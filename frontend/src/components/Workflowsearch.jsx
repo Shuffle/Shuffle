@@ -13,8 +13,9 @@ import { Grid, Paper, TextField, ButtonBase, InputAdornment, Typography, Button,
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const WorkflowSearch = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits }  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, selectAble, }  = props
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
+
 	const xs = parsedXs === undefined || parsedXs === null ? 12 : parsedXs
 	const theme = useTheme();
 	//const [apps, setApps] = React.useState([]);
@@ -109,6 +110,10 @@ const WorkflowSearch = props => {
 			</form>
 		)
 		//value={currentRefinement}
+	}
+
+	if (selectAble === true) {
+		console.log("Make it possible to select a Workflow!!")
 	}
 
 	const Hits = ({ hits }) => {

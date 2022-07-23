@@ -616,8 +616,6 @@ const Framework = (props) => {
 		}
 
 	const setFrameworkItem = (data) => {
-		console.log("UPLOAD: ", data)
-
     fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
       method: "POST",
       headers: {
@@ -675,8 +673,6 @@ const Framework = (props) => {
 			"description": newSelectedApp.description,
 		}
 
-		console.log("APP: ", newSelectedApp)
-
 		const foundelement = cy.getElementById(discoveryData.id)
 		if (foundelement !== undefined && foundelement !== null) {
 			foundelement.data("large_image", newSelectedApp.image_url)
@@ -699,46 +695,101 @@ const Framework = (props) => {
   const imgSize = 50;
 	var parsedFrameworkData = frameworkData 
 
+	// Awful mapping to make sure all access is always there
 	if (frameworkData !== undefined) {
 		if (frameworkData.cases !== undefined) {
-			frameworkData.Cases = frameworkData.cases
-		}
-		if (frameworkData.siem !== undefined) {
-			frameworkData.SIEM = frameworkData.siem
-		}
-		if (frameworkData.assets !== undefined) {
-			frameworkData.Assets = frameworkData.assets
-		}
-		if (frameworkData.intel !== undefined) {
-			frameworkData.Intel = frameworkData.intel
-		}
-		if (frameworkData.communication !== undefined) {
-			frameworkData.Comms = frameworkData.communication
-		}
-		if (frameworkData.network !== undefined) {
-			frameworkData.Network = frameworkData.network
-		}
-		if (frameworkData.iam !== undefined) {
-			frameworkData.IAM = frameworkData.iam
-		}
-		if (frameworkData.edr !== undefined) {
-			frameworkData["EDR & AV"] = frameworkData.edr
+			if (frameworkData.cases.large_image === undefined && frameworkData.cases.large_image === null || frameworkData.cases.large_image === "") {
+				frameworkData.cases = {}
+			}
+
+			parsedFrameworkData.Cases = frameworkData.cases
+		} else {
+			parsedFrameworkData.Cases = {}
 		}
 
-		parsedFrameworkData = frameworkData 
-	} else { 
-		console.log("No frameworkdata: ")
-		parsedFrameworkData = {
-			"Cases": 	{},  
-			"SIEM": 	{},
-			"Assets": {},
-			"IAM": {},
-			"Intel": 	{},
-			"Comms": 	{},
-			"Network": {},
-			"EDR & AV": {},
+		if (frameworkData.siem !== undefined) {
+			if (frameworkData.siem.large_image === undefined && frameworkData.siem.large_image === null || frameworkData.siem.large_image === "") {
+				frameworkData.siem = {}
+			}
+
+			parsedFrameworkData.SIEM = frameworkData.siem
+		} else {
+			parsedFrameworkData.SIEM = {}
 		}
+
+		if (frameworkData.assets !== undefined) {
+			if (frameworkData.assets.large_image === undefined && frameworkData.assets.large_image === null || frameworkData.assets.large_image === "") {
+				frameworkData.assets = {}
+			}
+
+			parsedFrameworkData.Assets = frameworkData.assets
+		} else {
+			parsedFrameworkData.Assets = {}
+		}
+
+		if (frameworkData.intel !== undefined) {
+			if (frameworkData.intel.large_image === undefined && frameworkData.intel.large_image === null || frameworkData.intel.large_image === "") {
+				frameworkData.intel = {}
+			}
+
+			parsedFrameworkData.Intel = frameworkData.intel
+		} else {
+			parsedFrameworkData.Intel= {}
+		}
+
+		if (frameworkData.communication !== undefined) {
+			if (frameworkData.communication.large_image === undefined && frameworkData.communication.large_image === null || frameworkData.communication.large_image === "") {
+				frameworkData.communication = {}
+			}
+
+			parsedFrameworkData.Comms = frameworkData.communication
+		} else {
+			parsedFrameworkData.Comms = {}
+		}
+
+		if (frameworkData.network !== undefined) {
+			if (frameworkData.network.large_image === undefined && frameworkData.network.large_image === null || frameworkData.network.large_image === "") {
+				frameworkData.network = {}
+			}
+
+			parsedFrameworkData.Network = frameworkData.network
+		} else {
+			parsedFrameworkData.Network = {}
+		}
+
+		if (frameworkData.iam !== undefined) {
+			if (frameworkData.iam.large_image === undefined && frameworkData.iam.large_image === null || frameworkData.iam.large_image === "") {
+				frameworkData.iam = {}
+			}
+
+			parsedFrameworkData.IAM = frameworkData.iam
+		} else {
+			parsedFrameworkData.IAM = {}
+		}
+
+		if (frameworkData.edr !== undefined) {
+			if (frameworkData.edr.large_image === undefined && frameworkData.edr.large_image === null || frameworkData.edr.large_image === "") {
+				frameworkData.edr = {}
+			}
+
+			parsedFrameworkData["EDR & AV"] = frameworkData.edr
+		} else {
+			parsedFrameworkData["EDR & AV"] = {}
+		}
+
+	} else { 
+		console.log("No frameworkdata for org! Setting default")
+		parsedFrameworkData["Cases"] = {}
+		parsedFrameworkData["SIEM"] = {}
+		parsedFrameworkData["Assets"] = {}
+		parsedFrameworkData["IAM"] = {}
+		parsedFrameworkData["Intel"] = {}
+		parsedFrameworkData["Comms"] = {}
+		parsedFrameworkData["Network"] = {}
+		parsedFrameworkData["EDR & AV"] = {}
 	}
+
+	console.log("Framework - update? ", parsedFrameworkData)
 
 	// 0 = automated, 1 = manual
 	const [usecaseType, setUsecaseType] = React.useState(0)
@@ -1168,10 +1219,10 @@ const Framework = (props) => {
 						description: parsedFrameworkData.Network.description === undefined ? "" : parsedFrameworkData.Network.description,
 						app_id: parsedFrameworkData.Network.id === undefined ? "" : parsedFrameworkData.Network.id,
 						text_margin_y: parsedFrameworkData.Network.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Network.large_image === undefined ? `${32*scale}px` : "0px",
-						margin_y: parsedFrameworkData.Network.large_image === undefined ? `${19*scale}px` : `0px`,
-						width: parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
-						height: parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
+						margin_x: 		parsedFrameworkData.Network.large_image === undefined ? `${32*scale}px` : "0px",
+						margin_y: 		parsedFrameworkData.Network.large_image === undefined ? `${19*scale}px` : `0px`,
+						width: 				parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
+						height: 			parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
 						large_image:  parsedFrameworkData.Network.large_image === undefined ? encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg">
 							<path d="M0.251953 10.6011H3.8391L9.38052 -4.92572e-08L10.8977 11.5696L15.0377 6.28838L19.3191 10.6011H23.3948V13.1836H18.252L15.2562 10.175L9.1491 18L7.88909 8.41894L5.39481 13.1836H0.251953V10.6011Z" />,
 						</svg>`) :  parsedFrameworkData.Network.large_image,
