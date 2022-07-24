@@ -30,28 +30,28 @@ const bodyDivStyle = {
 	overflowX: "hidden",
 }
 
-const boxStyle = {
-	color: "white",
-	flex: "1",
-	marginLeft: 10,
-	marginRight: 10,
-	paddingLeft: 30,
-	paddingRight: 30,
-	paddingBottom: 30,
-	paddingTop: 30,
-	display: "flex", 
-	flexDirection: "column",
-	overflowX: "hidden",
-	minHeight: 400,
-}
-
 // Should be different if logged in :|
 const Search = (props) => {
-  const { globalUrl, isLoaded, serverside, userdata } = props;
+  const { globalUrl, isLoaded, serverside, userdata, hidemargins, } = props;
 	let navigate = useNavigate();
 
   const [curTab, setCurTab] = useState(0);
   const iconStyle = { marginRight: 10 };
+
+	const boxStyle = {
+		color: "white",
+		flex: "1",
+		marginLeft: 10,
+		marginRight: 10,
+		paddingLeft: 30,
+		paddingRight: 30,
+		paddingBottom: 30,
+		paddingTop: hidemargins === true ? 0 : 30,
+		display: "flex", 
+		flexDirection: "column",
+		overflowX: "hidden",
+		minHeight: 400,
+	}
 
 	const views = {
     0: "apps",
@@ -62,7 +62,6 @@ const Search = (props) => {
 
 	const setConfig = (event, inputValue) => {
 		const newValue = parseInt(inputValue)
-		console.log("NEW: ", newValue)
 
     setCurTab(newValue)
     if (newValue === 0) {
@@ -86,7 +85,10 @@ const Search = (props) => {
 			extraQ = "&q="+foundQuery
 		}
 
-		navigate(`/search?tab=${views[newValue]}`+extraQ)
+	
+		if ((serverside === false || serverside === undefined) && window.location.pathname.includes("/search")) {
+			navigate(`/search?tab=${views[newValue]}`+extraQ)
+		}
   }
 
 	useEffect(() => {
@@ -114,10 +116,10 @@ const Search = (props) => {
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 
-		<div style={{paddingBottom: 100, color: "white", backgroundColor: theme.palette.surfacColor}}>
+		<div style={{paddingBottom: hidemargins === true ? 0 : 100, color: "white", backgroundColor: theme.palette.surfacColor}}>
 			<div style={boxStyle}>
 				<Tabs
-					style={{width: 610, margin: "auto", marginTop: 25, }}
+					style={{width: 610, margin: "auto", marginTop: hidemargins === true ? 0 : 25, }}
 					value={curTab}
 					indicatorColor="primary"
 					textColor="secondary"
@@ -152,10 +154,10 @@ const Search = (props) => {
 					<WorkflowGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				:
 				curTab === 2 ?
-					<DocsGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
+					<DocsGrid maxRows={6} parsedXs={12} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				: 
 				curTab === 3 ?
-					<CreatorGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
+					<CreatorGrid maxRows={3} parsedXs={4} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				: 
 				null}
 			</div>

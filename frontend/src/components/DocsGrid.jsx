@@ -133,7 +133,6 @@ const DocsGrid = props => {
 	var workflowDelay = -50
 	const Hits = ({ hits }) => {
 		const [mouseHoverIndex, setMouseHoverIndex] = useState(-1) 
-		var counted = 0
 		//console.log(hits)
 		//var curhits = hits
 		//if (hits.length > 0 && defaultApps.length === 0) {
@@ -146,6 +145,7 @@ const DocsGrid = props => {
 		//	setInnerHits(hits)
 		//}
 
+		var counted = 0
 		return (
 			<List>
 				{hits.map((data, index) => {
@@ -166,21 +166,21 @@ const DocsGrid = props => {
 						minWidth: "100%", 
 					}
 
-					//if (counted === 12/xs*rowHandler) {
-					//	return null
-					//}
-
-					console.log("DATA: ", data)
+					if (counted >= 12/xs*rowHandler) {
+						return null
+					}
 
 					counted += 1
+
 					var name = data.name === undefined ? 
 							data.filename.charAt(0).toUpperCase() + data.filename.slice(1).replaceAll("_", " ") + " - " + data.title : 
 							(data.name.charAt(0).toUpperCase()+data.name.slice(1)).replaceAll("_", " ")
 
-					if (name.length > 100) {
-						name = name.slice(0, 100)+"..."
+					if (name.length > 96) {
+						name = name.slice(0, 96)+"..."
 					}
 
+					//const secondaryText = data.data !== undefined ? data.data.slice(0, 100)+"..." : ""
 					const secondaryText = data.data !== undefined ? data.data.slice(0, 100)+"..." : ""
 					const baseImage = <PolymerIcon /> 
 					const avatar = data.image_url === undefined ? 
@@ -282,7 +282,7 @@ const DocsGrid = props => {
 					<CustomHits hitsPerPage={5}/>
 				</InstantSearch>
 				{showSuggestion === true ? 
-					<div style={{paddingTop: 100, maxWidth: isMobile ? "100%" : "60%", margin: "auto"}}>
+					<div style={{paddingTop: 0, maxWidth: isMobile ? "100%" : "60%", margin: "auto"}}>
 						<Typography variant="h6" style={{color: "white", marginTop: 50,}}>
 							Can't find what you're looking for? 
 						</Typography>
@@ -315,7 +315,7 @@ const DocsGrid = props => {
 								}}
 								color="primary"
 								fullWidth={true}
-								placeholder="What apps do you want to see?"
+								placeholder="What are we missing?"
 								type=""
 							  id="standard-required"
 								margin="normal"

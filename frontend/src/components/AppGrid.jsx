@@ -301,7 +301,7 @@ const AppGrid = props => {
 				  <Configure clickAnalytics />
 				</InstantSearch>
 				{showSuggestion === true ? 
-					<div style={{paddingTop: 100, maxWidth: isMobile ? "100%" : "60%", margin: "auto"}}>
+					<div style={{paddingTop: 0, maxWidth: isMobile ? "100%" : "60%", margin: "auto"}}>
 						<Typography variant="h6" style={{color: "white", marginTop: 50,}}>
 							Can't find what you're looking for? 
 						</Typography>

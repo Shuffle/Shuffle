@@ -31,7 +31,7 @@ const AppGrid = props => {
     window.location.host === "shuffler.io";
 
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
-	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 2 : parsedXs
+	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 4 : parsedXs
 	const theme = useTheme();
 	//const [apps, setApps] = React.useState([]);
 	//const [filteredApps, setFilteredApps] = React.useState([]);
@@ -227,15 +227,20 @@ const AppGrid = props => {
 		const [mouseHoverIndex, setMouseHoverIndex] = useState(-1) 
 		var counted = 0
 
-
 		return (
       <Grid container spacing={4} style={paperAppContainer}>
 				{hits.map((data, index) => {
 					workflowDelay += 50
 
+					if (counted === 12/xs*rowHandler) {
+						return null
+					}
+
+					counted += 1
+
 					return (
 						<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-							<Grid item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px" }}>
 								<WorkflowPaper key={index} data={data} />
 							</Grid>
 						</Zoom>
@@ -287,7 +292,7 @@ const AppGrid = props => {
 				<CustomHits hitsPerPage={5}/>
 			</InstantSearch>
 			{showSuggestion === true ? 
-				<div style={{maxWidth: isMobile ? "100%" : "60%", margin: "auto", paddingTop: 100, textAlign: "center",}}>
+				<div style={{maxWidth: isMobile ? "100%" : "60%", margin: "auto", paddingTop: 0, textAlign: "center",}}>
 					<Typography variant="h6" style={{color: "white", marginTop: 50,}}>
 						Can't find what you're looking for? 
 					</Typography>

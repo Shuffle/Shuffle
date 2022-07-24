@@ -25,8 +25,10 @@ import {
 } from "@material-ui/icons";
 
 const Body = {
-  maxWidth: 1000,
-  minWidth: 768,
+  //maxWidth: 1000,
+  //minWidth: 768,
+  maxWidth: "100%",
+  minWidth: "100%",
   margin: "auto",
   display: "flex",
   height: "100%",
@@ -108,8 +110,8 @@ const Docs = (defaultprops) => {
   };
 
   const SideBar = {
-    maxWidth: 250,
-    flex: 1,
+    minWidth: 250,
+    maxWidth: 300,
     position: "sticky",
 		top: 100,
 		maxHeight: "83vh",
@@ -346,11 +348,12 @@ const Docs = (defaultprops) => {
 
   const markdownStyle = {
     color: "rgba(255, 255, 255, 0.65)",
-    flex: "1",
     maxWidth: mobile ? "100%" : 750,
     overflow: "hidden",
     paddingBottom: 100,
-  	marginLeft: mobile ? 0 : 50,
+		maxWidth: 750,
+		minWidth: 750,
+		margin: "auto",
   };
 
   function OuterLink(props) {
@@ -768,6 +771,7 @@ const Docs = (defaultprops) => {
             id="markdown_wrapper"
             escapeHtml={false}
             source={data}
+						style={{marginRight: 150}}
             renderers={{
               link: OuterLink,
               image: Img,
