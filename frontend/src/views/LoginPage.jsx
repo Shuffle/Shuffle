@@ -184,13 +184,22 @@ const LoginDialog = (props) => {
                 );
               }
 
-              setIsLoggedIn(true);
-							if (!responseJson.tutorials.includes("welcome")) {
+							if (responseJson.tutorials === undefined || responseJson.tutorials === null || !responseJson.tutorials.includes("welcome")) {
 								console.log("RUN Welcome!!")
 								window.location.pathname = "/welcome" 
+								return
 							}
 
-							window.location.href = "/workflows"
+							const tmpView = new URLSearchParams(window.location.search).get("view")
+							if (tmpView !== undefined && tmpView !== null) {
+								//const newUrl = `/${tmpView}${decodeURIComponent(window.location.search)}`
+								const newUrl = `/${tmpView}`
+								window.location.pathname = newUrl
+							} else {
+								window.location.pathname = "/workflows"		
+							}
+
+              setIsLoggedIn(true);
             }
           })
         )

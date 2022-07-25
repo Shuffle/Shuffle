@@ -1533,6 +1533,7 @@ const ParsedAction = (props) => {
 
 						multiline = data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline
 						
+						console.log("Next to datafield")
             var datafield = (
               <TextField
                 disabled={disabled}
@@ -1669,8 +1670,9 @@ const ParsedAction = (props) => {
             );
 		
 						// Finds headers from a string to be used for autocompletion
+						console.log("Before header update")
 						const findHeaders = (inputdata) => {
-							const splitdata = inputdata.split("\n")
+							var splitdata = inputdata.split("\n")
 
 							var foundnewline = false
 							var allValues = []
@@ -1681,7 +1683,7 @@ const ParsedAction = (props) => {
 									continue
 								}
 
-								const splitvalue = ""
+								var splitvalue = ""
 								if (line.includes(":")) {
 									splitvalue = ":"
 								}
@@ -1698,7 +1700,7 @@ const ParsedAction = (props) => {
 									continue
 								}
 
-								const splitKeys = line.split(splitvalue)
+								var splitKeys = line.split(splitvalue)
 								if (splitKeys.length > 1) {
 									allValues.push({
 										key: splitKeys[0].trim(),
@@ -1760,7 +1762,7 @@ const ParsedAction = (props) => {
 
 															var newarr = []
 															for (var key in valsplit) {
-																const line = valsplit[key]
+																var line = valsplit[key]
 
 																if (key == index) {
 																	if (oldkey === "") {
@@ -1778,7 +1780,7 @@ const ParsedAction = (props) => {
 																}
 															}
 
-															const newval = newarr.join("\n")
+															var newval = newarr.join("\n")
 															console.log("Fixed: ", newval)
 
       												selectedActionParameters[count].value = newval
@@ -1796,7 +1798,7 @@ const ParsedAction = (props) => {
 
 															// Find the right line to replace!
 															//const newval = selectedActionParameters[count].value.replace(oldval, e.target.value, 1)
-															const tmpsplit = selectedActionParameters[count].value.split("\n")
+															var tmpsplit = selectedActionParameters[count].value.split("\n")
 															var valsplit = []
 															var add_empty = false
 															for (var key in tmpsplit) {
@@ -1815,7 +1817,7 @@ const ParsedAction = (props) => {
 
 															var newarr = []
 															for (var key in valsplit) {
-																const line = valsplit[key]
+																var line = valsplit[key]
 
 																if (key == index) {
 																	if (oldval === "") {
@@ -1833,7 +1835,7 @@ const ParsedAction = (props) => {
 																}
 															}
 
-															const newval = newarr.join("\n")
+															var newval = newarr.join("\n")
 															console.log("Fixed: ", newval)
 
       												selectedActionParameters[count].value = newval
@@ -1859,6 +1861,8 @@ const ParsedAction = (props) => {
 									</Button>
 								</div>
 						}
+
+						console.log("After header update")
 
             //console.log("FIELD VALUE: ", data.value)
             //const regexp = new RegExp("\W+\.", "g")
@@ -3521,7 +3525,7 @@ const ParsedAction = (props) => {
 										}
 
 
-										console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
+										//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
 										break
 									} 
 								}

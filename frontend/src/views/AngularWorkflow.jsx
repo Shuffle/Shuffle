@@ -2748,6 +2748,8 @@ const AngularWorkflow = (defaultprops) => {
     	  left: 0,
     	  selected: "",
     	});
+
+			console.log("DOne in the node update")
 		})
   }
 

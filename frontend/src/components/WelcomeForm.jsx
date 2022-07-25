@@ -316,7 +316,7 @@ const WelcomeForm = (props) => {
 													</Typography>
 											*/}
 											<Typography variant="body1" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
-												We need some more information in order to understand how we best can help you find relevant Usecases in Shuffle. Giving us this info is optional, but encouraged.
+												We need some more information in order to understand how we best can help you find relevant Usecases in Shuffle. 
 											</Typography> 
                         <Grid item xs={11} style={{marginTop: 16, padding: 0,}}>
                           <TextField

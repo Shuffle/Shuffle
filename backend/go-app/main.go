@@ -1050,7 +1050,11 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	tutorialsFinished := []string{}
+	tutorialsFinished := userInfo.PersonalInfo.Tutorials
+	if len(org.SecurityFramework.SIEM.Name) > 0 || len(org.SecurityFramework.Network.Name) > 0 || len(org.SecurityFramework.EDR.Name) > 0 || len(org.SecurityFramework.Cases.Name) > 0 || len(org.SecurityFramework.IAM.Name) > 0 || len(org.SecurityFramework.Assets.Name) > 0 || len(org.SecurityFramework.Intel.Name) > 0 || len(org.SecurityFramework.Communication.Name) > 0 {
+		tutorialsFinished = append(tutorialsFinished, "find_integrations")
+	}
+
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1066,8 +1070,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			},
 		},
 		EthInfo:      userInfo.EthInfo,
-		Tutorials:    tutorialsFinished,
 		ChatDisabled: chatDisabled,
+		Tutorials:    tutorialsFinished,
 		Priorities:   orgPriorities,
 	}
 

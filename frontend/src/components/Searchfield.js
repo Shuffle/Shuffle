@@ -83,7 +83,7 @@ const SearchField = props => {
 			*/
 
 		return (
-		  <form id="search_form" noValidate type="searchbox" action="" role="search" style={{margin: isCloud ? 10 : 0, }} onClick={() => {
+		  <form id="search_form" noValidate type="searchbox" action="" role="search" style={{margin: 0, }} onClick={() => {
 			}}>
 				<TextField 
 					fullWidth
@@ -93,6 +93,7 @@ const SearchField = props => {
 							color: "white",
 							fontSize: "1em",
 							height: 50,
+							margin: 0, 
 						},
 						startAdornment: (
 							<InputAdornment position="start">
