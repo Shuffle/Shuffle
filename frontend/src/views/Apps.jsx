@@ -1019,7 +1019,7 @@ const Apps = (props) => {
           {activateButton}
         	{editNewButton}
           {(props.userdata !== undefined && 
-            (props.userdata.role === "admin" ||
+            (props.userdata.admin === "true" ||
               props.userdata.id === selectedApp.owner ||
 							selectedApp.owner === "" 
 							)) || !selectedApp.generated ? (
@@ -1408,6 +1408,7 @@ const Apps = (props) => {
   }, [appValidation, isDropzone]);
 
 	var appDelay = -75 
+              
   const appView = isLoggedIn ? (
     <Dropzone
       style={{ width: viewWidth * 2 + 20, margin: "auto", padding: 20 }}
@@ -1481,7 +1482,7 @@ const Apps = (props) => {
                   </Tooltip>
                 )}
 
-                {userdata === undefined || userdata === null || userdata.role !== "admin" ? null : 
+                {userdata === undefined || userdata === null || userdata.admin === "false" ? null : 
 									<Tooltip
 										title={"Download from Github"}
 										style={{ marginTop: "28px", width: "100%" }}

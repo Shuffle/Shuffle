@@ -21,10 +21,11 @@ import {
 } from '@material-ui/core';
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
+import WorkflowPaperNew from "../components/WorkflowPaperNew.jsx"
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const AppGrid = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs }  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, alternativeView, }  = props
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -241,7 +242,11 @@ const AppGrid = props => {
 					return (
 						<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
 							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px" }}>
-								<WorkflowPaper key={index} data={data} />
+								{alternativeView === true ? 
+									<WorkflowPaperNew key={index} data={data} />
+								: 
+									<WorkflowPaper key={index} data={data} />
+								}
 							</Grid>
 						</Zoom>
 					)

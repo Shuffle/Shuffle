@@ -151,7 +151,10 @@ const Search = (props) => {
 					<AppGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} userdata={userdata} />
 				: 
 				curTab === 1 ?
-					<WorkflowGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
+    			window.location.pathname === "/search" ? 
+						<WorkflowGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} /> 
+						:
+						<WorkflowGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				:
 				curTab === 2 ?
 					<DocsGrid maxRows={6} parsedXs={12} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
@@ -162,6 +165,7 @@ const Search = (props) => {
 				null}
 			</div>
 		</div>
+	//{/*alternativeView={true} />*/}
 
 	const loadedCheck = isLoaded ? 
 		<div>
