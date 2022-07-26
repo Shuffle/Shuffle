@@ -1533,7 +1533,6 @@ const ParsedAction = (props) => {
 
 						multiline = data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline
 						
-						console.log("Next to datafield")
             var datafield = (
               <TextField
                 disabled={disabled}
@@ -1670,7 +1669,6 @@ const ParsedAction = (props) => {
             );
 		
 						// Finds headers from a string to be used for autocompletion
-						console.log("Before header update")
 						const findHeaders = (inputdata) => {
 							var splitdata = inputdata.split("\n")
 
@@ -1725,7 +1723,7 @@ const ParsedAction = (props) => {
 						if (data.name.toLowerCase() === "headers") {
 							//var tmpheaders = findHeaders(data.value)
 							var tmpheaders = findHeaders(selectedActionParameters[count].value)
-							datafield = 
+							const tmpdatafield = 
 								<div>
 									{tmpheaders.map((inputdata, index) => {
 										const oldkey = inputdata.key
@@ -1861,8 +1859,6 @@ const ParsedAction = (props) => {
 									</Button>
 								</div>
 						}
-
-						console.log("After header update")
 
             //console.log("FIELD VALUE: ", data.value)
             //const regexp = new RegExp("\W+\.", "g")
@@ -2725,7 +2721,7 @@ const ParsedAction = (props) => {
                     paddingRight: 0,
                   }}
                   onClick={() => {
-                    setAuthenticationModalOpen(true);
+                    setAuthenticationModalOpen(true)
                   }}
                 >
                   <Tooltip

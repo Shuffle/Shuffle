@@ -907,48 +907,56 @@ const Workflows = (props) => {
       })
       .then((responseJson) => {
         if (responseJson !== undefined) {
-          setWorkflows(responseJson);
-					fetchUsecases(responseJson)
+					var newarray = []
+					for (var key in responseJson) {
+						const wf = responseJson[key]
+						if (wf.public === true) {
+							continue
+						}
+
+						newarray.push(wf)
+					}
+
+          setWorkflows(newarray);
+					fetchUsecases(newarray)
 								
 					var setProdFilter = false 
 
-          if (responseJson !== undefined) {
-            var actionnamelist = [];
-            var parsedactionlist = [];
-            for (var key in responseJson) {
-							const workflow = responseJson[key]
-							if (workflow.status === "production") {
-								setProdFilter = true 
+					var actionnamelist = [];
+					var parsedactionlist = [];
+					for (var key in newarray) {
+						const workflow = newarray[key]
+						if (workflow.status === "production") {
+							setProdFilter = true 
+						}
+
+						for (var actionkey in newarray[key].actions) {
+							const action = newarray[key].actions[actionkey];
+							//console.log("Action: ", action)
+							if (actionnamelist.includes(action.app_name)) {
+								continue;
 							}
 
-              for (var actionkey in responseJson[key].actions) {
-                const action = responseJson[key].actions[actionkey];
-                //console.log("Action: ", action)
-                if (actionnamelist.includes(action.app_name)) {
-                  continue;
-                }
+							actionnamelist.push(action.app_name);
+							parsedactionlist.push(action);
+						}
+					}
 
-                actionnamelist.push(action.app_name);
-                parsedactionlist.push(action);
-              }
-            }
-
-            //console.log(parsedactionlist)
-            setActionImageList(parsedactionlist);
-          }
+					//console.log(parsedactionlist)
+					setActionImageList(parsedactionlist);
 
 								
 					if (setProdFilter === true) {
             setFilters(["status:production"]);
-						const newWorkflows = responseJson.filter(workflow => workflow.status === "production")
+						const newWorkflows = newarray.filter(workflow => workflow.status === "production")
 						console.log(newWorkflows)
 						if (newWorkflows !== undefined && newWorkflows !== null) {
           		setFilteredWorkflows(newWorkflows);
 						} else {
-          		setFilteredWorkflows(responseJson);
+          		setFilteredWorkflows(newarray);
 						}
 					} else { 
-          	setFilteredWorkflows(responseJson);
+          	setFilteredWorkflows(newarray);
 					}
 
 					// Ensures the zooming happens only once per load
@@ -2209,6 +2217,7 @@ const Workflows = (props) => {
           width: 330,
           renderCell: (params) => {
             const data = params.row.record;
+					
 
             return (
               <Grid item>

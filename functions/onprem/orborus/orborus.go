@@ -970,7 +970,7 @@ func main() {
 		req.Header.Add("Org", org)
 	}
 
-	log.Printf("[INFO] Waiting for executions at %s with Environment %s", fullUrl, environment)
+	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
 	for {
 		//go getStats()

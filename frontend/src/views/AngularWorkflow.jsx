@@ -354,6 +354,7 @@ const AngularWorkflow = (defaultprops) => {
   const [appsLoaded, setAppsLoaded] = React.useState(false);
   const [showVideo, setShowVideo] = React.useState("");
 	const [editWorkflowModalOpen, setEditWorkflowModalOpen] = React.useState(false);
+  const [userediting, setUserediting] = React.useState(false)
 
   const [lastSaved, setLastSaved] = React.useState(true);
 
@@ -391,6 +392,50 @@ const AngularWorkflow = (defaultprops) => {
       fetchUpdates();
     },
   });
+
+  const getAppDocs = (appname) => {
+    fetch(`${globalUrl}/api/v1/docs/${appname}?location=openapi`, {
+      headers: {
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status === 200) {
+          //alert.success("Successfully GOT app "+appId)
+        } else {
+          //alert.error("Failed getting app");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success === true) {
+					console.log("RESPONSE FOR APP: ", responseJson.reason);
+					
+					if (responseJson.reason !== undefined && responseJson.reason !== undefined && responseJson.reason.length > 0) {
+						selectedApp.documentation = responseJson.reason
+						setSelectedApp(selectedApp)
+						setUpdate(Math.random())
+					}
+				}
+  
+      })
+      .catch((error) => {
+        alert.error(error.toString());
+      });
+  };
+
+  useEffect(() => {
+		if (authenticationModalOpen === true && selectedAction.app_name !== undefined) {
+			console.log(`Should get app docs for: ${selectedAction.app_name}`)
+
+			if (selectedAction.documentation === undefined || selectedAction.documentation === null || selectedAction.documentation.length === 0) {
+				// SelectedApp.documentation = Markdown? If so, it works
+				getAppDocs(selectedAction.app_name) 
+			}
+		}
+	}, [authenticationModalOpen])
 
   const getAvailableWorkflows = (trigger_index) => {
     fetch(globalUrl + "/api/v1/workflows", {
@@ -1172,6 +1217,10 @@ const AngularWorkflow = (defaultprops) => {
     	    }
     	  }
     	}
+
+			if (userediting === true) {
+				useworkflow.user_editing = true
+			}
 
     	useworkflow.actions = newActions;
     	useworkflow.triggers = newTriggers;
@@ -10814,7 +10863,7 @@ const AngularWorkflow = (defaultprops) => {
             </Tooltip>
           )}
 					{/*userdata.avatar === creatorProfile.github_avatar ? null :*/}
-          	<Tooltip color="primary" title="Save Workflow" placement="top">
+          	<Tooltip color="primary" title={workflow.public === true ? "Use this Workflow in your organization" : "Save Workflow"} placement="top">
           	  <span>
           	    <Button
           	      disabled={savingState !== 0}
@@ -11410,6 +11459,7 @@ const AngularWorkflow = (defaultprops) => {
 						onClick={() => {
 							//setEditWorkflowDetails(true)
 							workflow.public = false
+  						setUserediting(true)
 							setWorkflow(workflow)
 							setUpdate(Math.random());
 						}}
