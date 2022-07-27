@@ -371,7 +371,7 @@ class AppBase:
         # FIXME: Adding retries here.
         try:
             finished = False
-            for i in range (0, 5):
+            for i in range (0, 10):
                 try:
                     ret = requests.post(url, headers=headers, json=action_result, timeout=10)
 
@@ -384,22 +384,32 @@ class AppBase:
 
                 except requests.exceptions.RequestException as e:
                     self.logger.info(f"[DEBUG] Request problem: {e}")
+                    time.sleep(0.1)
+
                     #time.sleep(5)
                     continue
                 except TimeoutError as e:
                     self.logger.info(f"[DEBUG] Timeout or request: {e}")
+                    time.sleep(0.1)
+
                     #time.sleep(5)
                     continue
                 except requests.exceptions.ConnectionError as e:
                     self.logger.info(f"[DEBUG] Connectionerror: {e}")
+                    time.sleep(0.1)
+
                     #time.sleep(5)
                     continue
                 except http.client.RemoteDisconnected as e:
                     self.logger.info(f"[DEBUG] Remote: {e}")
+                    time.sleep(0.1)
+
                     #time.sleep(5)
                     continue
                 except urllib3.exceptions.ProtocolError as e:
                     self.logger.info(f"[DEBUG] Protocol err: {e}")
+                    time.sleep(0.1)
+
                     #time.sleep(5)
                     continue
 
@@ -408,8 +418,8 @@ class AppBase:
             if not finished:
                 # Not sure why this would work tho :)
                 action_result["status"] = "FAILURE"
-                action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 5 retries" % url})
-                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished after 5 requests")
+                action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 10 retries to the backend" % url})
+                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished after 10 requests")
                 ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
         
             self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")

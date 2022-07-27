@@ -16,7 +16,7 @@ import {
 import Checkbox from '@mui/material/Checkbox';
 import { orange } from '@mui/material/colors';
 import { isMobile } from "react-device-detect" 
-import { GetParsedPaths } from "../views/Apps.jsx";
+import { GetParsedPaths, FindJsonPath } from "../views/Apps.jsx";
 import NestedMenuItem from "material-ui-nested-menu-item";
 
 import {
@@ -345,9 +345,9 @@ const CodeEditor = (props) => {
 		//console.log(found)
 
 		// Whelp this is inefficient af. Single loop pls
-		try{
-			// When the found array is empty.
-			for (var i = 0; i < found.length; i++) {
+		// When the found array is empty.
+		for (var i = 0; i < found.length; i++) {
+			try {
 				found[i] = found[i].toLowerCase()
 
 				var valuefound = false
@@ -379,13 +379,28 @@ const CodeEditor = (props) => {
 								//}
 
 								try {
-									input = input.replace(found[i], JSON.stringify(actionlist[k].example))
+									var new_input = FindJsonPath(fullpath, actionlist[k].example)
 								} catch (e) {
-									input = input.replace(found[i], actionlist[k].example)
+									console.log("ERR IN INPUT: ", e)
 								}
 
+								if (typeof new_input === "object") {
+									new_input = JSON.stringify(new_input)
+								} else {
+									if (typeof new_input === "string") {
+										new_input = new_input
+									} else {
+										new_input = ""
+									}
+								}
+
+								input = input.replace(found[i], new_input)
+
+								//} catch (e) {
+								//	input = input.replace(found[i], actionlist[k].example)
+								//}
+
 								shouldbreak = true 
-								console.log("New input: ", input)
 								break
 							}
 						}
@@ -395,9 +410,9 @@ const CodeEditor = (props) => {
 						}
 					}
 				}
+			} catch (e) {
+				console.log("Replace error: ", e)
 			}
-		} catch (e) {
-			console.log("Replace error: ", e)
 		}
 
 		const tmpValidation = validateJson(input.valueOf())
@@ -823,7 +838,6 @@ const CodeEditor = (props) => {
 										//<ExpandMoreIcon style={iconStyle} />
 
 										const indentation_count = (pathdata.name.match(/\./g) || []).length+1
-										const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
 										//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
 										const boxPadding = 0 
 										const namesplit = pathdata.name.split(".")
@@ -854,7 +868,7 @@ const CodeEditor = (props) => {
 													<div style={{ display: "flex", height: 30, }}>
 														{Array(indentation_count).fill().map((subdata, subindex) => {
 															return (
-																baseIndent
+																<div key={subindex} style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
 															)
 														})}
 														{icon} {newname} 

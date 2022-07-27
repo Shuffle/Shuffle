@@ -70,7 +70,72 @@ export const FixName = (name) => {
   return newAppname;
 };
 
+// Takes input of e.g. $node.data.#.asd and a matching value from a json blob
+// Returns 
+export const FindJsonPath = (path, inputdata) => {
+	const splitkey = ".";
+	var parsedValues = [];
+
+	if (inputdata === undefined || inputdata === null) {
+		return inputdata
+	}
+
+	if (typeof inputdata !== "object") {
+		return inputdata
+	}
+
+	var keysplit = path.split(splitkey)
+	if (path.startsWith("$") && keysplit.length > 1) {
+		keysplit = keysplit.slice(1,)
+	}
+
+	if (keysplit.length === 0) {
+		return inputdata
+	}
+
+	// FIXME: Check list - always getting FIRST item, not digging too deep.
+	// If object, send further
+	if (keysplit[0].includes("#")) {
+		if (Object.prototype.toString.call(inputdata) === '[object Array]') {
+			if (inputdata.length === 0) {
+				return ""
+			} else {
+
+				// Fix the list
+				if (keysplit.length === 1) {
+					return inputdata[0] 
+				} else {
+					const joinedsplit = keysplit.slice(1,).join(".")
+					return FindJsonPath(joinedsplit, inputdata[0]) 
+				}
+			}
+		} else {
+			return "" 
+		}
+	}
+
+	for (const [key, value] of Object.entries(inputdata)) {
+
+		if (key === keysplit[0]) {
+
+			// Return if no more keys
+			// Else, dig deeper
+			if (keysplit.length === 1) {
+				return value
+			} else {
+				const joinedsplit = keysplit.slice(1,).join(".")
+				return FindJsonPath(joinedsplit, value) 
+			}
+		} else {
+			//console.log("N: ", key)
+		}
+	}
+
+	return inputdata 
+}
+
 // Parses JSON data into keys that can be used everywhere :)
+// Reverse of this is FindJsonPath 
 export const GetParsedPaths = (inputdata, basekey) => {
   const splitkey = ".";
   var parsedValues = [];
@@ -92,7 +157,6 @@ export const GetParsedPaths = (inputdata, basekey) => {
 
     // Handle direct loop!
     if (!isNaN(key) && basekey === "") {
-      console.log("Handling direct loop.");
       parsedValues.push({
         type: "object",
         name: "Node",

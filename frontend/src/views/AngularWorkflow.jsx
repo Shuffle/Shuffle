@@ -2590,6 +2590,7 @@ const AngularWorkflow = (defaultprops) => {
     	          a.loop_versions.includes(curaction.app_version)))
     	  );
 
+
 				if (curaction.template === true) {
 					//newapps.
 					const parsedname = curaction.name.replaceAll(" ", "_").toLowerCase()
@@ -2630,6 +2631,12 @@ const AngularWorkflow = (defaultprops) => {
     	    setSelectedApp(tmpapp);
     	    setSelectedAction(curaction);
     	  } else {
+					console.log("CURAPP: ", curapp)
+					if (curapp.id !== curaction.id) {
+						curaction.app_id = curapp.id
+						//.valueOf()
+					}
+
     	    setAuthenticationType(
     	      curapp.authentication.type === "oauth2" &&
     	        curapp.authentication.redirect_uri !== undefined &&
@@ -2713,9 +2720,21 @@ const AngularWorkflow = (defaultprops) => {
     	            curaction.parameters[key].options[0];
     	        }
     	      }
-    	    }
+    	    } else {
+						console.log("Should check APP if it has the same params as ACTION")
+						for (var key in curapp.actions) {
+							const tmpaction = curapp.actions[key]
+							if (tmpaction.name === curaction.name) {
+								console.log("Found action - needs change?", tmpaction)
+								if (tmpaction.parameters !== undefined && tmpaction.parameters !== null && tmpaction.parameters.length > 0) {
+									curaction.parameters = JSON.parse(JSON.stringify(tmpaction.parameters))
+								}
+								break
+							}
+						}
+					}
 
-					console.log("ACTION: ", curaction)
+					console.log("ACTION CLICK: ", curaction)
     	    setSelectedApp(curapp);
     	    setSelectedAction(curaction);
 

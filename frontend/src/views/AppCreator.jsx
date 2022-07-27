@@ -3792,8 +3792,8 @@ const AppCreator = (defaultprops) => {
 							}
 
 							// Found that dashes in the URL doesn't work
-							parsedurl = parsedurl.replace("-", "_")
-							console.log("Actions: ", actions)
+							//parsedurl = parsedurl.replace("-", "_")
+							//console.log("Actions: ", actions)
 
 							if (baseUrl.length === 0 && parsedurl.includes("http")) {
 								const newurl = new URL(encodeURI(parsedurl))

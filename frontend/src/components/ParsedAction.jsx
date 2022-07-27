@@ -1410,7 +1410,7 @@ const ParsedAction = (props) => {
 
                             if (currentItem.description === openApiFieldDesc) {
                               currentItem.field_active = !hideBody;
-                              console.log("Changing", currentItem);
+                              //console.log("Changing", currentItem);
                             }
                           }
                         }}
