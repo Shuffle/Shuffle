@@ -297,7 +297,7 @@ const LoginDialog = (props) => {
             {loginInfo === undefined ||
             loginInfo === null ||
             loginInfo.length === 0 ? null : (
-              <div style={{ marginTop: "10px" }}>Response: {loginInfo}</div>
+              <div style={{ marginTop: "10px" }}>Database Response: {loginInfo}</div>
             )}
             <CircularProgress color="secondary" style={{ color: "white" }} />
 

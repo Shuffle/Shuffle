@@ -12043,7 +12043,7 @@ const AngularWorkflow = (defaultprops) => {
                     : 0;
 
                 const timestamp = new Date(data.started_at * 1000)
-                  .toISOString()
+                  .toLocaleString("en-GB")
                   .split(".")[0]
                   .split("T")
                   .join(" ");
@@ -12360,7 +12360,7 @@ const AngularWorkflow = (defaultprops) => {
                 <b>Started &nbsp;&nbsp;</b>
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                {new Date(executionData.started_at * 1000).toISOString()}
+                {new Date(executionData.started_at * 1000).toLocaleString("en-GB")}
               </Typography>
             </div>
           ) : null}
@@ -12374,7 +12374,7 @@ const AngularWorkflow = (defaultprops) => {
                 <b>Finished &nbsp;</b>
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                {new Date(executionData.completed_at * 1000).toISOString()}
+                {new Date(executionData.completed_at * 1000).toLocaleString("en-GB")}
               </Typography>
             </div>
           ) : null}
