@@ -342,77 +342,82 @@ const CodeEditor = (props) => {
 	const expectedOutput = (input) => {
 		
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+
 		//console.log(found)
 
 		// Whelp this is inefficient af. Single loop pls
 		// When the found array is empty.
-		for (var i = 0; i < found.length; i++) {
-			try {
-				found[i] = found[i].toLowerCase()
+		try { 
+			for (var i = 0; i < found.length; i++) {
+				try {
+					found[i] = found[i].toLowerCase()
 
-				var valuefound = false
-				for (var j = 0; j < actionlist.length; j++) {
-					if(found[i].slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
-						valuefound = true 
-						try {
-							input = input.replace(found[i], JSON.stringify(actionlist[j].example));
-						} catch (e) { 
-							input = input.replace(found[i], actionlist[j].example)
+					var valuefound = false
+					for (var j = 0; j < actionlist.length; j++) {
+						if(found[i].slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
+							valuefound = true 
+							try {
+								input = input.replace(found[i], JSON.stringify(actionlist[j].example));
+							} catch (e) { 
+								input = input.replace(found[i], actionlist[j].example)
+							}
+						} else {
 						}
-					} else {
 					}
-				}
 
-				if (!valuefound && availableVariables.includes(found[i])) {
-					var shouldbreak = false
-					for (var k=0; k < actionlist.length; k++){
-						var parsedPaths = []
-						if (typeof actionlist[k].example === "object") {
-							parsedPaths = GetParsedPaths(actionlist[k].example, "");
-						}
+					if (!valuefound && availableVariables.includes(found[i])) {
+						var shouldbreak = false
+						for (var k=0; k < actionlist.length; k++){
+							var parsedPaths = []
+							if (typeof actionlist[k].example === "object") {
+								parsedPaths = GetParsedPaths(actionlist[k].example, "");
+							}
 
-						for (var key in parsedPaths) {
-							const fullpath = "$"+actionlist[k].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
-							if (fullpath === found[i]) {
-								//if (actionlist[k].example === undefined) {
-								//	actionlist[k].example = "TMP"
-								//}
+							for (var key in parsedPaths) {
+								const fullpath = "$"+actionlist[k].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
+								if (fullpath === found[i]) {
+									//if (actionlist[k].example === undefined) {
+									//	actionlist[k].example = "TMP"
+									//}
 
-								try {
-									var new_input = FindJsonPath(fullpath, actionlist[k].example)
-								} catch (e) {
-									console.log("ERR IN INPUT: ", e)
-								}
-
-								if (typeof new_input === "object") {
-									new_input = JSON.stringify(new_input)
-								} else {
-									if (typeof new_input === "string") {
-										new_input = new_input
-									} else {
-										new_input = ""
+									try {
+										var new_input = FindJsonPath(fullpath, actionlist[k].example)
+									} catch (e) {
+										console.log("ERR IN INPUT: ", e)
 									}
+
+									if (typeof new_input === "object") {
+										new_input = JSON.stringify(new_input)
+									} else {
+										if (typeof new_input === "string") {
+											new_input = new_input
+										} else {
+											new_input = ""
+										}
+									}
+
+									input = input.replace(found[i], new_input)
+
+									//} catch (e) {
+									//	input = input.replace(found[i], actionlist[k].example)
+									//}
+
+									shouldbreak = true 
+									break
 								}
+							}
 
-								input = input.replace(found[i], new_input)
-
-								//} catch (e) {
-								//	input = input.replace(found[i], actionlist[k].example)
-								//}
-
-								shouldbreak = true 
+							if (shouldbreak) {
 								break
 							}
 						}
-
-						if (shouldbreak) {
-							break
-						}
 					}
+				} catch (e) {
+					console.log("Replace error: ", e)
 				}
-			} catch (e) {
-				console.log("Replace error: ", e)
 			}
+		} catch (e) {
+
 		}
 
 		const tmpValidation = validateJson(input.valueOf())

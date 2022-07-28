@@ -723,7 +723,6 @@ const Header = (props) => {
 											userdata.orgs.splice(foundIndex+1, 1)
 										} else {
 											console.log("ORG NOT FOUND IN LIST: ", childorg)
-
 										}
 
 										// This is stupid :)

@@ -414,9 +414,11 @@ const AngularWorkflow = (defaultprops) => {
 					console.log("RESPONSE FOR APP: ", responseJson.reason);
 					
 					if (responseJson.reason !== undefined && responseJson.reason !== undefined && responseJson.reason.length > 0) {
-						selectedApp.documentation = responseJson.reason
-						setSelectedApp(selectedApp)
-						setUpdate(Math.random())
+						if (!responseJson.reason.includes("404: Not Found") && responseJson.reason.length > 50) {
+							selectedApp.documentation = responseJson.reason
+							setSelectedApp(selectedApp)
+							setUpdate(Math.random())
+						}
 					}
 				}
   
@@ -6167,8 +6169,11 @@ const AngularWorkflow = (defaultprops) => {
 					//newSelectedAction.parameters[newParamIndex].value = param.value
 				}
 
-				// Not doing options fields
+				if (newSelectedAction.parameters === undefined || newSelectedAction.parameters === null) {
+					continue
+				}
 
+				// Not doing options fields
 				const newParamIndex = newSelectedAction.parameters.findIndex(paramdata => paramdata.name === param.name)
 				if (newParamIndex < 0) {
 					continue
