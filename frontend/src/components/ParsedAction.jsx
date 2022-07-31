@@ -2665,7 +2665,7 @@ const ParsedAction = (props) => {
                   selectedAction.app_name.substring(1)
                 ).replaceAll("_", " ")}
               </h3>
-              <div style={{ display: "flex", marginTop: 10 }}>
+              <div style={{display: "flex", marginTop: 10, }}>
                 <IconButton
                   style={{
                     marginTop: "auto",
@@ -2689,16 +2689,26 @@ const ParsedAction = (props) => {
 
                         var foundResult = workflowExecutions[key].results.find(
                           (result) => result.action.id === selectedAction.id
-                        );
+                        )
+
                         if (foundResult === undefined || foundResult === null) {
                           continue;
                         }
 
-                        setSelectedResult(foundResult);
+    										const oldstartnode = cy.getElementById(selectedAction.id);
+												console.log("FOUND NODe: ", oldstartnode)
+    										if (oldstartnode !== undefined && oldstartnode !== null) {
+													const foundname = oldstartnode.data("label")
+													if (foundname !== undefined && foundname !== null) {
+														foundResult.action.label = foundname
+													}
+												}
 
+                        setSelectedResult(foundResult);
                         if (setCodeModalOpen !== undefined) {
                           setCodeModalOpen(true);
                         }
+
                         break;
                       }
                     }

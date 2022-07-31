@@ -11587,6 +11587,17 @@ const AngularWorkflow = (defaultprops) => {
 								width: 30,
 							}}
 							onClick={() => {
+								if (validate.valid) {
+									//console.log("Find and change result: ", 
+									//const oldstartnode = cy.getElementById(selectedResult.action.id);
+									//if (oldstartnode !== undefined && oldstartnode !== null) {
+									//	const foundname = oldstartnode.data("label")
+									//	if (foundname !== undefined && foundname !== null) {
+									//		result.action.label = foundname
+									//	}
+									//}
+								}
+
 								setSelectedResult({
 									"action": {
 										"label": "Execution Argument",
@@ -11597,6 +11608,7 @@ const AngularWorkflow = (defaultprops) => {
 									"result": validate.valid ? JSON.stringify(validate.result) : validate.result,
 									"status": "SUCCESS" 
 								})
+
 								setCodeModalOpen(true);
 							}}
 						>
@@ -11785,6 +11797,20 @@ const AngularWorkflow = (defaultprops) => {
 
     //var newitem = JSON.parse(base);
 		var newitem = validateJson(base).result
+
+		// Check if base_node_name has changed
+		if (cy !== undefined && cy !== null) {
+			console.log("Change name?")
+      //const allNodes = cy.nodes().jsons();
+      //for (var key in allNodes) {
+        //const currentNode = allNodes[key];
+
+				//if (currentNode.
+			//}
+
+      //const nodedata = cy.getElementById(data.action.id).data();
+			//base_node_name = 
+		}
 
     to_be_copied = "$" + base_node_name.toLowerCase().replaceAll(" ", "_");
     for (var key in copy.namespace) {
@@ -12661,6 +12687,17 @@ const AngularWorkflow = (defaultprops) => {
                           width: 30,
                         }}
                         onClick={() => {
+													const oldstartnode = cy.getElementById(data.action.id);
+													console.log("FOUND NODe: ", oldstartnode)
+													if (oldstartnode !== undefined && oldstartnode !== null) {
+														const foundname = oldstartnode.data("label")
+														if (foundname !== undefined && foundname !== null) {
+															data.action.label = foundname
+														}
+													}
+
+													console.log("Click data: ", data)
+													//data.action.label = ""
                           setSelectedResult(data);
                           setCodeModalOpen(true);
                         }}
@@ -12922,7 +12959,16 @@ const AngularWorkflow = (defaultprops) => {
                       data.status === "SUCCESS" &&
                       data.action.id === selectedResult.action.id
                   );
+
                   if (result !== undefined) {
+										const oldstartnode = cy.getElementById(selectedResult.action.id);
+										if (oldstartnode !== undefined && oldstartnode !== null) {
+											const foundname = oldstartnode.data("label")
+											if (foundname !== undefined && foundname !== null) {
+												result.action.label = foundname
+											}
+										}
+
                     setSelectedResult(result);
                     setUpdate(Math.random());
                     break;
@@ -12956,7 +13002,16 @@ const AngularWorkflow = (defaultprops) => {
                       data.status !== "SKIPPED" &&
                       data.status !== "WAITING"
                   );
+
                   if (result !== undefined) {
+										const oldstartnode = cy.getElementById(selectedResult.action.id);
+										if (oldstartnode !== undefined && oldstartnode !== null) {
+											const foundname = oldstartnode.data("label")
+											if (foundname !== undefined && foundname !== null) {
+												result.action.label = foundname
+											}
+										}
+
                     setSelectedResult(result);
                     setUpdate(Math.random());
                     break;
