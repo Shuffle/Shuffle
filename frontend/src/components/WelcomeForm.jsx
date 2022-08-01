@@ -109,7 +109,7 @@ const WelcomeForm = (props) => {
 			const data = {
 				"tutorial": "welcome",
 				"firstname": name,
-				"role": role,
+				"company_role": role,
 				"user_id": userId,
 			}
 
@@ -318,6 +318,9 @@ const WelcomeForm = (props) => {
 														This data will be used within the product and NOT be shared unless <a href="https://shuffler.io/docs/organizations#cloud_synchronization" target="_blank" rel="norefferer" style={{color: "#f86a3e", textDecoration: "none"}}>cloud synchronization</a> is configured.
 													</Typography>
 											*/}
+											<Typography variant="h6" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
+												Welcome to Shuffle!
+											</Typography>
 											<Typography variant="body1" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
 												We need some more information in order to understand how we best can help you find relevant Usecases in Shuffle. 
 											</Typography> 
@@ -326,6 +329,7 @@ const WelcomeForm = (props) => {
 															required
 															style={{width: "100%", marginTop: 0,}}
 															placeholder="Name"
+															autoFocus
 															label="Name"
 															type="name"
 															id="standard-required"

@@ -2722,8 +2722,7 @@ const AngularWorkflow = (defaultprops) => {
     	          curaction.parameters[key].options.length > 0 &&
     	          curaction.parameters[key].value === ""
     	        ) {
-    	          curaction.parameters[key].value =
-    	            curaction.parameters[key].options[0];
+    	          curaction.parameters[key].value = curaction.parameters[key].options[0];
     	        }
     	      }
     	    } else {
@@ -2960,6 +2959,8 @@ const AngularWorkflow = (defaultprops) => {
         "uid",
         "uuid",
         "team id",
+        "message id",
+        "message_id",
       ],
       title: ["title", "name", "message"],
       description: ["description", "explanation", "story", "details"],
@@ -2980,7 +2981,7 @@ const AngularWorkflow = (defaultprops) => {
     };
 
     // 1. Find the right synonym
-    // 2.
+    // 2. Replace with an autocomplete if it exists
     var selectedsynonyms = [paramname];
     for (const [key, value] of Object.entries(synonyms)) {
       if (key === paramname || value.includes(paramname)) {

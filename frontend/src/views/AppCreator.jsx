@@ -3850,7 +3850,7 @@ const AppCreator = (defaultprops) => {
               Enable Fileupload
             </Button>
           ) : null}
-          {currentActionMethod === "GET" ? (
+          {/*currentActionMethod === "GET" ? (
             <Button
               color="primary"
               variant={fileDownloadEnabled ? "contained" : "outlined"}
@@ -3872,7 +3872,7 @@ const AppCreator = (defaultprops) => {
             >
 							Download as file
             </Button>
-          ) : null}
+          ) : null*/}
           {fileUploadEnabled ? (
             <TextField
               required
