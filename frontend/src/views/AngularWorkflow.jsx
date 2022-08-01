@@ -2561,7 +2561,7 @@ const AngularWorkflow = (defaultprops) => {
 				//var curaction = JSON.parse(JSON.stringify(data))
 				// FIXME: Trust it to just work?
 				//event.target.data()
-    	  var curaction = workflow.actions.find((a) => a.id === data.id);
+    	  var curaction = workflow.actions.find((a) => a.id === data.id)
     	  if (!curaction || curaction === undefined) {
 					console.log("NOT FOUND DATA: ", event.target.data())
 					if (data.id !== undefined && data.app_name !== undefined) {
@@ -2584,14 +2584,22 @@ const AngularWorkflow = (defaultprops) => {
 					newapps = filteredApps
 				}
 
-    	  const curapp = newapps.find(
-    	    (a) =>
-    	      a.name === curaction.app_name &&
-    	      (a.app_version === curaction.app_version ||
-    	        (a.loop_versions !== null &&
-    	          a.loop_versions.includes(curaction.app_version)))
-    	  );
+				// Check ID first, then names etc
+				// That way it always selects the right IF it exists
+				var curapp = newapps.find((a) =>
+					a.id === curaction.app_id
+				)
 
+				if (curapp === undefined || curapp === null) {
+					console.log("Couldn't find ID - checking with name & version")
+
+					curapp = newapps.find((a) =>
+						a.name === curaction.app_name &&
+						(a.app_version === curaction.app_version ||
+						(a.loop_versions !== null &&
+						a.loop_versions.includes(curaction.app_version)))
+					)
+				}
 
 				if (curaction.template === true) {
 					//newapps.
@@ -2619,7 +2627,7 @@ const AngularWorkflow = (defaultprops) => {
 				}
 
     	  if (!curapp || curapp === undefined) {
-					console.log("APPS: ", newapps)
+					console.log("APPS - couldn't find it: ", newapps)
     	    //alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`);
 
     	    const tmpapp = {
@@ -2640,22 +2648,18 @@ const AngularWorkflow = (defaultprops) => {
 					}
 
     	    setAuthenticationType(
-    	      curapp.authentication.type === "oauth2" &&
-    	        curapp.authentication.redirect_uri !== undefined &&
-    	        curapp.authentication.redirect_uri !== null
-    	        ? {
-    	            type: "oauth2",
-    	            redirect_uri: curapp.authentication.redirect_uri,
-    	            refresh_uri: curapp.authentication.refresh_uri,
-    	            token_uri: curapp.authentication.token_uri,
-    	            scope: curapp.authentication.scope,
-    	            client_id: curapp.authentication.client_id,
-    	            client_secret: curapp.authentication.client_secret,
-    	          }
-    	        : {
-    	            type: "",
-    	          }
-    	    );
+    	      curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null ? {
+								type: "oauth2",
+								redirect_uri: curapp.authentication.redirect_uri,
+								refresh_uri: curapp.authentication.refresh_uri,
+								token_uri: curapp.authentication.token_uri,
+								scope: curapp.authentication.scope,
+								client_id: curapp.authentication.client_id,
+								client_secret: curapp.authentication.client_secret,
+    	      } : {
+    	        	type: "",
+    	      }
+    	    )
 
     	    const requiresAuth = curapp.authentication.required; //&& ((curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null) || (curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null))
     	    setRequiresAuthentication(requiresAuth);
@@ -2672,15 +2676,15 @@ const AngularWorkflow = (defaultprops) => {
     	        findAuthId = curaction.authentication_id;
     	      }
 
-    	      var tmpAuth = JSON.parse(JSON.stringify(newAppAuth));
+    	      const tmpAuth = JSON.parse(JSON.stringify(newAppAuth));
+    	      //var tmpAuth = newAppAuth
 
     	      for (var key in tmpAuth) {
     	        var item = tmpAuth[key];
 
     	        const newfields = {};
     	        for (var filterkey in item.fields) {
-    	          newfields[item.fields[filterkey].key] =
-    	            item.fields[filterkey].value;
+    	          newfields[item.fields[filterkey].key] = item.fields[filterkey].value;
     	        }
 
     	        item.fields = newfields;
@@ -5544,23 +5548,29 @@ const AngularWorkflow = (defaultprops) => {
           findAuthId = newAppData.authentication_id;
         }
 
-				console.log("Found auth: ", findAuthId)
-        var tmpAuth = JSON.parse(JSON.stringify(appAuthentication));
+        const tmpAuth = JSON.parse(JSON.stringify(appAuthentication));
         for (var key in tmpAuth) {
           var item = tmpAuth[key];
 
           const newfields = {};
           for (var filterkey in item.fields) {
-            newfields[item.fields[filterkey].key] =
-              item.fields[filterkey].value;
+            newfields[item.fields[filterkey].key] = item.fields[filterkey].value;
           }
 
           item.fields = newfields;
-          if (item.app.name === app.name) {
+          if (item.app.id === app.id || item.app.name === app.name) {
             authenticationOptions.push(item);
-            if (item.id === findAuthId) {
-              newAppData.selectedAuthentication = item;
-            }
+
+						if (item.id === findAuthId) {
+							newAppData.selectedAuthentication = item
+							newAppData.authentication_id = item.id
+
+						} else if (findAuthId === "") {
+							// Will always be set to the last one if one isn't found. 
+							// Last = timestamp too
+							newAppData.selectedAuthentication = item
+							newAppData.authentication_id = item.id
+						}
           }
         }
 
@@ -5571,7 +5581,8 @@ const AngularWorkflow = (defaultprops) => {
         ) {
           for (var key in authenticationOptions) {
             const option = authenticationOptions[key];
-            if (option.active) {
+
+            if (option.active && newAppData.authentication_id === "") {
               newAppData.selectedAuthentication = option;
               newAppData.authentication_id = option.id;
               break;

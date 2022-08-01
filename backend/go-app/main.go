@@ -1270,6 +1270,10 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 				redirectUrl = url.QueryEscape(fmt.Sprintf("%s/api/v1/login_openid", os.Getenv("BASE_URL")))
 			}
 
+			if len(os.Getenv("SSO_REDIRECT_URL")) > 0 {
+				redirectUrl = url.QueryEscape(fmt.Sprintf("%s/api/v1/login_openid", os.Getenv("SSO_REDIRECT_URL")))
+			}
+
 			state := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("org=%s&challenge=%s&redirect=%s", org.Id, codeChallenge, redirectUrl)))
 
 			// has to happen after initial value is stored

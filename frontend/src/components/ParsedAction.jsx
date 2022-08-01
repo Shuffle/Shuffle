@@ -3211,7 +3211,6 @@ const ParsedAction = (props) => {
                   setSelectedAction(selectedAction);
                   setUpdate(Math.random());
                 } else {
-                  //console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
                   selectedAction.selectedAuthentication = e.target.value;
                   selectedAction.authentication_id = e.target.value.id;
                   setSelectedAction(selectedAction);

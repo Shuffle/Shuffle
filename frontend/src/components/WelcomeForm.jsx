@@ -4,9 +4,12 @@ import Step from "@material-ui/core/Step";
 import StepLabel from "@material-ui/core/StepLabel";
 import Button from "@material-ui/core/Button";
 import Checkbox from '@mui/material/Checkbox';
+
 import SearchIcon from '@mui/icons-material/Search';
 import EmailIcon from '@mui/icons-material/Email';
 import NewReleasesIcon from '@mui/icons-material/NewReleases';
+import ExtensionIcon from '@mui/icons-material/Extension';
+
 import theme from '../theme';
 import {
     FormGroup,
@@ -422,7 +425,9 @@ const WelcomeForm = (props) => {
 															</Button>
                             </div>
                             <div style={{display: "flex"}}>
-															<Button disabled={finishedApps.includes("INTEL")} variant={defaultSearch === "INTEL" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<NewReleasesIcon />} onClick={(event) => { onNodeSelect("INTEL") }} >
+															<Button disabled={finishedApps.includes("INTEL")} variant={defaultSearch === "INTEL" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<ExtensionIcon />} onClick={(event) => { onNodeSelect("INTEL") }} >
+															
+
 																	Intel
 															</Button>
 															<Button disabled={finishedApps.includes("COMMS")} variant={defaultSearch === "EMAIL" ? "contained" : "outlined"} style={buttonStyle} startIcon={<EmailIcon />} onClick={(event) => { onNodeSelect("EMAIL") }} >
