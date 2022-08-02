@@ -98,7 +98,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
-		_, _, err := handleExecution(workflowId, shuffle.Workflow{ExecutingOrg: shuffle.OrgMini{Id: orgId}}, request)
+		_, _, err := handleExecution(workflowId, shuffle.Workflow{ExecutingOrg: shuffle.OrgMini{Id: orgId}}, request, orgId)
 		if err != nil {
 			log.Printf("Failed to execute %s: %s", workflowId, err)
 		}
@@ -831,7 +831,7 @@ func getWorkflowLocal(fileId string, request *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-func handleExecution(id string, workflow shuffle.Workflow, request *http.Request) (shuffle.WorkflowExecution, string, error) {
+func handleExecution(id string, workflow shuffle.Workflow, request *http.Request, orgId string) (shuffle.WorkflowExecution, string, error) {
 	//go func() {
 	//	log.Printf("\n\nPRE TIME: %s\n\n", time.Now().Format("2006-01-02 15:04:05"))
 	//	_ = <-time.After(time.Second * 60)
@@ -850,8 +850,12 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	}
 
 	if len(workflow.ExecutingOrg.Id) == 0 {
-		log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
-		return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
+		if len(orgId) > 0 {
+			workflow.ExecutingOrg.Id = orgId
+		} else {
+			log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
+		}
 	}
 
 	if len(workflow.Actions) == 0 {
@@ -1138,7 +1142,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	user.ActiveOrg.Users = []shuffle.UserMini{}
 	workflow.ExecutingOrg = user.ActiveOrg
-	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request)
+	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request, user.ActiveOrg.Id)
 	if err == nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))

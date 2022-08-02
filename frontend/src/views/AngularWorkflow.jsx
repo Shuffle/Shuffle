@@ -2641,11 +2641,12 @@ const AngularWorkflow = (defaultprops) => {
     	    setSelectedApp(tmpapp);
     	    setSelectedAction(curaction);
     	  } else {
+					//if (curapp.id !== curaction.id) {
+					//	curaction.app_id = curapp.id
+					//	//.valueOf()
+					//}
 					console.log("CURAPP: ", curapp)
-					if (curapp.id !== curaction.id) {
-						curaction.app_id = curapp.id
-						//.valueOf()
-					}
+					curaction.app_id = curapp.id
 
     	    setAuthenticationType(
     	      curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null ? {

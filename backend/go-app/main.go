@@ -2311,7 +2311,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		//start, startok := request.URL.Query()["start"]
 
 		// OrgId: activeOrgs[0].Id,
-		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest)
+		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest, hook.OrgId)
 		if err == nil {
 			/*
 				err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
@@ -3585,7 +3585,7 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 		Body:   ioutil.NopCloser(bytes.NewReader(b)),
 	}
 
-	_, _, err = handleExecution(workflowId, shuffle.Workflow{}, newRequest)
+	_, _, err = handleExecution(workflowId, shuffle.Workflow{}, newRequest, workflow.OrgId)
 	return err
 }
 
@@ -3706,7 +3706,7 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 				return err
 			}
 
-			_, _, err = handleExecution(job.PrimaryItemId, shuffle.Workflow{}, newRequest)
+			_, _, err = handleExecution(job.PrimaryItemId, shuffle.Workflow{}, newRequest, job.OrgId)
 			if err != nil {
 				log.Printf("Failed continuing workflow from cloud user_input: %s", err)
 				return err
@@ -4009,7 +4009,12 @@ func runInitEs(ctx context.Context) {
 					Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
 				}
 
-				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request)
+				orgId := ""
+				if len(activeOrgs) > 0 {
+					orgId = activeOrgs[0].Id
+				}
+
+				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request, orgId)
 				if err != nil {
 					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
 				}
@@ -4869,7 +4874,12 @@ func runInit(ctx context.Context) {
 					Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
 				}
 
-				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request)
+				orgId := ""
+				if len(activeOrgs) > 0 {
+					orgId = activeOrgs[0].Id
+				}
+
+				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request, orgId)
 				if err != nil {
 					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
 				}
