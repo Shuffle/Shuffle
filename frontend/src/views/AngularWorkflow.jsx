@@ -4903,9 +4903,10 @@ const AngularWorkflow = (defaultprops) => {
     }
 
 		var mappedStartnode = ""
-		const edges = cy.edges.jsons()
-		for (var key in edges.length) {
-			const tmp = edges[key]
+		const alledges = cy.edges().jsons()
+		for (var key in alledges) {
+			const tmp = alledges[key]
+			console.log("TMP: ", tmp, tmp.data.source)
 			if (tmp.data.source === trigger.id) {
 				mappedStartnode = tmp.data.target
 				break

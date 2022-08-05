@@ -1504,14 +1504,19 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// Finds the startnode for the specific schedule
 	startNode := ""
-	for _, branch := range workflow.Branches {
-		if branch.SourceID == schedule.Id {
-			startNode = branch.DestinationID
-		}
-	}
+	if schedule.Start != "" {
+		startNode = schedule.Start
+	} else {
 
-	if startNode == "" {
-		startNode = workflow.Start
+		for _, branch := range workflow.Branches {
+			if branch.SourceID == schedule.Id {
+				startNode = branch.DestinationID
+			}
+		}
+
+		if startNode == "" {
+			startNode = workflow.Start
+		}
 	}
 
 	//log.Printf("Startnode: %s", startNode)
