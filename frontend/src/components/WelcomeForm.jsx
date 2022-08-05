@@ -513,7 +513,7 @@ const WelcomeForm = (props) => {
 															}}>
 																	Phishing
 															</Button>
-															<Button disabled={true} variant={defaultSearch === "Detection" ? "contained" : "outlined"} startIcon={<NewReleasesIcon />} style={newButtonStyle}  onClick={() => {
+															<Button variant={defaultSearch === "Detection" ? "contained" : "outlined"} startIcon={<NewReleasesIcon />} style={newButtonStyle}  onClick={() => {
 																setDefaultSearch("Detection")
 																setSelectionOpen(false)
 
@@ -525,7 +525,7 @@ const WelcomeForm = (props) => {
 															}}>
 																	Detection
 															</Button>
-															<Button disabled={true} variant={defaultSearch === "Response" ? "contained" : "outlined"} startIcon={<NewReleasesIcon />} style={newButtonStyle} onClick={() => {
+															<Button variant={defaultSearch === "Response" ? "contained" : "outlined"} startIcon={<NewReleasesIcon />} style={newButtonStyle} onClick={() => {
 																setDefaultSearch("Response")
 																setSelectionOpen(false)
 

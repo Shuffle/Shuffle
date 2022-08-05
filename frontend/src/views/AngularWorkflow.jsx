@@ -264,6 +264,11 @@ const AngularWorkflow = (defaultprops) => {
   const [leftViewOpen, setLeftViewOpen] = React.useState(isMobile ? false : true);
   const [leftBarSize, setLeftBarSize] = React.useState(isMobile ? 0 : 350);
   const [creatorProfile, setCreatorProfile] = React.useState({});
+  const [files, setFiles] = React.useState({
+		"namespaces": [
+			"default",
+		]
+	});
   const [appGroup, setAppGroup] = React.useState([]);
   const [triggerGroup, setTriggerGroup] = React.useState([]);
   const [executionText, setExecutionText] = React.useState("");
@@ -1677,6 +1682,43 @@ const AngularWorkflow = (defaultprops) => {
 		})
   }
 
+	const getFiles = () => {
+    fetch(globalUrl + "/api/v1/files", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for apps :O!");
+          return;
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.files !== undefined && responseJson.files !== null) {
+          setFiles(responseJson);
+        } else {
+          setFiles({"namespaces": []});
+        }
+
+        console.log("NAMESPACES: ", responseJson.namespaces);
+        if (
+          responseJson.namespaces !== undefined &&
+          responseJson.namespaces !== null
+        ) {
+          //setFileNamespaces(responseJson.namespaces);
+        }
+      })
+      .catch((error) => {
+        alert.error(error.toString());
+      });
+  };
+
   const getWorkflow = (workflow_id, sourcenode) => {
     fetch(globalUrl + "/api/v1/workflows/" + workflow_id, {
       method: "GET",
@@ -1745,8 +1787,14 @@ const AngularWorkflow = (defaultprops) => {
 					}
 
 					setTriggerGroup(appsFound)
-        }
-
+        } else { 
+					getAppAuthentication();
+					getEnvironments();
+					getWorkflowExecution(props.match.params.key, "");
+					getAvailableWorkflows(-1);
+					getSettings();
+					getFiles()
+				}
 
         // Appends SUBFLOWS. Does NOT run during normal grabbing of workflows.
         if (sourcenode.id !== undefined) {
@@ -4598,11 +4646,6 @@ const AngularWorkflow = (defaultprops) => {
       setFirstrequest(false);
       getWorkflow(props.match.params.key, {});
       getApps();
-      getAppAuthentication();
-      getEnvironments();
-      getWorkflowExecution(props.match.params.key, "");
-      getAvailableWorkflows(-1);
-      getSettings();
 
       const cursearch =
         typeof window === "undefined" || window.location === undefined
@@ -5327,7 +5370,7 @@ const AngularWorkflow = (defaultprops) => {
       description: "O365 email trigger",
       trigger_type: "EMAIL",
       errors: null,
-      is_valid: cloudSyncEnabled || isCloud ? true : false,
+      is_valid: isCloud ? true : false,
       label: "Email",
       environment: "cloud",
       large_image:
@@ -5341,7 +5384,7 @@ const AngularWorkflow = (defaultprops) => {
       description: "Gmail email trigger",
       trigger_type: "EMAIL",
       errors: null,
-      is_valid: cloudSyncEnabled || isCloud ? true : false,
+      is_valid: isCloud ? true : false,
       label: "Email",
       environment: "cloud",
       large_image:
@@ -11177,6 +11220,7 @@ const AngularWorkflow = (defaultprops) => {
 
 			defaultReturn = <ParsedAction
 				id="rightside_subactions"
+  			files={files}
 				setShowVideo={setShowVideo}
 				isCloud={isCloud}
 				getParents={getParents}

@@ -746,7 +746,7 @@ const Admin = (props) => {
 
     if (orgId.length === 0) {
       alert.error(
-        "Organization ID not defined. Please contact us on https://shuffler.io if this persists logout."
+        "Organization ID not defined (get deals). Please contact us on https://shuffler.io if this persists logout."
       );
       return;
     }
@@ -2693,6 +2693,22 @@ const Admin = (props) => {
           </div>
         ) : (
           <div>
+						{/*
+						<Tooltip
+              title={"Go to Organization document"}
+              style={{}}
+              aria-label={"Organization doc"}
+            >
+              <IconButton
+                style={{ top: -10, right: 50, position: "absolute" }}
+                onClick={() => {
+									console.log("Should go to icon")
+                }}
+              >
+                <FileCopyIcon style={{ color: "rgba(255,255,255,0.8)" }} />
+              </IconButton>
+            </Tooltip>
+						*/}
             <Tooltip
               title={"Copy Organization ID"}
               style={{}}

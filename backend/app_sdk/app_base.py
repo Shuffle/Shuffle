@@ -1024,6 +1024,33 @@ class AppBase:
 
     # Downloads all files from a namespace
     # Currently only working on local version of Shuffle
+    def get_file_category_ids(self, category):
+        org_id = self.full_execution["workflow"]["execution_org"]["id"]
+
+        get_path = "/api/v1/files/namespaces/%s?execution_id=%s&ids=true" % (category, self.full_execution["execution_id"])
+        headers = {
+            "Authorization": "Bearer %s" % self.authorization
+        }
+
+        ret = requests.get("%s%s" % (self.url, get_path), headers=headers)
+        return ret.json()
+        #if ret1.status_code != 200:
+        #    return {
+        #        "success": False,
+        #        "reason": "Status code is %d from backend for category %s" % category,
+        #        "list": [],
+        #    }
+
+        #return {
+        #    "success": True,
+        #    "ids": ret1.json(),
+        #}
+
+    def get_file_namespace_ids(self, namespace):
+        return get_file_category_ids(self, namespace)
+
+    # Downloads all files from a namespace
+    # Currently only working on local version of Shuffle
     def get_file_namespace(self, namespace):
         org_id = self.full_execution["workflow"]["execution_org"]["id"]
 
