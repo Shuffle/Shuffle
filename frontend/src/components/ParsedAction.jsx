@@ -1368,6 +1368,7 @@ const ParsedAction = (props) => {
             var hideBodyButton = "";
             const hideBodyButtonValue = (
               <div
+								key={data.name}
                 style={{
                   marginTop: 25,
                   border: "1px solid rgba(255,255,255,0.7)",
@@ -1960,14 +1961,14 @@ const ParsedAction = (props) => {
               selectedActionParameters[count].options !== null &&
               selectedActionParameters[count].options.length > 0)
             ) {
-							const parsedoptions = data.options !== undefined ? data.options : selectedActionParameters[count].options 
+							const parsedoptions = data.options !== undefined && data.options !== null && data.options.length > 0 ? data.options : selectedActionParameters[count].options 
 
               if (selectedActionParameters[count].value === "") {
                 // && selectedActionParameters[count].required) {
                 // Rofl, dirty workaround :)
                 const e = {
                   target: {
-                    value: parsedoptions.options[0],
+                    value: parsedoptions[0],
                   },
                 };
 

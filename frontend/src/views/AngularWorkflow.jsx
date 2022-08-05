@@ -1703,10 +1703,11 @@ const AngularWorkflow = (defaultprops) => {
         if (responseJson.files !== undefined && responseJson.files !== null) {
           setFiles(responseJson);
         } else {
-          setFiles({"namespaces": []});
+          setFiles({"namespaces": [
+						"default"
+					]});
         }
 
-        console.log("NAMESPACES: ", responseJson.namespaces);
         if (
           responseJson.namespaces !== undefined &&
           responseJson.namespaces !== null
@@ -3180,17 +3181,52 @@ const AngularWorkflow = (defaultprops) => {
     setLastSaved(false);
     const edge = event.target.data();
 
+		console.log("edge: ", edge)
+		if (edge.source === undefined && edge.target === undefined) {
+			return
+		}
+
 		const sourcenode = cy.getElementById(edge.source)
 		const destinationnode = cy.getElementById(edge.target)
 		if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
 		} else {
+			console.log("Is it a trigger? If so, check if it already has a branch and remove it: ", sourcenode.data())
+			if (sourcenode.data("type") === "TRIGGER") {
+				if (sourcenode.data("app_name") !== "Shuffle Workflow" && sourcenode.data("app_name") !== "User Input") {
+					setTimeout(() => {
+						const alledges = cy.edges().jsons()
+						console.log("edges: ", alledges, edge)
+						var targetedge = alledges.findIndex(
+							(data) => data.data.source === edge.source && data.data.id !== edge.id 
+						)
+
+						console.log("Node: ", targetedge)
+						if (targetedge !== -1) {
+							event.target.remove()
+
+							//console.log("Found branch already!")
+							alert.info("Triggers can have exactly one target node")
+							return
+					
+					
+							// name: "Shuffle Workflow",
+							// name: "User Input",
+						} else {
+							console.log("Node doesn't already have one")
+						}
+					}, 50)
+				}
+			}
+
 			const edgeCurve = calculateEdgeCurve(sourcenode.position(), destinationnode.position()) 
 			const currentedge = cy.getElementById(edge.id)
 			if (currentedge !== undefined && currentedge !== null) {
 				currentedge.style('control-point-distance', edgeCurve.distance)
 				currentedge.style('control-point-weight', edgeCurve.weight)
 			}
+
 		}
+
 
     var targetnode = workflow.triggers.findIndex(
       (data) => data.id === edge.target
@@ -3545,10 +3581,10 @@ const AngularWorkflow = (defaultprops) => {
 
     // trigger as source check
     const indexcheck = workflow.triggers.findIndex(
-      (data) => edge.data()["source"] === data.id
+      (data) => edge.data("source") === data.id
     );
     if (indexcheck !== -1) {
-      console.log("Shouldnt remove edge from trigger");
+      console.log("Shouldnt remove edge from trigger? ");
     }
 
     if (edge.data().source !== undefined) {
@@ -4717,12 +4753,13 @@ const AngularWorkflow = (defaultprops) => {
 
 					return false
 				},
-        preview: true,
+        preview: false,
         toggleOffOnLeave: true,
         loopAllowed: function (node) {
           return false;
         },
       });
+      // preview: true,
 
       cy.fit(null, 200);
 
