@@ -3186,6 +3186,13 @@ const AngularWorkflow = (defaultprops) => {
 			return
 		}
 
+		if (edge.readded === true) {
+			console.log("Readded edge - stopping")
+
+			event.target.data("readded", false)
+			return
+		}
+
 		const sourcenode = cy.getElementById(edge.source)
 		const destinationnode = cy.getElementById(edge.target)
 		if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
@@ -3567,11 +3574,47 @@ const AngularWorkflow = (defaultprops) => {
   const onEdgeRemoved = (event) => {
     setLastSaved(false);
 
-
     const edge = event.target;
     if (edge.data("decorator") === true) {
       return;
     }
+
+		// Check if the source is trigger and can start
+		console.log("Removed: ", edge.data())
+    const allNodes = cy.nodes().jsons()
+		for (var key in allNodes) {
+			const curnode = allNodes[key]
+			if (curnode.data.type !== "TRIGGER") {
+				continue
+			}
+
+			if (curnode.data.id === edge.data("source")) {
+				console.log("Found matching trigger source: ", curnode)
+				if (curnode.data.app_name !== "Shuffle Workflow" && curnode.data.app_name !== "User Input") {
+					// If it's started, READD the edge
+					if (curnode.data.status === "running") {
+						console.log("Edge is running - readd it: ", edge.data())
+						
+						// Just making sure it's not running infinitely
+						var newdata = edge.data()
+						newdata.readded = true
+
+						try {
+							cy.add({
+								group: "edges",
+								data: newdata,
+							})
+
+							alert.error("You must STOP the trigger before deleting its branches")
+						} catch (e) {
+							console.log("Failed re-adding edge: ", e)
+						}
+					}
+
+      		//status: "uninitialized",
+				}
+			}
+		}
 
     workflow.branches = workflow.branches.filter(
       (a) => a.id !== edge.data().id
@@ -4814,11 +4857,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const stopSchedule = (trigger, triggerindex) => {
     fetch(
-      globalUrl +
-        "/api/v1/workflows/" +
-        props.match.params.key +
-        "/schedule/" +
-        trigger.id,
+      `${globalUrl}/api/v1/workflows/${props.match.params.key}/schedule/${trigger.id}`,
       {
         method: "DELETE",
         headers: {
@@ -4863,7 +4902,7 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
 
-    alert.info("Attempting to create schedule with name " + trigger.name);
+    alert.info("Creating schedule with name " + trigger.name);
     const data = {
       name: trigger.name,
       frequency: workflow.triggers[triggerindex].parameters[0].value,
@@ -4873,7 +4912,7 @@ const AngularWorkflow = (defaultprops) => {
     };
 
     fetch(
-      globalUrl + "/api/v1/workflows/" + props.match.params.key + "/schedule",
+      `${globalUrl}/api/v1/workflows/${props.match.params.key}/schedule`,
       {
         method: "POST",
         headers: {
