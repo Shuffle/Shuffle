@@ -4902,6 +4902,16 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
 
+		var mappedStartnode = ""
+		const edges = cy.edges.jsons()
+		for (var key in edges.length) {
+			const tmp = edges[key]
+			if (tmp.data.source === trigger.id) {
+				mappedStartnode = tmp.data.target
+				break
+			}
+		}
+
     alert.info("Creating schedule with name " + trigger.name);
     const data = {
       name: trigger.name,
@@ -4909,7 +4919,8 @@ const AngularWorkflow = (defaultprops) => {
       execution_argument: workflow.triggers[triggerindex].parameters[1].value,
       environment: workflow.triggers[triggerindex].environment,
       id: trigger.id,
-    };
+			start: mappedStartnode,
+    }
 
     fetch(
       `${globalUrl}/api/v1/workflows/${props.match.params.key}/schedule`,
