@@ -1,43 +1,43 @@
 version: '3'
 services:
-  frontend:
-    #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:nightly
-    container_name: shuffle-frontend
-    hostname: shuffle-frontend
-    ports:
-      - "${FRONTEND_PORT}:80"
-      - "${FRONTEND_PORT_HTTPS}:443"
-    networks:
-      - shuffle
-    environment:
-      - BACKEND_HOSTNAME=${BACKEND_HOSTNAME}
-    restart: unless-stopped
-    depends_on:
-      - backend
-  backend:
-    #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:nightly
-    container_name: shuffle-backend
-    hostname: ${BACKEND_HOSTNAME}
-    # Here for debugging:
-    ports:
-      - "${BACKEND_PORT}:5001"
-    networks:
-      - shuffle
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
-      - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
-      #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
-    env_file: .env
-    environment:
-      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
-      - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
-      - SHUFFLE_FILE_LOCATION=/shuffle-files
-    restart: unless-stopped
-    #depends_on:
-      #- opensearch #Not necessary because dependancy is handled within the backend itself instead
+  #frontend:
+  #  #build: ./frontend
+  #  image: ghcr.io/frikky/shuffle-frontend:nightly
+  #  container_name: shuffle-frontend
+  #  hostname: shuffle-frontend
+  #  ports:
+  #    - "${FRONTEND_PORT}:80"
+  #    - "${FRONTEND_PORT_HTTPS}:443"
+  #  networks:
+  #    - shuffle
+  #  environment:
+  #    - BACKEND_HOSTNAME=${BACKEND_HOSTNAME}
+  #  restart: unless-stopped
+  #  depends_on:
+  #    - backend
+  #backend:
+  #  #build: ./backend
+  #  image: ghcr.io/frikky/shuffle-backend:nightly
+  #  container_name: shuffle-backend
+  #  hostname: ${BACKEND_HOSTNAME}
+  #  # Here for debugging:
+  #  ports:
+  #    - "${BACKEND_PORT}:5001"
+  #  networks:
+  #    - shuffle
+  #  volumes:
+  #    - /var/run/docker.sock:/var/run/docker.sock
+  #    - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
+  #    - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
+  #    #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
+  #  env_file: .env
+  #  environment:
+  #    #- DOCKER_HOST=tcp://docker-socket-proxy:2375
+  #    - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
+  #    - SHUFFLE_FILE_LOCATION=/shuffle-files
+  #  restart: unless-stopped
+  #  #depends_on:
+  #    #- opensearch #Not necessary because dependancy is handled within the backend itself instead
       #- database
   orborus:
     image: ghcr.io/frikky/shuffle-orborus:nightly

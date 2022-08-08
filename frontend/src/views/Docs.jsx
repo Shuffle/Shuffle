@@ -112,8 +112,9 @@ const Docs = (defaultprops) => {
   const SideBar = {
     minWidth: 250,
     maxWidth: 300,
-    position: "sticky",
-		top: 100,
+    position: "absolute",
+		top: 15,
+		left: 0,
 		maxHeight: "83vh",
 		overflowX: "hidden",
 		overflowY: "auto",
@@ -592,105 +593,107 @@ const Docs = (defaultprops) => {
 		<div style={{
 			color: "rgba(255, 255, 255, 0.65)",
 			flex: "1",
-			maxWidth: mobile ? "100%" : 750,
 			overflow: "hidden",
 			paddingBottom: 100,
 			marginLeft: mobile ? 0 : 50,
 			marginTop: 50, 
 			textAlign: "center",
-			maxWidth: 500,
+			margin: "auto",
+			maxWidth: mobile ? "100%" : 900,
+			maxWidth: mobile ? "100%" : 900,
+			marginTop: 50, 
 		}}>
-			<Typography variant="h4" style={{textAlign: "center",}}>
-				Documentation
-			</Typography>
-			<div style={{display: "flex", marginTop: 25, }}>
-				<CustomButton title="Open a Ticket" icon=<img src="/images/Shuffle_logo_new.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="mailto:support@shuffler.io" />
-				<CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
-			</div>
-
-			<div style={{textAlign: "left"}}>
-				<Typography variant="h6" style={headerStyle} >Tutorial</Typography>
-				<Typography variant="body1">
-					<b>Dive in.</b> Hands-on is the best approach to see how Shuffle can transform your security operations. Our set of tutorials and videos teach you how to build your skills. Check out the <Link to="/docs/getting-started" style={hrefStyle2}>getting started</Link> section to give it a go!
+				<Typography variant="h4" style={{textAlign: "center",}}>
+					Documentation
 				</Typography>
+				<div style={{display: "flex", marginTop: 25, }}>
+					<CustomButton title="Open a Ticket" icon=<img src="/images/Shuffle_logo_new.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="mailto:support@shuffler.io" />
+					<CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
+				</div>
 
-				<Typography variant="h6" style={headerStyle}>Why Shuffle?</Typography>
-				<Typography variant="body1">
-					<b>Security first.</b> We incentivize trying before buying, and give you the full set of tools you need to automate your operations. What's more is we also help you <a href="https://shuffler.io/pricing?tag=docs" target="_blank" style={hrefStyle2}>find usecases</a> that fit your your unique needs. Accessibility is key, and we intend to help every SOC globally use and share their usecases.
-				</Typography>
+				<div style={{textAlign: "left"}}>
+					<Typography variant="h6" style={headerStyle} >Tutorial</Typography>
+					<Typography variant="body1">
+						<b>Dive in.</b> Hands-on is the best approach to see how Shuffle can transform your security operations. Our set of tutorials and videos teach you how to build your skills. Check out the <Link to="/docs/getting-started" style={hrefStyle2}>getting started</Link> section to give it a go!
+					</Typography>
 
-				<Typography variant="h6" style={headerStyle}>Get help</Typography>
-				<Typography variant="body1">
-					<b>Our promise</b> is to make it easier and easier to automate your operations. In some cases however, it may be good with a helping hand. That's where <a href="https://shuffler.io/pricing?tag=docs" target="_blank" style={hrefStyle2}>Shuffle's consultancy and support</a> services come in handy. We help you build and automate your operational processes to a level you haven't seen before with the help of our <a href="https://shuffler.io/usecases?tag=docs" target="_blank" style={hrefStyle2}>usecases</a>.
-				</Typography>
+					<Typography variant="h6" style={headerStyle}>Why Shuffle?</Typography>
+					<Typography variant="body1">
+						<b>Security first.</b> We incentivize trying before buying, and give you the full set of tools you need to automate your operations. What's more is we also help you <a href="https://shuffler.io/pricing?tag=docs" target="_blank" style={hrefStyle2}>find usecases</a> that fit your your unique needs. Accessibility is key, and we intend to help every SOC globally use and share their usecases.
+					</Typography>
 
-				<Typography variant="h6" style={headerStyle}>APIs</Typography>
-				<Typography variant="body1">
-					<b>Learn.</b> We're all about learning, and are continuously creating documentation and video tutorials to better understand how to get started. APIs are an extremely important part of how the internet works today, and our goal is helping every security professional learn about them.
-				</Typography>
+					<Typography variant="h6" style={headerStyle}>Get help</Typography>
+					<Typography variant="body1">
+						<b>Our promise</b> is to make it easier and easier to automate your operations. In some cases however, it may be good with a helping hand. That's where <a href="https://shuffler.io/pricing?tag=docs" target="_blank" style={hrefStyle2}>Shuffle's consultancy and support</a> services come in handy. We help you build and automate your operational processes to a level you haven't seen before with the help of our <a href="https://shuffler.io/usecases?tag=docs" target="_blank" style={hrefStyle2}>usecases</a>.
+					</Typography>
 
-				<Typography variant="h6" style={headerStyle}>Workflow building</Typography>
-				<Typography variant="body1">
-					<b>Build.</b> Creating workflows has never been easier. Jump into things with our <Link to="/getting-started" style={hrefStyle2}>getting Started</Link> section and build to your hearts content. Workflows make it all come together, with an easy to use area.
-				</Typography>
+					<Typography variant="h6" style={headerStyle}>APIs</Typography>
+					<Typography variant="body1">
+						<b>Learn.</b> We're all about learning, and are continuously creating documentation and video tutorials to better understand how to get started. APIs are an extremely important part of how the internet works today, and our goal is helping every security professional learn about them.
+					</Typography>
 
-				<Typography variant="h6" style={headerStyle}>Managing Shuffle</Typography>
-				<Typography variant="body1">
-					<b>Organize.</b> Whether an organization of 1000 or 1, management tools are necessary. In Shuffle we offer full user management, MFA and single-signon options, multi-tenancy and a lot more - for free!
-				</Typography>
-			</div>
+					<Typography variant="h6" style={headerStyle}>Workflow building</Typography>
+					<Typography variant="body1">
+						<b>Build.</b> Creating workflows has never been easier. Jump into things with our <Link to="/getting-started" style={hrefStyle2}>getting Started</Link> section and build to your hearts content. Workflows make it all come together, with an easy to use area.
+					</Typography>
 
-			{/*
-			<Grid container spacing={2} style={{marginTop: 50, }}>
-				{list.map((data, index) => {
-					const item = data.name;
-					if (item === undefined) {
-						return null;
-					}
+					<Typography variant="h6" style={headerStyle}>Managing Shuffle</Typography>
+					<Typography variant="body1">
+						<b>Organize.</b> Whether an organization of 1000 or 1, management tools are necessary. In Shuffle we offer full user management, MFA and single-signon options, multi-tenancy and a lot more - for free!
+					</Typography>
+				</div>
 
-					const path = "/docs/" + item;
-					const newname =
-						item.charAt(0).toUpperCase() +
-						item.substring(1).split("_").join(" ").split("-").join(" ");
+				{/*
+				<Grid container spacing={2} style={{marginTop: 50, }}>
+					{list.map((data, index) => {
+						const item = data.name;
+						if (item === undefined) {
+							return null;
+						}
 
-					const itemMatching = props.match.params.key === undefined ? false : 
-						props.match.params.key.toLowerCase() === item.toLowerCase();
+						const path = "/docs/" + item;
+						const newname =
+							item.charAt(0).toUpperCase() +
+							item.substring(1).split("_").join(" ").split("-").join(" ");
 
-					return (
-						<Grid key={index} item xs={4}>
-							<DocumentationButton key={index} item={newname} link={"/docs/"+data.name} />
-						</Grid>
-					)
-				})}
-			</Grid>
-			*/}
+						const itemMatching = props.match.params.key === undefined ? false : 
+							props.match.params.key.toLowerCase() === item.toLowerCase();
 
-			{/*
-			<TextField
-				required
-				style={{
-					flex: "1", 
-					backgroundColor: theme.palette.inputColor,
-					height: 50, 
-				}}
-				InputProps={{
-					style:{
-						color: "white",
+						return (
+							<Grid key={index} item xs={4}>
+								<DocumentationButton key={index} item={newname} link={"/docs/"+data.name} />
+							</Grid>
+						)
+					})}
+				</Grid>
+				*/}
+
+				{/*
+				<TextField
+					required
+					style={{
+						flex: "1", 
+						backgroundColor: theme.palette.inputColor,
 						height: 50, 
-					},
-				}}
-				placeholder={"Search Knowledgebase"}
-				color="primary"
-				fullWidth={true}
-				type="firstname"
-				id={"Searchfield"}
-				margin="normal"
-				variant="outlined"
-				onChange={(event) => {
-					console.log("Change: ", event.target.value)
-				}}
-			/>
-			*/}
+					}}
+					InputProps={{
+						style:{
+							color: "white",
+							height: 50, 
+						},
+					}}
+					placeholder={"Search Knowledgebase"}
+					color="primary"
+					fullWidth={true}
+					type="firstname"
+					id={"Searchfield"}
+					margin="normal"
+					variant="outlined"
+					onChange={(event) => {
+						console.log("Change: ", event.target.value)
+					}}
+				/>
+				*/}
 		</div>
 
   const postDataBrowser =
@@ -766,20 +769,22 @@ const Docs = (defaultprops) => {
 				{props.match.params.key === undefined ?
 					mainpageInfo
 				:
-        <div id="markdown_wrapper_outer" style={markdownStyle}>
-          <ReactMarkdown
-            id="markdown_wrapper"
-            escapeHtml={false}
-            source={data}
-						style={{marginRight: 150}}
-            renderers={{
-              link: OuterLink,
-              image: Img,
-              code: CodeHandler,
-              heading: Heading,
-            }}
-          />
-        </div>
+        	<div id="markdown_wrapper_outer" style={markdownStyle}>
+						<div style={{maxWidth: 750, minWidth: 750, marginTop: 50, }}>
+							<ReactMarkdown
+								id="markdown_wrapper"
+								escapeHtml={false}
+								source={data}
+								style={{}}
+								renderers={{
+									link: OuterLink,
+									image: Img,
+									code: CodeHandler,
+									heading: Heading,
+								}}
+							/>
+						</div>
+					</div>
 				}
       </div>
     );

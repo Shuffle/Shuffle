@@ -38,6 +38,28 @@ const Search = (props) => {
   const [curTab, setCurTab] = useState(0);
   const iconStyle = { marginRight: 10 };
 
+	useEffect(() => {
+		if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
+			const urlSearchParams = new URLSearchParams(window.location.search)
+			const params = Object.fromEntries(urlSearchParams.entries())
+			const foundTab = params["tab"]
+			if (foundTab !== null && foundTab !== undefined) {
+				for (var key in Object.keys(views)) {
+					const value = views[key]
+					console.log(key, value)
+					if (value === foundTab) {
+						setConfig("", key)
+						break
+					}
+				}
+			}
+		}
+	}, [])
+
+	if (serverside === true) {
+		return null
+	}
+
 	const boxStyle = {
 		color: "white",
 		flex: "1",
@@ -90,24 +112,6 @@ const Search = (props) => {
 			navigate(`/search?tab=${views[newValue]}`+extraQ)
 		}
   }
-
-	useEffect(() => {
-		if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
-			const urlSearchParams = new URLSearchParams(window.location.search)
-			const params = Object.fromEntries(urlSearchParams.entries())
-			const foundTab = params["tab"]
-			if (foundTab !== null && foundTab !== undefined) {
-				for (var key in Object.keys(views)) {
-					const value = views[key]
-					console.log(key, value)
-					if (value === foundTab) {
-						setConfig("", key)
-						break
-					}
-				}
-			}
-		}
-	}, [])
 
 	if (isLoaded === false) {
 		return null

@@ -1046,8 +1046,6 @@ class AppBase:
         #    "ids": ret1.json(),
         #}
 
-    def get_file_namespace_ids(self, namespace):
-        return get_file_category_ids(self, namespace)
 
     # Downloads all files from a namespace
     # Currently only working on local version of Shuffle
@@ -1080,6 +1078,12 @@ class AppBase:
         #        tmp.write(filedata)
 
         return myzipfile
+
+    def get_file_namespace_ids(self, namespace):
+        return self.get_file_category_ids(self, namespace)
+
+    def get_file_category(self, category):
+        return self.get_file_namespace(self, category)
 
     # Things to consider for files:
     # - How can you download / stream a file? 
