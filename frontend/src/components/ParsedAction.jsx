@@ -1306,7 +1306,15 @@ const ParsedAction = (props) => {
               	if (data.name.toLowerCase() === "headers") {
 									console.log("Should show headers field instead with + and -!")
 
-									data.value = data.example
+									// Check if file ID exists
+									//
+									const fileFound = selectedActionParameters.find(param => param.name === "file_id")
+									if (fileFound === undefined || fileFound === null) {
+										data.value = data.example
+									} else {
+										// Purposely unset it if set by default when using files
+										data.value = ""
+									}
 								}
 							}
 
@@ -3115,8 +3123,9 @@ const ParsedAction = (props) => {
 										}
 									}
 
-									console.log("DID REPLACE ACTUALLY WORK?? - Something is buggy.");
+									console.log("DID NAME REPLACE ACTUALLY WORK? - may be missing it in certain triggers");
 									setWorkflow(workflow);
+                  setUpdate(Math.random());
 									baselabel = name
 								}}
 							/>

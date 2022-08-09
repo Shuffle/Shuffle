@@ -3048,6 +3048,7 @@ const AppCreator = (defaultprops) => {
 
                     if (hasFile) {
                       setFileUploadEnabled(true);
+											setActionField("headers", "")
                     }
                   }}
                 >
@@ -3905,37 +3906,41 @@ const AppCreator = (defaultprops) => {
             />
           ) : null}
           <div />
-          <b>Headers</b>: static for the action
-          <TextField
-            required
-            style={{
-              flex: "1",
-              marginRight: "15px",
-              marginTop: "5px",
-              backgroundColor: inputColor,
-            }}
-            fullWidth={true}
-            placeholder={
-              "Accept: application/json\r\nContent-Type: application/json"
-            }
-            margin="normal"
-            variant="outlined"
-            id="standard-required"
-            defaultValue={currentAction["headers"]}
-            multiline
-            rows="2"
-            onChange={(e) => setActionField("headers", e.target.value)}
-            helperText={
-              <span style={{ color: "white", marginBottom: "2px" }}>
-                Headers that are part of the request. Default: EMPTY
-              </span>
-            }
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-          />
+					{fileUploadEnabled ? null :
+						<span>
+							<b>Headers</b>
+							<TextField
+								required
+								style={{
+									flex: "1",
+									marginRight: "15px",
+									marginTop: "5px",
+									backgroundColor: inputColor,
+								}}
+								fullWidth={true}
+								placeholder={
+									"Accept: application/json\r\nContent-Type: application/json"
+								}
+								margin="normal"
+								variant="outlined"
+								id="standard-required"
+								defaultValue={currentAction["headers"]}
+								multiline
+								rows="2"
+								onChange={(e) => setActionField("headers", e.target.value)}
+								helperText={
+									<span style={{ color: "white", marginBottom: "2px" }}>
+										Headers that are part of the request. Default: EMPTY
+									</span>
+								}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+							/>
+						</span>
+					}
           {bodyInfo}
           <Divider
             style={{

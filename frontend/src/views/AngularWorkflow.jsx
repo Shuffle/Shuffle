@@ -6284,9 +6284,13 @@ const AngularWorkflow = (defaultprops) => {
 			const foundInfo = workflow.actions.find(ac => ac.id === selectedAction.id)
 		}
 
+		// Setting an old reference just to use the same memory space elsewhere 
+		// for selectedAction
+		const oldaction = JSON.parse(JSON.stringify(selectedAction))
+
     // Does this one find the wrong one?
-    //var newSelectedAction = selectedAction
-    var newSelectedAction = JSON.parse(JSON.stringify(selectedAction))
+    //var newSelectedAction = JSON.parse(JSON.stringify(selectedAction))
+    var newSelectedAction = selectedAction
     newSelectedAction.name = newaction.name;
     newSelectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
     newSelectedAction.errors = [];
@@ -6295,9 +6299,14 @@ const AngularWorkflow = (defaultprops) => {
 		//console.log(newSelectedAction)
 
 		// Simmple action swap autocompleter
-		if (selectedAction.parameters !== undefined && newSelectedAction.parameters !== undefined && selectedAction.id === newSelectedAction.id) {
-			for (var paramkey in selectedAction.parameters) {
-				const param = selectedAction.parameters[paramkey];
+		if (oldaction.parameters !== undefined && newSelectedAction.parameters !== undefined && oldaction.id === newSelectedAction.id) {
+			var fileid_found = false
+			for (var paramkey in oldaction.parameters) {
+				const param = oldaction.parameters[paramkey];
+			
+				if (param.name === "file_id") {
+					fileid_found = true
+				}
 
 				if (param.value === null || param.value === undefined || param.value.length === 0) {
 					continue
@@ -6309,7 +6318,14 @@ const AngularWorkflow = (defaultprops) => {
 				}
 
 				if (param.name === "headers") {
-					console.log("Swap header? For now, yes")
+					console.log("Swap header? For now, yes. File found: ", fileid_found)
+
+					if (fileid_found) {
+						newSelectedAction.parameters[paramkey].value = ""
+						newSelectedAction.parameters[paramkey].autocompleted = true
+
+						continue
+					}
 					//newSelectedAction.parameters[newParamIndex].value = param.value
 				}
 
@@ -6384,8 +6400,6 @@ const AngularWorkflow = (defaultprops) => {
     //setSelectedActionEnvironment(env)
 
 
-    console.log("NEW ACTION: ", newSelectedAction);
-    setSelectedAction(newSelectedAction);
 		if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
 			const foundActionIndex = workflow.actions.findIndex(actiondata => actiondata.id === newSelectedAction.id)
 			console.log("Found action on index ", foundActionIndex)
@@ -6394,6 +6408,9 @@ const AngularWorkflow = (defaultprops) => {
 				setWorkflow(workflow)
 			}
 		}
+
+    console.log("NEW ACTION: ", newSelectedAction);
+    setSelectedAction(newSelectedAction);
     setUpdate(Math.random());
 
     // FIXME - should change icon-node (descriptor) as well
@@ -6401,7 +6418,7 @@ const AngularWorkflow = (defaultprops) => {
     for (var key in allNodes) {
       const currentNode = allNodes[key];
       if (
-        currentNode.data.attachedTo === selectedAction.id &&
+        currentNode.data.attachedTo === oldaction.id &&
         currentNode.data.isDescriptor
       ) {
         const foundnode = cy.getElementById(currentNode.data.id);
@@ -11569,8 +11586,8 @@ const AngularWorkflow = (defaultprops) => {
 						<div>
 							<iframe 
 								src={`https://www.loom.com/embed/${workflow.video.split("/")[4]}`}
-								frameBorder={false}
-								webkitallowFullscreen={true}
+								frameBorder={"false"}
+								webkitallowfullscreen={"true"}
 								mozallowFullscreen={true}
 								allowFullScreen={true}
 								style={{
@@ -11587,8 +11604,8 @@ const AngularWorkflow = (defaultprops) => {
 							<div>
 								<iframe 
 									src={`https://www.youtube.com/embed/${((new URL(workflow.video)).searchParams).get("v")}`}
-									frameBorder={false}
-									webkitallowFullscreen={true}
+									frameBorder={"false"}
+									webkitallowfullscreen={"true"}
 									mozallowFullscreen={true}
 									allowFullScreen={true}
 									style={{
@@ -14392,8 +14409,8 @@ const AngularWorkflow = (defaultprops) => {
       			</IconButton>
 						<iframe 
 							src={showVideo}
-							frameBorder={false}
-							webkitallowFullscreen={true}
+							frameBorder={"false"}
+							webkitallowfullscreen={"true"}
 							mozallowFullscreen={true}
 							allowFullScreen={true}
 							style={{
