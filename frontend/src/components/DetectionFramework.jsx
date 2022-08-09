@@ -693,7 +693,7 @@ const Framework = (props) => {
     window.location.host === "shuffler.io";
 
   const imgSize = 50;
-	var parsedFrameworkData = frameworkData 
+	var parsedFrameworkData = frameworkData === undefined ? {} : frameworkData 
 
 	// Awful mapping to make sure all access is always there
 	if (frameworkData !== undefined) {
@@ -778,7 +778,7 @@ const Framework = (props) => {
 		}
 
 	} else { 
-		console.log("No frameworkdata for org! Setting default")
+		//console.log("No frameworkdata for org! Setting default")
 		parsedFrameworkData["Cases"] = {}
 		parsedFrameworkData["SIEM"] = {}
 		parsedFrameworkData["Assets"] = {}
@@ -789,7 +789,7 @@ const Framework = (props) => {
 		parsedFrameworkData["EDR & AV"] = {}
 	}
 
-	console.log("Framework - update? ", parsedFrameworkData)
+	//console.log("Framework - update? ", parsedFrameworkData)
 
 	// 0 = automated, 1 = manual
 	const [usecaseType, setUsecaseType] = React.useState(0)
