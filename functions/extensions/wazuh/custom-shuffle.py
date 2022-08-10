@@ -23,7 +23,6 @@ except Exception as e:
 #  </integration>
 
 # Global vars
-
 debug_enabled = True 
 pwd = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 json_alert = {}
@@ -31,6 +30,12 @@ now = time.strftime("%a %b %d %H:%M:%S %Z %Y")
 
 # Set paths
 log_file = 'integrations.log'
+
+try:
+    with open("/tmp/shuffle_start.txt", "w+") as tmp:
+        tmp.write("Script started")
+except:
+    pass
 
 
 def main(args):
@@ -68,6 +73,14 @@ def main(args):
     debug(msg)
 
     debug("# Sending message")
+
+    try:
+        with open("/tmp/shuffle_end.txt", "w+") as tmp:
+            tmp.write("Script done pre-msg sending")
+    except:
+        pass
+
+
     send_msg(msg, webhook)
 
 
