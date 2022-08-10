@@ -2744,6 +2744,21 @@ const Admin = (props) => {
                 <FileCopyIcon style={{ color: "rgba(255,255,255,0.8)" }} />
               </IconButton>
             </Tooltip>
+						{selectedOrganization.defaults !== undefined && selectedOrganization.defaults.documentation_reference !== undefined && selectedOrganization.defaults.documentation_reference !== null && selectedOrganization.defaults.documentation_reference.includes("http") ?
+							<Tooltip
+								title={"Open Organization Documentation"}
+                style={{ top: -10, right: 50, position: "absolute" }}
+								aria-label={"Open org docs"}
+							>
+								<a href={selectedOrganization.defaults.documentation_reference} target="_blank" style={{ textDecoration: "none", }} rel="noopener noreferrer">
+									<IconButton
+                		style={{ top: -10, right: 50, position: "absolute" }}
+									>
+										<DescriptionIcon style={{ color: "rgba(255,255,255,0.8)" }} />
+									</IconButton>
+								</a>
+							</Tooltip>
+						: null}
             {selectedOrganization.name.length > 0 ? (
               <OrgHeader
                 isCloud={isCloud}
@@ -2782,6 +2797,7 @@ const Admin = (props) => {
             <a
               href="https://shuffler.io/docs/organizations#cloud_sync"
               target="_blank"
+							rel="noopener noreferrer"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               cloud sync
@@ -3423,6 +3439,7 @@ const Admin = (props) => {
             Add, edit, block or change passwords.{" "}
             <a
               target="_blank"
+							rel="noopener noreferrer"
               href="https://shuffler.io/docs/organizations#user_management"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
@@ -3799,6 +3816,7 @@ const Admin = (props) => {
               Files from Workflows.{" "}
               <a
                 target="_blank"
+								rel="noopener noreferrer"
                 href="https://shuffler.io/docs/organizations#files"
                 style={{ textDecoration: "none", color: "#f85a3e" }}
               >

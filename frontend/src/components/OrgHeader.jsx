@@ -97,6 +97,15 @@ const OrgHeader = (props) => {
       ? ""
       : selectedOrganization.defaults.notification_workflow
   );
+
+  const [documentationReference, setDocumentationReference] = React.useState(
+    selectedOrganization.defaults === undefined
+      ? ""
+      : selectedOrganization.defaults.documentation_reference === undefined ||
+        selectedOrganization.defaults.documentation_reference.length === 0
+      ? ""
+      : selectedOrganization.defaults.documentation_reference
+  );
   const [openidClientId, setOpenidClientId] = React.useState(
     selectedOrganization.sso_config === undefined
       ? ""
@@ -245,6 +254,7 @@ const OrgHeader = (props) => {
               workflow_download_repo: workflowDownloadUrl,
               workflow_download_branch: workflowDownloadBranch,
               notification_workflow: notificationWorkflow,
+              documentation_reference: documentationReference,
             },
             {
               sso_entrypoint: ssoEntrypoint,
@@ -449,6 +459,38 @@ const OrgHeader = (props) => {
                 />
               </span>
             </Grid> 
+            <Grid item xs={12} style={{}}>
+              <span>
+                <Typography>Org Documentation reference</Typography>
+                <TextField
+                  required
+                  style={{
+                    flex: "1",
+                    marginTop: "5px",
+                    marginRight: "15px",
+                    backgroundColor: theme.palette.inputColor,
+                  }}
+                  fullWidth={true}
+                  type="name"
+                  id="outlined-with-placeholder"
+                  margin="normal"
+                  variant="outlined"
+                  placeholder="URL to an external reference for this implementation"
+                  value={documentationReference}
+                  onChange={(e) => {
+                    setDocumentationReference(e.target.value);
+                  }}
+                  InputProps={{
+                    classes: {
+                      notchedOutline: classes.notchedOutline,
+                    },
+                    style: {
+                      color: "white",
+                    },
+                  }}
+                />
+              </span>
+            </Grid>
 						{isCloud ? null : 
 						<Grid item xs={12} style={{marginTop: 50 }}>
 							<Typography variant="h4" style={{textAlign: "center",}}>OpenID connect</Typography>

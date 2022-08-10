@@ -834,6 +834,18 @@ func checkSwarmService(ctx context.Context) {
 
 // Initial loop etc
 func main() {
+	startupDelay := os.Getenv("SHUFFLE_ORBORUS_STARTUP_DELAY")
+	if len(startupDelay) > 0 {
+		log.Printf("[DEBUG] Setting startup delay to %#v", startupDelay)
+
+		tmpInt, err := strconv.Atoi(startupDelay)
+		if err == nil {
+			time.Sleep(time.Duration(tmpInt) * time.Second)
+		} else {
+			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_STARTUP_DELAY must be a number, not %s", startupDelay)
+		}
+	}
+
 	log.Println("[INFO] Setting up execution environment")
 
 	//FIXME

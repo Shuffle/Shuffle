@@ -3712,7 +3712,11 @@ const AppCreator = (defaultprops) => {
                       headers += key + "=" + value + "\n";
                     }
 
-                    setActionField("headers", headers.trim());
+										try {
+                    	setActionField("headers", headers.trim());
+										} catch (e) {
+											console.log("Failed to parse header: ", e)
+										}
                   }
 
                   if (request.body !== undefined && request.body !== null) {

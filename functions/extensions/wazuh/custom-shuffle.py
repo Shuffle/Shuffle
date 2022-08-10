@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Created by Shuffle, AS. <frikky@shuffler.io>.
 # Based on the Slack integration using Webhooks
 
@@ -24,7 +24,7 @@ except Exception as e:
 
 # Global vars
 
-debug_enabled = False
+debug_enabled = True 
 pwd = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 json_alert = {}
 now = time.strftime("%a %b %d %H:%M:%S %Z %Y")
@@ -56,8 +56,8 @@ def main(args):
     debug("# Processing alert")
     try:
         debug(json_alert)
-    except:
-        debug("Failed getting json_alert")
+    except Exception as e:
+        debug("Failed getting json_alert %s" % e)
         sys.exit(1)
 
     debug("# Generating message")
