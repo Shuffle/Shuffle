@@ -30,7 +30,7 @@ json_alert = {}
 now = time.strftime("%a %b %d %H:%M:%S %Z %Y")
 
 # Set paths
-log_file = '{0}/logs/integrations.log'.format(pwd)
+log_file = 'integrations.log'
 
 
 def main(args):
@@ -47,10 +47,18 @@ def main(args):
     debug(alert_file_location)
 
     # Load alert. Parse JSON object.
-    with open(alert_file_location) as alert_file:
-        json_alert = json.load(alert_file)
+    try:
+        with open(alert_file_location) as alert_file:
+            json_alert = json.load(alert_file)
+    except:
+        debug("# Alert file %s doesn't exist" % alert_file_location)
+
     debug("# Processing alert")
-    debug(json_alert)
+    try:
+        debug(json_alert)
+    except:
+        debug("Failed getting json_alert")
+        sys.exit(1)
 
     debug("# Generating message")
     msg = generate_msg(json_alert)
@@ -138,7 +146,7 @@ def generate_msg(alert):
 
 def send_msg(msg, url):
     headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8'}
-    res = requests.post(url, data=msg, headers=headers)
+    res = requests.post(url, data=msg, headers=headers, verify=False)
     debug(res)
 
 
@@ -160,9 +168,18 @@ if __name__ == "__main__":
             bad_arguments = True
 
         # Logging the call
+        try:
+            f = open(log_file, 'a')
+        except:
+            f = open(log_file, 'w+')
+            f.write("")
+            f.close()
+
         f = open(log_file, 'a')
         f.write(msg + '\n')
         f.close()
+
+
 
         if bad_arguments:
             debug("# Exiting: Bad arguments.")
