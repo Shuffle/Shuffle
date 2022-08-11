@@ -29,7 +29,7 @@ json_alert = {}
 now = time.strftime("%a %b %d %H:%M:%S %Z %Y")
 
 # Set paths
-log_file = 'integrations.log'
+log_file = '{0}/logs/integrations.log'.format(pwd)
 
 try:
     with open("/tmp/shuffle_start.txt", "w+") as tmp:
@@ -158,9 +158,10 @@ def generate_msg(alert):
 
 
 def send_msg(msg, url):
+    debug("# In send msg")
     headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8'}
     res = requests.post(url, data=msg, headers=headers, verify=False)
-    debug(res)
+    debug("# After send msg: %s" % res)
 
 
 if __name__ == "__main__":
@@ -175,7 +176,8 @@ if __name__ == "__main__":
                 sys.argv[3],
                 sys.argv[4] if len(sys.argv) > 4 else '',
             )
-            debug_enabled = (len(sys.argv) > 4 and sys.argv[4] == 'debug')
+            #debug_enabled = (len(sys.argv) > 4 and sys.argv[4] == 'debug')
+            debug_enabled = True
         else:
             msg = '{0} Wrong arguments'.format(now)
             bad_arguments = True
@@ -192,10 +194,8 @@ if __name__ == "__main__":
         f.write(msg + '\n')
         f.close()
 
-
-
         if bad_arguments:
-            debug("# Exiting: Bad arguments.")
+            debug("# Exiting: Bad arguments. Inputted: %s" % sys.argv)
             sys.exit(1)
 
         # Main function
