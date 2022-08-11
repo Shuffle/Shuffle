@@ -23,7 +23,7 @@ except Exception as e:
 #  </integration>
 
 # Global vars
-debug_enabled = True 
+debug_enabled = False 
 pwd = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 json_alert = {}
 now = time.strftime("%a %b %d %H:%M:%S %Z %Y")
