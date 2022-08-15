@@ -410,6 +410,11 @@ export const validateJson = (showResult) => {
   try {
     if (!showResult.includes("{") && !showResult.includes("[")) {
       jsonvalid = false
+
+			return {
+				valid: jsonvalid,
+				result: showResult,
+			};
     }
   } catch (e) {
     showResult = showResult.split("'").join('"');
@@ -1127,12 +1132,12 @@ const Workflows = (props) => {
   const exportAllWorkflows = (allWorkflows) => {
 		for (var i = 0; i < allWorkflows.length; i++) {
 			setTimeout(() => {
-				console.log(workflows[i].name)
-      	exportWorkflow(workflows[i], false)
+				console.log(allWorkflows[i].name)
+      	exportWorkflow(allWorkflows[i], false)
 			}, i * 200);
     }
 
-    alert.info(`exporting and keeping original for all ${workflows.length} workflows`);
+    alert.info(`exporting and keeping original for all ${allWorkflows.length} workflows`);
   };
 
   const deduplicateIds = (data) => {

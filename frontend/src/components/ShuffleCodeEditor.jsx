@@ -227,6 +227,34 @@ const CodeEditor = (props) => {
 		// console.log(dollar_occurences)
 	}
 
+	const fixVariable = (inputvariable) => {
+		if (inputvariable === undefined || inputvariable === null) {
+			return inputvariable
+		}
+
+		if (!inputvariable.includes(".")) {
+			return inputvariable
+		}
+
+		const itemsplit = inputvariable.split(".")
+		var newitem = []
+		var removedIndexes = 0
+		for (var key in itemsplit) {
+			var tmpitem = itemsplit[key]
+			if (tmpitem.startsWith("#")) {
+				removedIndexes += tmpitem.length-1
+				tmpitem = "#"
+			}
+
+			newitem.push(tmpitem)
+		}
+
+		//console.log("Fixed item: ", newitem, "removed length: ", removedIndexes)
+
+		return newitem.join(".")
+		//return inputvariable
+	}
+
 	const highlight_variables = (value) => {
 		// value.markText({line:0, ch:2}, {line:0, ch:8}, {"css": "background-color: #f85a3e; border-radius: 4px; color: white"})
 		// value.markText({line:0, ch:13}, {line:0, ch:15}, {"css": "background-color: #f85a3e; border-radius: 4px; color: white"})
@@ -252,6 +280,12 @@ const CodeEditor = (props) => {
 			// console.log(current_code_line)
 
 			var variable_occurence = current_code_line.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+
+			if (variable_occurence === null || variable_occurence === undefined) {
+				console.log("No variables found. Returning")
+				continue
+				//return
+			}
 
 			// console.log(variable_occurence)
 			// console.log()
@@ -280,15 +314,16 @@ const CodeEditor = (props) => {
 				}
 			} catch (e) {}
 
-			//console.log(dollar_occurence_len)
+			//console.log("VARIABLES: ", availableVariables)
+
 
 			try{
 				// console.log(variable_occurence)
 				for (var occ = 0; occ < variable_occurence.length; occ++){
 					// value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; border-radius: 4px; color: white"})
 					// var correctVariable = actionlist.find(action => action.autocomplete.toLowerCase() === variable_occurence[occ].slice(1,).toLowerCase())
-					var correctVariable = availableVariables.includes(variable_occurence[occ].toLowerCase())
-					// console.log(actionlist)
+					const fixedVariable = fixVariable(variable_occurence[occ])
+					var correctVariable = availableVariables.includes(fixedVariable)
 					if(!correctVariable) {
 						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: rgb(248, 106, 62, 0.9); padding-top: 2px; padding-bottom: 2px; color: white"})
 					}
@@ -297,7 +332,9 @@ const CodeEditor = (props) => {
 					}
 					// console.log(correctVariables)
 				}
-			} catch (e) {}
+			} catch (e) {
+				console.log("Error in color highlighting: ", e)
+			}
 		}
 	}
 
@@ -342,6 +379,10 @@ const CodeEditor = (props) => {
 	const expectedOutput = (input) => {
 		
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+		if (found === null || found === undefined) {
+			console.log("No output found!")
+			return
+		}
 
 		//console.log(found)
 
@@ -350,22 +391,24 @@ const CodeEditor = (props) => {
 		try { 
 			for (var i = 0; i < found.length; i++) {
 				try {
-					found[i] = found[i].toLowerCase()
+					//found[i] = found[i].toLowerCase()
+					const fixedVariable = fixVariable(found[i])
+					//var correctVariable = availableVariables.includes(fixedVariable)
 
 					var valuefound = false
 					for (var j = 0; j < actionlist.length; j++) {
-						if(found[i].slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
+						if(fixedVariable.slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
 							valuefound = true 
 							try {
-								input = input.replace(found[i], JSON.stringify(actionlist[j].example));
+								input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
 							} catch (e) { 
-								input = input.replace(found[i], actionlist[j].example)
+								input = input.replace(fixedVariable, actionlist[j].example)
 							}
 						} else {
 						}
 					}
 
-					if (!valuefound && availableVariables.includes(found[i])) {
+					if (!valuefound && availableVariables.includes(fixedVariable)) {
 						var shouldbreak = false
 						for (var k=0; k < actionlist.length; k++){
 							var parsedPaths = []
@@ -375,7 +418,7 @@ const CodeEditor = (props) => {
 
 							for (var key in parsedPaths) {
 								const fullpath = "$"+actionlist[k].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
-								if (fullpath === found[i]) {
+								if (fullpath === fixedVariable) {
 									//if (actionlist[k].example === undefined) {
 									//	actionlist[k].example = "TMP"
 									//}
@@ -396,7 +439,7 @@ const CodeEditor = (props) => {
 										}
 									}
 
-									input = input.replace(found[i], new_input)
+									input = input.replace(fixedVariable, new_input)
 
 									//} catch (e) {
 									//	input = input.replace(found[i], actionlist[k].example)
@@ -417,6 +460,7 @@ const CodeEditor = (props) => {
 				}
 			}
 		} catch (e) {
+			console.log("Outer replace error: ", e)
 
 		}
 
@@ -1106,7 +1150,7 @@ const CodeEditor = (props) => {
 								color: "white"
 							}}
 						>
-							Output
+							Expected Output
 						</span>
 					</DialogTitle>
 				}

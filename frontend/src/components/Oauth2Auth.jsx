@@ -53,6 +53,16 @@ const MenuProps = {
   getContentAnchorEl: null,
 };
 
+const registeredApps = [
+	"gmail",
+	"slack",
+	"webex",
+	"zoho_desk",
+	"outlook_graph",
+	"microsoft_teams",
+	"microsoft_teams_user_access",
+]
+
 const AuthenticationOauth2 = (props) => {
   const {
     saveWorkflow,
@@ -65,6 +75,7 @@ const AuthenticationOauth2 = (props) => {
     setSelectedAction,
     setNewAppAuth,
     setAuthenticationModalOpen,
+		isCloud,
   } = props;
   const theme = useTheme();
 
@@ -77,6 +88,7 @@ const AuthenticationOauth2 = (props) => {
       authenticationType.client_secret !== null &&
       authenticationType.client_secret.length > 0
   );
+
   const [clientId, setClientId] = React.useState(
     defaultConfigSet ? authenticationType.client_id : ""
   );
@@ -337,6 +349,87 @@ const AuthenticationOauth2 = (props) => {
           </a>
           <div />
         </span>
+
+				{isCloud && registeredApps.includes(selectedApp.name.toLowerCase()) ? 
+					<span>
+						<Button
+							style={{
+								marginBottom: 20,
+								marginTop: 20,
+								borderRadius: theme.palette.borderRadius,
+							}}
+          		disabled={
+            		clientSecret.length > 0 || clientId.length > 0
+							}
+							variant="contained"
+							fullWidth
+							onClick={() => {
+								// Hardcode some stuff?
+								// This could prolly be added to the app itself with a "default" client ID 
+								console.log("APP: ", selectedApp)
+								if (selectedApp.name.toLowerCase() == "outlook_graph") {
+									handleOauth2Request(
+										"bb4bff85-0d0b-4f5d-8a69-3cee8029b11a",
+										"",
+										"https://graph.microsoft.com",
+										["Mail.ReadWrite"],
+									);
+								} else if (selectedApp.name.toLowerCase() == "gmail") {
+									handleOauth2Request(
+										"253565968129-c0a35knic7q1pdk6i6qk9gdkvr07ci49.apps.googleusercontent.com",
+										"",
+										"https://gmail.googleapis.com",
+										["https://www.googleapis.com/auth/gmail.modify",
+											"https://www.googleapis.com/auth/gmail.send",
+											"https://www.googleapis.com/auth/gmail.insert",
+											"https://www.googleapis.com/auth/gmail.compose"]
+									)
+								} else if (selectedApp.name.toLowerCase() == "zoho_desk") {
+									handleOauth2Request(
+										"1000.ZR5MHUW6B0L6W1VUENFGIATFS0TOJT",
+										"",
+										"https://desk.zoho.com",
+										["Desk.tickets.READ",
+										"Desk.tickets.UPDATE",
+										"Desk.tickets.DELETE",
+										"Desk.tickets.CREATE"]
+									)
+								} else if (selectedApp.name.toLowerCase() == "slack") {
+									handleOauth2Request(
+										"151779186901.2448678750935",
+										"",
+										"https://slack.com",
+										["admin", "chat:write", "im:read", "im:write", "search:read", "usergroups:read", "usergroups:write"]
+									)
+								} else if (selectedApp.name.toLowerCase() == "webex") {
+									handleOauth2Request(
+										"Cab184f3d7271f540443c79b5b79845e3387abbbdb3db4233a87ea3a5432fb3d5",
+										"",
+										"https://webexapis.com",
+										["spark:all"]
+									)
+								} else if (selectedApp.name.toLowerCase().includes("microsoft_teams")) {
+									handleOauth2Request(
+										"31cb4c84-658e-43d5-ae84-22c9142e967a",
+										"",
+										"https://graph.microsoft.com",
+										["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read"]
+									)
+								}
+							}}
+							color="primary"
+						>
+							{buttonClicked ? (
+								<CircularProgress style={{ color: "white" }} />
+							) : (
+								"Auto-authenticate"
+							)}
+						</Button>
+						<Typography style={{textAlign: "center", marginTop: 0, marginBottom: 10, }}>
+							OR
+						</Typography>
+					</span>
+				: null}
         {/*<TextField
 						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
@@ -580,9 +673,11 @@ const AuthenticationOauth2 = (props) => {
           {buttonClicked ? (
             <CircularProgress style={{ color: "white" }} />
           ) : (
-            "Oauth2 request"
+            "Manually Authenticate"
           )}
         </Button>
+
+
 
         {defaultConfigSet ? (
           <span style={{}}>

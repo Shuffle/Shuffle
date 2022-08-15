@@ -14268,6 +14268,7 @@ const AngularWorkflow = (defaultprops) => {
               setSelectedAction={setSelectedAction}
               setNewAppAuth={setNewAppAuth}
               setAuthenticationModalOpen={setAuthenticationModalOpen}
+							isCloud={isCloud}
             />
           ) : (
             <AuthenticationData app={selectedApp} />

@@ -1301,6 +1301,10 @@ const ParsedAction = (props) => {
                 data.value = data.example;
               }
 
+							// In case of data.example
+							if (data.value === undefined || data.value === null) {
+								data.value = ""
+							}
 
 							if (data.value.length === 0) {
               	if (data.name.toLowerCase() === "headers") {
