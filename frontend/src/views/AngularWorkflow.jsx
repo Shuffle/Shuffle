@@ -419,7 +419,7 @@ const AngularWorkflow = (defaultprops) => {
 					console.log("RESPONSE FOR APP: ", responseJson.reason);
 					
 					if (responseJson.reason !== undefined && responseJson.reason !== undefined && responseJson.reason.length > 0) {
-						if (!responseJson.reason.includes("404: Not Found") && responseJson.reason.length > 50) {
+						if (!responseJson.reason.includes("404: Not Found") && responseJson.reason.length > 25) {
 							selectedApp.documentation = responseJson.reason
 							setSelectedApp(selectedApp)
 							setUpdate(Math.random())
@@ -1654,7 +1654,7 @@ const AngularWorkflow = (defaultprops) => {
   };
 
 	// Searhc by username, userId, workflow, appId should all work
-	const getUserProfile = (username) => {
+	const getUserProfile = (username, rerun) => {
     fetch(`${globalUrl}/api/v1/users/creators/${username}`, {
       method: "GET",
       headers: {
@@ -1675,6 +1675,15 @@ const AngularWorkflow = (defaultprops) => {
 			if (responseJson.success !== false) {
 				console.log("Found creator: ", responseJson)
 				setCreatorProfile(responseJson)
+			} else {
+				console.log("Couldn't find the creator profile (rerun?): ", responseJson, rerun)
+				// If the current user is any of the Shuffle Creators 
+				// AND the workflow doesn't have an owner: allow editing.
+				// else: Allow suggestions?
+				//console.log("User: ", userdata)
+				//if (rerun !== true) {
+				//	getUserProfile(userdata.id, true)
+				//}
 			}
 		})
 		.catch((error) => {
@@ -1758,10 +1767,11 @@ const AngularWorkflow = (defaultprops) => {
         if (responseJson.public) {
           //alert.info("This workflow is public. Save the workflow to use it in your organization.");
 				
+  				setAuthLoaded(true)
 					console.log("RESP: ", responseJson)
 					if (Object.getOwnPropertyNames(creatorProfile).length === 0) {
 						//getUserProfile("frikky") 
-						getUserProfile(responseJson.id) 
+						getUserProfile(responseJson.id, false) 
 					}
 
 					//{appGroup.map((data, index) => {
@@ -11444,10 +11454,13 @@ const AngularWorkflow = (defaultprops) => {
   //}}>Execute websocket</Button>
   //
 		
-	
+	// A list used for FRONTEND handling of whether a public workflow
+	// should be change-able
+	const allowList = ["frikky", "m1nk-code", "DavidtheGoliath"]
+	// console.log(allowList, userdata.public_username)
 
   const leftView = workflow.public === true ? 
-			<div style={{minHeight: "80vh", height: "100%", minWidth: leftBarSize-70, maxWidth: leftBarSize-70, zIndex: 0, padding: 35, borderRight: "1px solid rgba(91,96,100,1)",}}> 
+			<div style={{minHeight: "82vh", maxHeight: "82vh", height: "100%", minWidth: leftBarSize-70, maxWidth: leftBarSize-70, zIndex: 0, padding: 35, borderRight: "1px solid rgba(91,96,100,1)", overflowY: "auto",}}> 
 				<Typography variant="h6" color="textPrimary" style={{
 						margin: "0px 0px 0px 0px",
 					}}
@@ -11635,18 +11648,33 @@ const AngularWorkflow = (defaultprops) => {
 				</div>
 			: null}
 
-			{userdata.avatar === creatorProfile.github_avatar && userdata.avatar !== undefined ? 
+			{userdata.avatar !== undefined && (userdata.avatar === creatorProfile.github_avatar || allowList.includes(userdata.public_username)) ?
 				<div style={{marginTop: 50, }}>
+					<Typography variant="body2" color="textSecondary">
+						You can see these buttons because you may have the correct access rights as a creator to help modify this workflow. 
+					</Typography>
 					<Button
 						color="primary"
 						variant="contained"
 						fullWidth
 						style={{marginTop: 15, }}
 						onClick={() => {
+							// Further checks are being done on the backend
+							// Even if the user can "edit" a workflow on the frontend,
+							// that doesn't necessarily mean anything
+
 							//setEditWorkflowDetails(true)
 							workflow.public = false
   						setUserediting(true)
 							setWorkflow(workflow)
+
+							getAppAuthentication();
+							getEnvironments();
+							getWorkflowExecution(props.match.params.key, "");
+							getAvailableWorkflows(-1);
+							getSettings();
+							getFiles()
+
 							setUpdate(Math.random());
 						}}
 					>

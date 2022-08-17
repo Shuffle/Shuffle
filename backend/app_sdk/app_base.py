@@ -145,6 +145,37 @@ def flatten(a):
     flat_list = [a for xs in xss for a in xs]
     return flat_list
 
+@shuffle_filters.register
+def csv_parse(a):
+    a = str(a)
+    splitdata = a.split("\n")
+    columns = []
+    if len(splitdata) > 1:
+        columns = splitdata[0].split(",")
+    else:
+        return a.split("\n")
+
+    allitems = []
+    cnt = -1
+    for item in splitdata[1:]:
+        cnt += 1
+        commasplit = item.split(",")
+
+        fullitem = {}
+        fullitem["unparsed"] = item
+        fullitem["index"] = cnt 
+        fullitem["parsed"] = {}
+        if len(columns) != len(commasplit):
+            allitems.append(fullitem)
+            continue
+
+        for key in range(len(columns)):
+            fullitem["parsed"][columns[key]] = commasplit[key]
+        
+        allitems.append(fullitem)
+
+    return allitems
+
 #print(standard_filter_manager.filters)
 #print(shuffle_filters.filters)
 #print(Liquid("{{ '10' | plus: 1}}", filters=shuffle_filters.filters).render())
