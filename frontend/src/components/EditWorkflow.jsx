@@ -15,7 +15,6 @@ import {
   Divider,
   Button,
   TextField,
-  FormControl,
   IconButton,
   Menu,
   MenuItem,
@@ -32,6 +31,11 @@ import {
 	OutlinedInput,
 	Checkbox,
 	ListItemText,
+	Radio,
+	RadioGroup,
+	FormControl,
+	FormLabel,
+
 } from "@material-ui/core";
 
 import {
@@ -107,6 +111,7 @@ const EditWorkflow = (props) => {
 						required
             margin="dense"
             defaultValue={innerWorkflow.name}
+						label="Name"
             autoFocus
             fullWidth
           />
@@ -124,6 +129,7 @@ const EditWorkflow = (props) => {
             defaultValue={innerWorkflow.description}
             placeholder="Description"
             multiline
+						label="Description"
             margin="dense"
             fullWidth
           />
@@ -206,30 +212,50 @@ const EditWorkflow = (props) => {
 
   				{showMoreClicked === true ? 
 						<span style={{marginTop: 25, }}>
-							<TextField
-								onBlur={(event) => {
-									if (event.target.value.toLowerCase() === "test") {
-										innerWorkflow.status = "test"
-									} else if (event.target.value.toLowerCase() === "production" || event.target.value.toLowerCase() === "prod") {
-										innerWorkflow.status = "production"
-									} else {
-										innerWorkflow.status = "test"
-									}
 
-									setInnerWorkflow(innerWorkflow)
-								}}
-								InputProps={{
-									style: {
-										color: "white",
-									},
-								}}
-								color="primary"
-								defaultValue={innerWorkflow.status}
-								placeholder="The status of the workflow. Can be test or production."
-								rows="1"
-								margin="dense"
-								fullWidth
-							/>
+							<FormControl style={{marginTop: 15, }}>
+								<FormLabel id="demo-row-radio-buttons-group-label">Status</FormLabel>
+									<RadioGroup
+										row
+										aria-labelledby="demo-row-radio-buttons-group-label"
+										name="row-radio-buttons-group"
+										defaultValue={innerWorkflow.status}
+										onChange={(e) => {
+											console.log("Data: ", e.target.value)
+											
+											innerWorkflow.workflow_type = e.target.value
+											setInnerWorkflow(innerWorkflow)
+										}}
+									>
+										<FormControlLabel value="test" control={<Radio />} label="Test" />
+										<FormControlLabel value="production" control={<Radio />} label="Production" />
+
+									</RadioGroup>
+							</FormControl>
+							<div />
+
+							<FormControl style={{marginTop: 15, }}>
+								<FormLabel id="demo-row-radio-buttons-group-label">Type</FormLabel>
+									<RadioGroup
+										row
+										aria-labelledby="demo-row-radio-buttons-group-label"
+										name="row-radio-buttons-group"
+										defaultValue={innerWorkflow.workflow_type}
+										onChange={(e) => {
+											console.log("Data: ", e.target.value)
+											
+											innerWorkflow.workflow_type = e.target.value
+											setInnerWorkflow(innerWorkflow)
+										}}
+									>
+										<FormControlLabel value="trigger" control={<Radio />} label="Trigger" />
+										<FormControlLabel value="subflow" control={<Radio />} label="Subflow" />
+										<FormControlLabel value="standalone" control={<Radio />} label="Standalone" />
+
+									</RadioGroup>
+							</FormControl>
+
+
 							<TextField
 								onBlur={(event) => {
 									innerWorkflow.blogpost = event.target.value
@@ -244,6 +270,7 @@ const EditWorkflow = (props) => {
 								defaultValue={innerWorkflow.blogpost}
 								placeholder="A blogpost or other reference for how this work workflow was built, and what it's for."
 								rows="1"
+								label="blogpost"
 								margin="dense"
 								fullWidth
 							/>
@@ -261,6 +288,7 @@ const EditWorkflow = (props) => {
 								defaultValue={innerWorkflow.video}
 								placeholder="A youtube or loom link to the video"
 								rows="1"
+								label="Video"
 								margin="dense"
 								fullWidth
 							/>
@@ -279,6 +307,7 @@ const EditWorkflow = (props) => {
 								placeholder="Default return value (used for Subflows if the subflow fails)"
 								rows="3"
 								multiline
+								label="Default return value"
 								margin="dense"
 								fullWidth
 							/>

@@ -27,6 +27,11 @@ import {
 } from '@material-ui/core';
 
 import {
+	Avatar,
+  AvatarGroup,
+} from "@mui/material"
+
+import {
 	SkipNext as SkipNextIcon,
 	SkipPrevious as SkipPreviousIcon,
 	PlayArrow as PlayArrowIcon,
@@ -143,7 +148,6 @@ const CreatorGrid = props => {
     marginTop: 5,
   }
 	
-	var workflowDelay = -50
 	const Hits = ({ hits }) => {
 		const [mouseHoverIndex, setMouseHoverIndex] = useState(-1) 
 		var counted = 0
@@ -151,8 +155,6 @@ const CreatorGrid = props => {
 		return (
       <Grid container spacing={4} style={paperAppContainer}>
 				{hits.map((data, index) => {
-					workflowDelay += 50
-
 					if (counted === 12/xs*rowHandler) {
 						return null
 					}
@@ -160,16 +162,48 @@ const CreatorGrid = props => {
 					counted += 1
 
 					return (
-						<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
+						<Zoom key={index} in={true} style={{}}>
 							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px" }}>
-								<Card>
-						  		<CardActionArea component={Link} to={"/creators/"+data.username} style={{padding: "5px 10px 5px 10px", display: "flex"}}>
+								<Card style={{border: "1px solid rgba(255,255,255,0.3)"}}>
+						  		<CardActionArea component={Link} to={"/creators/"+data.username} style={{padding: "5px 10px 5px 10px", }}>
 										<CardContent sx={{ flex: '1 0 auto', minWidth: 160, maxWidth: 160, overflow: "hidden", padding: 0, }}>
-											<Typography component="div" variant="h6">
-												{data.username}
-											</Typography>
+											<div style={{display: "flex"}}>
+												<img style={{height: 74, width: 74, borderRadius: 100, }} alt={"Creator profile of "+data.username} src={data.image} />
+												<Typography component="div" variant="body1" style={{marginTop: 20, marginLeft: 15, }}>
+													@{data.username}
+												</Typography>
+											</div>
+											<Typography variant="body1" color="textSecondary" style={{marginTop: 10, }}>
+												<b>10</b> apps <span style={{marginLeft: 15, }}/><b>23</b> workflows
+											</Typography> 
+										{data.specialized_apps !== undefined && data.specialized_apps !== null && data.specialized_apps.length > 0 ? 
+											<AvatarGroup max={10} style={{flexDirection: "row", padding: 0, margin: 0, itemAlign: "left", textAlign: "left",}}>
+												{data.specialized_apps.map((app, index) => {
+													// Putting all this in secondary of ListItemText looked weird.
+													return (
+														<div
+															key={index}
+															style={{
+																height: 24,
+																width: 24,
+																filter: "brightness(0.6)",
+																cursor: "pointer",
+															}}
+															onClick={() => {
+																console.log("Click")
+																//navigate("/apps/"+app.id)
+															}}
+														>
+															<Tooltip color="primary" title={app.name} placement="bottom">
+																<Avatar alt={app.name} src={app.image} style={{width: 24, height: 24}}/>
+															</Tooltip>
+														</div>
+													)
+												})}
+											</AvatarGroup>
+											: 
+											null}
 										</CardContent>
-										<img style={{height: 100, width: 100, borderRadius: 100, }} alt={"Creator profile of "+data.username} src={data.image} />
 									</CardActionArea>
 								</Card>
 
@@ -251,15 +285,6 @@ const CreatorGrid = props => {
 				</div>
 				: null
 			}
-
-			<span style={{position: "absolute", display: "flex", textAlign: "right", float: "right", right: 0, bottom: 120, }}>
-				<Typography variant="body2" color="textSecondary" style={{}}>
-					Search by 
-				</Typography>
-				<a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{textDecoration: "none", color: "white"}}>
-					<img src={"/images/logo-algolia-nebula-blue-full.svg"} alt="Algolia logo" style={{height: 17, marginLeft: 5, marginTop: 3,}} />
-				</a>
-			</span>
 		</div>
 	)
 }

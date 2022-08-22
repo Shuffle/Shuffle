@@ -29,7 +29,6 @@ const Body = {
   //minWidth: 768,
   maxWidth: "100%",
   minWidth: "100%",
-  margin: "auto",
   display: "flex",
   height: "100%",
   color: "white",
@@ -105,17 +104,19 @@ const Docs = (defaultprops) => {
     padding: 30,
     paddingTop: 15,
     marginTop: 15,
-		minHeight: "50vh",
+		minHeight: "80vh",
     //height: "50vh",
   };
 
   const SideBar = {
     minWidth: 250,
     maxWidth: 300,
-    position: "absolute",
-		top: 15,
+		borderRight: "1px solid rgba(255,255,255,0.3)",
 		left: 0,
-		maxHeight: "83vh",
+		position: "sticky",
+		top: 50,
+		minHeight: "90vh",
+		maxHeight: "90vh",
 		overflowX: "hidden",
 		overflowY: "auto",
 		zIndex: 1000,
@@ -155,7 +156,11 @@ const Docs = (defaultprops) => {
       .then((responseJson) => {
         if (responseJson.success) {
           setData(responseJson.reason);
-          document.title = "Shuffle " + docId + " documentation";
+					if (docId === undefined) {
+          	document.title = "Shuffle documentation introduction";
+					} else {
+          	document.title = "Shuffle " + docId + " documentation";
+					}
 
 					if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.includes("404: Not Found")) {
 						navigate("/docs")
@@ -349,11 +354,8 @@ const Docs = (defaultprops) => {
 
   const markdownStyle = {
     color: "rgba(255, 255, 255, 0.65)",
-    maxWidth: mobile ? "100%" : 750,
     overflow: "hidden",
     paddingBottom: 100,
-		maxWidth: 750,
-		minWidth: 750,
 		margin: "auto",
   };
 
@@ -419,7 +421,7 @@ const Docs = (defaultprops) => {
             display: "flex",
           }}
         >
-          <div style={{ flex: 3, display: "flex", vAlign: "center" }}>
+          <div style={{ flex: 3, display: "flex", vAlign: "center", position: "sticky", top: 50,  }}>
             {mobile ? null : (
               <Typography style={{ display: "inline", marginTop: 6 }}>
                 <a
@@ -599,8 +601,6 @@ const Docs = (defaultprops) => {
 			marginTop: 50, 
 			textAlign: "center",
 			margin: "auto",
-			maxWidth: mobile ? "100%" : 900,
-			maxWidth: mobile ? "100%" : 900,
 			marginTop: 50, 
 		}}>
 				<Typography variant="h4" style={{textAlign: "center",}}>
@@ -766,11 +766,11 @@ const Docs = (defaultprops) => {
             </List>
           </Paper>
         </div>
-				{props.match.params.key === undefined ?
-					mainpageInfo
-				:
-        	<div id="markdown_wrapper_outer" style={markdownStyle}>
-						<div style={{maxWidth: 750, minWidth: 750, marginTop: 50, }}>
+				<div style={{maxWidth: 750, minWidth: 750, margin: "auto", overflow: "hidden", marginTop: 50, }}>
+					{props.match.params.key === undefined ?
+						mainpageInfo
+					:
+						<div id="markdown_wrapper_outer" style={markdownStyle}>
 							<ReactMarkdown
 								id="markdown_wrapper"
 								escapeHtml={false}
@@ -784,8 +784,8 @@ const Docs = (defaultprops) => {
 								}}
 							/>
 						</div>
-					</div>
-				}
+					}
+				</div>
       </div>
     );
 

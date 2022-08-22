@@ -59,6 +59,7 @@ const registeredApps = [
 	"webex",
 	"zoho_desk",
 	"outlook_graph",
+	"outlook_office365",
 	"microsoft_teams",
 	"microsoft_teams_user_access",
 ]
@@ -367,9 +368,9 @@ const AuthenticationOauth2 = (props) => {
 								// Hardcode some stuff?
 								// This could prolly be added to the app itself with a "default" client ID 
 								console.log("APP: ", selectedApp)
-								if (selectedApp.name.toLowerCase() == "outlook_graph") {
+								if (selectedApp.name.toLowerCase() == "outlook_graph" || selectedApp.name.toLowerCase() == "outlook_office365") {
 									handleOauth2Request(
-										"bb4bff85-0d0b-4f5d-8a69-3cee8029b11a",
+										"efe4c3fe-84a1-4821-a84f-23a6cfe8e72d",
 										"",
 										"https://graph.microsoft.com",
 										["Mail.ReadWrite"],

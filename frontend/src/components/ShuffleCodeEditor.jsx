@@ -379,10 +379,10 @@ const CodeEditor = (props) => {
 	const expectedOutput = (input) => {
 		
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
-		if (found === null || found === undefined) {
-			console.log("No output found!")
-			return
-		}
+		//if (found === null || found === undefined) {
+		//	console.log("No output found!")
+		//	return
+		//}
 
 		//console.log(found)
 

@@ -535,7 +535,8 @@ const SearchField = props => {
 						}
 
 						var name = hit.name === undefined ? 
-							hit.filename.charAt(0).toUpperCase() + hit.filename.slice(1).replaceAll("_", " ") + " - " + hit.title : 
+							hit.filename.charAt(0).toUpperCase() + hit.filename.slice(1).replaceAll("_", " ") + " - " + hit.title 
+							: 
 							(hit.name.charAt(0).toUpperCase()+hit.name.slice(1)).replaceAll("_", " ")
 
 						if (name.length > 30) {
@@ -552,6 +553,11 @@ const SearchField = props => {
 
 						var parsedUrl = hit.urlpath !== undefined ? hit.urlpath : ""
 						parsedUrl += `?queryID=${hit.__queryID}`
+						if (parsedUrl.includes("/apps/")) {
+							const extraHash = hit.url_hash === undefined ? "" : `#${hit.url_hash}`
+
+							parsedUrl = `/apps/${hit.filename}?tab=docs&queryID=${hit.__queryID}${extraHash}`
+						}
 
 						return (
 							<Link key={hit.objectID} to={parsedUrl} style={{textDecoration: "none", color: "white",}} onClick={(event) => {

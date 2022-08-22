@@ -11277,7 +11277,7 @@ const AngularWorkflow = (defaultprops) => {
       group: "nodes",
       data: {
         id: newId,
-        label: "Your comment :)",
+        label: "Click to write a comment",
         type: "COMMENT",
         is_valid: true,
         decorator: true,
