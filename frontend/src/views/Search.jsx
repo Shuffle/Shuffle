@@ -164,7 +164,7 @@ const Search = (props) => {
 					<DocsGrid maxRows={6} parsedXs={12} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				: 
 				curTab === 3 ?
-					<CreatorGrid maxRows={3} parsedXs={4} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
+					<CreatorGrid parsedXs={4} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				: 
 				null}
 			</div>

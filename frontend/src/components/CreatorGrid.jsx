@@ -37,7 +37,6 @@ import {
 	PlayArrow as PlayArrowIcon,
 } from "@material-ui/icons";
 
-import WorkflowPaper from "../components/WorkflowPaper.jsx"
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const CreatorGrid = props => {
@@ -174,7 +173,7 @@ const CreatorGrid = props => {
 												</Typography>
 											</div>
 											<Typography variant="body1" color="textSecondary" style={{marginTop: 10, }}>
-												<b>10</b> apps <span style={{marginLeft: 15, }}/><b>23</b> workflows
+												<b>{data.apps}</b> apps <span style={{marginLeft: 15, }}/><b>{data.workflows}</b> workflows
 											</Typography> 
 										{data.specialized_apps !== undefined && data.specialized_apps !== null && data.specialized_apps.length > 0 ? 
 											<AvatarGroup max={10} style={{flexDirection: "row", padding: 0, margin: 0, itemAlign: "left", textAlign: "left",}}>

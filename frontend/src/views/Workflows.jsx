@@ -2949,9 +2949,7 @@ const Workflows = (props) => {
 
   const WorkflowView = () => {
     if (workflows.length === 0) {
-			console.log("USER: ", userdata)
-			console.log("PROPS: ", props)
-			if (userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) {
+			if ((userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) || userdata.tutorials === null) {
 				return <Navigate to="/getting-started" replace />;
 			}
 		

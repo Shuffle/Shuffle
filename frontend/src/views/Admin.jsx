@@ -1338,20 +1338,18 @@ const Admin = (props) => {
   const downloadFile = (file) => {
     fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
       credentials: "include",
     })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for apps :O!");
-          return "";
-        }
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!");
+				return "";
+			}
 
-        return response.text();
-      })
+			console.log("Resp: ", response)
+
+			return response.blob()
+		})
       .then((respdata) => {
         if (respdata.length === 0) {
           alert.error("Failed getting file. Is it deleted?");
@@ -1591,18 +1589,13 @@ const Admin = (props) => {
       document.title = "Shuffle - admin";
     }
 
-    console.log("NEWVALUE: ", newValue);
-
     if (newValue === 6) {
       console.log("Should get apps for categories.");
     }
 
-    console.log("PROPS: ", props);
-
     navigate(`/admin?tab=${views[newValue]}`);
-
     setModalUser({});
-  };
+  }
 
   if (firstRequest) {
     setFirstRequest(false);
