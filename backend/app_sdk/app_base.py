@@ -166,11 +166,23 @@ def csv_parse(a):
         fullitem["index"] = cnt 
         fullitem["parsed"] = {}
         if len(columns) != len(commasplit):
-            allitems.append(fullitem)
-            continue
+
+            if len(commasplit) > len(columns):
+                diff = len(commasplit)-len(columns)
+
+                try:
+                    commasplit = commasplit[0:len(commasplit)-diff]
+                except:
+                    pass
+            else:
+                for item in range(0, len(columns)-len(commasplit)):
+                    commasplit.append("")
 
         for key in range(len(columns)):
-            fullitem["parsed"][columns[key]] = commasplit[key]
+            try:
+                fullitem["parsed"][columns[key]] = commasplit[key]
+            except:
+                continue 
         
         allitems.append(fullitem)
 

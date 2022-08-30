@@ -35,6 +35,7 @@ import {
 	SkipNext as SkipNextIcon,
 	SkipPrevious as SkipPreviousIcon,
 	PlayArrow as PlayArrowIcon,
+	VerifiedUser as VerifiedUserIcon, 
 } from "@material-ui/icons";
 
 
@@ -162,21 +163,30 @@ const CreatorGrid = props => {
 
 					return (
 						<Zoom key={index} in={true} style={{}}>
-							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px" }}>
-								<Card style={{border: "1px solid rgba(255,255,255,0.3)"}}>
-						  		<CardActionArea component={Link} to={"/creators/"+data.username} style={{padding: "5px 10px 5px 10px", }}>
+							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px", }}>
+								<Card style={{border: "1px solid rgba(255,255,255,0.3)", minHeight: 177, maxHeight: 177,}}>
+						  		<CardActionArea component={Link} to={"/creators/"+data.username} style={{padding: "5px 10px 5px 10px", minHeight: 177, maxHeight: 177,}}>
 										<CardContent sx={{ flex: '1 0 auto', minWidth: 160, maxWidth: 160, overflow: "hidden", padding: 0, }}>
 											<div style={{display: "flex"}}>
 												<img style={{height: 74, width: 74, borderRadius: 100, }} alt={"Creator profile of "+data.username} src={data.image} />
 												<Typography component="div" variant="body1" style={{marginTop: 20, marginLeft: 15, }}>
 													@{data.username}
 												</Typography>
+												<span style={{marginTop: "auto", marginBottom: "auto", marginLeft: 10, }}>
+													{data.verified === true ? 
+														<Tooltip title="Verified and earning from Shuffle contributions" placement="top">
+															<VerifiedUserIcon style={{}}/>
+														</Tooltip>
+													: 
+													null
+													}
+												</span>
 											</div>
 											<Typography variant="body1" color="textSecondary" style={{marginTop: 10, }}>
-												<b>{data.apps}</b> apps <span style={{marginLeft: 15, }}/><b>{data.workflows}</b> workflows
+												<b>{data.apps === undefined || data.apps === null ? 0 : data.apps}</b> apps <span style={{marginLeft: 15, }}/><b>{data.workflows === null || data.workflows === undefined ? 0 : data.workflows}</b> workflows
 											</Typography> 
 										{data.specialized_apps !== undefined && data.specialized_apps !== null && data.specialized_apps.length > 0 ? 
-											<AvatarGroup max={10} style={{flexDirection: "row", padding: 0, margin: 0, itemAlign: "left", textAlign: "left",}}>
+											<AvatarGroup max={10} style={{flexDirection: "row", padding: 0, margin: 0, itemAlign: "left", textAlign: "left", marginTop: 3,}}>
 												{data.specialized_apps.map((app, index) => {
 													// Putting all this in secondary of ListItemText looked weird.
 													return (
