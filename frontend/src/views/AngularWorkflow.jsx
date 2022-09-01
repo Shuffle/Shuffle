@@ -398,8 +398,8 @@ const AngularWorkflow = (defaultprops) => {
     },
   });
 
-  const getAppDocs = (appname) => {
-    fetch(`${globalUrl}/api/v1/docs/${appname}?location=openapi`, {
+  const getAppDocs = (appname, location, version) => {
+    fetch(`${globalUrl}/api/v1/docs/${appname}?location=${location}&version=${version}`, {
       headers: {
         Accept: "application/json",
       },
@@ -436,10 +436,14 @@ const AngularWorkflow = (defaultprops) => {
   useEffect(() => {
 		if (authenticationModalOpen === true && selectedAction.app_name !== undefined) {
 			console.log(`Should get app docs for: ${selectedAction.app_name}`)
+			//console.log(selectedAction)
+			//console.log("APP: ", selectedApp)
 
 			if (selectedAction.documentation === undefined || selectedAction.documentation === null || selectedAction.documentation.length === 0) {
 				// SelectedApp.documentation = Markdown? If so, it works
-				getAppDocs(selectedAction.app_name) 
+				//
+				const apptype = selectedApp.generated === false ? "python" : "openapi"
+				getAppDocs(selectedAction.app_name, apptype, selectedAction.app_version)
 			}
 		}
 	}, [authenticationModalOpen])
