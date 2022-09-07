@@ -1386,9 +1386,10 @@ const AngularWorkflow = (defaultprops) => {
     	  return;
     	}
 
-    	setVisited([]);
-    	setExecutionRequest({});
-    	stop();
+    	setVisited([])
+    	setExecutionRequest({})
+    	stop()
+		})
 
     	var curelements = cy.elements();
     	for (var i = 0; i < curelements.length; i++) {
@@ -1409,6 +1410,7 @@ const AngularWorkflow = (defaultprops) => {
     	  }
     	)
     	  .then((response) => {
+					setExecutionRequestStarted(false)
     	    if (response.status !== 200) {
     	      console.log("Status not 200 for WORKFLOW EXECUTION :O!");
     	    }
@@ -1460,9 +1462,9 @@ const AngularWorkflow = (defaultprops) => {
     	  })
     	  .catch((error) => {
     	    //alert.error(error.toString());
+					setExecutionRequestStarted(false)
     	    console.log("Execute workflow err: ", error.toString());
     	  });
-			})
   };
 
   // This can be used to only show prioritzed ones later
@@ -5511,12 +5513,12 @@ const AngularWorkflow = (defaultprops) => {
           {triggers.map((trigger, index) => {
             var imageline =
               trigger.large_image.length === 0 ? (
-                <img alt="" style={{ width: isMobile ? 40 : 80, pointerEvents: "none" }} />
+                <img alt="" style={{ borderRadius: theme.palette.borderRadius, width: isMobile ? 40 : 80, pointerEvents: "none" }} />
               ) : (
                 <img
                   alt=""
                   src={trigger.large_image}
-                  style={{ width: isMobile ? 40 : 80, height: isMobile ? 40 : 80, pointerEvents: "none" }}
+                  style={{ borderRadius: theme.palette.borderRadius, width: isMobile ? 40 : 80, height: isMobile ? 40 : 80, pointerEvents: "none" }}
                 />
               );
 
@@ -7231,7 +7233,7 @@ const AngularWorkflow = (defaultprops) => {
                 >
                   contains any of
                 </MenuItem>
-                {/*<MenuItem
+                <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
                     conditionValue.value = "matches regex";
@@ -7241,7 +7243,7 @@ const AngularWorkflow = (defaultprops) => {
                   key={"matches regex"}
                 >
                   matches regex
-                </MenuItem>*/}
+                </MenuItem>
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
@@ -7263,6 +7265,17 @@ const AngularWorkflow = (defaultprops) => {
                   key={"less than"}
                 >
                   less than
+                </MenuItem>
+                <MenuItem
+                  style={menuItemStyle}
+                  onClick={(e) => {
+                    conditionValue.value = "is empty";
+                    setConditionValue(conditionValue);
+                    setVariableAnchorEl(null);
+                  }}
+                  key={"is empty"}
+                >
+									is empty
                 </MenuItem>
               </Menu>
             </div>
@@ -11009,7 +11022,7 @@ const AngularWorkflow = (defaultprops) => {
         <span>
           <Button
             disabled={
-              workflow.public || executionRequestStarted || !workflow.isValid
+              workflow.public || executionRequestStarted 
             }
             style={{ height: boxSize, width: boxSize }}
             color="primary"
