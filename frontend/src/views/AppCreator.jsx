@@ -1814,7 +1814,7 @@ const AppCreator = (defaultprops) => {
         for (var querykey in item.queries) {
           const queryitem = item.queries[querykey];
 
-					if (queryitem === undefined || queryitem === null || queryitem.name === undefined || queryitem.name === null) {
+					if (queryitem === undefined || queryitem === null || queryitem.name === undefined || queryitem.name === null || queryitem.name === "") {
 						continue
 					}
 
@@ -1824,7 +1824,6 @@ const AppCreator = (defaultprops) => {
 					}
 
 					querynames.push(queryitem.name.toLowerCase())
-
           if (queryitem.name.toLowerCase() == "url") {
             console.log(item.name + " uses a bad query: url");
             continue;

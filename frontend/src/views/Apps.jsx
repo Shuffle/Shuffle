@@ -2265,7 +2265,7 @@ const Apps = (props) => {
       <FormControl>
         <DialogTitle>
           <div style={{ color: "rgba(255,255,255,0.9)" }}>
-            Create a new integration
+            Create a new app 
           </div>
         </DialogTitle>
         <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>

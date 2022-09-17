@@ -57,6 +57,7 @@ const data = [
       padding: "0px",
       margin: "0px",
       "background-color": "data(backgroundcolor)",
+      "background-image": "data(backgroundimage)",
       "border-color": "#ffffff",
       "text-margin-x": "0px",
       "z-index": 4999,

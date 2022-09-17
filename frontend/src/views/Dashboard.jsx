@@ -776,8 +776,6 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																					var baseTypeInfo = subcase.type !== undefined ? subcase.type : "communication"
 																					if (frameworkData !== undefined && frameworkData !== null) {
 																						if (frameworkData[baseTypeInfo] !== undefined && frameworkData[baseTypeInfo] !== null && subdata.app !== undefined && subdata.app !== null) {
-																							console.log("Name: ", frameworkData[baseTypeInfo], baseTypeInfo)
-																							console.log("Name2: ", subdata.app)
 																							if (frameworkData[baseTypeInfo].name !== undefined && frameworkData[baseTypeInfo].name.toLowerCase().replaceAll("_", " ") === subdata.app.toLowerCase().replaceAll("_", " ")) {
 																								highlight = true
 																							}

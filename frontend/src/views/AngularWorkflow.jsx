@@ -2815,17 +2815,23 @@ const AngularWorkflow = (defaultprops) => {
     	    cy.on("free", "node", (e) => onNodeDragStop(e, curaction));
     	  }
 
-				console.log("Object: ", environments)
+				console.log("Object: ", environments, curaction.environment)
     	  if (environments !== undefined && environments !== null && (typeof environments === "array" || typeof environments === "object")) {
+					console.log("Type: ", typeof(environments))
+
 					var parsedenv = environments
-					if (typeof environments === "object") {
-						parsedenv = [environments]
+					//if (typeof environments === "object") {
+					//	parsedenv = [environments]
+					//}
+
+    	    const envs = parsedenv.find((a) => a.Name === curaction.environment);
+    	    var env = environments[defaultEnvironmentIndex]
+					console.log("Inner envs: ", envs, curaction.environment)
+					if (envs !== undefined && envs !== null) {
+						env = envs
 					}
 
-    	    var env = parsedenv.find((a) => a.Name === curaction.environment);
-    	    if (!env || env === undefined) {
-    	      env = parsedenv[defaultEnvironmentIndex];
-    	    }
+					console.log("env: ", env)
 
     	    setSelectedActionEnvironment(env);
     	  }
@@ -9426,6 +9432,31 @@ const AngularWorkflow = (defaultprops) => {
               />
             </div>
           </div>
+					<div style={{marginTop: 15,}}>Background-Image</div>
+					<TextField
+						style={{
+							backgroundColor: inputColor,
+							borderRadius: theme.palette.borderRadius,
+						}}
+						InputProps={{
+							style: {
+								color: "white",
+								marginLeft: "5px",
+								maxWidth: "95%",
+								height: 50,
+								fontSize: "1em",
+							},
+						}}
+						fullWidth
+						color="primary"
+						placeholder={"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSr69kkDcJiR4Vm59ypxhGkD1JDIV0oLVDiBQ&usqp=CAU"}
+						defaultValue={selectedComment["backgroundimage"]}
+						onChange={(event) => {
+							selectedComment.backgroundimage = event.target.value;
+							console.log("Comment: ", selectedComment)
+							setSelectedComment(selectedComment);
+						}}
+					/>
         </div>
       );
     }
@@ -14142,7 +14173,6 @@ const AngularWorkflow = (defaultprops) => {
             backgroundColor: surfaceColor,
             color: "white",
             minWidth: 600,
-            padding: 50,
 						border: theme.palette.defaultBorder,
           },
         }}
@@ -14153,7 +14183,7 @@ const AngularWorkflow = (defaultprops) => {
             position: "absolute",
             top: 14,
             right: 14,
-            color: "grey",
+            color: "white",
           }}
           onClick={() => {
             setConfigureWorkflowModalOpen(false);

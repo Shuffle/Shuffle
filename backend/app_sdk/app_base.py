@@ -3312,7 +3312,7 @@ class AppBase:
 
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "An exception occurred while running this function. See exception for more details and contact support if this persists (support@shuffler.io)",
+                                            "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@shuffler.io)",
                                             "exception": e,
                                         })
                                         break
@@ -3343,7 +3343,7 @@ class AppBase:
 
                                     newres = json.dumps({
                                         "success": False,
-                                        "reason": "An exception occurred while running this function. See exception for more details and contact support if this persists (support@shuffler.io)",
+                                        "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@shuffler.io)",
                                         "exception": e,
                                     })
                                     break

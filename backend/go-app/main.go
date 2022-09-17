@@ -3187,6 +3187,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 		return
 	}
 
+	swagger.Info.Title = shuffle.FixFunctionName(swagger.Info.Title, swagger.Info.Title, false)
 	if strings.Contains(swagger.Info.Title, " ") {
 		swagger.Info.Title = strings.Replace(swagger.Info.Title, " ", "_", -1)
 	}
@@ -4800,7 +4801,6 @@ func runInit(ctx context.Context) {
 					continue
 				}
 
-				log.Printf("ENV: %s", item.Environment)
 				if item.Environment == "cloud" {
 					log.Printf("Skipping cloud schedule")
 					continue

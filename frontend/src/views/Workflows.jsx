@@ -1075,6 +1075,7 @@ const Workflows = (props) => {
     minWidth: isMobile ? "100%" : 1024,
     maxWidth: isMobile ? "100%" : 1024,
     margin: "auto",
+		paddingBottom: 200,
   };
 
   const emptyWorkflowStyle = {
@@ -1145,9 +1146,11 @@ const Workflows = (props) => {
       for (var key in data.triggers) {
         const trigger = data.triggers[key];
         if (trigger.app_name === "Shuffle Workflow") {
-          if (trigger.parameters.length > 2) {
-            trigger.parameters[2].value = "";
-          }
+					if (trigger.parameters !== null && trigger.parameters !== undefined) {
+						if (trigger.parameters.length > 2) {
+							trigger.parameters[2].value = "";
+						}
+					}
         }
 
         if (trigger.status === "running") {
@@ -3500,7 +3503,13 @@ const Workflows = (props) => {
         {exportVerifyModal}
         {publishModal}
         {workflowDownloadModalOpen}
-      </div>
+				{/*<div style={{zIndex: 1, position: "fixed", bottom: 110, right: 110, display: "flex", }}>
+					<Typography variant="body1" color="textSecondary" style={{zIndex: 1, marginRight: 0, maxWidth: 150, }}>
+						Need assistance? Ask our support team (it's free!).
+					</Typography>
+					<img src="/images/Arrow.png" style={{width: 150, zIndex: 1,}} />
+				</div>*/}
+			</div>
     ) : (
       <div
         style={{

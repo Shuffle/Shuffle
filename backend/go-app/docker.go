@@ -2,9 +2,8 @@ package main
 
 // Docker
 import (
-	"github.com/shuffle/shuffle-shared"
-
 	"archive/tar"
+	"github.com/shuffle/shuffle-shared"
 	//"bufio"
 	"path/filepath"
 	//"strconv"

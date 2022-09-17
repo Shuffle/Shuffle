@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 
+import { useNavigate, Link } from "react-router-dom";
 import {
   Grid,
   Typography,
@@ -8,7 +9,6 @@ import {
   Divider,
   TextField,
 } from "@material-ui/core";
-import { Link } from "react-router-dom";
 import { useAlert } from "react-alert";
 import { useTheme } from "@material-ui/core/styles";
 
@@ -18,6 +18,7 @@ const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, setUserData } = props;
   const theme = useTheme();
   const alert = useAlert();
+	let navigate = useNavigate();
 
   const [username, setUsername] = useState("");
   const [firstname, setFirstname] = useState("");
@@ -414,7 +415,15 @@ const Settings = (props) => {
       src={imageData}
       alt="Click to upload an image (174x174)"
       id="logo"
+			onClick={() => {
+				if (imageData !== theme.palette.defaultImage) {
+					navigate(`/creators/${userdata.public_username}`)
+				} else {
+					navigate(`/creators`)
+				}
+			}}
       style={{
+				cursor: "pointer",
         maxWidth: 100,
         maxHeight: 100,
         minWidth: 100,
@@ -810,7 +819,7 @@ const Settings = (props) => {
 						) : null}
           </div>
           <div style={{ flex: 1, marginTop: 20 }}>
-          {userdata !== undefined &&
+          {/*userdata !== undefined &&
             userdata.eth_info !== undefined &&
             userdata.eth_info.account !== undefined &&
             userdata.eth_info.account.length > 0 ? (
@@ -868,7 +877,7 @@ const Settings = (props) => {
               >
                 Authenticate Metamask Wallet
               </Button>
-            )}
+            )*/}
           </div>
         </div>
 

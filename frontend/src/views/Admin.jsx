@@ -349,7 +349,6 @@ const Admin = (props) => {
     })
       .then((response) =>
         response.json().then((responseJson) => {
-          console.log("RESP: ", responseJson);
           if (responseJson["success"] === false) {
             alert.error("Failed deleting auth");
           } else {
@@ -825,7 +824,7 @@ const Admin = (props) => {
             handleGetDeals(orgId);
           }
 
-          setSelectedOrganization(responseJson);
+          setSelectedOrganization(responseJson)
           var lists = {
             active: {
               triggers: [],
@@ -2381,7 +2380,7 @@ const Admin = (props) => {
       <CheckCircleIcon style={{ color: "green" }} />
     ) : (
       <CloseIcon style={{ color: "red" }} />
-    );
+    )
 
     return (
       <Grid
@@ -2397,8 +2396,8 @@ const Admin = (props) => {
             margin: 4,
             backgroundColor: theme.palette.inputColor,
             color: "white",
-            minHeight: expanded ? 200 : "inherit",
-            maxHeight: expanded ? 200 : "inherit",
+            minHeight: expanded ? 250 : "inherit",
+            maxHeight: expanded ? 250 : "inherit",
           }}
         >
           <ListItem>
@@ -2414,19 +2413,19 @@ const Admin = (props) => {
           {expanded ? (
             <div style={{ padding: 15 }}>
               <Typography>
-                Usage:{" "}
+                <b>Usage:&nbsp;</b>
                 {props.data.limit === 0 ? (
-                  "Infinite"
+                  "Unlimited"
                 ) : (
                   <span>
-                    {props.data.usage} / {props.data.limit}
+                    {props.data.usage} / {props.data.limit === "" ? "Unlimited" : props.data.limit}
                   </span>
                 )}
               </Typography>
-              <Typography>
+              {/*<Typography>
                 Data sharing: {props.data.data_collection}
-              </Typography>
-              <Typography>Description: {secondary}</Typography>
+              </Typography>*/}
+              <Typography style={{maxHeight: 150, overflowX: "hidden", overflowY: "auto"}}><b>Description:</b> {secondary}</Typography>
             </div>
           ) : null}
         </Card>
@@ -2935,7 +2934,7 @@ const Admin = (props) => {
             <Typography
               style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
             >
-              Cloud sync features
+              Cloud sync features (monthly usage)
             </Typography>
             <Grid container style={{ width: "100%", marginBottom: 15 }}>
               {selectedOrganization.sync_features === undefined ||
@@ -2945,11 +2944,16 @@ const Admin = (props) => {
                     key,
                     index
                   ) {
-                    if (key === "schedule") {
+										// unnecessary parts
+                    if (key === "schedule" || key === "apps" || key === "updates") {
                       return null;
                     }
 
                     const item = selectedOrganization.sync_features[key];
+										if (item === null) {
+											return null
+										}
+
                     const newkey = key.replaceAll("_", " ");
                     const griditem = {
                       primary: newkey,
@@ -2960,7 +2964,8 @@ const Admin = (props) => {
                           ? "Not defined yet"
                           : item.description,
                       limit: item.limit,
-                      usage: 0,
+                      usage: item.usage === undefined ||
+                        item.usage === null ? 0 : item.usage,
                       data_collection: "None",
                       active: item.active,
                       icon: <PolymerIcon style={{ color: itemColor }} />,
@@ -4717,8 +4722,12 @@ const Admin = (props) => {
               style={{ minWidth: 200, maxWidth: 200 }}
             />
             <ListItemText
+              primary="Command"
+              style={{ minWidth: 100, maxWidth: 100 }}
+            />
+            <ListItemText
               primary="Type"
-              style={{ minWidth: 150, maxWidth: 150 }}
+              style={{ minWidth: 125, maxWidth: 125 }}
             />
             <ListItemText
               primary="Default"
@@ -4770,7 +4779,10 @@ const Admin = (props) => {
                           ? environment.running_ip === undefined ||
                             environment.running_ip === null ||
                             environment.running_ip.length === 0
-                            ? "Not running"
+                            ? 
+														<div>
+															Not running
+														</div>
                             : environment.running_ip
                           : "N/A"
                       }
@@ -4780,9 +4792,52 @@ const Admin = (props) => {
                         overflow: "hidden",
                       }}
                     />
+
+                    <ListItemText
+                      style={{ minWidth: 100, maxWidth: 100 }}
+                      primary={
+												<Tooltip
+													title={"Copy Orborus command"}
+													style={{}}
+													aria-label={"Copy orborus command"}
+												>
+													<IconButton
+														style={{}}
+														onClick={() => {
+															const elementName = "copy_element_shuffle";
+															const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
+															const commandData = `docker run -d --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="https://shuffler.io" ghcr.io/frikky/shuffle-orborus:latest`
+															var copyText = document.getElementById(elementName);
+															if (copyText !== null && copyText !== undefined) {
+																const clipboard = navigator.clipboard;
+																if (clipboard === undefined) {
+																	alert.error("Can only copy over HTTPS (port 3443)");
+																	return;
+																}
+
+																navigator.clipboard.writeText(commandData);
+																copyText.select();
+																copyText.setSelectionRange(
+																	0,
+																	99999
+																); /* For mobile devices */
+
+																/* Copy the text inside the text field */
+																document.execCommand("copy");
+
+																alert.info("Orborus command copied to clipboard");
+															}
+														}}
+													>
+														<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: "rgba(255,255,255,0.8)" }} />
+													</IconButton>
+												</Tooltip>
+											}
+                    />
+
                     <ListItemText
                       primary={environment.Type}
-                      style={{ minWidth: 150, maxWidth: 150 }}
+                      style={{ minWidth: 125, maxWidth: 125 }}
                     />
                     <ListItemText
                       style={{
@@ -4857,7 +4912,7 @@ const Admin = (props) => {
                           }}
                           color="primary"
                         >
-                          Clear executions
+                          Clear
                         </Button>
                       </div>
                     </ListItemText>
