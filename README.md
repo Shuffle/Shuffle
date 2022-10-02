@@ -1,10 +1,4 @@
-<h1 align="center">
 
-[![Shuffle Logo](https://github.com/frikky/Shuffle/blob/launch/frontend/public/images/Shuffle_logo_new.png)](https://shuffler.io)
-
-Shuffle Automation
-
-</h1><h4 align="center">
 
 [Shuffle](https://shuffler.io) is an automation platform for and by the community, focusing on accessibility for anyone to automate. Security operations is complex, but it doesn't have to be.
 
