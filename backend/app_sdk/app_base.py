@@ -2166,10 +2166,87 @@ class AppBase:
                 self.logger.info(f"[ERROR] Liquid Template error: {e}")
                 error = True
                 error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_template_error",
+                    "value": f"There was a Liquid input error (1). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+            except SyntaxError as e:
+                self.logger.info(f"[ERROR] Liquid Syntax error: {e}")
+                error = True
+                error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_python_syntax_error",
+                    "value": f"There was a syntax error in your Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+            except IndentationError as e:
+                self.logger.info(f"[ERROR] Liquid IndentationError: {e}")
+                error = True
+                error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_indentiation_error",
+                    "value": f"There was an indentation error in your Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
             except jinja2.exceptions.TemplateSyntaxError as e:
                 self.logger.info(f"[ERROR] Liquid Syntax error: {e}")
                 error = True
                 error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_syntax_error",
+                    "value": f"There was a syntax error in your Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+            except json.decoder.JSONDecodeError as e:
+                self.logger.info(f"[ERROR] Liquid JSON Syntax error: {e}")
+                
+                replace = False
+                skip_next = False
+                newlines = []
+                thisline = []
+                for line in template.split("\n"):
+                    #print("LINE: %s" % repr(line))
+                    if "\"\"\"" in line or "\'\'\'" in line:
+                        if replace:
+                            skip_next = True
+                        else:
+                            replace = not replace 
+
+                    if replace == True:
+                        thisline.append(line)
+                        if skip_next == True:
+                            if len(thisline) > 0:
+                                #print(thisline)
+                                newlines.append(" ".join(thisline))
+                                thisline = []
+
+                            replace = False
+                    else:
+                        newlines.append(line)
+
+                new_template = "\n".join(newlines)
+                if new_template != template:
+                    #check_template(new_template)
+                    return parse_liquid(new_template, self)
+                else:
+                    error = True
+                    error_msg = e
+
+                    self.action["parameters"].append({
+                        "name": "liquid_json_error",
+                        "value": f"There was a syntax error in your input JSON(2). This is typically an issue with escaping newlines. Details: {e}",
+                    })
+
+                    self.action_result["action"] = self.action
             except TypeError as e:
                 try:
                     if "string as left operand" in f"{e}":
@@ -2194,6 +2271,13 @@ class AppBase:
 
                 except Exception as e:
                     print(f"SubError in Liquid: {e}")
+
+                    self.action["parameters"].append({
+                        "name": "liquid_general_error",
+                        "value": f"There was general error Liquid input (2). Details: {e}",
+                    })
+
+                    self.action_result["action"] = self.action
                     #return template
 
                 self.logger.info(f"[ERROR] Liquid TypeError error: {e}")
@@ -2204,6 +2288,13 @@ class AppBase:
                 self.logger.info(f"[ERROR] General exception for liquid: {e}")
                 error = True
                 error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_general_exception",
+                    "value": f"There was general exception Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
 
             if "fmt" in error_msg and "liquid_date" in error_msg:
                 return template

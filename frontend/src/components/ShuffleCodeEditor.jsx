@@ -1,5 +1,6 @@
 import React, {useState, useEffect, useLayoutEffect} from 'react';
 import {
+	CircularProgress, 
 	IconButton,
 	Dialog, 
 	Modal, 
@@ -29,6 +30,7 @@ import {
 	SquareFoot as SquareFootIcon,
   Circle as  CircleIcon,
   Add as AddIcon,
+	PlayArrow as PlayArrowIcon, 
 } from '@mui/icons-material';
 
 import {
@@ -67,7 +69,8 @@ const pythonFilters = [
 ]
 
 const CodeEditor = (props) => {
-	const { fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata, isFileEditor, runUpdateText } = props
+	const { globalUrl, fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata, isFileEditor, runUpdateText } = props
+
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
   	// const {codelang, setcodelang} = props
   const theme = useTheme();
@@ -91,6 +94,13 @@ const CodeEditor = (props) => {
 
   const [menuPosition, setMenuPosition] = useState(null);
   const [showAutocomplete, setShowAutocomplete] = React.useState(false);
+
+	const baseResult = ""
+	const [executionResult, setExecutionResult] = useState({
+		"valid": false,		
+		"result": baseResult,
+	})
+	const [executing, setExecuting] = useState(false)
 
 	const liquidOpen = Boolean(anchorEl);
 	const mathOpen = Boolean(anchorEl2);
@@ -384,7 +394,7 @@ const CodeEditor = (props) => {
 		//	return
 		//}
 
-		//console.log(found)
+		//console.log("FOUND: ", found)
 
 		// Whelp this is inefficient af. Single loop pls
 		// When the found array is empty.
@@ -395,6 +405,7 @@ const CodeEditor = (props) => {
 					const fixedVariable = fixVariable(found[i])
 					//var correctVariable = availableVariables.includes(fixedVariable)
 
+					// 
 					var valuefound = false
 					for (var j = 0; j < actionlist.length; j++) {
 						if(fixedVariable.slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
@@ -423,11 +434,14 @@ const CodeEditor = (props) => {
 									//	actionlist[k].example = "TMP"
 									//}
 
+									var new_input = ""
 									try {
-										var new_input = FindJsonPath(fullpath, actionlist[k].example)
+										new_input = FindJsonPath(fullpath, actionlist[k].example)
 									} catch (e) {
 										console.log("ERR IN INPUT: ", e)
 									}
+
+									console.log("Got input: ", new_input, actionlist[k].example, typeof new_input)
 
 									if (typeof new_input === "object") {
 										new_input = JSON.stringify(new_input)
@@ -435,10 +449,16 @@ const CodeEditor = (props) => {
 										if (typeof new_input === "string") {
 											new_input = new_input
 										} else {
-											new_input = ""
+											console.log("NO TYPE? ", typeof new_input)
+											try {
+												new_input = new_input.toString()
+											} catch (e) {
+												new_input = ""
+											}
 										}
 									}
 
+									//console.log("FOUND2: ", fixedVariable, actionlist[j].example)
 									input = input.replace(fixedVariable, new_input)
 
 									//} catch (e) {
@@ -461,7 +481,6 @@ const CodeEditor = (props) => {
 			}
 		} catch (e) {
 			console.log("Outer replace error: ", e)
-
 		}
 
 		const tmpValidation = validateJson(input.valueOf())
@@ -513,6 +532,67 @@ const CodeEditor = (props) => {
 		setAnchorEl(null)
 		setAnchorEl2(null)
 		setAnchorEl3(null)
+	}
+
+	const executeSingleAction = (inputdata) => {
+		//if (serverside === true) {
+		//	return
+		//}
+	
+		if (validation === true) {
+			inputdata = JSON.stringify(inputdata)
+		}
+
+		const appid = "3e2bdf9d5069fe3f4746c29d68785a6a" 
+		const actiondata = {"description":"Repeats the call parameter","id":"","name":"repeat_back_to_me","label":"","node_type":"","environment":"","sharing":false,"private_id":"","public_id":"","app_id":"3e2bdf9d5069fe3f4746c29d68785a6a","tags":null,"authentication":[],"tested":false,"parameters":[{"description":"The message to repeat","id":"","name":"call","example":"REPEATING: Hello world","value":inputdata,"multiline":true,"options":null,"action_field":"","variant":"STATIC_VALUE","required":true,"configuration":false,"tags":null,"schema":{"type":"string"},"skip_multicheck":false,"value_replace":null,"unique_toggled":false,"autocompleted":false}],"execution_variable":{"description":"","id":"","name":"","value":""},"returns":{"description":"","example":"","id":"","schema":{"type":"string"}},"authentication_id":"","example":"","auth_not_required":false,"source_workflow":"","run_magic_output":false,"run_magic_input":false,"execution_delay":0,"app_name":"Shuffle Tools","app_version":"1.2.0","selectedAuthentication":{}}
+
+		setExecutionResult({
+			"valid": false,		
+			"result": baseResult,
+		})
+
+		setExecuting(true)
+
+		fetch(globalUrl+"/api/v1/apps/"+appid+"/execute", {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			body: JSON.stringify(actiondata),
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for stream results :O!")
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			//console.log("RESPONSE: ", responseJson)
+			if (responseJson.success === true && responseJson.result !== null && responseJson.result !== undefined && responseJson.result.length > 0) {
+				const result = responseJson.result.slice(0, 50)+"..."
+				//alert.info("SUCCESS: "+result)
+
+				const validate = validateJson(responseJson.result)
+				setExecutionResult(validate)
+			} else if (responseJson.success === false && responseJson.reason !== undefined && responseJson.reason !== null) {
+				alert.error(responseJson.reason)
+				setExecutionResult({"valid": false, "result": responseJson.reason})
+			} else if (responseJson.success === true) {
+				setExecutionResult({"valid": false, "result": "Couldn't finish execution. Please fill all the required fields, and retry the execution."})
+			} else {
+				setExecutionResult({"valid": false, "result": "Couldn't finish execution (2). Please fill all the required fields, and validate the execution."})
+			}
+			
+			setExecuting(false)
+		})
+		.catch(error => {
+			//alert.error("Execution error: "+error.toString())
+			console.log("error: ", error)
+			setExecuting(false)
+		})
 	}
 
 	return (
@@ -1068,7 +1148,6 @@ const CodeEditor = (props) => {
 
 			<div
 				style={{
-					marginBottom: -30,
 				}}
 			>
 				{/*
@@ -1136,129 +1215,158 @@ const CodeEditor = (props) => {
 				*/}
 
 			</div>
-				{isFileEditor ? null :
-			<div>
-				{isMobile ? null : 
-					<DialogTitle
+				{isFileEditor ? null : (
+					<div>
+						{isMobile ? null : 
+							<DialogTitle
+								style={{
+									marginTop: 20,
+									paddingLeft: 10, 
+								}}
+							>
+								<span
+									style={{
+										color: "white"
+									}}
+								>
+									Expected Output
+								</span>
+								<IconButton disabled={executing} color="primary" style={{border: `1px solid ${theme.palette.primary.main}`, marginLeft: 300, padding: 8}} variant="contained" onClick={() => {
+									executeSingleAction(expOutput)
+								}}>
+									<Tooltip title="Try it! This runs Shuffle Tools' 'repeat back to me' action with the expected output." placement="top">
+										{executing ? <CircularProgress style={{height: 18, width: 18, }} /> : <PlayArrowIcon style={{height: 18, width: 18, }} /> }
+													 
+									</Tooltip>
+								</IconButton>
+							</DialogTitle>
+						}
+						{isMobile ? null : 
+							validation === true ? 
+								<ReactJson
+									src={expOutput}
+									theme={theme.palette.jsonTheme}
+									style={{
+										borderRadius: 5,
+										border: `2px solid ${theme.palette.inputColor}`,
+										padding: 10, 
+										maxHeight: 250, 
+										minheight: 250, 
+										overflow: "auto",
+									}}
+									collapsed={false}
+									enableClipboard={(copy) => {
+										//handleReactJsonClipboard(copy);
+									}}
+									displayDataTypes={false}
+									onSelect={(select) => {
+										//HandleJsonCopy(validate.result, select, "exec");
+									}}
+									name={"JSON autocompletion"}
+								/>
+							:
+								<p
+									id='expOutput'
+									style={{
+										whiteSpace: "pre-wrap",
+										color: "#f85a3e",
+										fontFamily: "monospace",
+										backgroundColor: "#282828",
+										padding: 20,
+										marginTop: -2,
+										border: `2px solid ${theme.palette.inputColor}`,
+										borderRadius: theme.palette.borderRadius,
+										maxHeight: 250,
+										overflow: "auto", 
+									}}
+								>
+									{expOutput}
+								</p>
+					}
+						{executionResult.valid === true ? 
+							<ReactJson
+								src={executionResult.result}
+								theme={theme.palette.jsonTheme}
+								style={{
+									borderRadius: 5,
+									border: `2px solid ${theme.palette.inputColor}`,
+									padding: 10, 
+									maxHeight: 100, 
+									minheight: 100, 
+									overflow: "auto",
+								}}
+								collapsed={false}
+								enableClipboard={(copy) => {
+									//handleReactJsonClipboard(copy);
+								}}
+								displayDataTypes={false}
+								onSelect={(select) => {
+									//HandleJsonCopy(validate.result, select, "exec");
+								}}
+								name={"Test result"}
+							/>
+						:
+						<span>
+							{executionResult.result.length > 0 ? 
+								<Typography variant="body2" style={{maxHeight: 100, overflow: "auto",}}>
+									Test output: {executionResult.result}
+								</Typography>
+							: null}
+						</span>
+						}
+					</div>
+				)
+				}
+				<div style={{
+						display: 'flex',
+						paddingTop : 30, // maybe handle this as well?
+					}}
+				>
+					<button
 						style={{
-							paddingTop: 30,
-							paddingLeft: 10, 
+							color: "white",
+							background: "#383b49",
+							border: "none",
+							height: 35,
+							flex: 1,
+							marginLeft: 5,
+							marginTop: 20,
+							cursor: "pointer"
+						}}
+						onClick={() => {
+							setExpansionModalOpen(false);
 						}}
 					>
-						<span
-							style={{
-								color: "white"
-							}}
-						>
-							Expected Output
-						</span>
-					</DialogTitle>
-				}
-				{isMobile ? null : 
-					validation === true ? 
-						<ReactJson
-							src={expOutput}
-							theme={theme.palette.jsonTheme}
-							style={{
-								borderRadius: 5,
-								border: `2px solid ${theme.palette.inputColor}`,
-								padding: 10, 
-								maxHeight: 250, 
-								minheight: 250, 
-								overflow: "auto",
-							}}
-							collapsed={false}
-							enableClipboard={(copy) => {
-								//handleReactJsonClipboard(copy);
-							}}
-							displayDataTypes={false}
-							onSelect={(select) => {
-								//HandleJsonCopy(validate.result, select, "exec");
-							}}
-							name={"JSON autocompletion"}
-						/>
-					:
-						<p
-							id='expOutput'
-							style={{
-								whiteSpace: "pre-wrap",
-								color: "#f85a3e",
-								fontFamily: "monospace",
-								backgroundColor: "#282828",
-								padding: 20,
-								marginTop: -2,
-								border: `2px solid ${theme.palette.inputColor}`,
-								borderRadius: theme.palette.borderRadius,
-								maxHeight: 250,
-								overflow: "auto", 
-							}}
-						>
-							{expOutput}
-						</p>
-				}
-				<p
-					style={{
-						color: "white",
-						fontFamily: "monospace",
-						margin: 20,
-						marginTop: 30,
-					}}
-				>
-					JSON Validation: {validation ? "Correct" : "Incorrect"}
-				</p>
-			</div> }
+						Cancel
+					</button>
+					<button
+						style={{
+							color: "white",
+							background: "#f85a3e",
+							border: "none",
 
-			<div
-				style={{
-					display: 'flex',
-					paddingTop : 30, // maybe handle this as well?
-				}}
-			>
-				<button
-					style={{
-						color: "white",
-						background: "#383b49",
-						border: "none",
-						height: 35,
-						flex: 1,
-						marginLeft: 5,
-						marginTop: 20,
-						cursor: "pointer"
-					}}
-					onClick={() => {
-						setExpansionModalOpen(false);
-					}}
-				>
-					Cancel
-				</button>
-				<button
-					style={{
-						color: "white",
-						background: "#f85a3e",
-						border: "none",
-
-						height: 35,
-						flex: 1, 
-						marginLeft: 10,
-						marginTop: 20,
-						cursor: "pointer"
-					}}
-					onClick={(event) => {
-						// console.log(codedata)
-						// console.log(fieldCount)
-						if (isFileEditor === true){
-							runUpdateText(localcodedata);
-							setcodedata(localcodedata);
+							height: 35,
+							flex: 1, 
+							marginLeft: 10,
+							marginTop: 20,
+							cursor: "pointer"
+						}}
+						onClick={(event) => {
+							// console.log(codedata)
+							// console.log(fieldCount)
+							if (isFileEditor === true){
+								runUpdateText(localcodedata);
+								setcodedata(localcodedata);
+								setExpansionModalOpen(false)
+							}
+							else {
+							changeActionParameterCodeMirror(event, fieldCount, localcodedata)
 							setExpansionModalOpen(false)
-						}
-						else {
-						changeActionParameterCodeMirror(event, fieldCount, localcodedata)
-						setExpansionModalOpen(false)
-						setcodedata(localcodedata)}
-					}}
-				>
-					Done
-				</button>
+							setcodedata(localcodedata)}
+						}}
+					>
+						Done
+					</button>
 			</div>
 		</Dialog>)
 }

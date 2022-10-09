@@ -6,16 +6,14 @@ import AppGrid from "../components/AppGrid.jsx"
 import WorkflowGrid from "../components/WorkflowGrid.jsx"
 import CreatorGrid from "../components/CreatorGrid.jsx"
 import DocsGrid from "../components/DocsGrid.jsx"
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { 
   Tabs,
-	Paper,
   Tab,
 } from "@material-ui/core";
 
 import {
-  Business as BusinessIcon,
 	Apps as AppsIcon,
 	Polymer as PolymerIcon,
 	EmojiObjects as EmojiObjectsIcon,

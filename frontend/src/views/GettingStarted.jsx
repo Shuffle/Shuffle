@@ -2373,12 +2373,14 @@ const GettingStarted = (props) => {
 								</Button>
 							</a>
 						</div>
+						{/*
 						<div style={{position: "fixed", bottom: 110, right: 110, display: "flex", }}>
 							<Typography variant="body1" color="textSecondary" style={{marginRight: 0, maxWidth: 150, }}>
 								Need assistance? Ask our support team (it's free!).
 							</Typography>
 							<img src="/images/Arrow.png" style={{width: 150}} />
 						</div>
+						*/}
 					</div>
           {/*
 					<div style={flexContainerStyle}>

@@ -15,6 +15,9 @@ import theme from '../theme';
 import { isMobile } from "react-device-detect" 
 import aa from 'search-insights'
 
+import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
+import algoliasearch from 'algoliasearch/lite';
+
 import {
 	Zoom,
 	Avatar,
@@ -51,6 +54,11 @@ import {
 	SwipeableDrawer,
   Switch,
 	Chip,
+	Card,
+	List,
+	ListItem,
+	ListItemText,
+	ListItemAvatar,
 } from "@material-ui/core";
 
 import {
@@ -58,6 +66,8 @@ import {
 } from "@mui/material"
 
 import {
+	Folder as FolderIcon,
+	LibraryBooks as LibraryBooksIcon,
   OpenInNew as OpenInNewIcon,
   Undo as UndoIcon,
   GetApp as GetAppIcon,
@@ -228,6 +238,7 @@ const svgSize = 24;
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
+const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const AngularWorkflow = (defaultprops) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = defaultprops;
   const referenceUrl = globalUrl + "/api/v1/hooks/";
@@ -1287,7 +1298,7 @@ const AngularWorkflow = (defaultprops) => {
 						if (responseJson.reason !== undefined && responseJson.reason !== null) {
     	      	alert.error("Failed to save: " + responseJson.reason);
 						} else {
-    	      	alert.error("Failed to save. Please contact your admin if this is unexpected.")
+    	      	alert.error("Failed to save. Please contact your support@shuffler.io or your local admin if this is unexpected.")
 						}
     	    } else {
     	      if (
@@ -2158,9 +2169,14 @@ const AngularWorkflow = (defaultprops) => {
         return;
       }
 
+			if (nodedata.parameters === undefined) {
+				return 
+			}
+
       const workflow_id = nodedata.parameters.find(
         (param) => param.name === "workflow"
       );
+
       if (workflow.id === workflow_id.valu) {
         return;
       }
@@ -2815,10 +2831,7 @@ const AngularWorkflow = (defaultprops) => {
     	    cy.on("free", "node", (e) => onNodeDragStop(e, curaction));
     	  }
 
-				console.log("Object: ", environments, curaction.environment)
     	  if (environments !== undefined && environments !== null && (typeof environments === "array" || typeof environments === "object")) {
-					console.log("Type: ", typeof(environments))
-
 					var parsedenv = environments
 					//if (typeof environments === "object") {
 					//	parsedenv = [environments]
@@ -2826,12 +2839,9 @@ const AngularWorkflow = (defaultprops) => {
 
     	    const envs = parsedenv.find((a) => a.Name === curaction.environment);
     	    var env = environments[defaultEnvironmentIndex]
-					console.log("Inner envs: ", envs, curaction.environment)
 					if (envs !== undefined && envs !== null) {
 						env = envs
 					}
-
-					console.log("env: ", env)
 
     	    setSelectedActionEnvironment(env);
     	  }
@@ -2898,7 +2908,7 @@ const AngularWorkflow = (defaultprops) => {
 		})
   }
 
-	const activateApp = (appid) => {
+	const activateApp = (appid, refresh) => {
 		fetch(globalUrl+"/api/v1/apps/"+appid+"/activate", {
     	  method: 'GET',
 				headers: {
@@ -2918,7 +2928,11 @@ const AngularWorkflow = (defaultprops) => {
 			if (responseJson.success === false) {
 				alert.error("Failed to activate the app")
 			} else {
-				alert.success("App activated for your organization!")
+				alert.success("App activated for your organization! Refresh the page to use the app.")
+
+				if (refresh === true) {
+      		getApps()
+				}
 			}
 		})
 		.catch(error => {
@@ -3925,7 +3939,7 @@ const AngularWorkflow = (defaultprops) => {
         var found = false;
         var showEnvCnt = 0;
         for (var key in responseJson) {
-          if (responseJson[key].default) {
+          if (responseJson[key].default && !found) {
             setDefaultEnvironmentIndex(key);
             found = true;
           }
@@ -3950,7 +3964,6 @@ const AngularWorkflow = (defaultprops) => {
 
 				// FIXME: Don't allow multiple in cloud yet. Cloud -> Onprem isn't stable.
 				if (isCloud) {
-					console.log("Envs: ", responseJson)
 					if (responseJson !== undefined && responseJson !== null && responseJson.length > 0) {
         		setEnvironments(responseJson);
 					} else {
@@ -5685,7 +5698,7 @@ const AngularWorkflow = (defaultprops) => {
 			//const activateApp = (appid) => {
 			if (newAppData.activated === false) {
 				console.log("SHOULD ACTIVATE!")
-				activateApp(newAppData.app_id) 
+				activateApp(newAppData.app_id, false) 
 			}
 
       // AUTHENTICATION
@@ -6161,6 +6174,233 @@ const AngularWorkflow = (defaultprops) => {
       }
     };
 
+		const SearchBox = ({currentRefinement, refine, isSearchStalled, } ) => {
+
+			useEffect(() => {
+				if (document !== undefined) {
+					const appsearchValue = document.getElementById("appsearch")
+					if (appsearchValue !== undefined && appsearchValue !== null) {
+						console.log("Value2: ", appsearchValue.value)
+						if (appsearchValue.value !== undefined && appsearchValue.value !== null && appsearchValue.value.length > 0) {
+							refine(appsearchValue.value)	
+						}
+					}
+					//}
+				}
+			}, [])
+
+			return (
+			  <form id="search_form" noValidate type="searchbox" action="" role="search" style={{margin: 0, display: "none",}} onClick={() => {
+				}}>
+					<TextField 
+						fullWidth
+						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, maxWidth: leftBarSize-20,}} 
+						InputProps={{
+							style:{
+								color: "white",
+								fontSize: "1em",
+								height: 50,
+								margin: 0, 
+							},
+							startAdornment: (
+								<InputAdornment position="start">
+									<SearchIcon style={{marginLeft: 5}}/>
+								</InputAdornment>
+							),
+						}}
+						autoComplete='off'
+						type="search"
+						color="primary"
+						placeholder="Find Public Apps, Workflows, Documentation and more"
+						value={currentRefinement}
+						id="shuffle_search_field"
+						onClick={(event) => {
+							console.log("Click!")
+						}}
+						onBlur={(event) => {
+							//setSearchOpen(false)
+						}}
+						onChange={(event) => {
+							//if (event.currentTarget.value.length > 0 && !searchOpen) {
+							//	setSearchOpen(true)
+							//}
+
+							refine(event.currentTarget.value)
+						}}
+						limit={5}
+					/>
+					{/*isSearchStalled ? 'My search is stalled' : ''*/}
+				</form>
+			)
+		}
+
+
+		const AppHits = ({ hits }) => {
+			const [mouseHoverIndex, setMouseHoverIndex] = useState(0) 
+
+			//var tmp = searchOpen
+			//if (!searchOpen) {
+			//	return null
+			//}
+
+			const positionInfo = document.activeElement.getBoundingClientRect()
+			const outerlistitemStyle = {
+				width: "100%",
+				overflowX: "hidden",
+				overflowY: "hidden",
+				borderBottom: "1px solid rgba(255,255,255,0.4)",
+			}
+
+			if (hits.length > 4) {
+				hits = hits.slice(0, 4)
+			}
+			
+			var type = "app"
+			const baseImage = <LibraryBooksIcon />
+
+			return (
+				<div style={{position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, minWidth: leftBarSize-10, maxWidth: leftBarSize-10, boxShadows: "none", overflowX: "hidden", }}>
+					<List style={{backgroundColor: theme.palette.inputColor, }}>
+						{hits.length === 0 ?
+							<ListItem style={outerlistitemStyle}>
+								<ListItemAvatar onClick={() => console.log(hits)}>
+									<Avatar>
+										<FolderIcon />
+									</Avatar>
+								</ListItemAvatar>
+								<ListItemText
+									primary={"No public apps found."}
+									secondary={"Try a broader search term"}
+								/>
+							</ListItem>
+							:
+							hits.map((hit, index) => {
+								const innerlistitemStyle = {
+									width: positionInfo.width+35,
+									overflowX: "hidden",
+									overflowY: "hidden",
+									borderBottom: "1px solid rgba(255,255,255,0.4)",
+									backgroundColor: mouseHoverIndex === index ? "#1f2023" : "inherit",
+									cursor: "pointer",
+									marginLeft: 0, 
+									marginRight: 0,
+									maxHeight: 75,
+									minHeight: 75,
+									maxWidth: 420,
+									minWidth: "100%", 
+								}
+
+								const name = hit.name === undefined ? 
+									hit.filename.charAt(0).toUpperCase() + hit.filename.slice(1).replaceAll("_", " ") + " - " + hit.title : 
+									(hit.name.charAt(0).toUpperCase()+hit.name.slice(1)).replaceAll("_", " ")
+
+								var secondaryText = hit.data !== undefined ? hit.data.slice(0, 40)+"..." : ""
+								const avatar = hit.image_url === undefined ? 
+									baseImage
+									:
+									<Avatar 
+										src={hit.image_url}
+										variant="rounded"
+									/>
+
+								//console.log(hit)
+								if (hit.categories !== undefined && hit.categories !== null && hit.categories.length > 0) {
+									secondaryText = hit.categories.slice(0,3).map((data, index) => {
+										if (index === 0) {
+											return data
+										} 
+
+										return ", "+data
+
+										/*
+											<Chip
+												key={index}
+												style={chipStyle}
+												label={data}
+												onClick={() => {
+													//handleChipClick
+												}}
+												variant="outlined"
+												color="primary"
+											/>
+										*/
+									})
+								}
+
+								var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://shuffler.io/apps/${hit.objectID}`
+								parsedUrl += `?queryID=${hit.__queryID}`
+
+								return (
+									<div style={{textDecoration: "none", color: "white",}} onClick={(event) => {
+										if (!isCloud) {
+											alert.info("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
+											setTimeout(() => {
+												event.preventDefault()
+												window.open(parsedUrl, '_blank')
+											}, 2000)
+										} else {
+											alert.info(`Activating ${name} and refreshing apps.`)
+										}
+
+										console.log("CLICK: ", hit)
+
+										const queryID = hit.__queryID
+										console.log("QUERY: ", queryID)
+
+										if (queryID !== undefined && queryID !== null) {
+											aa('init', {
+													appId: "JNSS5CFDZZ",
+													apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+											})
+
+											const timestamp = new Date().getTime()
+											aa('sendEvents', [
+												{
+													eventType: 'conversion',
+													eventName: 'Public App Activated',
+													index: 'appsearch',
+													objectIDs: [hit.objectID],
+													timestamp: timestamp,
+													queryID: queryID,
+													userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
+												}
+											])
+										} else {
+											console.log("No query to handle when activating")
+										}
+
+										activateApp(hit.objectID, true)
+									}}>
+										<ListItem key={hit.objectID} style={innerlistitemStyle} onMouseOver={() => {
+											setMouseHoverIndex(index)	
+										}}>
+											<ListItemAvatar>
+												{avatar}
+											</ListItemAvatar>
+											<ListItemText
+												primary={name}
+												secondary={secondaryText}
+											/>
+											{/*
+											<ListItemSecondaryAction>
+												<IconButton edge="end" aria-label="delete">
+													<DeleteIcon />
+												</IconButton>
+											</ListItemSecondaryAction>
+											*/}
+										</ListItem>
+									</div>
+							)})
+						}
+					</List>
+				</div>
+			)
+		}
+
+	
+		const CustomSearchBox = connectSearchBox(SearchBox)
+		const CustomAppHits = connectHits(AppHits)
+
     return (
       <div style={appViewStyle}>
         <div style={{ flex: "1" }}>
@@ -6197,7 +6437,9 @@ const AngularWorkflow = (defaultprops) => {
               }
             }}
             onBlur={(event) => {
-              console.log("BLUR: ", event.target.value);
+
+							//navigate(`?q=${event.target.value}`)
+
               runSearch(event.target.value);
             }}
           />
@@ -6232,10 +6474,21 @@ const AngularWorkflow = (defaultprops) => {
           ) : apps.length > 0 ? (
             <div
               style={{ textAlign: "center", width: leftBarSize, marginTop: 10 }}
+							onLoad={() => {
+								console.log("Should load in extra apps?")
+							}}
             >
               <Typography variant="body1" color="textSecondary">
-                Couldn't find app. Is it active?
+                Couldn't find an Activated app with that name. Searching unactivated apps. Click one to Activate it for your organization. 
               </Typography>
+							<InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
+								console.log("CLICKED")	
+							}}>
+								<CustomSearchBox />
+								<Index indexName="appsearch">
+									<CustomAppHits />
+								</Index>
+							</InstantSearch>
             </div>
           ) : (
             <div style={{ textAlign: "center", width: leftBarSize }}>
@@ -6479,6 +6732,14 @@ const AngularWorkflow = (defaultprops) => {
     event.target.value = event.target.value.replaceAll(".", "");
     event.target.value = event.target.value.replaceAll(",", "");
     event.target.value = event.target.value.replaceAll(" ", "_");
+    event.target.value = event.target.value.replaceAll("^", "_");
+    event.target.value = event.target.value.replaceAll("'", "_");
+    event.target.value = event.target.value.replaceAll("\"", "_");
+    event.target.value = event.target.value.replaceAll("\\", "_");
+    event.target.value = event.target.value.replaceAll(":", "_");
+    event.target.value = event.target.value.replaceAll(";", "_");
+    event.target.value = event.target.value.replaceAll("=", "_");
+    event.target.value = event.target.value.replaceAll("+", "_");
 
     selectedAction.label = event.target.value;
     setSelectedAction(selectedAction);
@@ -7842,7 +8103,7 @@ const AngularWorkflow = (defaultprops) => {
             console.log("BRANCH: ", branch);
             const startnode = branch.destination_id;
             const scopes = "https://www.googleapis.com/auth/gmail.readonly";
-            const url = `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Dgmail%26start%3d${startnode}`;
+            const url = `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Dgmail%26start%3d${startnode}`;
             console.log("URL: ", url);
 
             var newwin = window.open(url, "", "width=800,height=600");
@@ -7936,7 +8197,8 @@ const AngularWorkflow = (defaultprops) => {
 
             console.log("BRANCH: ", branch);
             const startnode = branch.destination_id;
-            const url = `https://login.microsoftonline.com/common/oauth2/authorize?access_type=offline&client_id=${client_id}&redirect_uri=${redirectUri}&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&prompt=login&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Doutlook%26start%3d${startnode}`;
+						// prompt=login
+            const url = `https://login.microsoftonline.com/common/oauth2/authorize?access_type=offline&client_id=${client_id}&redirect_uri=${redirectUri}&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Doutlook%26start%3d${startnode}`;
             //const url = `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Dgmail%26start%3d${startnode}`
 
             //const scopes = "https://www.googleapis.com/auth/gmail.readonly"
@@ -14464,6 +14726,8 @@ const AngularWorkflow = (defaultprops) => {
 						setWorkflow={setWorkflow}
 						modalOpen={editWorkflowModalOpen}
 						setModalOpen={setEditWorkflowModalOpen}
+						isEditing={true}
+						userdata={userdata}
 					/>
 				: null}
 

@@ -4804,6 +4804,11 @@ const Admin = (props) => {
 													<IconButton
 														style={{}}
 														onClick={() => {
+															if (environment.Type === "cloud") {
+																alert.info("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
+																return
+															}
+
 															const elementName = "copy_element_shuffle";
 															const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
 															const commandData = `docker run -d --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="https://shuffler.io" ghcr.io/frikky/shuffle-orborus:latest`

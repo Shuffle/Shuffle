@@ -395,6 +395,40 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	for _, action := range workflowExecution.Workflow.Actions {
+		found := false
+		for _, result := range workflowExecution.Results {
+			if result.Action.ID == action.ID {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			continue
+		}
+
+		//log.Printf("[DEBUG] Maybe not handled yet: %s", action.ID)
+		cacheId := fmt.Sprintf("%s_%s_result", workflowExecution.ExecutionId, action.ID)
+		cache, err := shuffle.GetCache(ctx, cacheId)
+		if err != nil {
+			//log.Printf("[WARNING] Couldn't find in fix exec %s (2): %s", cacheId, err)
+			continue
+		}
+
+		actionResult := shuffle.ActionResult{}
+		cacheData := []byte(cache.([]uint8))
+
+		// Just ensuring the data is good
+		err = json.Unmarshal(cacheData, &actionResult)
+		if err != nil {
+			continue
+		} else {
+			log.Printf("[DEBUG] APPENDING %s result to send to app or something\n\n\n\n", action.ID)
+			workflowExecution.Results = append(workflowExecution.Results, actionResult)
+		}
+	}
+
 	newjson, err := json.Marshal(workflowExecution)
 	if err != nil {
 		resp.WriteHeader(401)

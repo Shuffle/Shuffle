@@ -88,9 +88,9 @@ import {
 
 import Autocomplete from "@material-ui/lab/Autocomplete";
 
-import CodeMirror from "@uiw/react-codemirror";
-import "codemirror/keymap/sublime";
-import "codemirror/theme/gruvbox-dark.css";
+//import CodeMirror from "@uiw/react-codemirror";
+//import "codemirror/keymap/sublime";
+//import "codemirror/theme/gruvbox-dark.css";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
 
 const useStyles = makeStyles({
@@ -1515,6 +1515,7 @@ const ParsedAction = (props) => {
 								setcodedata={setcodedata}
 								expansionModalOpen={expansionModalOpen}
 								setExpansionModalOpen={setExpansionModalOpen}
+								globalUrl={globalUrl}
 							/>
 						)
 

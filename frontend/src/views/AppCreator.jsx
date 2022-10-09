@@ -3018,6 +3018,23 @@ const AppCreator = (defaultprops) => {
             data["file_field"] !== null &&
             data["file_field"].length > 0) || data["example_response"] === "shuffle_file_download"
 
+					// In case of extremely long summaries/names from OpenAPI def
+					//const maxlen = 35
+					//if (data.description === undefined || data.description === null || data.description.length === 0) {
+					//	if (data.name !== undefined && data.name !== null && data.name.length > maxlen ) {
+					//		var newname = []
+					//		for (var key in data.name.split(" ")) {
+					//			console.log("Name: ", data.name[key])
+					//			if (newname.join(" ").length < maxlen) {
+					//				newname.push(data.name[key])
+					//			}
+					//		}
+
+					//		data.description = data.name.valueOf()
+					//		data.name = newname.join(" ")
+					//	}
+					//}
+
           return (
             <Paper key={index} style={actionListStyle}>
               {error}
@@ -3031,6 +3048,16 @@ const AppCreator = (defaultprops) => {
                     overflowX: "hidden",
                   }}
                   onClick={() => {
+										console.log("Data: ", data)
+                    if (hasFile) {
+                      setFileUploadEnabled(true);
+											//setActionField("headers", "")
+											console.log("It has a file: ", data["file_field"])
+											data.headers = ""
+                    } else {
+											console.log("No file")
+										}
+
                     setCurrentAction(data);
                     setCurrentActionMethod(data.method);
                     setUrlPathQueries(data.queries);
@@ -3043,12 +3070,10 @@ const AppCreator = (defaultprops) => {
                       data["body"].length > 0
                     ) {
                       findBodyParams(data["body"]);
-                    }
+                    } else {
+											console.log("No body param")
+										}
 
-                    if (hasFile) {
-                      setFileUploadEnabled(true);
-											setActionField("headers", "")
-                    }
                   }}
                 >
                   <div style={{ display: "flex" }}>

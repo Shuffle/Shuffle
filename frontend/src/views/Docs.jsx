@@ -4,6 +4,7 @@ import { useTheme } from "@material-ui/core/styles";
 import ReactMarkdown from "react-markdown";
 import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { isMobile } from "react-device-detect";
 
 import {
 	Grid,
@@ -53,7 +54,7 @@ const innerHrefStyle = {
 };
 
 const Docs = (defaultprops) => {
-  const { globalUrl, selectedDoc, serverside, isMobile } = defaultprops;
+  const { globalUrl, selectedDoc, serverside, serverMobile } = defaultprops;
 
 	let navigate = useNavigate();
   const theme = useTheme();
@@ -73,7 +74,7 @@ const Docs = (defaultprops) => {
 	}, [])
 	//console.log("PARAMS: ", params)
 
-  const [mobile, setMobile] = useState(isMobile === true ? true : false);
+  const [mobile, setMobile] = useState(serverMobile === true || isMobile === true ? true : false);
   const [data, setData] = useState("");
   const [firstrequest, setFirstrequest] = useState(true);
   const [list, setList] = useState([]);
@@ -357,6 +358,9 @@ const Docs = (defaultprops) => {
     overflow: "hidden",
     paddingBottom: 100,
 		margin: "auto",
+		maxWidth: "100%",
+		minWidth: "100%",
+		overflow: "hidden",
   };
 
   function OuterLink(props) {
@@ -542,7 +546,20 @@ const Docs = (defaultprops) => {
         target="_blank"
         style={{ textDecoration: "none", color: "inherit", flex: 1, margin: 10, }}
 			>
-				<div style={{cursor: hover ? "pointer" : "default", borderRadius: theme.palette.borderRadius, flex: 1, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, padding: 25, }} onMouseOver={() => {
+				<div style={{cursor: hover ? "pointer" : "default", borderRadius: theme.palette.borderRadius, flex: 1, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, padding: 25, }} 
+					onClick={(event) => {
+						if (link === "" || link === undefined) { 
+							event.preventDefault()
+							console.log("IN CLICK!")
+							if (window.drift !== undefined) {
+								window.drift.api.startInteraction({ interactionId: 340043 })
+							} else {
+								console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+							}
+						} else {
+							console.log("Link defined: ", link)
+						}
+					}} onMouseOver={() => {
 						setHover(true)
 					}}
 					onMouseOut={() => {
@@ -607,7 +624,7 @@ const Docs = (defaultprops) => {
 					Documentation
 				</Typography>
 				<div style={{display: "flex", marginTop: 25, }}>
-					<CustomButton title="Open a Ticket" icon=<img src="/images/Shuffle_logo_new.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="mailto:support@shuffler.io" />
+					<CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> />
 					<CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
 				</div>
 
@@ -775,7 +792,7 @@ const Docs = (defaultprops) => {
 								id="markdown_wrapper"
 								escapeHtml={false}
 								source={data}
-								style={{}}
+								style={{maxWidth: "100%", minWidth: "100%", }}
 								renderers={{
 									link: OuterLink,
 									image: Img,

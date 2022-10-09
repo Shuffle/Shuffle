@@ -164,7 +164,14 @@ const AuthenticationOauth2 = (props) => {
       state += `%26refresh_uri%3d${authentication_url}`;
     }
 
-    const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`;
+		// Force new consent
+    //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`;
+
+		// Admin consent
+    //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=admin_consent&state=${state}&access_type=offline`;
+
+		// Skip consent
+    const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&state=${state}&access_type=offline`;
 
     //const url = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${client_id}&scope=AaaServer.profile.Read&redirect_uri=${redirectUri}&prompt=consent`
     //console.log("Full URI: ", url)
@@ -373,7 +380,7 @@ const AuthenticationOauth2 = (props) => {
 										"efe4c3fe-84a1-4821-a84f-23a6cfe8e72d",
 										"",
 										"https://graph.microsoft.com",
-										["Mail.ReadWrite"],
+										["Mail.ReadWrite", "Mail.Send"],
 									);
 								} else if (selectedApp.name.toLowerCase() == "gmail") {
 									handleOauth2Request(

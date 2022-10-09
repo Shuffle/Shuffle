@@ -119,7 +119,7 @@ const WorkflowSearch = props => {
 		var counted = 0
 
 		return (
-			<Grid container spacing={0} style={{border: "1px solid rgba(255,255,255,0.2)", maxHeight: 250, minHeight: 250, overflowY: "auto", overflowX: "hidden",}}>
+			<Grid container spacing={0} style={{border: "1px solid rgba(255,255,255,0.2)", maxHeight: 250, minHeight: 250, overflowY: "auto", overflowX: "hidden", }}>
 				{hits.map((data, index) => {
 					const paperStyle = {
 						backgroundColor: index === mouseHoverIndex ? "rgba(255,255,255,0.8)" : theme.palette.inputColor,
@@ -131,6 +131,8 @@ const WorkflowSearch = props => {
 						position: "relative",
 						overflow: "hidden",
 						width: "100%", 
+						minHeight: 37, 
+						maxHeight: 52, 
 					}
 	
 					if (counted === 12/xs*rowHandler) {
