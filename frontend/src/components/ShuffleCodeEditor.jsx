@@ -289,13 +289,22 @@ const CodeEditor = (props) => {
 			var current_code_line = code_lines[i]
 			// console.log(current_code_line)
 
-			var variable_occurence = current_code_line.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 
 			if (variable_occurence === null || variable_occurence === undefined) {
 				console.log("No variables found. Returning")
 				continue
-				//return
 			}
+
+			var new_occurences = []
+			for (var key in variable_occurence) {
+				if (variable_occurence[key][0] !== "\\") {
+					new_occurences.push(variable_occurence[key])
+				}
+			}
+
+			variable_occurence = new_occurences.valueOf()
+			console.log("Match2: ", variable_occurence)
 
 			// console.log(variable_occurence)
 			// console.log()
@@ -309,9 +318,10 @@ const CodeEditor = (props) => {
 			// 	console.log(actionlist[j].autocomplete);
 			// }
 
+			// Finds occurences of dollar signs
 			var dollar_occurence = []
-			for(var ch=0; ch<current_code_line.length; ch++){
-				if(current_code_line[ch] === '$'){
+			for(var ch = 0; ch < current_code_line.length; ch++){
+				if (current_code_line[ch] === '$' && (ch === 0 || current_code_line[ch-1] !== "\\")) {
 					dollar_occurence.push(ch)
 				}
 			}
@@ -319,7 +329,7 @@ const CodeEditor = (props) => {
 
 			var dollar_occurence_len = []
 			try{
-				for(var occ = 0; occ<variable_occurence.length; occ++){
+				for(var occ = 0; occ < variable_occurence.length; occ++){
 					dollar_occurence_len.push(variable_occurence[occ].length)
 				}
 			} catch (e) {}
@@ -328,6 +338,11 @@ const CodeEditor = (props) => {
 
 
 			try{
+				if (variable_occurence.length === 0) {
+					//value.markText({line:i, ch:0}, {line:i, ch:code_lines[i].length-1}, {"css": "background-color: #282828; border-radius: 0px; color: #b8bb26"})
+					//value.markText({line:i, ch:0}, {line:i, ch:code_lines[i].length-1}, {"css": "background-color: #; border-radius: 0px; color: inherit"})
+				}
+
 				// console.log(variable_occurence)
 				for (var occ = 0; occ < variable_occurence.length; occ++){
 					// value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; border-radius: 4px; color: white"})
@@ -388,6 +403,7 @@ const CodeEditor = (props) => {
 
 	const expectedOutput = (input) => {
 		
+		//const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 		//if (found === null || found === undefined) {
 		//	console.log("No output found!")
@@ -441,7 +457,7 @@ const CodeEditor = (props) => {
 										console.log("ERR IN INPUT: ", e)
 									}
 
-									console.log("Got input: ", new_input, actionlist[k].example, typeof new_input)
+									//console.log("Got output for: ", fullpath, new_input, actionlist[k].example, typeof new_input)
 
 									if (typeof new_input === "object") {
 										new_input = JSON.stringify(new_input)
@@ -605,7 +621,12 @@ const CodeEditor = (props) => {
 			open={expansionModalOpen}
 			onClose={() => {
 				console.log("In closer")
-				changeActionParameterCodeMirror({target: {value: ""}}, fieldCount, localcodedata)
+
+				if (changeActionParameterCodeMirror !== undefined) {
+					changeActionParameterCodeMirror({target: {value: ""}}, fieldCount, localcodedata)
+				} else {
+					console.log("No action called changeActionParameterCodeMirror in code editor")
+				}
 				//setExpansionModalOpen(false)
 			}}
 			PaperComponent={PaperComponent}
@@ -1234,7 +1255,7 @@ const CodeEditor = (props) => {
 								<IconButton disabled={executing} color="primary" style={{border: `1px solid ${theme.palette.primary.main}`, marginLeft: 300, padding: 8}} variant="contained" onClick={() => {
 									executeSingleAction(expOutput)
 								}}>
-									<Tooltip title="Try it! This runs Shuffle Tools' 'repeat back to me' action with the expected output." placement="top">
+									<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' action with what you see in the expected output window." placement="top">
 										{executing ? <CircularProgress style={{height: 18, width: 18, }} /> : <PlayArrowIcon style={{height: 18, width: 18, }} /> }
 													 
 									</Tooltip>

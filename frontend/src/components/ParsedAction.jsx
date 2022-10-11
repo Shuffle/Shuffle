@@ -561,7 +561,20 @@ const ParsedAction = (props) => {
 		const calculateHelpertext = (input_data) => {
 			var helperText = ""
 			var looperText = ""
-			const found = input_data.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+			//const found = input_data.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+			var found = input_data.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+
+			if (found !== null && found !== undefined) {
+				var new_occurences = []
+				for (var key in found) {
+					if (found[key][0] !== "\\") {
+						new_occurences.push(found[key])
+					}
+				}
+
+				console.log("New found: ", new_occurences))
+				found = new_occurences.valueOf()
+			}
 
 			if (found !== null) {
 				try {
@@ -571,7 +584,7 @@ const ParsedAction = (props) => {
 						if ((variableSplit.length-1) > 1) {
 							//console.log("Larger than 1: ", variableSplit)
 							if (looperText.length === 0) {
-								looperText += "PS: Double looping (.#) may cause problems."
+								looperText += "PS: Double looping (.#.#) may cause problems."
 							}
 						}
 

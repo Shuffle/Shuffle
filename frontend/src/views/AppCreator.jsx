@@ -670,7 +670,8 @@ const AppCreator = (defaultprops) => {
 					if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
 						const regex = /_shuffle_replace_\d/i;
 						//console.log("NEW: ", 
-						newaction.url = newaction.url.replace(regex, "")
+						newaction.url = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
+						console.log("Replaced: ", newaction.url) 
 					}
 
           // Finding category
@@ -679,6 +680,12 @@ const AppCreator = (defaultprops) => {
             var categoryindex = -1;
             // Stupid way of finding a category/grouping
             for (var key in pathsplit) {
+							if (pathsplit[key].includes("_shuffle_replace_")) {
+								const regex = /_shuffle_replace_\d/i;
+								//console.log("NEW: ", 
+								pathsplit[key] = pathsplit[key].replaceAll(new RegExp(regex, 'g'), "")
+							}
+
               if (
                 pathsplit[key].length > 0 &&
                 pathsplit[key] !== "v1" &&
@@ -1697,7 +1704,6 @@ const AppCreator = (defaultprops) => {
 			// Basic way to allow multiple of the same path 
 			var pathjoin = item.url+"_"+item.method.toLowerCase()
 			if (handledPaths.includes(pathjoin)) {
-				console.log("ALREADY INCLUDED: ", pathjoin)
 
 				// Max 100 of same lol
 				for (var i = 0; i < 100; i++) {
@@ -1708,7 +1714,6 @@ const AppCreator = (defaultprops) => {
 						continue
 					}
 
-					console.log("FOUND NEW: ", item.url)
 					break
 				}
 			}
@@ -1978,6 +1983,37 @@ const AppCreator = (defaultprops) => {
       	  item.body.length > 0
       	) {
 					console.log("GOT BODY: ", item.url, item.method)
+
+					// Replacing dollarsign insertions that aren't escaped
+					// This is to stop it from messing with systems in Shuffle.
+					// This MAY cause it to be a little weird in other systems however,
+					// but it's the only way we can properly support e.g. GraphQL
+					// with good examples
+					var newbody = ""
+					for (var key in item.body) {
+						if (item.body[key] === "$") {
+							if (key > 0) {
+								//console.log("Found: ", item.body[key-1])
+								if (item.body[key-1] !== "\\") {
+									newbody += "\\"
+								} 
+
+								newbody += item.body[key]
+							} else {
+								newbody += "\\"
+								newbody += item.body[key]
+							}
+							//newbody += item.body[key]
+						} else {
+							newbody += item.body[key]
+						}
+					}
+
+					if (newbody !== item.body) {
+						//console.log("New body: ", newbody)
+						item.body = newbody
+					}
+
 					//var pathjoin = item.url+"_"+item.method.toLowerCase()
 
       	  const required = false;
@@ -4656,6 +4692,12 @@ const AppCreator = (defaultprops) => {
         <div style={{ marginTop: 10, marginBottom: 10 }}>
           {projectCategories.map((tag, index) => {
             const newname = tag.charAt(0).toUpperCase() + tag.slice(1);
+
+						//var regex = /_shuffle_replace_\d/i;
+						////console.log("NEW: ", 
+						//newname = newname.replaceAll(regex, "")
+						//console.log("Replaced: ", newname) 
+
             return (
               <Chip
                 key={index}
@@ -4888,6 +4930,7 @@ const AppCreator = (defaultprops) => {
     imageUploadError.length > 0 ? (
       <div style={{ marginTop: 10 }}>Error: {imageUploadError}</div>
     ) : null;
+
   const imageUploadModalView = openImageModal ? (
     <Dialog
       open={openImageModal}

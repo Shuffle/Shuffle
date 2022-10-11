@@ -17,6 +17,6 @@
 
 
 #curl http://localhost:5001/api/v1/files/create -H "Authorization: Bearer 09627dcb-7e2a-4843-819b-417d268ff840" -d '{"filename": "rule2.yar", "org_id": "11f67b76-6051-4425-b0d6-be23daac6d12", "workflow_id": "global", "namespace": "yara"}'
-curl http://localhost:5001/api/v1/files/file_366ee8d2-1af6-4270-8639-213af30b4a29/upload -H "Authorization: Bearer 09627dcb-7e2a-4843-819b-417d268ff840" -F 'shuffle_file=@upload.sh'
+curl http://localhost:5002/api/v1/files/file_366ee8d2-1af6-4270-8639-213af30b4a29/upload -H "Authorization: Bearer 09627dcb-7e2a-4843-819b-417d268ff840" -F 'shuffle_file=@upload.sh'
 
 #curl http://localhost:5001/api/v1/files/namespaces/yara -H "Authorization: Bearer c5b4c827-65ec-47f4-9e8a-234cdba38959" --output rules.zip

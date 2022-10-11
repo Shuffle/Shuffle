@@ -345,6 +345,36 @@ class AppBase:
             
         return new_input
 
+    def prepare_response(self, request):
+        try:
+            parsedheaders = {}
+            for key, value in request.headers.items():
+                parsedheaders[key] = value
+
+            cookies = {}
+            if request.cookies:
+                for key, value in request.cookies.items():
+                    cookies[key] = value
+
+            
+            jsondata = request.text
+            try:
+                jsondata = json.loads(jsondata)
+            except:
+                pass
+
+            return json.dumps({
+                "success": True,
+                "status": request.status_code,
+                "url": request.url,
+                "headers": parsedheaders,
+                "body": jsondata,
+                "cookies":cookies,
+            })
+        except Exception as e:
+            print(f"[WARNING] Failed in request: {e}")
+            return request.text
+
     # FIXME: Add more info like logs in here.
     # Docker logs: https://forums.docker.com/t/docker-logs-inside-the-docker-container/68190/2
     def send_result(self, action_result, headers, stream_path):

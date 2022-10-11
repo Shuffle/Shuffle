@@ -254,7 +254,6 @@ const AngularWorkflow = (defaultprops) => {
   const yellow = "#FECC00";
   //const theme = useTheme();
 
-  const [bodyWidth, bodyHeight] = useWindowSize();
 
   var to_be_copied = "";
   const [firstrequest, setFirstrequest] = React.useState(true);
@@ -395,6 +394,9 @@ const AngularWorkflow = (defaultprops) => {
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
   const unloadText = "Are you sure you want to leave without saving (CTRL+S)?";
   const classes = useStyles();
+
+  const [bodyWidth, bodyHeight] = useWindowSize()
+	//console.log("Mobile: ", isMobile, bodyWidth, bodyHeight)
 	const cytoscapeWidth = isMobile ? bodyWidth - leftBarSize : bodyWidth - leftBarSize - 25
 
 
@@ -427,8 +429,6 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
 				if (responseJson.success === true) {
-					console.log("RESPONSE FOR APP: ", responseJson.reason);
-					
 					if (responseJson.reason !== undefined && responseJson.reason !== undefined && responseJson.reason.length > 0) {
 						if (!responseJson.reason.includes("404: Not Found") && responseJson.reason.length > 25) {
 							selectedApp.documentation = responseJson.reason
@@ -651,7 +651,6 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const setNewAppAuth = (appAuthData) => {
-    console.log("DAta: ", appAuthData);
     fetch(globalUrl + "/api/v1/apps/authentication", {
       method: "PUT",
       headers: {
@@ -1511,8 +1510,6 @@ const AngularWorkflow = (defaultprops) => {
           }
 
           if (cy !== undefined) {
-            console.log("NEW AUTH = reset cy's onnodeselect");
-
             // Remove the old listener for select, run with new one
             cy.removeListener("select");
             cy.on("select", "node", (e) => onNodeSelect(e, newauth));
@@ -14180,7 +14177,6 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const handleSubmitCheck = () => {
-      console.log("NEW AUTH: ", authenticationOption);
       if (authenticationOption.label.length === 0) {
         authenticationOption.label = `Auth for ${selectedApp.name}`;
       }
@@ -14244,7 +14240,6 @@ const AngularWorkflow = (defaultprops) => {
         });
       }
 
-      console.log("FIELDS: ", newFields);
       newAuthOption.fields = newFields;
       setNewAppAuth(newAuthOption);
 

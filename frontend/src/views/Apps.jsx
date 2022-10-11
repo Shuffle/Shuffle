@@ -77,10 +77,12 @@ export const FindJsonPath = (path, inputdata) => {
 	var parsedValues = [];
 
 	if (inputdata === undefined || inputdata === null) {
+		console.log("Input is ", inputdata, ". Returning.")
 		return inputdata
 	}
 
 	if (typeof inputdata !== "object") {
+		console.log("Input is NOT an object. Returning.")
 		return inputdata
 	}
 
@@ -90,6 +92,7 @@ export const FindJsonPath = (path, inputdata) => {
 	}
 
 	if (keysplit.length === 0) {
+		console.log("Couldn't find key: length is 0 for keysplit.")
 		return inputdata
 	}
 
@@ -114,9 +117,11 @@ export const FindJsonPath = (path, inputdata) => {
 		}
 	}
 
+	var found = false
 	for (const [key, value] of Object.entries(inputdata)) {
-
-		if (key === keysplit[0]) {
+		const newkey = key.valueOf().toLowerCase().replaceAll(" ", "_")
+		if (key === keysplit[0] || newkey === keysplit[0]) {
+			found = true 
 
 			// Return if no more keys
 			// Else, dig deeper
