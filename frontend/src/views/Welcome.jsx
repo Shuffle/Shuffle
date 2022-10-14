@@ -3,12 +3,11 @@ import WelcomeForm from "../components/WelcomeForm.jsx";
 import DetectionFramework from "../components/DetectionFramework.jsx";
 import { 
 	Grid, 
-	Container,
   Fade,
 	Typography, 
 } from '@mui/material';
 import theme from '../theme';
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 // Should be different if logged in :|
 const Welcome = (props) => {

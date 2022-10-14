@@ -572,7 +572,7 @@ const ParsedAction = (props) => {
 					}
 				}
 
-				console.log("New found: ", new_occurences))
+				console.log("New found: ", new_occurences)
 				found = new_occurences.valueOf()
 			}
 
