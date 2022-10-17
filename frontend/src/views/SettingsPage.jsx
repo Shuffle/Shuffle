@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Grid,
   Typography,
@@ -23,19 +23,16 @@ const Settings = (props) => {
   const [username, setUsername] = useState("");
   const [firstname, setFirstname] = useState("");
   const [lastname, setLastname] = useState("");
-  const [title, setTitle] = useState("");
-  const [companyname, setCompanyname] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
-  const [file, setFile] = React.useState("");
-  const [fileBase64, setFileBase64] = React.useState(
-    userdata.image === undefined || userdata.image === null
-      ? theme.palette.defaultImage
-      : userdata.image
-  );
+  // const [file, setFile] = React.useState("");
+  // const [fileBase64, setFileBase64] = React.useState(
+  //   userdata.image === undefined || userdata.image === null
+  //     ? theme.palette.defaultImage
+  //     : userdata.image
+  // );
   const [loadedValidationWorkflows, setLoadedValidationWorkflows] =
     React.useState([]);
   const [selfOwnedWorkflows, setSelfOwnedWorkflows] = React.useState([]);
@@ -43,7 +40,6 @@ const Settings = (props) => {
     React.useState([]);
 
   // Used for error messages etc
-  const [formMessage] = useState("");
   const [passwordFormMessage, setPasswordFormMessage] = useState("");
 
   const [firstrequest, setFirstRequest] = useState(true);
@@ -296,58 +292,58 @@ const Settings = (props) => {
     }
   };
 
-  const registerProviders = (userdata) => {
-    // Register hooks here
-    detectEthereumProvider().then((provider) => {
-      if (provider) {
-        if (!provider.isMetaMask) {
-          alert.error("Only MetaMask is supported as of now.");
-          return;
-        }
+  // const registerProviders = (userdata) => {
+  //   // Register hooks here
+  //   detectEthereumProvider().then((provider) => {
+  //     if (provider) {
+  //       if (!provider.isMetaMask) {
+  //         alert.error("Only MetaMask is supported as of now.");
+  //         return;
+  //       }
 
-        // Find the ethereum network
-        // Get the users' account(s)
-        //alert.info("Connecting to MetaMask")
-        //console.log("Connected: ", provider.isConnected())
+  //       // Find the ethereum network
+  //       // Get the users' account(s)
+  //       //alert.info("Connecting to MetaMask")
+  //       //console.log("Connected: ", provider.isConnected())
 
-        if (!provider.isConnected()) {
-          alert.error("Metamask is not connected.");
-          return;
-        }
+  //       if (!provider.isConnected()) {
+  //         alert.error("Metamask is not connected.");
+  //         return;
+  //       }
 
-        provider.on("message", (event) => {
-          alert.info("Ethereum message: ", event);
-        });
+  //       provider.on("message", (event) => {
+  //         alert.info("Ethereum message: ", event);
+  //       });
 
-        provider.on("chainChanged", (chainId) => {
-          console.log("Changed chain to: ", chainId);
+  //       provider.on("chainChanged", (chainId) => {
+  //         console.log("Changed chain to: ", chainId);
 
-          const method = "eth_getBalance";
-          const params = [userdata.eth_info.account, "latest"];
-          provider
-            .request({
-              method: method,
-              params,
-            })
-            .then((result) => {
-              console.log("Got result: ", result);
-              if (result !== undefined && result !== null) {
-                userdata.eth_info.balance = result;
-                userdata.eth_info.parsed_balance = result / 1000000000000000000;
-                console.log("INFO: ", userdata);
-                setUserData(userdata);
-              } else {
-                alert.error("Couldn't find balance: ", result);
-              }
-            })
-            .catch((error) => {
-              // If the request fails, the Promise will reject with an error.
-              alert.error("Failed getting info from ethereum API: " + error);
-            });
-        });
-      }
-    });
-  };
+  //         const method = "eth_getBalance";
+  //         const params = [userdata.eth_info.account, "latest"];
+  //         provider
+  //           .request({
+  //             method: method,
+  //             params,
+  //           })
+  //           .then((result) => {
+  //             console.log("Got result: ", result);
+  //             if (result !== undefined && result !== null) {
+  //               userdata.eth_info.balance = result;
+  //               userdata.eth_info.parsed_balance = result / 1000000000000000000;
+  //               console.log("INFO: ", userdata);
+  //               setUserData(userdata);
+  //             } else {
+  //               alert.error("Couldn't find balance: ", result);
+  //             }
+  //           })
+  //           .catch((error) => {
+  //             // If the request fails, the Promise will reject with an error.
+  //             alert.error("Failed getting info from ethereum API: " + error);
+  //           });
+  //       });
+  //     }
+  //   });
+  // };
 
   // This should "always" have data
   useEffect(() => {
