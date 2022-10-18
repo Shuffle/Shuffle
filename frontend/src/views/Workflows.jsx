@@ -1,13 +1,16 @@
 import React, { useEffect, useContext } from "react";
 import ReactDOM from "react-dom"
+
 import { makeStyles } from "@material-ui/core/styles";
 import { useTheme } from "@material-ui/core/styles";
 import { Navigate } from "react-router-dom";
 //import { Redirect } from "react-router-dom";
 
+
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import EditWorkflow from "../components/EditWorkflow.jsx" 
 import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
+
 import { isMobile } from "react-device-detect" 
 
 import {
@@ -19,16 +22,13 @@ import {
 	ListSubheader,
   Paper,
   Tooltip,
-  Divider,
   Button,
   TextField,
   FormControl,
   IconButton,
   Menu,
   MenuItem,
-  FormControlLabel,
   Chip,
-  Switch,
   Typography,
   Zoom,
   CircularProgress,
@@ -36,7 +36,6 @@ import {
   DialogTitle,
   DialogActions,
   DialogContent,
-	OutlinedInput,
 	Checkbox,
 	ListItemText,
 } from "@material-ui/core";
@@ -74,7 +73,7 @@ import {
   ExpandMore as ExpandMoreIcon,
 } from "@material-ui/icons";
 
-import NestedMenuItem from "material-ui-nested-menu-item";
+//import NestedMenuItem from "material-ui-nested-menu-item";
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 //https://next.material-ui.com/components/material-icons/
@@ -2023,7 +2022,6 @@ const Workflows = (props) => {
                 overflow: "hidden",
                 marginTop: 5,
 								maxHeight: 28,
-								overflow: "hidden",
               }}
             >
               {data.tags !== undefined && data.tags !== null
@@ -2973,100 +2971,100 @@ const Workflows = (props) => {
     </span>
   );
 
-	const tourOptions = {
-		defaultStepOptions: {
-			classes: "shadow-md bg-purple-dark",
-    	scrollTo: true
-		},
-		useModalOverlay: true,
-		tourName: workflows,
-		exitOnEsc: true,
-	}
+	// const tourOptions = {
+	// 	defaultStepOptions: {
+	// 		classes: "shadow-md bg-purple-dark",
+  //   	scrollTo: true
+	// 	},
+	// 	useModalOverlay: true,
+	// 	tourName: workflows,
+	// 	exitOnEsc: true,
+	// }
 
-   //classes: "custom-class-name-1 custom-class-name-2",
-	const newSteps = [
-		{
-    	id: "intro",
-    	scrollTo: true,
-    	beforeShowPromise: function() {
-    	  return new Promise(function(resolve) {
-    	    setTimeout(function() {
-    	      window.scrollTo(0, 0);
-    	      resolve();
-    	    }, 500);
-    	  });
-    	},
-    	buttons: [
-    	  {
-    	    classes: "shepherd-button-primary",
-					style: {
-						backgroundColor: "red",	
-						color: "white", 
-					},
-    	    text: "Next",
-    	    type: "next"
-    	  }
-    	],
-    	highlightClass: "highlight",
-    	showCancelLink: true,
-    	text: [
-    	  "React-Shepherd is a JavaScript library for guiding users through your React app."
-    	],
-    	when: {
-    	  show: () => {
-    	    console.log("show step 1");
-    	  },
-    	  hide: () => {
-    	    console.log("hide step 1");
-    	  }
-    	}
-  },	
-  {
-    	id: "second",
-    	attachTo: {
-    	  element: "second-step",
-    	  on: "top"
-    	},
-    	text: [
-    	  "Yuk eksplorasi hasil Tes Minat Bakat-mu dan rekomendasi <b>Jurusan</b> dan Karier."
-    	],
-    	buttons: [
-    	  {
-    	    classes: "btn btn-info",
-    	    text: "Kembali",
-    	    type: "back"
-    	  },
-    	  {
-    	    classes: "btn btn-success",
-    	    text: "Saya Mengerti",
-    	    type: "cancel"
-    	  }
-    	],
-    	when: {
-    	  show: () => {
-    	    console.log("show stepp");
-    	  },
-    	  hide: () => {
-    	    console.log("complete step");
-    	  }
-    	},
-    	showCancelLink: false,
-    	scrollTo: true,
-    	modalOverlayOpeningPadding: 4,
-    	useModalOverlay: false,
-    	canClickTarget: false
-  	}
-	]
+  //  //classes: "custom-class-name-1 custom-class-name-2",
+	// const newSteps = [
+	// 	{
+  //   	id: "intro",
+  //   	scrollTo: true,
+  //   	beforeShowPromise: function() {
+  //   	  return new Promise(function(resolve) {
+  //   	    setTimeout(function() {
+  //   	      window.scrollTo(0, 0);
+  //   	      resolve();
+  //   	    }, 500);
+  //   	  });
+  //   	},
+  //   	buttons: [
+  //   	  {
+  //   	    classes: "shepherd-button-primary",
+	// 				style: {
+	// 					backgroundColor: "red",	
+	// 					color: "white", 
+	// 				},
+  //   	    text: "Next",
+  //   	    type: "next"
+  //   	  }
+  //   	],
+  //   	highlightClass: "highlight",
+  //   	showCancelLink: true,
+  //   	text: [
+  //   	  "React-Shepherd is a JavaScript library for guiding users through your React app."
+  //   	],
+  //   	when: {
+  //   	  show: () => {
+  //   	    console.log("show step 1");
+  //   	  },
+  //   	  hide: () => {
+  //   	    console.log("hide step 1");
+  //   	  }
+  //   	}
+  // },	
+  // {
+  //   	id: "second",
+  //   	attachTo: {
+  //   	  element: "second-step",
+  //   	  on: "top"
+  //   	},
+  //   	text: [
+  //   	  "Yuk eksplorasi hasil Tes Minat Bakat-mu dan rekomendasi <b>Jurusan</b> dan Karier."
+  //   	],
+  //   	buttons: [
+  //   	  {
+  //   	    classes: "btn btn-info",
+  //   	    text: "Kembali",
+  //   	    type: "back"
+  //   	  },
+  //   	  {
+  //   	    classes: "btn btn-success",
+  //   	    text: "Saya Mengerti",
+  //   	    type: "cancel"
+  //   	  }
+  //   	],
+  //   	when: {
+  //   	  show: () => {
+  //   	    console.log("show stepp");
+  //   	  },
+  //   	  hide: () => {
+  //   	    console.log("complete step");
+  //   	  }
+  //   	},
+  //   	showCancelLink: false,
+  //   	scrollTo: true,
+  //   	modalOverlayOpeningPadding: 4,
+  //   	useModalOverlay: false,
+  //   	canClickTarget: false
+  // 	}
+	// ]
 		
-		function TourButton() {
-		  const tour = useContext(ShepherdTourContext);
+	// 	function TourButton() {
+	// 	  const tour = useContext(ShepherdTourContext);
 		
-		  return (
-		    <Button variant="contained" color="primary" onClick={tour.start}>
-		      Start Tour
-		    </Button>
-		  );
-		}
+	// 	  return (
+	// 	    <Button variant="contained" color="primary" onClick={tour.start}>
+	// 	      Start Tour
+	// 	    </Button>
+	// 	  );
+	// 	}
 
   const WorkflowView = () => {
     if (workflows.length === 0) {

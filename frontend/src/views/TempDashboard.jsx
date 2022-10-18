@@ -15,8 +15,8 @@ import TableRow from "@material-ui/core/TableRow";
 import Paper from "@material-ui/core/Paper";
 
 import { LineChart, LineSeries, BarChart } from "reaviz";
-import { Gridline, GridStripe } from "reaviz";
-import { GridlineSeries } from "reaviz";
+import { GridStripe } from "reaviz";
+//import { GridlineSeries } from "reaviz";
 
 import InputLabel from '@material-ui/core/InputLabel';
 import FormControl from '@material-ui/core/FormControl';
