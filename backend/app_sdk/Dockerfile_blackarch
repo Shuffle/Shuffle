@@ -1,4 +1,4 @@
-FROM peterclemenko/blackarch as base
+FROM blackarchlinux/blackarch as base
 
 FROM base as builder
 

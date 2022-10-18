@@ -14,6 +14,7 @@ import { useAlert } from "react-alert";
 import theme from '../theme';
 import { isMobile } from "react-device-detect" 
 import aa from 'search-insights'
+import Drift from "react-driftjs";
 
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
@@ -6336,7 +6337,7 @@ const AngularWorkflow = (defaultprops) => {
 												window.open(parsedUrl, '_blank')
 											}, 2000)
 										} else {
-											alert.info(`Activating ${name} and refreshing apps.`)
+											alert.info(`Activating ${name}`)
 										}
 
 										console.log("CLICK: ", hit)
@@ -8176,7 +8177,8 @@ const AngularWorkflow = (defaultprops) => {
 								`https%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister`
 
             //const client_id = "fd55c175-aa30-4fa6-b303-09a29fb3f750"
-            const client_id = "bb4bff85-0d0b-4f5d-8a69-3cee8029b11a";
+            //const client_id = "bb4bff85-0d0b-4f5d-8a69-3cee8029b11a";
+            const client_id = "efe4c3fe-84a1-4821-a84f-23a6cfe8e72d";
 
             const username = userdata.id;
             console.log(redirectUri);
@@ -8392,6 +8394,15 @@ const AngularWorkflow = (defaultprops) => {
           </div>
           {outlookButton}
           {gmailButton}
+					<Typography variant="body2" color="textSecondary" style={{marginTop: 5}}>
+						If you have trouble using this trigger, please <span style={{ textDecoration: "none", color: "#f86a3e"}} onClick={() => {
+							if (window.drift !== undefined) {
+								window.drift.api.startInteraction({ interactionId: 340043 })
+							} else {
+								console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+							}
+						}}>contact us</span> to get access
+					</Typography>
         </div>
       );
 

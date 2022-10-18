@@ -1982,7 +1982,7 @@ const AppCreator = (defaultprops) => {
       	  item.body !== null &&
       	  item.body.length > 0
       	) {
-					console.log("GOT BODY: ", item.url, item.method)
+					console.log("GOT BODY: ", item.url, item.method, item.body)
 
 					// Replacing dollarsign insertions that aren't escaped
 					// This is to stop it from messing with systems in Shuffle.
@@ -1994,8 +1994,11 @@ const AppCreator = (defaultprops) => {
 						if (item.body[key] === "$") {
 							if (key > 0) {
 								//console.log("Found: ", item.body[key-1])
-								if (item.body[key-1] !== "\\") {
-									newbody += "\\"
+								const newkey = parseInt(key, 10)
+								if (item.body[newkey-1] !== "\\") {
+									if (item.body[newkey+1] !== "\{") {
+										newbody += "\\"
+									} 
 								} 
 
 								newbody += item.body[key]
@@ -2009,8 +2012,8 @@ const AppCreator = (defaultprops) => {
 						}
 					}
 
+					console.log("New body: ", newbody)
 					if (newbody !== item.body) {
-						//console.log("New body: ", newbody)
 						item.body = newbody
 					}
 
@@ -3272,7 +3275,7 @@ const AppCreator = (defaultprops) => {
         margin="normal"
         variant="outlined"
         multiline
-        rows="5"
+        minRows="5"
         defaultValue={currentAction["body"]}
         onChange={(e) => {
           setActionField("body", e.target.value);
@@ -3310,7 +3313,7 @@ const AppCreator = (defaultprops) => {
         margin="normal"
         variant="outlined"
         multiline
-        rows="2"
+        minRows="2"
         defaultValue={currentAction["example_response"]}
         onChange={(e) => setActionField("example_response", e.target.value)}
         helperText={
@@ -3990,7 +3993,7 @@ const AppCreator = (defaultprops) => {
 								id="standard-required"
 								defaultValue={currentAction["headers"]}
 								multiline
-								rows="2"
+								minRows="2"
 								onChange={(e) => setActionField("headers", e.target.value)}
 								helperText={
 									<span style={{ color: "white", marginBottom: "2px" }}>
