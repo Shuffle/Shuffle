@@ -1,10 +1,12 @@
 import React, { useEffect, useContext } from "react";
+import ReactDOM from "react-dom"
 import { makeStyles } from "@material-ui/core/styles";
 import { useTheme } from "@material-ui/core/styles";
 import { Navigate } from "react-router-dom";
 //import { Redirect } from "react-router-dom";
 
 import SecurityFramework from '../components/SecurityFramework.jsx';
+import EditWorkflow from "../components/EditWorkflow.jsx" 
 import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
 import { isMobile } from "react-device-detect" 
 
@@ -406,6 +408,13 @@ export const validateJson = (showResult) => {
   	}
 	}
 
+	if (showResult[0] === "\"") {
+  	return {
+  	  valid: false,
+  	  result: showResult,
+		}
+	}
+
   var jsonvalid = true
   try {
     if (!showResult.includes("{") && !showResult.includes("[")) {
@@ -523,6 +532,7 @@ const Workflows = (props) => {
   const [exportData, setExportData] = React.useState("");
 
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [isEditing, setIsEditing] = React.useState(true);
   const [newWorkflowName, setNewWorkflowName] = React.useState("");
   const [newWorkflowDescription, setNewWorkflowDescription] =
     React.useState("");
@@ -545,12 +555,14 @@ const Workflows = (props) => {
   const [firstLoad, setFirstLoad] = React.useState(true);
   const [showMoreClicked, setShowMoreClicked] = React.useState(false);
   const [usecases, setUsecases] = React.useState([]);
+  const [appFramework, setAppFramework] = React.useState({});
 
   const isCloud =
     window.location.host === "localhost:3002" ||
     window.location.host === "shuffler.io";
 
   const findWorkflow = (filters) => {
+		console.log("Using filters: ", filters)
     if (filters.length === 0) {
       setFilteredWorkflows(workflows);
       return;
@@ -565,27 +577,44 @@ const Workflows = (props) => {
         found = filters.map((filter) =>
           curWorkflow.name.toLowerCase().includes(filter)
         );
-      } else {
+      }
+
+      if (found.every((v) => v !== true)) {
         found = filters.map((filter) => {
-          const newfilter = filter.toLowerCase();
-          if (filter === undefined) {
+          if (filter === undefined || filter === null) {
             return false;
           }
 
+          const newfilter = filter.toLowerCase();
+
           if (curWorkflow.name.toLowerCase().includes(filter.toLowerCase())) {
             return true;
-          } else if (curWorkflow.tags.includes(filter)) {
+          } else if (curWorkflow.tags !== undefined && curWorkflow.tags !== null && curWorkflow.tags.includes(filter)) {
             return true;
           } else if (curWorkflow.owner === filter) {
             return true;
           } else if (curWorkflow.org_id === filter) {
             return true;
+          } else if (curWorkflow.usecase_ids !== undefined && curWorkflow.usecase_ids !== null && curWorkflow.usecase_ids.length > 0) {
+						// Check if the usecase is the right category
+						for (var key in usecases) {
+							if (usecases[key].name.toLowerCase() !== newfilter) {
+								continue
+							}
+
+							for (var subkey in usecases[key].list) {
+								if (curWorkflow.usecase_ids.includes(usecases[key].list[subkey].name)) {
+									return true
+								}
+							}
+						}
           } else if (
             curWorkflow.actions !== null &&
             curWorkflow.actions !== undefined
           ) {
             for (var key in curWorkflow.actions) {
               const action = curWorkflow.actions[key];
+
               if (
                 action.app_name.toLowerCase() === newfilter ||
                 action.app_name.toLowerCase().includes(newfilter)
@@ -593,7 +622,7 @@ const Workflows = (props) => {
                 return true;
               }
             }
-          }
+					}
 
           return false;
         });
@@ -612,14 +641,17 @@ const Workflows = (props) => {
 
   const addFilter = (data) => {
     if (data === null || data === undefined) {
+			console.log("No filter data")
       return;
     }
 
     if (data.includes("<") && data.includes(">")) {
+			console.log("Filter includes < or >")
       return;
     }
 
     if (filters.includes(data) || filters.includes(data.toLowerCase())) {
+			console.log("Filter already has the data")
       return;
     }
 
@@ -886,6 +918,39 @@ const Workflows = (props) => {
     }
   }, [isDropzone]);
 
+	const getFramework = () => {
+		fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for framework!");
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				setAppFramework({})
+				if (responseJson.reason !== undefined) {
+					//alert.error("Failed loading: " + responseJson.reason)
+				} else {
+					//alert.error("Failed to load framework for your org.")
+				}
+			} else {
+				setAppFramework(responseJson)
+			}
+		})
+		.catch((error) => {
+			console.log("err in framework: ", error.toString());
+		})
+	}
+
   const getAvailableWorkflows = () => {
     fetch(globalUrl + "/api/v1/workflows", {
       method: "GET",
@@ -904,7 +969,6 @@ const Workflows = (props) => {
           }
 
           alert.info("Failed getting workflows.");
-          setWorkflowDone(true);
 
           return;
         }
@@ -922,7 +986,7 @@ const Workflows = (props) => {
 						newarray.push(wf)
 					}
 
-          setWorkflows(newarray);
+					// Workflows are set in here
 					fetchUsecases(newarray)
 								
 					var setProdFilter = false 
@@ -965,7 +1029,6 @@ const Workflows = (props) => {
 					}
 
 					// Ensures the zooming happens only once per load
-          setWorkflowDone(true);
         	setTimeout(() => {
 						setFirstLoad(false)
 					}, 100)
@@ -1001,6 +1064,7 @@ const Workflows = (props) => {
 
 						if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
 							for (var usecasekey in workflow.usecase_ids) {
+
 								if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
 									//console.log("Got match: ", workflow.usecase_ids[usecasekey])
 
@@ -1027,6 +1091,8 @@ const Workflows = (props) => {
 		} else {
   		setUsecases(categorydata)
 		}
+    setWorkflows(workflows);
+    setWorkflowDone(true);
 	}
 
   const fetchUsecases = (workflows) => {
@@ -1048,11 +1114,16 @@ const Workflows = (props) => {
       .then((responseJson) => {
 				if (responseJson.success !== false) {
 					handleKeysetting(responseJson, workflows)
+				} else {
+        	setWorkflows(workflows);
+      		setWorkflowDone(true);
 				}
       })
       .catch((error) => {
         //alert.error("ERROR: " + error.toString());
         console.log("ERROR: " + error.toString());
+        setWorkflows(workflows);
+      	setWorkflowDone(true);
       });
   };
 
@@ -1065,6 +1136,7 @@ const Workflows = (props) => {
       }
 
       getAvailableWorkflows();
+			getFramework()
     }
   }, [])
 
@@ -1452,7 +1524,10 @@ const Workflows = (props) => {
         <Paper
           square
           style={setupPaperStyle}
-          onClick={() => setModalOpen(true)}
+          onClick={() => {
+						setModalOpen(true)
+  					setIsEditing(false)
+					}}
           onMouseOver={() => {
             setHover(true);
           }}
@@ -1505,7 +1580,7 @@ const Workflows = (props) => {
     }
 
     if (!data.previously_saved) {
-      boxColor = "#f85a3e";
+      boxColor = "#f86a3e";
     }
 
     const menuClick = (event) => {
@@ -1539,25 +1614,27 @@ const Workflows = (props) => {
       >
         <MenuItem
           style={{ backgroundColor: inputColor, color: "white" }}
-          onClick={() => {
-            setModalOpen(true);
-            setEditingWorkflow(JSON.parse(JSON.stringify(data)));
-            setNewWorkflowName(data.name);
-            setNewWorkflowDescription(data.description);
-            setDefaultReturnValue(data.default_return_value);
-            if (data.tags !== undefined && data.tags !== null) {
-              setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
-            }
+          onClick={(event) => {
+						event.stopPropagation()
+						ReactDOM.unstable_batchedUpdates(() => {
+            	setModalOpen(true);
+            	setEditingWorkflow(JSON.parse(JSON.stringify(data)));
+            	setNewWorkflowName(data.name);
+            	setNewWorkflowDescription(data.description);
+            	setDefaultReturnValue(data.default_return_value);
+            	if (data.tags !== undefined && data.tags !== null) {
+            	  setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
+            	}
 
-						console.log("Editing: ", data)
-						if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
-							setSelectedUsecases(data.usecase_ids)
-						}
+							if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
+								setSelectedUsecases(data.usecase_ids)
+							}
+						})
           }}
           key={"change"}
         >
           <EditIcon style={{ marginLeft: 0, marginRight: 8 }} />
-          {"Change details"}
+          {"Edit details"}
         </MenuItem>
         <MenuItem
           style={{ backgroundColor: inputColor, color: "white" }}
@@ -1702,20 +1779,60 @@ const Workflows = (props) => {
       }
     }
 
+		var selectedCategory = ""
+		if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0 && usecases !== null && usecases !== undefined && usecases.length > 0) {
+			const oldcolor = boxColor.valueOf()
+
+			// Find the first usecase and use that ones' ID
+			for (var key in usecases) {
+				var category = usecases[key]
+				category.matches = []
+
+				for (var subcategorykey in category.list) {
+					var subcategory = category.list[subcategorykey]
+					subcategory.matches = []
+
+					for (var usecasekey in data.usecase_ids) {
+						if (data.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
+							boxColor = category.color
+							break
+						}
+					}
+					
+					if (boxColor !== oldcolor) {
+						break
+					}
+				}
+
+				if (boxColor !== oldcolor) {
+					selectedCategory = category.name
+					break
+				}
+			}
+		}
+
     return (
 			<div style={{width: "100%", position: "relative",}}>
         <Paper square style={paperAppStyle}>
-          <div
-            style={{
-              position: "absolute",
-              bottom: 1,
-              left: 1,
-              height: 12,
-              width: 12,
-              backgroundColor: boxColor,
-              borderRadius: "0 100px 0 0",
-            }}
-          />
+					{selectedCategory !== "" ?
+						<Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
+							<div
+								style={{
+									cursor: "pointer",
+									position: "absolute",
+									top: 0,
+									left: 0,
+									height: paperAppStyle.minHeight,
+									width: 2,
+									backgroundColor: boxColor,
+									borderRadius: "0 100px 0 0",
+								}}
+								onClick={() => {
+                  addFilter(selectedCategory)
+								}}
+							/>
+						</Tooltip>
+					: null}
           <Grid
             item
             style={{ display: "flex", flexDirection: "column", width: "100%" }}
@@ -2023,9 +2140,10 @@ const Workflows = (props) => {
 					return
 				}
 
-        if (method === "POST" && redirect) {
-          window.location.pathname = "/workflows/" + responseJson["id"];
-          setModalOpen(false);
+        if (redirect) {
+          //window.location.pathname = "/workflows/" + responseJson["id"];
+					navigate("/workflows/" + responseJson["id"])
+          //setModalOpen(false);
         } else if (!redirect) {
           // Update :)
           setTimeout(() => {
@@ -2034,7 +2152,7 @@ const Workflows = (props) => {
           setImportLoading(false);
           setModalOpen(false);
         } else {
-          alert.info("Successfully changed basic info for workflow");
+          //alert.info("Successfully changed basic info for workflow");
           setModalOpen(false);
         }
 
@@ -3498,11 +3616,25 @@ const Workflows = (props) => {
         >
           <WorkflowView />
         </Dropzone>
-        {modalView}
+        {/*modalView*/}
         {deleteModal}
         {exportVerifyModal}
         {publishModal}
         {workflowDownloadModalOpen}
+
+				{modalOpen === true ? 
+					<EditWorkflow
+						globalUrl={globalUrl}
+						workflow={editingWorkflow}
+						setWorkflow={setEditingWorkflow}
+						modalOpen={modalOpen}
+						setModalOpen={setModalOpen}
+  					usecases={usecases}
+						setNewWorkflow={setNewWorkflow}
+						appFramework={appFramework}
+						isEditing={isEditing}
+					/>
+				: null}
 				{/*<div style={{zIndex: 1, position: "fixed", bottom: 110, right: 110, display: "flex", }}>
 					<Typography variant="body1" color="textSecondary" style={{zIndex: 1, marginRight: 0, maxWidth: 150, }}>
 						Need assistance? Ask our support team (it's free!).

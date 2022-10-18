@@ -572,7 +572,7 @@ const ParsedAction = (props) => {
 					}
 				}
 
-				console.log("New found: ", new_occurences))
+				console.log("New found: ", new_occurences)
 				found = new_occurences.valueOf()
 			}
 
@@ -632,10 +632,12 @@ const ParsedAction = (props) => {
         );
         if (paramcheck !== undefined) {
           // Escapes all double quotes
-          const toReplace = event.target.value
-            .trim()
-            .replaceAll('\\"', '"')
-            .replaceAll('"', '\\"');
+          var toReplace = event.target.value.trim()
+
+
+					if (!toReplace.startsWith("{") && !toReplace.startsWith("[")) {
+						toReplace = toReplace.replaceAll('\\"', '"').replaceAll('"', '\\"')
+					}
 
           console.log("REPLACE WITH: ", toReplace);
           if (
@@ -1459,7 +1461,9 @@ const ParsedAction = (props) => {
               if (found === null || !hideBody) {
                 if (found === null) {
                   setActivateHidingBodyButton(true);
-                }
+                } else {
+									console.log("In found: ", found, hideBody)
+								}
               } else {
                 //console.log("SHOW BUTTON");
 
