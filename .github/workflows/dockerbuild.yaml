@@ -68,7 +68,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
-            ghcr.io/frikky/shuffle-${{ matrix.app }}:nightly
+            ghcr.io/shuffle/shuffle-${{ matrix.app }}:nightly
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly
 
       - name: Image digest
