@@ -41,34 +41,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       
-      - name: Login to DockerHub
+      # name: Login to DockerHub
+      # uses: docker/login-action@v2
+      # with:
+      #   username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #   password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
+      - name: Login to Ghcr 
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Dockerhub Build and push 
-        id: docker_build_dockerhub
-        uses: docker/build-push-action@v2
-        env:
-          BUILDX_NO_DEFAULT_LOAD: true
-        with:
-          context: ${{ matrix.path }}/
-          file: ${{ matrix.path }}/Dockerfile          
-          platforms: linux/amd64,linux/arm64
-          #,linux/386 - no node image I guess?
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly
-
-      #- name: Login to Ghcr 
-      #  uses: docker/login-action@v2
-      #  with:
-      #    registry: ghcr.io
-      #    username: frikky
-      #    password: ${{ secrets.GHCR_PW }} 
-
-      #- name: Ghcr Build and push
-      #  id: docker_build
+      #- name: Dockerhub Build and push 
+      #  id: docker_build_dockerhub
       #  uses: docker/build-push-action@v2
       #  env:
       #    BUILDX_NO_DEFAULT_LOAD: true
@@ -76,8 +63,21 @@ jobs:
       #    context: ${{ matrix.path }}/
       #    file: ${{ matrix.path }}/Dockerfile          
       #    platforms: linux/amd64,linux/arm64
+      #    #,linux/386 - no node image I guess?
       #    push: true
-      #    tags: frikky/shuffle-${{ matrix.app }}:nightly
+      #    tags: ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly  
+
+      - name: Ghcr Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        env:
+          BUILDX_NO_DEFAULT_LOAD: true
+        with:
+          context: ${{ matrix.path }}/
+          file: ${{ matrix.path }}/Dockerfile          
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: frikky/shuffle-${{ matrix.app }}:nightly
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
