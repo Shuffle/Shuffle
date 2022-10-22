@@ -2,7 +2,7 @@ version: '3'
 services:
   frontend:
     #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:nightly
+    image: ghcr.io/shuffle/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -17,7 +17,7 @@ services:
       - backend
   backend:
     #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:nightly
+    image: ghcr.io/shuffle/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -40,7 +40,7 @@ services:
       #- opensearch #Not necessary because dependancy is handled within the backend itself instead
       #- database
   orborus:
-    image: ghcr.io/frikky/shuffle-orborus:nightly
+    image: ghcr.io/shuffle/shuffle-orborus:nightly
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
