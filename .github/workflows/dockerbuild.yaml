@@ -60,10 +60,13 @@ jobs:
         env:
           BUILDX_NO_DEFAULT_LOAD: true
         with:
+          logout: false
           context: ${{ matrix.path }}/
           file: ${{ matrix.path }}/Dockerfile          
           platforms: linux/amd64,linux/arm64
           push: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
             ghcr.io/frikky/shuffle-${{ matrix.app }}:nightly
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly
