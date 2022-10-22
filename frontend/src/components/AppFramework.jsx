@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 
-import { securityFramework } from "./LandingpageUsecases.jsx";
+import { securityFramework} from "./LandingpageUsecases.jsx";
 import CytoscapeComponent from 'react-cytoscapejs';
 import frameworkStyle from '../frameworkStyle.jsx';
 import AppSearch from './Appsearch.jsx';
 import { v4 as uuidv4 } from "uuid";
 import theme from '../theme';
 import { useAlert } from "react-alert";
+import { usecaseTypes } from "../components/UsecaseSearch.jsx"
+import PaperComponent from "../components/PaperComponent.jsx"
+import SuggestedWorkflows from "../components/SuggestedWorkflows.jsx"
 
 import {
   Paper,
@@ -16,6 +19,7 @@ import {
 	Badge,
   CircularProgress,
 	Tooltip,
+	Dialog,
 } from "@material-ui/core";
 
 import { 
@@ -518,24 +522,105 @@ export const usecases = {
 }
 
 const Framework = (props) => {
-  const { globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, size, inputUsecase, isLoggedIn, color, discoveryWrapper, setDiscoveryWrapper} = props;
-
+  const { globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, setFrameworkData, size, inputUsecase, isLoggedIn, color, discoveryWrapper, setDiscoveryWrapper, userdata, apps, } = props;
 	const [cy, setCy] = React.useState()
 	const [edgesStarted, setEdgesStarted] = React.useState(false)
 	const [graphDone, setGraphDone] = React.useState(false)
 	const [cyDone, setCyDone] = React.useState(false)
 	const [discoveryData, setDiscoveryData] = React.useState({})
 	const [selectionOpen, setSelectionOpen] = React.useState(true)
+	const [frameworkSuggestions, setFrameworkSuggestions] = React.useState([])
 	const [newSelectedApp, setNewSelectedApp] = React.useState({})
 	const [defaultSearch, setDefaultSearch] = React.useState("")
 	const [animationStarted, setAnimationStarted] = React.useState(false)
 	const [paperTitle, setPaperTitle] = React.useState("")
+	const [changedApp, setChangedApp] = React.useState("")
+
+
+	const [usecaseType, setUsecaseType] = React.useState(0)
+	const [selectedUsecase, setSelectedUsecase] = React.useState(selectedOption !== undefined ? selectedOption : "Phishing")
+
 	const scale = size === undefined ? 1 : size > 5 ? 3 : size
 
   const alert = useAlert()
 
+	const showRecommendations = (changed, frameworkData) => {
+		console.log("Inside recommendation loader")
+		setChangedApp(changed)
+		
+		// FIX: 
+		// 0. Get workflows loaded in from usecasesearch
+		// 1. Search through workflow templates for matching app types
+		// 2. Validate if template is already in use~ (workflows with same tools)
+		// 3. Generate the workflow(s) - PS: Fix new workflow templates
+		// 4. Moving on!
+	
+		// How can we load templates? UsecaseSearch?
+		var showusecases = []
+		//const foundusecase = usecaseTypes.find(data => data.name.toLowerCase() === defaultSearch.toLowerCase())
+		for (var key in usecaseTypes) {
+			for (var subkey in usecaseTypes[key].value) {
+				const usecase = usecaseTypes[key].value[subkey]
+
+				if (usecase.active === false) {
+					continue
+				}
+
+				var potential = false
+				var matches = []
+				for (var itemtype in usecase.items) {
+					const apptype = usecase.items[itemtype].app_type.toLowerCase()
+					//console.log("OLD: ", changed, "USECASE: ", apptype)
+
+					if (changed.toLowerCase() === apptype || changed.toLowerCase().includes(apptype)) {
+						potential = true 
+
+						if (frameworkData[apptype].name !== undefined && frameworkData[apptype].name !== null && frameworkData[apptype].name.length > 0) {
+							usecase.items[itemtype].app = frameworkData[apptype]
+						}
+
+						matches.push(usecase.items[itemtype])
+					} else {
+						// Check if the type is done in frameworkData
+						if (frameworkData[apptype] !== undefined) {
+							//console.log("NOT UNDEFINED: ", frameworkData[apptype])
+							if (frameworkData[apptype].name !== undefined && frameworkData[apptype].name !== null && frameworkData[apptype].name.length > 0) {
+								console.log("FOUND: ", frameworkData[apptype])
+								usecase.items[itemtype].app = frameworkData[apptype]
+
+								//console.log("Real app!")
+								matches.push(usecase.items[itemtype])
+							}
+
+							//if (frameworkData[apptype] !== undefined) {
+						} else {
+							console.log("UNDEFINED APP (bad name?): ", apptype)
+						}
+					}
+				}
+
+				if (potential) {
+					if (matches.length === usecase.items.length) {
+						usecase.color = "#c51152"
+						usecase.type = usecaseTypes[key].name
+						showusecases.push(usecase)
+					}
+				}
+			}
+		}
+
+		// FIXME: Check if a usecase has already been handled
+		console.log("")
+		console.log("GOT USECASES: ", showusecases)
+
+		// FIXME: Just showing one usecase at a time for now
+		if (showusecases.length > 0) {
+			setFrameworkSuggestions(showusecases.slice(0,1))
+		}
+	}
+
 	useEffect(() => {
-		//console.log("DISCWRAP CHANG: ", discoveryWrapper)
+		console.log("DISCWRAP CHANG: ", discoveryWrapper)
 		if (discoveryWrapper === undefined || discoveryWrapper.id === "SHUFFLE" || discoveryWrapper.id === undefined || cy === undefined) {
 			setDiscoveryData({})
 
@@ -548,26 +633,30 @@ const Framework = (props) => {
 			
 
 		// Find the node and click it?
-		setTimeout(() => {
-			const nodes = cy.nodes().jsons()
-			for (var key in nodes) {
-				const node = nodes[key]
-				var newSearchName = discoveryWrapper.id.valueOf()
-				if (newSearchName === "EMAIL") {
-					newSearchName = "COMMS"
-				}
-
-				if (node.data.id === newSearchName) {
-					const tmpnode = cy.getElementById(node.data.id)
-					if (tmpnode !== undefined) {
-						tmpnode.select()
-					}
-
-					setDefaultSearch(discoveryWrapper.id)
-					setPaperTitle(discoveryWrapper.id)
-				}
+		//setTimeout(() => {
+		const nodes = cy.nodes().jsons()
+		for (var key in nodes) {
+			const node = nodes[key]
+			var newSearchName = discoveryWrapper.id.valueOf()
+			if (newSearchName === "EMAIL") {
+				newSearchName = "COMMS"
 			}
-		}, 50,)
+
+			if (newSearchName === "ERADICATION" || newSearchName === "ENDPOINT") {
+				newSearchName = "EDR & AV"
+			}
+
+			if (node.data.id === newSearchName) {
+				const tmpnode = cy.getElementById(node.data.id)
+				if (tmpnode !== undefined) {
+					tmpnode.select()
+				}
+
+				setDefaultSearch(discoveryWrapper.id)
+				setPaperTitle(discoveryWrapper.id)
+			}
+		}
+		//}, 50,)
 		//setDiscoveryData(discoveryWrapper)
 	}, [discoveryWrapper])
 
@@ -652,17 +741,23 @@ const Framework = (props) => {
 		}
 
 	useEffect(() => {
-		if (discoveryData.id === undefined) {
-			return
-		}
-
+		console.log(newSelectedApp, discoveryData)
 		if (newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined  || newSelectedApp.objectID.length === 0) {
 			return
 		}
 
-		if (paperTitle.length > 0) {
-			setDiscoveryWrapper({})
-			setSelectionOpen(false)
+		//if (paperTitle.length > 0) {
+		//	console.log("No papertitle (parent button)")
+
+		//	cy.elements().unselect()
+		//	return
+		//}
+
+		if (discoveryData.id === undefined) {
+			console.log("No discoverydata (parent button)")
+
+			cy.elements().unselect()
+			return
 		}
 
 		const submitValue = {
@@ -683,7 +778,29 @@ const Framework = (props) => {
 			foundelement.data("height", `${85*scale}px`)
 		}
 
+		if (setFrameworkData !== undefined) {
+			// Find discoveryData.id
+			var keys = []
+			for (const [key, value] of Object.entries(frameworkData)) {
+				if (key.toLowerCase() === discoveryData.id.toLowerCase()) {
+					keys.push(key)
+				}
+			}
+
+			if (keys.length === 0) {
+				console.log("Failed to find: ", discoveryData.id, " IN ", frameworkData)
+			} else {
+				for (var key in keys) {
+					frameworkData[keys[key]] = submitValue
+				}
+
+				setFrameworkData(frameworkData)
+				showRecommendations(discoveryData.id, frameworkData)
+			}
+		}
+
 		setFrameworkItem(submitValue) 
+		cy.elements().unselect()
 
 	}, [newSelectedApp])
 
@@ -792,8 +909,6 @@ const Framework = (props) => {
 	//console.log("Framework - update? ", parsedFrameworkData)
 
 	// 0 = automated, 1 = manual
-	const [usecaseType, setUsecaseType] = React.useState(0)
-	const [selectedUsecase, setSelectedUsecase] = React.useState(selectedOption !== undefined ? selectedOption : "Phishing")
 
 	const elements = []
 	const surfaceColor = "#27292D"
@@ -966,13 +1081,59 @@ const Framework = (props) => {
     )
 	}
 
+	const onNodeUnselect = (event) => {
+    var data = event.target.data();
+		console.log("UNSELECT: ", data)
+			
+		var parsedStyle = {
+      "border-width": "10px",
+      "border-opacity": ".7",
+			"border-color": "#7fe57f",
+    }
+
+		if (event.target !== undefined && event.target !== null) {
+			event.target.animate(
+				{
+					style: parsedStyle,
+				},
+				{
+					duration: animationDuration,
+				}
+			)
+
+			setTimeout(() => {
+				event.target.animate(
+					{
+						style: {
+							"border-width": "3px",
+						},
+					},
+					{
+						duration: animationDuration,
+					}
+				)
+			}, 2500)
+		}
+
+		//setDiscoveryData({})
+		setDiscoveryWrapper({})
+		setSelectionOpen(false)
+		setDefaultSearch("")
+		setPaperTitle("")
+
+		//setDiscoveryData({})
+	}
 
 	const onNodeSelect = (event) => {
-    const data = event.target.data();
+    var data = event.target.data();
 		console.log("Node: ", data)
 		if (data.id === "SHUFFLE") {
 			event.target.unselect()
 			return
+		}
+
+		if (data.label === "EDR & AV") {
+			data.label = "ERADICATION"
 		}
 	
 		setDiscoveryData(data)
@@ -1008,6 +1169,9 @@ const Framework = (props) => {
 
 		cy.on("select", "node", (e) => {
 			onNodeSelect(e)
+		})
+    cy.on("unselect", "node", (e) => {
+			onNodeUnselect(e)
 		})
 
 		cy.on("mouseover", "node", (e) => {onNodeHover(e)})
@@ -1547,8 +1711,21 @@ const Framework = (props) => {
 	var usecasediff = -100
 	const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
 
-	return (
+	return (	
 		<div style={{margin: "auto", backgroundColor: bgColor, position: "relative", }}>
+			<div style={{position: "absolute"}}>
+
+				<SuggestedWorkflows 
+					globalUrl={globalUrl}
+					userdata={userdata}
+					frameworkData={frameworkData}
+					usecaseSuggestions={frameworkSuggestions}
+					setUsecaseSuggestions={setFrameworkSuggestions}
+					inputSearch={changedApp}
+					apps={apps}
+				/>
+			</div>
+
 			{showOptions === false ? null : 
 				<div style={{textAlign: "center",}}>
 					{Object.keys(usecases).map((data, index) => {
@@ -1580,7 +1757,7 @@ const Framework = (props) => {
 
   		{
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
-					<Paper style={{width: 275, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: 25, left: 50, }}>
+					<Paper style={{width: 275, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: 50, }}>
 						{paperTitle.length > 0 ? 
 							<span>
 								<Typography variant="h6" style={{textAlign: "center"}}>
@@ -1718,6 +1895,8 @@ const Framework = (props) => {
 									defaultSearch={defaultSearch}
 									newSelectedApp={newSelectedApp}
 									setNewSelectedApp={setNewSelectedApp}
+									userdata={userdata}
+									cy={cy}
 								/>
 							: null}
 						</div>
