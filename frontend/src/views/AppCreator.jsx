@@ -393,35 +393,36 @@ const AppCreator = (defaultprops) => {
       return;
     }
   
-		handleEditApp(urlParams.get("id")) 
+		//handleEditApp(urlParams.get("id")) 
 
-    //fetch(globalUrl + "/api/v1/get_openapi/" + urlParams.get("id"), {
-    //  method: "GET",
-    //  headers: {
-    //    "Content-Type": "application/json",
-    //    Accept: "application/json",
-    //  },
-    //  credentials: "include",
-    //})
-    //  .then((response) => {
-    //    if (response.status !== 200) {
-    //      throw new Error("NOT 200 :O");
-    //    }
+		// THIS has to stay due to ID may not exist as normal app yet
+    fetch(globalUrl + "/api/v1/get_openapi/" + urlParams.get("id"), {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          throw new Error("NOT 200 :O");
+        }
 
-    //    return response.json();
-    //  })
-    //  .then((responseJson) => {
-    //    setIsAppLoaded(true);
-    //    if (!responseJson.success) {
-    //      alert.error("Failed to verify");
-    //    } else {
-    //      parseIncomingOpenapiData(responseJson);
-    //    }
-    //  })
-    //  .catch((error) => {
-    //    console.log("Error: ", error.toString());
-    //    alert.error(error.toString());
-    //  });
+        return response.json();
+      })
+      .then((responseJson) => {
+        setIsAppLoaded(true);
+        if (!responseJson.success) {
+          alert.error("Failed to get app config. Do you have access?");
+        } else {
+          parseIncomingOpenapiData(responseJson);
+        }
+      })
+      .catch((error) => {
+        console.log("Error: ", error.toString());
+        alert.error(error.toString());
+      });
   };
 
   const setFileFromb64 = () => {

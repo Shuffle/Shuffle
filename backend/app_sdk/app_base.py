@@ -3424,7 +3424,7 @@ class AppBase:
                                     errorstring = f"{e}"
 
                                     if "the JSON object must be" in errorstring:
-                                        self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
+                                        self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (0)?")
                                         try:
                                             e = json.loads(f"{e}")
                                         except:
@@ -3454,7 +3454,7 @@ class AppBase:
                                         })
                                         break
                                 except Exception as e:
-                                    self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
+                                    self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (1)?")
 
                                     try:
                                         e = json.loads(f"{e}")

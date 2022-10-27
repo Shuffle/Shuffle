@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import ReactDOM from "react-dom"
+
 import { useInterval } from "react-powerhooks";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 
@@ -1400,7 +1401,6 @@ const AngularWorkflow = (defaultprops) => {
     	setVisited([])
     	setExecutionRequest({})
     	stop()
-		})
 
     	var curelements = cy.elements();
     	for (var i = 0; i < curelements.length; i++) {
@@ -1476,6 +1476,7 @@ const AngularWorkflow = (defaultprops) => {
 					setExecutionRequestStarted(false)
     	    console.log("Execute workflow err: ", error.toString());
     	  });
+			})
   };
 
   // This can be used to only show prioritzed ones later
@@ -13858,7 +13859,7 @@ const AngularWorkflow = (defaultprops) => {
     	      <span style={{ color: "white" }}>Execution Variable</span>
     	    </DialogTitle>
     	    <DialogContent>
-    	      Execution Variables are TEMPORARY variables that you can ony be set
+    	      Execution Variables are TEMPORARY variables that you can only be set
     	      and used during execution. Learn more{" "}
     	      <a
     	        rel="noopener noreferrer"
@@ -13955,7 +13956,7 @@ const AngularWorkflow = (defaultprops) => {
 
     	          const variable = execution.execution_variables.find(
     	            (data) => data.name === newVariableName
-    	          );
+    	          )
     	          if (variable === undefined || variable.value === undefined) {
     	            return null;
     	          }
