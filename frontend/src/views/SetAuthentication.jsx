@@ -1,10 +1,10 @@
-import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
+import React, { useState } from "react";
 
 import { Typography, CircularProgress } from "@material-ui/core";
 import theme from '../theme';
 
 const SetAuthentication = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
+  const { globalUrl } = props;
 
   const [firstRequest, setFirstRequest] = useState(true);
   const [finished, setFinished] = useState(false);
@@ -20,7 +20,7 @@ const SetAuthentication = (props) => {
     const params = Object.fromEntries(urlSearchParams.entries());
 		console.log("PARAMS: ", params)
 
-    const authenticationStore = [];
+    //const authenticationStore = [];
     var appAuthData = {
       label: "",
       app: {
