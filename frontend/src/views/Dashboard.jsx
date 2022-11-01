@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
-import DetectionFramework from "../components/DetectionFramework.jsx";
+import AppFramework from "../components/AppFramework.jsx";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 // nodejs library that concatenates classes
 import classNames from "classnames";
@@ -834,7 +834,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																	borderRadius: theme.palette.borderRadius,
 																	border: "1px solid rgba(255,255,255,0.3)",
 																}}>
-																<DetectionFramework 
+																<AppFramework
 																	inputUsecase={inputUsecase}
 																	frameworkData={frameworkData}
 																	selectedOption={"Draw"}

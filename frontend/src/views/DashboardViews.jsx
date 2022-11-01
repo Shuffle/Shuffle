@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
-import DetectionFramework from "../components/DetectionFramework.jsx";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 // nodejs library that concatenates classes
 import classNames from "classnames";

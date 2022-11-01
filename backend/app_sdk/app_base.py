@@ -1433,7 +1433,7 @@ class AppBase:
                     "execution_id": self.current_execution_id
                 }
 
-                self.logger.info("[DEBUG] Before FULLEXEC stream result")
+                self.logger.info("[ERROR] Before FULLEXEC stream result")
                 ret = requests.post(
                     "%s/api/v1/streams/results" % (self.base_url), 
                     headers=headers, 
@@ -1444,8 +1444,7 @@ class AppBase:
                     fullexecution = ret.json()
                 else:
                     try:
-                        self.logger.info("[DEBUG] Error: Data: ", ret.json())
-                        self.logger.info("[DEBUG] Error with status code for results. Crashing because ACTION_RESULTS or WORKFLOW_VARIABLE can't be handled. Status: %d" % ret.status_code)
+                        self.logger.info("[ERROR] Error in app with status code for results. Crashing because results can't be handled. Status: %d" % ret.status_code)
                     except json.decoder.JSONDecodeError:
                         pass
 
@@ -1457,7 +1456,7 @@ class AppBase:
                     self.send_result(self.action_result, headers, stream_path) 
                     return
             except requests.exceptions.ConnectionError as e:
-                self.logger.info("[DEBUG] FullExec Connectionerror: %s" %  e)
+                self.logger.info("[ERROR] FullExec Connectionerror: %s" %  e)
                 self.action_result["result"] = json.dumps({
                     "success": False,
                     "reason": f"Connection error during startup: {e}"
@@ -1470,7 +1469,7 @@ class AppBase:
             try:
                 fullexecution = json.loads(self.full_execution)
             except json.decoder.JSONDecodeError as e:
-                self.logger.info("[WARNING] Json decode execution error: %s" % e)  
+                self.logger.info("[ERROR] Json decode execution error: %s" % e)  
                 self.action_result["result"] = "Json error during startup: %s" % e
                 self.send_result(self.action_result, headers, stream_path) 
                 return
@@ -3425,7 +3424,7 @@ class AppBase:
                                     errorstring = f"{e}"
 
                                     if "the JSON object must be" in errorstring:
-                                        self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
+                                        self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (0)?")
                                         try:
                                             e = json.loads(f"{e}")
                                         except:
@@ -3455,7 +3454,7 @@ class AppBase:
                                         })
                                         break
                                 except Exception as e:
-                                    self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
+                                    self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (1)?")
 
                                     try:
                                         e = json.loads(f"{e}")

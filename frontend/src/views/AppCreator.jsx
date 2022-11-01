@@ -34,7 +34,16 @@ import {
   AttachFile as AttachFileIcon,
   Apps as AppsIcon,
   ErrorOutline as ErrorOutlineIcon,
+	AddAPhoto as AddAPhotoIcon, 
+	AddAPhotoOutlined as AddAPhotoOutlinedIcon, 
+	ZoomInOutlined as ZoomInOutlinedIcon,
+	ZoomOutOutlined as ZoomOutOutlinedIcon,
+	Loop as LoopIcon,
 } from "@material-ui/icons";
+
+import {
+	AddPhotoAlternate as AddPhotoAlternateIcon,
+} from '@mui/icons-material';
 
 import { v4 as uuidv4 } from "uuid";
 import { Link, useParams } from "react-router-dom";
@@ -44,12 +53,6 @@ import { useAlert } from "react-alert";
 import words from "shellwords";
 
 import AvatarEditor from "react-avatar-editor";
-import AddAPhotoIcon from "@material-ui/icons/AddAPhoto";
-import AddAPhotoOutlinedIcon from "@material-ui/icons/AddAPhotoOutlined";
-import ZoomInOutlinedIcon from "@material-ui/icons/ZoomInOutlined";
-import ZoomOutOutlinedIcon from "@material-ui/icons/ZoomOutOutlined";
-import LoopIcon from "@material-ui/icons/Loop";
-import AddPhotoAlternateIcon from "@material-ui/icons/AddPhotoAlternate";
 
 const surfaceColor = "#27292D";
 const inputColor = "#383B40";
@@ -344,14 +347,14 @@ const AppCreator = (defaultprops) => {
   useEffect(() => {
 		if (window.location.pathname.includes("apps/edit")) {
 			setIsEditing(true);
-			handleEditApp();
+			handleEditApp(props.match.params.appid);
 		} else {
 			checkQuery();
 		}
   }, []);
 
-  const handleEditApp = () => {
-    fetch(globalUrl + "/api/v1/apps/" + props.match.params.appid + "/config", {
+  const handleEditApp = (appid) => {
+    fetch(globalUrl + "/api/v1/apps/" + appid + "/config", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -389,7 +392,10 @@ const AppCreator = (defaultprops) => {
       setIsAppLoaded(true);
       return;
     }
+  
+		//handleEditApp(urlParams.get("id")) 
 
+		// THIS has to stay due to ID may not exist as normal app yet
     fetch(globalUrl + "/api/v1/get_openapi/" + urlParams.get("id"), {
       method: "GET",
       headers: {
@@ -408,7 +414,7 @@ const AppCreator = (defaultprops) => {
       .then((responseJson) => {
         setIsAppLoaded(true);
         if (!responseJson.success) {
-          alert.error("Failed to verify");
+          alert.error("Failed to get app config. Do you have access?");
         } else {
           parseIncomingOpenapiData(responseJson);
         }

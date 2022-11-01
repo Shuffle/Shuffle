@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import {
   InputAdornment,
@@ -13,6 +13,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  Fade,
 } from "@material-ui/core";
 import { FavoriteBorder as FavoriteBorderIcon } from "@material-ui/icons";
 import { FixName } from "../views/Apps.jsx";
@@ -43,14 +44,15 @@ const ConfigureWorkflow = (props) => {
     isCloud,
     setAuthenticationType,
     alert,
+		showTriggers,
   } = props;
   const [requiredActions, setRequiredActions] = React.useState([]);
   const [requiredVariables, setRequiredVariables] = React.useState([]);
   const [requiredTriggers, setRequiredTriggers] = React.useState([]);
   const [previousAuth, setPreviousAuth] = React.useState(appAuthentication);
-  const [firstLoad, setFirstLoad] = React.useState("");
   const [itemChanged, setItemChanged] = React.useState(false);
-  var finished = false;
+  const [firstLoad, setFirstLoad] = React.useState("");
+  const [showFinalizeAnimation, setShowFinalizeAnimation] = React.useState(false);
 
   if (workflow === undefined || workflow === null) {
     return null;
@@ -94,18 +96,13 @@ const ConfigureWorkflow = (props) => {
   };
 
   if (firstLoad.length === 0 || firstLoad !== workflow.id) {
-    if (finished) {
-      setConfigureWorkflowModalOpen(false);
-      return null;
-    }
-
     if (apps === undefined || apps === null || apps.length === 0) {
       console.log("No apps loaded: ", apps);
       setConfigureWorkflowModalOpen(false);
       return null;
     }
 
-    setFirstLoad(workflow.id);
+    setFirstLoad(workflow.id)
     const newactions = [];
     for (var key in workflow.actions) {
       const action = workflow.actions[key];
@@ -272,17 +269,19 @@ const ConfigureWorkflow = (props) => {
     setRequiredTriggers(requiredTriggers);
     setRequiredVariables(requiredVariables);
     setRequiredActions(newactions);
-  }
+	}
 
   if (appAuthentication.length !== previousAuth.length) {
-    var newactions = [];
+    var newactions = []
     for (var actionkey in requiredActions) {
       var newaction = requiredActions[actionkey];
       const app = newaction.app;
 
       for (var key in appAuthentication) {
         const auth = appAuthentication[key];
-        if (auth.app.name === app.name && auth.active) {
+
+				// Does this account for all the different ones of the same? 
+        if (auth.app.name === app.name && auth.active === true) {
           newaction.auth_done = true;
           break;
         }
@@ -502,6 +501,7 @@ const ConfigureWorkflow = (props) => {
 
     return (
       <ListItem>
+				{/*
         <ListItemAvatar>
           <Avatar variant="rounded">
             <img
@@ -516,19 +516,28 @@ const ConfigureWorkflow = (props) => {
           secondary={action.app_version}
           style={{}}
         />
-        {action.must_authenticate ? (
-          action.auth_done ? (
-            <Button color="primary" variant="outlined" onClick={() => {}}>
-              Authenticated
-            </Button>
-          ) : selectedAction.app_name === action.app_name ? (
-            <CircularProgress />
-          ) : (
-            <Button
-              color="primary"
-              variant="contained"
-              onClick={() => {
-                setAuthenticationType(
+				*/}
+        {action.must_authenticate ? 
+						<Button
+        		  fullWidth
+        		  variant="contained"
+							disabled={action.auth_done}
+        		  style={{
+        		    flex: 1,
+        		    textTransform: "none",
+        		    textAlign: "left",
+        		    justifyContent: "flex-start",
+        		    backgroundColor: action.auth_done ? theme.palette.surfaceColor : "#ffffff",
+        		    color: action.auth_done ? "#686a6c" : "#2f2f2f",
+								borderRadius: theme.palette.borderRadius,
+								minWidth: 350, 
+								maxHeight: 50,
+								overflow: "hidden",
+								border: `1px solid ${theme.palette.inputColor}`,
+        		  }}
+        		  color="primary"
+        		  onClick={() => {
+        		      setAuthenticationType(
                   action.app.authentication.type === "oauth2" &&
                     action.app.authentication.redirect_uri !== undefined &&
                     action.app.authentication.redirect_uri !== null
@@ -541,37 +550,86 @@ const ConfigureWorkflow = (props) => {
                     : {
                         type: "",
                       }
-                );
+                )
 
                 setItemChanged(true);
-                setSelectedAction(action.action);
-                setSelectedApp(action.app);
+
+								if (setSelectedAction !== undefined) {
+                	setSelectedAction(action.action);
+								}
+
+								if (setSelectedApp !== undefined) {
+                	setSelectedApp(action.app);
+								}
+
                 setAuthenticationModalOpen(true);
-              }}
+        		  }}
             >
-              Authenticate
-            </Button>
-          )
-        ) : null}
+						<img
+							alt={action.app_name}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							src={action.large_image}
+						/>
+						<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
+							{action.auth_done ? "Authenticated" : `Authenticate ${action.app_name}`}
+						</Typography>
+        	</Button>
+         : null}
         {action.must_activate ? (
-          <Button
-            color="primary"
-            variant="contained"
-            onClick={() => {
-							console.log("ACTION: ", action)
-              activateApp(action.action.app_id, action.app_name, action.app_version);
-              setItemChanged(true);
-            }}
+					<Button
+        		  fullWidth
+        		  variant="contained"
+							disabled={action.auth_done}
+        		  style={{
+        		    flex: 1,
+        		    textTransform: "none",
+        		    textAlign: "left",
+        		    justifyContent: "flex-start",
+        		    backgroundColor: action.auth_done ? theme.palette.surfaceColor : "#ffffff",
+        		    color: action.auth_done ? "#686a6c" : "#2f2f2f",
+								borderRadius: theme.palette.borderRadius,
+								minWidth: 350, 
+								maxHeight: 50,
+								overflow: "hidden",
+								border: `1px solid ${theme.palette.inputColor}`,
+        		  }}
+        		  color="primary"
+        		  onClick={() => {
+								console.log("ACTION: ", action)
+								activateApp(action.action.app_id, action.app_name, action.app_version);
+								setItemChanged(true);
+            	}}
           >
-            Activate
+						<img
+							alt={action.app_name}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							src={action.large_image}
+						/>
+						<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
+							Activate
+						</Typography>
           </Button>
         ) : null}
 				{action.update_version !== action.app_version ? (
           <Button
-            color="primary"
-            variant="contained"
-						style={{marginLeft: 5}}
-            onClick={() => {
+						fullWidth
+						variant="contained"
+						disabled={action.auth_done}
+						style={{
+							flex: 1,
+							textTransform: "none",
+							textAlign: "left",
+							justifyContent: "flex-start",
+							backgroundColor: action.auth_done ? theme.palette.surfaceColor : "#ffffff",
+							color: action.auth_done ? "#686a6c" : "#2f2f2f",
+							borderRadius: theme.palette.borderRadius,
+							minWidth: 350, 
+							maxHeight: 50,
+							overflow: "hidden",
+							border: `1px solid ${theme.palette.inputColor}`,
+						}}
+						color="primary"
+						onClick={() => {
 							console.log("Set version to: ", action.update_version)
 
 							if (workflow.actions !== null) {
@@ -592,84 +650,118 @@ const ConfigureWorkflow = (props) => {
 							}
             }}
           >
-            {action.update_version}
+						<img
+							alt={action.app_name}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							src={action.large_image}
+						/>
+						<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
+							{action.update_version}
+						</Typography>
           </Button>
         ) : null}
       </ListItem>
     );
-  };
+  }
+									
+	// Based on the color here. Default: #f86a3e
+	//backgroundColor: selectedUsecaseCategory === usecase.name ? usecase.color : theme.palette.surfaceColor,
 
+	const topColor = "#f86a3e, #fc3922"
   return (
     <div>
-      <Typography variant="h6">{workflow.name}</Typography>
-      <Typography variant="body1" color="textSecondary">
-        The following configuration makes the workflow ready immediately.
-      </Typography>
-      {requiredActions.length > 0 ? (
-        <span>
-          <Typography variant="body1" style={{ marginTop: 10 }}>
-            Actions
-          </Typography>
-          <List>
-            {requiredActions.map((data, index) => {
-              return <AppSection key={index} action={data} />;
-            })}
-          </List>
-        </span>
-      ) : null}
+			<div style={{height: 125, width: "100%", background: `linear-gradient(to right, ${topColor}`, position: "relative",}}>
+			</div>
+			<div style={{margin: "25px 50px 50px 50px", maxHeight: 475, }}>
+      	<Typography variant="h6">{workflow.name}</Typography>
+      	<Typography variant="body2" color="textSecondary">
+      	  The following configuration makes the workflow ready immediately.
+      	</Typography>
+      	{requiredActions.length > 0 ? (
+      	  <span>
+      	    <Typography variant="body1" style={{ marginTop: 10 }}>
+      	      Required Actions
+      	    </Typography>
+      	    <List>
+      	      {requiredActions.map((data, index) => {
+      	        return (
+									<AppSection key={index} action={data} />
+								)
+      	      })}
+      	    </List>
+      	  </span>
+      	) : null}
 
-      {requiredVariables.length > 0 ? (
-        <span>
-          <Typography variant="body1" style={{ marginTop: 10 }}>
-            Variables
-          </Typography>
-          <List>
-            {requiredVariables.map((data, index) => {
-              return <VariableSection key={index} variable={data} />;
-            })}
-          </List>
-        </span>
-      ) : null}
+      	{requiredVariables.length > 0 ? (
+      	  <span>
+      	    <Typography variant="body1" style={{ marginTop: 10 }}>
+      	      Variables
+      	    </Typography>
+      	    <List>
+      	      {requiredVariables.map((data, index) => {
+      	        return <VariableSection key={index} variable={data} />;
+      	      })}
+      	    </List>
+      	  </span>
+      	) : null}
 
-      {requiredTriggers.length > 0 ? (
-        <span>
-          <Typography variant="body1" style={{ marginTop: 10 }}>
-            Triggers
-          </Typography>
-          <List>
-            {requiredTriggers.map((data, index) => {
-              return <TriggerSection key={index} trigger={data} />;
-            })}
-          </List>
-        </span>
-      ) : null}
-      <div style={{ textAlign: "center", display: "flex", marginTop: 20 }}>
-        <ButtonGroup style={{ margin: "auto" }}>
-          {/*
-					<Button color="primary" variant={"outlined"} style={{
-					}} onClick={() => {
-						setConfigureWorkflowModalOpen(false)
-					}}>
-						Skip 
-					</Button>
-					*/}
-          <Button
-            color="primary"
-            variant={itemChanged ? "contained" : "outlined"}
-            style={{}}
-            onClick={() => {
-              if (itemChanged) {
-                saveWorkflow(workflow);
-                window.location.reload();
-              } else {
-                setConfigureWorkflowModalOpen(false);
-              }
-            }}
-          >
-          	Close window 
-          </Button>
-        </ButtonGroup>
-      </div>
+      	{requiredTriggers.length > 0 && showTriggers !== false ? (
+      	  <span>
+      	    <Typography variant="body1" style={{ marginTop: 10 }}>
+      	      Triggers
+      	    </Typography>
+      	    <List>
+      	      {requiredTriggers.map((data, index) => {
+      	        return <TriggerSection key={index} trigger={data} />;
+      	      })}
+      	    </List>
+      	  </span>
+      	) : null}
+
+				<div style={{ textAlign: "center", display: "flex", marginTop: 20 }}>
+					{showFinalizeAnimation ? 
+						<img id="finalize_gif" src="/images/finalize.gif" alt="finalize workflow animation" style={{width: 150, margin: "auto",}} onLoad={() => {
+							console.log("Img loaded.")
+							setTimeout(() => {
+								console.log("Img closing.")
+								setConfigureWorkflowModalOpen(false);
+							}, 1250)
+								
+						}}/>
+						:
+						<ButtonGroup style={{ margin: "auto" }}>
+							{/*
+							<Button color="primary" variant={"outlined"} style={{
+							}} onClick={() => {
+								setConfigureWorkflowModalOpen(false)
+							}}>
+								Skip 
+							</Button>
+							*/}
+							<Button
+								color="textSecondary"
+								variant={"outlined"}
+								style={{}}
+								onClick={() => {
+									setShowFinalizeAnimation(true)
+									setTimeout(() => {
+										if (itemChanged) {
+											if (saveWorkflow !== undefined) {
+												saveWorkflow(workflow);
+												window.location.reload();
+											}
+
+										} else {
+										}
+									}, 1000)
+								}}
+							>
+								Finalize	
+							</Button>
+						</ButtonGroup>
+					}
+				</div>
+			</div>
     </div>
   );
 };

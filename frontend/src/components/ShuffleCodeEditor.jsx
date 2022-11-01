@@ -305,7 +305,6 @@ const CodeEditor = (props) => {
 
 			variable_occurence = new_occurences.valueOf()
 			console.log("Match2: ", variable_occurence)
-
 			// console.log(variable_occurence)
 			// console.log()
 
@@ -410,7 +409,7 @@ const CodeEditor = (props) => {
 		//	return
 		//}
 
-		//console.log("FOUND: ", found)
+		console.log("FOUND: ", found)
 
 		// Whelp this is inefficient af. Single loop pls
 		// When the found array is empty.
@@ -426,8 +425,15 @@ const CodeEditor = (props) => {
 					for (var j = 0; j < actionlist.length; j++) {
 						if(fixedVariable.slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
 							valuefound = true 
+
+							console.log("Valuefound: ", fixedVariable, actionlist[j].example)
+
 							try {
-								input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
+								if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
+									input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
+								} else {
+									input = input.replace(fixedVariable, actionlist[j].example)
+								}
 							} catch (e) { 
 								input = input.replace(fixedVariable, actionlist[j].example)
 							}

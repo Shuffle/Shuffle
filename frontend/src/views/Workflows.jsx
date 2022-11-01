@@ -1274,8 +1274,12 @@ const Workflows = (props) => {
 
         for (var subkey in data.actions[key].parameters) {
           const param = data.actions[key].parameters[subkey];
+
+					// Removed October 10th, 2022 as key usually isn't 
+					// containing anything secret, but rather necessary configurations.
+          // param.name.includes("key") ||
+					//
           if (
-            param.name.includes("key") ||
             param.name.includes("user") ||
             param.name.includes("pass") ||
             param.name.includes("api") ||
@@ -1322,8 +1326,9 @@ const Workflows = (props) => {
     ) {
       for (key in data.workflow_variables) {
         const param = data.workflow_variables[key];
+        //param.name.includes("key") ||
+
         if (
-          param.name.includes("key") ||
           param.name.includes("user") ||
           param.name.includes("pass") ||
           param.name.includes("api") ||
