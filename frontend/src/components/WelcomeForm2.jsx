@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from "react";
-import Stepper from "@material-ui/core/Stepper";
-import Step from "@material-ui/core/Step";
-import StepLabel from "@material-ui/core/StepLabel";
+import ReactGA from 'react-ga';
 import Button from "@material-ui/core/Button";
 import Checkbox from '@mui/material/Checkbox';
+
+import AliceCarousel from 'react-alice-carousel';
+import 'react-alice-carousel/lib/alice-carousel.css';
 
 import SearchIcon from '@mui/icons-material/Search';
 import EmailIcon from '@mui/icons-material/Email';
 import NewReleasesIcon from '@mui/icons-material/NewReleases';
 import ExtensionIcon from '@mui/icons-material/Extension';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 
 import theme from '../theme';
 import {
+  	Fade,
+		IconButton,
     FormGroup,
     FormControl,
     InputLabel,
@@ -24,23 +30,91 @@ import {
 		Typography, 
 		TextField,
 		Zoom,
+		List,
+		ListItem,
+		ListItemText,
+		Divider,
+		Tooltip,
+		Chip,
 } from "@material-ui/core";
+import { useAlert } from "react-alert";
+
 import { useNavigate, Link } from "react-router-dom";
 import WorkflowSearch from '../components/Workflowsearch.jsx';
+import AuthenticationItem from '../components/AuthenticationItem.jsx';
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
+import UsecaseSearch from "../components/UsecaseSearch.jsx"
+
+
+const responsive = {
+    0: { items: 1 },
+};
 
 const WelcomeForm = (props) => {
-		const { userdata, globalUrl, discoveryWrapper, setDiscoveryWrapper } = props
+		const { userdata, globalUrl, discoveryWrapper, setDiscoveryWrapper, appFramework, getFramework, activeStep, setActiveStep, steps, skipped, setSkipped, getApps, apps, handleSetSearch, usecaseButtons, defaultSearch, setDefaultSearch, selectionOpen, setSelectionOpen, } = props
 
-    const [activeStep, setActiveStep] = React.useState(0);
-    const [skipped, setSkipped] = React.useState(new Set());
+		const usecaseItems = [
+			<div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
+				<UsecaseSearch
+					globalUrl={globalUrl}
+					defaultSearch={"Phishing"}
+					appFramework={appFramework}
+					apps={apps}
+					getFramework={getFramework}
+					userdata={userdata}
+				/>
+			</div>
+			,
+			<div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
+				<UsecaseSearch
+					globalUrl={globalUrl}
+					defaultSearch={"Enrichment"}
+					appFramework={appFramework}
+					apps={apps}
+					getFramework={getFramework}
+					userdata={userdata}
+				/>
+			</div>
+			,
+			<div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
+				<UsecaseSearch
+					globalUrl={globalUrl}
+					defaultSearch={"Enrichment"}
+					usecaseSearch={"SIEM alert enrichment"}
+					appFramework={appFramework}
+					apps={apps}
+					getFramework={getFramework}
+					userdata={userdata}
+				/>
+			</div>
+			,
+			<div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
+				<UsecaseSearch
+					globalUrl={globalUrl}
+					defaultSearch={"Build your own"}
+					appFramework={appFramework}
+					apps={apps}
+					getFramework={getFramework}
+					userdata={userdata}
+				/>
+			</div>
+		]
+
     const [discoveryData, setDiscoveryData] = React.useState({})
     const [name, setName] = React.useState("")
     const [orgName, setOrgName] = React.useState("")
     const [role, setRole] = React.useState("")
     const [orgType, setOrgType] = React.useState("")
     const [finishedApps, setFinishedApps] = React.useState([])
+  	const [authentication, setAuthentication] = React.useState([]);
+		const [newSelectedApp, setNewSelectedApp] = React.useState({})
+		const [thumbIndex, setThumbIndex] = useState(0);
+    const [thumbAnimation, setThumbAnimation] = useState(false);
+    const [clickdiff, setclickdiff] = useState(0);
+
+		const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   
+  	const alert = useAlert();
 		let navigate = useNavigate();
 
     const onNodeSelect = (label) => {
@@ -77,8 +151,7 @@ const WelcomeForm = (props) => {
 			}
 		}, [discoveryWrapper])
 
-    useEffect(() => {
-
+		useEffect(() => {
 			if (
 				window.location.search !== undefined &&
 				window.location.search !== null
@@ -87,22 +160,18 @@ const WelcomeForm = (props) => {
 				const params = Object.fromEntries(urlSearchParams.entries());
 				const foundTab = params["tab"];
 				if (foundTab !== null && foundTab !== undefined && !isNaN(foundTab)) {
-					setActiveStep(foundTab-1)
+					if (foundTab === 3 || foundTab === "3") {
+						console.log("SET SEARCH!!")
+    				//setclickdiff(240)
+					}
 				} else { 
-    			navigate(`/welcome?tab=1`)
+    			//navigate(`/welcome?tab=1`)
 				}
 			}
-
 		}, [])
-
-    const steps = getSteps();
 
     const isStepOptional = step => {
         return step === 1
-    }
-
-    const isStepSkipped = step => {
-        return skipped.has(step)
     }
 
 		const sendUserUpdate = (name, role, userId) => {
@@ -177,7 +246,6 @@ const WelcomeForm = (props) => {
 						console.log("Update of org failed")
 						//alert.error("Failed updating org: ", responseJson.reason);
 					} else {
-						console.log("Update success!")
 						//alert.success("Successfully edited org!");
 					}
 				})
@@ -221,12 +289,25 @@ const WelcomeForm = (props) => {
 			)
 		}
 
+    const isStepSkipped = step => {
+        return skipped.has(step)
+    }
+
     const handleNext = () => {
 				setDefaultSearch("")
 
 				if (activeStep === 0) {
 					console.log("Should send basic information about org (fetch)")
+    			setclickdiff(0)
 					navigate(`/welcome?tab=2`)
+											
+					if (isCloud) {
+						ReactGA.event({
+								category: "welcome",
+								action: "click_page_one_next",
+								label: "",
+						})
+					}
 		
 					if (userdata.active_org !== undefined && userdata.active_org.id !== undefined && userdata.active_org.id !== null && userdata.active_org.id.length > 0) {
 						sendOrgUpdate(orgName, orgType, userdata.active_org.id, "") 
@@ -240,10 +321,21 @@ const WelcomeForm = (props) => {
 					console.log("Should send secondary info about apps and other things")
 					setDiscoveryWrapper({})
     	
+    			setclickdiff(240)
+    			//setclickdiff(0)
 					navigate(`/welcome?tab=3`)
+					//handleSetSearch("Enrichment", "2. Enrich")
+					handleSetSearch(usecaseButtons[0].name, usecaseButtons[0].usecase)
+					getApps()
+
+					// Make sure it's up to date
+					if (getFramework !== undefined) {
+						getFramework()
+					}
 				} else if (activeStep === 2) {
 					console.log("Should send third page with workflows activated and the like")
 				}
+
 
         let newSkipped = skipped;
         if (isStepSkipped(activeStep)) {
@@ -253,11 +345,27 @@ const WelcomeForm = (props) => {
 
         setActiveStep(prevActiveStep => prevActiveStep + 1);
         setSkipped(newSkipped);
-    };
+    }
+
     const handleBack = () => {
         setActiveStep(prevActiveStep => prevActiveStep - 1);
+
+				if (activeStep === 2) {
+					setDiscoveryWrapper({})
+
+					if (getFramework !== undefined) {
+						getFramework()
+					}
+    			setclickdiff(0)
+					navigate("/welcome?tab=2")
+				} else if (activeStep === 1) {
+    			//setclickdiff(0)
+					navigate("/welcome?tab=1")
+				}
     };
+
     const handleSkip = () => {
+    		setclickdiff(240)
         if (!isStepOptional(activeStep)) {
             throw new Error("You can't skip a step that isn't optional.");
         }
@@ -271,27 +379,16 @@ const WelcomeForm = (props) => {
     const handleReset = () => {
         setActiveStep(0);
     };
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-    const [selectionOpen, setSelectionOpen] = React.useState(false)
-    const [newSelectedApp, setNewSelectedApp] = React.useState({})
-    const [defaultSearch, setDefaultSearch] = React.useState("")
 
     useEffect(() => {
         console.log("Selected app changed (effect)")
     }, [newSelectedApp])
 
-    function getSteps() {
-        return [
-					"Help us get to know you", 
-					"Discover integrations", 
-					"Personalize Usecases",
-				]
-    }
-		
+	
 		//const buttonWidth = 145 
 		const buttonWidth = 450 
 		const buttonMargin = 10
-		const sizing = 435
+		const sizing = 475
 		const buttonStyle = {
 			flex: 1,
 			width: "100%", 
@@ -300,6 +397,23 @@ const WelcomeForm = (props) => {
 			fontSize: 18,
 		}
 
+		const slideNext = () => {
+			if (!thumbAnimation && thumbIndex < usecaseItems.length - 1) {
+				//handleSetSearch(usecaseButtons[0].name, usecaseButtons[0].usecase)
+				setThumbIndex(thumbIndex + 1);
+			} else if (!thumbAnimation && thumbIndex === usecaseItems.length - 1) {
+				setThumbIndex(0)
+			}
+    };
+
+    const slidePrev = () => {
+			if (!thumbAnimation && thumbIndex > 0) {
+				setThumbIndex(thumbIndex - 1);
+			} else if (!thumbAnimation && thumbIndex === 0) {
+				setThumbIndex(usecaseItems.length-1)
+			}
+    };
+
 		const newButtonStyle = {
 			padding: 22, 
 			flex: 1, 
@@ -307,22 +421,20 @@ const WelcomeForm = (props) => {
 			minWidth: buttonWidth, 
 			maxWidth: buttonWidth, 
 		}
-
+		
     const getStepContent = (step) => {
         switch (step) {
             case 0:
                 return (
-                    <Grid container spacing={1} style={{width: "100%", marginTop: 20, minHeight: sizing, maxHeight: sizing, }}>
+									<Fade in={true}>
+                    <Grid container spacing={1} style={{margin: "auto", maxWidth: 500, minWidth: 500, minHeight: sizing, maxHeight: sizing, }}>
 											{/*isCloud ? null :
 												<Typography variant="body1" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
 														This data will be used within the product and NOT be shared unless <a href="https://shuffler.io/docs/organizations#cloud_synchronization" target="_blank" rel="norefferer" style={{color: "#f86a3e", textDecoration: "none"}}>cloud synchronization</a> is configured.
 													</Typography>
 											*/}
-											<Typography variant="h6" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
-												Welcome to Shuffle!
-											</Typography>
 											<Typography variant="body1" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
-												We need some more information in order to understand how we best can help you find relevant Usecases in Shuffle. 
+												First, we need some more information in order to understand how we best can help you find relevant Usecases. This is optional, but highly encouraged.
 											</Typography> 
                         <Grid item xs={11} style={{marginTop: 16, padding: 0,}}>
                           <TextField
@@ -395,12 +507,20 @@ const WelcomeForm = (props) => {
                             </FormControl>
                         </Grid>
                     </Grid>
+									</Fade>
                 )
             case 1:
                 return (
-                    <div style={{minHeight: sizing, maxHeight: sizing, marginTop: 20,}}>
+									<Fade in={true}>
+                    <div style={{minHeight: sizing, maxHeight: sizing, marginTop: 20, maxWidth: 500, }}>
 												<Typography variant="body1" style={{marginLeft: 8, marginTop: 25, marginRight: 30, marginBottom: 0, }} color="textSecondary">
-													Find your apps, then we'll help you find relevant workflows. Can't find what you're looking for? Contact support: <a href="mailto:support@shuffler.io" style={{color: "#f86a3e", textDecoration: "none"}}>support@shuffler.io</a>
+													Clicks the buttons below to find your apps, then we will help you find relevant workflows. Can't find your app? <span style={{color: "#f86a3e", cursor: "pointer"}} onClick={() => {
+														if (window.drift !== undefined) {
+															window.drift.api.startInteraction({ interactionId: 340043 })
+														} else {
+															console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+														}
+													}}>Contact our App Developers!</span>
 												</Typography>
 												{/*The app framework helps us access and authenticate the most important APIs for you. */}
 
@@ -421,10 +541,15 @@ const WelcomeForm = (props) => {
                         <Grid item xs={11} style={{marginTop: 25, }}>
                             {/*<FormLabel style={{ color: "#B9B9BA" }}>Find your integrations!</FormLabel>*/}
                             <div style={{display: "flex"}}>
+															<Button disabled={finishedApps.includes("CASES")} variant={defaultSearch === "CASES" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<LightbulbIcon />} onClick={(event) => { onNodeSelect("CASES") }} >
+																	Case Management	
+															</Button>
+                            </div>
+                            <div style={{display: "flex"}}>
 															<Button disabled={finishedApps.includes("SIEM")} variant={defaultSearch === "SIEM" ? "contained" : "outlined"} style={buttonStyle} startIcon={<SearchIcon />} onClick={(event) => { onNodeSelect("SIEM") }} >
 																	SIEM
 															</Button>
-															<Button disabled={finishedApps.includes("EDR & AV")} variant={defaultSearch === "EDR & AV" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<NewReleasesIcon />} onClick={(event) => { onNodeSelect("EDR & AV") }} >
+															<Button disabled={finishedApps.includes("EDR & AV") || finishedApps.includes("ERADICATION")} variant={defaultSearch === "Eradication" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<NewReleasesIcon />} onClick={(event) => { onNodeSelect("ERADICATION") }} >
 																	Endpoint
 															</Button>
                             </div>
@@ -434,7 +559,7 @@ const WelcomeForm = (props) => {
 
 																	Intel
 															</Button>
-															<Button disabled={finishedApps.includes("COMMS")} variant={defaultSearch === "EMAIL" ? "contained" : "outlined"} style={buttonStyle} startIcon={<EmailIcon />} onClick={(event) => { onNodeSelect("EMAIL") }} >
+															<Button disabled={finishedApps.includes("COMMS") || finishedApps.includes("EMAIL")} variant={defaultSearch === "EMAIL" ? "contained" : "outlined"} style={buttonStyle} startIcon={<EmailIcon />} onClick={(event) => { onNodeSelect("EMAIL") }} >
 																	Email
 															</Button>
                             </div>
@@ -478,94 +603,123 @@ const WelcomeForm = (props) => {
                         </Grid>
 												*/}
 											</div>
+									</Fade>
                 )
             case 2:
                 return (
-                    <div style={{display: "flex", marginTop: 25, width: 1200, minHeight: sizing, maxHeight: sizing, }}>
-                        <Grid item xs={10} style={{width: "100%", flex: 5, }}>
-														<Typography variant="body1" style={{marginLeft: 8, marginTop: 0, marginRight: 30, marginBottom: 0, maxWidth: 500, }} color="textSecondary">
-															What usecases are you interested in? This will help us suggest relevant Workflows.
-														</Typography>
-
-                            <Grid item xs={5} style={{marginTop: 15, display: "flex", flexDirection: "column", width: "100%",}}>
-															<Button variant={defaultSearch === "Enrichment" ? "contained" : "outlined"} startIcon={<SearchIcon />} style={newButtonStyle}  onClick={() => {
-																	setDefaultSearch("Enrichment")
-
-																	setSelectionOpen(false)
-
-																	setTimeout(function(){
-																		setSelectionOpen(true)
-																	}, 150)
-
-																	sendOrgUpdate("", "", userdata.active_org.id, "2. Enrich") 
-																}}>
-																	Enrichment
-															</Button>
-															<Button variant={defaultSearch === "Phishing" ? "contained" : "outlined"} startIcon={<EmailIcon />} style={newButtonStyle} onClick={() => {
-																setDefaultSearch("Phishing")
-																setSelectionOpen(false)
-
-																setTimeout(function(){
-																	setSelectionOpen(true)
-																}, 150)
-
-																sendOrgUpdate("", "", userdata.active_org.id, "Email management") 
-															}}>
-																	Phishing
-															</Button>
-															<Button variant={defaultSearch === "Detection" ? "contained" : "outlined"} startIcon={<NewReleasesIcon />} style={newButtonStyle}  onClick={() => {
-																setDefaultSearch("Detection")
-																setSelectionOpen(false)
-
-																setTimeout(function(){
-																	setSelectionOpen(true)
-																}, 150);
-
-																sendOrgUpdate("", "", userdata.active_org.id, "3. Detect") 
-															}}>
-																	Detection
-															</Button>
-															<Button variant={defaultSearch === "Response" ? "contained" : "outlined"} startIcon={<NewReleasesIcon />} style={newButtonStyle} onClick={() => {
-																setDefaultSearch("Response")
-																setSelectionOpen(false)
-
-																setTimeout(function(){
-																	setSelectionOpen(true)
-																}, 150);
-
-																sendOrgUpdate("", "", userdata.active_org.id, "4. Respond") 
-															}}>
-																	Response
-															</Button>
-                            </Grid>
-                        </Grid>
+									<Fade in={true}>
+                    <div style={{marginTop: 0, maxWidth: 700, minWidth: 700, margin: "auto", minHeight: sizing, maxHeight: sizing, }}>
+												<Typography variant="body1" style={{marginTop: 15, marginBottom: 0, maxWidth: 500, margin: "auto", marginBottom: 15, }} color="textSecondary">
+													These are some of our Workflow templates, used to start new Workflows. Use the right and left buttons to find <a href="/usecases" target="_blank" rel="norefferer" style={{color: "#f86a3e", textDecoration: "none", }}>new Usecases</a>, and click the orange button to build it.
+												</Typography>
+												{/*<Divider />*/}
 												{/*
-                        <Grid item xs={10} paddingBottom="20px">
-                            <TextField
-                              required
-															fullWidth={true}
-															placeholder="Workflows as suggested from tools"
-															label="Workflows as suggested from tools"
-															type="astoolsworkflow"
-															id="standard-required"
-															autoComplete="astoolsworkflow"
-															margin="normal"
-															variant="outlined" 
-														/>
-                        </Grid>
+												<div style={{width: 475, margin: "auto",}}>
+													{usecaseButtons.map((usecase, index) => {
+
+														return (
+															<Chip
+																key={usecase.name}
+																style={{
+																	backgroundColor: defaultSearch === usecase.name ? usecase.color : theme.palette.surfaceColor,
+																	marginRight: 10, 
+																	paddingLeft: 5,
+																	paddingRight: 5,
+																	height: 28,
+																	cursor: "pointer",
+																	border: `1px solid ${usecase.color}`,
+																	color: "white",
+																	borderRadius: theme.palette.borderRadius, 
+																}}
+																label={`${index+1}. ${usecase.name}`}
+																onClick={() => {
+																	console.log("Clicked: ", usecase.name)
+																	if (defaultSearch === usecase.name) {
+																		//setSelectedUsecaseCategory("")
+																	} else {
+																		handleSetSearch(usecase.name, usecase.usecase)
+																	}
+																	//addFilter(usecase.name.slice(3,usecase.name.length))
+																}}
+																variant="outlined"
+																color="primary"
+															/>
+														)
+													})}
+												</div>
 												*/}
-												<div style={{marginTop: 15, flex: 6, }}>
-													{selectionOpen === true ?
-														<WorkflowSearch
-															ConfiguredHits={NewHits}
-															showSearch={false}
+												<div style={{marginTop: 0, }}>
+													{/*
+														<UsecaseSearch
+															globalUrl={globalUrl}
 															defaultSearch={defaultSearch}
-															newSelectedApp={newSelectedApp}
-															setNewSelectedApp={setNewSelectedApp}
+															appFramework={appFramework}
+															apps={apps}
 														/>
-													: null}
+													*/}
+
+		  										<div className="thumbs" style={{display: "flex"}}>
+														<Tooltip title={"Previous usecase"}>
+															<IconButton
+																style={{
+																	backgroundColor: thumbIndex === 0 ? "inherit" : "white",
+																	zIndex: 5000,
+																	minHeight: 50, 
+																	maxHeight: 50, 
+																	color: "grey",
+																	marginTop: 150,
+																	borderRadius: 50,
+																	border: "1px solid rgba(255,255,255,0.3)",
+																}}
+																onClick={() => {
+																	slidePrev() 
+																}}
+															>
+																<ArrowBackIosNewIcon />
+															</IconButton>
+														</Tooltip>
+														<div style={{minWidth: 554, maxWidth: 554, borderRadius: theme.palette.borderRadius, padding: 25, }}>
+															<AliceCarousel
+																	style={{ backgroundColor: theme.palette.surfaceColor, minHeight: 750, maxHeight: 750, }}
+																	items={usecaseItems}
+																	activeIndex={thumbIndex}
+																	infiniteLoop
+																	mouseTracking
+																	responsive={responsive}
+																	// activeIndex={activeIndex}
+																	controlsStrategy="responsive"
+																	autoPlay={false}
+																	infinite={true}
+																	animationType="fadeout"
+          												animationDuration={800}
+																	disableButtonsControls
+																	disableDotsControls
+
+															/>
+														</div>
+														<Tooltip title={"Next usecase"}>
+															<IconButton
+																style={{
+																	backgroundColor: thumbIndex === usecaseButtons.length-1 ? "inherit" : "white",
+																	zIndex: 5000,
+																	minHeight: 50, 
+																	maxHeight: 50, 
+																	color: "grey",
+																	marginTop: 150,
+																	borderRadius: 50,
+																	border: "1px solid rgba(255,255,255,0.3)",
+																}}
+																onClick={() => {
+																	slideNext() 
+																}}
+															>
+																<ArrowForwardIosIcon />
+															</IconButton>
+														</Tooltip>
+       										</div>
 												</div>
 										</div>
+									</Fade>
                 )
             default:
                 return "unknown step"
@@ -573,26 +727,7 @@ const WelcomeForm = (props) => {
     }
 
     return (
-        <div style={{paddingTop: 20}}>
-            <Stepper activeStep={activeStep} style={{backgroundColor: theme.palette.platformColor, borderRadius: theme.palette.borderRadius, padding: 12, border: "1px solid rgba(255,255,255,0.3)",}}>
-                {steps.map((label, index) => {
-                    const stepProps = {}
-                    const labelProps = {}
-                    //if (isStepOptional(index)) {
-                    //    labelProps.optional = "optional"
-                    //}
-
-                    if (isStepSkipped(index)) {
-                        stepProps.completed = false;
-                    }
-
-                    return (
-                        <Step key={label} {...stepProps}>
-                          <StepLabel {...labelProps} style={{marginLeft: 10}}>{label}</StepLabel>
-                        </Step>
-                    )
-                })}
-            </Stepper>
+        <div style={{}}>
             {/*selectionOpen ?
 							<WorkflowSearch
 									defaultSearch={defaultSearch}
@@ -619,31 +754,78 @@ const WelcomeForm = (props) => {
                 ) : (
                     <div>
                         {getStepContent(activeStep)}
-                        <div style={{paddingTop: 20}}>
-                            <Button disabled={activeStep === 0} onClick={handleBack}>
-                                Back
-                            </Button>
-                            {/*isStepOptional(activeStep) && (
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    onClick={handleSkip}
-                                >
-                                    Skip
-                                </Button>
-                            )*/}
-                            <Button 
-															variant={activeStep === 1 ? finishedApps.length === 4 ? "contained" : "outlined" : "contained"}
-															color="primary" 
-															onClick={handleNext} 
-															style={{marginLeft: 10, }} 
-															disabled={activeStep === 0 ? orgName.length === 0 || name.length === 0 : false}
-														>
-                                {activeStep === steps.length - 1 ? "Finish" : "Next"}
-                            </Button>
-                        </div>
-                    </div>
-                )}
+												<div style={{marginBottom: 20, }}/>
+													{activeStep === 2 || activeStep === 1 ? 
+														<div style={{margin: "auto", minWidth: 500, maxWidth: 500, position: "relative", }}>
+															<Button 
+																disabled={activeStep === 0} 
+																onClick={handleBack}
+																variant={"outlined"}
+																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -594 : -577, left: activeStep === 1 ? 105+clickdiff : -145+clickdiff, }} 
+															>
+																	Back
+															</Button>
+															<Button 
+																variant={"outlined"}
+																color="primary" 
+																onClick={handleNext} 
+																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -594 : -577, left: activeStep === 1 ? 758+clickdiff : 510+clickdiff, }} 
+																disabled={activeStep === 0 ? orgName.length === 0 || name.length === 0 : false}
+															>
+																	{activeStep === steps.length - 1 ? "Finish" : "Next"}
+															</Button>
+														</div>
+														: 
+														<div style={{margin: "auto", minWidth: 500, maxWidth: 500, marginLeft: activeStep === 1 ? 250 : "auto", marginTop: activeStep === 0 ? 25 : 0, }}>
+															<Button disabled={activeStep === 0} onClick={handleBack}>
+																	Back
+															</Button>
+															{/*isStepOptional(activeStep) && (
+																	<Button
+																			variant="contained"
+																			color="primary"
+																			onClick={handleSkip}
+																	>
+																			Skip
+																	</Button>
+															)*/}
+															<Button 
+																variant={activeStep === 1 ? finishedApps.length >= 4 ? "contained" : "outlined" : "outlined"}
+																color="primary" 
+																onClick={handleNext} 
+																style={{marginLeft: 10, }} 
+																disabled={activeStep === 0 ? orgName.length === 0 || name.length === 0 : false}
+															>
+																	{activeStep === steps.length - 1 ? "Finish" : "Next"}
+															</Button>
+															{activeStep === 0 ? 
+																<Button 
+																	variant={"outlined"}
+																	color="secondary" 
+																	onClick={() => {
+																		console.log("Skip!")
+												
+																		if (isCloud) {
+																				ReactGA.event({
+																					category: "welcome",
+																					action: "click_page_one_skip",
+																					label: "",
+																				})
+																		}
+
+																		setActiveStep(1)
+																		navigate(`/welcome?tab=2`)
+																	}} 
+																	style={{marginLeft: 240, }} 
+																	disabled={activeStep !== 0}
+																>
+																	Skip
+																</Button>
+															: null}
+                    			</div>
+												}
+                  </div>
+              )}
             </div>
         </div>
     );

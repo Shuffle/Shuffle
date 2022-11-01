@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {isMobile} from "react-device-detect";
-import DetectionFramework, { usecases } from "../components/DetectionFramework.jsx";
+import AppFramework, { usecases } from "../components/AppFramework.jsx";
 import {Link} from 'react-router-dom';
 import ReactGA from 'react-ga';
 
@@ -169,7 +169,7 @@ const LandingpageUsecases = (props) => {
 				</div>
 				{isMobile ? null : 
 					<div style={{marginLeft: 200, marginTop: 125, zIndex: 1000}}>
-						<DetectionFramework showOptions={false} selectedOption={selectedUsecase} rolling={true} />
+						<AppFramework showOptions={false} selectedOption={selectedUsecase} rolling={true} />
 					</div>
 				}
 				{isMobile ? null : 

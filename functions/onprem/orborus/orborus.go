@@ -704,8 +704,8 @@ func initializeImages() {
 		log.Printf("[DEBUG] Setting baseimageregistry")
 	}
 	if baseimagename == "" {
-		baseimagename = "frikky/shuffle"
-		baseimagename = "frikky"
+		baseimagename = "shuffle/shuffle"
+		baseimagename = "shuffle"
 		log.Printf("[DEBUG] Setting baseimagename")
 	}
 
@@ -713,7 +713,7 @@ func initializeImages() {
 
 	// check whether they are the same first
 	images := []string{
-		fmt.Sprintf("frikky/shuffle:app_sdk"),
+		fmt.Sprintf("shuffle/shuffle:app_sdk"),
 		fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", baseimageregistry, baseimagename, appSdkVersion),
 		fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion),
 		// fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),

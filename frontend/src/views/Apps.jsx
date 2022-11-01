@@ -39,6 +39,10 @@ import {
   Delete as DeleteIcon,
 } from "@material-ui/icons";
 
+import {
+	ForkRight as ForkRightIcon,
+} from '@mui/icons-material';
+
 import { useTheme } from "@material-ui/core/styles";
 
 import YAML from "yaml";
@@ -807,9 +811,11 @@ const Apps = (props) => {
         </Tooltip>
       ) : null;
 
-		// FIXME: Add /apps/new?id=<PUBLIC> to allow for changes of the original
 		// Should always reference the original ID.
-    var editButton =
+		//if (selectedApp.name !== undefined && selectedApp.name !== null && selectedApp.name.includes("New")) {
+		//}
+    
+		var editButton =
       selectedApp.activated &&
       selectedApp.private_id !== undefined &&
       selectedApp.private_id.length > 0 &&
@@ -829,21 +835,19 @@ const Apps = (props) => {
       ) : null;
 
     //var editNewButton = editButton === null ?
-    var editNewButton = selectedApp.generated && selectedApp.activated && props.userdata.id !== selectedApp.owner ? 
-				isCloud ? 
+    var editNewButton = selectedApp.generated && selectedApp.activated && props.userdata.id !== selectedApp.owner && isCloud ? 
 					<Link to={activateUrl} style={{ textDecoration: "none" }}>
-						<Tooltip title={"Edit this public app to your liking"}>
+						<Tooltip title={"Fork and Edit this public app to your liking"}>
 							<Button
 								variant="contained"
 								component="label"
 								color="primary"
 								style={{ marginTop: 10, marginRight: 10 }}
 							>
-								<EditIcon />
+								<ForkRightIcon />
 							</Button>
 						</Tooltip>
 					</Link>
-				: null
 			: null
 
     const activateButton = 
@@ -879,8 +883,7 @@ const Apps = (props) => {
       ((selectedApp.private_id !== undefined &&
         selectedApp.private_id.length > 0 &&
         selectedApp.generated) ||
-        (selectedApp.downloaded !== undefined &&
-          selectedApp.downloaded == true) ||
+        (selectedApp.downloaded !== undefined && selectedApp.downloaded == true) ||
         !selectedApp.generated) &&
       activateButton === null ? (
         <Tooltip title={"Delete app"}>
@@ -981,6 +984,10 @@ const Apps = (props) => {
     };
 
     const userRoles = ["you", isCloud ? "public" : "everyone"];
+
+		// Admin in org or creator of app
+		// FIXME: Missing check for if same creator account
+		const canEditApp = userdata !== undefined && (userdata.admin === "true" || userdata.id === selectedApp.owner || selectedApp.owner === "" || (userdata.admin === "true" && userdata.active_org.id === selectedApp.reference_org)) || !selectedApp.generated 
 
     //fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"),
     var baseInfo =
@@ -1086,14 +1093,20 @@ const Apps = (props) => {
           ) : null}
 
           {activateButton}
-        	{editNewButton}
-          {(editNewButton === null && userdata !== undefined && (userdata.admin === "true" || userdata.id === selectedApp.owner || selectedApp.owner === "" )) || !selectedApp.generated ? (
+
+					{ /* editNewButton === null && */ }
+
+          {canEditApp ? (
             <div>
               {editButton}
               {downloadButton}
               {deleteButton}
             </div>
-          ) : null}
+          ) : 
+						<div>
+        			{editNewButton}
+						</div>
+					}
           {selectedApp.tags !== undefined && selectedApp.tags !== null ? (
             <div
               style={{
@@ -1119,8 +1132,8 @@ const Apps = (props) => {
               })}
             </div>
           ) : null}
-          {props.userdata !== undefined &&
-          props.userdata.id === selectedApp.owner ? (
+					{canEditApp 
+						? (
             <div style={{ marginTop: 15 }}>
               {/*<p><b>ID:</b> {selectedApp.id}</p>*/}
               <b style={{ marginRight: 15 }}>Sharing </b>
@@ -1877,7 +1890,7 @@ const Apps = (props) => {
             getApps();
           }, 1000);
         } else {
-          alert.error("Failed deleting app");
+          alert.error("Failed deleting app. Does it still exist?");
         }
       })
       .catch((error) => {

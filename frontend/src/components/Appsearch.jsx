@@ -10,10 +10,11 @@ import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } 
 import algoliasearch from 'algoliasearch';
 import { InstantSearch, connectSearchBox, connectHits } from 'react-instantsearch-dom';
 import { Grid, Paper, TextField, ButtonBase, InputAdornment, Typography, Button, Tooltip} from '@material-ui/core';
+import aa from 'search-insights'
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
-const WorkflowSearch = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits }  = props
+const Appsearch = props => {
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, }  = props
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
@@ -140,19 +141,19 @@ const WorkflowSearch = props => {
 					}
 
 					counted += 1
-					var parsedname = ""
-					for (var key = 0; key < data.name.length; key++) {
-						var character = data.name.charAt(key)
-						if (character === character.toUpperCase()) {
-							//console.log(data.name[key], data.name[key+1])
-							if (data.name.charAt(key+1) !== undefined && data.name.charAt(key+1) === data.name.charAt(key+1).toUpperCase()) {
-							} else {
-								parsedname += " "
-							}
-						}
+					var parsedname = data.name.valueOf()
+					//for (var key = 0; key < data.name.length; key++) {
+					//	var character = data.name.charAt(key)
+					//	if (character === character.toUpperCase()) {
+					//		//console.log(data.name[key], data.name[key+1])
+					//		if (data.name.charAt(key+1) !== undefined && data.name.charAt(key+1) === data.name.charAt(key+1).toUpperCase()) {
+					//		} else {
+					//			parsedname += " "
+					//		}
+					//	}
 
-						parsedname += character
-					}
+					//	parsedname += character
+					//}
 					
 					parsedname = (parsedname.charAt(0).toUpperCase()+parsedname.substring(1)).replaceAll("_", " ")
 
@@ -179,6 +180,32 @@ const WorkflowSearch = props => {
 									action: `app_${parsedname}_${data.id}_personalize_click`,
 									label: "",
 								})
+							}
+
+							const queryID = ""
+
+							if (queryID !== undefined && queryID !== null) {
+								try {
+									aa('init', {
+										appId: searchClient.appId,
+										apiKey: searchClient.transporter.headers["x-algolia-api-key"]
+									})
+
+									const timestamp = new Date().getTime()
+									aa('sendEvents', [
+										{
+											eventType: 'conversion',
+											eventName: 'App Framework Activation',
+											index: 'appsearch',
+											objectIDs: [data.objectID],
+											timestamp: timestamp,
+											queryID: queryID,
+											userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
+										}
+									])
+								} catch (e) {
+									console.log("Failed algolia search update: ", e)
+								}
 							}
 						}}>
 							<div style={{display: "flex"}}>
@@ -215,4 +242,4 @@ const WorkflowSearch = props => {
 	)
 }
 
-export default WorkflowSearch;
+export default Appsearch;

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 import { useTheme } from "@material-ui/core/styles";
+import theme from '../theme';
 
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -62,6 +63,7 @@ const registeredApps = [
 	"outlook_office365",
 	"microsoft_teams",
 	"microsoft_teams_user_access",
+	"todoist",
 ]
 
 const AuthenticationOauth2 = (props) => {
@@ -77,8 +79,8 @@ const AuthenticationOauth2 = (props) => {
     setNewAppAuth,
     setAuthenticationModalOpen,
 		isCloud,
+		autoAuth, 
   } = props;
-  const theme = useTheme();
 
   //const [update, setUpdate] = React.useState("|")
   const [defaultConfigSet, setDefaultConfigSet] = React.useState(
@@ -88,7 +90,7 @@ const AuthenticationOauth2 = (props) => {
       authenticationType.client_secret !== undefined &&
       authenticationType.client_secret !== null &&
       authenticationType.client_secret.length > 0
-  );
+  );	
 
   const [clientId, setClientId] = React.useState(
     defaultConfigSet ? authenticationType.client_id : ""
@@ -122,6 +124,73 @@ const AuthenticationOauth2 = (props) => {
   if (selectedApp.authentication === undefined) {
     return null;
   }
+
+	const startOauth2Request = () => {
+		console.log("APP: ", selectedApp)
+		if (selectedApp.name.toLowerCase() == "outlook_graph" || selectedApp.name.toLowerCase() == "outlook_office365") {
+			handleOauth2Request(
+				"efe4c3fe-84a1-4821-a84f-23a6cfe8e72d",
+				"",
+				"https://graph.microsoft.com",
+				["Mail.ReadWrite"],
+			);
+		} else if (selectedApp.name.toLowerCase() == "gmail") {
+			handleOauth2Request(
+				"253565968129-c0a35knic7q1pdk6i6qk9gdkvr07ci49.apps.googleusercontent.com",
+				"",
+				"https://gmail.googleapis.com",
+				["https://www.googleapis.com/auth/gmail.modify",
+					"https://www.googleapis.com/auth/gmail.send",
+					"https://www.googleapis.com/auth/gmail.insert",
+					"https://www.googleapis.com/auth/gmail.compose"]
+			)
+		} else if (selectedApp.name.toLowerCase() == "zoho_desk") {
+			handleOauth2Request(
+				"1000.ZR5MHUW6B0L6W1VUENFGIATFS0TOJT",
+				"",
+				"https://desk.zoho.com",
+				["Desk.tickets.READ",
+				"Desk.tickets.UPDATE",
+				"Desk.tickets.DELETE",
+				"Desk.tickets.CREATE"]
+			)
+		} else if (selectedApp.name.toLowerCase() == "slack") {
+			handleOauth2Request(
+				"151779186901.2448678750935",
+				"",
+				"https://slack.com",
+				["admin", "chat:write", "im:read", "im:write", "search:read", "usergroups:read", "usergroups:write"]
+			)
+		} else if (selectedApp.name.toLowerCase() == "webex") {
+			handleOauth2Request(
+				"Cab184f3d7271f540443c79b5b79845e3387abbbdb3db4233a87ea3a5432fb3d5",
+				"",
+				"https://webexapis.com",
+				["spark:all"]
+			)
+		} else if (selectedApp.name.toLowerCase().includes("microsoft_teams")) {
+			handleOauth2Request(
+				"31cb4c84-658e-43d5-ae84-22c9142e967a",
+				"",
+				"https://graph.microsoft.com",
+				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read"]
+			)
+		} else if (selectedApp.name.toLowerCase().includes("todoist")) {
+			handleOauth2Request(
+				"35fa3a384040470db0c8527e90a3c2eb",
+				"",
+				"https://api.todoist.com",
+				["task:add"]
+			)
+		}
+	}
+
+	useEffect(() => {
+		console.log("Should automatically click the auto-auth button?")
+		if (autoAuth === true && selectedApp !== undefined) {
+			startOauth2Request() 
+		}
+	}, [])
 
   const handleOauth2Request = (client_id, client_secret, oauth_url, scopes) => {
     setButtonClicked(true);
@@ -164,19 +233,15 @@ const AuthenticationOauth2 = (props) => {
       state += `%26refresh_uri%3d${authentication_url}`;
     }
 
+		// No prompt forcing
+    const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=login&scope=${resources}&state=${state}&access_type=offline`;
 		// Force new consent
     //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`;
 
 		// Admin consent
-    //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=admin_consent&state=${state}&access_type=offline`;
-
-		// Skip consent
-    const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&state=${state}&access_type=offline`;
-
     //const url = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${client_id}&scope=AaaServer.profile.Read&redirect_uri=${redirectUri}&prompt=consent`
-    //console.log("Full URI: ", url)
-    //console.log("Redirect Uri: ", redirectUri)
-    // &resource=https%3A%2F%2Fgraph.microsoft.com&
+    
+		// &resource=https%3A%2F%2Fgraph.microsoft.com&
 
     // FIXME: Awful, but works for prototyping
     // How can we get a callback properly realtime?
@@ -188,12 +253,20 @@ const AuthenticationOauth2 = (props) => {
       var open = true;
       const timer = setInterval(() => {
         if (newwin.closed) {
+					console.log("Closed!")
+
+					if (setAuthenticationModalOpen !== undefined) {
+						setAuthenticationModalOpen(false)
+					}
+
           setButtonClicked(false);
           clearInterval(timer);
           //alert('"Secure Payment" window closed!');
 
           getAppAuthentication(true, true);
-        }
+        } else {
+					console.log("Not closed")
+				}
       }, 1000);
       //do {
       //	setTimeout(() => {
@@ -361,76 +434,48 @@ const AuthenticationOauth2 = (props) => {
 				{isCloud && registeredApps.includes(selectedApp.name.toLowerCase()) ? 
 					<span>
 						<Button
-							style={{
-								marginBottom: 20,
-								marginTop: 20,
+        		  fullWidth
+        		  variant="contained"
+        		  style={{
+								marginBottom: 20, 
+								marginTop: 20, 
+        		    flex: 1,
+        		    textTransform: "none",
+        		    textAlign: "left",
+        		    justifyContent: "flex-start",
+        		    backgroundColor: "#ffffff",
+        		    color: "#2f2f2f",
 								borderRadius: theme.palette.borderRadius,
-							}}
+								minWidth: 350, 
+								maxHeight: 50,
+								overflow: "hidden",
+								border: `1px solid ${theme.palette.inputColor}`,
+        		  }}
+        		  color="primary"
           		disabled={
             		clientSecret.length > 0 || clientId.length > 0
 							}
-							variant="contained"
 							fullWidth
 							onClick={() => {
 								// Hardcode some stuff?
 								// This could prolly be added to the app itself with a "default" client ID 
-								console.log("APP: ", selectedApp)
-								if (selectedApp.name.toLowerCase() == "outlook_graph" || selectedApp.name.toLowerCase() == "outlook_office365") {
-									handleOauth2Request(
-										"efe4c3fe-84a1-4821-a84f-23a6cfe8e72d",
-										"",
-										"https://graph.microsoft.com",
-										["Mail.ReadWrite", "Mail.Send"],
-									);
-								} else if (selectedApp.name.toLowerCase() == "gmail") {
-									handleOauth2Request(
-										"253565968129-c0a35knic7q1pdk6i6qk9gdkvr07ci49.apps.googleusercontent.com",
-										"",
-										"https://gmail.googleapis.com",
-										["https://www.googleapis.com/auth/gmail.modify",
-											"https://www.googleapis.com/auth/gmail.send",
-											"https://www.googleapis.com/auth/gmail.insert",
-											"https://www.googleapis.com/auth/gmail.compose"]
-									)
-								} else if (selectedApp.name.toLowerCase() == "zoho_desk") {
-									handleOauth2Request(
-										"1000.ZR5MHUW6B0L6W1VUENFGIATFS0TOJT",
-										"",
-										"https://desk.zoho.com",
-										["Desk.tickets.READ",
-										"Desk.tickets.UPDATE",
-										"Desk.tickets.DELETE",
-										"Desk.tickets.CREATE"]
-									)
-								} else if (selectedApp.name.toLowerCase() == "slack") {
-									handleOauth2Request(
-										"151779186901.2448678750935",
-										"",
-										"https://slack.com",
-										["admin", "chat:write", "im:read", "im:write", "search:read", "usergroups:read", "usergroups:write"]
-									)
-								} else if (selectedApp.name.toLowerCase() == "webex") {
-									handleOauth2Request(
-										"Cab184f3d7271f540443c79b5b79845e3387abbbdb3db4233a87ea3a5432fb3d5",
-										"",
-										"https://webexapis.com",
-										["spark:all"]
-									)
-								} else if (selectedApp.name.toLowerCase().includes("microsoft_teams")) {
-									handleOauth2Request(
-										"31cb4c84-658e-43d5-ae84-22c9142e967a",
-										"",
-										"https://graph.microsoft.com",
-										["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read"]
-									)
-								}
+								startOauth2Request()
 							}}
 							color="primary"
 						>
 							{buttonClicked ? (
-								<CircularProgress style={{ color: "white" }} />
+								<CircularProgress style={{ color: "#f86a3e", width: 45, height: 45, margin: "auto", }} />
 							) : (
-								"Auto-authenticate"
+								<span style={{display: "flex"}}>
+									<img
+										alt={selectedAction.app_name}
+										style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+										src={selectedAction.large_image}
+									/>
+									<Typography style={{ margin: 0, marginLeft: 10, marginTop: 5,}} variant="body1">
+										Auto-Authenticate 
+									</Typography>
+								</span>
 							)}
 						</Button>
 						<Typography style={{textAlign: "center", marginTop: 0, marginBottom: 10, }}>
