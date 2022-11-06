@@ -1428,33 +1428,51 @@ class AppBase:
         if isinstance(self.full_execution, str) and len(self.full_execution) == 0:
             self.logger.info("[DEBUG] NO EXECUTION - LOADING!")
             try:
-                tmpdata = {
-                    "authorization": self.authorization,
-                    "execution_id": self.current_execution_id
-                }
+                failed = False
+                rettext = ""
+                for i in range(0, 5):
+                    tmpdata = {
+                        "authorization": self.authorization,
+                        "execution_id": self.current_execution_id
+                    }
 
-                self.logger.info("[ERROR] Before FULLEXEC stream result")
-                ret = requests.post(
-                    "%s/api/v1/streams/results" % (self.base_url), 
-                    headers=headers, 
-                    json=tmpdata
-                )
+                    self.logger.info("[ERROR] Before FULLEXEC stream result")
+                    ret = requests.post(
+                        "%s/api/v1/streams/results" % (self.base_url), 
+                        headers=headers, 
+                        json=tmpdata
+                    )
 
-                if ret.status_code == 200:
-                    fullexecution = ret.json()
-                else:
-                    try:
-                        self.logger.info("[ERROR] Error in app with status code for results. Crashing because results can't be handled. Status: %d" % ret.status_code)
-                    except json.decoder.JSONDecodeError:
-                        pass
+                    if ret.status_code == 200:
+                        fullexecution = ret.json()
+                        failed = False
+                        break
 
+                    elif ret.status_code == 500:
+                        self.logger.info("[ERROR] (fails: %d) Error in app with status code %d for results (1). RETRYING because results can't be handled" % (i+1, ret.status_code))
+                    
+                        rettext = ret.text
+                        failed = True 
+                        time.sleep(10)
+                        continue
+
+                    else:
+                        self.logger.info("[ERROR] Error in app with status code %d for results (2). Crashing because results can't be handled" % ret.status_code)
+
+                        rettext = ret.text
+                        failed = True 
+                        break
+
+                if failed:
                     self.action_result["result"] = json.dumps({
                         "success": False,
                         "reason": f"Bad result from backend during startup of app: {ret.status_code}",
-                        "extended_reason": f"{ret.text}"
+                        "extended_reason": f"{rettext}"
                     })
+
                     self.send_result(self.action_result, headers, stream_path) 
                     return
+
             except requests.exceptions.ConnectionError as e:
                 self.logger.info("[ERROR] FullExec Connectionerror: %s" %  e)
                 self.action_result["result"] = json.dumps({
