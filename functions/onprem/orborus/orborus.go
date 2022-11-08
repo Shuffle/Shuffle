@@ -956,7 +956,7 @@ func main() {
 		}
 	}
 
-	client.Timeout = 10 * time.Second
+	client.Timeout = 30 * time.Second
 
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
 	req, err := http.NewRequest(
@@ -986,11 +986,11 @@ func main() {
 	hasStarted := false
 	for {
 		//go getStats()
-		//log.Printf("Prerequest")
-		//log.Printf("Postrequest")
+		log.Printf("[DEBUG] Prerequest - queue")
 		newresp, err := client.Do(req)
+		log.Printf("[DEBUG] Postrequest - queue")
 		if err != nil {
-			log.Printf("[WARNING] Failed making request: %s", err)
+			log.Printf("[WARNING] Failed making request to %s: %s", fullUrl, err)
 
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
