@@ -54,6 +54,7 @@
     "react-device-detect": "^1.9.10",
     "react-dom": "^16.14.0",
     "react-draggable": "^3.3.2",
+    "react-driftjs": "^1.2.2",
     "react-dropzone": "^10.1.10",
     "react-ga": "^2.7.0",
     "react-iframe": "^1.8.0",
