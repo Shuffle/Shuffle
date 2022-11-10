@@ -11,7 +11,7 @@ The Docker setup is done with docker-compose
 1. Make sure you have [Docker](https://docs.docker.com/get-docker/) and [docker-compose](https://docs.docker.com/compose/install/) installed.
 2. Download Shuffle
 ```bash
-git clone https://github.com/frikky/Shuffle
+git clone https://github.com/Shuffle/Shuffle
 cd Shuffle
 ```
 
