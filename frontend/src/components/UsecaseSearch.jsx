@@ -36,6 +36,7 @@ export const usecaseTypes = [{
 	"name": "enrichment",
 	"value": [{
 		"name": "EDR Ticket Enrichment",
+		"usecase_references": ["EDR to ticket"],
 		"active": true,
 		"items": [{
 			"name": "When an EDR alert is found",
@@ -49,6 +50,7 @@ export const usecaseTypes = [{
 	},
 	{
 		"name": "SIEM alert Enrichment",
+		"usecase_references": ["SIEM to ticket"],
 		"active": true,
 		"items": [{
 			"name": "When a SIEM alert is found",
@@ -63,6 +65,7 @@ export const usecaseTypes = [{
 	},
 	{
 		"name": "Email Enrichment",
+		"usecase_references": ["Email management"],
 		"active": true,
 		"items": [{
 			"name": "When I get an email",
@@ -81,6 +84,7 @@ export const usecaseTypes = [{
 	"value": [
 		{
 			"name": "Email analysis",
+			"usecase_references": ["Email management"],
 			"active": true,
 			"items": [{
 				"name": "When I get an email",
@@ -307,7 +311,7 @@ const UsecaseSearch = (props) => {
 		//
 		if (autotry === true && configureWorkflowModalOpen === false && workflow.id !== undefined && setUsecaseSearch !== undefined) {
 			console.log("Close it?")
-			alert.info("Workflow successfully added!")
+			alert.info("Workflow successfully added! Add more apps, and we will suggest more workflows")
 
 			if (setCloseWindow !== undefined) {
 				setCloseWindow(true)
