@@ -476,7 +476,6 @@ export const validateJson = (showResult) => {
 				if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
 					const inside_result = validateJson(value)
 					if (inside_result.valid) {
-						console.log("Replacing value since it's valid JSON!")
 						if (typeof inside_result.result === "string") {
           		const newres = JSON.parse(inside_result.result)
 							result[key] = newres 
