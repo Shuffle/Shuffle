@@ -521,8 +521,8 @@ export const usecases = {
 	}
 }
 
-const Framework = (props) => {
-  const { globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, setFrameworkData, size, inputUsecase, isLoggedIn, color, discoveryWrapper, setDiscoveryWrapper, userdata, apps, } = props;
+const AppFramework = (props) => {
+  const { globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, setFrameworkData, size, inputUsecase, isLoggedIn, color, discoveryWrapper, setDiscoveryWrapper, userdata, apps, inputUsecases, setInputUsecases } = props;
 	const [cy, setCy] = React.useState()
 	const [edgesStarted, setEdgesStarted] = React.useState(false)
 	const [graphDone, setGraphDone] = React.useState(false)
@@ -547,6 +547,13 @@ const Framework = (props) => {
 	const showRecommendations = (changed, frameworkData) => {
 		console.log("Inside recommendation loader")
 		setChangedApp(changed)
+
+		// Alternative changed
+		// This is for secondary values like email = comms
+		var alternativeChanged = changed
+		if (changed == "COMMS") {
+			alternativeChanged = "email"
+		}
 		
 		// FIX: 
 		// 0. Get workflows loaded in from usecasesearch
@@ -569,13 +576,18 @@ const Framework = (props) => {
 				var potential = false
 				var matches = []
 				for (var itemtype in usecase.items) {
-					const apptype = usecase.items[itemtype].app_type.toLowerCase()
+					var apptype = usecase.items[itemtype].app_type.toLowerCase()
+					if (apptype.toLowerCase() === "email" || apptype.toLowerCase() === "comms" || apptype === "communication") {
+						apptype = "Comms"
+					}
 					//console.log("OLD: ", changed, "USECASE: ", apptype)
 
-					if (changed.toLowerCase() === apptype || changed.toLowerCase().includes(apptype)) {
+					//console.log("APptype, changed, framework: ", apptype.toLowerCase(), alternativeChanged.toLowerCase(), changed.toLowerCase(), frameworkData)
+					if (changed.toLowerCase() === apptype.toLowerCase() || changed.toLowerCase().includes(apptype.toLowerCase()) || alternativeChanged.toLowerCase() === apptype.toLowerCase() || alternativeChanged.toLowerCase().includes(apptype.toLowerCase())) {
 						potential = true 
+						console.log("Potential: !", apptype)
 
-						if (frameworkData[apptype].name !== undefined && frameworkData[apptype].name !== null && frameworkData[apptype].name.length > 0) {
+						if (frameworkData[apptype] !== undefined && frameworkData[apptype].name !== undefined && frameworkData[apptype].name !== null && frameworkData[apptype].name.length > 0) {
 							usecase.items[itemtype].app = frameworkData[apptype]
 						}
 
@@ -585,7 +597,7 @@ const Framework = (props) => {
 						if (frameworkData[apptype] !== undefined) {
 							//console.log("NOT UNDEFINED: ", frameworkData[apptype])
 							if (frameworkData[apptype].name !== undefined && frameworkData[apptype].name !== null && frameworkData[apptype].name.length > 0) {
-								console.log("FOUND: ", frameworkData[apptype])
+								//console.log("FOUND: ", frameworkData[apptype])
 								usecase.items[itemtype].app = frameworkData[apptype]
 
 								//console.log("Real app!")
@@ -599,7 +611,42 @@ const Framework = (props) => {
 					}
 				}
 
+				// Adds to list if it's all matching and unhandled
 				if (potential) {
+					// Check finished usecases.
+					if (inputUsecases !== undefined && setInputUsecases !== undefined && usecase.usecase_references !== undefined && usecase.usecase_references.length > 0) {
+						var foundUsecase = false
+						for (var usecaseKey in inputUsecases) {
+							const usecaseCategory = inputUsecases[usecaseKey]
+							for (var subUsecaseKey in usecaseCategory.list) {
+								const loopUsecase = usecaseCategory.list[subUsecaseKey]
+								if (loopUsecase.matches === undefined || loopUsecase.matches === null || loopUsecase.matches.length === 0) {
+									//console.log("No matches - continuing")
+									continue
+								}
+
+								if (usecase.usecase_references.includes(loopUsecase.name)) {
+									foundUsecase = true
+									break
+								}
+							}
+
+							if (foundUsecase) {
+								break
+							}
+						}
+
+						if (!foundUsecase) {
+							console.log("Usecase NOT found!")
+						} else {
+							console.log("FOUND usecase existing in ", usecase.usecase_references)
+							continue
+						}
+					} else {
+						console.log("No usecase to try to match it to (usecase.usecase_references in UsecaseSearch)")
+					}
+
+					console.log("Usecase: ", usecase)
 					if (matches.length === usecase.items.length) {
 						usecase.color = "#c51152"
 						usecase.type = usecaseTypes[key].name
@@ -741,7 +788,7 @@ const Framework = (props) => {
 		}
 
 	useEffect(() => {
-		console.log(newSelectedApp, discoveryData)
+		console.log("New selected app: ", newSelectedApp, discoveryData)
 		if (newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined  || newSelectedApp.objectID.length === 0) {
 			return
 		}
@@ -765,8 +812,9 @@ const Framework = (props) => {
 			"name": newSelectedApp.name,
 			"id": newSelectedApp.objectID,
 			"large_image": newSelectedApp.image_url,
-			"description": newSelectedApp.description,
+			"description": newSelectedApp.description === undefined ? "" : newSelectedApp.description,
 		}
+
 
 		const foundelement = cy.getElementById(discoveryData.id)
 		if (foundelement !== undefined && foundelement !== null) {
@@ -794,8 +842,14 @@ const Framework = (props) => {
 					frameworkData[keys[key]] = submitValue
 				}
 
+				console.log("Frameworkdata: ", frameworkData)
 				setFrameworkData(frameworkData)
-				showRecommendations(discoveryData.id, frameworkData)
+
+				if (discoveryData.large_image !== undefined && discoveryData.large_image !== null && discoveryData.large_image.includes("storage.googleapis.com")) {
+					showRecommendations(discoveryData.id, frameworkData)
+				} else {
+					console.log("Skipping recommendations during unselect")
+				}
 			}
 		}
 
@@ -1091,6 +1145,7 @@ const Framework = (props) => {
 			"border-color": "#7fe57f",
     }
 
+		// Some error here?
 		if (event.target !== undefined && event.target !== null) {
 			event.target.animate(
 				{
@@ -1786,7 +1841,6 @@ const Framework = (props) => {
 								<CloseIcon style={{ color: "white", height: 15, width: 15, }} />
 							</IconButton>
 						</Tooltip>
-						{/* {/*Causes errors in Cytoscape. Removing for now.}
 						<Tooltip
 							title="Unselect app"
 							placement="top"
@@ -1801,12 +1855,29 @@ const Framework = (props) => {
 										"label": discoveryData.label,
 										"name": ""
 									})
+
 									setNewSelectedApp({
-										"image_url": "",
-										"name": "",
+										"animate": false,
+										"app_id": "",
+										"boxheight": "66.3px",
+										"boxwidth": "66.3px",
+										"description": "",
+										"errors": [],
+										"font_size": "9.36px",
+										"height": "66.3px",
 										"id": "",
+										"isValid": true,
+										"is_valid": true,
+										"label": "SIEM",
+										"large_image": "asd",
+										"margin_x": "0px",
+										"margin_y": "0px",
+										"name": "",
+										"text_margin_y": "46.800000000000004px",
+										"width": "66.3px",
 										"objectID": "remove",
 									})
+
 									setSelectionOpen(true)
 									setDefaultSearch("")
 
@@ -1830,7 +1901,6 @@ const Framework = (props) => {
 								<DeleteIcon style={{ color: "white", height: 15, width: 15, }} />
 							</IconButton>
 						</Tooltip>
-						*/}
 						<div style={{display: "flex"}}>
 							{discoveryData.name !== undefined && discoveryData.name !== null && discoveryData.name.length > 0 ? 
 								<div style={{border: "1px solid rgba(255,255,255,0.2)", borderRadius: 25, height: 40, width: 40, textAlign: "center", overflow: "hidden",}}>
@@ -1847,7 +1917,7 @@ const Framework = (props) => {
 									newSelectedApp.name !== undefined && newSelectedApp.name !== null && newSelectedApp.name.length > 0 ?
 										newSelectedApp.name
 										: 
-										`No ${discoveryData.label} app chosen`
+										`Find your ${discoveryData.label} app!`
 								}
 							</Typography>
 						</div>
@@ -1932,4 +2002,4 @@ const Framework = (props) => {
 	)
 }
 
-export default Framework;
+export default AppFramework;
