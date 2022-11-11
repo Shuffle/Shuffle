@@ -13,19 +13,19 @@ jobs:
         include:
          - app: frontend
            path: frontend
-           version: 0.8.3
+           version: 1.0.0
            experimental: true
          - app: backend
            path: backend
-           version: 0.8.3
+           version: 1.0.0
            experimental: false
          - app: orborus
            path: functions/onprem/orborus
-           version: 0.8.0
+           version: 1.0.0
            experimental: false
          - app: database
            path: backend/database
-           version: 0.8.0
+           version: 1.0.0
            experimental: false
     steps:
       -
