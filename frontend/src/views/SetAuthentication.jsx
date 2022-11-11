@@ -142,9 +142,14 @@ const SetAuthentication = (props) => {
 			appAuthData.label = `${foundScope}`
 		}
 
-		const foundTab = params["error"];
+		var foundTab = params["error"];
 		if (foundTab !== null && foundTab !== undefined && foundTab.length > 0) {
 			console.log("Found error: ", foundTab, "! Skipping Shuffle requests to validate Oauth2")
+			var errorDesc = params["error_description"]
+			if (errorDesc !== null && errorDesc !== undefined && errorDesc.length > 0) {
+				foundTab += "\n\n"+errorDesc
+			}
+
 			setFailed(true)
 			setResponse(`${foundTab}`)
 		} else {
