@@ -4740,7 +4740,7 @@ const Admin = (props) => {
               style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
-              primary="Last Changed"
+              primary="Last Edited"
               style={{ minWidth: 170, maxWidth: 170 }}
             />
             <ListItemText
@@ -4805,6 +4805,7 @@ const Admin = (props) => {
 												>
 													<IconButton
 														style={{}}
+														disabled={environment.Type === "cloud"}
 														onClick={() => {
 															if (environment.Type === "cloud") {
 																alert.info("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
@@ -4813,7 +4814,7 @@ const Admin = (props) => {
 
 															const elementName = "copy_element_shuffle";
 															const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
-															const commandData = `docker run -d --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="https://shuffler.io" ghcr.io/frikky/shuffle-orborus:latest`
+															const commandData = `docker run --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${globalUrl}"  -d ghcr.io/shuffle/shuffle-orborus:latest`
 															var copyText = document.getElementById(elementName);
 															if (copyText !== null && copyText !== undefined) {
 																const clipboard = navigator.clipboard;
@@ -4836,7 +4837,7 @@ const Admin = (props) => {
 															}
 														}}
 													>
-														<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: "rgba(255,255,255,0.8)" }} />
+														<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
 													</IconButton>
 												</Tooltip>
 											}
