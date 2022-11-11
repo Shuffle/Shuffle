@@ -37,7 +37,10 @@ import {
   Switch,
   Fade,
 } from "@material-ui/core";
-import { LockOpen as LockOpenIcon } from "@material-ui/icons";
+import { 
+	LockOpen as LockOpenIcon,
+	SupervisorAccount as SupervisorAccountIcon,
+} from "@mui/icons-material";
 
 const ITEM_HEIGHT = 55;
 const ITEM_PADDING_TOP = 8;
@@ -64,6 +67,8 @@ const registeredApps = [
 	"microsoft_teams",
 	"microsoft_teams_user_access",
 	"todoist",
+	"microsoft_sentinel",
+	"microsoft_365_defender",
 ]
 
 const AuthenticationOauth2 = (props) => {
@@ -100,11 +105,13 @@ const AuthenticationOauth2 = (props) => {
   );
   const [oauthUrl, setOauthUrl] = React.useState("");
   const [buttonClicked, setButtonClicked] = React.useState(false);
-  const [selectedScopes, setSelectedScopes] = React.useState([]);
+
   const [offlineAccess, setOfflineAccess] = React.useState(true);
   const allscopes =
     authenticationType.scope !== undefined ? authenticationType.scope : [];
 
+	console.log("ALLSCOPES: ", allscopes)
+  const [selectedScopes, setSelectedScopes] = React.useState(allscopes.length === 1 ? [allscopes[0]] : [])
   const [manuallyConfigure, setManuallyConfigure] = React.useState(
     defaultConfigSet ? false : true
   );
@@ -125,14 +132,16 @@ const AuthenticationOauth2 = (props) => {
     return null;
   }
 
-	const startOauth2Request = () => {
+	const startOauth2Request = (admin_consent) => {
 		console.log("APP: ", selectedApp)
 		if (selectedApp.name.toLowerCase() == "outlook_graph" || selectedApp.name.toLowerCase() == "outlook_office365") {
 			handleOauth2Request(
+				
 				"efe4c3fe-84a1-4821-a84f-23a6cfe8e72d",
 				"",
 				"https://graph.microsoft.com",
 				["Mail.ReadWrite"],
+				admin_consent,
 			);
 		} else if (selectedApp.name.toLowerCase() == "gmail") {
 			handleOauth2Request(
@@ -142,7 +151,8 @@ const AuthenticationOauth2 = (props) => {
 				["https://www.googleapis.com/auth/gmail.modify",
 					"https://www.googleapis.com/auth/gmail.send",
 					"https://www.googleapis.com/auth/gmail.insert",
-					"https://www.googleapis.com/auth/gmail.compose"]
+					"https://www.googleapis.com/auth/gmail.compose"],
+				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase() == "zoho_desk") {
 			handleOauth2Request(
@@ -152,35 +162,56 @@ const AuthenticationOauth2 = (props) => {
 				["Desk.tickets.READ",
 				"Desk.tickets.UPDATE",
 				"Desk.tickets.DELETE",
-				"Desk.tickets.CREATE"]
+				"Desk.tickets.CREATE"],
+				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase() == "slack") {
 			handleOauth2Request(
 				"151779186901.2448678750935",
 				"",
 				"https://slack.com",
-				["admin", "chat:write", "im:read", "im:write", "search:read", "usergroups:read", "usergroups:write"]
+				["admin", "chat:write", "im:read", "im:write", "search:read", "usergroups:read", "usergroups:write"],
+				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase() == "webex") {
 			handleOauth2Request(
 				"Cab184f3d7271f540443c79b5b79845e3387abbbdb3db4233a87ea3a5432fb3d5",
 				"",
 				"https://webexapis.com",
-				["spark:all"]
+				["spark:all"],
+				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("microsoft_teams")) {
 			handleOauth2Request(
 				"31cb4c84-658e-43d5-ae84-22c9142e967a",
 				"",
 				"https://graph.microsoft.com",
-				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read"]
+				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read"],
+				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("todoist")) {
 			handleOauth2Request(
 				"35fa3a384040470db0c8527e90a3c2eb",
 				"",
 				"https://api.todoist.com",
-				["task:add"]
+				["task:add"],
+				admin_consent,
+			)
+		} else if (selectedApp.name.toLowerCase().includes("microsoft_sentinel")) {
+			handleOauth2Request(
+				"4c16e8c4-3d34-4aa1-ac94-262ea170b7f7",
+				"",
+				"https://management.azure.com",
+				["https://management.azure.com/user_impersonation"],
+				admin_consent,
+			)
+		} else if (selectedApp.name.toLowerCase().includes("microsoft_365_defender")) {
+			handleOauth2Request(
+				"4c16e8c4-3d34-4aa1-ac94-262ea170b7f7",
+				"",
+				"https://graph.microsoft.com",
+				["SecurityEvents.ReadWrite.All"],
+				admin_consent,
 			)
 		}
 	}
@@ -192,7 +223,7 @@ const AuthenticationOauth2 = (props) => {
 		}
 	}, [])
 
-  const handleOauth2Request = (client_id, client_secret, oauth_url, scopes) => {
+  const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent) => {
     setButtonClicked(true);
     console.log("SCOPES: ", scopes);
 
@@ -234,7 +265,13 @@ const AuthenticationOauth2 = (props) => {
     }
 
 		// No prompt forcing
-    const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=login&scope=${resources}&state=${state}&access_type=offline`;
+    var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=login&scope=${resources}&state=${state}&access_type=offline`;
+		if (admin_consent === true) {
+			console.log("Running Oauth2 WITH admin consent")
+    	//url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=consent&scope=${resources}&state=${state}&access_type=offline`;
+    	url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=admin_consent&scope=${resources}&state=${state}&access_type=offline`;
+		}
+
 		// Force new consent
     //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`;
 
@@ -253,7 +290,7 @@ const AuthenticationOauth2 = (props) => {
       var open = true;
       const timer = setInterval(() => {
         if (newwin.closed) {
-					console.log("Closed!")
+					console.log("Closing?")
 
 					if (setAuthenticationModalOpen !== undefined) {
 						setAuthenticationModalOpen(false)
@@ -433,51 +470,87 @@ const AuthenticationOauth2 = (props) => {
 
 				{isCloud && registeredApps.includes(selectedApp.name.toLowerCase()) ? 
 					<span>
-						<Button
-        		  fullWidth
-        		  variant="contained"
-        		  style={{
-								marginBottom: 20, 
-								marginTop: 20, 
-        		    flex: 1,
-        		    textTransform: "none",
-        		    textAlign: "left",
-        		    justifyContent: "flex-start",
-        		    backgroundColor: "#ffffff",
-        		    color: "#2f2f2f",
-								borderRadius: theme.palette.borderRadius,
-								minWidth: 350, 
-								maxHeight: 50,
-								overflow: "hidden",
-								border: `1px solid ${theme.palette.inputColor}`,
-        		  }}
-        		  color="primary"
-          		disabled={
-            		clientSecret.length > 0 || clientId.length > 0
+						<span style={{display: "flex"}}>
+							<Button
+        			  fullWidth
+        			  variant="contained"
+        			  style={{
+									marginBottom: 20, 
+									marginTop: 20, 
+        			    flex: 1,
+        			    textTransform: "none",
+        			    textAlign: "left",
+        			    justifyContent: "flex-start",
+        			    backgroundColor: "#ffffff",
+        			    color: "#2f2f2f",
+									borderRadius: theme.palette.borderRadius,
+									minWidth:  300, 
+									maxWidth: 300,
+									maxHeight: 50,
+									overflow: "hidden",
+									border: `1px solid ${theme.palette.inputColor}`,
+        			  }}
+        			  color="primary"
+          			disabled={
+            			clientSecret.length > 0 || clientId.length > 0
+								}
+								fullWidth
+								onClick={() => {
+									// Hardcode some stuff?
+									// This could prolly be added to the app itself with a "default" client ID 
+									startOauth2Request()
+								}}
+								color="primary"
+							>
+								{buttonClicked ? (
+									<CircularProgress style={{ color: "#f86a3e", width: 45, height: 45, margin: "auto", }} />
+								) : (
+									<span style={{display: "flex"}}>
+										<img
+											alt={selectedAction.app_name}
+											style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+											src={selectedAction.large_image}
+										/>
+										<Typography style={{ margin: 0, marginLeft: 10, marginTop: 5,}} variant="body1">
+											Auto-Authenticate 
+										</Typography>
+									</span>
+								)}
+							</Button>
+							{buttonClicked ? 
+								null
+							:
+								<Tooltip
+									color="primary"
+									title={"Force Admin Consent"}
+									placement="top"
+								>
+									<Button
+										fullWidth
+										variant="outlined"
+										style={{
+											maxWidth: 50,
+											marginBottom: 20, 
+											marginTop: 20, 
+											maxHeight: 50, 
+										}}
+										color="primary"
+										disabled={
+											clientSecret.length > 0 || clientId.length > 0
+										}
+										fullWidth
+										onClick={() => {
+											// Hardcode some stuff?
+											// This could prolly be added to the app itself with a "default" client ID 
+											startOauth2Request(true)
+										}}
+										color="primary"
+									>
+										<SupervisorAccountIcon />
+									</Button>
+								</Tooltip>
 							}
-							fullWidth
-							onClick={() => {
-								// Hardcode some stuff?
-								// This could prolly be added to the app itself with a "default" client ID 
-								startOauth2Request()
-							}}
-							color="primary"
-						>
-							{buttonClicked ? (
-								<CircularProgress style={{ color: "#f86a3e", width: 45, height: 45, margin: "auto", }} />
-							) : (
-								<span style={{display: "flex"}}>
-									<img
-										alt={selectedAction.app_name}
-										style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
-										src={selectedAction.large_image}
-									/>
-									<Typography style={{ margin: 0, marginLeft: 10, marginTop: 5,}} variant="body1">
-										Auto-Authenticate 
-									</Typography>
-								</span>
-							)}
-						</Button>
+						</span>
 						<Typography style={{textAlign: "center", marginTop: 0, marginBottom: 10, }}>
 							OR
 						</Typography>
