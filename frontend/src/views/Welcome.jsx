@@ -30,6 +30,8 @@ const Welcome = (props) => {
 		const [defaultSearch, setDefaultSearch] = React.useState("")
 		const [selectionOpen, setSelectionOpen] = React.useState(false)
 		const [showWelcome, setShowWelcome] = React.useState(false)
+  	const [usecases, setUsecases] = React.useState([]);
+  	const [workflows, setWorkflows] = React.useState([]);
 
   	const isCloud =
 			window.location.host === "localhost:3002" ||
@@ -42,6 +44,122 @@ const Welcome = (props) => {
 		])
 
 		let navigate = useNavigate();
+
+		const handleKeysetting = (categorydata, workflows) => {
+			//workflows[0].category = ["detect"]
+			//workflows[0].usecase_ids = ["Correlate tickets"]
+
+			if (workflows !== undefined && workflows !== null) {
+				var newcategories = []
+				for (var key in categorydata) {
+					var category = categorydata[key]
+					category.matches = []
+
+					for (var subcategorykey in category.list) {
+						var subcategory = category.list[subcategorykey]
+						subcategory.matches = []
+
+						for (var workflowkey in workflows) {
+							const workflow = workflows[workflowkey]
+
+							if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
+								for (var usecasekey in workflow.usecase_ids) {
+
+									if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
+										//console.log("Got match: ", workflow.usecase_ids[usecasekey])
+
+										category.matches.push({
+											"workflow": workflow.id,
+											"category": subcategory.name,
+										})
+										subcategory.matches.push(workflow.id)
+										break
+									}
+								}
+							}
+
+							if (subcategory.matches.length > 0) {
+								break
+							}
+						}
+					}
+
+					newcategories.push(category)
+				} 
+
+				setUsecases(newcategories)
+			} else {
+				setUsecases(categorydata)
+			}
+
+			setWorkflows(workflows)
+		}
+  
+		const fetchUsecases = (workflows) => {
+			fetch(globalUrl + "/api/v1/workflows/usecases", {
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json",
+				},
+				credentials: "include",
+			})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for usecases");
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson.success !== false) {
+					handleKeysetting(responseJson, workflows)
+				} else {
+					//setWorkflows(workflows);
+					//setWorkflowDone(true);
+				}
+			})
+			.catch((error) => {
+				console.log("Usecase error: " + error.toString())
+			});
+		}
+
+		const getAvailableWorkflows = () => {
+			fetch(globalUrl + "/api/v1/workflows", {
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json",
+				},
+				credentials: "include",
+			})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for workflows :O!: ", response.status);
+				}
+
+				return response.json();
+			})
+			.then((responseJson) => {
+				if (responseJson !== undefined) {
+					var newarray = []
+					for (var key in responseJson) {
+						const wf = responseJson[key]
+						if (wf.public === true) {
+							continue
+						}
+
+						newarray.push(wf)
+					}
+
+					// Workflows are set in here
+					fetchUsecases(newarray)
+				}
+			})
+			.catch((error) => {
+				console.log("err in get workflows: ", error.toString());
+			})
+		}
 
 		const getFramework = () => {
 			fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
@@ -62,6 +180,7 @@ const Welcome = (props) => {
 			.then((responseJson) => {
 				if (responseJson.success === false) {
 					setFrameworkData({})
+
 					if (responseJson.reason !== undefined) {
 						//alert.error("Failed loading: " + responseJson.reason)
 					} else {
@@ -139,6 +258,7 @@ const Welcome = (props) => {
 		useEffect(() => {
 			getFramework() 
 			getApps()
+			getAvailableWorkflows() 
 
 			if (
 				window.location.search !== undefined &&
@@ -285,6 +405,8 @@ const Welcome = (props) => {
 														discoveryWrapper={discoveryWrapper}
 														setDiscoveryWrapper={setDiscoveryWrapper}
 														apps={apps}
+														inputUsecases={usecases}
+														setInputUsecases={setUsecases}
 												/>
 										</Fade>
 									</div>
