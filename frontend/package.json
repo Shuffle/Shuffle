@@ -1,7 +1,7 @@
 {
   "name": "shuffler",
   "homepage": "https://shuffler.io",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "dependencies": {
     "@babel/core": "^7.15.8",
@@ -16,7 +16,7 @@
     "@metamask/detect-provider": "^1.2.0",
     "@mui/icons-material": "^5.2.1",
     "@mui/material": "^5.2.3",
-    "@mui/x-data-grid": "^5.15.0",
+    "@mui/x-data-grid": "^5.17.11",
     "@uiw/react-codemirror": "^3.2.1",
     "@use-it/interval": "^1.0.0",
     "algoliasearch": "^4.13.1",
