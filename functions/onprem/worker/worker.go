@@ -113,31 +113,6 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 	}
 
 	// Might not be necessary because of cleanupEnv hostconfig autoremoval
-	//if cleanupEnv == "true" && len(containerIds) > 0 && (os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") {
-	if cleanupEnv == "true" && (os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") {
-		/*
-			ctx := context.Background()
-			dockercli, err := dockerclient.NewEnvClient()
-			if err == nil {
-				log.Printf("[INFO] Cleaning up %d containers", len(containerIds))
-				removeOptions := types.ContainerRemoveOptions{
-					RemoveVolumes: true,
-					Force:         true,
-				}
-
-				for _, containername := range containerIds {
-					log.Printf("[INFO] Should stop and and remove container %s (deprecated)", containername)
-					//dockercli.ContainerStop(ctx, containername, nil)
-					//dockercli.ContainerRemove(ctx, containername, removeOptions)
-					//removeContainers = append(removeContainers, containername)
-				}
-			}
-		*/
-	} else {
-		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
-			log.Printf("[DEBUG][%s] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", workflowExecution.ExecutionId, 0, cleanupEnv)
-		}
-	}
 
 	if len(reason) > 0 && len(nodeId) > 0 {
 		//log.Printf("[INFO] Running abort of workflow because it should be finished")
@@ -165,16 +140,11 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 			log.Printf("[INFO][%s] Failed building request: %s", workflowExecution.ExecutionId, err)
 		}
 
-		// FIXME: Add an API call to the backend
-		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
-			authorization := os.Getenv("AUTHORIZATION")
-			if len(authorization) > 0 {
-				req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
-			} else {
-				log.Printf("[ERROR][%s] No authorization specified for abort", workflowExecution.ExecutionId)
-			}
+		authorization := os.Getenv("AUTHORIZATION")
+		if len(authorization) > 0 {
+			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
 		} else {
-			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", workflowExecution.Authorization))
+			log.Printf("[ERROR][%s] No authorization specified for abort", workflowExecution.ExecutionId)
 		}
 
 		req.Header.Add("Content-Type", "application/json")
@@ -210,29 +180,8 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 	//Finished shutdown (after %d seconds). ", sleepDuration)
 
 	// Allows everything to finish in subprocesses (apps)
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
-		time.Sleep(time.Duration(sleepDuration) * time.Second)
-		os.Exit(3)
-	} else {
-		log.Printf("[DEBUG][%s] Sending result and resetting values (K8s & Swarm).", workflowExecution.ExecutionId)
-		//UpdateExecutionVariables(ctx, workflowExecution.ExecutionId, startAction, children, parents, visited, executed, nextActions, environments, extra)
-
-		/*
-			environments = []string{}
-			parents = map[string][]string{}
-			children = map[string][]string{}
-			visited = []string{}
-			executed = []string{}
-			nextActions = []string{}
-			containerIds = []string{}
-			extra = 0
-			startAction = ""
-			results = []shuffle.ActionResult{}
-			allLogs = map[string]string{}
-		*/
-		//requestsSent = 0
-		//executionRunning = false
-	}
+	time.Sleep(time.Duration(sleepDuration) * time.Second)
+	os.Exit(3)
 	//cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 }
 
@@ -240,58 +189,6 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution, action shuffle.Action) error {
 	// form basic hostConfig
 	ctx := context.Background()
-
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
-		//identifier := fmt.Sprintf("%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId)
-
-		appName := strings.Replace(identifier, fmt.Sprintf("_%s", action.ID), "", -1)
-		appName = strings.Replace(appName, fmt.Sprintf("_%s", workflowExecution.ExecutionId), "", -1)
-		appName = strings.ToLower(appName)
-		//log.Printf("[INFO][%s] New appname: %s, image: %s", workflowExecution.ExecutionId, appName, image)
-
-		if !shuffle.ArrayContains(downloadedImages, image) {
-			log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration for this image on the worker.", image)
-			// FIXME: Not caring if it's ok or not. Just continuing
-			// This is working as intended, just designed to download an updated
-			// image on every Orborus/new worker restart.
-
-			// Running as coroutine for eventual completeness
-			//go downloadDockerImageBackend(&http.Client{}, image)
-			// FIXME: With goroutines it got too much trouble of deploying with an older version
-			// Allowing slow startups, as long as it's eventually fast, and uses the same registry as on host.
-			downloadDockerImageBackend(&http.Client{}, image)
-		}
-
-		exposedPort, err := findAppInfo(image, appName)
-		if err != nil {
-			log.Printf("[ERROR] Failed finding and creating port for %s: %s", appName, err)
-			return err
-		}
-
-		log.Printf("[DEBUG][%s] Should run towards port %d for app %s. DELAY: %d", workflowExecution.ExecutionId, exposedPort, appName, action.ExecutionDelay)
-		if action.ExecutionDelay > 0 {
-			//log.Printf("[DEBUG] Running app %s with delay of %d", action.Name, action.ExecutionDelay)
-			waitTime := time.Duration(action.ExecutionDelay) * time.Second
-
-			time.AfterFunc(waitTime, func() {
-				err = sendAppRequest(baseUrl, appName, exposedPort, action, workflowExecution)
-				if err != nil {
-					log.Printf("[ERROR] Failed sending SCHEDULED request to app %s on port %d: %s", appName, exposedPort, err)
-				}
-			})
-
-		} else {
-			//log.Printf("[DEBUG] Running app %s NORMALLY as there is no delay set", action.Name)
-			err = sendAppRequest(baseUrl, appName, exposedPort, action, workflowExecution)
-			if err != nil {
-				log.Printf("[ERROR] Failed sending request to app %s on port %d: %s", appName, exposedPort, err)
-				return err
-			}
-		}
-
-		//log.Printf("[DEBUG] Successfully ran request towards port %d for app %s", exposedPort, appName)
-		return nil
-	}
 
 	// Max 10% CPU every second
 	//CPUShares: 128,
@@ -307,10 +204,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		Resources: container.Resources{},
 	}
 
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
-		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId))
-		//log.Printf("Environments: %#v", env)
-	}
+	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId))
 
 	// Removing because log extraction should happen first
 	if cleanupEnv == "true" {
@@ -2171,13 +2065,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 
-		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
-			finished := validateFinished(*workflowExecution)
-			if !finished {
-				log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
-				handleExecutionResult(*workflowExecution)
-			}
-		}
 	} else {
 		log.Printf("[INFO][%s] Skipping setexec with status %s", workflowExecution.ExecutionId, workflowExecution.Status)
 
@@ -2211,7 +2098,7 @@ func getWorkflowExecution(ctx context.Context, id string) (*shuffle.WorkflowExec
 }
 
 func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
-	if workflowExecution.ExecutionSource == "default" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
+	if workflowExecution.ExecutionSource == "default" {
 		log.Printf("[INFO][%s] Not sending backend info since source is default", workflowExecution.ExecutionId)
 		return
 	}
@@ -2253,7 +2140,7 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 	log.Printf("[INFO][%s] VALIDATION. Status: %s, shuffle.Actions: %d, Extra: %d, Results: %d. Parent: %#v\n", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results), workflowExecution.ExecutionParent)
 
 	//if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
-	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1 && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions)+extra && len(workflowExecution.Workflow.Actions) > 0) {
+	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1) || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions)+extra && len(workflowExecution.Workflow.Actions) > 0) {
 		if workflowExecution.Status == "FINISHED" {
 			for _, result := range workflowExecution.Results {
 				if result.Status == "EXECUTING" || result.Status == "WAITING" {
@@ -2263,9 +2150,7 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 			}
 		}
 
-		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
-			requestsSent += 1
-		}
+		requestsSent += 1
 
 		log.Printf("[DEBUG][%s] Should send full result to %s", workflowExecution.ExecutionId, baseUrl)
 
@@ -2340,10 +2225,6 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 	requestCache.Set(cacheKey, &workflowExecution, cache.DefaultExpiration)
 
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
-		return nil
-	}
-
 	handleExecutionResult(workflowExecution)
 	validateFinished(workflowExecution)
 
@@ -2365,69 +2246,6 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 
 // GetLocalIP returns the non loopback local IP of the host
 func getLocalIP() string {
-
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
-		name, err := os.Hostname()
-		if err != nil {
-			log.Printf("[ERROR] Couldn't find hostanme of worker: %s", err)
-			os.Exit(3)
-		}
-
-		log.Printf("[DEBUG] Found hostname %s since worker is running with \"run\" command", name)
-		return name
-
-		/**
-			Everything below was a test to see if we needed to match directly to a network interface. May require docker network API.
-		**/
-
-		log.Printf("[DEBUG] Looking for IP for the external docker-network %s", swarmNetworkName)
-		// Different process to ensure we find the right IP.
-		// Necessary due to Ingress being added to docker ser
-		ifaces, err := net.Interfaces()
-		if err != nil {
-			log.Printf("[ERROR] FATAL: networks the container is listening in %s: %s", swarmNetworkName, err)
-			os.Exit(3)
-		}
-
-		foundIP := ""
-		for _, i := range ifaces {
-			log.Printf("NETWORK: %s", i.Name)
-			//If i.Name != swarmNetworkName {
-			//	continue
-			//}
-
-			addrs, err := i.Addrs()
-			if err != nil {
-				log.Printf("[ERROR] FATAL: Failed getting address for listener in network %s: %s", swarmNetworkName, err)
-				continue
-			}
-
-			for _, addr := range addrs {
-				var ip net.IP
-				switch v := addr.(type) {
-				case *net.IPNet:
-					ip = v.IP
-				case *net.IPAddr:
-					ip = v.IP
-				}
-
-				log.Printf("%s: IP: %#v", i.Name, ip)
-
-				// FIXME: Allow for IPv6 too!
-				//if strings.Count(ip.String(), ".") == 3 {
-				//	foundIP = ip.String()
-				//	break
-				//}
-				// process IP address
-			}
-		}
-
-		if len(foundIP) == 0 {
-			log.Printf("[ERROR] FATAL: No valid IP found for network %s. Defaulting to base IP", swarmNetworkName)
-		} else {
-			return foundIP
-		}
-	}
 
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -2470,23 +2288,10 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 	}
 
 	log.Printf("[DEBUG] OLD HOSTNAME: %s", appCallbackUrl)
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
-		log.Printf("\n\nStarting webserver on port %d with hostname: %s\n\n", baseport, hostname)
+	port := listener.Addr().(*net.TCPAddr).Port
 
-		appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
-		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", baseport))
-		if err != nil {
-			log.Printf("[ERROR] Failed to assign port to %d: %s", baseport, err)
-			return nil
-		}
-
-		return listener
-	} else {
-		port := listener.Addr().(*net.TCPAddr).Port
-
-		log.Printf("\n\nStarting webserver on port %d with hostname: %s\n\n", port, hostname)
-		appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, port)
-	}
+	log.Printf("\n\nStarting webserver on port %d with hostname: %s\n\n", port, hostname)
+	appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, port)
 	log.Printf("NEW HOSTNAME: %s", appCallbackUrl)
 
 	return listener
@@ -2983,7 +2788,6 @@ func sendAppRequest(incomingUrl, appName string, port int, action shuffle.Action
 	return nil
 }
 
-// Function to auto-deploy certain apps if "run" is set
 // Has some issues with loading when running multiple workers and such.
 func baseDeploy() {
 	//return
@@ -3099,21 +2903,6 @@ func main() {
 	}
 
 	log.Printf("[INFO] Running with timezone %s and swarm config %#v", timezone, os.Getenv("SHUFFLE_SWARM_CONFIG"))
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
-		// Forcing download just in case on the first iteration.
-		workflowExecution := shuffle.WorkflowExecution{}
-
-		//var autoDeploy = []string{"frikky/shuffle:shuffle-subflow_1.0.0", "frikky/shuffle:http_1.1.0", "frikky/shuffle:shuffle-tools_1.1.0", "frikky/shuffle:testing_1.0.0"}
-
-		go baseDeploy()
-		//baseDeploy()
-
-		listener := webserverSetup(workflowExecution)
-		runWebserver(listener)
-		log.Printf("[ERROR] Stopped listener %#v - exiting.", listener)
-		os.Exit(3)
-	}
-
 	//imageName := fmt.Sprintf("%s/%s:shuffle_openapi_1.0.0", registryName, baseimagename)
 
 	// WORKER_TESTING_WORKFLOW should be a workflow ID
@@ -3466,17 +3255,6 @@ func runWebserver(listener net.Listener) {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
-
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
-		/*
-			err = dockercli.ServiceRemove(ctx, "shuffle-workers")
-			if err != nil {}
-		*/
-
-		requestCache = cache.New(60*time.Minute, 120*time.Minute)
-		log.Printf("[DEBUG] Running webserver config for SWARM and K8s")
-		r.HandleFunc("/api/v1/execute", handleRunExecution).Methods("POST", "OPTIONS")
-	}
 
 	//log.Fatal(http.ListenAndServe(port, nil))
 	http.Handle("/", r)

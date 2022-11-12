@@ -130,6 +130,8 @@ github.com/bketelsen/crypt v0.0.3-0.20200106085610-5cbc8cc4026c/go.mod h1:MKsuJm
 github.com/blang/semver v3.1.0+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
 github.com/blang/semver v3.5.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dRnpXw/yCqJaO+ZrUyxD+3VXMFFr56k5XYrpB4=
+github.com/bradfitz/gomemcache v0.0.0-20221031212613-62deef7fc822 h1:hjXJeBcAMS1WGENGqDpzvmgS43oECTx8UXq31UBu0Jw=
+github.com/bradfitz/gomemcache v0.0.0-20221031212613-62deef7fc822/go.mod h1:H0wQNHz2YrLsuXOZozoeDmnHXkNCRmMW0gwFWDfEZDA=
 github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013 h1:/P9/RL0xgWE+ehnCUUN5h3RpG3dmoMCOONO1CCvq23Y=
 github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013/go.mod h1:pccXHIvs3TV/TUqSNyEvF99sxjX2r4FFRIyw6TZY9+w=
 github.com/bshuster-repo/logrus-logstash-hook v0.4.1/go.mod h1:zsTqEiSzDgAa/8GZR7E1qaXrhYNDKBYy5/dWPTIflbk=
@@ -796,6 +798,8 @@ github.com/shuffle/shuffle-shared v0.2.82 h1:V3bYw7MxHPQgydUuWLGHONpX7NwbRPPAALo
 github.com/shuffle/shuffle-shared v0.2.82/go.mod h1:YuMle0RjwXb3hxR5PdaOOD9e+hUyK34OABS0UbrT/Sk=
 github.com/shuffle/shuffle-shared v0.3.5 h1:erfXVKjeSkmpoGczZ6hPETg8gDdZeXYgXsrEgVO/uqg=
 github.com/shuffle/shuffle-shared v0.3.5/go.mod h1:YuMle0RjwXb3hxR5PdaOOD9e+hUyK34OABS0UbrT/Sk=
+github.com/shuffle/shuffle-shared v0.3.24 h1:zBDZan4u2XjC6TAi5BdFoVroBPGYd6PAha+3/cSfD6w=
+github.com/shuffle/shuffle-shared v0.3.24/go.mod h1:yI6HCog/R3Kq1FvCIVbXedLl87rtSuDOyzolmuMswB4=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.0.6/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
