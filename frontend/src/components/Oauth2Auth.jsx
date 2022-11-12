@@ -128,6 +128,13 @@ const AuthenticationOauth2 = (props) => {
     active: true,
   });
 
+	useEffect(() => {
+		console.log("Should automatically click the auto-auth button?")
+		if (autoAuth === true && selectedApp !== undefined) {
+			startOauth2Request() 
+		}
+	}, [])
+
   if (selectedApp.authentication === undefined) {
     return null;
   }
@@ -216,12 +223,6 @@ const AuthenticationOauth2 = (props) => {
 		}
 	}
 
-	useEffect(() => {
-		console.log("Should automatically click the auto-auth button?")
-		if (autoAuth === true && selectedApp !== undefined) {
-			startOauth2Request() 
-		}
-	}, [])
 
   const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent) => {
     setButtonClicked(true);
