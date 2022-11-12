@@ -1,8 +1,8 @@
-name: ci
+name: docker-build
 
 on:
   push:
-    branches: master
+    branches: launch
 jobs:
   main:
     runs-on: ubuntu-latest
