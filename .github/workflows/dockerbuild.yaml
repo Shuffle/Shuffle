@@ -70,6 +70,7 @@ jobs:
           tags: |
             ghcr.io/shuffle/shuffle-${{ matrix.app }}:nightly
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly
+            ghcr.io/frikky/shuffle-${{ matrix.app }}:nightly
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
