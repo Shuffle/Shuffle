@@ -1998,7 +1998,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	resultLength := len(workflowExecution.Results)
 	setExecution := true
 
-	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, true)
+	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, true, 0)
 	if err != nil {
 		log.Printf("[DEBUG] Rerunning transaction? %s", err)
 		if strings.Contains(fmt.Sprintf("%s", err), "Rerun this transaction") {
@@ -2013,7 +2013,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			resultLength = len(workflowExecution.Results)
 			setExecution = true
 
-			workflowExecution, dbSave, err = shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false)
+			workflowExecution, dbSave, err = shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
 			if err != nil {
 				log.Printf("[ERROR] Failed execution of parsedexecution (2): %s", err)
 				resp.WriteHeader(401)
