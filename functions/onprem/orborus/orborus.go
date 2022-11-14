@@ -58,6 +58,7 @@ var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
 var concurrencyEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY")
 var appSdkVersion = os.Getenv("SHUFFLE_APP_SDK_VERSION")
 var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
+var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 
 //var baseimagename = "docker.pkg.github.com/frikky/shuffle"
 //var baseimagename = "ghcr.io/frikky"
@@ -689,12 +690,12 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "1.0.0"
+		appSdkVersion = "1.1.0"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 
 	if workerVersion == "" {
-		workerVersion = "nightly"
+		workerVersion = "1.1.0"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -704,24 +705,23 @@ func initializeImages() {
 		log.Printf("[DEBUG] Setting baseimageregistry")
 	}
 	if baseimagename == "" {
-		baseimagename = "shuffle/shuffle"
-		baseimagename = "shuffle"
+		baseimagename = "shuffle/shuffle" // Dockerhub
+		baseimagename = "shuffle"         // Github
 		log.Printf("[DEBUG] Setting baseimagename")
 	}
 
 	log.Printf("[DEBUG] Setting swarm config to %#v. Default is empty.", swarmConfig)
 
+	newWorker := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+	if len(newWorkerImage) > 0 {
+		newWorker = newWorkerImage
+	}
+
 	// check whether they are the same first
 	images := []string{
 		fmt.Sprintf("shuffle/shuffle:app_sdk"),
 		fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", baseimageregistry, baseimagename, appSdkVersion),
-		fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion),
-		// fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
-		// fmt.Sprintf("docker.io/%s:worker", baseimagename),
-
-		//fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion),
-		//fmt.Sprintf("%s/app_sdk:%s", baseimagename, appSdkVersion),
-		//fmt.Sprintf("frikky/shuffle:app_sdk"),
+		newWorker,
 	}
 
 	pullOptions := types.ImagePullOptions{}
@@ -919,6 +919,10 @@ func main() {
 	initializeImages()
 
 	workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+	if len(newWorkerImage) > 0 {
+		workerImage = newWorkerImage
+	}
+
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		checkSwarmService(ctx)
 
@@ -986,9 +990,9 @@ func main() {
 	hasStarted := false
 	for {
 		//go getStats()
-		log.Printf("[DEBUG] Prerequest - queue")
+		//log.Printf("[DEBUG] Prerequest - queue")
 		newresp, err := client.Do(req)
-		log.Printf("[DEBUG] Postrequest - queue")
+		//log.Printf("[DEBUG] Postrequest - queue")
 		if err != nil {
 			log.Printf("[WARNING] Failed making request to %s: %s", fullUrl, err)
 
@@ -1390,7 +1394,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	//log.Printf("[DEBUG] Data: %s", string(data))
 
-	//streamUrl := fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute", parsedBaseurl)
 	streamUrl := fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
 	if containerId == "" || containerId == "shuffle-orborus" {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
@@ -1407,6 +1410,10 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		log.Printf("[ERROR] Failed creating worker request: %s", err)
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+
+			if len(newWorkerImage) > 0 {
+				workerImage = newWorkerImage
+			}
 			deployServiceWorkers(workerImage)
 
 			time.Sleep(time.Duration(10) * time.Second)
@@ -1421,6 +1428,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		log.Printf("[ERROR] Error running worker request to %s (1): %s", streamUrl, err)
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+
+			if len(newWorkerImage) > 0 {
+				workerImage = newWorkerImage
+			}
+
 			deployServiceWorkers(workerImage)
 
 			time.Sleep(time.Duration(10) * time.Second)
@@ -1443,12 +1455,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		if strings.Contains(string(body), "Bad status ") {
 			return nil
 		}
-
-		//workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-		//deployServiceWorkers(workerImage)
-
-		//time.Sleep(time.Duration(10) * time.Second)
-		//err = sendWorkerRequest(executionRequest)
 
 		return errors.New(fmt.Sprintf("Bad statuscode from worker: %d - expecting 200", newresp.StatusCode))
 	}
