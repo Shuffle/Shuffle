@@ -15,9 +15,9 @@
 #curl -X POST "https://europe-west1-shuffle-241517.cloudfunctions.net/webhook_982995716e67c3a549092d3a3a7921cd" -H "Content-Type:application/json" -H "Authorization: Bearer 144308d0-6aab-4d4f-8bb2-75189281ee26" --data '{"name":"Keyboard Cat"}' -v
 
 ## GET HOOK
-#curl http://localhost:5001/api/v1/hooks/b4ba07c9-45d4-41f2-b260-83c8e99eba0c -H "Authorization: Bearer 144308d0-6aab-4d4f-8bb2-75189281ee26"
+#curl http://localhost:5001/api/v1/hooks/b4ba07c9-45d4-41f2-b260-83c8e99eba0c -H "Authorization: Bearer "
 
-#curl https://shuffler.io/api/v1/hooks/b4ba07c9-45d4-41f2-b260-83c8e99eba0c -H "Authorization: Bearer 144308d0-6aab-4d4f-8bb2-75189281ee26"
+#curl https://shuffler.io/api/v1/hooks/b4ba07c9-45d4-41f2-b260-83c8e99eba0c -H "Authorization: Bearer "
 
 
 #curl -X POST "https://europe-west1-shuffle-241517.cloudfunctions.net/webhook_3ceff795-ce9a-43a2-a2f5-d4401a6e772d" -H "Authorization: Bearer 144308d0-6aab-4d4f-8bb2-75189281ee26" --data 'wut' 
