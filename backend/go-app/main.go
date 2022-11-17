@@ -5917,6 +5917,48 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte("OK"))
 }
 
+func HandleGetLogs(w http.ResponseWriter, r *http.Request) {
+	cors := shuffle.HandleCors(w, r)
+	if cors {
+		return
+	}
+
+	user, err := shuffle.HandleApiAuthentication(w, r)
+	if err != nil {
+		log.Printf("[WARNING] Api authentication failed in get logs: %s", err)
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false}`))
+		return
+	}
+	
+	if user.Role != "admin" {
+		log.Printf("[AUDIT] User isn't admin (%s) and can't get logs.", user.Role)
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "not admin"}`))
+		return
+	}
+
+	filename := os.Getenv("SHUFFLE_LOG_FILENAME")
+	if filename == "" {
+		// Not sure what to do. assign a default filename or just send an error
+		// filename = "default.log"
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "Shuffle log filename not defined"}`))
+		return
+	}
+
+	data, err := os.ReadFile(filename)
+	if (err != nil) {
+		log.Printf("[ERROR] Could not read log file 'test.log'")
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "Could not read log file"}`))
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(data)
+}
+
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -6154,11 +6196,26 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", shuffle.HandleGetWidget).Methods("GET", "OPTIONS")
 
+	// Logs
+	r.HandleFunc("/api/v1/logs", HandleGetLogs).Methods("GET", "OPTIONS")
+	
 	http.Handle("/", r)
 }
 
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
+	filename := os.Getenv("SHUFFLE_LOG_FILENAME")
+	if filename != "" {
+		// Not sure what to do. assign a default filename or just don't create the file
+		logFile, err := os.OpenFile(filename, os.O_CREATE | os.O_APPEND | os.O_RDWR, 0666)
+		if err == nil {
+			mw := io.MultiWriter(os.Stdout, logFile)
+			log.SetOutput(mw)
+			defer logFile.Close()
+		}
+	}
+	// filename = "default.log"
+	
 	initHandlers()
 	hostname, err := os.Hostname()
 	if err != nil {
