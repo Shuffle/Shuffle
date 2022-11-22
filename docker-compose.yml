@@ -61,7 +61,7 @@ services:
     security_opt:
       - seccomp:unconfined
   opensearch:
-    image: opensearchproject/opensearch:2.3.0
+    image: opensearchproject/opensearch:2.4.0
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:

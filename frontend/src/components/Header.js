@@ -180,6 +180,8 @@ const Header = (props) => {
       org_id: orgId,
     };
 
+		localStorage.setItem("getting_started_sidebar", "open");
+
     fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
       mode: "cors",
       method: "POST",

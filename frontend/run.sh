@@ -6,6 +6,7 @@ docker rm shuffle-frontend
 echo "Running build for website"
 #sudo npm run build
 docker build . -t ghcr.io/frikky/shuffle-frontend:nightly
+docker tag ghcr.io/frikky/shuffle-frontend:nightly ghcr.io/shuffle/shuffle-frontend:nightly
 
 echo "Starting server"
 # Rerun build locally for it to update :)

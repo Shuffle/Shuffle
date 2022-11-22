@@ -729,7 +729,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		if (countErr == nil && count > 0) || countErr != nil {
 			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "Can't register without being admin"}`))
+			resp.Write([]byte(`{"success": false, "reason": "Users already exist. Please go to /login to log into your admin user."}`))
 			return
 		}
 	}
@@ -6120,6 +6120,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{key}/execute", executeSingleAction).Methods("POST", "OPTIONS")
 
 	// Docker orborus specific - downloads an image
