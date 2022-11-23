@@ -134,7 +134,6 @@ const CreatorGrid = props => {
 					onChange={(event) => {
 						refine(event.currentTarget.value)
 					}}
-					limit={5}
 				/>
 				{/*isSearchStalled ? 'My search is stalled' : ''*/}
 			</form>

@@ -65,6 +65,7 @@ import {
 	ListItem,
 	ListItemText,
 	ListItemAvatar,
+	Badge,
 } from "@material-ui/core";
 
 import {
@@ -109,6 +110,7 @@ import {
 
 import {
 		Preview as PreviewIcon,
+		ContentCopy as ContentCopyIcon, 
 } from '@mui/icons-material';
 
 import Autocomplete from "@material-ui/lab/Autocomplete";
@@ -367,8 +369,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const [selectedApp, setSelectedApp] = React.useState({});
   const [selectedAction, setSelectedAction] = React.useState({});
-  const [selectedActionEnvironment, setSelectedActionEnvironment] =
-    React.useState({});
+  const [selectedActionEnvironment, setSelectedActionEnvironment] = React.useState({});
 
   const [executionRequest, setExecutionRequest] = React.useState({});
 
@@ -2110,6 +2111,7 @@ const AngularWorkflow = (defaultprops) => {
 			setSelectedTriggerIndex(-1)
 			setTriggerFolders([])
 			setSubworkflow({})
+  		setLocalFirstrequest(true)
 
 			// Can be used for right side view
 			setRightSideBarOpen(false);
@@ -8194,6 +8196,7 @@ const AngularWorkflow = (defaultprops) => {
             responseJson.success !== false &&
             responseJson.length > 0
           ) {
+						console.log("Got trigger folders: ", triggerFolders)
             setTriggerFolders(responseJson);
           }
 
@@ -8207,7 +8210,7 @@ const AngularWorkflow = (defaultprops) => {
                 name: "outlookfolder",
                 id: responseJson[0].id,
               },
-            ];
+            ]
             selectedTrigger.parameters = [
               {
                 value: responseJson[0].displayName,
@@ -8225,7 +8228,7 @@ const AngularWorkflow = (defaultprops) => {
     };
 
     const getTriggerAuth = () => {
-      fetch(globalUrl + "/api/v1/triggers/outlook/" + selectedTrigger.id, {
+      fetch(globalUrl + "/api/v1/triggers/" + selectedTrigger.id, {
         method: "GET",
         headers: { "content-type": "application/json" },
         credentials: "include",
@@ -8238,20 +8241,24 @@ const AngularWorkflow = (defaultprops) => {
           return response.json();
         })
         .then((responseJson) => {
+
           setTriggerAuthentication(responseJson);
         })
         .catch((error) => {
           //console.log(error.toString());
-          console.log("Set outlook auth error: ", error.toString());
+          console.log("Set trigger auth error: ", error.toString());
         });
     };
 
     // Getting the triggers and the folders if they exist
-    // This is horrible hahah
     if (localFirstrequest) {
+			//console.log("Trigger: ", selectedTrigger)
+			//console.log("Triggername: ", selectedTrigger.name)
+			//if (selectedTrigger.name.toLowerCase() === "gmail") {
+			setGmailFolders();
+			setOutlookFolders();
+
       getTriggerAuth();
-      setOutlookFolders();
-      setGmailFolders();
       setLocalFirstrequest(false);
     }
 
@@ -8310,7 +8317,7 @@ const AngularWorkflow = (defaultprops) => {
             // Check whether we got a callback somewhere
             var id = setInterval(function () {
               fetch(
-                globalUrl + "/api/v1/triggers/gmail/" + selectedTrigger.id,
+                globalUrl + "/api/v1/triggers/" + selectedTrigger.id,
                 {
                   method: "GET",
                   headers: { "content-type": "application/json" },
@@ -8411,7 +8418,7 @@ const AngularWorkflow = (defaultprops) => {
             // Check whether we got a callback somewhere
             var id = setInterval(function () {
               fetch(
-                globalUrl + "/api/v1/triggers/outlook/" + selectedTrigger.id,
+                globalUrl + "/api/v1/triggers/ " + selectedTrigger.id,
                 {
                   method: "GET",
                   headers: { "content-type": "application/json" },
@@ -8506,61 +8513,73 @@ const AngularWorkflow = (defaultprops) => {
                     }}
                   />
                   <div style={{ flex: "10" }}>
-                    <b>Select {triggerAuthentication.type === "gmail" ? "labels" : "folders"} (CTRL+click)</b>
+                    <b>Select {triggerAuthentication.type === "gmail" ? "labels" : "a folder"}</b>
                   </div>
                 </div>
-                <Select
-									MenuProps={{
-										disableScrollLock: true,
-									}}
-                  multiple
-                  native
-                  rows="10"
-                  value={selectedTrigger.parameters[0].value.split(splitter)}
-                  style={{ backgroundColor: inputColor, color: "white" }}
-                  disabled={selectedTrigger.status === "running"}
-                  SelectDisplayProps={{
-                    style: {
-                      marginLeft: 10,
-                    },
-                  }}
-                  onChange={(e) => {
-                    setTriggerFolderWrapperMulti(e)
-                  }}
-                  fullWidth
-                  input={<Input id="select-multiple-native" />}
-                  key={selectedTrigger}
-                >
-                  {triggerFolders.map((folder) => {
-                    var folderItem = (
-                      <option
-                        key={folder.displayName}
-                        style={{
-                          backgroundColor: inputColor,
-                          fontSize: "1.2em",
-                        }}
-                        value={folder.displayName}
-                      >
-                        {folder.displayName}
-                      </option>
-                    );
+								{triggerFolders.length === 0 ?
+									<Typography variant="body2">
+										No folders found. Please authenticate and make sure the user has access folders available. If this persists, <a href="https://shuffler.io/contact" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>contact us</a>. 
+									</Typography>
+									:
+                	<Select
+										MenuProps={{
+											disableScrollLock: true,
+											sx: {
+													"&& .MuiMenuItem-root":{
+														backgroundColor: theme.palette.inputColor, 
+														color: "white",
+													}
+												}
+										}}
+                	  multiple={triggerAuthentication.type === "gmail"}
+                	  native
+                	  rows="10"
+                	  value={selectedTrigger.parameters[0].value.split(splitter)}
+                	  style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+                	  disabled={selectedTrigger.status === "running"}
+                	  SelectDisplayProps={{
+                	    style: {
+                	      marginLeft: 10,
+                	    },
+                	  }}
+                	  onChange={(e) => {
+                	    setTriggerFolderWrapperMulti(e)
+                	  }}
+                	  fullWidth
+                	  input={<Input id="select-multiple-native" style={{backgroundColor: theme.palette.inputColor, color: "white"}} />}
+                	  key={selectedTrigger}
+                	>
+										{triggerFolders.map((folder) => {
+                	    var folderItem = (
+                	      <option
+                	        key={folder.displayName}
+                	        style={{
+                	          backgroundColor: inputColor,
+                	          fontSize: "1.2em",
+                	        }}
+                	        value={folder.displayName}
+                	      >
+                	        {folder.displayName}
+                	      </option>
+                	    );
 
-                    if (folder.childFolderCount > 0) {
-                      // Here to handle subfolders sometime later
-                      folderItem = (
-                        <option
-                          key={folder.displayName}
-                          value={folder.displayName}
-                          style={{ marginLeft: "10px" }}
-                        >
-                          {folder.displayName}
-                        </option>
-                      );
-                    }
+                	    if (folder.childFolderCount > 0) {
+                	      // Here to handle subfolders sometime later
+                	      folderItem = (
+                	        <option
+                	          key={folder.displayName}
+                	          value={folder.displayName}
+                	          style={{ marginLeft: "10px" }}
+                	        >
+                	          {folder.displayName}
+                	        </option>
+                	      );
+                	    }
 
-                    return folderItem;
-                  })}
-                </Select>
+                	    return folderItem;
+                	  })}
+                	</Select>
+								}
               </span>
             )}
           </div>
@@ -10233,28 +10252,6 @@ const AngularWorkflow = (defaultprops) => {
                 }}
                 id="webhook_uri_field"
                 onClick={() => {
-                  var copyText = document.getElementById("webhook_uri_field");
-                  if (copyText !== undefined && copyText !== null) {
-                    console.log("NAVIGATOR: ", navigator);
-                    const clipboard = navigator.clipboard;
-                    if (clipboard === undefined) {
-                      alert.error("Can only copy over HTTPS (port 3443)");
-                      return;
-                    }
-
-                    navigator.clipboard.writeText(copyText.value);
-                    copyText.select();
-                    copyText.setSelectionRange(
-                      0,
-                      99999
-                    ); /* For mobile devices */
-
-                    /* Copy the text inside the text field */
-                    document.execCommand("copy");
-                    alert.success("Copied Webhook URL");
-                  } else {
-                    console.log("Couldn't find webhook URI field: ", copyText);
-                  }
                 }}
                 helperText={
                   workflow.triggers[selectedTriggerIndex].parameters[0].value !== undefined &&
@@ -10281,6 +10278,39 @@ const AngularWorkflow = (defaultprops) => {
                     maxWidth: "95%",
                     fontSize: "1em",
                   },
+            			endAdornment: 
+										<InputAdornment position="end">
+									 		<IconButton
+												aria-label="Copy webhook"
+												onClick={() => {
+                  				var copyText = document.getElementById("webhook_uri_field");
+                  				if (copyText !== undefined && copyText !== null) {
+                  				  console.log("NAVIGATOR: ", navigator);
+                  				  const clipboard = navigator.clipboard;
+                  				  if (clipboard === undefined) {
+                  				    alert.error("Can only copy over HTTPS (port 3443)");
+                  				    return;
+                  				  }
+
+                  				  navigator.clipboard.writeText(copyText.value);
+                  				  copyText.select();
+                  				  copyText.setSelectionRange(
+                  				    0,
+                  				    99999
+                  				  ); /* For mobile devices */
+
+                  				  /* Copy the text inside the text field */
+                  				  document.execCommand("copy");
+                  				  alert.success("Copied Webhook URL");
+                  				} else {
+                  				  console.log("Couldn't find webhook URI field: ", copyText);
+                  				}
+												}}
+												edge="end"
+											>
+												<ContentCopyIcon /> 
+                			</IconButton>
+										</InputAdornment>
                 }}
                 fullWidth
                 disabled
@@ -10509,7 +10539,9 @@ const AngularWorkflow = (defaultprops) => {
     const splitItem =
       workflow.triggers[selectedTriggerIndex].parameters[0].value.split(
         splitter
-      );
+      )
+
+		console.log("Starting mail sub: ", workflow.triggers[selectedTriggerIndex].parameters[0].value, splitItem);
     for (var key in splitItem) {
       const item = splitItem[key];
       const curfolder = triggerFolders.find((a) => a.displayName === item);
@@ -11839,22 +11871,30 @@ const AngularWorkflow = (defaultprops) => {
           </Tooltip>
           <Tooltip
             color="secondary"
-            title="Show executions"
+            title={`Show executions ${workflowExecutions.length}`}
             placement="top-start"
           >
             <span>
-              <Button
-                disabled={workflow.public}
-                color="primary"
-                style={{ height: 50, marginLeft: 10 }}
-                variant="outlined"
-                onClick={() => {
-                  setExecutionModalOpen(true);
-                  getWorkflowExecution(props.match.params.key, "");
-                }}
-              >
-                <DirectionsRunIcon />
-              </Button>
+							<Button
+								disabled={workflow.public}
+								color="primary"
+								style={{ height: 50, marginLeft: 10 }}
+								variant="outlined"
+								onClick={() => {
+									setExecutionModalOpen(true);
+									getWorkflowExecution(props.match.params.key, "");
+								}}
+							>
+								{/*<Badge 
+									sx={{"& .MuiBadge-badge": {
+											right: `20px`,
+											bottom: `20px`,
+										}
+									}}
+									variant="outlined" badgeContent={workflowExecutions.length} color="primary" anchorOrigin={{vertical: "top", horizontal: "left", }}> */}
+									<DirectionsRunIcon />
+								{/*</Badge>*/}
+							</Button>
             </span>
           </Tooltip>
           <Tooltip color="secondary" title="Add comment" placement="top-start">
@@ -12800,6 +12840,15 @@ const AngularWorkflow = (defaultprops) => {
 			</Tooltip>
 		)
 	}
+									
+	var nonskippedResults = []
+	if (executionData.results !== undefined) {
+		const newSkipped = executionData.results.find((result) => result.status !== "SKIPPED")
+		if (newSkipped !== undefined) {
+			nonskippedResults = newSkipped
+		}
+	}	
+									
 
 	var executionDelay = -75
   const executionModal = (
@@ -13280,7 +13329,16 @@ const AngularWorkflow = (defaultprops) => {
                 (executionData.results.length === 0 && // probably ment to be around the or's
                   executionData.status === "EXECUTING")
               ) ? (
-                <CircularProgress style={{ marginLeft: 20 }} />
+								<div style={{display: "flex"}}>
+                	<CircularProgress style={{ height: 45, width: 45, marginLeft: 20, marginRight: 20, }} />
+
+
+									{!isCloud && environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 ? 
+										<Typography variant="body2" color="textSecondary" style={{}}>
+											No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Learn more</a> 
+										</Typography>
+									: null}
+								</div>
               ) : null}
             </div>
           </div>
