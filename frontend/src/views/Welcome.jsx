@@ -458,7 +458,7 @@ const Welcome = (props) => {
 												})
 										}
 
-										navigate("/getting-started?message=Skipped intro")
+										navigate("/workflows?message=Skipped intro")
 									}}>
 										<CardActionArea style={actionObject}>
 											<Typography variant="h4" style={{color: "#f86a3e"}}> 

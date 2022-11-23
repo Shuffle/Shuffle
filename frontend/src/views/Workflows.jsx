@@ -15,7 +15,9 @@ import { isMobile } from "react-device-detect"
 
 import {
   Badge,
+	Divider,
   Avatar,
+  Drawer,
   Grid,
 	InputLabel,
 	Select,
@@ -37,6 +39,7 @@ import {
   DialogActions,
   DialogContent,
 	Checkbox,
+	LinearProgress,
 	ListItemText,
 } from "@material-ui/core";
 
@@ -71,10 +74,15 @@ import {
   CloudDownload as CloudDownloadIcon,
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
+	Done as DoneIcon,
+	CheckCircle as CheckCircleIcon, 
+	RadioButtonUnchecked as RadioButtonUncheckedIcon,
+  ArrowLeft as ArrowLeftIcon,
+  ArrowRight as ArrowRightIcon,
 } from "@material-ui/icons";
 
 //import NestedMenuItem from "material-ui-nested-menu-item";
-//import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
+//import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon,  Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 //https://next.material-ui.com/components/material-icons/
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
@@ -554,6 +562,54 @@ const Workflows = (props) => {
   const [showMoreClicked, setShowMoreClicked] = React.useState(false);
   const [usecases, setUsecases] = React.useState([]);
   const [appFramework, setAppFramework] = React.useState({});
+  const [drawerOpen, setDrawerOpen] = React.useState(false)
+  const [videoViewOpen, setVideoViewOpen] = React.useState(false)
+  const [gettingStartedItems, setGettingStartedItems] = React.useState([])
+	const drawerWidth = drawerOpen ? 325 : 0
+
+	const sidebarKey = "getting_started_sidebar"
+	if (isLoggedIn === true && gettingStartedItems.length === 0 && (userdata.tutorials !== undefined && userdata.tutorials !== null && userdata.tutorials.length > 0) && workflowDone === true) {
+
+		const activeFiltered = userdata.tutorials.filter((item) => item.active === true)
+		if (activeFiltered.length > 0) {
+			var newfiltered = []
+			for (var key in activeFiltered) {
+				if (activeFiltered[key].name === "Discover Usecases") {
+					if (workflows.length > 1) { 
+						activeFiltered[key].done = true
+						activeFiltered[key].description = `${workflows.length} workflows created`
+					}
+				}
+
+				newfiltered.push(activeFiltered[key])
+			}
+			setGettingStartedItems(activeFiltered)
+
+			const doneFiltered = activeFiltered.filter((item) => item.done === true)
+			if (doneFiltered.length > 0) { 
+				console.log("DONE: ", doneFiltered)
+			}
+
+      const sidebar = localStorage.getItem(sidebarKey);
+			if (sidebar === null || sidebar === undefined) {
+				console.log("No sidebar defined")
+              
+				localStorage.setItem(sidebarKey, "open");
+  			setDrawerOpen(true)
+      } else {
+				console.log("Got sidebar: ", sidebar)
+
+				if (sidebar === "open") {
+					console.log("OPEN the thingy!")
+  				setDrawerOpen(true)
+				} else {
+					console.log("Close the thingy!")
+  				setDrawerOpen(false)
+				}
+			}
+		}
+
+	}
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -914,7 +970,9 @@ const Workflows = (props) => {
     if (isDropzone) {
       setIsDropzone(false);
     }
+
   }, [isDropzone]);
+
 
 	const getFramework = () => {
 		fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
@@ -1029,7 +1087,9 @@ const Workflows = (props) => {
 					// Ensures the zooming happens only once per load
         	setTimeout(() => {
 						setFirstLoad(false)
+
 					}, 100)
+
         } else {
           if (isLoggedIn) {
             alert.error("An error occurred while loading workflows");
@@ -1142,9 +1202,9 @@ const Workflows = (props) => {
     color: "#ffffff",
     width: "100%",
     display: "flex",
-    minWidth: isMobile ? "100%" : 1024,
-    maxWidth: isMobile ? "100%" : 1024,
-    margin: "auto",
+    minWidth: isMobile ? "100%" : drawerWidth > 0 ? 824 : 1024,
+    maxWidth: isMobile ? "100%" : drawerWidth > 0 ? 824 : 1024,
+    margin: drawerWidth === 0 ? "auto" : `auto ${drawerWidth+100} auto auto`,
 		paddingBottom: 200,
   };
 
@@ -2881,8 +2941,8 @@ const Workflows = (props) => {
 
   const workflowViewStyle = {
     flex: viewSize.workflowView,
-    marginLeft: "10px",
-    marginRight: "10px",
+    marginLeft: 10, 
+    marginRight: 10, 
   };
 
   if (viewSize.workflowView === 0) {
@@ -3072,9 +3132,10 @@ const Workflows = (props) => {
 
   const WorkflowView = () => {
     if (workflows.length === 0) {
-			if ((userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) || userdata.tutorials === null) {
-				return <Navigate to="/getting-started" replace />;
-			}
+			// Not going there yet
+			//if ((userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) || userdata.tutorials === null) {
+			//	return <Navigate to="/getting-started" replace />;
+			//}
 		
       return (
         <div style={emptyWorkflowStyle}>
@@ -3600,6 +3661,158 @@ const Workflows = (props) => {
     </Dialog>
   ) : null;
 
+
+	//const 
+  //const [percentDone, setPercentDone] = React.useState(0)
+	const percentDone = gettingStartedItems.filter((item) => item.done).length / gettingStartedItems.length * 100
+
+	const GettingStartedItem = ({item, index}) => {
+		const [clicked, setClicked] = React.useState(false)
+		const doneIcon = item.done ? <CheckCircleIcon style={{color: "#4caf50", marginRight: 10, }} /> : <RadioButtonUncheckedIcon disabled style={{color: "#bdbdbd", marginRight: 10, }} />
+
+		return (
+			<div 
+				style={{cursor: "pointer", padding: 20, borderBottom: "1px solid rgba(255,255,255,0.3", backgroundColor: !clicked ? "#1f2023" : theme.palette.inputColor, }}
+				onClick={() => setClicked(true)}
+			>
+				<Typography variant="body2" style={{display: "flex", textDecoration: item.done ? "line-through" : "none", }}>
+					{doneIcon} {index + 1}. {item.name}
+				</Typography>
+				{clicked ? 
+					<span>
+						<Typography variant="body2" style={{marginLeft: 30, }}>
+							{item.description}
+						</Typography>
+						<Link to={item.link} style={{color: "inherit", textDecoration: "none", }}>
+							<Button variant={item.done ? "outlined" : "contained"} color="primary" style={{marginLeft: 30, marginTop: 5, }}>
+								Configure
+							</Button>
+						</Link>
+					</span>
+					: 
+					null
+				}
+			</div>
+		)
+	}
+
+	const gettingStartedDrawer = 
+		<Drawer
+      anchor={"right"}
+      open={drawerOpen}
+			variant="persistent"
+			keepMounted={true}
+      PaperProps={{
+        style: {
+          resize: "both",
+          overflow: "auto",
+          minWidth: drawerWidth,
+          maxWidth: drawerWidth,
+          backgroundColor: "#1F2023",
+          color: "white",
+          fontSize: 18,
+					borderLeft: theme.palette.defaultBorder,
+					marginTop: 64,
+					borderRadius: "5px 0px 0px 0px",
+        },
+      }}
+    >
+			<div style={{backgroundColor: "#f86a3e", display: "flex", }}>
+				<Typography variant="h6" style={{flex: 5, marginTop: 20, marginLeft: 20, marginBottom: 20, }}>
+					Getting Started
+				</Typography>
+				<Tooltip
+					title="Close drawer"
+					placement="top"
+				>
+					<IconButton
+						style={{ flex: 1, }}
+						onClick={(e) => {
+							e.preventDefault();
+							setDrawerOpen(false)
+
+							localStorage.setItem(sidebarKey, "closed");
+						}}
+					>
+  					<ArrowRightIcon style={{color: "white"}} /> 
+					</IconButton>
+				</Tooltip>
+			</div>
+			<div style={{padding: 20, }}>
+				<Typography variant="body2">
+					Setup progress: <b>{isNaN(percentDone) ? 0 : percentDone}%</b>
+				</Typography>
+
+				<LinearProgress color="primary" variant="determinate" value={percentDone} style={{marginTop: 5, height: 7, borderRadius: theme.palette.borderRadius, }} />
+
+				<Typography variant="body2" style={{marginTop: 20, }}>
+					Follow these steps to get you up and running!
+				</Typography>
+				<Divider style={{marginTop: 20, }} />
+				<Typography variant="body2" style={{color: "#f86a3e", marginTop: 20, cursor: "pointer", }} onClick={() => {
+					setVideoViewOpen(true)
+				}}>
+					<b>Watch 2-min introduction video</b>
+				</Typography>
+			</div>
+			<div style={{borderTop: "1px solid rgba(255,255,255,0.3)", }}>
+				{gettingStartedItems.map((item, index) => {
+					return (
+						<GettingStartedItem item={item} index={index} />
+					)
+				})}
+			</div>
+		</Drawer>
+				
+		const videoView =
+			<Dialog
+				open={videoViewOpen}
+				onClose={() => {
+					setVideoViewOpen(false)
+				}}
+				PaperProps={{
+					style: {
+						backgroundColor: surfaceColor,
+						color: "white",
+						minWidth: 560,
+						minHeight: 415,
+						textAlign: "center",
+					},
+				}}
+			>
+				<DialogTitle>
+					Welcome to Shuffle!	
+				</DialogTitle>
+
+				<Tooltip
+					title="Close window"
+					placement="top"
+					style={{ zIndex: 10011 }}
+				>
+					<IconButton
+						style={{ zIndex: 5000, position: "absolute", top: 10, right: 34 }}
+						onClick={(e) => {
+							e.preventDefault();
+							setVideoViewOpen(false)
+						}}
+					>
+						<CloseIcon style={{ color: "white" }} />
+					</IconButton>
+				</Tooltip>
+
+				<iframe 
+					width="560"
+					height="315" 
+					style={{margin: "0px auto 0px auto", width: 560, height: 315,}}
+					src="https://www.youtube-nocookie.com/embed/rO7k9q3OgC0" 
+					title="Introduction video" 
+					frameborder="0"
+					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+					allowfullscreen
+				>
+				</iframe>
+			</Dialog>
+
   const loadedCheck =
     isLoaded && isLoggedIn && workflowDone ? (
       <div>
@@ -3623,6 +3836,19 @@ const Workflows = (props) => {
         {exportVerifyModal}
         {publishModal}
         {workflowDownloadModalOpen}
+
+				{!drawerOpen ? <div style={{position: "fixed", top: 64, right: -5, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, }}>
+          <Tooltip title={`Getting started`} placement="bottom">
+						<IconButton onClick={() => {
+							setDrawerOpen(true)
+							localStorage.setItem(sidebarKey, "open");
+						}}>
+							<ArrowLeftIcon /> 
+						</IconButton>
+					</Tooltip>
+				</div> : null}
+				{isMobile ? null : gettingStartedDrawer} 
+				{videoView} 
 
 				{modalOpen === true ? 
 					<EditWorkflow
