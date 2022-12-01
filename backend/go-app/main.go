@@ -5947,16 +5947,95 @@ func HandleGetLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := os.ReadFile(filename)
-	if (err != nil) {
-		log.Printf("[ERROR] Could not read log file 'test.log'")
+	// Using the file API to create the file log
+	// Right now this will create a new file everytime the API is called
+
+	postBody, err := json.Marshal(map[string]string{
+		"filename": os.Getenv("SHUFFLE_LOG_FILENAME"),
+		"org_id": user.ActiveOrg.Id,
+	})
+
+	client := &http.Client{}
+	buffer := bytes.NewBuffer(postBody)
+
+	req, err := http.NewRequest("POST", "http://localhost:5001/api/v1/files/create", buffer)
+	if err != nil {
+		log.Printf("[ERROR] Failed to make API request api/v1/files/create")
 		w.WriteHeader(401)
-		w.Write([]byte(`{"success": false, "reason": "Could not read log file"}`))
-		return
+		w.Write([]byte(`{"success": false, "reason": "[ERROR] Failed to make API request api/v1/files/create"}`))
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", user.ApiKey))
+
+	resp, err := client.Do(req)
+	if resp.StatusCode != 200 {
+		log.Printf("[ERROR] Failed to make API request api/v1/files/create")
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "[ERROR] Failed to make API request api/v1/files/create"}`))
 	}
 
+	type getIdStruct struct {
+		Success bool `json:"success"`
+		Id string `json:"id"`
+	}
+	var tmp_struct getIdStruct
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed read response body")
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "Failed read response body"}`))
+	}
+
+	err = json.Unmarshal(respBody, &tmp_struct)
+	if err != nil {
+		log.Printf("[ERROR] Failed to unmarshal")
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "Failed to unmarshal"}`))
+	}
+    
+    body := &bytes.Buffer{}
+    writer := multipart.NewWriter(body)
+    fw, err := writer.CreateFormFile("shuffle_file", os.Getenv("SHUFFLE_LOG_FILENAME"))
+	if err != nil {
+		log.Printf("[ERROR] Failed to create formfile")
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "Failed to create form file"}`))
+	}
+
+    file, err := os.Open(os.Getenv("SHUFFLE_LOG_FILENAME"))
+	if err != nil {
+		log.Printf("[ERROR] Failed to open log file")
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "Failed to create open log file"}`))
+	}
+
+    _, err = io.Copy(fw, file)
+	if err != nil {
+		log.Printf("[ERROR] Failed to copy file to form")
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "Failed to copy file to form"}`))
+	}
+
+    writer.Close()
+
+	req, err = http.NewRequest("POST", fmt.Sprintf("http://localhost:5001/api/v1/files/%s/upload", tmp_struct.Id), body)
+	if err != nil {
+		log.Printf("[ERROR] Failed to create request POST")
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "Failed to create request POST"}`))
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", user.ApiKey))
+	req.Header.Add("Content-Type", writer.FormDataContentType())
+
+	resp, err = client.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Failed to make API request upload")
+		w.WriteHeader(401)
+		w.Write([]byte(`{"success": false, "reason": "Failed to make API request upload"}`))
+	}
+	
+	log.Printf("[INFO] Succesfully getting backend logs")
 	w.WriteHeader(200)
-	w.Write(data)
+	w.Write([]byte(`{"success": true, "reason": "Log file upload to opensearch check your files in the admin overview"}`))
 }
 
 func initHandlers() {
