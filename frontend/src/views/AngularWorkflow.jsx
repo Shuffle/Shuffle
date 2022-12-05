@@ -11871,7 +11871,7 @@ const AngularWorkflow = (defaultprops) => {
           </Tooltip>
           <Tooltip
             color="secondary"
-            title={`Show executions ${workflowExecutions.length}`}
+            title={`Show executions (${workflowExecutions.length})`}
             placement="top-start"
           >
             <span>

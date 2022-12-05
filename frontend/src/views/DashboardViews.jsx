@@ -349,7 +349,7 @@ const Dashboard = (props) => {
   const [workflows, setWorkflows] = useState([]);
   const [frameworkData, setFrameworkData] = useState(undefined);
 
-  const [widgetData, setWidgetData] = useState(undefined);
+  const [widgetData, setWidgetData] = useState([]);
 
 	let navigate = useNavigate();
   const isCloud =
@@ -440,9 +440,16 @@ const Dashboard = (props) => {
 						}
 					}
 
-					console.log("VAl: ", tmpdata)
+					const foundWidget = widgetData.findIndex(data => data.title === widget)
+					console.log("Found: ", foundWidget)
+					if (foundWidget !== undefined && foundWidget !== null && foundWidget >= 0) {
+						widgetData[foundWidget] = tmpdata
+					} else { 
+						widgetData.push(tmpdata)
+					}
 
-					setWidgetData(tmpdata)
+					console.log("Data: ", widgetData)
+					setWidgetData(widgetData)
 				}
 			})
       .catch((error) => {
@@ -470,89 +477,9 @@ const Dashboard = (props) => {
 		setTreeKeys(treeCategories)
 	}
 
-  const fetchUsecases = (workflows) => {
-    fetch(globalUrl + "/api/v1/workflows/usecases", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for usecases");
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-				// Matching workflows with usecases
-				if (responseJson.success !== false) {
-					if (workflows !== undefined && workflows !== null && workflows.length > 0) {
-						var categorydata = responseJson
-
-						var newcategories = []
-						for (var key in categorydata) {
-							var category = categorydata[key]
-							category.matches = []
-
-							for (var subcategorykey in category.list) {
-								var subcategory = category.list[subcategorykey]
-								subcategory.matches = []
-
-								for (var workflowkey in workflows) {
-									const workflow = workflows[workflowkey]
-
-									if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
-										for (var usecasekey in workflow.usecase_ids) {
-											if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
-
-												category.matches.push({
-													"workflow": workflow.id,
-													"category": subcategory.name,
-												})
-
-												subcategory.matches.push(workflow)
-												break
-											}
-										}
-									}
-
-									if (subcategory.matches.length > 0) {
-										break
-									}
-								}
-							}
-
-							newcategories.push(category)
-						} 
-
-						if (newcategories !== undefined && newcategories !== null && newcategories.length > 0) {
-							handleKeysetting(newcategories)
-							setUsecases(newcategories)
-							setSelectedUsecases(newcategories)
-						} else {
-							handleKeysetting(responseJson)
-							setUsecases(responseJson)
-							setSelectedUsecases(responseJson)
-						}
-					} else {
-						handleKeysetting(responseJson)
-						setUsecases(responseJson)
-						setSelectedUsecases(responseJson)
-					}
-				}
-      })
-      .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
-        console.log("ERROR: " + error.toString());
-      });
-  };
-
   useEffect(() => {
-		getWidget("main", "tmp") 
-		//fetchUsecases()
+		getWidget("main", "Overall") 
+		getWidget("main", "Overall2") 
   }, []);
 
   const fetchdata = (stats_id) => {
@@ -812,10 +739,10 @@ const Dashboard = (props) => {
 				: null}
 			</div>
 
-			{widgetData === undefined ? null : 
+			{widgetData === undefined || widgetData === null || widgetData === [] || widgetData.length === 0 ? null : 
 				<Draggable>
 					<Paper style={{height: 350, width: 500, padding: "15px 15px 15px 15px", }}>
-						<LineChartWrapper keys={widgetData} height={280} width={470}  />
+						<LineChartWrapper keys={widgetData[0]} height={280} width={470}  />
 					</Paper>
 				</Draggable>
 			}

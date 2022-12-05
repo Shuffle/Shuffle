@@ -3136,54 +3136,52 @@ const Workflows = (props) => {
 			//if ((userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) || userdata.tutorials === null) {
 			//	return <Navigate to="/getting-started" replace />;
 			//}
-		
-      return (
-        <div style={emptyWorkflowStyle}>
-          <Paper style={boxStyle}>
-            <div>
-              <h2>Welcome to Shuffle</h2>
-            </div>
-            <div>
-              <p>
-                <b>Shuffle</b> is a flexible, easy to use, automation platform
-                allowing users to integrate their services and devices freely.
-                It's made to significantly reduce the amount of manual labor,
-                and is focused on security applications.{" "}
-                <a
-                  href="/docs/about"
-                  style={{ textDecoration: "none", color: "#f85a3e" }}
-                >
-                  Click here to learn more.
-                </a>
-              </p>
-            </div>
-            <div>
-              If you want to jump straight into it, click here to create your
-              first workflow:
-            </div>
-            <div style={{ display: "flex" }}>
-              <Button
-								id="second-step"
-                color="primary"
-                style={{ marginTop: "20px" }}
-                variant="outlined"
-                onClick={() => setModalOpen(true)}
-              >
-                New workflow
-              </Button>
-              <span style={{ paddingTop: 20, display: "flex" }}>
-                <Typography
-                  style={{ marginTop: 5, marginLeft: 30, marginRight: 15 }}
-                >
-                  ..OR
-                </Typography>
-                {workflowButtons}
-              </span>
-            </div>
-          </Paper>
-        </div>
-      )
-
+      //return (
+      //  <div style={emptyWorkflowStyle}>
+      //    <Paper style={boxStyle}>
+      //      <div>
+      //        <h2>Welcome to Shuffle</h2>
+      //      </div>
+      //      <div>
+      //        <p>
+      //          <b>Shuffle</b> is a flexible, easy to use, automation platform
+      //          allowing users to integrate their services and devices freely.
+      //          It's made to significantly reduce the amount of manual labor,
+      //          and is focused on security applications.{" "}
+      //          <a
+      //            href="/docs/about"
+      //            style={{ textDecoration: "none", color: "#f85a3e" }}
+      //          >
+      //            Click here to learn more.
+      //          </a>
+      //        </p>
+      //      </div>
+      //      <div>
+      //        If you want to jump straight into it, click here to create your
+      //        first workflow:
+      //      </div>
+      //      <div style={{ display: "flex" }}>
+      //        <Button
+			//					id="second-step"
+      //          color="primary"
+      //          style={{ marginTop: "20px" }}
+      //          variant="outlined"
+      //          onClick={() => setModalOpen(true)}
+      //        >
+      //          New workflow
+      //        </Button>
+      //        <span style={{ paddingTop: 20, display: "flex" }}>
+      //          <Typography
+      //            style={{ marginTop: 5, marginLeft: 30, marginRight: 15 }}
+      //          >
+      //            ..OR
+      //          </Typography>
+      //          {workflowButtons}
+      //        </span>
+      //      </div>
+      //    </Paper>
+      //  </div>
+      //)
     }
 
 		var workflowDelay = -150
