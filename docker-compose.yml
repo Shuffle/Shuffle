@@ -1,65 +1,65 @@
 version: '3'
 services:
-  #frontend:
-  #  #build: ./frontend
-  #  image: ghcr.io/shuffle/shuffle-frontend:nightly
-  #  container_name: shuffle-frontend
-  #  hostname: shuffle-frontend
-  #  ports:
-  #    - "${FRONTEND_PORT}:80"
-  #    - "${FRONTEND_PORT_HTTPS}:443"
-  #  networks:
-  #    - shuffle
-  #  environment:
-  #    - BACKEND_HOSTNAME=${BACKEND_HOSTNAME}
-  #  restart: unless-stopped
-  #  depends_on:
-  #    - backend
-  #backend:
-  #  #build: ./backend
-  #  image: ghcr.io/shuffle/shuffle-backend:nightly
-  #  container_name: shuffle-backend
-  #  hostname: ${BACKEND_HOSTNAME}
-  #  # Here for debugging:
-  #  ports:
-  #    - "${BACKEND_PORT}:5001"
-  #  networks:
-  #    - shuffle
-  #  volumes:
-  #    - /var/run/docker.sock:/var/run/docker.sock
-  #    - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
-  #    - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
-  #    #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
-  #  env_file: .env
-  #  environment:
-  #    #- DOCKER_HOST=tcp://docker-socket-proxy:2375
-  #    - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
-  #    - SHUFFLE_FILE_LOCATION=/shuffle-files
-  #  restart: unless-stopped
-  #orborus:
-  #  image: ghcr.io/shuffle/shuffle-orborus:nightly
-  #  container_name: shuffle-orborus
-  #  hostname: shuffle-orborus
-  #  networks:
-  #    - shuffle
-  #  volumes:
-  #    - /var/run/docker.sock:/var/run/docker.sock
-  #  environment:
-  #    #- DOCKER_HOST=tcp://docker-socket-proxy:2375
-  #    - SHUFFLE_WORKER_VERSION=latest
-  #    - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
-  #    - BASE_URL=http://${OUTER_HOSTNAME}:5001
-  #    - DOCKER_API_VERSION=1.40
-  #    - SHUFFLE_BASE_IMAGE_NAME=${SHUFFLE_BASE_IMAGE_NAME}
-  #    - SHUFFLE_BASE_IMAGE_REGISTRY=${SHUFFLE_BASE_IMAGE_REGISTRY}
-  #    - SHUFFLE_BASE_IMAGE_TAG_SUFFIX=${SHUFFLE_BASE_IMAGE_TAG_SUFFIX}
-  #    - HTTP_PROXY=${HTTP_PROXY}
-  #    - HTTPS_PROXY=${HTTPS_PROXY}:qa
-  #    - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
-  #    - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
-  #  restart: unless-stopped
-  #  security_opt:
-  #    - seccomp:unconfined
+  frontend:
+    #build: ./frontend
+    image: ghcr.io/shuffle/shuffle-frontend:nightly
+    container_name: shuffle-frontend
+    hostname: shuffle-frontend
+    ports:
+      - "${FRONTEND_PORT}:80"
+      - "${FRONTEND_PORT_HTTPS}:443"
+    networks:
+      - shuffle
+    environment:
+      - BACKEND_HOSTNAME=${BACKEND_HOSTNAME}
+    restart: unless-stopped
+    depends_on:
+      - backend
+  backend:
+    build: ./backend
+    image: ghcr.io/shuffle/shuffle-backend:nightly
+    container_name: shuffle-backend
+    hostname: ${BACKEND_HOSTNAME}
+    # Here for debugging:
+    ports:
+      - "${BACKEND_PORT}:5001"
+    networks:
+      - shuffle
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
+      - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
+      #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
+    env_file: .env
+    environment:
+      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
+      - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
+      - SHUFFLE_FILE_LOCATION=/shuffle-files
+    restart: unless-stopped
+  orborus:
+    image: ghcr.io/shuffle/shuffle-orborus:nightly
+    container_name: shuffle-orborus
+    hostname: shuffle-orborus
+    networks:
+      - shuffle
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
+      - SHUFFLE_WORKER_VERSION=latest
+      - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
+      - BASE_URL=http://${OUTER_HOSTNAME}:5001
+      - DOCKER_API_VERSION=1.40
+      - SHUFFLE_BASE_IMAGE_NAME=${SHUFFLE_BASE_IMAGE_NAME}
+      - SHUFFLE_BASE_IMAGE_REGISTRY=${SHUFFLE_BASE_IMAGE_REGISTRY}
+      - SHUFFLE_BASE_IMAGE_TAG_SUFFIX=${SHUFFLE_BASE_IMAGE_TAG_SUFFIX}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
+      - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
   opensearch:
     image: opensearchproject/opensearch:2.4.0
     hostname: shuffle-opensearch

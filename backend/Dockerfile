@@ -15,8 +15,10 @@ ADD ./app_sdk/app_base.py /app_sdk
 ADD ./app_gen /app_gen
 
 RUN go get -v
+RUN go mod tidy
+RUN go clean -modcache
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o webapp .
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o webapp .
 
 # Certificate build - gets required certs
 FROM alpine:latest as certs
