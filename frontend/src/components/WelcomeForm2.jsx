@@ -161,7 +161,7 @@ const WelcomeForm = (props) => {
 				const foundTab = params["tab"];
 				if (foundTab !== null && foundTab !== undefined && !isNaN(foundTab)) {
 					if (foundTab === 3 || foundTab === "3") {
-						console.log("SET SEARCH!!")
+						//console.log("Set search!")
 					}
 				} else { 
     			//navigate(`/welcome?tab=1`)
@@ -380,8 +380,6 @@ const WelcomeForm = (props) => {
         console.log("Selected app changed (effect)")
     }, [newSelectedApp])
 
-		console.log("Clickdiff: ", clickdiff)
-	
 		//const buttonWidth = 145 
 		const buttonWidth = 450 
 		const buttonMargin = 10

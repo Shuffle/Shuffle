@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import theme from '../theme';
+import { useNavigate, Link } from "react-router-dom";
 import { useAlert } from "react-alert";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 import PaperComponent from "../components/PaperComponent.jsx"
@@ -785,9 +786,90 @@ const UsecaseSearch = (props) => {
 		})
 	}
 
+	// Stolen from /views/Workflows
+	// Due to states, not easy to just import as component~
+	const setNewWorkflow = (
+    name,
+    description,
+    tags,
+    defaultReturnValue,
+    editingWorkflow,
+    redirect,
+		currentUsecases,
+		inputblogpost,
+		inputstatus,
+  ) => {
+    var method = "POST";
+    var extraData = "";
+    var workflowdata = {};
+
+    if (editingWorkflow.id !== undefined) {
+      console.log("Building original workflow");
+      method = "PUT";
+      extraData = "/" + editingWorkflow.id + "?skip_save=true";
+      workflowdata = editingWorkflow;
+
+      console.log("REMOVING OWNER");
+      workflowdata["owner"] = "";
+      // FIXME: Loop triggers and turn them off?
+    }
+
+    workflowdata["name"] = name;
+    workflowdata["description"] = description;
+    if (tags !== undefined) {
+      workflowdata["tags"] = tags;
+    }
+		workflowdata["blogpost"] = inputblogpost 
+		workflowdata["status"] = inputstatus 
+
+    if (defaultReturnValue !== undefined) {
+      workflowdata["default_return_value"] = defaultReturnValue;
+    }
+
+		if (currentUsecases !== undefined && currentUsecases !== null) {
+			workflowdata["usecase_ids"] = currentUsecases 
+			//workflows[0].category = ["detect"]
+			//workflows[0].usecase_ids = ["Correlate tickets"]
+		}
+
+		const new_url = `${globalUrl}/api/v1/workflows${extraData}`
+    return fetch(new_url, {
+      method: method,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(workflowdata),
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for workflows :O!");
+          return;
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success === false) {
+					if (responseJson.reason !== undefined) {
+						alert.error("Error setting workflow: ", responseJson.reason)
+					} else {
+						alert.error("Error setting workflow.")
+					}
+
+					return
+				}
+
+        return responseJson;
+      })
+      .catch((error) => {
+        alert.error(error.toString());
+      });
+  }
+
 	const mergeWorkflowUsecases = (usecasedata) => {
 		//const url = `${globalUrl}/api/v1/workflows/merge`;
-		//const url = `https://0360-178-232-150-183.ngrok.io/api/v1/workflows/merge`;
 		const url = `https://shuffler.io/api/v1/workflows/merge`;
 		fetch(url, {
 			mode: "cors",
@@ -845,10 +927,57 @@ const UsecaseSearch = (props) => {
 							}
 						}
 					} else {
+						// Gets a full workflow that has to be handled from cloud directly
+						//
 						if (!isCloud) {
 							console.log("Not cloud!")
-							setFoundWorkflowId(responseJson.id)
+							if (setFoundWorkflowId !== undefined) {
+								setFoundWorkflowId(responseJson.id)
+							}
 							setWorkflow(responseJson)
+
+          		setNewWorkflow(
+          		  responseJson.name,
+          		  responseJson.description,
+          		  responseJson.tags,
+          		  responseJson.default_return_value,
+          		  {},
+          		  false,
+								[],
+								"",
+								responseJson.status,
+          		)
+							.then((response) => {
+								if (response !== undefined) {
+									// SET THE FULL THING
+									responseJson.id = response.id;
+									responseJson.first_save = false;
+									responseJson.previously_saved = false;
+									responseJson.is_valid = false;
+
+									// Actually create it
+									setNewWorkflow(
+										responseJson.name,
+										responseJson.description,
+										responseJson.tags,
+										responseJson.default_return_value,
+										responseJson,
+										false,
+										[],
+										"",
+										responseJson.status,
+									).then((response) => {
+										if (response !== undefined) {
+											alert.success("Successfully generated " + responseJson.name);
+										}
+									});
+								}
+							})
+							.catch((error) => {
+								alert.error("Generate error: " + error.toString());
+							})
+
+
 						} else if (isCloud) {
 							if (responseJson.workflow_id !== null && responseJson.workflow_id !== undefined) {
 								if (responseJson.added_auth !== undefined && responseJson.added_auth !== null && responseJson.added_auth.length > 0) {
@@ -1077,8 +1206,41 @@ const UsecaseSearch = (props) => {
 		})
 
 		//console.log("Data: ", data)
+		const activateApp = (appid) => {
+			fetch(globalUrl+"/api/v1/apps/"+appid+"/activate", {
+					method: 'GET',
+					headers: {
+						'Content-Type': 'application/json',
+						'Accept': 'application/json',
+					},
+					credentials: "include",
+			})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Failed to activate")
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson.success === false) {
+					alert.error("Failed to activate the app")
+				} else {
+					//alert.success("App activated for your organization! Refresh the page to use the app.")
+				}
+			})
+			.catch(error => {
+				//alert.error(error.toString())
+				console.log("Activate app error: ", error.toString())
+			});
+		}
 
 		const setFrameworkItem = (data) => {
+			// Making sure the app is being auto-built and added
+			if (!isCloud) {
+				activateApp(data.id)
+			}
+
 			fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
 				method: "POST",
 				headers: {

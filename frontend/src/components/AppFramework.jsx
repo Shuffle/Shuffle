@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 
-import { securityFramework} from "./LandingpageUsecases.jsx";
 import CytoscapeComponent from 'react-cytoscapejs';
 import frameworkStyle from '../frameworkStyle.jsx';
-import AppSearch from './Appsearch.jsx';
 import { v4 as uuidv4 } from "uuid";
 import theme from '../theme';
 import { useAlert } from "react-alert";
-import { usecaseTypes } from "../components/UsecaseSearch.jsx"
+
+import AppSearch from '../components/Appsearch.jsx';
 import PaperComponent from "../components/PaperComponent.jsx"
+import { usecaseTypes } from "../components/UsecaseSearch.jsx"
 import SuggestedWorkflows from "../components/SuggestedWorkflows.jsx"
+import { securityFramework} from "../components/LandingpageUsecases.jsx";
 
 import {
   Paper,
@@ -751,7 +752,41 @@ const AppFramework = (props) => {
       })
 		}
 
+		const activateApp = (appid) => {
+			fetch(globalUrl+"/api/v1/apps/"+appid+"/activate", {
+					method: 'GET',
+					headers: {
+						'Content-Type': 'application/json',
+						'Accept': 'application/json',
+					},
+					credentials: "include",
+			})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Failed to activate")
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson.success === false) {
+					alert.error("Failed to activate the app")
+				} else {
+					//alert.success("App activated for your organization! Refresh the page to use the app.")
+				}
+			})
+			.catch(error => {
+				//alert.error(error.toString())
+				console.log("Activate app error: ", error.toString())
+			});
+		}
+
 	const setFrameworkItem = (data) => {
+		console.log("Setting framework item: ", data, isCloud)
+		if (!isCloud) {
+			activateApp(data.id)
+		}
+
     fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
       method: "POST",
       headers: {

@@ -22,6 +22,7 @@ import {
 	CheckCircleRounded as CheckCircleRoundedIcon,
 } from "@mui/icons-material";
 import { FixName } from "../views/Apps.jsx";
+import aa from 'search-insights'
 
 // Handles workflow updates on first open to highlight the issues of the workflow
 // Variables
@@ -32,6 +33,7 @@ import { FixName } from "../views/Apps.jsx";
 // Specifically used for UNSAVED workflows only?
 const ConfigureWorkflow = (props) => {
   const {
+		userdata,
     globalUrl,
     theme,
     workflow,
@@ -526,6 +528,26 @@ const ConfigureWorkflow = (props) => {
   };
 
   const activateApp = (app_id, app_name, app_version) => {
+
+		if (aa !== undefined) {
+			aa('init', {
+					appId: "JNSS5CFDZZ",
+					apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+			})
+
+			const timestamp = new Date().getTime()
+			aa('sendEvents', [
+				{
+					eventType: 'conversion',
+					eventName: 'Public App Activated',
+					index: 'appsearch',
+					objectIDs: [app_id],
+					timestamp: timestamp,
+					userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
+				}
+			])
+		}
+
     fetch(
       `${globalUrl}/api/v1/apps/${app_id}/activate?app_name=${app_name}&app_version=${app_version}`,
       {
