@@ -57,6 +57,7 @@ const data = [
       padding: "0px",
       margin: "0px",
       "background-color": "data(backgroundcolor)",
+      "background-image": "data(backgroundimage)",
       "border-color": "#ffffff",
       "text-margin-x": "0px",
       "z-index": 4999,
@@ -163,14 +164,23 @@ const data = [
     selector: "node[?isSuggestion]",
     css: {
       shape: "ellipse",
-      width: "30px",
-      height: "30px",
+      width: "50px",
+      height: "50px",
       "z-index": "5002",
       "font-size": "0px",
       border: "1px solid rgba(255,255,255,0.9)",
       "background-image": "data(large_image)",
       "background-color": "data(iconBackground)",
       label: "data(label)",
+    },
+  },
+  {
+    selector: "node[?canConnect]",
+    css: {
+      "border-color": "#f86a3e",
+      "border-width": "10px",
+      "z-index": "5002",
+      "background-color": "#f86a3e",
     },
   },
   {

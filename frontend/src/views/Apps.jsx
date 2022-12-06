@@ -39,6 +39,10 @@ import {
   Delete as DeleteIcon,
 } from "@material-ui/icons";
 
+import {
+	ForkRight as ForkRightIcon,
+} from '@mui/icons-material';
+
 import { useTheme } from "@material-ui/core/styles";
 
 import YAML from "yaml";
@@ -70,7 +74,77 @@ export const FixName = (name) => {
   return newAppname;
 };
 
+// Takes input of e.g. $node.data.#.asd and a matching value from a json blob
+// Returns 
+export const FindJsonPath = (path, inputdata) => {
+	const splitkey = ".";
+	var parsedValues = [];
+
+	if (inputdata === undefined || inputdata === null) {
+		console.log("Input is ", inputdata, ". Returning.")
+		return inputdata
+	}
+
+	if (typeof inputdata !== "object") {
+		console.log("Input is NOT an object. Returning.")
+		return inputdata
+	}
+
+	var keysplit = path.split(splitkey)
+	if (path.startsWith("$") && keysplit.length > 1) {
+		keysplit = keysplit.slice(1,)
+	}
+
+	if (keysplit.length === 0) {
+		console.log("Couldn't find key: length is 0 for keysplit.")
+		return inputdata
+	}
+
+	// FIXME: Check list - always getting FIRST item, not digging too deep.
+	// If object, send further
+	if (keysplit[0].includes("#")) {
+		if (Object.prototype.toString.call(inputdata) === '[object Array]') {
+			if (inputdata.length === 0) {
+				return ""
+			} else {
+
+				// Fix the list
+				if (keysplit.length === 1) {
+					return inputdata[0] 
+				} else {
+					const joinedsplit = keysplit.slice(1,).join(".")
+					return FindJsonPath(joinedsplit, inputdata[0]) 
+				}
+			}
+		} else {
+			return "" 
+		}
+	}
+
+	var found = false
+	for (const [key, value] of Object.entries(inputdata)) {
+		const newkey = key.valueOf().toLowerCase().replaceAll(" ", "_")
+		if (key === keysplit[0] || newkey === keysplit[0]) {
+			found = true 
+
+			// Return if no more keys
+			// Else, dig deeper
+			if (keysplit.length === 1) {
+				return value
+			} else {
+				const joinedsplit = keysplit.slice(1,).join(".")
+				return FindJsonPath(joinedsplit, value) 
+			}
+		} else {
+			//console.log("N: ", key)
+		}
+	}
+
+	return inputdata 
+}
+
 // Parses JSON data into keys that can be used everywhere :)
+// Reverse of this is FindJsonPath 
 export const GetParsedPaths = (inputdata, basekey) => {
   const splitkey = ".";
   var parsedValues = [];
@@ -92,12 +166,18 @@ export const GetParsedPaths = (inputdata, basekey) => {
 
     // Handle direct loop!
     if (!isNaN(key) && basekey === "") {
-      console.log("Handling direct loop.");
       parsedValues.push({
         type: "object",
         name: "Node",
         autocomplete: `${basekey.replaceAll(" ", "_")}`,
       });
+
+      //parsedValues.push({
+      //  type: "value",
+      //  name: `${basekey} length`,
+      //  autocomplete: `{{ ${basekey.replaceAll(" ", "_")} | size }}`,
+      //});
+
       parsedValues.push({
         type: "list",
         name: `${splitkey}list`,
@@ -120,6 +200,13 @@ export const GetParsedPaths = (inputdata, basekey) => {
           name: basekeyname,
           autocomplete: `${basekey}.${key.replaceAll(" ", "_")}`,
         });
+
+        //parsedValues.push({
+        //  type: "value",
+        //  name: `${basekeyname} length`,
+        //  autocomplete: "{{ "+`${basekey}.${key.replaceAll(" ", "_")} | size }}`,
+        //});
+
         parsedValues.push({
           type: "list",
           name: `${basekeyname}${splitkey}list`,
@@ -724,9 +811,11 @@ const Apps = (props) => {
         </Tooltip>
       ) : null;
 
-		// FIXME: Add /apps/new?id=<PUBLIC> to allow for changes of the original
 		// Should always reference the original ID.
-    var editButton =
+		//if (selectedApp.name !== undefined && selectedApp.name !== null && selectedApp.name.includes("New")) {
+		//}
+    
+		var editButton =
       selectedApp.activated &&
       selectedApp.private_id !== undefined &&
       selectedApp.private_id.length > 0 &&
@@ -746,21 +835,19 @@ const Apps = (props) => {
       ) : null;
 
     //var editNewButton = editButton === null ?
-    var editNewButton = selectedApp.generated && selectedApp.activated && props.userdata.id !== selectedApp.owner ? 
-				isCloud ? 
+    var editNewButton = selectedApp.generated && selectedApp.activated && props.userdata.id !== selectedApp.owner && isCloud ? 
 					<Link to={activateUrl} style={{ textDecoration: "none" }}>
-						<Tooltip title={"Edit this public app to your liking"}>
+						<Tooltip title={"Fork and Edit this public app to your liking"}>
 							<Button
 								variant="contained"
 								component="label"
 								color="primary"
 								style={{ marginTop: 10, marginRight: 10 }}
 							>
-								<EditIcon />
+								<ForkRightIcon />
 							</Button>
 						</Tooltip>
 					</Link>
-				: null
 			: null
 
     const activateButton = 
@@ -796,8 +883,7 @@ const Apps = (props) => {
       ((selectedApp.private_id !== undefined &&
         selectedApp.private_id.length > 0 &&
         selectedApp.generated) ||
-        (selectedApp.downloaded !== undefined &&
-          selectedApp.downloaded == true) ||
+        (selectedApp.downloaded !== undefined && selectedApp.downloaded == true) ||
         !selectedApp.generated) &&
       activateButton === null ? (
         <Tooltip title={"Delete app"}>
@@ -898,6 +984,10 @@ const Apps = (props) => {
     };
 
     const userRoles = ["you", isCloud ? "public" : "everyone"];
+
+		// Admin in org or creator of app
+		// FIXME: Missing check for if same creator account
+		const canEditApp = userdata !== undefined && (userdata.admin === "true" || userdata.id === selectedApp.owner || selectedApp.owner === "" || (userdata.admin === "true" && userdata.active_org.id === selectedApp.reference_org)) || !selectedApp.generated 
 
     //fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"),
     var baseInfo =
@@ -1003,18 +1093,20 @@ const Apps = (props) => {
           ) : null}
 
           {activateButton}
-        	{editNewButton}
-          {(props.userdata !== undefined && 
-            (props.userdata.role === "admin" ||
-              props.userdata.id === selectedApp.owner ||
-							selectedApp.owner === "" 
-							)) || !selectedApp.generated ? (
+
+					{ /* editNewButton === null && */ }
+
+          {canEditApp ? (
             <div>
               {editButton}
               {downloadButton}
               {deleteButton}
             </div>
-          ) : null}
+          ) : 
+						<div>
+        			{editNewButton}
+						</div>
+					}
           {selectedApp.tags !== undefined && selectedApp.tags !== null ? (
             <div
               style={{
@@ -1040,8 +1132,8 @@ const Apps = (props) => {
               })}
             </div>
           ) : null}
-          {props.userdata !== undefined &&
-          props.userdata.id === selectedApp.owner ? (
+					{canEditApp 
+						? (
             <div style={{ marginTop: 15 }}>
               {/*<p><b>ID:</b> {selectedApp.id}</p>*/}
               <b style={{ marginRight: 15 }}>Sharing </b>
@@ -1394,6 +1486,7 @@ const Apps = (props) => {
   }, [appValidation, isDropzone]);
 
 	var appDelay = -75 
+              
   const appView = isLoggedIn ? (
     <Dropzone
       style={{ width: viewWidth * 2 + 20, margin: "auto", padding: 20 }}
@@ -1442,7 +1535,7 @@ const Apps = (props) => {
             </div>
             {isCloud ? null : (
               <span>
-                {isLoading ? null : (
+                {userdata === undefined || userdata === null || isLoading ? null : (
                   <Tooltip
                     title={"Reload apps locally"}
                     style={{ marginTop: "28px", width: "100%" }}
@@ -1466,29 +1559,32 @@ const Apps = (props) => {
                     </Button>
                   </Tooltip>
                 )}
-                <Tooltip
-                  title={"Download from Github"}
-                  style={{ marginTop: "28px", width: "100%" }}
-                  aria-label={"Upload"}
-                >
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    color="primary"
-                    style={{ margin: 5, maxHeight: 50, marginTop: 10 }}
-                    disabled={isLoading}
-                    onClick={() => {
-                      setOpenApi(baseRepository);
-                      setLoadAppsModalOpen(true);
-                    }}
-                  >
-                    {isLoading ? (
-                      <CircularProgress size={25} />
-                    ) : (
-                      <CloudDownloadIcon />
-                    )}
-                  </Button>
-                </Tooltip>
+
+                {userdata === undefined || userdata === null || userdata.admin === "false" ? null : 
+									<Tooltip
+										title={"Download from Github"}
+										style={{ marginTop: "28px", width: "100%" }}
+										aria-label={"Upload"}
+									>
+										<Button
+											variant="outlined"
+											component="label"
+											color="primary"
+											style={{ margin: 5, maxHeight: 50, marginTop: 10 }}
+											disabled={isLoading}
+											onClick={() => {
+												setOpenApi(baseRepository);
+												setLoadAppsModalOpen(true);
+											}}
+										>
+											{isLoading ? (
+												<CircularProgress size={25} />
+											) : (
+												<CloudDownloadIcon />
+											)}
+										</Button>
+									</Tooltip>
+								}
               </span>
             )}
           </div>
@@ -1511,7 +1607,7 @@ const Apps = (props) => {
               fullWidth
               color="primary"
               id="app_search_field"
-              placeholder={"Search apps"}
+              placeholder={"Search your apps"}
               onChange={(event) => {
                 handleSearchChange(event.target.value);
                 setCursearch(event.target.value);
@@ -1794,7 +1890,7 @@ const Apps = (props) => {
             getApps();
           }, 1000);
         } else {
-          alert.error("Failed deleting app");
+          alert.error("Failed deleting app. Does it still exist?");
         }
       })
       .catch((error) => {
@@ -2187,7 +2283,7 @@ const Apps = (props) => {
       <FormControl>
         <DialogTitle>
           <div style={{ color: "rgba(255,255,255,0.9)" }}>
-            Create a new integration
+            Create a new app 
           </div>
         </DialogTitle>
         <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>

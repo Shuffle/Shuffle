@@ -98,7 +98,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
-		_, _, err := handleExecution(workflowId, shuffle.Workflow{ExecutingOrg: shuffle.OrgMini{Id: orgId}}, request)
+		_, _, err := handleExecution(workflowId, shuffle.Workflow{ExecutingOrg: shuffle.OrgMini{Id: orgId}}, request, orgId)
 		if err != nil {
 			log.Printf("Failed to execute %s: %s", workflowId, err)
 		}
@@ -395,6 +395,40 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	for _, action := range workflowExecution.Workflow.Actions {
+		found := false
+		for _, result := range workflowExecution.Results {
+			if result.Action.ID == action.ID {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			continue
+		}
+
+		//log.Printf("[DEBUG] Maybe not handled yet: %s", action.ID)
+		cacheId := fmt.Sprintf("%s_%s_result", workflowExecution.ExecutionId, action.ID)
+		cache, err := shuffle.GetCache(ctx, cacheId)
+		if err != nil {
+			//log.Printf("[WARNING] Couldn't find in fix exec %s (2): %s", cacheId, err)
+			continue
+		}
+
+		actionResult := shuffle.ActionResult{}
+		cacheData := []byte(cache.([]uint8))
+
+		// Just ensuring the data is good
+		err = json.Unmarshal(cacheData, &actionResult)
+		if err != nil {
+			continue
+		} else {
+			log.Printf("[DEBUG] APPENDING %s result to send to app or something\n\n\n\n", action.ID)
+			workflowExecution.Results = append(workflowExecution.Results, actionResult)
+		}
+	}
+
 	newjson, err := json.Marshal(workflowExecution)
 	if err != nil {
 		resp.WriteHeader(401)
@@ -559,7 +593,8 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	//log.Printf("BASE LENGTH: %d", len(workflowExecution.Results))
-	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false)
+
+	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
 	if err != nil {
 		b, suberr := json.Marshal(actionResult)
 		if suberr != nil {
@@ -745,7 +780,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		if item.TriggerType == "SCHEDULE" && item.Status != "uninitialized" {
 			err = deleteSchedule(ctx, item.ID)
 			if err != nil {
-				log.Printf("Failed to delete schedule: %s - is it started?", err)
+				log.Printf("[DEBUG] Failed to delete schedule: %s - is it started?", err)
 			}
 		} else if item.TriggerType == "WEBHOOK" {
 			//err = removeWebhookFunction(ctx, item.ID)
@@ -755,7 +790,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		} else if item.TriggerType == "EMAIL" {
 			err = shuffle.HandleOutlookSubRemoval(ctx, user, workflow.ID, item.ID)
 			if err != nil {
-				log.Printf("Failed to delete OUTLOOK email sub (checking gmail after): %s", err)
+				log.Printf("[DEBUG] Failed to delete OUTLOOK email sub (checking gmail after): %s", err)
 			}
 
 			err = shuffle.HandleGmailSubRemoval(ctx, user, workflow.ID, item.ID)
@@ -763,14 +798,8 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 				log.Printf("Failed to delete gmail email sub: %s", err)
 			}
 		}
-
-		//err = increaseStatisticsField(ctx, "total_workflow_triggers", workflow.ID, -1, workflow.OrgId)
-		//if err != nil {
-		//	log.Printf("Failed to increase total workflows: %s", err)
-		//}
 	}
 
-	// FIXME - maybe delete workflow executions
 	err = shuffle.DeleteKey(ctx, "workflow", fileId)
 	if err != nil {
 		log.Printf("[DEBUG]] Failed deleting key %s", fileId)
@@ -780,11 +809,6 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 	log.Printf("[INFO] Should have deleted workflow %s (%s)", workflow.Name, fileId)
 
-	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
-	//memcache.Delete(ctx, memcacheName)
-	//memcacheName = fmt.Sprintf("%s_workflows", user.Username)
-	//memcache.Delete(ctx, memcacheName)
-	//cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	shuffle.DeleteCache(ctx, cacheKey)
 	log.Printf("[DEBUG] Cleared workflow cache for %s (%s)", user.Username, user.Id)
@@ -830,7 +854,7 @@ func getWorkflowLocal(fileId string, request *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-func handleExecution(id string, workflow shuffle.Workflow, request *http.Request) (shuffle.WorkflowExecution, string, error) {
+func handleExecution(id string, workflow shuffle.Workflow, request *http.Request, orgId string) (shuffle.WorkflowExecution, string, error) {
 	//go func() {
 	//	log.Printf("\n\nPRE TIME: %s\n\n", time.Now().Format("2006-01-02 15:04:05"))
 	//	_ = <-time.After(time.Second * 60)
@@ -849,8 +873,12 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	}
 
 	if len(workflow.ExecutingOrg.Id) == 0 {
-		log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
-		return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
+		if len(orgId) > 0 {
+			workflow.ExecutingOrg.Id = orgId
+		} else {
+			log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
+		}
 	}
 
 	if len(workflow.Actions) == 0 {
@@ -1048,6 +1076,10 @@ func cloudExecuteAction(execution shuffle.WorkflowExecution) error {
 	return nil
 }
 
+// 1. Check CORS
+// 2. Check authentication
+// 3. Check authorization
+// 4. Run the actual function
 func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -1104,8 +1136,8 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 		executionAuthValid, newOrgId = shuffle.RunExecuteAccessValidation(request, workflow)
 		if !executionAuthValid {
-			log.Printf("[INFO] Api authentication failed in execute workflow: %s", userErr)
-			resp.WriteHeader(401)
+			log.Printf("[INFO] Api authorization failed in execute workflow: %s", userErr)
+			resp.WriteHeader(403)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		} else {
@@ -1122,7 +1154,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 				log.Printf("[AUDIT] Letting user %s execute %s because they're admin of the same org", user.Username, workflow.ID)
 			} else {
 				log.Printf("[AUDIT] Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
-				resp.WriteHeader(401)
+				resp.WriteHeader(403)
 				resp.Write([]byte(`{"success": false}`))
 				return
 			}
@@ -1133,7 +1165,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	user.ActiveOrg.Users = []shuffle.UserMini{}
 	workflow.ExecutingOrg = user.ActiveOrg
-	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request)
+	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request, user.ActiveOrg.Id)
 	if err == nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
@@ -1384,15 +1416,14 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 }
 
 func deleteSchedule(ctx context.Context, id string) error {
-	log.Printf("Should stop schedule %s!", id)
+	log.Printf("[DEBUG] Should stop schedule %s!", id)
 	err := shuffle.DeleteKey(ctx, "schedules", id)
 	if err != nil {
-		log.Printf("Failed to delete schedule: %s", err)
+		log.Printf("[ERROR] Failed to delete schedule: %s", err)
 		return err
 	} else {
 		if value, exists := scheduledJobs[id]; exists {
-			log.Printf("STOPPING THIS SCHEDULE: %s", id)
-			// Looks like this does the trick? Hurr
+			// Stops the schedule properly
 			value.Lock()
 		} else {
 			// FIXME - allow it to kind of stop anyway?
@@ -1495,14 +1526,19 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// Finds the startnode for the specific schedule
 	startNode := ""
-	for _, branch := range workflow.Branches {
-		if branch.SourceID == schedule.Id {
-			startNode = branch.DestinationID
-		}
-	}
+	if schedule.Start != "" {
+		startNode = schedule.Start
+	} else {
 
-	if startNode == "" {
-		startNode = workflow.Start
+		for _, branch := range workflow.Branches {
+			if branch.SourceID == schedule.Id {
+				startNode = branch.DestinationID
+			}
+		}
+
+		if startNode == "" {
+			startNode = workflow.Start
+		}
 	}
 
 	//log.Printf("Startnode: %s", startNode)
@@ -2047,8 +2083,9 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	appCounter := 0
 	if err != nil {
-		log.Printf("Failed to get existing generated apps")
+		log.Printf("[WARNING] Failed to get existing generated apps for OpenAPI verification: %s", err)
 	}
+
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
 			continue
@@ -2606,7 +2643,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[INFO] Execution: %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
+	log.Printf("[INFO] Execution (single action): %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
 
 	executionRequest := shuffle.ExecutionRequest{
 		ExecutionId:   workflowExecution.ExecutionId,

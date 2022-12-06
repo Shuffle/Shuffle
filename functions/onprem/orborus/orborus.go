@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -57,6 +58,7 @@ var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
 var concurrencyEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY")
 var appSdkVersion = os.Getenv("SHUFFLE_APP_SDK_VERSION")
 var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
+var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 
 //var baseimagename = "docker.pkg.github.com/frikky/shuffle"
 //var baseimagename = "ghcr.io/frikky"
@@ -282,6 +284,35 @@ func deployServiceWorkers(image string) {
 			}
 		}
 
+		if len(os.Getenv("DOCKER_HOST")) > 0 {
+			log.Printf("[DEBUG] Deploying docker socket proxy to the network %s as the DOCKER_HOST variable is set", networkName)
+			//if err == nil {
+			containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+				All: true,
+			})
+
+			if err == nil {
+				for _, container := range containers {
+					if strings.Contains(strings.ToLower(container.Image), "docker-socket-proxy") {
+						networkConfig := &network.EndpointSettings{}
+						err := dockercli.NetworkConnect(ctx, networkName, container.ID, networkConfig)
+						if err != nil {
+							log.Printf("[ERROR] Failed connecting Docker socket proxy to docker network %s: %s", networkName, err)
+						} else {
+							log.Printf("[INFO] Attached the docker socket proxy to the execution network")
+						}
+
+						break
+					}
+				}
+			} else {
+				log.Printf("[ERROR] Failed listing containers when deploying socket proxy on swarm: %s", err)
+			}
+			//} else {
+			//	log.Printf("[ERROR] Failed listing and finding the right image for docker socket proxy: %s", err)
+			//}
+		}
+
 		//serviceOptions := types.ServiceCreateOptions{}
 		//service, err := dockercli.ServiceCreate(
 		//	context.Background(),
@@ -385,13 +416,15 @@ func deployServiceWorkers(image string) {
 			},
 		}
 
-		if defaultNetworkAttach == true {
+		if defaultNetworkAttach == true || strings.ToLower(os.Getenv("SHUFFLE_DEFAULT_NETWORK_ATTACH")) == "true" {
+			targetName := "shuffle_shuffle"
+			log.Printf("[DEBUG] Adding network attach for network %s to worker in swarm", targetName)
 			serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
-				Target: "shuffle_shuffle",
+				Target: targetName,
 			})
 
 			// FIXM: Remove this if deployment fails?
-			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=shuffle_shuffle"))
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=%s", targetName))
 		}
 
 		if dockerApiVersion != "" {
@@ -411,12 +444,23 @@ func deployServiceWorkers(image string) {
 		if len(os.Getenv("DOCKER_HOST")) > 0 {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_HOST=%s", os.Getenv("DOCKER_HOST")))
 		} else {
-			serviceSpec.TaskTemplate.ContainerSpec.Mounts = []mount.Mount{
-				mount.Mount{
-					Source: "/var/run/docker.sock",
-					Target: "/var/run/docker.sock",
-					Type:   mount.TypeBind,
-				},
+			if runtime.GOOS == "windows" {
+				serviceSpec.TaskTemplate.ContainerSpec.Mounts = []mount.Mount{
+					mount.Mount{
+						Source: `\\.\pipe\docker_engine`,
+						Target: `\\.\pipe\docker_engine`,
+						Type:   mount.TypeBind,
+					},
+				}
+			} else {
+				serviceSpec.TaskTemplate.ContainerSpec.Mounts = []mount.Mount{
+					mount.Mount{
+						Source: "/var/run/docker.sock",
+						Target: "/var/run/docker.sock",
+						Type:   mount.TypeBind,
+					},
+				}
+
 			}
 		}
 
@@ -475,7 +519,11 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	}
 
 	if len(os.Getenv("DOCKER_HOST")) == 0 {
-		hostConfig.Binds = []string{"/var/run/docker.sock:/var/run/docker.sock:rw"}
+		if runtime.GOOS == "windows" {
+			hostConfig.Binds = []string{`\\.\pipe\docker_engine:\\.\pipe\docker_engine`}
+		} else {
+			hostConfig.Binds = []string{"/var/run/docker.sock:/var/run/docker.sock:rw"}
+		}
 	}
 
 	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
@@ -642,12 +690,12 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "0.8.97"
+		appSdkVersion = "1.1.0"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 
 	if workerVersion == "" {
-		workerVersion = "nightly"
+		workerVersion = "1.1.0"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -657,24 +705,23 @@ func initializeImages() {
 		log.Printf("[DEBUG] Setting baseimageregistry")
 	}
 	if baseimagename == "" {
-		baseimagename = "frikky/shuffle"
-		baseimagename = "frikky"
+		baseimagename = "shuffle/shuffle" // Dockerhub
+		baseimagename = "shuffle"         // Github
 		log.Printf("[DEBUG] Setting baseimagename")
 	}
 
 	log.Printf("[DEBUG] Setting swarm config to %#v. Default is empty.", swarmConfig)
 
+	newWorker := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+	if len(newWorkerImage) > 0 {
+		newWorker = newWorkerImage
+	}
+
 	// check whether they are the same first
 	images := []string{
-		fmt.Sprintf("frikky/shuffle:app_sdk"),
+		fmt.Sprintf("shuffle/shuffle:app_sdk"),
 		fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", baseimageregistry, baseimagename, appSdkVersion),
-		fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion),
-		// fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
-		// fmt.Sprintf("docker.io/%s:worker", baseimagename),
-
-		//fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion),
-		//fmt.Sprintf("%s/app_sdk:%s", baseimagename, appSdkVersion),
-		//fmt.Sprintf("frikky/shuffle:app_sdk"),
+		newWorker,
 	}
 
 	pullOptions := types.ImagePullOptions{}
@@ -787,6 +834,18 @@ func checkSwarmService(ctx context.Context) {
 
 // Initial loop etc
 func main() {
+	startupDelay := os.Getenv("SHUFFLE_ORBORUS_STARTUP_DELAY")
+	if len(startupDelay) > 0 {
+		log.Printf("[DEBUG] Setting startup delay to %#v", startupDelay)
+
+		tmpInt, err := strconv.Atoi(startupDelay)
+		if err == nil {
+			time.Sleep(time.Duration(tmpInt) * time.Second)
+		} else {
+			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_STARTUP_DELAY must be a number, not %s", startupDelay)
+		}
+	}
+
 	log.Println("[INFO] Setting up execution environment")
 
 	//FIXME
@@ -835,8 +894,9 @@ func main() {
 
 	if len(os.Getenv("DOCKER_HOST")) > 0 {
 		log.Printf("[DEBUG] Running docker with socket proxy %s instead of default", os.Getenv("DOCKER_HOST"))
+
 	} else {
-		log.Printf("[DEBUG] Running docker with default socket /var/run/docker.sock")
+		log.Printf(`[DEBUG] Running docker with default socket /var/run/docker.sock or `)
 	}
 
 	ctx := context.Background()
@@ -859,6 +919,10 @@ func main() {
 	initializeImages()
 
 	workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+	if len(newWorkerImage) > 0 {
+		workerImage = newWorkerImage
+	}
+
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		checkSwarmService(ctx)
 
@@ -896,7 +960,7 @@ func main() {
 		}
 	}
 
-	client.Timeout = 10 * time.Second
+	client.Timeout = 30 * time.Second
 
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
 	req, err := http.NewRequest(
@@ -922,15 +986,15 @@ func main() {
 		req.Header.Add("Org", org)
 	}
 
-	log.Printf("[INFO] Waiting for executions at %s with Environment %s", fullUrl, environment)
+	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
 	for {
 		//go getStats()
-		//log.Printf("Prerequest")
-		//log.Printf("Postrequest")
+		//log.Printf("[DEBUG] Prerequest - queue")
 		newresp, err := client.Do(req)
+		//log.Printf("[DEBUG] Postrequest - queue")
 		if err != nil {
-			log.Printf("[WARNING] Failed making request: %s", err)
+			log.Printf("[WARNING] Failed making request to %s: %s", fullUrl, err)
 
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
@@ -1330,7 +1394,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	//log.Printf("[DEBUG] Data: %s", string(data))
 
-	//streamUrl := fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute", parsedBaseurl)
 	streamUrl := fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
 	if containerId == "" || containerId == "shuffle-orborus" {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
@@ -1347,6 +1410,10 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		log.Printf("[ERROR] Failed creating worker request: %s", err)
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+
+			if len(newWorkerImage) > 0 {
+				workerImage = newWorkerImage
+			}
 			deployServiceWorkers(workerImage)
 
 			time.Sleep(time.Duration(10) * time.Second)
@@ -1361,6 +1428,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		log.Printf("[ERROR] Error running worker request to %s (1): %s", streamUrl, err)
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+
+			if len(newWorkerImage) > 0 {
+				workerImage = newWorkerImage
+			}
+
 			deployServiceWorkers(workerImage)
 
 			time.Sleep(time.Duration(10) * time.Second)
@@ -1383,12 +1455,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		if strings.Contains(string(body), "Bad status ") {
 			return nil
 		}
-
-		//workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-		//deployServiceWorkers(workerImage)
-
-		//time.Sleep(time.Duration(10) * time.Second)
-		//err = sendWorkerRequest(executionRequest)
 
 		return errors.New(fmt.Sprintf("Bad statuscode from worker: %d - expecting 200", newresp.StatusCode))
 	}

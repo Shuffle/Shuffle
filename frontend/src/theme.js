@@ -15,6 +15,7 @@ const theme = createMuiTheme({
     type: "dark",
     surfaceColor: "#27292d",
     inputColor: "#383B40",
+    platformColor: "#1F2023",
     borderRadius: 5,
     defaultBorder: "1px solid rgba(255,255,255,0.3)",
 		jsonTheme: "brewer",

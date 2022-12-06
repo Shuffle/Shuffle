@@ -691,13 +691,25 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 
 	err = shuffle.SetUser(ctx, newUser, true)
 	if err != nil {
-		log.Printf("Error adding User %s: %s", username, err)
+		log.Printf("[ERROR] Problem adding User %s: %s", username, err)
 		return err
 	}
 
 	neworg, err := shuffle.GetOrg(ctx, org.Id)
 	if err == nil {
 		//neworg.Users = append(neworg.Users, *newUser)
+		for tutorialIndex, tutorial := range neworg.Tutorials {
+			if tutorial.Name == "Invite teammates" {
+				neworg.Tutorials[tutorialIndex].Description = fmt.Sprintf("%d users are in your org. Org name and Image change next.", len(neworg.Users))
+				if len(neworg.Users) > 0 {
+					neworg.Tutorials[tutorialIndex].Done = true
+					neworg.Tutorials[tutorialIndex].Link = "/admin"
+				}
+
+				break
+			}
+		}
+
 		err = shuffle.SetOrg(ctx, *neworg, neworg.Id)
 		if err != nil {
 			log.Printf("Failed updating org with user %s", newUser.Username)
@@ -729,7 +741,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		if (countErr == nil && count > 0) || countErr != nil {
 			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "Can't register without being admin"}`))
+			resp.Write([]byte(`{"success": false, "reason": "Users already exist. Please go to /login to log into your admin user."}`))
 			return
 		}
 	}
@@ -843,6 +855,8 @@ func handleCookie(request *http.Request) bool {
 	return true
 }
 
+// Returns whether the user is logged in or not etc.
+// Also has more data about the user and org
 func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -981,7 +995,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	org, err := shuffle.GetOrg(ctx, userInfo.ActiveOrg.Id)
-	if err == nil {
+	//if err == nil {
+	if len(org.Id) > 0 {
 		userInfo.ActiveOrg = shuffle.OrgMini{
 			Id:         org.Id,
 			Name:       org.Name,
@@ -990,6 +1005,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			Image:      org.Image,
 		}
 	}
+	//}
 
 	userInfo.ActiveOrg.Users = []shuffle.UserMini{}
 	userOrgs := []shuffle.OrgMini{}
@@ -1000,7 +1016,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		org, err := shuffle.GetOrg(ctx, item)
-		if err == nil {
+		_ = err
+		if len(org.Id) > 0 {
 			userOrgs = append(userOrgs, shuffle.OrgMini{
 				Id:         org.Id,
 				Name:       org.Name,
@@ -1035,7 +1052,35 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		chatDisabled = true
 	}
 
-	tutorialsFinished := []string{}
+	orgPriorities := org.Priorities
+	if len(org.Priorities) < 5 {
+		log.Printf("[WARNING] Should find and add priorities as length is less than 5 for org %s", userInfo.ActiveOrg.Id)
+		newPriorities, err := shuffle.GetPriorities(ctx, userInfo, org)
+		if err != nil {
+			log.Printf("[WARNING] Failed getting new priorities for org %s: %s", org.Id, err)
+			//orgPriorities = []shuffle.Priority{}
+		} else {
+			orgPriorities = newPriorities
+		}
+	}
+
+	tutorialsFinished := []shuffle.Tutorial{}
+	for _, tutorial := range userInfo.PersonalInfo.Tutorials {
+		tutorialsFinished = append(tutorialsFinished, shuffle.Tutorial{
+			Name: tutorial,
+		})
+	}
+
+	if len(org.SecurityFramework.SIEM.Name) > 0 || len(org.SecurityFramework.Network.Name) > 0 || len(org.SecurityFramework.EDR.Name) > 0 || len(org.SecurityFramework.Cases.Name) > 0 || len(org.SecurityFramework.IAM.Name) > 0 || len(org.SecurityFramework.Assets.Name) > 0 || len(org.SecurityFramework.Intel.Name) > 0 || len(org.SecurityFramework.Communication.Name) > 0 {
+		tutorialsFinished = append(tutorialsFinished, shuffle.Tutorial{
+			Name: "find_integrations",
+		})
+	}
+
+	for _, tutorial := range org.Tutorials {
+		tutorialsFinished = append(tutorialsFinished, tutorial)
+	}
+
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1051,8 +1096,10 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			},
 		},
 		EthInfo:      userInfo.EthInfo,
-		Tutorials:    tutorialsFinished,
 		ChatDisabled: chatDisabled,
+		Tutorials:    tutorialsFinished,
+
+		Priorities: orgPriorities,
 	}
 
 	returnData, err := json.Marshal(returnValue)
@@ -1231,7 +1278,6 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			log.Printf("[DEBUG] Found OpenID url (PKCE!!). Extra redirect check: %s", request.URL.String())
 			baseSSOUrl = org.SSOConfig.OpenIdAuthorization
 
 			codeChallenge := uuid.NewV4().String()
@@ -1251,6 +1297,10 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 				redirectUrl = url.QueryEscape(fmt.Sprintf("%s/api/v1/login_openid", os.Getenv("BASE_URL")))
 			}
 
+			if len(os.Getenv("SSO_REDIRECT_URL")) > 0 {
+				redirectUrl = url.QueryEscape(fmt.Sprintf("%s/api/v1/login_openid", os.Getenv("SSO_REDIRECT_URL")))
+			}
+
 			state := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("org=%s&challenge=%s&redirect=%s", org.Id, codeChallenge, redirectUrl)))
 
 			// has to happen after initial value is stored
@@ -1260,12 +1310,25 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 			//log.Printf("[DEBUG] Got challenge value %s (POST state)", codeChallenge)
 
-			baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=code&scope=openid&redirect_uri=%s&state=%s&code_challenge_method=S256&code_challenge=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, codeChallenge)
+			if len(org.SSOConfig.OpenIdClientSecret) > 0 {
+
+				//baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=code&scope=openid&redirect_uri=%s&state=%s&client_secret=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, org.SSOConfig.OpenIdClientSecret)
+				state := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("org=%s&redirect=%s&challenge=%s", org.Id, redirectUrl, org.SSOConfig.OpenIdClientSecret)))
+				log.Printf("URL: %s", redirectUrl)
+
+				baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=id_token&scope=openid&redirect_uri=%s&state=%s&response_mode=form_post&nonce=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, state)
+				//baseSSOUrl += fmt.Sprintf("&client_secret=%s", org.SSOConfig.OpenIdClientSecret)
+				log.Printf("[DEBUG] Found OpenID url (client secret). Extra redirect check: %s - %s", request.URL.String(), baseSSOUrl)
+			} else {
+				log.Printf("[DEBUG] Found OpenID url (PKCE!!). Extra redirect check: %s", request.URL.String())
+				baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=code&scope=openid&redirect_uri=%s&state=%s&code_challenge_method=S256&code_challenge=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, codeChallenge)
+			}
+
 			break
 		}
 
 		if len(org.SSOConfig.SSOEntrypoint) > 0 {
-			log.Printf("[DEBUG] Found SAML SSO url")
+			log.Printf("[DEBUG] Found SAML SSO url: %s", org.SSOConfig.SSOEntrypoint)
 			baseSSOUrl = org.SSOConfig.SSOEntrypoint
 			break
 		}
@@ -1333,8 +1396,23 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - have timeout here
+	tutorialsFinished := []shuffle.Tutorial{}
+	for _, tutorial := range Userdata.PersonalInfo.Tutorials {
+		tutorialsFinished = append(tutorialsFinished, shuffle.Tutorial{
+			Name: tutorial,
+		})
+	}
+	returnValue := shuffle.HandleInfo{
+		Success:   true,
+		Tutorials: tutorialsFinished,
+	}
+
 	loginData := `{"success": true}`
+	newData, err := json.Marshal(returnValue)
+	if err == nil {
+		loginData = string(newData)
+	}
+
 	if len(Userdata.Session) != 0 {
 		log.Println("[INFO] User session already exists - resetting it")
 		expiration := time.Now().Add(3600 * time.Second)
@@ -1345,7 +1423,17 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 			Expires: expiration,
 		})
 
+		returnValue.Cookies = append(returnValue.Cookies, shuffle.SessionCookie{
+			Key:        "session_token",
+			Value:      Userdata.Session,
+			Expiration: expiration.Unix(),
+		})
+
 		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, Userdata.Session, expiration.Unix())
+		newData, err := json.Marshal(returnValue)
+		if err == nil {
+			loginData = string(newData)
+		}
 		//log.Printf("SESSION LENGTH MORE THAN 0 IN LOGIN: %s", Userdata.Session)
 
 		err = shuffle.SetSession(ctx, Userdata, Userdata.Session)
@@ -1382,7 +1470,17 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
+		returnValue.Cookies = append(returnValue.Cookies, shuffle.SessionCookie{
+			Key:        "session_token",
+			Value:      sessionToken,
+			Expiration: expiration.Unix(),
+		})
+
 		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, sessionToken, expiration.Unix())
+		newData, err := json.Marshal(returnValue)
+		if err == nil {
+			loginData = string(newData)
+		}
 	}
 
 	log.Printf("[INFO] %s SUCCESSFULLY LOGGED IN with session %s", data.Username, Userdata.Session)
@@ -2244,7 +2342,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		//start, startok := request.URL.Query()["start"]
 
 		// OrgId: activeOrgs[0].Id,
-		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest)
+		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest, hook.OrgId)
 		if err == nil {
 			/*
 				err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
@@ -3055,18 +3153,19 @@ func handleSwaggerValidation(body []byte) (shuffle.ParsedOpenApi, error) {
 	return parsed, err
 }
 
-func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
+func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, skipEdit bool) {
 	type Test struct {
-		Editing bool   `datastore:"editing"`
-		Id      string `datastore:"id"`
-		Image   string `datastore:"image"`
+		Editing bool   `json:"editing" datastore:"editing"`
+		Id      string `json:"id" datastore:"id"`
+		Image   string `json:"image" datastore:"image"`
+		Body    string `json:"body" datastore:"body"`
 	}
 
 	var test Test
 	err := json.Unmarshal(body, &test)
 	if err != nil {
-		log.Printf("[WARNING] Failed unmarshalling test: %s", err)
-		resp.WriteHeader(401)
+		log.Printf("[ERROR] Failed unmarshalling in swagger build: %s", err)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -3076,13 +3175,13 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	hasher.Write(body)
 	newmd5 := hex.EncodeToString(hasher.Sum(nil))
 
-	if test.Editing && len(user.Id) > 0 {
+	if test.Editing && len(user.Id) > 0 && skipEdit != true {
 		// Quick verification test
 		ctx := context.Background()
 		app, err := shuffle.GetApp(ctx, test.Id, user, false)
 		if err != nil {
-			log.Printf("[WARNING] Error getting app when editing: %s", app.Name)
-			resp.WriteHeader(401)
+			log.Printf("[ERROR] Error getting app when editing: %s", app.Name)
+			resp.WriteHeader(400)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
@@ -3090,7 +3189,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 		// FIXME: Check whether it's in use.
 		if user.Id != app.Owner && user.Role != "admin" {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
-			resp.WriteHeader(401)
+			resp.WriteHeader(400)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
@@ -3114,12 +3213,13 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	}
 
 	if swagger.Info == nil {
-		log.Printf("[ERORR] Info is nil?: %#v", swagger)
+		log.Printf("[ERORR] Info is nil in swagger?")
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Info not parsed"}`))
 		return
 	}
 
+	swagger.Info.Title = shuffle.FixFunctionName(swagger.Info.Title, swagger.Info.Title, false)
 	if strings.Contains(swagger.Info.Title, " ") {
 		swagger.Info.Title = strings.Replace(swagger.Info.Title, " ", "_", -1)
 	}
@@ -3223,7 +3323,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	//log.Println(stitched)
 
 	// 3. Zip and stream it directly in the directory
-	_, err = shuffle.StreamZipdata(ctx, identifier, stitched, "requests\nurllib3", "")
+	_, err = shuffle.StreamZipdata(ctx, identifier, stitched, shuffle.GetAppRequirements(), "")
 	if err != nil {
 		log.Printf("[ERROR] Zipfile error: %s", err)
 		resp.WriteHeader(500)
@@ -3374,7 +3474,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	buildSwaggerApp(resp, body, user)
+	buildSwaggerApp(resp, body, user, false)
 }
 
 // Creates osfs from folderpath with a basepath as directory base
@@ -3445,7 +3545,6 @@ func handleAppHotload(ctx context.Context, location string, forceUpdate bool) er
 		return err
 	}
 
-	//log.Printf("Reading app folder: %#v", dir)
 	_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
 	if err != nil {
 		log.Printf("[WARNING] Githubfolders error: %s", err)
@@ -3518,7 +3617,7 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 		Body:   ioutil.NopCloser(bytes.NewReader(b)),
 	}
 
-	_, _, err = handleExecution(workflowId, shuffle.Workflow{}, newRequest)
+	_, _, err = handleExecution(workflowId, shuffle.Workflow{}, newRequest, workflow.OrgId)
 	return err
 }
 
@@ -3639,7 +3738,7 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 				return err
 			}
 
-			_, _, err = handleExecution(job.PrimaryItemId, shuffle.Workflow{}, newRequest)
+			_, _, err = handleExecution(job.PrimaryItemId, shuffle.Workflow{}, newRequest, job.OrgId)
 			if err != nil {
 				log.Printf("Failed continuing workflow from cloud user_input: %s", err)
 				return err
@@ -3942,7 +4041,12 @@ func runInitEs(ctx context.Context) {
 					Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
 				}
 
-				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request)
+				orgId := ""
+				if len(activeOrgs) > 0 {
+					orgId = activeOrgs[0].Id
+				}
+
+				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request, orgId)
 				if err != nil {
 					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
 				}
@@ -4728,7 +4832,6 @@ func runInit(ctx context.Context) {
 					continue
 				}
 
-				log.Printf("ENV: %s", item.Environment)
 				if item.Environment == "cloud" {
 					log.Printf("Skipping cloud schedule")
 					continue
@@ -4802,7 +4905,12 @@ func runInit(ctx context.Context) {
 					Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
 				}
 
-				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request)
+				orgId := ""
+				if len(activeOrgs) > 0 {
+					orgId = activeOrgs[0].Id
+				}
+
+				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request, orgId)
 				if err != nil {
 					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
 				}
@@ -5963,7 +6071,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/collections/{key}", shuffle.HandleGetCollection).Methods("GET", "OPTIONS")
 
 	// Related to use-cases that are not directly workflows.
+	r.HandleFunc("/api/v1/workflows/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/usecases", shuffle.UpdateUsecases).Methods("POST", "OPTIONS")
 
 	// Legacy app things
 	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
@@ -6041,13 +6151,14 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{key}/execute", executeSingleAction).Methods("POST", "OPTIONS")
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/migrate_database", migrateDatabase).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
-	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
 	// PS: For cloud, this has to use cloud storage.
@@ -6056,7 +6167,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/namespaces/{namespace}", shuffle.HandleGetFileNamespace).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}/content", shuffle.HandleGetFileContent).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/create", shuffle.HandleCreateFile).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/files/{fileId}/upload", shuffle.HandleUploadFile).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/files/{fileId}/upload", shuffle.HandleUploadFile).Methods("POST", "OPTIONS", "PATCH")
+	r.HandleFunc("/api/v1/files/{fileId}/edit", shuffle.HandleEditFile).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleGetFileMeta).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleDeleteFile).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/files", shuffle.HandleGetFiles).Methods("GET", "OPTIONS")
@@ -6069,6 +6181,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/notifications", shuffle.HandleGetNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/notifications/clear", shuffle.HandleClearNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
+
+	//r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", shuffle.HandleGetWidget).Methods("GET", "OPTIONS")
 
 	http.Handle("/", r)
 }

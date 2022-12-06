@@ -2,23 +2,26 @@ import { useEffect } from "react";
 //import { withRouter } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 
-function ScrollToTop({ getUserNotifications, setCurpath, history }) {
+// ensures scrolling happens in the right way on different pages and when changing
+function ScrollToTop({ getUserNotifications, curpath, setCurpath, history }) {
 	let location = useLocation();
 
   useEffect(() => {
-    //const unlisten = history.listen(() => {
-		window.scroll({
-			top: 0,
-			left: 0,
-			behavior: "smooth",
-		});
+		// Custom handler for certain scroll mechanics
+		//
+		console.log("OLD: ", curpath, "NeW: ", window.location.pathname)
+		if (curpath === window.location.pathname && curpath === "/usecases") {
+		} else { 
 
-		setCurpath(window.location.pathname);
-		getUserNotifications();
-    //});
-    //return () => {
-    //  unlisten();
-    //};
+			window.scroll({
+				top: 0,
+				left: 0,
+				behavior: "smooth",
+			});
+
+			setCurpath(window.location.pathname);
+			getUserNotifications();
+		}
   }, [location]);
 
   return null;

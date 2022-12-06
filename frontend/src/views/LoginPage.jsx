@@ -184,10 +184,22 @@ const LoginDialog = (props) => {
                 );
               }
 
-              setIsLoggedIn(true);
+							if (responseJson.tutorials === undefined || responseJson.tutorials === null || !responseJson.tutorials.includes("welcome")) {
+								console.log("RUN Welcome!!")
+								window.location.pathname = "/welcome" 
+								return
+							}
 
-              //navigate("/workflows")
-							window.location.href = "/workflows"
+							const tmpView = new URLSearchParams(window.location.search).get("view")
+							if (tmpView !== undefined && tmpView !== null) {
+								//const newUrl = `/${tmpView}${decodeURIComponent(window.location.search)}`
+								const newUrl = `/${tmpView}`
+								window.location.pathname = newUrl
+							} else {
+								window.location.pathname = "/workflows"		
+							}
+
+              setIsLoggedIn(true);
             }
           })
         )
@@ -285,7 +297,7 @@ const LoginDialog = (props) => {
             {loginInfo === undefined ||
             loginInfo === null ||
             loginInfo.length === 0 ? null : (
-              <div style={{ marginTop: "10px" }}>Response: {loginInfo}</div>
+              <div style={{ marginTop: "10px" }}>Database Response: {loginInfo}</div>
             )}
             <CircularProgress color="secondary" style={{ color: "white" }} />
 

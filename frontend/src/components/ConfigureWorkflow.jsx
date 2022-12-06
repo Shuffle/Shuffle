@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useInterval } from "react-powerhooks";
 
 import {
   InputAdornment,
@@ -13,9 +14,15 @@ import {
   List,
   ListItem,
   ListItemText,
+  Fade,
 } from "@material-ui/core";
-import { FavoriteBorder as FavoriteBorderIcon } from "@material-ui/icons";
+import { 
+	FavoriteBorder as FavoriteBorderIcon,
+	Error as ErrorIcon,
+	CheckCircleRounded as CheckCircleRoundedIcon,
+} from "@mui/icons-material";
 import { FixName } from "../views/Apps.jsx";
+import aa from 'search-insights'
 
 // Handles workflow updates on first open to highlight the issues of the workflow
 // Variables
@@ -26,6 +33,7 @@ import { FixName } from "../views/Apps.jsx";
 // Specifically used for UNSAVED workflows only?
 const ConfigureWorkflow = (props) => {
   const {
+		userdata,
     globalUrl,
     theme,
     workflow,
@@ -43,15 +51,34 @@ const ConfigureWorkflow = (props) => {
     isCloud,
     setAuthenticationType,
     alert,
+		showTriggers,
+		workflowExecutions,
+		getWorkflowExecution,
   } = props;
   const [requiredActions, setRequiredActions] = React.useState([]);
   const [requiredVariables, setRequiredVariables] = React.useState([]);
   const [requiredTriggers, setRequiredTriggers] = React.useState([]);
   const [previousAuth, setPreviousAuth] = React.useState(appAuthentication);
-  const [firstLoad, setFirstLoad] = React.useState("");
   const [itemChanged, setItemChanged] = React.useState(false);
-  var finished = false;
+  const [firstLoad, setFirstLoad] = React.useState("");
+  const [showFinalizeAnimation, setShowFinalizeAnimation] = React.useState(false);
 
+	const [checkStarted, setCheckStarted] = React.useState(false);
+
+	const { start, stop } = useInterval({
+		duration: 3000,
+		startImmediate: false,
+		callback: () => {
+			if (getWorkflowExecution !== undefined && workflowExecutions !== undefined) {
+				const paramkey = workflow.id
+				getWorkflowExecution(paramkey)
+			} else {
+				console.log("Executions or getWorkflowExecutions not defined")
+			}
+		},
+	});
+
+	// Where is this from?
   if (workflow === undefined || workflow === null) {
     return null;
   }
@@ -94,18 +121,13 @@ const ConfigureWorkflow = (props) => {
   };
 
   if (firstLoad.length === 0 || firstLoad !== workflow.id) {
-    if (finished) {
-      setConfigureWorkflowModalOpen(false);
-      return null;
-    }
-
     if (apps === undefined || apps === null || apps.length === 0) {
       console.log("No apps loaded: ", apps);
       setConfigureWorkflowModalOpen(false);
       return null;
     }
 
-    setFirstLoad(workflow.id);
+    setFirstLoad(workflow.id)
     const newactions = [];
     for (var key in workflow.actions) {
       const action = workflow.actions[key];
@@ -121,6 +143,8 @@ const ConfigureWorkflow = (props) => {
         action: action,
 				update_version: action.app_version,
         app: {},
+				steps: [],
+				show_steps: false,
       };
 
       const app = apps.find(
@@ -129,17 +153,21 @@ const ConfigureWorkflow = (props) => {
           (app.app_version === action.app_version ||
             (app.loop_versions !== null &&
               app.loop_versions.includes(action.app_version)))
-      );
+      )
+
+			//newaction.steps = wazuhSteps
       if (app === undefined || app === null) {
-        //console.log("App not found: ", action.app_name);
-          
       	const subapp = apps.find(app => app.name === action.app_name)
 				if (subapp !== undefined && subapp !== null) {
 					newaction.update_version = "1.1.0"
 				}
 
-
         newaction.must_activate = true;
+				newaction.steps.push({
+					"title": "Activate app",
+					"type": "activate",
+					"required": true,
+				})
       } else {
         if (
           action.authentication_id === "" &&
@@ -159,6 +187,12 @@ const ConfigureWorkflow = (props) => {
               }
             }
           }
+
+					newaction.steps.push({
+						"title": "Authenticate app",
+						"type": "authenticate",
+						"required": true,
+					})
 
           if (!filled) {
             newaction.must_authenticate = true;
@@ -247,6 +281,38 @@ const ConfigureWorkflow = (props) => {
       var trigger = workflow.triggers[key];
       trigger.index = key;
 
+			if (trigger.trigger_type === "WEBHOOK") {
+				console.log("Found webhook: ", trigger)
+				if (trigger.app_association !== undefined && trigger.app_association.name !== null && trigger.app_association.name !== "") {
+					console.log("Actions: ", newactions)
+					const findapp = trigger.app_association.name.toLowerCase()
+					const foundindex = newactions.findIndex(action => action.app_name.toLowerCase() === findapp)
+
+					// Adding webhook to start of it
+					if (foundindex >= 0) {
+						const tmpsteps = newactions[foundindex].steps
+						newactions[foundindex].steps = [
+							{
+								"title": "Configure Webhook",
+								"type": "webhook",
+								"required": true,
+							}
+						]
+
+						for (var subkey in tmpsteps) {
+							newactions[foundindex].steps.push(tmpsteps[subkey])
+						}
+				
+						newactions[foundindex].show_steps = true
+
+						console.log("CHANGED ACTION: ", newactions[foundindex])
+						//console.log("Index: ", newactions[foundindex])
+
+						continue
+					}
+				}
+			}
+
       if (trigger.status === "running") {
         continue;
       }
@@ -272,17 +338,19 @@ const ConfigureWorkflow = (props) => {
     setRequiredTriggers(requiredTriggers);
     setRequiredVariables(requiredVariables);
     setRequiredActions(newactions);
-  }
+	}
 
   if (appAuthentication.length !== previousAuth.length) {
-    var newactions = [];
+    var newactions = []
     for (var actionkey in requiredActions) {
       var newaction = requiredActions[actionkey];
       const app = newaction.app;
 
       for (var key in appAuthentication) {
         const auth = appAuthentication[key];
-        if (auth.app.name === app.name && auth.active) {
+
+				// Does this account for all the different ones of the same? 
+        if (auth.app.name === app.name && auth.active === true) {
           newaction.auth_done = true;
           break;
         }
@@ -298,7 +366,7 @@ const ConfigureWorkflow = (props) => {
   }
 
   const TriggerSection = (props) => {
-    const { trigger } = props;
+    const { trigger } = props
 
     return (
       <ListItem>
@@ -460,6 +528,26 @@ const ConfigureWorkflow = (props) => {
   };
 
   const activateApp = (app_id, app_name, app_version) => {
+
+		if (aa !== undefined) {
+			aa('init', {
+					appId: "JNSS5CFDZZ",
+					apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+			})
+
+			const timestamp = new Date().getTime()
+			aa('sendEvents', [
+				{
+					eventType: 'conversion',
+					eventName: 'Public App Activated',
+					index: 'appsearch',
+					objectIDs: [app_id],
+					timestamp: timestamp,
+					userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
+				}
+			])
+		}
+
     fetch(
       `${globalUrl}/api/v1/apps/${app_id}/activate?app_name=${app_name}&app_version=${app_version}`,
       {
@@ -502,6 +590,7 @@ const ConfigureWorkflow = (props) => {
 
     return (
       <ListItem>
+				{/*
         <ListItemAvatar>
           <Avatar variant="rounded">
             <img
@@ -516,19 +605,28 @@ const ConfigureWorkflow = (props) => {
           secondary={action.app_version}
           style={{}}
         />
-        {action.must_authenticate ? (
-          action.auth_done ? (
-            <Button color="primary" variant="outlined" onClick={() => {}}>
-              Authenticated
-            </Button>
-          ) : selectedAction.app_name === action.app_name ? (
-            <CircularProgress />
-          ) : (
-            <Button
-              color="primary"
-              variant="contained"
-              onClick={() => {
-                setAuthenticationType(
+				*/}
+        {action.must_authenticate ? 
+						<Button
+        		  fullWidth
+        		  variant="contained"
+							disabled={action.auth_done}
+        		  style={{
+        		    flex: 1,
+        		    textTransform: "none",
+        		    textAlign: "left",
+        		    justifyContent: "flex-start",
+        		    backgroundColor: action.auth_done ? theme.palette.surfaceColor : theme.palette.inputColor,
+        		    color: action.auth_done ? "#686a6c" : "#ffffff",
+								borderRadius: theme.palette.borderRadius,
+								minWidth: 350, 
+								maxHeight: 50,
+								overflow: "hidden",
+								border: `1px solid ${theme.palette.inputColor}`,
+        		  }}
+        		  color="primary"
+        		  onClick={() => {
+        		      setAuthenticationType(
                   action.app.authentication.type === "oauth2" &&
                     action.app.authentication.redirect_uri !== undefined &&
                     action.app.authentication.redirect_uri !== null
@@ -541,37 +639,52 @@ const ConfigureWorkflow = (props) => {
                     : {
                         type: "",
                       }
-                );
+                )
 
                 setItemChanged(true);
-                setSelectedAction(action.action);
-                setSelectedApp(action.app);
+
+								if (setSelectedAction !== undefined) {
+                	setSelectedAction(action.action);
+								}
+
+								if (setSelectedApp !== undefined) {
+                	setSelectedApp(action.app);
+								}
+
                 setAuthenticationModalOpen(true);
-              }}
+        		  }}
             >
-              Authenticate
-            </Button>
-          )
-        ) : null}
-        {action.must_activate ? (
+						<img
+							alt={action.app_name}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							src={action.large_image}
+						/>
+						<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
+							{action.auth_done ? "Authenticated" : `Authenticate ${action.app_name.replaceAll("_", " ")}`}
+						</Typography>
+        	</Button>
+         : null}
+				{action.update_version !== action.app_version ? 
           <Button
-            color="primary"
-            variant="contained"
-            onClick={() => {
-							console.log("ACTION: ", action)
-              activateApp(action.action.app_id, action.app_name, action.app_version);
-              setItemChanged(true);
-            }}
-          >
-            Activate
-          </Button>
-        ) : null}
-				{action.update_version !== action.app_version ? (
-          <Button
-            color="primary"
-            variant="contained"
-						style={{marginLeft: 5}}
-            onClick={() => {
+						fullWidth
+						variant="contained"
+						disabled={action.auth_done}
+						style={{
+							flex: 1,
+							textTransform: "none",
+							textAlign: "left",
+							justifyContent: "flex-start",
+							backgroundColor: action.auth_done ? theme.palette.surfaceColor : theme.palette.inputColor,
+							color: action.auth_done ? "#686a6c" : "#ffffff",
+							borderRadius: theme.palette.borderRadius,
+							minWidth: 350, 
+							maxHeight: 50,
+							overflow: "hidden",
+							border: `1px solid ${theme.palette.inputColor}`,
+						}}
+						color="primary"
+						onClick={(event) => {
+							event.preventDefault()
 							console.log("Set version to: ", action.update_version)
 
 							if (workflow.actions !== null) {
@@ -592,84 +705,398 @@ const ConfigureWorkflow = (props) => {
 							}
             }}
           >
-            {action.update_version}
+						<img
+							alt={action.app_name}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							src={action.large_image}
+						/>
+						<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
+							Update to version {action.update_version}
+						</Typography>
           </Button>
-        ) : null}
+					: 
+					action.must_activate ? 
+						<Button
+								fullWidth
+								variant="contained"
+								disabled={action.auth_done}
+								style={{
+									flex: 1,
+									textTransform: "none",
+									textAlign: "left",
+									justifyContent: "flex-start",
+									backgroundColor: action.auth_done ? theme.palette.surfaceColor : theme.palette.inputColor,
+									color: action.auth_done ? "#686a6c" : "#ffffff",
+									borderRadius: theme.palette.borderRadius,
+									minWidth: 350, 
+									maxHeight: 50,
+									overflow: "hidden",
+									border: `1px solid ${theme.palette.inputColor}`,
+								}}
+								color="primary"
+								onClick={() => {
+									console.log("ACTION: ", action)
+									activateApp(action.action.app_id, action.app_name, action.app_version);
+									setItemChanged(true);
+								}}
+					>
+						<img
+							alt={action.app_name}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							src={action.large_image}
+						/>
+						<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
+							Activate
+						</Typography>
+					</Button>
+				: 
+				null
+        }
       </ListItem>
     );
-  };
+  }
+									
+	// Based on the color here. Default: #f86a3e
+	//backgroundColor: selectedUsecaseCategory === usecase.name ? usecase.color : theme.palette.surfaceColor,
 
+	const BoxHighlight = (props) => {
+		const {data, appname, appinfo, index, activeStep, setActiveStep, finished, } = props
+
+		const [hovered, setHovered] = useState(false)
+		const [isOpen, setIsOpen] = useState(false)
+		const [isLoading, setIsLoading] = useState(false)
+
+		// This kind of just works for new workflows..
+		// What if we try many times?	
+
+		var webhook = {
+			"name": "Testhook",
+			"description": `A Webhook Trigger has been started and is ready to receive events from ${appname}. Click to copy the URL to send events to.`,
+			"url": "",
+		}
+
+		useEffect(() => {
+			if (data.type === "webhook" && !finished) {
+				if (!checkStarted) {
+					setCheckStarted(true)
+  				start()
+				}
+			}
+		}, [])
+
+		// Load webhook docs from the app itself (Wazuh)
+		// Add a "sample" for what the event is supposed to look like
+		// Have a listener for when ACTUALLY is received 
+		// INJECT the URL into the documentation when loading it in
+		// How can we load it in? Should we just use the app name & get docs -> parse?
+		if (data.type === "webhook" && workflow.triggers !== undefined && workflow.triggers !== null) {
+			//console.log("Find webhook in the workflow!")
+			for (var key in workflow.triggers) {
+				if (workflow.triggers[key].trigger_type !== "WEBHOOK") {
+					continue
+				}
+
+				for (var subkey in workflow.triggers[key].parameters) {
+					const param = workflow.triggers[key].parameters[subkey]
+					if (param.name === "url") {
+						webhook.url = param.value
+
+						if (isLoading === false) {
+							setIsLoading(true)
+						}
+						break
+					}
+				}
+			}
+		} else if (data.type == "authenticate") {
+			//console.log("Handle app authentication in the workflow!")
+		}
+	
+		return (
+			<div style={{backgroundColor: hovered ? theme.palette.inputColor : "inherit", padding: "10px 15px 10px 15px", borderTop: "1px solid rgba(255,255,255,0.15)",}} 
+				onClick={() => {
+					setIsOpen(!isOpen)
+					setActiveStep(index)
+				}}
+				onMouseOver={() => {
+					setHovered(true);
+				}}
+				onMouseOut={() => {
+					setHovered(false);
+				}}
+			>
+
+				<div style={{display: "flex"}}>
+      		<Typography variant="h6" style={{flex: 10, }}>{data.title}</Typography>
+					{finished ?
+						<CheckCircleRoundedIcon style={{color: "#0f9d58", flex: 1, }} />
+						:
+						<ErrorIcon style={{color: "#ffd300", flex: 1, }} />
+					}
+				</div>
+
+				{activeStep === index ? 
+					<div>
+						{data.type === "webhook" ?
+							<div onClick={(event) => {
+								event.preventDefault()
+								console.log("Clicked Webhook")
+
+								var copyText = document.getElementById("copy_element_shuffle")
+								if (copyText !== undefined && copyText !== null) {
+									console.log("NAVIGATOR: ", navigator);
+									const clipboard = navigator.clipboard;
+									if (clipboard === undefined) {
+										alert.error("Can only copy over HTTPS (port 3443)");
+										return;
+									}
+
+									navigator.clipboard.writeText(webhook.url);
+									copyText.select();
+									copyText.setSelectionRange(
+										0,
+										99999
+									); /* For mobile devices */
+
+									/* Copy the text inside the text field */
+									document.execCommand("copy");
+									alert.success("Copied Webhook URL");
+								}
+							}}>
+								<Typography variant="body2" color="textSecondary">{webhook.description}</Typography>
+								{/*<Typography variant="body2" color="textSecondary">{webhook.url}</Typography>*/}
+								{isLoading && finished === false ? 
+									<div style={{margin: "auto", width: 60, height: 60, marginTop: 5, }}>
+										<CircularProgress  /> 
+									</div>
+									: 
+									null
+								}
+							</div>
+						: 
+							<AppSection key={index} action={appinfo} />
+						}
+					</div>
+				: null}
+
+			</div>
+		)
+	}
+
+	const AppWrapper = (props) => {
+		const {data, parentindex} = props
+		const [clicked, setClicked] = useState(true)
+		const [hovered, setHovered] = useState(false)
+		const [activeStep, setActiveStep] = useState(0)
+		const [firstRun, setFirstRun] = useState(true)
+		const [finishCount, setFinishCount] = useState(0)
+
+		return (
+			<div style={{backgroundColor: hovered ? theme.palette.inputColor : "inherit", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, cursor: "pointer", }} 
+			>
+				<div style={{display: "flex", marginLeft: 15, marginTop: 15, marginBottom: 15, }} 
+					onClick={() => {
+						//setClicked(!clicked)
+					}}
+					onMouseOver={() => {
+						setHovered(true);
+					}}
+					onMouseOut={() => {
+						setHovered(false);
+					}}
+				>
+					<Avatar variant="rounded" style={{}}>
+						<img
+							alt={data.label}
+							src={data.large_image}
+							style={{ width: 50, }}
+						/>
+					</Avatar>
+					<Typography variant="h6" style={{marginLeft: 15, }}>
+						Configure {data.app_name.replaceAll("_", " ")}
+					</Typography>
+				</div>
+				{clicked === true ? 
+					data.steps.map((step, index) => {
+						var finished = false
+						if (step.type === "activate") {
+							if (data.activation_done === true) {
+								finished = true
+
+								if (index === activeStep && firstRun === true) {
+									setActiveStep(activeStep+1)
+								}
+						
+								if (firstRun) {
+									setFinishCount(finishCount+1)
+								}
+							}
+						}
+
+						if (step.type === "authenticate") {
+							console.log("AUTH STEP: ", step)
+							if (data.must_authenticate === true ) {
+								finished = false
+							} else {
+								if (data.activation_done === true && data.auth_done === true) {
+									finished = true 
+
+									if (firstRun) {
+										setFinishCount(finishCount+1)
+									}
+
+									if (index === activeStep && firstRun === true) {
+										setActiveStep(activeStep+1)
+									}
+								}
+							}
+						}
+
+						if (step.type === "webhook") {
+							for (var key in workflowExecutions) {
+								const exec = workflowExecutions[key]
+								if (exec.execution_argument !== undefined && exec.execution_argument !== null && exec.execution_argument.length > 0 && exec.execution_source === "webhook") {
+									//console.log("Done: ", exec)
+
+									finished = true
+									if (index === activeStep && firstRun === true) {
+										setActiveStep(activeStep+1)
+									
+									}
+
+									if (firstRun) {
+										setFinishCount(finishCount+1)
+									}
+
+									// Finished + source = webhook
+
+									stop()
+									//if (isLoading === true) {
+									//	setIsLoading(false)
+									//}
+									
+
+									break
+								}
+							}
+						}
+
+						if (firstRun === true && index === data.steps.length-1) {
+							setFirstRun(false)
+						}
+
+						return (
+							<BoxHighlight appinfo={data} appname={"Wazuh"} key={index} data={step} index={index} activeStep={activeStep} setActiveStep={setActiveStep} finished={finished} />
+						)
+					})
+				: null}
+			</div>
+		)
+	}
+
+	const topColor = "#f86a3e, #fc3922"
   return (
     <div>
-      <Typography variant="h6">{workflow.name}</Typography>
-      <Typography variant="body1" color="textSecondary">
-        The following configuration makes the workflow ready immediately.
-      </Typography>
-      {requiredActions.length > 0 ? (
-        <span>
-          <Typography variant="body1" style={{ marginTop: 10 }}>
-            Actions
-          </Typography>
-          <List>
-            {requiredActions.map((data, index) => {
-              return <AppSection key={index} action={data} />;
-            })}
-          </List>
-        </span>
-      ) : null}
+			<div style={{height: 75, width: "100%", background: `linear-gradient(to right, ${topColor}`, position: "relative",}}>
+			</div>
+			<div style={{margin: "25px 50px 50px 50px", maxHeight: 475, }}>
+      	<Typography variant="h6">{workflow.name}</Typography>
+      	<Typography variant="body2" color="textSecondary">
+      	  The following configuration makes the workflow ready immediately.
+      	</Typography>
+      	{requiredActions.length > 0 ? (
+      	  <span>
+      	    <Typography variant="body1" style={{ marginTop: 10, }}>
+      	      Required Actions
+      	    </Typography>
 
-      {requiredVariables.length > 0 ? (
-        <span>
-          <Typography variant="body1" style={{ marginTop: 10 }}>
-            Variables
-          </Typography>
-          <List>
-            {requiredVariables.map((data, index) => {
-              return <VariableSection key={index} variable={data} />;
-            })}
-          </List>
-        </span>
-      ) : null}
+      	    <List>
+      	      {requiredActions.map((data, index) => {
+      	        return (
+									<div>
+										{data.steps !== undefined && data.steps !== null && data.show_steps === true ?
+											<AppWrapper data={data} parentindex={index} />
+										: 
+											<AppSection key={index} action={data} />
+										}
+									</div>
+								)
+      	      })}
+      	    </List>
+      	  </span>
+      	) : null}
 
-      {requiredTriggers.length > 0 ? (
-        <span>
-          <Typography variant="body1" style={{ marginTop: 10 }}>
-            Triggers
-          </Typography>
-          <List>
-            {requiredTriggers.map((data, index) => {
-              return <TriggerSection key={index} trigger={data} />;
-            })}
-          </List>
-        </span>
-      ) : null}
-      <div style={{ textAlign: "center", display: "flex", marginTop: 20 }}>
-        <ButtonGroup style={{ margin: "auto" }}>
-          {/*
-					<Button color="primary" variant={"outlined"} style={{
-					}} onClick={() => {
-						setConfigureWorkflowModalOpen(false)
-					}}>
-						Skip 
-					</Button>
-					*/}
-          <Button
-            color="primary"
-            variant={itemChanged ? "contained" : "outlined"}
-            style={{}}
-            onClick={() => {
-              if (itemChanged) {
-                saveWorkflow(workflow);
-                window.location.reload();
-              } else {
-                setConfigureWorkflowModalOpen(false);
-              }
-            }}
-          >
-          	Close window 
-          </Button>
-        </ButtonGroup>
-      </div>
+      	{requiredVariables.length > 0 ? (
+      	  <span>
+      	    <Typography variant="body1" style={{ marginTop: 10 }}>
+      	      Variables
+      	    </Typography>
+      	    <List>
+      	      {requiredVariables.map((data, index) => {
+      	        return <VariableSection key={index} variable={data} />;
+      	      })}
+      	    </List>
+      	  </span>
+      	) : null}
+
+      	{requiredTriggers.length > 0 && showTriggers !== false ? (
+      	  <span>
+      	    <Typography variant="body1" style={{ marginTop: 10 }}>
+      	      Triggers
+      	    </Typography>
+      	    <List>
+      	      {requiredTriggers.map((data, index) => {
+      	        return <TriggerSection key={index} trigger={data} />;
+      	      })}
+      	    </List>
+      	  </span>
+      	) : null}
+
+				<div style={{ textAlign: "center", display: "flex", marginTop: 20 }}>
+					{showFinalizeAnimation ? 
+						<img id="finalize_gif" src="/images/finalize.gif" alt="finalize workflow animation" style={{width: 150, margin: "auto",}} onLoad={() => {
+							console.log("Img loaded.")
+							setTimeout(() => {
+								console.log("Img closing.")
+								setConfigureWorkflowModalOpen(false);
+							}, 1250)
+								
+						}}/>
+						:
+						<ButtonGroup style={{ margin: "auto" }}>
+							{/*
+							<Button color="primary" variant={"outlined"} style={{
+							}} onClick={() => {
+								setConfigureWorkflowModalOpen(false)
+							}}>
+								Skip 
+							</Button>
+							*/}
+							<Button
+								color="textSecondary"
+								variant={"outlined"}
+								style={{}}
+								onClick={() => {
+									stop()
+									setShowFinalizeAnimation(true)
+									setTimeout(() => {
+										if (itemChanged) {
+											if (saveWorkflow !== undefined) {
+												saveWorkflow(workflow);
+												window.location.reload();
+											}
+
+										} else {
+										}
+									}, 1000)
+								}}
+							>
+								Finalize	
+							</Button>
+						</ButtonGroup>
+					}
+				</div>
+			</div>
     </div>
   );
 };

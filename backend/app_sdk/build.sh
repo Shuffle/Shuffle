@@ -2,15 +2,20 @@
 
 ### DEFAULT 
 NAME=shuffle-app_sdk
-VERSION=0.9.70
+VERSION=1.1.0
 
 docker rmi docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION --force
-docker build . -f Dockerfile -t frikky/shuffle:app_sdk -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION -t ghcr.io/frikky/$NAME:nightly
+docker build . -f Dockerfile -t frikky/shuffle:app_sdk -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION -t ghcr.io/frikky/$NAME:nightly -t shuffle/shuffle:app_sdk -t shuffle/$NAME:$VERSION -t docker.pkg.github.com/shuffle/shuffle/$NAME:$VERSION -t ghcr.io/shuffle/$NAME:$VERSION -t ghcr.io/shuffle/$NAME:nightly
 
 docker push frikky/shuffle:app_sdk
 docker push ghcr.io/frikky/$NAME:$VERSION
 docker push ghcr.io/frikky/$NAME:nightly
 docker push ghcr.io/frikky/$NAME:latest
+
+docker push shuffle/shuffle:app_sdk
+docker push ghcr.io/shuffle/$NAME:$VERSION
+docker push ghcr.io/shuffle/$NAME:nightly
+docker push ghcr.io/shuffle/$NAME:latest
 
 
 
