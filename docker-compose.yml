@@ -1,8 +1,7 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
-    image: ghcr.io/shuffle/shuffle-frontend:nightly
+    image: ghcr.io/shuffle/shuffle-frontend:latest
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -16,8 +15,7 @@ services:
     depends_on:
       - backend
   backend:
-    build: ./backend
-    image: ghcr.io/shuffle/shuffle-backend:nightly
+    image: ghcr.io/shuffle/shuffle-backend:latest
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -29,7 +27,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
       - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
-      #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
     env_file: .env
     environment:
       #- DOCKER_HOST=tcp://docker-socket-proxy:2375
@@ -37,7 +34,7 @@ services:
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
   orborus:
-    image: ghcr.io/shuffle/shuffle-orborus:nightly
+    image: ghcr.io/shuffle/shuffle-orborus:latest
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
