@@ -1,4 +1,4 @@
-FROM golang:1.17.2-buster as builder
+FROM golang:1.19.3-buster as builder
 
 # Add files
 RUN mkdir /app
@@ -18,13 +18,21 @@ RUN go get -v
 RUN go mod tidy
 RUN go clean -modcache
 
+# From November 2022, CGO is enabled due to packages
+# that we use requiring it. This is a temporary fix
+# and makes us HAVE to install libc compatibility packages farther down.
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o webapp .
 
 # Certificate build - gets required certs
 FROM alpine:latest as certs
 RUN apk --update add ca-certificates
 
-FROM alpine:3.14.2
+# Sets up the final image
+FROM alpine:3.17.0
+
+# FIXME: Install cgo because CGO_ENABLED=1 during build
+RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libstdc++
 
 COPY --from=builder /app/ /app
 COPY --from=builder /app_sdk/ /app_sdk

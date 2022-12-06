@@ -2,11 +2,11 @@
 # Done manually for now since GHCR isn't being pushed to easily with the current Github action CI. Nightly = Latest IF we run hotfixes on latest
 
 ### Pull latest from ghcr CI/CD
-docker pull ghcr.io/shuffle/shuffle-app_sdk:nightly
-docker pull ghcr.io/shuffle/shuffle-worker:nightly
-docker pull ghcr.io/shuffle/shuffle-orborus:nightly
-docker pull ghcr.io/shuffle/shuffle-frontend:nightly
-docker pull ghcr.io/shuffle/shuffle-backend:nightly
+#docker pull ghcr.io/shuffle/shuffle-app_sdk:nightly
+#docker pull ghcr.io/shuffle/shuffle-worker:nightly
+#docker pull ghcr.io/shuffle/shuffle-orborus:nightly
+#docker pull ghcr.io/shuffle/shuffle-frontend:nightly
+#docker pull ghcr.io/shuffle/shuffle-backend:nightly
 
 ### LATEST releases:
 #docker tag ghcr.io/shuffle/shuffle-app_sdk:nightly ghcr.io/shuffle/shuffle-app_sdk:latest
