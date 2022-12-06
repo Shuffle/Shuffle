@@ -780,7 +780,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		if item.TriggerType == "SCHEDULE" && item.Status != "uninitialized" {
 			err = deleteSchedule(ctx, item.ID)
 			if err != nil {
-				log.Printf("Failed to delete schedule: %s - is it started?", err)
+				log.Printf("[DEBUG] Failed to delete schedule: %s - is it started?", err)
 			}
 		} else if item.TriggerType == "WEBHOOK" {
 			//err = removeWebhookFunction(ctx, item.ID)
@@ -790,7 +790,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		} else if item.TriggerType == "EMAIL" {
 			err = shuffle.HandleOutlookSubRemoval(ctx, user, workflow.ID, item.ID)
 			if err != nil {
-				log.Printf("Failed to delete OUTLOOK email sub (checking gmail after): %s", err)
+				log.Printf("[DEBUG] Failed to delete OUTLOOK email sub (checking gmail after): %s", err)
 			}
 
 			err = shuffle.HandleGmailSubRemoval(ctx, user, workflow.ID, item.ID)
@@ -798,14 +798,8 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 				log.Printf("Failed to delete gmail email sub: %s", err)
 			}
 		}
-
-		//err = increaseStatisticsField(ctx, "total_workflow_triggers", workflow.ID, -1, workflow.OrgId)
-		//if err != nil {
-		//	log.Printf("Failed to increase total workflows: %s", err)
-		//}
 	}
 
-	// FIXME - maybe delete workflow executions
 	err = shuffle.DeleteKey(ctx, "workflow", fileId)
 	if err != nil {
 		log.Printf("[DEBUG]] Failed deleting key %s", fileId)
@@ -815,11 +809,6 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 	log.Printf("[INFO] Should have deleted workflow %s (%s)", workflow.Name, fileId)
 
-	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
-	//memcache.Delete(ctx, memcacheName)
-	//memcacheName = fmt.Sprintf("%s_workflows", user.Username)
-	//memcache.Delete(ctx, memcacheName)
-	//cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	shuffle.DeleteCache(ctx, cacheKey)
 	log.Printf("[DEBUG] Cleared workflow cache for %s (%s)", user.Username, user.Id)
@@ -1427,15 +1416,14 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 }
 
 func deleteSchedule(ctx context.Context, id string) error {
-	log.Printf("Should stop schedule %s!", id)
+	log.Printf("[DEBUG] Should stop schedule %s!", id)
 	err := shuffle.DeleteKey(ctx, "schedules", id)
 	if err != nil {
-		log.Printf("Failed to delete schedule: %s", err)
+		log.Printf("[ERROR] Failed to delete schedule: %s", err)
 		return err
 	} else {
 		if value, exists := scheduledJobs[id]; exists {
-			log.Printf("STOPPING THIS SCHEDULE: %s", id)
-			// Looks like this does the trick? Hurr
+			// Stops the schedule properly
 			value.Lock()
 		} else {
 			// FIXME - allow it to kind of stop anyway?
