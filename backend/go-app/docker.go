@@ -3,13 +3,16 @@ package main
 // Docker
 import (
 	"archive/tar"
+
 	"github.com/shuffle/shuffle-shared"
+
 	//"bufio"
 	"path/filepath"
 	//"strconv"
 
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -756,7 +759,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 								tagFound = version.Name
 							}
 
-							buildSwaggerApp(resp, []byte(openApiApp.Body), user)
+							buildSwaggerApp(resp, []byte(openApiApp.Body), user, false)
 						}
 					}
 				}
@@ -802,6 +805,92 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	//resp.WriteHeader(200)
 }
 
+// Downloads and activates an app from shuffler.io if possible
+func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user shuffle.User, appId string) {
+	url := fmt.Sprintf("https://shuffler.io/api/v1/apps/%s/config", appId)
+	log.Printf("Downloading API from %s", url)
+	req, err := http.NewRequest(
+		"GET",
+		url,
+		nil,
+	)
+
+	if err != nil {
+		log.Printf("[ERROR] Failed auto-downloading app %s: %s", appId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+		return
+	}
+
+	httpClient := &http.Client{}
+	newresp, err := httpClient.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Failed running auto-download request for %s: %s", appId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+		return
+	}
+
+	respBody, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed setting respbody for workflow download: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+		return
+	}
+
+	if len(respBody) > 0 {
+		type tmpapp struct {
+			Success bool   `json:"success"`
+			OpenAPI string `json:"openapi"`
+		}
+
+		app := tmpapp{}
+		err := json.Unmarshal(respBody, &app)
+		if err != nil || app.Success == false || len(app.OpenAPI) == 0 {
+			log.Printf("[ERROR] Failed app unmarshal during auto-download. Success%#v. Applength: %d: %s", app.Success, len(app.OpenAPI), err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			return
+		}
+
+		key, err := base64.StdEncoding.DecodeString(app.OpenAPI)
+		if err != nil {
+			log.Printf("[ERROR] Failed auto-setting OpenAPI app: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			return
+		}
+
+		cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+		shuffle.DeleteCache(ctx, cacheKey)
+		cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+		shuffle.DeleteCache(ctx, cacheKey)
+		cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
+		shuffle.DeleteCache(ctx, cacheKey)
+
+		newapp := shuffle.ParsedOpenApi{}
+		err = json.Unmarshal(key, &newapp)
+		if err != nil {
+			log.Printf("[ERROR] Failed openapi unmarshal during auto-download: %s", app.Success, len(app.OpenAPI), err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			return
+		}
+
+		err = json.Unmarshal(key, &newapp)
+		if err != nil {
+			log.Printf("[ERROR] Failed openapi unmarshal during auto-download: %s", app.Success, len(app.OpenAPI), err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			return
+		}
+
+		buildSwaggerApp(resp, []byte(newapp.Body), user, true)
+		return
+	}
+}
+
 func activateWorkflowAppDocker(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -845,9 +934,9 @@ func activateWorkflowAppDocker(resp http.ResponseWriter, request *http.Request) 
 			apps, err := shuffle.FindWorkflowAppByName(ctx, appName)
 			//log.Printf("[INFO] Found %d apps for %s", len(apps), appName)
 			if err != nil || len(apps) == 0 {
-				log.Printf("[WARNING] Error getting app %s (app config): %s", appName, err)
-				resp.WriteHeader(401)
-				resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+				log.Printf("[WARNING] Error getting app %s (app config). Starting remote download.: %s", appName, err)
+
+				handleRemoteDownloadApp(resp, ctx, user, fileId)
 				return
 			}
 
@@ -868,10 +957,12 @@ func activateWorkflowAppDocker(resp http.ResponseWriter, request *http.Request) 
 
 			app = &selectedApp
 		} else {
-			log.Printf("[WARNING] Error getting app with ID %s (app config): %s", fileId, err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			log.Printf("[WARNING] Error getting app with ID %s (app config): %s. Starting remote download(2)", fileId, err)
+			handleRemoteDownloadApp(resp, ctx, user, fileId)
 			return
+			//resp.WriteHeader(401)
+			//resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			//return
 		}
 	}
 

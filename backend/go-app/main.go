@@ -3153,18 +3153,19 @@ func handleSwaggerValidation(body []byte) (shuffle.ParsedOpenApi, error) {
 	return parsed, err
 }
 
-func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
+func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, skipEdit bool) {
 	type Test struct {
-		Editing bool   `datastore:"editing"`
-		Id      string `datastore:"id"`
-		Image   string `datastore:"image"`
+		Editing bool   `json:"editing" datastore:"editing"`
+		Id      string `json:"id" datastore:"id"`
+		Image   string `json:"image" datastore:"image"`
+		Body    string `json:"body" datastore:"body"`
 	}
 
 	var test Test
 	err := json.Unmarshal(body, &test)
 	if err != nil {
-		log.Printf("[WARNING] Failed unmarshalling test: %s", err)
-		resp.WriteHeader(401)
+		log.Printf("[ERROR] Failed unmarshalling in swagger build: %s", err)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -3174,13 +3175,13 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	hasher.Write(body)
 	newmd5 := hex.EncodeToString(hasher.Sum(nil))
 
-	if test.Editing && len(user.Id) > 0 {
+	if test.Editing && len(user.Id) > 0 && skipEdit != true {
 		// Quick verification test
 		ctx := context.Background()
 		app, err := shuffle.GetApp(ctx, test.Id, user, false)
 		if err != nil {
-			log.Printf("[WARNING] Error getting app when editing: %s", app.Name)
-			resp.WriteHeader(401)
+			log.Printf("[ERROR] Error getting app when editing: %s", app.Name)
+			resp.WriteHeader(400)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
@@ -3188,7 +3189,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 		// FIXME: Check whether it's in use.
 		if user.Id != app.Owner && user.Role != "admin" {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
-			resp.WriteHeader(401)
+			resp.WriteHeader(400)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
@@ -3212,7 +3213,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	}
 
 	if swagger.Info == nil {
-		log.Printf("[ERORR] Info is nil?: %#v", swagger)
+		log.Printf("[ERORR] Info is nil in swagger?")
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Info not parsed"}`))
 		return
@@ -3322,7 +3323,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	//log.Println(stitched)
 
 	// 3. Zip and stream it directly in the directory
-	_, err = shuffle.StreamZipdata(ctx, identifier, stitched, "requests\nurllib3", "")
+	_, err = shuffle.StreamZipdata(ctx, identifier, stitched, shuffle.GetAppRequirements(), "")
 	if err != nil {
 		log.Printf("[ERROR] Zipfile error: %s", err)
 		resp.WriteHeader(500)
@@ -3473,7 +3474,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	buildSwaggerApp(resp, body, user)
+	buildSwaggerApp(resp, body, user, false)
 }
 
 // Creates osfs from folderpath with a basepath as directory base
@@ -3544,7 +3545,6 @@ func handleAppHotload(ctx context.Context, location string, forceUpdate bool) er
 		return err
 	}
 
-	//log.Printf("Reading app folder: %#v", dir)
 	_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
 	if err != nil {
 		log.Printf("[WARNING] Githubfolders error: %s", err)
