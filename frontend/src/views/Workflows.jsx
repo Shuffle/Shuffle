@@ -2271,35 +2271,35 @@ const Workflows = (props) => {
 						"",
 						data.status,
           )
-            .then((response) => {
-              if (response !== undefined) {
-                // SET THE FULL THING
-                data.id = response.id;
-                data.first_save = false;
-                data.previously_saved = false;
-                data.is_valid = false;
+					.then((response) => {
+						if (response !== undefined) {
+							// SET THE FULL THING
+							data.id = response.id;
+							data.first_save = false;
+							data.previously_saved = false;
+							data.is_valid = false;
 
-                // Actually create it
-                setNewWorkflow(
-                  data.name,
-                  data.description,
-                  data.tags,
-                  data.default_return_value,
-                  data,
-                  false,
-									[],
-									"",
-									data.status,
-                ).then((response) => {
-                  if (response !== undefined) {
-                    alert.success("Successfully imported " + data.name);
-                  }
-                });
-              }
-            })
-            .catch((error) => {
-              alert.error("Import error: " + error.toString());
-            });
+							// Actually create it
+							setNewWorkflow(
+								data.name,
+								data.description,
+								data.tags,
+								data.default_return_value,
+								data,
+								false,
+								[],
+								"",
+								data.status,
+							).then((response) => {
+								if (response !== undefined) {
+									alert.success("Successfully imported " + data.name);
+								}
+							});
+						}
+					})
+					.catch((error) => {
+						alert.error("Import error: " + error.toString());
+					});
         });
 
         // Actually reads

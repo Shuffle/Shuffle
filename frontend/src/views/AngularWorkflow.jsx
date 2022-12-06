@@ -6532,15 +6532,15 @@ const AngularWorkflow = (defaultprops) => {
 
 								return (
 									<div style={{textDecoration: "none", color: "white",}} onClick={(event) => {
-										if (!isCloud) {
-											alert.info("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
-											setTimeout(() => {
-												event.preventDefault()
-												window.open(parsedUrl, '_blank')
-											}, 2000)
-										} else {
-											alert.info(`Activating ${name}`)
-										}
+										//if (!isCloud) {
+										//	alert.info("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
+										//	setTimeout(() => {
+										//		event.preventDefault()
+										//		window.open(parsedUrl, '_blank')
+										//	}, 2000)
+										//} else {
+										alert.info(`Activating ${name}`)
+										//}
 
 										console.log("CLICK: ", hit)
 
@@ -6679,7 +6679,7 @@ const AngularWorkflow = (defaultprops) => {
 							}}
             >
               <Typography variant="body1" color="textSecondary">
-                Couldn't find an Activated app with that name. Searching unactivated apps. Click one to Activate it for your organization. 
+                Couldn't find the app you're looking for? Searching unactivated apps. Click one of the below apps to Activate it for your organization. 
               </Typography>
 							<InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
 								console.log("CLICKED")	
@@ -14837,6 +14837,7 @@ const AngularWorkflow = (defaultprops) => {
           <CloseIcon />
         </IconButton>
         <ConfigureWorkflow
+					userdata={userdata}
           alert={alert}
           theme={theme}
           setAuthenticationType={setAuthenticationType}

@@ -392,21 +392,21 @@ const Welcome = (props) => {
 										</Typography>
 										<Fade>
 												<AppFramework
-														inputUsecase={inputUsecase}
-														frameworkData={frameworkData}
-														setFrameworkData={setFrameworkData}
-														selectedOption={"Draw"}
-														showOptions={false}
-														isLoaded={true}
-														isLoggedIn={true}
-														globalUrl={globalUrl}
-														size={0.78}
-														color={theme.palette.platformColor}
-														discoveryWrapper={discoveryWrapper}
-														setDiscoveryWrapper={setDiscoveryWrapper}
-														apps={apps}
-														inputUsecases={usecases}
-														setInputUsecases={setUsecases}
+													inputUsecase={inputUsecase}
+													frameworkData={frameworkData}
+													setFrameworkData={setFrameworkData}
+													selectedOption={"Draw"}
+													showOptions={false}
+													isLoaded={true}
+													isLoggedIn={true}
+													globalUrl={globalUrl}
+													size={0.78}
+													color={theme.palette.platformColor}
+													discoveryWrapper={discoveryWrapper}
+													setDiscoveryWrapper={setDiscoveryWrapper}
+													apps={apps}
+													inputUsecases={usecases}
+													setInputUsecases={setUsecases}
 												/>
 										</Fade>
 									</div>
