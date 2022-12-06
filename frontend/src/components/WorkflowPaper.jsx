@@ -63,6 +63,10 @@ const WorkflowPaper = (props) => {
     const [anchorEl, setAnchorEl] = React.useState(null);
 		const appGroup = data.action_references === undefined || data.action_references === null ? [] : data.action_references
 
+  	const isCloud =
+			window.location.host === "localhost:3002" ||
+			window.location.host === "shuffler.io";
+
 		//console.log("Workflow: ", data)
     var boxColor = "#86c142";
 
@@ -94,6 +98,10 @@ const WorkflowPaper = (props) => {
 		var parsedUrl = `/workflows/${data.objectID}`
 		if (data.__queryID !== undefined && data.__queryID !== null) {
 			parsedUrl += `?queryID=${data.__queryID}`
+		}
+
+		if (!isCloud) {
+			parsedUrl = `https://shuffler.io${parsedUrl}`
 		}
 
     return (
@@ -137,12 +145,14 @@ const WorkflowPaper = (props) => {
                     flex: 10,
                   }}
                 >
-                  <Link
-                    to={parsedUrl}
+                  <a
+                    href={parsedUrl}
+										rel="norefferer"
+										target="_blank"
                     style={{ textDecoration: "none", color: "inherit" }}
                   >
                     {parsedName}
-                  </Link>
+                  </a>
                 </Typography>
               </Tooltip>
             </Grid>

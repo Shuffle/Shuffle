@@ -148,6 +148,8 @@ const AppGrid = props => {
 		//	setInnerHits(hits)
 		//}
 
+		console.log("In appgrid")
+
 		return (
 			<Grid container spacing={2}>
 				{hits.map((data, index) => {
@@ -184,11 +186,11 @@ const AppGrid = props => {
 					}
 					
 					parsedname = (parsedname.charAt(0).toUpperCase()+parsedname.substring(1)).replaceAll("_", " ")
-
+					const appUrl = isCloud ? `/apps/${data.objectID}?queryID=${data.__queryID}` : `https://shuffler.io/apps/${data.objectID}?queryID=${data.__queryID}`
 					return (
 						<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
 							<Grid item xs={xs} key={index}>
-								<Link to={`/apps/${data.objectID}?queryID=${data.__queryID}`} style={{textDecoration: "none", color: "#f85a3e"}}>
+								<a href={appUrl} rel="noopener noreferrer" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
 									<Paper elevation={0} style={paperStyle} onMouseOver={() => {
 										setMouseHoverIndex(index)
 										/*
@@ -254,7 +256,7 @@ const AppGrid = props => {
 											</Tooltip>
 										}
 									</Paper>
-								</Link>
+								</a>
 							</Grid>
 						</Zoom>
 					)

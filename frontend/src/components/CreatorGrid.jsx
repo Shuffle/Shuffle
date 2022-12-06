@@ -53,6 +53,10 @@ const CreatorGrid = props => {
 
 	const buttonStyle = {borderRadius: 30, height: 50, width: 220, margin: isMobile ? "15px auto 15px auto" : 20, fontSize: 18,}
 
+	const isCloud =
+		window.location.host === "localhost:3002" ||
+		window.location.host === "shuffler.io";
+
 	const innerColor = "rgba(255,255,255,0.65)"
 	const borderRadius = 3
 	window.title = "Shuffle | Workflows | Discover your use-case"
@@ -159,62 +163,64 @@ const CreatorGrid = props => {
 					}
 
 					counted += 1
+					const creatorUrl = !isCloud ? `https://shuffler.io/creators/${data.username}` : `/creators/${data.username}`
 
 					return (
 						<Zoom key={index} in={true} style={{}}>
 							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px", }}>
 								<Card style={{border: "1px solid rgba(255,255,255,0.3)", minHeight: 177, maxHeight: 177,}}>
-						  		<CardActionArea component={Link} to={"/creators/"+data.username} style={{padding: "5px 10px 5px 10px", minHeight: 177, maxHeight: 177,}}>
-										<CardContent sx={{ flex: '1 0 auto', minWidth: 160, maxWidth: 160, overflow: "hidden", padding: 0, }}>
-											<div style={{display: "flex"}}>
-												<img style={{height: 74, width: 74, borderRadius: 100, }} alt={"Creator profile of "+data.username} src={data.image} />
-												<Typography component="div" variant="body1" style={{marginTop: 20, marginLeft: 15, }}>
-													@{data.username}
-												</Typography>
-												<span style={{marginTop: "auto", marginBottom: "auto", marginLeft: 10, }}>
-													{data.verified === true ? 
-														<Tooltip title="Verified and earning from Shuffle contributions" placement="top">
-															<VerifiedUserIcon style={{}}/>
-														</Tooltip>
-													: 
-													null
-													}
-												</span>
-											</div>
-											<Typography variant="body1" color="textSecondary" style={{marginTop: 10, }}>
-												<b>{data.apps === undefined || data.apps === null ? 0 : data.apps}</b> apps <span style={{marginLeft: 15, }}/><b>{data.workflows === null || data.workflows === undefined ? 0 : data.workflows}</b> workflows
-											</Typography> 
-										{data.specialized_apps !== undefined && data.specialized_apps !== null && data.specialized_apps.length > 0 ? 
-											<AvatarGroup max={10} style={{flexDirection: "row", padding: 0, margin: 0, itemAlign: "left", textAlign: "left", marginTop: 3,}}>
-												{data.specialized_apps.map((app, index) => {
-													// Putting all this in secondary of ListItemText looked weird.
-													return (
-														<div
-															key={index}
-															style={{
-																height: 24,
-																width: 24,
-																filter: "brightness(0.6)",
-																cursor: "pointer",
-															}}
-															onClick={() => {
-																console.log("Click")
-																//navigate("/apps/"+app.id)
-															}}
-														>
-															<Tooltip color="primary" title={app.name} placement="bottom">
-																<Avatar alt={app.name} src={app.image} style={{width: 24, height: 24}}/>
+									<a href={creatorUrl} rel="noopener noreferrer" target="_blank" style={{textDecoration: "none", color: "inherit",}}>
+						  			<CardActionArea style={{padding: "5px 10px 5px 10px", minHeight: 177, maxHeight: 177,}}>
+											<CardContent sx={{ flex: '1 0 auto', minWidth: 160, maxWidth: 160, overflow: "hidden", padding: 0, }}>
+												<div style={{display: "flex"}}>
+													<img style={{height: 74, width: 74, borderRadius: 100, }} alt={"Creator profile of "+data.username} src={data.image} />
+													<Typography component="div" variant="body1" style={{marginTop: 20, marginLeft: 15, }}>
+														@{data.username}
+													</Typography>
+													<span style={{marginTop: "auto", marginBottom: "auto", marginLeft: 10, }}>
+														{data.verified === true ? 
+															<Tooltip title="Verified and earning from Shuffle contributions" placement="top">
+																<VerifiedUserIcon style={{}}/>
 															</Tooltip>
-														</div>
-													)
-												})}
-											</AvatarGroup>
-											: 
-											null}
-										</CardContent>
-									</CardActionArea>
+														: 
+														null
+														}
+													</span>
+												</div>
+												<Typography variant="body1" color="textSecondary" style={{marginTop: 10, }}>
+													<b>{data.apps === undefined || data.apps === null ? 0 : data.apps}</b> apps <span style={{marginLeft: 15, }}/><b>{data.workflows === null || data.workflows === undefined ? 0 : data.workflows}</b> workflows
+												</Typography> 
+											{data.specialized_apps !== undefined && data.specialized_apps !== null && data.specialized_apps.length > 0 ? 
+												<AvatarGroup max={10} style={{flexDirection: "row", padding: 0, margin: 0, itemAlign: "left", textAlign: "left", marginTop: 3,}}>
+													{data.specialized_apps.map((app, index) => {
+														// Putting all this in secondary of ListItemText looked weird.
+														return (
+															<div
+																key={index}
+																style={{
+																	height: 24,
+																	width: 24,
+																	filter: "brightness(0.6)",
+																	cursor: "pointer",
+																}}
+																onClick={() => {
+																	console.log("Click")
+																	//navigate("/apps/"+app.id)
+																}}
+															>
+																<Tooltip color="primary" title={app.name} placement="bottom">
+																	<Avatar alt={app.name} src={app.image} style={{width: 24, height: 24}}/>
+																</Tooltip>
+															</div>
+														)
+													})}
+												</AvatarGroup>
+												: 
+												null}
+											</CardContent>
+										</CardActionArea>
+									</a>
 								</Card>
-
 							</Grid>
 						</Zoom>
 					)
