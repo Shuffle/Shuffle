@@ -786,7 +786,9 @@ const UsecaseSearch = (props) => {
 	}
 
 	const mergeWorkflowUsecases = (usecasedata) => {
-		const url = `${globalUrl}/api/v1/workflows/merge`;
+		//const url = `${globalUrl}/api/v1/workflows/merge`;
+		//const url = `https://0360-178-232-150-183.ngrok.io/api/v1/workflows/merge`;
+		const url = `https://shuffler.io/api/v1/workflows/merge`;
 		fetch(url, {
 			mode: "cors",
 			method: "POST",
@@ -802,76 +804,85 @@ const UsecaseSearch = (props) => {
 			response.json().then((responseJson) => {
 				setIsUploading(false)
 				var changed = false
-				if (responseJson.success === false) {
-					if (responseJson.reason !== null && responseJson.reason !== undefined) {
-						//alert.error(responseJson.reason)
-					}
 
-					if (responseJson.source === "") {
-						const appname = 
-						usecasedata.source.error = usecasedata.source.app_name === undefined ? "Select a Trigger workflow first" : `${usecasedata.source.app_name} has no public trigger workflow yet. Click this to try another app`
-						changed = true 
+					if (responseJson.success === false) {
+						if (responseJson.reason !== null && responseJson.reason !== undefined) {
+							//alert.error(responseJson.reason)
+						}
+
+						if (responseJson.source === "") {
+							const appname = 
+							usecasedata.source.error = usecasedata.source.app_name === undefined ? "Select a Trigger workflow first" : `${usecasedata.source.app_name} has no public trigger workflow yet. Click this to try another app`
+							changed = true 
+							} else {
+								usecasedata.source.error = ""
+								changed = true 
+							}
+
+						if (responseJson.destination === "") {
+							usecasedata.destination.error = usecasedata.destination.app_name === undefined ? "Select a Subflow first" : `${usecasedata.destination.app_name} has no public subflow yet. Click this to try another app`
+							changed = true 
 						} else {
-							usecasedata.source.error = ""
+							usecasedata.destination.error = ""
 							changed = true 
 						}
 
-					if (responseJson.destination === "") {
-						usecasedata.destination.error = usecasedata.destination.app_name === undefined ? "Select a Subflow first" : `${usecasedata.destination.app_name} has no public subflow yet. Click this to try another app`
-						changed = true 
-					} else {
-						usecasedata.destination.error = ""
-						changed = true 
-					}
+						if (responseJson.middle !== undefined) {
+							for (var key in responseJson.middle) {
+								for (var subkey in usecasedata.middle) {
+									if (responseJson.middle[key] === usecasedata.middle[key].text) {
+										console.log("Found: ")
+										if (usecasedata.middle[subkey].app_name === undefined || usecasedata.middle[subkey].app_name === "") {
+											usecasedata.middle[subkey].error = `${usecasedata.middle[subkey].type} app must be selected first. Click this to change`
+										} else {
+											usecasedata.middle[subkey].error = `${usecasedata.middle[subkey].app_name} has no public subflow yet. Click this to change`
+										}
 
-					if (responseJson.middle !== undefined) {
-						for (var key in responseJson.middle) {
-							for (var subkey in usecasedata.middle) {
-								if (responseJson.middle[key] === usecasedata.middle[key].text) {
-									console.log("Found: ")
-									if (usecasedata.middle[subkey].app_name === undefined || usecasedata.middle[subkey].app_name === "") {
-										usecasedata.middle[subkey].error = `${usecasedata.middle[subkey].type} app must be selected first. Click this to change`
-									} else {
-										usecasedata.middle[subkey].error = `${usecasedata.middle[subkey].app_name} has no public subflow yet. Click this to change`
+										changed = true
+										break
 									}
-
-									changed = true
-									break
 								}
 							}
 						}
-					}
-				} else {
-					if (responseJson.workflow_id !== null && responseJson.workflow_id !== undefined) {
-						if (responseJson.added_auth !== undefined && responseJson.added_auth !== null && responseJson.added_auth.length > 0) {
-							console.log("SHOULD HANDLE AUTH: ", responseJson.added_auth)
-							setConfigureWorkflowAuth(responseJson.added_auth)
-			
-							if (setFoundWorkflowId !== undefined) {
-								console.log("Set found workflow id: ", responseJson.workflow_id)
-								setFoundWorkflowId(responseJson.workflow_id)
+					} else {
+						if (!isCloud) {
+							console.log("Not cloud!")
+							setFoundWorkflowId(responseJson.id)
+							setWorkflow(responseJson)
+						} else if (isCloud) {
+							if (responseJson.workflow_id !== null && responseJson.workflow_id !== undefined) {
+								if (responseJson.added_auth !== undefined && responseJson.added_auth !== null && responseJson.added_auth.length > 0) {
+									console.log("SHOULD HANDLE AUTH: ", responseJson.added_auth)
+									setConfigureWorkflowAuth(responseJson.added_auth)
+				
+									if (setFoundWorkflowId !== undefined) {
+										console.log("Set found workflow id: ", responseJson.workflow_id)
+										setFoundWorkflowId(responseJson.workflow_id)
+									}
+
+									getWorkflow(responseJson.workflow_id) 
+									getAppAuthentication()
+								} else {
+									if (setFoundWorkflowId !== undefined) {
+										console.log("Set found workflow id: ", responseJson.workflow_id)
+										setFoundWorkflowId(responseJson.workflow_id)
+									}
+
+									setWorkflow({"id": responseJson.workflow_id})
+								}
 							}
 
-							getWorkflow(responseJson.workflow_id) 
-  						getAppAuthentication()
-						} else {
-							if (setFoundWorkflowId !== undefined) {
-								console.log("Set found workflow id: ", responseJson.workflow_id)
-								setFoundWorkflowId(responseJson.workflow_id)
+							if (responseJson.auth_required === true) {
+								console.log("SET AUTH AS NEXT STEP!")
 							}
 
-							setWorkflow({"id": responseJson.workflow_id})
+
 						}
 					}
-
-					if (responseJson.auth_required === true) {
-						console.log("SET AUTH AS NEXT STEP!")
+					
+					if (changed === true) {
+						setAllUsecases([usecasedata])
 					}
-				}
-
-				if (changed === true) {
-					setAllUsecases([usecasedata])
-				}
 			})
 		)
 		.catch((error) => {

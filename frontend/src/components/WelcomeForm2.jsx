@@ -162,7 +162,6 @@ const WelcomeForm = (props) => {
 				if (foundTab !== null && foundTab !== undefined && !isNaN(foundTab)) {
 					if (foundTab === 3 || foundTab === "3") {
 						console.log("SET SEARCH!!")
-    				//setclickdiff(240)
 					}
 				} else { 
     			//navigate(`/welcome?tab=1`)
@@ -298,7 +297,7 @@ const WelcomeForm = (props) => {
 
 				if (activeStep === 0) {
 					console.log("Should send basic information about org (fetch)")
-    			setclickdiff(0)
+					setclickdiff(240)
 					navigate(`/welcome?tab=2`)
 											
 					if (isCloud) {
@@ -321,8 +320,6 @@ const WelcomeForm = (props) => {
 					console.log("Should send secondary info about apps and other things")
 					setDiscoveryWrapper({})
     	
-    			setclickdiff(240)
-    			//setclickdiff(0)
 					navigate(`/welcome?tab=3`)
 					//handleSetSearch("Enrichment", "2. Enrich")
 					handleSetSearch(usecaseButtons[0].name, usecaseButtons[0].usecase)
@@ -356,10 +353,8 @@ const WelcomeForm = (props) => {
 					if (getFramework !== undefined) {
 						getFramework()
 					}
-    			setclickdiff(0)
 					navigate("/welcome?tab=2")
 				} else if (activeStep === 1) {
-    			//setclickdiff(0)
 					navigate("/welcome?tab=1")
 				}
     };
@@ -376,6 +371,7 @@ const WelcomeForm = (props) => {
             return newSkipped;
         });
     };
+
     const handleReset = () => {
         setActiveStep(0);
     };
@@ -384,6 +380,7 @@ const WelcomeForm = (props) => {
         console.log("Selected app changed (effect)")
     }, [newSelectedApp])
 
+		console.log("Clickdiff: ", clickdiff)
 	
 		//const buttonWidth = 145 
 		const buttonWidth = 450 
@@ -434,7 +431,7 @@ const WelcomeForm = (props) => {
 													</Typography>
 											*/}
 											<Typography variant="body1" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
-												First, we need some more information in order to understand how we best can help you find relevant Usecases. This is optional, but highly encouraged.
+												In order to understand how we best can help you find relevant Usecases, please provide the information below. This is optional, but highly encouraged.
 											</Typography> 
                         <Grid item xs={11} style={{marginTop: 16, padding: 0,}}>
                           <TextField
@@ -761,7 +758,7 @@ const WelcomeForm = (props) => {
 																disabled={activeStep === 0} 
 																onClick={handleBack}
 																variant={"outlined"}
-																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -594 : -577, left: activeStep === 1 ? 105+clickdiff : -145+clickdiff, }} 
+																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -600 : -577, left: activeStep === 1 ? 105 : -145+clickdiff, }} 
 															>
 																	Back
 															</Button>
@@ -769,7 +766,7 @@ const WelcomeForm = (props) => {
 																variant={"outlined"}
 																color="primary" 
 																onClick={handleNext} 
-																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -594 : -577, left: activeStep === 1 ? 758+clickdiff : 510+clickdiff, }} 
+																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -600: -577, left: activeStep === 1 ? 748 : 510+clickdiff, }} 
 																disabled={activeStep === 0 ? orgName.length === 0 || name.length === 0 : false}
 															>
 																	{activeStep === steps.length - 1 ? "Finish" : "Next"}
@@ -804,7 +801,8 @@ const WelcomeForm = (props) => {
 																	color="secondary" 
 																	onClick={() => {
 																		console.log("Skip!")
-												
+    		
+																		setclickdiff(240)
 																		if (isCloud) {
 																				ReactGA.event({
 																					category: "welcome",

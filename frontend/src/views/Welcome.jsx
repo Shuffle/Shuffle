@@ -309,7 +309,7 @@ const Welcome = (props) => {
 		}
 
     return (
-				<div style={{width: 1000, margin: "auto", backgroundColor: theme.palette.platformColor, paddingBottom: 150, minHeight: 1500,}}>
+				<div style={{width: 1000, margin: "auto", backgroundColor: theme.palette.platformColor, paddingBottom: 150, minHeight: 1500, }}>
 					{/*
 					<div style={{position: "fixed", bottom: 110, right: 110, display: "flex", }}>
 						<img src="/images/Arrow.png" style={{width: 250, height: "100%",}} />
@@ -317,7 +317,7 @@ const Welcome = (props) => {
 					*/}
 					{showWelcome === true ? 
 						<div>
-							<div style={{minWidth: 500, maxWidth: 500, margin: "auto",}}>
+							<div style={{minWidth: 500, maxWidth: 500, margin: "auto", marginTop: isCloud ? "auto" : 20, }}>
 								<Stepper 
 									activeStep={activeStep} 
 									color="primary"
@@ -430,6 +430,8 @@ const Welcome = (props) => {
 													action: "click_welcome_continue",
 													label: "",
 												})
+										} else {
+											//setActiveStep(1)
 										}
 
 										setShowWelcome(true)

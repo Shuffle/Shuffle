@@ -691,13 +691,25 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 
 	err = shuffle.SetUser(ctx, newUser, true)
 	if err != nil {
-		log.Printf("Error adding User %s: %s", username, err)
+		log.Printf("[ERROR] Problem adding User %s: %s", username, err)
 		return err
 	}
 
 	neworg, err := shuffle.GetOrg(ctx, org.Id)
 	if err == nil {
 		//neworg.Users = append(neworg.Users, *newUser)
+		for tutorialIndex, tutorial := range neworg.Tutorials {
+			if tutorial.Name == "Invite teammates" {
+				neworg.Tutorials[tutorialIndex].Description = fmt.Sprintf("%d users are in your org. Org name and Image change next.", len(neworg.Users))
+				if len(neworg.Users) > 0 {
+					neworg.Tutorials[tutorialIndex].Done = true
+					neworg.Tutorials[tutorialIndex].Link = "/admin"
+				}
+
+				break
+			}
+		}
+
 		err = shuffle.SetOrg(ctx, *neworg, neworg.Id)
 		if err != nil {
 			log.Printf("Failed updating org with user %s", newUser.Username)
@@ -843,6 +855,8 @@ func handleCookie(request *http.Request) bool {
 	return true
 }
 
+// Returns whether the user is logged in or not etc.
+// Also has more data about the user and org
 func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -1050,9 +1064,21 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	tutorialsFinished := userInfo.PersonalInfo.Tutorials
+	tutorialsFinished := []shuffle.Tutorial{}
+	for _, tutorial := range userInfo.PersonalInfo.Tutorials {
+		tutorialsFinished = append(tutorialsFinished, shuffle.Tutorial{
+			Name: tutorial,
+		})
+	}
+
 	if len(org.SecurityFramework.SIEM.Name) > 0 || len(org.SecurityFramework.Network.Name) > 0 || len(org.SecurityFramework.EDR.Name) > 0 || len(org.SecurityFramework.Cases.Name) > 0 || len(org.SecurityFramework.IAM.Name) > 0 || len(org.SecurityFramework.Assets.Name) > 0 || len(org.SecurityFramework.Intel.Name) > 0 || len(org.SecurityFramework.Communication.Name) > 0 {
-		tutorialsFinished = append(tutorialsFinished, "find_integrations")
+		tutorialsFinished = append(tutorialsFinished, shuffle.Tutorial{
+			Name: "find_integrations",
+		})
+	}
+
+	for _, tutorial := range org.Tutorials {
+		tutorialsFinished = append(tutorialsFinished, tutorial)
 	}
 
 	returnValue := shuffle.HandleInfo{
@@ -1072,7 +1098,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		EthInfo:      userInfo.EthInfo,
 		ChatDisabled: chatDisabled,
 		Tutorials:    tutorialsFinished,
-		Priorities:   orgPriorities,
+
+		Priorities: orgPriorities,
 	}
 
 	returnData, err := json.Marshal(returnValue)
@@ -1369,8 +1396,12 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - have timeout here
-	tutorialsFinished := Userdata.PersonalInfo.Tutorials
+	tutorialsFinished := []shuffle.Tutorial{}
+	for _, tutorial := range Userdata.PersonalInfo.Tutorials {
+		tutorialsFinished = append(tutorialsFinished, shuffle.Tutorial{
+			Name: tutorial,
+		})
+	}
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Tutorials: tutorialsFinished,
