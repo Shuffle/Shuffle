@@ -62,7 +62,7 @@ import NestedMenuItem from "material-ui-nested-menu-item";
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 //https://next.material-ui.com/components/material-icons/
-import { DataGrid, GridToolbar } from "@material-ui/data-grid";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
@@ -148,9 +148,9 @@ const GettingStarted = (props) => {
   const [downloadUrl, setDownloadUrl] = React.useState(
     "https://github.com/frikky/shuffle-workflows"
   );
+  const [videoViewOpen, setVideoViewOpen] = React.useState(false)
   const [downloadBranch, setDownloadBranch] = React.useState("master");
   const [loadWorkflowsModalOpen, setLoadWorkflowsModalOpen] = React.useState(false);
-  const [videoViewOpen, setVideoViewOpen] = React.useState(false);
   const [exportModalOpen, setExportModalOpen] = React.useState(false);
   const [exportData, setExportData] = React.useState("");
 
@@ -515,8 +515,6 @@ const GettingStarted = (props) => {
       credentials: "include",
     })
       .then((response) => {
-				setVideoViewOpen(true)
-
         if (response.status !== 200) {
           console.log("Status not 200 for workflows :O!: ", response.status);
 
@@ -561,6 +559,7 @@ const GettingStarted = (props) => {
 					// Ensures the zooming happens only once per load
         	setTimeout(() => {
 						setFirstLoad(false)
+						setVideoViewOpen(true)
 					}, 100)
         } else {
           if (isLoggedIn) {
@@ -2152,7 +2151,7 @@ const GettingStarted = (props) => {
 		const steps = [
 			{
 				html: (
-					<Typography variant={textType} style={{marginTop: textSpacingDiff}} onClick={() => {
+					<Typography variant={textType} style={{marginTop: textSpacingDiff, textAlign: "left",}} onClick={() => {
 						if (isCloud) {
 							ReactGA.event({
 								category: "getting-started",
@@ -2160,15 +2159,15 @@ const GettingStarted = (props) => {
 							})
 						}
 					}}>
-						<Link to="/detectionframework" style={{textDecoration: "none", color: "#f86a3e",}}>Find relevant apps</Link> and start your automation journey
+						<Link to="/welcome?tab=2" style={{textDecoration: "none", color: "#f86a3e",}}>Find relevant apps</Link> and start your automation journey
 					</Typography>
 				), 
 				tutorial: "find_integrations",
 			},
 			{
 				html: 
-					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
-							Discover <Link to="/usecases" style={{cursor: "pointer", textDecoration: "none", color: "#f86a3e",}}>Use Case ideas</Link> and&nbsp;
+					<Typography variant={textType} style={{marginTop: textSpacingDiff, textAlign: "left",}}>
+							Discover <Link to="/welcome?tab=3" style={{cursor: "pointer", textDecoration: "none", color: "#f86a3e",}}>Use-Case ideas</Link> and&nbsp;
 							<span style={{cursor: "pointer", textDecoration: "none", color: "#f86a3e",}} onClick={() => {
     
   						if (isCloud) {
@@ -2200,7 +2199,7 @@ const GettingStarted = (props) => {
 			},
 			{
 				html: (
-					<Typography variant={textType} style={{marginTop: textSpacingDiff}} onClick={() => {
+					<Typography variant={textType} style={{marginTop: textSpacingDiff, textAlign: "left",}} onClick={() => {
 						if (isCloud) {
 							ReactGA.event({
 								category: "getting-started",
@@ -2218,8 +2217,8 @@ const GettingStarted = (props) => {
 			},
 			{
 				html: 
-					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
-						Configure your organization <Link to="/admin" style={{textDecoration: "none", color: "#f86a3e",}}>in the admin panel</Link>
+					<Typography variant={textType} style={{marginTop: textSpacingDiff, textAlign: "left",}}>
+						Configure your organization name <Link to="/admin" style={{textDecoration: "none", color: "#f86a3e",}}>in the admin panel</Link> and <Link to="/admin?tab=users" style={{textDecoration: "none", color: "#f86a3e",}}>invite your team</Link>
 					</Typography>,
 				tutorial: "configure_organization",
 			}
@@ -2227,55 +2226,53 @@ const GettingStarted = (props) => {
 	
     return (
       <div style={viewStyle}>
-				{isCloud ? 
-					<Dialog
-						open={videoViewOpen}
-						onClose={() => {
-							setVideoViewOpen(false)
-						}}
-						PaperProps={{
-							style: {
-								backgroundColor: surfaceColor,
-								color: "white",
-								minWidth: 560,
-								minHeight: 415,
-								textAlign: "center",
-							},
-						}}
+				<Dialog
+					open={videoViewOpen}
+					onClose={() => {
+						setVideoViewOpen(false)
+					}}
+					PaperProps={{
+						style: {
+							backgroundColor: surfaceColor,
+							color: "white",
+							minWidth: 560,
+							minHeight: 415,
+							textAlign: "center",
+						},
+					}}
+				>
+					<DialogTitle>
+						Welcome to Shuffle!	
+					</DialogTitle>
+
+					<Tooltip
+						title="Close window"
+						placement="top"
+						style={{ zIndex: 10011 }}
 					>
-      			<DialogTitle>
-							Welcome to Shuffle!	
-      			</DialogTitle>
-
-        	  <Tooltip
-        	    title="Close window"
-        	    placement="top"
-        	    style={{ zIndex: 10011 }}
-        	  >
-        	    <IconButton
-        	      style={{ zIndex: 5000, position: "absolute", top: 10, right: 34 }}
-        	      onClick={(e) => {
-        	        e.preventDefault();
-        	        setVideoViewOpen(false)
-        	      }}
-        	    >
-        	      <CloseIcon style={{ color: "white" }} />
-        	    </IconButton>
-        	  </Tooltip>
-
-						<iframe 
-							width="560"
-							height="315" 
-							style={{margin: "0px auto 0px auto", width: 560, height: 315,}}
-							src="https://www.youtube-nocookie.com/embed/rO7k9q3OgC0" 
-							title="Introduction video" 
-							frameborder="0"
-							allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-							allowfullscreen
+						<IconButton
+							style={{ zIndex: 5000, position: "absolute", top: 10, right: 34 }}
+							onClick={(e) => {
+								e.preventDefault();
+								setVideoViewOpen(false)
+							}}
 						>
-						</iframe>
-					</Dialog>
-				: null}
+							<CloseIcon style={{ color: "white" }} />
+						</IconButton>
+					</Tooltip>
+
+					<iframe 
+						width="560"
+						height="315" 
+						style={{margin: "0px auto 0px auto", width: 560, height: 315,}}
+						src="https://www.youtube-nocookie.com/embed/rO7k9q3OgC0" 
+						title="Introduction video" 
+						frameborder="0"
+						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+						allowfullscreen
+					>
+					</iframe>
+				</Dialog>
         <div style={workflowViewStyle}>
 					<Typography variant="h1" style={{fontSize: 30, marginTop: 25, }}>
 						Getting Started with Shuffle
@@ -2292,8 +2289,34 @@ const GettingStarted = (props) => {
 									console.log("Found tutorial for ", data.tutorial)
 									tutorialFound = true 
 								}
-							}
 
+								if (tutorialFound === false) {
+									if (data.tutorial === "discover_workflows") {
+										if (workflows.length > 0) {
+											for (var key in workflows) {
+												const tmpworkflow = workflows[key]
+												if (tmpworkflow.published_id !== undefined && tmpworkflow.published_id !== null &&  tmpworkflow.published_id.length > 0) {
+													tutorialFound = true
+													break
+												}
+											}
+										}
+									}
+
+									if (data.tutorial === "learn_shuffle") {
+										//tutorial: "discover_workflows",
+										if (workflows.length > 0) {
+											tutorialFound = true
+										}
+									}
+
+									if (data.tutorial === "configure_organization") {
+										if (userdata.active_org.name !== userdata.username) {
+											tutorialFound = true
+										}
+									}
+								}
+							}
 								
 							return (
 								<div key={index} style={{display: "flex", marginBottom: index === steps.length-1 ? 0 : 20, }}>
@@ -2350,6 +2373,14 @@ const GettingStarted = (props) => {
 								</Button>
 							</a>
 						</div>
+						{/*
+						<div style={{position: "fixed", bottom: 110, right: 110, display: "flex", }}>
+							<Typography variant="body1" color="textSecondary" style={{marginRight: 0, maxWidth: 150, }}>
+								Need assistance? Ask our support team (it's free!).
+							</Typography>
+							<img src="/images/Arrow.png" style={{width: 150}} />
+						</div>
+						*/}
 					</div>
           {/*
 					<div style={flexContainerStyle}>

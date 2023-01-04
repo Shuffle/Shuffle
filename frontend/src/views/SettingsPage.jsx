@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 
+import { useNavigate } from "react-router-dom";
 import {
   Grid,
   Typography,
@@ -8,7 +9,6 @@ import {
   Divider,
   TextField,
 } from "@material-ui/core";
-import { Link } from "react-router-dom";
 import { useAlert } from "react-alert";
 import { useTheme } from "@material-ui/core/styles";
 
@@ -18,23 +18,21 @@ const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, setUserData } = props;
   const theme = useTheme();
   const alert = useAlert();
+	let navigate = useNavigate();
 
   const [username, setUsername] = useState("");
   const [firstname, setFirstname] = useState("");
   const [lastname, setLastname] = useState("");
-  const [title, setTitle] = useState("");
-  const [companyname, setCompanyname] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
-  const [file, setFile] = React.useState("");
-  const [fileBase64, setFileBase64] = React.useState(
-    userdata.image === undefined || userdata.image === null
-      ? theme.palette.defaultImage
-      : userdata.image
-  );
+  // const [file, setFile] = React.useState("");
+  // const [fileBase64, setFileBase64] = React.useState(
+  //   userdata.image === undefined || userdata.image === null
+  //     ? theme.palette.defaultImage
+  //     : userdata.image
+  // );
   const [loadedValidationWorkflows, setLoadedValidationWorkflows] =
     React.useState([]);
   const [selfOwnedWorkflows, setSelfOwnedWorkflows] = React.useState([]);
@@ -42,7 +40,6 @@ const Settings = (props) => {
     React.useState([]);
 
   // Used for error messages etc
-  const [formMessage] = useState("");
   const [passwordFormMessage, setPasswordFormMessage] = useState("");
 
   const [firstrequest, setFirstRequest] = useState(true);
@@ -295,58 +292,58 @@ const Settings = (props) => {
     }
   };
 
-  const registerProviders = (userdata) => {
-    // Register hooks here
-    detectEthereumProvider().then((provider) => {
-      if (provider) {
-        if (!provider.isMetaMask) {
-          alert.error("Only MetaMask is supported as of now.");
-          return;
-        }
+  // const registerProviders = (userdata) => {
+  //   // Register hooks here
+  //   detectEthereumProvider().then((provider) => {
+  //     if (provider) {
+  //       if (!provider.isMetaMask) {
+  //         alert.error("Only MetaMask is supported as of now.");
+  //         return;
+  //       }
 
-        // Find the ethereum network
-        // Get the users' account(s)
-        //alert.info("Connecting to MetaMask")
-        //console.log("Connected: ", provider.isConnected())
+  //       // Find the ethereum network
+  //       // Get the users' account(s)
+  //       //alert.info("Connecting to MetaMask")
+  //       //console.log("Connected: ", provider.isConnected())
 
-        if (!provider.isConnected()) {
-          alert.error("Metamask is not connected.");
-          return;
-        }
+  //       if (!provider.isConnected()) {
+  //         alert.error("Metamask is not connected.");
+  //         return;
+  //       }
 
-        provider.on("message", (event) => {
-          alert.info("Ethereum message: ", event);
-        });
+  //       provider.on("message", (event) => {
+  //         alert.info("Ethereum message: ", event);
+  //       });
 
-        provider.on("chainChanged", (chainId) => {
-          console.log("Changed chain to: ", chainId);
+  //       provider.on("chainChanged", (chainId) => {
+  //         console.log("Changed chain to: ", chainId);
 
-          const method = "eth_getBalance";
-          const params = [userdata.eth_info.account, "latest"];
-          provider
-            .request({
-              method: method,
-              params,
-            })
-            .then((result) => {
-              console.log("Got result: ", result);
-              if (result !== undefined && result !== null) {
-                userdata.eth_info.balance = result;
-                userdata.eth_info.parsed_balance = result / 1000000000000000000;
-                console.log("INFO: ", userdata);
-                setUserData(userdata);
-              } else {
-                alert.error("Couldn't find balance: ", result);
-              }
-            })
-            .catch((error) => {
-              // If the request fails, the Promise will reject with an error.
-              alert.error("Failed getting info from ethereum API: " + error);
-            });
-        });
-      }
-    });
-  };
+  //         const method = "eth_getBalance";
+  //         const params = [userdata.eth_info.account, "latest"];
+  //         provider
+  //           .request({
+  //             method: method,
+  //             params,
+  //           })
+  //           .then((result) => {
+  //             console.log("Got result: ", result);
+  //             if (result !== undefined && result !== null) {
+  //               userdata.eth_info.balance = result;
+  //               userdata.eth_info.parsed_balance = result / 1000000000000000000;
+  //               console.log("INFO: ", userdata);
+  //               setUserData(userdata);
+  //             } else {
+  //               alert.error("Couldn't find balance: ", result);
+  //             }
+  //           })
+  //           .catch((error) => {
+  //             // If the request fails, the Promise will reject with an error.
+  //             alert.error("Failed getting info from ethereum API: " + error);
+  //           });
+  //       });
+  //     }
+  //   });
+  // };
 
   // This should "always" have data
   useEffect(() => {
@@ -414,7 +411,15 @@ const Settings = (props) => {
       src={imageData}
       alt="Click to upload an image (174x174)"
       id="logo"
+			onClick={() => {
+				if (imageData !== theme.palette.defaultImage) {
+					navigate(`/creators/${userdata.public_username}`)
+				} else {
+					navigate(`/creators`)
+				}
+			}}
       style={{
+				cursor: "pointer",
         maxWidth: 100,
         maxHeight: 100,
         minWidth: 100,
@@ -733,7 +738,7 @@ const Settings = (props) => {
   					{isCloud ?
 							<span>
 								<Typography variant="body1" color="textSecondary">
-									By connecting your Github account, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/search?tab=creators">creator account</a>. This enables you to earn a passive income from Shuffle. This IS reversible.
+									By connecting your Github or Metamask account, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/search?tab=creators">creator account</a>. This enables you to earn a passive income from Shuffle. This IS reversible. Support: support@shuffler.io
 								</Typography>
 								<Button
 									style={{ height: 40, marginTop: 10 }}
@@ -810,7 +815,7 @@ const Settings = (props) => {
 						) : null}
           </div>
           <div style={{ flex: 1, marginTop: 20 }}>
-          {userdata !== undefined &&
+          {/*userdata !== undefined &&
             userdata.eth_info !== undefined &&
             userdata.eth_info.account !== undefined &&
             userdata.eth_info.account.length > 0 ? (
@@ -868,7 +873,7 @@ const Settings = (props) => {
               >
                 Authenticate Metamask Wallet
               </Button>
-            )}
+            )*/}
           </div>
         </div>
 

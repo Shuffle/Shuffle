@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from "react-dom"
 
-import DetectionFramework from "../components/DetectionFramework.jsx";
+import AppFramework from "../components/AppFramework.jsx";
 import { useAlert } from "react-alert";
 import { Link, useParams } from "react-router-dom";
 import theme from '../theme';
@@ -69,7 +69,7 @@ const Framework = (props) => {
 				</Link>
 			</div>
 			{frameworkLoaded === true && isLoaded ? 
-				<DetectionFramework 
+				<AppFramework
 					frameworkData={frameworkData}
 					selectedOption={"Draw"}
 					showOptions={false}

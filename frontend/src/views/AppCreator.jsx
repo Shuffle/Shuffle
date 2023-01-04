@@ -34,7 +34,16 @@ import {
   AttachFile as AttachFileIcon,
   Apps as AppsIcon,
   ErrorOutline as ErrorOutlineIcon,
+	AddAPhoto as AddAPhotoIcon, 
+	AddAPhotoOutlined as AddAPhotoOutlinedIcon, 
+	ZoomInOutlined as ZoomInOutlinedIcon,
+	ZoomOutOutlined as ZoomOutOutlinedIcon,
+	Loop as LoopIcon,
 } from "@material-ui/icons";
+
+import {
+	AddPhotoAlternate as AddPhotoAlternateIcon,
+} from '@mui/icons-material';
 
 import { v4 as uuidv4 } from "uuid";
 import { Link, useParams } from "react-router-dom";
@@ -44,12 +53,6 @@ import { useAlert } from "react-alert";
 import words from "shellwords";
 
 import AvatarEditor from "react-avatar-editor";
-import AddAPhotoIcon from "@material-ui/icons/AddAPhoto";
-import AddAPhotoOutlinedIcon from "@material-ui/icons/AddAPhotoOutlined";
-import ZoomInOutlinedIcon from "@material-ui/icons/ZoomInOutlined";
-import ZoomOutOutlinedIcon from "@material-ui/icons/ZoomOutOutlined";
-import LoopIcon from "@material-ui/icons/Loop";
-import AddPhotoAlternateIcon from "@material-ui/icons/AddPhotoAlternate";
 
 const surfaceColor = "#27292D";
 const inputColor = "#383B40";
@@ -289,8 +292,8 @@ const AppCreator = (defaultprops) => {
     type: "header",
     example: "",
   };
-  const [extraAuth, setExtraAuth] = useState([]);
 
+  const [extraAuth, setExtraAuth] = useState([]);
   const [app, setApp] = useState({});
   const [appAuthentication, setAppAuthentication] = React.useState([]);
   const [selectedAction, setSelectedAction] = useState({});
@@ -344,14 +347,14 @@ const AppCreator = (defaultprops) => {
   useEffect(() => {
 		if (window.location.pathname.includes("apps/edit")) {
 			setIsEditing(true);
-			handleEditApp();
+			handleEditApp(props.match.params.appid);
 		} else {
 			checkQuery();
 		}
   }, []);
 
-  const handleEditApp = () => {
-    fetch(globalUrl + "/api/v1/apps/" + props.match.params.appid + "/config", {
+  const handleEditApp = (appid) => {
+    fetch(globalUrl + "/api/v1/apps/" + appid + "/config", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -389,7 +392,10 @@ const AppCreator = (defaultprops) => {
       setIsAppLoaded(true);
       return;
     }
+  
+		//handleEditApp(urlParams.get("id")) 
 
+		// THIS has to stay due to ID may not exist as normal app yet
     fetch(globalUrl + "/api/v1/get_openapi/" + urlParams.get("id"), {
       method: "GET",
       headers: {
@@ -408,7 +414,7 @@ const AppCreator = (defaultprops) => {
       .then((responseJson) => {
         setIsAppLoaded(true);
         if (!responseJson.success) {
-          alert.error("Failed to verify");
+          alert.error("Failed to get app config. Do you have access?");
         } else {
           parseIncomingOpenapiData(responseJson);
         }
@@ -670,7 +676,8 @@ const AppCreator = (defaultprops) => {
 					if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
 						const regex = /_shuffle_replace_\d/i;
 						//console.log("NEW: ", 
-						newaction.url = newaction.url.replace(regex, "")
+						newaction.url = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
+						console.log("Replaced: ", newaction.url) 
 					}
 
           // Finding category
@@ -679,6 +686,12 @@ const AppCreator = (defaultprops) => {
             var categoryindex = -1;
             // Stupid way of finding a category/grouping
             for (var key in pathsplit) {
+							if (pathsplit[key].includes("_shuffle_replace_")) {
+								const regex = /_shuffle_replace_\d/i;
+								//console.log("NEW: ", 
+								pathsplit[key] = pathsplit[key].replaceAll(new RegExp(regex, 'g'), "")
+							}
+
               if (
                 pathsplit[key].length > 0 &&
                 pathsplit[key] !== "v1" &&
@@ -1420,13 +1433,16 @@ const AppCreator = (defaultprops) => {
 
     //console.log("SECURITYSCHEMES: ", securitySchemes)
     if (securitySchemes !== undefined) {
+			console.log("NEWAUTH: ", securitySchemes)
       // FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
       //console.log("SECURITY: ", securitySchemes)
       //if (Object.entries(securitySchemes) > 1 &&
       var newauth = [];
 			try {
+				var optionset = false 
       	for (const [key, value] of Object.entries(securitySchemes)) {
       	  console.log(key, value);
+
       	  if (key === "jwt") {
       	    setAuthenticationOption("JWT");
       	    setAuthenticationRequired(true);
@@ -1437,25 +1453,48 @@ const AppCreator = (defaultprops) => {
       	      value.in.length > 0
       	    ) {
       	      setParameterName(value.in);
+							optionset = true 
       	    }
 
       	  } else if (value.scheme === "bearer") {
       	    setAuthenticationOption("Bearer auth");
       	    setAuthenticationRequired(true);
+						optionset = true 
 
       	  } else if (key === "ApiKeyAuth" || key === "Token" || ((value.in === "header" || value.in === "query") && value.name !== undefined)) {
-      	    setAuthenticationOption("API key");
+						//if (optionset === false) {
+						//	optionset = true 
+						//}
 
-      	    value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
-      	    setParameterLocation(value.in);
-      	    if (!apikeySelection.includes(value.in)) {
-      	      console.log("APIKEY SELECT: ", apikeySelection);
-      	      alert.error("Might be error in setting up API key authentication");
-      	    }
+						if (optionset === false) {
+							optionset = true 
+      	    	value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1)
 
-      	    console.log("PARAM NAME: ", value.name);
-      	    setParameterName(value.name);
-      	    setAuthenticationRequired(true);
+      	    	setParameterLocation(value.in);
+      	    	if (!apikeySelection.includes(value.in)) {
+      	    	  console.log("APIKEY SELECT: ", apikeySelection);
+      	    	  alert.error("Might be error in setting up API key authentication");
+      	    	}
+
+      	    	console.log("PARAM NAME: ", value.name);
+      	    	setAuthenticationOption("API key");
+      	    	setParameterName(value.name);
+      	    	setAuthenticationRequired(true);
+
+      	    	newauth.push({
+      	    		"name": key,
+      	    		"type": value.in.toLowerCase(),
+								"in": value.in.toLowerCase(),
+      	    		"example": "",
+							})
+						} else {
+      	    	newauth.push({
+      	    		"name": key,
+      	    		"type": value.in.toLowerCase(),
+								"in": value.in.toLowerCase(),
+      	    		"example": "",
+      	    	})
+						}
 
       	    if (value.description !== undefined && value.description !== null && value.description.length > 0) {
 							// Don't want a real description - just the ones we're replacing with
@@ -1467,15 +1506,18 @@ const AppCreator = (defaultprops) => {
       	  } else if (value.scheme === "basic") {
       	    setAuthenticationOption("Basic auth");
       	    setAuthenticationRequired(true);
+						optionset = true 
 
       	  } else if (value.scheme === "oauth2") {
       	    setAuthenticationOption("Oauth2");
       	    setAuthenticationRequired(true);
+						optionset = true 
 
       	  } else if (value.type === "oauth2" || key === "Oauth2" || key === "Oauth2c" || (key !== undefined && key !== null && key.toLowerCase().includes("oauth2"))) {
       	    //alert.info("Can't handle Oauth2 auth yet.")
       	    setAuthenticationOption("Oauth2");
       	    setAuthenticationRequired(true);
+						optionset = true 
 
       	    //console.log("FLOW-1: ", value)
       	    const flowkey = value.flow === undefined ? "flows" : "flow";
@@ -1558,6 +1600,7 @@ const AppCreator = (defaultprops) => {
 			}
 
       if (newauth.length > 0) {
+				newauth = newauth.filter(data => data.name != "ApiKeyAuth")
         setExtraAuth(newauth);
       }
     }
@@ -1630,9 +1673,9 @@ const AppCreator = (defaultprops) => {
       data.info["contact"] = basedata.info.contact;
     } else if (contact === "") {
       data.info["contact"] = {
-        name: "@frikkylikeme",
-        url: "https://twitter.com/frikkylikeme",
-        email: "frikky@shuffler.io",
+        name: "@Anonymous Shuffle User",
+        url: "https://twitter.com/shuffleio",
+        email: "support@shuffler.io",
       };
     } else {
       data.info["contact"] = contact;
@@ -1667,7 +1710,6 @@ const AppCreator = (defaultprops) => {
 			// Basic way to allow multiple of the same path 
 			var pathjoin = item.url+"_"+item.method.toLowerCase()
 			if (handledPaths.includes(pathjoin)) {
-				console.log("ALREADY INCLUDED: ", pathjoin)
 
 				// Max 100 of same lol
 				for (var i = 0; i < 100; i++) {
@@ -1678,7 +1720,6 @@ const AppCreator = (defaultprops) => {
 						continue
 					}
 
-					console.log("FOUND NEW: ", item.url)
 					break
 				}
 			}
@@ -1784,13 +1825,16 @@ const AppCreator = (defaultprops) => {
         for (var querykey in item.queries) {
           const queryitem = item.queries[querykey];
 
+					if (queryitem === undefined || queryitem === null || queryitem.name === undefined || queryitem.name === null || queryitem.name === "") {
+						continue
+					}
+
 					// A fix for duplicate items
 					if (querynames.includes(queryitem.name.toLowerCase())) {
 						continue
 					}
 
 					querynames.push(queryitem.name.toLowerCase())
-
           if (queryitem.name.toLowerCase() == "url") {
             console.log(item.name + " uses a bad query: url");
             continue;
@@ -1937,70 +1981,110 @@ const AppCreator = (defaultprops) => {
         }
       }
 
-      if (
-        item.body !== undefined &&
-        item.body !== null &&
-        item.body.length > 0
-      ) {
-        const required = false;
-        newitem = {
-          in: "body",
-          name: "body",
-          multiline: true,
-          description: "Generated by shuffler.io OpenAPI",
-          required: required,
-          example: item.body,
-          schema: {
-            type: "string",
-          },
-        };
+			const methodname = item.method.toLowerCase()
+			if (methodname === "post" || methodname === "put" || methodname === "patch") {
+      	if (
+      	  item.body !== undefined &&
+      	  item.body !== null &&
+      	  item.body.length > 0
+      	) {
+					console.log("GOT BODY: ", item.url, item.method, item.body)
 
-        // FIXME - add application/json if JSON example?
-        data.paths[item.url][item.method.toLowerCase()]["requestBody"] = {
-          description: "Generated by Shuffler.io",
-          required: required,
-          content: {
-            example: {
-              example: item.body,
-            },
-          },
-        };
+					// Replacing dollarsign insertions that aren't escaped
+					// This is to stop it from messing with systems in Shuffle.
+					// This MAY cause it to be a little weird in other systems however,
+					// but it's the only way we can properly support e.g. GraphQL
+					// with good examples
+					var newbody = ""
+					for (var key in item.body) {
+						if (item.body[key] === "$") {
+							if (key > 0) {
+								//console.log("Found: ", item.body[key-1])
+								const newkey = parseInt(key, 10)
+								if (item.body[newkey-1] !== "\\") {
+									if (item.body[newkey+1] !== "\{") {
+										newbody += "\\"
+									} 
+								} 
 
-        data.paths[item.url][item.method.toLowerCase()].parameters.push(
-          newitem
-        );
-      } else if (actionBodyRequest.includes(item.method.toUpperCase())) {
-        // Appending an empty field
-        const required = false;
-        newitem = {
-          in: "body",
-          name: "body",
-          multiline: true,
-          description: "Generated by shuffler.io OpenAPI",
-          required: required,
-          example: "",
-          schema: {
-            type: "string",
-          },
-        };
+								newbody += item.body[key]
+							} else {
+								newbody += "\\"
+								newbody += item.body[key]
+							}
+							//newbody += item.body[key]
+						} else {
+							newbody += item.body[key]
+						}
+					}
 
-        // FIXME - add application/json if JSON example?
-        data.paths[item.url][item.method.toLowerCase()]["requestBody"] = {
-          description: "Generated by Shuffler.io",
-          required: required,
-          content: {
-            example: {
-              example: "",
-            },
-          },
-        };
+					console.log("New body: ", newbody)
+					if (newbody !== item.body) {
+						item.body = newbody
+					}
 
-        data.paths[item.url][item.method.toLowerCase()].parameters.push(
-          newitem
-        );
-      } else {
-        //console.log("Nothing to append?")
-      }
+					//var pathjoin = item.url+"_"+item.method.toLowerCase()
+
+      	  const required = false;
+      	  newitem = {
+      	    in: "body",
+      	    name: "body",
+      	    multiline: true,
+      	    description: "Generated by shuffler.io OpenAPI",
+      	    required: required,
+      	    example: item.body,
+      	    schema: {
+      	      type: "string",
+      	    },
+      	  };
+
+      	  // FIXME - add application/json if JSON example?
+      	  data.paths[item.url][item.method.toLowerCase()]["requestBody"] = {
+      	    description: "Generated by Shuffler.io",
+      	    required: required,
+      	    content: {
+      	      example: {
+      	        example: item.body,
+      	      },
+      	    },
+      	  };
+
+      	  data.paths[item.url][item.method.toLowerCase()].parameters.push(
+      	    newitem
+      	  );
+      	} else if (actionBodyRequest.includes(item.method.toUpperCase())) {
+      	  // Appending an empty field
+      	  const required = false;
+      	  newitem = {
+      	    in: "body",
+      	    name: "body",
+      	    multiline: true,
+      	    description: "Generated by shuffler.io OpenAPI",
+      	    required: required,
+      	    example: "",
+      	    schema: {
+      	      type: "string",
+      	    },
+      	  };
+
+      	  // FIXME - add application/json if JSON example?
+      	  data.paths[item.url][item.method.toLowerCase()]["requestBody"] = {
+      	    description: "Generated by Shuffler.io",
+      	    required: required,
+      	    content: {
+      	      example: {
+      	        example: "",
+      	      },
+      	    },
+      	  };
+
+      	  data.paths[item.url][item.method.toLowerCase()].parameters.push(
+      	    newitem
+      	  );
+      	} else {
+      	  //console.log("Nothing to append?")
+      	}
+			}
 
       // https://swagger.io/docs/specification/describing-request-body/file-upload/
       if (
@@ -2365,6 +2449,7 @@ const AppCreator = (defaultprops) => {
           <span style={{ width: 50 }} />
         )}
       </div>
+
       {extraAuth.map((value, index) => {
         return (
           <span
@@ -2978,6 +3063,23 @@ const AppCreator = (defaultprops) => {
             data["file_field"] !== null &&
             data["file_field"].length > 0) || data["example_response"] === "shuffle_file_download"
 
+					// In case of extremely long summaries/names from OpenAPI def
+					//const maxlen = 35
+					//if (data.description === undefined || data.description === null || data.description.length === 0) {
+					//	if (data.name !== undefined && data.name !== null && data.name.length > maxlen ) {
+					//		var newname = []
+					//		for (var key in data.name.split(" ")) {
+					//			console.log("Name: ", data.name[key])
+					//			if (newname.join(" ").length < maxlen) {
+					//				newname.push(data.name[key])
+					//			}
+					//		}
+
+					//		data.description = data.name.valueOf()
+					//		data.name = newname.join(" ")
+					//	}
+					//}
+
           return (
             <Paper key={index} style={actionListStyle}>
               {error}
@@ -2991,6 +3093,16 @@ const AppCreator = (defaultprops) => {
                     overflowX: "hidden",
                   }}
                   onClick={() => {
+										console.log("Data: ", data)
+                    if (hasFile) {
+                      setFileUploadEnabled(true);
+											//setActionField("headers", "")
+											console.log("It has a file: ", data["file_field"])
+											data.headers = ""
+                    } else {
+											console.log("No file")
+										}
+
                     setCurrentAction(data);
                     setCurrentActionMethod(data.method);
                     setUrlPathQueries(data.queries);
@@ -3003,11 +3115,10 @@ const AppCreator = (defaultprops) => {
                       data["body"].length > 0
                     ) {
                       findBodyParams(data["body"]);
-                    }
+                    } else {
+											console.log("No body param")
+										}
 
-                    if (hasFile) {
-                      setFileUploadEnabled(true);
-                    }
                   }}
                 >
                   <div style={{ display: "flex" }}>
@@ -3170,7 +3281,7 @@ const AppCreator = (defaultprops) => {
         margin="normal"
         variant="outlined"
         multiline
-        rows="5"
+        minRows="5"
         defaultValue={currentAction["body"]}
         onChange={(e) => {
           setActionField("body", e.target.value);
@@ -3208,7 +3319,7 @@ const AppCreator = (defaultprops) => {
         margin="normal"
         variant="outlined"
         multiline
-        rows="2"
+        minRows="2"
         defaultValue={currentAction["example_response"]}
         onChange={(e) => setActionField("example_response", e.target.value)}
         helperText={
@@ -3670,7 +3781,11 @@ const AppCreator = (defaultprops) => {
                       headers += key + "=" + value + "\n";
                     }
 
-                    setActionField("headers", headers.trim());
+										try {
+                    	setActionField("headers", headers.trim());
+										} catch (e) {
+											console.log("Failed to parse header: ", e)
+										}
                   }
 
                   if (request.body !== undefined && request.body !== null) {
@@ -3751,8 +3866,8 @@ const AppCreator = (defaultprops) => {
 							}
 
 							// Found that dashes in the URL doesn't work
-							parsedurl = parsedurl.replace("-", "_")
-							console.log("Actions: ", actions)
+							//parsedurl = parsedurl.replace("-", "_")
+							//console.log("Actions: ", actions)
 
 							if (baseUrl.length === 0 && parsedurl.includes("http")) {
 								const newurl = new URL(encodeURI(parsedurl))
@@ -3809,7 +3924,7 @@ const AppCreator = (defaultprops) => {
               Enable Fileupload
             </Button>
           ) : null}
-          {currentActionMethod === "GET" ? (
+          {/*currentActionMethod === "GET" ? (
             <Button
               color="primary"
               variant={fileDownloadEnabled ? "contained" : "outlined"}
@@ -3831,7 +3946,7 @@ const AppCreator = (defaultprops) => {
             >
 							Download as file
             </Button>
-          ) : null}
+          ) : null*/}
           {fileUploadEnabled ? (
             <TextField
               required
@@ -3864,37 +3979,41 @@ const AppCreator = (defaultprops) => {
             />
           ) : null}
           <div />
-          <b>Headers</b>: static for the action
-          <TextField
-            required
-            style={{
-              flex: "1",
-              marginRight: "15px",
-              marginTop: "5px",
-              backgroundColor: inputColor,
-            }}
-            fullWidth={true}
-            placeholder={
-              "Accept: application/json\r\nContent-Type: application/json"
-            }
-            margin="normal"
-            variant="outlined"
-            id="standard-required"
-            defaultValue={currentAction["headers"]}
-            multiline
-            rows="2"
-            onChange={(e) => setActionField("headers", e.target.value)}
-            helperText={
-              <span style={{ color: "white", marginBottom: "2px" }}>
-                Headers that are part of the request. Default: EMPTY
-              </span>
-            }
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-          />
+					{fileUploadEnabled ? null :
+						<span>
+							<b>Headers</b>
+							<TextField
+								required
+								style={{
+									flex: "1",
+									marginRight: "15px",
+									marginTop: "5px",
+									backgroundColor: inputColor,
+								}}
+								fullWidth={true}
+								placeholder={
+									"Accept: application/json\r\nContent-Type: application/json"
+								}
+								margin="normal"
+								variant="outlined"
+								id="standard-required"
+								defaultValue={currentAction["headers"]}
+								multiline
+								minRows="2"
+								onChange={(e) => setActionField("headers", e.target.value)}
+								helperText={
+									<span style={{ color: "white", marginBottom: "2px" }}>
+										Headers that are part of the request. Default: EMPTY
+									</span>
+								}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+							/>
+						</span>
+					}
           {bodyInfo}
           <Divider
             style={{
@@ -4582,6 +4701,12 @@ const AppCreator = (defaultprops) => {
         <div style={{ marginTop: 10, marginBottom: 10 }}>
           {projectCategories.map((tag, index) => {
             const newname = tag.charAt(0).toUpperCase() + tag.slice(1);
+
+						//var regex = /_shuffle_replace_\d/i;
+						////console.log("NEW: ", 
+						//newname = newname.replaceAll(regex, "")
+						//console.log("Replaced: ", newname) 
+
             return (
               <Chip
                 key={index}
@@ -4814,6 +4939,7 @@ const AppCreator = (defaultprops) => {
     imageUploadError.length > 0 ? (
       <div style={{ marginTop: 10 }}>Error: {imageUploadError}</div>
     ) : null;
+
   const imageUploadModalView = openImageModal ? (
     <Dialog
       open={openImageModal}

@@ -17,6 +17,7 @@ import http.client
 import urllib.parse
 import jinja2 
 import datetime
+import dateutil
 from io import StringIO as StringBuffer
 from io import BytesIO
 from liquid import Liquid, defaults
@@ -103,6 +104,89 @@ def base64_decode(a):
         return base64.b64decode(a).decode()
     except:
         return base64.b64decode(a)
+
+@shuffle_filters.register
+def json_parse(a):
+    return json.loads(str(a))
+
+@shuffle_filters.register
+def as_object(a):
+    return json.loads(str(a))
+
+@shuffle_filters.register
+def ast(a):
+    return ast.literal_eval(str(a))
+
+@shuffle_filters.register
+def escape_string(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\'", -1).replace("\"", "\\\"", -1)
+
+@shuffle_filters.register
+def json_escape(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\\\'", -1).replace("\"", "\\\\\"", -1)
+
+@shuffle_filters.register
+def escape_json(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\\\'", -1).replace("\"", "\\\\\"", -1)
+
+# By default using json escape to add all backslashes
+@shuffle_filters.register
+def escape(a):
+    a = str(a)
+    return json_escape(a)
+
+@shuffle_filters.register
+def flatten(a):
+    a = list(a)
+
+    flat_list = [a for xs in xss for a in xs]
+    return flat_list
+
+@shuffle_filters.register
+def csv_parse(a):
+    a = str(a)
+    splitdata = a.split("\n")
+    columns = []
+    if len(splitdata) > 1:
+        columns = splitdata[0].split(",")
+    else:
+        return a.split("\n")
+
+    allitems = []
+    cnt = -1
+    for item in splitdata[1:]:
+        cnt += 1
+        commasplit = item.split(",")
+
+        fullitem = {}
+        fullitem["unparsed"] = item
+        fullitem["index"] = cnt 
+        fullitem["parsed"] = {}
+        if len(columns) != len(commasplit):
+
+            if len(commasplit) > len(columns):
+                diff = len(commasplit)-len(columns)
+
+                try:
+                    commasplit = commasplit[0:len(commasplit)-diff]
+                except:
+                    pass
+            else:
+                for item in range(0, len(columns)-len(commasplit)):
+                    commasplit.append("")
+
+        for key in range(len(columns)):
+            try:
+                fullitem["parsed"][columns[key]] = commasplit[key]
+            except:
+                continue 
+        
+        allitems.append(fullitem)
+
+    return allitems
 
 #print(standard_filter_manager.filters)
 #print(shuffle_filters.filters)
@@ -261,6 +345,36 @@ class AppBase:
             
         return new_input
 
+    def prepare_response(self, request):
+        try:
+            parsedheaders = {}
+            for key, value in request.headers.items():
+                parsedheaders[key] = value
+
+            cookies = {}
+            if request.cookies:
+                for key, value in request.cookies.items():
+                    cookies[key] = value
+
+            
+            jsondata = request.text
+            try:
+                jsondata = json.loads(jsondata)
+            except:
+                pass
+
+            return json.dumps({
+                "success": True,
+                "status": request.status_code,
+                "url": request.url,
+                "headers": parsedheaders,
+                "body": jsondata,
+                "cookies":cookies,
+            })
+        except Exception as e:
+            print(f"[WARNING] Failed in request: {e}")
+            return request.text
+
     # FIXME: Add more info like logs in here.
     # Docker logs: https://forums.docker.com/t/docker-logs-inside-the-docker-container/68190/2
     def send_result(self, action_result, headers, stream_path):
@@ -330,7 +444,7 @@ class AppBase:
         # FIXME: Adding retries here.
         try:
             finished = False
-            for i in range (0, 5):
+            for i in range (0, 10):
                 try:
                     ret = requests.post(url, headers=headers, json=action_result, timeout=10)
 
@@ -339,26 +453,36 @@ class AppBase:
                         finished = True
                         break
                     else:
-                        self.logger.info(f"[DEBUG] RESP: {ret.text}")
+                        self.logger.info(f"[ERROR] RESP: {ret.text}")
 
                 except requests.exceptions.RequestException as e:
                     self.logger.info(f"[DEBUG] Request problem: {e}")
+                    time.sleep(0.1)
+
                     #time.sleep(5)
                     continue
                 except TimeoutError as e:
                     self.logger.info(f"[DEBUG] Timeout or request: {e}")
+                    time.sleep(0.1)
+
                     #time.sleep(5)
                     continue
                 except requests.exceptions.ConnectionError as e:
                     self.logger.info(f"[DEBUG] Connectionerror: {e}")
+                    time.sleep(0.1)
+
                     #time.sleep(5)
                     continue
                 except http.client.RemoteDisconnected as e:
                     self.logger.info(f"[DEBUG] Remote: {e}")
+                    time.sleep(0.1)
+
                     #time.sleep(5)
                     continue
                 except urllib3.exceptions.ProtocolError as e:
                     self.logger.info(f"[DEBUG] Protocol err: {e}")
+                    time.sleep(0.1)
+
                     #time.sleep(5)
                     continue
 
@@ -367,17 +491,17 @@ class AppBase:
             if not finished:
                 # Not sure why this would work tho :)
                 action_result["status"] = "FAILURE"
-                action_result["result"] = f"POST failed to get info!"
-                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished")
+                action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 10 retries to the backend" % url})
+                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished after 10 requests")
                 ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
         
             self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:
             self.logger.info(f"[DEBUG] Unexpected ConnectionError happened: {e}")
         except TypeError as e:
-            #self.logger.exception(e)
             action_result["status"] = "FAILURE"
-            action_result["result"] = f"POST error: {e}"
+            action_result["result"] = json.dumps({"success": False, "reason": "Typeerror when sending to backend URL %s" % url})
+
             self.logger.info(f"[DEBUG] Before typeerror stream result: {e}")
             ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
             #self.logger.info(f"[DEBUG] Result: {ret.status_code}")
@@ -973,6 +1097,31 @@ class AppBase:
 
     # Downloads all files from a namespace
     # Currently only working on local version of Shuffle
+    def get_file_category_ids(self, category):
+        org_id = self.full_execution["workflow"]["execution_org"]["id"]
+
+        get_path = "/api/v1/files/namespaces/%s?execution_id=%s&ids=true" % (category, self.full_execution["execution_id"])
+        headers = {
+            "Authorization": "Bearer %s" % self.authorization
+        }
+
+        ret = requests.get("%s%s" % (self.url, get_path), headers=headers)
+        return ret.json()
+        #if ret1.status_code != 200:
+        #    return {
+        #        "success": False,
+        #        "reason": "Status code is %d from backend for category %s" % category,
+        #        "list": [],
+        #    }
+
+        #return {
+        #    "success": True,
+        #    "ids": ret1.json(),
+        #}
+
+
+    # Downloads all files from a namespace
+    # Currently only working on local version of Shuffle
     def get_file_namespace(self, namespace):
         org_id = self.full_execution["workflow"]["execution_org"]["id"]
 
@@ -1002,6 +1151,12 @@ class AppBase:
         #        tmp.write(filedata)
 
         return myzipfile
+
+    def get_file_namespace_ids(self, namespace):
+        return self.get_file_category_ids(self, namespace)
+
+    def get_file_category(self, category):
+        return self.get_file_namespace(self, category)
 
     # Things to consider for files:
     # - How can you download / stream a file? 
@@ -1273,36 +1428,53 @@ class AppBase:
         if isinstance(self.full_execution, str) and len(self.full_execution) == 0:
             self.logger.info("[DEBUG] NO EXECUTION - LOADING!")
             try:
-                tmpdata = {
-                    "authorization": self.authorization,
-                    "execution_id": self.current_execution_id
-                }
+                failed = False
+                rettext = ""
+                for i in range(0, 5):
+                    tmpdata = {
+                        "authorization": self.authorization,
+                        "execution_id": self.current_execution_id
+                    }
 
-                self.logger.info("[DEBUG] Before FULLEXEC stream result")
-                ret = requests.post(
-                    "%s/api/v1/streams/results" % (self.base_url), 
-                    headers=headers, 
-                    json=tmpdata
-                )
+                    self.logger.info("[ERROR] Before FULLEXEC stream result")
+                    ret = requests.post(
+                        "%s/api/v1/streams/results" % (self.base_url), 
+                        headers=headers, 
+                        json=tmpdata
+                    )
 
-                if ret.status_code == 200:
-                    fullexecution = ret.json()
-                else:
-                    try:
-                        self.logger.info("[DEBUG] Error: Data: ", ret.json())
-                        self.logger.info("[DEBUG] Error with status code for results. Crashing because ACTION_RESULTS or WORKFLOW_VARIABLE can't be handled. Status: %d" % ret.status_code)
-                    except json.decoder.JSONDecodeError:
-                        pass
+                    if ret.status_code == 200:
+                        fullexecution = ret.json()
+                        failed = False
+                        break
 
+                    elif ret.status_code == 500:
+                        self.logger.info("[ERROR] (fails: %d) Error in app with status code %d for results (1). RETRYING because results can't be handled" % (i+1, ret.status_code))
+                    
+                        rettext = ret.text
+                        failed = True 
+                        time.sleep(10)
+                        continue
+
+                    else:
+                        self.logger.info("[ERROR] Error in app with status code %d for results (2). Crashing because results can't be handled" % ret.status_code)
+
+                        rettext = ret.text
+                        failed = True 
+                        break
+
+                if failed:
                     self.action_result["result"] = json.dumps({
                         "success": False,
                         "reason": f"Bad result from backend during startup of app: {ret.status_code}",
-                        "extended_reason": f"{ret.text}"
+                        "extended_reason": f"{rettext}"
                     })
+
                     self.send_result(self.action_result, headers, stream_path) 
                     return
+
             except requests.exceptions.ConnectionError as e:
-                self.logger.info("[DEBUG] FullExec Connectionerror: %s" %  e)
+                self.logger.info("[ERROR] FullExec Connectionerror: %s" %  e)
                 self.action_result["result"] = json.dumps({
                     "success": False,
                     "reason": f"Connection error during startup: {e}"
@@ -1315,7 +1487,7 @@ class AppBase:
             try:
                 fullexecution = json.loads(self.full_execution)
             except json.decoder.JSONDecodeError as e:
-                self.logger.info("[WARNING] Json decode execution error: %s" % e)  
+                self.logger.info("[ERROR] Json decode execution error: %s" % e)  
                 self.action_result["result"] = "Json error during startup: %s" % e
                 self.send_result(self.action_result, headers, stream_path) 
                 return
@@ -2012,7 +2184,6 @@ class AppBase:
             errors = False
             error_msg = ""
             try:
-                #self.logger.info("In liquid")
                 if len(template) > 10000000:
                     self.logger.info("[DEBUG] Skipping liquid - size too big (%d)" % len(template))
                     return template
@@ -2042,10 +2213,87 @@ class AppBase:
                 self.logger.info(f"[ERROR] Liquid Template error: {e}")
                 error = True
                 error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_template_error",
+                    "value": f"There was a Liquid input error (1). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+            except SyntaxError as e:
+                self.logger.info(f"[ERROR] Liquid Syntax error: {e}")
+                error = True
+                error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_python_syntax_error",
+                    "value": f"There was a syntax error in your Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+            except IndentationError as e:
+                self.logger.info(f"[ERROR] Liquid IndentationError: {e}")
+                error = True
+                error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_indentiation_error",
+                    "value": f"There was an indentation error in your Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
             except jinja2.exceptions.TemplateSyntaxError as e:
                 self.logger.info(f"[ERROR] Liquid Syntax error: {e}")
                 error = True
                 error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_syntax_error",
+                    "value": f"There was a syntax error in your Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+            except json.decoder.JSONDecodeError as e:
+                self.logger.info(f"[ERROR] Liquid JSON Syntax error: {e}")
+                
+                replace = False
+                skip_next = False
+                newlines = []
+                thisline = []
+                for line in template.split("\n"):
+                    #print("LINE: %s" % repr(line))
+                    if "\"\"\"" in line or "\'\'\'" in line:
+                        if replace:
+                            skip_next = True
+                        else:
+                            replace = not replace 
+
+                    if replace == True:
+                        thisline.append(line)
+                        if skip_next == True:
+                            if len(thisline) > 0:
+                                #print(thisline)
+                                newlines.append(" ".join(thisline))
+                                thisline = []
+
+                            replace = False
+                    else:
+                        newlines.append(line)
+
+                new_template = "\n".join(newlines)
+                if new_template != template:
+                    #check_template(new_template)
+                    return parse_liquid(new_template, self)
+                else:
+                    error = True
+                    error_msg = e
+
+                    self.action["parameters"].append({
+                        "name": "liquid_json_error",
+                        "value": f"There was a syntax error in your input JSON(2). This is typically an issue with escaping newlines. Details: {e}",
+                    })
+
+                    self.action_result["action"] = self.action
             except TypeError as e:
                 try:
                     if "string as left operand" in f"{e}":
@@ -2070,6 +2318,13 @@ class AppBase:
 
                 except Exception as e:
                     print(f"SubError in Liquid: {e}")
+
+                    self.action["parameters"].append({
+                        "name": "liquid_general_error",
+                        "value": f"There was general error Liquid input (2). Details: {e}",
+                    })
+
+                    self.action_result["action"] = self.action
                     #return template
 
                 self.logger.info(f"[ERROR] Liquid TypeError error: {e}")
@@ -2081,6 +2336,16 @@ class AppBase:
                 error = True
                 error_msg = e
 
+                self.action["parameters"].append({
+                    "name": "liquid_general_exception",
+                    "value": f"There was general exception Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+
+            if "fmt" in error_msg and "liquid_date" in error_msg:
+                return template
+
             self.logger.info("Done in liquid")
             if error == True:
                 self.action_result["status"] = "FAILURE" 
@@ -2089,6 +2354,7 @@ class AppBase:
                     "reason": f"Failed to parse LiquidPy: {error_msg}",
                     "input": template,
                 }
+
                 try:
                     self.action_result["result"] = json.dumps(data)
                 except Exception as e:
@@ -2227,7 +2493,6 @@ class AppBase:
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
                 #self.logger.info("[INFO] Done with regex matching")
                 if len(actualitem) > 0:
-                    #self.logger.info("[DEBUG] Matches: ", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
@@ -2458,6 +2723,12 @@ class AppBase:
             except KeyError:
                 return True, ""
 
+            # Startnode should always run - no need to check incoming
+            try:
+                if action["id"] == fullexecution["start"]:
+                    return True, ""
+            except Exception as error:
+                self.logger.info(f"[WARNING] Failed checking startnode: {error}")
 
             available_checks = [
                 "=",
@@ -2527,7 +2798,7 @@ class AppBase:
                     check, sourcevalue, is_loop = parse_params(action, fullexecution, condition["source"], self)
                     if check:
                         continue
-                        return False, {"success": False, "reason": "Failed condition (1): %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
+                        return False, {"success": False, "reason": "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
                     #sourcevalue = sourcevalue.encode("utf-8")
                     sourcevalue = parse_wrapper_start(sourcevalue, self)
@@ -2536,7 +2807,7 @@ class AppBase:
                     check, destinationvalue, is_loop = parse_params(action, fullexecution, condition["destination"], self)
                     if check:
                         continue
-                        return False, {"success": False, "reason": "Failed condition (2): %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
+                        return False, {"success": False, "reason": "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
                     #destinationvalue = destinationvalue.encode("utf-8")
                     destinationvalue = parse_wrapper_start(destinationvalue, self)
@@ -2695,6 +2966,8 @@ class AppBase:
                             if parameter["name"] == "body": 
                                 bodyindex = counter
                                 #self.logger.info("PARAM: %s" % parameter)
+
+                                # FIXMe: This should also happen after liquid & param parsing..
                                 try:
                                     values = parameter["value_replace"]
                                     if values != None:
@@ -2702,16 +2975,24 @@ class AppBase:
                                         for val in values:
                                             replace_value = val["value"]
                                             replace_key = val["key"]
+
                                             if (val["value"].startswith("{") and val["value"].endswith("}")) or (val["value"].startswith("[") and val["value"].endswith("]")):
                                                 self.logger.info(f"""Trying to parse as JSON: {val["value"]}""")
                                                 try:
-                                                    value_replace = json.loads(val["value"])
-                                                    # If it gets here, remove the "" infront and behind the key as well since this is preventing the JSON from being loaded
+                                                    newval = val["value"]
+
+                                                    # If it gets here, remove the "" infront and behind the key as well 
+                                                    # since this is preventing the JSON from being loaded
+                                                    tmpvalue = json.loads(newval)
                                                     replace_key = f"\"{replace_key}\""
                                                 except json.decoder.JSONDecodeError as e:
-                                                    self.logger.info("Failed JSON replacement for OpenAPI %s", val["key"])
+                                                    self.logger.info("[WARNING] Failed JSON replacement for OpenAPI %s", val["key"])
+
                                             elif val["value"].lower() == "true" or val["value"].lower() == "false":
                                                 replace_key = f"\"{replace_key}\""
+                                            else:
+                                                if "\"" in replace_value and not "\\\"" in replace_value:
+                                                    replace_value = replace_value.replace("\"", "\\\"", -1)
 
                                             action["parameters"][counter]["value"] = action["parameters"][counter]["value"].replace(replace_key, replace_value, 1)
 
@@ -2767,6 +3048,9 @@ class AppBase:
                                     "reason": "Parameter {parameter} has an issue",
                                     "exception": f"Value Error: {check}",
                                 }))
+
+                            if parameter["name"] == "body": 
+                                self.logger.info(f"[INFO] Should debug field with liquid and other checks as it's BODY: {value}")
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
@@ -3107,6 +3391,13 @@ class AppBase:
                             # FIXME: add this to Multi exec as well.
                             try:
                                 for key, value in params.items():
+                                    if "-" in key:
+                                        try:
+                                            newkey = key.replace("-", "_", -1).lower()
+                                            params[newkey] = params[key]
+                                        except Exception as e:
+                                            self.logger.info("[DEBUG] Failed updating key with dash in it: %s" % e)
+
                                     try:
                                         if isinstance(value, str) and ((value.startswith("{") and value.endswith("}")) or (value.startswith("[") and value.endswith("]"))):
                                             params[key] = json.loads(value)
@@ -3151,7 +3442,7 @@ class AppBase:
                                     errorstring = f"{e}"
 
                                     if "the JSON object must be" in errorstring:
-                                        self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
+                                        self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (0)?")
                                         try:
                                             e = json.loads(f"{e}")
                                         except:
@@ -3159,7 +3450,7 @@ class AppBase:
 
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "An exception occurred while running this function. See exception for more details and contact support if this persists (support@shuffler.io)",
+                                            "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@shuffler.io)",
                                             "exception": e,
                                         })
                                         break
@@ -3181,7 +3472,7 @@ class AppBase:
                                         })
                                         break
                                 except Exception as e:
-                                    self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
+                                    self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (1)?")
 
                                     try:
                                         e = json.loads(f"{e}")
@@ -3190,7 +3481,7 @@ class AppBase:
 
                                     newres = json.dumps({
                                         "success": False,
-                                        "reason": "An exception occurred while running this function. See exception for more details and contact support if this persists (support@shuffler.io)",
+                                        "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@shuffler.io)",
                                         "exception": e,
                                     })
                                     break
@@ -3322,12 +3613,22 @@ class AppBase:
                 except TypeError as e:
                     self.logger.info("[ERROR] TypeError issue: %s" % e)
                     self.action_result["status"] = "FAILURE" 
-                    self.action_result["result"] = "TypeError: %s" % str(e)
+                    self.action_result["result"] = json.dumps({
+                        "success": False, 
+                        "reason": f"Typeerror. Most likely due to a list that should've been a string. See details for more info.",
+                        "details": e,
+                    })
+                    #self.action_result["result"] = "TypeError: %s" % str(e)
             else:
                 self.logger.info("[DEBUG] Function %s doesn't exist?" % action["name"])
                 self.logger.error(f"[ERROR] App {self.__class__.__name__}.{action['name']} is not callable")
                 self.action_result["status"] = "FAILURE" 
-                self.action_result["result"] = "Function %s is not callable." % actionname
+                #self.action_result["result"] = "Function %s is not callable." % actionname
+
+                self.action_result["result"] = json.dumps({
+                    "success": False, 
+                    "reason": f"Function %s doesn't exist." % actionname,
+                })
 
         # https://ptb.discord.com/channels/747075026288902237/882017498550112286/882043773138382890
         except (requests.exceptions.RequestException, TimeoutError) as e:

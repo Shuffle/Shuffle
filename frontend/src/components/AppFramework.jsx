@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 
-import { securityFramework } from "./LandingpageUsecases.jsx";
 import CytoscapeComponent from 'react-cytoscapejs';
 import frameworkStyle from '../frameworkStyle.jsx';
-import WorkflowSearch from './Workflowsearch.jsx';
 import { v4 as uuidv4 } from "uuid";
 import theme from '../theme';
 import { useAlert } from "react-alert";
+
+import AppSearch from '../components/Appsearch.jsx';
+import PaperComponent from "../components/PaperComponent.jsx"
+import { usecaseTypes } from "../components/UsecaseSearch.jsx"
+import SuggestedWorkflows from "../components/SuggestedWorkflows.jsx"
+import { securityFramework} from "../components/LandingpageUsecases.jsx";
 
 import {
   Paper,
@@ -16,6 +20,7 @@ import {
 	Badge,
   CircularProgress,
 	Tooltip,
+	Dialog,
 } from "@material-ui/core";
 
 import { 
@@ -517,20 +522,191 @@ export const usecases = {
 	}
 }
 
-const Framework = (props) => {
-  const {globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, size, inputUsecase, isLoggedIn, } = props;
+const AppFramework = (props) => {
+  const { globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, setFrameworkData, size, inputUsecase, isLoggedIn, color, discoveryWrapper, setDiscoveryWrapper, userdata, apps, inputUsecases, setInputUsecases } = props;
 	const [cy, setCy] = React.useState()
 	const [edgesStarted, setEdgesStarted] = React.useState(false)
 	const [graphDone, setGraphDone] = React.useState(false)
 	const [cyDone, setCyDone] = React.useState(false)
 	const [discoveryData, setDiscoveryData] = React.useState({})
 	const [selectionOpen, setSelectionOpen] = React.useState(true)
+	const [frameworkSuggestions, setFrameworkSuggestions] = React.useState([])
 	const [newSelectedApp, setNewSelectedApp] = React.useState({})
 	const [defaultSearch, setDefaultSearch] = React.useState("")
 	const [animationStarted, setAnimationStarted] = React.useState(false)
+	const [paperTitle, setPaperTitle] = React.useState("")
+	const [changedApp, setChangedApp] = React.useState("")
+
+
+	const [usecaseType, setUsecaseType] = React.useState(0)
+	const [selectedUsecase, setSelectedUsecase] = React.useState(selectedOption !== undefined ? selectedOption : "Phishing")
+
 	const scale = size === undefined ? 1 : size > 5 ? 3 : size
 
   const alert = useAlert()
+
+	const showRecommendations = (changed, frameworkData) => {
+		console.log("Inside recommendation loader")
+		setChangedApp(changed)
+
+		// Alternative changed
+		// This is for secondary values like email = comms
+		var alternativeChanged = changed
+		if (changed == "COMMS") {
+			alternativeChanged = "email"
+		}
+		
+		// FIX: 
+		// 0. Get workflows loaded in from usecasesearch
+		// 1. Search through workflow templates for matching app types
+		// 2. Validate if template is already in use~ (workflows with same tools)
+		// 3. Generate the workflow(s) - PS: Fix new workflow templates
+		// 4. Moving on!
+	
+		// How can we load templates? UsecaseSearch?
+		var showusecases = []
+		//const foundusecase = usecaseTypes.find(data => data.name.toLowerCase() === defaultSearch.toLowerCase())
+		for (var key in usecaseTypes) {
+			for (var subkey in usecaseTypes[key].value) {
+				const usecase = usecaseTypes[key].value[subkey]
+
+				if (usecase.active === false) {
+					continue
+				}
+
+				var potential = false
+				var matches = []
+				for (var itemtype in usecase.items) {
+					var apptype = usecase.items[itemtype].app_type.toLowerCase()
+					if (apptype.toLowerCase() === "email" || apptype.toLowerCase() === "comms" || apptype === "communication") {
+						apptype = "Comms"
+					}
+					//console.log("OLD: ", changed, "USECASE: ", apptype)
+
+					//console.log("APptype, changed, framework: ", apptype.toLowerCase(), alternativeChanged.toLowerCase(), changed.toLowerCase(), frameworkData)
+					if (changed.toLowerCase() === apptype.toLowerCase() || changed.toLowerCase().includes(apptype.toLowerCase()) || alternativeChanged.toLowerCase() === apptype.toLowerCase() || alternativeChanged.toLowerCase().includes(apptype.toLowerCase())) {
+						potential = true 
+						console.log("Potential: !", apptype)
+
+						if (frameworkData[apptype] !== undefined && frameworkData[apptype].name !== undefined && frameworkData[apptype].name !== null && frameworkData[apptype].name.length > 0) {
+							usecase.items[itemtype].app = frameworkData[apptype]
+						}
+
+						matches.push(usecase.items[itemtype])
+					} else {
+						// Check if the type is done in frameworkData
+						if (frameworkData[apptype] !== undefined) {
+							//console.log("NOT UNDEFINED: ", frameworkData[apptype])
+							if (frameworkData[apptype].name !== undefined && frameworkData[apptype].name !== null && frameworkData[apptype].name.length > 0) {
+								//console.log("FOUND: ", frameworkData[apptype])
+								usecase.items[itemtype].app = frameworkData[apptype]
+
+								//console.log("Real app!")
+								matches.push(usecase.items[itemtype])
+							}
+
+							//if (frameworkData[apptype] !== undefined) {
+						} else {
+							console.log("UNDEFINED APP (bad name?): ", apptype)
+						}
+					}
+				}
+
+				// Adds to list if it's all matching and unhandled
+				if (potential) {
+					// Check finished usecases.
+					if (inputUsecases !== undefined && setInputUsecases !== undefined && usecase.usecase_references !== undefined && usecase.usecase_references.length > 0) {
+						var foundUsecase = false
+						for (var usecaseKey in inputUsecases) {
+							const usecaseCategory = inputUsecases[usecaseKey]
+							for (var subUsecaseKey in usecaseCategory.list) {
+								const loopUsecase = usecaseCategory.list[subUsecaseKey]
+								if (loopUsecase.matches === undefined || loopUsecase.matches === null || loopUsecase.matches.length === 0) {
+									//console.log("No matches - continuing")
+									continue
+								}
+
+								if (usecase.usecase_references.includes(loopUsecase.name)) {
+									foundUsecase = true
+									break
+								}
+							}
+
+							if (foundUsecase) {
+								break
+							}
+						}
+
+						if (!foundUsecase) {
+							console.log("Usecase NOT found!")
+						} else {
+							console.log("FOUND usecase existing in ", usecase.usecase_references)
+							continue
+						}
+					} else {
+						console.log("No usecase to try to match it to (usecase.usecase_references in UsecaseSearch)")
+					}
+
+					console.log("Usecase: ", usecase)
+					if (matches.length === usecase.items.length) {
+						usecase.color = "#c51152"
+						usecase.type = usecaseTypes[key].name
+						showusecases.push(usecase)
+					}
+				}
+			}
+		}
+
+		// FIXME: Check if a usecase has already been handled
+		console.log("")
+		console.log("GOT USECASES: ", showusecases)
+
+		// FIXME: Just showing one usecase at a time for now
+		if (showusecases.length > 0) {
+			setFrameworkSuggestions(showusecases.slice(0,1))
+		}
+	}
+
+	useEffect(() => {
+		console.log("DISCWRAP CHANG: ", discoveryWrapper)
+		if (discoveryWrapper === undefined || discoveryWrapper.id === "SHUFFLE" || discoveryWrapper.id === undefined || cy === undefined) {
+			setDiscoveryData({})
+
+			if (cy !== undefined) {
+				cy.nodes().unselect()
+			}
+
+			return
+		}
+			
+
+		// Find the node and click it?
+		//setTimeout(() => {
+		const nodes = cy.nodes().jsons()
+		for (var key in nodes) {
+			const node = nodes[key]
+			var newSearchName = discoveryWrapper.id.valueOf()
+			if (newSearchName === "EMAIL") {
+				newSearchName = "COMMS"
+			}
+
+			if (newSearchName === "ERADICATION" || newSearchName === "ENDPOINT") {
+				newSearchName = "EDR & AV"
+			}
+
+			if (node.data.id === newSearchName) {
+				const tmpnode = cy.getElementById(node.data.id)
+				if (tmpnode !== undefined) {
+					tmpnode.select()
+				}
+
+				setDefaultSearch(discoveryWrapper.id)
+				setPaperTitle(discoveryWrapper.id)
+			}
+		}
+		//}, 50,)
+		//setDiscoveryData(discoveryWrapper)
+	}, [discoveryWrapper])
 
 	const setUsecaseItem = (inputUsecase) => {
 		var parsedUsecase = inputUsecase
@@ -576,7 +752,41 @@ const Framework = (props) => {
       })
 		}
 
+		const activateApp = (appid) => {
+			fetch(globalUrl+"/api/v1/apps/"+appid+"/activate", {
+					method: 'GET',
+					headers: {
+						'Content-Type': 'application/json',
+						'Accept': 'application/json',
+					},
+					credentials: "include",
+			})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Failed to activate")
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson.success === false) {
+					alert.error("Failed to activate the app")
+				} else {
+					//alert.success("App activated for your organization! Refresh the page to use the app.")
+				}
+			})
+			.catch(error => {
+				//alert.error(error.toString())
+				console.log("Activate app error: ", error.toString())
+			});
+		}
+
 	const setFrameworkItem = (data) => {
+		console.log("Setting framework item: ", data, isCloud)
+		if (!isCloud) {
+			activateApp(data.id)
+		}
+
     fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
       method: "POST",
       headers: {
@@ -613,11 +823,22 @@ const Framework = (props) => {
 		}
 
 	useEffect(() => {
-		if (discoveryData.id === undefined) {
+		console.log("New selected app: ", newSelectedApp, discoveryData)
+		if (newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined  || newSelectedApp.objectID.length === 0) {
 			return
 		}
 
-		if (newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined  || newSelectedApp.objectID.length === 0) {
+		//if (paperTitle.length > 0) {
+		//	console.log("No papertitle (parent button)")
+
+		//	cy.elements().unselect()
+		//	return
+		//}
+
+		if (discoveryData.id === undefined) {
+			console.log("No discoverydata (parent button)")
+
+			cy.elements().unselect()
 			return
 		}
 
@@ -625,7 +846,10 @@ const Framework = (props) => {
 			"type": discoveryData.id,
 			"name": newSelectedApp.name,
 			"id": newSelectedApp.objectID,
+			"large_image": newSelectedApp.image_url,
+			"description": newSelectedApp.description === undefined ? "" : newSelectedApp.description,
 		}
+
 
 		const foundelement = cy.getElementById(discoveryData.id)
 		if (foundelement !== undefined && foundelement !== null) {
@@ -637,7 +861,35 @@ const Framework = (props) => {
 			foundelement.data("height", `${85*scale}px`)
 		}
 
+		if (setFrameworkData !== undefined) {
+			// Find discoveryData.id
+			var keys = []
+			for (const [key, value] of Object.entries(frameworkData)) {
+				if (key.toLowerCase() === discoveryData.id.toLowerCase()) {
+					keys.push(key)
+				}
+			}
+
+			if (keys.length === 0) {
+				console.log("Failed to find: ", discoveryData.id, " IN ", frameworkData)
+			} else {
+				for (var key in keys) {
+					frameworkData[keys[key]] = submitValue
+				}
+
+				console.log("Frameworkdata: ", frameworkData)
+				setFrameworkData(frameworkData)
+
+				if (discoveryData.large_image !== undefined && discoveryData.large_image !== null && discoveryData.large_image.includes("storage.googleapis.com")) {
+					showRecommendations(discoveryData.id, frameworkData)
+				} else {
+					console.log("Skipping recommendations during unselect")
+				}
+			}
+		}
+
 		setFrameworkItem(submitValue) 
+		cy.elements().unselect()
 
 	}, [newSelectedApp])
 
@@ -647,52 +899,105 @@ const Framework = (props) => {
     window.location.host === "shuffler.io";
 
   const imgSize = 50;
-	var parsedFrameworkData = frameworkData 
+	var parsedFrameworkData = frameworkData === undefined ? {} : frameworkData 
 
+	// Awful mapping to make sure all access is always there
 	if (frameworkData !== undefined) {
 		if (frameworkData.cases !== undefined) {
-			frameworkData.Cases = frameworkData.cases
-		}
-		if (frameworkData.siem !== undefined) {
-			frameworkData.SIEM = frameworkData.siem
-		}
-		if (frameworkData.assets !== undefined) {
-			frameworkData.Assets = frameworkData.assets
-		}
-		if (frameworkData.intel !== undefined) {
-			frameworkData.Intel = frameworkData.intel
-		}
-		if (frameworkData.communication !== undefined) {
-			frameworkData.Comms = frameworkData.communication
-		}
-		if (frameworkData.network !== undefined) {
-			frameworkData.Network = frameworkData.network
-		}
-		if (frameworkData.iam !== undefined) {
-			frameworkData.IAM = frameworkData.iam
-		}
-		if (frameworkData.edr !== undefined) {
-			frameworkData["EDR & AV"] = frameworkData.edr
+			if (frameworkData.cases.large_image === undefined && frameworkData.cases.large_image === null || frameworkData.cases.large_image === "") {
+				frameworkData.cases = {}
+			}
+
+			parsedFrameworkData.Cases = frameworkData.cases
+		} else {
+			parsedFrameworkData.Cases = {}
 		}
 
-		parsedFrameworkData = frameworkData 
-	} else { 
-		console.log("No frameworkdata: ")
-		parsedFrameworkData = {
-			"Cases": 	{},  
-			"SIEM": 	{},
-			"Assets": {},
-			"IAM": {},
-			"Intel": 	{},
-			"Comms": 	{},
-			"Network": {},
-			"EDR & AV": {},
+		if (frameworkData.siem !== undefined) {
+			if (frameworkData.siem.large_image === undefined && frameworkData.siem.large_image === null || frameworkData.siem.large_image === "") {
+				frameworkData.siem = {}
+			}
+
+			parsedFrameworkData.SIEM = frameworkData.siem
+		} else {
+			parsedFrameworkData.SIEM = {}
 		}
+
+		if (frameworkData.assets !== undefined) {
+			if (frameworkData.assets.large_image === undefined && frameworkData.assets.large_image === null || frameworkData.assets.large_image === "") {
+				frameworkData.assets = {}
+			}
+
+			parsedFrameworkData.Assets = frameworkData.assets
+		} else {
+			parsedFrameworkData.Assets = {}
+		}
+
+		if (frameworkData.intel !== undefined) {
+			if (frameworkData.intel.large_image === undefined && frameworkData.intel.large_image === null || frameworkData.intel.large_image === "") {
+				frameworkData.intel = {}
+			}
+
+			parsedFrameworkData.Intel = frameworkData.intel
+		} else {
+			parsedFrameworkData.Intel= {}
+		}
+
+		if (frameworkData.communication !== undefined) {
+			if (frameworkData.communication.large_image === undefined && frameworkData.communication.large_image === null || frameworkData.communication.large_image === "") {
+				frameworkData.communication = {}
+			}
+
+			parsedFrameworkData.Comms = frameworkData.communication
+		} else {
+			parsedFrameworkData.Comms = {}
+		}
+
+		if (frameworkData.network !== undefined) {
+			if (frameworkData.network.large_image === undefined && frameworkData.network.large_image === null || frameworkData.network.large_image === "") {
+				frameworkData.network = {}
+			}
+
+			parsedFrameworkData.Network = frameworkData.network
+		} else {
+			parsedFrameworkData.Network = {}
+		}
+
+		if (frameworkData.iam !== undefined) {
+			if (frameworkData.iam.large_image === undefined && frameworkData.iam.large_image === null || frameworkData.iam.large_image === "") {
+				frameworkData.iam = {}
+			}
+
+			parsedFrameworkData.IAM = frameworkData.iam
+		} else {
+			parsedFrameworkData.IAM = {}
+		}
+
+		if (frameworkData.edr !== undefined) {
+			if (frameworkData.edr.large_image === undefined && frameworkData.edr.large_image === null || frameworkData.edr.large_image === "") {
+				frameworkData.edr = {}
+			}
+
+			parsedFrameworkData["EDR & AV"] = frameworkData.edr
+		} else {
+			parsedFrameworkData["EDR & AV"] = {}
+		}
+
+	} else { 
+		//console.log("No frameworkdata for org! Setting default")
+		parsedFrameworkData["Cases"] = {}
+		parsedFrameworkData["SIEM"] = {}
+		parsedFrameworkData["Assets"] = {}
+		parsedFrameworkData["IAM"] = {}
+		parsedFrameworkData["Intel"] = {}
+		parsedFrameworkData["Comms"] = {}
+		parsedFrameworkData["Network"] = {}
+		parsedFrameworkData["EDR & AV"] = {}
 	}
 
+	//console.log("Framework - update? ", parsedFrameworkData)
+
 	// 0 = automated, 1 = manual
-	const [usecaseType, setUsecaseType] = React.useState(0)
-	const [selectedUsecase, setSelectedUsecase] = React.useState(selectedOption !== undefined ? selectedOption : "Phishing")
 
 	const elements = []
 	const surfaceColor = "#27292D"
@@ -865,13 +1170,60 @@ const Framework = (props) => {
     )
 	}
 
+	const onNodeUnselect = (event) => {
+    var data = event.target.data();
+		console.log("UNSELECT: ", data)
+			
+		var parsedStyle = {
+      "border-width": "10px",
+      "border-opacity": ".7",
+			"border-color": "#7fe57f",
+    }
+
+		// Some error here?
+		if (event.target !== undefined && event.target !== null) {
+			event.target.animate(
+				{
+					style: parsedStyle,
+				},
+				{
+					duration: animationDuration,
+				}
+			)
+
+			setTimeout(() => {
+				event.target.animate(
+					{
+						style: {
+							"border-width": "3px",
+						},
+					},
+					{
+						duration: animationDuration,
+					}
+				)
+			}, 2500)
+		}
+
+		//setDiscoveryData({})
+		setDiscoveryWrapper({})
+		setSelectionOpen(false)
+		setDefaultSearch("")
+		setPaperTitle("")
+
+		//setDiscoveryData({})
+	}
 
 	const onNodeSelect = (event) => {
-    const data = event.target.data();
+    var data = event.target.data();
 		console.log("Node: ", data)
 		if (data.id === "SHUFFLE") {
 			event.target.unselect()
 			return
+		}
+
+		if (data.label === "EDR & AV") {
+			data.label = "ERADICATION"
 		}
 	
 		setDiscoveryData(data)
@@ -908,6 +1260,9 @@ const Framework = (props) => {
 		cy.on("select", "node", (e) => {
 			onNodeSelect(e)
 		})
+    cy.on("unselect", "node", (e) => {
+			onNodeUnselect(e)
+		})
 
 		cy.on("mouseover", "node", (e) => {onNodeHover(e)})
     cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
@@ -924,10 +1279,7 @@ const Framework = (props) => {
 		const shiftmodifier = 3*scale
 		//const svgSize = `${40*scale}px`
 		const svgSize = `${40}px`
-		console.log("Size: ", svgSize)
 
-
-		console.log("Framework: ", parsedFrameworkData)
 		const fontSize = `${12*scale}px`
 		const defaultSize = `${85*scale}px`
 		const iconSize = `${45*scale}px`
@@ -1121,10 +1473,10 @@ const Framework = (props) => {
 						description: parsedFrameworkData.Network.description === undefined ? "" : parsedFrameworkData.Network.description,
 						app_id: parsedFrameworkData.Network.id === undefined ? "" : parsedFrameworkData.Network.id,
 						text_margin_y: parsedFrameworkData.Network.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Network.large_image === undefined ? `${32*scale}px` : "0px",
-						margin_y: parsedFrameworkData.Network.large_image === undefined ? `${19*scale}px` : `0px`,
-						width: parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
-						height: parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
+						margin_x: 		parsedFrameworkData.Network.large_image === undefined ? `${32*scale}px` : "0px",
+						margin_y: 		parsedFrameworkData.Network.large_image === undefined ? `${19*scale}px` : `0px`,
+						width: 				parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
+						height: 			parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
 						large_image:  parsedFrameworkData.Network.large_image === undefined ? encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg">
 							<path d="M0.251953 10.6011H3.8391L9.38052 -4.92572e-08L10.8977 11.5696L15.0377 6.28838L19.3191 10.6011H23.3948V13.1836H18.252L15.2562 10.175L9.1491 18L7.88909 8.41894L5.39481 13.1836H0.251953V10.6011Z" />,
 						</svg>`) :  parsedFrameworkData.Network.large_image,
@@ -1265,14 +1617,11 @@ const Framework = (props) => {
 		changeUsecase(selectedUsecase, usecaseType)
 
 		if (inputUsecase !== undefined && inputUsecase !== null) {
-			console.log("Got usecase: ", inputUsecase)
-
 			for (var key in inputUsecase.process) {
 				if (inputUsecase.process[key].source === "" || inputUsecase.process[key].target === "") {
 					continue
 				}
 
-				console.log("Edge: ", inputUsecase.process[key])
 				inputUsecase.process[key].label = parseInt(key)+1
 				inputUsecase.process[key].id = uuidv4();
 
@@ -1377,8 +1726,11 @@ const Framework = (props) => {
 			//}
 		}
 
+		const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
+		console.log("BGCOLOR: ", bgColor)
+
 		return (
-				<Paper style={{marginBottom: 15, width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 15, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", }} onMouseOver={handleHover} onMouseOut={handleHoverOut}>
+				<Paper style={{marginBottom: 15, width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 15, backgroundColor: bgColor, border: "1px solid rgba(255,255,255,0.2)", }} onMouseOver={handleHover} onMouseOut={handleHoverOut}>
 					<Typography style={{textAlign: "center"}}>
 						{data.name}
 					</Typography>
@@ -1447,8 +1799,23 @@ const Framework = (props) => {
 
 	//autounselectify={true}
 	var usecasediff = -100
-	return (
-		<div style={{margin: "auto", backgroundColor: theme.palette.surfaceColor, position: "relative", }}>
+	const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
+
+	return (	
+		<div style={{margin: "auto", backgroundColor: bgColor, position: "relative", }}>
+			<div style={{position: "absolute"}}>
+
+				<SuggestedWorkflows 
+					globalUrl={globalUrl}
+					userdata={userdata}
+					frameworkData={frameworkData}
+					usecaseSuggestions={frameworkSuggestions}
+					setUsecaseSuggestions={setFrameworkSuggestions}
+					inputSearch={changedApp}
+					apps={apps}
+				/>
+			</div>
+
 			{showOptions === false ? null : 
 				<div style={{textAlign: "center",}}>
 					{Object.keys(usecases).map((data, index) => {
@@ -1480,7 +1847,15 @@ const Framework = (props) => {
 
   		{
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
-					<Paper style={{width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: 50, left: 50, }}>
+					<Paper style={{width: 275, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: 50, }}>
+						{paperTitle.length > 0 ? 
+							<span>
+								<Typography variant="h6" style={{textAlign: "center"}}>
+									{paperTitle}
+								</Typography>
+								<Divider style={{marginTop: 5, marginBottom: 5 }} />
+							</span>
+						: null}
 						<Tooltip
 							title="Close window"
 							placement="top"
@@ -1495,12 +1870,12 @@ const Framework = (props) => {
 									e.preventDefault();
 									setDiscoveryData({})
 									setDefaultSearch("")
+									setPaperTitle("")
 								}}
 							>
 								<CloseIcon style={{ color: "white", height: 15, width: 15, }} />
 							</IconButton>
 						</Tooltip>
-						{/* {/*Causes errors in Cytoscape. Removing for now.}
 						<Tooltip
 							title="Unselect app"
 							placement="top"
@@ -1515,12 +1890,29 @@ const Framework = (props) => {
 										"label": discoveryData.label,
 										"name": ""
 									})
+
 									setNewSelectedApp({
-										"image_url": "",
-										"name": "",
+										"animate": false,
+										"app_id": "",
+										"boxheight": "66.3px",
+										"boxwidth": "66.3px",
+										"description": "",
+										"errors": [],
+										"font_size": "9.36px",
+										"height": "66.3px",
 										"id": "",
+										"isValid": true,
+										"is_valid": true,
+										"label": "SIEM",
+										"large_image": "asd",
+										"margin_x": "0px",
+										"margin_y": "0px",
+										"name": "",
+										"text_margin_y": "46.800000000000004px",
+										"width": "66.3px",
 										"objectID": "remove",
 									})
+
 									setSelectionOpen(true)
 									setDefaultSearch("")
 
@@ -1544,7 +1936,6 @@ const Framework = (props) => {
 								<DeleteIcon style={{ color: "white", height: 15, width: 15, }} />
 							</IconButton>
 						</Tooltip>
-						*/}
 						<div style={{display: "flex"}}>
 							{discoveryData.name !== undefined && discoveryData.name !== null && discoveryData.name.length > 0 ? 
 								<div style={{border: "1px solid rgba(255,255,255,0.2)", borderRadius: 25, height: 40, width: 40, textAlign: "center", overflow: "hidden",}}>
@@ -1561,18 +1952,18 @@ const Framework = (props) => {
 									newSelectedApp.name !== undefined && newSelectedApp.name !== null && newSelectedApp.name.length > 0 ?
 										newSelectedApp.name
 										: 
-										`No ${discoveryData.label} app chosen`
+										`Find your ${discoveryData.label} app!`
 								}
 							</Typography>
 						</div>
 						<div>
 							{discoveryData !== undefined && discoveryData.name !== undefined && discoveryData.name !== null && discoveryData.name.length > 0 ? 
 								<span>
-									<Typography variant="body2" color="textSecondary" style={{marginTop: 10, marginBottom: 10, }}>
+									<Typography variant="body2" color="textSecondary" style={{marginTop: 10, marginBottom: 10, maxHeight: 75, overflowY: "auto", overflowX: "hidden", }}>
 										{discoveryData.description}
 									</Typography>
 									{/*isCloud && defaultSearch !== undefined && defaultSearch.length > 0 ? 
-										{<WorkflowSearch 
+										{<
 											newSelectedApp={newSelectedApp}
 											setNewSelectedApp={setNewSelectedApp}
 											defaultSearch={defaultSearch}
@@ -1604,19 +1995,16 @@ const Framework = (props) => {
 							}
 						</div>
 						<div style={{marginTop: 10}}>
-						{selectionOpen ? 
-							isCloud && defaultSearch !== undefined && defaultSearch.length > 0 ? 
-								<WorkflowSearch 
+							{selectionOpen ? 
+								<AppSearch
 									defaultSearch={defaultSearch}
 									newSelectedApp={newSelectedApp}
 									setNewSelectedApp={setNewSelectedApp}
+									userdata={userdata}
+									cy={cy}
 								/>
-								: 
-								<div>
-									Coming in 1.0.0. <a style={{ textDecoration: "none", color: "#f85a3e" }} href="https://shuffler.io/register" target="_blank">Register for Shuffle cloud</a> to try an early version now. 
-								</div>
-						: null}
-							</div>
+							: null}
+						</div>
 					</Paper>
 					: null
 			}
@@ -1649,4 +2037,4 @@ const Framework = (props) => {
 	)
 }
 
-export default Framework;
+export default AppFramework;

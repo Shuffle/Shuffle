@@ -15,13 +15,16 @@ import theme from "./theme";
 import Apps from "./views/Apps";
 import AppCreator from "./views/AppCreator";
 
+import Welcome from "./views/Welcome.jsx";
 import Dashboard from "./views/Dashboard.jsx";
+import DashboardView from "./views/DashboardViews.jsx";
 import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs";
 import Introduction from "./views/Introduction";
 import SetAuthentication from "./views/SetAuthentication";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
+import Search from "./views/Search.jsx";
 
 import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
@@ -40,6 +43,7 @@ import { isMobile } from "react-device-detect";
 
 import detectEthereumProvider from "@metamask/detect-provider";
 import Drift from "react-driftjs";
+import DashboardPage from "./views/TempDashboard.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
@@ -50,11 +54,12 @@ if (window.location.port === "3000") {
   //globalUrl = "http://localhost:5002"
 }
 
-if (globalUrl.includes("githubpreview.dev")) {
+// Development on Github Codespaces
+if (globalUrl.includes("app.github.dev")) {
 	//globalUrl = globalUrl.replace("3000", "5001")
-	globalUrl = "https://frikky-shuffle-5gvr4xx62w64-5001.githubpreview.dev"
+	globalUrl = "https://frikky-shuffle-5gvr4xx62w64-5001.preview.app.github.dev"
 }
-console.log("global: ", globalUrl)
+//console.log("global: ", globalUrl)
 
 const App = (message, props) => {
 
@@ -64,11 +69,7 @@ const App = (message, props) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [dataset, setDataset] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
-  const [curpath, setCurpath] = useState(
-    typeof window === "undefined" || window.location === undefined
-      ? ""
-      : window.location.pathname
-  )
+  const [curpath, setCurpath] = useState(typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname)
 
 
   useEffect(() => {
@@ -130,7 +131,7 @@ const App = (message, props) => {
       .then((responseJson) => {
         var userInfo = {};
         if (responseJson.success === true) {
-          console.log(responseJson);
+          //console.log("USER: ", responseJson);
 
           userInfo = responseJson;
           setIsLoggedIn(true);
@@ -303,6 +304,7 @@ const App = (message, props) => {
       >
         <ScrollToTop
           getUserNotifications={getUserNotifications}
+					curpath={curpath}
           setCurpath={setCurpath}
         />
 				{!isLoaded ? null : 
@@ -310,7 +312,7 @@ const App = (message, props) => {
 						<Drift 
 							appId="zfk9i7w3yizf" 
 							attributes={{
-								name: userdata.username === undefined || userdata.username === null ? "OSS user" : `${userdata.username} - OSS`,
+								name: userdata.username === undefined || userdata.username === null ? "OSS user" : `OSS ${userdata.username}`,
 							}}
 							eventHandlers={[
 								{ 
@@ -319,7 +321,6 @@ const App = (message, props) => {
 								},
 							]}
 						/>
-					
 				}
         <Header
           notifications={notifications}
@@ -370,6 +371,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+					<Route exact path="/search" element={<Search serverside={false} isLoaded={isLoaded} userdata={userdata} globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} {...props} /> } />
         	<Route
         	  exact
         	  path="/admin/:key"
@@ -648,6 +650,45 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route
+        	  exact
+        	  path="/testdashboard"
+        	  element={
+        	    <DashboardPage
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/dashboards"
+        	  element={
+        	    <DashboardView
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+					<Route
+						exact
+						path="/welcome"
+						element={
+							<Welcome
+								cookies={cookies}
+								removeCookie={removeCookie}
+								isLoaded={isLoaded}
+								isLoggedIn={isLoggedIn}
+								globalUrl={globalUrl}
+								cookies={cookies}
+								userdata={userdata}
+								{...props}
+							/>
+						}
+					/>
         	<Route
         	  exact
         	  path="/"

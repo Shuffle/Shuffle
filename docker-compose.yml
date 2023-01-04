@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    image: ghcr.io/frikky/shuffle-frontend:latest
+    image: ghcr.io/shuffle/shuffle-frontend:latest
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -15,7 +15,7 @@ services:
     depends_on:
       - backend
   backend:
-    image: ghcr.io/frikky/shuffle-backend:latest
+    image: ghcr.io/shuffle/shuffle-backend:latest
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -29,11 +29,12 @@ services:
       - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
     env_file: .env
     environment:
+      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
   orborus:
-    image: ghcr.io/frikky/shuffle-orborus:latest
+    image: ghcr.io/shuffle/shuffle-orborus:latest
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -41,6 +42,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
+      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
       - SHUFFLE_WORKER_VERSION=latest
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
@@ -52,25 +54,22 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
-      - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
-      - SHUFFLE_SCALE_REPLICAS=1
-      - SHUFFLE_SWARM_CONFIG=runn
     restart: unless-stopped
     security_opt:
       - seccomp:unconfined
   opensearch:
-    image: opensearchproject/opensearch:1.2.4
+    image: opensearchproject/opensearch:2.4.0
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
       - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms1024m -Xmx1024m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - cluster.initial_master_nodes=shuffle-opensearch
       - cluster.routing.allocation.disk.threshold_enabled=false
       - cluster.name=shuffle-cluster
       - node.name=shuffle-opensearch
-      - discovery.seed_hosts=shuffle-opensearch
-      - cluster.initial_master_nodes=shuffle-opensearch
       - node.store.allow_mmap=false
+      - discovery.seed_hosts=shuffle-opensearch
     ulimits:
       memlock:
         soft: -1
@@ -87,6 +86,8 @@ services:
     restart: unless-stopped
   #docker-socket-proxy:
   #  image: tecnativa/docker-socket-proxy
+  #  container_name: shuffle-frontend
+  #  hostname: docker-socket-proxy
   #  privileged: true
   #  environment:
   #    - SERVICES=1
@@ -105,6 +106,7 @@ services:
   #    - POST=1
   #    - AUTH=1
   #    - SECRETS=1
+  #    - SWARM=1
   #  volumes:
   #    - /var/run/docker.sock:/var/run/docker.sock
   #  networks:

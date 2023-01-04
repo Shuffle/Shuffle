@@ -1,33 +1,36 @@
 import React, { useEffect, useContext } from "react";
+import ReactDOM from "react-dom"
+
 import { makeStyles } from "@material-ui/core/styles";
 import { useTheme } from "@material-ui/core/styles";
 import { Navigate } from "react-router-dom";
 //import { Redirect } from "react-router-dom";
 
-import SecurityFramework from '../components/SecurityFramework.jsx';
-import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
-import { isMobile } from "react-device-detect" 
 
+import SecurityFramework from '../components/SecurityFramework.jsx';
+import EditWorkflow from "../components/EditWorkflow.jsx" 
+import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
+
+import { isMobile } from "react-device-detect" 
 
 import {
   Badge,
+	Divider,
   Avatar,
+  Drawer,
   Grid,
 	InputLabel,
 	Select,
 	ListSubheader,
   Paper,
   Tooltip,
-  Divider,
   Button,
   TextField,
   FormControl,
   IconButton,
   Menu,
   MenuItem,
-  FormControlLabel,
   Chip,
-  Switch,
   Typography,
   Zoom,
   CircularProgress,
@@ -35,8 +38,8 @@ import {
   DialogTitle,
   DialogActions,
   DialogContent,
-	OutlinedInput,
 	Checkbox,
+	LinearProgress,
 	ListItemText,
 } from "@material-ui/core";
 
@@ -71,22 +74,28 @@ import {
   CloudDownload as CloudDownloadIcon,
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
+	Done as DoneIcon,
+	CheckCircle as CheckCircleIcon, 
+	RadioButtonUnchecked as RadioButtonUncheckedIcon,
+  ArrowLeft as ArrowLeftIcon,
+  ArrowRight as ArrowRightIcon,
 } from "@material-ui/icons";
 
-import NestedMenuItem from "material-ui-nested-menu-item";
-//import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
+//import NestedMenuItem from "material-ui-nested-menu-item";
+//import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon,  Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 //https://next.material-ui.com/components/material-icons/
-import { DataGrid, GridToolbar } from "@material-ui/data-grid";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import Dropzone from "../components/Dropzone";
 
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAlert } from "react-alert";
 import ChipInput from "material-ui-chip-input";
 import { v4 as uuidv4 } from "uuid";
+
 
 const inputColor = "#383B40";
 const surfaceColor = "#27292D";
@@ -133,8 +142,8 @@ export const GetIconInfo = (action) => {
   const iconList = [
     { key: "cache_add", values: ["set_cache"] },
     { key: "cache_get", values: ["get_cache"] },
-    { key: "filter", values: ["filter", "route", "router"] },
-    { key: "merge", values: ["join", "merge"] },
+    { key: "filter", values: ["filter"] },
+    { key: "merge", values: ["join", "merge", "route", "router"] },
     {
       key: "search",
       values: ["search", "find", "locate", "index", "analyze", "anal", "match", "check cache", "check", "verify", "validate"],
@@ -406,10 +415,22 @@ export const validateJson = (showResult) => {
   	}
 	}
 
+	if (showResult[0] === "\"") {
+  	return {
+  	  valid: false,
+  	  result: showResult,
+		}
+	}
+
   var jsonvalid = true
   try {
     if (!showResult.includes("{") && !showResult.includes("[")) {
       jsonvalid = false
+
+			return {
+				valid: jsonvalid,
+				result: showResult,
+			};
     }
   } catch (e) {
     showResult = showResult.split("'").join('"');
@@ -419,13 +440,14 @@ export const validateJson = (showResult) => {
         jsonvalid = false;
       }
     } catch (e) {
+
       jsonvalid = false;
     }
   }
 
   var result = showResult;
   try {
-    result = jsonvalid ? JSON.parse(showResult) : showResult;
+    result = jsonvalid ? JSON.parse(showResult, {"storeAsString": true}) : showResult;
   } catch (e) {
     ////console.log("Failed parsing JSON even though its valid: ", e)
     jsonvalid = false;
@@ -462,7 +484,6 @@ export const validateJson = (showResult) => {
 				if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
 					const inside_result = validateJson(value)
 					if (inside_result.valid) {
-						console.log("Replacing value since it's valid JSON!")
 						if (typeof inside_result.result === "string") {
           		const newres = JSON.parse(inside_result.result)
 							result[key] = newres 
@@ -477,7 +498,6 @@ export const validateJson = (showResult) => {
 		}
 	}
 
-  //console.log("VALID: ", jsonvalid, result, typeof result)
   return {
     valid: jsonvalid,
     result: result,
@@ -487,6 +507,8 @@ export const validateJson = (showResult) => {
 const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
   document.title = "Shuffle - Workflows";
+	let navigate = useNavigate();
+
   const theme = useTheme();
   const alert = useAlert();
   const classes = useStyles(theme);
@@ -516,6 +538,7 @@ const Workflows = (props) => {
   const [exportData, setExportData] = React.useState("");
 
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [isEditing, setIsEditing] = React.useState(true);
   const [newWorkflowName, setNewWorkflowName] = React.useState("");
   const [newWorkflowDescription, setNewWorkflowDescription] =
     React.useState("");
@@ -538,12 +561,62 @@ const Workflows = (props) => {
   const [firstLoad, setFirstLoad] = React.useState(true);
   const [showMoreClicked, setShowMoreClicked] = React.useState(false);
   const [usecases, setUsecases] = React.useState([]);
+  const [appFramework, setAppFramework] = React.useState({});
+  const [drawerOpen, setDrawerOpen] = React.useState(false)
+  const [videoViewOpen, setVideoViewOpen] = React.useState(false)
+  const [gettingStartedItems, setGettingStartedItems] = React.useState([])
+	const drawerWidth = drawerOpen ? 325 : 0
+
+	const sidebarKey = "getting_started_sidebar"
+	if (isLoggedIn === true && gettingStartedItems.length === 0 && (userdata.tutorials !== undefined && userdata.tutorials !== null && userdata.tutorials.length > 0) && workflowDone === true) {
+		const activeFiltered = userdata.tutorials.filter((item) => item.active === true)
+		if (activeFiltered.length > 0) {
+			var newfiltered = []
+			for (var key in activeFiltered) {
+				if (activeFiltered[key].name === "Discover Usecases") {
+					if (workflows.length > 1) { 
+						activeFiltered[key].done = true
+						activeFiltered[key].description = `${workflows.length} workflows created`
+					}
+				}
+
+				newfiltered.push(activeFiltered[key])
+			}
+
+			setGettingStartedItems(activeFiltered)
+
+			const doneFiltered = activeFiltered.filter((item) => item.done === true)
+			if (doneFiltered.length > 0) { 
+				console.log("DONE: ", doneFiltered)
+			}
+
+      const sidebar = localStorage.getItem(sidebarKey);
+			if (sidebar === null || sidebar === undefined) {
+				console.log("No sidebar defined")
+              
+				localStorage.setItem(sidebarKey, "open");
+  			setDrawerOpen(true)
+      } else {
+				console.log("Got sidebar: ", sidebar)
+
+				if (sidebar === "open") {
+					console.log("OPEN the thingy!")
+  				setDrawerOpen(true)
+				} else {
+					console.log("Close the thingy!")
+  				setDrawerOpen(false)
+				}
+			}
+		}
+
+	}
 
   const isCloud =
     window.location.host === "localhost:3002" ||
     window.location.host === "shuffler.io";
 
   const findWorkflow = (filters) => {
+		console.log("Using filters: ", filters)
     if (filters.length === 0) {
       setFilteredWorkflows(workflows);
       return;
@@ -558,27 +631,44 @@ const Workflows = (props) => {
         found = filters.map((filter) =>
           curWorkflow.name.toLowerCase().includes(filter)
         );
-      } else {
+      }
+
+      if (found.every((v) => v !== true)) {
         found = filters.map((filter) => {
-          const newfilter = filter.toLowerCase();
-          if (filter === undefined) {
+          if (filter === undefined || filter === null) {
             return false;
           }
 
+          const newfilter = filter.toLowerCase();
+
           if (curWorkflow.name.toLowerCase().includes(filter.toLowerCase())) {
             return true;
-          } else if (curWorkflow.tags.includes(filter)) {
+          } else if (curWorkflow.tags !== undefined && curWorkflow.tags !== null && curWorkflow.tags.includes(filter)) {
             return true;
           } else if (curWorkflow.owner === filter) {
             return true;
           } else if (curWorkflow.org_id === filter) {
             return true;
+          } else if (curWorkflow.usecase_ids !== undefined && curWorkflow.usecase_ids !== null && curWorkflow.usecase_ids.length > 0) {
+						// Check if the usecase is the right category
+						for (var key in usecases) {
+							if (usecases[key].name.toLowerCase() !== newfilter) {
+								continue
+							}
+
+							for (var subkey in usecases[key].list) {
+								if (curWorkflow.usecase_ids.includes(usecases[key].list[subkey].name)) {
+									return true
+								}
+							}
+						}
           } else if (
             curWorkflow.actions !== null &&
             curWorkflow.actions !== undefined
           ) {
             for (var key in curWorkflow.actions) {
               const action = curWorkflow.actions[key];
+
               if (
                 action.app_name.toLowerCase() === newfilter ||
                 action.app_name.toLowerCase().includes(newfilter)
@@ -586,7 +676,7 @@ const Workflows = (props) => {
                 return true;
               }
             }
-          }
+					}
 
           return false;
         });
@@ -605,14 +695,17 @@ const Workflows = (props) => {
 
   const addFilter = (data) => {
     if (data === null || data === undefined) {
+			console.log("No filter data")
       return;
     }
 
     if (data.includes("<") && data.includes(">")) {
+			console.log("Filter includes < or >")
       return;
     }
 
     if (filters.includes(data) || filters.includes(data.toLowerCase())) {
+			console.log("Filter already has the data")
       return;
     }
 
@@ -877,7 +970,42 @@ const Workflows = (props) => {
     if (isDropzone) {
       setIsDropzone(false);
     }
+
   }, [isDropzone]);
+
+
+	const getFramework = () => {
+		fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for framework!");
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				setAppFramework({})
+				if (responseJson.reason !== undefined) {
+					//alert.error("Failed loading: " + responseJson.reason)
+				} else {
+					//alert.error("Failed to load framework for your org.")
+				}
+			} else {
+				setAppFramework(responseJson)
+			}
+		})
+		.catch((error) => {
+			console.log("err in framework: ", error.toString());
+		})
+	}
 
   const getAvailableWorkflows = () => {
     fetch(globalUrl + "/api/v1/workflows", {
@@ -893,11 +1021,10 @@ const Workflows = (props) => {
           console.log("Status not 200 for workflows :O!: ", response.status);
 
           if (isCloud) {
-            window.location.pathname = "/search?tab=workflows";
+            navigate("/search?tab=workflows")
           }
 
           alert.info("Failed getting workflows.");
-          setWorkflowDone(true);
 
           return;
         }
@@ -905,55 +1032,64 @@ const Workflows = (props) => {
       })
       .then((responseJson) => {
         if (responseJson !== undefined) {
-          setWorkflows(responseJson);
-					fetchUsecases(responseJson)
+					var newarray = []
+					for (var key in responseJson) {
+						const wf = responseJson[key]
+						if (wf.public === true) {
+							continue
+						}
+
+						newarray.push(wf)
+					}
+
+					// Workflows are set in here
+					fetchUsecases(newarray)
 								
 					var setProdFilter = false 
 
-          if (responseJson !== undefined) {
-            var actionnamelist = [];
-            var parsedactionlist = [];
-            for (var key in responseJson) {
-							const workflow = responseJson[key]
-							if (workflow.status === "production") {
-								setProdFilter = true 
+					var actionnamelist = [];
+					var parsedactionlist = [];
+					for (var key in newarray) {
+						const workflow = newarray[key]
+						if (workflow.status === "production") {
+							setProdFilter = true 
+						}
+
+						for (var actionkey in newarray[key].actions) {
+							const action = newarray[key].actions[actionkey];
+							//console.log("Action: ", action)
+							if (actionnamelist.includes(action.app_name)) {
+								continue;
 							}
 
-              for (var actionkey in responseJson[key].actions) {
-                const action = responseJson[key].actions[actionkey];
-                //console.log("Action: ", action)
-                if (actionnamelist.includes(action.app_name)) {
-                  continue;
-                }
+							actionnamelist.push(action.app_name);
+							parsedactionlist.push(action);
+						}
+					}
 
-                actionnamelist.push(action.app_name);
-                parsedactionlist.push(action);
-              }
-            }
-
-            //console.log(parsedactionlist)
-            setActionImageList(parsedactionlist);
-          }
+					//console.log(parsedactionlist)
+					setActionImageList(parsedactionlist);
 
 								
 					if (setProdFilter === true) {
             setFilters(["status:production"]);
-						const newWorkflows = responseJson.filter(workflow => workflow.status === "production")
+						const newWorkflows = newarray.filter(workflow => workflow.status === "production")
 						console.log(newWorkflows)
 						if (newWorkflows !== undefined && newWorkflows !== null) {
           		setFilteredWorkflows(newWorkflows);
 						} else {
-          		setFilteredWorkflows(responseJson);
+          		setFilteredWorkflows(newarray);
 						}
 					} else { 
-          	setFilteredWorkflows(responseJson);
+          	setFilteredWorkflows(newarray);
 					}
 
 					// Ensures the zooming happens only once per load
-          setWorkflowDone(true);
         	setTimeout(() => {
 						setFirstLoad(false)
+
 					}, 100)
+
         } else {
           if (isLoggedIn) {
             alert.error("An error occurred while loading workflows");
@@ -986,6 +1122,7 @@ const Workflows = (props) => {
 
 						if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
 							for (var usecasekey in workflow.usecase_ids) {
+
 								if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
 									//console.log("Got match: ", workflow.usecase_ids[usecasekey])
 
@@ -1012,6 +1149,8 @@ const Workflows = (props) => {
 		} else {
   		setUsecases(categorydata)
 		}
+    setWorkflows(workflows);
+    setWorkflowDone(true);
 	}
 
   const fetchUsecases = (workflows) => {
@@ -1033,11 +1172,16 @@ const Workflows = (props) => {
       .then((responseJson) => {
 				if (responseJson.success !== false) {
 					handleKeysetting(responseJson, workflows)
+				} else {
+        	setWorkflows(workflows);
+      		setWorkflowDone(true);
 				}
       })
       .catch((error) => {
         //alert.error("ERROR: " + error.toString());
         console.log("ERROR: " + error.toString());
+        setWorkflows(workflows);
+      	setWorkflowDone(true);
       });
   };
 
@@ -1050,6 +1194,7 @@ const Workflows = (props) => {
       }
 
       getAvailableWorkflows();
+			getFramework()
     }
   }, [])
 
@@ -1057,9 +1202,10 @@ const Workflows = (props) => {
     color: "#ffffff",
     width: "100%",
     display: "flex",
-    minWidth: isMobile ? "100%" : 1024,
-    maxWidth: isMobile ? "100%" : 1024,
-    margin: "auto",
+    minWidth: isMobile ? "100%" : drawerWidth > 0 ? 824 : 1024,
+    maxWidth: isMobile ? "100%" : drawerWidth > 0 ? 824 : 1024,
+    margin: drawerWidth === 0 ? "auto" : `auto ${drawerWidth+100} auto auto`,
+		paddingBottom: 200,
   };
 
   const emptyWorkflowStyle = {
@@ -1114,10 +1260,15 @@ const Workflows = (props) => {
     justifyContent: "space-between",
   };
 
-  const exportAllWorkflows = () => {
-    for (var key in workflows) {
-      exportWorkflow(workflows[key], false);
+  const exportAllWorkflows = (allWorkflows) => {
+		for (var i = 0; i < allWorkflows.length; i++) {
+			setTimeout(() => {
+				console.log(allWorkflows[i].name)
+      	exportWorkflow(allWorkflows[i], false)
+			}, i * 200);
     }
+
+    alert.info(`exporting and keeping original for all ${allWorkflows.length} workflows`);
   };
 
   const deduplicateIds = (data) => {
@@ -1125,9 +1276,11 @@ const Workflows = (props) => {
       for (var key in data.triggers) {
         const trigger = data.triggers[key];
         if (trigger.app_name === "Shuffle Workflow") {
-          if (trigger.parameters.length > 2) {
-            trigger.parameters[2].value = "";
-          }
+					if (trigger.parameters !== null && trigger.parameters !== undefined) {
+						if (trigger.parameters.length > 2) {
+							trigger.parameters[2].value = "";
+						}
+					}
         }
 
         if (trigger.status === "running") {
@@ -1180,8 +1333,12 @@ const Workflows = (props) => {
 
         for (var subkey in data.actions[key].parameters) {
           const param = data.actions[key].parameters[subkey];
+
+					// Removed October 10th, 2022 as key usually isn't 
+					// containing anything secret, but rather necessary configurations.
+          // param.name.includes("key") ||
+					//
           if (
-            param.name.includes("key") ||
             param.name.includes("user") ||
             param.name.includes("pass") ||
             param.name.includes("api") ||
@@ -1228,8 +1385,9 @@ const Workflows = (props) => {
     ) {
       for (key in data.workflow_variables) {
         const param = data.workflow_variables[key];
+        //param.name.includes("key") ||
+
         if (
-          param.name.includes("key") ||
           param.name.includes("user") ||
           param.name.includes("pass") ||
           param.name.includes("api") ||
@@ -1425,11 +1583,14 @@ const Workflows = (props) => {
     };
 
     return (
-      <Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
+      <Grid item xs={isMobile || workflows.length === 0 ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
         <Paper
           square
           style={setupPaperStyle}
-          onClick={() => setModalOpen(true)}
+          onClick={() => {
+						setModalOpen(true)
+  					setIsEditing(false)
+					}}
           onMouseOver={() => {
             setHover(true);
           }}
@@ -1482,7 +1643,7 @@ const Workflows = (props) => {
     }
 
     if (!data.previously_saved) {
-      boxColor = "#f85a3e";
+      boxColor = "#f86a3e";
     }
 
     const menuClick = (event) => {
@@ -1516,25 +1677,27 @@ const Workflows = (props) => {
       >
         <MenuItem
           style={{ backgroundColor: inputColor, color: "white" }}
-          onClick={() => {
-            setModalOpen(true);
-            setEditingWorkflow(JSON.parse(JSON.stringify(data)));
-            setNewWorkflowName(data.name);
-            setNewWorkflowDescription(data.description);
-            setDefaultReturnValue(data.default_return_value);
-            if (data.tags !== undefined && data.tags !== null) {
-              setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
-            }
+          onClick={(event) => {
+						event.stopPropagation()
+						ReactDOM.unstable_batchedUpdates(() => {
+            	setModalOpen(true);
+            	setEditingWorkflow(JSON.parse(JSON.stringify(data)));
+            	setNewWorkflowName(data.name);
+            	setNewWorkflowDescription(data.description);
+            	setDefaultReturnValue(data.default_return_value);
+            	if (data.tags !== undefined && data.tags !== null) {
+            	  setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
+            	}
 
-						console.log("Editing: ", data)
-						if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
-							setSelectedUsecases(data.usecase_ids)
-						}
+							if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
+								setSelectedUsecases(data.usecase_ids)
+							}
+						})
           }}
           key={"change"}
         >
           <EditIcon style={{ marginLeft: 0, marginRight: 8 }} />
-          {"Change details"}
+          {"Edit details"}
         </MenuItem>
         <MenuItem
           style={{ backgroundColor: inputColor, color: "white" }}
@@ -1679,20 +1842,60 @@ const Workflows = (props) => {
       }
     }
 
+		var selectedCategory = ""
+		if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0 && usecases !== null && usecases !== undefined && usecases.length > 0) {
+			const oldcolor = boxColor.valueOf()
+
+			// Find the first usecase and use that ones' ID
+			for (var key in usecases) {
+				var category = usecases[key]
+				category.matches = []
+
+				for (var subcategorykey in category.list) {
+					var subcategory = category.list[subcategorykey]
+					subcategory.matches = []
+
+					for (var usecasekey in data.usecase_ids) {
+						if (data.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
+							boxColor = category.color
+							break
+						}
+					}
+					
+					if (boxColor !== oldcolor) {
+						break
+					}
+				}
+
+				if (boxColor !== oldcolor) {
+					selectedCategory = category.name
+					break
+				}
+			}
+		}
+
     return (
 			<div style={{width: "100%", position: "relative",}}>
         <Paper square style={paperAppStyle}>
-          <div
-            style={{
-              position: "absolute",
-              bottom: 1,
-              left: 1,
-              height: 12,
-              width: 12,
-              backgroundColor: boxColor,
-              borderRadius: "0 100px 0 0",
-            }}
-          />
+					{selectedCategory !== "" ?
+						<Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
+							<div
+								style={{
+									cursor: "pointer",
+									position: "absolute",
+									top: 0,
+									left: 0,
+									height: paperAppStyle.minHeight,
+									width: 2,
+									backgroundColor: boxColor,
+									borderRadius: "0 100px 0 0",
+								}}
+								onClick={() => {
+                  addFilter(selectedCategory)
+								}}
+							/>
+						</Tooltip>
+					: null}
           <Grid
             item
             style={{ display: "flex", flexDirection: "column", width: "100%" }}
@@ -1883,7 +2086,6 @@ const Workflows = (props) => {
                 overflow: "hidden",
                 marginTop: 5,
 								maxHeight: 28,
-								overflow: "hidden",
               }}
             >
               {data.tags !== undefined && data.tags !== null
@@ -2000,9 +2202,10 @@ const Workflows = (props) => {
 					return
 				}
 
-        if (method === "POST" && redirect) {
-          window.location.pathname = "/workflows/" + responseJson["id"];
-          setModalOpen(false);
+        if (redirect) {
+          //window.location.pathname = "/workflows/" + responseJson["id"];
+					navigate("/workflows/" + responseJson["id"])
+          //setModalOpen(false);
         } else if (!redirect) {
           // Update :)
           setTimeout(() => {
@@ -2011,7 +2214,7 @@ const Workflows = (props) => {
           setImportLoading(false);
           setModalOpen(false);
         } else {
-          alert.info("Successfully changed basic info for workflow");
+          //alert.info("Successfully changed basic info for workflow");
           setModalOpen(false);
         }
 
@@ -2068,35 +2271,35 @@ const Workflows = (props) => {
 						"",
 						data.status,
           )
-            .then((response) => {
-              if (response !== undefined) {
-                // SET THE FULL THING
-                data.id = response.id;
-                data.first_save = false;
-                data.previously_saved = false;
-                data.is_valid = false;
+					.then((response) => {
+						if (response !== undefined) {
+							// SET THE FULL THING
+							data.id = response.id;
+							data.first_save = false;
+							data.previously_saved = false;
+							data.is_valid = false;
 
-                // Actually create it
-                setNewWorkflow(
-                  data.name,
-                  data.description,
-                  data.tags,
-                  data.default_return_value,
-                  data,
-                  false,
-									[],
-									"",
-									data.status,
-                ).then((response) => {
-                  if (response !== undefined) {
-                    alert.success("Successfully imported " + data.name);
-                  }
-                });
-              }
-            })
-            .catch((error) => {
-              alert.error("Import error: " + error.toString());
-            });
+							// Actually create it
+							setNewWorkflow(
+								data.name,
+								data.description,
+								data.tags,
+								data.default_return_value,
+								data,
+								false,
+								[],
+								"",
+								data.status,
+							).then((response) => {
+								if (response !== undefined) {
+									alert.success("Successfully imported " + data.name);
+								}
+							});
+						}
+					})
+					.catch((error) => {
+						alert.error("Import error: " + error.toString());
+					});
         });
 
         // Actually reads
@@ -2202,6 +2405,7 @@ const Workflows = (props) => {
           width: 330,
           renderCell: (params) => {
             const data = params.row.record;
+					
 
             return (
               <Grid item>
@@ -2737,8 +2941,8 @@ const Workflows = (props) => {
 
   const workflowViewStyle = {
     flex: viewSize.workflowView,
-    marginLeft: "10px",
-    marginRight: "10px",
+    marginLeft: 10, 
+    marginRight: 10, 
   };
 
   if (viewSize.workflowView === 0) {
@@ -2809,7 +3013,7 @@ const Workflows = (props) => {
             style={{}}
             variant="text"
             onClick={() => {
-              exportAllWorkflows();
+              exportAllWorkflows(workflows);
             }}
           >
             <GetAppIcon />
@@ -2831,156 +3035,153 @@ const Workflows = (props) => {
     </span>
   );
 
-	const tourOptions = {
-		defaultStepOptions: {
-			classes: "shadow-md bg-purple-dark",
-    	scrollTo: true
-		},
-		useModalOverlay: true,
-		tourName: workflows,
-		exitOnEsc: true,
-	}
+	// const tourOptions = {
+	// 	defaultStepOptions: {
+	// 		classes: "shadow-md bg-purple-dark",
+  //   	scrollTo: true
+	// 	},
+	// 	useModalOverlay: true,
+	// 	tourName: workflows,
+	// 	exitOnEsc: true,
+	// }
 
-   //classes: "custom-class-name-1 custom-class-name-2",
-	const newSteps = [
-		{
-    	id: "intro",
-    	scrollTo: true,
-    	beforeShowPromise: function() {
-    	  return new Promise(function(resolve) {
-    	    setTimeout(function() {
-    	      window.scrollTo(0, 0);
-    	      resolve();
-    	    }, 500);
-    	  });
-    	},
-    	buttons: [
-    	  {
-    	    classes: "shepherd-button-primary",
-					style: {
-						backgroundColor: "red",	
-						color: "white", 
-					},
-    	    text: "Next",
-    	    type: "next"
-    	  }
-    	],
-    	highlightClass: "highlight",
-    	showCancelLink: true,
-    	text: [
-    	  "React-Shepherd is a JavaScript library for guiding users through your React app."
-    	],
-    	when: {
-    	  show: () => {
-    	    console.log("show step 1");
-    	  },
-    	  hide: () => {
-    	    console.log("hide step 1");
-    	  }
-    	}
-  },	
-  {
-    	id: "second",
-    	attachTo: {
-    	  element: "second-step",
-    	  on: "top"
-    	},
-    	text: [
-    	  "Yuk eksplorasi hasil Tes Minat Bakat-mu dan rekomendasi <b>Jurusan</b> dan Karier."
-    	],
-    	buttons: [
-    	  {
-    	    classes: "btn btn-info",
-    	    text: "Kembali",
-    	    type: "back"
-    	  },
-    	  {
-    	    classes: "btn btn-success",
-    	    text: "Saya Mengerti",
-    	    type: "cancel"
-    	  }
-    	],
-    	when: {
-    	  show: () => {
-    	    console.log("show stepp");
-    	  },
-    	  hide: () => {
-    	    console.log("complete step");
-    	  }
-    	},
-    	showCancelLink: false,
-    	scrollTo: true,
-    	modalOverlayOpeningPadding: 4,
-    	useModalOverlay: false,
-    	canClickTarget: false
-  	}
-	]
+  //  //classes: "custom-class-name-1 custom-class-name-2",
+	// const newSteps = [
+	// 	{
+  //   	id: "intro",
+  //   	scrollTo: true,
+  //   	beforeShowPromise: function() {
+  //   	  return new Promise(function(resolve) {
+  //   	    setTimeout(function() {
+  //   	      window.scrollTo(0, 0);
+  //   	      resolve();
+  //   	    }, 500);
+  //   	  });
+  //   	},
+  //   	buttons: [
+  //   	  {
+  //   	    classes: "shepherd-button-primary",
+	// 				style: {
+	// 					backgroundColor: "red",	
+	// 					color: "white", 
+	// 				},
+  //   	    text: "Next",
+  //   	    type: "next"
+  //   	  }
+  //   	],
+  //   	highlightClass: "highlight",
+  //   	showCancelLink: true,
+  //   	text: [
+  //   	  "React-Shepherd is a JavaScript library for guiding users through your React app."
+  //   	],
+  //   	when: {
+  //   	  show: () => {
+  //   	    console.log("show step 1");
+  //   	  },
+  //   	  hide: () => {
+  //   	    console.log("hide step 1");
+  //   	  }
+  //   	}
+  // },	
+  // {
+  //   	id: "second",
+  //   	attachTo: {
+  //   	  element: "second-step",
+  //   	  on: "top"
+  //   	},
+  //   	text: [
+  //   	  "Yuk eksplorasi hasil Tes Minat Bakat-mu dan rekomendasi <b>Jurusan</b> dan Karier."
+  //   	],
+  //   	buttons: [
+  //   	  {
+  //   	    classes: "btn btn-info",
+  //   	    text: "Kembali",
+  //   	    type: "back"
+  //   	  },
+  //   	  {
+  //   	    classes: "btn btn-success",
+  //   	    text: "Saya Mengerti",
+  //   	    type: "cancel"
+  //   	  }
+  //   	],
+  //   	when: {
+  //   	  show: () => {
+  //   	    console.log("show stepp");
+  //   	  },
+  //   	  hide: () => {
+  //   	    console.log("complete step");
+  //   	  }
+  //   	},
+  //   	showCancelLink: false,
+  //   	scrollTo: true,
+  //   	modalOverlayOpeningPadding: 4,
+  //   	useModalOverlay: false,
+  //   	canClickTarget: false
+  // 	}
+	// ]
 		
-		function TourButton() {
-		  const tour = useContext(ShepherdTourContext);
+	// 	function TourButton() {
+	// 	  const tour = useContext(ShepherdTourContext);
 		
-		  return (
-		    <Button variant="contained" color="primary" onClick={tour.start}>
-		      Start Tour
-		    </Button>
-		  );
-		}
+	// 	  return (
+	// 	    <Button variant="contained" color="primary" onClick={tour.start}>
+	// 	      Start Tour
+	// 	    </Button>
+	// 	  );
+	// 	}
 
   const WorkflowView = () => {
     if (workflows.length === 0) {
-			console.log("USER: ", userdata)
-			console.log("PROPS: ", props)
-			if (userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) {
-				return <Navigate to="/getting-started" replace />;
-			}
-		
-      return (
-        <div style={emptyWorkflowStyle}>
-          <Paper style={boxStyle}>
-            <div>
-              <h2>Welcome to Shuffle</h2>
-            </div>
-            <div>
-              <p>
-                <b>Shuffle</b> is a flexible, easy to use, automation platform
-                allowing users to integrate their services and devices freely.
-                It's made to significantly reduce the amount of manual labor,
-                and is focused on security applications.{" "}
-                <a
-                  href="/docs/about"
-                  style={{ textDecoration: "none", color: "#f85a3e" }}
-                >
-                  Click here to learn more.
-                </a>
-              </p>
-            </div>
-            <div>
-              If you want to jump straight into it, click here to create your
-              first workflow:
-            </div>
-            <div style={{ display: "flex" }}>
-              <Button
-								id="second-step"
-                color="primary"
-                style={{ marginTop: "20px" }}
-                variant="outlined"
-                onClick={() => setModalOpen(true)}
-              >
-                New workflow
-              </Button>
-              <span style={{ paddingTop: 20, display: "flex" }}>
-                <Typography
-                  style={{ marginTop: 5, marginLeft: 30, marginRight: 15 }}
-                >
-                  ..OR
-                </Typography>
-                {workflowButtons}
-              </span>
-            </div>
-          </Paper>
-        </div>
-      )
-
+			// Not going there yet
+			//if ((userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) || userdata.tutorials === null) {
+			//	return <Navigate to="/getting-started" replace />;
+			//}
+      //return (
+      //  <div style={emptyWorkflowStyle}>
+      //    <Paper style={boxStyle}>
+      //      <div>
+      //        <h2>Welcome to Shuffle</h2>
+      //      </div>
+      //      <div>
+      //        <p>
+      //          <b>Shuffle</b> is a flexible, easy to use, automation platform
+      //          allowing users to integrate their services and devices freely.
+      //          It's made to significantly reduce the amount of manual labor,
+      //          and is focused on security applications.{" "}
+      //          <a
+      //            href="/docs/about"
+      //            style={{ textDecoration: "none", color: "#f85a3e" }}
+      //          >
+      //            Click here to learn more.
+      //          </a>
+      //        </p>
+      //      </div>
+      //      <div>
+      //        If you want to jump straight into it, click here to create your
+      //        first workflow:
+      //      </div>
+      //      <div style={{ display: "flex" }}>
+      //        <Button
+			//					id="second-step"
+      //          color="primary"
+      //          style={{ marginTop: "20px" }}
+      //          variant="outlined"
+      //          onClick={() => setModalOpen(true)}
+      //        >
+      //          New workflow
+      //        </Button>
+      //        <span style={{ paddingTop: 20, display: "flex" }}>
+      //          <Typography
+      //            style={{ marginTop: 5, marginLeft: 30, marginRight: 15 }}
+      //          >
+      //            ..OR
+      //          </Typography>
+      //          {workflowButtons}
+      //        </span>
+      //      </div>
+      //    </Paper>
+      //  </div>
+      //)
     }
 
 		var workflowDelay = -150
@@ -3036,7 +3237,7 @@ const Workflows = (props) => {
 								</div>
 							</div>
 						}
-            <div style={{ flex: 1, textAlign: "right" }}>
+            <div style={{ flex: 1, textAlign: "right", }}>
               {workflowButtons}
             </div>
           </div>
@@ -3088,7 +3289,7 @@ const Workflows = (props) => {
 					}}
 					*/}
   		
-					<div style={{width: "100%",}}>
+					<div style={{width: "100%", minHeight: isMobile ? 0 : 71, maxHeight: isMobile ? 0 : 71, }}>
 						{!isMobile && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
 							<div style={{ display: "flex", }}>
 								{usecases.map((usecase, index) => {
@@ -3240,6 +3441,11 @@ const Workflows = (props) => {
 							</Zoom>
 
               {filteredWorkflows.map((data, index) => {
+								// Shouldn't be a part of this list
+								if (data.public === true) {
+									return null
+								}
+
   							if (firstLoad) {
 									workflowDelay += 75
 								} else {
@@ -3453,6 +3659,158 @@ const Workflows = (props) => {
     </Dialog>
   ) : null;
 
+
+	//const 
+  //const [percentDone, setPercentDone] = React.useState(0)
+	const percentDone = gettingStartedItems.filter((item) => item.done).length / gettingStartedItems.length * 100
+
+	const GettingStartedItem = ({item, index}) => {
+		const [clicked, setClicked] = React.useState(false)
+		const doneIcon = item.done ? <CheckCircleIcon style={{color: "#4caf50", marginRight: 10, }} /> : <RadioButtonUncheckedIcon disabled style={{color: "#bdbdbd", marginRight: 10, }} />
+
+		return (
+			<div 
+				style={{cursor: "pointer", padding: 20, borderBottom: "1px solid rgba(255,255,255,0.3", backgroundColor: !clicked ? "#1f2023" : theme.palette.inputColor, }}
+				onClick={() => setClicked(true)}
+			>
+				<Typography variant="body2" style={{display: "flex", textDecoration: item.done ? "line-through" : "none", }}>
+					{doneIcon} {index + 1}. {item.name}
+				</Typography>
+				{clicked ? 
+					<span>
+						<Typography variant="body2" style={{marginLeft: 30, }}>
+							{item.description}
+						</Typography>
+						<Link to={item.link} style={{color: "inherit", textDecoration: "none", }}>
+							<Button variant={item.done ? "outlined" : "contained"} color="primary" style={{marginLeft: 30, marginTop: 5, }}>
+								Configure
+							</Button>
+						</Link>
+					</span>
+					: 
+					null
+				}
+			</div>
+		)
+	}
+
+	const gettingStartedDrawer = 
+		<Drawer
+      anchor={"right"}
+      open={drawerOpen}
+			variant="persistent"
+			keepMounted={true}
+      PaperProps={{
+        style: {
+          resize: "both",
+          overflow: "auto",
+          minWidth: drawerWidth,
+          maxWidth: drawerWidth,
+          backgroundColor: "#1F2023",
+          color: "white",
+          fontSize: 18,
+					borderLeft: theme.palette.defaultBorder,
+					marginTop: 66,
+					borderRadius: "5px 0px 0px 0px",
+        },
+      }}
+    >
+			<div style={{backgroundColor: "#f86a3e", display: "flex", }}>
+				<Typography variant="h6" style={{flex: 5, marginTop: 20, marginLeft: 20, marginBottom: 20, }}>
+					Getting Started
+				</Typography>
+				<Tooltip
+					title="Close drawer"
+					placement="top"
+				>
+					<IconButton
+						style={{ flex: 1, }}
+						onClick={(e) => {
+							e.preventDefault();
+							setDrawerOpen(false)
+
+							localStorage.setItem(sidebarKey, "closed");
+						}}
+					>
+  					<ArrowRightIcon style={{color: "white"}} /> 
+					</IconButton>
+				</Tooltip>
+			</div>
+			<div style={{padding: 20, }}>
+				<Typography variant="body2">
+					Setup progress: <b>{isNaN(percentDone) ? 0 : percentDone}%</b>
+				</Typography>
+
+				<LinearProgress color="primary" variant="determinate" value={percentDone} style={{marginTop: 5, height: 7, borderRadius: theme.palette.borderRadius, }} />
+
+				<Typography variant="body2" style={{marginTop: 20, }}>
+					Follow these steps to get you up and running!
+				</Typography>
+				<Divider style={{marginTop: 20, }} />
+				<Typography variant="body2" style={{color: "#f86a3e", marginTop: 20, cursor: "pointer", }} onClick={() => {
+					setVideoViewOpen(true)
+				}}>
+					<b>Watch 2-min introduction video</b>
+				</Typography>
+			</div>
+			<div style={{borderTop: "1px solid rgba(255,255,255,0.3)", }}>
+				{gettingStartedItems.map((item, index) => {
+					return (
+						<GettingStartedItem item={item} index={index} />
+					)
+				})}
+			</div>
+		</Drawer>
+				
+		const videoView =
+			<Dialog
+				open={videoViewOpen}
+				onClose={() => {
+					setVideoViewOpen(false)
+				}}
+				PaperProps={{
+					style: {
+						backgroundColor: surfaceColor,
+						color: "white",
+						minWidth: 560,
+						minHeight: 415,
+						textAlign: "center",
+					},
+				}}
+			>
+				<DialogTitle>
+					Welcome to Shuffle!	
+				</DialogTitle>
+
+				<Tooltip
+					title="Close window"
+					placement="top"
+					style={{ zIndex: 10011 }}
+				>
+					<IconButton
+						style={{ zIndex: 5000, position: "absolute", top: 10, right: 34 }}
+						onClick={(e) => {
+							e.preventDefault();
+							setVideoViewOpen(false)
+						}}
+					>
+						<CloseIcon style={{ color: "white" }} />
+					</IconButton>
+				</Tooltip>
+
+				<iframe 
+					width="560"
+					height="315" 
+					style={{margin: "0px auto 0px auto", width: 560, height: 315,}}
+					src="https://www.youtube-nocookie.com/embed/rO7k9q3OgC0" 
+					title="Introduction video" 
+					frameborder="0"
+					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+					allowfullscreen
+				>
+				</iframe>
+			</Dialog>
+
   const loadedCheck =
     isLoaded && isLoggedIn && workflowDone ? (
       <div>
@@ -3471,12 +3829,45 @@ const Workflows = (props) => {
         >
           <WorkflowView />
         </Dropzone>
-        {modalView}
+        {/*modalView*/}
         {deleteModal}
         {exportVerifyModal}
         {publishModal}
         {workflowDownloadModalOpen}
-      </div>
+
+				{!drawerOpen ? <div style={{position: "fixed", top: 64, right: -5, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, }}>
+          <Tooltip title={`Getting started`} placement="bottom">
+						<IconButton onClick={() => {
+							setDrawerOpen(true)
+							localStorage.setItem(sidebarKey, "open");
+						}}>
+							<ArrowLeftIcon /> 
+						</IconButton>
+					</Tooltip>
+				</div> : null}
+				{isMobile ? null : gettingStartedDrawer} 
+				{videoView} 
+
+				{modalOpen === true ? 
+					<EditWorkflow
+						globalUrl={globalUrl}
+						workflow={editingWorkflow}
+						setWorkflow={setEditingWorkflow}
+						modalOpen={modalOpen}
+						setModalOpen={setModalOpen}
+  					usecases={usecases}
+						setNewWorkflow={setNewWorkflow}
+						appFramework={appFramework}
+						isEditing={isEditing}
+					/>
+				: null}
+				{/*<div style={{zIndex: 1, position: "fixed", bottom: 110, right: 110, display: "flex", }}>
+					<Typography variant="body1" color="textSecondary" style={{zIndex: 1, marginRight: 0, maxWidth: 150, }}>
+						Need assistance? Ask our support team (it's free!).
+					</Typography>
+					<img src="/images/Arrow.png" style={{width: 150, zIndex: 1,}} />
+				</div>*/}
+			</div>
     ) : (
       <div
         style={{

@@ -51,7 +51,8 @@ import {
   GridToolbarContainer,
   GridDensitySelector,
   GridToolbar,
-} from "@material-ui/data-grid";
+} from "@mui/x-data-grid";
+
 import { makeStyles } from "@material-ui/core/styles";
 
 import ListIcon from "@material-ui/icons/List";

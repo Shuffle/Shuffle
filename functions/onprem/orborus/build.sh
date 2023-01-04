@@ -1,5 +1,5 @@
 NAME=shuffle-orborus
-VERSION=0.9.71
+VERSION=1.0.9
 
 echo "Running docker build with $NAME:$VERSION"
 #docker rmi frikky/shuffle:$NAME --force
@@ -10,3 +10,7 @@ docker build . -t frikky/shuffle:$NAME -t docker.pkg.github.com/frikky/shuffle/$
 docker push frikky/shuffle:$NAME
 docker push ghcr.io/frikky/$NAME:$VERSION
 docker push ghcr.io/frikky/$NAME:nightly
+
+docker push shuffle/shuffle:$NAME
+docker push ghcr.io/shuffle/$NAME:$VERSION
+docker push ghcr.io/shuffle/$NAME:nightly

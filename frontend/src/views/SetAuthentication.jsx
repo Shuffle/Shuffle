@@ -1,10 +1,10 @@
-import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
+import React, { useState } from "react";
 
 import { Typography, CircularProgress } from "@material-ui/core";
 import theme from '../theme';
 
 const SetAuthentication = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
+  const { globalUrl } = props;
 
   const [firstRequest, setFirstRequest] = useState(true);
   const [finished, setFinished] = useState(false);
@@ -20,7 +20,7 @@ const SetAuthentication = (props) => {
     const params = Object.fromEntries(urlSearchParams.entries());
 		console.log("PARAMS: ", params)
 
-    const authenticationStore = [];
+    //const authenticationStore = [];
     var appAuthData = {
       label: "",
       app: {
@@ -60,6 +60,7 @@ const SetAuthentication = (props) => {
 			externalData.code = params.code
     }
 
+		var foundScope = ""
     if (params.state !== undefined && params.state !== null) {
       const paramsplit = params.state.split("&");
       console.log(paramsplit);
@@ -112,6 +113,7 @@ const SetAuthentication = (props) => {
 
         if (query[0] === "scope") {
           appAuthData.fields.push({ key: "scope", value: query[1] });
+					foundScope = query[1]
         }
 
         if (query[0] === "client_id") {
@@ -136,145 +138,157 @@ const SetAuthentication = (props) => {
       }
     }
 
-		if (externalData.handleExternal) {
-			console.log("RUN EXTERNAL!!: ", externalData)
-			
-			fetch(globalUrl + "/api/v1/triggers/github/register", {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-					Accept: "application/json",
-				},
-				credentials: "include",
-				body: JSON.stringify(externalData),
-			})
-			.then((response) => {
-					const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
-					const tmpView = new URLSearchParams(cursearch).get("state");
-					if (
-						tmpView !== undefined &&
-						tmpView !== null &&
-						tmpView.length > 0
-					) {
-						console.log("State to find app name from: ", tmpView)
+		if (foundScope !== undefined && foundScope !== null && foundScope.length > 0) {
+			appAuthData.label = `${foundScope}`
+		}
+
+		var foundTab = params["error"];
+		if (foundTab !== null && foundTab !== undefined && foundTab.length > 0) {
+			console.log("Found error: ", foundTab, "! Skipping Shuffle requests to validate Oauth2")
+			var errorDesc = params["error_description"]
+			if (errorDesc !== null && errorDesc !== undefined && errorDesc.length > 0) {
+				foundTab += "\n\n"+errorDesc
+			}
+
+			setFailed(true)
+			setResponse(`${foundTab}`)
+		} else {
+			if (externalData.handleExternal) {
+					console.log("RUN EXTERNAL!!: ", externalData)
+					
+					fetch(globalUrl + "/api/v1/triggers/github/register", {
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							Accept: "application/json",
+						},
+						credentials: "include",
+						body: JSON.stringify(externalData),
+					})
+					.then((response) => {
+							const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+							const tmpView = new URLSearchParams(cursearch).get("state");
+							if (
+								tmpView !== undefined &&
+								tmpView !== null &&
+								tmpView.length > 0
+							) {
+								console.log("State to find app name from: ", tmpView)
+							}
+
+						if (response.status !== 200) {
+							console.log("Status not 200 for oauth2 authentication");
+							setFailed(true);
+						} else {
+							setFinished(true);
+							//setTimeout(() => {
+							//	window.close();
+							//}, 2500);
+						}
+
+						return response.json();
+					})
+					.then((responseJson) => {
+						//setUserSettings(responseJson)
+						console.log("Resp: ", responseJson);
+
+						if (responseJson.reason !== undefined) {
+							setResponse(responseJson.reason);
+							setFinished(true);
+
+						} else {
+							const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+							var tmpView = new URLSearchParams(cursearch).get("error_description");
+							if (
+								tmpView !== undefined &&
+								tmpView !== null &&
+								tmpView.length > 0
+							) {
+								setResponse(tmpView)
+							} else {
+								tmpView = new URLSearchParams(cursearch).get("error");
+								if (
+									tmpView !== undefined &&
+									tmpView !== null &&
+									tmpView.length > 0
+								) {
+									setResponse(tmpView)
+								}
+							}
+						}
+
+					})
+					.catch((error) => {
+						console.log(error);
+					});
+
+				return
+			}
+
+    	fetch(globalUrl + "/api/v1/apps/authentication", {
+    	  method: "PUT",
+    	  headers: {
+    	    "Content-Type": "application/json",
+    	    Accept: "application/json",
+    	  },
+    	  credentials: "include",
+    	  body: JSON.stringify(appAuthData),
+    	})
+    	  .then((response) => {
+    	      const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+						const tmpView = new URLSearchParams(cursearch).get("state");
+    	  		if (
+    	  		  tmpView !== undefined &&
+    	  		  tmpView !== null &&
+    	  		  tmpView.length > 0
+    	  		) {
+							console.log("State to find app name from: ", tmpView)
+    	  		}
+
+    	    if (response.status !== 200) {
+    	      console.log("Status not 200 for oauth2 authentication");
+    	      setFailed(true);
+    	    } else {
+    	    	setFinished(true);
+						setTimeout(() => {
+							window.close();
+						}, 2500);
 					}
 
-				if (response.status !== 200) {
-					console.log("Status not 200 for oauth2 authentication");
-					setFailed(true);
-				} else {
-					setFinished(true);
-					//setTimeout(() => {
-					//	window.close();
-					//}, 2500);
-				}
+    	    return response.json();
+    	  })
+    	  .then((responseJson) => {
+    	    //setUserSettings(responseJson)
+					if (responseJson.reason !== undefined) {
+    	    	setResponse(responseJson.reason);
+    	    	setFinished(true);
 
-				return response.json();
-			})
-			.then((responseJson) => {
-				//setUserSettings(responseJson)
-				console.log("Resp: ", responseJson);
-
-				if (responseJson.reason !== undefined) {
-					setResponse(responseJson.reason);
-					setFinished(true);
-
-				} else {
-					const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
-					var tmpView = new URLSearchParams(cursearch).get("error_description");
-					if (
-						tmpView !== undefined &&
-						tmpView !== null &&
-						tmpView.length > 0
-					) {
-						setResponse(tmpView)
 					} else {
-						tmpView = new URLSearchParams(cursearch).get("error");
-						if (
-							tmpView !== undefined &&
-							tmpView !== null &&
-							tmpView.length > 0
-						) {
+    	      const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+						var tmpView = new URLSearchParams(cursearch).get("error_description");
+    	  		if (
+    	  		  tmpView !== undefined &&
+    	  		  tmpView !== null &&
+    	  		  tmpView.length > 0
+    	  		) {
 							setResponse(tmpView)
+    	  		} else {
+							tmpView = new URLSearchParams(cursearch).get("error");
+    	  			if (
+    	  			  tmpView !== undefined &&
+    	  			  tmpView !== null &&
+    	  			  tmpView.length > 0
+    	  			) {
+								setResponse(tmpView)
+							}
 						}
 					}
-				}
 
-			})
-			.catch((error) => {
-				console.log(error);
-			});
-
-		return
-	}
-
-	console.log(appAuthData);
-
-    fetch(globalUrl + "/api/v1/apps/authentication", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(appAuthData),
-    })
-      .then((response) => {
-          const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
-					const tmpView = new URLSearchParams(cursearch).get("state");
-      		if (
-      		  tmpView !== undefined &&
-      		  tmpView !== null &&
-      		  tmpView.length > 0
-      		) {
-						console.log("State to find app name from: ", tmpView)
-      		}
-
-        if (response.status !== 200) {
-          console.log("Status not 200 for oauth2 authentication");
-          setFailed(true);
-        } else {
-        	setFinished(true);
-					setTimeout(() => {
-						window.close();
-					}, 2500);
-				}
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        //setUserSettings(responseJson)
-        console.log("Resp: ", responseJson);
-
-				if (responseJson.reason !== undefined) {
-        	setResponse(responseJson.reason);
-        	setFinished(true);
-
-				} else {
-          const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
-					var tmpView = new URLSearchParams(cursearch).get("error_description");
-      		if (
-      		  tmpView !== undefined &&
-      		  tmpView !== null &&
-      		  tmpView.length > 0
-      		) {
-						setResponse(tmpView)
-      		} else {
-						tmpView = new URLSearchParams(cursearch).get("error");
-      			if (
-      			  tmpView !== undefined &&
-      			  tmpView !== null &&
-      			  tmpView.length > 0
-      			) {
-							setResponse(tmpView)
-						}
-					}
-				}
-
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+    	  })
+    	  .catch((error) => {
+    	    console.log(error);
+    	  });
+			}
   }
 
   return (
@@ -298,6 +312,9 @@ const SetAuthentication = (props) => {
         )}
         <div />
         {failed ? "Failed setup. Error: " : ""} {response}
+				<br/>
+				<br/>
+        {failed ? "If the error persists, try to use fewer scopes. Contact our support at support@shuffler.io if you need further assistance. You may close this window." : ""}
       </Typography>
     </div>
   );

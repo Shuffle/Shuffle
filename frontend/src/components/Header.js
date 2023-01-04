@@ -39,6 +39,7 @@ import {
 } from "@mui/icons-material";
 //import LogoutIcon from '@mui/icons-material/Logout';
 import { useAlert } from "react-alert";
+import SearchField from '../components/Searchfield'
 
 const hoverColor = "#f85a3e";
 const hoverOutColor = "#e8eaf6";
@@ -178,6 +179,8 @@ const Header = (props) => {
     const data = {
       org_id: orgId,
     };
+
+		localStorage.setItem("getting_started_sidebar", "open");
 
     fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
       mode: "cors",
@@ -506,7 +509,7 @@ const Header = (props) => {
   //<div style={{position: "fixed", top: 0, left: 0, display: "flex"}}>
   const loginTextBrowser = !isLoggedIn ? (
     <div style={{ display: "flex" }}>
-      <List style={{ display: "flex", flexDirect: "row" }} component="nav">
+      <List style={{ flex: 1, display: "flex", flexDirect: "row" }} component="nav">
         <ListItem style={{ textAlign: "center", marginLeft: "0px" }}>
           <Link to="/docs" style={hrefStyle}>
             <div
@@ -519,7 +522,13 @@ const Header = (props) => {
           </Link>
         </ListItem>
       </List>
-      <div style={{ flex: "7", display: "flex", flexDirection: "row-reverse" }}>
+			{!isLoaded ? null : 
+				userdata.chat_disabled === true ? null : 
+				<div style={{flex: 1, }}>
+					<SearchField serverside={false} userdata={userdata} />
+				</div>
+			}
+      <div style={{ flex: 1, display: "flex", flexDirection: "row-reverse" }}>
         <List
           style={{ display: "flex", flexDirection: "row-reverse" }}
           component="nav"
@@ -540,12 +549,12 @@ const Header = (props) => {
     </div>
   ) : (
     <div style={{ display: "flex" }}>
-      <div style={{ flex: "1", flexDirection: "row" }}>
+      <div style={{ flex: 1, flexDirection: "row" }}>
         <List
           style={{ display: "flex", flexDirect: "row", flex: "1" }}
           component="nav"
         >
-          <ListItem style={{ textAlign: "center" }}>
+          <ListItem style={{ textAlign: "center", maxWidth: 140, }}>
             <Link to="/workflows" style={hrefStyle}>
               <div
                 onMouseOver={handleSoarHover}
@@ -561,7 +570,7 @@ const Header = (props) => {
               </div>
             </Link>
           </ListItem>
-          <ListItem style={{ textAlign: "center" }}>
+          <ListItem style={{ textAlign: "center", maxWidth: 100, }}>
             <Link to="/apps" style={hrefStyle}>
               <div
                 onMouseOver={handleHelpHover}
@@ -584,7 +593,7 @@ const Header = (props) => {
 							</Link>
        			</ListItem>
 						*/}
-          <ListItem style={{ textAlign: "center" }}>
+          <ListItem style={{ textAlign: "center", maxWidth: 120, }}>
             <Link to="/docs" style={hrefStyle}>
               <div
                 onMouseOver={handleDocsHover}
@@ -619,8 +628,14 @@ const Header = (props) => {
 					*/}
         </List>
       </div>
+			{!isLoaded ? null : 
+				userdata.chat_disabled === true ? null : 
+				<div style={{flex: 1, }}>
+					<SearchField serverside={false} userdata={userdata} />
+				</div>
+			}
       <div
-        style={{ flex: "10", display: "flex", flexDirection: "row-reverse" }}
+        style={{ flex: 1, display: "flex", flexDirection: "row-reverse" }}
       >
         {avatarMenu}
         {notificationMenu}
@@ -710,7 +725,6 @@ const Header = (props) => {
 											userdata.orgs.splice(foundIndex+1, 1)
 										} else {
 											console.log("ORG NOT FOUND IN LIST: ", childorg)
-
 										}
 
 										// This is stupid :)
