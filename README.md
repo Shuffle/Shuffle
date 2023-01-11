@@ -21,7 +21,7 @@ Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 
 </h4>
 
-![Example Shuffle webhook integration](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/github_shuffle_img.png)
+[![Example Shuffle webhook integration](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/github_shuffle_img.png)]
 
 ## Try it
 * Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/.github/install-guide.md)
