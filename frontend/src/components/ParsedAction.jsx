@@ -277,7 +277,7 @@ const ParsedAction = (props) => {
           console.log("FOUNDACTION: ", foundAction);
           if (foundAction !== null && foundAction !== undefined) {
             var foundparams = [];
-            for (var paramkey in foundAction.parameters) {
+            for (let [paramkey,paramkeyval] in foundAction.parameters.entries()) {
               const param = foundAction.parameters[paramkey];
 
               const foundParam = selectedAction.parameters.find(
@@ -401,7 +401,7 @@ const ParsedAction = (props) => {
       if (actionlist.length === 0) {
         // FIXME: Have previous execution values in here
 				if (workflowExecutions.length > 0) {
-					for (var key in workflowExecutions) {
+					for (let [key,keyval] in workflowExecutions.entries()) {
 						if (
 							workflowExecutions[key].execution_argument === undefined ||
 							workflowExecutions[key].execution_argument === null ||
@@ -451,7 +451,7 @@ const ParsedAction = (props) => {
           workflow.workflow_variables !== undefined &&
           workflow.workflow_variables.length > 0
         ) {
-          for (var key in workflow.workflow_variables) {
+          for (let [key,keyval] in workflow.workflow_variables.entries()) {
             const item = workflow.workflow_variables[key];
             actionlist.push({
               type: "workflow_variable",
@@ -470,7 +470,7 @@ const ParsedAction = (props) => {
           workflow.execution_variables !== undefined &&
           workflow.execution_variables.length > 0
         ) {
-          for (var key in workflow.execution_variables) {
+          for (let [key,keyval] in workflow.execution_variables.entries()) {
             const item = workflow.execution_variables[key];
             actionlist.push({
               type: "execution_variable",
@@ -488,7 +488,7 @@ const ParsedAction = (props) => {
         	var parents = getParents(selectedAction);
 
         	if (parents.length > 1) {
-        	  for (var key in parents) {
+        	  for (let [key,keyval] in parents.entries()) {
         	    const item = parents[key];
         	    if (item.label === "Execution Argument") {
         	      continue;
@@ -500,7 +500,7 @@ const ParsedAction = (props) => {
         	    if (workflowExecutions.length > 0) {
         	      // Look for the ID
         	      const found = false;
-        	      for (var key in workflowExecutions) {
+        	      for (let [key,keyval] in workflowExecutions.entries()) {
         	        if (
         	          workflowExecutions[key].results === undefined ||
         	          workflowExecutions[key].results === null
@@ -566,7 +566,7 @@ const ParsedAction = (props) => {
 
 			if (found !== null && found !== undefined) {
 				var new_occurences = []
-				for (var key in found) {
+				for (let [key,keyval] in found.entries()) {
 					if (found[key][0] !== "\\") {
 						new_occurences.push(found[key])
 					}
@@ -579,7 +579,7 @@ const ParsedAction = (props) => {
 			if (found !== null) {
 				try {
 					// When the found array is empty.
-					for (var i = 0; i < found.length; i++) {
+					for (let i = 0; i < found.length; i++) {
 						const variableSplit = found[i].split(".#")
 						if ((variableSplit.length-1) > 1) {
 							//console.log("Larger than 1: ", variableSplit)
@@ -589,7 +589,7 @@ const ParsedAction = (props) => {
 						}
 
 						var foundSlice = false
-						for (var j = 0; j < actionlist.length; j++) {
+						for (let j = 0; j < actionlist.length; j++) {
 							//console.log("ACTION: ", found[i], actionlist[j])
 							//console.log("ACTION :", found[i].split(".")[0].slice(1,).toLowerCase(), actionlist[j].autocomplete.toLowerCase())
 							if(found[i].split(".")[0].slice(1,).toLowerCase() == actionlist[j].autocomplete.toLowerCase()){
@@ -730,7 +730,7 @@ const ParsedAction = (props) => {
 
         var curstring = "";
         var record = false;
-        for (var key in selectedActionParameters[count].value) {
+        for (let [key,keyval] in selectedActionParameters[count].value.entries()) {
           const item = selectedActionParameters[count].value[key];
           if (record) {
             curstring += item;
@@ -911,7 +911,7 @@ const ParsedAction = (props) => {
 
 				var curstring = ""
 				var record = false
-				for (var key in selectedActionParameters[count].value) {
+				for (let [key,keyval] in selectedActionParameters[count].value.entries()) {
 					const item = selectedActionParameters[count].value[key]
 					if (record) {
 						curstring += item
@@ -1187,7 +1187,7 @@ const ParsedAction = (props) => {
           		  renderInput={(params) => {
 									if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
 										const prefixes = ["Post", "Put", "Patch"]
-										for (var key in prefixes) {
+										for (let [key,keyval] in prefixes.entries()) {
 											if (params.inputProps.value.startsWith(prefixes[key])) {
 												params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
 												if (params.inputProps.value.length > 1) {
@@ -1426,7 +1426,7 @@ const ParsedAction = (props) => {
 
                           setHideBody(!hideBody);
 			
-                          for (var key in selectedActionParameters) {
+                          for (let [key,keyval] in selectedActionParameters.entries()) {
                             var currentItem = selectedActionParameters[key];
 														if (currentItem.name === "ssl_verify") {
 
@@ -1472,10 +1472,10 @@ const ParsedAction = (props) => {
                 openApiHelperText = "OpenAPI spec: fill the following fields.";
                 //console.log("SHOULD ADD TO selectedActionParameters!: ", found, selectedActionParameters)
                 var changed = false;
-                for (var specKey in found) {
+                for (let [speckey,speckeyval] in found.entries()) {
                   const tmpitem = found[specKey];
                   var skip = false;
-                  for (var innerkey in selectedActionParameters) {
+                  for (let [innerkey,innerkeyval] in selectedActionParameters.entries()) {
                     if (selectedActionParameters[innerkey].name === tmpitem) {
                       skip = true;
                       break;
@@ -1707,7 +1707,7 @@ const ParsedAction = (props) => {
 
 							var foundnewline = false
 							var allValues = []
-							for (var key in splitdata) {
+							for (let [key,keyval] in splitdata.entries()) {
 								const line = splitdata[key]
 								if (line === "") {
 									foundnewline = true 
@@ -1777,7 +1777,7 @@ const ParsedAction = (props) => {
 															const tmpsplit = selectedActionParameters[count].value.split("\n")
 															var valsplit = []
 															var add_empty = false
-															for (var key in tmpsplit) {
+															for (let [key,keyval] in tmpsplit.entries()) {
 																if (tmpsplit[key] === "") {
 																	add_empty = true
 																	continue
@@ -1792,7 +1792,7 @@ const ParsedAction = (props) => {
 															console.log("Split: ", valsplit)
 
 															var newarr = []
-															for (var key in valsplit) {
+															for (let [key,keyval] in valsplit.entries()) {
 																var line = valsplit[key]
 
 																if (key == index) {
@@ -1832,7 +1832,7 @@ const ParsedAction = (props) => {
 															var tmpsplit = selectedActionParameters[count].value.split("\n")
 															var valsplit = []
 															var add_empty = false
-															for (var key in tmpsplit) {
+															for (let [key,keyval] in tmpsplit.entries()) {
 																if (tmpsplit[key] === "") {
 																	add_empty = true
 																	continue
@@ -1847,7 +1847,7 @@ const ParsedAction = (props) => {
 															console.log("Split: ", valsplit)
 
 															var newarr = []
-															for (var key in valsplit) {
+															for (let [key,keyval] in valsplit.entries()) {
 																var line = valsplit[key]
 
 																if (key == index) {
@@ -2094,7 +2094,7 @@ const ParsedAction = (props) => {
                   : "$" + values[0].autocomplete;
 
                 toComplete = toComplete.toLowerCase().replaceAll(" ", "_");
-                for (var key in values) {
+                for (let [key,keyval] in values.entries()) {
                   if (key == 0 || values[key].autocomplete.length === 0) {
                     continue;
                   }
@@ -2205,7 +2205,7 @@ const ParsedAction = (props) => {
                         workflow.triggers !== null &&
                         workflow.triggers.length > 0
                       ) {
-                        for (var key in workflow.triggers) {
+                        for (let [key,keyval] in workflow.triggers.entries()) {
                           const item = workflow.triggers[key];
 
                           if (cy !== undefined) {
@@ -2727,7 +2727,7 @@ const ParsedAction = (props) => {
                     if (workflowExecutions.length > 0) {
                       // Look for the ID
                       const found = false;
-                      for (var key in workflowExecutions) {
+                      for (let [key,keyval] in workflowExecutions.entries()) {
                         if (
                           workflowExecutions[key].results === undefined ||
                           workflowExecutions[key].results === null
@@ -2971,8 +2971,8 @@ const ParsedAction = (props) => {
 									//
 									// Should make it a function lol
 									if (workflow.branches !== undefined && workflow.branches !== null) {	
-										for (var key in workflow.branches) {
-											for (var subkey in workflow.branches[key].conditions) {
+										for (let [key,keyval] in workflow.branches.entries()) {
+											for (let [key,keyval] in workflow.branches[key].conditions.entries()) {
 												const condition = workflow.branches[key].conditions[subkey]
 												const sourceparam = condition.source
 												const destinationparam = condition.destination
@@ -3080,12 +3080,12 @@ const ParsedAction = (props) => {
 										}
 									}
 
-									for (var key in workflow.actions) {
+									for (let [key,keyval] in workflow.actions.entries()) {
 										if (workflow.actions[key].id === selectedAction.id) {
 											continue
 										}
 
-										for (var subkey in workflow.actions[key].parameters) {
+										for (let [subkey, subkeyval] in workflow.actions[key].parameters.entries()) {
 											const param = workflow.actions[key].parameters[subkey];
 											if (!param.value.includes("$")) {
 												continue
@@ -3251,7 +3251,7 @@ const ParsedAction = (props) => {
                   selectedAction.selectedAuthentication = {};
                   selectedAction.authentication_id = "";
 
-                  for (var key in selectedAction.parameters) {
+                  for (let [key,keyval] in selectedAction.parameters.entries()) {
                     //console.log(selectedAction.parameters[key])
                     if (selectedAction.parameters[key].configuration) {
                       selectedAction.parameters[key].value = "";
@@ -3568,7 +3568,7 @@ const ParsedAction = (props) => {
 							if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
 								var extraUrl = ""
 								const descSplit = data.description.split("\n")
-								for (var line in descSplit) {
+								for (let [key,keyval] in descSplit.entries()) {
 									if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
 										const urlsplit = descSplit[line].split("/")
 										try {
@@ -3629,7 +3629,7 @@ const ParsedAction = (props) => {
             renderInput={(params) => {
 							if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
 								const prefixes = ["Post", "Put", "Patch"]
-								for (var key in prefixes) {
+								for (let [key,keyval] in prefixes.entries()) {
 									if (params.inputProps.value.startsWith(prefixes[key])) {
 										params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
 										if (params.inputProps.value.length > 1) {
