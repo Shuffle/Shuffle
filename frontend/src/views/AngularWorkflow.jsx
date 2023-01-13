@@ -1549,7 +1549,7 @@ const AngularWorkflow = (defaultprops) => {
                 var item = tmpAuth[key];
 
                 const newfields = {};
-                for (let [key,keyval] in item.fields.entries()) {
+                for (let [filterkey, filterkeyval] in item.fields.entries()) {
                   newfields[item.fields[filterkey].key] =
                     item.fields[filterkey].value;
                 }
@@ -2026,7 +2026,7 @@ const AngularWorkflow = (defaultprops) => {
 		// Wait for new node to possibly be selected
 		//setTimeout(() => {
 		const typeIds = cy.elements('node:selected').jsons();
-		for (let [key,keyval] in typeIds.entries()) {
+		for (let [idkey,idkeyval] in typeIds.entries()) {
 			const item = typeIds[idkey]
 			if (item.data.isButton === true) {
 				//console.log("Reselect old node & return - or just return?")

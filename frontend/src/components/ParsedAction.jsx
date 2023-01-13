@@ -1472,7 +1472,7 @@ const ParsedAction = (props) => {
                 openApiHelperText = "OpenAPI spec: fill the following fields.";
                 //console.log("SHOULD ADD TO selectedActionParameters!: ", found, selectedActionParameters)
                 var changed = false;
-                for (let [speckey,speckeyval] in found.entries()) {
+                for (let [specKey,specKeyVal] in found.entries()) {
                   const tmpitem = found[specKey];
                   var skip = false;
                   for (let [innerkey,innerkeyval] in selectedActionParameters.entries()) {
@@ -2972,7 +2972,7 @@ const ParsedAction = (props) => {
 									// Should make it a function lol
 									if (workflow.branches !== undefined && workflow.branches !== null) {	
 										for (let [key,keyval] in workflow.branches.entries()) {
-											for (let [key,keyval] in workflow.branches[key].conditions.entries()) {
+											for (let [subkey,subkeyval] in workflow.branches[key].conditions.entries()) {
 												const condition = workflow.branches[key].conditions[subkey]
 												const sourceparam = condition.source
 												const destinationparam = condition.destination
@@ -3568,7 +3568,7 @@ const ParsedAction = (props) => {
 							if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
 								var extraUrl = ""
 								const descSplit = data.description.split("\n")
-								for (let [key,keyval] in descSplit.entries()) {
+								for (let [line,lineval] in descSplit.entries()) {
 									if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
 										const urlsplit = descSplit[line].split("/")
 										try {

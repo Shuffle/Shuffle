@@ -456,7 +456,7 @@ const AppCreator = (defaultprops) => {
     }
 
     var newitem = data;
-    for (var key in paramsplit) {
+    for (let [key,keyval] in paramsplit.entries()) {
       var tmpparam = paramsplit[key];
       if (tmpparam === "#") {
         continue;
@@ -579,7 +579,7 @@ const AppCreator = (defaultprops) => {
 		console.log("Tags: ", data.tags)
     if (data.tags !== undefined && data.tags.length > 0) {
       var newtags = [];
-      for (var key in data.tags) {
+      for (let [key,keyval] in data.tags.entries()) {
         if (data.tags[key].name.length > 50) {
           console.log(
             "Skipping tag because it's too long: ",
@@ -685,7 +685,7 @@ const AppCreator = (defaultprops) => {
             const pathsplit = path.split("/");
             var categoryindex = -1;
             // Stupid way of finding a category/grouping
-            for (var key in pathsplit) {
+            for (let [key,keyval] in pathsplit.entries()) {
 							if (pathsplit[key].includes("_shuffle_replace_")) {
 								const regex = /_shuffle_replace_\d/i;
 								//console.log("NEW: ", 
@@ -750,9 +750,9 @@ const AppCreator = (defaultprops) => {
                     }
 
                     //console.log("Data: ", data)
-                    for (var subkey in methodvalue["requestBody"]["content"][
+                    for (let [subkey,subkeyval] in methodvalue["requestBody"]["content"][
                       "application/json"
-                    ]["schema"]["required"]) {
+                    ]["schema"]["required"].entries()) {
                       const tmpitem =
                         methodvalue["requestBody"]["content"][
                           "application/json"
@@ -771,7 +771,7 @@ const AppCreator = (defaultprops) => {
                     );
                     var newbody = {};
                     // Can handle default, required, description and type
-                    for (var propkey in retRef.properties) {
+                    for (let [propkey,propkeyval] in retRef.properties.entries()) {
 											console.log("replace: ", propkey)
 
                       const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
@@ -810,9 +810,9 @@ const AppCreator = (defaultprops) => {
                       tmpobject[prop] = `\$\{${prop}\}`;
                     }
 
-                    for (var subkey in methodvalue["requestBody"]["content"][
+                    for (let [subkey,subkeyval] in methodvalue["requestBody"]["content"][
                       "application/xml"
-                    ]["schema"]["required"]) {
+                    ]["schema"]["required"].entries()) {
                       const tmpitem =
                         methodvalue["requestBody"]["content"][
                           "application/xml"
@@ -917,7 +917,7 @@ const AppCreator = (defaultprops) => {
                       parameter["type"] === "object"
                     ) {
                       var newbody = {};
-                      for (var propkey in parameter.properties) {
+                      for (let [propkey,propkeyval] in parameter.properties.entries()) {
 												console.log("propkey2: ", propkey)
                       	const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                         if (parameter.properties[propkey].type === undefined) {
@@ -1046,7 +1046,7 @@ const AppCreator = (defaultprops) => {
                           parameter["type"] === "object"
                         ) {
                           var newbody = {};
-                          for (var propkey in parameter.properties) {
+                          for (let [propkey,propkeyval] in parameter.properties.entries()) {
 														console.log("propkey3: ", propkey)
                             const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                             if (
@@ -1135,7 +1135,7 @@ const AppCreator = (defaultprops) => {
                               parameter["type"] === "object"
                             ) {
                               var newbody = {};
-                              for (var propkey in parameter.properties) {
+                              for (let [propkey,propkeyval] in parameter.properties.entries()) {
 																console.log("propkey4: ", propkey)
                                 const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                                 if (
@@ -1219,7 +1219,7 @@ const AppCreator = (defaultprops) => {
                               parameter["type"] === "object"
                             ) {
                               var newbody = {};
-                              for (var propkey in parameter.properties) {
+                              for (let [propkey,keyval] in parameter.properties.entries()) {
 																console.log("propkey5: ", propkey)
                                 const parsedkey = propkey
                                   .replaceAll(" ", "_")
@@ -1287,7 +1287,7 @@ const AppCreator = (defaultprops) => {
             }
           }
 
-          for (var key in methodvalue.parameters) {
+          for (let [key,keyval] in methodvalue.parameters.entries()) {
             const parameter = handleGetRef(methodvalue.parameters[key], data);
             if (parameter.in === "query") {
               var tmpaction = {
@@ -1334,7 +1334,7 @@ const AppCreator = (defaultprops) => {
             if (Object.getOwnPropertyNames(wordlist).length === 0) {
               for (let [newpath, pathvalue] of Object.entries(data.paths)) {
                 const newpathsplit = newpath.split("/");
-                for (var key in newpathsplit) {
+                for (let [key,keyval] in newpathsplit.entries()) {
                   const pathitem = newpathsplit[key].toLowerCase();
                   if (wordlist[pathitem] === undefined) {
                     wordlist[pathitem] = 1;
@@ -1351,7 +1351,7 @@ const AppCreator = (defaultprops) => {
             const urlsplit = path.split("/");
             if (urlsplit.length > 0) {
               var curname = "";
-              for (var key in urlsplit) {
+              for (let [key,keyval] in urlsplit.entries()) {
                 var subpath = urlsplit[key];
                 if (wordlist[subpath] > 2 || subpath.length < 1) {
                   continue;
@@ -1413,7 +1413,7 @@ const AppCreator = (defaultprops) => {
           const regex = /{\w+}/g;
           const found = firstUrl.match(regex);
           if (found !== null) {
-            for (var key in found) {
+            for (let [key,keyval] in found.entries()) {
               const item = found[key].slice(1, found[key].length - 1);
               const foundVar = data.servers[0].variables[item];
               if (foundVar["default"] !== undefined) {
@@ -1683,7 +1683,7 @@ const AppCreator = (defaultprops) => {
 
     if (newWorkflowTags.length > 0) {
       var newtags = [];
-      for (var key in newWorkflowTags) {
+      for (let [key,keyval] in newWorkflowTags.entries()) {
         newtags.push({ name: newWorkflowTags[key] });
       }
 
@@ -1696,7 +1696,7 @@ const AppCreator = (defaultprops) => {
 
     // Handles actions
 		var handledPaths = []
-    for (var key in actions) {
+    for (let [key,keyval] in actions.entries()) {
       var item = JSON.parse(JSON.stringify(actions[key]))
       if (item.errors.length > 0) {
         alert.error("Saving with error in action " + item.name);
@@ -1712,7 +1712,7 @@ const AppCreator = (defaultprops) => {
 			if (handledPaths.includes(pathjoin)) {
 
 				// Max 100 of same lol
-				for (var i = 0; i < 100; i++) {
+				for (let i = 0; i < 100; i++) {
 					item.url = item.url+"_shuffle_replace_"+i
 
 					pathjoin = item.url+"_"+item.method.toLowerCase()
@@ -1822,7 +1822,7 @@ const AppCreator = (defaultprops) => {
       if (item.queries.length > 0) {
         var skipped = false;
 				var querynames = []
-        for (var querykey in item.queries) {
+        for (let [querykey,querykeyval] in item.queries.entries()) {
           const queryitem = item.queries[querykey];
 
 					if (queryitem === undefined || queryitem === null || queryitem.name === undefined || queryitem.name === null || queryitem.name === "") {
@@ -1923,7 +1923,7 @@ const AppCreator = (defaultprops) => {
       //data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 
       if (item.paths.length > 0) {
-        for (querykey in item.paths) {
+        for (let [querykey,querykeyval] in item.paths.entries()) {
           const queryitem = item.paths[querykey];
 
           if (queryitem.toLowerCase() == "url") {
@@ -1958,7 +1958,7 @@ const AppCreator = (defaultprops) => {
         const values = getCurrentPaths(item.url);
         const paths = values[0];
 
-        for (querykey in paths) {
+        for (let [querykey,querykeyval] in paths.entries()) {
           const queryitem = paths[querykey];
           newitem = {
             in: "path",
@@ -1996,7 +1996,7 @@ const AppCreator = (defaultprops) => {
 					// but it's the only way we can properly support e.g. GraphQL
 					// with good examples
 					var newbody = ""
-					for (var key in item.body) {
+					for (let [key,keyval] in item.body.entries()) {
 						if (item.body[key] === "$") {
 							if (key > 0) {
 								//console.log("Found: ", item.body[key-1])
@@ -2118,9 +2118,9 @@ const AppCreator = (defaultprops) => {
         const required = false;
 
         const headersSplit = item.headers.split("\n");
-        for (var key in headersSplit) {
+        for (let [key,keyval] in headersSplit.entries()) {
           const header = headersSplit[key];
-          var key = "";
+          // var key = "";
           var value = "";
           if (header.length > 0 && header.includes("= ")) {
             const headersplit = header.split("= ");
