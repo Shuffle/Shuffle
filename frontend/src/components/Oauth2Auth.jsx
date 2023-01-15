@@ -69,6 +69,9 @@ const registeredApps = [
 	"todoist",
 	"microsoft_sentinel",
 	"microsoft_365_defender",
+	"google_sheets",
+	"google_drive",
+	"google_disk",
 ]
 
 const AuthenticationOauth2 = (props) => {
@@ -218,6 +221,22 @@ const AuthenticationOauth2 = (props) => {
 				"",
 				"https://graph.microsoft.com",
 				["SecurityEvents.ReadWrite.All"],
+				admin_consent,
+			)
+		} else if (selectedApp.name.toLowerCase().includes("google_sheets")) {
+			handleOauth2Request(
+				"253565968129-mppu17aciek8slr3kpgnb37hp86dmvmb.apps.googleusercontent.com",
+				"",
+				"https://sheets.googleapis.com",
+				["https://www.googleapis.com/auth/spreadsheets"],
+				admin_consent,
+			)
+		} else if (selectedApp.name.toLowerCase().includes("google_drive")) {
+			handleOauth2Request(
+				"253565968129-6pij4g6ojim4gpum0h9m9u3bc357qsq7.apps.googleusercontent.com",
+				"",
+				"https://www.googleapis.com/drive/v3",
+				["https://www.googleapis.com/auth/drive"],
 				admin_consent,
 			)
 		}
