@@ -327,7 +327,8 @@ class AppBase:
 
             new_input = fixed_return
         except Exception as e:
-            self.logger.info(f"[ERROR] Failed to run magic parser (2): {e}")
+            # Not used anymore
+            #self.logger.info(f"[ERROR] Failed to run magic parser (2): {e}")
             return input_data
 
         try:
@@ -401,15 +402,6 @@ class AppBase:
 
         # FIXME: Add cleanup of parameters to not send to frontend here
         params = {}
-        #action = action_result["action"]
-        #try:
-        #    for item in action["authentication"]:
-        #        for action["parameters"]
-        #        self.logger.info("AUTH: ", key, value)
-        #        params[item["key"]] = item["value"]
-       #except KeyError:
-        #    self.logger.info("No authentication specified!")
-        #    pass
 
         # I wonder if this actually works 
         self.logger.info(f"[DEBUG] Before last stream result")
@@ -448,7 +440,7 @@ class AppBase:
                 try:
                     ret = requests.post(url, headers=headers, json=action_result, timeout=10)
 
-                    self.logger.info(f"[DEBUG] Result: {ret.status_code} (break on 200)")
+                    self.logger.info(f"[DEBUG] Result: {ret.status_code} (break on 200 or 201)")
                     if ret.status_code == 200 or ret.status_code == 201:
                         finished = True
                         break
@@ -1015,6 +1007,7 @@ class AppBase:
 
 
                 # An attempt at decomposing coroutine results
+                # Backwards compatibility
                 try:
                     if asyncio.iscoroutine(tmp):
                         self.logger.info("[DEBUG] In coroutine (2)")
@@ -1028,7 +1021,8 @@ class AppBase:
 
                         tmp = asyncio.run(parse_value(tmp))
                     else:
-                        self.logger.info("[DEBUG] Not in coroutine (2)")
+                        #self.logger.info("[DEBUG] Not in coroutine (2)")
+                        pass
                 except Exception as e:
                     self.logger.warning("[ERROR] Failed to parse coroutine value for old app: {e}")
 
@@ -1448,7 +1442,7 @@ class AppBase:
                         failed = False
                         break
 
-                    elif ret.status_code == 500:
+                    elif ret.status_code == 500 or ret.status_code == 400:
                         self.logger.info("[ERROR] (fails: %d) Error in app with status code %d for results (1). RETRYING because results can't be handled" % (i+1, ret.status_code))
                     
                         rettext = ret.text
@@ -1522,7 +1516,7 @@ class AppBase:
         except Exception as e:
             self.logger.info(f"[WARNING] Failed in replace params action parsing: {e}")
 
-        self.logger.info("[DEBUG] AFTER FULLEXEC stream result (init)")
+        self.logger.info(f"[DEBUG] AFTER FULLEXEC stream result (init): {self.current_execution_id}")
 
         # Gets the value at the parenthesis level you want
         def parse_nested_param(string, level):
@@ -1708,7 +1702,7 @@ class AppBase:
 
             # Because liquid can handle ALL of this now.
             # Implemented for >0.9.25
-            self.logger.info("[DEBUG] Skipping parser because use of its been deprecated >0.9.25 due to Liquid implementation")
+            #self.logger.info("[DEBUG] Skipping parser because use of its been deprecated >0.9.25 due to Liquid implementation")
             return data, False
 
             wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght", "join", "replace"]
@@ -2409,9 +2403,11 @@ class AppBase:
                         newvalue[key] = recurse_cleanup_script(value)
         
             except json.decoder.JSONDecodeError as e:
-                print(f"[WARNING] Failed JSON replacement for OpenAPI keys (3) {e}")
+                # Since here the data isn't at all JSON compatible..?
+                # Seems to happen with newlines in variables being parsed in as strings?
+                print(f"[ERROR] Failed JSON replacement for OpenAPI keys (3) {e}. Value: {data}")
             except Exception as e:
-                print(f"[WARNING] Failed as an exception (1): {e}") 
+                print(f"[ERROR] Failed as an exception (1): {e}") 
                 
             try:
                 for deletekey in deletekeys:
@@ -2476,9 +2472,17 @@ class AppBase:
             except:
                 self.logger.info("Error in initial replacement of escaped dollar!")
 
-            # Basic fix in case variant isn't set
+            paramname = ""
             try:
-                self.logger.info(f"[DEBUG] Parameter variant: {parameter['variant']} of length {len(parameter['value'])}")
+                paramname = parameter["name"]
+            except:
+                pass
+
+            # Basic fix in case variant isn't set
+            # Variant is ALWAYS STATIC_VALUE from mid 2021~ 
+            try:
+                self.logger.info(f"[DEBUG] Parameter '{paramname}' of length {len(parameter['value'])}")
+                parameter["variant"] = parameter["variant"]
             except:
                 parameter["variant"] = "STATIC_VALUE"
 
@@ -2904,7 +2908,8 @@ class AppBase:
         if " " in actionname:
             actionname.replace(" ", "_", -1) 
 
-        #print(action)
+        #print("ACTION: ", action)
+        #print("exec: ", self.full_execution)
         #if action.generated:
         #    actionname = actionname.lower()
 
@@ -2931,12 +2936,14 @@ class AppBase:
                         # What variables are necessary here tho hmm
 
                         params = {}
+                        # This replacement should happen in backend as part of params
+                        # error log is useless
                         try:
                             for item in action["authentication"]:
-                                #self.logger.info("AUTH: ", key, value)
-                                params[item["key"]] = item["value"]
-                        except KeyError:
-                            self.logger.info("[DEBUG] No authentication specified!")
+                                self.logger.info("AUTH PARAM: ", key, value)
+                                #params[item["key"]] = item["value"]
+                        except KeyError as e:
+                            self.logger.info(f"[WARNING] No authentication specified! Is this correct? err: {e}")
 
                         # Fixes OpenAPI body parameters for later.
                         newparams = []
@@ -3007,7 +3014,7 @@ class AppBase:
                                     pass
 
                                  
-                                self.logger.info(f"""HANDLING {action["parameters"][counter]["value"]}""")
+                                self.logger.info(f"""HANDLING BODY: {action["parameters"][counter]["value"]}""")
                                 action["parameters"][counter]["value"] = recurse_cleanup_script(action["parameters"][counter]["value"])
 
                         #self.logger.info(action["parameters"])
@@ -3442,7 +3449,7 @@ class AppBase:
                                     errorstring = f"{e}"
 
                                     if "the JSON object must be" in errorstring:
-                                        self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (0)?")
+                                        self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (0)? the JSON object must be in...")
                                         try:
                                             e = json.loads(f"{e}")
                                         except:
@@ -3472,7 +3479,7 @@ class AppBase:
                                         })
                                         break
                                 except Exception as e:
-                                    self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (1)?")
+                                    self.logger.info(f"[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (1)? err: {e}")
 
                                     try:
                                         e = json.loads(f"{e}")
@@ -3499,7 +3506,8 @@ class AppBase:
 
                                     newres = asyncio.run(parse_value(newres))
                                 else:
-                                    self.logger.info("[DEBUG] Not in coroutine (1)")
+                                    #self.logger.info("[DEBUG] Not in coroutine (1)")
+                                    pass
                             except Exception as e:
                                 self.logger.warning("[ERROR] Failed to parse coroutine value for old app: {e}")
 
@@ -3712,7 +3720,6 @@ class AppBase:
             def execute():
                 if request.method == "POST":
                     #print(request.get_json(force=True))
-                    #print("DATA: ", request.data)
                     requestdata = {}
                     try:
                         requestdata = json.loads(request.data)
