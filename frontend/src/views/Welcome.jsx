@@ -20,7 +20,7 @@ import theme from '../theme';
 import { useNavigate, Link } from "react-router-dom";
 
 const Welcome = (props) => {
-    const { globalUrl, surfaceColor, newColor, mini, inputColor, userdata, isLoggedIn, isLoaded } = props;
+    const { globalUrl, surfaceColor, newColor, mini, inputColor, userdata, isLoggedIn, isLoaded, serverside } = props;
     const [skipped, setSkipped] = React.useState(new Set());
     const [inputUsecase, setInputUsecase] = useState({});
   	const [frameworkData, setFrameworkData] = useState(undefined);
@@ -33,6 +33,14 @@ const Welcome = (props) => {
   	const [usecases, setUsecases] = React.useState([]);
   	const [workflows, setWorkflows] = React.useState([]);
 
+		let navigate = useNavigate();
+    //if (serverside === false && isLoaded === true && isLoggedIn === false) {
+		//	console.log("Redirecting to login?")
+		//	console.log(window.location.pathname)
+		//	console.log(window.location)
+		//	navigate(`/login?view=${window.location.pathname}${window.location.search}`)
+		//}
+
   	const isCloud =
 			window.location.host === "localhost:3002" ||
 			window.location.host === "shuffler.io";
@@ -43,7 +51,6 @@ const Welcome = (props) => {
 			"Discover Usecases",
 		])
 
-		let navigate = useNavigate();
 
 		const handleKeysetting = (categorydata, workflows) => {
 			//workflows[0].category = ["detect"]
@@ -238,7 +245,6 @@ const Welcome = (props) => {
 		}]
 
 		const handleSetSearch = (input, orgupdate) => {
-			console.log("INPUT & ORGUPDATE: ", input, orgupdate, defaultSearch)
 			if (input !== defaultSearch) {
 				setDefaultSearch(input)
 				setSelectionOpen(false)
@@ -268,11 +274,8 @@ const Welcome = (props) => {
 				const params = Object.fromEntries(urlSearchParams.entries());
 				const foundTab = params["tab"];
 				if (foundTab !== null && foundTab !== undefined && !isNaN(foundTab)) {
-					console.log("FOUND TAB: ", foundTab)
 					setShowWelcome(true)
 					if (foundTab === 3 || foundTab === "3") {
-						console.log("SET SEARCH!!")
-
 						handleSetSearch(usecaseButtons[0].name, usecaseButtons[0].usecase)
 					}
 

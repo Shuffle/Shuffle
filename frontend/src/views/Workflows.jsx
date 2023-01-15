@@ -569,6 +569,7 @@ const Workflows = (props) => {
 
 	const sidebarKey = "getting_started_sidebar"
 	if (isLoggedIn === true && gettingStartedItems.length === 0 && (userdata.tutorials !== undefined && userdata.tutorials !== null && userdata.tutorials.length > 0) && workflowDone === true) {
+
 		const activeFiltered = userdata.tutorials.filter((item) => item.active === true)
 		if (activeFiltered.length > 0) {
 			var newfiltered = []
@@ -582,7 +583,6 @@ const Workflows = (props) => {
 
 				newfiltered.push(activeFiltered[key])
 			}
-
 			setGettingStartedItems(activeFiltered)
 
 			const doneFiltered = activeFiltered.filter((item) => item.done === true)
@@ -1583,7 +1583,7 @@ const Workflows = (props) => {
     };
 
     return (
-      <Grid item xs={isMobile || workflows.length === 0 ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
+      <Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
         <Paper
           square
           style={setupPaperStyle}
@@ -2271,35 +2271,35 @@ const Workflows = (props) => {
 						"",
 						data.status,
           )
-					.then((response) => {
-						if (response !== undefined) {
-							// SET THE FULL THING
-							data.id = response.id;
-							data.first_save = false;
-							data.previously_saved = false;
-							data.is_valid = false;
+            .then((response) => {
+              if (response !== undefined) {
+                // SET THE FULL THING
+                data.id = response.id;
+                data.first_save = false;
+                data.previously_saved = false;
+                data.is_valid = false;
 
-							// Actually create it
-							setNewWorkflow(
-								data.name,
-								data.description,
-								data.tags,
-								data.default_return_value,
-								data,
-								false,
-								[],
-								"",
-								data.status,
-							).then((response) => {
-								if (response !== undefined) {
-									alert.success("Successfully imported " + data.name);
-								}
-							});
-						}
-					})
-					.catch((error) => {
-						alert.error("Import error: " + error.toString());
-					});
+                // Actually create it
+                setNewWorkflow(
+                  data.name,
+                  data.description,
+                  data.tags,
+                  data.default_return_value,
+                  data,
+                  false,
+									[],
+									"",
+									data.status,
+                ).then((response) => {
+                  if (response !== undefined) {
+                    alert.success("Successfully imported " + data.name);
+                  }
+                });
+              }
+            })
+            .catch((error) => {
+              alert.error("Import error: " + error.toString());
+            });
         });
 
         // Actually reads
@@ -3710,7 +3710,7 @@ const Workflows = (props) => {
           color: "white",
           fontSize: 18,
 					borderLeft: theme.palette.defaultBorder,
-					marginTop: 66,
+					marginTop: 64,
 					borderRadius: "5px 0px 0px 0px",
         },
       }}
