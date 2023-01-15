@@ -73,7 +73,7 @@ import {
 
 import { useAlert } from "react-alert";
 import Dropzone from "../components/Dropzone";
-import HandlePayment from "./HandlePayment";
+import HandlePaymentNew from "./HandlePaymentNew";
 import OrgHeader from "../components/OrgHeader.jsx";
 import { display, style } from "@mui/system";
 
@@ -3244,7 +3244,7 @@ const Admin = (props) => {
         )}
 
         <div style={{ backgroundColor: "#1f2023", paddingTop: 25 }}>
-          <HandlePayment
+          <HandlePaymentNew
             theme={theme}
             stripeKey={props.stripeKey}
             userdata={userdata}
