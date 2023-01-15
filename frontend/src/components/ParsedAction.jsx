@@ -1911,7 +1911,7 @@ const ParsedAction = (props) => {
 
 						// Basic helpertext
 
-            if (data.name.toLowerCase() === "file_category") {
+            if (files !== undefined && files !== null && data.name.toLowerCase() === "file_category") {
               //selectedActionParameters[count].options.length > 0
 							console.log("FileS: ", files)
 							if (files.namespaces !== undefined && files.namespaces !== null && files.namespaces.length > 0) {
