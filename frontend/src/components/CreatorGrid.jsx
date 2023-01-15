@@ -239,7 +239,7 @@ const CreatorGrid = props => {
 				<div style={{maxWidth: 450, margin: "auto", marginTop: 15, marginBottom: 15, }}>
 					<CustomSearchBox />
 				</div>
-				<CustomHits hitsPerPage={20}/>
+				<CustomHits hitsPerPage={100}/>
 			</InstantSearch>
 			{showSuggestion === true ? 
 				<div style={{maxWidth: isMobile ? "100%" : "60%", margin: "auto", paddingTop: 50, textAlign: "center",}}>
