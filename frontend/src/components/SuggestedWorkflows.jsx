@@ -83,6 +83,12 @@ const SuggestedWorkflows = (props) => {
 			dstimage = usecase.items[2].app
 		}
 
+		console.log(srcimage, dstimage, usecase.items)
+		if (srcimage === undefined || dstimage === undefined) {
+			console.log("Error in src or dst: returning!")
+			return null
+		}
+
 		const finished = finishedUsecases.includes(usecasename)
 		const selectedIcon = finished ? <DoneIcon /> : <AutoFixHighIcon /> 
 
