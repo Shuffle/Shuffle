@@ -36,6 +36,7 @@ import {
 		Divider,
 		Tooltip,
 		Chip,
+		ButtonGroup,
 } from "@material-ui/core";
 import { useAlert } from "react-alert";
 
@@ -53,7 +54,25 @@ const responsive = {
 const WelcomeForm = (props) => {
 		const { userdata, globalUrl, discoveryWrapper, setDiscoveryWrapper, appFramework, getFramework, activeStep, setActiveStep, steps, skipped, setSkipped, getApps, apps, handleSetSearch, usecaseButtons, defaultSearch, setDefaultSearch, selectionOpen, setSelectionOpen, } = props
 
-		const usecaseItems = [
+    const [usecaseItems, setUsecaseItems] = useState([
+			{
+				"search": "Phishing",
+				"usecase_search": undefined,
+			},
+			{
+				"search": "Enrichment",
+				"usecase_search": undefined,
+			},
+			{
+				"search": "Enrichment",
+				"usecase_search": "SIEM alert enrichment",
+			},
+			{
+				"search": "Build your own",
+				"usecase_search": undefined,
+			}])
+
+			/*
 			<div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
 				<UsecaseSearch
 					globalUrl={globalUrl}
@@ -98,7 +117,8 @@ const WelcomeForm = (props) => {
 					userdata={userdata}
 				/>
 			</div>
-		]
+		])
+		*/
 
     const [discoveryData, setDiscoveryData] = React.useState({})
     const [name, setName] = React.useState("")
@@ -165,6 +185,43 @@ const WelcomeForm = (props) => {
 					}
 				} else { 
     			//navigate(`/welcome?tab=1`)
+				}
+
+				const foundTemplate = params["workflow_template"];
+				if (foundTemplate !== null && foundTemplate !== undefined) {
+					console.log("Found workflow template: ", foundTemplate)
+				
+					var sourceapp = undefined
+					var destinationapp = undefined
+					var action = undefined
+					const srcapp = params["source_app"];
+					if (srcapp !== null && srcapp !== undefined) {
+						sourceapp = srcapp
+					}
+
+					const dstapp = params["dest_app"];
+					if (dstapp !== null && dstapp !== undefined) {
+						destinationapp = dstapp
+					}
+
+					const act = params["action"];
+					if (act !== null && act !== undefined) {
+						action = act
+					}
+    
+					//defaultSearch={foundTemplate}
+					//
+					usecaseItems[0] = {
+						"search": "enrichment",
+						"usecase_search": foundTemplate,
+						"sourceapp": sourceapp,
+						"destinationapp": destinationapp,
+						"autotry": action === "try",
+					}
+
+					console.log("Adding: ", usecaseItems[0])
+
+					setUsecaseItems(usecaseItems)
 				}
 			}
 		}, [])
@@ -416,7 +473,27 @@ const WelcomeForm = (props) => {
 			minWidth: buttonWidth, 
 			maxWidth: buttonWidth, 
 		}
-		
+
+
+		const formattedCarousel = appFramework === undefined || appFramework === null ? [] : usecaseItems.map((item, index) => {
+			return (
+				<div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
+					<UsecaseSearch
+						globalUrl={globalUrl}
+						defaultSearch={item.search}
+						usecaseSearch={item.usecase_search}
+						appFramework={appFramework}
+						apps={apps}
+						getFramework={getFramework}
+						userdata={userdata}
+						autotry={item.autotry}
+						sourceapp={item.sourceapp}
+						destinationapp={item.destinationapp}
+					/>
+				</div>
+			)
+		})
+
     const getStepContent = (step) => {
         switch (step) {
             case 0:
@@ -676,10 +753,10 @@ const WelcomeForm = (props) => {
 														<div style={{minWidth: 554, maxWidth: 554, borderRadius: theme.palette.borderRadius, padding: 25, }}>
 															<AliceCarousel
 																	style={{ backgroundColor: theme.palette.surfaceColor, minHeight: 750, maxHeight: 750, }}
-																	items={usecaseItems}
+																	items={formattedCarousel}
 																	activeIndex={thumbIndex}
 																	infiniteLoop
-																	mouseTracking
+																	mouseTracking={false}
 																	responsive={responsive}
 																	// activeIndex={activeIndex}
 																	controlsStrategy="responsive"
@@ -688,7 +765,6 @@ const WelcomeForm = (props) => {
 																	animationType="fadeout"
           												animationDuration={800}
 																	disableButtonsControls
-																	disableDotsControls
 
 															/>
 														</div>
@@ -721,6 +797,7 @@ const WelcomeForm = (props) => {
         }
     }
 
+		const extraHeight = isCloud ? -7 : 0
     return (
         <div style={{}}>
             {/*selectionOpen ?
@@ -756,7 +833,7 @@ const WelcomeForm = (props) => {
 																disabled={activeStep === 0} 
 																onClick={handleBack}
 																variant={"outlined"}
-																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -600 : -577, left: activeStep === 1 ? 105 : -145+clickdiff, }} 
+																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -600-extraHeight : -577, left: activeStep === 1 ? 105 : -145+clickdiff, borderRadius: "50px 0px 0px 50px", }} 
 															>
 																	Back
 															</Button>
@@ -764,7 +841,7 @@ const WelcomeForm = (props) => {
 																variant={"outlined"}
 																color="primary" 
 																onClick={handleNext} 
-																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -600: -577, left: activeStep === 1 ? 748 : 510+clickdiff, }} 
+																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -600-extraHeight: -577, left: activeStep === 1 ? 748 : 510+clickdiff, borderRadius: "0px 50px 50px 0px", }}
 																disabled={activeStep === 0 ? orgName.length === 0 || name.length === 0 : false}
 															>
 																	{activeStep === steps.length - 1 ? "Finish" : "Next"}

@@ -2787,9 +2787,6 @@ class AppBase:
                     correct_branches += 1
                     continue
 
-                # FIXME: Check if the previous node has a result or not 
-
-                #self.logger.info("[DEBUG] Relevant conditions: %s" % branch["conditions"])
                 successful_conditions = []
                 failed_conditions = []
                 successful_conditions = 0
@@ -2802,26 +2799,19 @@ class AppBase:
                     check, sourcevalue, is_loop = parse_params(action, fullexecution, condition["source"], self)
                     if check:
                         continue
-                        return False, {"success": False, "reason": "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
-                    #sourcevalue = sourcevalue.encode("utf-8")
                     sourcevalue = parse_wrapper_start(sourcevalue, self)
                     destinationvalue = condition["destination"]["value"]
 
                     check, destinationvalue, is_loop = parse_params(action, fullexecution, condition["destination"], self)
                     if check:
                         continue
-                        return False, {"success": False, "reason": "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
-                    #destinationvalue = destinationvalue.encode("utf-8")
                     destinationvalue = parse_wrapper_start(destinationvalue, self)
 
                     if not condition["condition"]["value"] in available_checks:
                         self.logger.warning("Skipping %s %s %s because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
                         continue
-
-                    #self.logger.info(destinationvalue)
-                    # NEGATE 
 
                     # Configuration = negated because of WorkflowAppActionParam..
                     validation = run_validation(sourcevalue, condition["condition"]["value"], destinationvalue)
@@ -2834,12 +2824,6 @@ class AppBase:
                     if validation == True:
                         successful_conditions += 1
 
-                    #if not validation:
-                    #    self.logger.info("Failed condition check for %s %s %s." % (sourcevalue, condition["condition"]["value"], destinationvalue))
-                    #    return False, {"success": False, "reason": "Failed condition (3): %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)}
-
-                #self.logger.info("CONDITIONS VS SUCCESS: %d vs %d" % (total_conditions, successful_conditions))
-
                 if total_conditions == successful_conditions:
                     correct_branches += 1
     
@@ -2849,14 +2833,8 @@ class AppBase:
             if matching_branches > 0 and correct_branches > 0:
                 return True, ""
 
-            # FIXME: Check if previous branches are at all finished
-
             self.logger.info("[DEBUG] Correct branches vs matching branches: %d vs %d" % (correct_branches, matching_branches))
             return False, {"success": False, "reason": "Minimum of one branch's conditions must be correct to continue. Total: %d of %d" % (correct_branches, matching_branches)}
-
-            #Correct branches vs matching branches: 1 vs 1
-            #if 
-            return True, ""
 
 
         #
