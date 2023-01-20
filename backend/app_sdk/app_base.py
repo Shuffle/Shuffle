@@ -142,7 +142,7 @@ def escape(a):
 def flatten(a):
     a = list(a)
 
-    flat_list = [a for xs in xss for a in xs]
+    flat_list = [a for xs in a for a in xs]
     return flat_list
 
 @shuffle_filters.register
