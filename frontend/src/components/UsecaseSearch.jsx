@@ -1590,7 +1590,7 @@ const UsecaseSearch = (props) => {
 								style={{ textDecoration: "none",  }}
 							>
 								<Button 
-									style={{borderRadius: 25, marginLeft: 114, marginTop: 35, }}
+									style={{borderRadius: 25, marginLeft: 130, marginTop: 35, }}
 									variant={"outlined"} 
 									color="secondary" 
 									onClick={() => {

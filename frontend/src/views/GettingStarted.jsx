@@ -66,7 +66,7 @@ import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
-import Dropzone from "../components/Dropzone";
+import Dropzone from "../components/Dropzone.jsx";
 
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { useAlert } from "react-alert";

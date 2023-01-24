@@ -545,9 +545,49 @@ const AppFramework = (props) => {
 
   const alert = useAlert()
 
+	const handleLoadNextSuggestion = (frameworkData) => {
+		console.log("Should check for next apps to load from App suggestion model")
+		//fetch(globalUrl + "/api/v1/workflows/usecases", {
+      //credentials: "include",
+		
+		fetch("https://europe-west2-shuffler.cloudfunctions.net/app_recommendations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(frameworkData),
+			cors: "no-cors",
+    })
+		.then((response) => {
+			//if (response.status !== 200) {
+			//	console.log("Status not 200 for framework!");
+			//}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			console.log("Response: ", responseJson)
+			//if (responseJson.success === false) {
+			//	if (responseJson.reason !== undefined) {
+			//		alert.error("Failed updating: " + responseJson.reason)
+			//	} else {
+			//		alert.error("Failed to update framework for your org.")
+			//	}
+			//} else {
+			//	alert.info("Updated usecase.")
+			//}
+		})
+		.catch((error) => {
+			//alert.error(error.toString());
+			//setFrameworkLoaded(true)
+		})
+	}
+
 	const showRecommendations = (changed, frameworkData) => {
 		console.log("Inside recommendation loader")
 		setChangedApp(changed)
+		handleLoadNextSuggestion(frameworkData)
 
 		// Alternative changed
 		// This is for secondary values like email = comms

@@ -144,6 +144,14 @@ const WelcomeForm = (props) => {
 				)
 			}
 
+			if (isCloud) {
+					ReactGA.event({
+						category: "welcome",
+						action: `click_${label}`,
+						label: "",
+					})
+			}
+
 			setSelectionOpen(true)
 			setDefaultSearch(label)
     }
@@ -585,14 +593,8 @@ const WelcomeForm = (props) => {
                 return (
 									<Fade in={true}>
                     <div style={{minHeight: sizing, maxHeight: sizing, marginTop: 20, maxWidth: 500, }}>
-												<Typography variant="body1" style={{marginLeft: 8, marginTop: 25, marginRight: 30, marginBottom: 0, }} color="textSecondary">
-													Clicks the buttons below to find your apps, then we will help you find relevant workflows. Can't find your app? <span style={{color: "#f86a3e", cursor: "pointer"}} onClick={() => {
-														if (window.drift !== undefined) {
-															window.drift.api.startInteraction({ interactionId: 340043 })
-														} else {
-															console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
-														}
-													}}>Contact our App Developers!</span>
+												<Typography variant="body1" style={{marginLeft: 8, marginTop: 50, marginRight: 30, marginBottom: 0, }} color="textSecondary">
+													Use the buttons below to find your apps, and we will help you connect them later. 
 												</Typography>
 												{/*The app framework helps us access and authenticate the most important APIs for you. */}
 
@@ -833,7 +835,7 @@ const WelcomeForm = (props) => {
 																disabled={activeStep === 0} 
 																onClick={handleBack}
 																variant={"outlined"}
-																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -600-extraHeight : -577, left: activeStep === 1 ? 105 : -145+clickdiff, borderRadius: "50px 0px 0px 50px", }} 
+																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -625-extraHeight : -576, left: activeStep === 1 ? 125 : -125+clickdiff, borderRadius: "50px 0px 0px 50px", }} 
 															>
 																	Back
 															</Button>
@@ -841,7 +843,7 @@ const WelcomeForm = (props) => {
 																variant={"outlined"}
 																color="primary" 
 																onClick={handleNext} 
-																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -600-extraHeight: -577, left: activeStep === 1 ? 748 : 510+clickdiff, borderRadius: "0px 50px 50px 0px", }}
+																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -625-extraHeight : -576, left: activeStep === 1 ? 738 : 489+clickdiff, borderRadius: "0px 50px 50px 0px", }}
 																disabled={activeStep === 0 ? orgName.length === 0 || name.length === 0 : false}
 															>
 																	{activeStep === steps.length - 1 ? "Finish" : "Next"}

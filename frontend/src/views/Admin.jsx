@@ -72,9 +72,11 @@ import {
 } from "@material-ui/icons";
 
 import { useAlert } from "react-alert";
-import Dropzone from "../components/Dropzone";
-import HandlePaymentNew from "./HandlePaymentNew";
+import Dropzone from "../components/Dropzone.jsx";
+import HandlePaymentNew from "../views/HandlePaymentNew.jsx";
 import OrgHeader from "../components/OrgHeader.jsx";
+import OrgHeaderexpanded from "../components/OrgHeaderexpanded.jsx";
+import Billing from "../components/Billing.jsx";
 import { display, style } from "@mui/system";
 
 const useStyles = makeStyles({
@@ -188,8 +190,10 @@ const Admin = (props) => {
   const [dealDiscount, setDealDiscount] = React.useState("");
   const [dealerror, setDealerror] = React.useState("");
   const [dealList, setDealList] = React.useState([]);
+  const [adminTab, setAdminTab] = React.useState(1);
 
   const [fileContent, setFileContent] = React.useState("");
+  const [billingInfo, setBillingInfo] = React.useState({});
   
   useEffect(() => {
     if (isDropzone) {
@@ -1562,6 +1566,14 @@ const Admin = (props) => {
     5: "environments",
     6: "suborgs",
   };
+
+  const admin_views = {
+    0: "organization",
+    1: "cloud_sync",
+    2: "billing",
+    3: "stats",
+  };
+
   const setConfig = (event, inputValue) => {
     const newValue = parseInt(inputValue);
 
@@ -1612,17 +1624,29 @@ const Admin = (props) => {
     ) {
       const urlSearchParams = new URLSearchParams(window.location.search);
       const params = Object.fromEntries(urlSearchParams.entries());
-      const foundTab = params["tab"];
-      if (foundTab !== null && foundTab !== undefined) {
-        for (var key in Object.keys(views)) {
-          const value = views[key];
-          console.log(key, value);
-          if (value === foundTab) {
-            setConfig("", key);
+
+      const adminTab = params["admin_tab"];
+      if (adminTab !== null && adminTab !== undefined) {
+				for (var key in Object.keys(admin_views)) {
+          const value = admin_views[key];
+          if (value === adminTab) {
+						setAdminTab(parseInt(key));
+            setConfig("", 0);
             break;
           }
         }
-      }
+			} else { 
+				const foundTab = params["tab"];
+				if (foundTab !== null && foundTab !== undefined) {
+					for (var key in Object.keys(views)) {
+						const value = views[key];
+						if (value === foundTab) {
+							setConfig("", key);
+							break;
+						}
+					}
+				}
+			}
     }
   }
 
@@ -2612,48 +2636,7 @@ const Admin = (props) => {
       });
   };
 
-  const cancelSubscriptions = (subscription_id) => {
-    console.log(selectedOrganization);
-    const orgId = selectedOrganization.id;
-    const data = {
-      subscription_id: subscription_id,
-      action: "cancel",
-      org_id: selectedOrganization.id,
-    };
-
-    const url = globalUrl + `/api/v1/orgs/${orgId}`;
-    fetch(url, {
-      mode: "cors",
-      method: "POST",
-      body: JSON.stringify(data),
-      credentials: "include",
-      crossDomain: true,
-      withCredentials: true,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    })
-      .then(function (response) {
-        if (response.status !== 200) {
-          console.log("Error in response");
-        }
-
-        handleGetOrg(selectedOrganization.id);
-        return response.json();
-      })
-      .then(function (responseJson) {
-        if (responseJson.success !== undefined && responseJson.success) {
-          alert.success("Successfully stopped subscription!");
-        } else {
-          alert.error("Failed stopping subscription. Please contact us.");
-        }
-      })
-      .catch(function (error) {
-        console.log("Error: ", error);
-        alert.error("Failed stopping subscription. Please contact us.");
-      });
-  };
-
+  
   const organizationView =
     curTab === 0 && selectedOrganization.id !== undefined ? (
       <div style={{ position: "relative" }}>
@@ -2758,6 +2741,7 @@ const Admin = (props) => {
                 setSelectedOrganization={setSelectedOrganization}
                 globalUrl={globalUrl}
                 selectedOrganization={selectedOrganization}
+								adminTab={adminTab}
               />
             ) : (
               <div
@@ -2772,6 +2756,51 @@ const Admin = (props) => {
                 <Typography>Loading Organization</Typography>
               </div>
             )}
+
+						<Tabs
+							value={adminTab}
+							indicatorColor="primary"
+							textColor="secondary"
+							style={{marginTop: 20, }}
+							onChange={(event, inputValue) => {
+    						const newValue = parseInt(inputValue);
+								setAdminTab(newValue);
+
+  							//const setConfig = (event, inputValue) => {
+    						navigate(`/admin?admin_tab=${admin_views[newValue]}`);
+							}}
+							aria-label="disabled tabs example"
+						>
+							<Tab
+								label=<span>
+									Edit Details
+								</span>
+							/>
+							<Tab
+								label=<span>
+									Cloud Synchronization	
+								</span>
+							/>
+							<Tab
+								disabled={!isCloud}
+								label=<span>
+									Billing
+								</span>
+							/>
+							<Tab
+								disabled={true}
+								label=<span>
+									Usage	
+								</span>
+							/>
+							<Tab
+								disabled={true}
+								label=<span>
+									Notifications	
+								</span>
+							/>
+						</Tabs>
+
             <Divider
               style={{
                 marginTop: 20,
@@ -2779,205 +2808,241 @@ const Admin = (props) => {
                 backgroundColor: theme.palette.inputColor,
               }}
             />
-            <Typography
-              variant="h6"
-              style={{ marginBottom: "10px", color: "white" }}
-            >
-              Cloud syncronization
-            </Typography>
-            What does{" "}
-            <a
-              href="https://shuffler.io/docs/organizations#cloud_sync"
-              target="_blank"
-							rel="noopener noreferrer"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
-            >
-              cloud sync
-            </a>{" "}
-            do? Cloud syncronization is a way of getting more out of Shuffle.
-            Shuffle will <b>ALWAYS</b> make every option open source, but
-            features relying on other users can't be done without a
-            collaborative approach.
-            {isCloud ? (
-              <div style={{ marginTop: 15, display: "flex" }}>
-                <div style={{ flex: 1 }}>
-                  <Typography style={{}}>
-                    Currently syncronizing:{" "}
-                    {selectedOrganization.cloud_sync_active === true
-                      ? "True"
-                      : "False"}
-                  </Typography>
-                  {selectedOrganization.cloud_sync_active ? (
-                    <Typography style={{}}>
-                      Syncronization interval:{" "}
-                      {selectedOrganization.sync_config.interval === 0
-                        ? "60"
-                        : selectedOrganization.sync_config.interval}
-                    </Typography>
-                  ) : null}
-                  <Typography
-                    style={{
-                      whiteSpace: "nowrap",
-                      marginTop: 25,
-                      marginRight: 10,
-                    }}
-                  >
-                    Your Apikey
-                  </Typography>
-                  <div style={{ display: "flex" }}>
-                    <TextField
-                      color="primary"
-                      style={{ backgroundColor: theme.palette.inputColor }}
-                      InputProps={{
-                        style: {
-                          height: "50px",
-                          color: "white",
-                          fontSize: "1em",
-                        },
-                      }}
-                      required
-                      fullWidth={true}
-                      disabled={true}
-                      autoComplete="cloud apikey"
-                      id="apikey_field"
-                      margin="normal"
-                      placeholder="Cloud Apikey"
-                      variant="outlined"
-                      defaultValue={userSettings.apikey}
-                    />
-                    {selectedOrganization.cloud_sync_active ? (
-                      <Button
-                        style={{
-                          width: 150,
-                          height: 50,
-                          marginLeft: 10,
-                          marginTop: 17,
-                        }}
-                        variant={
-                          selectedOrganization.cloud_sync_active === true
-                            ? "outlined"
-                            : "contained"
-                        }
-                        color="primary"
-                        onClick={() => {
-                          handleStopOrgSync(selectedOrganization.id);
-                        }}
-                      >
-                        Stop Sync
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div style={{ display: "flex", marginBottom: 20 }}>
-                  <TextField
-                    color="primary"
-                    style={{
-                      backgroundColor: theme.palette.inputColor,
-                      marginRight: 10,
-                    }}
-                    InputProps={{
-                      style: {
-                        height: "50px",
-                        color: "white",
-                        fontSize: "1em",
-                      },
-                    }}
-                    required
-                    fullWidth={true}
-                    disabled={selectedOrganization.cloud_sync}
-                    autoComplete="cloud apikey"
-                    id="apikey_field"
-                    margin="normal"
-                    placeholder="Cloud Apikey"
-                    variant="outlined"
-                    onChange={(event) => {
-                      setCloudSyncApikey(event.target.value);
-                    }}
-                  />
-                  <Button
-                    disabled={
-                      (!selectedOrganization.cloud_sync &&
-                        cloudSyncApikey.length === 0) ||
-                      loading
-                    }
-                    style={{ marginTop: 15, height: 50, width: 150 }}
-                    onClick={() => {
-                      setLoading(true);
-                      enableCloudSync(
-                        cloudSyncApikey,
-                        selectedOrganization,
-                        selectedOrganization.cloud_sync
-                      );
-                    }}
-                    color="primary"
-                    variant={
-                      selectedOrganization.cloud_sync === true
-                        ? "outlined"
-                        : "contained"
-                    }
-                  >
-                    {selectedOrganization.cloud_sync
-                      ? "Stop sync"
-                      : "Start sync"}
-                  </Button>
-                </div>
-                {orgSyncResponse.length > 0 ? (
-                  <Typography style={{ marginTop: 5, marginBottom: 10 }}>
-                    Message from Shuffle Cloud: <b>{orgSyncResponse}</b>
-                  </Typography>
-                ) : null}
-              </div>
-            )}
-            <Typography
-              style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
-            >
-              Cloud sync features (monthly usage)
-            </Typography>
-            <Grid container style={{ width: "100%", marginBottom: 15 }}>
-              {selectedOrganization.sync_features === undefined ||
-              selectedOrganization.sync_features === null
-                ? null
-                : Object.keys(selectedOrganization.sync_features).map(function (
-                    key,
-                    index
-                  ) {
-										// unnecessary parts
-                    if (key === "schedule" || key === "apps" || key === "updates") {
-                      return null;
-                    }
 
-                    const item = selectedOrganization.sync_features[key];
-										if (item === null) {
-											return null
-										}
+						{adminTab === 0 ? (
+							<OrgHeaderexpanded
+									isCloud={isCloud}
+									userdata={userdata}
+									setSelectedOrganization={setSelectedOrganization}
+									globalUrl={globalUrl}
+									selectedOrganization={selectedOrganization}
+									adminTab={adminTab}
+							/>
+						)
+						: adminTab === 1 ? (
+							<div>
+            		<Typography
+            		  variant="h6"
+            		  style={{ marginBottom: "10px", color: "white" }}
+            		>
+            		  Cloud syncronization
+            		</Typography>
+            		What does{" "}
+            		<a
+            		  href="https://shuffler.io/docs/organizations#cloud_sync"
+            		  target="_blank"
+									rel="noopener noreferrer"
+            		  style={{ textDecoration: "none", color: "#f85a3e" }}
+            		>
+            		  cloud sync
+            		</a>{" "}
+            		do? Cloud syncronization is a way of getting more out of Shuffle.
+            		Shuffle will <b>ALWAYS</b> make every option open source, but
+            		features relying on other users can't be done without a
+            		collaborative approach.
+            		{isCloud ? (
+            		  <div style={{ marginTop: 15, display: "flex" }}>
+            		    <div style={{ flex: 1 }}>
+            		      <Typography style={{}}>
+            		        Currently syncronizing:{" "}
+            		        {selectedOrganization.cloud_sync_active === true
+            		          ? "True"
+            		          : "False"}
+            		      </Typography>
+            		      {selectedOrganization.cloud_sync_active ? (
+            		        <Typography style={{}}>
+            		          Syncronization interval:{" "}
+            		          {selectedOrganization.sync_config.interval === 0
+            		            ? "60"
+            		            : selectedOrganization.sync_config.interval}
+            		        </Typography>
+            		      ) : null}
+            		      <Typography
+            		        style={{
+            		          whiteSpace: "nowrap",
+            		          marginTop: 25,
+            		          marginRight: 10,
+            		        }}
+            		      >
+            		        Your Apikey
+            		      </Typography>
+            		      <div style={{ display: "flex" }}>
+            		        <TextField
+            		          color="primary"
+            		          style={{ backgroundColor: theme.palette.inputColor }}
+            		          InputProps={{
+            		            style: {
+            		              height: "50px",
+            		              color: "white",
+            		              fontSize: "1em",
+            		            },
+            		          }}
+            		          required
+            		          fullWidth={true}
+            		          disabled={true}
+            		          autoComplete="cloud apikey"
+            		          id="apikey_field"
+            		          margin="normal"
+            		          placeholder="Cloud Apikey"
+            		          variant="outlined"
+            		          defaultValue={userSettings.apikey}
+            		        />
+            		        {selectedOrganization.cloud_sync_active ? (
+            		          <Button
+            		            style={{
+            		              width: 150,
+            		              height: 50,
+            		              marginLeft: 10,
+            		              marginTop: 17,
+            		            }}
+            		            variant={
+            		              selectedOrganization.cloud_sync_active === true
+            		                ? "outlined"
+            		                : "contained"
+            		            }
+            		            color="primary"
+            		            onClick={() => {
+            		              handleStopOrgSync(selectedOrganization.id);
+            		            }}
+            		          >
+            		            Stop Sync
+            		          </Button>
+            		        ) : null}
+            		      </div>
+            		    </div>
+            		  </div>
+            		) : (
+            		  <div>
+            		    <div style={{ display: "flex", marginBottom: 20 }}>
+            		      <TextField
+            		        color="primary"
+            		        style={{
+            		          backgroundColor: theme.palette.inputColor,
+            		          marginRight: 10,
+            		        }}
+            		        InputProps={{
+            		          style: {
+            		            height: "50px",
+            		            color: "white",
+            		            fontSize: "1em",
+            		          },
+            		        }}
+            		        required
+            		        fullWidth={true}
+            		        disabled={selectedOrganization.cloud_sync}
+            		        autoComplete="cloud apikey"
+            		        id="apikey_field"
+            		        margin="normal"
+            		        placeholder="Cloud Apikey"
+            		        variant="outlined"
+            		        onChange={(event) => {
+            		          setCloudSyncApikey(event.target.value);
+            		        }}
+            		      />
+            		      <Button
+            		        disabled={
+            		          (!selectedOrganization.cloud_sync &&
+            		            cloudSyncApikey.length === 0) ||
+            		          loading
+            		        }
+            		        style={{ marginTop: 15, height: 50, width: 150 }}
+            		        onClick={() => {
+            		          setLoading(true);
+            		          enableCloudSync(
+            		            cloudSyncApikey,
+            		            selectedOrganization,
+            		            selectedOrganization.cloud_sync
+            		          );
+            		        }}
+            		        color="primary"
+            		        variant={
+            		          selectedOrganization.cloud_sync === true
+            		            ? "outlined"
+            		            : "contained"
+            		        }
+            		      >
+            		        {selectedOrganization.cloud_sync
+            		          ? "Stop sync"
+            		          : "Start sync"}
+            		      </Button>
+            		    </div>
+            		    {orgSyncResponse.length > 0 ? (
+            		      <Typography style={{ marginTop: 5, marginBottom: 10 }}>
+            		        Message from Shuffle Cloud: <b>{orgSyncResponse}</b>
+            		      </Typography>
+            		    ) : null}
+            		  </div>
+            		)}
+            		<Typography
+            		  style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
+            		>
+            		  Cloud sync features (monthly usage)
+            		</Typography>
+            		<Grid container style={{ width: "100%", marginBottom: 15 }}>
+            		  {selectedOrganization.sync_features === undefined ||
+            		  selectedOrganization.sync_features === null
+            		    ? null
+            		    : Object.keys(selectedOrganization.sync_features).map(function (
+            		        key,
+            		        index
+            		      ) {
+												// unnecessary parts
+            		        if (key === "schedule" || key === "apps" || key === "updates") {
+            		          return null;
+            		        }
 
-                    const newkey = key.replaceAll("_", " ");
-                    const griditem = {
-                      primary: newkey,
-                      secondary:
-                        item.description === undefined ||
-                        item.description === null ||
-                        item.description.length === 0
-                          ? "Not defined yet"
-                          : item.description,
-                      limit: item.limit,
-                      usage: item.usage === undefined ||
-                        item.usage === null ? 0 : item.usage,
-                      data_collection: "None",
-                      active: item.active,
-                      icon: <PolymerIcon style={{ color: itemColor }} />,
-                    };
+            		        const item = selectedOrganization.sync_features[key];
+												if (item === null) {
+													return null
+												}
 
-                    return (
-                      <Zoom key={index}>
-                        <GridItem data={griditem} />
-                      </Zoom>
-                    );
-                  })}
-            </Grid>
+            		        const newkey = key.replaceAll("_", " ");
+            		        const griditem = {
+            		          primary: newkey,
+            		          secondary:
+            		            item.description === undefined ||
+            		            item.description === null ||
+            		            item.description.length === 0
+            		              ? "Not defined yet"
+            		              : item.description,
+            		          limit: item.limit,
+            		          usage: item.usage === undefined ||
+            		            item.usage === null ? 0 : item.usage,
+            		          data_collection: "None",
+            		          active: item.active,
+            		          icon: <PolymerIcon style={{ color: itemColor }} />,
+            		        };
+
+            		        return (
+            		          <Zoom key={index}>
+            		            <GridItem data={griditem} />
+            		          </Zoom>
+            		        );
+            		      })}
+            		</Grid>
+							</div>
+							)
+						: adminTab === 2 ? 
+							<Billing 
+								isCloud={isCloud}
+								userdata={userdata}
+								setSelectedOrganization={setSelectedOrganization}
+								globalUrl={globalUrl}
+								selectedOrganization={selectedOrganization}
+								adminTab={adminTab}
+								billingInfo={billingInfo}
+								selectedOrganization={selectedOrganization}
+								stripeKey={props.stripeKey}
+								handleGetOrg={handleGetOrg}
+							/>
+						: adminTab === 3 ? 
+							<div>
+								<Typography style={{ marginTop: 20, marginBottom: 10 }}>
+									Stats	
+								</Typography>
+							</div>
+							: null
+						}
             <Divider
               style={{
                 marginTop: 20,
@@ -2986,8 +3051,8 @@ const Admin = (props) => {
               }}
             />
             {isCloud &&
-            selectedOrganization.partner_info !== undefined &&
-            selectedOrganization.partner_info.reseller === true ? (
+							selectedOrganization.partner_info !== undefined &&
+							selectedOrganization.partner_info.reseller === true ? (
               <div style={{ marginTop: 30, marginBottom: 200 }}>
                 <Typography
                   style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
@@ -3169,89 +3234,9 @@ const Admin = (props) => {
                 />
               </div>
             ) : null}
-            {isCloud &&
-            selectedOrganization.subscriptions !== undefined &&
-            selectedOrganization.subscriptions !== null &&
-            selectedOrganization.subscriptions.length > 0 ? (
-              <div style={{ marginTop: 30, marginBottom: 20 }}>
-                <Typography
-                  style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
-                >
-                  Your subscription
-                  {selectedOrganization.subscriptions.length > 1 ? "s" : ""}
-                </Typography>
-                <Grid container spacing={3} style={{ marginTop: 15 }}>
-                  {selectedOrganization.subscriptions
-                    .reverse()
-                    .map((sub, index) => {
-                      return (
-                        <Grid item key={index} xs={4}>
-                          <Card
-                            elevation={6}
-                            style={{
-                              backgroundColor: theme.palette.inputColor,
-                              color: "white",
-                              padding: 25,
-                              textAlign: "left",
-                            }}
-                          >
-                            <b>Type</b>: {sub.level}
-                            <div />
-                            <b>Recurrence</b>: {sub.recurrence}
-                            <div />
-                            {sub.active ? (
-                              <div>
-                                <b>Started</b>:{" "}
-                                {new Date(sub.startdate * 1000).toISOString()}
-                                <div />
-                                <Button
-                                  variant="outlined"
-                                  color="primary"
-                                  style={{ marginTop: 15 }}
-                                  onClick={() => {
-                                    cancelSubscriptions(sub.reference);
-                                  }}
-                                >
-                                  Cancel subscription
-                                </Button>
-                              </div>
-                            ) : (
-                              <div>
-                                <b>Cancelled</b>:{" "}
-                                {new Date(
-                                  sub.cancellationdate * 1000
-                                ).toISOString()}
-                                <div />
-                                <Typography color="textSecondary">
-                                  <b>Status</b>: Deactivated
-                                </Typography>
-                              </div>
-                            )}
-                          </Card>
-                        </Grid>
-                      );
-                    })}
-                </Grid>
-                <Divider
-                  style={{
-                    marginTop: 20,
-                    backgroundColor: theme.palette.inputColor,
-                  }}
-                />
-              </div>
-            ) : null}
+            
           </div>
         )}
-
-        <div style={{ backgroundColor: "#1f2023", paddingTop: 25 }}>
-          <HandlePaymentNew
-            theme={theme}
-            stripeKey={props.stripeKey}
-            userdata={userdata}
-            globalUrl={globalUrl}
-            {...props}
-          />
-        </div>
       </div>
     ) : null;
 

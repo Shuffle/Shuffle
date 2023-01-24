@@ -641,9 +641,10 @@ const CodeEditor = (props) => {
 					backgroundColor: theme.palette.surfaceColor,
 					color: "white",
 					minWidth: isMobile ? "100%" : 600,
+					maxHeight: isMobile ? "100%" : 800,
 					padding: isMobile ? "25px 10px 25px 10px" : 25,
 					border: theme.palette.defaultBorder,
-					zIndex: 10012,
+					zIndex: 12501,
 				},
 			}}
 		>

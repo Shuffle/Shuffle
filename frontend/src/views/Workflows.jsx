@@ -89,7 +89,7 @@ import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
-import Dropzone from "../components/Dropzone";
+import Dropzone from "../components/Dropzone.jsx";
 
 import { useNavigate, Link } from "react-router-dom";
 import { useAlert } from "react-alert";
@@ -1262,8 +1262,9 @@ const Workflows = (props) => {
 
   const exportAllWorkflows = (allWorkflows) => {
 		for (var i = 0; i < allWorkflows.length; i++) {
+			console.log(allWorkflows[i])
 			setTimeout(() => {
-				console.log(allWorkflows[i].name)
+				console.log(allWorkflows[i])
       	exportWorkflow(allWorkflows[i], false)
 			}, i * 200);
     }

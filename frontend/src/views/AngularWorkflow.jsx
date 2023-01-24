@@ -6144,7 +6144,6 @@ const AngularWorkflow = (defaultprops) => {
       const [hover, setHover] = React.useState(false);
 
 			if (app.id === "" || app.name === "") {
-				console.log("Skipping app: ", app)
 				return null
 			}
 

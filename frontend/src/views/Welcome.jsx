@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import theme from '../theme';
 import { useNavigate, Link } from "react-router-dom";
+import Drift from "react-driftjs";
 
 const Welcome = (props) => {
     const { globalUrl, surfaceColor, newColor, mini, inputColor, userdata, isLoggedIn, isLoaded, serverside } = props;
@@ -25,7 +26,7 @@ const Welcome = (props) => {
     const [inputUsecase, setInputUsecase] = useState({});
   	const [frameworkData, setFrameworkData] = useState(undefined);
   	const [discoveryWrapper, setDiscoveryWrapper] = useState(undefined);
-    const [activeStep, setActiveStep] = React.useState(0);
+    const [activeStep, setActiveStep] = React.useState(1);
   	const [apps, setApps] = React.useState([]);
 		const [defaultSearch, setDefaultSearch] = React.useState("")
 		const [selectionOpen, setSelectionOpen] = React.useState(false)
@@ -281,7 +282,8 @@ const Welcome = (props) => {
 
 					setActiveStep(foundTab-1)
 				} else { 
-    			navigate(`/welcome?tab=1`)
+    			//navigate(`/welcome?tab=1`)
+    			navigate(`/welcome?tab=2`)
 				}
 			}
 		}, [])
@@ -426,29 +428,31 @@ const Welcome = (props) => {
 									Who do you identify with the most?
 								</Typography>
 								<div style={{display: "flex", marginTop: 70, width: 700, margin: "auto",}}>
-									<Card style={paperObject} onClick={() => {
-										if (isCloud) {
-												ReactGA.event({
-													category: "welcome",
-													action: "click_welcome_continue",
-													label: "",
-												})
-										} else {
-											//setActiveStep(1)
-										}
+									<div style={{border: "1px solid #49A928",}}>
+										<Card style={paperObject} onClick={() => {
+											if (isCloud) {
+													ReactGA.event({
+														category: "welcome",
+														action: "click_welcome_continue",
+														label: "",
+													})
+											} else {
+												//setActiveStep(1)
+											}
 
-										setShowWelcome(true)
-									}}>
-										<CardActionArea style={actionObject}>
-											<Typography variant="h4" style={{color: "#49A928"}}> 
-												New to Shuffle 
-											</Typography>
-											<img src="/images/welcome_cog.png" style={imageStyle} />
-											<Typography variant="body1" style={{marginTop: 30, color: "rgba(255,255,255,0.8)"}}>
-												Follow our short introduction and learn some tips and tricks
-											</Typography>
-										</CardActionArea>
-									</Card>
+											setShowWelcome(true)
+										}}>
+											<CardActionArea style={actionObject}>
+												<Typography variant="h4" style={{color: "#49A928"}}> 
+													New to Shuffle 
+												</Typography>
+												<img src="/images/welcome_cog.png" style={imageStyle} />
+												<Typography variant="body1" style={{marginTop: 30, color: "rgba(255,255,255,0.8)"}}>
+													Follow our short introduction and learn some tips and tricks
+												</Typography>
+											</CardActionArea>
+										</Card>
+									</div>
 									<div style={{marginLeft: 25, marginRight: 25, }}>
 										<Typography style={{marginTop: 200, }}>
 											OR
@@ -476,6 +480,19 @@ const Welcome = (props) => {
 										</CardActionArea>
 									</Card>
 								</div>
+								{/*
+								<div style={{margin: "auto", border: "1px solid rgba(255,255,255,0.5)", borderRadius: theme.palette.borderRadius, marginTop: 50, width: 200, overflow: "wrap", padding: 25, cursor: "pointer", }} onClick={() => {
+									if (window.drift !== undefined) {
+										window.drift.api.startInteraction({ interactionId: 341911 })
+									} else {
+										console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+									}
+								}}>
+									<Typography variant="body1" style={{margin: "auto", textAlign: "center"}}>
+										Want a free Proof of Value with our support team? 
+									</Typography>
+								</div>
+								*/}
 							</div>
 						</Fade>
 					}
