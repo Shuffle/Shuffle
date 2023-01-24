@@ -264,6 +264,7 @@ const ConfigureWorkflow = (props) => {
       }
     }
 
+	if (workflow.workflow_variables !== undefined && workflow.workflow_variables !== null && workflow.workflow_variables.length !== 0) {
     for (let [key,keyval] in workflow.workflow_variables.entries()) {
       const variable = workflow.workflow_variables[key];
       if (
@@ -276,7 +277,9 @@ const ConfigureWorkflow = (props) => {
         requiredVariables.push(variable);
       }
     }
+	  }
 
+	if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length !== 0) {
     for (let [key,keyval] in workflow.triggers.entries()) {
       var trigger = workflow.triggers[key];
       trigger.index = key;
@@ -326,6 +329,7 @@ const ConfigureWorkflow = (props) => {
 
       requiredTriggers.push(trigger);
     }
+}
 
     if (
       requiredTriggers.length === 0 &&

@@ -1103,26 +1103,26 @@ const AngularWorkflow = (defaultprops) => {
     	var newBranches = [];
     	var newVBranches = [];
     	var newComments = [];
-    	for (let [key,keyval] in cyelements.entries()) {
-    	  if (cyelements[key].data === undefined) {
+    	for (let cyelementsKey in cyelements) {
+    	  if (cyelements[cyelementsKey].data === undefined) {
     	    continue;
     	  }
 
-    	  var type = cyelements[key].data()["type"];
+    	  var type = cyelements[cyelementsKey].data()["type"];
     	  if (type === undefined) {
     	    if (
-    	      cyelements[key].data().source === undefined ||
-    	      cyelements[key].data().target === undefined
+    	      cyelements[cyelementsKey].data().source === undefined ||
+    	      cyelements[cyelementsKey].data().target === undefined
     	    ) {
     	      continue;
     	    }
 
     	    var parsedElement = {
-    	      id: cyelements[key].data().id,
-    	      source_id: cyelements[key].data().source,
-    	      destination_id: cyelements[key].data().target,
-    	      conditions: cyelements[key].data().conditions,
-    	      decorator: cyelements[key].data().decorator,
+    	      id: cyelements[cyelementsKey].data().id,
+    	      source_id: cyelements[cyelementsKey].data().source,
+    	      destination_id: cyelements[cyelementsKey].data().target,
+    	      conditions: cyelements[cyelementsKey].data().conditions,
+    	      decorator: cyelements[cyelementsKey].data().decorator,
     	    };
 
     	    if (parsedElement.decorator) {
@@ -1132,7 +1132,7 @@ const AngularWorkflow = (defaultprops) => {
     	    }
     	  } else {
     	    if (type === "ACTION") {
-    	      const cyelement = cyelements[key].data();
+    	      const cyelement = cyelements[cyelementsKey].data();
     	      const elementid =
     	        cyelement.id === undefined || cyelement.id === null
     	          ? cyelement["_id"]
@@ -1144,10 +1144,10 @@ const AngularWorkflow = (defaultprops) => {
     	          (a["id"] === elementid || a["_id"] === elementid)
     	      );
     	      if (curworkflowAction === undefined) {
-    	        curworkflowAction = cyelements[key].data();
+    	        curworkflowAction = cyelements[cyelementsKey].data();
     	      }
 
-    	      curworkflowAction.position = cyelements[key].position();
+    	      curworkflowAction.position = cyelements[cyelementsKey].position();
 
     	      // workaround to fix some edgecases
     	      if (
@@ -1162,8 +1162,8 @@ const AngularWorkflow = (defaultprops) => {
     	        curworkflowAction.example === "" ||
     	        curworkflowAction.example === null
     	      ) {
-    	        if (cyelements[key].data().example !== undefined) {
-    	          curworkflowAction.example = cyelements[key].data().example;
+    	        if (cyelements[cyelementsKey].data().example !== undefined) {
+    	          curworkflowAction.example = cyelements[cyelementsKey].data().example;
     	        }
     	      }
 
@@ -1173,8 +1173,8 @@ const AngularWorkflow = (defaultprops) => {
 
     	      // Cleans up OpenAPI items
     	      var newparams = [];
-    	      for (let [key,keyval] in curworkflowAction.parameters.entries()) {
-    	        const thisitem = curworkflowAction.parameters[key];
+    	      for (let parametersKey in curworkflowAction.parameters) {
+    	        const thisitem = curworkflowAction.parameters[parametersKey];
     	        if (thisitem.name.startsWith("${") && thisitem.name.endsWith("}")) {
     	          continue;
     	        }
@@ -1190,13 +1190,13 @@ const AngularWorkflow = (defaultprops) => {
     	      }
 
     	      var curworkflowTrigger = useworkflow.triggers.find(
-    	        (a) => a.id === cyelements[key].data()["id"]
+    	        (a) => a.id === cyelements[cyelementsKey].data()["id"]
     	      );
     	      if (curworkflowTrigger === undefined) {
-    	        curworkflowTrigger = cyelements[key].data();
+    	        curworkflowTrigger = cyelements[cyelementsKey].data();
     	      }
 
-    	      curworkflowTrigger.position = cyelements[key].position();
+    	      curworkflowTrigger.position = cyelements[cyelementsKey].position();
 						if (curworkflowTrigger.canConnect === false) {
 							continue
 						}
@@ -1208,11 +1208,11 @@ const AngularWorkflow = (defaultprops) => {
     	      }
 
     	      var curworkflowComment = useworkflow.comments.find(
-    	        (a) => a.id === cyelements[key].data()["id"]
+    	        (a) => a.id === cyelements[cyelementsKey].data()["id"]
     	      )
 
     	      if (curworkflowComment === undefined) {
-    	        curworkflowComment = cyelements[key].data();
+    	        curworkflowComment = cyelements[cyelementsKey].data();
 							try {
 								curworkflowComment.position.x = parseInt(curworkflowComment.position.x)
 							} catch (e) {
@@ -1240,7 +1240,7 @@ const AngularWorkflow = (defaultprops) => {
 							curworkflowComment.width = 200
 						}
 
-    	      curworkflowComment.position = cyelements[key].position();
+    	      curworkflowComment.position = cyelements[cyelementsKey].position();
 						//console.log(curworkflowComment)
 
     	      newComments.push(curworkflowComment);
@@ -1519,6 +1519,7 @@ const AngularWorkflow = (defaultprops) => {
       .then((responseJson) => {
         if (responseJson.success) {
           var newauth = [];
+          console.log("App auth: ", responseJson.data);
           for (let [key,keyval] in responseJson.data.entries()) {
             if (responseJson.data[key].defined === false) {
               continue;
@@ -2026,7 +2027,7 @@ const AngularWorkflow = (defaultprops) => {
 		// Wait for new node to possibly be selected
 		//setTimeout(() => {
 		const typeIds = cy.elements('node:selected').jsons();
-		for (let [idkey,idkeyval] in typeIds.entries()) {
+		for (var idkey in typeIds) {
 			const item = typeIds[idkey]
 			if (item.data.isButton === true) {
 				//console.log("Reselect old node & return - or just return?")
@@ -2234,6 +2235,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
 		const connected = event.target.connectedEdges().jsons()
+    if (connected.length > 0 && connected !== undefined) {
 		for (let [key,keyval] in connected.entries()) {
 			const edge = connected[key]
 			//console.log("EDGE:", edge)
@@ -2253,6 +2255,7 @@ const AngularWorkflow = (defaultprops) => {
 				currentedge.style('control-point-weight', edgeCurve.weight)
 			}
 		}
+  }
 
     if (styledElements.length === 1) {
       console.log(
@@ -2398,8 +2401,8 @@ const AngularWorkflow = (defaultprops) => {
 
     if (nodedata.app_name !== undefined) {
       const allNodes = cy.nodes().jsons();
-      for (let [key,keyval] in allNodes.entries()) {
-        const currentNode = allNodes[key];
+      for (var key_ in allNodes) {
+        const currentNode = allNodes[key_];
         if (currentNode.data.attachedTo === nodedata.id) {
           cy.getElementById(currentNode.data.id).remove();
         }
@@ -2481,8 +2484,8 @@ const AngularWorkflow = (defaultprops) => {
 
           elementMouseIsOver.style.border = newBorder;
           console.log("STYLED: ", styledElements);
-          for (let [key,keyval] in styledElements.entries()) {
-            const curElement = document.getElementById(styledElements[key]);
+          for (var styledElementsKey in styledElements) {
+            const curElement = document.getElementById(styledElements[styledElementsKey]);
             if (curElement !== null && curElement !== undefined) {
               curElement.style.border = curElement.style.original_border;
             }
@@ -2494,8 +2497,8 @@ const AngularWorkflow = (defaultprops) => {
           elementMouseIsOver.id === "cytoscape_view" ||
           elementMouseIsOver.id === ""
         ) {
-          for (let [key,keyval] in styledElements.entries()) {
-            const curElement = document.getElementById(styledElements[key]);
+          for (var index in styledElements) {
+            const curElement = document.getElementById(styledElements[index]);
             if (curElement !== null && curElement !== undefined) {
               curElement.style.border = curElement.style.original_border;
             }
@@ -2636,8 +2639,8 @@ const AngularWorkflow = (defaultprops) => {
     	          foundbranch.destination_id === parentNode.data("id")
     	      );
 
-    	      for (let [key,keyval] in sourcebranches.entries()) {
-    	        var newbranch = JSON.parse(JSON.stringify(sourcebranches[key]));
+    	      for (var sourceBranchesKey in sourcebranches) {
+    	        var newbranch = JSON.parse(JSON.stringify(sourcebranches[sourceBranchesKey]));
     	        newbranch.id = uuidv4();
     	        newbranch.source_id = newNodeData.id;
 
@@ -2650,9 +2653,9 @@ const AngularWorkflow = (defaultprops) => {
     	        });
     	      }
 
-    	      for (let [key,keyval] in destinationbranches.entries()) {
+    	      for (var destinationBranchesKey in destinationbranches) {
     	        var newbranch = JSON.parse(
-    	          JSON.stringify(destinationbranches[key])
+    	          JSON.stringify(destinationbranches[destinationBranchesKey])
     	        );
     	        newbranch.id = uuidv4();
     	        newbranch.destination_id = newNodeData.id;
@@ -2729,19 +2732,19 @@ const AngularWorkflow = (defaultprops) => {
 					console.log("FIND AN ACTION AMONG THE APPS THAT MATCHES NAME: ", parsedname)
 
 					curaction.matching_actions = []
-					for (let [key,keyval] in newapps.entries()) {
-						for (let [subkey,subkeyval] in newapps[key].actions.entries()) {
-							const tmpaction = newapps[key].actions[subkey]
+					for (var newAppskey in newapps) {
+						for (let actionsSubkey in newapps[newAppskey].actions) {
+							const tmpaction = newapps[newAppskey].actions[actionsSubkey]
 							if (tmpaction.name.replaceAll(" ", "_").toLowerCase() === parsedname) {
-								console.log("MATCH!: ", newapps[key])
+								console.log("MATCH!: ", newapps[newAppskey])
 								curaction.matching_actions.push({
-									"app_name": newapps[key].name,
-									"app_version": newapps[key].app_version,
-									"app_id": newapps[key].id,
+									"app_name": newapps[newAppskey].name,
+									"app_version": newapps[newAppskey].app_version,
+									"app_id": newapps[newAppskey].id,
 									"action": tmpaction,
-									"large_image": newapps[key].large_image,
-									"app_index": key,
-									"action_index": subkey,
+									"large_image": newapps[newAppskey].large_image,
+									"app_index": newAppskey,
+									"action_index": actionsSubkey,
 								})
 							}
 						}
@@ -2801,12 +2804,12 @@ const AngularWorkflow = (defaultprops) => {
     	      const tmpAuth = JSON.parse(JSON.stringify(newAppAuth));
     	      //var tmpAuth = newAppAuth
 
-    	      for (let [key,keyval] in tmpAuth.entries()) {
-    	        var item = tmpAuth[key];
+    	      for (var tmpAuthKey in tmpAuth) {
+    	        var item = tmpAuth[tmpAuthKey];
 
     	        const newfields = {};
-    	        for (let [filterkey,filterkeyval] in item.fields.entries()) {
-    	          newfields[item.fields[filterkey].key] = item.fields[filterkey].value;
+    	        for (var fieldFilterKey in item.fields) {
+    	          newfields[item.fields[fieldFilterKey].key] = item.fields[fieldFilterKey].value;
     	        }
 
     	        item.fields = newfields;
@@ -2837,20 +2840,20 @@ const AngularWorkflow = (defaultprops) => {
     	      curaction.parameters !== null &&
     	      curaction.parameters.length > 0
     	    ) {
-    	      for (let [key,keyval] in curaction.parameters.entries()) {
+    	      for (var curActionParamKey in curaction.parameters) {
     	        if (
-    	          curaction.parameters[key].options !== undefined &&
-    	          curaction.parameters[key].options !== null &&
-    	          curaction.parameters[key].options.length > 0 &&
-    	          curaction.parameters[key].value === ""
+    	          curaction.parameters[curActionParamKey].options !== undefined &&
+    	          curaction.parameters[curActionParamKey].options !== null &&
+    	          curaction.parameters[curActionParamKey].options.length > 0 &&
+    	          curaction.parameters[curActionParamKey].value === ""
     	        ) {
-    	          curaction.parameters[key].value = curaction.parameters[key].options[0];
+    	          curaction.parameters[curActionParamKey].value = curaction.parameters[curActionParamKey].options[0];
     	        }
     	      }
     	    } else {
 						console.log("Should check APP if it has the same params as ACTION")
-						for (let [key,keyval] in curapp.actions.entries()) {
-							const tmpaction = curapp.actions[key]
+						for (var actionKey in curapp.actions) {
+							const tmpaction = curapp.actions[actionKey]
 							if (tmpaction.name === curaction.name) {
 								console.log("Found action - needs change?", tmpaction)
 								if (tmpaction.parameters !== undefined && tmpaction.parameters !== null && tmpaction.parameters.length > 0) {
@@ -3195,8 +3198,8 @@ const AngularWorkflow = (defaultprops) => {
     // 2. Check parents in order
     var exampledata = GetExampleResult({ id: "exec", name: "exec" });
     var parentlabel = "exec";
-    for (let [paramkey,paramkeyval] in dstdata.parameters.entries()) {
-      const param = dstdata.parameters[paramkey];
+    for (var dstdataParamKey in dstdata.parameters) {
+      const param = dstdata.parameters[dstdataParamKey];
       // Skip authentication params
       if (param.configuration) {
         continue
@@ -3210,10 +3213,10 @@ const AngularWorkflow = (defaultprops) => {
 
       const foundresult = GetParamMatch(paramname, exampledata, "");
       if (foundresult.length > 0) {
-				console.log("FOUND ReS for field: ", dstdata.parameters[paramkey].name, foundresult)
-        if (dstdata.parameters[paramkey].value.length === 0) {
-          dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`;
-          dstdata.parameters[paramkey].autocompleted = true
+				console.log("FOUND ReS for field: ", dstdata.parameters[dstdataParamKey].name, foundresult)
+        if (dstdata.parameters[dstdataParamKey].value.length === 0) {
+          dstdata.parameters[dstdataParamKey].value = `$${parentlabel}${foundresult}`;
+          dstdata.parameters[dstdataParamKey].autocompleted = true
         }
       }
     }
@@ -3765,8 +3768,8 @@ const AngularWorkflow = (defaultprops) => {
 
     if (data.app_name !== undefined) {
       const allNodes = cy.nodes().jsons();
-      for (let [key,keyval] in allNodes.entries()) {
-        const currentNode = allNodes[key];
+      for (let allNodesKey in allNodes) {
+        const currentNode = allNodes[allNodesKey];
         if (currentNode.data.attachedTo === data.id) {
           cy.getElementById(currentNode.data.id).remove();
         }
@@ -4048,11 +4051,18 @@ const AngularWorkflow = (defaultprops) => {
 
   const animationDuration = 150;
   const onNodeHoverOut = (event) => {
+    // console.log("Hover out: ", event.target.data());
+
     const nodedata = event.target.data();
+    // console.log("nodedata", nodedata);
+    // console.log("nodedata.app_name: ", nodedata.app_name);
     if (nodedata.app_name !== undefined) {
+      
       const allNodes = cy.nodes().jsons();
-      for (let [key,keyval] in allNodes.entries()) {
-        const currentNode = allNodes[key];
+      // console.log("allNodes: ", allNodes)
+      for (var nodekey in allNodes) {
+        const currentNode = allNodes[nodekey];
+        // console.log("Current node: ", currentNode);
         if (
           currentNode.data.isButton &&
           currentNode.data.attachedTo !== nodedata.id
@@ -4071,7 +4081,7 @@ const AngularWorkflow = (defaultprops) => {
 		// Skipping node editing if it's the selected one
 		if (cy !== undefined) {
 			const typeIds = cy.elements('node:selected').jsons();
-			for (let [idkey,idkeyval] in typeIds.entries()) {
+			for (var idkey in typeIds) {
 				const item = typeIds[idkey]
 				if (item.data.id === nodedata.id) {
 					return
@@ -4329,8 +4339,9 @@ const AngularWorkflow = (defaultprops) => {
       const allNodes = cy.nodes().jsons();
 
       var found = false;
-      for (let [key,keyval] in allNodes.entries()) {
-        const currentNode = allNodes[key];
+      for (var _key in allNodes) {
+        const currentNode = allNodes[_key];
+        // console.log("CURRENT NODE: ", currentNode)
         if (
           (currentNode.data.isButton || currentNode.data.isSuggestion) &&
           currentNode.data.attachedTo !== nodedata.id
@@ -4380,7 +4391,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
 		const typeIds = cy.elements('node:selected').jsons();
-		for (let [idkey,idkeyval] in typeIds) {
+		for (var idkey in typeIds) {
 			const item = typeIds[idkey]
 			if (item.data.id === nodedata.id) {
 				//console.log("items: ", item.data.id, nodedata.id)
@@ -4791,8 +4802,8 @@ const AngularWorkflow = (defaultprops) => {
 
     // Verifies if a branch is valid and skips others
     var newedges = [];
-    for (let [key,keyval] in edges.entries()) {
-      var item = edges[key];
+    for (var edgeKey in edges) {
+      var item = edges[edgeKey];
       if (item.data === undefined) {
         continue;
       }
@@ -4816,6 +4827,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const removeNode = (nodeId) => {
     const selectedNode = cy.getElementById(nodeId);
+    // console.log("selected node in removenode", selectedNode);
     if (selectedNode.data() === undefined) {
 			console.log("No node to remove")
       return;
@@ -5139,6 +5151,7 @@ const AngularWorkflow = (defaultprops) => {
 
 		var mappedStartnode = ""
 		const alledges = cy.edges().jsons()
+    if (alledges !== undefined && alledges !== null && alledges.length > 0) {
 		for (let [key,keyval] in alledges.entries()) {
 			const tmp = alledges[key]
 			console.log("TMP: ", tmp, tmp.data.source)
@@ -5147,6 +5160,7 @@ const AngularWorkflow = (defaultprops) => {
 				break
 			}
 		}
+  }
 
     alert.info("Creating schedule with name " + trigger.name);
     const data = {
@@ -7457,8 +7471,10 @@ const AngularWorkflow = (defaultprops) => {
 
                 const handleActionHover = (inside, actionId) => {
                   var node = cy.getElementById(actionId);
+                  console.log("Hovering over action: " + actionId)
                   if (node.length > 0) {
                     if (inside) {
+                      console.log("Hovering over action: " + actionId)
                       node.addClass("shuffle-hover-highlight");
                     } else {
                       node.removeClass("shuffle-hover-highlight");
