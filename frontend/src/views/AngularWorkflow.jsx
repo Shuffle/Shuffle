@@ -134,7 +134,7 @@ import ParsedAction from "../components/ParsedAction.jsx";
 import PaperComponent from "../components/PaperComponent.jsx"
 import ExtraApps from "../components/ExtraApps.jsx"
 import EditWorkflow from "../components/EditWorkflow.jsx"
-import AppStats from "../components/AppStats.jsx";
+// import AppStats from "../components/AppStats.jsx";
 
 const surfaceColor = "#27292D";
 const inputColor = "#383B40";
