@@ -83,7 +83,6 @@ const SuggestedWorkflows = (props) => {
 			dstimage = usecase.items[2].app
 		}
 
-		console.log(srcimage, dstimage, usecase.items)
 		if (srcimage === undefined || dstimage === undefined) {
 			console.log("Error in src or dst: returning!")
 			return null
@@ -148,8 +147,6 @@ const SuggestedWorkflows = (props) => {
 						finishedUsecases.push(usecaseSearch)
 						setFinishedUsecases(finishedUsecases)
 
-
-
 						setUsecaseSearch("")
 						setUsecaseSearchType("")
 					}}
@@ -161,7 +158,7 @@ const SuggestedWorkflows = (props) => {
 							minWidth: 450,
 							padding: 50,
 							overflow: "hidden",
-							zIndex: 10012,
+							zIndex: 10050,
 							border: theme.palette.defaultBorder,
 						},
 					}}

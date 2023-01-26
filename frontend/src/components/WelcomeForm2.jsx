@@ -615,7 +615,14 @@ const WelcomeForm = (props) => {
                         <Grid item xs={11} style={{marginTop: 25, }}>
                             {/*<FormLabel style={{ color: "#B9B9BA" }}>Find your integrations!</FormLabel>*/}
                             <div style={{display: "flex"}}>
-															<Button disabled={finishedApps.includes("CASES")} variant={defaultSearch === "CASES" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<LightbulbIcon />} onClick={(event) => { onNodeSelect("CASES") }} >
+															<Button disabled={finishedApps.includes("CASES")} variant={defaultSearch === "CASES" ? "contained" : "outlined"}  style={{
+																flex: 1,
+																width: "100%", 
+																padding: 25,
+																margin: buttonMargin,
+																fontSize: 18,
+																borderColor: finishedApps.includes("CASES") ? "inherit" : "#f86a3e",
+															}} startIcon={<LightbulbIcon />} onClick={(event) => { onNodeSelect("CASES") }} >
 																	Case Management	
 															</Button>
                             </div>

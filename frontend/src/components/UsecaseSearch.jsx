@@ -1163,11 +1163,11 @@ const UsecaseSearch = (props) => {
 			}
 
 			if (changed) {
-				alert.error("Errors were found. Click them to sort sort them out or go to the next usecase.")
+				//alert.error("Errors were found. Click them to sort sort them out or go to the next usecase.")
 
-				setUpdate(Math.random())
-				setIsUploading(false)
-				return
+				//setUpdate(Math.random())
+				//setIsUploading(false)
+				//return
 			}
 
 			// Auto finding these during deploy
