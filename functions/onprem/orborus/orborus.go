@@ -60,8 +60,8 @@ var appSdkVersion = os.Getenv("SHUFFLE_APP_SDK_VERSION")
 var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 
-//var baseimagename = "docker.pkg.github.com/frikky/shuffle"
-//var baseimagename = "ghcr.io/frikky"
+// var baseimagename = "docker.pkg.github.com/frikky/shuffle"
+// var baseimagename = "ghcr.io/frikky"
 // var baseimagename = "frikky/shuffle"
 var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
@@ -71,8 +71,9 @@ var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 var auth = os.Getenv("AUTH")
 var org = os.Getenv("ORG")
 
-//var orgId = os.Getenv("ORG_ID")
+// var orgId = os.Getenv("ORG_ID")
 var baseUrl = os.Getenv("BASE_URL")
+var workerServerUrl = os.Getenv("SHUFFLE_WORKER_SERVER_URL")
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
@@ -439,6 +440,10 @@ func deployServiceWorkers(image string) {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+		}
+
+		if len(workerServerUrl) > 0 {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_WORKER_SERVER_URL=%s", os.Getenv("SHUFFLE_WORKER_SERVER_URL")))
 		}
 
 		if len(os.Getenv("DOCKER_HOST")) > 0 {
@@ -1375,6 +1380,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		HTTPProxy:             os.Getenv("HTTP_PROXY"),
 		HTTPSProxy:            os.Getenv("HTTPS_PROXY"),
 		ShufflePassProxyToApp: os.Getenv("SHUFFLE_PASS_APP_PROXY"),
+		WorkerServerUrl:       os.Getenv("SHUFFLE_WORKER_SERVER_URL"),
 	}
 
 	parsedBaseurl := baseUrl
@@ -1397,6 +1403,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 	streamUrl := fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
 	if containerId == "" || containerId == "shuffle-orborus" {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
+	}
+
+	// var workerServerUrl = os.Getenv("SHUFFLE_WORKER_SERVER_URL")
+	if len(workerServerUrl) > 0 {
+		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
 	}
 
 	client := &http.Client{}
