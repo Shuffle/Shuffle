@@ -88,7 +88,7 @@ var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
 
-//var syncUrl = "http://localhost:5002"
+// var syncUrl = "http://localhost:5002"
 var syncSubUrl = "https://shuffler.io"
 
 //var syncUrl = "http://localhost:5002"
@@ -1052,6 +1052,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		chatDisabled = true
 	}
 
+	userOrgs = shuffle.SortOrgList(userOrgs)
 	orgPriorities := org.Priorities
 	if len(org.Priorities) < 5 {
 		log.Printf("[WARNING] Should find and add priorities as length is less than 5 for org %s", userInfo.ActiveOrg.Id)
@@ -3916,7 +3917,7 @@ func runInitCloudSetup() {
 }
 
 func runInitEs(ctx context.Context) {
-	log.Printf("[DEBUG] Starting INIT setup (ES)")
+	log.Printf("[DEBUG] Starting INIT setup for Elasticsearch/Opensearch")
 
 	httpProxy := os.Getenv("HTTP_PROXY")
 	if len(httpProxy) > 0 {
@@ -3933,7 +3934,7 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[DEBUG] Setting default environment for org to %s", defaultEnv)
 	}
 
-	log.Printf("[DEBUG] Getting organizations")
+	log.Printf("[DEBUG] Getting organizations for Elasticsearch/Opensearch")
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
 
 	setUsers := false
@@ -4388,7 +4389,7 @@ func runInit(ctx context.Context) {
 	//}
 	//log.Printf("[DEBUG] Finalized init statistics update")
 
-	log.Printf("[DEBUG] Starting INIT setup")
+	log.Printf("[DEBUG] Starting INIT setup (NOT Opensearch/Elasticsearch!)")
 	httpProxy := os.Getenv("HTTP_PROXY")
 	if len(httpProxy) > 0 {
 		log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)

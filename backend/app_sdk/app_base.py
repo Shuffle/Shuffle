@@ -1442,12 +1442,13 @@ class AppBase:
                         failed = False
                         break
 
-                    elif ret.status_code == 500 or ret.status_code == 400:
+                    #elif ret.status_code == 500 or ret.status_code == 400:
+                    elif ret.status_code >= 400:
                         self.logger.info("[ERROR] (fails: %d) Error in app with status code %d for results (1). RETRYING because results can't be handled" % (i+1, ret.status_code))
                     
                         rettext = ret.text
                         failed = True 
-                        time.sleep(10)
+                        time.sleep(8)
                         continue
 
                     else:
