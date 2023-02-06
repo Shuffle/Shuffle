@@ -682,7 +682,9 @@ func stopWorker(containername string) error {
 	//		All: true,
 	//	})
 
-	if err := dockercli.ContainerStop(ctx, containername, nil); err != nil {
+	//if err := dockercli.ContainerStop(ctx, containername, nil); err != nil {
+	var options container.StopOptions
+	if err := dockercli.ContainerStop(ctx, containername, options); err != nil {
 		log.Printf("[ERROR] Unable to stop container %s - running removal anyway, just in case: %s", containername, err)
 	}
 
@@ -1369,9 +1371,10 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 	// FIXME - add killing of apps with same execution ID too
 	log.Printf("[INFO] Should STOP %d containers.", len(stopContainers))
+	var options container.StopOptions
 	for _, containername := range stopContainers {
 		log.Printf("[INFO] Stopping and removing container %s", containerNames[containername])
-		dockercli.ContainerStop(ctx, containername, nil)
+		dockercli.ContainerStop(ctx, containername, options)
 		removeContainers = append(removeContainers, containername)
 	}
 
