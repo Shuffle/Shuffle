@@ -299,6 +299,60 @@ const AppCreator = (defaultprops) => {
   const [selectedAction, setSelectedAction] = useState({});
   const [authLoaded, setAuthLoaded] = useState(false);
 
+	// From 2023: Example to handle action labels
+	// Goal: Make this dynamically load from the backend
+	// and make categories + labels modifyable.
+	//
+	// Categories are the main categories in the App Framework
+  const [categories, setCategories] = useState([
+		{
+    	"name": "Communication",
+			"color": "#FFC107",
+			"icon": "communication",
+			"action_labels": [],
+		}, {
+			"name": "SIEM",
+			"color": "#FFC107",
+			"icon": "siem",
+			"action_labels": ["Get alerts", "Search", "Create detection",],
+		}, {
+			"name": "Eradication",
+			"color": "#FFC107",
+			"icon": "eradication",
+			"action_labels": ["List tickets", "Update ticket", "Block hash", "Isolate host"],
+		}, {
+			"name": "Cases",
+			"color": "#FFC107",
+			"icon": "cases",
+			"action_labels": ["List tickets", "Get ticket", "Create ticket", "Update ticket",],
+		}, {
+			"name": "Assets",
+			"color": "#FFC107",
+			"icon": "assets",
+			"action_labels": [],
+		}, {
+			"name": "Intel",
+			"color": "#FFC107",
+			"icon": "intel",
+			"action_labels": [],
+		}, {
+			"name": "IAM",
+			"color": "#FFC107",
+			"icon": "iam",
+			"action_labels": [],
+		}, {
+			"name": "Network",
+			"color": "#FFC107",
+			"icon": "network",
+			"action_labels": ["Block IP",],
+		}, {
+			"name": "Other",
+			"color": "#FFC107",
+			"icon": "other",
+			"action_labels": [],
+		}
+	]);
+
   //const [actions, setActions] = useState([{
   //	"name": "Get workflows",
   //	"description": "Get workflows",
@@ -337,6 +391,7 @@ const AppCreator = (defaultprops) => {
     body: "",
     errors: [],
     example_response: "",
+		action_label: "No Label",
     method: actionNonBodyRequest[0],
   });
 
@@ -456,8 +511,8 @@ const AppCreator = (defaultprops) => {
     }
 
     var newitem = data;
-    for (let [key,keyval] in paramsplit.entries()) {
-      var tmpparam = paramsplit[key];
+    for (let paramkey in paramsplit) {
+      var tmpparam = paramsplit[paramkey];
       if (tmpparam === "#") {
         continue;
       }
@@ -579,16 +634,14 @@ const AppCreator = (defaultprops) => {
 		console.log("Tags: ", data.tags)
     if (data.tags !== undefined && data.tags.length > 0) {
       var newtags = [];
-      for (let [key,keyval] in data.tags.entries()) {
-        if (data.tags[key].name.length > 50) {
-          console.log(
-            "Skipping tag because it's too long: ",
-            data.tags[key].name.length
-          );
+      for (let tagkey in data.tags) {
+        if (data.tags[tagkey].name.length > 50) {
+          console.log("Skipping tag because it's too long: ",data.tags[tagkey].name.length);
+
           continue;
         }
 
-        newtags.push(data.tags[key].name);
+        newtags.push(data.tags[tagkey].name);
       }
 
       if (newtags.length > 10) {
@@ -625,6 +678,7 @@ const AppCreator = (defaultprops) => {
 		console.log("Paths: ", data.paths)
     if (data.paths !== null && data.paths !== undefined) {
       for (let [path, pathvalue] of Object.entries(data.paths)) {
+
         for (let [method, methodvalue] of Object.entries(pathvalue)) {
           if (methodvalue === null) {
             alert.info("Skipped method (null)" + method);
@@ -685,24 +739,24 @@ const AppCreator = (defaultprops) => {
             const pathsplit = path.split("/");
             var categoryindex = -1;
             // Stupid way of finding a category/grouping
-            for (let [key,keyval] in pathsplit.entries()) {
-							if (pathsplit[key].includes("_shuffle_replace_")) {
+            for (let splitkey in pathsplit) {
+							if (pathsplit[splitkey].includes("_shuffle_replace_")) {
 								const regex = /_shuffle_replace_\d/i;
 								//console.log("NEW: ", 
-								pathsplit[key] = pathsplit[key].replaceAll(new RegExp(regex, 'g'), "")
+								pathsplit[splitkey] = pathsplit[splitkey].replaceAll(new RegExp(regex, 'g'), "")
 							}
 
               if (
-                pathsplit[key].length > 0 &&
-                pathsplit[key] !== "v1" &&
-                pathsplit[key] !== "v2" &&
-                pathsplit[key] !== "api" &&
-                pathsplit[key] !== "1.0" &&
-                pathsplit[key] !== "apis"
+                pathsplit[splitkey].length > 0 &&
+                pathsplit[splitkey] !== "v1" &&
+                pathsplit[splitkey] !== "v2" &&
+                pathsplit[splitkey] !== "api" &&
+                pathsplit[splitkey] !== "1.0" &&
+                pathsplit[splitkey] !== "apis"
               ) {
-                newaction["category"] = pathsplit[key];
-                if (!all_categories.includes(pathsplit[key])) {
-                  all_categories.push(pathsplit[key]);
+                newaction["category"] = pathsplit[splitkey];
+                if (!all_categories.includes(pathsplit[splitkey])) {
+                  all_categories.push(pathsplit[splitkey]);
                 }
                 break;
               }
@@ -743,16 +797,14 @@ const AppCreator = (defaultprops) => {
                   console.log("Schema: ", methodvalue["requestBody"]["content"]["application/json"]["schema"])
                   if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
                     var tmpobject = {};
-                    for (let [prop, propvalue] of Object.entries(
-                      methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"]
-                    )) {
+                    for (let prop of methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"]) {
                       tmpobject[prop] = `\$\{${prop}\}`;
                     }
 
                     //console.log("Data: ", data)
-                    for (let [subkey,subkeyval] in methodvalue["requestBody"]["content"][
-                      "application/json"
-                    ]["schema"]["required"].entries()) {
+                    for (let subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
+                      
+                    
                       const tmpitem =
                         methodvalue["requestBody"]["content"][
                           "application/json"
@@ -771,7 +823,7 @@ const AppCreator = (defaultprops) => {
                     );
                     var newbody = {};
                     // Can handle default, required, description and type
-                    for (let [propkey,propkeyval] in retRef.properties.entries()) {
+                    for (let propkey in retRef.properties) {
 											console.log("replace: ", propkey)
 
                       const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
@@ -802,17 +854,12 @@ const AppCreator = (defaultprops) => {
                     ]["properties"] !== undefined
                   ) {
                     var tmpobject = {};
-                    for (let [prop, propvalue] of Object.entries(
-                      methodvalue["requestBody"]["content"]["application/xml"][
-                        "schema"
-                      ]["properties"]
-                    )) {
+                    for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
+                    
                       tmpobject[prop] = `\$\{${prop}\}`;
                     }
 
-                    for (let [subkey,subkeyval] in methodvalue["requestBody"]["content"][
-                      "application/xml"
-                    ]["schema"]["required"].entries()) {
+                    for (let [subkey,subkeyval] in Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"])) {
                       const tmpitem =
                         methodvalue["requestBody"]["content"][
                           "application/xml"
@@ -854,11 +901,7 @@ const AppCreator = (defaultprops) => {
                       "multipart/form-data"
                     ]["schema"] !== null
                   ) {
-                    if (
-                      methodvalue["requestBody"]["content"][
-                        "multipart/form-data"
-                      ]["schema"]["type"] === "object"
-                    ) {
+                    if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
                       const fieldname =
                         methodvalue["requestBody"]["content"][
                           "multipart/form-data"
@@ -912,12 +955,11 @@ const AppCreator = (defaultprops) => {
                   if (schemas.length === 1) {
                     const parameter = handleGetRef({ $ref: schemas[0] }, data);
 
-                    if (
-                      parameter.properties !== undefined &&
-                      parameter["type"] === "object"
-                    ) {
+										console.log("Reading type from parameter: ", parameter)
+                    if (parameter.properties !== undefined && parameter["type"] === "object") {
+                    
                       var newbody = {};
-                      for (let [propkey,propkeyval] in parameter.properties.entries()) {
+                      for (let propkey in parameter.properties) {
 												console.log("propkey2: ", propkey)
                       	const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                         if (parameter.properties[propkey].type === undefined) {
@@ -987,7 +1029,6 @@ const AppCreator = (defaultprops) => {
                   methodvalue.responses.default.content["text/plain"] !==
                   undefined
                 ) {
-									console.log("RESP: ", path, methodvalue.responses.default.content["text/plain"])
                   if (
                     methodvalue.responses.default.content["text/plain"][
                       "schema"
@@ -1039,19 +1080,15 @@ const AppCreator = (defaultprops) => {
                           ],
                           data
                         );
-                        //console.log("GOT REF RETURN AS EXAMPLE: ", parameter)
 
-                        if (
-                          parameter.properties !== undefined &&
-                          parameter["type"] === "object"
-                        ) {
+                        console.log("Reading parameter type 2", parameter)
+                        if (parameter.properties !== undefined && parameter["type"] === "object") {
                           var newbody = {};
-                          for (let [propkey,propkeyval] in parameter.properties.entries()) {
+                          for (let propkey in parameter.properties) {
 														console.log("propkey3: ", propkey)
+
                             const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
-                            if (
-                              parameter.properties[propkey].type === undefined
-                            ) {
+                            if (parameter.properties[propkey].type === undefined) {
                               console.log(
                                 "Skipping (1): ",
                                 parameter.properties[propkey]
@@ -1130,12 +1167,11 @@ const AppCreator = (defaultprops) => {
                               selectedComponent,
                               data
                             );
-                            if (
-                              parameter.properties !== undefined &&
-                              parameter["type"] === "object"
-                            ) {
+
+														console.log("Reading parameter type 3!")
+                            if (parameter.properties !== undefined && parameter["type"] === "object") {
                               var newbody = {};
-                              for (let [propkey,propkeyval] in parameter.properties.entries()) {
+                              for (let propkey in parameter.properties) {
 																console.log("propkey4: ", propkey)
                                 const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                                 if (
@@ -1214,12 +1250,11 @@ const AppCreator = (defaultprops) => {
                               ]["properties"]["data"],
                               data
                             );
-                            if (
-                              parameter.properties !== undefined &&
-                              parameter["type"] === "object"
-                            ) {
+
+														console.log("Reading type 3: ", parameter)
+                            if (parameter.properties !== undefined && parameter["type"] === "object") {
                               var newbody = {};
-                              for (let [propkey,keyval] in parameter.properties.entries()) {
+                              for (let propkey in parameter.properties) {
 																console.log("propkey5: ", propkey)
                                 const parsedkey = propkey
                                   .replaceAll(" ", "_")
@@ -1287,8 +1322,8 @@ const AppCreator = (defaultprops) => {
             }
           }
 
-          for (let [key,keyval] in methodvalue.parameters.entries()) {
-            const parameter = handleGetRef(methodvalue.parameters[key], data);
+          for (let paramkey in methodvalue.parameters) {
+            const parameter = handleGetRef(methodvalue.parameters[paramkey], data);
             if (parameter.in === "query") {
               var tmpaction = {
                 description: parameter.description,
@@ -1334,8 +1369,9 @@ const AppCreator = (defaultprops) => {
             if (Object.getOwnPropertyNames(wordlist).length === 0) {
               for (let [newpath, pathvalue] of Object.entries(data.paths)) {
                 const newpathsplit = newpath.split("/");
-                for (let [key,keyval] in newpathsplit.entries()) {
-                  const pathitem = newpathsplit[key].toLowerCase();
+
+                for (let splitkey in newpathsplit) {
+                  const pathitem = newpathsplit[splitkey].toLowerCase();
                   if (wordlist[pathitem] === undefined) {
                     wordlist[pathitem] = 1;
                   } else {
@@ -1351,8 +1387,8 @@ const AppCreator = (defaultprops) => {
             const urlsplit = path.split("/");
             if (urlsplit.length > 0) {
               var curname = "";
-              for (let [key,keyval] in urlsplit.entries()) {
-                var subpath = urlsplit[key];
+              for (let urlkey in urlsplit) {
+                var subpath = urlsplit[urlkey];
                 if (wordlist[subpath] > 2 || subpath.length < 1) {
                   continue;
                 }
@@ -1396,8 +1432,7 @@ const AppCreator = (defaultprops) => {
             }
           }
 
-
-
+					newaction.action_label = "No Label"
           newActions.push(newaction);
         }
       }
@@ -1413,11 +1448,11 @@ const AppCreator = (defaultprops) => {
           const regex = /{\w+}/g;
           const found = firstUrl.match(regex);
           if (found !== null) {
-            for (let [key,keyval] in found.entries()) {
-              const item = found[key].slice(1, found[key].length - 1);
+            for (let foundkey in found) {
+              const item = found[foundkey].slice(1, found[foundkey].length - 1);
               const foundVar = data.servers[0].variables[item];
               if (foundVar["default"] !== undefined) {
-                firstUrl = firstUrl.replace(found[key], foundVar["default"]);
+                firstUrl = firstUrl.replace(found[foundkey], foundVar["default"]);
               }
             }
           }
@@ -1436,7 +1471,6 @@ const AppCreator = (defaultprops) => {
 			console.log("NEWAUTH: ", securitySchemes)
       // FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
       //console.log("SECURITY: ", securitySchemes)
-      //if (Object.entries(securitySchemes) > 1 &&
       var newauth = [];
 			try {
 				var optionset = false 
@@ -1558,9 +1592,7 @@ const AppCreator = (defaultprops) => {
       	          setOauth2Scopes(value[flowkey][basekey].scopes);
       	        } else {
       	          var newscopes = [];
-      	          for (let [scopekey, scopevalue] of Object.entries(
-      	            value[flowkey][basekey].scopes
-      	          )) {
+      	          for (let [scopekey, scopevalue] of Object.entries(value[flowkey][basekey].scopes)) {
       	            if (scopekey.startsWith("http")) {
       	              const scopekeysplit = scopekey.split("/");
       	              if (scopekeysplit.length < 5) {
@@ -1683,8 +1715,8 @@ const AppCreator = (defaultprops) => {
 
     if (newWorkflowTags.length > 0) {
       var newtags = [];
-      for (let [key,keyval] in newWorkflowTags.entries()) {
-        newtags.push({ name: newWorkflowTags[key] });
+      for (let tagkey in newWorkflowTags) {
+        newtags.push({ name: newWorkflowTags[tagkey] });
       }
 
       data["tags"] = newtags;
@@ -1696,8 +1728,8 @@ const AppCreator = (defaultprops) => {
 
     // Handles actions
 		var handledPaths = []
-    for (let [key,keyval] in actions.entries()) {
-      var item = JSON.parse(JSON.stringify(actions[key]))
+    for (let actionkey in actions) {
+      var item = JSON.parse(JSON.stringify(actions[actionkey]))
       if (item.errors.length > 0) {
         alert.error("Saving with error in action " + item.name);
       }
@@ -1822,7 +1854,7 @@ const AppCreator = (defaultprops) => {
       if (item.queries.length > 0) {
         var skipped = false;
 				var querynames = []
-        for (let [querykey,querykeyval] in item.queries.entries()) {
+        for (let querykey in item.queries) {
           const queryitem = item.queries[querykey];
 
 					if (queryitem === undefined || queryitem === null || queryitem.name === undefined || queryitem.name === null || queryitem.name === "") {
@@ -1923,7 +1955,7 @@ const AppCreator = (defaultprops) => {
       //data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 
       if (item.paths.length > 0) {
-        for (let [querykey,querykeyval] in item.paths.entries()) {
+        for (let querykey in item.paths) {
           const queryitem = item.paths[querykey];
 
           if (queryitem.toLowerCase() == "url") {
@@ -1948,9 +1980,7 @@ const AppCreator = (defaultprops) => {
             newitem.description = queryitem.description;
           }
 
-          data.paths[item.url][item.method.toLowerCase()].parameters.push(
-            newitem
-          );
+          data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem);
           //console.log(queryitem)
         }
       } else {
@@ -1958,7 +1988,7 @@ const AppCreator = (defaultprops) => {
         const values = getCurrentPaths(item.url);
         const paths = values[0];
 
-        for (let [querykey,querykeyval] in paths.entries()) {
+        for (let querykey in paths) {
           const queryitem = paths[querykey];
           newitem = {
             in: "path",
@@ -1996,25 +2026,25 @@ const AppCreator = (defaultprops) => {
 					// but it's the only way we can properly support e.g. GraphQL
 					// with good examples
 					var newbody = ""
-					for (let [key,keyval] in item.body.entries()) {
-						if (item.body[key] === "$") {
-							if (key > 0) {
-								//console.log("Found: ", item.body[key-1])
-								const newkey = parseInt(key, 10)
+					for (let bodykey in item.body) {
+						if (item.body[bodykey] === "$") {
+							if (bodykey > 0) {
+
+								const newkey = parseInt(bodykey, 10)
 								if (item.body[newkey-1] !== "\\") {
 									if (item.body[newkey+1] !== "\{") {
 										newbody += "\\"
 									} 
 								} 
 
-								newbody += item.body[key]
+								newbody += item.body[bodykey]
 							} else {
 								newbody += "\\"
-								newbody += item.body[key]
+								newbody += item.body[bodykey]
 							}
-							//newbody += item.body[key]
+
 						} else {
-							newbody += item.body[key]
+							newbody += item.body[bodykey]
 						}
 					}
 
@@ -2118,42 +2148,43 @@ const AppCreator = (defaultprops) => {
         const required = false;
 
         const headersSplit = item.headers.split("\n");
-        for (let [key,keyval] in headersSplit.entries()) {
-          const header = headersSplit[key];
-          // var key = "";
+        for (let headerkey in headersSplit) {
+          const header = headersSplit[headerkey];
+
+					var innerkey = ""
           var value = "";
           if (header.length > 0 && header.includes("= ")) {
             const headersplit = header.split("= ");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else if (header.length > 0 && header.includes(" =")) {
             const headersplit = header.split(" =");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else if (header.length > 0 && header.includes("=")) {
             const headersplit = header.split("=");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else if (header.length > 0 && header.includes(": ")) {
             const headersplit = header.split(": ");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else if (header.length > 0 && header.includes(" :")) {
             const headersplit = header.split(" :");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else if (header.length > 0 && header.includes(":")) {
             const headersplit = header.split(":");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else {
             continue;
           }
 
-          if (key.length > 0 && value.length > 0) {
+          if (innerkey.length > 0 && value.length > 0) {
             newitem = {
               in: "header",
-              name: key,
+              name: innerkey,
               multiline: false,
               description: "Header generated by shuffler.io OpenAPI",
               required: false,
@@ -2235,8 +2266,8 @@ const AppCreator = (defaultprops) => {
     }
 
     if (setExtraAuth.length > 0) {
-      for (var key in extraAuth) {
-        const curauth = extraAuth[key];
+      for (let authkey in extraAuth) {
+        const curauth = extraAuth[authkey];
 
         if (curauth.name.toLowerCase() == "url") {
           alert.error("Can't add extra auth with Name URL");
@@ -2326,30 +2357,6 @@ const AppCreator = (defaultprops) => {
         using the API
       </div>
     ) : null;
-
-  // API key
-  //const verifyBaseUrl = () => {
-  //	if (baseUrl.startsWith("http://") || baseUrl.startsWith("https://")) {
-  //		return true
-  //	}
-
-  //	if (baseUrl.endsWith("/")) {
-  //		return true
-  //	}
-  //
-  //	return false
-  //}
-
-  //const verifyApiParameter = () => {
-  //	const notAllowed = ["!","#","$","%","&","'","^","+","-",".","_","~","|","]","+","$",]
-  //	for (var key in notAllowed) {
-  //		if (parameterName.includes(notAllowed[key])) {
-  //			return false
-  //		}
-  //	}
-
-  //	return true
-  //}
 
   const testAction = (index) => {
     console.log("Should test action at index " + index);
@@ -3021,6 +3028,9 @@ const AppCreator = (defaultprops) => {
       </div>
     );
 
+	const foundCategory = newWorkflowCategories !== undefined && newWorkflowCategories !== null && newWorkflowCategories.length > 0 ? categories.find((x) => x.name === newWorkflowCategories[0]) : undefined
+	const actionLabels = foundCategory !== undefined && foundCategory !== null  && foundCategory.action_labels.length > 0 ? ["No Label"].concat(foundCategory.action_labels) : []
+	
   const loopActions =
     actions.length === 0 ? null : (
       <div>
@@ -3157,6 +3167,48 @@ const AppCreator = (defaultprops) => {
 							</div>
 						</Tooltip>
 						*/}
+
+							{/* From 2023: Example of handling action labels */}
+             	{/*actionLabels.length > 0 && newWorkflowCategories !== undefined && newWorkflowCategories !== null && newWorkflowCategories.length > 0 && categories.length > 0 ? 
+								(
+									<Select
+										fullWidth
+										onChange={(e) => {
+											console.log("Should change: ", e.target.value)
+
+											actions[index].action_label = e.target.value
+											setActions(actions)
+    									setUpdate(Math.random());
+										}}
+										value={data.action_label}
+										style={{
+											backgroundColor: inputColor,
+											paddingLeft: 10,
+											color: "white",
+											height: 30,
+											maxWidth: 50, 
+											marginLeft: 10, 
+										}}
+										inputProps={{
+											name: "Method",
+											id: "method-option",
+										}}
+									>
+										{actionLabels.map((label, labelindex) => {
+											return (
+												<MenuItem
+													key={labelindex}
+													value={label}
+													style={{ }}
+												>
+													{label}
+												</MenuItem>
+											)
+										})}
+									</Select>
+								)
+							: null*/}
+
               <Tooltip
                 title="Duplicate action"
                 placement="bottom"
@@ -4056,17 +4108,6 @@ const AppCreator = (defaultprops) => {
     </Dialog>
   );
 
-  const categories = [
-    "Communication",
-    "Cases",
-    "SIEM",
-    "Assets",
-    "Intel",
-    "IAM",
-    "Network",
-    "Eradication",
-    "Other",
-  ];
 
   const tagView = (
     <div style={{ color: "white" }}>
@@ -4094,7 +4135,7 @@ const AppCreator = (defaultprops) => {
 				}}
 			/>
 			*/}
-      <h4>Categories</h4>
+      <h4>Choose a Category</h4>
       <Select
         fullWidth
         SelectDisplayProps={{
@@ -4114,7 +4155,7 @@ const AppCreator = (defaultprops) => {
         style={{ backgroundColor: inputColor, color: "white", height: "50px" }}
       >
         {categories.map((data, index) => {
-					if (data === undefined || data === null || data === "") {
+					if (data === undefined || data === null || data === "" || data === undefined || data === null || data === "") {
 						return null
 					}
 
@@ -4122,9 +4163,9 @@ const AppCreator = (defaultprops) => {
 						<MenuItem
 							key={index}
 							style={{ backgroundColor: inputColor, color: "white" }}
-							value={data}
+							value={data.name}
 						>
-							{data}
+							{data.name}
 						</MenuItem>
         	)
 				})}

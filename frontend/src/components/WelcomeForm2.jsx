@@ -594,7 +594,7 @@ const WelcomeForm = (props) => {
 									<Fade in={true}>
                     <div style={{minHeight: sizing, maxHeight: sizing, marginTop: 20, maxWidth: 500, }}>
 												<Typography variant="body1" style={{marginLeft: 8, marginTop: 50, marginRight: 30, marginBottom: 0, }} color="textSecondary">
-													Use the buttons below to find your apps, and we will help you connect them later. 
+													Apps for each category are shown based on your activity and can be changed by clicking their icon. We will help you connect them later.
 												</Typography>
 												{/*The app framework helps us access and authenticate the most important APIs for you. */}
 

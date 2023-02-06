@@ -564,6 +564,7 @@ const AppFramework = (props) => {
 
   const alert = useAlert()
 
+
 	const handleLoadNextSuggestion = (frameworkData) => {
 		console.log("Should check for next apps to load from App suggestion model")
 		//fetch(globalUrl + "/api/v1/workflows/usecases", {
@@ -623,7 +624,6 @@ const AppFramework = (props) => {
 				suggestions.push(value.slice(0,1))
 			}
 
-			console.log("SUGG: ", suggestions)
 			setInjectedApps(suggestions)
 		})
 		.catch((error) => {
@@ -908,6 +908,10 @@ const AppFramework = (props) => {
 				//setFrameworkLoaded(true)
       })
 		}
+
+	useEffect(() => {
+		handleLoadNextSuggestion(frameworkData) 
+	}, [])
 
 	useEffect(() => {
 		console.log("New selected app: ", newSelectedApp, discoveryData)
@@ -1931,10 +1935,11 @@ const AppFramework = (props) => {
 
 				return (
 					<div style={{display: "flex", position: "absolute", top: categoryTop, left: categoryLeft,  zIndex: 10010, }}>
-						{apps.map((app) => {
+						{apps.map((app, appIndex) => {
 							return (
 								<Chip
 									avatar={<Avatar alt={app.name} src={app.image_url} style={{backgroundColor: "white", }} />}
+									key={app.id}
 									label={""}
 									variant="contained"
 									style={{}}
@@ -2089,6 +2094,9 @@ const AppFramework = (props) => {
 
 									setSelectionOpen(true)
 									setDefaultSearch("")
+		
+									//handleLoadNextSuggestion(frameworkData) 
+									setInjectedApps([])
 
 									const foundelement = cy.getElementById(discoveryData.id)
 									if (foundelement !== undefined && foundelement !== null) {

@@ -1020,11 +1020,11 @@ const Workflows = (props) => {
         if (response.status !== 200) {
           console.log("Status not 200 for workflows :O!: ", response.status);
 
-          if (isCloud) {
-            navigate("/search?tab=workflows")
-          }
+          //if (isCloud) {
+          //  navigate("/search?tab=workflows")
+          //}
 
-          alert.info("Failed getting workflows.");
+          alert.info("Failed getting workflows. Are you logged in?");
 
           return;
         }
@@ -3757,7 +3757,7 @@ const Workflows = (props) => {
 			<div style={{borderTop: "1px solid rgba(255,255,255,0.3)", }}>
 				{gettingStartedItems.map((item, index) => {
 					return (
-						<GettingStartedItem item={item} index={index} />
+						<GettingStartedItem key={index} item={item} index={index} />
 					)
 				})}
 			</div>

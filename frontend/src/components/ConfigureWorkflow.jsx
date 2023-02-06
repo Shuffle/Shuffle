@@ -129,7 +129,7 @@ const ConfigureWorkflow = (props) => {
 
     setFirstLoad(workflow.id)
     const newactions = [];
-    for (let [key, keyval] in workflow.actions.entries()) {
+    for (let [key, keyval] in Object.entries(workflow.actions)) {
       const action = workflow.actions[key];
       var newaction = {
         large_image: action.large_image,
@@ -175,7 +175,7 @@ const ConfigureWorkflow = (props) => {
         ) {
           // Check if configuration is filled or not
           var filled = true;
-          for (let [key,keyval] in action.parameters.entries()) {
+          for (let [key,keyval] in Object.entries(action.parameters)) {
             if (action.parameters[key].configuration) {
               //console.log("Found config: ", action.parameters[key])
               if (
@@ -216,7 +216,7 @@ const ConfigureWorkflow = (props) => {
 
       if (newaction.must_authenticate) {
         var authenticationOptions = [];
-        for (let [key,keyval] in appAuthentication.entries()) {
+        for (let [key,keyval] in Object.entries(appAuthentication)) {
           const auth = appAuthentication[key];
           if (auth.app.name === app.name && auth.active) {
             //console.log("Found auth: ", auth)
@@ -265,7 +265,7 @@ const ConfigureWorkflow = (props) => {
     }
 
 	if (workflow.workflow_variables !== undefined && workflow.workflow_variables !== null && workflow.workflow_variables.length !== 0) {
-    for (let [key,keyval] in workflow.workflow_variables.entries()) {
+    for (let [key,keyval] in Object.entries(workflow.workflow_variables)) {
       const variable = workflow.workflow_variables[key];
       if (
         variable.value === undefined ||
@@ -280,7 +280,7 @@ const ConfigureWorkflow = (props) => {
 	  }
 
 	if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length !== 0) {
-    for (let [key,keyval] in workflow.triggers.entries()) {
+    for (let [key,keyval] in Object.entries(workflow.triggers)) {
       var trigger = workflow.triggers[key];
       trigger.index = key;
 
@@ -302,7 +302,7 @@ const ConfigureWorkflow = (props) => {
 							}
 						]
 
-						for (let [subkey,subkeyval] in tmpsteps.entries()) {
+						for (let [subkey,subkeyval] in Object.entries(tmpsteps)) {
 							newactions[foundindex].steps.push(tmpsteps[subkey])
 						}
 				
@@ -344,13 +344,13 @@ const ConfigureWorkflow = (props) => {
     setRequiredActions(newactions);
 	}
 
-  if (appAuthentication.length !== previousAuth.length) {
+  if (appAuthentication !== undefined && previousAuth !== undefined && appAuthentication.length !== previousAuth.length) {
     var newactions = []
-    for (let [actionkey, actionkeyval] in requiredActions.entries()) {
+    for (let [actionkey, actionkeyval] in Object.entries(requiredActions)) {
       var newaction = requiredActions[actionkey];
       const app = newaction.app;
 
-      for (let [key,keyval] in appAuthentication.entries()) {
+      for (let [key,keyval] in Object.entries(appAuthentication)) {
         const auth = appAuthentication[key];
 
 				// Does this account for all the different ones of the same? 
@@ -694,7 +694,7 @@ const ConfigureWorkflow = (props) => {
 							if (workflow.actions !== null) {
 								//console.log(workflow.actions)
 								alert.info("Setting action to version "+action.update_version)
-								for (let [key,keyval] in workflow.actions.entries()) {
+								for (let [key,keyval] in Object.entries(workflow.actions)) {
 									if (workflow.actions[key].app_name === action.app_name && workflow.actions[key].app_version === action.app_version) {
 										workflow.actions[key].app_version = action.update_version
 

@@ -305,7 +305,7 @@ const AngularWorkflow = (defaultprops) => {
   const [historyIndex, setHistoryIndex] = React.useState(history.length);
   const [variableInfo, setVariableInfo] = React.useState({})
 
-  const [appAuthentication, setAppAuthentication] = React.useState([]);
+  const [appAuthentication, setAppAuthentication] = React.useState(undefined);
   const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
   const [executionVariablesModalOpen, setExecutionVariablesModalOpen] =
     React.useState(false);
@@ -316,7 +316,6 @@ const AngularWorkflow = (defaultprops) => {
 
 
   const [workflowDone, setWorkflowDone] = React.useState(false);
-  const [authLoaded, setAuthLoaded] = React.useState(false);
   const [localFirstrequest, setLocalFirstrequest] = React.useState(true);
   const [requiresAuthentication, setRequiresAuthentication] =
     React.useState(false);
@@ -410,14 +409,13 @@ const AngularWorkflow = (defaultprops) => {
   const [bodyWidth, bodyHeight] = useWindowSize()
   //console.log("Mobile: ", isMobile, bodyWidth, bodyHeight)
   const cytoscapeWidth = isMobile ? bodyWidth - leftBarSize : bodyWidth - leftBarSize - 25
-
-
+	
   const [elements, setElements] = useState([]);
   // No point going as fast, as the nodes aren't realtime anymore, but bulk updated.
   // Set it from 2500 to 6000 to reduce overall load
   const { start, stop } = useInterval({
     duration: 3000,
-    startImmediate: false,
+    startImmediate: true,
     callback: () => {
       fetchUpdates();
     },
@@ -496,8 +494,8 @@ const AngularWorkflow = (defaultprops) => {
             var baseSubflow = {}
             const trigger = workflow.triggers[trigger_index];
             if (trigger.parameters.length >= 3) {
-              for (let [key,keyval] in trigger.parameters.entries()) {
-                const param = trigger.parameters[key];
+              for (let paramkey in trigger.parameters) {
+                const param = trigger.parameters[paramkey];
 
                 if (param.name === "workflow") {
                   if (param.value === workflow.id) {
@@ -727,21 +725,25 @@ const AngularWorkflow = (defaultprops) => {
 
           var tmpView = new URLSearchParams(cursearch).get("execution_id");
           if (
-            execution_id !== undefined &&
-            execution_id !== null &&
-            execution_id.length > 0 &&
-            (tmpView === undefined || tmpView === null || tmpView.length === 0)
+            execution_id !== undefined && execution_id !== null &&
+            execution_id.length > 0 && (tmpView === undefined || tmpView === null || tmpView.length === 0)
           ) {
             tmpView = execution_id;
           }
 
           if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
-            const execution = responseJson.find(
-              (data) => data.execution_id === tmpView
-            );
+            const execution = responseJson.find((data) => data.execution_id === tmpView);
 
             if (execution !== null && execution !== undefined) {
-              setExecutionData(execution);
+
+							if (execution.execution_argument.includes("too large")) {
+              	setExecutionData({});
+								setExecutionRunning(true);
+								setExecutionRequestStarted(false);
+							} else {  
+              	setExecutionData(execution);
+							}
+
               setExecutionModalView(1);
               start();
 
@@ -841,6 +843,141 @@ const AngularWorkflow = (defaultprops) => {
       });
   };
 
+	const handleColoring = (actionId, status, label) => {
+		if (cy === undefined) {
+			return
+		}
+
+		var currentnode = cy.getElementById(actionId);
+		if (currentnode.length === 0) {
+			return
+			//continue;
+		}
+
+		currentnode = currentnode[0];
+		const outgoingEdges = currentnode.outgoers("edge");
+		const incomingEdges = currentnode.incomers("edge");
+
+		switch (status) {
+			case "EXECUTING":
+				currentnode.removeClass("not-executing-highlight");
+				currentnode.removeClass("success-highlight");
+				currentnode.removeClass("failure-highlight");
+				currentnode.removeClass("shuffle-hover-highlight");
+				currentnode.removeClass("awaiting-data-highlight");
+				incomingEdges.addClass("success-highlight");
+				currentnode.addClass("executing-highlight");
+				break;
+			case "SKIPPED":
+				currentnode.removeClass("not-executing-highlight");
+				currentnode.removeClass("success-highlight");
+				currentnode.removeClass("failure-highlight");
+				currentnode.removeClass("shuffle-hover-highlight");
+				currentnode.removeClass("awaiting-data-highlight");
+				currentnode.removeClass("executing-highlight");
+				currentnode.addClass("skipped-highlight");
+				break;
+			case "WAITING":
+				currentnode.removeClass("not-executing-highlight");
+				currentnode.removeClass("success-highlight");
+				currentnode.removeClass("failure-highlight");
+				currentnode.removeClass("shuffle-hover-highlight");
+				currentnode.removeClass("awaiting-data-highlight");
+				currentnode.addClass("executing-highlight");
+
+				if (!visited.includes(label)) {
+					if (executionRunning) {
+						visited.push(label);
+						setVisited(visited);
+					}
+				}
+
+				// FIXME - add outgoing nodes to executing
+				//const outgoingNodes = outgoingEdges.find().data().target
+				if (outgoingEdges.length > 0) {
+					outgoingEdges.addClass("success-highlight");
+				}
+				break;
+			case "SUCCESS":
+				currentnode.removeClass("not-executing-highlight");
+				currentnode.removeClass("executing-highlight");
+				currentnode.removeClass("failure-highlight");
+				currentnode.removeClass("shuffle-hover-highlight");
+				currentnode.removeClass("awaiting-data-highlight");
+				currentnode.addClass("success-highlight");
+				incomingEdges.addClass("success-highlight");
+				outgoingEdges.addClass("success-highlight");
+
+				if (visited !== undefined && visited !== null && !visited.includes(label)) {
+					if (executionRunning) {
+						visited.push(label);
+						setVisited(visited);
+					}
+				}
+
+				// FIXME - add outgoing nodes to executing
+				//const outgoingNodes = outgoingEdges.find().data().target
+				if (outgoingEdges.length > 0) {
+					for (let i = 0; i < outgoingEdges.length; i++) {
+						const edge = outgoingEdges[i];
+						const targetnode = cy.getElementById(edge.data().target);
+						if (
+							targetnode !== undefined &&
+							!targetnode.classes().includes("success-highlight") &&
+							!targetnode.classes().includes("failure-highlight")
+						) {
+							targetnode.removeClass("not-executing-highlight");
+							targetnode.removeClass("success-highlight");
+							targetnode.removeClass("shuffle-hover-highlight");
+							targetnode.removeClass("failure-highlight");
+							targetnode.removeClass("awaiting-data-highlight");
+							targetnode.addClass("executing-highlight");
+						}
+					}
+				}
+				break;
+			case "FAILURE":
+				//When status comes as failure, allow user to start workflow execution
+				if (executionRunning) {
+					setExecutionRunning(false);
+				}
+
+				currentnode.removeClass("not-executing-highlight");
+				currentnode.removeClass("executing-highlight");
+				currentnode.removeClass("success-highlight");
+				currentnode.removeClass("awaiting-data-highlight");
+				currentnode.removeClass("shuffle-hover-highlight");
+				currentnode.addClass("failure-highlight");
+
+				if (!visited.includes(label)) {
+					//if (item.action.result !== undefined && item.action.result !== null && !item.action.result.includes("failed condition")) {
+					//	alert.error("Error for " + item.action.label + " with result " + item.result);
+					//}
+					visited.push(label);
+					setVisited(visited);
+				}
+				break;
+			case "AWAITING_DATA":
+				currentnode.removeClass("not-executing-highlight");
+				currentnode.removeClass("executing-highlight");
+				currentnode.removeClass("success-highlight");
+				currentnode.removeClass("failure-highlight");
+				currentnode.removeClass("shuffle-hover-highlight");
+				currentnode.addClass("awaiting-data-highlight");
+				break;
+			default:
+				currentnode.removeClass("not-executing-highlight");
+				currentnode.removeClass("executing-highlight");
+				currentnode.removeClass("success-highlight");
+				currentnode.removeClass("failure-highlight");
+				currentnode.removeClass("shuffle-hover-highlight");
+				currentnode.removeClass("awaiting-data-highlight");
+				currentnode.addClass("not-executing-highlight");
+				//console.log("DEFAULT -> Clearing!");
+				break;
+		}
+	}
+
   // Controls the colors and direction of execution results.
   // Style is in defaultCytoscapeStyle.js
   const handleUpdateResults = (responseJson, executionRequest) => {
@@ -852,176 +989,40 @@ const AngularWorkflow = (defaultprops) => {
       if (JSON.stringify(responseJson) !== JSON.stringify(executionData)) {
         // FIXME: If another is selected, don't edit..
         // Doesn't work because this is some async garbage
-        if (
-          executionData.execution_id === undefined ||
-          (responseJson.execution_id === executionData.execution_id &&
-            responseJson.results !== undefined &&
-            responseJson.results !== null)
-        ) {
-          if (
-            executionData.status !== responseJson.status ||
-            executionData.result !== responseJson.result ||
-            executionData.results.length !== responseJson.results.length
-          ) {
-            setExecutionData(responseJson);
+        if (executionData.execution_id === undefined || (responseJson.execution_id === executionData.execution_id && responseJson.results !== undefined && responseJson.results !== null)) {
+          if (executionData.status !== responseJson.status || executionData.result !== responseJson.result || (executionData.results !== undefined && responseJson.results !== null && executionData.results.length !== responseJson.results.length)) {
+						console.log("Updating data!")
+            setExecutionData(responseJson)
           } else {
-            //console.log("NOT updating state.");
+            console.log("NOT updating executiondata state.");
           }
         }
       }
 
       if (responseJson.execution_id !== executionRequest.execution_id) {
-        cy.elements().removeClass(
-          "success-highlight failure-highlight executing-highlight"
-        );
+        cy.elements().removeClass("success-highlight failure-highlight executing-highlight");
         return;
       }
 
     	if (responseJson.results !== null && responseJson.results.length > 0) {
-    	  for (let [key,keyval] in responseJson.results.entries()) {
-    	    var item = responseJson.results[key];
-    	    var currentnode = cy.getElementById(item.action.id);
-    	    if (currentnode.length === 0) {
-    	      continue;
-    	    }
+				// First clear current nodes
+				if (responseJson.workflow.actions !== undefined && responseJson.workflow.actions !== null) {
+					// In clearing of actions
+					for (let actionKey in responseJson.workflow.actions) {
+    	    	var item = responseJson.workflow.actions[actionKey];
 
-          currentnode = currentnode[0];
-          const outgoingEdges = currentnode.outgoers("edge");
-          const incomingEdges = currentnode.incomers("edge");
+						handleColoring(item.id, "", item.label)
+					}
+				}
 
-          switch (item.status) {
-            case "EXECUTING":
-              currentnode.removeClass("not-executing-highlight");
-              currentnode.removeClass("success-highlight");
-              currentnode.removeClass("failure-highlight");
-              currentnode.removeClass("shuffle-hover-highlight");
-              currentnode.removeClass("awaiting-data-highlight");
-              incomingEdges.addClass("success-highlight");
-              currentnode.addClass("executing-highlight");
-              break;
-            case "SKIPPED":
-              currentnode.removeClass("not-executing-highlight");
-              currentnode.removeClass("success-highlight");
-              currentnode.removeClass("failure-highlight");
-              currentnode.removeClass("shuffle-hover-highlight");
-              currentnode.removeClass("awaiting-data-highlight");
-              currentnode.removeClass("executing-highlight");
-              currentnode.addClass("skipped-highlight");
-              break;
-            case "WAITING":
-              currentnode.removeClass("not-executing-highlight");
-              currentnode.removeClass("success-highlight");
-              currentnode.removeClass("failure-highlight");
-              currentnode.removeClass("shuffle-hover-highlight");
-              currentnode.removeClass("awaiting-data-highlight");
-              currentnode.addClass("executing-highlight");
+    	  for (let resultKey in responseJson.results) {
+    	    var item = responseJson.results[resultKey];
 
-              if (!visited.includes(item.action.label)) {
-                if (executionRunning) {
-                  visited.push(item.action.label);
-                  setVisited(visited);
-                }
-              }
-
-              // FIXME - add outgoing nodes to executing
-              //const outgoingNodes = outgoingEdges.find().data().target
-              if (outgoingEdges.length > 0) {
-                outgoingEdges.addClass("success-highlight");
-              }
-              break;
-            case "SUCCESS":
-              currentnode.removeClass("not-executing-highlight");
-              currentnode.removeClass("executing-highlight");
-              currentnode.removeClass("failure-highlight");
-              currentnode.removeClass("shuffle-hover-highlight");
-              currentnode.removeClass("awaiting-data-highlight");
-              currentnode.addClass("success-highlight");
-              incomingEdges.addClass("success-highlight");
-              outgoingEdges.addClass("success-highlight");
-
-              if (
-                visited !== undefined &&
-                visited !== null &&
-                !visited.includes(item.action.label)
-              ) {
-                if (executionRunning) {
-                  visited.push(item.action.label);
-                  setVisited(visited);
-                }
-              }
-
-    	        // FIXME - add outgoing nodes to executing
-    	        //const outgoingNodes = outgoingEdges.find().data().target
-    	        if (outgoingEdges.length > 0) {
-    	          for (let i = 0; i < outgoingEdges.length; i++) {
-    	            const edge = outgoingEdges[i];
-    	            const targetnode = cy.getElementById(edge.data().target);
-    	            if (
-    	              targetnode !== undefined &&
-    	              !targetnode.classes().includes("success-highlight") &&
-    	              !targetnode.classes().includes("failure-highlight")
-    	            ) {
-    	              targetnode.removeClass("not-executing-highlight");
-    	              targetnode.removeClass("success-highlight");
-    	              targetnode.removeClass("shuffle-hover-highlight");
-    	              targetnode.removeClass("failure-highlight");
-    	              targetnode.removeClass("awaiting-data-highlight");
-    	              targetnode.addClass("executing-highlight");
-    	            }
-    	          }
-    	        }
-    	        break;
-    	      case "FAILURE":
-    	        //When status comes as failure, allow user to start workflow execution
-    	        if (executionRunning) {
-    	          setExecutionRunning(false);
-    	        }
-
-              currentnode.removeClass("not-executing-highlight");
-              currentnode.removeClass("executing-highlight");
-              currentnode.removeClass("success-highlight");
-              currentnode.removeClass("awaiting-data-highlight");
-              currentnode.removeClass("shuffle-hover-highlight");
-              currentnode.addClass("failure-highlight");
-
-              if (!visited.includes(item.action.label)) {
-                if (
-                  item.action.result !== undefined &&
-                  item.action.result !== null &&
-                  !item.action.result.includes("failed condition")
-                ) {
-                  alert.error(
-                    "Error for " +
-                    item.action.label +
-                    " with result " +
-                    item.result
-                  );
-                }
-                visited.push(item.action.label);
-                setVisited(visited);
-              }
-              break;
-            case "AWAITING_DATA":
-              currentnode.removeClass("not-executing-highlight");
-              currentnode.removeClass("executing-highlight");
-              currentnode.removeClass("success-highlight");
-              currentnode.removeClass("failure-highlight");
-              currentnode.removeClass("shuffle-hover-highlight");
-              currentnode.addClass("awaiting-data-highlight");
-              break;
-            default:
-              console.log("DEFAULT?");
-              break;
-          }
+					handleColoring(item.action.id, item.status, item.action.label)
         }
       }
 
-      if (
-        responseJson.status === "ABORTED" ||
-        responseJson.status === "STOPPED" ||
-        responseJson.status === "FAILURE" ||
-        responseJson.status === "WAITING"
-      ) {
+      if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status === "WAITING") {
         stop();
 
         if (executionRunning) {
@@ -1341,14 +1342,10 @@ const AngularWorkflow = (defaultprops) => {
     	            cyelements[i].data().errors = [];
     	          }
 
-    	          for (let [key,keyval] in workflow.actions.entries()) {
-    	            workflow.actions[key].is_valid = true;
-    	            workflow.actions[key].errors = [];
+    	          for (let actionkey in workflow.actions) {
+    	            workflow.actions[actionkey].is_valid = true;
+    	            workflow.actions[actionkey].errors = [];
     	          }
-    	        }
-
-    	        for (let [key,keyval] in workflow.errors.entries()) {
-    	          //alert.info(workflow.errors[key]);
     	        }
 
             setWorkflow(workflow);
@@ -1373,11 +1370,11 @@ const AngularWorkflow = (defaultprops) => {
     var firstnode = cy.getElementById(workflow.start);
     if (firstnode.length === 0) {
       var found = false;
-      for (let [key,keyval] in workflow.actions.entries()) {
-        if (workflow.actions[key].isStartNode) {
+      for (let actionkey in workflow.actions) {
+        if (workflow.actions[actionkey].isStartNode) {
           console.log("Updating startnode");
-          workflow.start = workflow.actions[key].id;
-          firstnode = cy.getElementById(workflow.actions[key].id);
+          workflow.start = workflow.actions[actionkey].id;
+          firstnode = cy.getElementById(workflow.actions[actionkey].id);
           found = true;
           break;
         }
@@ -1520,14 +1517,15 @@ const AngularWorkflow = (defaultprops) => {
       .then((responseJson) => {
         if (responseJson.success) {
           var newauth = [];
-          console.log("App auth: ", responseJson.data);
-          for (let [key,keyval] in responseJson.data.entries()) {
-            if (responseJson.data[key].defined === false) {
+          for (let authkey in responseJson.data) {
+            if (responseJson.data[authkey].defined === false) {
               continue;
             }
 
-            newauth.push(responseJson.data[key]);
+            newauth.push(responseJson.data[authkey]);
           }
+
+          setAppAuthentication(newauth);
 
           if (cy !== undefined) {
             // Remove the old listener for select, run with new one
@@ -1536,24 +1534,20 @@ const AngularWorkflow = (defaultprops) => {
             cy.on("select", "edge", (e) => onEdgeSelect(e));
           }
 
-          setAppAuthentication(newauth);
-          setAuthLoaded(true);
-
           if (updateAction === true) {
             if (selectedApp.authentication.required) {
               // Setup auth here :)
               var appUpdates = false;
               const authenticationOptions = [];
 
-              var tmpAuth = JSON.parse(JSON.stringify(responseJson.data));
+              var tmpAuth = JSON.parse(JSON.stringify(newauth));
               var latest = 0;
-              for (let [key,keyval] in tmpAuth.entries()) {
-                var item = tmpAuth[key];
+              for (let authkey in tmpAuth) {
+                var item = tmpAuth[authkey];
 
                 const newfields = {};
-                for (let [filterkey, filterkeyval] in item.fields.entries()) {
-                  newfields[item.fields[filterkey].key] =
-                    item.fields[filterkey].value;
+                for (let filterkey in item.fields) {
+                  newfields[item.fields[filterkey].key] = item.fields[filterkey].value;
                 }
 
                 item.fields = newfields;
@@ -1565,10 +1559,10 @@ const AngularWorkflow = (defaultprops) => {
                     latest = item.edited;
                     selectedAction.selectedAuthentication = item;
 
-                    for (let [key,keyval] in workflow.actions.entries()) {
-                      if (workflow.actions[key].app_name === selectedApp.name) {
-                        workflow.actions[key].selectedAuthentication = item;
-                        workflow.actions[key].authentication_id = item.id;
+                    for (let actionkey in workflow.actions) {
+                      if (workflow.actions[actionkey].app_name === selectedApp.name) {
+                        workflow.actions[actionkey].selectedAuthentication = item;
+                        workflow.actions[actionkey].authentication_id = item.id;
                         appUpdates = true;
                       }
                     }
@@ -1603,11 +1597,11 @@ const AngularWorkflow = (defaultprops) => {
             }
           }
         } else {
-          setAuthLoaded(true);
+					setAppAuthentication([]);
         }
       })
       .catch((error) => {
-        setAuthLoaded(true);
+				setAppAuthentication([]);
         //alert.error("Auth loading error: " + error.toString());
         console.log("AppAuth error: " + error.toString());
       });
@@ -1807,7 +1801,7 @@ const AngularWorkflow = (defaultprops) => {
         if (responseJson.public) {
           //alert.info("This workflow is public. Save the workflow to use it in your organization.");
 
-          setAuthLoaded(true)
+  				setAppAuthentication([])
           console.log("RESP: ", responseJson)
           if (Object.getOwnPropertyNames(creatorProfile).length === 0) {
             //getUserProfile("frikky") 
@@ -1817,8 +1811,8 @@ const AngularWorkflow = (defaultprops) => {
 					//{appGroup.map((data, index) => {
 					//const [appGroup, setAppGroup] = React.useState([]);
 					var appsFound = []
-					for (let [key,keyval] in responseJson.actions.entries()) {
-						const parsedAction = responseJson.actions[key]
+					for (let actionkey in responseJson.actions) {
+						const parsedAction = responseJson.actions[actionkey]
 						if (parsedAction.large_image === undefined || parsedAction.large_image === null || parsedAction.large_image === "") {
 							continue
 						}
@@ -1830,8 +1824,8 @@ const AngularWorkflow = (defaultprops) => {
           setAppGroup(appsFound)
 
 					appsFound = []
-					for (let [key,keyval] in responseJson.triggers.entries()) {
-						const parsedAction = responseJson.triggers[key]
+					for (let triggerkey in responseJson.triggers) {
+						const parsedAction = responseJson.triggers[triggerkey]
 						if (appsFound.findIndex(data => data.app_name === parsedAction.app_name) < 0){
 							appsFound.push(parsedAction)
 						}
@@ -2008,6 +2002,7 @@ const AngularWorkflow = (defaultprops) => {
               responseJson.errors !== // what
               responseJson.errors.length > 0
             ) {
+							console.log("Setting configure Modal to open")
               setConfigureWorkflowModalOpen(true);
             }
           }
@@ -2091,10 +2086,6 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
     */
-
-    //cy.removeListener("select");
-    //cy.on("select", "node", (e) => onNodeSelect(e, appAuthentication));
-    //cy.on("select", "edge", (e) => onEdgeSelect(e));
 
 
     // FIXME - check if they have value before overriding like this for no reason.
@@ -2239,26 +2230,26 @@ const AngularWorkflow = (defaultprops) => {
 
 		const connected = event.target.connectedEdges().jsons()
     if (connected.length > 0 && connected !== undefined) {
-		for (let [key,keyval] in connected.entries()) {
-			const edge = connected[key]
-			//console.log("EDGE:", edge)
+			for (let connectkey in connected) {
+				const edge = connected[connectkey]
+				//console.log("EDGE:", edge)
 
-      //const edge = edgeBase.json()
+				//const edge = edgeBase.json()
 
-      const sourcenode = cy.getElementById(edge.data.source)
-      const destinationnode = cy.getElementById(edge.data.target)
-      if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
-        continue
-      }
+				const sourcenode = cy.getElementById(edge.data.source)
+				const destinationnode = cy.getElementById(edge.data.target)
+				if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
+					continue
+				}
 
-      const edgeCurve = calculateEdgeCurve(sourcenode.position(), destinationnode.position())
-      const currentedge = cy.getElementById(edge.data.id)
-			if (currentedge !== undefined && currentedge !== null) {
-				currentedge.style('control-point-distance', edgeCurve.distance)
-				currentedge.style('control-point-weight', edgeCurve.weight)
+				const edgeCurve = calculateEdgeCurve(sourcenode.position(), destinationnode.position())
+				const currentedge = cy.getElementById(edge.data.id)
+				if (currentedge !== undefined && currentedge !== null) {
+					currentedge.style('control-point-distance', edgeCurve.distance)
+					currentedge.style('control-point-weight', edgeCurve.weight)
+				}
 			}
 		}
-  }
 
     if (styledElements.length === 1) {
       console.log(
@@ -2337,8 +2328,8 @@ const AngularWorkflow = (defaultprops) => {
     ) {
       const allNodes = cy.nodes().jsons();
       var found = false;
-      for (let [key,keyval] in allNodes.entries()) {
-        const currentNode = allNodes[key];
+      for (let nodekey in allNodes) {
+        const currentNode = allNodes[nodekey];
         if (
           currentNode.data.attachedTo === nodedata.id &&
           currentNode.data.isDescriptor
@@ -2404,8 +2395,8 @@ const AngularWorkflow = (defaultprops) => {
 
     if (nodedata.app_name !== undefined) {
       const allNodes = cy.nodes().jsons();
-      for (var key_ in allNodes) {
-        const currentNode = allNodes[key_];
+      for (var nodekey in allNodes) {
+        const currentNode = allNodes[nodekey];
         if (currentNode.data.attachedTo === nodedata.id) {
           cy.getElementById(currentNode.data.id).remove();
         }
@@ -2535,7 +2526,9 @@ const AngularWorkflow = (defaultprops) => {
   // https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
   // onNodeClick
   const onNodeSelect = (event, newAppAuth) => {
-    // Otherwise everything is SUPER slow
+		console.log("App auth in select: ", newAppAuth)
+    // Forces all states to update at the same time,
+		// Otherwise everything is SUPER slow
     ReactDOM.unstable_batchedUpdates(() => {
       const data = event.target.data();
       if (data.isButton) {
@@ -2691,7 +2684,6 @@ const AngularWorkflow = (defaultprops) => {
         //event.target.data()
         var curaction = workflow.actions.find((a) => a.id === data.id)
         if (!curaction || curaction === undefined) {
-          console.log("NOT FOUND DATA: ", event.target.data())
           if (data.id !== undefined && data.app_name !== undefined) {
             workflow.actions.push(data)
             setWorkflow(workflow)
@@ -2805,24 +2797,43 @@ const AngularWorkflow = (defaultprops) => {
             }
 
             const tmpAuth = JSON.parse(JSON.stringify(newAppAuth));
-            //var tmpAuth = newAppAuth
+						console.log("FOUND AUTH OPTIONS: ", tmpAuth)
 
-    	      for (var tmpAuthKey in tmpAuth) {
+						const curappName = curapp.name.toLowerCase()
+    	      for (let tmpAuthKey in tmpAuth) {
     	        var item = tmpAuth[tmpAuthKey];
 
     	        const newfields = {};
-    	        for (var fieldFilterKey in item.fields) {
-    	          newfields[item.fields[fieldFilterKey].key] = item.fields[fieldFilterKey].value;
+              if (item.app.name.toLowerCase() !== curappName) {
+								continue
+							}
+
+							// Makes list into key:value object 
+							for (let fieldkey in item.fields) {
+								if (item.fields[fieldkey] === undefined) {
+									console.log("Problem with filterkey in Node select", fieldkey)
+									continue
+								}
+
+								const filterkey = item.fields[fieldkey]["key"]
+								if (filterkey === null || filterkey === undefined) {
+									console.log("Problem with filterkey 2. Null or undefined 3")
+									continue
+								}
+
+								newfields[filterkey] = item.fields[fieldkey]["value"];
     	        }
 
               item.fields = newfields;
-              if (item.app.name === curapp.name) {
+              if (item.app.name.toLowerCase() === curappName) {
                 authenticationOptions.push(item);
                 if (item.id === findAuthId) {
                   curaction.selectedAuthentication = item;
                 }
               }
             }
+
+						console.log("Options: ", authenticationOptions)
 
             curaction.authentication = authenticationOptions;
             if (
@@ -2855,7 +2866,7 @@ const AngularWorkflow = (defaultprops) => {
     	      }
     	    } else {
 						console.log("Should check APP if it has the same params as ACTION")
-						for (var actionKey in curapp.actions) {
+						for (let actionKey in curapp.actions) {
 							const tmpaction = curapp.actions[actionKey]
 							if (tmpaction.name === curaction.name) {
 								console.log("Found action - needs change?", tmpaction)
@@ -2867,7 +2878,24 @@ const AngularWorkflow = (defaultprops) => {
 						}
 					}
 
+					//curaction["authentication"] = []
+					//curaction["authentication_id"] = ""
+					// Fix parameters that are... Not ideal
+					//var paramnames = []
+					//var newparams = []
+					//for (let paramKey in curaction.parameters) {
+					//	console.log("Name: ", curaction.parameters[paramKey].name)
+					//	if (paramnames.includes(curaction.parameters[paramKey].name)) {
+					//		continue
+					//	}
+
+					//	paramnames.push(curaction.parameters[paramKey].name)
+					//	newparams.push(curaction.parameters[paramKey])
+					//}
+
+					//curaction.parameters = newparams
           console.log("ACTION CLICK: ", curaction)
+
           setSelectedApp(curapp);
           setSelectedAction(curaction);
 
@@ -2931,7 +2959,6 @@ const AngularWorkflow = (defaultprops) => {
           }
         }
 
-        console.log("DATA: ", data)
         setSelectedTriggerIndex(trigger_index);
         setSelectedTrigger(data);
         setSelectedActionEnvironment(data.env);
@@ -3003,10 +3030,10 @@ const AngularWorkflow = (defaultprops) => {
     var exampledata = item.example === undefined ? "" : item.example;
     if (workflowExecutions.length > 0) {
       // Look for the ID
-      for (let [key,keyval] in workflowExecutions.entries()) {
+      for (let execkey in workflowExecutions) {
         if (
-          workflowExecutions[key].results === undefined ||
-          workflowExecutions[key].results === null
+          workflowExecutions[execkey].results === undefined ||
+          workflowExecutions[execkey].results === null
         ) {
           continue;
         }
@@ -3014,16 +3041,16 @@ const AngularWorkflow = (defaultprops) => {
         var foundResult = { result: "" };
         if (item.id === "exec") {
           if (
-            workflowExecutions[key].execution_argument !== undefined &&
-            workflowExecutions[key].execution_argument !== null &&
-            workflowExecutions[key].execution_argument.length > 0
+            workflowExecutions[execkey].execution_argument !== undefined &&
+            workflowExecutions[execkey].execution_argument !== null &&
+            workflowExecutions[execkey].execution_argument.length > 0
           ) {
-            foundResult.result = workflowExecutions[key].execution_argument;
+            foundResult.result = workflowExecutions[execkey].execution_argument;
           } else {
             continue;
           }
         } else {
-          foundResult = workflowExecutions[key].results.find(
+          foundResult = workflowExecutions[execkey].results.find(
             (result) => result.action.id === item.id
           );
           if (foundResult === undefined) {
@@ -3150,7 +3177,7 @@ const AngularWorkflow = (defaultprops) => {
             selectedkey = `.${key}`;
           }
 
-          for (let [subitem,subitemval] in value.entries()) {
+          for (let [subitem,subitemval] in Object.entries(value)) {
             toreturn = GetParamMatch(
               paramname,
               value[subitem],
@@ -3226,8 +3253,8 @@ const AngularWorkflow = (defaultprops) => {
 
     var parents = getParents(dstdata);
     if (parents.length > 1) {
-      for (let [key,keyval] in parents.entries()) {
-        const item = parents[key];
+      for (let parentkey in parents) {
+        const item = parents[parentkey];
         if (item.label === "Execution Argument") {
           continue;
         }
@@ -3236,33 +3263,36 @@ const AngularWorkflow = (defaultprops) => {
           item.label === undefined
             ? ""
             : item.label.toLowerCase().trim().replaceAll(" ", "_");
+
         exampledata = GetExampleResult(item);
-        for (let [paramkey,paramkeyval] in dstdata.parameters.entries()) {
-          const param = dstdata.parameters[paramkey];
-          // Skip authentication params
-          if (param.configuration) {
-            continue
-          }
+				if (dstdata.parameters !== undefined && dstdata.parameters !== null) {
+        	for (let [paramkey,paramkeyval] in Object.entries(dstdata.parameters)) {
+        	  const param = dstdata.parameters[paramkey];
+        	  // Skip authentication params
+        	  if (param.configuration) {
+        	    continue
+        	  }
 
-          if (param.options !== undefined && param.options !== null && param.options.length > 0) {
-            continue
-          }
+        	  if (param.options !== undefined && param.options !== null && param.options.length > 0) {
+        	    continue
+        	  }
 
-          const paramname = param.name
-            .toLowerCase()
-            .trim()
-            .replaceAll("_", " ");
+        	  const paramname = param.name
+        	    .toLowerCase()
+        	    .trim()
+        	    .replaceAll("_", " ");
 
-          const foundresult = GetParamMatch(paramname, exampledata, "");
-          if (foundresult.length > 0) {
-            if (dstdata.parameters[paramkey].value.length === 0) {
-              dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`;
-              dstdata.parameters[paramkey].autocompleted = true
-            } else {
-              //dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`;
-            }
-          }
-        }
+        	  const foundresult = GetParamMatch(paramname, exampledata, "");
+        	  if (foundresult.length > 0) {
+        	    if (dstdata.parameters[paramkey].value.length === 0) {
+        	      dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`;
+        	      dstdata.parameters[paramkey].autocompleted = true
+        	    } else {
+        	      //dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`;
+        	    }
+        	  }
+        	}
+				}
         // Check agains every param
       }
     }
@@ -3387,18 +3417,18 @@ const AngularWorkflow = (defaultprops) => {
     // dest == dest && source == source
     // backend: check all children? to stop recursion
     var found = false;
-    for (let [key,keyval] in workflow.branches.entries()) {
+    for (let branchkey in workflow.branches) {
       if (
-        workflow.branches[key].destination_id === edge.source &&
-        workflow.branches[key].source_id === edge.target
+        workflow.branches[branchkey].destination_id === edge.source &&
+        workflow.branches[branchkey].source_id === edge.target
       ) {
         alert.error("A branch in the opposite direction already exists");
         event.target.remove();
         found = true;
         break;
       } else if (
-        workflow.branches[key].destination_id === edge.target &&
-        workflow.branches[key].source_id === edge.source
+        workflow.branches[branchkey].destination_id === edge.target &&
+        workflow.branches[branchkey].source_id === edge.source
       ) {
         console.log(edge.source);
         alert.error("That branch already exists");
@@ -3418,7 +3448,7 @@ const AngularWorkflow = (defaultprops) => {
 
           found = true;
         }
-      } else if (edge.source === workflow.branches[key].source_id) {
+      } else if (edge.source === workflow.branches[branchkey].source_id) {
         // FIXME: Verify multi-target for triggers
         // 1. Check if destination exists
         // 2. Check if source is a trigger
@@ -3495,9 +3525,9 @@ const AngularWorkflow = (defaultprops) => {
     const node = event.target;
     const nodedata = event.target.data();
 
-    if (Object.keys(nodedata).length === 1) {
-      console.log("Check if another node actually exists before adding")
-    }
+    //if (Object.keys(nodedata).length === 1) {
+    //  console.log("Check if another node actually exists before adding")
+    //}
 
     if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)
     ) {
@@ -3522,8 +3552,8 @@ const AngularWorkflow = (defaultprops) => {
       }
 
       // Remove bad startnode
-      for (let [key,keyval] in workflow.actions.entries()) {
-        const action = workflow.actions[key];
+      for (let actionkey in workflow.actions) {
+        const action = workflow.actions[actionkey];
         if (action.isStartNode && workflow.start !== action.id) {
           action.isStartNode = false;
         }
@@ -3586,7 +3616,7 @@ const AngularWorkflow = (defaultprops) => {
       ) {
         var newparameters = [];
 
-        for (let [subkey,subkeyval] in nodedata.parameters.entries()) {
+        for (let [subkey,subkeyval] in Object.entries(nodedata.parameters)) {
           var newparam = JSON.parse(
             JSON.stringify(nodedata.parameters[subkey])
           );
@@ -3679,8 +3709,8 @@ const AngularWorkflow = (defaultprops) => {
     // Check if the source is trigger and can start
     console.log("Removed: ", edge.data())
     const allNodes = cy.nodes().jsons()
-		for (let [key,keyval] in allNodes.entries()) {
-			const curnode = allNodes[key]
+		for (let nodekey in allNodes) {
+			const curnode = allNodes[nodekey]
 			if (curnode.data.type !== "TRIGGER") {
 				continue
 			}
@@ -3951,8 +3981,8 @@ const AngularWorkflow = (defaultprops) => {
       const parsedjson = JSON.parse(clipboard);
       //console.log("Parsed: ", parsedjson)
 
-      for (let [key,keyval] in parsedjson.entries()) {
-        const item = parsedjson[key];
+      for (let jsonkey in parsedjson) {
+        const item = parsedjson[jsonkey];
         console.log("Adding: ", item);
         item.data.id = uuidv4()
 
@@ -3999,13 +4029,13 @@ const AngularWorkflow = (defaultprops) => {
       .then((responseJson) => {
         var found = false;
         var showEnvCnt = 0;
-        for (let [key,keyval] in responseJson.entries()) {
-          if (responseJson[key].default && !found) {
-            setDefaultEnvironmentIndex(key);
+        for (let jsonkey in responseJson) {
+          if (responseJson[jsonkey].default && !found) {
+            setDefaultEnvironmentIndex(jsonkey);
             found = true;
           }
 
-          if (responseJson[key].archived === false) {
+          if (responseJson[jsonkey].archived === false) {
             showEnvCnt += 1;
           }
         }
@@ -4015,9 +4045,9 @@ const AngularWorkflow = (defaultprops) => {
         }
 
         if (!found) {
-          for (let [key,keyval] in responseJson.entries()) {
-            if (!responseJson[key].archived) {
-              setDefaultEnvironmentIndex(key);
+          for (let jsonkey in responseJson) {
+            if (!responseJson[jsonkey].archived) {
+              setDefaultEnvironmentIndex(jsonkey);
               break;
             }
           }
@@ -4846,6 +4876,7 @@ const AngularWorkflow = (defaultprops) => {
       const triggerindex = workflow.triggers.findIndex(
         (data) => data.id === selectedNode.data().id
       );
+
       setSelectedTriggerIndex(triggerindex);
       if (selectedNode.data().trigger_type === "SCHEDULE") {
         setSelectedTrigger(selectedNode.data());
@@ -4869,7 +4900,12 @@ const AngularWorkflow = (defaultprops) => {
     if (selectedNode.data().decorator === true && selectedNode.data("type") !== "COMMENT") {
       alert.info("This node can't be deleted.");
     } else {
+			console.log("Deleted.")
       selectedNode.remove();
+
+			setSelectedTrigger({})
+			setSelectedEdge({})
+			setSelectedAction({})
     }
 
     // An attempt at NOT unselecting when removing
@@ -4984,8 +5020,7 @@ const AngularWorkflow = (defaultprops) => {
     console.log("In graph setup")
 
     // 2nd load - configures cytoscape
-  } else if (!established && cy !== undefined && ((apps !== null && apps !== undefined && apps.length > 0) || workflow.public === true) && Object.getOwnPropertyNames(workflow).length > 0 && authLoaded) {
-
+  } else if (!established && cy !== undefined && ((apps !== null && apps !== undefined && apps.length > 0) || workflow.public === true) && Object.getOwnPropertyNames(workflow).length > 0 && appAuthentication !== undefined) {
     console.log("In POST graph setup!")
 
 
@@ -5022,11 +5057,8 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     if (cy.edgehandles !== undefined) {
-      console.log("Inside edgehandles")
       cy.edgehandles({
         handleNodes: (el) => {
-          console.log("in handlenodes")
-
           if (el.isNode() &&
             !el.data("isButton") &&
             !el.data("isDescriptor") &&
@@ -5155,8 +5187,8 @@ const AngularWorkflow = (defaultprops) => {
 		var mappedStartnode = ""
 		const alledges = cy.edges().jsons()
     if (alledges !== undefined && alledges !== null && alledges.length > 0) {
-		for (let [key,keyval] in alledges.entries()) {
-			const tmp = alledges[key]
+		for (let edgekey in alledges) {
+			const tmp = alledges[edgekey]
 			console.log("TMP: ", tmp, tmp.data.source)
 			if (tmp.data.source === trigger.id) {
 				mappedStartnode = tmp.data.target
@@ -5934,13 +5966,27 @@ const AngularWorkflow = (defaultprops) => {
         }
 
         const tmpAuth = JSON.parse(JSON.stringify(appAuthentication));
-        for (let [key,keyval] in tmpAuth.entries()) {
-          var item = tmpAuth[key];
+        for (let authkey in tmpAuth) {
+					if (authkey === undefined) {
+						continue
+					}
 
+          var item = tmpAuth[authkey];
           const newfields = {};
-          for (let [filterkey,filterkeyval] in item.fields.entries()) {
-            newfields[item.fields[filterkey].key] = item.fields[filterkey].value;
-          }
+					for (let fieldkey in item.fields) {
+						if (item.fields[fieldkey] === undefined) {
+							console.log("Problem with filterkey in Node select", fieldkey)
+							continue
+						}
+
+						const filterkey = item.fields[fieldkey]["key"]
+						if (filterkey === null || filterkey === undefined) {
+							console.log("Problem with filterkey 2. Null or undefined 3")
+							continue
+						}
+
+						newfields[filterkey] = item.fields[fieldkey]["value"];
+					}
 
           item.fields = newfields;
           if (item.app.id === app.id || item.app.name === app.name) {
@@ -5964,8 +6010,8 @@ const AngularWorkflow = (defaultprops) => {
           authenticationOptions !== null &&
           authenticationOptions.length > 0
         ) {
-          for (let [key,keyval] in authenticationOptions.entries()) {
-            const option = authenticationOptions[key];
+          for (let authkey in authenticationOptions) {
+            const option = authenticationOptions[authkey];
 
             if (option.active && newAppData.authentication_id === "") {
               newAppData.selectedAuthentication = option;
@@ -6046,6 +6092,7 @@ const AngularWorkflow = (defaultprops) => {
         newNodeId = uuidv4();
         const actionType = "ACTION";
         const actionLabel = getNextActionName(app.name);
+				console.log("Next action name: ", actionLabel)
         var parameters = null;
         var example = "";
         var description = ""
@@ -6085,6 +6132,8 @@ const AngularWorkflow = (defaultprops) => {
 
         // activated: app.generated === true ? app.activated === false ? false : true : true,
         const newAppData = {
+          name: app.actions[0].name,
+          label: actionLabel,
           app_name: app.name,
           app_version: app.app_version,
           app_id: app.id,
@@ -6098,9 +6147,7 @@ const AngularWorkflow = (defaultprops) => {
           _id_: newNodeId,
           id: newNodeId,
           is_valid: true,
-          label: actionLabel,
           type: actionType,
-          name: app.actions[0].name,
           parameters: parameters,
           isStartNode: false,
           large_image: app.large_image,
@@ -6376,12 +6423,14 @@ const AngularWorkflow = (defaultprops) => {
         if (newApps.length === 0) {
           const searchvalue = value.trim().toLowerCase();
           newApps = allApps.filter((app) => {
-            for (let [key,keyval] in app.actions.entries()) {
-              const inneraction = app.actions[key];
-              if (inneraction.name.toLowerCase().includes(searchvalue)) {
-                return true;
-              }
-            }
+						if (app.actions !== undefined && app.actions !== null) {
+							for (let actionkey in app.actions) {
+								const inneraction = app.actions[actionkey];
+								if (inneraction.name.toLowerCase().includes(searchvalue)) {
+									return true;
+								}
+							}
+						}
 
             return false;
           });
@@ -6405,7 +6454,6 @@ const AngularWorkflow = (defaultprops) => {
         if (document !== undefined) {
           const appsearchValue = document.getElementById("appsearch")
           if (appsearchValue !== undefined && appsearchValue !== null) {
-            console.log("Value2: ", appsearchValue.value)
             if (appsearchValue.value !== undefined && appsearchValue.value !== null && appsearchValue.value.length > 0) {
               refine(appsearchValue.value)
             }
@@ -6741,24 +6789,28 @@ const AngularWorkflow = (defaultprops) => {
     var highest = "";
 
     const allitems = workflow.actions.concat(workflow.triggers);
-    for (let [key,keyval] in allitems.entries()) {
-      const item = allitems[key];
-      if (
-        item.app_name === appName &&
-        item.label !== undefined &&
-        item.label !== null
-      ) {
-        var number = item.label.split("_");
-        if (
-          isNaN(number[-1]) &&
-          parseInt(number[number.length - 1]) > highest
-        ) {
-          highest = number[number.length - 1];
-        }
-      }
-    }
+		if (allitems !== undefined && allitems !== null) {
+			for (let itemkey in allitems) {
+				const item = allitems[itemkey];
+				if (
+					item.app_name === appName &&
+					item.label !== undefined &&
+					item.label !== null
+				) {
+					var number = item.label.split("_");
+					if (
+						isNaN(number[-1]) &&
+						parseInt(number[number.length - 1]) > highest
+					) {
+						highest = number[number.length - 1];
+					}
+				}
+			}
+		}
 
     appName = appName.replaceAll(" ", "_")
+
+		console.log("Highest:", highest)
 
     if (highest) {
       return appName + "_" + (parseInt(highest) + 1);
@@ -6799,10 +6851,11 @@ const AngularWorkflow = (defaultprops) => {
     newSelectedAction.is_valid = true;
     //console.log(newSelectedAction)
 
+
 		// Simmple action swap autocompleter
-		if (oldaction.parameters !== undefined && newSelectedAction.parameters !== undefined && oldaction.id === newSelectedAction.id) {
+		if (oldaction.parameters !== undefined && oldaction.parameters !== null && newSelectedAction.parameters !== undefined && oldaction.id === newSelectedAction.id) {
 			var fileid_found = false
-			for (let [paramkey,paramkeyval] in oldaction.parameters.entries()) {
+			for (let [paramkey,paramkeyval] in Object.entries(oldaction.parameters)) {
 				const param = oldaction.parameters[paramkey];
 			
 				if (param.name === "file_id") {
@@ -6916,24 +6969,26 @@ const AngularWorkflow = (defaultprops) => {
 
     // FIXME - should change icon-node (descriptor) as well
     const allNodes = cy.nodes().jsons();
-    for (let [key,keyval] in allNodes.entries()) {
-      const currentNode = allNodes[key];
-      if (
-        currentNode.data.attachedTo === oldaction.id &&
-        currentNode.data.isDescriptor
-      ) {
-        const foundnode = cy.getElementById(currentNode.data.id);
-        if (foundnode !== null && foundnode !== undefined) {
-          const iconInfo = GetIconInfo(newaction);
-          const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
-          const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
-          foundnode.data("image", svgpin_Url);
-          foundnode.data("imageColor", iconInfo.iconBackgroundColor);
-        }
+		if (allNodes !== undefined && allNodes !== null) {
+			for (let nodekey in allNodes) {
+				const currentNode = allNodes[nodekey];
+				if (
+					currentNode.data.attachedTo === oldaction.id &&
+					currentNode.data.isDescriptor
+				) {
+					const foundnode = cy.getElementById(currentNode.data.id);
+					if (foundnode !== null && foundnode !== undefined) {
+						const iconInfo = GetIconInfo(newaction);
+						const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
+						const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
+						foundnode.data("image", svgpin_Url);
+						foundnode.data("imageColor", iconInfo.iconBackgroundColor);
+					}
 
-        break;
-      }
-    }
+					break;
+				}
+			}
+		}
   };
 
   // APPSELECT at top
@@ -7008,15 +7063,15 @@ const AngularWorkflow = (defaultprops) => {
     var iterations = 0;
     var maxiter = 10;
     while (true) {
-      for (let [key,keyval] in allkeys.entries()) {
-        var currentnode = cy.getElementById(allkeys[key]);
+      for (let parentkey in allkeys) {
+        var currentnode = cy.getElementById(allkeys[parentkey]);
         if (currentnode === undefined || currentnode === null) {
           continue;
         }
 
         if (currentnode.data() === undefined) {
-          handled.push(allkeys[key]);
-          results.push({ id: allkeys[key], type: "TRIGGER" });
+          handled.push(allkeys[parentkey]);
+          results.push({ id: allkeys[parentkey], type: "TRIGGER" });
         } else {
           if (handled.includes(currentnode.data().id)) {
             continue;
@@ -7255,8 +7310,8 @@ const AngularWorkflow = (defaultprops) => {
         workflow.workflow_variables !== undefined &&
         workflow.workflow_variables.length > 0
       ) {
-        for (let [key,keyval] in workflow.workflow_variables.entries()) {
-          const item = workflow.workflow_variables[key];
+        for (let varkey in workflow.workflow_variables) {
+          const item = workflow.workflow_variables[varkey];
           actionlist.push({
             type: "workflow_variable",
             name: item.name,
@@ -7274,8 +7329,8 @@ const AngularWorkflow = (defaultprops) => {
         workflow.execution_variables !== undefined &&
         workflow.execution_variables.length > 0
       ) {
-        for (let [key,keyval] in workflow.execution_variables.entries()) {
-          const item = workflow.execution_variables[key];
+        for (let varkey in workflow.execution_variables) {
+          const item = workflow.execution_variables[varkey];
           actionlist.push({
             type: "execution_variable",
             name: item.name,
@@ -7290,8 +7345,8 @@ const AngularWorkflow = (defaultprops) => {
       const destAction = cy.getElementById(selectedEdge.target);
       var parents = getParents(destAction.data());
       if (parents.length > 1) {
-        for (let [key,keyval] in parents.entries()) {
-          const item = parents[key];
+        for (let parentkey in parents) {
+          const item = parents[parentkey];
           if (item.label === "Execution Argument") {
             continue;
           }
@@ -7466,8 +7521,8 @@ const AngularWorkflow = (defaultprops) => {
                     workflow.triggers !== null &&
                     workflow.triggers.length > 0
                   ) {
-                    for (let [key,keyval] in workflow.triggers.entries()) {
-                      const item = workflow.triggers[key];
+                    for (let triggerkey in workflow.triggers) {
+                      const item = workflow.triggers[triggerkey];
 
                       var node = cy.getElementById(item.id);
                       if (node.length > 0) {
@@ -8812,8 +8867,8 @@ const AngularWorkflow = (defaultprops) => {
         workflow.workflow_variables !== undefined &&
         workflow.workflow_variables.length > 0
       ) {
-        for (let [key,keyval] in workflow.workflow_variables.entries()) {
-          const item = workflow.workflow_variables[key];
+        for (let varkey in workflow.workflow_variables) {
+          const item = workflow.workflow_variables[varkey];
           actionlist.push({
             type: "workflow_variable",
             name: item.name,
@@ -8831,8 +8886,8 @@ const AngularWorkflow = (defaultprops) => {
         workflow.execution_variables !== undefined &&
         workflow.execution_variables.length > 0
       ) {
-        for (let [key,keyval] in workflow.execution_variables.entries()) {
-          const item = workflow.execution_variables[key];
+        for (let varkey in workflow.execution_variables) {
+          const item = workflow.execution_variables[varkey];
           actionlist.push({
             type: "execution_variable",
             name: item.name,
@@ -8846,8 +8901,8 @@ const AngularWorkflow = (defaultprops) => {
 
       var parents = getParents(selectedTrigger);
       if (parents.length > 1) {
-        for (let [key,keyval] in parents.entries()) {
-          const item = parents[key];
+        for (let parentkey in parents) {
+          const item = parents[parentkey];
           if (item.label === "Execution Argument") {
             continue;
           }
@@ -8856,15 +8911,15 @@ const AngularWorkflow = (defaultprops) => {
           // Find previous execution and their variables
           if (workflowExecutions.length > 0) {
             // Look for the ID
-            for (let [key,keyval] in workflowExecutions.entries()) {
+            for (let execkey in workflowExecutions) {
               if (
-                workflowExecutions[key].results === undefined ||
-                workflowExecutions[key].results === null
+                workflowExecutions[execkey].results === undefined ||
+                workflowExecutions[execkey].results === null
               ) {
                 continue;
               }
 
-              var foundResult = workflowExecutions[key].results.find(
+              var foundResult = workflowExecutions[execkey].results.find(
                 (result) => result.action.id === item.id
               );
               if (foundResult === undefined) {
@@ -8985,8 +9040,8 @@ const AngularWorkflow = (defaultprops) => {
                 workflow.triggers !== null &&
                 workflow.triggers.length > 0
               ) {
-                for (let [key,keyval] in workflow.triggers.entries()) {
-                  const item = workflow.triggers[key];
+                for (let triggerkey in workflow.triggers) {
+                  const item = workflow.triggers[triggerkey];
 
                   if (cy !== undefined) {
                     var node = cy.getElementById(item.id);
@@ -9704,7 +9759,6 @@ const AngularWorkflow = (defaultprops) => {
                   workflow.triggers[selectedTriggerIndex].parameters[1].value
                 }
                 onBlur={(e) => {
-                  console.log("DATA: ", e.target.value);
                   workflow.triggers[selectedTriggerIndex].parameters[1].value =
                     e.target.value;
                   setWorkflow(workflow);
@@ -10570,8 +10624,8 @@ const AngularWorkflow = (defaultprops) => {
       )
 
 		console.log("Starting mail sub: ", workflow.triggers[selectedTriggerIndex].parameters[0].value, splitItem);
-    for (let [key,keyval] in splitItem.entries()) {
-      const item = splitItem[key];
+    for (let splitkey in splitItem) {
+      const item = splitItem[splitkey];
       const curfolder = triggerFolders.find((a) => a.displayName === item);
       if (curfolder === undefined) {
         alert.error("Something went wrong with folder selection: " + item);
@@ -10761,7 +10815,7 @@ const AngularWorkflow = (defaultprops) => {
       })
       .catch((error) => {
         //alert.error(error.toString());
-        alert.error("Delete webhook error: ", error.toString());
+        alert.error("Delete webhook error. Contact support or check logs if this persists.")
       });
   };
 
@@ -12725,17 +12779,17 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     to_be_copied = "$" + base_node_name.toLowerCase().replaceAll(" ", "_");
-    for (let [key,keyval] in copy.namespace.entries()) {
-      if (copy.namespace[key].includes("Results for")) {
+    for (let copykey in copy.namespace) {
+      if (copy.namespace[copykey].includes("Results for")) {
         continue;
       }
 
       if (newitem !== undefined && newitem !== null) {
-        newitem = newitem[copy.namespace[key]];
-        if (!isNaN(copy.namespace[key])) {
+        newitem = newitem[copy.namespace[copykey]];
+        if (!isNaN(copy.namespace[copykey])) {
           to_be_copied += ".#";
         } else {
-          to_be_copied += "." + copy.namespace[key];
+          to_be_copied += "." + copy.namespace[copykey];
         }
       }
     }
@@ -12943,7 +12997,7 @@ const AngularWorkflow = (defaultprops) => {
         </Tooltip>
         : null}
       {executionModalView === 0 ? (
-        <div style={{ padding: isMobile ? "0px 0px 0px 10px" : 25 }}>
+        <div style={{ padding: isMobile ? "0px 0px 0px 10px" : 25, zIndex: 12502, }}>
           <Breadcrumbs
             aria-label="breadcrumb"
             separator="›"
@@ -12980,8 +13034,7 @@ const AngularWorkflow = (defaultprops) => {
 
                 const statusColor =
                   data.status === "FINISHED"
-                    ? green
-                    : data.status === "ABORTED" || data.status === "FAILED"
+                    ? green : data.status === "ABORTED" || data.status === "FAILED"
                       ? "red"
                       : yellow;
                 const resultsLength =
@@ -13000,17 +13053,20 @@ const AngularWorkflow = (defaultprops) => {
                     data.workflow.actions !== null
                     ? data.workflow.actions.length
                     : 0;
-                for (let [key,keyval] in data.workflow.triggers.entries()) {
-                  const trigger = data.workflow.triggers[key];
-                  if (
-                    (trigger.app_name === "User Input" &&
-                      trigger.trigger_type === "USERINPUT") ||
-                    (trigger.app_name === "Shuffle Workflow" &&
-                      trigger.trigger_type === "SUBFLOW")
-                  ) {
-                    calculatedResult += 1;
-                  }
-                }
+
+								if (data.workflow.triggers !== undefined && data.workflow.triggers !== null) {
+                	for (let triggerkey in data.workflow.triggers) {
+                	  const trigger = data.workflow.triggers[triggerkey];
+                	  if (
+                	    (trigger.app_name === "User Input" &&
+                	      trigger.trigger_type === "USERINPUT") ||
+                	    (trigger.app_name === "Shuffle Workflow" &&
+                	      trigger.trigger_type === "SUBFLOW")
+                	  ) {
+                	    calculatedResult += 1;
+                	  }
+                	}
+								}
 
                 return (
                   <Zoom key={index} in={true} style={{ transitionDelay: `${executionDelay}ms` }}>
@@ -13041,6 +13097,7 @@ const AngularWorkflow = (defaultprops) => {
                               setExecutionRequestStarted(false);
                             }
 
+
                             // Ensuring we have the latest version of the result.
                             // Especially important IF the result is > 1 Mb in cloud
                             var checkStarted = false
@@ -13053,21 +13110,23 @@ const AngularWorkflow = (defaultprops) => {
 																setExecutionRunning(true);
 																setExecutionRequestStarted(false);
 															} else {
-															for (let [key,keyval] in data.results.entries()) {
-																if (data.results[key].status !== "SUCCESS") {
-																	continue
-																}
+																if (data.results !== undefined && data.results !== null) {
+																	for (let resultkey in data.results) {
+																		if (data.results[resultkey].status !== "SUCCESS") {
+																			continue
+																		}
 
-                                  if (data.results[key].result.includes("too large")) {
-                                    setExecutionData({});
-                                    checkStarted = true
-                                    start();
-                                    setExecutionRunning(true);
-                                    setExecutionRequestStarted(false);
-                                    break
-                                  }
-                                }
-                              }
+																		if (data.results[resultkey].result.includes("too large")) {
+																			setExecutionData({});
+																			checkStarted = true
+																			start();
+																			setExecutionRunning(true);
+																			setExecutionRequestStarted(false);
+																			break
+																		}
+																	}
+																}
+															}
                             }
 
                             const cur_execution = {
@@ -13079,6 +13138,24 @@ const AngularWorkflow = (defaultprops) => {
 
                             if (!checkStarted) {
                               handleUpdateResults(data, cur_execution);
+
+															console.log("Clearing colors during click for: !", data)
+
+															if (cy !== undefined && cy !== null) {
+																cy.elements().removeClass("success-highlight failure-highlight executing-highlight");
+																for (let actionKey in data.workflow.actions) {
+																	var actionitem = data.workflow.actions[actionKey];
+
+																	handleColoring(actionitem.id, "", actionitem.label)
+																}
+
+    	  												for (let resultKey in data.results) {
+    	  												  var item = data.results[resultKey];
+
+																	handleColoring(item.action.id, item.status, item.action.label)
+        												}
+															}
+
                               setExecutionData(data);
                             }
                           }}
@@ -13153,7 +13230,7 @@ const AngularWorkflow = (defaultprops) => {
               })}
             </div>
           ) : (
-            <div>There are no executions yet</div>
+            <div>There are no executions yet, or they are not loaded.</div>
           )}
         </div>
       ) : (
@@ -13536,10 +13613,12 @@ const AngularWorkflow = (defaultprops) => {
 							if (data.similar_actions !== undefined && data.similar_actions !== null) {
 								var minimumMatch = 85
 								var matching_executions = []
-								for (let [k,kval] in data.similar_actions.entries()){
-									if (data.similar_actions.hasOwnProperty(k)) {
-										if (data.similar_actions[k].similarity > minimumMatch) {
-											matching_executions.push(data.similar_actions[k].execution_id)
+								if (data.similar_actions !== undefined && data.similar_actions !== null) {
+									for (let [k,kval] in Object.entries(data.similar_actions)){
+										if (data.similar_actions.hasOwnProperty(k)) {
+											if (data.similar_actions[k].similarity > minimumMatch) {
+												matching_executions.push(data.similar_actions[k].execution_id)
+											}
 										}
 									}
 								}
@@ -13882,28 +13961,31 @@ const AngularWorkflow = (defaultprops) => {
               }}
               onClick={(e) => {
                 e.preventDefault();
-                for (let [key,keyval] in workflowExecutions.entries()) {
-                  const execution = workflowExecutions[key];
-                  const result = execution.results.find(
-                    (data) =>
-                      data.status === "SUCCESS" &&
-                      data.action.id === selectedResult.action.id
-                  );
 
-                if (result !== undefined) {
-                  const oldstartnode = cy.getElementById(selectedResult.action.id);
-                  if (oldstartnode !== undefined && oldstartnode !== null) {
-                    const foundname = oldstartnode.data("label")
-                    if (foundname !== undefined && foundname !== null) {
-                      result.action.label = foundname
-                    }
-                  }
+								if (workflowExecutions !== null) {
+                	for (let execkey in workflowExecutions) {
+                	  const execution = workflowExecutions[execkey];
+										if (execution.execution_argument.includes("too large")) {
+											continue
+										}
 
-                    setSelectedResult(result);
-                    setUpdate(Math.random());
-                    break;
-                  }
-                }
+                	  const result = execution.results.find((data) => data.status === "SUCCESS" && data.action.id === selectedResult.action.id)
+
+										if (result !== undefined) {
+											const oldstartnode = cy.getElementById(selectedResult.action.id);
+											if (oldstartnode !== undefined && oldstartnode !== null) {
+												const foundname = oldstartnode.data("label")
+												if (foundname !== undefined && foundname !== null) {
+													result.action.label = foundname
+												}
+											}
+
+											setSelectedResult(result);
+											setUpdate(Math.random());
+											break;
+										}
+                	}
+								}
               }}
             >
               <DoneIcon style={{ color: "white" }} />
@@ -13923,8 +14005,8 @@ const AngularWorkflow = (defaultprops) => {
               }}
               onClick={(e) => {
                 e.preventDefault();
-                for (let [key,keyval] in workflowExecutions.entries()) {
-                  const execution = workflowExecutions[key];
+                for (let execkey in workflowExecutions) {
+                  const execution = workflowExecutions[execkey];
                   const result = execution.results.find(
                     (data) =>
                       data.action.id === selectedResult.action.id &&
@@ -13961,13 +14043,21 @@ const AngularWorkflow = (defaultprops) => {
             style={{ zIndex: 5000, position: "absolute", top: 34, right: 98 }}
             onClick={(e) => {
               e.preventDefault();
-              const executionIndex = workflowExecutions.findIndex(
-                (data) => data.execution_id === selectedResult.execution_id
-              );
+              const executionIndex = workflowExecutions.findIndex((data) => data.execution_id === selectedResult.execution_id);
+
               if (executionIndex !== -1) {
                 setExecutionModalOpen(true);
                 setExecutionModalView(1);
-                setExecutionData(workflowExecutions[executionIndex]);
+
+								if (workflowExecutions[executionIndex] !== undefined && workflowExecutions[executionIndex] !== null && workflowExecutions[executionIndex].execution_argument.includes("too large")) {
+									//checkStarted = true 
+									setExecutionData({});
+									start();
+									setExecutionRunning(true);
+									setExecutionRequestStarted(false);
+								} else {
+                	setExecutionData(workflowExecutions[executionIndex]);
+								}
               }
             }}
           >
@@ -14597,14 +14687,14 @@ const AngularWorkflow = (defaultprops) => {
 
     authenticationOption.app.actions = [];
 
-    for (let [key,keyval] in selectedApp.authentication.parameters.entries()) {
+    for (let paramkey in selectedApp.authentication.parameters) {
       if (
         authenticationOption.fields[
-        selectedApp.authentication.parameters[key].name
+        selectedApp.authentication.parameters[paramkey].name
         ] === undefined
       ) {
         authenticationOption.fields[
-          selectedApp.authentication.parameters[key].name
+          selectedApp.authentication.parameters[paramkey].name
         ] = "";
       }
     }
@@ -14616,31 +14706,31 @@ const AngularWorkflow = (defaultprops) => {
 
       // Automatically mapping fields that already exist (predefined).
       // Warning if fields are NOT filled
-      for (let [key,keyval] in selectedApp.authentication.parameters.entries()) {
+      for (let paramkey in selectedApp.authentication.parameters) {
         if (
           authenticationOption.fields[
-            selectedApp.authentication.parameters[key].name
+            selectedApp.authentication.parameters[paramkey].name
           ].length === 0
         ) {
           if (
-            selectedApp.authentication.parameters[key].value !== undefined &&
-            selectedApp.authentication.parameters[key].value !== null &&
-            selectedApp.authentication.parameters[key].value.length > 0
+            selectedApp.authentication.parameters[paramkey].value !== undefined &&
+            selectedApp.authentication.parameters[paramkey].value !== null &&
+            selectedApp.authentication.parameters[paramkey].value.length > 0
           ) {
             authenticationOption.fields[
-              selectedApp.authentication.parameters[key].name
-            ] = selectedApp.authentication.parameters[key].value;
+              selectedApp.authentication.parameters[paramkey].name
+            ] = selectedApp.authentication.parameters[paramkey].value;
           } else {
             if (
-              selectedApp.authentication.parameters[key].schema.type === "bool"
+              selectedApp.authentication.parameters[paramkey].schema.type === "bool"
             ) {
               authenticationOption.fields[
-                selectedApp.authentication.parameters[key].name
+                selectedApp.authentication.parameters[paramkey].name
               ] = "false";
             } else {
               alert.info(
                 "Field " +
-                selectedApp.authentication.parameters[key].name +
+                selectedApp.authentication.parameters[paramkey].name +
                 " can't be empty"
               );
               return;
@@ -14665,11 +14755,12 @@ const AngularWorkflow = (defaultprops) => {
 
       var newAuthOption = JSON.parse(JSON.stringify(authenticationOption));
       var newFields = [];
-      for (let [key,keyval] in newAuthOption.fields.entries()) {
-        const value = newAuthOption.fields[key];
+			console.log("Fields: ", newAuthOption.fields)
+      for (let authkey in newAuthOption.fields) {
+        const value = newAuthOption.fields[authkey];
         newFields.push({
-          key: key,
-          value: value,
+          "key": authkey,
+          "value": value,
         });
       }
 

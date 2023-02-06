@@ -5162,7 +5162,7 @@ const Admin = (props) => {
             index={6}
             value={6}
             label=<span>
-              <BusinessIcon style={iconStyle} /> Organizations
+              <BusinessIcon style={iconStyle} /> Tenants
             </span>
           />
           {/*window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null*/}
