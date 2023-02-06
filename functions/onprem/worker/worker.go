@@ -252,7 +252,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	}
 
 	cacheData := []byte("1")
-	err = shuffle.SetCache(ctx, newExecId, cacheData)
+	err = shuffle.SetCache(ctx, newExecId, cacheData, 30)
 	if err != nil {
 		log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
 	} else {
@@ -1614,6 +1614,7 @@ func handleDefaultExecution(client *http.Client, req *http.Request, workflowExec
 		}
 
 		log.Printf("[INFO] Status: %s, Results: %d, actions: %d", workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
+
 		if workflowExecution.Status != "EXECUTING" {
 			log.Printf("[WARNING] Exiting as worker execution has status %s!", workflowExecution.Status)
 			log.Printf("[DEBUG] Shutting down (21)")

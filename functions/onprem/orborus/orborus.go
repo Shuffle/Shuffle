@@ -7,7 +7,7 @@ package main
 // FIXME:
 // 2022/01/12 17:13:36 [WARNING] Swarm init: Error response from daemon: manager stopped: failed to listen on remote API address: listen tcp: address tcp/2377%!(EXTRA string=172.23.0.2): unknown port
 
-// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
+// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/shuffle/shuffle-worker:nightly
 
 //  Potential issues:
 // Default network could be same as on the host
@@ -60,9 +60,9 @@ var appSdkVersion = os.Getenv("SHUFFLE_APP_SDK_VERSION")
 var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 
-// var baseimagename = "docker.pkg.github.com/frikky/shuffle"
+// var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
-// var baseimagename = "frikky/shuffle"
+// var baseimagename = "shuffle/shuffle"
 var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
 var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
@@ -82,6 +82,8 @@ var timezone = os.Getenv("TZ")
 var containerName = os.Getenv("ORBORUS_CONTAINER_NAME")
 var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
+var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
+
 var executionIds = []string{}
 
 var dockercli *dockerclient.Client
@@ -207,7 +209,7 @@ func deployServiceWorkers(image string) {
 		ctx := context.Background()
 		// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
 
-		// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
+		// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/shuffle/shuffle-worker:nightly
 		networkName := "shuffle_swarm_executions"
 		if len(swarmNetworkName) > 0 {
 			networkName = swarmNetworkName
@@ -591,7 +593,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%s", err), "Conflict. The container name ") {
 			identifier = fmt.Sprintf("%s-%s", identifier, parsedUuid)
-			log.Printf("[INFO] 2 - Identifier: %s", identifier)
+			//log.Printf("[INFO] 2 - Identifier: %s", identifier)
 			cont, err = dockercli.ContainerCreate(
 				context.Background(),
 				config,
@@ -714,6 +716,7 @@ func initializeImages() {
 		baseimageregistry = "ghcr.io"
 		log.Printf("[DEBUG] Setting baseimageregistry")
 	}
+
 	if baseimagename == "" {
 		baseimagename = "shuffle/shuffle" // Dockerhub
 		baseimagename = "shuffle"         // Github
@@ -877,6 +880,15 @@ func main() {
 		timezone = "Europe/Amsterdam"
 	}
 
+	if len(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME")) > 0 {
+		log.Printf("[INFO] Trying to set Orborus sleep time between polls to %s", os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
+
+		tmpInt, err := strconv.Atoi(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
+		if err == nil {
+			sleepTime = tmpInt
+		}
+	}
+
 	log.Printf("[INFO] Running with timezone %s", timezone)
 
 	workerTimeout := 600
@@ -996,6 +1008,11 @@ func main() {
 		req.Header.Add("Org", org)
 	}
 
+	if len(orborusLabel) > 0 {
+		log.Printf("[DEBUG] Sending with Label %s", orborusLabel)
+		req.Header.Add("X-Orborus-Label", orborusLabel)
+	}
+
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
 	for {
@@ -1015,22 +1032,9 @@ func main() {
 			continue
 		}
 
-		// FIXME - add check for StatusCode
-		if newresp.StatusCode != 200 {
-			if hasStarted {
-				log.Printf("[WARNING] Bad statuscode from backend: %d", newresp.StatusCode)
-			}
-		} else {
-			if !hasStarted {
-				log.Printf("[DEBUG] Starting iteration. Got statuscode %d from backend on first request", newresp.StatusCode)
-			}
-
-			hasStarted = true
-		}
-
 		body, err := ioutil.ReadAll(newresp.Body)
 		if err != nil {
-			log.Printf("[ERROR] Failed reading body: %s", err)
+			log.Printf("[ERROR] Failed reading body from Shuffle: %s", err)
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
 				go zombiecheck(ctx, workerTimeout)
@@ -1038,6 +1042,17 @@ func main() {
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
+		}
+
+		// FIXME - add check for StatusCode
+		if newresp.StatusCode != 200 {
+			log.Printf("[ERROR] Backend configuration missing (%d): %s", newresp.StatusCode, string(body))
+		} else {
+			if !hasStarted {
+				log.Printf("[DEBUG] Starting iteration. Got statuscode %d from backend on first request", newresp.StatusCode)
+			}
+
+			hasStarted = true
 		}
 
 		var executionRequests shuffle.ExecutionRequestWrapper
@@ -1093,11 +1108,11 @@ func main() {
 		var toBeRemoved shuffle.ExecutionRequestWrapper
 		for _, execution := range executionRequests.Data {
 			if len(execution.ExecutionArgument) > 0 {
-				log.Printf("[INFO] Argument: %#v", execution.ExecutionArgument)
+				log.Printf("[INFO] Argument: %s", execution.ExecutionArgument)
 			}
 
 			if execution.Type == "schedule" {
-				log.Printf("[INFO] SOMETHING ELSE :O: %s", execution.Type)
+				log.Printf("[INFO] Schedule type! Weird deployment. Type: %s", execution.Type)
 				continue
 			}
 
@@ -1105,23 +1120,10 @@ func main() {
 				log.Printf("[INFO] Executionstatus issue: ", execution.Status)
 			}
 
-			/*
-				found := false
-				for _, executionId := range executionIds {
-					if execution.ExecutionId == executionId {
-						found = true
-						break
-					}
-				}
-
-				// Doesn't work because of USER INPUT
-				if found {
-					log.Printf("[INFO] Skipping duplicate %s", execution.ExecutionId)
-					continue
-				} else {
-					//log.Printf("[INFO] Adding to be ran %s", execution.ExecutionId)
-				}
-			*/
+			if shuffle.ArrayContains(executionIds, execution.ExecutionId) {
+				log.Printf("[INFO] Execution already handled: %s", execution.ExecutionId)
+				continue
+			}
 
 			// Now, how do I execute this one?
 			// FIXME - if error, check the status of the running one. If it's bad, send data back.
@@ -1189,6 +1191,18 @@ func main() {
 
 			result.Header.Add("Content-Type", "application/json")
 			result.Header.Add("Org-Id", environment)
+
+			if len(auth) > 0 {
+				result.Header.Add("Authorization", auth)
+			}
+
+			if len(org) > 0 {
+				result.Header.Add("Org", org)
+			}
+
+			if len(orborusLabel) > 0 {
+				result.Header.Add("X-Orborus-Label", orborusLabel)
+			}
 
 			resultResp, err := client.Do(result)
 			if err != nil {

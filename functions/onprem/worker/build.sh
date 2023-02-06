@@ -1,5 +1,5 @@
 NAME=shuffle-worker
-VERSION=1.1.0
+VERSION=1.1.1
 
 echo "Running docker build with $NAME:$VERSION"
 #CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker.bin .
@@ -13,3 +13,6 @@ docker build . -t frikky/shuffle:$NAME -t frikky/shuffle:$NAME_$VERSION -t docke
 #docker tag frikky/shuffle:$NAME ghcr.io/frikky/shuffle-worker:0.8.52
 docker push ghcr.io/frikky/$NAME:$VERSION
 docker push ghcr.io/frikky/$NAME:nightly
+
+docker push ghcr.io/shuffle/$NAME:$VERSION
+docker push ghcr.io/shuffle/$NAME:nightly

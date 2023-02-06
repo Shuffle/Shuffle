@@ -1096,7 +1096,8 @@ class AppBase:
 
         get_path = "/api/v1/files/namespaces/%s?execution_id=%s&ids=true" % (category, self.full_execution["execution_id"])
         headers = {
-            "Authorization": "Bearer %s" % self.authorization
+            "Authorization": "Bearer %s" % self.authorization,
+            "User-Agent": "Shuffle 1.1.0",
         }
 
         ret = requests.get("%s%s" % (self.url, get_path), headers=headers)
@@ -1121,7 +1122,8 @@ class AppBase:
 
         get_path = "/api/v1/files/namespaces/%s?execution_id=%s" % (namespace, self.full_execution["execution_id"])
         headers = {
-            "Authorization": "Bearer %s" % self.authorization
+            "Authorization": "Bearer %s" % self.authorization,
+            "User-Agent": "Shuffle 1.1.0",
         }
 
         ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
@@ -1183,7 +1185,8 @@ class AppBase:
             get_path = "/api/v1/files/%s?execution_id=%s" % (item, full_execution["execution_id"])
             headers = {
                 "Content-Type": "application/json",     
-                "Authorization": "Bearer %s" % self.authorization
+                "Authorization": "Bearer %s" % self.authorization,
+                "User-Agent": "Shuffle 1.1.0",
             }
 
             ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
@@ -1285,7 +1288,8 @@ class AppBase:
         org_id = full_execution["workflow"]["execution_org"]["id"]
         headers = {
             "Content-Type": "application/json",     
-            "Authorization": "Bearer %s" % self.authorization
+            "Authorization": "Bearer %s" % self.authorization,
+            "User-Agent": "Shuffle 1.1.0",
         }
 
         if not isinstance(infiles, list):
@@ -1331,6 +1335,7 @@ class AppBase:
 
             new_headers = {
                 "Authorization": f"Bearer {self.authorization}",
+                "User-Agent": "Shuffle 1.1.0",
             }
 
             upload_path = "/api/v1/files/%s/upload?execution_id=%s" % (cur_id, full_execution["execution_id"])
@@ -1377,7 +1382,8 @@ class AppBase:
 
         headers = {
             "Content-Type": "application/json",     
-            "Authorization": f"Bearer {self.authorization}" 
+            "Authorization": f"Bearer {self.authorization}",
+            "User-Agent": "Shuffle 1.1.0",
         }
 
         if len(self.action) == 0:
@@ -1491,6 +1497,13 @@ class AppBase:
 
 
         self.full_execution = fullexecution
+
+        #try:
+        #    if "backend_url" in self.full_execution:
+        #        self.url = self.full_execution["backend_url"]
+        #        self.base_url = self.full_execution["backend_url"]
+        #except KeyError:
+        #    pass
 
         try:
             if replace_params == True:

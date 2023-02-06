@@ -4302,7 +4302,9 @@ func runInitEs(ctx context.Context) {
 
 		url := os.Getenv("SHUFFLE_APP_DOWNLOAD_LOCATION")
 		if len(url) == 0 {
-			url = "https://github.com/frikky/shuffle-apps"
+			log.Printf("Skipping download since no URL is set")
+			//url = "https://github.com/frikky/shuffle-apps"
+			return
 		}
 
 		username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
