@@ -2297,7 +2297,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		if err == nil {
 			for _, branch := range workflow.Branches {
 				if branch.SourceID == hook.Id {
-					log.Printf("[INFO] Found ID %s for hook", hook.Id)
+					log.Printf("[DEBUG] Found ID %s for hook", hook.Id)
 					if branch.DestinationID != hook.Start {
 						newBody.Start = branch.DestinationID
 						break
@@ -2309,51 +2309,69 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	b, err := json.Marshal(newBody)
 	if err != nil {
-		log.Printf("Failed newBody marshaling: %s", err)
-		resp.WriteHeader(401)
+		log.Printf("[ERROR] Failed newBody marshaling for webhook: %s", err)
+		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
+	// Should wrap the response input Body as well?
 	for _, item := range hook.Workflows {
-		//log.Printf("Running webhook for workflow %s with startnode %s", item, hook.Start)
+		log.Printf("[INFO] Running webhook for workflow %s with startnode %s", item, hook.Start)
+
+		// This ID is empty to force it to get the webhook within the execution
 		workflow := shuffle.Workflow{
 			ID: "",
 		}
 
-		//parsedBody := string(body)
-		//parsedBody = strings.Replace(parsedBody, "\"", "\\\"", -1)
-		//if len(parsedBody) > 0 {
-		//	if string(parsedBody[0]) == `"` && string(parsedBody[len(parsedBody)-1]) == "\"" {
-		//		parsedBody = parsedBody[1 : len(parsedBody)-1]
-		//	}
-		//}
-
-		//bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_source": "webhook", "execution_argument": "%s"}`, hook.Start, string(parsedBody))
-		//if len(hook.Start) == 0 {
-		//	log.Printf("No start node for hook %s - running with workflow default.", hook.Id)
-		//	bodyWrapper = string(parsedBody)
-		//}
+		if len(hook.Start) == 0 {
+			log.Printf("[WARNING] No start node for hook %s - running with workflow default.", hook.Id)
+			//bodyWrapper = string(parsedBody)
+		}
 
 		newRequest := &http.Request{
 			URL:    &url.URL{},
 			Method: "POST",
 			Body:   ioutil.NopCloser(bytes.NewReader(b)),
 		}
-		//start, startok := request.URL.Query()["start"]
 
 		// OrgId: activeOrgs[0].Id,
-		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest, hook.OrgId)
-		if err == nil {
-			/*
-				err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
-				if err != nil {
-					log.Printf("Failed to increase total apps loaded stats: %s", err)
-				}
-			*/
+		workflowExecution, executionResp, err := handleExecution(ctx, item, workflow, newRequest)
 
+		if err == nil {
+			if hook.Version == "v2" {
+				timeout := 15
+				//if hook.VersionTimeout != 0 {
+				//	timeout = hook.VersionTimeout
+				//}
+
+				log.Printf("[DEBUG] Waiting for Webhook response from %s for max %d seconds! Checking every 1 second. Hook ID: %s", workflowExecution.ExecutionId, timeout, hook.Id)
+				// Try every second for 15 seconds
+				for i := 0; i < timeout; i++ {
+					time.Sleep(1 * time.Second)
+
+					newExec, err := shuffle.GetWorkflowExecution(ctx, workflowExecution.ExecutionId)
+					if err != nil {
+						log.Printf("[ERROR] Failed to get workflow execution: %s", err)
+						break
+					}
+
+					if newExec.Status != "EXECUTING" {
+						log.Printf("[INFO] Got response from webhook v2 of length '%d' <- %s", len(newExec.Result), newExec.ExecutionId)
+						resp.WriteHeader(200)
+						resp.Write([]byte(newExec.Result))
+						return
+					}
+				}
+			}
+
+			// Fallback
 			resp.WriteHeader(200)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s"}`, workflowExecution.ExecutionId)))
+			if len(hook.CustomResponse) > 0 {
+				resp.Write([]byte(hook.CustomResponse))
+			} else {
+				resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s"}`, workflowExecution.ExecutionId)))
+			}
 			return
 		}
 
@@ -2408,6 +2426,8 @@ func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 	if !responseData.Success {
 		return errors.New(fmt.Sprintf("Cloud error from Shuffler: %s", responseData.Reason))
 	}
+
+	log.Printf("[INFO] Cloud action executed successfully for '%s'", action.Action)
 
 	return nil
 }

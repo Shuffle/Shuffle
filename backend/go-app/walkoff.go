@@ -1627,7 +1627,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		log.Printf("Action: %#v", action)
+		log.Printf("Starting Cloud schedule Action: %#v", action)
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
 			log.Printf("Failed cloud action START schedule: %s", err)

@@ -2669,19 +2669,6 @@ class AppBase:
                     return True
 
                 return False
-                #if tmp == "[]":
-                #    tmp = []
-
-                #if type(tmp) == list and len(tmp) == 0 and not flip:
-                #    new_list.append(item)
-                #elif type(tmp) == list and len(tmp) > 0 and flip:
-                #    new_list.append(item)
-                #elif type(tmp) == str and not tmp and not flip:
-                #    new_list.append(item)
-                #elif type(tmp) == str and tmp and flip:
-                #    new_list.append(item)
-                #else:
-                #    failed_list.append(item)
 
             elif check.lower() == "contains_any_of":
                 newvalue = [destinationvalue.lower()]
@@ -2913,7 +2900,8 @@ class AppBase:
                 self.action_result["status"] = "FAILURE" 
                 self.action_result["result"] = json.dumps({
                     "success": False,
-                    "reason": f"Function {actionname} doesn't exist.",
+                    "reason": f"Function {actionname} doesn't exist, or the App is out of date.",
+                    "details": "If this persists, please restart delete the Docker image locally, restart your Orborus instance and then try again to force-download the latest version. Contact support@shuffler.io with this data if the issue persists.",
                 })
             elif callable(func):
                 try:
