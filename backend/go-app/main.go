@@ -2336,7 +2336,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		// OrgId: activeOrgs[0].Id,
-		workflowExecution, executionResp, err := handleExecution(ctx, item, workflow, newRequest)
+		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest, hook.OrgId)
 
 		if err == nil {
 			if hook.Version == "v2" {
@@ -2378,6 +2378,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
 	}
+
 }
 
 func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {

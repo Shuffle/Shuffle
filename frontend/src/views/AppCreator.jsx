@@ -222,6 +222,14 @@ const parseCurl = (s) => {
   return out;
 };
 
+export const base64_decode = (str) => {
+	return decodeURIComponent(
+		atob(str).split("").map(function (c) {
+			return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+		}).join("")
+	);
+};
+
 // Should be different if logged in :|
 const AppCreator = (defaultprops) => {
   const { globalUrl, isLoaded } = defaultprops;
@@ -527,16 +535,7 @@ const AppCreator = (defaultprops) => {
     return newitem;
   };
 
-  const base64_decode = (str) => {
-    return decodeURIComponent(
-      atob(str)
-        .split("")
-        .map(function (c) {
-          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-        })
-        .join("")
-    );
-  };
+
 
   // Sets the data up as it should be at later points
   // This is the data FROM the database, not what's being saved
@@ -1889,7 +1888,9 @@ const AppCreator = (defaultprops) => {
             queryitem.name.toLowerCase() == "ssl_verify" ||
             queryitem.name.toLowerCase() == "queries" ||
             queryitem.name.toLowerCase() == "headers" ||
-            queryitem.name.toLowerCase() == "access_token" ||
+            queryitem.name.toLowerCase() == "access_token") {
+						/*
+
             queryitem.name.includes("[") ||
             queryitem.name.includes("]") ||
             queryitem.name.includes("{") ||
@@ -1910,10 +1911,11 @@ const AppCreator = (defaultprops) => {
             queryitem.name.includes('"') ||
             queryitem.name.includes("'")
           ) {
-            console.log(
-              item.name + " error: uses a bad query - not adding: ",
-              queryitem.name
-            )
+							*/
+            console.log(item.name + " error: uses a bad query - not adding: ",queryitem.name)
+            
+
+						// Find a replacement for the invalid ones first.
 
             continue;
           }
@@ -3922,11 +3924,15 @@ const AppCreator = (defaultprops) => {
 							//console.log("Actions: ", actions)
 
 							if (baseUrl.length === 0 && parsedurl.includes("http")) {
-								const newurl = new URL(encodeURI(parsedurl))
-								newurl.searchParams.delete(parameterName)
-								console.log("New url: ", newurl)
-								parsedurl = newurl.pathname
-								setBaseUrl(newurl.origin)
+								try {
+									const newurl = new URL(encodeURI(parsedurl))
+									newurl.searchParams.delete(parameterName)
+									console.log("New url: ", newurl)
+									parsedurl = newurl.pathname
+									setBaseUrl(newurl.origin)
+								} catch (e) {
+									console.log("Failed to parse URL: ", e)
+								}
 							}
 
               if (event.target.value !== parsedurl) {
