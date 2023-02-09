@@ -19,6 +19,7 @@ cd Shuffle
 ```bash
 mkdir shuffle-database
 sudo chown -R 1000:1000 shuffle-database
+# IF you get an error using 'chown', add the user first with 'sudo useradd opensearch'
 ```
 
 4. Run docker-compose.
