@@ -222,6 +222,55 @@ const parseCurl = (s) => {
   return out;
 };
 
+export const appCategories = [
+		{
+    	"name": "Communication",
+			"color": "#FFC107",
+			"icon": "communication",
+			"action_labels": ["List Messages", "Send Message",],
+		}, {
+			"name": "SIEM",
+			"color": "#FFC107",
+			"icon": "siem",
+			"action_labels": ["Get alerts", "Search", "Create detection",],
+		}, {
+			"name": "Eradication",
+			"color": "#FFC107",
+			"icon": "eradication",
+			"action_labels": ["List tickets", "Update ticket", "Block hash", "Isolate host"],
+		}, {
+			"name": "Cases",
+			"color": "#FFC107",
+			"icon": "cases",
+			"action_labels": ["List tickets", "Get ticket", "Create ticket", "Update ticket",],
+		}, {
+			"name": "Assets",
+			"color": "#FFC107",
+			"icon": "assets",
+			"action_labels": [],
+		}, {
+			"name": "Intel",
+			"color": "#FFC107",
+			"icon": "intel",
+			"action_labels": [],
+		}, {
+			"name": "IAM",
+			"color": "#FFC107",
+			"icon": "iam",
+			"action_labels": [],
+		}, {
+			"name": "Network",
+			"color": "#FFC107",
+			"icon": "network",
+			"action_labels": ["Block IP",],
+		}, {
+			"name": "Other",
+			"color": "#FFC107",
+			"icon": "other",
+			"action_labels": [],
+		},
+]
+
 export const base64_decode = (str) => {
 	return decodeURIComponent(
 		atob(str).split("").map(function (c) {
@@ -310,81 +359,8 @@ const AppCreator = (defaultprops) => {
 	// From 2023: Example to handle action labels
 	// Goal: Make this dynamically load from the backend
 	// and make categories + labels modifyable.
-	//
 	// Categories are the main categories in the App Framework
-  const [categories, setCategories] = useState([
-		{
-    	"name": "Communication",
-			"color": "#FFC107",
-			"icon": "communication",
-			"action_labels": [],
-		}, {
-			"name": "SIEM",
-			"color": "#FFC107",
-			"icon": "siem",
-			"action_labels": ["Get alerts", "Search", "Create detection",],
-		}, {
-			"name": "Eradication",
-			"color": "#FFC107",
-			"icon": "eradication",
-			"action_labels": ["List tickets", "Update ticket", "Block hash", "Isolate host"],
-		}, {
-			"name": "Cases",
-			"color": "#FFC107",
-			"icon": "cases",
-			"action_labels": ["List tickets", "Get ticket", "Create ticket", "Update ticket",],
-		}, {
-			"name": "Assets",
-			"color": "#FFC107",
-			"icon": "assets",
-			"action_labels": [],
-		}, {
-			"name": "Intel",
-			"color": "#FFC107",
-			"icon": "intel",
-			"action_labels": [],
-		}, {
-			"name": "IAM",
-			"color": "#FFC107",
-			"icon": "iam",
-			"action_labels": [],
-		}, {
-			"name": "Network",
-			"color": "#FFC107",
-			"icon": "network",
-			"action_labels": ["Block IP",],
-		}, {
-			"name": "Other",
-			"color": "#FFC107",
-			"icon": "other",
-			"action_labels": [],
-		}
-	]);
-
-  //const [actions, setActions] = useState([{
-  //	"name": "Get workflows",
-  //	"description": "Get workflows",
-  //	"url": "/workflows",
-  //	"headers": "",
-  //	"queries": [],
-  //	"paths": [],
-  //	"body": "",
-  //	"errors": ["wutface", "WOAH"],
-  //	"method": actionNonBodyRequest[0],
-  //}, {
-  //	"name": "Get workflow",
-  //	"description": "Get workflow",
-  //	"url": "/workflows/{id}",
-  //	"headers": "",
-  //	"queries": [],
-  //	"paths": ["id"],
-  //	"body": "",
-  //	"errors": ["wutface", "WOAH"],
-  //	"method": actionNonBodyRequest[0],
-  //},
-  //
-  //])
-
+  const [categories, setCategories] = useState(appCategories)
   const [currentActionMethod, setCurrentActionMethod] = useState(
     actionNonBodyRequest[0]
   )

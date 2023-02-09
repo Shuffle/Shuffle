@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ReactGA from 'react-ga';
+import ReactGA from 'react-ga4';
 import theme from '../theme';
 import PaperComponent from "../components/PaperComponent.jsx"
 import UsecaseSearch, { usecaseTypes } from "../components/UsecaseSearch.jsx"

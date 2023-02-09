@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-import ReactGA from 'react-ga';
 import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
 
@@ -159,25 +158,10 @@ const WorkflowSearch = props => {
 					return (
 						<Paper key={index} elevation={0} style={paperStyle} onMouseOver={() => {
 							setMouseHoverIndex(index)
-							/*
-							ReactGA.event({
-								category: "app_grid_view",
-								action: `search_bar_click`,
-								label: "",
-							})
-							*/
 						}} onMouseOut={() => {
 							setMouseHoverIndex(-1)
 						}} onClick={() => {
 							setNewSelectedApp(data)
-							//if (data.objectID !== data.objectID) {
-							//}
-
-							//ReactGA.event({
-							//	category: "app_search",
-							//	action: `app_${parsedname}_${data.id}_click`,
-							//	label: "",
-							//})
 						}}>
 							<div style={{display: "flex"}}>
 								{/*<img alt={data.name} src={data.image_url} style={{width: "100%", maxWidth: 30, minWidth: 30, minHeight: 30, maxHeight: 30, display: "block", }} />*/}

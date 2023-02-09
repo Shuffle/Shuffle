@@ -2,7 +2,7 @@ import React, {useState } from 'react';
 import {isMobile} from "react-device-detect";
 import AppFramework, { usecases } from "../components/AppFramework.jsx";
 import {Link} from 'react-router-dom';
-import ReactGA from 'react-ga';
+import ReactGA from 'react-ga4';
 
 import { Button, LinearProgress, Typography } from '@material-ui/core';
 

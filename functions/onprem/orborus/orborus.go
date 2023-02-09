@@ -65,7 +65,8 @@ var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 // var baseimagename = "shuffle/shuffle"
 var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
-var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
+
+//var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
 // Used for cloud with auth
 var auth = os.Getenv("AUTH")

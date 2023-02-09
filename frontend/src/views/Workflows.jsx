@@ -551,7 +551,6 @@ const Workflows = (props) => {
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
   const [publishModalOpen, setPublishModalOpen] = React.useState(false);
   const [editingWorkflow, setEditingWorkflow] = React.useState({});
-  const [importLoading, setImportLoading] = React.useState(false);
   const [isDropzone, setIsDropzone] = React.useState(false);
   const [view, setView] = React.useState("grid");
   const [filters, setFilters] = React.useState([]);
@@ -585,10 +584,10 @@ const Workflows = (props) => {
 			}
 			setGettingStartedItems(activeFiltered)
 
-			const doneFiltered = activeFiltered.filter((item) => item.done === true)
-			if (doneFiltered.length > 0) { 
-				console.log("DONE: ", doneFiltered)
-			}
+			//const doneFiltered = activeFiltered.filter((item) => item.done === true)
+			//if (doneFiltered.length > 0) { 
+			//	console.log("DONE: ", doneFiltered)
+			//}
 
       const sidebar = localStorage.getItem(sidebarKey);
 			if (sidebar === null || sidebar === undefined) {
@@ -597,13 +596,10 @@ const Workflows = (props) => {
 				localStorage.setItem(sidebarKey, "open");
   			setDrawerOpen(true)
       } else {
-				console.log("Got sidebar: ", sidebar)
-
 				if (sidebar === "open") {
 					console.log("OPEN the thingy!")
   				setDrawerOpen(true)
 				} else {
-					console.log("Close the thingy!")
   				setDrawerOpen(false)
 				}
 			}
@@ -1229,7 +1225,6 @@ const Workflows = (props) => {
     display: "flex",
     flexWrap: "wrap",
     alignContent: "space-between",
-    marginTop: 5,
   };
 
   const paperAppStyle = {
@@ -2212,7 +2207,7 @@ const Workflows = (props) => {
           setTimeout(() => {
             getAvailableWorkflows();
           }, 2500);
-          setImportLoading(false);
+					setSubmitLoading(false)
           setModalOpen(false);
         } else {
           //alert.info("Successfully changed basic info for workflow");
@@ -2223,7 +2218,7 @@ const Workflows = (props) => {
       })
       .catch((error) => {
         alert.error(error.toString());
-        setImportLoading(false);
+				setSubmitLoading(false)
         setModalOpen(false);
         setSubmitLoading(false);
       });
@@ -2231,8 +2226,8 @@ const Workflows = (props) => {
 
   const importFiles = (event) => {
     console.log("Importing!");
+		setSubmitLoading(true)
 
-    setImportLoading(true);
     if (event.target.files.length > 0) {
     	console.log("Files: !", event.target.files.length);
       for (var key in event.target.files) {
@@ -2240,7 +2235,7 @@ const Workflows = (props) => {
         if (file.type !== "application/json") {
           if (file.type !== undefined) {
             alert.error("File has to contain valid json");
-    				setImportLoading(false);
+						setSubmitLoading(false)
           }
 
           continue;
@@ -2254,7 +2249,7 @@ const Workflows = (props) => {
             data = JSON.parse(reader.result);
           } catch (e) {
             alert.error("Invalid JSON: " + e);
-            setImportLoading(false);
+						setSubmitLoading(false)
             return;
           }
     
@@ -2981,20 +2976,15 @@ const Workflows = (props) => {
         </Tooltip>
       )}
       <Tooltip color="primary" title={"Import workflows"} placement="top">
-        {importLoading ? (
-          <Button color="secondary" style={{}} variant="text" onClick={() => {}}>
-            <CircularProgress style={{ maxHeight: 15, maxWidth: 15 }} />
-          </Button>
-        ) : (
-          <Button
-            color="secondary"
-            style={{}}
-            variant="text"
-            onClick={() => upload.click()}
-          >
-            <PublishIcon />
-          </Button>
-        )}
+				<Button
+					color="secondary"
+					style={{}}
+					variant="text"
+					onClick={() => upload.click()}
+				>
+					
+					{submitLoading ? <CircularProgress color="secondary" /> : <PublishIcon />}
+				</Button>
       </Tooltip>
       <input
         hidden
@@ -3290,7 +3280,7 @@ const Workflows = (props) => {
 					}}
 					*/}
   		
-					<div style={{width: "100%", minHeight: isMobile ? 0 : 71, maxHeight: isMobile ? 0 : 71, }}>
+					<div style={{width: "100%", minHeight: isMobile ? 0 : 51, maxHeight: isMobile ? 0 : 51, marginTop: 10, }}>
 						{!isMobile && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
 							<div style={{ display: "flex", }}>
 								{usecases.map((usecase, index) => {
@@ -3320,12 +3310,12 @@ const Workflows = (props) => {
 
 											}}
 										>
-											<a href={`/usecases?selected=${usecase.name}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", }}>
-												<Typography variant="body1" color="textPrimary">
+											<a href={`/usecases?selected=${usecase.name}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", display: "flex", }}>
+												<Typography variant="body1" color="textPrimary" style={{flex: 4, }}>
 													{usecase.name}
 												</Typography>
-												<Typography variant="body2" color="textSecondary">
-													In use: {usecase.matches.length}/{usecase.list.length}
+												<Typography variant="body2" color="textSecondary" style={{flex: 1, marginTop: 5,}}>
+													{usecase.matches.length}/{usecase.list.length}
 												</Typography>
 											</a>
 										</Paper>
@@ -3334,7 +3324,8 @@ const Workflows = (props) => {
 							</div>
 						: null}
 					</div>
-          <div style={{ marginTop: 15 }} />
+
+          <div style={{ marginTop: 10, marginBottom: 10, }} />
           {!isMobile &&
 					actionImageList !== undefined &&
           actionImageList !== null &&
@@ -3435,44 +3426,48 @@ const Workflows = (props) => {
             })}
             </div>
           ) : null}
-          {view === "grid" ? (
-            <Grid container spacing={4} style={paperAppContainer}>
-							<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-              	<NewWorkflowPaper />
-							</Zoom>
 
-              {filteredWorkflows.map((data, index) => {
-								// Shouldn't be a part of this list
-								if (data.public === true) {
-									return null
-								}
 
-  							if (firstLoad) {
-									workflowDelay += 75
-								} else {
+					<div style={{marginTop: 15, }}>
+						{view === "grid" ? (
+							<Grid container spacing={4} style={paperAppContainer}>
+								<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
+									<NewWorkflowPaper />
+								</Zoom>
+
+								{filteredWorkflows.map((data, index) => {
+									// Shouldn't be a part of this list
+									if (data.public === true) {
+										return null
+									}
+
+									if (firstLoad) {
+										workflowDelay += 75
+									} else {
+										return (
+											<Grid key={index} item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
+												<WorkflowPaper key={index} data={data} />
+											</Grid>
+										)
+									}
+
 									return (
-      							<Grid key={index} item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
-											<WorkflowPaper key={index} data={data} />
-      							</Grid>
+										<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
+											<Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
+												<WorkflowPaper key={index} data={data} />
+											</Grid>
+										</Zoom>
 									)
-								}
+								})}
+							</Grid>
+						) : (
+							<WorkflowListView />
+						)}
+					</div>
 
-                return (
-									<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-      							<Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
-											<WorkflowPaper key={index} data={data} />
-      							</Grid>
-									</Zoom>
-								)
-              })}
-            </Grid>
-          ) : (
-            <WorkflowListView />
-          )}
-
-          <div style={{ marginBottom: 100 }} />
-        </div>
-      </div>
+					<div style={{ marginBottom: 100 }} />
+				</div>
+			</div>
     );
   };
 

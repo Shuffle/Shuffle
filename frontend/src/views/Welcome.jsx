@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ReactGA from 'react-ga';
+import ReactGA from 'react-ga4';
 import WelcomeForm2 from "../components/WelcomeForm2.jsx";
 import Stepper from "@material-ui/core/Stepper";
 import Step from "@material-ui/core/Step";

@@ -415,7 +415,7 @@ const AngularWorkflow = (defaultprops) => {
   // Set it from 2500 to 6000 to reduce overall load
   const { start, stop } = useInterval({
     duration: 3000,
-    startImmediate: true,
+    startImmediate: false,
     callback: () => {
       fetchUpdates();
     },
@@ -981,6 +981,9 @@ const AngularWorkflow = (defaultprops) => {
   // Controls the colors and direction of execution results.
   // Style is in defaultCytoscapeStyle.js
   const handleUpdateResults = (responseJson, executionRequest) => {
+		if (responseJson === undefined || responseJson === null || responseJson.success === false) {
+			return
+		}
     //console.log(responseJson)
     // Loop nodes and find results
     // Update on every interval? idk
@@ -2952,10 +2955,19 @@ const AngularWorkflow = (defaultprops) => {
           getSettings();
         } else if (data.app_name === "Webhook") {
           if (workflow.triggers[trigger_index].parameters !== undefined && workflow.triggers[trigger_index].parameters !== null && workflow.triggers[trigger_index].parameters.length > 0) {
+						console.log("Can set params here!")
             workflow.triggers[trigger_index].parameters[0] = {
               name: "url",
               value: referenceUrl + "webhook_" + workflow.triggers[trigger_index].id,
             };
+
+						if (workflow.triggers[trigger_index].parameters.length < 5) {
+							console.log("Adding to webhook params!")
+							workflow.triggers[trigger_index].parameters.push({
+								name: "await_response",
+								value: "v1,"
+							})
+						}
           }
         }
 
@@ -10538,7 +10550,7 @@ const AngularWorkflow = (defaultprops) => {
                   }}
                   fullWidth
                   multiline
-                  rows="4"
+                  rows="2"
                   defaultValue={trigger_header_auth}
                   color="primary"
                   disabled={selectedTrigger.status === "running"}
@@ -10557,7 +10569,44 @@ const AngularWorkflow = (defaultprops) => {
                   }}
                 />
               </div>
-            </div>
+							{isCloud && workflow.triggers[selectedTriggerIndex].parameters.length > 4 ? 
+								<FormGroup
+									style={{ paddingLeft: 10, backgroundColor: inputColor, marginBottom: 50,  }}
+									row
+								>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={workflow.triggers[selectedTriggerIndex].parameters[4].value.includes("v2")}
+											disabled={selectedTrigger.status === "running"}
+											onChange={(e) => {
+												if (selectedTrigger.parameters === null) {
+													selectedTrigger.parameters = [];
+												}
+
+												// Sets the webhook to run as version 2.. kinda
+												var value = "v2"
+												if (workflow.triggers[selectedTriggerIndex].parameters[4].value.includes("v2")) {
+													value = "v1"
+												}
+
+												workflow.triggers[selectedTriggerIndex].parameters[4] = {
+													name: "await_response",
+													value: value
+												}
+
+												setWorkflow(workflow)
+												setUpdate(Math.random())
+											}}
+											color="primary"
+											value="await_response"
+										/>
+									}
+									label={<div style={{ color: "white" }}>Wait For Response</div>}
+								/>
+							</FormGroup>
+						: null}
+						</div>
           </div>
         </div>
       );
@@ -10707,12 +10756,7 @@ const AngularWorkflow = (defaultprops) => {
     const branch = workflow.branches.find(
       (branch) => branch.source_id === trigger.id
     );
-    if (
-      branch === undefined &&
-      (workflow.start === undefined ||
-        workflow.start === null ||
-        workflow.start.length === 0)
-    ) {
+    if (branch === undefined && (workflow.start === undefined || workflow.start === null || workflow.start.length === 0)) {
       alert.error("No webhook node defined");
     }
 
@@ -10721,12 +10765,18 @@ const AngularWorkflow = (defaultprops) => {
       startNode = branch.destination_id;
     }
 
-    const param = trigger.parameters.find(
-      (param) => param.name === "auth_headers"
-    );
+    const param = trigger.parameters.find((param) => param.name === "auth_headers");
     var auth = "";
     if (param !== undefined && param !== null) {
       auth = param.value;
+    }
+
+
+		// Version: v2 = await response for 30 sec
+    const await_resp = trigger.parameters.find((param) => param.name === "await_response");
+    var version = "";
+    if (await_resp !== undefined && await_resp !== null) {
+      version = await_resp.value;
     }
 
     const customRespParam = trigger.parameters.find(
@@ -10737,7 +10787,6 @@ const AngularWorkflow = (defaultprops) => {
       custom_response = customRespParam.value;
     }
 
-    console.log("TRIG: ", trigger);
     const data = {
       name: hookname,
       type: "webhook",
@@ -10747,7 +10796,11 @@ const AngularWorkflow = (defaultprops) => {
       environment: trigger.environment,
       auth: auth,
       custom_response: custom_response,
+			version: version,
+			version_timeout: 15,
     };
+
+		console.log("Trigger data: ", data)
 
     fetch(globalUrl + "/api/v1/hooks/new", {
       method: "POST",
