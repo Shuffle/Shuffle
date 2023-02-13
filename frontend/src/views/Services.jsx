@@ -1,6 +1,5 @@
 import React, {useState } from 'react';
 
-import ReactGA from 'react-ga';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import {isMobile} from "react-device-detect";
 

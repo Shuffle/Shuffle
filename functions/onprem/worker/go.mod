@@ -2,6 +2,8 @@ module worker
 
 go 1.19
 
+//replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
+
 require (
 	cloud.google.com/go/datastore v1.10.0
 	cloud.google.com/go/storage v1.29.0
@@ -9,7 +11,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.3.51
+	github.com/shuffle/shuffle-shared v0.3.52
 )
 
 require (

@@ -80,8 +80,6 @@ var autoDeploy = map[string]string{
 	"testing:1.0.0":         "frikky/shuffle:testing_1.0.0",
 }
 
-//fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
-
 // New Worker mappings
 var portMappings map[string]int
 var baseport = 33333
@@ -94,7 +92,7 @@ type UserInputSubflow struct {
 
 // removes every container except itself (worker)
 func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
-	log.Printf("[INFO][%s] Shutdown (%s) started with reason %#v. Result amount: %d. ResultsSent: %d, Send result: %#v, Parenent: %#v", workflowExecution.ExecutionId, workflowExecution.Status, reason, len(workflowExecution.Results), requestsSent, handleResultSend, workflowExecution.ExecutionParent)
+	log.Printf("[INFO][%s] Shutdown (%s) started with reason %#v. Result amount: %d. ResultsSent: %d, Send result: %#v, Parent: %#v", workflowExecution.ExecutionId, workflowExecution.Status, reason, len(workflowExecution.Results), requestsSent, handleResultSend, workflowExecution.ExecutionParent)
 	//reason := "Error in execution"
 
 	sleepDuration := 1
@@ -245,9 +243,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 	// Checking as late as possible, just in case.
 	newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
-	_, err := shuffle.GetCache(ctx, newExecId)
+	cache, err := shuffle.GetCache(ctx, newExecId)
 	if err == nil {
-		log.Printf("\n\n[DEBUG] Result for %s already found - returning\n\n", newExecId)
+		cacheData := []byte(cache.([]uint8))
+		log.Printf("\n\n[DEBUG] Result for %s already found - returning. Result: %s\n\n", newExecId, string(cacheData))
 		return nil
 	}
 
@@ -564,447 +563,17 @@ func removeIndex(s []string, i int) []string {
 func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 	ctx := context.Background()
 
+	workflowExecution, relevantActions := shuffle.DecideExecution(ctx, workflowExecution, environment)
 	startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
-	log.Printf("[DEBUG][%s] Getting info for %s. Extra: %d", workflowExecution.ExecutionId, workflowExecution.ExecutionId, extra)
+
 	dockercli, err := dockerclient.NewEnvClient()
 	if err != nil {
 		log.Printf("[ERROR] Unable to create docker client (3): %s", err)
 		return
 	}
 
-	log.Printf("[INFO][%s] Inside execution results with %d / %d results", workflowExecution.ExecutionId, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
-
-	if len(startAction) == 0 {
-		startAction = workflowExecution.Start
-		if len(startAction) == 0 {
-			log.Printf("Didn't find execution start action. Setting it to workflow start action.")
-			startAction = workflowExecution.Workflow.Start
-		}
-	}
-
-	//log.Printf("NEXTACTIONS: %s", nextActions)
-	//if len(nextActions) == 0 {
-	//	nextActions = append(nextActions, startAction)
-	//}
-
-	queueNodes := []string{}
-	if len(workflowExecution.Results) == 0 {
-		nextActions = []string{startAction}
-	} else {
-		// This is to re-check the nodes that exist and whether they should continue
-		appendActions := []string{}
-		for _, item := range workflowExecution.Results {
-
-			// FIXME: Check whether the item should be visited or not
-			// Do the same check as in walkoff.go - are the parents done?
-			// If skipped and both parents are skipped: keep as skipped, otherwise queue
-			if item.Status == "SKIPPED" {
-				isSkipped := true
-
-				for _, branch := range workflowExecution.Workflow.Branches {
-					// 1. Finds branches where the destination is our node
-					// 2. Finds results of those branches, and sees the status
-					// 3. If the status isn't skipped or failure, then it will still run this node
-					if branch.DestinationID == item.Action.ID {
-						for _, subresult := range workflowExecution.Results {
-							if subresult.Action.ID == branch.SourceID {
-								if subresult.Status != "SKIPPED" && subresult.Status != "FAILURE" {
-									//log.Printf("\n\n\nSUBRESULT PARENT STATUS: %s\n\n\n", subresult.Status)
-									isSkipped = false
-
-									break
-								}
-							}
-						}
-					}
-				}
-
-				if isSkipped {
-					//log.Printf("Skipping %s as all parents are done", item.Action.Label)
-					if !arrayContains(visited, item.Action.ID) {
-						//log.Printf("[INFO][%s] Adding visited (1): %s", workflowExecution.ExecutionId, item.Action.Label)
-						visited = append(visited, item.Action.ID)
-					}
-				} else {
-					log.Printf("[INFO][%s] Continuing %s as all parents are NOT done", workflowExecution.ExecutionId, item.Action.Label)
-					appendActions = append(appendActions, item.Action.ID)
-				}
-			} else {
-				if item.Status == "FINISHED" {
-					//log.Printf("[INFO][%s] Adding visited (2): %s", workflowExecution.ExecutionId, item.Action.Label)
-					visited = append(visited, item.Action.ID)
-				}
-			}
-
-			//if len(nextActions) == 0 {
-			//nextActions = append(nextActions, children[item.Action.ID]...)
-			for _, child := range children[item.Action.ID] {
-				if !arrayContains(nextActions, child) && !arrayContains(visited, child) && !arrayContains(visited, child) {
-					nextActions = append(nextActions, child)
-				}
-			}
-
-			if len(appendActions) > 0 {
-				//log.Printf("APPENDED NODES: %#v", appendActions)
-				nextActions = append(nextActions, appendActions...)
-			}
-		}
-	}
-
-	//log.Printf("Nextactions: %s", nextActions)
-	// This is a backup in case something goes wrong in this complex hellhole.
-	// Max default execution time is 5 minutes for now anyway, which should take
-	// care if it gets stuck in a loop.
-	// FIXME: Force killing a worker should result in a notification somewhere
-	if len(nextActions) == 0 {
-		log.Printf("[INFO][%s] No next action. Finished? Result vs shuffle.Actions: %d - %d", workflowExecution.ExecutionId, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
-		exit := true
-		for _, item := range workflowExecution.Results {
-			if item.Status == "EXECUTING" {
-				exit = false
-				break
-			}
-		}
-
-		if len(environments) == 1 {
-			log.Printf("[INFO][%s] Should send results to the backend because environments are %s", workflowExecution.ExecutionId, environments)
-			validateFinished(workflowExecution)
-		}
-
-		if exit && len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions) {
-			log.Printf("[DEBUG][%s] Shutting down (1)", workflowExecution.ExecutionId)
-			shutdown(workflowExecution, "", "", true)
-		}
-
-		// Look for the NEXT missing action
-		notFound := []string{}
-		for _, action := range workflowExecution.Workflow.Actions {
-			found := false
-			for _, result := range workflowExecution.Results {
-				if action.ID == result.Action.ID {
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				notFound = append(notFound, action.ID)
-			}
-		}
-
-		//log.Printf("SOMETHING IS MISSING!: %#v", notFound)
-		for _, item := range notFound {
-			if arrayContains(executed, item) {
-				log.Printf("%s has already executed but no result!", item)
-				return
-			}
-
-			// Visited means it's been touched in any way.
-			outerIndex := -1
-			for index, visit := range visited {
-				if visit == item {
-					outerIndex = index
-					break
-				}
-			}
-
-			if outerIndex >= 0 {
-				log.Printf("Removing index %s from visited")
-				visited = append(visited[:outerIndex], visited[outerIndex+1:]...)
-			}
-
-			fixed := 0
-			for _, parent := range parents[item] {
-				parentResult := getResult(workflowExecution, parent)
-				if parentResult.Status == "FINISHED" || parentResult.Status == "SUCCESS" || parentResult.Status == "SKIPPED" || parentResult.Status == "FAILURE" {
-					fixed += 1
-				}
-			}
-
-			if fixed == len(parents[item]) {
-				nextActions = append(nextActions, item)
-			}
-
-			// If it's not executed and not in nextActions
-			// FIXME: Check if the item's parents are finished. If they're not, skip.
-		}
-	}
-
-	//log.Printf("Checking nextactions: %s", nextActions)
-	for _, node := range nextActions {
-		nodeChildren := children[node]
-		for _, child := range nodeChildren {
-			if !arrayContains(queueNodes, child) {
-				queueNodes = append(queueNodes, child)
-			}
-		}
-	}
-
-	// IF NOT VISITED && IN toExecuteOnPrem
-	// SKIP if it's not onprem
-	toRemove := []int{}
-	//log.Printf("\n\nNEXTACTIONS: %#v\n\n", nextActions)
-	// FIXME: In this loop, there may be an ordering issue where a subflow and other triggers don't wait for all parent nodes to finish, due to that happening farther down in the loop. That means they may execute with only a single parent node actually being finishing.
-	// FIXME: Look at how to fix it by moving it farther down. PS: Fixing this, means it should be fixed in the worker too. Make them generic in shuffle mod
-	for index, nextAction := range nextActions {
-		action := getAction(workflowExecution, nextAction, environment)
-		// check visited and onprem
-		if arrayContains(visited, nextAction) {
-			//log.Printf("ALREADY VISITIED (%s): %s", action.Label, nextAction)
-			toRemove = append(toRemove, index)
-			//nextActions = removeIndex(nextActions, index)
-
-			//validateFinished(workflowExecution)
-			_ = index
-
-			continue
-		}
-
-		// Not really sure how this edgecase happens.
-
-		// FIXME
-		// Execute, as we don't really care if env is not set? IDK
-		if action.Environment != environment { //&& action.Environment != "" {
-			//log.Printf("Action: %#v", action)
-			log.Printf("[WARNING] Bad environment for node: %#v. Want %s. Skipping if NOT empty env.", action.Environment, environment)
-			if len(action.Environment) > 0 {
-				continue
-			}
-		}
-
-		// check whether the parent is finished executing
-		//log.Printf("%s has %d parents", nextAction, len(parents[nextAction]))
-
-		continueOuter := true
-		if action.IsStartNode {
-			continueOuter = false
-		} else if len(parents[nextAction]) > 0 {
-			// FIXME - wait for parents to finishe executing
-			fixed := 0
-			for _, parent := range parents[nextAction] {
-				parentResult := getResult(workflowExecution, parent)
-				if parentResult.Status == "FINISHED" || parentResult.Status == "SUCCESS" || parentResult.Status == "SKIPPED" || parentResult.Status == "FAILURE" {
-					fixed += 1
-				}
-			}
-
-			if fixed == len(parents[nextAction]) {
-				continueOuter = false
-			}
-		} else {
-			continueOuter = false
-		}
-
-		if continueOuter {
-			log.Printf("[INFO] Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
-
-			continue
-		}
-
-		// get action status
-		actionResult := getResult(workflowExecution, nextAction)
-		if actionResult.Action.ID == action.ID {
-			//log.Printf("[INFO] %s already has status %s.", action.ID, actionResult.Status)
-
-			continue
-		} else {
-			log.Printf("[INFO][%s] %s:%s has no status result yet. Should execute.", workflowExecution.ExecutionId, action.Name, action.ID)
-
-			// Check cache here too.
-		}
-
-		// Rerunning this multiple places, as timing is the hardest part here.
-		newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, nextAction)
-		_, err := shuffle.GetCache(ctx, newExecId)
-		if err == nil {
-			//log.Printf("\n\n[DEBUG] Already found %s (1) - returning\n\n", newExecId)
-			continue
-		}
-
-		/*
-			cacheData := []byte("1")
-			err = shuffle.SetCache(ctx, newExecId, cacheData)
-			if err != nil {
-				log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
-			} else {
-				log.Printf("\n\n[DEBUG] Adding %s to cache. Name: %s\n\n", newExecId, action.Name)
-			}
-		*/
-
-		if action.AppName == "Shuffle Tools" && (action.Name == "skip_me" || action.Name == "router" || action.Name == "route") {
-			topClient := &http.Client{
-				Timeout: 3 * time.Second,
-			}
-			err := runSkipAction(topClient, action, workflowExecution.Workflow.ID, workflowExecution.ExecutionId, workflowExecution.Authorization, "SKIPPED")
-			if err != nil {
-				log.Printf("[DEBUG][%s] Error in skipme for %s: %s", workflowExecution.ExecutionId, action.Label, err)
-			} else {
-				//log.Printf("[INFO][%s] Adding visited (4): %s", workflowExecution.ExecutionId, action.Label)
-
-				visited = append(visited, action.ID)
-				executed = append(executed, action.ID)
-				continue
-			}
-		} else if action.AppName == "Shuffle Workflow" {
-			//log.Printf("SHUFFLE WORKFLOW: %#v", action)
-			branchesFound := 0
-			parentFinished := 0
-
-			for _, item := range workflowExecution.Workflow.Branches {
-				if item.DestinationID == action.ID {
-					branchesFound += 1
-
-					for _, result := range workflowExecution.Results {
-						if result.Action.ID == item.SourceID {
-							// Check for fails etc
-							if result.Status == "SUCCESS" || result.Status == "SKIPPED" {
-								parentFinished += 1
-							} else {
-								log.Printf("Parent %s has status %s", result.Action.Label, result.Status)
-							}
-
-							break
-						}
-					}
-				}
-			}
-
-			log.Printf("[DEBUG] Should execute %s (?). Branches: %d. Parents done: %d", action.AppName, branchesFound, parentFinished)
-			if branchesFound == parentFinished {
-				action.Environment = environment
-				action.AppName = "shuffle-subflow"
-				action.Name = "run_subflow"
-				action.AppVersion = "1.0.0"
-
-				//appname := action.AppName
-				//appversion := action.AppVersion
-				//appname = strings.Replace(appname, ".", "-", -1)
-				//appversion = strings.Replace(appversion, ".", "-", -1)
-				//	shuffle-subflow_1.0.0
-
-				//visited = append(visited, action.ID)
-				//executed = append(executed, action.ID)
-
-				trigger := shuffle.Trigger{}
-				for _, innertrigger := range workflowExecution.Workflow.Triggers {
-					if innertrigger.ID == action.ID {
-						trigger = innertrigger
-						break
-					}
-				}
-
-				// FIXME: Add startnode from frontend
-				action.ExecutionDelay = trigger.ExecutionDelay
-				action.Label = trigger.Label
-				action.Parameters = []shuffle.WorkflowAppActionParameter{}
-				for _, parameter := range trigger.Parameters {
-					parameter.Variant = "STATIC_VALUE"
-					action.Parameters = append(action.Parameters, parameter)
-				}
-
-				action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
-					Name:  "source_workflow",
-					Value: workflowExecution.Workflow.ID,
-				})
-
-				action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
-					Name:  "source_execution",
-					Value: workflowExecution.ExecutionId,
-				})
-
-				action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
-					Name:  "source_node",
-					Value: trigger.ID,
-				})
-
-				action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
-					Name:  "source_auth",
-					Value: workflowExecution.Authorization,
-				})
-
-				//trigger.LargeImage = ""
-				//err = handleSubworkflowExecution(client, workflowExecution, trigger, action)
-				//if err != nil {
-				//	log.Printf("[ERROR] Failed to execute subworkflow: %s", err)
-				//} else {
-				//	log.Printf("[INFO] Executed subworkflow!")
-				//}
-				//continue
-			}
-		} else if action.AppName == "User Input" {
-			log.Printf("[DEBUG] RUNNING USER INPUT!")
-			branchesFound := 0
-			parentFinished := 0
-
-			for _, item := range workflowExecution.Workflow.Branches {
-				if item.DestinationID == action.ID {
-					branchesFound += 1
-
-					for _, result := range workflowExecution.Results {
-						if result.Action.ID == item.SourceID {
-							// Check for fails etc
-							if result.Status == "SUCCESS" || result.Status == "SKIPPED" {
-								parentFinished += 1
-							} else {
-								log.Printf("Parent %s has status %s", result.Action.Label, result.Status)
-							}
-
-							break
-						}
-					}
-				}
-			}
-
-			log.Printf("[DEBUG] Should execute %s (?). Branches: %d. Parents done: %d", action.AppName, branchesFound, parentFinished)
-			if branchesFound == parentFinished {
-
-				if action.ID == workflowExecution.Start {
-					log.Printf("[DEBUG] Skipping user input because it's the startnode")
-					visited = append(visited, action.ID)
-					executed = append(executed, action.ID)
-					continue
-				} else {
-					log.Printf("[DEBUG] Should stop after this iteration because it's user-input based. %#v", action)
-					trigger := shuffle.Trigger{}
-					for _, innertrigger := range workflowExecution.Workflow.Triggers {
-						if innertrigger.ID == action.ID {
-							trigger = innertrigger
-							break
-						}
-					}
-
-					action.Label = action.Label
-					action.Parameters = []shuffle.WorkflowAppActionParameter{}
-					for _, parameter := range trigger.Parameters {
-						action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
-							Name:  parameter.Name,
-							Value: parameter.Value,
-						})
-					}
-
-					trigger.LargeImage = ""
-					triggerData, err := json.Marshal(trigger)
-					if err != nil {
-						log.Printf("[WARNING] Failed unmarshalling action: %s", err)
-						triggerData = []byte("Failed unmarshalling. Cancel execution!")
-					}
-
-					err = runUserInput(topClient, action, workflowExecution.Workflow.ID, workflowExecution, workflowExecution.Authorization, string(triggerData), dockercli)
-					if err != nil {
-						log.Printf("[ERROR] Failed launching backend magic: %s", err)
-						os.Exit(3)
-					} else {
-						log.Printf("[INFO] Launched user input node succesfully!")
-						os.Exit(3)
-					}
-
-					break
-				}
-			}
-		} else {
-			//log.Printf("Handling action %#v", action)
-		}
-
+	log.Printf("\n\n[DEBUG] Got %d relevant action(s) to run!\n\n", len(relevantActions))
+	for _, action := range relevantActions {
 		appname := action.AppName
 		appversion := action.AppVersion
 		appname = strings.Replace(appname, ".", "-", -1)
@@ -2089,8 +1658,10 @@ func getWorkflowExecution(ctx context.Context, id string) (*shuffle.WorkflowExec
 		parsedValue := value.(*shuffle.WorkflowExecution)
 		//log.Printf("Found execution for id %s with %d results", parsedValue.ExecutionId, len(parsedValue.Results))
 
+		workflowExecution := shuffle.Fixexecution(ctx, *parsedValue)
+
 		//validateFinished(*parsedValue)
-		return parsedValue, nil
+		return &workflowExecution, nil
 	}
 
 	return &shuffle.WorkflowExecution{}, errors.New("No workflowexecution defined yet")
@@ -2134,6 +1705,7 @@ func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
 func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 	ctx := context.Background()
 	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
+	workflowExecution = shuffle.Fixexecution(ctx, workflowExecution)
 	_, extra, _, _, _, _, _, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 
 	log.Printf("[INFO][%s] VALIDATION. Status: %s, shuffle.Actions: %d, Extra: %d, Results: %d. Parent: %#v\n", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results), workflowExecution.ExecutionParent)
@@ -2220,6 +1792,8 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 		log.Printf("[INFO] Workflowexecution executionId can't be empty.")
 		return errors.New("ExecutionId can't be empty.")
 	}
+
+	workflowExecution = shuffle.Fixexecution(ctx, workflowExecution)
 
 	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 	requestCache.Set(cacheKey, &workflowExecution, cache.DefaultExpiration)
@@ -2490,7 +2064,7 @@ func main() {
 	} else {
 		authorization = os.Getenv("AUTHORIZATION")
 		executionId = os.Getenv("EXECUTIONID")
-		log.Printf("[INFO] Running normal execution with auth %s and ID %s", authorization, executionId)
+		log.Printf("[INFO] Running normal execution with auth %s (AUTHORIZATION) and ID %s (EXECUTIONID)", authorization, executionId)
 	}
 
 	workflowExecution := shuffle.WorkflowExecution{
@@ -2604,7 +2178,7 @@ func main() {
 				listener := webserverSetup(workflowExecution)
 				err := executionInit(workflowExecution)
 				if err != nil {
-					log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
+					log.Printf("[INFO] Workflow setup failed. Is this the right environment?: %s", workflowExecution.ExecutionId, err)
 					log.Printf("[DEBUG] Shutting down (30)")
 					shutdown(workflowExecution, "", "", true)
 				}

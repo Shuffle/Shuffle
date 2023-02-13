@@ -1016,6 +1016,12 @@ func main() {
 		req.Header.Add("X-Orborus-Label", orborusLabel)
 	}
 
+	if swarmConfig != "run" && swarmConfig != "swarm" {
+		req.Header.Add("X-Orborus-Runmode", "Default")
+	} else {
+		req.Header.Add("X-Orborus-Runmode", "Docker Swarm")
+	}
+
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
 	for {
@@ -1052,7 +1058,7 @@ func main() {
 			log.Printf("[ERROR] Backend configuration missing (%d): %s", newresp.StatusCode, string(body))
 		} else {
 			if !hasStarted {
-				log.Printf("[DEBUG] Starting iteration. Got statuscode %d from backend on first request", newresp.StatusCode)
+				log.Printf("[DEBUG] Starting iteration on environment %#v (default = Shuffle). Got statuscode %d from backend on first request", environment, newresp.StatusCode)
 			}
 
 			hasStarted = true

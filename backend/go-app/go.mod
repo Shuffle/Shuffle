@@ -2,7 +2,7 @@ module main
 
 go 1.19
 
-replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 
 require (
 	cloud.google.com/go/datastore v1.10.0

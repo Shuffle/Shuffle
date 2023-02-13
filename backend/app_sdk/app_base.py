@@ -145,6 +145,7 @@ def flatten(a):
     flat_list = [a for xs in a for a in xs]
     return flat_list
 
+
 @shuffle_filters.register
 def csv_parse(a):
     a = str(a)
@@ -186,9 +187,37 @@ def csv_parse(a):
         
         allitems.append(fullitem)
 
-    return allitems
+    try:
+        return json.dumps(allitems)
+    except:
+        print("[ERROR] Failed dumping from JSON in csv parse")
+        return allitems
 
-#print(standard_filter_manager.filters)
+@shuffle_filters.register
+def parse_csv(a):
+    return csv_parse(a)
+
+@shuffle_filters.register
+def format_csv(a):
+    return csv_parse(a)
+
+@shuffle_filters.register
+def csv_format(a):
+    return csv_parse(a)@standard_filter_manager.register
+
+@shuffle_filters.register
+def split(base, sep):
+    if not sep:
+        try:
+            return json.dumps(list(base))
+        except:
+            return list(base)
+
+    try:
+        return json.dumps(base.split(sep))
+    except:
+        return base.split(sep)
+
 #print(shuffle_filters.filters)
 #print(Liquid("{{ '10' | plus: 1}}", filters=shuffle_filters.filters).render())
 #print(Liquid("{{ '10' | minus: 1}}", filters=shuffle_filters.filters).render())
@@ -2918,12 +2947,12 @@ class AppBase:
                         params = {}
                         # This replacement should happen in backend as part of params
                         # error log is useless
-                        try:
-                            for item in action["authentication"]:
-                                self.logger.info("AUTH PARAM: ", key, value)
-                                #params[item["key"]] = item["value"]
-                        except KeyError as e:
-                            self.logger.info(f"[WARNING] No authentication specified! Is this correct? err: {e}")
+                        #try:
+                        #    for item in action["authentication"]:
+                        #        self.logger.info("AUTH PARAM: ", key, value)
+                        #        #params[item["key"]] = item["value"]
+                        #except KeyError as e:
+                        #    self.logger.info(f"[WARNING] No authentication specified! Is this correct? err: {e}")
 
                         # Fixes OpenAPI body parameters for later.
                         newparams = []

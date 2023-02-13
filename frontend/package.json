@@ -58,7 +58,7 @@
     "react-draggable": "^3.3.2",
     "react-driftjs": "^1.2.2",
     "react-dropzone": "^10.1.10",
-    "react-ga": "^2.7.0",
+    "react-ga4": "^2.0.0",
     "react-iframe": "^1.8.0",
     "react-instantsearch-dom": "^6.28.0",
     "react-json-pretty": "^2.2.0",

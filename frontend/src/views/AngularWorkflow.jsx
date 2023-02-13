@@ -13154,7 +13154,7 @@ const AngularWorkflow = (defaultprops) => {
                             // Ensuring we have the latest version of the result.
                             // Especially important IF the result is > 1 Mb in cloud
                             var checkStarted = false
-                            if (isCloud && data.results !== undefined && data.results !== null && data.results.length > 0) {
+                            if (data.results !== undefined && data.results !== null && data.results.length > 0) {
 
 															if (data.execution_argument !== undefined && data.execution_argument !== null && data.execution_argument.includes("too large")) {
 																setExecutionData({});
