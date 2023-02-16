@@ -27,12 +27,12 @@ sudo chown -R 1000:1000 shuffle-database
 docker-compose up -d
 ```
 
-5. Recommended for Elasticsearch to work well
+5. Recommended for Opensearch to work well
 ```bash
 sudo sysctl -w vm.max_map_count=262144             # https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
 ```
 
-When you're done, skip to the "After installation" step below.
+When you're done, skip to the [After installation](#after-installation) step below.
 
 ## Windows with WSL  
 This step is for setting up with Docker on windows from scratch.
