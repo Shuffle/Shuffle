@@ -63,7 +63,7 @@ https://shuffler.io/docs/configuration
 3. Sign in with the same Username & Password! Go to /apps and see if you have any apps yet. If not - you may need to [configure proxies](https://shuffler.io/docs/configuration#production_readiness)
 4. Check out https://shuffler.io/docs/configuration as it has a lot of useful information to get started
 
-![Admin account setup](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_adminaccount.png)
+![Admin account setup](https://github.com/Shuffle/Shuffle/blob/main/frontend/src/assets/img/shuffle_adminaccount.png?raw=true)
 
 ### Useful info
 * Check out [getting started](https://shuffler.io/docs/getting_started)
