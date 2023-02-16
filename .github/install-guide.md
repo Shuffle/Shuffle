@@ -1,7 +1,7 @@
 # Installation guide
 Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
-This document outlines a an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or K8s. 
+This document outlines a an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
 
 # Docker - *nix
 The Docker setup is done with docker-compose 
@@ -25,6 +25,11 @@ sudo chown -R 1000:1000 shuffle-database
 4. Run docker-compose.
 ```bash
 docker-compose up -d
+```
+
+5. Recommended for Elasticsearch to work well
+```bash
+sudo sysctl -w vm.max_map_count=262144             # https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
 ```
 
 When you're done, skip to the "After installation" step below.
