@@ -1737,7 +1737,7 @@ const AngularWorkflow = (defaultprops) => {
     })
       .then((response) => {
         if (response.status !== 200) {
-          console.log("Status not 200 for apps :O!");
+          //console.log("Status not 200 for apps :O!");
           return;
         }
 
@@ -1762,7 +1762,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+				console.log("Error loading files: ", error)
       });
   };
 
@@ -2529,7 +2530,6 @@ const AngularWorkflow = (defaultprops) => {
   // https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
   // onNodeClick
   const onNodeSelect = (event, newAppAuth) => {
-		console.log("App auth in select: ", newAppAuth)
     // Forces all states to update at the same time,
 		// Otherwise everything is SUPER slow
     ReactDOM.unstable_batchedUpdates(() => {
@@ -2800,7 +2800,7 @@ const AngularWorkflow = (defaultprops) => {
             }
 
             const tmpAuth = JSON.parse(JSON.stringify(newAppAuth));
-						console.log("FOUND AUTH OPTIONS: ", tmpAuth)
+						//console.log("FOUND AUTH OPTIONS: ", tmpAuth)
 
 						const curappName = curapp.name.toLowerCase()
     	      for (let tmpAuthKey in tmpAuth) {
@@ -2835,8 +2835,6 @@ const AngularWorkflow = (defaultprops) => {
                 }
               }
             }
-
-						console.log("Options: ", authenticationOptions)
 
             curaction.authentication = authenticationOptions;
             if (
@@ -5958,13 +5956,11 @@ const AngularWorkflow = (defaultprops) => {
 
       //const activateApp = (appid) => {
       if (newAppData.activated === false) {
-        console.log("SHOULD ACTIVATE!")
         activateApp(newAppData.app_id, false)
       }
 
       // AUTHENTICATION
       if (app.authentication !== undefined && app.authentication !== null && app.authentication.required === true) {
-        console.log("App auth is required!")
 
         // Setup auth here :)
         const authenticationOptions = [];
@@ -6233,7 +6229,8 @@ const AngularWorkflow = (defaultprops) => {
 				app.large_image = theme.palette.defaultImage
 			}
 
-      const image = app.large_image;
+      const image = app.large_image !== undefined && app.large_image !== null && app.large_image !== "" ? app.large_image : theme.palette.defaultImage
+			
       const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle));
       const pixelSize = !hover ? "2px" : "4px";
       //newAppStyle.borderLeft = app.is_valid && app.actions !== null && app.actions !== undefined && app.actions.length > 0 && !(app.activated && app.generated)
@@ -6328,7 +6325,7 @@ const AngularWorkflow = (defaultprops) => {
                   name: app.actions[0].name,
                   parameters: parameters,
                   isStartNode: false,
-                  large_image: app.large_image,
+                  large_image: image,
                   run_magic_output: false,
                   authentication: [],
                   execution_variable: undefined,
@@ -7653,7 +7650,7 @@ const AngularWorkflow = (defaultprops) => {
           <div style={{ display: "flex" }}>
             <Tooltip
               color="primary"
-              title={conditionValue.configuration ? "Negated" : "Default"}
+              title={conditionValue.configuration ? "Opposite" : "Default"}
               placement="top"
             >
               <span
@@ -13494,34 +13491,39 @@ const AngularWorkflow = (defaultprops) => {
           <div style={{ display: "flex", marginTop: 10, marginBottom: 30 }}>
             <div>
               {executionData.status !== undefined &&
-                executionData.status !== "ABORTED" &&
-                executionData.status !== "FINISHED" &&
-                executionData.status !== "FAILURE" &&
-                executionData.status !== "WAITING" &&
-                !(
-                  executionData.results === undefined ||
-                  executionData.results === null ||
-                  (executionData.results.length === 0 && // probably ment to be around the or's
-                    executionData.status === "EXECUTING")
-                ) ? (
+									executionData.status !== "ABORTED" &&
+									executionData.status !== "FINISHED" &&
+									executionData.status !== "FAILURE" &&
+									executionData.status !== "WAITING" &&
+                !(executionData.results === undefined || executionData.results === null || (executionData.results.length === 0 &&  executionData.status === "EXECUTING")) ? (
                 <div style={{ display: "flex" }}>
-                  <CircularProgress style={{ height: 45, width: 45, marginLeft: 20, marginRight: 20, }} />
+                  <CircularProgress style={{ height: 45, width: 45, marginLeft: 20, marginRight: 20, }} onClick={() => {
+										console.log(environments, defaultEnvironmentIndex, nonskippedResults)
+									}} />
 
-
-                  {!isCloud && environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 ?
+                  {environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 && environments[defaultEnvironmentIndex].Name !== "Cloud" ?
                     <Typography variant="body2" color="textSecondary" style={{}}>
-                      No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
+                      No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@shuffler.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@shuffler.io</a>
                     </Typography>
                     : null}
                 </div>
               ) : null}
             </div>
           </div>
-          {executionData.results === undefined ||
+          {
+						executionData.results === undefined ||
             executionData.results === null ||
-            (executionData.results.length === 0 &&
-              executionData.status === "EXECUTING") ? (
-            <CircularProgress />
+            (executionData.results.length === 0 && executionData.status === "EXECUTING") ? (
+
+						<div style={{ display: "flex" }}>
+							<CircularProgress style={{ height: 45, width: 45, marginLeft: 20, marginRight: 20, }} /> 
+								{environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 && environments[defaultEnvironmentIndex].Name !== "Cloud" ?
+									<Typography variant="body2" color="textSecondary" style={{}}>
+										No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@shuffler.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@shuffler.io</a>
+									</Typography>
+								: 
+								null}
+							</div>
           ) : (
             executionData.results.map((data, index) => {
               if (executionData.results.length !== 1 && !showSkippedActions && (data.status === "SKIPPED")) {

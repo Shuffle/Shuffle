@@ -560,6 +560,9 @@ const Workflows = (props) => {
   const [firstLoad, setFirstLoad] = React.useState(true);
   const [showMoreClicked, setShowMoreClicked] = React.useState(false);
   const [usecases, setUsecases] = React.useState([]);
+  const [allUsecases, setAllUsecases] = React.useState({
+		"success": false,
+	});
   const [appFramework, setAppFramework] = React.useState({});
   const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [videoViewOpen, setVideoViewOpen] = React.useState(false)
@@ -615,6 +618,7 @@ const Workflows = (props) => {
 		console.log("Using filters: ", filters)
     if (filters.length === 0) {
       setFilteredWorkflows(workflows);
+			handleKeysetting(allUsecases, workflows)
       return;
     }
 
@@ -684,7 +688,10 @@ const Workflows = (props) => {
       }
     }
 
+		console.log("Changing workflow filter, and finding new usecase mappings!")
     if (newWorkflows.length !== workflows.length) {
+			handleKeysetting(allUsecases, newWorkflows)
+
       setFilteredWorkflows(newWorkflows);
     }
   };
@@ -715,7 +722,7 @@ const Workflows = (props) => {
     var newfilters = filters;
 
     if (index < 0) {
-      console.log("Can't handle index: ", index);
+      console.log("Can't handle index (remove): ", index);
       return;
     }
 
@@ -1037,9 +1044,6 @@ const Workflows = (props) => {
 
 						newarray.push(wf)
 					}
-
-					// Workflows are set in here
-					fetchUsecases(newarray)
 								
 					var setProdFilter = false 
 
@@ -1068,22 +1072,22 @@ const Workflows = (props) => {
 
 								
 					if (setProdFilter === true) {
-            setFilters(["status:production"]);
 						const newWorkflows = newarray.filter(workflow => workflow.status === "production")
-						console.log(newWorkflows)
 						if (newWorkflows !== undefined && newWorkflows !== null) {
           		setFilteredWorkflows(newWorkflows);
 						} else {
           		setFilteredWorkflows(newarray);
 						}
+            setFilters(["status:production"]);
 					} else { 
           	setFilteredWorkflows(newarray);
 					}
 
+
 					// Ensures the zooming happens only once per load
         	setTimeout(() => {
+						fetchUsecases(newarray)
 						setFirstLoad(false)
-
 					}, 100)
 
         } else {
@@ -1100,9 +1104,6 @@ const Workflows = (props) => {
   };
 
 	const handleKeysetting = (categorydata, workflows) => {
-		//workflows[0].category = ["detect"]
-		//workflows[0].usecase_ids = ["Correlate tickets"]
-
 		if (workflows !== undefined && workflows !== null) {
 			var newcategories = []
 			for (var key in categorydata) {
@@ -1145,8 +1146,6 @@ const Workflows = (props) => {
 		} else {
   		setUsecases(categorydata)
 		}
-    setWorkflows(workflows);
-    setWorkflowDone(true);
 	}
 
   const fetchUsecases = (workflows) => {
@@ -1166,12 +1165,13 @@ const Workflows = (props) => {
         return response.json();
       })
       .then((responseJson) => {
+				setWorkflows(workflows);
+				setWorkflowDone(true);
+
 				if (responseJson.success !== false) {
+					setAllUsecases(responseJson);
 					handleKeysetting(responseJson, workflows)
-				} else {
-        	setWorkflows(workflows);
-      		setWorkflowDone(true);
-				}
+				} 
       })
       .catch((error) => {
         //alert.error("ERROR: " + error.toString());
@@ -2764,7 +2764,9 @@ const Workflows = (props) => {
 										return (
 											<span key={index}>
 												<ListSubheader
-													style={{color: usecase.color}}
+													style={{
+														color: usecase.color
+													}}
 												>
 													{usecase.name}
 												</ListSubheader>
@@ -3285,12 +3287,15 @@ const Workflows = (props) => {
 							<div style={{ display: "flex", }}>
 								{usecases.map((usecase, index) => {
 									//console.log(usecase)
+									const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length/usecase.list.length*100) : 0
+
 									return (
 										<Paper
 											key={usecase.name}
 											style={{
 												flex: 1,
-												backgroundColor: filters.includes(usecase.name.toLowerCase()) ? usecase.color : theme.palette.surfaceColor,
+												backgroundImage: `linear-gradient(to right, ${usecase.color}, ${usecase.color} ${percentDone}%, transparent ${percentDone}%, transparent 100%)`,
+												backgroundColor: filters.includes(usecase.name.toLowerCase()) ? null : theme.palette.surfaceColor,
 												borderRadius: theme.palette.borderRadius,
 												marginRight: index === usecases.length-1 ? 0 : 10, 
 												cursor: "pointer",
@@ -3299,25 +3304,23 @@ const Workflows = (props) => {
 												padding: 10,
 											}}
 											onClick={() => {
-												console.log("Clicked!")
-												return
-												if (filters.includes(usecase.name.toLowerCase())) {
+												console.log("Filters: ", filters, usecase.name.toLowerCase())
+												if (!filters.includes(usecase.name.toLowerCase())) {
 													addFilter(usecase.name)
 												} else {
-													const foundIndex = filters.indexOf(usecase.name.toLowerCase())
-  												removeFilter(foundIndex) 
+  												removeFilter(filters.indexOf(usecase.name.toLowerCase()))
 												}
 
 											}}
 										>
-											<a href={`/usecases?selected=${usecase.name}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", display: "flex", }}>
+											<span style={{ textDecoration: "none", display: "flex", }}>
 												<Typography variant="body1" color="textPrimary" style={{flex: 4, }}>
 													{usecase.name}
 												</Typography>
 												<Typography variant="body2" color="textSecondary" style={{flex: 1, marginTop: 5,}}>
 													{usecase.matches.length}/{usecase.list.length}
 												</Typography>
-											</a>
+											</span>
 										</Paper>
 									)
 								})}

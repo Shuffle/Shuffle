@@ -811,7 +811,7 @@ const Admin = (props) => {
       })
       .then((responseJson) => {
         if (responseJson["success"] === false) {
-          alert.error("Failed getting your org: ", responseJson.readon);
+          alert.error("Failed getting your org. If this persists, please contact support.");
         } else {
           if (
             responseJson.sync_features === undefined ||
@@ -883,17 +883,21 @@ const Admin = (props) => {
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             setLoginInfo("Error: " + responseJson.reason);
+    				alert.error("Failed to send email (2). Please try again and contact support if this persists.")
           } else {
             setLoginInfo("");
             setModalOpen(false);
             setTimeout(() => {
               getUsers();
             }, 1000);
+    				
+						alert.info("Invite sent! They will show up in the list when they have accepted the invite.")
           }
         })
       )
       .catch((error) => {
         console.log("Error in userdata: ", error);
+    		alert.error("Failed to send email. Please try again and contact support if this persists.")
       });
   };
 
@@ -3267,7 +3271,7 @@ const Admin = (props) => {
       <DialogContent>
         {curTab === 1 && isCloud ? (
           <Typography variant="body1" style={{ marginBottom: 10 }}>
-            We'll send an email to invite them to your organization.
+            We will send an email to invite them to your organization.
           </Typography>
         ) : curTab === 6 ? (
           <Typography variant="body1" style={{ marginBottom: 10 }}>

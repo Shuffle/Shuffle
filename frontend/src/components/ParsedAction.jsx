@@ -194,13 +194,11 @@ const ParsedAction = (props) => {
 				if (paramcheck.id === "TOGGLED"){ 
   				setHideBody(false)
   				setActivateHidingBodyButton(false)
-					console.log("TOGGLED BODY!")
 				} else {
   				setHideBody(true)
 
 					if (paramcheck.id === "UNTOGGLED") {
   					setActivateHidingBodyButton(false)
-						console.log("UNTOGGLED!")
 					}
 				}
 			}

@@ -55,6 +55,7 @@ const ConfigureWorkflow = (props) => {
 		workflowExecutions,
 		getWorkflowExecution,
   } = props;
+
   const [requiredActions, setRequiredActions] = React.useState([]);
   const [requiredVariables, setRequiredVariables] = React.useState([]);
   const [requiredTriggers, setRequiredTriggers] = React.useState([]);
