@@ -929,8 +929,6 @@ func main() {
 	zombiecheck(ctx, workerTimeout)
 
 	log.Printf("[INFO] Running towards %s (BASE_URL) with environment name %s", baseUrl, environment)
-	httpProxy := os.Getenv("HTTP_PROXY")
-	httpsProxy := os.Getenv("HTTPS_PROXY")
 
 	if environment == "" {
 		environment = "onprem"
@@ -965,27 +963,7 @@ func main() {
 
 	log.Printf("[INFO] Finished configuring docker environment")
 
-	// FIXME - time limit
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: nil,
-		},
-	}
-
-	//getStats()
-
-	if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
-		client = &http.Client{}
-	} else {
-		if len(httpProxy) > 0 {
-			log.Printf("[INFO] Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
-		}
-		if len(httpsProxy) > 0 {
-			log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
-		}
-	}
-
-	client.Timeout = 30 * time.Second
+	client := shuffle.GetExternalClient(baseUrl)
 
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
 	req, err := http.NewRequest(

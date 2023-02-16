@@ -467,7 +467,7 @@ class AppBase:
             finished = False
             for i in range (0, 10):
                 try:
-                    ret = requests.post(url, headers=headers, json=action_result, timeout=10)
+                    ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False)
 
                     self.logger.info(f"[DEBUG] Result: {ret.status_code} (break on 200 or 201)")
                     if ret.status_code == 200 or ret.status_code == 201:
@@ -514,7 +514,7 @@ class AppBase:
                 action_result["status"] = "FAILURE"
                 action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 10 retries to the backend" % url})
                 self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished after 10 requests")
-                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
+                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
         
             self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:
@@ -524,7 +524,7 @@ class AppBase:
             action_result["result"] = json.dumps({"success": False, "reason": "Typeerror when sending to backend URL %s" % url})
 
             self.logger.info(f"[DEBUG] Before typeerror stream result: {e}")
-            ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
+            ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
             #self.logger.info(f"[DEBUG] Result: {ret.status_code}")
             #if ret.status_code != 200:
             #    pr
@@ -653,7 +653,7 @@ class AppBase:
             #self.logger.info(f"RET: {ret.text}")
             #self.logger.info(f"ID: {ret.status_code}")
             url = f"{self.url}/api/v1/orgs/{org_id}/validate_app_values"
-            ret = requests.post(url, json=data)
+            ret = requests.post(url, json=data, verify=False)
             if ret.status_code == 200:
                 json_value = ret.json()
                 if len(json_value["found"]) > 0: 
@@ -1129,7 +1129,7 @@ class AppBase:
             "User-Agent": "Shuffle 1.1.0",
         }
 
-        ret = requests.get("%s%s" % (self.url, get_path), headers=headers)
+        ret = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
         return ret.json()
         #if ret1.status_code != 200:
         #    return {
@@ -1155,7 +1155,7 @@ class AppBase:
             "User-Agent": "Shuffle 1.1.0",
         }
 
-        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
+        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
         if ret1.status_code != 200:
             return None 
 
@@ -1218,7 +1218,7 @@ class AppBase:
                 "User-Agent": "Shuffle 1.1.0",
             }
 
-            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
+            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
             self.logger.info("RET1 (file get): %s" % ret1.text)
             if ret1.status_code != 200:
                 returns.append({
@@ -1229,7 +1229,7 @@ class AppBase:
                 continue
 
             content_path = "/api/v1/files/%s/content?execution_id=%s" % (item, full_execution["execution_id"])
-            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
+            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers, verify=False)
             self.logger.info("RET2 (file get) done")
             if ret2.status_code == 200:
                 tmpdata = ret1.json()
@@ -1265,7 +1265,7 @@ class AppBase:
             "value": str(value),
         }
 
-        response = requests.post(url, json=data)
+        response = requests.post(url, json=data, verify=False)
         try:
             allvalues = response.json()
             allvalues["key"] = key
@@ -1287,7 +1287,7 @@ class AppBase:
             "key": key,
         }
 
-        value = requests.post(url, json=data)
+        value = requests.post(url, json=data, verify=False)
         try:
             allvalues = value.json()
             self.logger.info("VAL1: ", allvalues)
@@ -1341,7 +1341,7 @@ class AppBase:
                 self.logger.info(f"KeyError in file setup: {e}")
                 pass
 
-            ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data)
+            ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data, verify=False)
             #self.logger.info(f"Ret CREATE: {ret.text}")
             cur_id = ""
             if ret.status_code == 200:
@@ -1373,7 +1373,7 @@ class AppBase:
             files={"shuffle_file": (filename, curfile["data"])}
             #open(filename,'rb')}
 
-            ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers)
+            ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers, verify=False)
             self.logger.info("Ret UPLOAD: %s" % ret.text)
             self.logger.info("Ret2 UPLOAD: %d" % ret.status_code)
 
@@ -1440,7 +1440,7 @@ class AppBase:
 
         # FIXME: Shouldn't skip this, but it's good for minimzing API calls
         #try:
-        #    ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
+        #    ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
         #    self.logger.info("Workflow: %d" % ret.status_code)
         #    if ret.status_code != 200:
         #        self.logger.info(ret.text)
@@ -1469,7 +1469,8 @@ class AppBase:
                     ret = requests.post(
                         "%s/api/v1/streams/results" % (self.base_url), 
                         headers=headers, 
-                        json=tmpdata
+                        json=tmpdata,
+                        verify=False
                     )
 
                     if ret.status_code == 200:

@@ -144,24 +144,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		}
 
 		req.Header.Add("Content-Type", "application/json")
-		client := &http.Client{
-			Transport: &http.Transport{
-				Proxy: nil,
-			},
-		}
-
-		httpProxy := os.Getenv("HTTP_PROXY")
-		httpsProxy := os.Getenv("HTTPS_PROXY")
-		if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
-			client = &http.Client{}
-		} else {
-			if len(httpProxy) > 0 {
-				log.Printf("[INFO][%s] Running with HTTP proxy %s (env: HTTP_PROXY)", workflowExecution.ExecutionId, httpProxy)
-			}
-			if len(httpsProxy) > 0 {
-				log.Printf("[INFO][%s] Running with HTTPS proxy %s (env: HTTPS_PROXY)", workflowExecution.ExecutionId, httpsProxy)
-			}
-		}
+		client := shuffle.GetExternalClient(baseUrl)
 
 		//log.Printf("[DEBUG][%s] All App Logs: %#v", workflowExecution.ExecutionId, allLogs)
 		_, err = client.Do(req)
@@ -2023,24 +2006,7 @@ func main() {
 
 	log.Printf("[INFO] Setting up worker environment")
 	sleepTime := 5
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: nil,
-		},
-	}
-
-	httpProxy := os.Getenv("HTTP_PROXY")
-	httpsProxy := os.Getenv("HTTPS_PROXY")
-	if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
-		client = &http.Client{}
-	} else {
-		if len(httpProxy) > 0 {
-			log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
-		}
-		if len(httpsProxy) > 0 {
-			log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
-		}
-	}
+	client := shuffle.GetExternalClient(baseUrl)
 
 	if timezone == "" {
 		timezone = "Europe/Amsterdam"
