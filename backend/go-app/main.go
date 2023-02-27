@@ -3696,12 +3696,15 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 				return err
 			}
 
-			org.SyncConfig.Interval = 0
-			org.SyncConfig.Apikey = ""
-			org.CloudSync = false
-
 			// Just in case
 			org, err = handleStopCloudSync(syncUrl, *org)
+			if err != nil {
+				log.Printf("[ERROR] Failed stopping cloud sync remotely: %s", err)
+			}
+
+			org.SyncConfig.Interval = 0
+			org.CloudSync = false
+			org.SyncConfig.Apikey = ""
 
 			startDate := time.Now().Unix()
 			org.SyncFeatures.Webhook = shuffle.SyncData{Active: false, Type: "trigger", Name: "Webhook", StartDate: startDate}
