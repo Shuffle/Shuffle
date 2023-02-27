@@ -3679,47 +3679,47 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	if !responseData.Success {
 		log.Printf("[WARNING] Should stop org job controller because no success?")
 
-		if strings.Contains(responseData.Reason, "Bad apikey") || strings.Contains(responseData.Reason, "Error getting the organization") || strings.Contains(responseData.Reason, "Organization isn't syncing") {
+		if strings.Contains(strings.ToLower(responseData.Reason), "bad apikey") || strings.Contains(responseData.Reason, "Error getting the organization") || strings.Contains(responseData.Reason, "Organization isn't syncing") {
 			log.Printf("[WARNING] Remote error; Bad apikey or org error. Stopping sync for org: %s", responseData.Reason)
 
 			if value, exists := scheduledOrgs[org.Id]; exists {
 				// Looks like this does the trick? Hurr
-				log.Printf("[WARNING] STOPPING ORG SCHEDULE for: %s", org.Id)
-
+				log.Printf("[INFO] STOPPING ORG SCHEDULE for: %s", org.Id)
 				value.Lock()
-				org, err := shuffle.GetOrg(ctx, org.Id)
-				if err != nil {
-					log.Printf("[WARNING] Failed finding org %s: %s", org.Id, err)
-					return err
-				}
-
-				org.SyncConfig.Interval = 0
-				org.SyncConfig.Apikey = ""
-				org.CloudSync = false
-
-				// Just in case
-				org, err = handleStopCloudSync(syncUrl, *org)
-
-				startDate := time.Now().Unix()
-				org.SyncFeatures.Webhook = shuffle.SyncData{Active: false, Type: "trigger", Name: "Webhook", StartDate: startDate}
-				org.SyncFeatures.UserInput = shuffle.SyncData{Active: false, Type: "trigger", Name: "User Input", StartDate: startDate}
-				org.SyncFeatures.EmailTrigger = shuffle.SyncData{Active: false, Type: "action", Name: "Email Trigger", StartDate: startDate}
-				org.SyncFeatures.Schedules = shuffle.SyncData{Active: false, Type: "trigger", Name: "Schedule", StartDate: startDate, Limit: 0}
-				org.SyncFeatures.SendMail = shuffle.SyncData{Active: false, Type: "action", Name: "Send Email", StartDate: startDate, Limit: 0}
-				org.SyncFeatures.SendSms = shuffle.SyncData{Active: false, Type: "action", Name: "Send SMS", StartDate: startDate, Limit: 0}
-				org.CloudSyncActive = false
-
-				err = shuffle.SetOrg(ctx, *org, org.Id)
-				if err != nil {
-					log.Printf("[WARNING] Failed setting organization when stopping sync: %s", err)
-				} else {
-					log.Printf("[INFO] Successfully STOPPED org cloud sync for %s (%s)", org.Name, org.Id)
-				}
-
-				return errors.New("Stopped schedule for org locally because of bad apikey.")
 			} else {
-				return errors.New(fmt.Sprintf("Failed finding the schedule for org %s (%s)", org.Name, org.Id))
+				log.Printf("[INFO] Failed finding the schedule for org %s (%s)", org.Name, org.Id)
 			}
+
+			org, err := shuffle.GetOrg(ctx, org.Id)
+			if err != nil {
+				log.Printf("[WARNING] Failed finding org %s: %s", org.Id, err)
+				return err
+			}
+
+			org.SyncConfig.Interval = 0
+			org.SyncConfig.Apikey = ""
+			org.CloudSync = false
+
+			// Just in case
+			org, err = handleStopCloudSync(syncUrl, *org)
+
+			startDate := time.Now().Unix()
+			org.SyncFeatures.Webhook = shuffle.SyncData{Active: false, Type: "trigger", Name: "Webhook", StartDate: startDate}
+			org.SyncFeatures.UserInput = shuffle.SyncData{Active: false, Type: "trigger", Name: "User Input", StartDate: startDate}
+			org.SyncFeatures.EmailTrigger = shuffle.SyncData{Active: false, Type: "action", Name: "Email Trigger", StartDate: startDate}
+			org.SyncFeatures.Schedules = shuffle.SyncData{Active: false, Type: "trigger", Name: "Schedule", StartDate: startDate, Limit: 0}
+			org.SyncFeatures.SendMail = shuffle.SyncData{Active: false, Type: "action", Name: "Send Email", StartDate: startDate, Limit: 0}
+			org.SyncFeatures.SendSms = shuffle.SyncData{Active: false, Type: "action", Name: "Send SMS", StartDate: startDate, Limit: 0}
+			org.CloudSyncActive = false
+
+			err = shuffle.SetOrg(ctx, *org, org.Id)
+			if err != nil {
+				log.Printf("[WARNING] Failed setting organization when stopping sync: %s", err)
+			} else {
+				log.Printf("[INFO] Successfully STOPPED org cloud sync for %s (%s)", org.Name, org.Id)
+			}
+
+			return nil
 		}
 
 		return errors.New("[ERROR] Remote job handler issues.")
