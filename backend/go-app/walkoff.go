@@ -462,7 +462,8 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 	//log.Printf("Actionresult unmarshal: %s", string(body))
 	log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
-	err = shuffle.ValidateNewWorkerExecution(body)
+	ctx := context.Background()
+	err = shuffle.ValidateNewWorkerExecution(ctx, body)
 	if err == nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "success"}`)))
@@ -488,7 +489,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	// 4. Push to db
 	// IF FAIL: Set executionstatus: abort or cancel
 
-	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, err)
