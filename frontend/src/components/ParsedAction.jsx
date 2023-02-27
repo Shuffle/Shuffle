@@ -701,10 +701,7 @@ const ParsedAction = (props) => {
       }
 
       // bad detection mechanism probably
-      if (
-        event.target.value[event.target.value.length - 1] === "." &&
-        actionlist.length > 0
-      ) {
+      if (event.target.value[event.target.value.length - 1] === "." && actionlist.length > 0) {
         console.log("GET THE LAST ARGUMENT FOR NODE!");
         // THIS IS AN EXAMPLE OF SHOWING IT
         /*
@@ -2098,6 +2095,8 @@ const ParsedAction = (props) => {
                   toComplete += values[key].autocomplete;
                 }
 
+												
+
                 // Handles the fields under OpenAPI body to be parsed.
                 if (data.name.startsWith("${") && data.name.endsWith("}")) {
                   console.log("INSIDE VALUE REPLACE: ", data.name, toComplete);
@@ -2131,10 +2130,8 @@ const ParsedAction = (props) => {
                       }
                     }
 
-                    selectedActionParameters[count]["value_replace"] =
-                      paramcheck;
-                    selectedAction.parameters[count]["value_replace"] =
-                      paramcheck;
+                    selectedActionParameters[count]["value_replace"] = paramcheck;
+                    selectedAction.parameters[count]["value_replace"] = paramcheck;
                     setSelectedAction(selectedAction);
                     setUpdate(Math.random());
 
@@ -2144,13 +2141,15 @@ const ParsedAction = (props) => {
                   }
                 }
 
-                selectedActionParameters[count].value += toComplete;
-                selectedAction.parameters[count].value =
-                  selectedActionParameters[count].value;
-                setSelectedAction(selectedAction);
-                setUpdate(Math.random());
-
-                setShowDropdown(false);
+								console.log("In nestedclick!!")
+								var newValue = selectedActionParameters[count].value + toComplete
+								changeActionParameter({target: {value: newValue}}, count, data)
+                //selectedActionParameters[count].value += toComplete;
+                //selectedAction.parameters[count].value = selectedActionParameters[count].value;
+                //setSelectedAction(selectedAction);
+								//setUpdate(Math.random());
+                
+								setShowDropdown(false);
                 setMenuPosition(null);
               };
 
@@ -2604,7 +2603,9 @@ const ParsedAction = (props) => {
 
                         setUpdate(Math.random());
                       }}
-                      onClick={() => setShowAutocomplete(true)}
+                      onClick={() => {
+												setShowAutocomplete(true)
+											}}
                       fullWidth
                       open={showAutocomplete}
                       style={{
@@ -2614,22 +2615,12 @@ const ParsedAction = (props) => {
                         borderRadius: theme.palette.borderRadius,
                       }}
                       onChange={(e) => {
-                        if (
-                          selectedActionParameters[count].value[
-                            selectedActionParameters[count].value.length - 1
-                          ] === "."
-                        ) {
-                          e.target.value.autocomplete =
-                            e.target.value.autocomplete.slice(
-                              1,
-                              e.target.value.autocomplete.length
-                            );
+                        if (selectedActionParameters[count].value[selectedActionParameters[count].value.length - 1] === ".") {
+                          e.target.value.autocomplete = e.target.value.autocomplete.slice(1,e.target.value.autocomplete.length);
                         }
 
-                        selectedActionParameters[count].value +=
-                          e.target.value.autocomplete;
-                        selectedAction.parameters[count].value =
-                          selectedActionParameters[count].value;
+                        selectedActionParameters[count].value += e.target.value.autocomplete;
+                        selectedAction.parameters[count].value = selectedActionParameters[count].value;
                         setSelectedAction(selectedAction);
                         setUpdate(Math.random());
 
@@ -2973,108 +2964,110 @@ const ParsedAction = (props) => {
 									// Should make it a function lol
 									if (workflow.branches !== undefined && workflow.branches !== null) {	
 										for (let [key,keyval] in Object.entries(workflow.branches)) {
-											for (let [subkey,subkeyval] in Object.entries(workflow.branches[key].conditions)) {
-												const condition = workflow.branches[key].conditions[subkey]
-												const sourceparam = condition.source
-												const destinationparam = condition.destination
+											if (workflow.branches[key].conditions !== undefined && workflow.branches[key].conditions !== null) {
+												for (let [subkey,subkeyval] in Object.entries(workflow.branches[key].conditions)) {
+													const condition = workflow.branches[key].conditions[subkey]
+													const sourceparam = condition.source
+													const destinationparam = condition.destination
 
-												// Should have a smarter way of discovering node names
-												// Finding index(es) and replacing at the location
-												if (sourceparam.value.includes("$")) {
-													try {
-														var cnt = -1
-														var previous = 0
-														while (true) {
-															cnt += 1 
-															// Need to make sure e.g. changing the first here doesn't change the 2nd
-															// $change_me
-															// $change_me_2
-															
-															const foundindex = sourceparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
-															if (foundindex === previous && foundindex !== 0) {
-																break
-															}
-	
-															if (foundindex >= 0) {
-																previous = foundindex+newname.length
-																// Need to add diff of length to word
-	
-																// Check location:
-																// If it's a-zA-Z_ then don't replace
-																if (sourceparam.value.length > foundindex+parsedBaseLabel.length) {
-																	const regex = /[a-zA-Z0-9_]/g;
-																	const match = sourceparam.value[foundindex+parsedBaseLabel.length].match(regex);
-																	if (match !== null) {
-																		continue
-																	}
-																}
+													// Should have a smarter way of discovering node names
+													// Finding index(es) and replacing at the location
+													if (sourceparam.value.includes("$")) {
+														try {
+															var cnt = -1
+															var previous = 0
+															while (true) {
+																cnt += 1 
+																// Need to make sure e.g. changing the first here doesn't change the 2nd
+																// $change_me
+																// $change_me_2
 																
-																console.log("Old found: ", workflow.branches[key].conditions[subkey].source.value)
-																const extralength = newname.length-parsedBaseLabel.length
-																sourceparam.value = sourceparam.value.substring(0, foundindex) + newname + sourceparam.value.substring(foundindex-extralength+newname.length, sourceparam.value.length)
+																const foundindex = sourceparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+																if (foundindex === previous && foundindex !== 0) {
+																	break
+																}
+	
+																if (foundindex >= 0) {
+																	previous = foundindex+newname.length
+																	// Need to add diff of length to word
+	
+																	// Check location:
+																	// If it's a-zA-Z_ then don't replace
+																	if (sourceparam.value.length > foundindex+parsedBaseLabel.length) {
+																		const regex = /[a-zA-Z0-9_]/g;
+																		const match = sourceparam.value[foundindex+parsedBaseLabel.length].match(regex);
+																		if (match !== null) {
+																			continue
+																		}
+																	}
+																	
+																	console.log("Old found: ", workflow.branches[key].conditions[subkey].source.value)
+																	const extralength = newname.length-parsedBaseLabel.length
+																	sourceparam.value = sourceparam.value.substring(0, foundindex) + newname + sourceparam.value.substring(foundindex-extralength+newname.length, sourceparam.value.length)
 
-																console.log("New: ", workflow.branches[key].conditions[subkey].source.value)
-															} else { 
-																break
-															}
+																	console.log("New: ", workflow.branches[key].conditions[subkey].source.value)
+																} else { 
+																	break
+																}
 	
-															// Break no matter what after 5 replaces. May need to increase
-															if (cnt >= 5) {
-																break
-															}
+																// Break no matter what after 5 replaces. May need to increase
+																if (cnt >= 5) {
+																	break
+																}
 	
+															}
+            								} catch (e) {
+															console.log("Failed value replacement based on index: ", e)
 														}
-            							} catch (e) {
-														console.log("Failed value replacement based on index: ", e)
 													}
-												}
 
-												if (destinationparam.value.includes("$")) {
-													try {
-														var cnt = -1
-														var previous = 0
-														while (true) {
-															cnt += 1 
-															// Need to make sure e.g. changing the first here doesn't change the 2nd
-															// $change_me
-															// $change_me_2
-															
-															const foundindex = destinationparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
-															if (foundindex === previous && foundindex !== 0) {
-																break
-															}
-	
-															if (foundindex >= 0) {
-																previous = foundindex+newname.length
-																// Need to add diff of length to word
-	
-																// Check location:
-																// If it's a-zA-Z_ then don't replace
-																if (destinationparam.value.length > foundindex+parsedBaseLabel.length) {
-																	const regex = /[a-zA-Z0-9_]/g;
-																	const match = destinationparam.value[foundindex+parsedBaseLabel.length].match(regex);
-																	if (match !== null) {
-																		continue
-																	}
-																}
+													if (destinationparam.value.includes("$")) {
+														try {
+															var cnt = -1
+															var previous = 0
+															while (true) {
+																cnt += 1 
+																// Need to make sure e.g. changing the first here doesn't change the 2nd
+																// $change_me
+																// $change_me_2
 																
-																console.log("Old found: ", workflow.branches[key].conditions[subkey].destination.value)
-																const extralength = newname.length-parsedBaseLabel.length
-																destinationparam.value = destinationparam.value.substring(0, foundindex) + newname + destinationparam.value.substring(foundindex-extralength+newname.length, destinationparam.value.length)
+																const foundindex = destinationparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+																if (foundindex === previous && foundindex !== 0) {
+																	break
+																}
+	
+																if (foundindex >= 0) {
+																	previous = foundindex+newname.length
+																	// Need to add diff of length to word
+	
+																	// Check location:
+																	// If it's a-zA-Z_ then don't replace
+																	if (destinationparam.value.length > foundindex+parsedBaseLabel.length) {
+																		const regex = /[a-zA-Z0-9_]/g;
+																		const match = destinationparam.value[foundindex+parsedBaseLabel.length].match(regex);
+																		if (match !== null) {
+																			continue
+																		}
+																	}
+																	
+																	console.log("Old found: ", workflow.branches[key].conditions[subkey].destination.value)
+																	const extralength = newname.length-parsedBaseLabel.length
+																	destinationparam.value = destinationparam.value.substring(0, foundindex) + newname + destinationparam.value.substring(foundindex-extralength+newname.length, destinationparam.value.length)
 
-																console.log("New: ", workflow.branches[key].conditions[subkey].destination.value)
-															} else { 
-																break
-															}
+																	console.log("New: ", workflow.branches[key].conditions[subkey].destination.value)
+																} else { 
+																	break
+																}
 	
-															// Break no matter what after 5 replaces. May need to increase
-															if (cnt >= 5) {
-																break
-															}
+																// Break no matter what after 5 replaces. May need to increase
+																if (cnt >= 5) {
+																	break
+																}
 	
+															}
+            								} catch (e) {
+															console.log("Failed value replacement based on index: ", e)
 														}
-            							} catch (e) {
-														console.log("Failed value replacement based on index: ", e)
 													}
 												}
 											}

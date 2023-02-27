@@ -910,7 +910,9 @@ const AppFramework = (props) => {
 		}
 
 	useEffect(() => {
-		handleLoadNextSuggestion(frameworkData) 
+		if (!window.location.pathname.includes("usecases")) {
+			handleLoadNextSuggestion(frameworkData) 
+		}
 	}, [])
 
 	useEffect(() => {
@@ -985,9 +987,8 @@ const AppFramework = (props) => {
 	}, [newSelectedApp])
 
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+    
 
   const imgSize = 50;
 	var parsedFrameworkData = frameworkData === undefined ? {} : frameworkData 
@@ -1906,7 +1907,7 @@ const AppFramework = (props) => {
 				/>
 			</div>
 
-			{injectedApps.map((apps) => {
+			{injectedApps.map((apps, appindex) => {
 				var categoryTop = 100
 				var categoryLeft = 100
 
@@ -1934,7 +1935,7 @@ const AppFramework = (props) => {
 				}
 
 				return (
-					<div style={{display: "flex", position: "absolute", top: categoryTop, left: categoryLeft,  zIndex: 10010, }}>
+					<div key={appindex} style={{display: "flex", position: "absolute", top: categoryTop, left: categoryLeft,  zIndex: 10010, }}>
 						{apps.map((app, appIndex) => {
 							return (
 								<Chip

@@ -222,22 +222,23 @@ const parseCurl = (s) => {
   return out;
 };
 
+// Basically CRUD for each category + special
 export const appCategories = [
 		{
     	"name": "Communication",
 			"color": "#FFC107",
 			"icon": "communication",
-			"action_labels": ["List Messages", "Send Message",],
+			"action_labels": ["List Messages", "Send Message", "Get Message", "Search messages"],
 		}, {
 			"name": "SIEM",
 			"color": "#FFC107",
 			"icon": "siem",
-			"action_labels": ["Get alerts", "Search", "Create detection",],
+			"action_labels": ["List Alerts", "Search", "Create detection", "Add hash to lookup_list",],
 		}, {
 			"name": "Eradication",
 			"color": "#FFC107",
 			"icon": "eradication",
-			"action_labels": ["List tickets", "Update ticket", "Block hash", "Isolate host"],
+			"action_labels": ["List Alerts", "Update Alert", "Create detection", "Block hash", "Search Hosts", "Isolate host"],
 		}, {
 			"name": "Cases",
 			"color": "#FFC107",
@@ -247,27 +248,27 @@ export const appCategories = [
 			"name": "Assets",
 			"color": "#FFC107",
 			"icon": "assets",
-			"action_labels": [],
+			"action_labels": ["List Assets", "Get Asset", "Search Assets", "Search Users", "Search endpoints", "Search vulnerabilities"],
 		}, {
 			"name": "Intel",
 			"color": "#FFC107",
 			"icon": "intel",
-			"action_labels": [],
+			"action_labels": ["Get IOC", "Search IOC", "Create IOC", "Update IOC", "Delete IOC", "Add IOC",],
 		}, {
 			"name": "IAM",
 			"color": "#FFC107",
 			"icon": "iam",
-			"action_labels": [],
+			"action_labels": ["Get Identity", "Get Asset", "Search Identity", "Reset Password", "Disable user", ],
 		}, {
 			"name": "Network",
 			"color": "#FFC107",
 			"icon": "network",
-			"action_labels": ["Block IP",],
+			"action_labels": ["Get Rules", "Allow IP", "Block IP",],
 		}, {
 			"name": "Other",
 			"color": "#FFC107",
 			"icon": "other",
-			"action_labels": [],
+			"action_labels": ["Update Info", "Get Info", "Get Status", "Get Version", "Get Health", "Get Config", "Get Configs", "Get Configs by type", "Get Configs by name", "Run script"],
 		},
 ]
 
@@ -3152,11 +3153,15 @@ const AppCreator = (defaultprops) => {
 									<Select
 										fullWidth
 										onChange={(e) => {
-											console.log("Should change: ", e.target.value)
+											console.log("Should change: ", e.target.value, " Index: ", index)
 
-											actions[index].action_label = e.target.value
-											setActions(actions)
-    									setUpdate(Math.random());
+											const foundIndex = actions.findIndex((action) => action.name === data.name)
+											console.log("Found index: ", foundIndex)
+											if (foundIndex !== undefined && foundIndex !== null && foundIndex >= 0) {
+												actions[foundIndex].action_label = e.target.value
+												setActions(actions)
+												setUpdate(Math.random())
+											}
 										}}
 										value={data.action_label}
 										style={{

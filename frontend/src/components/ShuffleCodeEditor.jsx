@@ -54,8 +54,14 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 const liquidFilters = [
 	{"name": "Size", "value": "size", "example": ""},
 	{"name": "Date", "value": `date: "%Y%m%d"`, "example": `{{ "now" | date: "%s" }}`},
+	{"name": "Split", "value": `split: ","`, "example": `{{ "this,can,become,a,list" | split: "," }}`},
+	{"name": "Join", "value": `join: ","`, "example": `{{ ["this","can","become","a","string"] | join: "," }}`},
 	{"name": "Escape String", "value": `{{ \"\"\"'string with weird'" quotes\"\"\" | escape_string }}`, "example": ``},
 	{"name": "Flatten", "value": `flatten`, "example": `{{ [1, [1, 2], [2, 3, 4]] | flatten }}`},
+	{"name": "URL encode", "value": `url_encode`, "example": `{{ "https://www.google.com/search?q=hello world" | url_encode }}`},
+	{"name": "URL decode ", "value": `url_decode`, "example": `{{ "https://www.google.com/search?q=hello%20world" | url_decode }}`},
+	{"name": "base64_encode", "value": `base64_encode`, "example": `{{ "https://www.google.com/search?q=hello%20world" | base64_encode }}`},
+	{"name": "base64_decode", "value": `base64_decode`, "example": `{{ "aGVsbG8K" | base64_encode }}`},
 ]
 
 const mathFilters = [
@@ -426,10 +432,11 @@ const CodeEditor = (props) => {
 						if(fixedVariable.slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
 							valuefound = true 
 
-							console.log("Valuefound: ", fixedVariable, actionlist[j].example)
-
 							try {
-								if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
+								if (typeof actionlist[j].example === "object") {
+									input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
+
+								} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
 									input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
 								} else {
 									input = input.replace(fixedVariable, actionlist[j].example)
@@ -438,6 +445,7 @@ const CodeEditor = (props) => {
 								input = input.replace(fixedVariable, actionlist[j].example)
 							}
 						} else {
+							// Couldn't find the correct example value
 						}
 					}
 
@@ -565,12 +573,14 @@ const CodeEditor = (props) => {
 			inputdata = JSON.stringify(inputdata)
 		}
 
+		// Shuffle Tools 1.2.0 (in most cases?)
 		const appid = "3e2bdf9d5069fe3f4746c29d68785a6a" 
 		const actiondata = {"description":"Repeats the call parameter","id":"","name":"repeat_back_to_me","label":"","node_type":"","environment":"","sharing":false,"private_id":"","public_id":"","app_id":"3e2bdf9d5069fe3f4746c29d68785a6a","tags":null,"authentication":[],"tested":false,"parameters":[{"description":"The message to repeat","id":"","name":"call","example":"REPEATING: Hello world","value":inputdata,"multiline":true,"options":null,"action_field":"","variant":"STATIC_VALUE","required":true,"configuration":false,"tags":null,"schema":{"type":"string"},"skip_multicheck":false,"value_replace":null,"unique_toggled":false,"autocompleted":false}],"execution_variable":{"description":"","id":"","name":"","value":""},"returns":{"description":"","example":"","id":"","schema":{"type":"string"}},"authentication_id":"","example":"","auth_not_required":false,"source_workflow":"","run_magic_output":false,"run_magic_input":false,"execution_delay":0,"app_name":"Shuffle Tools","app_version":"1.2.0","selectedAuthentication":{}}
 
 		setExecutionResult({
 			"valid": false,		
 			"result": baseResult,
+			"errors": [],
 		})
 
 		setExecuting(true)
@@ -593,21 +603,27 @@ const CodeEditor = (props) => {
 		})
 		.then((responseJson) => {
 			//console.log("RESPONSE: ", responseJson)
+			var newResult = {}
 			if (responseJson.success === true && responseJson.result !== null && responseJson.result !== undefined && responseJson.result.length > 0) {
 				const result = responseJson.result.slice(0, 50)+"..."
 				//alert.info("SUCCESS: "+result)
 
 				const validate = validateJson(responseJson.result)
-				setExecutionResult(validate)
+				newResult = validate
 			} else if (responseJson.success === false && responseJson.reason !== undefined && responseJson.reason !== null) {
 				alert.error(responseJson.reason)
-				setExecutionResult({"valid": false, "result": responseJson.reason})
+				newResult = {"valid": false, "result": responseJson.reason}
 			} else if (responseJson.success === true) {
-				setExecutionResult({"valid": false, "result": "Couldn't finish execution. Please fill all the required fields, and retry the execution."})
+				newResult = {"valid": false, "result": "Couldn't finish execution. Please fill all the required fields, and retry the execution."}
 			} else {
-				setExecutionResult({"valid": false, "result": "Couldn't finish execution (2). Please fill all the required fields, and validate the execution."})
+				newResult = {"valid": false, "result": "Couldn't finish execution (2). Please fill all the required fields, and validate the execution."}
 			}
-			
+
+			if (responseJson.errors !== undefined && responseJson.errors !== null && responseJson.errors.length > 0) {
+				newResult.errors = responseJson.errors
+			}
+
+			setExecutionResult(newResult)
 			setExecuting(false)
 		})
 		.catch(error => {
@@ -1262,7 +1278,7 @@ const CodeEditor = (props) => {
 								<IconButton disabled={executing} color="primary" style={{border: `1px solid ${theme.palette.primary.main}`, marginLeft: 300, padding: 8}} variant="contained" onClick={() => {
 									executeSingleAction(expOutput)
 								}}>
-									<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' action with what you see in the expected output window." placement="top">
+									<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
 										{executing ? <CircularProgress style={{height: 18, width: 18, }} /> : <PlayArrowIcon style={{height: 18, width: 18, }} /> }
 													 
 									</Tooltip>
@@ -1339,6 +1355,11 @@ const CodeEditor = (props) => {
 								<Typography variant="body2" style={{maxHeight: 100, overflow: "auto",}}>
 									Test output: {executionResult.result}
 								</Typography>
+							: null}
+							{executionResult.errors !== undefined && executionResult.errors !== null && executionResult.errors.length > 0 ?
+								<Typography variant="body2" style={{maxHeight: 100, overflow: "auto", color: "#f85a3e",}}>
+									Errors ({executionResult.errors.length}): {executionResult.errors.join("\n")}
+								</Typography> 
 							: null}
 						</span>
 						}

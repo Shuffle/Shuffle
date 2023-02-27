@@ -2737,7 +2737,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 					fullPath = fmt.Sprintf("%s%s", extra, "api.yml")
 					fileReader, err = fs.Open(fullPath)
 					if err != nil {
-						log.Printf("Failed finding api.yaml/yml: %s", err)
+						log.Printf("[INFO] Failed finding api.yaml/yml for file %s: %s", filename, err)
 						continue
 					}
 				}
