@@ -1340,156 +1340,6 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "redirect", "sso_url": "%s"}`, baseSSOUrl)))
 }
 
-func handleLogin(resp http.ResponseWriter, request *http.Request) {
-	cors := shuffle.HandleCors(resp, request)
-	if cors {
-		return
-	}
-
-	// Gets a struct of Username, password
-	data, err := shuffle.ParseLoginParameters(resp, request)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	log.Printf("[INFO] Handling login of %s", data.Username)
-
-	err = checkUsername(data.Username)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	ctx := context.Background()
-	log.Printf("[INFO] Login Username: %s", data.Username)
-	users, err := shuffle.FindUser(ctx, strings.ToLower(strings.TrimSpace(data.Username)))
-	if err != nil && len(users) == 0 {
-		log.Printf("[WARNING] Failed getting user %s: %s", data.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-		return
-	}
-
-	if len(users) != 1 {
-		log.Printf(`Found multiple or no users with the same username: %s: %d`, data.Username, len(users))
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %d users with username %s"}`, len(users), data.Username)))
-		return
-	}
-
-	Userdata := users[0]
-
-	err = bcrypt.CompareHashAndPassword([]byte(Userdata.Password), []byte(data.Password))
-	if err != nil {
-		log.Printf("Password for %s is incorrect: %s", data.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-		return
-	}
-
-	if !Userdata.Active {
-		log.Printf("%s is not active, but tried to login. Error: %v", data.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "This user is deactivated"}`))
-		return
-	}
-
-	tutorialsFinished := []shuffle.Tutorial{}
-	for _, tutorial := range Userdata.PersonalInfo.Tutorials {
-		tutorialsFinished = append(tutorialsFinished, shuffle.Tutorial{
-			Name: tutorial,
-		})
-	}
-	returnValue := shuffle.HandleInfo{
-		Success:   true,
-		Tutorials: tutorialsFinished,
-	}
-
-	loginData := `{"success": true}`
-	newData, err := json.Marshal(returnValue)
-	if err == nil {
-		loginData = string(newData)
-	}
-
-	if len(Userdata.Session) != 0 {
-		log.Println("[INFO] User session already exists - resetting it")
-		expiration := time.Now().Add(3600 * time.Second)
-
-		http.SetCookie(resp, &http.Cookie{
-			Name:    "session_token",
-			Value:   Userdata.Session,
-			Expires: expiration,
-		})
-
-		returnValue.Cookies = append(returnValue.Cookies, shuffle.SessionCookie{
-			Key:        "session_token",
-			Value:      Userdata.Session,
-			Expiration: expiration.Unix(),
-		})
-
-		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, Userdata.Session, expiration.Unix())
-		newData, err := json.Marshal(returnValue)
-		if err == nil {
-			loginData = string(newData)
-		}
-		//log.Printf("SESSION LENGTH MORE THAN 0 IN LOGIN: %s", Userdata.Session)
-
-		err = shuffle.SetSession(ctx, Userdata, Userdata.Session)
-		if err != nil {
-			log.Printf("Error adding session to database: %s", err)
-		}
-
-		resp.WriteHeader(200)
-		resp.Write([]byte(loginData))
-		return
-	} else {
-		log.Printf("[INFO] User session is empty - create one!")
-
-		sessionToken := uuid.NewV4().String()
-		expiration := time.Now().Add(3600 * time.Second)
-		http.SetCookie(resp, &http.Cookie{
-			Name:    "session_token",
-			Value:   sessionToken,
-			Expires: expiration,
-		})
-
-		// ADD TO DATABASE
-		err = shuffle.SetSession(ctx, Userdata, sessionToken)
-		if err != nil {
-			log.Printf("Error adding session to database: %s", err)
-		}
-
-		Userdata.Session = sessionToken
-		err = shuffle.SetUser(ctx, &Userdata, true)
-		if err != nil {
-			log.Printf("Failed updating user when setting session: %s", err)
-			resp.WriteHeader(500)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		returnValue.Cookies = append(returnValue.Cookies, shuffle.SessionCookie{
-			Key:        "session_token",
-			Value:      sessionToken,
-			Expiration: expiration.Unix(),
-		})
-
-		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, sessionToken, expiration.Unix())
-		newData, err := json.Marshal(returnValue)
-		if err == nil {
-			loginData = string(newData)
-		}
-	}
-
-	log.Printf("[INFO] %s SUCCESSFULLY LOGGED IN with session %s", data.Username, Userdata.Session)
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(loginData))
-}
-
 func fixOrgUser(ctx context.Context, org *shuffle.Org) *shuffle.Org {
 	//found := false
 	//for _, id := range user.Orgs {
@@ -3829,47 +3679,50 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	if !responseData.Success {
 		log.Printf("[WARNING] Should stop org job controller because no success?")
 
-		if strings.Contains(responseData.Reason, "Bad apikey") || strings.Contains(responseData.Reason, "Error getting the organization") || strings.Contains(responseData.Reason, "Organization isn't syncing") {
+		if strings.Contains(strings.ToLower(responseData.Reason), "bad apikey") || strings.Contains(responseData.Reason, "Error getting the organization") || strings.Contains(responseData.Reason, "Organization isn't syncing") {
 			log.Printf("[WARNING] Remote error; Bad apikey or org error. Stopping sync for org: %s", responseData.Reason)
 
 			if value, exists := scheduledOrgs[org.Id]; exists {
 				// Looks like this does the trick? Hurr
-				log.Printf("[WARNING] STOPPING ORG SCHEDULE for: %s", org.Id)
-
+				log.Printf("[INFO] STOPPING ORG SCHEDULE for: %s", org.Id)
 				value.Lock()
-				org, err := shuffle.GetOrg(ctx, org.Id)
-				if err != nil {
-					log.Printf("[WARNING] Failed finding org %s: %s", org.Id, err)
-					return err
-				}
-
-				org.SyncConfig.Interval = 0
-				org.SyncConfig.Apikey = ""
-				org.CloudSync = false
-
-				// Just in case
-				org, err = handleStopCloudSync(syncUrl, *org)
-
-				startDate := time.Now().Unix()
-				org.SyncFeatures.Webhook = shuffle.SyncData{Active: false, Type: "trigger", Name: "Webhook", StartDate: startDate}
-				org.SyncFeatures.UserInput = shuffle.SyncData{Active: false, Type: "trigger", Name: "User Input", StartDate: startDate}
-				org.SyncFeatures.EmailTrigger = shuffle.SyncData{Active: false, Type: "action", Name: "Email Trigger", StartDate: startDate}
-				org.SyncFeatures.Schedules = shuffle.SyncData{Active: false, Type: "trigger", Name: "Schedule", StartDate: startDate, Limit: 0}
-				org.SyncFeatures.SendMail = shuffle.SyncData{Active: false, Type: "action", Name: "Send Email", StartDate: startDate, Limit: 0}
-				org.SyncFeatures.SendSms = shuffle.SyncData{Active: false, Type: "action", Name: "Send SMS", StartDate: startDate, Limit: 0}
-				org.CloudSyncActive = false
-
-				err = shuffle.SetOrg(ctx, *org, org.Id)
-				if err != nil {
-					log.Printf("[WARNING] Failed setting organization when stopping sync: %s", err)
-				} else {
-					log.Printf("[INFO] Successfully STOPPED org cloud sync for %s (%s)", org.Name, org.Id)
-				}
-
-				return errors.New("Stopped schedule for org locally because of bad apikey.")
 			} else {
-				return errors.New(fmt.Sprintf("Failed finding the schedule for org %s (%s)", org.Name, org.Id))
+				log.Printf("[INFO] Failed finding the schedule for org %s (%s)", org.Name, org.Id)
 			}
+
+			org, err := shuffle.GetOrg(ctx, org.Id)
+			if err != nil {
+				log.Printf("[WARNING] Failed finding org %s: %s", org.Id, err)
+				return err
+			}
+
+			// Just in case
+			org, err = handleStopCloudSync(syncUrl, *org)
+			if err != nil {
+				log.Printf("[ERROR] Failed stopping cloud sync remotely: %s", err)
+			}
+
+			org.SyncConfig.Interval = 0
+			org.CloudSync = false
+			org.SyncConfig.Apikey = ""
+
+			startDate := time.Now().Unix()
+			org.SyncFeatures.Webhook = shuffle.SyncData{Active: false, Type: "trigger", Name: "Webhook", StartDate: startDate}
+			org.SyncFeatures.UserInput = shuffle.SyncData{Active: false, Type: "trigger", Name: "User Input", StartDate: startDate}
+			org.SyncFeatures.EmailTrigger = shuffle.SyncData{Active: false, Type: "action", Name: "Email Trigger", StartDate: startDate}
+			org.SyncFeatures.Schedules = shuffle.SyncData{Active: false, Type: "trigger", Name: "Schedule", StartDate: startDate, Limit: 0}
+			org.SyncFeatures.SendMail = shuffle.SyncData{Active: false, Type: "action", Name: "Send Email", StartDate: startDate, Limit: 0}
+			org.SyncFeatures.SendSms = shuffle.SyncData{Active: false, Type: "action", Name: "Send SMS", StartDate: startDate, Limit: 0}
+			org.CloudSyncActive = false
+
+			err = shuffle.SetOrg(ctx, *org, org.Id)
+			if err != nil {
+				log.Printf("[WARNING] Failed setting organization when stopping sync: %s", err)
+			} else {
+				log.Printf("[INFO] Successfully STOPPED org cloud sync for %s (%s)", org.Name, org.Id)
+			}
+
+			return nil
 		}
 
 		return errors.New("[ERROR] Remote job handler issues.")
@@ -4323,9 +4176,9 @@ func runInitEs(ctx context.Context) {
 
 		url := os.Getenv("SHUFFLE_APP_DOWNLOAD_LOCATION")
 		if len(url) == 0 {
-			log.Printf("Skipping download since no URL is set")
-			//url = "https://github.com/frikky/shuffle-apps"
-			return
+			log.Printf("[INFO] Skipping download of apps since no URL is set. Default would be https://github.com/frikky/shuffle-apps")
+			//url = ""
+			//return
 		}
 
 		username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
@@ -6042,7 +5895,7 @@ func initHandlers() {
 
 	// General - duplicates and old.
 	r.HandleFunc("/api/v1/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/login", handleLogin).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login", shuffle.HandleLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/logout", shuffle.HandleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")

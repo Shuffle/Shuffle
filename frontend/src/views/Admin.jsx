@@ -209,7 +209,7 @@ const Admin = (props) => {
   const [openEditor, setOpenEditor] = React.useState(false);
   const [renderTextBox, setRenderTextBox] = React.useState(false);
   const [openFileId, setOpenFileId] = React.useState(false);
-  const allowedFileTypes = ["txt", "py", "yaml","yml","json"]
+  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv",]
 
   const runUpdateText = (text) =>{
     fetch(`${globalUrl}/api/v1/files/${openFileId}/edit`, {
@@ -1014,6 +1014,36 @@ const Admin = (props) => {
       )
       .catch((error) => {
         console.log("Error when deleting: ", error);
+      });
+  };
+
+  const rerunCloudWorkflows = (environment) => {
+		alert.info("Starting execution reruns. This can run in the background.") 
+    fetch(
+      `${globalUrl}/api/v1/environments/${environment.id}/rerun`,
+      {
+        method: "GET",
+        credentials: "include",
+      }
+    )
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for apps :O!");
+          return;
+        } else {
+          alert.error(response.reason);
+          //alert.info("Aborted all dangling workflows");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        console.log("Got response for execution: ", responseJson);
+        //console.log("RESPONSE: ", responseJson)
+        //setFiles(responseJson)
+      })
+      .catch((error) => {
+        //alert.error(error.toString())
       });
   };
 
@@ -3943,7 +3973,7 @@ const Admin = (props) => {
           <List>
             <ListItem>
               <ListItemText
-                primary="Created"
+                primary="Updated"
                 style={{ maxWidth: 225, minWidth: 225 }}
               />
               <ListItemText
@@ -3989,7 +4019,8 @@ const Admin = (props) => {
                     bgColor = "#1f2023";
                   }
 
-									const isDisabledButton = isCloud || file.filesize < 100000 && file.status === ("active") && allowedFileTypes.includes(file.filename.split(".")[1]) === true
+									const filenamesplit = file.filename.split(".")
+									const iseditable = file.filesize < 100000 && file.status === "active" && allowedFileTypes.includes(filenamesplit[filenamesplit.length-1])
 
                   return (
                     <ListItem
@@ -4006,7 +4037,7 @@ const Admin = (props) => {
                           minWidth: 225,
                           overflow: "hidden",
                         }}
-                        primary={new Date(file.created_at * 1000).toISOString()}
+                        primary={new Date(file.updated_at * 1000).toISOString()}
                       />
                       <ListItemText
                         style={{
@@ -4099,13 +4130,13 @@ const Admin = (props) => {
                       <ListItemText
                         primary=<span style={{ display:"inline"}}>
                           <Tooltip
-                            title={"Edit File"}
+                            title={`Edit File (${allowedFileTypes.join(", ")})`}
                             style={{}}
                             aria-label={"Edit"}
                           >
                             <span>
                               <IconButton
-                                disabled={isDisabledButton ? false : true}
+                                disabled={!iseditable}
                                 style = {{padding: "6px"}}
                                 onClick={() => {
                                   setOpenEditor(true)
@@ -4114,11 +4145,7 @@ const Admin = (props) => {
                                 }}
                               >
                                 <EditIcon
-                                  style={{
-                                    color: isDisabledButton === true 
-                                        ? "white"
-                                        : "grey",
-                                  }}
+                                  style={{color: iseditable ? "white" : "grey",}}
                                 />
                               </IconButton>
                             </span>
@@ -4888,9 +4915,7 @@ const Admin = (props) => {
                     >
                       <div style={{ display: "flex" }}>
                         <Button
-                          variant={
-                            environment.archived ? "contained" : "outlined"
-                          }
+                          variant={environment.archived ? "contained" : "outlined"}
                           style={{ borderRadius: "0px" }}
                           onClick={() => deleteEnvironment(environment)}
                           color="primary"
@@ -4900,16 +4925,19 @@ const Admin = (props) => {
                         <Button
                           variant={"outlined"}
                           style={{ borderRadius: "0px" }}
+													disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
                           onClick={() => {
-                            console.log(
-                              "Should clear executions for: ",
-                              environment
-                            );
-                            abortEnvironmentWorkflows(environment);
+                            console.log("Should clear executions for: ", environment);
+
+														if (isCloud && environment.Name.toLowerCase() === "cloud") {
+                            	rerunCloudWorkflows(environment);
+														} else { 
+                            	abortEnvironmentWorkflows(environment);
+														}
                           }}
                           color="primary"
                         >
-                          Clear
+													{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
                         </Button>
                       </div>
                     </ListItemText>

@@ -274,6 +274,7 @@ const AngularWorkflow = (defaultprops) => {
   const [triggerAuthentication, setTriggerAuthentication] = React.useState({});
   const [triggerFolders, setTriggerFolders] = React.useState([]);
   const [workflows, setWorkflows] = React.useState([]);
+  const [parentWorkflows, setParentWorkflows] = React.useState([]);
   const [showEnvironment, setShowEnvironment] = React.useState(false);
   const [editWorkflowDetails, setEditWorkflowDetails] = React.useState(false);
 
@@ -487,7 +488,6 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (responseJson !== undefined) {
-          setWorkflows(responseJson);
 
           // Sets up subflow trigger with the right info
           if (trigger_index > -1) {
@@ -529,6 +529,37 @@ const AngularWorkflow = (defaultprops) => {
               }
             }
           }
+
+					if (workflows.length === 0) {
+						//console.log("First request. Checking for parent trigger (if this is subflow")
+						var parentworkflows = []
+						for (let workflowkey in responseJson) {
+							const innerworkflow = responseJson[workflowkey]
+
+							for (let triggerkey in innerworkflow.triggers) {
+								const trigger = innerworkflow.triggers[triggerkey]
+								if (trigger.trigger_type === "SUBFLOW") {
+
+									for (let paramkey in trigger.parameters) {
+										const param = trigger.parameters[paramkey]
+										if (param.name === "workflow" && param.value === props.match.params.key) {
+											parentworkflows.push({
+												id: innerworkflow.id,
+												name: innerworkflow.name,
+												image: innerworkflow.image,
+											})
+										}
+									}
+								}
+							}
+						}
+
+						if (parentworkflows.length > 0) {
+							setParentWorkflows(parentworkflows.filter(wf => wf.id !== props.match.params.key))
+						}
+					}
+
+          setWorkflows(responseJson);
         }
       })
       .catch((error) => {
@@ -2324,54 +2355,85 @@ const AngularWorkflow = (defaultprops) => {
       ((nodedata.app_name !== "Shuffle Tools" &&
         nodedata.app_name !== "Testing" &&
         nodedata.app_name !== "Shuffle Workflow" &&
-        nodedata.app_name !== "User Input" &&
-        nodedata.app_name !== "Webhook" &&
-        nodedata.app_name !== "Schedule" &&
-        nodedata.app_name !== "Email") ||
+        nodedata.app_name !== "User Input") ||
         nodedata.isStartNode)
     ) {
-      const allNodes = cy.nodes().jsons();
-      var found = false;
-      for (let nodekey in allNodes) {
-        const currentNode = allNodes[nodekey];
-        if (
-          currentNode.data.attachedTo === nodedata.id &&
-          currentNode.data.isDescriptor
-        ) {
-          found = true;
-          console.log("FOUND THE NODE!");
-          break;
-        }
-      }
+			const allNodes = cy.nodes().jsons();
+			var found = false;
+			for (let nodekey in allNodes) {
+				const currentNode = allNodes[nodekey];
+				if (
+					currentNode.data.attachedTo === nodedata.id &&
+					currentNode.data.isDescriptor
+				) {
+					found = true;
+					console.log("FOUND THE NODE!");
+					break;
+				}
+			}
 
-      // Readding the icon after moving the node
-      if (!found) {
-        const iconInfo = GetIconInfo(nodedata);
-        const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
-        const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
+			if (nodedata.app_name === "Webhook" || nodedata.app_name === "Schedule" || nodedata.app_name === "Gmail" || nodedata.app_name === "Office365") {
+				console.log("Found triggers. Add!")
 
-        const offset = nodedata.isStartNode ? 36 : 44;
-        const decoratorNode = {
-          position: {
-            x: event.target.position().x + offset,
-            y: event.target.position().y + offset,
-          },
-          locked: true,
-          data: {
-            isDescriptor: true,
-            isValid: true,
-            is_valid: true,
-            label: "",
-            image: svgpin_Url,
-            imageColor: iconInfo.iconBackgroundColor,
-            attachedTo: nodedata.id,
-          },
-        };
+      	if (!found) {
+					console.log("Find amount of executions for the specific nodetype: ", nodedata.app_name, "Executions: ", workflowExecutions)
+					// Find how many executions it has 
+					var executions = 0
+					const matchingExecutions = workflowExecutions.filter((execution => execution.execution_source === nodedata.app_name.toLowerCase()))
+					console.log("Matches: ", matchingExecutions.length)
+					const color = matchingExecutions.length > 0 ? "#34a853" : "#ea4436"
+					const decoratorNode = {
+						position: {
+							x: event.target.position().x + 44,
+							y: event.target.position().y + 44,
+						},
+						locked: true,
+						data: {
+							isDescriptor: true,
+							isValid: true,
+							is_valid: true,
+							isTrigger: true,
+							label: `${matchingExecutions.length}`,
+							attachedTo: nodedata.id,
+							imageColor: color,
+							hasExecutions: true,
+						},
+					};
 
-        cy.add(decoratorNode).unselectify();
-      } else {
-        console.log("Node already exists - don't add descriptor node");
-      }
+					cy.add(decoratorNode)
+				}
+			} else { 
+      	
+
+      	// Readding the icon after moving the node
+      	if (!found) {
+      	  const iconInfo = GetIconInfo(nodedata);
+      	  const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
+      	  const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
+
+      	  const offset = nodedata.isStartNode ? 36 : 44;
+      	  const decoratorNode = {
+      	    position: {
+      	      x: event.target.position().x + offset,
+      	      y: event.target.position().y + offset,
+      	    },
+      	    locked: true,
+      	    data: {
+      	      isDescriptor: true,
+      	      isValid: true,
+      	      is_valid: true,
+      	      label: "",
+      	      image: svgpin_Url,
+      	      imageColor: iconInfo.iconBackgroundColor,
+      	      attachedTo: nodedata.id,
+      	    },
+      	  };
+
+      	  cy.add(decoratorNode).unselectify();
+      	} else {
+      	  console.log("Node already exists - don't add descriptor node");
+      	}
+			}
     }
 
     originalLocation = {
@@ -2676,6 +2738,11 @@ const AngularWorkflow = (defaultprops) => {
         return;
       } else if (data.isDescriptor) {
         console.log("Can't select descriptor");
+				if (data.isTrigger) {
+					console.log("But maybe we can select trigger descriptor? Maybe open execution tab?")
+      		setExecutionModalOpen(true)
+				}
+
         event.target.unselect();
         return;
       }
@@ -4211,6 +4278,11 @@ const AngularWorkflow = (defaultprops) => {
     });
   };
 
+  const addRunCountButton = (event) => {
+		// Count executions?
+		// Maybe it shouldn't be onclick?
+	}
+
   const addCopyButton = (event) => {
     var parentNode = cy.$("#" + event.target.data("id"));
     if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
@@ -4379,7 +4451,52 @@ const AngularWorkflow = (defaultprops) => {
     //if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
 
     if (nodedata.app_name !== undefined && !workflow.public === true) {
-      const allNodes = cy.nodes().jsons();
+			const allNodes = cy.nodes().jsons();
+
+			if (nodedata.app_name === "Webhook" || nodedata.app_name === "Schedule" || nodedata.app_name === "Gmail" || nodedata.app_name === "Office365") {
+				console.log("In this :)")
+
+				var found = false;
+				for (let nodekey in allNodes) {
+					const currentNode = allNodes[nodekey];
+					if (
+						currentNode.data.attachedTo === nodedata.id &&
+						currentNode.data.isDescriptor
+					) {
+						found = true;
+						console.log("FOUND THE NODE!");
+						break;
+					}
+				}
+
+				if (!found) {
+					console.log("Find amount of executions for the specific nodetype: ", nodedata.app_name, "Executions: ", workflowExecutions)
+					// Find how many executions it has 
+					var executions = 0
+					const matchingExecutions = workflowExecutions.filter((execution => execution.execution_source === nodedata.app_name.toLowerCase()))
+					console.log("Matches: ", matchingExecutions.length)
+					const color = matchingExecutions.length > 0 ? "#34a853" : "#ea4436"
+					const decoratorNode = {
+						position: {
+							x: event.target.position().x + 44,
+							y: event.target.position().y + 44,
+						},
+						locked: true,
+						data: {
+							isDescriptor: true,
+							isValid: true,
+							is_valid: true,
+							isTrigger: true,
+							label: `${matchingExecutions.length}`,
+							attachedTo: nodedata.id,
+							imageColor: color,
+							hasExecutions: true,
+						},
+					};
+
+					cy.add(decoratorNode)
+				}
+			}
 
       var found = false;
       for (var _key in allNodes) {
@@ -4413,7 +4530,10 @@ const AngularWorkflow = (defaultprops) => {
         if (nodedata.type === "TRIGGER") {
           if (nodedata.trigger_type === "SUBFLOW" || nodedata.trigger_type === "USERINPUT") {
             addCopyButton(event);
-          }
+          } else {
+						// Check how many executions from the source
+						addRunCountButton(event);
+					}
         } else {
           addCopyButton(event);
           addStartnodeButton(event);
@@ -4467,7 +4587,7 @@ const AngularWorkflow = (defaultprops) => {
       //		locked: true,
       //	})
       //}
-    }
+    } 
 
     if (event.target !== undefined && event.target !== null) {
       event.target.animate(
@@ -4721,6 +4841,7 @@ const AngularWorkflow = (defaultprops) => {
       };
       return decoratorNode;
     });
+
 
     const triggers = workflow.triggers.map((trigger) => {
       const node = {};
@@ -5017,14 +5138,7 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   // App length necessary cus of cy initialization
-  if (
-    // First load - gets the workflow
-    elements.length === 0 &&
-    workflow.actions !== undefined &&
-    !graphSetup &&
-    Object.getOwnPropertyNames(workflow).length > 0
-  ) {
-
+  if (elements.length === 0 && workflow.actions !== undefined && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0) {
     setGraphSetup(true);
     setupGraph();
     console.log("In graph setup")
@@ -10073,6 +10187,10 @@ const AngularWorkflow = (defaultprops) => {
           name: "custom_response_body",
           value: "",
         };
+        workflow.triggers[selectedTriggerIndex].parameters[4] = {
+          name: "await_response",
+          value: "v1",
+        };
         setWorkflow(workflow);
       } else {
         // Always update
@@ -11073,26 +11191,6 @@ const AngularWorkflow = (defaultprops) => {
                       undefined &&
                       workflow.triggers[
                         selectedTriggerIndex
-                      ].parameters[2].value.includes("subflow")
-                    }
-                    onChange={() => {
-                      setTriggerOptionsWrapper("subflow");
-                    }}
-                    color="primary"
-                    value="subflow"
-                    disabled
-                  />
-                }
-                label={<div style={{ color: "white" }}>Subflow</div>}
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={
-                      workflow.triggers[selectedTriggerIndex].parameters[2] !==
-                      undefined &&
-                      workflow.triggers[
-                        selectedTriggerIndex
                       ].parameters[2].value.includes("email")
                     }
                     onChange={() => {
@@ -11119,12 +11217,23 @@ const AngularWorkflow = (defaultprops) => {
                 }
                 label={<div style={{ color: "white" }}>SMS</div>}
               />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("subflow")}
+                    onChange={() => {
+                      setTriggerOptionsWrapper("subflow");
+                    }}
+                    color="primary"
+                    value="subflow"
+                  />
+                }
+                label={<div style={{ color: "white" }}>Subflow</div>}
+              />
             </FormGroup>
             {workflow.triggers[selectedTriggerIndex].parameters[2] !==
               undefined &&
-              workflow.triggers[
-                selectedTriggerIndex
-              ].parameters[2].value.includes("email") ? (
+              workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email") ? (
               <TextField
                 style={{
                   backgroundColor: inputColor,
@@ -11187,11 +11296,7 @@ const AngularWorkflow = (defaultprops) => {
                 }}
               />
             ) : null}
-            {workflow.triggers[selectedTriggerIndex].parameters[2] !==
-              undefined &&
-              workflow.triggers[
-                selectedTriggerIndex
-              ].parameters[2].value.includes("subflow") ? (
+            {workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("subflow") ? (
               <TextField
                 style={{
                   backgroundColor: inputColor,
@@ -11213,8 +11318,7 @@ const AngularWorkflow = (defaultprops) => {
                   workflow.triggers[selectedTriggerIndex].parameters[5].value
                 }
                 onBlur={(event) => {
-                  workflow.triggers[selectedTriggerIndex].parameters[5].value =
-                    event.target.value;
+                  workflow.triggers[selectedTriggerIndex].parameters[5].value = event.target.value;
                   setWorkflow(workflow);
                   setUpdate(Math.random());
                 }}
@@ -11565,6 +11669,36 @@ const AngularWorkflow = (defaultprops) => {
             <h2 style={{ margin: 0 }}>{workflow.name}</h2>
           </Breadcrumbs>
         </div>
+				<div style={{display: "flex", marginLeft: 10, }}>
+					{parentWorkflows.slice(0,5).map((wf, index) => {
+						return (
+							<a href={`/workflows/${wf.id}`} target="_blank" rel="noopener noreferrer" key={index}>
+								<Tooltip arrow placement="left" title={
+									<span style={{}}>
+										{wf.image !== undefined && wf.image !== null && wf.image.length > 0 ?
+											<img 
+												src={wf.image} 
+												alt={wf.name} 
+												style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} 
+												
+											/>
+											: null}
+										<Typography>
+											Parent workflow: '{wf.name}'
+										</Typography>
+									</span>
+
+								} placement="bottom">
+									<span onClick={() => {
+										console.log("Click: ", wf)
+									}}>
+										<img src={theme.palette.defaultImage} style={{height: 25, width: 25, cursor: "pointer", border: 15, marginRight: 5, marginTop: 5, filter: "grayscale(90%)", }} />
+									</span>
+								</Tooltip>
+							</a>
+						)
+					})}
+				</div>
       </div>
     );
   };
@@ -14146,6 +14280,7 @@ const AngularWorkflow = (defaultprops) => {
                 width: imgsize,
                 height: imgsize,
                 border: `2px solid ${statusColor}`,
+								filter: curapp === undefined ? "grayscale(100%)" : null,
               }}
             />
           )}

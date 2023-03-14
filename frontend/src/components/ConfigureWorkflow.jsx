@@ -170,10 +170,7 @@ const ConfigureWorkflow = (props) => {
 					"required": true,
 				})
       } else {
-        if (
-          action.authentication_id === "" &&
-          app.authentication.required === true
-        ) {
+        if (action.authentication_id === "" && app.authentication.required === true && action.parameters !== undefined && action.parameters !== null) {
           // Check if configuration is filled or not
           var filled = true;
           for (let [key,keyval] in Object.entries(action.parameters)) {

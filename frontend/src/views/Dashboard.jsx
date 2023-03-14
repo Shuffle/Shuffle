@@ -99,6 +99,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 	const [description, setDescription] = useState("");
 	const [video, setVideo] = useState("");
 	const [blogpost, setBlogpost] = useState("");
+	const [workflowOutline, setWorkflowOutline] = useState("");
 
 	const [selectedWorkflows, setSelectedWorkflows] = useState([])
 	const [firstLoad, setFirstLoad] = useState(true)
@@ -186,6 +187,11 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 		if (mitreTags !== inputUsecase.mitre) {
 			inputUsecase.mitre = mitreTags
 			parsedUsecase.mitre = mitreTags 
+		}
+
+		if (workflowOutline !== inputUsecase.workflow_outline) {
+			inputUsecase.workflow_outline = workflowOutline 
+			parsedUsecase.workflow_outline = workflowOutline
 		}
 
     fetch(globalUrl + "/api/v1/workflows/usecases", {
@@ -302,6 +308,10 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 
 										if (inputUsecase.extra_buttons !== undefined && inputUsecase.extra_buttons !== null) {
 											subcase.extra_buttons = inputUsecase.extra_buttons
+										}
+
+										if (inputUsecase.workflow_outline !== undefined && inputUsecase.workflow_outline !== null) {
+											subcase.workflow_outline = inputUsecase.workflow_outline
 										}
 									}
 								}
@@ -433,6 +443,12 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																		if (subcase.mitre !== undefined && subcase.mitre !== null) {
 																			setMitreTags(subcase.mitre)
 																		}
+
+																		if (subcase.workflow_outline !== undefined && subcase.workflow_outline !== null) {
+																			setWorkflowOutline(subcase.workflow_outline)
+																		} else {
+																			setWorkflowOutline("")
+																		}
 																	}}
 																>
 																	<EditIcon style={{ color: usecase.color }} />
@@ -502,9 +518,6 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 													<div style={{marginTop: 25, display: "flex", minHeight: 400, maxHeight: 400, marginRight: 15, }}>
 														{editing ? 
 															<div style={{flex: 1, marginRight: 50, }}>
-																<Typography variant="h6">
-																	Editing!
-																</Typography>
 																<TextField
           											  style={{
           											    marginTop: 10,
@@ -553,6 +566,26 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																	}}
           											  id="videoEditing"
           											/>
+																<TextField
+          											  style={{
+          											    marginTop: 10,
+          											    marginRight: 10,
+          											  }}
+																	variant="outlined"
+          											  fullWidth
+          											  color="primary"
+																	label="Workflow Outline"
+          											  placeholder={"Workflow Outline"}
+																	value={workflowOutline}
+																	multiline
+																	minRows={3}
+																	onChange={(event) => {
+																		setWorkflowOutline(event.target.value)
+																	}}
+          											  id="workflowOutline"
+																	tabIndex="-1"
+          											/>
+
 																<div
 																	style={{
 																		display: 'flex',
@@ -573,6 +606,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																			setDescription("")
 																			setVideo("")
 																			setBlogpost("")
+																			setWorkflowOutline("")
 																			setEditing(false)
 																		}}
 																	>
@@ -590,10 +624,11 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																			cursor: "pointer"
 																		}}
 																		onClick={(event) => {
-																			setEditing(false)
 																			setUsecaseItem(inputUsecase) 
+																			setEditing(false)
 																			setDescription("")
 																			setVideo("")
+																			setWorkflowOutline("")
 																			setBlogpost("")
 																		}}
 																	>
