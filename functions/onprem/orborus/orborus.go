@@ -84,6 +84,7 @@ var containerName = os.Getenv("ORBORUS_CONTAINER_NAME")
 var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
+var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 
 var executionIds = []string{}
 
@@ -437,6 +438,10 @@ func deployServiceWorkers(image string) {
 
 		if len(os.Getenv("SHUFFLE_SCALE_REPLICAS")) > 0 {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SCALE_REPLICAS=%s", os.Getenv("SHUFFLE_SCALE_REPLICAS")))
+		}
+
+		if len(os.Getenv("SHUFFLE_MEMCACHED")) > 0 {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_MEMCACHED=%s", os.Getenv("SHUFFLE_MEMCACHED")))
 		}
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) == "true" {
@@ -1140,6 +1145,10 @@ func main() {
 
 			if len(os.Getenv("DOCKER_HOST")) > 0 {
 				env = append(env, fmt.Sprintf("DOCKER_HOST=%s", os.Getenv("DOCKER_HOST")))
+			}
+
+			if len(os.Getenv("SHUFFLE_MEMCACHED")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_MEMCACHED=%s", os.Getenv("SHUFFLE_MEMCACHED")))
 			}
 
 			err = deployWorker(workerImage, containerName, env, execution)

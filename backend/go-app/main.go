@@ -4026,7 +4026,7 @@ func runInitEs(ctx context.Context) {
 
 	for _, org := range activeOrgs {
 		if !org.CloudSync {
-			log.Printf("[INFO] Skipping org syncCheck for %s because sync isn't set (1).", org.Id)
+			log.Printf("[INFO] Skipping org syncCheck for '%s' because sync isn't set (1).", org.Id)
 			continue
 		}
 
@@ -5016,7 +5016,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 	if err != nil {
 		return &org, err
 	}
-	log.Printf("Remote disable ret: %s", string(respBody))
+	log.Printf("[INFO] Remote disable ret: %s", string(respBody))
 
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
@@ -5923,6 +5923,9 @@ func initHandlers() {
 
 	// App specific
 	// From here down isnt checked for org specific
+	r.HandleFunc("/api/v1/apps/{key}/execute", executeSingleAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/categories", shuffle.GetActiveCategories).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/frameworkConfiguration", shuffle.GetFrameworkConfiguration).Methods("GET", "OPTIONS")
@@ -6026,10 +6029,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/environments/{key}/rerun", shuffle.HandleRerunExecutions).Methods("GET", "POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/{key}/execute", executeSingleAction).Methods("POST", "OPTIONS")
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")

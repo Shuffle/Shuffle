@@ -139,6 +139,15 @@ def escape(a):
     return json_escape(a)
 
 @shuffle_filters.register
+def neat_json(a):
+    try:
+        a = json.loads(a)
+    except:
+        pass 
+
+    return json.dumps(a, indent=4, sort_keys=True)
+
+@shuffle_filters.register
 def flatten(a):
     a = list(a)
 
