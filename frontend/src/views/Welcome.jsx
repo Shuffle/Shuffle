@@ -311,8 +311,11 @@ const Welcome = (props) => {
 			height: 150, 
 			margin: "auto", 
 			marginTop: 30, 
+			borderRadius: 75, 
+			objectFit: "scale-down",
 		}
 
+		const experienced_image = userdata !== undefined && userdata !== null && userdata.active_org !== undefined && userdata.active_org.image !== undefined && userdata.active_org.image !== null && userdata.active_org.image !== "" ? userdata.active_org.image : "/images/social/shuffle_logo_round.png" 
     return (
 				<div style={{width: 1000, margin: "auto", backgroundColor: theme.palette.platformColor, paddingBottom: 150, minHeight: 1500, }}>
 					{/*
@@ -473,9 +476,10 @@ const Welcome = (props) => {
 											<Typography variant="h4" style={{color: "#f86a3e"}}> 
 												Experienced 
 											</Typography>
-											<img src="/images/social/shuffle_logo_round.png" style={imageStyle} />
+											<img src={experienced_image} style={imageStyle} />
+										
 											<Typography variant="body1" style={{marginTop: 30, color: "rgba(255,255,255,0.8)"}}>
-												You know Shuffle well. Head to the product right away!
+												You know Shuffle well. Head to your organization right away!
 											</Typography>
 										</CardActionArea>
 									</Card>
