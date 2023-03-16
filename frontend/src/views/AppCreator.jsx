@@ -71,6 +71,7 @@ const actionListStyle = {
   backgroundColor: inputColor,
   display: "flex",
   color: "white",
+	position: "relative",
 };
 
 const boxStyle = {
@@ -313,9 +314,7 @@ const AppCreator = (defaultprops) => {
   const [isAppLoaded, setIsAppLoaded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [description, setDescription] = useState("");
-  const [updater, setUpdater] = useState("tmp");
   const [baseUrl, setBaseUrl] = useState("");
-  const [actionsModalOpen, setActionsModalOpen] = useState(false);
   const [authenticationRequired, setAuthenticationRequired] = useState(false);
   const [authenticationOption, setAuthenticationOption] = useState(
     authenticationOptions[0]
@@ -331,9 +330,6 @@ const AppCreator = (defaultprops) => {
   const [projectCategories, setProjectCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
 
-  const [urlPath, setUrlPath] = useState("");
-  //const [urlPathQueries, setUrlPathQueries] = useState([{"name": "test", "required": false}]);
-  const [urlPathQueries, setUrlPathQueries] = useState([]);
   const [update, setUpdate] = useState("");
   const [urlPathParameters] = useState([]);
   const [basedata, setBasedata] = React.useState({});
@@ -341,8 +337,6 @@ const AppCreator = (defaultprops) => {
   const [filteredActions, setFilteredActions] = useState([]);
   const [errorCode, setErrorCode] = useState("");
   const [appBuilding, setAppBuilding] = useState(false);
-  const [extraBodyFields, setExtraBodyFields] = useState([]);
-  const [fileUploadEnabled, setFileUploadEnabled] = useState(false);
   const [fileDownloadEnabled, setFileDownloadEnabled] = useState(false);
   const [actionAmount, setActionAmount] = useState(increaseAmount);
   const defaultAuth = {
@@ -362,23 +356,7 @@ const AppCreator = (defaultprops) => {
 	// and make categories + labels modifyable.
 	// Categories are the main categories in the App Framework
   const [categories, setCategories] = useState(appCategories)
-  const [currentActionMethod, setCurrentActionMethod] = useState(
-    actionNonBodyRequest[0]
-  )
-  const [currentAction, setCurrentAction] = useState({
-    name: "",
-    file_field: "",
-    description: "",
-    url: "",
-    headers: "",
-    paths: [],
-    queries: [],
-    body: "",
-    errors: [],
-    example_response: "",
-		action_label: "No Label",
-    method: actionNonBodyRequest[0],
-  });
+  
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -607,7 +585,6 @@ const AppCreator = (defaultprops) => {
       }
     }
 
-		console.log("Tags: ", data.tags)
     if (data.tags !== undefined && data.tags.length > 0) {
       var newtags = [];
       for (let tagkey in data.tags) {
@@ -701,7 +678,18 @@ const AppCreator = (defaultprops) => {
             body: "",
             errors: [],
             example_response: "",
+						action_label: "No Label",
+						required_bodyfields: [],
           };
+
+					if (methodvalue["x-label"] !== undefined && methodvalue["x-label"] !== null) {
+						// FIX: Map labels only if they're actually in the category list
+						newaction.action_label = methodvalue["x-label"]
+					}
+
+					if (methodvalue["x-required-fields"] !== undefined && methodvalue["x-required-fields"] !== null) {
+						newaction.required_bodyfields = methodvalue["x-required-fields"]
+					}
 
 					if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
 						const regex = /_shuffle_replace_\d/i;
@@ -740,7 +728,7 @@ const AppCreator = (defaultprops) => {
           }
 					
 					if (path === "/files/{file_id}/content") {
-						console.log("FILE DOWNLOAD Method: ", path, method, methodvalue)
+						//console.log("FILE DOWNLOAD Method: ", path, method, methodvalue)
 					}
 
 
@@ -771,6 +759,7 @@ const AppCreator = (defaultprops) => {
                   methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null
                 ) {
                   console.log("Schema: ", methodvalue["requestBody"]["content"]["application/json"]["schema"])
+
                   if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
                     var tmpobject = {};
                     for (let prop of methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"]) {
@@ -1408,7 +1397,7 @@ const AppCreator = (defaultprops) => {
             }
           }
 
-					newaction.action_label = "No Label"
+					//newaction.action_label = "No Label"
           newActions.push(newaction);
         }
       }
@@ -1444,7 +1433,6 @@ const AppCreator = (defaultprops) => {
 
     //console.log("SECURITYSCHEMES: ", securitySchemes)
     if (securitySchemes !== undefined) {
-			console.log("NEWAUTH: ", securitySchemes)
       // FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
       //console.log("SECURITY: ", securitySchemes)
       var newauth = [];
@@ -1773,6 +1761,16 @@ const AppCreator = (defaultprops) => {
         },
       };
 
+			if (item.action_label !== undefined && item.action_label !== "" && item.action_label !== "No Label") {
+				console.log("Action label: ", item.action_label)
+				data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
+			}
+
+			if (item.required_bodyfields !== undefined && item.required_bodyfields !== null && item.required_bodyfields.length > 0) {
+				console.log("Required bodyfields: ", item.required_bodyfields)
+				data.paths[item.url][item.method.toLowerCase()]["x-required-fields"] = item.required_bodyfields
+			}
+
       //console.log("ACTION: ", item)
 
       if (item.example_response !== undefined && item.example_response !== null && item.example_response.length > 0) {
@@ -1997,7 +1995,7 @@ const AppCreator = (defaultprops) => {
       	  item.body !== null &&
       	  item.body.length > 0
       	) {
-					console.log("GOT BODY: ", item.url, item.method, item.body)
+					//console.log("GOT BODY: ", item.url, item.method, item.body)
 
 					// Replacing dollarsign insertions that aren't escaped
 					// This is to stop it from messing with systems in Shuffle.
@@ -2027,7 +2025,7 @@ const AppCreator = (defaultprops) => {
 						}
 					}
 
-					console.log("New body: ", newbody)
+					//console.log("New body: ", newbody)
 					if (newbody !== item.body) {
 						item.body = newbody
 					}
@@ -2096,12 +2094,7 @@ const AppCreator = (defaultprops) => {
 			}
 
       // https://swagger.io/docs/specification/describing-request-body/file-upload/
-      if (
-        item.file_field !== undefined &&
-        item.file_field !== null &&
-        item.file_field.length > 0
-      ) {
-        console.log("HANDLE FILEFIELD SAVE: ", item.file_field);
+      if (item.file_field !== undefined && item.file_field !== null && item.file_field.length > 0) {
         data.paths[item.url][item.method.toLowerCase()]["requestBody"][
           "content"
         ]["multipart/form-data"] = {
@@ -2116,11 +2109,7 @@ const AppCreator = (defaultprops) => {
           },
         };
 
-        console.log(
-          data.paths[item.url][item.method.toLowerCase()]["requestBody"][
-            "content"
-          ]["multipart/form-data"]
-        );
+        //console.log(data.paths[item.url][item.method.toLowerCase()]["requestBody"]["content"]["multipart/form-data"])
       }
 
       if (item.headers.length > 0) {
@@ -2342,35 +2331,7 @@ const AppCreator = (defaultprops) => {
     console.log(actions[index]);
   };
 
-  const addPathQuery = () => {
-    urlPathQueries.push({ name: "", required: true, example: "", });
-    if (updater === "addupdater") {
-      setUpdater("updater");
-    } else {
-      setUpdater("addupdater");
-    }
-    setUrlPathQueries(urlPathQueries);
-  };
-
-  const flipRequired = (index) => {
-    urlPathQueries[index].required = !urlPathQueries[index].required;
-    if (updater === "flipupdater") {
-      setUpdater("updater");
-    } else {
-      setUpdater("flipupdater");
-    }
-    setUrlPathQueries(urlPathQueries);
-  };
-
-  const deletePathQuery = (index) => {
-    urlPathQueries.splice(index, 1);
-    if (updater === "deleteupdater") {
-      setUpdater("updater");
-    } else {
-      setUpdater("deleteupdater");
-    }
-    setUrlPathQueries(urlPathQueries);
-  };
+  
 
   const duplicateAction = (index) => {
     var newAction = JSON.parse(JSON.stringify(actions[index]));
@@ -2390,18 +2351,18 @@ const AppCreator = (defaultprops) => {
 
   const deleteAction = (index) => {
     actions.splice(index, 1);
-    setCurrentAction({
-      name: "",
-      description: "",
-      url: "",
-      file_field: "",
-      headers: "",
-      paths: [],
-      queries: [],
-      body: "",
-      errors: [],
-      method: actionNonBodyRequest[0],
-    });
+    //setCurrentAction({
+    //  name: "",
+    //  description: "",
+    //  url: "",
+    //  file_field: "",
+    //  headers: "",
+    //  paths: [],
+    //  queries: [],
+    //  body: "",
+    //  errors: [],
+    //  method: actionNonBodyRequest[0],
+    //});
 
     setActions(actions);
     setFilteredActions(actions);
@@ -2904,8 +2865,237 @@ const AppCreator = (defaultprops) => {
       </div>
     ) : null;
 
-  const loopQueries =
-    urlPathQueries.length === 0 ? null : (
+  
+
+		const getCurrentPaths = (urlPath) => {
+  	  var paths = [];
+  	  var queries = [];
+
+  	  if (urlPath.includes("{") && urlPath.includes("}")) {
+  	    var tmpWord = "";
+  	    var record = false;
+
+  	    var query = false;
+  	    for (var key in urlPath) {
+  	      if (urlPath[key] === "?") {
+  	        query = true;
+  	      }
+
+  	      if (urlPath[key] === "}") {
+  	        if (tmpWord === parameterName) {
+  	          tmpWord = "";
+  	          record = false;
+  	          continue;
+  	        } else if (query) {
+  	          queries.push(tmpWord);
+  	        } else {
+  	          paths.push(tmpWord);
+  	        }
+
+  	        tmpWord = "";
+  	        record = false;
+  	      }
+
+  	      if (record) {
+  	        tmpWord += urlPath[key];
+  	      }
+
+  	      //if (urlPath[key] === "{" && urlPath[key-1] === "/") {
+  	      if (urlPath[key] === "{") {
+  	        record = true;
+  	      }
+  	    }
+  	  }
+
+  	  if (urlPath.includes("<") && urlPath.includes(">")) {
+  	    var tmpWord = "";
+  	    var record = false;
+
+  	    var query = false;
+  	    for (var key in urlPath) {
+  	      if (urlPath[key] === "?") {
+  	        query = true;
+  	      }
+
+  	      if (urlPath[key] === ">") {
+  	        if (tmpWord === parameterName) {
+  	          tmpWord = "";
+  	          record = false;
+  	          continue;
+  	        } else if (query) {
+  	          queries.push(tmpWord);
+  	        } else {
+  	          paths.push(tmpWord);
+  	        }
+
+  	        tmpWord = "";
+  	        record = false;
+  	      }
+
+  	      if (record) {
+  	        tmpWord += urlPath[key];
+  	      }
+
+  	      //if (urlPath[key] === "{" && urlPath[key-1] === "/") {
+  	      if (urlPath[key] === "<") {
+  	        record = true;
+  	      }
+  	    }
+  	  }
+
+  	  return [paths, queries];
+  	};
+
+	const foundCategory = newWorkflowCategories !== undefined && newWorkflowCategories !== null && newWorkflowCategories.length > 0 ? categories.find((x) => x.name === newWorkflowCategories[0]) : undefined
+	const actionLabels = foundCategory !== undefined && foundCategory !== null  && foundCategory.action_labels.length > 0 ? ["No Label"].concat(foundCategory.action_labels) : []
+
+	const ActionPaper = (props) => {
+		const { data, index } = props
+
+  	const [updater, setUpdater] = useState("tmp");
+  	const [actionsModalOpen, setActionsModalOpen] = useState(false);
+  	const [urlPath, setUrlPath] = useState("");
+  	const [fileUploadEnabled, setFileUploadEnabled] = useState(false);
+  	const [currentActionMethod, setCurrentActionMethod] = useState(actionNonBodyRequest[0])
+  	const [extraBodyFields, setExtraBodyFields] = useState([]);
+  	const [urlPathQueries, setUrlPathQueries] = useState([]);
+		const [currentAction, setCurrentAction] = useState({
+			name: "",
+			file_field: "",
+			description: "",
+			url: "",
+			headers: "",
+			paths: [],
+			queries: [],
+			body: "",
+			errors: [],
+			example_response: "",
+			method: actionNonBodyRequest[0],
+			action_label: "No Label",
+			required_bodyfields: [],
+		});
+
+		const findBodyParams = (body) => {
+			const regex = /\${(\w+)}/g;
+			const found = body.match(regex);
+			if (found === null) {
+				setExtraBodyFields([]);
+			} else {
+				setExtraBodyFields(found);
+			}
+  	};
+
+		const UrlPathParameters = () => {
+			const values = getCurrentPaths(urlPath);
+			const paths = values[0];
+			const queries = values[1];
+
+			if (currentAction.paths !== paths && urlPath.length > 0) {
+				//console.log("IN PATHS SETTER: !", paths)
+				setActionField("paths", paths);
+			}
+
+			var tmpQueries = [];
+
+			// No overlapping of names
+			for (var key in queries) {
+				const tmpquery = queries[key];
+				const found = tmpQueries.find((query) => query.name === tmpquery);
+				if (found === undefined) {
+					tmpQueries.push({ name: queries[key], required: true });
+				}
+			}
+
+			// FIXME: Frontend isn't updating..
+			if (tmpQueries.length > 0 && JSON.stringify(tmpQueries) !== JSON.stringify(urlPathQueries)) {
+				setUrlPathQueries(tmpQueries);
+			}
+
+			return paths.length > 0 ? (
+				<div>Required parameters: {paths.join(", ")}</div>
+			) : null;
+		};
+
+
+		const HandleIndividualChip = (props) => {
+    		const { chipData, index } = props;
+    		const [chipRequired, setChipRequired] = useState(currentAction.required_bodyfields !== undefined ? currentAction.required_bodyfields.includes(chipData) : false);
+
+				const parsedChip = chipData.startsWith("${") && chipData.endsWith("}") ? chipData.substring(2, chipData.length - 1) : chipData
+
+    		return (
+    		  <Tooltip title={chipRequired ? "Make not required" : "Make required"}>
+    		    <Chip
+    		      style={{
+    		        backgroundColor: chipRequired ? "#f86a3e" : "#3d3f43",
+    		        height: 30,
+    		        margin: 3,
+    		        paddingLeft: 5,
+    		        paddingRight: 5,
+    		        height: 28,
+    		        cursor: "pointer",
+    		        borderColor: "#3d3f43",
+    		        color: "white",
+    		      }}
+    		      label={parsedChip}
+    		      onClick={() => {
+								if (chipRequired) {
+									currentAction["required_bodyfields"].splice(currentAction["required_bodyfields"].indexOf(chipData), 1)
+								} else {
+    							currentAction["required_bodyfields"].push(chipData) 
+								}
+
+    						setCurrentAction(currentAction);
+    		        setChipRequired(!chipRequired);
+    		      }}
+    		    />
+    		  </Tooltip>
+    		);
+  	};
+
+		const setActionField = (field, value) => {
+			currentAction[field] = value
+			setCurrentAction(currentAction)
+
+			//setUrlPathQueries(currentAction.queries)
+		};
+
+		const addPathQuery = () => {
+  	  urlPathQueries.push({ name: "", required: true, example: "", });
+  	  if (updater === "addupdater") {
+  	    setUpdater("updater");
+  	  } else {
+  	    setUpdater("addupdater");
+  	  }
+  	  setUrlPathQueries(urlPathQueries);
+  	};
+
+  	const flipRequired = (index) => {
+  	  urlPathQueries[index].required = !urlPathQueries[index].required;
+  	  if (updater === "flipupdater") {
+  	    setUpdater("updater");
+  	  } else {
+  	    setUpdater("flipupdater");
+  	  }
+  	  setUrlPathQueries(urlPathQueries);
+  	};
+
+  	const deletePathQuery = (index) => {
+			console.log("Should delete index: ", index)
+			var tmpqueries = JSON.parse(JSON.stringify(urlPathQueries))
+			tmpqueries.splice(index, 1)
+
+			console.log("Queries: ", tmpqueries)
+  	  setUrlPathQueries(tmpqueries);
+
+  	  if (updater === "deleteupdater") {
+  	    setUpdater("updater");
+  	  } else {
+  	    setUpdater("deleteupdater");
+  	  }
+  	};
+
+		const loopQueries = urlPathQueries.length === 0 ? null : (
       <div>
         <Divider
           style={{
@@ -2917,17 +3107,17 @@ const AppCreator = (defaultprops) => {
           }}
         />
         Queries
-        {urlPathQueries.map((data, index) => {
-          const requiredColor = data.required === true ? "green" : "red";
+        {urlPathQueries.map((query, queryIndex) => {
+          const requiredColor = query.required === true ? "green" : "red";
           //const required = data.required === true ? <div style={{color: "green", cursor: "pointer"}}>{data.required.toString()}</div> : <div onClick={() => {flipRequired(index)}} style={{display: "inline", color: "red", cursor: "pointer"}}>{data.required.toString()}</div>
           return (
-            <Paper key={index} style={actionListStyle}>
+            <Paper key={queryIndex} style={actionListStyle}>
               <div style={{ marginLeft: "5px", width: "100%" }}>
 								<div style={{display: "flex"}}>
 									<TextField
 										required
 										fullWidth={true}
-										defaultValue={data.name}
+										defaultValue={query.name}
 										placeholder={"Query name (key)"}
 										label={"Query Key"}
 										helperText={
@@ -2937,11 +3127,7 @@ const AppCreator = (defaultprops) => {
 										}
 										onBlur={(e) => {
 											console.log("IN BLUR: ", e.target.value);
-											urlPathQueries[index].name = e.target.value.replaceAll(
-												"=",
-												""
-											);
-
+											urlPathQueries[queryIndex].name = e.target.value.replaceAll("=", "");
 											setUrlPathQueries(urlPathQueries);
 										}}
 										style={{flex: 3}}
@@ -2953,11 +3139,11 @@ const AppCreator = (defaultprops) => {
 									/>
 									<TextField
 										fullWidth={true}
-										defaultValue={data.example}
+										defaultValue={query.example}
 										placeholder={"Default value"}
 										label={"Example"}
 										onBlur={(e) => {
-											urlPathQueries[index].example = e.target.value.replaceAll(
+											urlPathQueries[queryIndex].example = e.target.value.replaceAll(
 												"=",
 												""
 											)
@@ -2975,19 +3161,19 @@ const AppCreator = (defaultprops) => {
                 <div
                   style={{ cursor: "pointer" }}
                   onClick={() => {
-                    flipRequired(index);
+                    flipRequired(queryIndex);
                   }}
                 >
                   Required:{" "}
                   <div style={{ display: "inline", color: requiredColor }}>
-                    {data.required.toString()}
+                    {query.required.toString()}
                   </div>
                 </div>
               </div>
               <div
                 style={{ float: "right", color: "#f85a3e", cursor: "pointer" }}
                 onClick={() => {
-                  deletePathQuery(index);
+                  deletePathQuery(queryIndex);
                 }}
               >
   							<DeleteIcon />
@@ -3007,1093 +3193,954 @@ const AppCreator = (defaultprops) => {
       </div>
     );
 
-	const foundCategory = newWorkflowCategories !== undefined && newWorkflowCategories !== null && newWorkflowCategories.length > 0 ? categories.find((x) => x.name === newWorkflowCategories[0]) : undefined
-	const actionLabels = foundCategory !== undefined && foundCategory !== null  && foundCategory.action_labels.length > 0 ? ["No Label"].concat(foundCategory.action_labels) : []
-	
-  const loopActions =
-    actions.length === 0 ? null : (
+  	const SetExtraBodyField = (props) => {
+  	  const { extraBodyFields } = props;
+
+  	  if (extraBodyFields === undefined || extraBodyFields === null) {
+  	    return null;
+  	  }
+
+  	  //const parsedlist = extraBodyFields.join(", ")
+  	  //console.log("LIST: ", parsedlist)
+
+  	  return (
+  	    <span>
+  	      {extraBodyFields.map((data, index) => {
+  	        return <HandleIndividualChip key={index} chipData={data} />;
+  	      })}
+  	    </span>
+  	  );
+  	};
+
+  	const bodyInfo = actionBodyRequest.includes(currentActionMethod) ? (
+  	  <div style={{ marginTop: 10 }}>
+  	    <b>Request Body</b>:{" "}
+  	    {extraBodyFields.length > 0 ? (
+  	      <Typography style={{ display: "inline-block" }}>
+  	        <SetExtraBodyField extraBodyFields={extraBodyFields} />
+  	      </Typography>
+  	    ) : (
+  	      <Typography style={{ display: "inline-block" }}>
+  	        {`Add variables with \$\{ variable_name }`}
+  	      </Typography>
+  	    )}
+  	    <TextField
+  	      required
+  	      style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
+  	      fullWidth={true}
+  	      placeholder={
+  	        '{\n\t"example": "${example}",\n\t"apikey": "${apikey}",\n\t"search": "1.2.3.5"\n}'
+  	      }
+  	      margin="normal"
+  	      variant="outlined"
+  	      multiline
+  	      minRows="5"
+  	      defaultValue={currentAction["body"]}
+  	      onChange={(e) => {
+  	        setActionField("body", e.target.value);
+  	        findBodyParams(e.target.value);
+  	      }}
+  	      key={currentAction}
+  	      helperText={
+  	        <span style={{ color: "white", marginBottom: "2px" }}>
+  	          Shows an example body to the user. ${} creates variables.
+  	        </span>
+  	      }
+  	      InputProps={{
+  	        classes: {
+  	          notchedOutline: classes.notchedOutline,
+  	        },
+  	        style: {
+  	          color: "white",
+  	        },
+  	      }}
+  	    />
+  	    <div></div>
+  	  </div>
+  	) : null;
+
+  	const exampleResponse = fileDownloadEnabled ? null : (
+  	  <div style={{}}>
+  	    <b>Example success response</b>
+  	    <TextField
+  	      required
+  	      style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
+  	      fullWidth={true}
+  	      placeholder={
+  	        '{\n\t"email": "testing@test.com",\n\t"firstname": "testing"\n}'
+  	      }
+  	      margin="normal"
+  	      variant="outlined"
+  	      multiline
+  	      minRows="2"
+  	      defaultValue={currentAction["example_response"]}
+  	      onChange={(e) => setActionField("example_response", e.target.value)}
+  	      helperText={
+  	        <span style={{ color: "white", marginBottom: "2px" }}>
+  	          Helps with autocompletion and understanding of the endpoint
+  	        </span>
+  	      }
+  	      key={currentAction}
+  	      InputProps={{
+  	        style: {
+  	          color: "white",
+  	        },
+  	      }}
+  	    />
+  	  </div>
+  	);
+
+  	const addActionToView = (errors) => {
+  	  currentAction.errors = errors;
+  	  currentAction.queries = urlPathQueries;
+  	  setUrlPathQueries([]);
+
+  	  const actionIndex = actions.findIndex((data) => data.name === currentAction.name);
+  	  
+  	  if (actionIndex < 0) {
+  	    actions.push(currentAction);
+  	  } else {
+  	    actions[actionIndex] = currentAction;
+  	  }
+
+  	  if (actions.length > actionAmount) {
+  	    setActionAmount(actions.length);
+  	  }
+
+  	  setActions(actions);
+  	  setFilteredActions(actions);
+  	};
+
+  	const getActionErrors = () => {
+  	  var errormessage = [];
+  	  if (currentAction.name === undefined || currentAction.name.length === 0) {
+  	    errormessage.push("Name can't be empty");
+  	  }
+
+  	  // Url verification
+  	  //if (currentAction.url.length === 0) {
+  	  //	errormessage.push("URL path can't be empty.")
+  	  if (!currentAction.url.startsWith("/") && baseUrl.length > 0 && currentAction.url.length > 0) {
+  	    errormessage.push("URL must start with /");
+  	  }
+
+  	  const check = urlPathQueries.findIndex((data) => data.name.length === 0);
+  	  if (check >= 0) {
+  	    errormessage.push("All queries must have a value");
+  	  }
+
+  	  return errormessage;
+  	};
+
+  	
+
+		const newActionModal = (
+    		<Dialog
+    		  open={actionsModalOpen}
+    		  fullWidth
+					PaperProps={{
+    		    style: {
+    		      backgroundColor: surfaceColor,
+    		      color: "white",
+    		      minWidth: 500,
+    		      maxWidth: 500,
+							maxHeight: 800,
+    		    },
+    		  }}
+    		  onClose={() => {
+    		    setUrlPath("");
+    		    setCurrentAction({
+    		      name: "",
+    		      description: "",
+    		      url: "",
+    		      file_field: "",
+    		      headers: "",
+    		      paths: [],
+    		      queries: [],
+    		      body: "",
+    		      errors: [],
+    		      method: actionNonBodyRequest[0],
+							action_label: "No Label",
+							required_bodyfields: [],
+    		    });
+    		    setCurrentActionMethod(apikeySelection[0]);
+    		    setUrlPathQueries([]);
+    		    setActionsModalOpen(false);
+    		    setFileUploadEnabled(false);
+    		  }}
+    		>
+    		  <FormControl style={{ backgroundColor: surfaceColor, color: "white" }}>
+    		    <DialogTitle>
+    		      <div style={{ color: "white" }}>New action</div>
+    		    </DialogTitle>
+    		    <DialogContent>
+    		      <a
+    		        target="_blank"
+    		        href="https://shuffler.io/docs/app_creation#actions"
+    		        style={{ textDecoration: "none", color: "#f85a3e" }}
+    		      >
+    		        Learn more about actions
+    		      </a>
+    		      <div style={{ marginTop: "15px" }} />
+    		      Name
+    		      <TextField
+    		        required
+    		        style={{
+    		          flex: "1",
+    		          marginTop: 5,
+    		          marginRight: 15,
+    		          backgroundColor: inputColor,
+    		        }}
+    		        fullWidth={true}
+    		        placeholder="Name"
+    		        type="name"
+    		        id="standard-required"
+    		        margin="normal"
+    		        variant="outlined"
+    		        defaultValue={currentAction["name"]}
+    		        onChange={(e) => {
+    		          setActionField("name", e.target.value);
+    		        }}
+    		        onBlur={(e) => {
+    		          // Fix basic issues in frontend. Python functions run a-zA-Z0-9_
+    		          const regex = /[A-Za-z0-9 _]/g;
+    		          const found = e.target.value.match(regex);
+    		          if (found !== null) {
+    		            setActionField("name", found.join(""));
+    		          }
+    		        }}
+    		        key={currentAction}
+    		        InputProps={{
+    		          classes: {
+    		            notchedOutline: classes.notchedOutline,
+    		          },
+    		          style: {
+    		            color: "white",
+    		          },
+    		        }}
+    		      />
+    		      <div style={{ marginTop: 10 }} />
+    		      Description
+    		      <TextField
+    		        required
+    		        style={{
+    		          flex: "1",
+    		          marginTop: "5px",
+    		          marginRight: "15px",
+    		          backgroundColor: inputColor,
+    		        }}
+    		        fullWidth={true}
+    		        placeholder="Description"
+    		        type="description"
+    		        id="standard-required"
+    		        margin="normal"
+    		        variant="outlined"
+    		        defaultValue={currentAction["description"]}
+    		        onChange={(e) => setActionField("description", e.target.value)}
+    		        InputProps={{
+    		          style: {
+    		            color: "white",
+    		          },
+    		        }}
+    		      />
+    		      <Divider
+    		        style={{
+    		          marginBottom: "10px",
+    		          marginTop: "30px",
+    		          height: "1px",
+    		          width: "100%",
+    		          backgroundColor: "grey",
+    		        }}
+    		      />
+    		      <h2>Request</h2>
+    		      <Select
+    		        fullWidth
+    		        onChange={(e) => {
+    		          setActionField("method", e.target.value);
+    		          setCurrentActionMethod(e.target.value);
+    		        }}
+    		        value={currentActionMethod}
+    		        style={{
+    		          backgroundColor: inputColor,
+    		          paddingLeft: "10px",
+    		          color: "white",
+    		          height: "50px",
+    		        }}
+    		        inputProps={{
+    		          name: "Method",
+    		          id: "method-option",
+    		        }}
+    		      >
+    		        {actionNonBodyRequest.map((data, index) => {
+    		          return (
+    		            <MenuItem
+    		              key={index}
+    		              style={{ backgroundColor: inputColor, color: "white" }}
+    		              value={data}
+    		            >
+    		              {data}
+    		            </MenuItem>
+    		          );
+    		        })}
+    		        {actionBodyRequest.map((data, index) => (
+    		          <MenuItem
+    		            key={index}
+    		            style={{ backgroundColor: inputColor, color: "white" }}
+    		            value={data}
+    		          >
+    		            {data}
+    		          </MenuItem>
+    		        ))}
+    		      </Select>
+    		      <div style={{ marginTop: "15px" }} />
+    		      URL path / Curl statement
+    		      <TextField
+    		        required
+    		        style={{
+    		          flex: "1",
+    		          marginRight: "15px",
+    		          marginTop: "5px",
+    		          backgroundColor: inputColor,
+    		        }}
+    		        fullWidth={true}
+    		        placeholder="URL path"
+    		        id="standard-required"
+    		        margin="normal"
+    		        variant="outlined"
+    		        value={urlPath}
+    		        onChange={(e) => {
+    		          setActionField("url", e.target.value);
+    		          setUrlPath(e.target.value);
+    		        }}
+    		        helperText={
+    		          <span style={{ color: "white", marginBottom: "2px" }}>
+    		            The path to use. Must start with /. Use {"{variablename}"} to
+    		            have path variables
+    		          </span>
+    		        }
+    		        InputProps={{
+    		          classes: {
+    		            notchedOutline: classes.notchedOutline,
+    		            input: classes.input,
+    		          },
+    		          style: {
+    		            color: "white",
+    		          },
+    		        }}
+    		        onBlur={(event) => {
+    		          var parsedurl = event.target.value;
+    		          //console.log("URL: ", parsedurl)
+    		          if (parsedurl.includes("   ")) {
+    		            parsedurl = parsedurl.replaceAll("   ", " ");
+    		          }
+
+    		          if (parsedurl.includes("  ")) {
+    		            parsedurl = parsedurl.replaceAll("  ", " ");
+    		          }
+
+    		          if (parsedurl.includes("[") && parsedurl.includes("]")) {
+    		            //console.log("REPLACE1")
+    		            parsedurl = parsedurl.replaceAll("[", "{");
+    		            parsedurl = parsedurl.replaceAll("]", "}");
+    		          }
+
+    		          if (parsedurl.includes("<") && parsedurl.includes(">")) {
+    		            //console.log("REPLACE2")
+    		            parsedurl = parsedurl.replaceAll("<", "{");
+    		            parsedurl = parsedurl.replaceAll(">", "}");
+    		          }
+
+    		          //console.log("URL2: ", parsedurl)
+    		          if (
+    		            parsedurl.startsWith("PUT ") ||
+    		            parsedurl.startsWith("GET ") ||
+    		            parsedurl.startsWith("POST ") ||
+    		            parsedurl.startsWith("DELETE ") ||
+    		            parsedurl.startsWith("PATCH ") ||
+    		            parsedurl.startsWith("CONNECT ")
+    		          ) {
+    		            const tmp = parsedurl.split(" ");
+
+    		            if (tmp.length > 1) {
+    		              parsedurl = tmp[1].trim();
+    		              setActionField("url", parsedurl);
+
+    		              setCurrentActionMethod(tmp[0].toUpperCase());
+    		              setActionField("method", tmp[0].toUpperCase());
+    		            }
+
+    		            console.log("URL3: ", parsedurl);
+
+    		            //setUpdate(Math.random());
+    		          } else if (parsedurl.startsWith("curl")) {
+    		            console.log("URL4: ", parsedurl);
+
+    		            const request = parseCurl(event.target.value);
+    		            if (
+    		              request !== event.target.value &&
+    		              request.method !== undefined &&
+    		              request.method !== null
+    		            ) {
+    		              if (request.method.toUpperCase() !== currentAction.Method) {
+    		                setCurrentActionMethod(request.method.toUpperCase());
+    		                setActionField("method", request.method.toUpperCase());
+    		              }
+
+    		              if (request.header !== undefined && request.header !== null) {
+    		                var headers = [];
+    		                for (let [key, value] of Object.entries(request.header)) {
+													if (value === undefined) {
+														if (key.includes(":")) {
+															const keysplit = key.split(":")
+															key = keysplit[0].trim()
+															value = keysplit[1].trim()
+
+														} else if (key.includes("=")) {
+															const keysplit = key.split("=")
+															key = keysplit[0].trim()
+															value = keysplit[1].trim()
+
+														} else {
+															alert.error("Removed key: ", key)
+															continue
+														}
+													}
+
+    		                  if (
+    		                    parameterName !== undefined &&
+    		                    key.toLowerCase() === parameterName.toLowerCase()
+    		                  ) {
+    		                    continue;
+    		                  }
+
+    		                  if (key === "Authorization") {
+    		                    continue;
+    		                  }
+
+    		                  headers += key + "=" + value + "\n";
+    		                }
+
+												try {
+    		                	setActionField("headers", headers.trim());
+												} catch (e) {
+													console.log("Failed to parse header: ", e)
+												}
+    		              }
+
+    		              if (request.body !== undefined && request.body !== null) {
+    		                setActionField("body", request.body);
+    		              }
+
+    		              // Parse URL
+    		              if (request.url !== undefined) {
+    		                parsedurl = request.url;
+    		              }
+    		            }
+
+    		            console.log("PARSED: ", parsedurl);
+    		            if (parsedurl !== undefined) {
+    		              if (parsedurl.includes("<") && parsedurl.includes(">")) {
+    		                parsedurl = parsedurl.split("<").join("{");
+    		                parsedurl = parsedurl.split(">").join("}");
+    		              }
+
+    		              if (
+    		                parsedurl.startsWith("http") ||
+    		                parsedurl.startsWith("ftp")
+    		              ) {
+    		                if (
+    		                  parsedurl !== undefined &&
+    		                  parsedurl.includes(parameterName)
+    		                ) {
+    		                  // Remove <> etc.
+    		                  //
+
+    		                  console.log("IT HAS THE PARAM NAME!");
+    		                  const newurl = new URL(encodeURI(parsedurl));
+    		                  newurl.searchParams.delete(parameterName);
+    		                  parsedurl = decodeURI(newurl.href);
+    		                }
+
+    		                // Remove the base URL itself
+    		                if (
+    		                  parsedurl !== undefined &&
+    		                  baseUrl !== undefined &&
+    		                  baseUrl.length > 0 &&
+    		                  parsedurl.includes(baseUrl)
+    		                ) {
+    		                  parsedurl = parsedurl.replace(baseUrl, "");
+    		                }
+
+    		                // Check URL query && headers
+    		                //setActionField("url", parsedurl)
+    		              }
+    		            }
+    		          }
+
+									if (baseUrl !== undefined && baseUrl !== null && parsedurl.startsWith(baseUrl)) {
+    		  					parsedurl = parsedurl.replaceAll(baseUrl, "");
+									}
+
+									if (parsedurl.includes("?")) {
+										const parsedurlsplit = parsedurl.split("?")
+										parsedurl = parsedurlsplit[0]
+										
+										//var newqueries = selectedAction.queries === undefined || selectedAction.queries === null ? [] : selectedAction.queries
+
+										const datasplit = parsedurlsplit[1].split("&")
+										for (var key in datasplit) {
+											console.log("Data: ", datasplit[key])
+											var actualkey = datasplit[key]
+											var example = ""
+											if (datasplit[key].includes("=")) {
+												actualkey = datasplit[key].split("=")[0]
+												example = datasplit[key].split("=")[1]
+											}
+
+											const foundPath = urlPathQueries.find(data => data.name === actualkey)
+											if (foundPath === null || foundPath === undefined) {
+												urlPathQueries.push({ name: actualkey, example: example, required: true })
+											}
+										}
+									}
+
+									// Found that dashes in the URL doesn't work
+									//parsedurl = parsedurl.replace("-", "_")
+									//console.log("Actions: ", actions)
+
+									if (baseUrl.length === 0 && parsedurl.includes("http")) {
+										try {
+											const newurl = new URL(encodeURI(parsedurl))
+											newurl.searchParams.delete(parameterName)
+											console.log("New url: ", newurl)
+											parsedurl = newurl.pathname
+											setBaseUrl(newurl.origin)
+										} catch (e) {
+											console.log("Failed to parse URL: ", e)
+										}
+									}
+
+    		          if (event.target.value !== parsedurl) {
+    		            setUrlPath(parsedurl);
+    		            setActionField("url", parsedurl);
+    		          }
+    		          //console.log("URL: ", request.url)
+    		        }}
+    		      />
+    		      <UrlPathParameters />
+    		      {loopQueries}
+    		      <Button
+    		        color="primary"
+    		        style={{
+    		          marginTop: "5px",
+    		          marginBottom: "10px",
+    		          borderRadius: "0px",
+    		        }}
+    		        variant="outlined"
+    		        onClick={() => {
+    		          addPathQuery();
+    		        }}
+    		      >
+    		        New query
+    		      </Button>
+    		      {currentActionMethod === "POST" ? (
+    		        <Button
+    		          color="primary"
+    		          variant={fileUploadEnabled ? "contained" : "outlined"}
+    		          style={{
+    		            marginLeft: 10,
+    		            marginTop: "5px",
+    		            marginBottom: "10px",
+    		            borderRadius: "0px",
+    		          }}
+    		          onClick={() => {
+    		            setFileUploadEnabled(!fileUploadEnabled);
+    		            if (
+    		              fileUploadEnabled &&
+    		              currentAction["file_field"].length > 0
+    		            ) {
+    		              setActionField("file_field", "");
+    		            }
+    		            //setUpdate(Math.random());
+    		          }}
+    		        >
+    		          Enable Fileupload
+    		        </Button>
+    		      ) : null}
+    		      {/*currentActionMethod === "GET" ? (
+    		        <Button
+    		          color="primary"
+    		          variant={fileDownloadEnabled ? "contained" : "outlined"}
+    		          style={{
+    		            marginLeft: 10,
+    		            marginTop: "5px",
+    		            marginBottom: "10px",
+    		            borderRadius: "0px",
+    		          }}
+    		          onClick={() => {
+    		            setFileDownloadEnabled(!fileDownloadEnabled);
+    		            if (fileDownloadEnabled) {
+    		              setActionField("example_response", "");
+										} else {
+    		              setActionField("example_response", "shuffle_file_download");
+										}
+    		            //setUpdate(Math.random());
+    		          }}
+    		        >
+									Download as file
+    		        </Button>
+    		      ) : null*/}
+    		      {fileUploadEnabled ? (
+    		        <TextField
+    		          required
+    		          style={{
+    		            backgroundColor: inputColor,
+    		            display: "inline-block",
+    		            marginLeft: 10,
+    		            maxWidth: 210,
+    		            marginTop: 7,
+    		          }}
+    		          placeholder={"file"}
+    		          margin="normal"
+    		          variant="outlined"
+    		          id="standard-required"
+    		          defaultValue={currentAction["file_field"]}
+    		          onChange={(e) => setActionField("file_field", e.target.value)}
+    		          helperText={
+    		            <span style={{ color: "white", marginBottom: "2px" }}>
+    		              The File field to interact with
+    		            </span>
+    		          }
+    		          InputProps={{
+    		            classes: {
+    		              notchedOutline: classes.notchedOutline,
+    		            },
+    		            style: {
+    		              color: "white",
+    		            },
+    		          }}
+    		        />
+    		      ) : null}
+    		      <div />
+							{fileUploadEnabled ? null :
+								<span>
+									<b>Headers</b>
+									<TextField
+										required
+										style={{
+											flex: "1",
+											marginRight: "15px",
+											marginTop: "5px",
+											backgroundColor: inputColor,
+										}}
+										fullWidth={true}
+										placeholder={
+											"Accept: application/json\r\nContent-Type: application/json"
+										}
+										margin="normal"
+										variant="outlined"
+										id="standard-required"
+										defaultValue={currentAction["headers"]}
+										multiline
+										minRows="2"
+										onChange={(e) => setActionField("headers", e.target.value)}
+										helperText={
+											<span style={{ color: "white", marginBottom: "2px" }}>
+												Headers that are part of the request. Default: EMPTY
+											</span>
+										}
+										InputProps={{
+											style: {
+												color: "white",
+											},
+										}}
+									/>
+								</span>
+							}
+    		      {bodyInfo}
+    		      <Divider
+    		        style={{
+    		          backgroundColor: "rgba(255,255,255,0.5)",
+    		          marginTop: 15,
+    		          marginBottom: 15,
+    		        }}
+    		      />
+    		      {exampleResponse}
+    		    </DialogContent>
+    		    <DialogActions>
+    		      <Button
+    		        style={{ borderRadius: "0px" }}
+    		        onClick={() => {
+    		          setActionsModalOpen(false);
+    		        }}
+    		      >
+    		        Cancel
+    		      </Button>
+    		      <Button
+    		        color="primary"
+    		        variant={urlPath.length > 0 ? "contained" : "outlined"}
+    		        style={{ borderRadius: "0px" }}
+    		        onClick={() => {
+    		          //console.log(urlPathQueries)
+    		          //console.log(urlPath)
+    		          console.log(currentAction);
+    		          const errors = getActionErrors();
+    		          addActionToView(errors);
+    		          setActionsModalOpen(false);
+    		          setUrlPathQueries([]);
+    		          setUrlPath("");
+    		          setFileUploadEnabled(false);
+    		        }}
+    		      >
+    		        Submit
+    		      </Button>
+    		    </DialogActions>
+    		  </FormControl>
+    		</Dialog>
+  		);
+
+
+		var error =
+			data.errors.length > 0 ? (
+				<Tooltip
+					color="primary"
+					title={data.errors.join("\n")}
+					placement="bottom"
+				>
+					<ErrorOutlineIcon />
+				</Tooltip>
+			) : (
+				<Tooltip
+					color="secondary"
+					title={data.errors.join("\n")}
+					placement="bottom"
+				>
+					<CheckCircleIcon style={{ marginTop: 6 }} />
+				</Tooltip>
+			);
+
+		var bgColor = "#61afee";
+		if (data.method === "POST") {
+			bgColor = "#49cc90";
+		} else if (data.method === "PUT") {
+			bgColor = "#fca130";
+		} else if (data.method === "PATCH") {
+			bgColor = "#50e3c2";
+		} else if (data.method === "DELETE") {
+			bgColor = "#f93e3e";
+		} else if (data.method === "HEAD") {
+			bgColor = "#9012fe";
+		}
+
+		const url = data.url;
+		const hasFile = (data["file_field"] !== undefined && data["file_field"] !== null && data["file_field"].length > 0) || data["example_response"] === "shuffle_file_download"
+			
+				
+		return (
+			<Paper key={index} style={actionListStyle}>
+        {newActionModal}
+
+				{error}
+				<Tooltip title="Edit action" placement="bottom">
+					<div
+						id={data.name}
+						style={{
+							marginLeft: "5px",
+							width: "100%",
+							cursor: "pointer",
+							maxWidth: 725,
+							overflowX: "hidden",
+						}}
+						onClick={() => {
+							console.log("Data: ", data)
+							if (hasFile) {
+								//setActionField("headers", "")
+								//console.log("It has a file: ", data["file_field"])
+								
+								setFileUploadEnabled(true);
+								data.headers = ""
+							} else {
+								console.log("No file")
+							}
+
+							setCurrentAction(data);
+							setCurrentActionMethod(data.method);
+							setUrlPathQueries(data.queries);
+							setUrlPath(data.url);
+							setActionsModalOpen(true);
+
+							if (data["body"] !== undefined && data["body"] !== null && data["body"].length > 0) {
+								findBodyParams(data["body"]);
+							} else {
+								console.log("No body param")
+							}
+
+						}}
+					>
+						<div style={{ display: "flex" }}>
+							<Chip
+								style={{
+									backgroundColor: bgColor,
+									color: "white",
+									borderRadius: 5,
+									minWidth: 80,
+									marginRight: 10,
+									marginTop: 2,
+									cursor: "pointer",
+									fontSize: 14,
+								}}
+								label={data.method}
+							/>
+							<span
+								style={{
+									fontSize: 16,
+									marginTop: "auto",
+									marginBottom: "auto",
+								}}
+							>
+								{hasFile ? (
+									<AttachFileIcon style={{ height: 20, width: 20 }} />
+								) : null}{" "}
+								{url} - {data.name}
+							</span>
+						</div>
+					</div>
+				</Tooltip>
+				{/*
+			<Tooltip title="Test action" placement="bottom">
+				<div style={{color: "#f85a3e", cursor: "pointer", marginRight: "10px", }} onClick={() => {testAction(index)}}>
+					Test
+				</div>
+			</Tooltip>
+			*/}
+
+				{/* From 2023: Example of handling action labels */}
+				{actionLabels.length > 0 && newWorkflowCategories !== undefined && newWorkflowCategories !== null && newWorkflowCategories.length > 0 && categories.length > 0 ? 
+						<Select
+							fullWidth
+							onChange={(e) => {
+								console.log("Should change: ", e.target.value, " Index: ", index)
+
+								const foundIndex = actions.findIndex((action) => action.name === data.name)
+								console.log("Found index: ", foundIndex)
+								if (foundIndex !== undefined && foundIndex !== null && foundIndex >= 0) {
+									actions[foundIndex].action_label = e.target.value
+									setActions(actions)
+									setUpdate(Math.random())
+								}
+							}}
+							value={data.action_label}
+							style={{
+								backgroundColor: inputColor,
+								paddingLeft: 10,
+								color: "white",
+								height: 30,
+								maxWidth: 50, 
+								marginLeft: 10, 
+							}}
+							inputProps={{
+								name: "Method",
+								id: "method-option",
+							}}
+						>
+							{actionLabels.map((label, labelindex) => {
+								return (
+									<MenuItem
+										key={labelindex}
+										value={label}
+										style={{ }}
+									>
+										{label}
+									</MenuItem>
+								)
+							})}
+						</Select>
+				: null}
+
+				<Tooltip
+					title="Duplicate action"
+					placement="bottom"
+					style={{ minWidth: 60 }}
+				>
+					<div
+						style={{
+							color: "#f85a3e",
+							cursor: "pointer",
+							marginRight: 15,
+						}}
+						onClick={() => {
+							duplicateAction(index);
+						}}
+					>
+						<FileCopyIcon color="secondary" />
+					</div>
+				</Tooltip>
+				<Tooltip
+					title="Delete action"
+					placement="bottom"
+					style={{ minWidth: 60 }}
+				>
+					<div
+						style={{ color: "#f85a3e", cursor: "pointer" }}
+						onClick={() => {
+							deleteAction(index);
+						}}
+					>
+						<DeleteIcon color="secondary" />
+					</div>
+				</Tooltip>
+
+
+				{ index === filteredActions.length - 1 || index === actionAmount - 1 ?
+          <Button
+            color="primary"
+            style={{ borderRadius: 0, position: "absolute", top: 70, }}
+            variant={actions.length === 0 ? "contained" : "outlined"}
+            onClick={(e) => {
+							e.preventDefault();
+
+              setCurrentActionMethod(actionNonBodyRequest[0]);
+              setCurrentAction({
+                name: "",
+                description: "",
+                url: "",
+                file_field: "",
+                headers: "",
+                queries: [],
+                paths: [],
+                body: "",
+                errors: [],
+                method: actionNonBodyRequest[0],
+              });
+              setActionsModalOpen(true);
+            }}
+          >
+            New action
+          </Button>
+				: null}
+			</Paper>
+		)
+	}
+
+  const LoopActions = (props) => {
+		const { filteredActions } = props;
+
+		//console.log("Actions: ", filteredActions)
+    if (filteredActions === null || filteredActions === undefined || filteredActions.length === 0) {
+			return null
+		}
+		
+		return (
       <div>
         {filteredActions.slice(0, actionAmount).map((data, index) => {
-          var error =
-            data.errors.length > 0 ? (
-              <Tooltip
-                color="primary"
-                title={data.errors.join("\n")}
-                placement="bottom"
-              >
-                <ErrorOutlineIcon />
-              </Tooltip>
-            ) : (
-              <Tooltip
-                color="secondary"
-                title={data.errors.join("\n")}
-                placement="bottom"
-              >
-                <CheckCircleIcon style={{ marginTop: 6 }} />
-              </Tooltip>
-            );
-
-          var bgColor = "#61afee";
-          if (data.method === "POST") {
-            bgColor = "#49cc90";
-          } else if (data.method === "PUT") {
-            bgColor = "#fca130";
-          } else if (data.method === "PATCH") {
-            bgColor = "#50e3c2";
-          } else if (data.method === "DELETE") {
-            bgColor = "#f93e3e";
-          } else if (data.method === "HEAD") {
-            bgColor = "#9012fe";
-          }
-
-          const url = data.url;
-          const hasFile =
-            (data["file_field"] !== undefined &&
-            data["file_field"] !== null &&
-            data["file_field"].length > 0) || data["example_response"] === "shuffle_file_download"
-
-					// In case of extremely long summaries/names from OpenAPI def
-					//const maxlen = 35
-					//if (data.description === undefined || data.description === null || data.description.length === 0) {
-					//	if (data.name !== undefined && data.name !== null && data.name.length > maxlen ) {
-					//		var newname = []
-					//		for (var key in data.name.split(" ")) {
-					//			console.log("Name: ", data.name[key])
-					//			if (newname.join(" ").length < maxlen) {
-					//				newname.push(data.name[key])
-					//			}
-					//		}
-
-					//		data.description = data.name.valueOf()
-					//		data.name = newname.join(" ")
-					//	}
-					//}
-
           return (
-            <Paper key={index} style={actionListStyle}>
-              {error}
-              <Tooltip title="Edit action" placement="bottom">
-                <div
-                  style={{
-                    marginLeft: "5px",
-                    width: "100%",
-                    cursor: "pointer",
-                    maxWidth: 725,
-                    overflowX: "hidden",
-                  }}
-                  onClick={() => {
-										console.log("Data: ", data)
-                    if (hasFile) {
-                      setFileUploadEnabled(true);
-											//setActionField("headers", "")
-											console.log("It has a file: ", data["file_field"])
-											data.headers = ""
-                    } else {
-											console.log("No file")
-										}
+						<ActionPaper key={index} index={index} data={data} />
+					)
+			})}
+		</div>
+		)
+	}
 
-                    setCurrentAction(data);
-                    setCurrentActionMethod(data.method);
-                    setUrlPathQueries(data.queries);
-                    setUrlPath(data.url);
-                    setActionsModalOpen(true);
-
-                    if (
-                      data["body"] !== undefined &&
-                      data["body"] !== null &&
-                      data["body"].length > 0
-                    ) {
-                      findBodyParams(data["body"]);
-                    } else {
-											console.log("No body param")
-										}
-
-                  }}
-                >
-                  <div style={{ display: "flex" }}>
-                    <Chip
-                      style={{
-                        backgroundColor: bgColor,
-                        color: "white",
-                        borderRadius: 5,
-                        minWidth: 80,
-                        marginRight: 10,
-                        marginTop: 2,
-                        cursor: "pointer",
-                        fontSize: 14,
-                      }}
-                      label={data.method}
-                    />
-                    <span
-                      style={{
-                        fontSize: 16,
-                        marginTop: "auto",
-                        marginBottom: "auto",
-                      }}
-                    >
-                      {hasFile ? (
-                        <AttachFileIcon style={{ height: 20, width: 20 }} />
-                      ) : null}{" "}
-                      {url} - {data.name}
-                    </span>
-                  </div>
-                </div>
-              </Tooltip>
-              {/*
-					 	<Tooltip title="Test action" placement="bottom">
-							<div style={{color: "#f85a3e", cursor: "pointer", marginRight: "10px", }} onClick={() => {testAction(index)}}>
-								Test
-							</div>
-						</Tooltip>
-						*/}
-
-							{/* From 2023: Example of handling action labels */}
-             	{/*actionLabels.length > 0 && newWorkflowCategories !== undefined && newWorkflowCategories !== null && newWorkflowCategories.length > 0 && categories.length > 0 ? 
-								(
-									<Select
-										fullWidth
-										onChange={(e) => {
-											console.log("Should change: ", e.target.value, " Index: ", index)
-
-											const foundIndex = actions.findIndex((action) => action.name === data.name)
-											console.log("Found index: ", foundIndex)
-											if (foundIndex !== undefined && foundIndex !== null && foundIndex >= 0) {
-												actions[foundIndex].action_label = e.target.value
-												setActions(actions)
-												setUpdate(Math.random())
-											}
-										}}
-										value={data.action_label}
-										style={{
-											backgroundColor: inputColor,
-											paddingLeft: 10,
-											color: "white",
-											height: 30,
-											maxWidth: 50, 
-											marginLeft: 10, 
-										}}
-										inputProps={{
-											name: "Method",
-											id: "method-option",
-										}}
-									>
-										{actionLabels.map((label, labelindex) => {
-											return (
-												<MenuItem
-													key={labelindex}
-													value={label}
-													style={{ }}
-												>
-													{label}
-												</MenuItem>
-											)
-										})}
-									</Select>
-								)
-							: null*/}
-
-              <Tooltip
-                title="Duplicate action"
-                placement="bottom"
-                style={{ minWidth: 60 }}
-              >
-                <div
-                  style={{
-                    color: "#f85a3e",
-                    cursor: "pointer",
-                    marginRight: 15,
-                  }}
-                  onClick={() => {
-                    duplicateAction(index);
-                  }}
-                >
-                  <FileCopyIcon color="secondary" />
-                </div>
-              </Tooltip>
-              <Tooltip
-                title="Delete action"
-                placement="bottom"
-                style={{ minWidth: 60 }}
-              >
-                <div
-                  style={{ color: "#f85a3e", cursor: "pointer" }}
-                  onClick={() => {
-                    deleteAction(index);
-                  }}
-                >
-                  <DeleteIcon color="secondary" />
-                </div>
-              </Tooltip>
-            </Paper>
-          );
-        })}
-      </div>
-    );
-
-  const setActionField = (field, value) => {
-    currentAction[field] = value;
-    setCurrentAction(currentAction);
-
-    //setUrlPathQueries(currentAction.queries)
-  };
-
-  const findBodyParams = (body) => {
-    const regex = /\${(\w+)}/g;
-    const found = body.match(regex);
-    if (found === null) {
-      setExtraBodyFields([]);
-    } else {
-      setExtraBodyFields(found);
-    }
-  };
-
-  const HandleIndividualChip = (props) => {
-    const { chipData, index } = props;
-    const [chipRequired, setChipRequired] = useState(false);
-
-    return (
-      <Tooltip title={chipRequired ? "Make not required" : "Make required"}>
-        <Chip
-          style={{
-            backgroundColor: chipRequired ? "#f86a3e" : "#3d3f43",
-            height: 30,
-            margin: 3,
-            paddingLeft: 5,
-            paddingRight: 5,
-            height: 28,
-            cursor: "pointer",
-            borderColor: "#3d3f43",
-            color: "white",
-          }}
-          label={chipData}
-          onClick={() => {
-            console.log("CLICK: ", chipData);
-            setChipRequired(!chipRequired);
-          }}
-        />
-      </Tooltip>
-    );
-  };
-
-  const SetExtraBodyField = (props) => {
-    const { extraBodyFields } = props;
-
-    if (extraBodyFields === undefined || extraBodyFields === null) {
-      return null;
-    }
-
-    //const parsedlist = extraBodyFields.join(", ")
-    //console.log("LIST: ", parsedlist)
-
-    return (
-      <span>
-        {extraBodyFields.map((data, index) => {
-          return <HandleIndividualChip key={index} chipData={data} />;
-        })}
-      </span>
-    );
-  };
-
-  const bodyInfo = actionBodyRequest.includes(currentActionMethod) ? (
-    <div style={{ marginTop: 10 }}>
-      <b>Request Body</b>:{" "}
-      {extraBodyFields.length > 0 ? (
-        <Typography style={{ display: "inline-block" }}>
-          <SetExtraBodyField extraBodyFields={extraBodyFields} />
-        </Typography>
-      ) : (
-        <Typography style={{ display: "inline-block" }}>
-          {`Add variables with \$\{ variable_name }`}
-        </Typography>
-      )}
-      <TextField
-        required
-        style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
-        fullWidth={true}
-        placeholder={
-          '{\n\t"example": "${example}",\n\t"apikey": "${apikey}",\n\t"search": "1.2.3.5"\n}'
-        }
-        margin="normal"
-        variant="outlined"
-        multiline
-        minRows="5"
-        defaultValue={currentAction["body"]}
-        onChange={(e) => {
-          setActionField("body", e.target.value);
-          findBodyParams(e.target.value);
-        }}
-        key={currentAction}
-        helperText={
-          <span style={{ color: "white", marginBottom: "2px" }}>
-            Shows an example body to the user. ${} creates variables.
-          </span>
-        }
-        InputProps={{
-          classes: {
-            notchedOutline: classes.notchedOutline,
-          },
-          style: {
-            color: "white",
-          },
-        }}
-      />
-      <div></div>
-    </div>
-  ) : null;
-
-  const exampleResponse = fileDownloadEnabled ? null : (
-    <div style={{}}>
-      <b>Example success response</b>
-      <TextField
-        required
-        style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
-        fullWidth={true}
-        placeholder={
-          '{\n\t"email": "testing@test.com",\n\t"firstname": "testing"\n}'
-        }
-        margin="normal"
-        variant="outlined"
-        multiline
-        minRows="2"
-        defaultValue={currentAction["example_response"]}
-        onChange={(e) => setActionField("example_response", e.target.value)}
-        helperText={
-          <span style={{ color: "white", marginBottom: "2px" }}>
-            Helps with autocompletion and understanding of the endpoint
-          </span>
-        }
-        key={currentAction}
-        InputProps={{
-          style: {
-            color: "white",
-          },
-        }}
-      />
-    </div>
-  );
-
-  const addActionToView = (errors) => {
-    currentAction.errors = errors;
-    currentAction.queries = urlPathQueries;
-    setUrlPathQueries([]);
-
-    const actionIndex = actions.findIndex(
-      (data) => data.name === currentAction.name
-    );
-    if (actionIndex < 0) {
-      actions.push(currentAction);
-    } else {
-      actions[actionIndex] = currentAction;
-    }
-
-    if (actions.length > actionAmount) {
-      setActionAmount(actions.length);
-    }
-
-    setActions(actions);
-    setFilteredActions(actions);
-  };
-
-  const getActionErrors = () => {
-    var errormessage = [];
-    if (currentAction.name === undefined || currentAction.name.length === 0) {
-      errormessage.push("Name can't be empty");
-    }
-
-    // Url verification
-    //if (currentAction.url.length === 0) {
-    //	errormessage.push("URL path can't be empty.")
-    if (
-      !currentAction.url.startsWith("/") &&
-      baseUrl.length > 0 &&
-      currentAction.url.length > 0
-    ) {
-      errormessage.push("URL must start with /");
-    }
-
-    const check = urlPathQueries.findIndex((data) => data.name.length === 0);
-    if (check >= 0) {
-      errormessage.push("All queries must have a value");
-    }
-
-    return errormessage;
-  };
-
-  const getCurrentPaths = (urlPath) => {
-    var paths = [];
-    var queries = [];
-
-    if (urlPath.includes("{") && urlPath.includes("}")) {
-      var tmpWord = "";
-      var record = false;
-
-      var query = false;
-      for (var key in urlPath) {
-        if (urlPath[key] === "?") {
-          query = true;
-        }
-
-        if (urlPath[key] === "}") {
-          if (tmpWord === parameterName) {
-            tmpWord = "";
-            record = false;
-            continue;
-          } else if (query) {
-            queries.push(tmpWord);
-          } else {
-            paths.push(tmpWord);
-          }
-
-          tmpWord = "";
-          record = false;
-        }
-
-        if (record) {
-          tmpWord += urlPath[key];
-        }
-
-        //if (urlPath[key] === "{" && urlPath[key-1] === "/") {
-        if (urlPath[key] === "{") {
-          record = true;
-        }
-      }
-    }
-
-    if (urlPath.includes("<") && urlPath.includes(">")) {
-      var tmpWord = "";
-      var record = false;
-
-      var query = false;
-      for (var key in urlPath) {
-        if (urlPath[key] === "?") {
-          query = true;
-        }
-
-        if (urlPath[key] === ">") {
-          if (tmpWord === parameterName) {
-            tmpWord = "";
-            record = false;
-            continue;
-          } else if (query) {
-            queries.push(tmpWord);
-          } else {
-            paths.push(tmpWord);
-          }
-
-          tmpWord = "";
-          record = false;
-        }
-
-        if (record) {
-          tmpWord += urlPath[key];
-        }
-
-        //if (urlPath[key] === "{" && urlPath[key-1] === "/") {
-        if (urlPath[key] === "<") {
-          record = true;
-        }
-      }
-    }
-
-    return [paths, queries];
-  };
-
-  const UrlPathParameters = () => {
-    const values = getCurrentPaths(urlPath);
-    const paths = values[0];
-    const queries = values[1];
-
-    if (currentAction.paths !== paths && urlPath.length > 0) {
-      //console.log("IN PATHS SETTER: !", paths)
-      setActionField("paths", paths);
-    }
-
-    var tmpQueries = [];
-
-    // No overlapping of names
-    for (var key in queries) {
-      const tmpquery = queries[key];
-      const found = tmpQueries.find((query) => query.name === tmpquery);
-      if (found === undefined) {
-        tmpQueries.push({ name: queries[key], required: true });
-      }
-    }
-
-    // FIXME: Frontend isn't updating..
-    if (
-      tmpQueries.length > 0 &&
-      JSON.stringify(tmpQueries) !== JSON.stringify(urlPathQueries)
-    ) {
-      setUrlPathQueries(tmpQueries);
-    }
-
-    return paths.length > 0 ? (
-      <div>Required parameters: {paths.join(", ")}</div>
-    ) : null;
-  };
-
-  const newActionModal = (
-    <Dialog
-      open={actionsModalOpen}
-      fullWidth
-			PaperProps={{
-        style: {
-          backgroundColor: surfaceColor,
-          color: "white",
-          minWidth: 500,
-          maxWidth: 500,
-					maxHeight: 800,
-        },
-      }}
-      onClose={() => {
-        setUrlPath("");
-        setCurrentAction({
-          name: "",
-          description: "",
-          url: "",
-          file_field: "",
-          headers: "",
-          paths: [],
-          queries: [],
-          body: "",
-          errors: [],
-          method: actionNonBodyRequest[0],
-        });
-        setCurrentActionMethod(apikeySelection[0]);
-        setUrlPathQueries([]);
-        setActionsModalOpen(false);
-        setFileUploadEnabled(false);
-      }}
-    >
-      <FormControl style={{ backgroundColor: surfaceColor, color: "white" }}>
-        <DialogTitle>
-          <div style={{ color: "white" }}>New action</div>
-        </DialogTitle>
-        <DialogContent>
-          <a
-            target="_blank"
-            href="https://shuffler.io/docs/app_creation#actions"
-            style={{ textDecoration: "none", color: "#f85a3e" }}
-          >
-            Learn more about actions
-          </a>
-          <div style={{ marginTop: "15px" }} />
-          Name
-          <TextField
-            required
-            style={{
-              flex: "1",
-              marginTop: 5,
-              marginRight: 15,
-              backgroundColor: inputColor,
-            }}
-            fullWidth={true}
-            placeholder="Name"
-            type="name"
-            id="standard-required"
-            margin="normal"
-            variant="outlined"
-            defaultValue={currentAction["name"]}
-            onChange={(e) => {
-              setActionField("name", e.target.value);
-            }}
-            onBlur={(e) => {
-              // Fix basic issues in frontend. Python functions run a-zA-Z0-9_
-              const regex = /[A-Za-z0-9 _]/g;
-              const found = e.target.value.match(regex);
-              if (found !== null) {
-                setActionField("name", found.join(""));
-              }
-            }}
-            key={currentAction}
-            InputProps={{
-              classes: {
-                notchedOutline: classes.notchedOutline,
-              },
-              style: {
-                color: "white",
-              },
-            }}
-          />
-          <div style={{ marginTop: 10 }} />
-          Description
-          <TextField
-            required
-            style={{
-              flex: "1",
-              marginTop: "5px",
-              marginRight: "15px",
-              backgroundColor: inputColor,
-            }}
-            fullWidth={true}
-            placeholder="Description"
-            type="description"
-            id="standard-required"
-            margin="normal"
-            variant="outlined"
-            defaultValue={currentAction["description"]}
-            onChange={(e) => setActionField("description", e.target.value)}
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-          />
-          <Divider
-            style={{
-              marginBottom: "10px",
-              marginTop: "30px",
-              height: "1px",
-              width: "100%",
-              backgroundColor: "grey",
-            }}
-          />
-          <h2>Request</h2>
-          <Select
-            fullWidth
-            onChange={(e) => {
-              setActionField("method", e.target.value);
-              setCurrentActionMethod(e.target.value);
-            }}
-            value={currentActionMethod}
-            style={{
-              backgroundColor: inputColor,
-              paddingLeft: "10px",
-              color: "white",
-              height: "50px",
-            }}
-            inputProps={{
-              name: "Method",
-              id: "method-option",
-            }}
-          >
-            {actionNonBodyRequest.map((data, index) => {
-              return (
-                <MenuItem
-                  key={index}
-                  style={{ backgroundColor: inputColor, color: "white" }}
-                  value={data}
-                >
-                  {data}
-                </MenuItem>
-              );
-            })}
-            {actionBodyRequest.map((data, index) => (
-              <MenuItem
-                key={index}
-                style={{ backgroundColor: inputColor, color: "white" }}
-                value={data}
-              >
-                {data}
-              </MenuItem>
-            ))}
-          </Select>
-          <div style={{ marginTop: "15px" }} />
-          URL path / Curl statement
-          <TextField
-            required
-            style={{
-              flex: "1",
-              marginRight: "15px",
-              marginTop: "5px",
-              backgroundColor: inputColor,
-            }}
-            fullWidth={true}
-            placeholder="URL path"
-            id="standard-required"
-            margin="normal"
-            variant="outlined"
-            value={urlPath}
-            onChange={(e) => {
-              setActionField("url", e.target.value);
-              setUrlPath(e.target.value);
-            }}
-            helperText={
-              <span style={{ color: "white", marginBottom: "2px" }}>
-                The path to use. Must start with /. Use {"{variablename}"} to
-                have path variables
-              </span>
-            }
-            InputProps={{
-              classes: {
-                notchedOutline: classes.notchedOutline,
-                input: classes.input,
-              },
-              style: {
-                color: "white",
-              },
-            }}
-            onBlur={(event) => {
-              var parsedurl = event.target.value;
-              //console.log("URL: ", parsedurl)
-              if (parsedurl.includes("   ")) {
-                parsedurl = parsedurl.replaceAll("   ", " ");
-              }
-
-              if (parsedurl.includes("  ")) {
-                parsedurl = parsedurl.replaceAll("  ", " ");
-              }
-
-              if (parsedurl.includes("[") && parsedurl.includes("]")) {
-                //console.log("REPLACE1")
-                parsedurl = parsedurl.replaceAll("[", "{");
-                parsedurl = parsedurl.replaceAll("]", "}");
-              }
-
-              if (parsedurl.includes("<") && parsedurl.includes(">")) {
-                //console.log("REPLACE2")
-                parsedurl = parsedurl.replaceAll("<", "{");
-                parsedurl = parsedurl.replaceAll(">", "}");
-              }
-
-              //console.log("URL2: ", parsedurl)
-              if (
-                parsedurl.startsWith("PUT ") ||
-                parsedurl.startsWith("GET ") ||
-                parsedurl.startsWith("POST ") ||
-                parsedurl.startsWith("DELETE ") ||
-                parsedurl.startsWith("PATCH ") ||
-                parsedurl.startsWith("CONNECT ")
-              ) {
-                const tmp = parsedurl.split(" ");
-
-                if (tmp.length > 1) {
-                  parsedurl = tmp[1].trim();
-                  setActionField("url", parsedurl);
-
-                  setCurrentActionMethod(tmp[0].toUpperCase());
-                  setActionField("method", tmp[0].toUpperCase());
-                }
-
-                console.log("URL3: ", parsedurl);
-
-                setUpdate(Math.random());
-              } else if (parsedurl.startsWith("curl")) {
-                console.log("URL4: ", parsedurl);
-
-                const request = parseCurl(event.target.value);
-                if (
-                  request !== event.target.value &&
-                  request.method !== undefined &&
-                  request.method !== null
-                ) {
-                  if (request.method.toUpperCase() !== currentAction.Method) {
-                    setCurrentActionMethod(request.method.toUpperCase());
-                    setActionField("method", request.method.toUpperCase());
-                  }
-
-                  if (request.header !== undefined && request.header !== null) {
-                    var headers = [];
-                    for (let [key, value] of Object.entries(request.header)) {
-											if (value === undefined) {
-												if (key.includes(":")) {
-													const keysplit = key.split(":")
-													key = keysplit[0].trim()
-													value = keysplit[1].trim()
-
-												} else if (key.includes("=")) {
-													const keysplit = key.split("=")
-													key = keysplit[0].trim()
-													value = keysplit[1].trim()
-
-												} else {
-													alert.error("Removed key: ", key)
-													continue
-												}
-											}
-
-                      if (
-                        parameterName !== undefined &&
-                        key.toLowerCase() === parameterName.toLowerCase()
-                      ) {
-                        continue;
-                      }
-
-                      if (key === "Authorization") {
-                        continue;
-                      }
-
-                      headers += key + "=" + value + "\n";
-                    }
-
-										try {
-                    	setActionField("headers", headers.trim());
-										} catch (e) {
-											console.log("Failed to parse header: ", e)
-										}
-                  }
-
-                  if (request.body !== undefined && request.body !== null) {
-                    setActionField("body", request.body);
-                  }
-
-                  // Parse URL
-                  if (request.url !== undefined) {
-                    parsedurl = request.url;
-                  }
-                }
-
-                console.log("PARSED: ", parsedurl);
-                if (parsedurl !== undefined) {
-                  if (parsedurl.includes("<") && parsedurl.includes(">")) {
-                    parsedurl = parsedurl.split("<").join("{");
-                    parsedurl = parsedurl.split(">").join("}");
-                  }
-
-                  if (
-                    parsedurl.startsWith("http") ||
-                    parsedurl.startsWith("ftp")
-                  ) {
-                    if (
-                      parsedurl !== undefined &&
-                      parsedurl.includes(parameterName)
-                    ) {
-                      // Remove <> etc.
-                      //
-
-                      console.log("IT HAS THE PARAM NAME!");
-                      const newurl = new URL(encodeURI(parsedurl));
-                      newurl.searchParams.delete(parameterName);
-                      parsedurl = decodeURI(newurl.href);
-                    }
-
-                    // Remove the base URL itself
-                    if (
-                      parsedurl !== undefined &&
-                      baseUrl !== undefined &&
-                      baseUrl.length > 0 &&
-                      parsedurl.includes(baseUrl)
-                    ) {
-                      parsedurl = parsedurl.replace(baseUrl, "");
-                    }
-
-                    // Check URL query && headers
-                    //setActionField("url", parsedurl)
-                  }
-                }
-              }
-
-							if (baseUrl !== undefined && baseUrl !== null && parsedurl.startsWith(baseUrl)) {
-      					parsedurl = parsedurl.replaceAll(baseUrl, "");
-							}
-
-							if (parsedurl.includes("?")) {
-								const parsedurlsplit = parsedurl.split("?")
-								parsedurl = parsedurlsplit[0]
-								
-								//var newqueries = selectedAction.queries === undefined || selectedAction.queries === null ? [] : selectedAction.queries
-
-								const datasplit = parsedurlsplit[1].split("&")
-								for (var key in datasplit) {
-									console.log("Data: ", datasplit[key])
-									var actualkey = datasplit[key]
-									var example = ""
-									if (datasplit[key].includes("=")) {
-										actualkey = datasplit[key].split("=")[0]
-										example = datasplit[key].split("=")[1]
-									}
-
-									const foundPath = urlPathQueries.find(data => data.name === actualkey)
-									if (foundPath === null || foundPath === undefined) {
-										urlPathQueries.push({ name: actualkey, example: example, required: true })
-									}
-								}
-							}
-
-							// Found that dashes in the URL doesn't work
-							//parsedurl = parsedurl.replace("-", "_")
-							//console.log("Actions: ", actions)
-
-							if (baseUrl.length === 0 && parsedurl.includes("http")) {
-								try {
-									const newurl = new URL(encodeURI(parsedurl))
-									newurl.searchParams.delete(parameterName)
-									console.log("New url: ", newurl)
-									parsedurl = newurl.pathname
-									setBaseUrl(newurl.origin)
-								} catch (e) {
-									console.log("Failed to parse URL: ", e)
-								}
-							}
-
-              if (event.target.value !== parsedurl) {
-                setUrlPath(parsedurl);
-                setActionField("url", parsedurl);
-              }
-              //console.log("URL: ", request.url)
-            }}
-          />
-          <UrlPathParameters />
-          {loopQueries}
-          <Button
-            color="primary"
-            style={{
-              marginTop: "5px",
-              marginBottom: "10px",
-              borderRadius: "0px",
-            }}
-            variant="outlined"
-            onClick={() => {
-              addPathQuery();
-            }}
-          >
-            New query
-          </Button>
-          {currentActionMethod === "POST" ? (
-            <Button
-              color="primary"
-              variant={fileUploadEnabled ? "contained" : "outlined"}
-              style={{
-                marginLeft: 10,
-                marginTop: "5px",
-                marginBottom: "10px",
-                borderRadius: "0px",
-              }}
-              onClick={() => {
-                setFileUploadEnabled(!fileUploadEnabled);
-                if (
-                  fileUploadEnabled &&
-                  currentAction["file_field"].length > 0
-                ) {
-                  setActionField("file_field", "");
-                }
-                setUpdate(Math.random());
-              }}
-            >
-              Enable Fileupload
-            </Button>
-          ) : null}
-          {/*currentActionMethod === "GET" ? (
-            <Button
-              color="primary"
-              variant={fileDownloadEnabled ? "contained" : "outlined"}
-              style={{
-                marginLeft: 10,
-                marginTop: "5px",
-                marginBottom: "10px",
-                borderRadius: "0px",
-              }}
-              onClick={() => {
-                setFileDownloadEnabled(!fileDownloadEnabled);
-                if (fileDownloadEnabled) {
-                  setActionField("example_response", "");
-								} else {
-                  setActionField("example_response", "shuffle_file_download");
-								}
-                setUpdate(Math.random());
-              }}
-            >
-							Download as file
-            </Button>
-          ) : null*/}
-          {fileUploadEnabled ? (
-            <TextField
-              required
-              style={{
-                backgroundColor: inputColor,
-                display: "inline-block",
-                marginLeft: 10,
-                maxWidth: 210,
-                marginTop: 7,
-              }}
-              placeholder={"file"}
-              margin="normal"
-              variant="outlined"
-              id="standard-required"
-              defaultValue={currentAction["file_field"]}
-              onChange={(e) => setActionField("file_field", e.target.value)}
-              helperText={
-                <span style={{ color: "white", marginBottom: "2px" }}>
-                  The File field to interact with
-                </span>
-              }
-              InputProps={{
-                classes: {
-                  notchedOutline: classes.notchedOutline,
-                },
-                style: {
-                  color: "white",
-                },
-              }}
-            />
-          ) : null}
-          <div />
-					{fileUploadEnabled ? null :
-						<span>
-							<b>Headers</b>
-							<TextField
-								required
-								style={{
-									flex: "1",
-									marginRight: "15px",
-									marginTop: "5px",
-									backgroundColor: inputColor,
-								}}
-								fullWidth={true}
-								placeholder={
-									"Accept: application/json\r\nContent-Type: application/json"
-								}
-								margin="normal"
-								variant="outlined"
-								id="standard-required"
-								defaultValue={currentAction["headers"]}
-								multiline
-								minRows="2"
-								onChange={(e) => setActionField("headers", e.target.value)}
-								helperText={
-									<span style={{ color: "white", marginBottom: "2px" }}>
-										Headers that are part of the request. Default: EMPTY
-									</span>
-								}
-								InputProps={{
-									style: {
-										color: "white",
-									},
-								}}
-							/>
-						</span>
-					}
-          {bodyInfo}
-          <Divider
-            style={{
-              backgroundColor: "rgba(255,255,255,0.5)",
-              marginTop: 15,
-              marginBottom: 15,
-            }}
-          />
-          {exampleResponse}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            style={{ borderRadius: "0px" }}
-            onClick={() => {
-              setActionsModalOpen(false);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            color="primary"
-            variant={urlPath.length > 0 ? "contained" : "outlined"}
-            style={{ borderRadius: "0px" }}
-            onClick={() => {
-              //console.log(urlPathQueries)
-              //console.log(urlPath)
-              console.log(currentAction);
-              const errors = getActionErrors();
-              addActionToView(errors);
-              setActionsModalOpen(false);
-              setUrlPathQueries([]);
-              setUrlPath("");
-              setFileUploadEnabled(false);
-            }}
-          >
-            Submit
-          </Button>
-        </DialogActions>
-      </FormControl>
-    </Dialog>
-  );
 
 
   const tagView = (
@@ -4314,7 +4361,6 @@ const AppCreator = (defaultprops) => {
       console.log(selectedAction);
     };
 
-    //{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ?
     const getAppAuthentication = () => {
       fetch(globalUrl + "/api/v1/apps/authentication", {
         method: "GET",
@@ -4389,26 +4435,16 @@ const AppCreator = (defaultprops) => {
         });
     };
 
-    if (
-      !authLoaded &&
-      appAuthentication.length === 0 &&
-      selectedAction.id !== undefined
-    ) {
+    if (!authLoaded && appAuthentication.length === 0 && selectedAction.id !== undefined) {
       setAuthLoaded(true);
       getAppAuthentication();
-    } else if (
-      selectedAction.id === undefined &&
-      currentAction.name !== undefined &&
-      currentAction.name !== null &&
-      currentAction.name.length > 0
-    ) {
+    } 
+
+		/*
+		else if (selectedAction.id === undefined && currentAction.name !== undefined && currentAction.name !== null && currentAction.name.length > 0) {
       var methodName = `${currentAction.method}_${currentAction.name}`;
-      if (
-        currentAction.method.toLowerCase() === "custom" ||
-        currentAction.name
-          .toLowerCase()
-          .startsWith(currentAction.method.toLowerCase())
-      ) {
+      if (currentAction.method.toLowerCase() === "custom" ||
+        currentAction.name.toLowerCase().startsWith(currentAction.method.toLowerCase())) {
         methodName = currentAction.name;
       }
 
@@ -4417,6 +4453,7 @@ const AppCreator = (defaultprops) => {
         var newselectedaction = app.actions.find(
           (item) => item.name.toLowerCase().replaceAll(" ", "_") === methodName
         );
+
         if (newselectedaction !== undefined && newselectedaction !== null) {
           newselectedaction.app_id = app.id;
           newselectedaction.app_name = app.name;
@@ -4428,6 +4465,7 @@ const AppCreator = (defaultprops) => {
         }
       }
     }
+		*/
 
     const setNewAppAuth = (appAuthData) => {
       //console.log("DAta: ", appAuthData)
@@ -4782,35 +4820,62 @@ const AppCreator = (defaultprops) => {
         </div>
       ) : null}
       <div>
-        {loopActions}
+        <LoopActions filteredActions={filteredActions} />
+				{/*
         <div style={{ display: "flex" }}>
           <Button
             color="primary"
             style={{ marginTop: "20px", borderRadius: "0px" }}
             variant={actions.length === 0 ? "contained" : "outlined"}
             onClick={() => {
-              setCurrentAction({
-                name: "",
-                description: "",
-                url: "",
-                file_field: "",
-                headers: "",
-                queries: [],
-                paths: [],
-                body: "",
-                errors: [],
-                method: actionNonBodyRequest[0],
-              });
-              setCurrentActionMethod(actionNonBodyRequest[0]);
-              setActionsModalOpen(true);
+  	    			//actions.push({
+              //  name: "Change name",
+              //  description: "",
+              //  url: "",
+              //  file_field: "",
+              //  headers: "",
+              //  queries: [],
+              //  paths: [],
+              //  body: "",
+              //  errors: [],
+              //  method: actionNonBodyRequest[0],
+							//	action_label: "No Label",
+							//	required_bodyfields: [],
+              //})
+							//setActions(actions)
+							//setFilteredActions(actions)
+    					//setUpdate(Math.random());
+
+    					//const foundPaper = document.getElementById("Change name");
+							//if (foundPaper !== null) {
+							//	console.log("Found: ", foundPaper)
+							//} else {
+							//	console.log("Not found")
+							//}
+
+							// Find the item and click if possible
+
+              //setCurrentActionMethod(actionNonBodyRequest[0]);
+              //setCurrentAction({
+              //  name: "",
+              //  description: "",
+              //  url: "",
+              //  file_field: "",
+              //  headers: "",
+              //  queries: [],
+              //  paths: [],
+              //  body: "",
+              //  errors: [],
+              //  method: actionNonBodyRequest[0],
+              //});
+              //setActionsModalOpen(true);
             }}
           >
             New action
           </Button>
-          {/*
 						{actionAmount} {actions.length}
-					*/}
         </div>
+				*/}
       </div>
     </div>
   );
@@ -5382,9 +5447,9 @@ const AppCreator = (defaultprops) => {
 
         <Divider
           style={{
-            marginBottom: "10px",
-            marginTop: "30px",
-            height: "1px",
+            marginBottom: 10,
+            marginTop: 70,
+            height: 1,
             width: "100%",
             backgroundColor: "grey",
           }}
@@ -5418,7 +5483,6 @@ const AppCreator = (defaultprops) => {
     isLoaded && isAppLoaded ? (
       <div>
         <div style={bodyDivStyle}>{landingpageDataBrowser}</div>
-        {newActionModal}
       </div>
     ) : (
       <div></div>
