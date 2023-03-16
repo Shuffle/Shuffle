@@ -2,7 +2,6 @@ import React, { useEffect, useContext } from "react";
 import ReactDOM from "react-dom"
 
 import { makeStyles } from "@material-ui/core/styles";
-import { useTheme } from "@material-ui/core/styles";
 import { Navigate } from "react-router-dom";
 //import { Redirect } from "react-router-dom";
 
@@ -95,7 +94,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAlert } from "react-alert";
 import ChipInput from "material-ui-chip-input";
 import { v4 as uuidv4 } from "uuid";
-
+import theme from "../theme";
 
 const inputColor = "#383B40";
 const surfaceColor = "#27292D";
@@ -479,7 +478,8 @@ export const validateJson = (showResult) => {
 	// This is where we start recursing
 	if (jsonvalid) {
 		// Check fields if they can be parsed too 
-    try {
+   	//console.log("In this window for the data. Should look for list in result! Does recursion.") 
+		try {
 			for (const [key, value] of Object.entries(result)) {
 				if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
 					const inside_result = validateJson(value)
@@ -489,6 +489,25 @@ export const validateJson = (showResult) => {
 							result[key] = newres 
 						} else {
 							result[key] = inside_result.result
+						}
+					}
+				} else {
+
+					// Usually only reaches here if raw array > dict > value
+					if (typeof showResult !== "array") {
+						for (const [subkey, subvalue] of Object.entries(value)) {
+							if (typeof subvalue === "string" && (subvalue.startsWith("{") || subvalue.startsWith("["))) {
+								const inside_result = validateJson(subvalue)
+								if (inside_result.valid) {
+									if (typeof inside_result.result === "string") {
+										const newres = JSON.parse(inside_result.result)
+										result[key][subkey] = newres 
+									} else {
+										result[key][subkey] = inside_result.result
+									}
+								}
+							}
+
 						}
 					}
 				}
@@ -509,7 +528,6 @@ const Workflows = (props) => {
   document.title = "Shuffle - Workflows";
 	let navigate = useNavigate();
 
-  const theme = useTheme();
   const alert = useAlert();
   const classes = useStyles(theme);
   const imgSize = 60;
@@ -1267,17 +1285,19 @@ const Workflows = (props) => {
     alert.info(`exporting and keeping original for all ${allWorkflows.length} workflows`);
   };
 
-  const deduplicateIds = (data) => {
+  const deduplicateIds = (data, skip_sanitize) => {
     if (data.triggers !== null && data.triggers !== undefined) {
       for (var key in data.triggers) {
         const trigger = data.triggers[key];
-        if (trigger.app_name === "Shuffle Workflow") {
-					if (trigger.parameters !== null && trigger.parameters !== undefined) {
-						if (trigger.parameters.length > 2) {
-							trigger.parameters[2].value = "";
+				if (skip_sanitize !== true) {
+					if (trigger.app_name === "Shuffle Workflow") {
+						if (trigger.parameters !== null && trigger.parameters !== undefined) {
+							if (trigger.parameters.length > 2) {
+								trigger.parameters[2].value = "";
+							}
 						}
 					}
-        }
+				}
 
         if (trigger.status === "running") {
           trigger.status = "stopped";
@@ -1323,7 +1343,7 @@ const Workflows = (props) => {
       }
     }
 
-    if (data.actions !== null && data.actions !== undefined) {
+    if (data.actions !== null && data.actions !== undefined && skip_sanitize !== true) {
       for (key in data.actions) {
         data.actions[key].authentication_id = "";
 
@@ -1375,10 +1395,7 @@ const Workflows = (props) => {
       }
     }
 
-    if (
-      data.workflow_variables !== null &&
-      data.workflow_variables !== undefined
-    ) {
+    if (data.workflow_variables !== null && data.workflow_variables !== undefined && skip_sanitize !== true) {
       for (key in data.workflow_variables) {
         const param = data.workflow_variables[key];
         //param.name.includes("key") ||
@@ -1499,7 +1516,7 @@ const Workflows = (props) => {
     alert.success("Copying workflow " + data.name);
     data.id = "";
     data.name = data.name + "_copy";
-    data = deduplicateIds(data);
+    data = deduplicateIds(data, true);
 
     fetch(globalUrl + "/api/v1/workflows", {
       method: "POST",
