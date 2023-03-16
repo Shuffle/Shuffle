@@ -72,6 +72,9 @@ const registeredApps = [
 	"google_sheets",
 	"google_drive",
 	"google_disk",
+	"jira",
+	"jira_service_desk",
+	"jira_service_management",
 ]
 
 const AuthenticationOauth2 = (props) => {
@@ -231,7 +234,7 @@ const AuthenticationOauth2 = (props) => {
 				["https://www.googleapis.com/auth/spreadsheets"],
 				admin_consent,
 			)
-		} else if (selectedApp.name.toLowerCase().includes("google_drive")) {
+		} else if (selectedApp.name.toLowerCase().includes("google_drive") || selectedApp.name.toLowerCase().includes("google_disk")) {
 			handleOauth2Request(
 				"253565968129-6pij4g6ojim4gpum0h9m9u3bc357qsq7.apps.googleusercontent.com",
 				"",
@@ -239,13 +242,23 @@ const AuthenticationOauth2 = (props) => {
 				["https://www.googleapis.com/auth/drive"],
 				admin_consent,
 			)
+		} else if (selectedApp.name.toLowerCase().includes("jira_service_desk") || selectedApp.name.toLowerCase().includes("jira") || selectedApp.name.toLowerCase().includes("jira_service_management")) {
+			handleOauth2Request(
+				"AI02egeCQh1Zskm1QAJaaR6dzjR97V2F",
+				"",
+				"https://api.atlassian.com",
+				["read:jira-work", "write:jira-work", "read:servicedesk:jira-service-management", "write:servicedesk:jira-service-management", "read:request:jira-service-management", "write:request:jira-service-management"],
+
+				admin_consent,
+			)
 		}
+		// write:request:jira-service-management
 	}
 
 
   const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent) => {
     setButtonClicked(true);
-    console.log("SCOPES: ", scopes);
+    //console.log("SCOPES: ", scopes);
 
 		client_id = client_id.trim()
 		client_secret = client_secret.trim()
@@ -465,7 +478,7 @@ const AuthenticationOauth2 = (props) => {
     authenticationOption.label = selectedApp.name + " authentication";
   }
 
-  //console.log(
+  console.log("Window: ", window.location)
   return (
     <div>
       <DialogTitle>
@@ -475,11 +488,11 @@ const AuthenticationOauth2 = (props) => {
       </DialogTitle>
       <DialogContent>
         <span style={{}}>
-            Oauth2 requires a client ID and secret to authenticate, defined in the remote system. Your redirect URL is <b>https://shuffler.io/set_authentication</b>.
+            Oauth2 requires a client ID and secret to authenticate, defined in the remote system. Your redirect URL is <b>{window.location.origin}/set_authentication</b>&nbsp;-&nbsp;
           <a
             target="_blank"
             rel="norefferer"
-            href="https://shuffler.io/docs/apps#authentication"
+            href="/docs/apps#authentication"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
             {" "}
