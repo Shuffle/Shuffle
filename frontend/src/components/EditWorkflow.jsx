@@ -43,6 +43,7 @@ import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   Publish as PublishIcon,
+  OpenInNew as OpenInNewIcon,
 } from "@material-ui/icons";
 
 const EditWorkflow = (props) => {
@@ -153,9 +154,30 @@ const EditWorkflow = (props) => {
       <DialogTitle style={{padding: 30, paddingBottom: 0, zIndex: 1000,}}>
 				<div style={{display: "flex"}}>
         	<div style={{flex: 1, color: "rgba(255,255,255,0.9)" }}>
-						<Typography variant="h6">
-        	  	{newWorkflow ? "New" : "Editing"} workflow
-						</Typography>
+						<div style={{display: "flex"}}>
+							<Typography variant="h6" style={{flex: 9, }}>
+								{newWorkflow ? "New" : "Editing"} workflow
+							</Typography>
+							{newWorkflow === true ? null :
+								<div style={{ marginLeft: 5, flex: 1 }}>
+									<Tooltip title="Open Workflow Form for 'normal' users">
+										<a
+											rel="noopener noreferrer"
+											href={`/workflows/${workflow.id}/run`}
+											target="_blank"
+											style={{
+												textDecoration: "none",
+												color: "#f85a3e",
+												marginLeft: 5,
+												marginTop: 10,
+											}}
+										>
+											<OpenInNewIcon />
+										</a>
+									</Tooltip>
+								</div>
+							}
+						</div>
 						<Typography variant="body2" color="textSecondary" style={{maxWidth: 440,}}>
 							Workflows can be built from scratch, or from templates. <a href="/usecases" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
 						</Typography>
