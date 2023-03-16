@@ -1371,6 +1371,9 @@ const AppFramework = (props) => {
 		const shiftmodifier = 3*scale
 		//const svgSize = `${40*scale}px`
 		//const svgSize = `${40}px`
+	
+		const foundMiddleImage = userdata !== undefined && userdata !== null && userdata.active_org !== undefined && userdata.active_org.image !== undefined && userdata.active_org.image !== null && userdata.active_org.image !== "" ? userdata.active_org.image : '/images/Shuffle_logo.png'
+		
 
 		const fontSize = `${12*scale}px`
 		const defaultSize = `${85*scale}px`
@@ -1614,6 +1617,7 @@ const AppFramework = (props) => {
 					isValid: true,
 					errors: [],
 					middle_node: true,
+					large_image: foundMiddleImage,
 				},
 				renderedPosition: {
 					x: baselocationX,
