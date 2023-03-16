@@ -2046,10 +2046,10 @@ const Apps = (props) => {
       })
       .catch((error) => {
         console.log("ERROR: ", error.toString());
-        alert.error(error.toString());
-
+        //alert.error(error.toString());
         //stop()
-        setIsLoading(false);
+        
+				setIsLoading(false);
         setValidation(false);
       });
   };
