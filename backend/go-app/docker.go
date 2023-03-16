@@ -620,7 +620,7 @@ func hookTest() {
 	}
 }
 
-//https://stackoverflow.com/questions/23935141/how-to-copy-docker-images-from-one-host-to-another-without-using-a-repository
+// https://stackoverflow.com/questions/23935141/how-to-copy-docker-images-from-one-host-to-another-without-using-a-repository
 func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -643,14 +643,9 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	type requestCheck struct {
-		Name string `datastore:"name" json:"name" yaml:"name"`
-	}
-
 	// This has to be done in a weird way because Datastore doesn't
 	// support map[string]interface and similar (openapi3.Swagger)
-	var version requestCheck
-
+	var version shuffle.DockerRequestCheck
 	err = json.Unmarshal(body, &version)
 	if err != nil {
 		resp.WriteHeader(422)

@@ -1163,6 +1163,7 @@ func main() {
 		}
 
 		// Removes handled workflows (worker is made)
+		//log.Printf("\n\n[INFO] Removing %d executions from queue\n\n", len(toBeRemoved.Data))
 		if len(toBeRemoved.Data) > 0 {
 			confirmUrl := fmt.Sprintf("%s/api/v1/workflows/queue/confirm", baseUrl)
 
