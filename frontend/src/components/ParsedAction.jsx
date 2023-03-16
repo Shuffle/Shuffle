@@ -45,6 +45,10 @@ import {
   Fade,
 } from "@material-ui/core";
 
+import { 
+	Autocomplete 
+} from "@material-ui/lab";
+
 import {
   HelpOutline as HelpOutlineIcon,
   Description as DescriptionIcon,
@@ -72,7 +76,6 @@ import {
   Pause as PauseIcon,
   Delete as DeleteIcon,
   AddCircleOutline as AddCircleOutlineIcon,
-  Circle as  CircleIcon,
   Save as SaveIcon,
   KeyboardArrowLeft as KeyboardArrowLeftIcon,
   KeyboardArrowRight as KeyboardArrowRightIcon,
@@ -82,11 +85,11 @@ import {
   ExpandMore as ExpandMoreIcon,
   VpnKey as VpnKeyIcon,
 	AutoFixHigh as AutoFixHighIcon,
+  Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
 } from '@mui/icons-material';
 //} from "@material-ui/icons";
 
-import Autocomplete from "@material-ui/lab/Autocomplete";
 
 //import CodeMirror from "@uiw/react-codemirror";
 //import "codemirror/keymap/sublime";
@@ -620,7 +623,7 @@ const ParsedAction = (props) => {
 			return helperText
 		}
 
-    const changeActionParameter = (event, count, data) => {
+    const changeActionParameter = (event, count, data, viewForceUpdate) => {
 			//console.log("Action change: ", selectedAction, data)
       if (data.name.startsWith("${") && data.name.endsWith("}")) {
         // PARAM FIX - Gonna use the ID field, even though it's a hack
@@ -812,8 +815,8 @@ const ParsedAction = (props) => {
 			}
 
       setSelectedAction(selectedAction);
-			if (forceUpdate) {
-      	setUpdate(Math.random())
+			if (forceUpdate || viewForceUpdate === true) {
+				setUpdate(Math.random())
 			}
       //setUpdate(event.target.value)
     };
@@ -1601,6 +1604,9 @@ const ParsedAction = (props) => {
 														style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
 														onClick={(event) => {
 															event.preventDefault()
+
+															// Get cursor position
+															// This makes it so we can put it in the right location?
 															setMenuPosition({
 																top: event.pageY + 10,
 																left: event.pageX + 10,
@@ -1619,6 +1625,7 @@ const ParsedAction = (props) => {
                 helperText={returnHelperText(data.name, data.value)}
                 onClick={() => {
                   console.log("Clicked field: ", clickedFieldId, data.name)
+
 									if (data.name === "file_id") {
 										console.log("show file video?")
 										if (setShowVideo !== undefined) {
@@ -1934,7 +1941,7 @@ const ParsedAction = (props) => {
                     },
                     endAdornment: hideExtraTypes ? null : (
                       <InputAdornment position="end">
-                        <Tooltip title="Autocomplete the text" placement="top">
+                        <Tooltip title="Autocomplete text" placement="top">
                           <AddCircleOutlineIcon
                             style={{ cursor: "pointer" }}
                             onClick={(event) => {
@@ -2073,11 +2080,8 @@ const ParsedAction = (props) => {
               };
 
               const handleItemClick = (values) => {
-                if (
-                  values === undefined ||
-                  values === null ||
-                  values.length === 0
-                ) {
+								console.log("In normal itemclick")
+                if (values === undefined ||values === null ||values.length === 0) {
                   return;
                 }
 
@@ -2143,7 +2147,7 @@ const ParsedAction = (props) => {
 
 								console.log("In nestedclick!!")
 								var newValue = selectedActionParameters[count].value + toComplete
-								changeActionParameter({target: {value: newValue}}, count, data)
+								changeActionParameter({target: {value: newValue}}, count, data, true)
                 //selectedActionParameters[count].value += toComplete;
                 //selectedAction.parameters[count].value = selectedActionParameters[count].value;
                 //setSelectedAction(selectedAction);
@@ -3466,6 +3470,21 @@ const ParsedAction = (props) => {
             autoHighlight
             value={selectedAction}
             classes={{ inputRoot: classes.inputRoot }}
+						groupBy={(option) => {
+							// Most popular
+							// Is categorized
+							// Uncategorized
+							return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
+						}}
+						renderGroup={(params) => {
+							return (
+								<li key={params.key}>
+									<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
+									<Typography variant="body2">{params.children}</Typography>
+								</li>
+							)	
+  					}}
+            options={selectedApp.actions.filter((a) => a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))}
             ListboxProps={{
               style: {
                 backgroundColor: theme.palette.inputColor,
@@ -3480,12 +3499,7 @@ const ParsedAction = (props) => {
 							return options
 						}}
             getOptionLabel={(option) => {
-              if (
-                option === undefined ||
-                option === null ||
-                option.name === undefined ||
-                option.name === null 
-              ) {
+              if (option === undefined || option === null || option.name === undefined || option.name === null ) {
                 return null;
               }
 
@@ -3495,7 +3509,6 @@ const ParsedAction = (props) => {
 
               return newname;
             }}
-            options={sortByKey(selectedApp.actions, "label")}
             fullWidth
             style={{
               backgroundColor: theme.palette.inputColor,
@@ -3514,19 +3527,13 @@ const ParsedAction = (props) => {
             }}
             renderOption={(data) => {
               var newActionname = data.name;
-              if (
-                data.label !== undefined &&
-                data.label !== null &&
-                data.label.length > 0
-              ) {
+              if (data.label !== undefined && data.label !== null && data.label.length > 0) {
                 newActionname = data.label;
               }
 
               var newActiondescription = data.description;
 							//console.log("DESC: ", newActiondescription)
-              if (
-                data.description === undefined || data.description === null
-              ) {
+              if (data.description === undefined || data.description === null) {
 								newActiondescription = "Description: No description defined for this action"
               } else {
 								newActiondescription = "Description: "+newActiondescription
@@ -3562,21 +3569,26 @@ const ParsedAction = (props) => {
 							if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
 								var extraUrl = ""
 								const descSplit = data.description.split("\n")
-								for (let [line,lineval] in Object.entries(descSplit)) {
-									if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
-										const urlsplit = descSplit[line].split("/")
-										try {
-											extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
-										} catch (e) {
-											console.log("Failed - running with -1")
-											extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
-										}
+								// Last line of descSplit
+								if (descSplit.length > 0) {
+									extraUrl = descSplit[descSplit.length-1]
+								} 
+
+								//for (let [line,lineval] in Object.entries(descSplit)) {
+								//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
+								//		const urlsplit = descSplit[line].split("/")
+								//		try {
+								//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
+								//		} catch (e) {
+								//			//console.log("Failed - running with -1")
+								//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
+								//		}
 
 
-										//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
-										break
-									} 
-								}
+								//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
+								//		//break
+								//	} 
+								//}
 
 								if (extraUrl.length > 0) {
 									if (extraUrl.includes(" ")) {
@@ -3586,9 +3598,10 @@ const ParsedAction = (props) => {
 									if (extraUrl.includes("#")) {
 										extraUrl = extraUrl.split("#")[0]
 									}
+
 									extraDescription = `${method} ${extraUrl}`
 								} else {
-									console.log("No url found. Check again :)")
+									//console.log("No url found. Check again :)")
 								}
 							}
 
@@ -3609,10 +3622,10 @@ const ParsedAction = (props) => {
 											>
 												{useIcon}
 											</span>
-											<span style={{marginBottom: 0,}}>{newActionname}</span>
+											<span style={{marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
 										</div>
 										{extraDescription.length > 0 ? 
-											<Typography variant="body2" color="textSecondary" style={{marginTop: 0, }}>
+											<Typography variant="body2" color="textSecondary" style={{marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block",}}>
 												{extraDescription}	
 											</Typography>
 										: null}
