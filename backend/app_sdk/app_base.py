@@ -2773,6 +2773,7 @@ class AppBase:
                     return True, ""
             except Exception as error:
                 self.logger.info(f"[WARNING] Failed checking startnode: {error}")
+                return True, ""
 
             available_checks = [
                 "=",

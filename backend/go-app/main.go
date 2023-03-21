@@ -3560,7 +3560,7 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 
 	} else if job.Type == "schedule" {
 		if job.Action == "execute" {
-			log.Printf("Should handle schedule for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			log.Printf("[INFO] Should handle schedule for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
 			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "schedule", job.ThirdItem)
 			if err != nil {
 				log.Printf("[INFO] Failed executing workflow from cloud schedule: %s", err)
@@ -3570,7 +3570,7 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 		}
 	} else if job.Type == "email_trigger" {
 		if job.Action == "execute" {
-			log.Printf("Should handle email for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			log.Printf("[INFO] Should handle email for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
 			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "email_trigger", job.ThirdItem)
 			if err != nil {
 				log.Printf("Failed executing workflow from email trigger: %s", err)
@@ -3581,7 +3581,7 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 
 	} else if job.Type == "user_input" {
 		if job.Action == "continue" {
-			log.Printf("Should handle user_input CONTINUE for workflow %s with start node %s and execution ID %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			log.Printf("[INFO] Should handle user_input CONTINUE for workflow %s with start node %s and execution ID %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
 			// FIXME: Handle authorization
 			ctx := context.Background()
 			workflowExecution, err := shuffle.GetWorkflowExecution(ctx, job.ThirdItem)
@@ -5977,7 +5977,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.SaveWorkflow).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.GetSpecificWorkflow).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/recommend", shuffle.RecommendAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/recommend", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
 
 	// Triggers
 	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")

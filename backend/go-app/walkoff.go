@@ -2664,7 +2664,11 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	time.Sleep(2 * time.Second)
 	log.Printf("[INFO] Starting validation of execution %s", workflowExecution.ExecutionId)
 
-	returnBytes := shuffle.HandleRetValidation(ctx, workflowExecution)
+	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1)
+	returnBytes, err := json.Marshal(returnBody)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
+	}
 
 	resp.WriteHeader(200)
 	resp.Write(returnBytes)

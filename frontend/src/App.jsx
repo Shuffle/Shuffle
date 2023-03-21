@@ -25,6 +25,7 @@ import Introduction from "./views/Introduction";
 import SetAuthentication from "./views/SetAuthentication";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
 import Search from "./views/Search.jsx";
+import RunWorkflow from "./views/RunWorkflow.jsx";
 
 import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
@@ -540,6 +541,8 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+					<Route exact path="/workflows/:key/run" element={<RunWorkflow serverside={serverside} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
+					<Route exact path="/workflows/:key/execute" element={<RunWorkflow serverside={serverside} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
         	<Route
         	  exact
         	  path="/docs/:key"
