@@ -1618,7 +1618,16 @@ const AppCreator = (defaultprops) => {
     }
 
     setProjectCategories(all_categories);
+
+		// Rearrange them by which has action_label
+		const firstActions = newActions.filter(data => data.action_label !== undefined && data.action_label !== null && data.action_label !== "No Label")
+		console.log("First actions: ", firstActions)
+		const secondActions = newActions.filter(data => data.action_label === undefined || data.action_label === null || data.action_label === "No Label")
+		newActions = firstActions.concat(secondActions)
     setActions(newActions);
+		//data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
+
+
     setFilteredActions(newActions);
     setIsAppLoaded(true);
   };
@@ -4031,12 +4040,16 @@ const AppCreator = (defaultprops) => {
 							}}
 							value={data.action_label}
 							style={{
+								border: data.action_label === undefined || data.action_label === "No Label" ? "" : `2px solid ${bgColor}`,
+								borderRadius: theme.shape.borderRadius,
 								backgroundColor: inputColor,
 								paddingLeft: 10,
 								color: "white",
 								height: 30,
-								maxWidth: 50, 
+								maxWidth: 35, 
 								marginLeft: 10, 
+								marginRight: 10, 
+								overflow: "hidden",
 							}}
 							inputProps={{
 								name: "Method",
@@ -4048,7 +4061,8 @@ const AppCreator = (defaultprops) => {
 									<MenuItem
 										key={labelindex}
 										value={label}
-										style={{ }}
+										style={{ 
+										}}
 									>
 										{label}
 									</MenuItem>

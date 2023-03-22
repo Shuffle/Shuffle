@@ -1298,7 +1298,10 @@ const AppFramework = (props) => {
 		}
 
 		//setDiscoveryData({})
-		setDiscoveryWrapper({})
+		if (setDiscoveryWrapper !== undefined) { 
+			setDiscoveryWrapper({})
+		}
+
 		setSelectionOpen(false)
 		setDefaultSearch("")
 		setPaperTitle("")

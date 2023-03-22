@@ -43,6 +43,7 @@ import {
   DialogContent,
   CircularProgress,
   Box,
+	InputAdornment,
 } from "@material-ui/core";
 
 import { Autocomplete } from "@mui/material";
@@ -67,6 +68,8 @@ import {
   Schedule as ScheduleIcon,
   Cloud as CloudIcon,
   Business as BusinessIcon,
+	Visibility as VisibilityIcon,
+	VisibilityOff as VisibilityOffIcon,
 } from "@material-ui/icons";
 
 import { useAlert } from "react-alert";
@@ -185,6 +188,8 @@ const Admin = (props) => {
   const [dealerror, setDealerror] = React.useState("");
   const [dealList, setDealList] = React.useState([]);
   const [adminTab, setAdminTab] = React.useState(1);
+	const [showApiKey, setShowApiKey] = useState(false);
+
 
   const [billingInfo, setBillingInfo] = React.useState({});
   
@@ -2242,7 +2247,7 @@ const Admin = (props) => {
       <DialogTitle>
         <span style={{ color: "white" }}>Enable cloud features</span>
       </DialogTitle>
-      <DialogContent>
+      <DialogContent color="textSecondary">
         What does{" "}
         <a
           href="https://shuffler.io/docs/organizations#cloud_sync"
@@ -2535,15 +2540,23 @@ const Admin = (props) => {
 							<Tab
 								disabled={true}
 								label=<span>
+									Branding	
+								</span>
+							/>
+							<Tab
+								disabled={true}
+								label=<span>
 									Usage	
 								</span>
 							/>
+							{/*
 							<Tab
 								disabled={true}
 								label=<span>
 									Notifications	
 								</span>
 							/>
+							*/}
 						</Tabs>
 
             <Divider
@@ -2614,13 +2627,28 @@ const Admin = (props) => {
             		      <div style={{ display: "flex" }}>
             		        <TextField
             		          color="primary"
-            		          style={{ backgroundColor: theme.palette.inputColor }}
+            		          style={{ 
+														backgroundColor: theme.palette.inputColor,
+														maxWidth: 500,
+													}}
             		          InputProps={{
             		            style: {
             		              height: "50px",
             		              color: "white",
             		              fontSize: "1em",
             		            },
+														endAdornment: (
+															<InputAdornment position="end">
+																<IconButton
+																	aria-label="toggle password visibility"
+																	onClick={() => {
+																		setShowApiKey(!showApiKey)
+																	}}
+																>
+																	{showApiKey ? <VisibilityIcon /> : <VisibilityOffIcon />}
+																</IconButton>
+															</InputAdornment>
+														)
             		          }}
             		          required
             		          fullWidth={true}
@@ -2631,6 +2659,7 @@ const Admin = (props) => {
             		          placeholder="Cloud Apikey"
             		          variant="outlined"
             		          defaultValue={userSettings.apikey}
+													type={!isCloud || showApiKey ? "text" : "password"}
             		        />
             		        {selectedOrganization.cloud_sync_active ? (
             		          <Button
@@ -2718,10 +2747,11 @@ const Admin = (props) => {
             		    ) : null}
             		  </div>
             		)}
-            		<Typography
-            		  style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
-            		>
-            		  Cloud sync features (monthly usage)
+            		<Typography variant="h6" style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}>
+            		  Cloud sync features 
+            		</Typography>
+            		<Typography variant="body2" color="textSecondary" style={{marginBottom: 10, marginLeft: 5, }}>
+									If not otherwise specified, Usage will reset monthly
             		</Typography>
             		<Grid container style={{ width: "100%", marginBottom: 15 }}>
             		  {selectedOrganization.sync_features === undefined ||

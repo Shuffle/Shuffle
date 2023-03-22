@@ -241,16 +241,15 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 		BuildArgs: map[string]*string{},
 		Labels:    labels,
 	}
-
 	// NetworkMode: "host",
 
 	httpProxy := os.Getenv("HTTP_PROXY")
 	if len(httpProxy) > 0 {
-		buildOptions.BuildArgs["http_proxy"] = &httpProxy
+		buildOptions.BuildArgs["HTTP_PROXY"] = &httpProxy
 	}
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 	if len(httpProxy) > 0 {
-		buildOptions.BuildArgs["https_proxy"] = &httpsProxy
+		buildOptions.BuildArgs["HTTPS_PROXY"] = &httpsProxy
 	}
 
 	// Build the actual image
@@ -352,7 +351,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 	httpProxy := os.Getenv("HTTP_PROXY")
 	if len(httpProxy) > 0 {
-		buildOptions.BuildArgs["http_proxy"] = &httpProxy
+		buildOptions.BuildArgs["HTTP_PROXY"] = &httpProxy
 	}
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 	if len(httpProxy) > 0 {

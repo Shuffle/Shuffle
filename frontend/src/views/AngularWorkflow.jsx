@@ -8320,17 +8320,15 @@ const AngularWorkflow = (defaultprops) => {
 
     var injectedData = <div></div>;
 
-    if (
-      selectedEdge.conditions !== undefined &&
-      selectedEdge.conditions !== null &&
-      selectedEdge.conditions.length > 0
-    ) {
+    if (selectedEdge.conditions !== undefined && selectedEdge.conditions !== null && selectedEdge.conditions.length > 0) {
       injectedData = selectedEdge.conditions.map((condition, index) => {
         return ConditionHandler(condition, index);
       });
     }
 
-    // FIXME - remove index
+		// Startnode = dest node
+		const conditionsDisabled = false
+
     const conditionId = uuidv4();
     return (
       <div style={appApiViewStyle}>
@@ -8363,7 +8361,7 @@ const AngularWorkflow = (defaultprops) => {
 
         <Button
           style={{ margin: "auto", marginTop: "10px" }}
-          color="primary"
+          color="secondary"
           variant="outlined"
           onClick={() => {
             if (conditionsModalOpen) {
@@ -8396,6 +8394,13 @@ const AngularWorkflow = (defaultprops) => {
         >
           New condition
         </Button>
+
+				{/* Check if dest is the same as start */}
+				{conditionsDisabled ? 
+					<Typography variant="body1">
+						Conditions are unavailable between triggers and the startnode.
+					</Typography>
+				: null}
       </div>
     );
   };

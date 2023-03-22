@@ -18,8 +18,8 @@ import theme from '../theme';
 import Checkbox from '@mui/material/Checkbox';
 import { orange } from '@mui/material/colors';
 import { isMobile } from "react-device-detect" 
-import { GetParsedPaths, FindJsonPath } from "../views/Apps.jsx";
 import NestedMenuItem from "material-ui-nested-menu-item";
+import { GetParsedPaths, FindJsonPath } from "../views/Apps.jsx";
 
 import {
 	FullscreenExit as FullscreenExitIcon,
@@ -83,12 +83,12 @@ const shuffleTheme = createTheme({
   theme: 'dark',
   settings: {
     background: '#282828',
-    foreground: '#ffffff',
+    foreground: '#282828',
     caret: '#5d00ff',
     selection: '#036dd626',
     selectionMatch: '#036dd626',
     lineHighlight: '#8a91991a',
-    gutterBackground: '#fff',
+    gutterBackground: '#282828',
     gutterForeground: '#8a919966',
 		fontSize: 18,
 		borderRadius: theme.palette.borderRadius,
@@ -156,7 +156,6 @@ const CodeEditor = (props) => {
 	}
 
 	let navigate = useNavigate();
-	// console.log("is it file editor? - ", isFileEditor);
 
 	useEffect(() => {
 		var allVariables = []
@@ -449,101 +448,102 @@ const CodeEditor = (props) => {
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 
 		console.log("FOUND: ", found)
-
 		// Whelp this is inefficient af. Single loop pls
 		// When the found array is empty.
-		try { 
-			for (var i = 0; i < found.length; i++) {
-				try {
-					//found[i] = found[i].toLowerCase()
-					const fixedVariable = fixVariable(found[i])
-					//var correctVariable = availableVariables.includes(fixedVariable)
+		if (found !== null && found !== undefined) {
+			try { 
+				for (var i = 0; i < found.length; i++) {
+					try {
+						//found[i] = found[i].toLowerCase()
+						const fixedVariable = fixVariable(found[i])
+						//var correctVariable = availableVariables.includes(fixedVariable)
 
-					// 
-					var valuefound = false
-					for (var j = 0; j < actionlist.length; j++) {
-						if(fixedVariable.slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
-							valuefound = true 
+						// 
+						var valuefound = false
+						for (var j = 0; j < actionlist.length; j++) {
+							if(fixedVariable.slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
+								valuefound = true 
 
-							try {
-								if (typeof actionlist[j].example === "object") {
-									input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
+								try {
+									if (typeof actionlist[j].example === "object") {
+										input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
 
-								} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
-									input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
-								} else {
+									} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
+										input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
+									} else {
+										input = input.replace(fixedVariable, actionlist[j].example)
+									}
+								} catch (e) { 
 									input = input.replace(fixedVariable, actionlist[j].example)
 								}
-							} catch (e) { 
-								input = input.replace(fixedVariable, actionlist[j].example)
+							} else {
+								// Couldn't find the correct example value
 							}
-						} else {
-							// Couldn't find the correct example value
 						}
-					}
 
-					if (!valuefound && availableVariables.includes(fixedVariable)) {
-						var shouldbreak = false
-						for (var k=0; k < actionlist.length; k++){
-							var parsedPaths = []
-							if (typeof actionlist[k].example === "object") {
-								parsedPaths = GetParsedPaths(actionlist[k].example, "");
-							}
+						if (!valuefound && availableVariables.includes(fixedVariable)) {
+							var shouldbreak = false
+							for (var k=0; k < actionlist.length; k++){
+								var parsedPaths = []
+								if (typeof actionlist[k].example === "object") {
+									parsedPaths = GetParsedPaths(actionlist[k].example, "");
+								}
 
-							for (var key in parsedPaths) {
-								const fullpath = "$"+actionlist[k].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
-								if (fullpath === fixedVariable) {
-									//if (actionlist[k].example === undefined) {
-									//	actionlist[k].example = "TMP"
-									//}
+								for (var key in parsedPaths) {
+									const fullpath = "$"+actionlist[k].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
+									if (fullpath === fixedVariable) {
+										//if (actionlist[k].example === undefined) {
+										//	actionlist[k].example = "TMP"
+										//}
 
-									var new_input = ""
-									try {
-										new_input = FindJsonPath(fullpath, actionlist[k].example)
-									} catch (e) {
-										console.log("ERR IN INPUT: ", e)
-									}
+										var new_input = ""
+										try {
+											new_input = FindJsonPath(fullpath, actionlist[k].example)
+										} catch (e) {
+											console.log("ERR IN INPUT: ", e)
+										}
 
-									//console.log("Got output for: ", fullpath, new_input, actionlist[k].example, typeof new_input)
+										//console.log("Got output for: ", fullpath, new_input, actionlist[k].example, typeof new_input)
 
-									if (typeof new_input === "object") {
-										new_input = JSON.stringify(new_input)
-									} else {
-										if (typeof new_input === "string") {
-											new_input = new_input
+										if (typeof new_input === "object") {
+											new_input = JSON.stringify(new_input)
 										} else {
-											console.log("NO TYPE? ", typeof new_input)
-											try {
-												new_input = new_input.toString()
-											} catch (e) {
-												new_input = ""
+											if (typeof new_input === "string") {
+												new_input = new_input
+											} else {
+												console.log("NO TYPE? ", typeof new_input)
+												try {
+													new_input = new_input.toString()
+												} catch (e) {
+													new_input = ""
+												}
 											}
 										}
+
+										//console.log("FOUND2: ", fixedVariable, actionlist[j].example)
+										input = input.replace(fixedVariable, new_input)
+
+										//} catch (e) {
+										//	input = input.replace(found[i], actionlist[k].example)
+										//}
+
+										shouldbreak = true 
+										break
 									}
+								}
 
-									//console.log("FOUND2: ", fixedVariable, actionlist[j].example)
-									input = input.replace(fixedVariable, new_input)
-
-									//} catch (e) {
-									//	input = input.replace(found[i], actionlist[k].example)
-									//}
-
-									shouldbreak = true 
+								if (shouldbreak) {
 									break
 								}
 							}
-
-							if (shouldbreak) {
-								break
-							}
 						}
+					} catch (e) {
+						console.log("Replace error: ", e)
 					}
-				} catch (e) {
-					console.log("Replace error: ", e)
 				}
+			} catch (e) {
+				//console.log("Outer replace error: ", e)
 			}
-		} catch (e) {
-			//console.log("Outer replace error: ", e)
 		}
 
 		const tmpValidation = validateJson(input.valueOf())
@@ -687,15 +687,15 @@ const CodeEditor = (props) => {
 			PaperComponent={PaperComponent}
 			PaperProps={{
 				style: {
-					backgroundColor: theme.palette.surfaceColor,
-					color: "white",
-					minWidth: isMobile ? "100%" : 1200,
-					maxWidth: isMobile ? "100%" : 1200,
-					minHeight: isMobile ? "100%" : 900,
-					maxHeight: isMobile ? "100%" : 900,
-					padding: isMobile ? "25px 10px 25px 10px" : 25,
-					border: theme.palette.defaultBorder,
 					zIndex: 12501,
+					color: "white",
+					minWidth: isMobile ? "100%" : isFileEditor ? 650 : 1200,
+					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1200,
+					minHeight: isMobile ? "100%" : 720,
+					maxHeight: isMobile ? "100%" : 720,
+					border: theme.palette.defaultBorder,
+					padding: isMobile ? "25px 10px 25px 10px" : 25,
+					backgroundColor: theme.palette.surfaceColor,
 				},
 			}}
 		>
@@ -1156,6 +1156,11 @@ const CodeEditor = (props) => {
 							theme={shuffleTheme} 
 							value = {localcodedata}
 							height={isFileEditor ? 450 : 700} 
+							width={isFileEditor ? 650 : 550}
+							style={{
+								maxWidth: isFileEditor ? 450 : 500,
+								wordBreak: "break-word",
+							}}
 							onCursorActivity = {(value) => {
 								// console.log(value.getCursor())
 								setCurrentCharacter(value.getCursor().ch)
@@ -1165,6 +1170,8 @@ const CodeEditor = (props) => {
 								highlight_variables(value)
 							}}
 							onChange={(value) => {
+								//console.log("Value: '", value.getValue(), "'")
+
 								setlocalcodedata(value.getValue())
 								expectedOutput(value.getValue())
 
@@ -1179,7 +1186,7 @@ const CodeEditor = (props) => {
 								styleSelectedText: true,
 								keyMap: 'sublime',
 								mode: 'python',
-								lineWrapping: linewrap,
+								lineWrapping: true,
 								//theme: codeTheme,
 								// mode: {codelang},
 							}}

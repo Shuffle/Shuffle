@@ -46,7 +46,7 @@ const Files = (props) => {
   const [renderTextBox, setRenderTextBox] = React.useState(false);
 
   const alert = useAlert();
-  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv",]
+  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log"]
   var upload = "";
 
   const handleKeyDown = (event) => {
@@ -108,11 +108,7 @@ const Files = (props) => {
           setFiles([]);
         }
 
-        console.log("NAMESPACES: ", responseJson.namespaces);
-        if (
-          responseJson.namespaces !== undefined &&
-          responseJson.namespaces !== null
-        ) {
+        if (responseJson.namespaces !== undefined && responseJson.namespaces !== null) {
           setFileNamespaces(responseJson.namespaces);
         }
       })
@@ -574,7 +570,7 @@ const Files = (props) => {
 							}
 
 							const filenamesplit = file.filename.split(".")
-							const iseditable = file.filesize < 100000 && file.status === "active" && allowedFileTypes.includes(filenamesplit[filenamesplit.length-1])
+							const iseditable = file.filesize < 2000000 && file.status === "active" && allowedFileTypes.includes(filenamesplit[filenamesplit.length-1])
 
 							return (
 								<ListItem
