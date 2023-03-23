@@ -49,6 +49,7 @@ import 'codemirror/keymap/sublime';
 import 'codemirror/addon/selection/mark-selection.js'
 import 'codemirror/theme/gruvbox-dark.css';
 import 'codemirror/theme/duotone-light.css';
+import {indentWithTab} from "@codemirror/commands"
 import { padding, textAlign } from '@mui/system';
 import data from '../frameworkStyle.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
@@ -79,44 +80,45 @@ const pythonFilters = [
 	{"name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads(r"""$nodename""")\n{% endpython %}`, "example": ``},
 ]
 
-const shuffleTheme = createTheme({
-  theme: 'dark',
-  settings: {
-    background: '#282828',
-    foreground: '#282828',
-    caret: '#5d00ff',
-    selection: '#036dd626',
-    selectionMatch: '#036dd626',
-    lineHighlight: '#8a91991a',
-    gutterBackground: '#282828',
-    gutterForeground: '#8a919966',
-		fontSize: 18,
-		borderRadius: theme.palette.borderRadius,
-		border: `2px solid ${theme.palette.inputColor}`,
-  },
-  styles: [
-    { tag: tags.comment, color: '#787b8099' },
-    { tag: tags.variableName, color: '#0080ff' },
-    { tag: [tags.string, tags.special(tags.brace)], color: '#5c6166' },
-    { tag: tags.number, color: '#5c6166' },
-    { tag: tags.bool, color: '#5c6166' },
-    { tag: tags.null, color: '#5c6166' },
-    { tag: tags.keyword, color: '#5c6166' },
-    { tag: tags.operator, color: '#5c6166' },
-    { tag: tags.className, color: '#5c6166' },
-    { tag: tags.definition(tags.typeName), color: '#5c6166' },
-    { tag: tags.typeName, color: '#5c6166' },
-    { tag: tags.angleBracket, color: '#5c6166' },
-    { tag: tags.tagName, color: '#5c6166' },
-    { tag: tags.attributeName, color: '#5c6166' },
-  ],
-});
+//const shuffleTheme = createTheme({
+//  theme: 'dark',
+//  settings: {
+//    background: '#282828',
+//    foreground: '#282828',
+//    caret: '#5d00ff',
+//    selection: '#036dd626',
+//    selectionMatch: '#036dd626',
+//    lineHighlight: '#8a91991a',
+//    gutterBackground: '#282828',
+//    gutterForeground: '#8a919966',
+//		fontSize: 18,
+//		borderRadius: theme.palette.borderRadius,
+//		border: `2px solid ${theme.palette.inputColor}`,
+//  },
+//  styles: [
+//    { tag: tags.comment, color: '#787b8099' },
+//    { tag: tags.variableName, color: '#0080ff' },
+//    { tag: [tags.string, tags.special(tags.brace)], color: '#5c6166' },
+//    { tag: tags.number, color: '#5c6166' },
+//    { tag: tags.bool, color: '#5c6166' },
+//    { tag: tags.null, color: '#5c6166' },
+//    { tag: tags.keyword, color: '#5c6166' },
+//    { tag: tags.operator, color: '#5c6166' },
+//    { tag: tags.className, color: '#5c6166' },
+//    { tag: tags.definition(tags.typeName), color: '#5c6166' },
+//    { tag: tags.typeName, color: '#5c6166' },
+//    { tag: tags.angleBracket, color: '#5c6166' },
+//    { tag: tags.tagName, color: '#5c6166' },
+//    { tag: tags.attributeName, color: '#5c6166' },
+//  ],
+//});
 
 const CodeEditor = (props) => {
-	const { globalUrl, fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata, isFileEditor, runUpdateText } = props
+	const { globalUrl, fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata, isFileEditor, runUpdateText, toolsAppId } = props
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
   	// const {codelang, setcodelang} = props
+	
 	const [validation, setValidation] = React.useState(false);
 	const [expOutput, setExpOutput] = React.useState(" ");
 	const [linewrap, setlinewrap] = React.useState(true);
@@ -607,8 +609,9 @@ const CodeEditor = (props) => {
 		}
 
 		// Shuffle Tools 1.2.0 (in most cases?)
-		const appid = "3e2bdf9d5069fe3f4746c29d68785a6a" 
-		const actiondata = {"description":"Repeats the call parameter","id":"","name":"repeat_back_to_me","label":"","node_type":"","environment":"","sharing":false,"private_id":"","public_id":"","app_id":"3e2bdf9d5069fe3f4746c29d68785a6a","tags":null,"authentication":[],"tested":false,"parameters":[{"description":"The message to repeat","id":"","name":"call","example":"REPEATING: Hello world","value":inputdata,"multiline":true,"options":null,"action_field":"","variant":"STATIC_VALUE","required":true,"configuration":false,"tags":null,"schema":{"type":"string"},"skip_multicheck":false,"value_replace":null,"unique_toggled":false,"autocompleted":false}],"execution_variable":{"description":"","id":"","name":"","value":""},"returns":{"description":"","example":"","id":"","schema":{"type":"string"}},"authentication_id":"","example":"","auth_not_required":false,"source_workflow":"","run_magic_output":false,"run_magic_input":false,"execution_delay":0,"app_name":"Shuffle Tools","app_version":"1.2.0","selectedAuthentication":{}}
+		const appid = toolsAppId !== undefined && toolsAppId !== null && toolsAppId.length > 0 ? toolsAppId : "3e2bdf9d5069fe3f4746c29d68785a6a"
+
+		const actiondata = {"description":"Repeats the call parameter","id":"","name":"repeat_back_to_me","label":"","node_type":"","environment":"","sharing":false,"private_id":"","public_id":"","app_id": appid,"tags":null,"authentication":[],"tested":false,"parameters":[{"description":"The message to repeat","id":"","name":"call","example":"REPEATING: Hello world","value":inputdata,"multiline":true,"options":null,"action_field":"","variant":"STATIC_VALUE","required":true,"configuration":false,"tags":null,"schema":{"type":"string"},"skip_multicheck":false,"value_replace":null,"unique_toggled":false,"autocompleted":false}],"execution_variable":{"description":"","id":"","name":"","value":""},"returns":{"description":"","example":"","id":"","schema":{"type":"string"}},"authentication_id":"","example":"","auth_not_required":false,"source_workflow":"","run_magic_output":false,"run_magic_input":false,"execution_delay":0,"app_name":"Shuffle Tools","app_version":"1.2.0","selectedAuthentication":{}}
 
 		setExecutionResult({
 			"valid": false,		
@@ -618,7 +621,7 @@ const CodeEditor = (props) => {
 
 		setExecuting(true)
 
-		fetch(globalUrl+"/api/v1/apps/"+appid+"/execute", {
+		fetch(`${globalUrl}/api/v1/apps/${appid}/execute`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -1148,18 +1151,19 @@ const CodeEditor = (props) => {
 					</div> 
 					}
 					<span style={{
-						border: `2px solid ${theme.palette.inputColor}`,
+						border: `2px solid red`,
 						borderRadius: theme.palette.borderRadius,
 						position: "relative",
 					}}>
 						<CodeMirror
-							theme={shuffleTheme} 
 							value = {localcodedata}
-							height={isFileEditor ? 450 : 700} 
-							width={isFileEditor ? 650 : 550}
+							height={isFileEditor ? 450 : 525} 
+							width={isFileEditor ? 650 : 600}
 							style={{
 								maxWidth: isFileEditor ? 450 : 500,
 								wordBreak: "break-word",
+								marginTop: 0,
+								paddingTop: 0,
 							}}
 							onCursorActivity = {(value) => {
 								// console.log(value.getCursor())
@@ -1182,13 +1186,14 @@ const CodeEditor = (props) => {
 								// console.log(findIndex(value.getValue()))
 								// highlight_variables(value)
 							}}
+							extensions={[indentWithTab]}
 							options={{
 								styleSelectedText: true,
+								theme: codeTheme,
 								keyMap: 'sublime',
-								mode: 'python',
-								lineWrapping: true,
-								//theme: codeTheme,
-								// mode: {codelang},
+								mode: validation === true ? "json" : "python",
+								lineWrapping: linewrap,
+
 							}}
 						/>
 					</span>
@@ -1360,7 +1365,7 @@ const CodeEditor = (props) => {
 										id='expOutput'
 										style={{
 											whiteSpace: "pre-wrap",
-											color: "#f85a3e",
+											color: "#ebdbb2",
 											fontFamily: "monospace",
 											backgroundColor: "#282828",
 											padding: 10,
@@ -1369,7 +1374,10 @@ const CodeEditor = (props) => {
 											borderRadius: theme.palette.borderRadius,
 											maxHeight: 500,
 											minHeight: 500, 
+											minWidth: 500,
+											maxWidth: 500,
 											overflow: "auto", 
+											whiteSpace: "pre-wrap",
 										}}
 									>
 										{expOutput}

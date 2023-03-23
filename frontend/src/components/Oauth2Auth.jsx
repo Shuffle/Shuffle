@@ -153,7 +153,7 @@ const AuthenticationOauth2 = (props) => {
 				"efe4c3fe-84a1-4821-a84f-23a6cfe8e72d",
 				"",
 				"https://graph.microsoft.com",
-				["Mail.ReadWrite"],
+				["Mail.ReadWrite", "Mail.Send"],
 				admin_consent,
 			);
 		} else if (selectedApp.name.toLowerCase() == "gmail") {

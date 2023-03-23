@@ -274,6 +274,7 @@ const AngularWorkflow = (defaultprops) => {
   const [cystyle] = useState(cytoscapestyle);
   const [cy, setCy] = React.useState();
 
+	const [toolsApp, setToolsApp] = React.useState({});
   const [currentView, setCurrentView] = React.useState(0);
   const [triggerAuthentication, setTriggerAuthentication] = React.useState({});
   const [triggerFolders, setTriggerFolders] = React.useState([]);
@@ -1701,11 +1702,12 @@ const AngularWorkflow = (defaultprops) => {
           return
         }
 
-        // FIXME - handle versions on left bar
-        //handleAppVersioning(responseJson)
-        //var tmpapps = []
-        //tmpapps = tmpapps.concat(getExtraApps())
-        //tmpapps = tmpapps.concat(responseJson)
+				// Used for e.g. Liquid testing
+				const foundTools = responseJson.find((app) => app.name === "Shuffle Tools")
+				if (foundTools !== undefined && foundTools !== null) {
+					setToolsApp(foundTools)
+				}
+
         setApps(responseJson);
 
         if (isCloud) {
@@ -12554,9 +12556,10 @@ const AngularWorkflow = (defaultprops) => {
       defaultReturn = <ParsedAction
         id="rightside_subactions"
         files={files}
-        setShowVideo={setShowVideo}
         isCloud={isCloud}
         getParents={getParents}
+				toolsAppId={toolsApp.id}
+        setShowVideo={setShowVideo}
         actionDelayChange={actionDelayChange}
         getAppAuthentication={getAppAuthentication}
         appAuthentication={appAuthentication}

@@ -2597,7 +2597,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 
 	if user.Role == "org-reader" {
 		log.Printf("[WARNING] Org-reader doesn't have access to execute single action: %s (%s)", user.Username, user.Id)
-		resp.WriteHeader(401)
+		resp.WriteHeader(403)
 		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
 		return
 	}

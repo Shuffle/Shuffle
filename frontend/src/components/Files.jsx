@@ -35,7 +35,7 @@ import CodeEditor from "../components/ShuffleCodeEditor.jsx";
 import theme from "../theme";
 
 const Files = (props) => {
-  const { globalUrl, userdata, serverside, selectedOrganization, } = props;
+  const { globalUrl, userdata, serverside, selectedOrganization, isCloud, } = props;
 
   const [files, setFiles] = React.useState([]);
   const [selectedNamespace, setSelectedNamespace] = React.useState("default");
@@ -504,6 +504,7 @@ const Files = (props) => {
 						/>}</div>
 
 				<CodeEditor
+					isCloud={isCloud}
 					expansionModalOpen={openEditor}
 					setExpansionModalOpen={setOpenEditor}
 					setcodedata = {setFileContent}

@@ -166,6 +166,7 @@ const ParsedAction = (props) => {
 		lastSaved,
 		setLastSaved,
 		setShowVideo,
+		toolsAppId,
 		//expansionModalOpen,
 		//setExpansionModalOpen,
   } = props;
@@ -1520,6 +1521,8 @@ const ParsedAction = (props) => {
 						const shufflecode = fieldCount !== count ? null : 
 						(
 							<ShuffleCodeEditor
+								isCloud={isCloud}
+								toolsAppId={toolsAppId}
 								fieldCount = {fieldCount}
 								setFieldCount = {setFieldCount}
 								actionlist = {actionlist}

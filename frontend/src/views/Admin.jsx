@@ -3519,6 +3519,7 @@ const Admin = (props) => {
 
   const filesView = curTab !== 3 ? null : 
 		<Files 
+			isCloud={isCloud}
 			globalUrl={globalUrl}
 			userdata={userdata}
 			serverside={serverside} 
