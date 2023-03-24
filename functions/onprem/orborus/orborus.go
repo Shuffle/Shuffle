@@ -59,6 +59,7 @@ var concurrencyEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY")
 var appSdkVersion = os.Getenv("SHUFFLE_APP_SDK_VERSION")
 var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
+var workerLocalDocker = os.Getenv("SHUFFLE_WORKER_LOCAL_DOCKER")
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -459,7 +460,7 @@ func deployServiceWorkers(image string) {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("BASE_URL=%s", os.Getenv("BASE_URL")))
 		}
 
-		if len(os.Getenv("DOCKER_HOST")) > 0 {
+		if len(os.Getenv("DOCKER_HOST")) > 0 && strings.ToLower(workerLocalDocker) != "true" {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_HOST=%s", os.Getenv("DOCKER_HOST")))
 		} else {
 			if runtime.GOOS == "windows" {
@@ -536,7 +537,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		Resources: container.Resources{},
 	}
 
-	if len(os.Getenv("DOCKER_HOST")) == 0 {
+	if len(os.Getenv("DOCKER_HOST")) == 0 || strings.ToLower(workerLocalDocker) == "true"{
 		if runtime.GOOS == "windows" {
 			hostConfig.Binds = []string{`\\.\pipe\docker_engine:\\.\pipe\docker_engine`}
 		} else {
@@ -1143,7 +1144,7 @@ func main() {
 				env = append(env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
 			}
 
-			if len(os.Getenv("DOCKER_HOST")) > 0 {
+			if len(os.Getenv("DOCKER_HOST")) > 0 && strings.ToLower(workerLocalDocker) != "true" {
 				env = append(env, fmt.Sprintf("DOCKER_HOST=%s", os.Getenv("DOCKER_HOST")))
 			}
 
