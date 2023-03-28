@@ -1151,7 +1151,6 @@ const CodeEditor = (props) => {
 					</div> 
 					}
 					<span style={{
-						border: `2px solid red`,
 						borderRadius: theme.palette.borderRadius,
 						position: "relative",
 					}}>

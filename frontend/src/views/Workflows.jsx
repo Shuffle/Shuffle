@@ -3875,6 +3875,9 @@ const Workflows = (props) => {
 						setNewWorkflow={setNewWorkflow}
 						appFramework={appFramework}
 						isEditing={isEditing}
+
+						workflows={workflows}
+						setWorkflows={setWorkflows}
 					/>
 				: null}
 				{/*<div style={{zIndex: 1, position: "fixed", bottom: 110, right: 110, display: "flex", }}>

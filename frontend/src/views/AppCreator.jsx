@@ -234,17 +234,17 @@ export const appCategories = [
 			"name": "SIEM",
 			"color": "#FFC107",
 			"icon": "siem",
-			"action_labels": ["List Alerts", "Search", "Create detection", "Add hash to lookup_list",],
+			"action_labels": ["Search", "List Alerts", "Close Alert", "Create detection", "Add to lookup list",],
 		}, {
 			"name": "Eradication",
 			"color": "#FFC107",
 			"icon": "eradication",
-			"action_labels": ["List Alerts", "Update Alert", "Create detection", "Block hash", "Search Hosts", "Isolate host"],
+			"action_labels": ["List Alerts", "Close Alert", "Create detection", "Block hash", "Search Hosts", "Isolate host", "Unisolate host"],
 		}, {
 			"name": "Cases",
 			"color": "#FFC107",
 			"icon": "cases",
-			"action_labels": ["List tickets", "Get ticket", "Create ticket", "Update ticket",],
+			"action_labels": ["List tickets", "Get ticket", "Create ticket", "Close ticket", "Add comment", "Update ticket",],
 		}, {
 			"name": "Assets",
 			"color": "#FFC107",
@@ -254,12 +254,12 @@ export const appCategories = [
 			"name": "Intel",
 			"color": "#FFC107",
 			"icon": "intel",
-			"action_labels": ["Get IOC", "Search IOC", "Create IOC", "Update IOC", "Delete IOC", "Add IOC",],
+			"action_labels": ["Get IOC", "Search IOC", "Create IOC", "Update IOC", "Delete IOC",],
 		}, {
 			"name": "IAM",
 			"color": "#FFC107",
 			"icon": "iam",
-			"action_labels": ["Get Identity", "Get Asset", "Search Identity", "Reset Password", "Disable user", ],
+			"action_labels": ["Reset Password", "Enable user", "Disable user", "Get Identity", "Get Asset", "Search Identity", ],
 		}, {
 			"name": "Network",
 			"color": "#FFC107",
@@ -574,10 +574,7 @@ const AppCreator = (defaultprops) => {
         setContact(data.info.contact);
       }
 
-      if (
-        data.info["x-categories"] !== undefined &&
-        data.info["x-categories"].length > 0
-      ) {
+      if (data.info["x-categories"] !== undefined && data.info["x-categories"].length > 0) {
         if (typeof data.info["x-categories"] === "array") {
         } else {
         }
@@ -4125,6 +4122,8 @@ const AppCreator = (defaultprops) => {
                 body: "",
                 errors: [],
                 method: actionNonBodyRequest[0],
+								action_label: "No Label",
+								required_bodyfields: [],
               });
               setActionsModalOpen(true);
             }}
@@ -4139,7 +4138,7 @@ const AppCreator = (defaultprops) => {
   const LoopActions = (props) => {
 		const { filteredActions } = props;
 
-		//console.log("Actions: ", filteredActions)
+		console.log("Actions: ", filteredActions)
     if (filteredActions === null || filteredActions === undefined || filteredActions.length === 0) {
 			return null
 		}
@@ -4147,6 +4146,7 @@ const AppCreator = (defaultprops) => {
 		return (
       <div>
         {filteredActions.slice(0, actionAmount).map((data, index) => {
+					//console.log("Found action: ", data)
           return (
 						<ActionPaper key={index} index={index} data={data} />
 					)
@@ -4195,11 +4195,8 @@ const AppCreator = (defaultprops) => {
           setNewWorkflowCategories([e.target.value]);
           setUpdate("added " + e.target.value);
         }}
-        value={
-          newWorkflowCategories.length === 0
-            ? "Select a category"
-            : newWorkflowCategories[0]
-        }
+        value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
+        
         style={{ backgroundColor: inputColor, color: "white", height: "50px" }}
       >
         {categories.map((data, index) => {
@@ -4835,6 +4832,37 @@ const AppCreator = (defaultprops) => {
       ) : null}
       <div>
         <LoopActions filteredActions={filteredActions} />
+				{ actions.length === 0 || filteredActions.length === 0 ? 
+          <Button
+            color="primary"
+            style={{ borderRadius: 0, marginTop: 15, marginBottom: 10, }}
+            variant={actions.length === 0 ? "contained" : "outlined"}
+            onClick={(e) => {
+              actions.push({
+                name: "Change Me",
+                description: "",
+                url: "",
+                file_field: "",
+                headers: "",
+                queries: [],
+                paths: [],
+                body: "",
+                errors: [],
+                method: actionNonBodyRequest[0],
+								action_label: "No Label",
+								required_bodyfields: [],
+              });
+
+							console.log("Added: ", actions)
+              setActions(actions)
+							setFilteredActions(actions)
+              setActionAmount(50);
+    					setUpdate(Math.random());
+            }}
+          >
+            New action
+          </Button>
+					: null}
 				{/*
         <div style={{ display: "flex" }}>
           <Button
