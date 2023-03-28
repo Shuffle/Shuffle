@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v23.0.0+incompatible
 	github.com/mackerelio/go-osstat v0.2.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.3.66
+	github.com/shuffle/shuffle-shared v0.3.74
 )
 
 require (

@@ -2062,6 +2062,15 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	// Find user agent header
+	userAgent := request.Header.Get("User-Agent")
+	if strings.Contains(strings.ToLower(userAgent), "microsoftpreview") || strings.Contains(strings.ToLower(userAgent), "googlebot") {
+		log.Printf("[AUDIT] Blocking googlebot and microsoftbot for webhooks. UA: '%s'", userAgent)
+		resp.WriteHeader(400)
+		resp.Write([]byte(`{"success": false, "reason": "Google/Microsoft preview bots not allowed. Please change the useragent."}`))
+		return
+	}
+
 	// ID: webhook_<UID>
 	if len(hookId) != 44 {
 		log.Printf("[INFO] Couldn't handle hookId. Too short in webhook: %d", len(hookId))
