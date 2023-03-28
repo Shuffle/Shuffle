@@ -496,7 +496,9 @@ const EditWorkflow = (props) => {
 								setWorkflow({})
 							} else {
 								setWorkflow(innerWorkflow)
+								console.log("editing workflow: ", innerWorkflow)
 							}
+							
 							setModalOpen(false)
             }}
             color="primary"

@@ -169,7 +169,7 @@ const CreatorGrid = props => {
 						<Zoom key={index} in={true} style={{}}>
 							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px", }}>
 								<Card style={{border: "1px solid rgba(255,255,255,0.3)", minHeight: 177, maxHeight: 177,}}>
-									<a href={creatorUrl} rel="noopener noreferrer" target="_blank" style={{textDecoration: "none", color: "inherit",}}>
+									<a href={creatorUrl} rel="noopener noreferrer" target={isCloud ? "" : "_blank"} style={{textDecoration: "none", color: "inherit",}}>
 						  			<CardActionArea style={{padding: "5px 10px 5px 10px", minHeight: 177, maxHeight: 177,}}>
 											<CardContent sx={{ flex: '1 0 auto', minWidth: 160, maxWidth: 160, overflow: "hidden", padding: 0, }}>
 												<div style={{display: "flex"}}>

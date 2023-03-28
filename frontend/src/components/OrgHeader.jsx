@@ -143,9 +143,7 @@ const OrgHeader = (props) => {
         variant="contained"
         color="primary"
         disabled={
-          userdata === undefined ||
-          userdata === null ||
-          userdata.admin !== "true"
+          userdata === undefined || userdata === null || userdata.admin !== "true"
         }
         onClick={() =>
           handleEditOrg(
