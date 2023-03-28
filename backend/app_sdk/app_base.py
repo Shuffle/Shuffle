@@ -154,6 +154,30 @@ def flatten(a):
     flat_list = [a for xs in a for a in xs]
     return flat_list
 
+@shuffle_filters.register
+def last(a):
+    try:
+        a = json.loads(a)
+    except:
+        pass
+
+    if len(a) == 0:
+        return ""
+
+    return a[-1]
+
+@shuffle_filters.register
+def first(a):
+    try:
+        a = json.loads(a)
+    except:
+        pass
+
+    if len(a) == 0:
+        return ""
+
+    return a[0]
+    
 
 @shuffle_filters.register
 def csv_parse(a):
