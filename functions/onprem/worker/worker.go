@@ -2118,7 +2118,7 @@ func main() {
 			}
 
 			// Checks if a subflow is child of the startnode, as sub-subflows aren't working properly yet
-			childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start)
+			childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start, []string{}, []string{})
 			log.Printf("[DEBUG] Looking for subflow in %#v to check execution pattern as child of %s", childNodes, workflowExecution.Start)
 			subflowFound := false
 			for _, childNode := range childNodes {

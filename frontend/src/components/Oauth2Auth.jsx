@@ -113,10 +113,9 @@ const AuthenticationOauth2 = (props) => {
   const [buttonClicked, setButtonClicked] = React.useState(false);
 
   const [offlineAccess, setOfflineAccess] = React.useState(true);
-  const allscopes =
-    authenticationType.scope !== undefined ? authenticationType.scope : [];
+  const allscopes = authenticationType.scope !== undefined ? authenticationType.scope : [];
+    
 
-	console.log("ALLSCOPES: ", allscopes)
   const [selectedScopes, setSelectedScopes] = React.useState(allscopes.length === 1 ? [allscopes[0]] : [])
   const [manuallyConfigure, setManuallyConfigure] = React.useState(
     defaultConfigSet ? false : true
@@ -247,8 +246,7 @@ const AuthenticationOauth2 = (props) => {
 				"AI02egeCQh1Zskm1QAJaaR6dzjR97V2F",
 				"",
 				"https://api.atlassian.com",
-				["read:jira-work", "write:jira-work", "read:servicedesk:jira-service-management", "write:servicedesk:jira-service-management", "read:request:jira-service-management", "write:request:jira-service-management"],
-
+				["read:jira-work", "write:jira-work", "read:servicedesk:jira-service-management", "write:servicedesk:jira-service-management", "read:request:jira-service-management", "write:request:jira-service-management", "offline_access"],
 				admin_consent,
 			)
 		}
@@ -266,8 +264,11 @@ const AuthenticationOauth2 = (props) => {
 
     var resources = "";
     if (scopes !== undefined && (scopes !== null) & (scopes.length > 0)) {
+			console.log("IN scope 1")
 			if (offlineAccess === true && !scopes.includes("offline_access")) {
-				if (authenticationType.redirect_uri.includes("microsoft")) {
+
+				console.log("IN scope 2")
+				if (!authenticationType.redirect_uri.includes("google")) {
 					console.log("Appending offline access")
 					scopes.push("offline_access")
 				}
