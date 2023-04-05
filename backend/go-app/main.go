@@ -21,7 +21,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -1226,15 +1225,6 @@ func handleContact(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Thanks for reaching out. We will contact you soon!"}`)))
 }
 
-func verifier() (*shuffle.CodeVerifier, error) {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]byte, 32, 32)
-	for i := 0; i < 32; i++ {
-		b[i] = byte(r.Intn(255))
-	}
-	return shuffle.CreateCodeVerifierFromBytes(b)
-}
-
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -1279,51 +1269,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			baseSSOUrl = org.SSOConfig.OpenIdAuthorization
-
-			codeChallenge := uuid.NewV4().String()
-			//h.Write([]byte(v.Value))
-			verifier, verifiererr := verifier()
-			if verifiererr == nil {
-				codeChallenge = verifier.Value
-			}
-
-			//log.Printf("[DEBUG] Got challenge value %s (pre state)", codeChallenge)
-
-			// https://192.168.55.222:3443/api/v1/login_openid
-			//location := strings.Split(request.URL.String(), "/")
-			//redirectUrl := url.QueryEscape("http://localhost:5001/api/v1/login_openid")
-			redirectUrl := url.QueryEscape(fmt.Sprintf("http://%s/api/v1/login_openid", request.Host))
-			if strings.Contains(request.Host, "shuffle-backend") && !strings.Contains(os.Getenv("BASE_URL"), "shuffle-backend") {
-				redirectUrl = url.QueryEscape(fmt.Sprintf("%s/api/v1/login_openid", os.Getenv("BASE_URL")))
-			}
-
-			if len(os.Getenv("SSO_REDIRECT_URL")) > 0 {
-				redirectUrl = url.QueryEscape(fmt.Sprintf("%s/api/v1/login_openid", os.Getenv("SSO_REDIRECT_URL")))
-			}
-
-			state := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("org=%s&challenge=%s&redirect=%s", org.Id, codeChallenge, redirectUrl)))
-
-			// has to happen after initial value is stored
-			if verifiererr == nil {
-				codeChallenge = verifier.CodeChallengeS256()
-			}
-
-			//log.Printf("[DEBUG] Got challenge value %s (POST state)", codeChallenge)
-
-			if len(org.SSOConfig.OpenIdClientSecret) > 0 {
-
-				//baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=code&scope=openid&redirect_uri=%s&state=%s&client_secret=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, org.SSOConfig.OpenIdClientSecret)
-				state := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("org=%s&redirect=%s&challenge=%s", org.Id, redirectUrl, org.SSOConfig.OpenIdClientSecret)))
-				log.Printf("URL: %s", redirectUrl)
-
-				baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=id_token&scope=openid&redirect_uri=%s&state=%s&response_mode=form_post&nonce=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, state)
-				//baseSSOUrl += fmt.Sprintf("&client_secret=%s", org.SSOConfig.OpenIdClientSecret)
-				log.Printf("[DEBUG] Found OpenID url (client secret). Extra redirect check: %s - %s", request.URL.String(), baseSSOUrl)
-			} else {
-				log.Printf("[DEBUG] Found OpenID url (PKCE!!). Extra redirect check: %s", request.URL.String())
-				baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=code&scope=openid&redirect_uri=%s&state=%s&code_challenge_method=S256&code_challenge=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, codeChallenge)
-			}
+			baseSSOUrl = shuffle.GetOpenIdUrl(org)
 
 			break
 		}

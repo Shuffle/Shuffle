@@ -88,10 +88,8 @@ const LoginDialog = (props) => {
           if (responseJson["success"] === false) {
             setLoginInfo(responseJson["reason"]);
           } else {
-            if (
-              responseJson.sso_url !== undefined &&
-              responseJson.sso_url !== null
-            ) {
+
+            if (responseJson.sso_url !== undefined && responseJson.sso_url !== null) {
               setSSOUrl(responseJson.sso_url);
             }
 

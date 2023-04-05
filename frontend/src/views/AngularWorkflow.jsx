@@ -9079,46 +9079,47 @@ const AngularWorkflow = (defaultprops) => {
   };
 
 	const handleWorkflowSelectionUpdate = (e, isUserinput) => {
-			setUpdate(Math.random());
+		setUpdate(Math.random());
 
-			if (e.target.value === undefined || e.target.value === null || e.target.value.id === undefined) {
-				return null
-			}
-
-			const paramIndex = isUserinput === true ? 5 : 0
-			workflow.triggers[selectedTriggerIndex].parameters[paramIndex].value = e.target.value.id;
-			setSubworkflow(e.target.value);
-
-			// Sets the startnode
-			if (e.target.value.id !== workflow.id) {
-				console.log("WORKFLOW: ", e.target.value);
-
-				const startnode = e.target.value.actions.find((action) => action.id === e.target.value.start);
-				
-
-				if (startnode !== undefined && startnode !== null) {
-					setSubworkflowStartnode(startnode);
-
-					if (paramIndex === 0) { 
-						try {
-							workflow.triggers[selectedTriggerIndex].parameters[3].value = startnode.id;
-						} catch {
-							workflow.triggers[selectedTriggerIndex].parameters[3] = {
-								name: "startnode",
-								value: startnode.id,
-							};
-						}
-					}
-
-					//setWorkflow(workflow);
-				}
-				console.log("STARTNODE: ", startnode);
-			} else {
-				console.log("WORKFLOW: ", workflow);
-			}
-
-			setWorkflow(workflow);
+		if (e.target.value === undefined || e.target.value === null || e.target.value.id === undefined) {
+			console.log("Returning as there's no id")
+			return null
 		}
+
+		const paramIndex = isUserinput === true ? 5 : 0
+		workflow.triggers[selectedTriggerIndex].parameters[paramIndex].value = e.target.value.id;
+		setSubworkflow(e.target.value);
+
+		// Sets the startnode
+		if (e.target.value.id !== workflow.id) {
+			console.log("WORKFLOW: ", e.target.value);
+
+			const startnode = e.target.value.actions.find((action) => action.id === e.target.value.start);
+			
+
+			if (startnode !== undefined && startnode !== null) {
+				setSubworkflowStartnode(startnode);
+
+				if (paramIndex === 0) { 
+					try {
+						workflow.triggers[selectedTriggerIndex].parameters[3].value = startnode.id;
+					} catch {
+						workflow.triggers[selectedTriggerIndex].parameters[3] = {
+							name: "startnode",
+							value: startnode.id,
+						};
+					}
+				}
+
+				//setWorkflow(workflow);
+			}
+			console.log("STARTNODE: ", startnode);
+		} else {
+			console.log("WORKFLOW: ", workflow);
+		}
+
+		setWorkflow(workflow);
+	}
 
   const SubflowSidebar = () => {
     const [menuPosition, setMenuPosition] = useState(null);
@@ -9880,7 +9881,7 @@ const AngularWorkflow = (defaultprops) => {
                   id="subflow_search"
                   autoHighlight
 									freeSolo
-									autoSelect
+									//autoSelect
                   value={subworkflow}
                   classes={{ inputRoot: classes.inputRoot }}
                   ListboxProps={{
@@ -9914,7 +9915,24 @@ const AngularWorkflow = (defaultprops) => {
                   }}
                   onChange={(event, newValue) => {
 										console.log("Found value: ", newValue)
-                    handleWorkflowSelectionUpdate({ target: { value: newValue } })
+
+										var parsedinput = { target: { value: newValue } }
+
+										// For variables
+										if (typeof newValue === 'string' && newValue.startsWith("$")) {
+											parsedinput = { 
+												target: { 
+													value: {
+														"name": newValue, 
+														"id": newValue,
+														"actions": [],
+														"triggers": [],
+													} 
+												} 
+											}
+										}
+
+                    handleWorkflowSelectionUpdate(parsedinput)
                   }}
                   renderOption={(data, index) => {
                     if (data.id === workflow.id) {
