@@ -1151,6 +1151,10 @@ func main() {
 				env = append(env, fmt.Sprintf("SHUFFLE_MEMCACHED=%s", os.Getenv("SHUFFLE_MEMCACHED")))
 			}
 
+			if len(os.Getenv("SHUFFLE_CLOUDRUN_URL")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_CLOUDRUN_URL=%s", os.Getenv("SHUFFLE_CLOUDRUN_URL")))
+			}
+
 			err = deployWorker(workerImage, containerName, env, execution)
 			zombiecounter += 1
 			if err == nil {
