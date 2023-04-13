@@ -3805,7 +3805,7 @@ class AppBase:
                         # BASE URL (backend)
                         try:
                             app.url = requestdata["url"]
-                            logger.info(f"BACKEND URL: {app.url}")
+                            logger.info(f"BACKEND URL (url): {app.url}")
                         except Exception as e:
                             logger.info(f"[ERROR] Failed parsing url (backend): {e}")
                             extra_info += f"\n{e}"
@@ -3813,7 +3813,7 @@ class AppBase:
                         # URL (worker)
                         try:
                             app.base_url = requestdata["base_url"]
-                            logger.info(f"WORKER URL: {app.base_url}")
+                            logger.info(f"WORKER URL (base url): {app.base_url}")
                         except Exception as e:
                             logger.info(f"[ERROR] Failed parsing base url (worker): {e}")
                             extra_info += f"\n{e}"

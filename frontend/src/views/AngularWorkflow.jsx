@@ -14574,7 +14574,7 @@ const AngularWorkflow = (defaultprops) => {
           {curapp === null ? null : (
             <img
               alt={selectedResult.app_name}
-              src={curapp === undefined ? theme.palette.defaultImage : curapp.large_image}
+              src={curapp === undefined ? theme.palette.defaultImage : curapp.app_name === "shuffle-subflow" ? triggers[4].large_image : curapp.app_name === "User Input" ? triggers[5].large_image : curapp.large_image}
               style={{
                 marginRight: 20,
                 width: imgsize,

@@ -13,7 +13,7 @@ import (
 
 	//"crypto/tls"
 	//"crypto/x509"
-	"encoding/base64"
+	//"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -1269,7 +1269,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			baseSSOUrl = shuffle.GetOpenIdUrl(org)
+			baseSSOUrl = shuffle.GetOpenIdUrl(request, *org)
 
 			break
 		}

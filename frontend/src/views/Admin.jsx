@@ -1957,8 +1957,9 @@ const Admin = (props) => {
       <DialogContent color="textSecondary">
         What does{" "}
         <a
-          href="https://shuffler.io/docs/organizations#cloud_sync"
+          href="/docs/organizations#cloud_sync"
           target="_blank"
+					rel="noopener noreferrer"
           style={{ textDecoration: "none", color: "#f85a3e" }}
         >
           cloud sync
@@ -2049,7 +2050,8 @@ const Admin = (props) => {
             organization.{" "}
             <a
               target="_blank"
-              href="https://shuffler.io/docs/organizations#organization"
+							rel="noopener noreferrer"
+              href="/docs/organizations#organization"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               Learn more
@@ -2239,7 +2241,7 @@ const Admin = (props) => {
             		</Typography>
             		What does{" "}
             		<a
-            		  href="https://shuffler.io/docs/organizations#cloud_sync"
+            		  href="/docs/organizations#cloud_sync"
             		  target="_blank"
 									rel="noopener noreferrer"
             		  style={{ textDecoration: "none", color: "#f85a3e" }}
@@ -2672,7 +2674,7 @@ const Admin = (props) => {
             <a
               target="_blank"
 							rel="noopener noreferrer"
-              href="https://shuffler.io/docs/organizations#user_management"
+              href="/docs/organizations#user_management"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               Learn more
@@ -3009,7 +3011,8 @@ const Admin = (props) => {
             Schedules used in Workflows. Makes locating and control easier.{" "}
             <a
               target="_blank"
-              href="https://shuffler.io/docs/organizations#schedules"
+							rel="noopener noreferrer"
+              href="/docs/organizations#schedules"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               Learn more
@@ -3074,6 +3077,7 @@ const Admin = (props) => {
                           style={{ textDecoration: "none", color: "#f85a3e" }}
                           href={`/workflows/${schedule.workflow_id}`}
                           target="_blank"
+													rel="noopener noreferrer"
                         >
                           {schedule.workflow_id}
                         </a>
@@ -3214,7 +3218,8 @@ const Admin = (props) => {
           &nbsp;
           <a
             target="_blank"
-            href="https://shuffler.io/docs/organizations#app_authentication"
+						rel="noopener noreferrer"
+            href="/docs/organizations#app_authentication"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
             Learn more about authentication
@@ -3439,7 +3444,8 @@ const Admin = (props) => {
             in.{" "}
             <a
               target="_blank"
-              href="https://shuffler.io/docs/organizations#environments"
+							rel="noopener noreferrer"
+              href="/docs/organizations#environments"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               Learn more
