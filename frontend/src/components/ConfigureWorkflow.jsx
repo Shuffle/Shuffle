@@ -146,17 +146,18 @@ const ConfigureWorkflow = (props) => {
         app: {},
 				steps: [],
 				show_steps: false,
-      };
+      }
 
-      const app = apps.find(
-        (app) =>
-          app.name === action.app_name &&
-          (app.app_version === action.app_version ||
-            (app.loop_versions !== null &&
-              app.loop_versions.includes(action.app_version)))
+			//console.log("Action: ", key, keyval)
+
+      const app = apps.find((app) =>
+				app.id === action.app_id || 
+				(app.name === action.app_name &&
+				(app.app_version === action.app_version || (app.loop_versions !== null && app.loop_versions.includes(action.app_version))))
       )
 
-			//newaction.steps = wazuhSteps
+			//console.log("FOUND APP: ", app)
+
       if (app === undefined || app === null) {
       	const subapp = apps.find(app => app.name === action.app_name)
 				if (subapp !== undefined && subapp !== null) {
@@ -265,17 +266,14 @@ const ConfigureWorkflow = (props) => {
 	if (workflow.workflow_variables !== undefined && workflow.workflow_variables !== null && workflow.workflow_variables.length !== 0) {
     for (let [key,keyval] in Object.entries(workflow.workflow_variables)) {
       const variable = workflow.workflow_variables[key];
-      if (
-        variable.value === undefined ||
-        variable.value === undefined ||
-        variable.value.length < 2
-      ) {
+      if (variable.value === undefined || variable.value === undefined || variable.value.length === 0) {
         variable.value = "";
-        variable.index = key;
         requiredVariables.push(variable);
       }
+
+			variable.index = key;
     }
-	  }
+	}
 
 	if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length !== 0) {
     for (let [key,keyval] in Object.entries(workflow.triggers)) {
@@ -1015,7 +1013,7 @@ const ConfigureWorkflow = (props) => {
       	    <List>
       	      {requiredActions.map((data, index) => {
       	        return (
-									<div>
+									<div key={index}>
 										{data.steps !== undefined && data.steps !== null && data.show_steps === true ?
 											<AppWrapper data={data} parentindex={index} />
 										: 

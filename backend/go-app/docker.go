@@ -842,7 +842,7 @@ func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user
 		app := tmpapp{}
 		err := json.Unmarshal(respBody, &app)
 		if err != nil || app.Success == false || len(app.OpenAPI) == 0 {
-			log.Printf("[ERROR] Failed app unmarshal during auto-download. Success%#v. Applength: %d: %s", app.Success, len(app.OpenAPI), err)
+			log.Printf("[ERROR] Failed app unmarshal during auto-download. Success: %#v. Applength: %d: %s", app.Success, len(app.OpenAPI), err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
 			return
@@ -960,37 +960,29 @@ func activateWorkflowAppDocker(resp http.ResponseWriter, request *http.Request) 
 		}
 	}
 
-	if app.Sharing || app.Public {
-		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
-		if err == nil {
-			added := false
-			if !shuffle.ArrayContains(org.ActiveApps, app.ID) {
-				org.ActiveApps = append(org.ActiveApps, app.ID)
-				added = true
-			}
-
-			if added {
-				err = shuffle.SetOrg(ctx, *org, org.Id)
-				if err != nil {
-					log.Printf("[WARNING] Failed setting org when autoadding apps on save: %s", err)
-				} else {
-					log.Printf("[INFO] Added public app %s (%s) to org %s (%s)", app.Name, app.ID, user.ActiveOrg.Name, user.ActiveOrg.Id)
-					cacheKey := fmt.Sprintf("apps_%s", user.Id)
-					shuffle.DeleteCache(ctx, cacheKey)
-				}
-			}
-		}
-	} else {
-		log.Printf("[WARNING] User is trying to activate %s which is NOT public", app.Name)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
+	// Just making sure it's being built properly
+	if app == nil {
+		log.Printf("[WARNING] App is nil. This shouldn't happen. Starting remote download(3)")
+		handleRemoteDownloadApp(resp, ctx, user, fileId)
 		return
 	}
 
-	log.Printf("[DEBUG] App %s (%s) activated for org %s by user %s", app.Name, app.ID, user.ActiveOrg.Id, user.Username)
+	// Check the app.. hmm
+	openApiApp, err := shuffle.GetOpenApiDatastore(ctx, app.ID)
+	if err != nil {
+		log.Printf("[WARNING] Error getting app %s (openapi config): %s", app.ID, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Couldn't find app OpenAPI"}`))
+		return
+	}
 
-	// If onprem, it should autobuild the container(s) from here
+	log.Printf("[INFO] User %s (%s) is activating %s. Public: %t, Shared: %t", user.Username, user.Id, app.Name, app.Public, app.Sharing)
+	buildSwaggerApp(resp, []byte(openApiApp.Body), user, true)
 
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
+	//app.Active = true
+	//app.Generated = true
+	//app, err := shuffle.SetApp(ctx, app)
+
+	//resp.WriteHeader(200)
+	//resp.Write([]byte(`{"success": true}`))
 }

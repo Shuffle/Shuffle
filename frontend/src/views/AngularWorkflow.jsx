@@ -1909,7 +1909,7 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const getWorkflow = (workflow_id, sourcenode) => {
-    fetch(globalUrl + "/api/v1/workflows/" + workflow_id, {
+    fetch(`${globalUrl}/api/v1/workflows/${workflow_id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -1920,12 +1920,25 @@ const AngularWorkflow = (defaultprops) => {
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for workflows :O!");
-          window.location.pathname = "/workflows";
+
+					if (response.status >= 500) {
+						alert.info("Something went wrong while loading the workflow. Please reload.")
+					} else {
+						alert.info("You don't access to this workflow or loading failed.")
+						window.location.pathname = "/workflows";
+					}
         }
 
+				// Read text from stream
+				//return response.text();
         return response.json();
       })
       .then((responseJson) => {
+				// Load as JSON
+				//console.log("Got workflow TXT: ", responseText)
+				//const responseJson = JSON.parse(responseText)
+				//console.log("Got workflow JSON: ", responseJson)
+
         // Not sure why this is necessary.
         if (responseJson.isValid === undefined) {
           responseJson.isValid = true;
@@ -2145,7 +2158,6 @@ const AngularWorkflow = (defaultprops) => {
           setWorkflowDone(true);
 
           // Add error checks
-          console.log("Workflow: ", responseJson);
           if (!responseJson.public) {
             if (
               !responseJson.previously_saved ||
@@ -2517,8 +2529,6 @@ const AngularWorkflow = (defaultprops) => {
 					cy.add(decoratorNode)
 				}
 			} else { 
-      	
-
       	// Readding the icon after moving the node
       	if (!found) {
       	  const iconInfo = GetIconInfo(nodedata);
@@ -3187,7 +3197,7 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   const activateApp = (appid, refresh) => {
-    fetch(globalUrl + "/api/v1/apps/" + appid + "/activate", {
+    fetch(`${globalUrl}/api/v1/apps/${appid}/activate`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -3204,11 +3214,10 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (responseJson.success === false) {
-          alert.error("Failed to activate the app")
+          alert.error("Failed to auto-activate the app. Go to /apps and activate it.")
         } else {
-          alert.success("App activated for your organization! Refresh the page to use the app.")
-
           if (refresh === true) {
+          	alert.success("App activated for your organization! Refresh the page to use the app.")
             getApps()
           }
         }
@@ -3939,6 +3948,7 @@ const AngularWorkflow = (defaultprops) => {
     workflow.branches = workflow.branches.filter(
       (a) => a.id !== edge.data().id
     );
+
     setWorkflow(workflow);
     event.target.remove();
 
@@ -5591,7 +5601,9 @@ const AngularWorkflow = (defaultprops) => {
     display: "flex",
   };
 
-  const VariablesView = () => {
+	const VariableItem = (props) => {
+		const { variable, index, type } = props;
+
     const [open, setOpen] = React.useState(false);
     const [anchorEl, setAnchorEl] = React.useState(null);
 
@@ -5600,29 +5612,148 @@ const AngularWorkflow = (defaultprops) => {
       setAnchorEl(event.currentTarget);
     };
 
-    const deleteVariable = (variableIndex) => {
-      //console.log("Delete:", variableName);
-      if (workflow.workflow_variables !== undefined && workflow.workflow_variables !== null && workflow.workflow_variables.length > variableIndex) {
-        workflow.workflow_variables.splice(variableIndex, 1)
-      }
+    const deleteVariable = (type, variableIndex) => {
 
-      //workflow.workflow_variables = workflow.workflow_variables.filter(
-      //  (data) => data.name !== variableName
-      //);
-      setWorkflow(workflow);
+			console.log("Delete type: ", type, variableIndex)
+
+			if (type === "normal") {
+				if (workflow.workflow_variables !== undefined && workflow.workflow_variables !== null && workflow.workflow_variables.length > variableIndex) {
+					var vars = JSON.parse(JSON.stringify(workflow.workflow_variables))
+					vars.splice(variableIndex, 1)
+					workflow.workflow_variables = vars
+
+					console.log("Workflow after del: ", workflow)
+
+					setWorkflow(workflow);
+					setUpdate(Math.random());
+				}
+			} else if (type === "exec") {
+				if (workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > variableIndex) {
+					var vars = JSON.parse(JSON.stringify(workflow.execution_variables))
+					vars.splice(variableIndex, 1)
+					workflow.execution_variables = vars
+
+					console.log("Workflow after del: ", workflow)
+
+					setWorkflow(workflow);
+					setUpdate(Math.random());
+				}
+			}
     };
 
-    const deleteExecutionVariable = (variableIndex) => {
-      if (workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > variableIndex) {
-        workflow.execution_variables.splice(variableIndex, 1)
-      }
+		return (
+			<div key={index}>
+				<Paper square style={paperVariableStyle} onClick={() => { }}>
+					<div
+						style={{
+							marginLeft: "10px",
+							marginTop: "5px",
+							marginBottom: "5px",
+							width: "2px",
+							backgroundColor: yellow,
+							marginRight: "5px",
+						}}
+					/>
+					<div style={{ display: "flex", width: "100%" }}>
+						<div
+							style={{
+								flex: "10",
+								marginTop: "15px",
+								marginLeft: "10px",
+								overflow: "hidden",
+							}}
+							onClick={() => {
+								setVariableInfo({
+									"name": variable.name,
+									"description": variable.description,
+									"value": variable.value,
+									"index": index,
+								})
 
-      //workflow.execution_variables = workflow.execution_variables.filter(
-      //  (data) => data.name !== variableName
-      //);
-      setWorkflow(workflow);
-    };
+								if (type === "normal") {
+									setVariablesModalOpen(true);
+								} else if (type === "exec") {
+									setExecutionVariablesModalOpen(true);
+								} else {
+									console.log("Unknown type: ", type)
+								}
+							}}
+						>
+							Name: {variable.name}
+						</div>
+						<div style={{ flex: "1", marginLeft: "0px" }}>
+							<IconButton
+								aria-label="more"
+								aria-controls="long-menu"
+								aria-haspopup="true"
+								onClick={menuClick}
+								style={{ color: "white" }}
+							>
+								<MoreVertIcon />
+							</IconButton>
+							<Menu
+								id="long-menu"
+								anchorEl={anchorEl}
+								keepMounted
+								open={open}
+								PaperProps={{
+									style: {
+										backgroundColor: surfaceColor,
+									},
+								}}
+								onClose={() => {
+									setOpen(false);
+									setAnchorEl(null);
+								}}
+							>
+								<MenuItem
+									style={{
+										backgroundColor: inputColor,
+										color: "white",
+									}}
+									onClick={() => {
+										setOpen(false);
+										setVariableInfo({
+											"name": variable.name,
+											"description": variable.description,
+											"value": variable.value,
+											"index": index,
+										})
 
+										if (type === "normal") {
+											setVariablesModalOpen(true);
+										} else if (type === "exec") {
+											setExecutionVariablesModalOpen(true);
+										} else {
+											console.log("Unknown type: ", type)
+										}
+									}}
+									key={"Edit"}
+								>
+									{"Edit"}
+								</MenuItem>
+								<MenuItem
+									style={{
+										backgroundColor: inputColor,
+										color: "white",
+									}}
+									onClick={() => {
+										deleteVariable(type, index);
+										setOpen(false);
+									}}
+									key={"Delete"}
+								>
+									{"Delete"}
+								</MenuItem>
+							</Menu>
+						</div>
+					</div>
+				</Paper>
+			</div>
+		)
+	}
+
+  const VariablesView = () => {
     const variableScrollStyle = {
       margin: 15,
       overflow: "scroll",
@@ -5642,108 +5773,20 @@ const AngularWorkflow = (defaultprops) => {
             target="_blank"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
-            WORKFLOW variables?
+            Workflow variables?
           </a>
           {workflow.workflow_variables === null
             ? null
-            : workflow.workflow_variables.map((variable, index) => {
+            : workflow.workflow_variables.map((variable, varindex) => {
               return (
-                <div key={index}>
-                  <Paper square style={paperVariableStyle} onClick={() => { }}>
-                    <div
-                      style={{
-                        marginLeft: "10px",
-                        marginTop: "5px",
-                        marginBottom: "5px",
-                        width: "2px",
-                        backgroundColor: yellow,
-                        marginRight: "5px",
-                      }}
-                    />
-                    <div style={{ display: "flex", width: "100%" }}>
-                      <div
-                        style={{
-                          flex: "10",
-                          marginTop: "15px",
-                          marginLeft: "10px",
-                          overflow: "hidden",
-                        }}
-                        onClick={() => {
-                          setVariableInfo({
-                            "name": variable.name,
-                            "description": variable.description,
-                            "value": variable.value,
-                            "index": index,
-                          })
-                          setVariablesModalOpen(true);
-                        }}
-                      >
-                        Name: {variable.name}
-                      </div>
-                      <div style={{ flex: "1", marginLeft: "0px" }}>
-                        <IconButton
-                          aria-label="more"
-                          aria-controls="long-menu"
-                          aria-haspopup="true"
-                          onClick={menuClick}
-                          style={{ color: "white" }}
-                        >
-                          <MoreVertIcon />
-                        </IconButton>
-                        <Menu
-                          id="long-menu"
-                          anchorEl={anchorEl}
-                          keepMounted
-                          open={open}
-                          PaperProps={{
-                            style: {
-                              backgroundColor: surfaceColor,
-                            },
-                          }}
-                          onClose={() => {
-                            setOpen(false);
-                            setAnchorEl(null);
-                          }}
-                        >
-                          <MenuItem
-                            style={{
-                              backgroundColor: inputColor,
-                              color: "white",
-                            }}
-                            onClick={() => {
-                              setOpen(false);
-                              setVariableInfo({
-                                "name": variable.name,
-                                "description": variable.description,
-                                "value": variable.value,
-                                "index": index,
-                              })
-                              setVariablesModalOpen(true);
-                            }}
-                            key={"Edit"}
-                          >
-                            {"Edit"}
-                          </MenuItem>
-                          <MenuItem
-                            style={{
-                              backgroundColor: inputColor,
-                              color: "white",
-                            }}
-                            onClick={() => {
-                              deleteVariable(index);
-                              setOpen(false);
-                            }}
-                            key={"Delete"}
-                          >
-                            {"Delete"}
-                          </MenuItem>
-                        </Menu>
-                      </div>
-                    </div>
-                  </Paper>
-                </div>
+								<VariableItem 
+									variable={variable}
+									index={varindex}
+									type={"normal"}
+								/>
               );
-            })}
+					})}
+
           <div style={{ flex: "1" }}>
             <Button
               fullWidth
@@ -5753,6 +5796,12 @@ const AngularWorkflow = (defaultprops) => {
               onClick={() => {
                 setVariablesModalOpen(true);
                 setLastSaved(false);
+
+								setVariableInfo({
+									"name": "",
+									"description": "",
+									"value": "",
+								})
               }}
             >
               New workflow variable
@@ -5774,109 +5823,18 @@ const AngularWorkflow = (defaultprops) => {
             target="_blank"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
-            EXECUTION variables?
+            Runtime variables?
           </a>
           {workflow.execution_variables === null ||
             workflow.execution_variables === undefined
             ? null
-            : workflow.execution_variables.map((variable, index) => {
+            : workflow.execution_variables.map((variable, varindex2) => {
               return (
-                <div>
-                  <Paper square style={paperVariableStyle} onClick={() => { }}>
-                    <div
-                      style={{
-                        marginLeft: "10px",
-                        marginTop: "5px",
-                        marginBottom: "5px",
-                        width: "2px",
-                        backgroundColor: yellow,
-                        marginRight: "5px",
-                      }}
-                    />
-                    <div style={{ display: "flex", width: "100%" }}>
-                      <div
-                        style={{
-                          flex: "10",
-                          marginTop: "15px",
-                          marginLeft: "10px",
-                          overflow: "hidden",
-                        }}
-                        onClick={() => {
-                          //setNewVariableName(variable.name);
-                          setVariableInfo({
-                            "name": variable.name,
-                            "description": variable.description,
-                            "value": variable.value,
-                            "index": index,
-                          })
-                          setExecutionVariablesModalOpen(true);
-                        }}
-                      >
-                        Name: {variable.name}
-                      </div>
-                      <div style={{ flex: "1", marginLeft: "0px" }}>
-                        <IconButton
-                          aria-label="more"
-                          aria-controls="long-menu"
-                          aria-haspopup="true"
-                          onClick={menuClick}
-                          style={{ color: "white" }}
-                        >
-                          <MoreVertIcon />
-                        </IconButton>
-                        <Menu
-                          id="long-menu"
-                          anchorEl={anchorEl}
-                          keepMounted
-                          open={open}
-                          PaperProps={{
-                            style: {
-                              backgroundColor: surfaceColor,
-                            },
-                          }}
-                          onClose={() => {
-                            setOpen(false);
-                            setAnchorEl(null);
-                          }}
-                        >
-                          <MenuItem
-                            style={{
-                              backgroundColor: inputColor,
-                              color: "white",
-                            }}
-                            onClick={() => {
-                              setOpen(false);
-                              //setNewVariableName(variable.name);
-                              setVariableInfo({
-                                "name": variable.name,
-                                "description": variable.description,
-                                "value": variable.value,
-                                "index": index,
-                              })
-                              setExecutionVariablesModalOpen(true);
-                            }}
-                            key={"Edit"}
-                          >
-                            {"Edit"}
-                          </MenuItem>
-                          <MenuItem
-                            style={{
-                              backgroundColor: inputColor,
-                              color: "white",
-                            }}
-                            onClick={() => {
-                              deleteExecutionVariable(index);
-                              setOpen(false);
-                            }}
-                            key={"Delete"}
-                          >
-                            {"Delete"}
-                          </MenuItem>
-                        </Menu>
-                      </div>
-                    </div>
-                  </Paper>
-                </div>
+								<VariableItem 
+									variable={variable}
+									index={varindex2}
+									type={"exec"}
+								/>
               );
             })}
           <div style={{ flex: "1" }}>
@@ -5888,6 +5846,12 @@ const AngularWorkflow = (defaultprops) => {
               onClick={() => {
                 setExecutionVariablesModalOpen(true);
                 setLastSaved(false);
+
+								setVariableInfo({
+									"name": "",
+									"description": "",
+									"value": "",
+								})
               }}
             >
               New execution variable
@@ -6401,6 +6365,13 @@ const AngularWorkflow = (defaultprops) => {
         };
 
         // FIXME: overwrite category if the ACTION chosen has a different category
+				//
+
+				if (!isCloud && (!app.is_valid || (!app.activated && app.generated)))  {
+					console.log("NOT VALID: Activate!")
+                    
+					activateApp(app.id, false)
+				}
 
         // const image = "url("+app.large_image+")"
         // FIXME - find the cytoscape offset position
@@ -7539,11 +7510,7 @@ const AngularWorkflow = (defaultprops) => {
         example: "tmp",
       })
 
-      if (
-        workflow.workflow_variables !== null &&
-        workflow.workflow_variables !== undefined &&
-        workflow.workflow_variables.length > 0
-      ) {
+      if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
         for (let varkey in workflow.workflow_variables) {
           const item = workflow.workflow_variables[varkey];
           actionlist.push({
@@ -14841,6 +14808,8 @@ const AngularWorkflow = (defaultprops) => {
         aria-labelledby="draggable-dialog-title"
         onClose={() => {
           setNewVariableName("");
+          setNewVariableValue("");
+
           setExecutionVariablesModalOpen(false);
         }}
         PaperProps={{
@@ -14849,7 +14818,8 @@ const AngularWorkflow = (defaultprops) => {
             backgroundColor: surfaceColor,
             color: "white",
             border: theme.palette.defaultBorder,
-            maxWidth: "100%",
+            maxWidth: isMobile ? bodyWidth - 100 : 800,
+						minWidth: isMobile ? bodyWidth - 100 : 800,
           },
         }}
       >
@@ -14879,8 +14849,24 @@ const AngularWorkflow = (defaultprops) => {
                 },
               }}
               margin="dense"
+							label="Name"
               fullWidth
               defaultValue={newVariableName}
+            />
+            <TextField
+              onBlur={(event) => setNewVariableValue(event.target.value)}
+              color="primary"
+              placeholder="Default Value (optional)"
+              style={{ marginTop: 25 }}
+              InputProps={{
+                style: {
+                  color: "white",
+                },
+              }}
+              margin="dense"
+							label="Default Value (optional)"
+              fullWidth
+              defaultValue={newVariableValue}
             />
           </DialogContent>
           <DialogActions>
@@ -14888,6 +14874,7 @@ const AngularWorkflow = (defaultprops) => {
               style={{ borderRadius: "0px" }}
               onClick={() => {
                 setNewVariableName("");
+                setNewVariableValue("");
                 setExecutionVariablesModalOpen(false);
               }}
               color="primary"
@@ -14916,11 +14903,15 @@ const AngularWorkflow = (defaultprops) => {
                   if (newVariableName.length > 0) {
                     workflow.execution_variables[found].name = newVariableName;
                   }
+
+									if (newVariableValue.length > 0) {
+										workflow.execution_variables[found].value = newVariableValue;
+									}
                 } else {
                   workflow.execution_variables.push({
                     name: newVariableName,
+                    value: newVariableValue,
                     description: "An execution variable",
-                    value: "",
                     id: uuidv4(),
                   });
                 }
