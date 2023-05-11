@@ -20,7 +20,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/shuffle-shared v0.3.35
-	golang.org/x/crypto v0.3.0
+	golang.org/x/crypto v0.3.1-0.20221117191849-2c476679df9a
 	google.golang.org/api v0.103.0
 	google.golang.org/appengine v1.6.7
 	google.golang.org/grpc v1.51.0
@@ -43,7 +43,7 @@ require (
 	github.com/algolia/algoliasearch-client-go/v3 v3.18.1 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20221031212613-62deef7fc822 // indirect
 	github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013 // indirect
-	github.com/cloudflare/circl v1.1.0 // indirect
+	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/containerd/cgroups v1.0.3 // indirect
 	github.com/containerd/containerd v1.6.6 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -89,7 +89,7 @@ require (
 	golang.org/x/net v0.2.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
