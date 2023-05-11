@@ -91,6 +91,7 @@ const AuthenticationOauth2 = (props) => {
     setAuthenticationModalOpen,
 		isCloud,
 		autoAuth, 
+		authButtonOnly, 
   } = props;
 
   //const [update, setUpdate] = React.useState("|")
@@ -126,7 +127,7 @@ const AuthenticationOauth2 = (props) => {
     label: "",
     usage: [
       {
-        workflow_id: workflow.id,
+        workflow_id: workflow !== undefined ? workflow.id : "",
       },
     ],
     id: uuidv4(),
@@ -145,26 +146,30 @@ const AuthenticationOauth2 = (props) => {
   }
 
 	const startOauth2Request = (admin_consent) => {
-		console.log("APP: ", selectedApp)
+		// Admin consent also means to add refresh tokens
+
+
+		//console.log("APP: ", selectedApp)
 		if (selectedApp.name.toLowerCase() == "outlook_graph" || selectedApp.name.toLowerCase() == "outlook_office365") {
 			handleOauth2Request(
-				
 				"efe4c3fe-84a1-4821-a84f-23a6cfe8e72d",
 				"",
 				"https://graph.microsoft.com",
-				["Mail.ReadWrite", "Mail.Send"],
+				["Mail.ReadWrite", "Mail.Send", "offline_access"],
 				admin_consent,
 			);
 		} else if (selectedApp.name.toLowerCase() == "gmail") {
 			handleOauth2Request(
-				"253565968129-c0a35knic7q1pdk6i6qk9gdkvr07ci49.apps.googleusercontent.com",
+				"253565968129-6ke8086pkp0at16m8t95rdcsas69ngt1.apps.googleusercontent.com",
 				"",
 				"https://gmail.googleapis.com",
 				["https://www.googleapis.com/auth/gmail.modify",
 					"https://www.googleapis.com/auth/gmail.send",
 					"https://www.googleapis.com/auth/gmail.insert",
-					"https://www.googleapis.com/auth/gmail.compose"],
+					"https://www.googleapis.com/auth/gmail.compose",
+					],
 				admin_consent,
+				"select_account%20consent", 
 			)
 		} else if (selectedApp.name.toLowerCase() == "zoho_desk") {
 			handleOauth2Request(
@@ -174,7 +179,8 @@ const AuthenticationOauth2 = (props) => {
 				["Desk.tickets.READ",
 				"Desk.tickets.UPDATE",
 				"Desk.tickets.DELETE",
-				"Desk.tickets.CREATE"],
+				"Desk.tickets.CREATE",
+				"offline_access"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase() == "slack") {
@@ -182,7 +188,7 @@ const AuthenticationOauth2 = (props) => {
 				"151779186901.2448678750935",
 				"",
 				"https://slack.com",
-				["admin", "chat:write", "im:read", "im:write", "search:read", "usergroups:read", "usergroups:write"],
+				["chat:write:user", "im:read", "im:write", "search:read", "usergroups:read", "usergroups:write", "offline_access"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase() == "webex") {
@@ -190,7 +196,7 @@ const AuthenticationOauth2 = (props) => {
 				"Cab184f3d7271f540443c79b5b79845e3387abbbdb3db4233a87ea3a5432fb3d5",
 				"",
 				"https://webexapis.com",
-				["spark:all"],
+				["spark:all", "offline_access"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("microsoft_teams")) {
@@ -198,7 +204,7 @@ const AuthenticationOauth2 = (props) => {
 				"31cb4c84-658e-43d5-ae84-22c9142e967a",
 				"",
 				"https://graph.microsoft.com",
-				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read"],
+				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read", "offline_access"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("todoist")) {
@@ -206,7 +212,7 @@ const AuthenticationOauth2 = (props) => {
 				"35fa3a384040470db0c8527e90a3c2eb",
 				"",
 				"https://api.todoist.com",
-				["task:add"],
+				["task:add", "offline_access"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("microsoft_sentinel")) {
@@ -214,7 +220,7 @@ const AuthenticationOauth2 = (props) => {
 				"4c16e8c4-3d34-4aa1-ac94-262ea170b7f7",
 				"",
 				"https://management.azure.com",
-				["https://management.azure.com/user_impersonation"],
+				["https://management.azure.com/user_impersonation", "offline_access"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("microsoft_365_defender")) {
@@ -222,7 +228,7 @@ const AuthenticationOauth2 = (props) => {
 				"4c16e8c4-3d34-4aa1-ac94-262ea170b7f7",
 				"",
 				"https://graph.microsoft.com",
-				["SecurityEvents.ReadWrite.All"],
+				["SecurityEvents.ReadWrite.All", "offline_access"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("google_sheets")) {
@@ -232,14 +238,16 @@ const AuthenticationOauth2 = (props) => {
 				"https://sheets.googleapis.com",
 				["https://www.googleapis.com/auth/spreadsheets"],
 				admin_consent,
+				"consent",
 			)
 		} else if (selectedApp.name.toLowerCase().includes("google_drive") || selectedApp.name.toLowerCase().includes("google_disk")) {
 			handleOauth2Request(
 				"253565968129-6pij4g6ojim4gpum0h9m9u3bc357qsq7.apps.googleusercontent.com",
 				"",
 				"https://www.googleapis.com/drive/v3",
-				["https://www.googleapis.com/auth/drive"],
+				["https://www.googleapis.com/auth/drive",],
 				admin_consent,
+				"consent",
 			)
 		} else if (selectedApp.name.toLowerCase().includes("jira_service_desk") || selectedApp.name.toLowerCase().includes("jira") || selectedApp.name.toLowerCase().includes("jira_service_management")) {
 			handleOauth2Request(
@@ -254,7 +262,7 @@ const AuthenticationOauth2 = (props) => {
 	}
 
 
-  const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent) => {
+  const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent, prompt) => {
     setButtonClicked(true);
     //console.log("SCOPES: ", scopes);
 
@@ -282,7 +290,8 @@ const AuthenticationOauth2 = (props) => {
     //console.log("AUTH: ", authenticationType)
     //console.log("SCOPES2: ", resources)
     const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`;
-    var state = `workflow_id%3D${workflow.id}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`;
+		const workflowId = workflow !== undefined ? workflow.id : "";
+    var state = `workflow_id%3D${workflowId}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`;
     if (oauth_url !== undefined && oauth_url !== null && oauth_url.length > 0) {
       state += `%26oauth_url%3d${oauth_url}`;
       console.log("ADDING OAUTH2 URL: ", state);
@@ -299,12 +308,20 @@ const AuthenticationOauth2 = (props) => {
     }
 
 		// No prompt forcing
-    var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=login&scope=${resources}&state=${state}&access_type=offline`;
+    //var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=login&scope=${resources}&state=${state}&access_type=offline`;
+		var defaultPrompt = "login"
+   	if (prompt !== undefined && prompt !== null && prompt.length > 0) {
+			defaultPrompt = prompt
+		}
+		
+		var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=${defaultPrompt}&scope=${resources}&state=${state}&access_type=offline`;
 		if (admin_consent === true) {
 			console.log("Running Oauth2 WITH admin consent")
     	//url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=consent&scope=${resources}&state=${state}&access_type=offline`;
     	url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=admin_consent&scope=${resources}&state=${state}&access_type=offline`;
 		}
+
+		console.log("URL: ", url)
 
 		// Force new consent
     //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`;
@@ -333,8 +350,11 @@ const AuthenticationOauth2 = (props) => {
           setButtonClicked(false);
           clearInterval(timer);
           //alert('"Secure Payment" window closed!');
+					//
 
-          getAppAuthentication(true, true);
+					if (getAppAuthentication !== undefined) {
+          	getAppAuthentication(true, true);
+					}
         } else {
 					console.log("Not closed")
 				}
@@ -479,6 +499,59 @@ const AuthenticationOauth2 = (props) => {
     authenticationOption.label = selectedApp.name + " authentication";
   }
 
+
+	const autoAuthButton = 
+		<Button
+				fullWidth
+				variant="contained"
+				style={{
+					marginBottom: 20, 
+					marginTop: 20, 
+					flex: 1,
+					textTransform: "none",
+					textAlign: "left",
+					justifyContent: "flex-start",
+					backgroundColor: "#ffffff",
+					color: "#2f2f2f",
+					borderRadius: theme.palette.borderRadius,
+					minWidth:  300, 
+					maxWidth: 300,
+					maxHeight: 50,
+					overflow: "hidden",
+					border: `1px solid ${theme.palette.inputColor}`,
+				}}
+				color="primary"
+				disabled={
+					clientSecret.length > 0 || clientId.length > 0
+				}
+				fullWidth
+				onClick={() => {
+					// Hardcode some stuff?
+					// This could prolly be added to the app itself with a "default" client ID 
+					startOauth2Request()
+				}}
+				color="primary"
+			>
+				{buttonClicked ? (
+					<CircularProgress style={{ color: "#f86a3e", width: 45, height: 45, margin: "auto", }} />
+				) : (
+					<span style={{display: "flex"}}>
+						<img
+							alt={selectedAction.app_name}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							src={selectedAction.large_image}
+						/>
+						<Typography style={{ margin: 0, marginLeft: 10, marginTop: 5,}} variant="body1">
+							One-click Login
+						</Typography>
+					</span>
+				)}
+			</Button>
+
+	if (authButtonOnly === true) {
+		return autoAuthButton
+	}
+
   console.log("Window: ", window.location)
   return (
     <div>
@@ -505,52 +578,8 @@ const AuthenticationOauth2 = (props) => {
 				{isCloud && registeredApps.includes(selectedApp.name.toLowerCase()) ? 
 					<span>
 						<span style={{display: "flex"}}>
-							<Button
-        			  fullWidth
-        			  variant="contained"
-        			  style={{
-									marginBottom: 20, 
-									marginTop: 20, 
-        			    flex: 1,
-        			    textTransform: "none",
-        			    textAlign: "left",
-        			    justifyContent: "flex-start",
-        			    backgroundColor: "#ffffff",
-        			    color: "#2f2f2f",
-									borderRadius: theme.palette.borderRadius,
-									minWidth:  300, 
-									maxWidth: 300,
-									maxHeight: 50,
-									overflow: "hidden",
-									border: `1px solid ${theme.palette.inputColor}`,
-        			  }}
-        			  color="primary"
-          			disabled={
-            			clientSecret.length > 0 || clientId.length > 0
-								}
-								fullWidth
-								onClick={() => {
-									// Hardcode some stuff?
-									// This could prolly be added to the app itself with a "default" client ID 
-									startOauth2Request()
-								}}
-								color="primary"
-							>
-								{buttonClicked ? (
-									<CircularProgress style={{ color: "#f86a3e", width: 45, height: 45, margin: "auto", }} />
-								) : (
-									<span style={{display: "flex"}}>
-										<img
-											alt={selectedAction.app_name}
-											style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
-											src={selectedAction.large_image}
-										/>
-										<Typography style={{ margin: 0, marginLeft: 10, marginTop: 5,}} variant="body1">
-											Auto-Authenticate 
-										</Typography>
-									</span>
-								)}
-							</Button>
+							{autoAuthButton}
+							
 							{buttonClicked ? 
 								null
 							:

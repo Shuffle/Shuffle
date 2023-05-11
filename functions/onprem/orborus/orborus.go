@@ -51,7 +51,7 @@ import (
 
 // Starts jobs in bulk, so this could be increased
 var sleepTime = 3
-var maxConcurrency = 50
+var maxConcurrency = 10
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
@@ -973,7 +973,6 @@ func main() {
 	log.Printf("[INFO] Finished configuring docker environment")
 
 	client := shuffle.GetExternalClient(baseUrl)
-
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
 	req, err := http.NewRequest(
 		"GET",

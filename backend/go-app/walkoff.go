@@ -1923,7 +1923,7 @@ func loadGithubWorkflows(url, username, password, userId, branch, orgId string) 
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
-			log.Printf("Failed loading repo %s into memory (github workflows): %s", url, err)
+			log.Printf("[INFO] Failed loading repo %s into memory (github workflows): %s", url, err)
 			return err
 		}
 
@@ -3107,8 +3107,8 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	var tmpBody tmpStruct
 	err = json.Unmarshal(body, &tmpBody)
 	if err != nil {
-		log.Printf("Error with unmarshal tmpBody: %s", err)
-		resp.WriteHeader(401)
+		log.Printf("[WARNING] Error with unmarshal app git clone: %s", err)
+		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -3135,20 +3135,20 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
-			log.Printf("Failed loading repo %s into memory (github workflows 2): %s", tmpBody.URL, err)
-			resp.WriteHeader(401)
+			log.Printf("[WARNING] Failed loading repo %s into memory (github apps 2): %s", tmpBody.URL, err)
+			resp.WriteHeader(500)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
 		}
 
 		dir, err := fs.ReadDir("/")
 		if err != nil {
-			log.Printf("FAiled reading folder: %s", err)
+			log.Printf("[WARNING] FAiled reading folder: %s", err)
 		}
 		_ = r
 
 		if tmpBody.ForceUpdate {
-			log.Printf("[AUDIT] Running with force update from user %s (%s) for %s!", user.Username, user.Id, tmpBody.URL)
+			log.Printf("[AUDIT] Running app get with force update from user %s (%s) for %s!", user.Username, user.Id, tmpBody.URL)
 		} else {
 			log.Printf("[AUDIT] Updating apps with updates for user %s (%s) for %s (no force)", user.Username, user.Id, tmpBody.URL)
 		}

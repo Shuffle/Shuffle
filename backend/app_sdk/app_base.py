@@ -2279,6 +2279,13 @@ class AppBase:
 
                 # Can't handle self yet (?)
                 ret = run.render(**globals())
+                    
+                # Load output as JSON
+                try:
+                    ret = json.loads(ret)
+                except: 
+                    pass
+
                 return ret
             except jinja2.exceptions.TemplateNotFound as e:
                 self.logger.info(f"[ERROR] Liquid Template error: {e}")
@@ -3064,7 +3071,6 @@ class AppBase:
                         #self.logger.info(action["parameters"])
 
                         # This seems redundant now 
-                        self.logger.info("[DEBUG] Pre parameters")
                         for parameter in newparams:
                             action["parameters"].append(parameter)
 
@@ -3086,7 +3092,6 @@ class AppBase:
 
                         # Multi_parameter has the data for each. variable
                         minlength = 0
-                        self.logger.info("[DEBUG] Pre-loading parameters")
                         multi_parameters = json.loads(json.dumps(params))
                         multiexecution = False
                         multi_execution_lists = []
@@ -3513,8 +3518,11 @@ class AppBase:
                                             try:
                                                 del params[field]
                                                 self.logger.info("[WARNING] Removed field invalid field %s" % field)
-                                            except KeyError:
+                                            except KeyError as e:
+                                                self.logger.info("[WARNING] Tried to remove field %s but it didn't exist" % field)
                                                 break
+                                        else:
+                                            self.logger.info("[ERROR] Couldn't find fieldsplit in error. Raw error: %s" % errorstring)
                                     else:
                                         newres = json.dumps({
                                             "success": False,

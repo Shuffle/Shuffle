@@ -695,15 +695,12 @@ const Admin = (props) => {
 
   const handleGetOrg = (orgId) => {
     if (orgId.length === 0) {
-      alert.error(
-        "Organization ID not defined. Please contact us on https://shuffler.io if this persists logout."
-      );
+      alert.error("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
       return;
     }
 
     // Just use this one?
-    var baseurl = globalUrl;
-    const url = baseurl + "/api/v1/orgs/" + orgId;
+    const url = `${globalUrl}/api/v1/orgs/${orgId}`
     fetch(url, {
       method: "GET",
       credentials: "include",
@@ -719,7 +716,11 @@ const Admin = (props) => {
       })
       .then((responseJson) => {
         if (responseJson["success"] === false) {
-          alert.error("Failed getting your org. If this persists, please contact support.");
+					if (responseJson.reason !== undefined) {
+						alert.error(responseJson.reason);
+					} else {
+          	alert.error("Failed getting your org. If this persists, please contact support.");
+					}
         } else {
           if (
             responseJson.sync_features === undefined ||
@@ -727,8 +728,6 @@ const Admin = (props) => {
           ) {
             responseJson.sync_features = {};
           }
-
-
 
           setSelectedOrganization(responseJson)
           var lists = {

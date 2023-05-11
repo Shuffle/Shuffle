@@ -281,6 +281,74 @@ export const base64_decode = (str) => {
 	);
 };
 
+// Loops through properties to find the actual JSON output to use
+const getJsonObject = (properties) => {
+	// Loop inside the JSON object and get the value of each key
+	let jsonObject = {};
+	for (let key in properties) {
+		const property = properties[key];
+
+		const subloop = false
+		if (property.hasOwnProperty("type")) {
+			if (property.type === "object" || property.type === "array") {
+				subloop = true
+			}
+		} 
+
+		if (subloop) {
+			if (property.hasOwnProperty("items") && property.items.hasOwnProperty("properties")) {
+
+				const jsonret = getJsonObject(property.items.properties);
+				if (property.type === "array") {
+					console.log("ARRAY!!")
+					jsonObject[key] = [jsonret];
+				} else {
+					jsonObject[key] = jsonret;
+				}
+			} else {
+				if (property.hasOwnProperty("properties")) {
+					const jsonret = getJsonObject(property.properties);
+					if (property.type === "array") {
+						console.log("ARRAY2!!")
+						jsonObject[key] = [jsonret];
+					} else {
+						jsonObject[key] = jsonret;
+					}
+				} else { 
+					console.log("No items or properties found: ", property);
+				}
+			}
+
+		} else {
+			if (property.hasOwnProperty("example")) {
+				jsonObject[key] = property.example;
+			} else if (property.hasOwnProperty("enum") && property.enum.length > 0) {
+				jsonObject[key] = property.enum[0];
+			} else if (property.hasOwnProperty("default")) {
+				jsonObject[key] = property.default;
+			} else if (property.hasOwnProperty("maximum")) {
+				jsonObject[key] = property.maximum;
+			} else if (property.hasOwnProperty("minimum")) {
+				jsonObject[key] = property.minimum;
+			} else if (property.hasOwnProperty("type")) {
+				if (property.type === "integer" || property.type === "number") {
+					jsonObject[key] = 0;
+				} else if (property.type === "boolean") {
+					jsonObject[key] = false;
+				} else if (property.type === "string") {
+					jsonObject[key] = "";
+				} else {
+					console.log("Unknown type: ", property);
+				}
+			} else {
+				console.log("No example or enum found: ", property);
+			}
+		}
+	}
+
+	return jsonObject
+}
+
 // Should be different if logged in :|
 const AppCreator = (defaultprops) => {
   const { globalUrl, isLoaded } = defaultprops;
@@ -626,6 +694,7 @@ const AppCreator = (defaultprops) => {
     var wordlist = {};
     var all_categories = [];
 		console.log("Paths: ", data.paths)
+		var parentUrl = ""
     if (data.paths !== null && data.paths !== undefined) {
       for (let [path, pathvalue] of Object.entries(data.paths)) {
 
@@ -742,7 +811,7 @@ const AppCreator = (defaultprops) => {
 								console.log("Set content!")
 							}
 						}
-						
+
 						if (methodvalue["requestBody"]["content"] !== undefined) {
 							// Handle content - XML or JSON
 							//
@@ -755,45 +824,56 @@ const AppCreator = (defaultprops) => {
                 if (
                   methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null
                 ) {
-                  console.log("Schema: ", methodvalue["requestBody"]["content"]["application/json"]["schema"])
+                  //console.log("Schema: ", methodvalue["requestBody"]["content"]["application/json"]["schema"])
 
-                  if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
-                    var tmpobject = {};
-                    for (let prop of methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"]) {
-                      tmpobject[prop] = `\$\{${prop}\}`;
-                    }
+									try {
+										if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
+											// Read out properties from a JSON object
+											const jsonObject = getJsonObject(methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"])
+											console.log("JSON OBJECT: ", jsonObject)
+											if (jsonObject !== undefined && jsonObject !== null) {
+												try {
+													newaction["body"] = JSON.stringify(jsonObject, null, 2)
+												} catch (e) {
+													console.log("JSON object parse error: ", e)
+												}
+											}
 
-                    //console.log("Data: ", data)
-                    for (let subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
-                      
-                    
-                      const tmpitem =
-                        methodvalue["requestBody"]["content"][
-                          "application/json"
-                        ]["schema"]["required"][subkey];
-                      tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
-                    }
 
-                    newaction["body"] = JSON.stringify(tmpobject, null, 2);
-                  } else if (
-                    methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== null) {
-                    const retRef = handleGetRef(
-                      methodvalue["requestBody"]["content"]["application/json"][
-                        "schema"
-                      ],
-                      data
-                    );
-                    var newbody = {};
-                    // Can handle default, required, description and type
-                    for (let propkey in retRef.properties) {
-											console.log("replace: ", propkey)
+											//newaction["body"] = JSON.stringify(jsonObject, null, 2);
 
-                      const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
-                      newbody[parsedkey] = "${" + parsedkey + "}";
-                    }
+											var tmpobject = {};
+											for (let prop of methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"]) {
+												tmpobject[prop] = `\$\{${prop}\}`;
+											}
 
-                    newaction["body"] = JSON.stringify(newbody, null, 2);
-                  }
+											//console.log("Data: ", data)
+											for (let subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
+												const tmpitem = methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"][subkey];
+												tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
+											}
+
+											newaction["body"] = JSON.stringify(tmpobject, null, 2);
+
+										} else if (
+
+											methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== null) {
+											const retRef = handleGetRef(methodvalue["requestBody"]["content"]["application/json"]["schema"], data);
+											
+											var newbody = {};
+											// Can handle default, required, description and type
+											for (let propkey in retRef.properties) {
+												console.log("replace: ", propkey)
+
+												const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
+												newbody[parsedkey] = "${" + parsedkey + "}";
+											}
+
+											newaction["body"] = JSON.stringify(newbody, null, 2);
+										}
+									} catch (e) {
+										console.log("RequestBody json error: ", e, path)
+									}
                 }
               } else if (
                 methodvalue["requestBody"]["content"]["application/xml"] !==
@@ -810,28 +890,32 @@ const AppCreator = (defaultprops) => {
                     "schema"
                   ] !== null
                 ) {
-                  if (
-                    methodvalue["requestBody"]["content"]["application/xml"][
-                      "schema"
-                    ]["properties"] !== undefined
-                  ) {
-                    var tmpobject = {};
-                    for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
-                    
-                      tmpobject[prop] = `\$\{${prop}\}`;
-                    }
+									try {
+										if (
+											methodvalue["requestBody"]["content"]["application/xml"][
+												"schema"
+											]["properties"] !== undefined
+										) {
+											var tmpobject = {};
+											for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
+											
+												tmpobject[prop] = `\$\{${prop}\}`;
+											}
 
-                    for (let [subkey,subkeyval] in Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"])) {
-                      const tmpitem =
-                        methodvalue["requestBody"]["content"][
-                          "application/xml"
-                        ]["schema"]["required"][subkey];
-                      tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
-                    }
+											for (let [subkey,subkeyval] in Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"])) {
+												const tmpitem =
+													methodvalue["requestBody"]["content"][
+														"application/xml"
+													]["schema"]["required"][subkey];
+												tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
+											}
 
-                    //console.log("OBJ XML: ", tmpobject)
-                    //newaction["body"] = XML.stringify(tmpobject, null, 2)
-                  }
+											//console.log("OBJ XML: ", tmpobject)
+											//newaction["body"] = XML.stringify(tmpobject, null, 2)
+										}
+									} catch (e) {
+										console.log("RequestBody xml error: ", e, path)
+									}
                 }
               } else {
                 if (
@@ -863,30 +947,34 @@ const AppCreator = (defaultprops) => {
                       "multipart/form-data"
                     ]["schema"] !== null
                   ) {
-                    if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
-                      const fieldname =
-                        methodvalue["requestBody"]["content"][
-                          "multipart/form-data"
-                        ]["schema"]["properties"]["fieldname"];
+										try {
+											if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
+												const fieldname =
+													methodvalue["requestBody"]["content"][
+														"multipart/form-data"
+													]["schema"]["properties"]["fieldname"];
 
-                      if (fieldname !== undefined) {
-                        //console.log("FIELDNAME: ", fieldname);
-                        newaction.file_field = fieldname["value"];
-                      } else {
-												for (const [subkey, subvalue] of Object.entries(methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])) {
-													if (subkey.includes("file")) {
-														console.log("Found subkey field for file: ", path, method, methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])
-														newaction.file_field = subkey
-														break
+												if (fieldname !== undefined) {
+													//console.log("FIELDNAME: ", fieldname);
+													newaction.file_field = fieldname["value"];
+												} else {
+													for (const [subkey, subvalue] of Object.entries(methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])) {
+														if (subkey.includes("file")) {
+															console.log("Found subkey field for file: ", path, method, methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])
+															newaction.file_field = subkey
+															break
+														}
+													}
+
+													if (newaction.file_field === undefined || newaction.file_field === null || newaction.file_field.length === 0) {
+														console.log("No file fieldname found: ", methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])
 													}
 												}
-
-												if (newaction.file_field === undefined || newaction.file_field === null || newaction.file_field.length === 0) {
-													console.log("No file fieldname found: ", methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])
-												}
+											} else {
+												console.log("No type found: ", methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"])
 											}
-                    } else {
-											console.log("No type found: ", methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"])
+										} catch (e) {
+											console.log("Multipart/form error: ", e, path)
 										}
                   }
                 } else {
@@ -914,73 +1002,76 @@ const AppCreator = (defaultprops) => {
                     }
                   }
 
-                  if (schemas.length === 1) {
-                    const parameter = handleGetRef({ $ref: schemas[0] }, data);
+									try {
+                  	if (schemas.length === 1) {
+                  	  const parameter = handleGetRef({ $ref: schemas[0] }, data);
 
-										console.log("Reading type from parameter: ", parameter)
-                    if (parameter.properties !== undefined && parameter["type"] === "object") {
-                    
-                      var newbody = {};
-                      for (let propkey in parameter.properties) {
-												console.log("propkey2: ", propkey)
-                      	const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
-                        if (parameter.properties[propkey].type === undefined) {
-                          console.log(
-                            "Skipping (4): ",
-                            parameter.properties[propkey]
-                          );
-                          continue;
-                        }
+											console.log("Reading type from parameter: ", parameter)
+                  	  if (parameter.properties !== undefined && parameter["type"] === "object") {
+                  	  
+                  	    var newbody = {};
+                  	    for (let propkey in parameter.properties) {
+													console.log("propkey2: ", propkey)
+                  	    	const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
+                  	      if (parameter.properties[propkey].type === undefined) {
+                  	        console.log(
+                  	          "Skipping (4): ",
+                  	          parameter.properties[propkey]
+                  	        );
+                  	        continue;
+                  	      }
 
-                        if (parameter.properties[propkey].type === "string") {
-                          if (
-                            parameter.properties[propkey].description !==
-                            undefined
-                          ) {
-                            newbody[parsedkey] =
-                              parameter.properties[propkey].description;
-                          } else {
-                            newbody[parsedkey] = "";
-                          }
-                        } else if (
-                          parameter.properties[propkey].type.includes("int") ||
-                          parameter.properties[propkey].type.includes("uint64")
-                        ) {
-                          newbody[parsedkey] = 0;
-                        } else if (
-                          parameter.properties[propkey].type.includes("boolean")
-                        ) {
-                          newbody[parsedkey] = false;
-                        } else if (
-                          parameter.properties[propkey].type.includes("array")
-                        ) {
-                          newbody[parsedkey] = [];
-                        } else {
-                          console.log(
-                            "CANT HANDLE JSON TYPE (4)",
-                            parameter.properties[propkey].type,
-                            parameter.properties[propkey],
-														path
-                          );
-                          newbody[parsedkey] = [];
-                        }
-                      }
+                  	      if (parameter.properties[propkey].type === "string") {
+                  	        if (
+                  	          parameter.properties[propkey].description !==
+                  	          undefined
+                  	        ) {
+                  	          newbody[parsedkey] =
+                  	            parameter.properties[propkey].description;
+                  	        } else {
+                  	          newbody[parsedkey] = "";
+                  	        }
+                  	      } else if (
+                  	        parameter.properties[propkey].type.includes("int") ||
+                  	        parameter.properties[propkey].type.includes("uint64")
+                  	      ) {
+                  	        newbody[parsedkey] = 0;
+                  	      } else if (
+                  	        parameter.properties[propkey].type.includes("boolean")
+                  	      ) {
+                  	        newbody[parsedkey] = false;
+                  	      } else if (
+                  	        parameter.properties[propkey].type.includes("array")
+                  	      ) {
+                  	        newbody[parsedkey] = [];
+                  	      } else {
+                  	        console.log(
+                  	          "CANT HANDLE JSON TYPE (4)",
+                  	          parameter.properties[propkey].type,
+                  	          parameter.properties[propkey],
+															path
+                  	        );
+                  	        newbody[parsedkey] = [];
+                  	      }
+                  	    }
 
-                      newaction["body"] = JSON.stringify(newbody, null, 2);
-                    } else {
-                      console.log(
-                        "CANT HANDLE PARAM: (4) ",
-                        parameter.properties,
-												path
-                      );
-                    }
-                  }
+                  	    newaction["body"] = JSON.stringify(newbody, null, 2);
+                  	  } else {
+                  	    console.log(
+                  	      "CANT HANDLE PARAM: (4) ",
+                  	      parameter.properties,
+													path
+                  	    );
+                  	  }
+                  	}
+									} catch (e) {
+										console.log("Param Error: ", e, path)
+									}
                 }
               }
             }
           }
 
-          // HAHAHA wtf is this.
           if (
             methodvalue.responses !== undefined &&
             methodvalue.responses !== null
@@ -1033,7 +1124,20 @@ const AppCreator = (defaultprops) => {
                       selectedExample["content"]["application/json"]["schema"] !== undefined &&
                     	selectedExample["content"]["application/json"]["schema"] !== null
                     ) {
-											console.log("JSON: ", selectedExample["content"]["application/json"]["schema"])
+											//console.log("JSON Output: ", selectedExample["content"]["application/json"]["schema"])
+
+											if (selectedExample["content"]["application/json"]["schema"]["properties"] !== undefined && selectedExample["content"]["application/json"]["schema"]["properties"] !== null) {
+												const jsonObject = getJsonObject(selectedExample["content"]["application/json"]["schema"]["properties"]) 
+												console.log("ReSP Return: ", jsonObject)
+												if (jsonObject !== undefined && jsonObject !== null) {
+													try {
+                          	newaction.example_response = JSON.stringify(jsonObject, null, 2)
+													} catch (e) {
+														console.log("JSON object output parse error: ", e)
+													}
+												}
+											}
+
                       if (selectedExample["content"]["application/json"]["schema"]["$ref"] !== undefined) {
                         //console.log("REF EXAMPLE: ", selectedExample["content"]["application/json"]["schema"])
                         const parameter = handleGetRef(
@@ -1043,11 +1147,11 @@ const AppCreator = (defaultprops) => {
                           data
                         );
 
-                        console.log("Reading parameter type 2", parameter)
+                        //console.log("Reading parameter type 2", parameter)
                         if (parameter.properties !== undefined && parameter["type"] === "object") {
                           var newbody = {};
                           for (let propkey in parameter.properties) {
-														console.log("propkey3: ", propkey)
+														//console.log("propkey3: ", propkey)
 
                             const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                             if (parameter.properties[propkey].type === undefined) {
@@ -1090,10 +1194,7 @@ const AppCreator = (defaultprops) => {
                               //const parameter = handleGetRef(selectedExample["content"]["application/json"]["schema"], data)
                               newbody[parsedkey] = [];
                             } else {
-                              console.log(
-                                "CANT HANDLE JSON TYPE ",
-                                parameter.properties[propkey].type,
-                                parameter.properties[propkey]
+                              console.log("CANT HANDLE JSON TYPE ", parameter.properties[propkey].type,parameter.properties[propkey]
                               );
                               newbody[parsedkey] = [];
                             }
@@ -1422,13 +1523,14 @@ const AppCreator = (defaultprops) => {
 
         if (firstUrl.endsWith("/")) {
           setBaseUrl(firstUrl.slice(0, firstUrl.length - 1));
+					parentUrl = firstUrl.slice(0, firstUrl.length - 1)
         } else {
-          setBaseUrl(firstUrl);
+          setBaseUrl(firstUrl)
+					parentUrl = firstUrl
         }
       }
     }
 
-    //console.log("SECURITYSCHEMES: ", securitySchemes)
     if (securitySchemes !== undefined) {
       // FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
       //console.log("SECURITY: ", securitySchemes)
@@ -1598,6 +1700,61 @@ const AppCreator = (defaultprops) => {
       }
     }
 
+		console.log("PARent: ", parentUrl)
+		var prefixCheck = "/v1"
+		if (parentUrl.includes("/")) {
+			const urlsplit = parentUrl.split("/")
+			if (urlsplit.length > 2) {
+				// Skip if http:// in it too
+				prefixCheck = "/" + urlsplit.slice(3).join("/")
+			}
+
+			console.log("Prefix: ", prefixCheck)
+			if (prefixCheck.length > 0 && prefixCheck !== "/" && prefixCheck.startsWith("/")) {
+				for (var actionKey in newActions) {
+					const action = newActions[actionKey]
+
+					if (action.url !== undefined && action.url !== null && action.url.startsWith(prefixCheck)) {
+						newActions[actionKey].url = action.url.slice(prefixCheck.length, action.url.length)
+					}
+
+					console.log("Action: ", newActions[actionKey].url)
+				}
+			}
+		}
+
+		console.log("Actions: ", newActions.length, " BaseURL: ", parentUrl)
+	
+		var newActions2 = []
+		// Remove with duplicate action URLs
+		for (var actionKey in newActions) {
+			const action = newActions[actionKey]
+			if (action.url === undefined || action.url === null) {
+				continue
+			}
+
+			var found = false
+			for (var actionKey2 in newActions2) {
+				const action2 = newActions2[actionKey2]
+				if (action2.url === undefined || action2.url === null) {
+					continue
+				}
+
+				if (action.url === action2.url) {
+					found = true
+					break
+				}
+			}
+
+			if (!found) {
+				newActions2.push(action)
+			} else {
+				console.log("Skipping duplicate action: ", action.url, " . Should merge contents")
+			}
+		}
+
+		console.log("Actions: ", newActions.length, " Actions2: ", newActions2.length)
+		newActions = newActions2
     if (newActions.length > increaseAmount - 1) {
       setActionAmount(increaseAmount);
     } else {
@@ -1606,11 +1763,7 @@ const AppCreator = (defaultprops) => {
 
     //const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io"
     if (newActions.length > 1000 && isCloud) {
-      alert.error(
-        "Cut down actions from " +
-          newActions.length +
-          " to 999 because of limit"
-      );
+      alert.error("Cut down actions from " + newActions.length + " to 999 because of limit");
       newActions = newActions.slice(0, 999);
     }
 

@@ -404,8 +404,8 @@ const AngularWorkflow = (defaultprops) => {
   const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
   const [executionVariablesModalOpen, setExecutionVariablesModalOpen] =
     React.useState(false);
-  const [authenticationModalOpen, setAuthenticationModalOpen] =
-    React.useState(false);
+  const [authenticationModalOpen, setAuthenticationModalOpen] = React.useState(false);
+    
   const [conditionsModalOpen, setConditionsModalOpen] = React.useState(false);
   const [authenticationType, setAuthenticationType] = React.useState("");
 
@@ -1635,14 +1635,14 @@ const AngularWorkflow = (defaultprops) => {
       },
       credentials: "include",
     })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for app auth :O!");
-        }
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for app auth :O!");
+			}
 
-        return response.json();
-      })
-      .then((responseJson) => {
+			return response.json();
+		})
+		.then((responseJson) => {
         if (responseJson.success) {
           var newauth = [];
           for (let authkey in responseJson.data) {
@@ -2871,6 +2871,11 @@ const AngularWorkflow = (defaultprops) => {
         return;
       }
 
+			if (data.type === undefined) {
+				console.log("No type, automatically setting to action");
+				data.type = "ACTION"
+			}
+
       if (data.type === "ACTION") {
         setSelectedComment({})
         //var curaction = JSON.parse(JSON.stringify(data))
@@ -3168,7 +3173,7 @@ const AngularWorkflow = (defaultprops) => {
       } else if (data.type === "COMMENT") {
         setSelectedComment(data);
       } else {
-        alert.error("Can't handle " + data.type);
+        alert.error("Can't handle node type " + data.type);
         return;
       }
 
@@ -4181,13 +4186,34 @@ const AngularWorkflow = (defaultprops) => {
     //window.document.execCommand('insertText', false, text);
     //
     try {
-      const parsedjson = JSON.parse(clipboard);
-      //console.log("Parsed: ", parsedjson)
+      var parsedjson = JSON.parse(clipboard);
+			// Check if array
+			if (!Array.isArray(parsedjson)) {
+				console.log("Not array! Adding to array.")
+				parsedjson = [parsedjson]
+			}
 
       for (let jsonkey in parsedjson) {
-        const item = parsedjson[jsonkey];
+        var item = parsedjson[jsonkey];
         console.log("Adding: ", item);
-        item.data.id = uuidv4()
+
+				if (item.data === undefined || item.data === null) {
+					console.log("Appending from here")
+					const newitem = {
+						"data": item,
+						"position": {
+							"x": 0,
+							"y": 0
+						},
+						"group": "nodes",
+					}
+
+					item = newitem
+					item.type = "ACTION"
+					item.isStartNode = false
+				}
+
+				item.data.id = uuidv4()
 
         cy.add({
           group: item.group,
@@ -5518,7 +5544,7 @@ const AngularWorkflow = (defaultprops) => {
 		}
   }
 
-    alert.info("Creating schedule with name " + trigger.name);
+    alert.info("Creating schedule") 
     const data = {
       name: trigger.name,
       frequency: workflow.triggers[triggerindex].parameters[0].value,
