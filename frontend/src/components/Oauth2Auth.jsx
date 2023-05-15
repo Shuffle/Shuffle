@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTheme } from "@material-ui/core/styles";
 import theme from '../theme';
 
@@ -75,6 +76,7 @@ const registeredApps = [
 	"jira",
 	"jira_service_desk",
 	"jira_service_management",
+	"github",
 ]
 
 const AuthenticationOauth2 = (props) => {
@@ -92,7 +94,10 @@ const AuthenticationOauth2 = (props) => {
 		isCloud,
 		autoAuth, 
 		authButtonOnly, 
+		isLoggedIn,
   } = props;
+
+  let navigate = useNavigate();
 
   //const [update, setUpdate] = React.useState("|")
   const [defaultConfigSet, setDefaultConfigSet] = React.useState(
@@ -113,7 +118,7 @@ const AuthenticationOauth2 = (props) => {
   const [oauthUrl, setOauthUrl] = React.useState("");
   const [buttonClicked, setButtonClicked] = React.useState(false);
 
-  const [offlineAccess, setOfflineAccess] = React.useState(true);
+  const [offlineAccess, setOfflineAccess] = React.useState(false);
   const allscopes = authenticationType.scope !== undefined ? authenticationType.scope : [];
     
 
@@ -134,8 +139,13 @@ const AuthenticationOauth2 = (props) => {
     active: true,
   });
 
+
 	useEffect(() => {
-		console.log("Should automatically click the auto-auth button?")
+		if (isLoggedIn === false) {
+			navigate(`/login?view=${window.location.pathname}&message=Log in to authenticate this app`)
+		}
+
+		console.log("Should automatically click the auto-auth button?: ", autoAuth)
 		if (autoAuth === true && selectedApp !== undefined) {
 			startOauth2Request() 
 		}
@@ -147,7 +157,8 @@ const AuthenticationOauth2 = (props) => {
 
 	const startOauth2Request = (admin_consent) => {
 		// Admin consent also means to add refresh tokens
-
+		console.log("Inside oauth2 request for app: ", selectedApp.name)
+		selectedApp.name = selectedApp.name.replace(" ", "_").toLowerCase()
 
 		//console.log("APP: ", selectedApp)
 		if (selectedApp.name.toLowerCase() == "outlook_graph" || selectedApp.name.toLowerCase() == "outlook_office365") {
@@ -185,10 +196,10 @@ const AuthenticationOauth2 = (props) => {
 			)
 		} else if (selectedApp.name.toLowerCase() == "slack") {
 			handleOauth2Request(
-				"151779186901.2448678750935",
+				"5155508477298.5168162485601",
 				"",
 				"https://slack.com",
-				["chat:write:user", "im:read", "im:write", "search:read", "usergroups:read", "usergroups:write", "offline_access"],
+				["chat:write:user", "im:read", "im:write", "search:read", "usergroups:read", "usergroups:write",],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase() == "webex") {
@@ -196,7 +207,7 @@ const AuthenticationOauth2 = (props) => {
 				"Cab184f3d7271f540443c79b5b79845e3387abbbdb3db4233a87ea3a5432fb3d5",
 				"",
 				"https://webexapis.com",
-				["spark:all", "offline_access"],
+				["spark:all"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("microsoft_teams")) {
@@ -212,7 +223,7 @@ const AuthenticationOauth2 = (props) => {
 				"35fa3a384040470db0c8527e90a3c2eb",
 				"",
 				"https://api.todoist.com",
-				["task:add", "offline_access"],
+				["task:add",],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("microsoft_sentinel")) {
@@ -220,7 +231,7 @@ const AuthenticationOauth2 = (props) => {
 				"4c16e8c4-3d34-4aa1-ac94-262ea170b7f7",
 				"",
 				"https://management.azure.com",
-				["https://management.azure.com/user_impersonation", "offline_access"],
+				["https://management.azure.com/user_impersonation",],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("microsoft_365_defender")) {
@@ -228,7 +239,7 @@ const AuthenticationOauth2 = (props) => {
 				"4c16e8c4-3d34-4aa1-ac94-262ea170b7f7",
 				"",
 				"https://graph.microsoft.com",
-				["SecurityEvents.ReadWrite.All", "offline_access"],
+				["SecurityEvents.ReadWrite.All",],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("google_sheets")) {
@@ -244,7 +255,7 @@ const AuthenticationOauth2 = (props) => {
 			handleOauth2Request(
 				"253565968129-6pij4g6ojim4gpum0h9m9u3bc357qsq7.apps.googleusercontent.com",
 				"",
-				"https://www.googleapis.com/drive/v3",
+				"https://www.googleapis.com",
 				["https://www.googleapis.com/auth/drive",],
 				admin_consent,
 				"consent",
@@ -254,9 +265,19 @@ const AuthenticationOauth2 = (props) => {
 				"AI02egeCQh1Zskm1QAJaaR6dzjR97V2F",
 				"",
 				"https://api.atlassian.com",
-				["read:jira-work", "write:jira-work", "read:servicedesk:jira-service-management", "write:servicedesk:jira-service-management", "read:request:jira-service-management", "write:request:jira-service-management", "offline_access"],
+				["read:jira-work", "write:jira-work", "read:servicedesk:jira-service-management", "write:servicedesk:jira-service-management", "read:request:jira-service-management", "write:request:jira-service-management",],
 				admin_consent,
 			)
+		} else if (selectedApp.name.toLowerCase().includes("github")) {
+			handleOauth2Request(
+				"3d272b1b782b100b1e61",
+				"",
+				"https://api.github.com",
+				["repo","user","project","notifications",],
+				admin_consent,
+			)
+		} else {
+			console.log("No match found for: ", selectedApp.name)
 		}
 		// write:request:jira-service-management
 	}
@@ -315,6 +336,7 @@ const AuthenticationOauth2 = (props) => {
 		}
 		
 		var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=${defaultPrompt}&scope=${resources}&state=${state}&access_type=offline`;
+
 		if (admin_consent === true) {
 			console.log("Running Oauth2 WITH admin consent")
     	//url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=consent&scope=${resources}&state=${state}&access_type=offline`;
@@ -605,7 +627,8 @@ const AuthenticationOauth2 = (props) => {
 										onClick={() => {
 											// Hardcode some stuff?
 											// This could prolly be added to the app itself with a "default" client ID 
-											startOauth2Request(true)
+											//startOauth2Request(true)
+											startOauth2Request()
 										}}
 										color="primary"
 									>

@@ -5,6 +5,7 @@ import Stepper from "@material-ui/core/Stepper";
 import Step from "@material-ui/core/Step";
 import StepLabel from "@material-ui/core/StepLabel";
 import AppFramework from "../components/AppFramework.jsx";
+import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import { 
 	Grid, 
 	Container,
@@ -303,19 +304,21 @@ const Welcome = (props) => {
 		}
 
 		const actionObject = {
-			padding: "50px 35px 50px 35px", 
+			padding: "35px", 
+			maxHeight: 300,
+			minHeight: 300,
 		}
 
 		const imageStyle = {
 			width: 150, 
-			height: 150, 
-			margin: "auto", 
-			marginTop: 30, 
+			// height: 150, 
+			// margin: "auto", 
+			// marginTop: 10, 
 			borderRadius: 75, 
 			objectFit: "scale-down",
 		}
-
-		const experienced_image = userdata !== undefined && userdata !== null && userdata.active_org !== undefined && userdata.active_org.image !== undefined && userdata.active_org.image !== null && userdata.active_org.image !== "" ? userdata.active_org.image : "/images/social/shuffle_logo_round.png" 
+		const buttonStyle = { borderRadius: 8, height: 51, width: 464, fontSize: 16, background: "linear-gradient(89.83deg, #FF8444 0.13%, #F2643B 99.84%)", padding: "16px 24px", top: 75, }
+		const experienced_image = userdata !== undefined && userdata !== null && userdata.active_org !== undefined && userdata.active_org.image !== undefined && userdata.active_org.image !== null && userdata.active_org.image !== "" ? userdata.active_org.image : "/images/experienced.png" 
     return (
 				<div style={{width: 1000, margin: "auto", backgroundColor: theme.palette.platformColor, paddingBottom: 150, minHeight: 1500, }}>
 					{/*
@@ -424,14 +427,26 @@ const Welcome = (props) => {
 						: 
 						<Fade in={true}>
 							<div style={{maxWidth: 700, margin: "auto", marginTop: 50, }}>
-								<Typography variant="h4" style={{color: "white", textAlign: "center"}}>
-									Welcome to Shuffle
+								{/*
+							<div style={{display:"flex"}}>
+								<ArrowBackIosIcon style={{color: "#9E9E9E",}} onClick={() => {
+										navigate("/login")
+									}}/>
+								<Typography variant="body1" style={{color: "#9E9E9E",textAlign: "center", marginBottom: 50, paddingRight: "366px"}} onClick={() => {
+										navigate("/login")
+									}}>
+								Back
 								</Typography>
-								<Typography variant="body1" style={{textAlign: "center", marginBottom: 50, }}>
-									Who do you identify with the most?
+							</div>
+								*/}
+								<Typography variant="h4" style={{color: "#F1F1F1", textAlign: "center", paddingRight: "300px"}}>
+									Help us get to know you.
+								</Typography>
+								<Typography variant="body1" style={{color: "#9E9E9E", textAlign: "center", marginBottom: 50, paddingRight: "366px"}}>
+								Let us help you create a smoother journey.
 								</Typography>
 								<div style={{display: "flex", marginTop: 70, width: 700, margin: "auto",}}>
-									<div style={{border: "1px solid #49A928",}}>
+									<div style={{border: "1px solid #806BFF",}}>
 										<Card style={paperObject} onClick={() => {
 											if (isCloud) {
 													ReactGA.event({
@@ -446,20 +461,20 @@ const Welcome = (props) => {
 											setShowWelcome(true)
 										}}>
 											<CardActionArea style={actionObject}>
-												<Typography variant="h4" style={{color: "#49A928"}}> 
+												<img src="/images/welcome-to-shuffle.png" style={imageStyle} />
+												<Typography variant="h4" style={{color: "#F1F1F1"}}> 
 													New to Shuffle 
 												</Typography>
-												<img src="/images/welcome_cog.png" style={imageStyle} />
-												<Typography variant="body1" style={{marginTop: 30, color: "rgba(255,255,255,0.8)"}}>
-													Follow our short introduction and learn some tips and tricks
+												<Typography variant="body1" style={{marginTop: 10, color: "rgba(255,255,255,0.8)"}}>
+														Let us guide you for an easier experience.
 												</Typography>
 											</CardActionArea>
 										</Card>
 									</div>
 									<div style={{marginLeft: 25, marginRight: 25, }}>
-										<Typography style={{marginTop: 200, }}>
+										{/* <Typography style={{marginTop: 200, }}>
 											OR
-										</Typography>
+										</Typography> */}
 									</div>
 									<Card style={paperObject} onClick={() => {
 										if (isCloud) {
@@ -473,16 +488,23 @@ const Welcome = (props) => {
 										navigate("/workflows?message=Skipped intro")
 									}}>
 										<CardActionArea style={actionObject}>
-											<Typography variant="h4" style={{color: "#f86a3e"}}> 
+											<img src={experienced_image} style={{padding: "38px", objectFit: "scale-down", minHeight: 40, maxHeight: 40, }} />
+											<Typography variant="h4" style={{color: "#F1F1F1"}}> 
 												Experienced 
-											</Typography>
-											<img src={experienced_image} style={imageStyle} />
-										
-											<Typography variant="body1" style={{marginTop: 30, color: "rgba(255,255,255,0.8)"}}>
-												You know Shuffle well. Head to your organization right away!
+											</Typography>										
+											<Typography variant="body1" style={{marginTop: 10, color: "rgba(255,255,255,0.8)"}}>
+											You will head to Shuffle right away.
 											</Typography>
 										</CardActionArea>
 									</Card>
+								</div>
+
+								<div style={{display: "flex", flexDirection: "row", }}>
+									<Button variant="contained" type="submit" fullWidth style={buttonStyle} onClick={() => {
+										navigate("/workflows?message=Skipped intro")
+									}}>
+										Continue
+									</Button>
 								</div>
 								{/*
 								<div style={{margin: "auto", border: "1px solid rgba(255,255,255,0.5)", borderRadius: theme.palette.borderRadius, marginTop: 50, width: 200, overflow: "wrap", padding: 25, cursor: "pointer", }} onClick={() => {

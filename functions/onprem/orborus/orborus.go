@@ -4,11 +4,6 @@ package main
 	Orborus exists to listen for new workflow executions whcih are deployed as workers.
 */
 
-// FIXME:
-// 2022/01/12 17:13:36 [WARNING] Swarm init: Error response from daemon: manager stopped: failed to listen on remote API address: listen tcp: address tcp/2377%!(EXTRA string=172.23.0.2): unknown port
-
-// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/shuffle/shuffle-worker:nightly
-
 //  Potential issues:
 // Default network could be same as on the host
 // Ingress network may not exist (default)
@@ -43,15 +38,14 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	uuid "github.com/satori/go.uuid"
 
-	//network "github.com/docker/docker/api/types/network"
-	//natting "github.com/docker/go-connections/nat"
-	"github.com/mackerelio/go-osstat/cpu"
+	//"github.com/mackerelio/go-osstat/disk"
 	"github.com/mackerelio/go-osstat/memory"
+	"github.com/shirou/gopsutil/cpu"
 )
 
 // Starts jobs in bulk, so this could be increased
 var sleepTime = 3
-var maxConcurrency = 10
+var maxConcurrency = 25
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
@@ -90,6 +84,7 @@ var executionIds = []string{}
 
 var dockercli *dockerclient.Client
 var containerId string
+var executionCount = 0
 
 func init() {
 	var err error
@@ -714,18 +709,18 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "1.1.0"
+		appSdkVersion = "latest"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 
 	if workerVersion == "" {
-		workerVersion = "1.1.0"
+		workerVersion = "latest"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
 	if baseimageregistry == "" {
-		baseimageregistry = "docker.io"
-		baseimageregistry = "ghcr.io"
+		baseimageregistry = "docker.io" // Dockerhub
+		baseimageregistry = "ghcr.io"   // Github
 		log.Printf("[DEBUG] Setting baseimageregistry")
 	}
 
@@ -744,6 +739,7 @@ func initializeImages() {
 
 	// check whether they are the same first
 	images := []string{
+		fmt.Sprintf("frikky/shuffle:app_sdk"),
 		fmt.Sprintf("shuffle/shuffle:app_sdk"),
 		fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", baseimageregistry, baseimagename, appSdkVersion),
 		newWorker,
@@ -761,40 +757,6 @@ func initializeImages() {
 		io.Copy(os.Stdout, reader)
 		log.Printf("[DEBUG] Successfully downloaded and built %s", image)
 	}
-}
-
-// Will be used for checking if there's enough to deploy based on a threshold
-// E.g. having maximum CPU and maxmimum RAM
-// Does this work containerized?
-func getStats() {
-	fmt.Printf("\n")
-
-	memory, err := memory.Get()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		return
-	}
-
-	before, err := cpu.Get()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		return
-	}
-	time.Sleep(time.Duration(250) * time.Millisecond)
-	after, err := cpu.Get()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		return
-	}
-	total := float64(after.Total - before.Total)
-
-	fmt.Printf("[INFO] memory total: %d bytes\n", memory.Total)
-	fmt.Printf("[INFO] memory used: %d bytes\n", memory.Used)
-	fmt.Printf("[INFO] cpu used  : %f%%\n", float64(after.User-before.User)/total*100)
-	fmt.Printf("[INFO] cpu system: %f%%\n", float64(after.System-before.System)/total*100)
-	fmt.Printf("[INFO] cpu idle  : %f%%\n", float64(after.Idle-before.Idle)/total*100)
-
-	fmt.Printf("\n")
 }
 
 func findActiveSwarmNodes() (int64, error) {
@@ -857,6 +819,76 @@ func checkSwarmService(ctx context.Context) {
 	log.Printf("[DEBUG] Swarm info: %s\n\n", ret)
 }
 
+func getOrborusStats() shuffle.OrborusStats {
+	newStats := shuffle.OrborusStats{
+		OrgId:        org,
+		Environment:  environment,
+		OrborusLabel: orborusLabel,
+		Timestamp:    time.Now().Unix(),
+	}
+
+	if swarmConfig == "run" || swarmConfig == "swarm" {
+		newStats.Swarm = true
+	}
+
+	if runningMode == "kubernetes" || runningMode == "k8s" {
+		newStats.Kubernetes = true
+	}
+
+	newStats.PollTime = sleepTime
+	newStats.MaxQueue = maxConcurrency
+	newStats.Queue = executionCount
+
+	// Get CPU usage and max CPU
+	/*
+		before, err := cpu.Get()
+		if err != nil {
+			log.Printf("[ERROR] Failed getting CPU stats: %s", err)
+		} else {
+			newStats.CPU = int(before.User)
+			newStats.MaxCPU = int(before.Total)
+		}
+	*/
+
+	cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
+	if err == nil && len(cpuPercent) > 0 {
+		newStats.CPUPercent = cpuPercent[0]
+	}
+	//Percent(interval time.Duration, percpu bool) ([]float64, error)
+
+	// Get memory usage
+	memory, err := memory.Get()
+	if err != nil {
+		log.Printf("[ERROR] Failed getting memory stats: %s", err)
+	} else {
+		newStats.Memory = int(memory.Used)
+		newStats.MaxMemory = int(memory.Total)
+	}
+
+	// Get disk usage
+	/*
+		disk, err := disk.Get()
+		if err != nil {
+			log.Printf("[ERROR] Failed getting disk stats: %s", err)
+		} else {
+			newStats.Disk = int(disk.Used)
+			newStats.MaxDisk = int(disk.Total)
+		}
+	*/
+
+	/*
+			// General
+			Disk   int `json:"disk"`
+
+			// Docker
+			AppContainers    int `json:"app_containers"`
+			WorkerContainers int `json:"worker_containers"`
+			TotalContainers  int `json:"total_containers"`
+		}
+	*/
+	return newStats
+}
+
 // Initial loop etc
 func main() {
 	startupDelay := os.Getenv("SHUFFLE_ORBORUS_STARTUP_DELAY")
@@ -867,7 +899,7 @@ func main() {
 		if err == nil {
 			time.Sleep(time.Duration(tmpInt) * time.Second)
 		} else {
-			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_STARTUP_DELAY must be a number, not %s", startupDelay)
+			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_STARTUP_DELAY must be a number, not '%s'. Using default.", startupDelay)
 		}
 	}
 
@@ -892,6 +924,8 @@ func main() {
 		timezone = "Europe/Amsterdam"
 	}
 
+	log.Printf("[INFO] Using environment '%s' with timezone %s", environment, timezone)
+
 	if len(os.Getenv("SHUFFLE_ORBORUS_PULL_TIME")) > 0 {
 		log.Printf("[INFO] Trying to set Orborus sleep time between polls to %s", os.Getenv("SHUFFLE_ORBORUS_PULL_TIME"))
 
@@ -900,8 +934,6 @@ func main() {
 			sleepTime = tmpInt
 		}
 	}
-
-	log.Printf("[INFO] Running with timezone %s", timezone)
 
 	workerTimeout := 600
 	if workerTimeoutEnv != "" {
@@ -941,7 +973,7 @@ func main() {
 
 	if environment == "" {
 		environment = "onprem"
-		log.Printf("[INFO] Defaulting to environment name %s. Set environment variable ENVIRONMENT_NAME to change. This should be the same as in the frontend action.", environment)
+		log.Printf("[WARNING] Defaulting to environment name %s. Set environment variable ENVIRONMENT_NAME to change. This should be the same as in the frontend action.", environment)
 	}
 
 	// FIXME - during init, BUILD and/or LOAD worker and app_sdk
@@ -970,14 +1002,17 @@ func main() {
 		//deployServiceWorkers(workerImage)
 	}
 
-	log.Printf("[INFO] Finished configuring docker environment")
-
 	client := shuffle.GetExternalClient(baseUrl)
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
+	log.Printf("[INFO] Finished configuring docker environment. Connecting to %s", fullUrl)
+
+	forwardData := bytes.NewBuffer([]byte{})
+	forwardMethod := "POST"
+
 	req, err := http.NewRequest(
-		"GET",
+		forwardMethod,
 		fullUrl,
-		nil,
+		forwardData,
 	)
 
 	if err != nil {
@@ -986,9 +1021,9 @@ func main() {
 	}
 
 	zombiecounter := 0
+
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Org-Id", environment)
-
 	if len(auth) > 0 {
 		req.Header.Add("Authorization", auth)
 	}
@@ -998,7 +1033,7 @@ func main() {
 	}
 
 	if len(orborusLabel) > 0 {
-		log.Printf("[DEBUG] Sending with Label %s", orborusLabel)
+		log.Printf("[DEBUG] Sending with Label '%s'", orborusLabel)
 		req.Header.Add("X-Orborus-Label", orborusLabel)
 	}
 
@@ -1011,8 +1046,19 @@ func main() {
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
 	for {
-		//go getStats()
-		//log.Printf("[DEBUG] Prerequest - queue")
+		if req.Method == "POST" {
+			// Should find data to send (memory etc.)
+
+			orborusStats := getOrborusStats()
+			// Marshal and set body
+			jsonData, err := json.Marshal(orborusStats)
+			if err == nil {
+				req.Body = ioutil.NopCloser(bytes.NewBuffer(jsonData))
+			} else {
+				log.Printf("[ERROR] Failed marshalling json: %s", err)
+			}
+		}
+
 		newresp, err := client.Do(req)
 		//log.Printf("[DEBUG] Postrequest - queue")
 		if err != nil {
@@ -1024,6 +1070,16 @@ func main() {
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
+			continue
+		}
+
+		if newresp.StatusCode == 405 {
+			log.Printf("[WARNING] Received 405 from %s. This is likely due to a misconfigured base URL. Automatically swapping to GET request (backwards compatibility)", fullUrl)
+
+			req.Method = "GET"
+			req.Body = nil
+
+			//time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
 
@@ -1082,7 +1138,7 @@ func main() {
 			}
 
 			// Anything below here verifies concurrency
-			executionCount := getRunningWorkers(ctx, workerTimeout)
+			executionCount = getRunningWorkers(ctx, workerTimeout)
 			if executionCount >= maxConcurrency {
 				if zombiecounter*sleepTime > workerTimeout {
 					go zombiecheck(ctx, workerTimeout)

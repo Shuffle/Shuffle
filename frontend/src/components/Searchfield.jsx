@@ -83,28 +83,32 @@ const SearchField = props => {
 			*/
 
 		return (
-		  <form id="search_form" noValidate type="searchbox" action="" role="search" style={{margin: 0, }} onClick={() => {
+		  <form id="search_form" noValidate type="searchbox" action="" role="search" style={{margin: "10px 0px 0px 0px", }} onClick={() => {
 			}}>
 				<TextField 
 					fullWidth
-					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%",}} 
+					style={{backgroundColor: theme.palette.surfaceColor, borderRadius: borderRadius, minWidth: 403, maxWidth: 403, }} 
 					InputProps={{
 						style:{
 							color: "white",
 							fontSize: "1em",
 							height: 50,
 							margin: 0, 
+							fontSize: "0.9em",
+							paddingLeft: 10,
 						},
-						startAdornment: (
+						disableUnderline: true,
+						endAdornment: (
 							<InputAdornment position="start">
-								<SearchIcon style={{marginLeft: 5}}/>
+								<SearchIcon style={{marginLeft: 5, color: "#f86a3e",}}/>
+								
 							</InputAdornment>
 						),
 					}}
 					autoComplete='off'
 					type="search"
 					color="primary"
-					placeholder="Find Public Apps, Workflows, Documentation and more"
+					placeholder="Find Public Apps, Workflows, Documentation..."
 					value={currentRefinement}
 					id="shuffle_search_field"
 					onClick={(event) => {

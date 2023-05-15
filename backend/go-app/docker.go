@@ -678,8 +678,11 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		alternativeName = strings.Join(alternativeNameSplit[1:3], "/")
 	}
 
+	log.Printf("[INFO] Trying to download image: %s. Alt: %s", version.Name, alternativeName)
+
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
+			//log.Printf("[DEBUG] Tag: %s", tag)
 			if strings.ToLower(tag) == strings.ToLower(version.Name) {
 				img = image
 				tagFound = tag
@@ -690,6 +693,29 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 				img2 = image
 				tagFound2 = tag
 			}
+		}
+	}
+
+	pullOptions := types.ImagePullOptions{}
+	if len(img.ID) == 0 {
+		_, err := dockercli.ImagePull(context.Background(), version.Name, pullOptions)
+		if err == nil {
+			tagFound = version.Name
+			img.ID = version.Name
+			img2.ID = version.Name
+
+			dockercli.ImageTag(ctx, version.Name, alternativeName)
+		}
+	}
+
+	if len(img2.ID) == 0 {
+		_, err := dockercli.ImagePull(context.Background(), alternativeName, pullOptions)
+		if err == nil {
+			tagFound = alternativeName
+			img.ID = alternativeName
+			img2.ID = alternativeName
+
+			dockercli.ImageTag(ctx, alternativeName, version.Name)
 		}
 	}
 
@@ -722,7 +748,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 					foundApp := shuffle.WorkflowApp{}
 					imageName = strings.ToLower(imageName)
 					imageVersion = strings.ToLower(imageVersion)
-					log.Printf("[DEBUG] Looking for appname %s with version %s", imageName, imageVersion)
+					log.Printf("[DEBUG] Docker Looking for appname %s with version %s", imageName, imageVersion)
 
 					for _, app := range workflowapps {
 						if strings.ToLower(strings.Replace(app.Name, " ", "_", -1)) == imageName && app.AppVersion == imageVersion {

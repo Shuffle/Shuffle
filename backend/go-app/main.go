@@ -81,17 +81,13 @@ import (
 var gceProject = "shuffle"
 var bucketName = "shuffler.appspot.com"
 var baseAppPath = "/home/frikky/git/shaffuru/tmp/apps"
+
 var baseDockerName = "frikky/shuffle"
 var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
-
-// var syncUrl = "http://localhost:5002"
 var syncSubUrl = "https://shuffler.io"
-
-//var syncUrl = "http://localhost:5002"
-//var syncSubUrl = "https://050196912a9d.ngrok.io"
 
 var dbclient *datastore.Client
 
@@ -5873,7 +5869,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
 
 	// Used by orborus
-	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET")
+	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET", "POST")
 	r.HandleFunc("/api/v1/workflows/queue/confirm", handleGetWorkflowqueueConfirm).Methods("POST")
 
 	// App specific
@@ -6017,6 +6013,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/notifications", shuffle.HandleGetNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/notifications/clear", shuffle.HandleClearNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
+
+	r.HandleFunc("/api/v1/conversation", shuffle.RunActionAI).Methods("POST", "OPTIONS")
 
 	//r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")

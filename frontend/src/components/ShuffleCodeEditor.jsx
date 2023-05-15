@@ -20,6 +20,7 @@ import { orange } from '@mui/material/colors';
 import { isMobile } from "react-device-detect" 
 import NestedMenuItem from "material-ui-nested-menu-item";
 import { GetParsedPaths, FindJsonPath } from "../views/Apps.jsx";
+import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
 
 import {
 	FullscreenExit as FullscreenExitIcon,
@@ -114,7 +115,24 @@ const pythonFilters = [
 //});
 
 const CodeEditor = (props) => {
-	const { globalUrl, fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata, isFileEditor, runUpdateText, toolsAppId } = props
+	const { 
+		globalUrl, 
+		fieldCount, 
+		setFieldCount, 
+		actionlist, 
+		changeActionParameterCodeMirror, 
+		expansionModalOpen, 
+		setExpansionModalOpen, 
+		codedata, 
+		setcodedata, 
+		isFileEditor, 
+		runUpdateText, 
+		toolsAppId, 
+		parameterName, 
+		selectedAction ,
+		workflowExecutions,
+		getParents,
+	} = props
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
   	// const {codelang, setcodelang} = props
@@ -139,6 +157,8 @@ const CodeEditor = (props) => {
 
   const [menuPosition, setMenuPosition] = useState(null);
   const [showAutocomplete, setShowAutocomplete] = React.useState(false);
+
+	const [isAiLoading, setIsAiLoading] = React.useState(false);
 
 	const baseResult = ""
 	const [executionResult, setExecutionResult] = useState({
@@ -188,8 +208,201 @@ const CodeEditor = (props) => {
 		setMainVariables(tmpVariables)
 	}, [])
 
+	const aiSubmit = (value, inputAction) => {
+		if (value === undefined || value === "") {
+			console.log("No value input!")
+			return
+		}
+
+		setIsAiLoading(true)
+
+		// Time to construct this huh... Hmm
+		var AppContext = []
+		if (inputAction !== undefined && inputAction !== null && getParents !== undefined && getParents !== null && workflowExecutions !== undefined && workflowExecutions !== null) {
+			const parents = getParents(inputAction)
+
+			console.log("Parents: ", parents)
+			var actionlist = []
+			if (parents.length > 1) {
+				for (let [key,keyval] in Object.entries(parents)) {
+					const item = parents[key];
+					if (item.label === "Execution Argument") {
+						continue;
+					}
+
+					var exampledata = item.example === undefined || item.example === null ? "" : item.example;
+					// Find previous execution and their variables
+					//exampledata === "" &&
+					if (workflowExecutions.length > 0) {
+						// Look for the ID
+						const found = false;
+						for (let [key,keyval] in Object.entries(workflowExecutions)) {
+							if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+								continue;
+							}
+
+							var foundResult = workflowExecutions[key].results.find((result) => result.action.id === item.id);
+							if (foundResult === undefined || foundResult === null) {
+								continue;
+							}
+
+							if (foundResult.result !== undefined && foundResult.result !== null) {
+								foundResult = foundResult.result
+							}
+
+							const valid = validateJson(foundResult, true)
+							if (valid.valid) {
+								if (valid.result.success === false) {
+									//console.log("Skipping success false autocomplete")
+								} else {
+									exampledata = valid.result;
+									break;
+								}
+							} else {
+								exampledata = foundResult;
+							}
+						}
+					}
+
+					// 1. Take
+					const itemlabelComplete = item.label === null || item.label === undefined ? "" : item.label.split(" ").join("_");
+
+					const actionvalue = {
+						app_name: item.app_name,
+						action_name: item.name,
+						label: item.label,
+
+						type: "action",
+						id: item.id,
+						name: item.label,
+						autocomplete: itemlabelComplete,
+						example: exampledata,
+					};
+
+					actionlist.push(actionvalue);
+				}
+			}
+
+			var fixedResults = []
+			for (var i = 0; i < actionlist.length; i++) {
+				const item = actionlist[i];
+				const responseFix = SetJsonDotnotation(item.example, "") 
+				
+				// Check if json
+				const validated = validateJson(responseFix)
+				var exampledata = responseFix;
+				if (validated.valid) {
+					exampledata = JSON.stringify(validated.result)
+				}
+
+				AppContext.push({
+					"app_name": item.app_name,
+					"action_name": item.action_name,
+					"label": item.label,
+					"example": exampledata,
+				})
+			}
+		}
+
+		var conversationData = {
+			"query": value,
+			"output_format": "action",
+			"app_context": AppContext,
+		}
+
+		if (inputAction !== undefined) {
+			console.log("Add app context! This should them get parameters directly")
+			conversationData.output_format = "action_parameters"
+
+			conversationData.app_id = inputAction.app_id
+			conversationData.app_name = inputAction.app_name
+			conversationData.action_name = inputAction.name
+			conversationData.parameters = inputAction.parameters
+		}
+
+		fetch(`${globalUrl}/api/v1/conversation`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			body: JSON.stringify(conversationData),
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for stream results :O!");
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			console.log("Conversation response: ", responseJson)
+			setIsAiLoading(false)
+			if (responseJson.success === false) {
+				if (responseJson.reason !== undefined) {
+				}
+
+				return
+			}
+
+			if (inputAction !== undefined) {
+				console.log("In input action! Should check params if they match, and add suggestions")
+
+				if (responseJson.parameters === undefined || responseJson.parameters.length === 0) {
+					return
+				}
+
+				for (let respParam of responseJson.parameters) {
+					if (respParam.name !== parameterName) {
+						continue
+					}
+
+					if (respParam.value === "") {
+						break
+					}
+
+					setlocalcodedata(respParam.value)
+					break
+				}
+
+				return
+			}
+		})
+		.catch((error) => {
+			setIsAiLoading(false)
+			console.log("Conv response error: ", error);
+		});
+	}
+
 	const autoFormat = (input) => {
+		// Check if it's default too
 		if (validation !== true) {
+
+			// Should try to automatically fix this input
+			console.log("Running AI input fixer")
+			if (aiSubmit !== undefined && parameterName !== undefined && selectedAction !== undefined) {
+
+				// Should remove params from selectedAction that aren't parameterName  
+				var tmpAction = JSON.parse(JSON.stringify(selectedAction))
+				var tmpParams = selectedAction.parameters.filter((param) => param.name === parameterName)
+
+				var aiMsg = `Make it valid for action ${tmpAction.label} with parameter ${parameterName}: `
+				if (tmpParams.length > 0) {
+					aiMsg += tmpParams[0].value
+				}
+
+
+				if (localcodedata.startsWith("//")) {
+					aiMsg = localcodedata
+				}
+
+				tmpAction.parameters = tmpParams
+				console.log("Parameters: ", tmpParams.length)
+
+				aiSubmit(aiMsg, tmpAction)
+			}
+
 			return
 		}
 
@@ -295,6 +508,8 @@ const CodeEditor = (props) => {
 		var removedIndexes = 0
 		for (var key in itemsplit) {
 			var tmpitem = itemsplit[key]
+
+			// Makes sure #0 and # are same, as we only visualize first one anyway
 			if (tmpitem.startsWith("#")) {
 				removedIndexes += tmpitem.length-1
 				tmpitem = "#"
@@ -303,7 +518,7 @@ const CodeEditor = (props) => {
 			newitem.push(tmpitem)
 		}
 
-		//console.log("Fixed item: ", newitem, "removed length: ", removedIndexes)
+		console.log("Fixed item: ", newitem, "removed length: ", removedIndexes)
 
 		return newitem.join(".")
 		//return inputvariable
@@ -450,12 +665,17 @@ const CodeEditor = (props) => {
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 
 		console.log("FOUND: ", found)
+
+
 		// Whelp this is inefficient af. Single loop pls
 		// When the found array is empty.
 		if (found !== null && found !== undefined) {
 			try { 
 				for (var i = 0; i < found.length; i++) {
 					try {
+						// For found specifically, should replace .#\d with .# with regex
+						
+
 						//found[i] = found[i].toLowerCase()
 						const fixedVariable = fixVariable(found[i])
 						//var correctVariable = availableVariables.includes(fixedVariable)
@@ -468,15 +688,15 @@ const CodeEditor = (props) => {
 
 								try {
 									if (typeof actionlist[j].example === "object") {
-										input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
+										input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
 
 									} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
-										input = input.replace(fixedVariable, JSON.stringify(actionlist[j].example));
+										input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
 									} else {
-										input = input.replace(fixedVariable, actionlist[j].example)
+										input = input.replace(found[i], actionlist[j].example, -1)
 									}
 								} catch (e) { 
-									input = input.replace(fixedVariable, actionlist[j].example)
+									input = input.replace(found[i], actionlist[j].example, -1)
 								}
 							} else {
 								// Couldn't find the correct example value
@@ -523,7 +743,8 @@ const CodeEditor = (props) => {
 										}
 
 										//console.log("FOUND2: ", fixedVariable, actionlist[j].example)
-										input = input.replace(fixedVariable, new_input)
+										input = input.replace(fixedVariable, new_input, -1)
+										input = input.replace(found[i], new_input, -1)
 
 										//} catch (e) {
 										//	input = input.replace(found[i], actionlist[k].example)
@@ -769,6 +990,7 @@ const CodeEditor = (props) => {
 									height: 50, 
 									width: 50, 
 								}}
+								disabled={isAiLoading}
 								onClick={() => {
 									autoFormat(localcodedata) 
 								}}
@@ -778,7 +1000,11 @@ const CodeEditor = (props) => {
 									title={"Auto format data"}
 									placement="top"
 								>
-									<AutoFixHighIcon style={{color: "rgba(255,255,255,0.7)"}}/>
+									{isAiLoading ? 
+										<CircularProgress style={{height: 20, width: 20, color: "rgba(255,255,255,0.7)"}}/>
+										:
+										<AutoFixHighIcon style={{color: "rgba(255,255,255,0.7)"}}/>
+									}
 								</Tooltip>
 							</IconButton>
 						</div>

@@ -5,10 +5,11 @@ import { useNavigate, Link } from "react-router-dom";
 import countries from "../components/Countries.jsx";
 import CodeEditor from "../components/ShuffleCodeEditor.jsx";
 import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
-
+import CacheView from "../components/CacheView.jsx";
 import theme from "../theme";
 import AddIcon from "@mui/icons-material/Add";
 import ClearIcon from '@mui/icons-material/Clear';
+import StorageIcon from '@mui/icons-material/Storage';
 //import ToggleButton from '@mui/material/ToggleButton';
 import {
   FormControl,
@@ -81,6 +82,7 @@ import Billing from "../components/Billing.jsx";
 import Branding from "../components/Branding.jsx";
 import Files from "../components/Files.jsx";
 import { display, style } from "@mui/system";
+//import EnvironmentStats from "../components/EnvironmentStats.jsx";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -183,7 +185,7 @@ const Admin = (props) => {
 
 
   const [billingInfo, setBillingInfo] = React.useState({});
-  
+
   useEffect(() => {
     if (isDropzone) {
       //redirectOpenApi();
@@ -695,13 +697,15 @@ const Admin = (props) => {
 
   const handleGetOrg = (orgId) => {
     if (orgId.length === 0) {
-      alert.error("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
+      alert.error(
+        "Organization ID not defined. Please contact us on https://shuffler.io if this persists logout."
+      );
       return;
     }
 
     // Just use this one?
-    const url = `${globalUrl}/api/v1/orgs/${orgId}`
-    fetch(url, {
+    
+    fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
       method: "GET",
       credentials: "include",
       headers: {
@@ -716,11 +720,7 @@ const Admin = (props) => {
       })
       .then((responseJson) => {
         if (responseJson["success"] === false) {
-					if (responseJson.reason !== undefined) {
-						alert.error(responseJson.reason);
-					} else {
-          	alert.error("Failed getting your org. If this persists, please contact support.");
-					}
+          alert.error("Failed getting your org. If this persists, please contact support.");
         } else {
           if (
             responseJson.sync_features === undefined ||
@@ -1258,9 +1258,10 @@ const Admin = (props) => {
     1: "users",
     2: "app_auth",
     3: "files",
-    4: "schedules",
-    5: "environments",
-    6: "suborgs",
+    4: "cache",
+    5: "schedules",
+    6: "environments",
+    7: "suborgs",
   };
 
   const admin_views = {
@@ -1268,6 +1269,7 @@ const Admin = (props) => {
     1: "cloud_sync",
     2: "billing",
     3: "branding",
+    4: "cache",
   };
 
   const setConfig = (event, inputValue) => {
@@ -1281,21 +1283,25 @@ const Admin = (props) => {
       document.title = "Shuffle - admin - app authentication";
       getAppAuthentication();
     } else if (newValue === 3) {
-      document.title = "Shuffle - admin - files";
+      document.title = "Shuffle - admin - Files";
     } else if (newValue === 4) {
+      document.title = "Shuffle - admin - Datastore";
+
+      //listOrgCache("3fd181b9-fb29-41b7-b2f5-15292265d420");
+    } else if (newValue === 5) {
       document.title = "Shuffle - admin - schedules";
       getSchedules();
-    } else if (newValue === 5) {
+    } else if (newValue === 6) {
       document.title = "Shuffle - admin - environments";
       getEnvironments();
-    } else if (newValue === 6) {
+    } else if (newValue === 7) {
       document.title = "Shuffle - admin - orgs";
       getOrgs();
     } else {
       document.title = "Shuffle - admin";
     }
 
-    if (newValue === 6) {
+    if (newValue === 8) {
       console.log("Should get apps for categories.");
     }
 
@@ -1394,7 +1400,8 @@ const Admin = (props) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
           alert.error("Failed setting user: " + responseJson.reason);
         } else {
-          alert.success("Set the user field " + field + " to " + value);
+          //alert.success("Set the user field " + field + " to " + value);
+          alert.success("Successfully updated user field " + field)
 
           if (field !== "suborgs") {
             setSelectedUserModalOpen(false);
@@ -2407,6 +2414,7 @@ const Admin = (props) => {
 									If not otherwise specified, Usage will reset monthly
             		</Typography>
             		<Grid container style={{ width: "100%", marginBottom: 15 }}>
+
             		  {selectedOrganization.sync_features === undefined ||
             		  selectedOrganization.sync_features === null
             		    ? null
@@ -2507,11 +2515,7 @@ const Admin = (props) => {
     >
       <DialogTitle>
         <span style={{ color: "white" }}>
-          {curTab === 1
-            ? "Add user"
-            : curTab === 6
-            ? "Add Sub-Organization"
-            : "Add environment"}
+          {curTab === 1 ? "Add user" : curTab === 7 ? "Add Sub-Organization" : "Add environment"}
         </span>
       </DialogTitle>
       <DialogContent>
@@ -2519,7 +2523,7 @@ const Admin = (props) => {
           <Typography variant="body1" style={{ marginBottom: 10 }}>
             We will send an email to invite them to your organization.
           </Typography>
-        ) : curTab === 6 ? (
+        ) : curTab === 7 ? (
           <Typography variant="body1" style={{ marginBottom: 10 }}>
             The organization created will become a child of your current
             organization, and be available to you.
@@ -2578,7 +2582,7 @@ const Admin = (props) => {
               </span>
             )}
           </div>
-        ) : curTab === 6 ? (
+        ) : curTab === 7 ? (
           <div>
             Name
             <TextField
@@ -2603,7 +2607,7 @@ const Admin = (props) => {
               }}
             />
           </div>
-        ) : curTab === 5 ? (
+        ) : curTab === 6 ? (
           <div>
             Environment Name
             <TextField
@@ -2649,9 +2653,9 @@ const Admin = (props) => {
               } else {
                 submitUser(modalUser);
               }
-            } else if (curTab === 6) {
+            } else if (curTab === 7) {
               createSubOrg(selectedOrganization.id, orgName);
-            } else if (curTab === 5) {
+            } else if (curTab === 6) {
               submitEnvironment(modalUser);
             }
           }}
@@ -3002,7 +3006,7 @@ const Admin = (props) => {
 		/>
 
   const schedulesView =
-    curTab === 4 ? (
+    curTab === 5 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Schedules</h2>
@@ -3108,7 +3112,7 @@ const Admin = (props) => {
     ) : null;
 
   const appCategoryView =
-    curTab === 7 ? (
+    curTab === 8 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Categories</h2>
@@ -3434,7 +3438,7 @@ const Admin = (props) => {
     ) : null;
 
   const environmentView =
-    curTab === 5 ? (
+    curTab === 6 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Environments</h2>
@@ -3697,11 +3701,12 @@ const Admin = (props) => {
                 );
               })}
         </List>
+				{/*<EnvironmentStats />*/}
       </div>
     ) : null;
 
   const organizationsTab =
-    curTab === 6 ? (
+    curTab === 7 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Organizations</h2>
@@ -3831,7 +3836,7 @@ const Admin = (props) => {
     ) : null;
 
   const hybridTab =
-    curTab === 7 ? (
+    curTab === 8 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Hybrid</h2>
@@ -3882,6 +3887,16 @@ const Admin = (props) => {
       </div>
     ) : null;
 
+    const cacheOrgView =
+    curTab === 4 ? (
+      <div>
+        <CacheView
+					globalUrl={globalUrl}
+					orgId = {selectedOrganization.id}
+        />
+      </div>
+    ) : null;
+
   // primary={environment.Registered ? "true" : "false"}
 
   const iconStyle = { marginRight: 10 };
@@ -3901,6 +3916,8 @@ const Admin = (props) => {
           textColor="secondary"
           onChange={setConfig}
           aria-label="disabled tabs example"
+          variant="scrollable"
+          scrollButtons="auto"
         >
           <Tab
             label=<span>
@@ -3928,6 +3945,11 @@ const Admin = (props) => {
             </span>
           />
           <Tab
+            label=<span>
+              <StorageIcon style={iconStyle} /> Datastore 
+            </span>
+          />
+          <Tab
             disabled={userdata.admin !== "true"}
             label=<span>
               <ScheduleIcon style={iconStyle} />
@@ -3935,7 +3957,6 @@ const Admin = (props) => {
             </span>
           />
           <Tab
-            index={5}
             disabled={userdata.admin !== "true"}
             label=<span>
               <EcoIcon style={iconStyle} />
@@ -3943,12 +3964,11 @@ const Admin = (props) => {
             </span>
           />
           <Tab
-            index={6}
-            value={6}
             label=<span>
               <BusinessIcon style={iconStyle} /> Tenants
             </span>
           />
+
           {/*window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null*/}
           {/*window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null*/}
         </Tabs>
@@ -3969,6 +3989,7 @@ const Admin = (props) => {
           {hybridTab}
           {organizationsTab}
           {appCategoryView}
+          {cacheOrgView}
         </div>
       </Paper>
     </div>

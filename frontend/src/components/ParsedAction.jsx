@@ -167,6 +167,7 @@ const ParsedAction = (props) => {
 		setLastSaved,
 		setShowVideo,
 		toolsAppId,
+		aiSubmit,
 		//expansionModalOpen,
 		//setExpansionModalOpen,
   } = props;
@@ -1458,7 +1459,7 @@ const ParsedAction = (props) => {
                 if (found === null) {
                   setActivateHidingBodyButton(true);
                 } else {
-									console.log("In found: ", found, hideBody)
+									//console.log("In found: ", found, hideBody)
 								}
               } else {
                 //console.log("SHOW BUTTON");
@@ -1532,6 +1533,12 @@ const ParsedAction = (props) => {
 								expansionModalOpen={expansionModalOpen}
 								setExpansionModalOpen={setExpansionModalOpen}
 								globalUrl={globalUrl}
+
+								workflowExecutions={workflowExecutions}
+								getParents={getParents}
+								selectedAction={selectedAction}
+								parameterName={data.name}
+								aiSubmit={aiSubmit}
 							/>
 						)
 
@@ -3222,6 +3229,7 @@ const ParsedAction = (props) => {
           </Tooltip>
         </div>
       ) : null}
+
       {selectedAction.authentication !== undefined &&
 				selectedAction.authentication !== null &&
 				selectedAction.authentication.length > 0 ? (

@@ -145,9 +145,11 @@ const EditWorkflow = (props) => {
         style: {
           backgroundColor: theme.palette.surfaceColor,
           color: "white",
-          minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
-          maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
+          minWidth: isMobile ? "90%" : 550,
+          maxWidth: isMobile ? "90%" : 550,
 					minHeight: 400,
+          //minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
+          //maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
         },
       }}
     >
@@ -196,7 +198,7 @@ const EditWorkflow = (props) => {
         	  	</div>
 						: null}
         	</div>
-					{newWorkflow === true ? 
+					{/*newWorkflow === true ? 
 						<div style={{flex: 1, marginLeft: 45, }}>
 							<Typography variant="h6">
 								Use a Template
@@ -205,7 +207,7 @@ const EditWorkflow = (props) => {
 								Start your workflow from our templating system. This uses publied workflows from our <a href="/creators" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Creators</a> to generate full Usecases or parts of your Workflow.
 							</Typography>
 						</div>
-					: null}
+					: null*/}
 				</div>
       </DialogTitle>
       <FormControl>
@@ -438,7 +440,7 @@ const EditWorkflow = (props) => {
 							</IconButton>
 						</Tooltip>
 					</div>
-					{newWorkflow === true ? 
+					{/*newWorkflow === true ? 
 						<div style={{marginLeft: 50, maxWidth: 400, minWidth: 400, position: "relative",}}>
 							<UsecaseSearch
 								globalUrl={globalUrl}
@@ -449,7 +451,7 @@ const EditWorkflow = (props) => {
 								userdata={userdata}
 							/>
 						</div>
-					: null}
+					: null*/}
         </DialogContent>
         <DialogActions>
           <Button

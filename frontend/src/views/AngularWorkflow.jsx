@@ -107,6 +107,7 @@ import {
   VpnKey as VpnKeyIcon,
   AddComment as AddCommentIcon,
   Edit as EditIcon,
+	Send as SendIcon,
 } from "@material-ui/icons";
 
 import {
@@ -114,6 +115,7 @@ import {
   ContentCopy as ContentCopyIcon,
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
+	AutoFixHigh as AutoFixHighIcon,
 } from '@mui/icons-material';
 
 import Autocomplete from "@material-ui/lab/Autocomplete";
@@ -282,6 +284,51 @@ export function sortByKey(array, key) {
   });
 }
 
+// look for keys and set values with shuffle dotnotation 
+// used primarily for AI autocompletions
+export function SetJsonDotnotation(jsonInput, inputKey) {
+
+	if (jsonInput === undefined || jsonInput === null) {
+		return jsonInput;
+	}
+
+	// Check for array
+	if (Array.isArray(jsonInput)) {
+		for (var i = 0; i < jsonInput.length; i++) {
+			jsonInput[i] = SetJsonDotnotation(jsonInput[i], inputKey+".#");
+		}
+
+		return jsonInput;
+		// Check for dict
+	} else if (typeof jsonInput === "object") {
+		// Loop keys and values
+	
+		for (var key in jsonInput) {
+			if (!jsonInput.hasOwnProperty(key)) {
+				continue
+			}
+
+			const value = jsonInput[key];
+			// Check if array
+			if (Array.isArray(value)) {
+				for (var i = 0; i < value.length; i++) {
+					jsonInput[key][i] = SetJsonDotnotation(jsonInput[key][i], inputKey+"."+key+".#");
+				}
+			} else if (typeof value === "object") {
+				jsonInput[key] = SetJsonDotnotation(jsonInput[key], inputKey+"."+key);
+			} else {
+				jsonInput[key] = inputKey+"."+key
+			}
+		}
+	} else {
+		//jsonInput = inputKey
+
+		console.log("SetJsonDotnotation: jsonInput is not an object or array, but key ", jsonInput, typeof jsonInput);
+	}
+
+	return jsonInput;
+}
+
 export const green = "#86c142";
 export const yellow = "#FECC00";
 
@@ -417,8 +464,7 @@ const AngularWorkflow = (defaultprops) => {
   const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false);
   const [showSkippedActions, setShowSkippedActions] = React.useState(false);
   const [lastExecution, setLastExecution] = React.useState("");
-  const [configureWorkflowModalOpen, setConfigureWorkflowModalOpen] =
-    React.useState(false);
+  const [configureWorkflowModalOpen, setConfigureWorkflowModalOpen] = React.useState(false);
 
   const curpath =
     typeof window === "undefined" || window.location === undefined
@@ -485,6 +531,18 @@ const AngularWorkflow = (defaultprops) => {
   const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
   const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0);
   const [workflowRecommendations, setWorkflowRecommendations] = React.useState([]);
+
+	const [listCache, setListCache] = React.useState([]);
+	const [suggestionBox, setSuggestionBox] = React.useState({
+		"position": {
+			"top": 500,
+			"left": 500,
+		},
+		"open": false,
+		"attachedTo": "",
+	});
+
+	
 
   // This should all be set once, not on every iteration
   // Use states and don't update lol
@@ -564,6 +622,31 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
   }, [authenticationModalOpen])
+
+	const listOrgCache = (orgId) => {
+		fetch(`${globalUrl}/api/v1/orgs/${orgId}/list_cache`, {
+				method: "GET",
+				headers: {
+						"Content-Type": "application/json",
+						Accept: "application/json",
+				},
+				credentials: "include",
+		})
+		.then((response) => {
+				if (response.status !== 200) {
+						console.log("Status not 200 for apps :O!");
+						return;
+				}
+
+				return response.json();
+		})
+		.then((responseJson) => {
+				setListCache(responseJson);
+		})
+		.catch((error) => {
+				alert.error(error.toString());
+		});
+	};
 
   const getAvailableWorkflows = (trigger_index) => {
     fetch(globalUrl + "/api/v1/workflows", {
@@ -2718,10 +2801,60 @@ const AngularWorkflow = (defaultprops) => {
   const onNodeSelect = (event, newAppAuth) => {
     // Forces all states to update at the same time,
 		// Otherwise everything is SUPER slow
-    ReactDOM.unstable_batchedUpdates(() => {
+
+		ReactDOM.unstable_batchedUpdates(() => {
       const data = event.target.data();
       if (data.isButton) {
-        if (data.buttonType === "delete") {
+        if (data.buttonType === "suggestion") {
+					if (cy === undefined) {
+						console.log("Cy not defined yet")
+						return
+					}
+
+					// Inject HTML at a fixed location
+					//const newHtml = "<div id='suggestion' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: white; z-index: 1000;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);'><h1>Do you want to add this suggestion?</h1><button id='suggestion_yes'>Yes</button><button id='suggestion_no'>No</button></div></div>"
+	
+					// Find mouse cursor position on screen
+					console.log("Suggestion html to be added at location: ", event)
+					/*
+					const position = {
+						"top": cy.pan().y, 
+						"left": cy.pan().x, 
+					}
+					*/
+
+
+					const position = event.target.renderedPosition();
+					const container = cy.container();
+					const offset = {
+  					left: container.offsetLeft,
+  					top: container.offsetTop
+					};
+					
+					// Calculate the actual screen position for the box
+					const screenPosition = {
+					  left: position.x + offset.left - 150,
+					  top: position.y + offset.top,
+					};
+					
+					// Log the position to the console
+					console.log('Node screen position:', screenPosition);
+
+					const newbox = {
+						"position": screenPosition,
+						"node_position": event.target.position(),
+						"open": true,
+						"attachedTo": data.attachedTo,
+					}
+
+					console.log("Rendered position: ", newbox.node_position)
+
+					setSuggestionBox(newbox)
+
+					// Unselect
+        	event.target.unselect();
+					
+        } else if (data.buttonType === "delete") {
           const parentNode = cy.getElementById(data.attachedTo);
           if (parentNode !== null && parentNode !== undefined) {
             removeNode(data.attachedTo)
@@ -3187,6 +3320,14 @@ const AngularWorkflow = (defaultprops) => {
 
       console.log("DOne in the node update")
 
+			setSuggestionBox({
+				"position": {
+					"top": 500,
+					"left": 500,
+				},
+				"open": false,
+				"attachedTo": "",
+			});
       sendStreamRequest({
         "item": "node",
         "type": "select",
@@ -3582,7 +3723,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const eventTarget = event.target.target()
-    console.log("BUTTON ADDED! Find parent from: ", eventTarget)
+    //console.log("BUTTON ADDED! Find parent from: ", eventTarget)
     if (eventTarget.data("isButton") === true) {
       const parentNode = cy.getElementById(eventTarget.data("attachedTo"))
       event.target.remove()
@@ -4211,6 +4352,8 @@ const AngularWorkflow = (defaultprops) => {
 					item = newitem
 					item.type = "ACTION"
 					item.isStartNode = false
+					item.data.type = "ACTION"
+					item.data.isStartNode = false
 				}
 
 				item.data.id = uuidv4()
@@ -4473,7 +4616,46 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const addSuggestionButtons = (nodedata, event) => {
-		console.log("In suggestion buttons: ", nodedata, ". This is not enabled yet. Backend needs further work.")
+		//console.log("In suggestion buttons: ", nodedata, ". This is not enabled yet. Backend needs further work.")
+		// Skipping add for now. Should Re-enable
+
+		// Add a button for autocompletion based on input
+		console.log("Type: ", nodedata.type)
+		if (nodedata.type === "ACTION") {
+			const color = "#34a853" 
+
+			// Fix icon
+    	const iconInfo = {
+    	  icon: "M7.5 5.6 10 7 8.6 4.5 10 2 7.5 3.4 5 2l1.4 2.5L5 7zm12 9.8L17 14l1.4 2.5L17 19l2.5-1.4L22 19l-1.4-2.5L22 14zM22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29a.9959.9959 0 0 0-1.41 0L1.29 18.96c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.7 11.05c.39-.39.39-1.02 0-1.41l-2.33-2.35zm-1.03 5.49-2.12-2.12 2.44-2.44 2.12 2.12-2.44 2.44z",
+    	  iconColor: buttonColor,
+    	  iconBackgroundColor: buttonBackgroundColor,
+    	};
+
+    	const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
+    	const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
+
+			const decoratorNode = {
+				position: {
+					x: event.target.position().x + 0,
+					y: event.target.position().y + 65,
+				},
+				locked: true,
+				data: {
+					isButton: true,
+					isValid: true,
+					is_valid: true,
+					//label: "+",
+					attachedTo: nodedata.id,
+					imageColor: color,
+        	buttonType: "suggestion", 
+					icon: svgpin_Url,
+					iconBackground: iconInfo.iconBackgroundColor,
+				},
+			};
+
+			cy.add(decoratorNode);
+		}
+
 		return
 	
 		//setWorkflowRecommendations(responseJson.actions)
@@ -7199,7 +7381,6 @@ const AngularWorkflow = (defaultprops) => {
     setSelectedAction(newSelectedAction);
     setUpdate(Math.random());
 
-    // FIXME - should change icon-node (descriptor) as well
     const allNodes = cy.nodes().jsons();
 		if (allNodes !== undefined && allNodes !== null) {
 			for (let nodekey in allNodes) {
@@ -7221,7 +7402,12 @@ const AngularWorkflow = (defaultprops) => {
 				}
 			}
 		}
-  };
+
+		// Send it in here, after all fields are filled
+		// Disabled for now :(
+		// const aiMsg = "Fill based on previous values"
+		// aiSubmit(aiMsg, undefined, undefined, newSelectedAction)
+	};
 
   // APPSELECT at top
   // appname & version
@@ -10905,7 +11091,6 @@ const AngularWorkflow = (defaultprops) => {
                   fullWidth
                   multiline
                   rows="2"
-                  defaultValue={trigger_header_auth}
                   color="primary"
                   disabled={selectedTrigger.status === "running"}
                   placeholder={"OK"}
@@ -12612,6 +12797,8 @@ const AngularWorkflow = (defaultprops) => {
         requiresAuthentication={requiresAuthentication}
         setLastSaved={setLastSaved}
         lastSaved={lastSaved}
+
+				aiSubmit={aiSubmit}
       />
 
     } else if (Object.getOwnPropertyNames(selectedComment).length > 0) {
@@ -12928,6 +13115,9 @@ const AngularWorkflow = (defaultprops) => {
               getAvailableWorkflows(-1);
               getSettings();
               getFiles()
+
+							// For loading datastore
+							// listOrgCache(workflow.org_id) 
 
               setUpdate(Math.random());
             }}
@@ -14566,8 +14756,8 @@ const AngularWorkflow = (defaultprops) => {
         <div style={{ display: "flex", marginBottom: 15 }}>
           {curapp === null ? null : (
             <img
-              alt={selectedResult.app_name}
-              src={curapp === undefined ? theme.palette.defaultImage : curapp.app_name === "shuffle-subflow" ? triggers[4].large_image : curapp.app_name === "User Input" ? triggers[5].large_image : curapp.large_image}
+              alt={selectedResult.action.app_name}
+              src={selectedResult === undefined ? theme.palette.defaultImage : selectedResult.action.app_name === "shuffle-subflow" ? triggers[4].large_image : selectedResult.action.app_name === "User Input" ? triggers[5].large_image : curapp.large_image}
               style={{
                 marginRight: 20,
                 width: imgsize,
@@ -14596,6 +14786,15 @@ const AngularWorkflow = (defaultprops) => {
         <div style={{ marginBottom: 5 }}>
           <b>Status </b> {selectedResult.status}
         </div>
+
+
+					<h1 onClick={() => {
+						console.log("APP: ", curapp)
+						console.log("Data: ", selectedResult)
+					}}>
+						HIYA: {selectedResult.action.app_name}
+					</h1>
+
         {validate.valid ? (
           <ReactJson
             src={validate.result}
@@ -14613,8 +14812,12 @@ const AngularWorkflow = (defaultprops) => {
           />
         ) : (
           <div>
-            <b>Result</b>&nbsp;
+            <b>Result</b>
+						<br/>
             <span
+							style={{
+								wordBreak: "break-word",
+							}}
               onClick={() => {
                 console.log("IN HERE TO CLICK");
                 to_be_copied = selectedResult.result;
@@ -15734,6 +15937,358 @@ const AngularWorkflow = (defaultprops) => {
       </div>
     </Dialog>
   ) : null;
+
+	// Should get AI autocompletes
+	const aiSubmit = (value, setResponseMsg, setSuggestionLoading, inputAction) => {
+		if (setResponseMsg !== undefined) {
+			setResponseMsg("")
+		}
+
+		if (value === undefined || value === "") {
+			console.log("No value input!")
+			return
+		}
+
+		if (setSuggestionLoading !== undefined) {
+			setSuggestionLoading(true)
+		}
+	
+		console.log("Submit conversation with value: ", value);
+
+		// This is to find sample response and parse it as string
+		
+		var AppContext = []
+		if (inputAction !== undefined && inputAction !== null) {
+			const parents = getParents(inputAction)
+
+			console.log("Parents: ", parents)
+			var actionlist = []
+			if (parents.length > 1) {
+				for (let [key,keyval] in Object.entries(parents)) {
+					const item = parents[key];
+					if (item.label === "Execution Argument") {
+						continue;
+					}
+
+					var exampledata = item.example === undefined || item.example === null ? "" : item.example;
+					// Find previous execution and their variables
+					//exampledata === "" &&
+					if (workflowExecutions.length > 0) {
+						// Look for the ID
+						const found = false;
+						for (let [key,keyval] in Object.entries(workflowExecutions)) {
+							if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+								continue;
+							}
+
+							var foundResult = workflowExecutions[key].results.find((result) => result.action.id === item.id);
+							if (foundResult === undefined || foundResult === null) {
+								continue;
+							}
+
+							if (foundResult.result !== undefined && foundResult.result !== null) {
+								foundResult = foundResult.result
+							}
+
+							const valid = validateJson(foundResult, true)
+							if (valid.valid) {
+								if (valid.result.success === false) {
+									//console.log("Skipping success false autocomplete")
+								} else {
+									exampledata = valid.result;
+									break;
+								}
+							} else {
+								exampledata = foundResult;
+							}
+						}
+					}
+
+					// 1. Take
+					const itemlabelComplete = item.label === null || item.label === undefined ? "" : item.label.split(" ").join("_");
+
+					const actionvalue = {
+						app_name: item.app_name,
+						action_name: item.name,
+						label: item.label,
+
+						type: "action",
+						id: item.id,
+						name: item.label,
+						autocomplete: itemlabelComplete,
+						example: exampledata,
+					};
+
+					actionlist.push(actionvalue);
+				}
+			}
+
+			var fixedResults = []
+			for (var i = 0; i < actionlist.length; i++) {
+				const item = actionlist[i];
+				const responseFix = SetJsonDotnotation(item.example, "") 
+				
+				// Check if json
+				const validated = validateJson(responseFix)
+				var exampledata = responseFix;
+				if (validated.valid) {
+					exampledata = JSON.stringify(validated.result)
+				}
+
+				AppContext.push({
+					"app_name": item.app_name,
+					"action_name": item.action_name,
+					"label": item.label,
+					"example": exampledata,
+				})
+			}
+		}
+
+		var conversationData = {
+			"query": value,
+			"output_format": "action",
+			"app_context": AppContext,
+
+			"workflow_id": workflow.id,
+		}
+
+		if (inputAction !== undefined) {
+			console.log("Add app context! This should them get parameters directly")
+			conversationData.output_format = "action_parameters"
+
+			conversationData.app_id = inputAction.app_id
+			conversationData.app_name = inputAction.app_name
+			conversationData.action_name = inputAction.name
+			conversationData.parameters = inputAction.parameters
+
+			if (!value.includes(inputAction.label)) {
+				conversationData.query = inputAction.label.replace("_", " ", -1)
+			}
+		}
+
+		// Onprem not available yet (April 2023)
+		// Should: Make OpenAI work for them with their own key
+		//fetch("https://shuffler.io/api/v1/conversation", {
+		fetch(`${globalUrl}/api/v1/conversation`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			body: JSON.stringify(conversationData),
+			credentials: "include",
+		})
+		.then((response) => {
+			if (setSuggestionLoading !== undefined) {
+				setSuggestionLoading(false)
+			}
+
+			if (response.status !== 200) {
+				console.log("Status not 200 for stream results :O!");
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			console.log("Conversation response: ", responseJson)
+			if (responseJson.success === false) {
+				if (responseJson.reason !== undefined) {
+					if (setResponseMsg !== undefined) {
+						setResponseMsg(responseJson.reason)
+					}
+				}
+
+				return
+			}
+
+			if (inputAction !== undefined) {
+				console.log("In input action! Should check params if they match, and add suggestions")
+
+				if (responseJson.parameters === undefined || responseJson.parameters.length === 0) {
+					return
+				}
+
+				var changed = false
+
+				for (let paramkey in inputAction.parameters) {
+					const actionParam = inputAction.parameters[paramkey]
+
+					if (actionParam.autocompleted === true) {
+						continue
+					}
+
+					if (actionParam.configuration === true && actionParam.name !== "url") {
+						continue
+					}
+
+					if (actionParam.value !== "" && actionParam.value !== actionParam.example) {
+						console.log("Skipping: ", actionParam)
+						continue
+					}
+
+					for (let respParam of responseJson.parameters) {
+						if (respParam.name === actionParam.name) {
+							console.log("Found match for param: ", respParam)
+
+							if (respParam.value === "") {
+								break
+							}
+
+							changed = true
+			
+							inputAction.parameters[paramkey].autocompleted = true
+							inputAction.parameters[paramkey].value = respParam.value
+							break
+						}
+					}
+				}
+
+				if (changed === true) {
+					console.log("Setting action! Force update pls :)")
+					setUpdate(Math.random())
+					setSelectedAction(inputAction)
+				}
+
+				return
+			}
+
+			console.log("Suggestionbox location: ", suggestionBox)
+
+			// Add action
+			if (responseJson.app_name !== undefined && responseJson.app_name !== null) {
+				// Always added to 0, 0
+				// Should use suggestionBox.position.x, suggestionBox.position.y
+				var newitem = {
+					"data": responseJson,
+					"position": {
+						"x": suggestionBox.node_position.x !== undefined ? suggestionBox.node_position.x : 0,
+						"y": suggestionBox.node_position.y !== undefined ? suggestionBox.node_position.y + 100 : 0,
+					},
+					"group": "nodes",
+				}
+
+				newitem.type = "ACTION"
+				newitem.isStartNode = false
+				newitem.data.id = uuidv4()
+				newitem.data.type = "ACTION"
+				newitem.data.isStartNode = false
+
+				newitem.data.is_valid = true
+				newitem.data.isValid = true
+
+				cy.add({
+					group: 	newitem.group,
+					data: 	newitem.data,
+					position: newitem.position,
+				});
+
+				// Add edge
+				const newId = uuidv4()
+				cy.add({
+					group: "edges",
+					data: {
+						id: newId,
+						_id: newId,
+						source: suggestionBox.attachedTo,
+						target: newitem.data.id,
+					}
+				})
+				//label: "Generated",
+		
+				setSuggestionBox({
+					"position": {
+						"top": 500,
+						"left": 500,
+					},
+					"open": false,
+					"attachedTo": "",
+				});
+			}
+		})
+		.catch((error) => {
+			if (setSuggestionLoading !== undefined) {
+				setSuggestionLoading(false)
+			}
+
+			console.log("Conv response error: ", error);
+		});
+	}
+
+	const SuggestionBoxUi = () => {
+		const [suggestionValue, setSuggestionValue] = useState("");
+		const [suggestionLoading, setSuggestionLoading] = useState(false);
+		const [responseMsg, setResponseMsg] = useState("");
+
+		if (suggestionBox === undefined || suggestionBox.open === false) {
+			return false
+		}
+
+		return ( 
+			<div style={{width: 350, padding: 15, position: "fixed", top: suggestionBox.position.top, left: suggestionBox.position.left, borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", }}>
+				{/*
+				<AutoFixHighIcon style={{height: 12, width: 12, color: "white", position: "absolute", top: 10, right: 24, }} />
+				*/}
+				<Tooltip
+					title="Close"
+					placement="top"
+					style={{ zIndex: 10011 }}
+				>
+					<IconButton
+						style={{ zIndex: 5000, position: "absolute", top: 0, right: 0}}
+						onClick={(e) => {
+							e.preventDefault();
+							setSuggestionBox({
+								"position": {
+									"top": 500,
+									"left": 500,
+								},
+								"open": false,
+								"value": "",
+								"loading": false,
+							});
+						}}
+					>
+						<CloseIcon style={{ color: "white", height: 12, width: 12, }} />
+					</IconButton>
+				</Tooltip>
+				<form onSubmit={(e, value) => {
+					e.preventDefault();
+					aiSubmit(suggestionValue, setResponseMsg, setSuggestionLoading)
+				}}>
+					<TextField
+						id="suggestion-textfield"
+						style={{width: "90%"}}
+						disabled={suggestionLoading}
+						label="What action do you want to add?"
+						onChange={(e) => {
+							setSuggestionValue(e.target.value)
+						}}
+						InputProps={{
+							endAdornment: (
+								<InputAdornment position="end">
+									<Tooltip title="Run search" placement="top">
+										<SendIcon style={{ cursor: "pointer" }} onClick={(e) => {
+											e.preventDefault();
+											aiSubmit(suggestionValue, setResponseMsg, setSuggestionLoading)
+										}} />
+									</Tooltip>
+								</InputAdornment>
+							),
+						}}
+					/>
+				</form>
+				{suggestionLoading === true ?
+					<CircularProgress style={{height: 15, width: 15, marginTop: 5, }} />
+				: null}
+				{responseMsg.length > 0 ?	
+					<Typography variant="body2">
+						{responseMsg}
+					</Typography>
+				: null}
+			</div>
+		)
+	}
+
   const loadedCheck =
     isLoaded && workflowDone ? (
       <div>
@@ -15745,6 +16300,8 @@ const AngularWorkflow = (defaultprops) => {
         {codePopoutModal}
         {configureWorkflowModal}
         {editWorkflowModal}
+
+				<SuggestionBoxUi />
 
         {editWorkflowModalOpen === true ?
           <EditWorkflow

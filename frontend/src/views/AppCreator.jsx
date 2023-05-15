@@ -300,7 +300,7 @@ const getJsonObject = (properties) => {
 
 				const jsonret = getJsonObject(property.items.properties);
 				if (property.type === "array") {
-					console.log("ARRAY!!")
+					//console.log("ARRAY!!")
 					jsonObject[key] = [jsonret];
 				} else {
 					jsonObject[key] = jsonret;
@@ -309,13 +309,13 @@ const getJsonObject = (properties) => {
 				if (property.hasOwnProperty("properties")) {
 					const jsonret = getJsonObject(property.properties);
 					if (property.type === "array") {
-						console.log("ARRAY2!!")
+						//console.log("ARRAY2!!")
 						jsonObject[key] = [jsonret];
 					} else {
 						jsonObject[key] = jsonret;
 					}
 				} else { 
-					console.log("No items or properties found: ", property);
+					//console.log("No items or properties found: ", property);
 				}
 			}
 
@@ -426,9 +426,7 @@ const AppCreator = (defaultprops) => {
   const [categories, setCategories] = useState(appCategories)
   
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
   useEffect(() => {
 		if (window.location.pathname.includes("apps/edit")) {
@@ -612,72 +610,103 @@ const AppCreator = (defaultprops) => {
 
     setBasedata(data);
 		console.log("Info: ", data)
-    if (data.info !== null && data.info !== undefined) {
-      if (data.info.title !== undefined && data.info.title !== null) {
-        if (data.info.title.length > 29) {
-          setName(data.info.title.slice(0, 29));
-        } else {
-          setName(data.info.title);
-        }
-      }
 
-      setDescription(data.info.description);
-      document.title = "Apps - " + data.info.title;
+		try { 
+			if (data.info !== null && data.info !== undefined) {
+				if (data.info.title !== undefined && data.info.title !== null) {
+					if (data.info.title.endsWith(" API")) {
+						data.info.title = data.info.title.substring(0, data.info.title.length - 4)
+					} else if (data.info.title.endsWith("API")) {
+						data.info.title = data.info.title.substring(0, data.info.title.length - 3)
+					}
 
-      if (data.info["x-logo"] !== undefined) {
-        if (data.info["x-logo"].url !== undefined) {
-          //console.log("PARSED LOGO: ", data.info["x-logo"].url);
-          setFileBase64(data.info["x-logo"].url);
-        } else {
-          setFileBase64(data.info["x-logo"]);
-        }
-        //console.log("");
-        //console.log("");
-        //console.log("LOGO: ", data.info["x-logo"]);
-        //console.log("");
-        //console.log("");
-      }
+					if (data.info.title.length > 29) {
+						setName(data.info.title.slice(0, 29));
+					} else {
+						setName(data.info.title);
+					}
+				}
 
-      if (data.info.contact !== undefined) {
-        setContact(data.info.contact);
-      }
+				setDescription(data.info.description);
+				document.title = "Apps - " + data.info.title;
 
-      if (data.info["x-categories"] !== undefined && data.info["x-categories"].length > 0) {
-        if (typeof data.info["x-categories"] === "array") {
-        } else {
-        }
-        setNewWorkflowCategories(data.info["x-categories"]);
-      }
-    }
+				if (data.info["x-logo"] !== undefined) {
+					if (data.info["x-logo"].url !== undefined) {
+						//console.log("PARSED LOGO: ", data.info["x-logo"].url);
+						setFileBase64(data.info["x-logo"].url);
+					} else {
+						setFileBase64(data.info["x-logo"]);
+					}
+					//console.log("");
+					//console.log("");
+					//console.log("LOGO: ", data.info["x-logo"]);
+					//console.log("");
+					//console.log("");
+				}
 
-    if (data.tags !== undefined && data.tags.length > 0) {
-      var newtags = [];
-      for (let tagkey in data.tags) {
-        if (data.tags[tagkey].name.length > 50) {
-          console.log("Skipping tag because it's too long: ",data.tags[tagkey].name.length);
+				if (data.info.contact !== undefined) {
+					setContact(data.info.contact);
+				}
 
-          continue;
-        }
+				if (data.info["x-categories"] !== undefined && data.info["x-categories"].length > 0) {
+					if (typeof data.info["x-categories"] === "array") {
+					} else {
+					}
+					setNewWorkflowCategories(data.info["x-categories"]);
+				}
+			}
+		} catch (e) {
+			console.log("Failed setting info: ", e)
+		}
 
-        newtags.push(data.tags[tagkey].name);
-      }
+		console.log("Tags: ", data.tags)
+		try {
+			if (data.tags !== undefined && data.tags.length > 0) {
+				var newtags = [];
+				for (let tagkey in data.tags) {
+					if (data.tags[tagkey].name.length > 50) {
+						console.log("Skipping tag because it's too long: ",data.tags[tagkey].name.length);
 
-      if (newtags.length > 10) {
-        newtags = newtags.slice(0, 9);
-      }
+						continue;
+					}
 
-      setNewWorkflowTags(newtags);
-    }
+					newtags.push(data.tags[tagkey].name);
+				}
+
+				if (newtags.length > 10) {
+					newtags = newtags.slice(0, 9);
+				}
+
+				setNewWorkflowTags(newtags);
+			}
+		} catch (e) {
+			console.log("Failed to parse tags: ", e)
+		}
 
     // This is annoying (:
-    var securitySchemes = data.components.securityDefinitions;
-    if (securitySchemes === undefined) {
-      securitySchemes = data.securitySchemes;
-    }
+		console.log("Security schemes 1: ", data.securitySchemes)
 
-    if (securitySchemes === undefined) {
-      securitySchemes = data.components.securitySchemes;
-    }
+		// Weird generator problems to be handle
+		var securitySchemes = undefined
+		try { 
+			if (data.securitySchemes !== undefined) {
+				securitySchemes = data.securitySchemes
+				if (securitySchemes === undefined) {
+					securitySchemes = data.securityDefinitions;
+				}
+			}
+			
+			if (securitySchemes === undefined && data.components !== undefined) { 
+				securitySchemes = data.components.securitySchemes;
+				if (securitySchemes === undefined) {
+					securitySchemes = data.components.securityDefinitions;
+				}
+			}
+		} catch (e) {
+			console.log("Failed to parse security schemes: ", e)
+		}
+
+		console.log("Security schemes 2: ", securitySchemes)
 
     const allowedfunctions = [
       "GET",
@@ -693,8 +722,9 @@ const AppCreator = (defaultprops) => {
     var newActions = [];
     var wordlist = {};
     var all_categories = [];
-		console.log("Paths: ", data.paths)
 		var parentUrl = ""
+
+		console.log("Paths: ", data.paths)
     if (data.paths !== null && data.paths !== undefined) {
       for (let [path, pathvalue] of Object.entries(data.paths)) {
 
@@ -708,7 +738,7 @@ const AppCreator = (defaultprops) => {
             // Typical YAML issue
             if (method !== "parameters") {
               console.log("Invalid method: ", method, "data: ", methodvalue);
-              alert.info("Skipped method (not allowed): " + method);
+              //alert.info("Skipped method (not allowed): " + method);
             }
             continue;
           }
@@ -830,7 +860,7 @@ const AppCreator = (defaultprops) => {
 										if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
 											// Read out properties from a JSON object
 											const jsonObject = getJsonObject(methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"])
-											console.log("JSON OBJECT: ", jsonObject)
+											//console.log("JSON OBJECT: ", jsonObject)
 											if (jsonObject !== undefined && jsonObject !== null) {
 												try {
 													newaction["body"] = JSON.stringify(jsonObject, null, 2)
@@ -1128,7 +1158,6 @@ const AppCreator = (defaultprops) => {
 
 											if (selectedExample["content"]["application/json"]["schema"]["properties"] !== undefined && selectedExample["content"]["application/json"]["schema"]["properties"] !== null) {
 												const jsonObject = getJsonObject(selectedExample["content"]["application/json"]["schema"]["properties"]) 
-												console.log("ReSP Return: ", jsonObject)
 												if (jsonObject !== undefined && jsonObject !== null) {
 													try {
                           	newaction.example_response = JSON.stringify(jsonObject, null, 2)
@@ -1483,7 +1512,8 @@ const AppCreator = (defaultprops) => {
                 const searchactions = newActions.find(
                   (data) => data.name === newname
                 );
-                console.log("SEARCH: ", searchactions);
+
+                //console.log("SEARCH: ", searchactions);
                 if (searchactions !== undefined) {
                   newaction.errors.push("Missing name");
                 } else {
@@ -1532,13 +1562,13 @@ const AppCreator = (defaultprops) => {
     }
 
     if (securitySchemes !== undefined) {
-      // FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
-      //console.log("SECURITY: ", securitySchemes)
+      
+			console.log("SECURITY: ", securitySchemes)
       var newauth = [];
 			try {
 				var optionset = false 
       	for (const [key, value] of Object.entries(securitySchemes)) {
-      	  console.log(key, value);
+      	  console.log("AUTH: ", key, value);
 
       	  if (key === "jwt") {
       	    setAuthenticationOption("JWT");
@@ -1749,7 +1779,8 @@ const AppCreator = (defaultprops) => {
 			if (!found) {
 				newActions2.push(action)
 			} else {
-				console.log("Skipping duplicate action: ", action.url, " . Should merge contents")
+				console.log("NOT skipping duplicate action: ", action.url, ". Should merge contents")
+				newActions2.push(action)
 			}
 		}
 

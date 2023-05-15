@@ -10,7 +10,7 @@ import GettingStarted from "./views/GettingStarted";
 import EditWebhook from "./views/EditWebhook";
 import AngularWorkflow from "./views/AngularWorkflow";
 
-import Header from "./components/Header";
+import Header from "./components/Header.jsx";
 import theme from "./theme";
 import Apps from "./views/Apps";
 import AppCreator from "./views/AppCreator";
@@ -336,7 +336,9 @@ const App = (message, props) => {
           userdata={userdata}
           {...props}
         />
+				{/*
         <div style={{ height: 60 }} />
+				*/}
 				<Routes>
         	<Route
         	  exact
