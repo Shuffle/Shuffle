@@ -176,6 +176,21 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	// form basic hostConfig
 	ctx := context.Background()
 
+	if action.AppName == "shuffle-subflow" {
+		// Automatic replacement of URL
+		for paramIndex, param := range action.Parameters {
+			if param.Name != "backend_url" {
+				continue
+			}
+
+			if strings.Contains(param.Value, "shuffle-backend") {
+				// Automatic replacement as this is default
+				action.Parameters[paramIndex].Value = os.Getenv("BASE_URL")
+				log.Printf("[DEBUG][%s] Replaced backend_url with %s", workflowExecution.ExecutionId, os.Getenv("BASE_URL"))
+			}
+		}
+	}
+
 	// Max 10% CPU every second
 	//CPUShares: 128,
 	//CPUQuota:  10000,

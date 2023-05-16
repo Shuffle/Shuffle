@@ -586,14 +586,17 @@ const RunWorkflow = (defaultprops) => {
 	const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)"
 	const buttonStyle = {borderRadius: 25, height: 50, fontSize: 18, backgroundImage: handleValidateForm(executionArgument) || executionLoading ? buttonBackground : "grey", color: "white"}
 	
+	console.log("execdata: ", executionData)
 	const disabledButtons = message.length > 0 || executionData.status === "FINISHED" || executionData.status === "ABORTED"
 
 	const organization = selectedOrganization !== undefined && selectedOrganization !== null ? selectedOrganization.name : "Unknown"
 	const contact = selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.org !== undefined && selectedOrganization.org !== null? selectedOrganization.org : "support@shuffler.io"
 	//const contact = selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.contact !== undefined && selectedOrganization.contact !== null? selectedOrganization.contact : "support@shuffler.io"
-	const image = selectedOrganization !== undefined && selectedOrganization !== null ? selectedOrganization.image : theme.palette.defaultImage
+	
+	const image = selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.image !== undefined && selectedOrganization.image !== null && selectedOrganization.image !== "" ? selectedOrganization.image : theme.palette.defaultImage
 
-	//<Button fullWidth id="continue_execution" variant="contained" disabled={disabledButtons} color="primary" style={{border: answer === "true" ? "2px solid rgba(255,255,255,0.6)" : null, flex: 1,}} onClick={() => {
+	console.log("IMG: ", image, "ORG: ", selectedOrganization)
+
 	if (!disabledButtons && answer !== undefined && answer !== null && organization !== "Unknown" && buttonClicked.length === 0) {
 		console.log("Finding button!")
 		// Find the button
@@ -692,7 +695,13 @@ const RunWorkflow = (defaultprops) => {
 						</span>
 					}
 					{executionRunning ?
-						<CircularProgress style={{marginTop: 20, marginBottom: 20, textAlign: "center", }}/>
+						<span style={{width: 50, height: 50, margin: "auto", alignItems: "center", justifyContent: "center", textAlign: "center", }}>
+							<CircularProgress style={{marginTop: 20, marginBottom: 20, marginLeft: 185, }}/>
+							<Typography variant="body2" style={{margin: "auto", marginTop: 20, marginBottom: 20, textAlign: "center", alignItem: "center", }} color="textSecondary">
+								Status: {executionData.status}
+							</Typography>
+						</span>
+						
 						:
 						answer !== undefined && answer !== null ? 
 							<span style={{marginTop: 20, }}>
@@ -729,7 +738,8 @@ const RunWorkflow = (defaultprops) => {
 						:
 						<div style={{display: "flex", marginTop: "15px"}}>
 							<Button variant="contained" type="submit" color="primary" fullWidth disabled={!handleValidateForm(executionArgument) || executionLoading}>
-								{executionLoading ? <CircularProgress color="secondary" style={{color: "white",}} /> : "Run Workflow"}
+								{executionLoading ? 
+									<CircularProgress color="secondary" style={{color: "white",}} /> : "Run Workflow"}
 							</Button> 				
 						</div>
 					}

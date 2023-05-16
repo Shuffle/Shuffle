@@ -555,7 +555,8 @@ const AngularWorkflow = (defaultprops) => {
   const isCloud =
     window.location.host === "localhost:3002" ||
     window.location.host === "shuffler.io";
-  const appBarSize = isCloud ? 75 : 60;
+
+  const appBarSize = isCloud ? 75 : 72;
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
   const unloadText = "Are you sure you want to leave without saving (CTRL+S)?";
   const classes = useStyles();
@@ -13141,6 +13142,8 @@ const AngularWorkflow = (defaultprops) => {
           </Button>
         </div>
         : null}
+
+
     </div>
     : isMobile && leftViewOpen ?
       <div
@@ -14757,7 +14760,7 @@ const AngularWorkflow = (defaultprops) => {
           {curapp === null ? null : (
             <img
               alt={selectedResult.action.app_name}
-              src={selectedResult === undefined ? theme.palette.defaultImage : selectedResult.action.app_name === "shuffle-subflow" ? triggers[4].large_image : selectedResult.action.app_name === "User Input" ? triggers[5].large_image : curapp.large_image}
+              src={selectedResult === undefined ? theme.palette.defaultImage : selectedResult.action.app_name === "shuffle-subflow" ? triggers[4].large_image : selectedResult.action.app_name === "User Input" ? triggers[5].large_image : selectedResult.action.large_image}
               style={{
                 marginRight: 20,
                 width: imgsize,

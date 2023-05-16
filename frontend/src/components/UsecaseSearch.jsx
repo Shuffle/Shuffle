@@ -85,7 +85,7 @@ export const usecaseTypes = [{
 },
 {
 	"name": "phishing",
-	"aliases": ["ransomware", "phish"],
+	"aliases": ["ransomware", "ransomware handling"],
 	"value": [
 		{
 			"name": "Email analysis",
@@ -123,7 +123,7 @@ export const usecaseTypes = [{
 	},
 	{
 	"name": "response",
-	"aliases": ["response", "respond", "exploits"],
+	"aliases": ["response", "respond", "exploits", "eradication",],
 	"value": [
 		{
 			"name": "EDR host isolation",

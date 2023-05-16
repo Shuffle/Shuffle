@@ -560,7 +560,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(workflowExecution.ExecutionOrg) > 0 && user.ActiveOrg.Id == workflowExecution.ExecutionOrg && user.Role == "admin" {
-			log.Printf("[DEBUG] Correct org for execution!")
+			log.Printf("[DEBUG] User %s is in correct org. Allowing org continuation for execution!", user.Username)
 		} else {
 			log.Printf("[WARNING] Bad authorization key when getting stream results %s.", actionResult.ExecutionId)
 			resp.WriteHeader(401)
@@ -1097,7 +1097,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, 10)
 	if err != nil {
-		log.Printf("[WARNING] Failed in prepareExecution for execution Id %s: %s", workflowExecution.ExecutionId, err)
+		log.Printf("[WARNING] Failed in prepareExecution for execution Id '%s': %s", workflowExecution.ExecutionId, err)
 		return workflowExecution, fmt.Sprintf("Failed preparration: %s", err), err
 	}
 
