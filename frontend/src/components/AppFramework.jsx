@@ -116,58 +116,7 @@ export const usecases = {
 				"human": true,
 			},
 	]},
-	"Ransomware": {
-		"manual": [],
-		"automated": [
-			{
-				"source":	"BOTTOM_LEFT",
-				"target":	"EDR & AV",
-				"description": "EDR & AV alert",
-				"human": false,
-			},
-			{
-				"source":	"EDR & AV",
-				"target":	"SHUFFLE",
-				"description": "",
-				"human": false,
-			},
-			{
-				"source":	"SHUFFLE",
-				"target":	"EDR & AV",
-				"human": false,
-				"description": "isolate",
-			},
-			{
-				"source":	"SHUFFLE",
-				"target":	"IAM",
-				"human": false,
-				"description": "Block access",
-			},
-			{
-				"source":	"SHUFFLE",
-				"target":	"COMMS",
-				"description": "Notify oncall and affected user",
-				"human": false,
-			},
-			{
-				"source":	"SHUFFLE",
-				"target":	"CASES",
-				"description": "Create enriched alert",
-				"human": false,
-			},
-			{
-				"source":	"SHUFFLE",
-				"target":	"CASES",
-				"human": false,
-			},
-			{
-				"source":	"CASES",
-				"target":	"EDR & AV",
-				"description": "Validate alert",
-				"human": true,
-			},
-		]
-	},
+	
 	"Exploits": {
 		"manual": [],
 		"automated": [
@@ -220,46 +169,6 @@ export const usecases = {
 			},
 		]
 	},	
-	"AWS S3 honeypots": {
-		"manual": [],
-		"automated": [
-			{
-				"source":	"TOP_LEFT",
-				"target":	"SIEM",
-				"description": "S3 logs",
-				"human": false,
-			},
-
-			{
-				"source":	"SIEM",
-				"target":	"SHUFFLE",
-				"human": false,
-			},
-			{
-				"source":	"SHUFFLE",
-				"target":	"INTEL",
-				"description": "Add sighting",
-				"human": false,
-			},
-			{
-				"source":	"INTEL",
-				"target":	"SHUFFLE",
-				"human": false,
-			},
-			{
-				"source":	"SHUFFLE",
-				"target":	"CASES",
-				"description": "Create case",
-				"human": false,
-			},
-			{
-				"source":	"SHUFFLE",
-				"target":	"NETWORK",
-				"description": "Block IP",
-				"human": false,
-			},
-		]
-	},
 	"SIEM alerts": {
 		"manual": [],
 		"automated": [
@@ -532,6 +441,58 @@ export const usecases = {
 				"target":	"CASES",
 				"description": "",
 				"human": false,
+			},
+		]
+	},
+	"Ransomware": {
+		"manual": [],
+		"automated": [
+			{
+				"source":	"BOTTOM_LEFT",
+				"target":	"EDR & AV",
+				"description": "EDR & AV alert",
+				"human": false,
+			},
+			{
+				"source":	"EDR & AV",
+				"target":	"SHUFFLE",
+				"description": "",
+				"human": false,
+			},
+			{
+				"source":	"SHUFFLE",
+				"target":	"EDR & AV",
+				"human": false,
+				"description": "isolate",
+			},
+			{
+				"source":	"SHUFFLE",
+				"target":	"IAM",
+				"human": false,
+				"description": "Block access",
+			},
+			{
+				"source":	"SHUFFLE",
+				"target":	"COMMS",
+				"description": "Notify oncall and affected user",
+				"human": false,
+			},
+			{
+				"source":	"SHUFFLE",
+				"target":	"CASES",
+				"description": "Create enriched alert",
+				"human": false,
+			},
+			{
+				"source":	"SHUFFLE",
+				"target":	"CASES",
+				"human": false,
+			},
+			{
+				"source":	"CASES",
+				"target":	"EDR & AV",
+				"description": "Validate alert",
+				"human": true,
 			},
 		]
 	},

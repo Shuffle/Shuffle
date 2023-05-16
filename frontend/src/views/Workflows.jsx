@@ -3447,6 +3447,26 @@ const Workflows = (props) => {
             </div>
           ) : null}
 
+					{/*userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0 ?
+						<div style={{width: "100%", border: "1px solid rgba(255,255,255,0.1)", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+							<div style={{flex: 2, overflow: "hidden",}}>
+								<Typography variant="body1" >
+									{userdata.priorities[0].name}
+								</Typography>
+								<Typography variant="body2" color="textSecondary">
+									{userdata.priorities[0].description}
+								</Typography>
+							</div>
+							<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
+								<Button style={{height: 50, borderRadius: 25,  marginTop: 8, width: 200, }} variant="contained" color="secondary" onClick={() => {navigate(userdata.priorities[0].url)}}>
+									Continue
+								</Button>
+								<Button  style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="text" color="secondary">
+									Ignore
+								</Button>
+							</div> 
+						</div>
+					: null*/}
 
 					<div style={{marginTop: 15, }}>
 						{view === "grid" ? (

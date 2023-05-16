@@ -118,7 +118,7 @@ const Search = (props) => {
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 
-		<div style={{paddingBottom: hidemargins === true ? 0 : 100, color: "white", backgroundColor: theme.palette.surfacColor}}>
+		<div style={{paddingBottom: hidemargins === true ? 0 : 100, color: "white", }}>
 			<div style={boxStyle}>
 				<Tabs
 					style={{width: 610, margin: "auto", marginTop: hidemargins === true ? 0 : 25, }}
@@ -179,7 +179,7 @@ const Search = (props) => {
 
 	// #1f2023?
 	return(
-		<div style={{backgroundColor: "#1f2023",}}>
+		<div style={{}}>
 			{loadedCheck}
 		</div>
 	)

@@ -301,12 +301,14 @@ const Welcome = (props) => {
 			minWidth: 300,
 			backgroundColor: theme.palette.surfaceColor,
 			color: "white",
+			borderRadius: theme.palette.borderRadius,
 		}
 
 		const actionObject = {
 			padding: "35px", 
 			maxHeight: 300,
 			minHeight: 300,
+			borderRadius: theme.palette.borderRadius,
 		}
 
 		const imageStyle = {
@@ -317,10 +319,22 @@ const Welcome = (props) => {
 			borderRadius: 75, 
 			objectFit: "scale-down",
 		}
-		const buttonStyle = { borderRadius: 8, height: 51, width: 464, fontSize: 16, background: "linear-gradient(89.83deg, #FF8444 0.13%, #F2643B 99.84%)", padding: "16px 24px", top: 75, }
-		const experienced_image = userdata !== undefined && userdata !== null && userdata.active_org !== undefined && userdata.active_org.image !== undefined && userdata.active_org.image !== null && userdata.active_org.image !== "" ? userdata.active_org.image : "/images/experienced.png" 
+		const buttonStyle = { 
+			borderRadius: 8, 
+			height: 51, 
+			width: 464, 
+			fontSize: 16, 
+			background: "linear-gradient(89.83deg, #FF8444 0.13%, #F2643B 99.84%)", 
+			padding: "16px 24px", 
+			top: 75, 
+			margin: "auto",
+			itemAlign: "center",
+		}
+
+		const defaultImage = "/images/experienced.png"
+		const experienced_image = userdata !== undefined && userdata !== null && userdata.active_org !== undefined && userdata.active_org.image !== undefined && userdata.active_org.image !== null && userdata.active_org.image !== "" ? userdata.active_org.image : defaultImage
     return (
-				<div style={{width: 1000, margin: "auto", backgroundColor: theme.palette.platformColor, paddingBottom: 150, minHeight: 1500, }}>
+				<div style={{width: 1000, margin: "auto", paddingBottom: 150, minHeight: 1500, }}>
 					{/*
 					<div style={{position: "fixed", bottom: 110, right: 110, display: "flex", }}>
 						<img src="/images/Arrow.png" style={{width: 250, height: "100%",}} />
@@ -439,14 +453,14 @@ const Welcome = (props) => {
 								</Typography>
 							</div>
 								*/}
-								<Typography variant="h4" style={{color: "#F1F1F1", textAlign: "center", paddingRight: "300px"}}>
-									Help us get to know you.
+								<Typography variant="h4" style={{color: "#F1F1F1", textAlign: "center", marginTop: 50, }}>
+									Help us get to know you
 								</Typography>
-								<Typography variant="body1" style={{color: "#9E9E9E", textAlign: "center", marginBottom: 50, paddingRight: "366px"}}>
-								Let us help you create a smoother journey.
+								<Typography variant="body1" style={{color: "#9E9E9E", textAlign: "center", marginBottom: 50,}}>
+									We will use this information to personalize your automation
 								</Typography>
 								<div style={{display: "flex", marginTop: 70, width: 700, margin: "auto",}}>
-									<div style={{border: "1px solid #806BFF",}}>
+									<div style={{border: "1px solid #806BFF", borderRadius: theme.palette.borderRadius, }}>
 										<Card style={paperObject} onClick={() => {
 											if (isCloud) {
 													ReactGA.event({
@@ -466,7 +480,7 @@ const Welcome = (props) => {
 													New to Shuffle 
 												</Typography>
 												<Typography variant="body1" style={{marginTop: 10, color: "rgba(255,255,255,0.8)"}}>
-														Let us guide you for an easier experience.
+														Let us guide you for an easier experience
 												</Typography>
 											</CardActionArea>
 										</Card>
@@ -488,37 +502,38 @@ const Welcome = (props) => {
 										navigate("/workflows?message=Skipped intro")
 									}}>
 										<CardActionArea style={actionObject}>
-											<img src={experienced_image} style={{padding: "38px", objectFit: "scale-down", minHeight: 40, maxHeight: 40, }} />
+											<img src={experienced_image} style={{padding: experienced_image === defaultImage ? 38 : 10, objectFit: "scale-down", minHeight: experienced_image === defaultImage ? 40 : 70, maxHeight: experienced_image === defaultImage ? 40 : 70, bordeRadius: theme.palette.borderRadius, }} />
 											<Typography variant="h4" style={{color: "#F1F1F1"}}> 
 												Experienced 
 											</Typography>										
 											<Typography variant="body1" style={{marginTop: 10, color: "rgba(255,255,255,0.8)"}}>
-											You will head to Shuffle right away.
+												Head to Shuffle right away
 											</Typography>
 										</CardActionArea>
 									</Card>
 								</div>
 
+								{/*
 								<div style={{display: "flex", flexDirection: "row", }}>
 									<Button variant="contained" type="submit" fullWidth style={buttonStyle} onClick={() => {
-										navigate("/workflows?message=Skipped intro")
+										navigate("/workflows?message=Skipped intro continue")
 									}}>
 										Continue
 									</Button>
 								</div>
-								{/*
-								<div style={{margin: "auto", border: "1px solid rgba(255,255,255,0.5)", borderRadius: theme.palette.borderRadius, marginTop: 50, width: 200, overflow: "wrap", padding: 25, cursor: "pointer", }} onClick={() => {
+								*/}
+
+								<div style={{margin: "auto", borderRadius: theme.palette.borderRadius, marginTop: 50, width: 200, overflow: "wrap", padding: 25, cursor: "pointer", }} onClick={() => {
 									if (window.drift !== undefined) {
-										window.drift.api.startInteraction({ interactionId: 341911 })
+										window.drift.api.startInteraction({ interactionId: 340045 })
 									} else {
 										console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
 									}
 								}}>
 									<Typography variant="body1" style={{margin: "auto", textAlign: "center"}}>
-										Want a free Proof of Value with our support team? 
+										Want a demo instead?
 									</Typography>
 								</div>
-								*/}
 							</div>
 						</Fade>
 					}

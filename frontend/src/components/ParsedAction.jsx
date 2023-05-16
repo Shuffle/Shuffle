@@ -1636,12 +1636,12 @@ const ParsedAction = (props) => {
                 onClick={() => {
                   console.log("Clicked field: ", clickedFieldId, data.name)
 
-									if (data.name === "file_id") {
-										console.log("show file video?")
-										if (setShowVideo !== undefined) {
-											setShowVideo("https://www.youtube.com/embed/DPYowyTbsSk")
-										}
-									}
+									//if (data.name === "file_id") {
+									//	console.log("show file video?")
+									//	if (setShowVideo !== undefined) {
+									//		setShowVideo("https://www.youtube.com/embed/DPYowyTbsSk")
+									//	}
+									//}
                   //(data.name.toLowerCase().includes("api") ||
 									/*
                   setExpansionModalOpen(false);

@@ -617,7 +617,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				<List style={{display: 'flex', flexDirection: 'row-reverse'}} component="nav">
 					<ListItem style={{textAlign: "center"}}>
 						<Link to="/login" style={hrefStyle}>
-							<Button variant="outlined" color="primary" style={{textTransform: "none", borderRadius: 25, padding: "7px 14px 7px 14px", maxWidth: 100, minWidth: 100, }} onClick={() => {
+							<Button variant="outlined" style={{textTransform: "none", borderRadius: 25, padding: "7px 14px 7px 14px", maxWidth: 100, minWidth: 100, }} onClick={() => {
 								if (isCloud) {
 									ReactGA.event({
 										category: "header",
@@ -933,7 +933,8 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 						<div onMouseOver={handleHomeHover} onMouseOut={handleHomeHoverOut} style={{color: HomeHoverColor, cursor: "pointer"}}> 
 							<Grid container direction="row" alignItems="center">
 								<Grid item>
-									<HomeIcon style={{marginTop: 3, marginRight: 5}} />
+									<img src={"/images/logos/orange_logo.svg"} alt="logo" style={{height: 20, width: 20, marginTop: 3, marginRight: 5, }}/>
+									{/*<HomeIcon style={{marginTop: 3, marginRight: 5}} />*/}
 								</Grid>
 							</Grid>
 						</div>

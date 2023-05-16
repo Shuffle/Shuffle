@@ -163,13 +163,9 @@ const Admin = (props) => {
   const [selectedUser, setSelectedUser] = React.useState({});
   const [newUsername, setNewUsername] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
-  const [selectedUserModalOpen, setSelectedUserModalOpen] =
-    React.useState(false);
-  const [selectedAuthentication, setSelectedAuthentication] = React.useState(
-    {}
-  );
-  const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] =
-    React.useState(false);
+  const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false);
+  const [selectedAuthentication, setSelectedAuthentication] = React.useState({});
+  const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false);
   const [authenticationFields, setAuthenticationFields] = React.useState([]);
   const [showArchived, setShowArchived] = React.useState(false);
   const [isDropzone, setIsDropzone] = React.useState(false);
@@ -179,12 +175,10 @@ const Admin = (props) => {
   const [secret2FA, setSecret2FA] = React.useState("");
   const [show2faSetup, setShow2faSetup] = useState(false);
 
-
   const [adminTab, setAdminTab] = React.useState(1);
 	const [showApiKey, setShowApiKey] = useState(false);
-
-
   const [billingInfo, setBillingInfo] = React.useState({});
+	const [selectedStatus, setSelectedStatus] = React.useState([]);
 
   useEffect(() => {
     if (isDropzone) {
@@ -192,6 +186,8 @@ const Admin = (props) => {
       setIsDropzone(false);
     }
   }, [isDropzone]);
+
+
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
@@ -286,6 +282,20 @@ const Admin = (props) => {
 	*/
 
   const alert = useAlert();
+	const handleStatusChange = (event) => {
+		const { value } = event.target;
+
+		setSelectedStatus(value);
+  	handleEditOrg(
+			"",
+			"",
+			selectedOrganization.id,
+			"",
+			{},
+			{},
+			value,
+		)	
+	}
 
   const deleteAuthentication = (data) => {
     alert.info("Deleting auth " + data.label);
@@ -547,6 +557,54 @@ const Admin = (props) => {
       });
   };
 
+  const handleEditOrg = (
+    name,
+    description,
+    orgId,
+    image,
+    defaults,
+    sso_config,
+		lead_info,
+  ) => {
+
+    const data = {
+      name: name,
+      description: description,
+      org_id: orgId,
+      image: image,
+      defaults: defaults,
+      sso_config: sso_config,
+			lead_info: lead_info,
+    };
+
+    const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+    fetch(url, {
+      mode: "cors",
+      method: "POST",
+      body: JSON.stringify(data),
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then((response) =>
+        response.json().then((responseJson) => {
+          if (responseJson["success"] === false) {
+            alert.error("Failed updating org: ", responseJson.reason);
+          } else {
+						if (lead_info === undefined || lead_info === null || lead_info === []) {
+            	alert.success("Successfully edited org!");
+						}
+          }
+        })
+      )
+      .catch((error) => {
+        alert.error("Err: " + error.toString());
+      });
+  };
+
   const editAuthenticationConfig = (id) => {
     const data = {
       id: id,
@@ -696,10 +754,18 @@ const Admin = (props) => {
   
 
   const handleGetOrg = (orgId) => {
+
+    if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
+			const urlSearchParams = new URLSearchParams(window.location.search);
+			const params = Object.fromEntries(urlSearchParams.entries());
+			const foundorgid = params["org_id"];
+			if (foundorgid !== undefined && foundorgid !== null) {
+				orgId = foundorgid;
+			}
+		}
+
     if (orgId.length === 0) {
-      alert.error(
-        "Organization ID not defined. Please contact us on https://shuffler.io if this persists logout."
-      );
+      alert.error("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
       return;
     }
 
@@ -728,6 +794,31 @@ const Admin = (props) => {
           ) {
             responseJson.sync_features = {};
           }
+
+					if (responseJson.lead_info !== undefined && responseJson.lead_info !== null) {
+						var leads = []
+						if (responseJson.lead_info.customer) {
+							leads.push("customer")
+						}
+
+						if (responseJson.lead_info.demo_done) {
+							leads.push("demo done")
+						}
+
+						if (responseJson.lead_info.pov) {
+							leads.push("pov")
+						}
+
+						if (responseJson.lead_info.lead) {
+							leads.push("lead")
+						}
+
+						if (responseJson.lead_info.student) {
+							leads.push("student")
+						}
+
+						setSelectedStatus(leads)
+					}
 
           setSelectedOrganization(responseJson)
           var lists = {
@@ -2094,6 +2185,31 @@ const Admin = (props) => {
               </IconButton>
             </Tooltip>
 						*/}
+
+						{userdata.support === true ? 
+							<FormControl sx={{ m: 1, width: 300, }} style={{top: -10, right: 50, position: "absolute" }}>
+								<InputLabel id="">Status</InputLabel>
+								<Select
+									style={{minWidth: 150, maxWidth: 150, }}
+									labelId="multiselect-status"
+									id="multiselect-status"
+									multiple
+									value={selectedStatus}
+									onChange={handleStatusChange}
+									input={<OutlinedInput label="Status" />}
+									renderValue={(selected) => selected.join(', ')}
+									MenuProps={MenuProps}
+								>
+									{["lead", "pov", "demo done", "customer", "student", ].map((name) => (
+										<MenuItem key={name} value={name}>
+											<Checkbox checked={selectedStatus.indexOf(name) > -1} />
+											<ListItemText primary={name} />
+										</MenuItem>
+									))}
+								</Select>
+							</FormControl>
+						: null}
+
             <Tooltip
               title={"Copy Organization ID"}
               style={{}}
@@ -2152,6 +2268,7 @@ const Admin = (props) => {
                 globalUrl={globalUrl}
                 selectedOrganization={selectedOrganization}
 								adminTab={adminTab}
+  							handleEditOrg={handleEditOrg}
               />
             ) : (
               <div

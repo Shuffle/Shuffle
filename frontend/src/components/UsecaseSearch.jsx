@@ -35,6 +35,7 @@ const defaultValue = {"id": "", "name": "Build your own",
 
 export const usecaseTypes = [{
 	"name": "enrichment",
+	"aliases": ["enrichment", "enrich"],
 	"value": [{
 		"name": "EDR Ticket Enrichment",
 		"usecase_references": ["EDR to ticket"],
@@ -51,6 +52,7 @@ export const usecaseTypes = [{
 	},
 	{
 		"name": "SIEM alert Enrichment",
+		"aliases": ["siem alert enrichment", "siem alert enrich"],
 		"usecase_references": ["SIEM to ticket"],
 		"active": true,
 		"items": [{
@@ -66,6 +68,7 @@ export const usecaseTypes = [{
 	},
 	{
 		"name": "Email Enrichment",
+		"aliases": ["email enrichment", "email enrich"],
 		"usecase_references": ["Email management"],
 		"active": true,
 		"items": [{
@@ -82,6 +85,7 @@ export const usecaseTypes = [{
 },
 {
 	"name": "phishing",
+	"aliases": ["ransomware", "phish"],
 	"value": [
 		{
 			"name": "Email analysis",
@@ -100,6 +104,7 @@ export const usecaseTypes = [{
 	},
 	{
 	"name": "detection",
+	"aliases": ["detection", "detect", "siem alerts", "new detections",],
 	"value": [
 		{
 			"name": "Sigma rule detection",
@@ -118,12 +123,13 @@ export const usecaseTypes = [{
 	},
 	{
 	"name": "response",
+	"aliases": ["response", "respond", "exploits"],
 	"value": [
 		{
 			"name": "EDR host isolation",
 			"active": false,
 			"items": [{
-				"name": "When malicious endpoint activity is detected",
+				"name": "When exploits are detected",
 				"app_type": "edr",
 				"type": "trigger",
 			},
@@ -133,7 +139,45 @@ export const usecaseTypes = [{
 				"type": "subflow",
 			}],
 		}]
-	}
+	},
+	{
+	"name": "vulnerabilities",
+	"aliases": [],
+	"value": [
+		{
+			"name": "Vulnerability is found",
+			"active": false,
+			"items": [{
+				"name": "When a vulnerability is found",
+				"app_type": "assets",
+				"type": "trigger",
+			},
+			{
+				"name": "Patch the vulnerability",
+				"app_type": "edr",
+				"type": "subflow",
+			}],
+		}]
+	},
+	{
+	"name": "approvals",
+	"aliases": ["approval"],
+	"value": [
+		{
+			"name": "Approval is needed",
+			"active": false,
+			"items": [{
+				"name": "When approval is needed",
+				"app_type": "iam",
+				"type": "trigger",
+			},
+			{
+				"name": "Notify the user",
+				"app_type": "communication",
+				"type": "subflow",
+			}],
+		}]
+	},
 ]
 
 export const triggerlist = [

@@ -14787,14 +14787,6 @@ const AngularWorkflow = (defaultprops) => {
           <b>Status </b> {selectedResult.status}
         </div>
 
-
-					<h1 onClick={() => {
-						console.log("APP: ", curapp)
-						console.log("Data: ", selectedResult)
-					}}>
-						HIYA: {selectedResult.action.app_name}
-					</h1>
-
         {validate.valid ? (
           <ReactJson
             src={validate.result}

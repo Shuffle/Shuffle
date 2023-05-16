@@ -30,6 +30,7 @@ const OrgHeader = (props) => {
     globalUrl,
     isCloud,
 		adminTab,
+  	handleEditOrg, 
   } = props;
 
   const theme = useTheme();
@@ -83,49 +84,6 @@ const OrgHeader = (props) => {
     };
   }
 
-  const handleEditOrg = (
-    name,
-    description,
-    orgId,
-    image,
-    defaults,
-    sso_config
-  ) => {
-
-    const data = {
-      name: name,
-      description: description,
-      org_id: orgId,
-      image: image,
-      defaults: defaults,
-      sso_config: sso_config,
-    };
-
-    const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
-    fetch(url, {
-      mode: "cors",
-      method: "POST",
-      body: JSON.stringify(data),
-      credentials: "include",
-      crossDomain: true,
-      withCredentials: true,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    })
-      .then((response) =>
-        response.json().then((responseJson) => {
-          if (responseJson["success"] === false) {
-            alert.error("Failed updating org: ", responseJson.reason);
-          } else {
-            alert.success("Successfully edited org!");
-          }
-        })
-      )
-      .catch((error) => {
-        alert.error("Err: " + error.toString());
-      });
-  };
 
   var image = "";
   const editHeaderImage = (event) => {
@@ -151,10 +109,9 @@ const OrgHeader = (props) => {
             orgDescription,
             selectedOrganization.id,
             selectedOrganization.image,
-            {
-            },
-            {
-            }
+            {},
+            {},
+						[],
           )
         }
       >

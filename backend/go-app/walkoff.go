@@ -263,7 +263,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	environment := request.Header.Get("org")
 	if len(environment) == 0 {
-		log.Printf("[AUDIT] No 'org' header set (get workflow queue). Required for cloud.")
+		//log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
 		/*
 			resp.WriteHeader(403)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the org header. This can be done by setting the 'ORG' environment variable for Orborus to your Org ID in Shuffle"}`)))
@@ -276,7 +276,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	// This section is cloud custom for now
 	auth := request.Header.Get("Authorization")
 	if len(auth) == 0 {
-		log.Printf("[AUDIT] No Authorization header set. Required for cloud. Env: %s, org: %s", orgId, environment)
+		//log.Printf("[AUDIT] No Authorization header set. Env: %s, org: %s", orgId, environment)
 		/*
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the auth header (only applicable for cloud for now)."}`)))
