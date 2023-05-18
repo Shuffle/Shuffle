@@ -1,10 +1,10 @@
 #!/bin/sh
 docker stop shuffle-backend
 docker rm shuffle-backend
-docker rmi frikky/shuffle:backend 
+docker rmi ghcr.io/shuffle/shuffle-backend:latest
 
-docker build . -t shuffle/shuffle:backend
-docker push shuffle/shuffle:backend
+docker build . -t ghcr.io/shuffle/shuffle-backend:latest
+#docker push ghcr.io/shuffle/shuffle-backend:latest
 
 echo "Starting server"
 #docker run -it \

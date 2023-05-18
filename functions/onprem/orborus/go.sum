@@ -200,6 +200,8 @@ github.com/shirou/gopsutil v3.21.11+incompatible h1:+1+c1VGhc88SSonWP6foOcLhvnKl
 github.com/shirou/gopsutil v3.21.11+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
 github.com/shuffle/shuffle-shared v0.4.11 h1:qTYQ/kGzKbbMGMrKL2OLoabIpQABdtMurmkSw0LBVso=
 github.com/shuffle/shuffle-shared v0.4.11/go.mod h1:jQrYySmvp/0De5ftrAaY6xwwr7TMfqBmBxQ2AX9yrjQ=
+github.com/shuffle/shuffle-shared v0.4.14 h1:jDhvGRdnwDDfsJaNdaww8LlXmjDAlVTHarcO4F+9vKs=
+github.com/shuffle/shuffle-shared v0.4.14/go.mod h1:jQrYySmvp/0De5ftrAaY6xwwr7TMfqBmBxQ2AX9yrjQ=
 github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e h1:MRM5ITcdelLK2j1vwZ3Je0FKVCfqOLp5zO6trqMLYs0=
 github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e/go.mod h1:XV66xRDqSt+GTGFMVlhk3ULuV0y9ZmzeVGR4mloJI3M=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

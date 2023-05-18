@@ -643,7 +643,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "success"}`)))
 		return
 	} else {
-		log.Printf("[DEBUG] Handling other execution variant (subflow): %s", err)
+		log.Printf("[DEBUG] Handling other execution variant (subflow?): %s", err)
 	}
 
 	var actionResult shuffle.ActionResult
@@ -757,6 +757,8 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
+	log.Printf("[DEBUG] Running workflow execution transaction for %s", workflowExecutionId)
+
 	// Should start a tx for the execution here
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
 	if err != nil {
