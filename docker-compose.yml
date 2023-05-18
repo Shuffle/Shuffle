@@ -43,7 +43,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       #- DOCKER_HOST=tcp://docker-socket-proxy:2375
-      - SHUFFLE_WORKER_VERSION=latest
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
       - DOCKER_API_VERSION=1.40

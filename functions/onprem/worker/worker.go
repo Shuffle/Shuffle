@@ -1637,7 +1637,7 @@ func sendSelfRequest(actionResult shuffle.ActionResult) {
 
 	newresp, err := topClient.Do(req)
 	if err != nil {
-		log.Printf("[ERROR][%s] Error running finishing request (2): %s", actionResult.ExecutionId, err)
+		log.Printf("[ERROR][%s] Error running self request (2): %s", actionResult.ExecutionId, err)
 		return
 	}
 
@@ -1646,16 +1646,18 @@ func sendSelfRequest(actionResult shuffle.ActionResult) {
 		body, err := ioutil.ReadAll(newresp.Body)
 		//log.Printf("[INFO] BACKEND STATUS: %d", newresp.StatusCode)
 		if err != nil {
-			log.Printf("[ERROR][%s] Failed reading body: %s", actionResult.ExecutionId, err)
+			log.Printf("[ERROR][%s] Failed reading self request body: %s", actionResult.ExecutionId, err)
 		} else {
-			log.Printf("[DEBUG][%s] NEWRESP (from backend): %s", actionResult.ExecutionId, string(body))
+			log.Printf("[DEBUG][%s] NEWRESP (from self - 1): %s", actionResult.ExecutionId, string(body))
 		}
 	}
 }
 
 func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
-	log.Printf("[INFO][%s] Not sending backend info since source is default (not swarm)", workflowExecution.ExecutionId)
-	return
+	if workflowExecution.ExecutionSource == "default" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
+		//log.Printf("[INFO][%s] Not sending backend info since source is default (not swarm)", workflowExecution.ExecutionId)
+		//return
+	}
 
 	streamUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
 	req, err := http.NewRequest(
@@ -2003,7 +2005,7 @@ func downloadDockerImageBackend(client *http.Client, imageName string) error {
 // Initial loop etc
 func main() {
 	// Elasticsearch necessary to ensure we'ren ot running with Datastore configurations for minimal/maximal data sizes
-	_, err := shuffle.RunInit(datastore.Client{}, storage.Client{}, "", "", true, "elasticsearch")
+	_, err := shuffle.RunInit(datastore.Client{}, storage.Client{}, "", "worker", true, "elasticsearch")
 	if err != nil {
 		log.Printf("[ERROR] Failed to run worker init: %s", err)
 	} else {

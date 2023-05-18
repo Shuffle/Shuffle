@@ -726,7 +726,7 @@ func initializeImages() {
 
 	if baseimagename == "" {
 		baseimagename = "shuffle/shuffle" // Dockerhub
-		baseimagename = "shuffle"         // Github
+		baseimagename = "shuffle"         // Github 		(ghcr.io)
 		log.Printf("[DEBUG] Setting baseimagename")
 	}
 

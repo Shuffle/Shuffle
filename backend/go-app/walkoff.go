@@ -105,7 +105,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		}
 	}
 
-	log.Printf("Starting frequency: %d", newfrequency)
+	log.Printf("[INFO] Starting frequency for execution: %d", newfrequency)
 	jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
 	if err != nil {
 		log.Printf("Failed to schedule workflow: %s", err)
@@ -333,7 +333,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 					// Check if CPU percent constantly has stayed above X% for the last Y requests
 					percentageCheck := 90
-					concurrentChecks := 0
+					concurrentChecks := 2
 
 					//if int(envData.CPUPercent) > percentageCheck {
 					// Get cached data
@@ -1801,15 +1801,15 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		log.Printf("Starting Cloud schedule Action: %#v", action)
+		//log.Printf("Starting Cloud schedule Action: %#v", action)
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
-			log.Printf("Failed cloud action START schedule: %s", err)
+			log.Printf("[WARNING] Failed cloud action START schedule: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
 		} else {
-			log.Printf("Successfully set up cloud action schedule")
+			log.Printf("[INFO] Successfully set up cloud action schedule")
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Done"}`)))
 			return
