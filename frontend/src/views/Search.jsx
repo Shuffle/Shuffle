@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import theme from '../theme';
+import theme from '../theme.jsx';
 import {isMobile} from "react-device-detect";
 import AppGrid from "../components/AppGrid.jsx"
 import WorkflowGrid from "../components/WorkflowGrid.jsx"

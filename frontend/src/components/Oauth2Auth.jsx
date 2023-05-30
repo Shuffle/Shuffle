@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTheme } from "@material-ui/core/styles";
-import theme from '../theme';
+import theme from '../theme.jsx';
 
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -90,7 +90,6 @@ const AuthenticationOauth2 = (props) => {
     appAuthentication,
     setSelectedAction,
     setNewAppAuth,
-    setAuthenticationModalOpen,
 		isCloud,
 		autoAuth, 
 		authButtonOnly, 
@@ -118,7 +117,7 @@ const AuthenticationOauth2 = (props) => {
   const [oauthUrl, setOauthUrl] = React.useState("");
   const [buttonClicked, setButtonClicked] = React.useState(false);
 
-  const [offlineAccess, setOfflineAccess] = React.useState(false);
+  const [offlineAccess, setOfflineAccess] = React.useState(true);
   const allscopes = authenticationType.scope !== undefined ? authenticationType.scope : [];
     
 
@@ -365,9 +364,6 @@ const AuthenticationOauth2 = (props) => {
         if (newwin.closed) {
 					console.log("Closing?")
 
-					if (setAuthenticationModalOpen !== undefined) {
-						setAuthenticationModalOpen(false)
-					}
 
           setButtonClicked(false);
           clearInterval(timer);
@@ -375,7 +371,7 @@ const AuthenticationOauth2 = (props) => {
 					//
 
 					if (getAppAuthentication !== undefined) {
-          	getAppAuthentication(true, true);
+          	getAppAuthentication(true, true, true);
 					}
         } else {
 					console.log("Not closed")
@@ -574,7 +570,6 @@ const AuthenticationOauth2 = (props) => {
 		return autoAuthButton
 	}
 
-  console.log("Window: ", window.location)
   return (
     <div>
       <DialogTitle>

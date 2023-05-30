@@ -6,7 +6,7 @@ import countries from "../components/Countries.jsx";
 import CodeEditor from "../components/ShuffleCodeEditor.jsx";
 import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
 import CacheView from "../components/CacheView.jsx";
-import theme from "../theme";
+import theme from "../theme.jsx";
 import AddIcon from "@mui/icons-material/Add";
 import ClearIcon from '@mui/icons-material/Clear';
 import StorageIcon from '@mui/icons-material/Storage';

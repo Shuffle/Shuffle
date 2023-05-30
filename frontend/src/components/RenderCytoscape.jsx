@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import * as cytoscape from "cytoscape";
 import CytoscapeComponent from "react-cytoscapejs";
-import cystyle from "../defaultCytoscapeStyle";
+import cystyle from "../defaultCytoscapeStyle.jsx";
 
 const surfaceColor = "#27292D";
 const CytoscapeWrapper = (props) => {

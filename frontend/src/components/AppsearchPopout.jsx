@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import theme from '../theme';
+import theme from '../theme.jsx';
 import AppSearch from './Appsearch.jsx';
 
 import {

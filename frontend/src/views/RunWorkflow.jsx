@@ -6,7 +6,7 @@ import { useInterval } from "react-powerhooks";
 import { makeStyles } from '@material-ui/styles';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import {isMobile} from "react-device-detect";
-import theme from '../theme';
+import theme from '../theme.jsx';
 import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import { green, yellow } from "./AngularWorkflow.jsx";
 
@@ -39,15 +39,6 @@ const bodyDivStyle = {
 	position: "relative", 
 }
 
-const boxStyle = {
-	color: "white",
-	paddingLeft: "30px",
-	paddingRight: "30px",
-	paddingBottom: "30px",
-	paddingTop: "30px",
-	backgroundColor: theme.palette.surfaceColor,
-	marginBottom: 150, 
-}
 
 const RunWorkflow = (defaultprops) => {
   const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, register, serverside } = defaultprops;
@@ -65,11 +56,25 @@ const RunWorkflow = (defaultprops) => {
   const [apps, setApps] = React.useState([]);
   const [buttonClicked, setButtonClicked] = React.useState("");
 
+	const boxStyle = {
+		color: "white",
+		paddingLeft: "30px",
+		paddingRight: "30px",
+		paddingBottom: "30px",
+		paddingTop: "30px",
+		backgroundColor: theme.palette.surfaceColor,
+		marginBottom: 150, 
+	}
+
   const params = useParams();
   var props = JSON.parse(JSON.stringify(defaultprops))
   props.match = {}
   props.match.params = params
 
+	const defaultTitle = "Run Workflow"
+	if (document != undefined && document.title != defaultTitle) {
+		document.title = defaultTitle
+	}
 
 	const parsedsearch = serverside === true ? "" : window.location.search
 	if (serverside !== true) {
@@ -513,6 +518,9 @@ const RunWorkflow = (defaultprops) => {
           if (responseJson.sync_features === undefined || responseJson.sync_features === null) {
           }
 
+					if (document != undefined && document.title != defaultTitle) {
+						document.title = responseJson.name + " - " + defaultTitle
+					}
           setSelectedOrganization(responseJson)
         }
       })

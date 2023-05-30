@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
 import frameworkStyle from '../frameworkStyle.jsx';
 import { v4 as uuidv4 } from "uuid";
-import theme from '../theme';
+import theme from '../theme.jsx';
 import { useAlert } from "react-alert";
 
 import AppSearch from '../components/Appsearch.jsx';

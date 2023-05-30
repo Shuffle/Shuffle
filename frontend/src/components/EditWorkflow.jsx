@@ -1,5 +1,5 @@
 import React, { useEffect, useContext } from "react";
-import theme from '../theme';
+import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect" 
 import ChipInput from "material-ui-chip-input";
 import UsecaseSearch from "../components/UsecaseSearch.jsx"

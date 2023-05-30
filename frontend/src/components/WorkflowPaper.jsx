@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
-import theme from '../theme';
+import theme from '../theme.jsx';
 
 import {
 	Chip,
@@ -30,19 +30,6 @@ const workflowActionStyle = {
 	justifyContent: "space-between",
 }
 
-const paperAppStyle = {
-	minHeight: 130,
-	maxHeight: 130,
-	overflow: "hidden",
-	width: "100%",
-	color: "white",
-	backgroundColor: theme.palette.surfaceColor,
-	padding: "12px 12px 0px 15px",
-	borderRadius: 5,
-	display: "flex",
-	boxSizing: "border-box",
-	position: "relative",
-}
 
 const chipStyle = {
 	backgroundColor: "#3d3f43",
@@ -69,6 +56,20 @@ const WorkflowPaper = (props) => {
 
 		//console.log("Workflow: ", data)
     var boxColor = "#86c142";
+
+		const paperAppStyle = {
+			minHeight: 130,
+			maxHeight: 130,
+			overflow: "hidden",
+			width: "100%",
+			color: "white",
+			backgroundColor: theme.palette.surfaceColor,
+			padding: "12px 12px 0px 15px",
+			borderRadius: 5,
+			display: "flex",
+			boxSizing: "border-box",
+			position: "relative",
+		}
 
     var parsedName = data.name;
     if (

@@ -77,7 +77,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 		textDecoration: "none",
 	}
 
-  const isCloud = serverside === true ? true : window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  const isCloud = serverside === true || typeof window === 'undefined' ? true : window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
 	const clearNotifications = () => {
 		// Don't really care about the logout

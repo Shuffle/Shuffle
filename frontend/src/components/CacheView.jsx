@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import theme from "../theme";
+import theme from "../theme.jsx";
 import {
     Tooltip,
     Divider,
@@ -48,9 +48,10 @@ const CacheView = (props) => {
     const [listCache, setListCache] = React.useState([]);
     const [addCache, setAddCache] = React.useState("");
     const [modalOpen, setModalOpen] = React.useState(false);
-    const [key,setKey]= React.useState(""); 
+    const [key, setKey]= React.useState(""); 
     const [value, setValue]= React.useState(""); 
-    const [cacheInput, setCacheInput]= React.useState('');
+    const [cacheInput, setCacheInput]= React.useState("");
+    const [cacheCursor, setCacheCursor]= React.useState("");
 
     const alert = useAlert();
     useEffect(() => {
@@ -67,20 +68,26 @@ const CacheView = (props) => {
             },
             credentials: "include",
         })
-            .then((response) => {
-                if (response.status !== 200) {
-                    console.log("Status not 200 for apps :O!");
-                    return;
-                }
+				.then((response) => {
+						if (response.status !== 200) {
+								console.log("Status not 200 for apps :O!");
+								return;
+						}
 
-                return response.json();
-            })
-            .then((responseJson) => {
-                setListCache(responseJson);
-            })
-            .catch((error) => {
-                alert.error(error.toString());
-            });
+						return response.json();
+				})
+				.then((responseJson) => {
+					if (responseJson.success === true) {
+						setListCache(responseJson.keys);
+					}
+
+					if (responseJson.cursor !== undefined && responseJson.cursor !==  null && responseJson.cursor !== "") {
+						setCacheCursor(responseJson.cursor);
+					}
+				})
+				.catch((error) => {
+						alert.error(error.toString());
+				});
     };
 
     // const getCacheList = (orgId) => {

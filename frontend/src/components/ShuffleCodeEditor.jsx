@@ -14,7 +14,7 @@ import {
 	Button,
 } from '@material-ui/core';
 
-import theme from '../theme';
+import theme from '../theme.jsx';
 import Checkbox from '@mui/material/Checkbox';
 import { orange } from '@mui/material/colors';
 import { isMobile } from "react-device-detect" 

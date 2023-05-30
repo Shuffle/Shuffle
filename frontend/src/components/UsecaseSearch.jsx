@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import theme from '../theme';
+import theme from '../theme.jsx';
 import { useNavigate, Link } from "react-router-dom";
 import { useAlert } from "react-alert";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";

@@ -13,7 +13,7 @@ import ReactJson from "react-json-view";
 import NestedMenuItem from "material-ui-nested-menu-item";
 import ReactMarkdown from "react-markdown";
 import { useAlert } from "react-alert";
-import theme from '../theme';
+import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect"
 import aa from 'search-insights'
 import Drift from "react-driftjs";
@@ -128,7 +128,7 @@ import undoRedo from "cytoscape-undo-redo";
 
 import Draggable from "react-draggable";
 
-import cytoscapestyle from "../defaultCytoscapeStyle";
+import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
 import cxtmenu from "cytoscape-cxtmenu";
 
 import { validateJson, GetIconInfo } from "./Workflows.jsx";
@@ -1710,7 +1710,7 @@ const AngularWorkflow = (defaultprops) => {
   //"Testing",
   const internalIds = ["Shuffle Tools", "http", "email"];
 
-  const getAppAuthentication = (reset, updateAction) => {
+  const getAppAuthentication = (reset, updateAction, closeMenu) => {
     fetch(globalUrl + "/api/v1/apps/authentication", {
       method: "GET",
       headers: {
@@ -1727,6 +1727,7 @@ const AngularWorkflow = (defaultprops) => {
 			return response.json();
 		})
 		.then((responseJson) => {
+				var shouldClose = false 
         if (responseJson.success) {
           var newauth = [];
           for (let authkey in responseJson.data) {
@@ -1757,13 +1758,18 @@ const AngularWorkflow = (defaultprops) => {
               for (let authkey in tmpAuth) {
                 var item = tmpAuth[authkey];
 
+								//console.log("Got auth: ", item);
+
                 const newfields = {};
                 for (let filterkey in item.fields) {
                   newfields[item.fields[filterkey].key] = item.fields[filterkey].value;
                 }
 
                 item.fields = newfields;
-                if (item.app.name === selectedApp.name) {
+
+								const appname = selectedApp.name.toLowerCase().replace(" ", "_", -1)
+								const itemname = item.app.name.toLowerCase().replace(" ", "_", -1)
+                if (itemname === appname) {
                   authenticationOptions.push(item);
 
                   // Always becoming the last one
@@ -1772,14 +1778,19 @@ const AngularWorkflow = (defaultprops) => {
                     selectedAction.selectedAuthentication = item;
 
                     for (let actionkey in workflow.actions) {
-                      if (workflow.actions[actionkey].app_name === selectedApp.name) {
+											const actionAppname = workflow.actions[actionkey].app_name.toLowerCase().replace(" ", "_", -1)
+                      if (actionAppname === appname) {
                         workflow.actions[actionkey].selectedAuthentication = item;
                         workflow.actions[actionkey].authentication_id = item.id;
                         appUpdates = true;
                       }
                     }
-                  }
-                }
+                  } else {
+										//console.log("Not newer: ", item.edited, " vs ", latest)
+									}
+                } else {
+									//console.log("Appname is wrong: ", appname, " vs ", itemname)
+								}
               }
 
               selectedAction.authentication = authenticationOptions;
@@ -1799,18 +1810,28 @@ const AngularWorkflow = (defaultprops) => {
                 setWorkflow(workflow);
                 saveWorkflow(workflow);
                 alert.info("Added and updated authentication!");
+								shouldClose = true 
               } else {
                 console.log("Closing auth modal? FAIL")
 
                 alert.error("Failed to find new authentication. See details in Oauth2 popup window where auth was attempted.");
+								shouldClose = false 
               }
             } else {
               alert.info("No authentication to update");
             }
-          }
+          } else {
+						shouldClose = true
+					}
         } else {
 					setAppAuthentication([]);
+					shouldClose = true 
         }
+
+				// Auto-closing if changes were made 
+				if (closeMenu === true && shouldClose === true) {
+					setAuthenticationModalOpen(false);
+				}
       })
       .catch((error) => {
 				setAppAuthentication([]);
@@ -3364,7 +3385,7 @@ const AngularWorkflow = (defaultprops) => {
           alert.error("Failed to auto-activate the app. Go to /apps and activate it.")
         } else {
           if (refresh === true) {
-          	alert.success("App activated for your organization! Refresh the page to use the app.")
+          	//alert.success("App activated for your organization! Refresh the page to use the app.")
             getApps()
           }
         }
@@ -14760,7 +14781,7 @@ const AngularWorkflow = (defaultprops) => {
           {curapp === null ? null : (
             <img
               alt={selectedResult.action.app_name}
-              src={selectedResult === undefined ? theme.palette.defaultImage : selectedResult.action.app_name === "shuffle-subflow" ? triggers[4].large_image : selectedResult.action.app_name === "User Input" ? triggers[5].large_image : selectedResult.action.large_image}
+              src={selectedResult === undefined ? theme.palette.defaultImage : selectedResult.action.app_name === "shuffle-subflow" ? triggers[4].large_image : selectedResult.action.app_name === "User Input" ? triggers[5].large_image : selectedResult.action.large_image !== undefined  && selectedResult.action.large_image !== null && selectedResult.action.large_image !== "" ? selectedResult.action.large_image : curapp.large_image}
               style={{
                 marginRight: 20,
                 width: imgsize,

@@ -4,7 +4,7 @@ import AppFramework from "../components/AppFramework.jsx";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 // nodejs library that concatenates classes
 import classNames from "classnames";
-import theme from '../theme';
+import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 
 // react plugin used to create charts

@@ -7,7 +7,7 @@ import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from "@material-ui/core/styles";
 import NestedMenuItem from "material-ui-nested-menu-item";
 import { useAlert } from "react-alert";
-import theme from '../theme';
+import theme from '../theme.jsx';
 
 import {
 	ButtonGroup,

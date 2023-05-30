@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import theme from '../theme';
+import theme from '../theme.jsx';
 import { useAlert } from "react-alert";
 import {
 	Tooltip,

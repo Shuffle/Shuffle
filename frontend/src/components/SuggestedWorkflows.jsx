@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
-import theme from '../theme';
+import theme from '../theme.jsx';
 import PaperComponent from "../components/PaperComponent.jsx"
 import UsecaseSearch, { usecaseTypes } from "../components/UsecaseSearch.jsx"
 

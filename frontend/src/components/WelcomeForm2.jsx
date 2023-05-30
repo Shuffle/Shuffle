@@ -14,7 +14,7 @@ import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 
-import theme from '../theme';
+import theme from '../theme.jsx';
 import {
   	Fade,
 		IconButton,

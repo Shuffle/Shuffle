@@ -17,7 +17,7 @@ import {
 	CardContent,
 	CardActionArea,
 } from '@mui/material';
-import theme from '../theme';
+import theme from '../theme.jsx';
 import { useNavigate, Link } from "react-router-dom";
 import Drift from "react-driftjs";
 

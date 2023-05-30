@@ -32,7 +32,7 @@ import {
 import { useAlert } from "react-alert";
 import Dropzone from "../components/Dropzone.jsx";
 import CodeEditor from "../components/ShuffleCodeEditor.jsx";
-import theme from "../theme";
+import theme from "../theme.jsx";
 
 const Files = (props) => {
   const { globalUrl, userdata, serverside, selectedOrganization, isCloud, } = props;

@@ -202,6 +202,8 @@ github.com/shuffle/shuffle-shared v0.4.11 h1:qTYQ/kGzKbbMGMrKL2OLoabIpQABdtMurmk
 github.com/shuffle/shuffle-shared v0.4.11/go.mod h1:jQrYySmvp/0De5ftrAaY6xwwr7TMfqBmBxQ2AX9yrjQ=
 github.com/shuffle/shuffle-shared v0.4.14 h1:jDhvGRdnwDDfsJaNdaww8LlXmjDAlVTHarcO4F+9vKs=
 github.com/shuffle/shuffle-shared v0.4.14/go.mod h1:jQrYySmvp/0De5ftrAaY6xwwr7TMfqBmBxQ2AX9yrjQ=
+github.com/shuffle/shuffle-shared v0.4.17 h1:56ll366bdmIJu/7GFqNC2XTjjl0SGBf430PSq+EB6Ro=
+github.com/shuffle/shuffle-shared v0.4.17/go.mod h1:jQrYySmvp/0De5ftrAaY6xwwr7TMfqBmBxQ2AX9yrjQ=
 github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e h1:MRM5ITcdelLK2j1vwZ3Je0FKVCfqOLp5zO6trqMLYs0=
 github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e/go.mod h1:XV66xRDqSt+GTGFMVlhk3ULuV0y9ZmzeVGR4mloJI3M=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

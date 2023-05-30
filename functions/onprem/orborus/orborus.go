@@ -935,6 +935,13 @@ func main() {
 		}
 	}
 
+	// Handle Cleanup
+	// var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
+	// SHUFFLE_CONTAINER_AUTO_CLEANUP=false
+	if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) == "true" {
+		cleanupEnv = "true"
+	}
+
 	workerTimeout := 600
 	if workerTimeoutEnv != "" {
 		tmpInt, err := strconv.Atoi(workerTimeoutEnv)
@@ -1173,6 +1180,7 @@ func main() {
 
 			if shuffle.ArrayContains(executionIds, execution.ExecutionId) {
 				log.Printf("[INFO] Execution already handled: %s", execution.ExecutionId)
+				toBeRemoved.Data = append(toBeRemoved.Data, execution)
 				continue
 			}
 

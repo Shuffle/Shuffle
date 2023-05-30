@@ -400,7 +400,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 										// Add to start of org.Priorities
 										org.Priorities = append(org.Priorities, shuffle.Priority{
 											Name:        fmt.Sprintf("High CPU in environment %s", orgId),
-											Description: fmt.Sprintf("The environment %s has been using more than %d percent CPU.", orgId, percentageCheck),
+											Description: fmt.Sprintf("The environment %s has been using more than %d percent CPU. This indicates you may need to look at scaling.", orgId, percentageCheck),
 											Type:        "scale",
 											Active:      true,
 											URL:         fmt.Sprintf("/admin?tab=environments"),
