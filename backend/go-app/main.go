@@ -696,9 +696,9 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 		for tutorialIndex, tutorial := range neworg.Tutorials {
 			if tutorial.Name == "Invite teammates" {
 				neworg.Tutorials[tutorialIndex].Description = fmt.Sprintf("%d users are in your org. Org name and Image change next.", len(neworg.Users))
-				if len(neworg.Users) > 0 {
+				if len(neworg.Users) > 1 {
 					neworg.Tutorials[tutorialIndex].Done = true
-					neworg.Tutorials[tutorialIndex].Link = "/admin"
+					neworg.Tutorials[tutorialIndex].Link = "/admin?tab=users"
 				}
 
 				break
@@ -1105,14 +1105,16 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 
 	userOrgs = shuffle.SortOrgList(userOrgs)
 	orgPriorities := org.Priorities
-	if len(org.Priorities) < 5 {
-		log.Printf("[WARNING] Should find and add priorities as length is less than 5 for org %s", userInfo.ActiveOrg.Id)
+	if len(org.Priorities) < 10 {
+		log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
 		newPriorities, err := shuffle.GetPriorities(ctx, userInfo, org)
 		if err != nil {
 			log.Printf("[WARNING] Failed getting new priorities for org %s: %s", org.Id, err)
 			//orgPriorities = []shuffle.Priority{}
 		} else {
 			orgPriorities = newPriorities
+
+			// A way to manage them over time
 		}
 	}
 

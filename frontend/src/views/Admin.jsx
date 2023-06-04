@@ -80,6 +80,7 @@ import HandlePaymentNew from "../views/HandlePaymentNew.jsx";
 import OrgHeader from "../components/OrgHeader.jsx";
 import OrgHeaderexpanded from "../components/OrgHeaderexpanded.jsx";
 import Billing from "../components/Billing.jsx";
+import Priorities from "../components/Priorities.jsx";
 import Branding from "../components/Branding.jsx";
 import Files from "../components/Files.jsx";
 import { display, style } from "@mui/system";
@@ -1359,9 +1360,9 @@ const Admin = (props) => {
   const admin_views = {
     0: "organization",
     1: "cloud_sync",
-    2: "billing",
-    3: "branding",
-    4: "cache",
+		2: "priorities",
+    3: "billing",
+    4: "branding",
   };
 
   const setConfig = (event, inputValue) => {
@@ -2310,6 +2311,11 @@ const Admin = (props) => {
 								</span>
 							/>
 							<Tab
+								label=<span>
+									Priorities	
+								</span>
+							/>
+							<Tab
 								disabled={!isCloud}
 								label=<span>
 									Billing
@@ -2577,6 +2583,18 @@ const Admin = (props) => {
 							</div>
 							)
 						: adminTab === 2 ? 
+							<Priorities
+								isCloud={isCloud}
+								userdata={userdata}
+								adminTab={adminTab}
+								globalUrl={globalUrl}
+								handleGetOrg={handleGetOrg}
+								selectedOrganization={selectedOrganization}
+								selectedOrganization={selectedOrganization}
+								setSelectedOrganization={setSelectedOrganization}
+								checkLogin={checkLogin}
+							/>
+						: adminTab === 3 ? 
 							<Billing 
 								isCloud={isCloud}
 								userdata={userdata}
@@ -2589,7 +2607,7 @@ const Admin = (props) => {
 								stripeKey={props.stripeKey}
 								handleGetOrg={handleGetOrg}
 							/>
-						: adminTab === 3 ? 
+						: adminTab === 4 ? 
 							<Branding
 								isCloud={isCloud}
 								userdata={userdata}

@@ -398,13 +398,14 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 									if !foundRecommendation {
 										// Add to start of org.Priorities
-										org.Priorities = append(org.Priorities, shuffle.Priority{
+										org, _ = shuffle.AddPriority(*org, shuffle.Priority{
 											Name:        fmt.Sprintf("High CPU in environment %s", orgId),
 											Description: fmt.Sprintf("The environment %s has been using more than %d percent CPU. This indicates you may need to look at scaling.", orgId, percentageCheck),
 											Type:        "scale",
 											Active:      true,
 											URL:         fmt.Sprintf("/admin?tab=environments"),
-										})
+											Severity:    1,
+										}, false)
 
 										//Make last item the first item
 										org.Priorities = append([]shuffle.Priority{org.Priorities[len(org.Priorities)-1]}, org.Priorities[:len(org.Priorities)-1]...)
