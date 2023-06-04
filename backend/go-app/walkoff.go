@@ -814,7 +814,7 @@ func JSONCheck(str string) bool {
 
 func handleExecutionStatistics(execution shuffle.WorkflowExecution) {
 	// FIXME: CLEAN UP THE JSON THAT'S SAVED.
-	// https://github.com/frikky/Shuffle/issues/172
+	// https://github.com/shuffle/Shuffle/issues/172
 	appResults := []shuffle.AppExecutionExample{}
 	for _, result := range execution.Results {
 		resultCheck := JSONCheck(result.Result)
@@ -2370,7 +2370,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				if !found {
 					err = shuffle.SetWorkflowAppDatastore(ctx, api, api.ID)
 					if err != nil {
-						log.Printf("[WARNING] Failed setting workflowapp in loop: %s", err)
+						log.Printf("[WARNING] Failed setting workflowapp %s (%s) in loop: %s", api.Name, api.ID, err)
 						continue
 					} else {
 						appCounter += 1
@@ -2599,7 +2599,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		// Might require reflection into the python code to append the fields as well
 		for index, action := range workflowapp.Actions {
 			if action.AuthNotRequired {
-				log.Printf("Skipping auth setup: %s", action.Name)
+				log.Printf("[WARNING] Skipping auth setup for: %s", action.Name)
 				continue
 			}
 
@@ -2647,7 +2647,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 
 	err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 	if err != nil {
-		log.Printf("Failed setting workflowapp: %s", err)
+		log.Printf("[WARNING] Failed setting workflowapp: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2876,6 +2876,11 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		// Folder?
 		switch mode := file.Mode(); {
 		case mode.IsDir():
+			// Specific folder for skipping
+			if file.Name() == "unsupported" {
+				continue
+			}
+
 			tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
 			dir, err := fs.ReadDir(tmpExtra)
 			if err != nil {
@@ -2899,7 +2904,8 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 				//buildFirst, buildLast, err := IterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate)
 
 				if !forceUpdate {
-					return buildLaterFirst, buildLaterList, err
+					continue
+					//return buildLaterFirst, buildLaterList, err
 				}
 			}
 
@@ -2973,7 +2979,8 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 				err = gyaml.Unmarshal(appfileData, &workflowapp)
 				if err != nil {
 					log.Printf("[WARNING] Failed building workflowapp %s: %s", extra, err)
-					return buildLaterFirst, buildLaterList, errors.New(fmt.Sprintf("Failed building %s: %s", extra, err))
+					continue
+					//return buildLaterFirst, buildLaterList, errors.New(fmt.Sprintf("Failed building %s: %s", extra, err))
 					//continue
 				}
 
@@ -3021,7 +3028,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 					}
 				}
 
-				workflowapp.ReferenceInfo.GithubUrl = fmt.Sprintf("https://github.com/frikky/shuffle-apps/tree/master/%s/%s", strings.ToLower(newName), workflowapp.AppVersion)
+				workflowapp.ReferenceInfo.GithubUrl = fmt.Sprintf("https://github.com/shuffle/shuffle-apps/tree/master/%s/%s", strings.ToLower(newName), workflowapp.AppVersion)
 
 				tags := []string{
 					fmt.Sprintf("%s:%s_%s", baseDockerName, strings.ToLower(newName), workflowapp.AppVersion),
@@ -3187,6 +3194,32 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
 	shuffle.DeleteCache(ctx, cacheKey)
+
+	newSortedList := []shuffle.BuildLaterStruct{}
+	initApps := []string{
+		"tools",
+		"http",
+		"email",
+	}
+	for _, buildLater := range buildLaterFirst {
+		found := false
+		for _, appname := range initApps {
+			for _, tag := range buildLater.Tags {
+				if strings.Contains(strings.ToLower(tag), appname) {
+					newSortedList = append(newSortedList, buildLater)
+					found = true
+					break
+				}
+			}
+
+			if found {
+				break
+			}
+		}
+	}
+
+	// Prepend newSortedList to buildLaterFirst
+	buildLaterFirst = append(newSortedList, buildLaterFirst...)
 
 	if len(extra) == 0 {
 		log.Printf("[INFO] Starting build of %d containers (FIRST)", len(buildLaterFirst))

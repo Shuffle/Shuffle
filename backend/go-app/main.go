@@ -3905,6 +3905,11 @@ func runInitEs(ctx context.Context) {
 		}
 	}
 
+	if strings.Contains(os.Getenv("SHUFFLE_OPENSEARCH_URL"), "https") {
+		log.Printf("[INFO] Waiting 10 seconds during init to make sure the opensearch instance is up and running with security features properly")
+		time.Sleep(10 * time.Second)
+	}
+
 	_ = setUsers
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
@@ -4188,7 +4193,8 @@ func runInitEs(ctx context.Context) {
 
 		url := os.Getenv("SHUFFLE_APP_DOWNLOAD_LOCATION")
 		if len(url) == 0 {
-			log.Printf("[INFO] Skipping download of apps since no URL is set. Default would be https://github.com/frikky/shuffle-apps")
+			log.Printf("[INFO] Skipping download of apps since no URL is set. Default would be https://github.com/shuffle/shuffle-apps")
+			url = "https://github.com/shuffle/shuffle-apps"
 			//url = ""
 			//return
 		}
@@ -4215,7 +4221,6 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[DEBUG] Getting apps from url '%s'", url)
 
 		r, err := git.Clone(storer, fs, cloneOptions)
-
 		if err != nil {
 			log.Printf("[WARNING] Failed loading repo into memory (init): %s", err)
 		}
@@ -4227,7 +4232,6 @@ func runInitEs(ctx context.Context) {
 		_ = r
 		//iterateAppGithubFolders(fs, dir, "", "testing")
 
-		// FIXME: Get all the apps?
 		_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
 		if err != nil {
 			log.Printf("[WARNING] Error from app load in init: %s", err)
@@ -4242,7 +4246,7 @@ func runInitEs(ctx context.Context) {
 	}
 
 	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
-	apis := "https://github.com/frikky/security-openapis"
+	apis := "https://github.com/shuffle/security-openapis"
 
 	// THis gets memory problems hahah
 	//apis := "https://github.com/APIs-guru/openapi-directory"
@@ -4850,7 +4854,7 @@ func runInit(ctx context.Context) {
 
 		url := os.Getenv("SHUFFLE_APP_DOWNLOAD_LOCATION")
 		if len(url) == 0 {
-			url = "https://github.com/frikky/shuffle-apps"
+			url = "https://github.com/shuffle/shuffle-apps"
 		}
 
 		username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
@@ -4901,7 +4905,7 @@ func runInit(ctx context.Context) {
 	}
 
 	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
-	apis := "https://github.com/frikky/security-openapis"
+	apis := "https://github.com/shuffle/security-openapis"
 
 	// FIXME: This part gets memory problems. Fix in the future to load these apps too.
 	//apis := "https://github.com/APIs-guru/openapi-directory"
