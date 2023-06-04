@@ -27,6 +27,7 @@ import {
   Divider,
   TextField,
   Button,
+  ButtonGroup,
   Tabs,
   Tab,
   Grid,
@@ -129,7 +130,7 @@ const FileCategoryInput = (props) => {
 
 
 const Admin = (props) => {
-  const { globalUrl, userdata, serverside } = props;
+  const { globalUrl, userdata, serverside, checkLogin } = props;
 
   var to_be_copied = "";
   const classes = useStyles();
@@ -3554,6 +3555,49 @@ const Admin = (props) => {
       </div>
     ) : null;
 
+	const changeRecommendation = (recommendation, action) => {
+    const data = {
+      action: action,
+      name: recommendation.name,
+    };
+
+    fetch(`${globalUrl}/api/v1/recommendations/modify`, {
+      mode: "cors",
+      method: "POST",
+      body: JSON.stringify(data),
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then((response) => {
+        if (response.status === 200) {
+        } else {
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success === true) {
+					if (checkLogin !== undefined) {
+						checkLogin()
+  					getEnvironments()
+					}
+        } else {
+        	if (responseJson.success === false && responseJson.reason !== undefined) {
+          	alert.error("Failed change recommendation: ", responseJson.reason)
+        	} else {
+          	alert.error("Failed change recommendation");
+					}
+        }
+      })
+      .catch((error) => {
+        alert.info("Failed dismissing alert. Please contact support@shuffler.io if this persists.");
+      });
+	}
+
   const environmentView =
     curTab === 6 ? (
       <div>
@@ -3645,7 +3689,6 @@ const Admin = (props) => {
                 }
 
                 if (environment.archived === undefined) {
-                  getEnvironments();
                   return null;
                 }
 
@@ -3654,167 +3697,206 @@ const Admin = (props) => {
                   bgColor = "#1f2023";
                 }
 
+								// Check if there's a notification for it in userdata.priorities
+								var showCPUAlert = false	
+								var foundIndex = -1
+								if (userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
+									foundIndex = userdata.priorities.findIndex(prio => prio.name.includes("CPU") && prio.active === true)
+
+									if (foundIndex >= 0 && userdata.priorities[foundIndex].name.endsWith(environment.Name)) {
+											showCPUAlert = true
+									}
+								}
+
+								console.log("Show CPU alert: ", showCPUAlert)
+
                 return (
-                  <ListItem key={index} style={{ backgroundColor: bgColor }}>
-                    <ListItemText
-                      primary={environment.Name}
-                      style={{
-                        minWidth: 150,
-                        maxWidth: 150,
-                        overflow: "hidden",
-                      }}
-                    />
-                    <ListItemText
-                      primary={
-                        environment.Type !== "cloud"
-                          ? environment.running_ip === undefined ||
-                            environment.running_ip === null ||
-                            environment.running_ip.length === 0
-                            ? 
-														<div>
-															Not running
-														</div>
-                            : environment.running_ip
-                          : "N/A"
-                      }
-                      style={{
-                        minWidth: 200,
-                        maxWidth: 200,
-                        overflow: "hidden",
-                      }}
-                    />
+									<span key={index}>
+                  	<ListItem key={index} style={{ backgroundColor: bgColor }}>
+                  	  <ListItemText
+                  	    primary={environment.Name}
+                  	    style={{
+                  	      minWidth: 150,
+                  	      maxWidth: 150,
+                  	      overflow: "hidden",
+                  	    }}
+                  	  />
+                  	  <ListItemText
+                  	    primary={
+                  	      environment.Type !== "cloud"
+                  	        ? environment.running_ip === undefined ||
+                  	          environment.running_ip === null ||
+                  	          environment.running_ip.length === 0
+                  	          ? 
+															<div>
+																Not running
+															</div>
+                  	          : environment.running_ip.split(":")[0] 
+                  	        : "N/A"
+                  	    }
+                  	    style={{
+                  	      minWidth: 200,
+                  	      maxWidth: 200,
+                  	      overflow: "hidden",
+                  	    }}
+                  	  />
 
-                    <ListItemText
-                      style={{ minWidth: 100, maxWidth: 100 }}
-                      primary={
-												<Tooltip
-													title={"Copy Orborus command"}
-													style={{}}
-													aria-label={"Copy orborus command"}
-												>
-													<IconButton
+                  	  <ListItemText
+                  	    style={{ minWidth: 100, maxWidth: 100 }}
+                  	    primary={
+													<Tooltip
+														title={"Copy Orborus command"}
 														style={{}}
-														disabled={environment.Type === "cloud"}
-														onClick={() => {
-															if (environment.Type === "cloud") {
-																alert.info("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
-																return
-															}
-
-															const elementName = "copy_element_shuffle";
-															const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
-															const commandData = `docker run --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${globalUrl}" --name="shuffle-orborus" -d ghcr.io/shuffle/shuffle-orborus:latest`
-															var copyText = document.getElementById(elementName);
-															if (copyText !== null && copyText !== undefined) {
-																const clipboard = navigator.clipboard;
-																if (clipboard === undefined) {
-																	alert.error("Can only copy over HTTPS (port 3443)");
-																	return;
+														aria-label={"Copy orborus command"}
+													>
+														<IconButton
+															style={{}}
+															disabled={environment.Type === "cloud"}
+															onClick={() => {
+																if (environment.Type === "cloud") {
+																	alert.info("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
+																	return
 																}
 
-																navigator.clipboard.writeText(commandData);
-																copyText.select();
-																copyText.setSelectionRange(
-																	0,
-																	99999
-																); /* For mobile devices */
+																const elementName = "copy_element_shuffle";
+																const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
+																const commandData = `docker run --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${globalUrl}" --name="shuffle-orborus" -d ghcr.io/shuffle/shuffle-orborus:latest`
+																var copyText = document.getElementById(elementName);
+																if (copyText !== null && copyText !== undefined) {
+																	const clipboard = navigator.clipboard;
+																	if (clipboard === undefined) {
+																		alert.error("Can only copy over HTTPS (port 3443)");
+																		return;
+																	}
 
-																/* Copy the text inside the text field */
-																document.execCommand("copy");
+																	navigator.clipboard.writeText(commandData);
+																	copyText.select();
+																	copyText.setSelectionRange(
+																		0,
+																		99999
+																	); /* For mobile devices */
 
-																alert.info("Orborus command copied to clipboard");
-															}
-														}}
-													>
-														<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
-													</IconButton>
-												</Tooltip>
-											}
-                    />
+																	/* Copy the text inside the text field */
+																	document.execCommand("copy");
 
-                    <ListItemText
-                      primary={environment.Type}
-                      style={{ minWidth: 125, maxWidth: 125 }}
-                    />
-                    <ListItemText
-                      style={{
-                        minWidth: 125,
-                        maxWidth: 125,
-                        overflow: "hidden",
-                      }}
-                      primary={environment.default ? "true" : null}
-                    >
-                      {environment.default ? null : (
-                        <Button
-                          variant="outlined"
-                          style={{ borderRadius: "0px", marginRight: 5 }}
-                          onClick={() => setDefaultEnvironment(environment)}
-                          color="primary"
-                        >
-                          Make default
-                        </Button>
-                      )}
-                    </ListItemText>
-                    <ListItemText
-                      style={{
-                        minWidth: 100,
-                        maxWidth: 100,
-                        overflow: "hidden",
-                        marginLeft: 10,
-                      }}
-                      primary={environment.archived.toString()}
-                    />
-                    <ListItemText
-                      style={{
-                        minWidth: 150,
-                        maxWidth: 150,
-                        overflow: "hidden",
-                      }}
-                      primary={
-                        environment.edited !== undefined &&
-                        environment.edited !== null &&
-                        environment.edited !== 0
-                          ? new Date(environment.edited * 1000).toISOString()
-                          : 0
-                      }
-                    />
-                    <ListItemText
-                      style={{
-                        minWidth: 300,
-                        maxWidth: 300,
-                        overflow: "hidden",
-                        marginLeft: 10,
-                      }}
-                    >
-                      <div style={{ display: "flex" }}>
-                        <Button
-                          variant={environment.archived ? "contained" : "outlined"}
-                          style={{ borderRadius: "0px" }}
-                          onClick={() => deleteEnvironment(environment)}
-                          color="primary"
-                        >
-                          {environment.archived ? "Activate" : "Disable"}
-                        </Button>
-                        <Button
-                          variant={"outlined"}
-                          style={{ borderRadius: "0px" }}
-													disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
-                          onClick={() => {
-                            console.log("Should clear executions for: ", environment);
+																	alert.info("Orborus command copied to clipboard");
+																}
+															}}
+														>
+															<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
+														</IconButton>
+													</Tooltip>
+												}
+                  	  />
 
-														if (isCloud && environment.Name.toLowerCase() === "cloud") {
-                            	rerunCloudWorkflows(environment);
-														} else { 
-                            	abortEnvironmentWorkflows(environment);
-														}
-                          }}
-                          color="primary"
-                        >
-													{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
-                        </Button>
-                      </div>
-                    </ListItemText>
-                  </ListItem>
+                  	  <ListItemText
+                  	    primary={environment.Type}
+                  	    style={{ minWidth: 125, maxWidth: 125 }}
+                  	  />
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 125,
+                  	      maxWidth: 125,
+                  	      overflow: "hidden",
+                  	    }}
+                  	    primary={environment.default ? "true" : null}
+                  	  >
+                  	    {environment.default ? null : (
+                  	      <Button
+                  	        variant="outlined"
+                  	        style={{ marginRight: 5 }}
+                  	        onClick={() => setDefaultEnvironment(environment)}
+                  	        color="primary"
+                  	      >
+                  	        Make default
+                  	      </Button>
+                  	    )}
+                  	  </ListItemText>
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 100,
+                  	      maxWidth: 100,
+                  	      overflow: "hidden",
+                  	      marginLeft: 10,
+                  	    }}
+                  	    primary={environment.archived.toString()}
+                  	  />
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 150,
+                  	      maxWidth: 150,
+                  	      overflow: "hidden",
+                  	    }}
+                  	    primary={
+                  	      environment.edited !== undefined &&
+                  	      environment.edited !== null &&
+                  	      environment.edited !== 0
+                  	        ? new Date(environment.edited * 1000).toISOString()
+                  	        : 0
+                  	    }
+                  	  />
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 300,
+                  	      maxWidth: 300,
+                  	      overflow: "hidden",
+                  	      marginLeft: 10,
+                  	    }}
+                  	  >
+                  	    <div style={{ display: "flex" }}>
+													<ButtonGroup style={{borderRadius: "5px 5px 5px 5px",}}>
+														<Button
+															variant={environment.archived ? "contained" : "outlined"}
+															style={{ }}
+															onClick={() => deleteEnvironment(environment)}
+															color="primary"
+														>
+															{environment.archived ? "Activate" : "Disable"}
+														</Button>
+														<Button
+															variant={"outlined"}
+															style={{ }}
+															disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
+															onClick={() => {
+																console.log("Should clear executions for: ", environment);
+
+																if (isCloud && environment.Name.toLowerCase() === "cloud") {
+																	rerunCloudWorkflows(environment);
+																} else { 
+																	abortEnvironmentWorkflows(environment);
+																}
+															}}
+															color="primary"
+														>
+															{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
+														</Button>
+													</ButtonGroup>
+                  	    </div>
+                  	  </ListItemText>
+                  	</ListItem>
+										{showCPUAlert === false ? null : 
+                  		<ListItem key={index+"_cpu"} style={{ backgroundColor: bgColor }}>
+												<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+													<div style={{flex: 2, overflow: "hidden",}}>
+														<Typography variant="body1" >
+															90% CPU the server(s) hosting the Shuffle App Runner (Orborus) was found.  
+														</Typography>
+														<Typography variant="body2" color="textSecondary">
+															Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://shuffler.io/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
+														</Typography>
+													</div>
+													<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
+														<Button style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="outlined" color="secondary" onClick={() => {
+															// dismiss -> get envs
+														 	changeRecommendation(userdata.priorities[foundIndex], "dismiss")
+														}}>
+															Dismiss	
+														</Button>
+													</div> 
+												</div>
+											</ListItem>
+										}
+									</span>
                 );
               })}
         </List>
@@ -3973,7 +4055,7 @@ const Admin = (props) => {
               style={{ minWidth: 150, maxWidth: 150 }}
             />
             <ListItemText
-              primary="Orborus running"
+              primary="Orborus source"
               style={{ minWidth: 200, maxWidth: 200 }}
             />
             <ListItemText

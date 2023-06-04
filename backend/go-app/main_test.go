@@ -24,6 +24,7 @@ type endpoint struct {
 	handler http.HandlerFunc
 	path    string
 	method  string
+	body    []byte
 }
 
 func init() {
@@ -44,7 +45,7 @@ func TestAuthenticationRequired(t *testing.T) {
 		{handler: shuffle.HandleNewOutlookRegister, path: "/functions/outlook/register", method: "GET"},
 		{handler: shuffle.HandleGetOutlookFolders, path: "/functions/outlook/getFolders", method: "GET"},
 		{handler: shuffle.HandleApiGeneration, path: "/api/v1/users/generateapikey", method: "GET"},
-		{handler: handleLogin, path: "/api/v1/users/login", method: "POST"}, // prob not this one
+		{handler: shuffle.HandleLogin, path: "/api/v1/users/login", method: "POST"}, // prob not this one
 		// handleRegister generates nil pointer exception. Not necessary for this anyway.
 		//{handler: handleRegister, path: "/api/v1/users/register", method: "POST"},
 		{handler: shuffle.HandleGetUsers, path: "/api/v1/users/getusers", method: "GET"},
@@ -108,8 +109,8 @@ func TestAuthenticationRequired(t *testing.T) {
 
 		{handler: verifySwagger, path: "/api/v1/verify_swagger", method: "POST"},
 		{handler: verifySwagger, path: "/api/v1/verify_openapi", method: "POST"},
-		{handler: echoOpenapiData, path: "/api/v1/get_openapi_uri", method: "POST"},
-		{handler: echoOpenapiData, path: "/api/v1/validate_openapi", method: "POST"},
+		{handler: shuffle.EchoOpenapiData, path: "/api/v1/get_openapi_uri", method: "POST"},
+		{handler: shuffle.EchoOpenapiData, path: "/api/v1/validate_openapi", method: "POST"},
 		{handler: shuffle.ValidateSwagger, path: "/api/v1/validate_openapi", method: "POST"},
 		{handler: getOpenapi, path: "/api/v1/get_openapi", method: "GET"},
 
@@ -117,7 +118,7 @@ func TestAuthenticationRequired(t *testing.T) {
 
 		{handler: handleCloudSetup, path: "/api/v1/cloud/setup", method: "POST"},
 		{handler: shuffle.HandleGetOrgs, path: "/api/v1/orgs", method: "POST"},
-		{handler: shuffle.HandleGetFileContent, path: "/api/v1/files/{fileId}/content", method: "POST"},
+		{handler: shuffle.HandleGetFileContent, path: "/api/v1/files/{fileId}/content", method: "POST", body: []byte("hi")},
 	}
 
 	var err error
@@ -197,10 +198,11 @@ func TestAuthenticationNotRequired(t *testing.T) {
 // requirements might change after the refactor.
 func TestCors(t *testing.T) {
 	handlers := []endpoint{
+		{handler: handleLogin, path: "/api/v1/users/login", method: "POST"}, // prob not this one
+
 		{handler: shuffle.HandleNewOutlookRegister, path: "/functions/outlook/register", method: "GET"},
 		{handler: shuffle.HandleGetOutlookFolders, path: "/functions/outlook/getFolders", method: "GET"},
 		{handler: shuffle.HandleApiGeneration, path: "/api/v1/users/generateapikey", method: "GET"},
-		{handler: handleLogin, path: "/api/v1/users/login", method: "POST"}, // prob not this one
 		// handleRegister generates nil pointer exception
 		{handler: handleRegister, path: "/api/v1/users/register", method: "POST"},
 		{handler: shuffle.HandleGetUsers, path: "/api/v1/users/getusers", method: "GET"},

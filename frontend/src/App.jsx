@@ -370,6 +370,7 @@ const App = (message, props) => {
         	      globalUrl={globalUrl}
         	      setCookie={setCookie}
         	      cookies={cookies}
+        	      checkLogin={checkLogin}
         	      {...props}
         	    />
         	  }

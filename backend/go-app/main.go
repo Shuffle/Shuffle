@@ -791,7 +791,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 				CloudSync: false,
 			}
 
-			err = shuffle.SetOrg(ctx, newOrg, orgId)
+			err = shuffle.SetOrg(ctx, newOrg, newOrg.Id)
 			if err != nil {
 				log.Printf("[WARNING] Failed setting init organization: %s", err)
 			} else {
@@ -943,48 +943,104 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	})
 
 	// Updating user info if there's something wrong
-	if (len(userInfo.ActiveOrg.Name) == 0 || len(userInfo.ActiveOrg.Id) == 0) && len(userInfo.Orgs) > 0 {
-		_, err := shuffle.GetOrg(ctx, userInfo.Orgs[0])
-		if err != nil {
+	if len(userInfo.ActiveOrg.Name) == 0 || len(userInfo.ActiveOrg.Id) == 0 {
+		if len(userInfo.Orgs) == 0 || (len(userInfo.Orgs) > 0 && userInfo.Orgs[0] == "") {
 			orgs, err := shuffle.GetAllOrgs(ctx)
-			if err == nil {
-				newStringOrgs := []string{}
-				newOrgs := []shuffle.Org{}
+			log.Printf("[INFO] Fixing organization for user %s (%s). Found orgs: %d", userInfo.Username, userInfo.Id, len(orgs))
+			if err == nil && len(orgs) > 0 {
 				for _, org := range orgs {
-					if strings.ToLower(org.Name) == strings.ToLower(userInfo.Orgs[0]) {
-						newOrgs = append(newOrgs, org)
-						newStringOrgs = append(newStringOrgs, org.Id)
+					if len(org.Id) == 0 {
+						continue
 					}
-				}
 
-				if len(newOrgs) > 0 {
+					// Prolly some way here to jump into another org
+					// when you have access to the DB
 					userInfo.ActiveOrg = shuffle.OrgMini{
-						Id:   newOrgs[0].Id,
-						Name: newOrgs[0].Name,
+						Name: org.Name,
+						Id:   org.Id,
+						Role: "admin",
 					}
-
-					userInfo.Orgs = newStringOrgs
-
-					err = shuffle.SetUser(ctx, &userInfo, true)
-					if err != nil {
-						log.Printf("Error patching User for activeOrg: %s", err)
-					} else {
-						log.Printf("Updated the users' org")
-					}
+					userInfo.Orgs = []string{org.Id}
+					break
 				}
-			} else {
-				log.Printf("Failed getting orgs for user. Major issue.: %s", err)
 			}
 
-		} else {
-			// 1. Check if the org exists by ID
-			// 2. if it does, overwrite user
-			userInfo.ActiveOrg = shuffle.OrgMini{
-				Id: userInfo.Orgs[0],
+			// Make a new one in case we couldn't find one
+			if len(userInfo.ActiveOrg.Id) == 0 {
+				orgSetupName := "default"
+				orgId := uuid.NewV4().String()
+				newOrg := shuffle.Org{
+					Name:      orgSetupName,
+					Id:        orgId,
+					Org:       orgSetupName,
+					Users:     []shuffle.User{},
+					Roles:     []string{"admin", "user"},
+					CloudSync: false,
+				}
+
+				err = shuffle.SetOrg(ctx, newOrg, newOrg.Id)
+				if err == nil {
+					userInfo.ActiveOrg = shuffle.OrgMini{
+						Name: newOrg.Name,
+						Id:   newOrg.Id,
+						Role: "admin",
+					}
+					userInfo.Orgs = []string{newOrg.Id}
+				} else {
+					log.Printf("[WARNING] Failed to set new org: %s", err)
+				}
 			}
+
+			// Set user
 			err = shuffle.SetUser(ctx, &userInfo, true)
 			if err != nil {
-				log.Printf("[INFO] Error patching User for activeOrg: %s", err)
+				log.Printf("[WARNING] Failed fixing org info for user %s (%s)", userInfo.Username, userInfo.Id)
+			} else {
+				log.Printf("[INFO] Set organization for %s (%s) to be %s (%s)", userInfo.Username, userInfo.Id, userInfo.ActiveOrg.Name, userInfo.ActiveOrg.Id)
+			}
+		} else if len(userInfo.Orgs) > 0 && userInfo.Orgs[0] != "" {
+			_, err := shuffle.GetOrg(ctx, userInfo.Orgs[0])
+			if err != nil {
+				orgs, err := shuffle.GetAllOrgs(ctx)
+				if err == nil {
+					newStringOrgs := []string{}
+					newOrgs := []shuffle.Org{}
+					for _, org := range orgs {
+						if strings.ToLower(org.Name) == strings.ToLower(userInfo.Orgs[0]) {
+							newOrgs = append(newOrgs, org)
+							newStringOrgs = append(newStringOrgs, org.Id)
+						}
+					}
+
+					if len(newOrgs) > 0 {
+						userInfo.ActiveOrg = shuffle.OrgMini{
+							Id:   newOrgs[0].Id,
+							Name: newOrgs[0].Name,
+						}
+
+						userInfo.Orgs = newStringOrgs
+
+						err = shuffle.SetUser(ctx, &userInfo, true)
+						if err != nil {
+							log.Printf("Error patching User for activeOrg: %s", err)
+						} else {
+							log.Printf("Updated the users' org")
+						}
+					}
+				} else {
+					log.Printf("Failed getting orgs for user. Major issue.: %s", err)
+				}
+
+			} else {
+				// 1. Check if the org exists by ID
+				// 2. if it does, overwrite user
+				userInfo.ActiveOrg = shuffle.OrgMini{
+					Id: userInfo.Orgs[0],
+				}
+				err = shuffle.SetUser(ctx, &userInfo, true)
+				if err != nil {
+					log.Printf("[INFO] Error patching User for activeOrg: %s", err)
+				}
 			}
 		}
 	}
@@ -1383,7 +1439,7 @@ func fixUserOrg(ctx context.Context, user *shuffle.User) *shuffle.User {
 			org.Users = append(org.Users, *user)
 		}
 
-		err = shuffle.SetOrg(ctx, *org, orgId)
+		err = shuffle.SetOrg(ctx, *org, org.Id)
 		if err != nil {
 			log.Printf("Failed setting org %s", orgId)
 		}
@@ -3924,7 +3980,7 @@ func runInitEs(ctx context.Context) {
 				CloudSync: false,
 			}
 
-			err = shuffle.SetOrg(ctx, newOrg, orgId)
+			err = shuffle.SetOrg(ctx, newOrg, newOrg.Id)
 			setUsers := false
 			if err != nil {
 				log.Printf("[WARNING] Failed setting organization when creating original user: %s", err)
@@ -3976,6 +4032,11 @@ func runInitEs(ctx context.Context) {
 	}
 
 	for _, org := range activeOrgs {
+		if len(org.Id) == 0 {
+			log.Printf("[DEBUG] No ID found for org with name '%s'. Why was it made?", org.Name)
+			continue
+		}
+
 		if !org.CloudSync {
 			log.Printf("[INFO] Skipping org syncCheck for '%s' because sync isn't set (1).", org.Id)
 			continue
@@ -4151,7 +4212,7 @@ func runInitEs(ctx context.Context) {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
-		log.Printf("[DEBUG] Getting apps from %s", url)
+		log.Printf("[DEBUG] Getting apps from url '%s'", url)
 
 		r, err := git.Clone(storer, fs, cloneOptions)
 
@@ -4288,11 +4349,11 @@ func runInit(ctx context.Context) {
 				CloudSync: false,
 			}
 
-			err = shuffle.SetOrg(ctx, newOrg, orgId)
+			err = shuffle.SetOrg(ctx, newOrg, newOrg.Id)
 			if err != nil {
-				log.Printf("Failed setting organization: %s", err)
+				log.Printf("[WARNING] Failed setting organization: %s", err)
 			} else {
-				log.Printf("Successfully created the default org!")
+				log.Printf("[WARNING] Successfully created the default org!")
 				setUsers = true
 			}
 		} else {
@@ -4810,7 +4871,7 @@ func runInit(ctx context.Context) {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
-		log.Printf("[DEBUG] Getting apps from %s", url)
+		log.Printf("[DEBUG] Getting apps from URL '%s'", url)
 
 		r, err := git.Clone(storer, fs, cloneOptions)
 
@@ -5929,6 +5990,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.SaveWorkflow).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.GetSpecificWorkflow).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/recommend", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
+
+	// New for recommendations in Shuffle
+	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/recommendations/modify", shuffle.HandleRecommendationAction).Methods("POST", "OPTIONS")
 
 	// Triggers
 	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")

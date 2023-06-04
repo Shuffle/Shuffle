@@ -45,7 +45,7 @@ import (
 
 // Starts jobs in bulk, so this could be increased
 var sleepTime = 3
-var maxConcurrency = 25
+var maxConcurrency = 15
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
