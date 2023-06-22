@@ -212,6 +212,27 @@ func deployServiceWorkers(image string) {
 			networkName = swarmNetworkName
 		}
 
+		// Get a list of network interfaces
+		interfaces, err := net.Interfaces()
+		if err != nil {
+			panic(err)
+		}
+
+		// Check if there is at least one interface
+		if len(interfaces) < 2 {
+			panic("Insufficient network interfaces")
+		}
+
+		// Get the second interface
+		targetInterface := interfaces[1]
+		mtu := targetInterface.MTU
+
+		// Print the interface and MTU information
+		fmt.Printf("Target Interface: %s, MTU: %d\n", targetInterface.Name, mtu)
+		// Create the network options with the specified MTU
+		options := make(map[string]string)
+		options["com.docker.network.driver.mtu"] = fmt.Sprintf("%d", mtu)
+
 		ingressOptions := types.NetworkCreate{
 			Driver:     "overlay",
 			Attachable: false,
@@ -227,7 +248,7 @@ func deployServiceWorkers(image string) {
 			},
 		}
 
-		_, err := dockercli.NetworkCreate(
+		_, err = dockercli.NetworkCreate(
 			ctx,
 			"ingress",
 			ingressOptions,
@@ -241,6 +262,7 @@ func deployServiceWorkers(image string) {
 		// Specific subnet?
 		networkCreateOptions := types.NetworkCreate{
 			Driver:     "overlay",
+			Options:    options,
 			Attachable: true,
 			Ingress:    false,
 			IPAM: &network.IPAM{
