@@ -503,6 +503,7 @@ const App = (message, props) => {
         	  path="/workflows"
         	  element={
         	    <Workflows
+          			checkLogin={checkLogin}
         	      cookies={cookies}
         	      removeCookie={removeCookie}
         	      isLoaded={isLoaded}

@@ -11484,7 +11484,7 @@ const AngularWorkflow = (defaultprops) => {
           >
             <div style={{ flex: "1" }}>
               <h3 style={{ marginBottom: "5px" }}>
-                {selectedTrigger.app_name}: {selectedTrigger.status}
+                {selectedTrigger.app_name}
               </h3>
               <a
                 rel="noopener noreferrer"
@@ -11526,7 +11526,7 @@ const AngularWorkflow = (defaultprops) => {
             onChange={selectedTriggerChange}
           />
 
-          <div style={{ marginTop: "20px" }}>
+          {/*<div style={{ marginTop: "20px" }}>
             Environment:
             <TextField
               style={{
@@ -11549,6 +11549,7 @@ const AngularWorkflow = (defaultprops) => {
               value={selectedTrigger.environment}
             />
           </div>
+					*/}
           <Divider
             style={{
               marginTop: "20px",
@@ -13697,7 +13698,7 @@ const AngularWorkflow = (defaultprops) => {
           >
             <h2 style={{ color: "rgba(255,255,255,0.5)" }}>
               <DirectionsRunIcon style={{ marginRight: 10 }} />
-              All Executions
+              All Workflow Runs 
             </h2>
           </Breadcrumbs>
           <Button
@@ -13710,7 +13711,7 @@ const AngularWorkflow = (defaultprops) => {
             color="primary"
           >
             <CachedIcon style={{ marginRight: 10 }} />
-            Refresh executions
+            Refresh Runs 
           </Button>
           <Divider
             style={{
@@ -13956,7 +13957,7 @@ const AngularWorkflow = (defaultprops) => {
                 style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
                 onClick={() => { }}
               >
-                See other Executions
+                See more runs 
               </h2>
             </span>
           </Breadcrumbs>
@@ -14781,7 +14782,7 @@ const AngularWorkflow = (defaultprops) => {
           {curapp === null ? null : (
             <img
               alt={selectedResult.action.app_name}
-              src={selectedResult === undefined ? theme.palette.defaultImage : selectedResult.action.app_name === "shuffle-subflow" ? triggers[4].large_image : selectedResult.action.app_name === "User Input" ? triggers[5].large_image : selectedResult.action.large_image !== undefined  && selectedResult.action.large_image !== null && selectedResult.action.large_image !== "" ? selectedResult.action.large_image : curapp.large_image}
+              src={selectedResult === undefined ? theme.palette.defaultImage : selectedResult.action.app_name === "shuffle-subflow" ? triggers[4].large_image : selectedResult.action.app_name === "User Input" ? triggers[5].large_image : selectedResult.action !== undefined && selectedResult.action.large_image !== undefined && selectedResult.action.large_image !== null && selectedResult.action.large_image !== "" ? selectedResult.action.large_image : curapp !== undefined ? curapp.large_image : theme.palette.defaultImage}
               style={{
                 marginRight: 20,
                 width: imgsize,
@@ -15509,7 +15510,7 @@ const AngularWorkflow = (defaultprops) => {
       <div>
         <DialogTitle id="draggable-dialog-title" style={{ cursor: "move", }}>
           <div style={{ color: "white" }}>
-            Authentication for {selectedApp.name}
+            Authentication for {selectedApp.name.replace("_", " ", -1)}
           </div>
         </DialogTitle>
         <DialogContent>

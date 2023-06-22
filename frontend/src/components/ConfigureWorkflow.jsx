@@ -79,6 +79,17 @@ const ConfigureWorkflow = (props) => {
 		},
 	});
 
+	// ONLY when component is being unloaded, run stop() function
+	// This is to prevent the interval from running when the component is not being used
+	
+	/*
+	useEffect(() => {
+		return () => {
+			stop()
+		}
+	}, [])
+	*/
+
 	// Where is this from?
   if (workflow === undefined || workflow === null) {
     return null;

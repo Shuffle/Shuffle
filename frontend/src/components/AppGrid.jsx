@@ -362,7 +362,7 @@ const AppGrid = props => {
 					: null
 				}
 
-				<span style={{position: "absolute", display: "flex", textAlign: "right", float: "right", right: 0, bottom: 120, }}>
+				<span style={{position: "absolute", display: "flex", textAlign: "right", float: "right", right: 0, bottom: isMobile?"":120, }}>
 					<Typography variant="body2" color="textSecondary" style={{}}>
 						Search by 
 					</Typography>

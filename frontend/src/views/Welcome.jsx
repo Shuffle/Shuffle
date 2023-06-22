@@ -334,7 +334,7 @@ const Welcome = (props) => {
 		const defaultImage = "/images/experienced.png"
 		const experienced_image = userdata !== undefined && userdata !== null && userdata.active_org !== undefined && userdata.active_org.image !== undefined && userdata.active_org.image !== null && userdata.active_org.image !== "" ? userdata.active_org.image : defaultImage
     return (
-				<div style={{width: 1000, margin: "auto", paddingBottom: 150, minHeight: 1500, }}>
+				<div style={{width: 1000, margin: "auto", paddingBottom: 150, minHeight: 1500, marginTop: 50, }}>
 					{/*
 					<div style={{position: "fixed", bottom: 110, right: 110, display: "flex", }}>
 						<img src="/images/Arrow.png" style={{width: 250, height: "100%",}} />

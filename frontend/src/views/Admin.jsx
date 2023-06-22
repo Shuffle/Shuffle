@@ -177,7 +177,7 @@ const Admin = (props) => {
   const [secret2FA, setSecret2FA] = React.useState("");
   const [show2faSetup, setShow2faSetup] = useState(false);
 
-  const [adminTab, setAdminTab] = React.useState(1);
+  const [adminTab, setAdminTab] = React.useState(2);
 	const [showApiKey, setShowApiKey] = useState(false);
   const [billingInfo, setBillingInfo] = React.useState({});
 	const [selectedStatus, setSelectedStatus] = React.useState([]);
@@ -188,8 +188,6 @@ const Admin = (props) => {
       setIsDropzone(false);
     }
   }, [isDropzone]);
-
-
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
@@ -299,6 +297,165 @@ const Admin = (props) => {
 		)	
 	}
 
+	// Basically just a simple way to get a generated email
+	// This also may help understand how to communicate with users 
+	// both inside and outside Shuffle
+	// This could also be generated on the backend
+	const mailsendingButton = (org) => {
+		if (org === undefined || org === null) {
+			return ""
+		}
+
+		if (users.length === 0) {
+			return ""
+		}
+
+		// 1 mail based on users that have only apps
+		// Another based on those doing workflows
+		// Another based on those trying usecases(?) or templates
+		//
+		// Start based on edr, siem & ticketing
+		// Talk about enrichment?
+		// Check suggested usecases
+		// Check suggested workflows 
+		var your_apps = "- Connecting "
+
+		var subject_add = 0
+		var subject = "Want to automate "
+
+		if (org.security_framework !== undefined && org.security_framework !== null) {
+			if (org.security_framework.cases.name !== undefined && org.security_framework.cases.name !== null && org.security_framework.cases.name !== "") {
+				your_apps += org.security_framework.cases.name.replace("_", " ", -1) + ", "
+
+				if (subject_add < 2) {
+					if (subject_add === 1) {
+						subject += " & "
+					}
+
+					subject_add += 1 
+					subject += org.security_framework.cases.name.replace("_", " ", -1) 
+				}
+			}
+
+			if (org.security_framework.siem.name !== undefined && org.security_framework.siem.name !== null && org.security_framework.siem.name !== "") {
+				your_apps += org.security_framework.siem.name.replace("_", " ", -1) + ", "
+
+				if (subject_add < 2) {
+					if (subject_add === 1) {
+						subject += " & "
+					}
+
+					subject_add += 1 
+					subject += org.security_framework.siem.name.replace("_", " ", -1)
+				}
+			}
+
+			if (org.security_framework.communication.name !== undefined && org.security_framework.communication.name !== null && org.security_framework.communication.name !== "") {
+				your_apps += org.security_framework.communication.name.replace("_", " ", -1) + ", "
+
+				if (subject_add < 2) {
+					if (subject_add === 1) {
+						subject += " & "
+					}
+
+					subject_add += 1 
+					subject += org.security_framework.communication.name.replace("_", " ", -1)
+				}
+			}
+
+			if (org.security_framework.edr.name !== undefined && org.security_framework.edr.name !== null && org.security_framework.edr.name !== "") {
+				your_apps += org.security_framework.edr.name.replace("_", " ", -1) + ", "
+
+				if (subject_add < 2) {
+					if (subject_add === 1) {
+						subject += " & "
+					}
+
+					subject_add += 1 
+					subject += org.security_framework.edr.name.replace("_", " ", -1)
+				}
+			}
+
+			if (org.security_framework.intel.name !== undefined && org.security_framework.intel.name !== null && org.security_framework.intel.name !== "") {
+				your_apps += org.security_framework.intel.name.replace("_", " ", -1) + ", "
+
+				if (subject_add < 2) {
+					if (subject_add === 1) {
+						subject += " & "
+					}
+
+					subject_add += 1 
+					subject += org.security_framework.intel.name.replace("_", " ", -1)
+				}
+			}
+
+
+			// Remove comma
+			subject += "?"
+			your_apps = your_apps.substring(0, your_apps.length - 2)
+		}
+
+
+		// Add usecases they may not have tried (from recommendations): org.priorities where item type is usecase
+		var usecases = "- Building usecases like "
+		const active_usecase = org.priorities.filter((item) => item.type === "usecase" && item.active === true)
+		if (active_usecase.length > 0) {
+			for (var i = 0; i < active_usecase.length; i++) {
+				if (active_usecase[i].name.includes("Suggested Usecase: ")) {
+					usecases += active_usecase[i].name.replace("Suggested Usecase: ", "", -1) + ", "
+				} else {
+					usecases += active_usecase[i].name + ", "
+				}
+			}
+
+			usecases = usecases.substring(0, usecases.length - 2)
+		}
+
+		if (your_apps.length <= 15) {
+			your_apps = ""
+		} 
+
+		if (usecases.length <= 30) {
+			usecases = ""
+		}
+
+		var workflow_amount = "a few"
+		var admins = "" 
+
+		// Loop users
+		for (var i = 0; i < users.length; i++) {
+			if (users[i].role === "admin") {
+				admins += users[i].username + ","
+			}
+		}
+
+		// Remove last comma
+		admins = admins.substring(0, admins.length - 1)
+
+		if (your_apps.length > 5) {
+			your_apps += "%0D%0A"
+		}
+
+		if (usecases.length > 5) {
+			usecases += "%0D%0A"
+		}
+
+		// Get drift username from userdata.username before @ in email
+		const username = userdata.username.substring(0, userdata.username.indexOf("@"))
+
+		var body = `Hey,%0D%0AI saw you trying to use Shuffle, and thought we may be able to help. Right now, it looks like you have ${workflow_amount} workflows made, but I'm not sure if you're getting the most out of Shuffle.%0D%0A%0D%0AIf you're interested, I'd love to set up a quick call to see if we can help you get more out of Shuffle. %0D%0A%0D%0A
+
+Some of the things we can help with:%0D%0A
+${your_apps}
+- Properly authenticating and custom building apps%0D%0A
+${usecases}
+- Creating special usecases%0D%0A%0D%0A
+
+Let me know if you're interested, or set up a call here: https://drift.me/${username}`
+
+		return `mailto:${admins}?subject=${subject}&body=${body}`
+	}
+
   const deleteAuthentication = (data) => {
     alert.info("Deleting auth " + data.label);
 
@@ -366,6 +523,13 @@ const Admin = (props) => {
         console.log("Error in userdata: ", error);
       });
   };
+
+
+	if (userdata.support === true && selectedOrganization.id !== "" && selectedOrganization.id !== undefined && selectedOrganization.id !== null && selectedOrganization.id !== userdata.active_org.id) {
+		alert.info("Refreshing window to fix org support access")
+		window.location.reload()
+		return null
+	}
 
   const handleVerify2FA = (userId, code) => {
     const data = {
@@ -799,6 +963,10 @@ const Admin = (props) => {
 
 					if (responseJson.lead_info !== undefined && responseJson.lead_info !== null) {
 						var leads = []
+						if (responseJson.lead_info.contacted) {
+							leads.push("contacted")
+						}
+
 						if (responseJson.lead_info.customer) {
 							leads.push("customer")
 						}
@@ -1181,11 +1349,6 @@ const Admin = (props) => {
 
   var localData = "";
 
-  // useEffect(() => {
-  //   console.log('confirm', fileContent);
-  // }, [fileContent])
-
-  
 
   const getSchedules = () => {
     fetch(globalUrl + "/api/v1/workflows/schedules", {
@@ -1321,6 +1484,10 @@ const Admin = (props) => {
         alert.error(error.toString());
       });
   };
+
+  useEffect(() => {
+		getUsers()
+  }, []);
 
   const getSettings = () => {
     fetch(globalUrl + "/api/v1/getsettings", {
@@ -2189,27 +2356,45 @@ const Admin = (props) => {
 						*/}
 
 						{userdata.support === true ? 
-							<FormControl sx={{ m: 1, width: 300, }} style={{top: -10, right: 50, position: "absolute" }}>
-								<InputLabel id="">Status</InputLabel>
-								<Select
-									style={{minWidth: 150, maxWidth: 150, }}
-									labelId="multiselect-status"
-									id="multiselect-status"
-									multiple
-									value={selectedStatus}
-									onChange={handleStatusChange}
-									input={<OutlinedInput label="Status" />}
-									renderValue={(selected) => selected.join(', ')}
-									MenuProps={MenuProps}
-								>
-									{["lead", "pov", "demo done", "customer", "student", ].map((name) => (
-										<MenuItem key={name} value={name}>
-											<Checkbox checked={selectedStatus.indexOf(name) > -1} />
-											<ListItemText primary={name} />
-										</MenuItem>
-									))}
-								</Select>
-							</FormControl>
+							<span style={{display: "flex", top: -10, right: 50, position: "absolute"}}>
+								<a href={mailsendingButton(selectedOrganization)} target="_blank" rel="noopener noreferrer" style={{textDecoration: "none"}} disabled={selectedStatus.length !== 0}>
+									<Button
+										variant="outlined"
+										color="primary"
+										disabled={selectedStatus.length !== 0}
+										style={{ minWidth: 80, maxWidth: 80, height: "100%", }} 
+										onClick={() => {
+												console.log("Should send mail to admins of org with context")
+												handleStatusChange({target: {value: ["contacted"]}})
+
+												// open a mailto with subject "hello" and sender "frikky@shuffler.io"
+										}}
+									>
+										Sales mail
+									</Button>
+								</a>
+								<FormControl sx={{ m: 1, width: 300, }} style={{}}>
+									<InputLabel id="">Status</InputLabel>
+									<Select
+										style={{minWidth: 150, maxWidth: 150, }}
+										labelId="multiselect-status"
+										id="multiselect-status"
+										multiple
+										value={selectedStatus}
+										onChange={handleStatusChange}
+										input={<OutlinedInput label="Status" />}
+										renderValue={(selected) => selected.join(', ')}
+										MenuProps={MenuProps}
+									>
+										{["contacted", "lead", "pov", "demo done", "customer", "student", ].map((name) => (
+											<MenuItem key={name} value={name}>
+												<Checkbox checked={selectedStatus.indexOf(name) > -1} />
+												<ListItemText primary={name} />
+											</MenuItem>
+										))}
+									</Select>
+								</FormControl>
+							</span>
 						: null}
 
             <Tooltip
@@ -2588,10 +2773,6 @@ const Admin = (props) => {
 								userdata={userdata}
 								adminTab={adminTab}
 								globalUrl={globalUrl}
-								handleGetOrg={handleGetOrg}
-								selectedOrganization={selectedOrganization}
-								selectedOrganization={selectedOrganization}
-								setSelectedOrganization={setSelectedOrganization}
 								checkLogin={checkLogin}
 							/>
 						: adminTab === 3 ? 
