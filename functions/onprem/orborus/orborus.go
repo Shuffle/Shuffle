@@ -214,21 +214,25 @@ func deployServiceWorkers(image string) {
 
 		// Get a list of network interfaces
 		interfaces, err := net.Interfaces()
+		mtu := 1500 // default docker MTU
 		if err != nil {
-			panic(err)
+			log.Printf("[ERROR] Failed to get network interfaces: %s", err)
 		}
 
 		// Check if there is at least one interface
 		if len(interfaces) < 2 {
-			panic("Insufficient network interfaces")
-		}
+			log.Printf("[ERROR] Failed to get enough network interfaces")
+		} else {		
+			// Get the preferred interface
+			for _, iface := range interfaces {
+				if strings.Contains(iface.Name, "eth0") {
+					targetInterface := iface
+					mtu = targetInterface.MTU
+					break
+				}
+			}
+		}		
 
-		// Get the second interface
-		targetInterface := interfaces[1]
-		mtu := targetInterface.MTU
-
-		// Print the interface and MTU information
-		fmt.Printf("Target Interface: %s, MTU: %d\n", targetInterface.Name, mtu)
 		// Create the network options with the specified MTU
 		options := make(map[string]string)
 		options["com.docker.network.driver.mtu"] = fmt.Sprintf("%d", mtu)
