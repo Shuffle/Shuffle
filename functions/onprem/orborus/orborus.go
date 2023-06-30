@@ -53,6 +53,8 @@ var concurrencyEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY")
 var appSdkVersion = os.Getenv("SHUFFLE_APP_SDK_VERSION")
 var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
+var dockerSwarmBridgeMTU = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_MTU")
+var dockerSwarmBridgeInterface = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_INTERFACE")
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -214,18 +216,31 @@ func deployServiceWorkers(image string) {
 
 		// Get a list of network interfaces
 		interfaces, err := net.Interfaces()
-		mtu := 1500 // default docker MTU
 		if err != nil {
 			log.Printf("[ERROR] Failed to get network interfaces: %s", err)
 		}
 
+		mtu, err := strconv.Atoi(dockerSwarmBridgeMTU) // by default
+		bridgeName := dockerSwarmBridgeInterface
+
+		if err != nil {
+			log.Printf("[ERROR] Failed to convert the default MTU to int: %s. Using 1500 instead", err)
+			mtu = 1500
+		}
+
 		// Check if there is at least one interface
 		if len(interfaces) < 2 {
+			// this assumes that the machine should have at least 2 network
+			// interfaces. If not, we will use the default MTU.
+			// interface 1 is the loopback interface
+			// interface 2 is eth0, The eth0 interface inside a 
+			// Docker container corresponds to the virtual Ethernet
+			// interface that connects the container to the docker0
 			log.Printf("[ERROR] Failed to get enough network interfaces")
 		} else {		
 			// Get the preferred interface
 			for _, iface := range interfaces {
-				if strings.Contains(iface.Name, "eth0") {
+				if strings.Contains(iface.Name, bridgeName) {
 					targetInterface := iface
 					mtu = targetInterface.MTU
 					break
