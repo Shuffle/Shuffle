@@ -37,9 +37,6 @@ import (
 	"cloud.google.com/go/storage"
 	"google.golang.org/appengine/mail"
 
-	//"github.com/elastic/go-elasticsearch/v7"
-	//"github.com/elastic/go-elasticsearch/v8/esapi"
-
 	"github.com/frikky/kin-openapi/openapi2"
 	"github.com/frikky/kin-openapi/openapi2conv"
 	"github.com/frikky/kin-openapi/openapi3"
@@ -3908,8 +3905,8 @@ func runInitEs(ctx context.Context) {
 	}
 
 	if strings.Contains(os.Getenv("SHUFFLE_OPENSEARCH_URL"), "https") {
-		log.Printf("[INFO] Waiting 10 seconds during init to make sure the opensearch instance is up and running with security features properly")
-		time.Sleep(10 * time.Second)
+		log.Printf("[INFO] Waiting during init to make sure the opensearch instance is up and running with security features properly")
+		time.Sleep(30 * time.Second)
 	}
 
 	_ = setUsers
@@ -6055,7 +6052,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")

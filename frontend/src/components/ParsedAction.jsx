@@ -2729,10 +2729,7 @@ const ParsedAction = (props) => {
                       // Look for the ID
                       const found = false;
                       for (let [key,keyval] in Object.entries(workflowExecutions)) {
-                        if (
-                          workflowExecutions[key].results === undefined ||
-                          workflowExecutions[key].results === null
-                        ) {
+                        if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
                           continue;
                         }
 

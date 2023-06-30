@@ -165,7 +165,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id, 100)
 	if err != nil {
 		log.Printf("[WARNING] (1) Failed reading body for workflowqueue: %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Entity parsing error - confirm"}`)))
 		return
 	}
@@ -179,8 +179,8 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Println("Failed reading body for stream result queue")
-		resp.WriteHeader(401)
+		log.Println("[WARNING] Failed reading body for stream result queue")
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
@@ -190,16 +190,16 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	var removeExecutionRequests shuffle.ExecutionRequestWrapper
 	err = json.Unmarshal(body, &removeExecutionRequests)
 	if err != nil {
-		log.Printf("Failed executionrequest in queue unmarshaling: %s", err)
-		resp.WriteHeader(401)
+		log.Printf("[WARNING] Failed executionrequest in queue unmarshaling: %s", err)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
 
 	if len(removeExecutionRequests.Data) == 0 {
-		log.Printf("No requests to fix remove from DB")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Some removal error"}`)))
+		log.Printf("[WARNING] No requests to fix remove from DB")
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Queue removal error"}`)))
 		return
 	}
 
@@ -636,7 +636,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Actionresult unmarshal: %s", string(body))
-	log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
 	ctx := context.Background()
 	err = shuffle.ValidateNewWorkerExecution(ctx, body)
 	if err == nil {
@@ -646,6 +645,8 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	} else {
 		log.Printf("[DEBUG] Handling other execution variant (subflow?): %s", err)
 	}
+
+	log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
 
 	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
@@ -698,60 +699,63 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
-		log.Printf("[INFO] SHOULD WAIT A BIT AND RUN CLOUD STUFF WITH USER INPUT! WAITING!")
+	/*
+		// Removed as UserInput is now handled as an app
+			if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
+				log.Printf("[INFO] SHOULD WAIT A BIT AND RUN USER INPUT! WAITING!")
 
-		var trigger shuffle.Trigger
-		err = json.Unmarshal([]byte(actionResult.Result), &trigger)
-		if err != nil {
-			log.Printf("[WARNING] Failed unmarshaling actionresult for user input: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
+				var trigger shuffle.Trigger
+				err = json.Unmarshal([]byte(actionResult.Result), &trigger)
+				if err != nil {
+					log.Printf("[WARNING] Failed unmarshaling actionresult for user input: %s", err)
+					resp.WriteHeader(401)
+					resp.Write([]byte(`{"success": false}`))
+					return
+				}
 
-		orgId := workflowExecution.ExecutionOrg
-		if len(workflowExecution.OrgId) == 0 && len(workflowExecution.Workflow.OrgId) > 0 {
-			orgId = workflowExecution.Workflow.OrgId
-		}
+				orgId := workflowExecution.ExecutionOrg
+				if len(workflowExecution.OrgId) == 0 && len(workflowExecution.Workflow.OrgId) > 0 {
+					orgId = workflowExecution.Workflow.OrgId
+				}
 
-		err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
-		if err != nil {
-			log.Printf("[WARNING] Failed userinput handler: %s", err)
+				err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+				if err != nil {
+					log.Printf("[WARNING] Failed userinput handler: %s", err)
 
-			actionResult.Result = fmt.Sprintf(`{"success": False, "reason": "%s"}`, err)
+					actionResult.Result = fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)
 
-			workflowExecution.Results = append(workflowExecution.Results, actionResult)
-			workflowExecution.Status = "ABORTED"
-			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-			if err != nil {
-				log.Printf("[WARNING] Failed to set execution during wait: %s", err)
-			} else {
-				log.Printf("[INFO] Successfully set the execution %s to waiting.", workflowExecution.ExecutionId)
+					workflowExecution.Results = append(workflowExecution.Results, actionResult)
+					workflowExecution.Status = "ABORTED"
+					err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
+					if err != nil {
+						log.Printf("[WARNING] Failed to set execution during wait: %s", err)
+					} else {
+						log.Printf("[INFO] Successfully set the execution %s to waiting.", workflowExecution.ExecutionId)
+					}
+
+					resp.WriteHeader(401)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
+					return
+				} else {
+					log.Printf("[INFO] Successful userinput handler")
+					resp.WriteHeader(200)
+					resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
+
+					actionResult.Result = `{"success": True, "reason": "Waiting for user feedback based on configuration"}`
+
+					workflowExecution.Results = append(workflowExecution.Results, actionResult)
+					workflowExecution.Status = actionResult.Status
+					err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
+					if err != nil {
+						log.Printf("[WARNING] Failed setting userinput: %s", err)
+					} else {
+						log.Printf("[DEBUG] Successfully set the execution to waiting.")
+					}
+				}
+
+				return
 			}
-
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
-			return
-		} else {
-			log.Printf("[INFO] Successful userinput handler")
-			resp.WriteHeader(200)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
-
-			actionResult.Result = `{"success": True, "reason": "Waiting for user feedback based on configuration"}`
-
-			workflowExecution.Results = append(workflowExecution.Results, actionResult)
-			workflowExecution.Status = actionResult.Status
-			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-			if err != nil {
-				log.Printf("[WARNING] Failed setting userinput: %s", err)
-			} else {
-				log.Printf("[DEBUG] Successfully set the execution to waiting.")
-			}
-		}
-
-		return
-	}
+	*/
 
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 }
@@ -1049,14 +1053,16 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		workflow = *tmpworkflow
 	}
 
-	if len(workflow.ExecutingOrg.Id) == 0 {
-		if len(orgId) > 0 {
-			workflow.ExecutingOrg.Id = orgId
-		} else {
-			log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
-			return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
+	/*
+		if len(workflow.ExecutingOrg.Id) == 0 {
+			if len(orgId) > 0 {
+				workflow.ExecutingOrg.Id = orgId
+			} else {
+				log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
+				return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
+			}
 		}
-	}
+	*/
 
 	if len(workflow.Actions) == 0 {
 		workflow.Actions = []shuffle.Action{}
@@ -1100,8 +1106,13 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, 10)
 	if err != nil {
-		log.Printf("[WARNING] Failed in prepareExecution for execution Id '%s': %s", workflowExecution.ExecutionId, err)
-		return workflowExecution, fmt.Sprintf("Failed preparration: %s", err), err
+		if strings.Contains(fmt.Sprintf("%s", err), "User Input") {
+			// Special for user input callbacks
+			return workflowExecution, fmt.Sprintf("%s", err), nil
+		} else {
+			log.Printf("[WARNING] Failed in prepareExecution: %s", err)
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed starting workflow: %s", err), err
+		}
 	}
 
 	err = imageCheckBuilder(execInfo.ImageNames)
@@ -1293,7 +1304,8 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
+	log.Printf("[INFO] Inside execute workflow for ID %s", fileId)
+
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil && workflow.ID == "" {
@@ -1310,6 +1322,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		// 1. Parent workflow contains this workflow ID in the source trigger?
 		// 2. Parent workflow's owner is same org?
 		// 3. Parent execution auth is correct
+		log.Printf("[INFO] Inside execute workflow access validation!")
 
 		executionAuthValid, newOrgId = shuffle.RunExecuteAccessValidation(request, workflow)
 		if !executionAuthValid {
@@ -1344,6 +1357,12 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.ExecutingOrg = user.ActiveOrg
 	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request, user.ActiveOrg.Id)
 	if err == nil {
+		if strings.Contains(executionResp, "User Input:") {
+			resp.WriteHeader(400)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
+			return
+		}
+
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
 		return
@@ -2691,7 +2710,7 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 
 	if len(triggerType) == 0 {
 		log.Printf("[WARNING] No type specified for user input node")
-		return errors.New("No type specified for user input node")
+		//return errors.New("No type specified for user input node")
 	}
 
 	// FIXME: This is not the right time to send them, BUT it's well served for testing. Save -> send email / sms

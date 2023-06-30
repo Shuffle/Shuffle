@@ -127,6 +127,8 @@ const Search = (props) => {
 					textColor="secondary"
 					onChange={setConfig}
 					aria-label="disabled tabs example"
+					variant="scrollable"
+          			scrollButtons="auto"
 				>
 					<Tab
 						label=<span>

@@ -9,6 +9,7 @@ import { Navigate } from "react-router-dom";
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import EditWorkflow from "../components/EditWorkflow.jsx" 
 import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
+import Priority from "../components/Priority.jsx";
 
 import { isMobile } from "react-device-detect" 
 
@@ -524,7 +525,7 @@ export const validateJson = (showResult) => {
 };
 
 const Workflows = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
+  const { globalUrl, isLoggedIn, isLoaded, userdata, checkLogin } = props;
   document.title = "Shuffle - Workflows";
 	let navigate = useNavigate();
 
@@ -585,6 +586,7 @@ const Workflows = (props) => {
   const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [videoViewOpen, setVideoViewOpen] = React.useState(false)
   const [gettingStartedItems, setGettingStartedItems] = React.useState([])
+
 	const drawerWidth = drawerOpen ? 325 : 0
 
 	const sidebarKey = "getting_started_sidebar"
@@ -618,7 +620,6 @@ const Workflows = (props) => {
   			setDrawerOpen(true)
       } else {
 				if (sidebar === "open") {
-					console.log("OPEN the thingy!")
   				setDrawerOpen(true)
 				} else {
   				setDrawerOpen(false)
@@ -1126,6 +1127,11 @@ const Workflows = (props) => {
 			var newcategories = []
 			for (var key in categorydata) {
 				var category = categorydata[key]
+				// Check if category is bool
+				if (typeof category === "boolean") {
+					continue
+				}
+
 				category.matches = []
 
 				for (var subcategorykey in category.list) {
@@ -1216,8 +1222,8 @@ const Workflows = (props) => {
     color: "#ffffff",
     width: "100%",
     display: "flex",
-    minWidth: isMobile ? "100%" : drawerWidth > 0 ? 824 : 1024,
-    maxWidth: isMobile ? "100%" : drawerWidth > 0 ? 824 : 1024,
+    minWidth: isMobile ? "100%" : 1024,
+    maxWidth: isMobile ? "100%" : 1024,
     margin: drawerWidth === 0 ? "auto" : `auto ${drawerWidth+100} auto auto`,
 		paddingBottom: 200,
   };
@@ -1583,7 +1589,8 @@ const Workflows = (props) => {
     const innerColor = "rgba(255,255,255,0.3)";
     const setupPaperStyle = {
       minHeight: paperAppStyle.minHeight,
-      width: paperAppStyle.width,
+			maxWidth: "100%",
+      minWidth: paperAppStyle.width,
       color: innerColor,
       padding: paperAppStyle.padding,
       borderRadius: paperAppStyle.borderRadius,
@@ -1612,7 +1619,7 @@ const Workflows = (props) => {
           }}
         >
           <Tooltip title={`New Workflow`} placement="bottom">
-            <span style={{ textAlign: "center", width: 300, margin: "auto" }}>
+            <span style={{ textAlign: "center", minWidth: 300, margin: "auto" }}>
               <AddCircleIcon style={{ height: 65, width: 65 }} />
             </span>
           </Tooltip>
@@ -3197,7 +3204,7 @@ const Workflows = (props) => {
 		var workflowDelay = -150
 		var appDelay = -75	
 
-
+		const foundPriority = userdata === undefined || userdata === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
     return (
       <div style={viewStyle}>
         <div style={workflowViewStyle}>
@@ -3470,9 +3477,17 @@ const Workflows = (props) => {
 						</div>
 					: null}
 
-					<div style={{marginTop: 15, }}>
+					{foundPriority != null && workflows.length < 6 ? 
+						<Priority
+							globalUrl={globalUrl}
+							priority={foundPriority}
+							checkLogin={checkLogin}
+						/>
+					: null}
+
+					<div style={{marginTop: 15, marginBottom: 50, }}>
 						{view === "grid" ? (
-							<Grid container spacing={4} style={paperAppContainer}>
+							<Grid container spacing={filteredWorkflows.length === 0 ? 12 : filteredWorkflows.length === 1 ? 6 : 4} style={paperAppContainer}>
 								<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
 									<NewWorkflowPaper />
 								</Zoom>
@@ -3506,6 +3521,15 @@ const Workflows = (props) => {
 							<WorkflowListView />
 						)}
 					</div>
+
+					{foundPriority != null && filteredWorkflows.length > 6 ? 
+							<Priority
+								style={{marginTop: 15, }}
+								globalUrl={globalUrl}
+								priority={foundPriority}
+								checkLogin={checkLogin}
+							/>
+					: null}
 
 					<div style={{ marginBottom: 100 }} />
 				</div>

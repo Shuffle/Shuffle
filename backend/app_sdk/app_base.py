@@ -18,6 +18,10 @@ import urllib.parse
 import jinja2 
 import datetime
 import dateutil
+
+import threading
+import concurrent.futures
+
 from io import StringIO as StringBuffer
 from io import BytesIO
 from liquid import Liquid, defaults
@@ -267,6 +271,7 @@ def split(base, sep):
 ###
 ###
 
+
 class AppBase:
     __version__ = None
     app_name = None
@@ -396,7 +401,7 @@ class AppBase:
         try:
             new_input = input_data.split()
         except Exception as e:
-            self.logger.info(f"[ERROR] Failed to run magic parser during split (1): {e}")
+            self.logger.info(f"[ERROR] Failed to run parser during split (1): {e}")
             return input_data
 
         # Won't ever touch this one?
@@ -452,9 +457,11 @@ class AppBase:
             else:
                 self.logger.warning(f"[WARNING] Magic output not defined.")
         except KeyError as e:
-            self.logger.warning(f"[DEBUG] Failed to run magic autoparser (send result) - keyerror: {e}")
+            #self.logger.warning(f"[DEBUG] Failed to run magic autoparser (send result) - keyerror: {e}")
+            pass 
         except Exception as e:
-            self.logger.warning(f"[DEBUG] Failed to run magic autoparser (send result): {e}")
+            #self.logger.warning(f"[DEBUG] Failed to run magic autoparser (send result): {e}")
+            pass
 
         # Try it with some magic
 
@@ -471,7 +478,7 @@ class AppBase:
         self.logger.info(f"[INFO] URL FOR RESULT (URL): {url}")
 
         try:
-            log_contents = "disabled: add env SHUFFLE_LOGS_DISABLED=true to Orborus to re-enable logs for apps"
+            log_contents = "disabled: add env SHUFFLE_LOGS_DISABLED=true to Orborus to re-enable logs for apps. Can not be enabled natively in Cloud except in Hybrid mode."
             if not os.getenv("SHUFFLE_LOGS_DISABLED") == "true":
                 log_contents = self.log_capture_string.getvalue()
 
@@ -1025,11 +1032,9 @@ class AppBase:
             for subparams in param_multiplier:
                 #self.logger.info(f"SUBPARAMS IN MULTI: {subparams}")
                 try:
-                    #tmp = await func(**subparams)
 
                     while True:
                         try:
-                            #tmp = await func(**subparams)
                             tmp = func(**subparams)
                             break
                         except TypeError as e:
@@ -1042,7 +1047,7 @@ class AppBase:
                     
                                     try:
                                         del subparams[field]
-                                        self.logger.info("Removed field invalid field %s" % field)
+                                        self.logger.info("Removed invalid field %s (1)" % field)
                                     except KeyError:
                                         break
                             else:
@@ -1488,7 +1493,7 @@ class AppBase:
         # If found, we get the full results list from backend
         fullexecution = {}
         if isinstance(self.full_execution, str) and len(self.full_execution) == 0:
-            self.logger.info("[DEBUG] NO EXECUTION - LOADING!")
+            #self.logger.info("[DEBUG] NO EXECUTION - LOADING!")
             try:
                 failed = False
                 rettext = ""
@@ -1525,6 +1530,7 @@ class AppBase:
 
                         rettext = ret.text
                         failed = True 
+                        time.sleep(8)
                         break
 
                 if failed:
@@ -1832,7 +1838,7 @@ class AppBase:
                     else:
                         parse_string = inner_result
 
-            print("PARSE STRING: %s" % parse_string)
+            #print("PARSE STRING: %s" % parse_string)
             return parse_string, True
 
         # Looks for parantheses to grab special cases within a string, e.g:
@@ -1971,7 +1977,7 @@ class AppBase:
                         if isinstance(seconditem, int):
                             seconditem = str(seconditem)
 
-                        print("[DEBUG] ACTUAL PARSED: %s" % actualitem)
+                        #print("[DEBUG] ACTUAL PARSED: %s" % actualitem)
 
                         # Means it's a single item -> continue
                         if seconditem == "":
@@ -2093,13 +2099,13 @@ class AppBase:
             actionname_lower = parsersplit[0][1:].lower()
 
             #Actionname: Start_node
-            print(f"\n[INFO] Actionname: {actionname_lower}")
+            #print(f"\n[INFO] Actionname: {actionname_lower}")
 
             # 1. Find the action
             baseresult = ""
 
             appendresult = "" 
-            print("[INFO] Parsersplit length: %d" % len(parsersplit))
+            #print("[INFO] Parsersplit length: %d" % len(parsersplit))
             if (actionname_lower.startswith("exec ") or actionname_lower.startswith("webhook ") or actionname_lower.startswith("schedule ") or actionname_lower.startswith("userinput ") or actionname_lower.startswith("email_trigger ") or actionname_lower.startswith("trigger ")) and len(parsersplit) == 1:
                 record = False
                 for char in actionname_lower:
@@ -2142,7 +2148,6 @@ class AppBase:
                         print("[DEBUG] No results to get values from.")
                         baseresult = "$" + parsersplit[0][1:] 
                     
-                    print("[DEBUG] BEFORE VARIABLES!")
                     if len(baseresult) == 0:
                         try:
                             for variable in execution_data["workflow"]["workflow_variables"]:
@@ -2153,13 +2158,12 @@ class AppBase:
                                     break
 
                         except KeyError as e:
-                            print("[INFO] KeyError wf variables: %s" % e)
+                            #print("[INFO] KeyError wf variables: %s" % e)
                             pass
                         except TypeError as e:
-                            print("[INFO] TypeError wf variables: %s" % e)
+                            #print("[INFO] TypeError wf variables: %s" % e)
                             pass
         
-                    print("[DEBUG] BEFORE EXECUTION VAR")
                     if len(baseresult) == 0:
                         try:
                             for variable in execution_data["execution_variables"]:
@@ -2177,14 +2181,14 @@ class AppBase:
             except KeyError as error:
                 print(f"[DEBUG] KeyError in JSON: {error}")
         
-            print(f"[INFO] After first trycatch. Baseresult")#, baseresult)
+            #print(f"[INFO] After first trycatch. Baseresult")#, baseresult)
         
             # 2. Find the JSON data
             # Returns if there isn't any JSON in the base ($nodename)
             if len(baseresult) == 0:
                 return ""+appendresult, False
         
-            print("[INFO] After second return")
+            #print("[INFO] After second return")
             # Returns if the result is JUST something like $nodename, not $nodename.value
             if len(parsersplit) == 1:
                 returndata = str(baseresult)+str(appendresult)
@@ -2195,7 +2199,7 @@ class AppBase:
             baseresult = baseresult.replace(" False", " false,")
 
             # Tries to actually read it as JSON with some stupid formatting
-            print("[INFO] After third parser return - Formatted")#, baseresult)
+            #print("[INFO] After third parser return - Formatted")#, baseresult)
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
@@ -2219,7 +2223,6 @@ class AppBase:
                     print("[WARNING] Parseditem issue: %s" % e)
                     pass
 
-            print("[DEBUG] DATA: (%s) %s" % (type(data), data))
             if is_loop:
                 print("[DEBUG] DATA IS A LOOP - SHOULD WRAP")
                 if parsersplit[-1] == "#":
@@ -2231,7 +2234,6 @@ class AppBase:
                     parseditem = "${%s%s}$" % (parsersplit[-1], json.dumps(data))
 
 
-            print("[DEBUG] Before last return with %s" % appendresult)
             returndata = str(parseditem)+str(appendresult)
 
             # New in 0.8.97: Don't return items without lists
@@ -2558,7 +2560,7 @@ class AppBase:
             # Basic fix in case variant isn't set
             # Variant is ALWAYS STATIC_VALUE from mid 2021~ 
             try:
-                self.logger.info(f"[DEBUG] Parameter '{paramname}' of length {len(parameter['value'])}")
+                #self.logger.info(f"[DEBUG] Parameter '{paramname}' of length {len(parameter['value'])}")
                 parameter["variant"] = parameter["variant"]
             except:
                 parameter["variant"] = "STATIC_VALUE"
@@ -2928,7 +2930,7 @@ class AppBase:
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution, self)
         if isinstance(tmpresult, object) or isinstance(tmpresult, list) or isinstance(tmpresult, dict):
-            self.logger.info("[DEBUG] Fixing branch return as object -> string")
+            #self.logger.info("[DEBUG] Fixing branch return as object -> string")
             try:
                 #tmpresult = tmpresult.replace("'", "\"")
                 tmpresult = json.dumps(tmpresult) 
@@ -3064,7 +3066,6 @@ class AppBase:
                         #self.logger.info(action["parameters"])
 
                         # This seems redundant now 
-                        self.logger.info("[DEBUG] Pre parameters")
                         for parameter in newparams:
                             action["parameters"].append(parameter)
 
@@ -3086,7 +3087,6 @@ class AppBase:
 
                         # Multi_parameter has the data for each. variable
                         minlength = 0
-                        self.logger.info("[DEBUG] Pre-loading parameters")
                         multi_parameters = json.loads(json.dumps(params))
                         multiexecution = False
                         multi_execution_lists = []
@@ -3344,9 +3344,6 @@ class AppBase:
                                 # This part has fucked over so many random JSON usages because of weird paranthesis parsing
 
                                 value = parse_wrapper_start(value, self)
-                                #self.logger.info("[DEBUG] Post return: %s" % value)
-
-                                #self.logger.info("POST data value: %s" % value)
 
                                 try:
                                     if str(value).startswith("b'") and str(value).endswith("'"):
@@ -3479,8 +3476,73 @@ class AppBase:
                                     break
 
                                 try:
-                                    newres = func(**params)
+                                    #try:
+                                    # Individual functions shouldn't take longer than this
+                                    # This is an attempt to make timeouts occur less, incentivizing users to make use efficient API's
+                                    # PS: Not implemented for lists - only single actions as of May 2023
+                                    timeout = 30 
+
+                                    # Check if current app is Shuffle Tools, then set to 55 due to certain actions being slow (ioc parser..) 
+                                    #uu In general, this should be disabled for onprem 
+                                    if self.action["app_name"].lower() == "shuffle tools":
+                                        timeout = 55
+
+                                    timeout = 30 
+
+                                    try:
+                                        executor = concurrent.futures.ThreadPoolExecutor()
+                                        future = executor.submit(func, **params)
+                                        newres = future.result(timeout)
+
+                                        if not future.done():
+                                            # The future is still running, so we need to cancel it
+                                            future.cancel()
+                                            newres = json.dumps({
+                                                "success": False,
+                                                "reason": "Timeout error within %d seconds. This happens if we can't reach or use the API you're trying to use within the time limit." % timeout,
+                                                "exception": str(e),
+                                            })
+
+                                        else:
+                                            # The future is done, so we can just get the result from newres :)
+                                            #newres = future.result()
+                                            #print("Future is done!")
+                                            pass
+
+                                    except concurrent.futures.TimeoutError as e:
+                                        newres = json.dumps({
+                                            "success": False,
+                                            "reason": "Timeout error within %d seconds (2). This happens if we can't reach or use the API you're trying to use within the time limit" % timeout
+                                        })
+
                                     break
+
+
+
+                                    #thread = threading.Thread(target=func, args=(**params,))
+                                    #thread.start()
+
+                                    #thread.join(timeout)
+
+                                    #if thread.is_alive():
+                                    #    # The thread is still running, so we need to stop it
+                                    #    # You can handle this as needed, such as raising an exception
+                                    #    timeout_handler()
+
+
+                                    #with Timeout(timeout):
+                                    #    newres = func(**params)
+                                    #    break
+                                    #except Timeout.Timeout as e:
+                                    #    self.logger.info(f"[DEBUG] Timeout error: {e}")
+                                    #    newres = json.dumps({
+                                    #        "success": False,
+                                    #        "reason": "Timeout error within %d seconds. This typically happens if we can't reach the API you're trying to reach." % timeout,
+                                    #        "exception": str(e),
+                                    #    })
+
+                                    #    break
+
                                 except TypeError as e:
                                     newres = ""
                                     self.logger.info(f"[DEBUG] Got exec type error: {e}")
@@ -3512,7 +3574,7 @@ class AppBase:
                             
                                             try:
                                                 del params[field]
-                                                self.logger.info("[WARNING] Removed field invalid field %s" % field)
+                                                self.logger.info("[WARNING] Removed invalid field %s (2)" % field)
                                             except KeyError:
                                                 break
                                     else:
@@ -3605,7 +3667,7 @@ class AppBase:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     self.logger.info("Can't handle type %s value from function" % (type(newres)))
 
-                            self.logger.info("[INFO] POST NEWRES RESULT!")#, result)
+                            #self.logger.info("[INFO] POST NEWRES RESULT!")#, result)
                         else:
                             #self.logger.info("[INFO] APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
                             # 1. Use number of executions based on the arrays being similar
@@ -3776,7 +3838,6 @@ class AppBase:
                     #logger.info(f"[DEBUG] Datatype: {type(requestdata)}: {requestdata}")
 
                     # Remaking class for each request
-                    #print(f"APP: {app}")
         
                     app = cls(redis=None, logger=logger, console_logger=logger)
                     extra_info = ""

@@ -693,52 +693,8 @@ const WelcomeForm = (props) => {
 												<Typography variant="body1" style={{marginTop: 15, marginBottom: 0, maxWidth: 500, margin: "auto", marginBottom: 15, }} color="textSecondary">
 													These are some of our Workflow templates, used to start new Workflows. Use the right and left buttons to find <a href="/usecases" target="_blank" rel="norefferer" style={{color: "#f86a3e", textDecoration: "none", }}>new Usecases</a>, and click the orange button to build it.
 												</Typography>
-												{/*<Divider />*/}
-												{/*
-												<div style={{width: 475, margin: "auto",}}>
-													{usecaseButtons.map((usecase, index) => {
 
-														return (
-															<Chip
-																key={usecase.name}
-																style={{
-																	backgroundColor: defaultSearch === usecase.name ? usecase.color : theme.palette.surfaceColor,
-																	marginRight: 10, 
-																	paddingLeft: 5,
-																	paddingRight: 5,
-																	height: 28,
-																	cursor: "pointer",
-																	border: `1px solid ${usecase.color}`,
-																	color: "white",
-																	borderRadius: theme.palette.borderRadius, 
-																}}
-																label={`${index+1}. ${usecase.name}`}
-																onClick={() => {
-																	console.log("Clicked: ", usecase.name)
-																	if (defaultSearch === usecase.name) {
-																		//setSelectedUsecaseCategory("")
-																	} else {
-																		handleSetSearch(usecase.name, usecase.usecase)
-																	}
-																	//addFilter(usecase.name.slice(3,usecase.name.length))
-																}}
-																variant="outlined"
-																color="primary"
-															/>
-														)
-													})}
-												</div>
-												*/}
 												<div style={{marginTop: 0, }}>
-													{/*
-														<UsecaseSearch
-															globalUrl={globalUrl}
-															defaultSearch={defaultSearch}
-															appFramework={appFramework}
-															apps={apps}
-														/>
-													*/}
-
 		  										<div className="thumbs" style={{display: "flex"}}>
 														<Tooltip title={"Previous usecase"}>
 															<IconButton

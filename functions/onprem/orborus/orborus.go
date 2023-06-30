@@ -207,10 +207,6 @@ func deployServiceWorkers(image string) {
 		// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
 
 		// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/shuffle/shuffle-worker:nightly
-		networkName := "shuffle_swarm_executions"
-		if len(swarmNetworkName) > 0 {
-			networkName = swarmNetworkName
-		}
 
 		// Get a list of network interfaces
 		interfaces, err := net.Interfaces()
@@ -260,6 +256,11 @@ func deployServiceWorkers(image string) {
 
 		//docker network create --driver=overlay workers
 		// Specific subnet?
+		networkName := "shuffle_swarm_executions"
+		if len(swarmNetworkName) > 0 {
+			networkName = swarmNetworkName
+		}
+
 		networkCreateOptions := types.NetworkCreate{
 			Driver:     "overlay",
 			Options:    options,
@@ -335,15 +336,6 @@ func deployServiceWorkers(image string) {
 			//}
 		}
 
-		//serviceOptions := types.ServiceCreateOptions{}
-		//service, err := dockercli.ServiceCreate(
-		//	context.Background(),
-		//	serviceSpec,
-		//	serviceOptions,
-		//)
-
-		//containerName := fmt.Sprintf("shuffle-worker-%s", parsedUuid)
-
 		replicas := uint64(1)
 		scaleReplicas := os.Getenv("SHUFFLE_SCALE_REPLICAS")
 		if len(scaleReplicas) > 0 {
@@ -358,7 +350,6 @@ func deployServiceWorkers(image string) {
 		}
 
 		innerContainerName := fmt.Sprintf("shuffle-workers")
-
 		cnt, _ := findActiveSwarmNodes()
 		nodeCount := uint64(1)
 		if cnt > 0 {
@@ -394,8 +385,12 @@ func deployServiceWorkers(image string) {
 				swarm.NetworkAttachmentConfig{
 					Target: networkName,
 				},
+				swarm.NetworkAttachmentConfig{
+					Target: "ingress",
+				},
 			},
 			EndpointSpec: &swarm.EndpointSpec{
+				Mode: "vip",
 				Ports: []swarm.PortConfig{
 					swarm.PortConfig{
 						Protocol:      swarm.PortConfigProtocolTCP,
@@ -425,9 +420,9 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("TZ=%s", timezone),
 						fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 					},
-					Hosts: []string{
-						innerContainerName,
-					},
+					//Hosts: []string{
+					//	innerContainerName,
+					//},
 				},
 				RestartPolicy: &swarm.RestartPolicy{
 					Condition: swarm.RestartPolicyConditionOnFailure,
@@ -747,8 +742,8 @@ func initializeImages() {
 	}
 
 	if baseimagename == "" {
-		baseimagename = "shuffle/shuffle" // Dockerhub
-		baseimagename = "shuffle"         // Github 		(ghcr.io)
+		baseimagename = "frikky/shuffle" // Dockerhub
+		baseimagename = "shuffle"        // Github 		(ghcr.io)
 		log.Printf("[DEBUG] Setting baseimagename")
 	}
 
@@ -1582,6 +1577,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	_ = body
 
-	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING: docker service logs shuffle-workers | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
+	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING: docker service logs shuffle-workers 2&>1 | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
 	return nil
 }
