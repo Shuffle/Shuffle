@@ -113,4 +113,10 @@ services:
 networks:
   shuffle:
     driver: bridge
-    #driver: overlay 
+
+    # uncomment to set MTU for swarm mode.
+    # MTU should be whatever is your host's preferred MTU is.
+    # Refer to this doc to figure out what your host's MTU is:
+    # https://shuffler.io/docs/troubleshooting#TLS_timeout_error/Timeout_Errors/EOF_Errors 
+    # driver_opts:
+    #   com.docker.network.driver.mtu: 1460
