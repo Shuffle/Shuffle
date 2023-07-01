@@ -247,6 +247,7 @@ func deployServiceWorkers(image string) {
 				if strings.Contains(iface.Name, bridgeName) {
 					targetInterface := iface
 					mtu = targetInterface.MTU
+					log.Printf("[INFO] Using MTU %d from interface %s", mtu, targetInterface.Name)
 					break
 				}
 			}
