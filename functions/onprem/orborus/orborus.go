@@ -223,6 +223,10 @@ func deployServiceWorkers(image string) {
 		mtu, err := strconv.Atoi(dockerSwarmBridgeMTU) // by default
 		bridgeName := dockerSwarmBridgeInterface
 
+		if bridgeName == "" {
+			bridgeName = "eth0"
+		}
+
 		if err != nil {
 			log.Printf("[ERROR] Failed to convert the default MTU to int: %s. Using 1500 instead", err)
 			mtu = 1500
