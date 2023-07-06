@@ -7,7 +7,7 @@ go 1.19
 require (
 	cloud.google.com/go/datastore v1.10.0
 	cloud.google.com/go/storage v1.29.0
-	github.com/docker/docker v23.0.0+incompatible
+	github.com/docker/docker v23.0.3+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/satori/go.uuid v1.2.0
