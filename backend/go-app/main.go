@@ -3028,7 +3028,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	if test.Editing && len(user.Id) > 0 {
 		// Quick verification test
 		ctx := context.Background()
-		app, err := shuffle.GetApp(ctx, test.Id, user)
+		app, err := shuffle.GetApp(ctx, test.Id, user, false)
 		if err != nil {
 			log.Printf("[WARNING] Error getting app when editing: %s", app.Name)
 			resp.WriteHeader(401)
@@ -4019,7 +4019,7 @@ func runInitEs(ctx context.Context) {
 
 	// Getting apps to see if we should initialize a test
 	// FIXME: Isn't this a little backwards?
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %#v", len(workflowapps), err)
 
 	// accept any certificate (might be useful for testing)
@@ -4671,7 +4671,7 @@ func runInit(ctx context.Context) {
 	}
 
 	// Getting apps to see if we should initialize a test
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000,0 )
 	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %s", len(workflowapps), err)
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
@@ -5286,7 +5286,7 @@ func migrateDatabase(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[DEBUG] Found %d workflows(s) to be migrated", len(workflows))
 	}
 
-	apps, err := shuffle.GetAllWorkflowApps(ctx, 0)
+	apps, err := shuffle.GetAllWorkflowApps(ctx, 0, 0)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting apps: %#v", err)
 	} else {
@@ -5729,6 +5729,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.SaveWorkflow).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.GetSpecificWorkflow).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
 
 	// Triggers
 	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")

@@ -577,7 +577,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	//setWorkflowqueuetest(id)
 	ctx := context.Background()
-	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id, 10)
 	if err != nil {
 		log.Printf("(1) Failed reading body for workflowqueue: %s", err)
 		resp.WriteHeader(401)
@@ -676,7 +676,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id, 10)
 	if err != nil {
 		// Skipping as this comes up over and over
 		//log.Printf("(2) Failed reading body for workflowqueue: %s", err)
@@ -782,7 +782,8 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 	//log.Printf("Actionresult unmarshal: %s", string(body))
 	log.Printf("[DEBUG] Got workflow result from %s of length %d", request.RemoteAddr, len(body))
-	err = shuffle.ValidateNewWorkerExecution(body)
+	ctx := context.Background()
+	err = shuffle.ValidateNewWorkerExecution(ctx, body)
 	if err == nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "success"}`)))
@@ -808,7 +809,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	// 4. Push to db
 	// IF FAIL: Set executionstatus: abort or cancel
 
-	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, err)
@@ -910,7 +910,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	//log.Printf("BASE LENGTH: %d", len(workflowExecution.Results))
-	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false)
+	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
 	if err != nil {
 		log.Printf("[ERROR] Failed running of parsedexecution: %s", err)
 		resp.WriteHeader(401)
@@ -1514,7 +1514,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		}
 	}
 
-	childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start)
+	childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start, []string{}, []string{})
 
 	topic := "workflows"
 	startFound := false
@@ -1561,14 +1561,14 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 				newFields := []shuffle.AuthenticationStore{}
 				for _, field := range curAuth.Fields {
 					parsedKey := fmt.Sprintf("%s_%d_%s_%s", curAuth.OrgId, curAuth.Created, curAuth.Label, field.Key)
-					newValue, err := shuffle.HandleKeyDecryption(field.Value, parsedKey)
+					newValue, err := shuffle.HandleKeyDecryption([]byte(field.Value), parsedKey)
 					if err != nil {
 						log.Printf("[WARNING] Failed decryption for %s: %s", field.Key, err)
 						setField = false
 						break
 					}
 
-					field.Value = newValue
+					field.Value = string(newValue)
 					newFields = append(newFields, field)
 				}
 
@@ -2655,7 +2655,7 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	if err != nil {
 		log.Printf("{WARNING] Failed getting apps (getworkflowapps): %s", err)
 		resp.WriteHeader(401)
@@ -2753,7 +2753,7 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - continue the search here with github repos etc.
 	// Caching might be smart :D
 	ctx := context.Background()
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	if err != nil {
 		log.Printf("Error: Failed getting workflowapps: %s", err)
 		resp.WriteHeader(401)
@@ -3023,7 +3023,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 
 	ctx := context.Background()
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	appCounter := 0
 	if err != nil {
 		log.Printf("Failed to get existing generated apps")
@@ -3316,7 +3316,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	allapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	allapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	if err != nil {
 		log.Printf("Failed getting apps to verify: %s", err)
 		resp.WriteHeader(401)
@@ -3582,10 +3582,14 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	time.Sleep(2 * time.Second)
 	log.Printf("[INFO] Starting validation of execution %s", workflowExecution.ExecutionId)
 
-	returnBytes := shuffle.HandleRetValidation(ctx, workflowExecution)
+	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1)
+	returnBytes, err := json.Marshal(returnBody)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
+	}
 
 	resp.WriteHeader(200)
-	resp.Write(returnBytes)
+	resp.Write([]byte(returnBytes))
 }
 
 // Onlyname is used to
@@ -3766,7 +3770,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 				}
 
 				if len(allapps) == 0 {
-					allapps, err = shuffle.GetAllWorkflowApps(ctx, 0)
+					allapps, err = shuffle.GetAllWorkflowApps(ctx, 0, 0)
 					if err != nil {
 						log.Printf("[WARNING] Failed getting apps to verify: %s", err)
 						continue

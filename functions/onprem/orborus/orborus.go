@@ -148,7 +148,7 @@ func deployWorker(image string, identifier string, env []string) {
 		NetworkMode: container.NetworkMode(fmt.Sprintf("container:%s", containerId)),
 	}
 
-	if cleanupEnv == "true" {
+	if strings.ToLower(cleanupEnv) == "true" {
 		hostConfig.AutoRemove = true
 	}
 
