@@ -112,7 +112,6 @@ const Docs = (defaultprops) => {
   const SideBar = {
     minWidth: 250,
     maxWidth: 300,
-		borderRight: "1px solid rgba(255,255,255,0.3)",
 		left: 0,
 		position: "sticky",
 		top: 50,
@@ -121,6 +120,7 @@ const Docs = (defaultprops) => {
 		overflowX: "hidden",
 		overflowY: "auto",
 		zIndex: 1000,
+		//borderRight: "1px solid rgba(255,255,255,0.3)",
   };
 
   const fetchDocList = () => {
@@ -361,6 +361,7 @@ const Docs = (defaultprops) => {
 		maxWidth: "100%",
 		minWidth: "100%",
 		overflow: "hidden",
+		fontSize: isMobile ? "1.3rem" : "1.0rem",
   };
 
   function OuterLink(props) {

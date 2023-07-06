@@ -71,6 +71,7 @@ const actionListStyle = {
   backgroundColor: inputColor,
   display: "flex",
   color: "white",
+	position: "relative",
 };
 
 const boxStyle = {
@@ -222,6 +223,132 @@ const parseCurl = (s) => {
   return out;
 };
 
+// Basically CRUD for each category + special
+export const appCategories = [
+		{
+    	"name": "Communication",
+			"color": "#FFC107",
+			"icon": "communication",
+			"action_labels": ["List Messages", "Send Message", "Get Message", "Search messages"],
+		}, {
+			"name": "SIEM",
+			"color": "#FFC107",
+			"icon": "siem",
+			"action_labels": ["Search", "List Alerts", "Close Alert", "Create detection", "Add to lookup list",],
+		}, {
+			"name": "Eradication",
+			"color": "#FFC107",
+			"icon": "eradication",
+			"action_labels": ["List Alerts", "Close Alert", "Create detection", "Block hash", "Search Hosts", "Isolate host", "Unisolate host"],
+		}, {
+			"name": "Cases",
+			"color": "#FFC107",
+			"icon": "cases",
+			"action_labels": ["List tickets", "Get ticket", "Create ticket", "Close ticket", "Add comment", "Update ticket",],
+		}, {
+			"name": "Assets",
+			"color": "#FFC107",
+			"icon": "assets",
+			"action_labels": ["List Assets", "Get Asset", "Search Assets", "Search Users", "Search endpoints", "Search vulnerabilities"],
+		}, {
+			"name": "Intel",
+			"color": "#FFC107",
+			"icon": "intel",
+			"action_labels": ["Get IOC", "Search IOC", "Create IOC", "Update IOC", "Delete IOC",],
+		}, {
+			"name": "IAM",
+			"color": "#FFC107",
+			"icon": "iam",
+			"action_labels": ["Reset Password", "Enable user", "Disable user", "Get Identity", "Get Asset", "Search Identity", ],
+		}, {
+			"name": "Network",
+			"color": "#FFC107",
+			"icon": "network",
+			"action_labels": ["Get Rules", "Allow IP", "Block IP",],
+		}, {
+			"name": "Other",
+			"color": "#FFC107",
+			"icon": "other",
+			"action_labels": ["Update Info", "Get Info", "Get Status", "Get Version", "Get Health", "Get Config", "Get Configs", "Get Configs by type", "Get Configs by name", "Run script"],
+		},
+]
+
+export const base64_decode = (str) => {
+	return decodeURIComponent(
+		atob(str).split("").map(function (c) {
+			return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+		}).join("")
+	);
+};
+
+// Loops through properties to find the actual JSON output to use
+const getJsonObject = (properties) => {
+	// Loop inside the JSON object and get the value of each key
+	let jsonObject = {};
+	for (let key in properties) {
+		const property = properties[key];
+
+		const subloop = false
+		if (property.hasOwnProperty("type")) {
+			if (property.type === "object" || property.type === "array") {
+				subloop = true
+			}
+		} 
+
+		if (subloop) {
+			if (property.hasOwnProperty("items") && property.items.hasOwnProperty("properties")) {
+
+				const jsonret = getJsonObject(property.items.properties);
+				if (property.type === "array") {
+					//console.log("ARRAY!!")
+					jsonObject[key] = [jsonret];
+				} else {
+					jsonObject[key] = jsonret;
+				}
+			} else {
+				if (property.hasOwnProperty("properties")) {
+					const jsonret = getJsonObject(property.properties);
+					if (property.type === "array") {
+						//console.log("ARRAY2!!")
+						jsonObject[key] = [jsonret];
+					} else {
+						jsonObject[key] = jsonret;
+					}
+				} else { 
+					//console.log("No items or properties found: ", property);
+				}
+			}
+
+		} else {
+			if (property.hasOwnProperty("example")) {
+				jsonObject[key] = property.example;
+			} else if (property.hasOwnProperty("enum") && property.enum.length > 0) {
+				jsonObject[key] = property.enum[0];
+			} else if (property.hasOwnProperty("default")) {
+				jsonObject[key] = property.default;
+			} else if (property.hasOwnProperty("maximum")) {
+				jsonObject[key] = property.maximum;
+			} else if (property.hasOwnProperty("minimum")) {
+				jsonObject[key] = property.minimum;
+			} else if (property.hasOwnProperty("type")) {
+				if (property.type === "integer" || property.type === "number") {
+					jsonObject[key] = 0;
+				} else if (property.type === "boolean") {
+					jsonObject[key] = false;
+				} else if (property.type === "string") {
+					jsonObject[key] = "";
+				} else {
+					console.log("Unknown type: ", property);
+				}
+			} else {
+				console.log("No example or enum found: ", property);
+			}
+		}
+	}
+
+	return jsonObject
+}
+
 // Should be different if logged in :|
 const AppCreator = (defaultprops) => {
   const { globalUrl, isLoaded } = defaultprops;
@@ -255,9 +382,7 @@ const AppCreator = (defaultprops) => {
   const [isAppLoaded, setIsAppLoaded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [description, setDescription] = useState("");
-  const [updater, setUpdater] = useState("tmp");
   const [baseUrl, setBaseUrl] = useState("");
-  const [actionsModalOpen, setActionsModalOpen] = useState(false);
   const [authenticationRequired, setAuthenticationRequired] = useState(false);
   const [authenticationOption, setAuthenticationOption] = useState(
     authenticationOptions[0]
@@ -273,9 +398,6 @@ const AppCreator = (defaultprops) => {
   const [projectCategories, setProjectCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
 
-  const [urlPath, setUrlPath] = useState("");
-  //const [urlPathQueries, setUrlPathQueries] = useState([{"name": "test", "required": false}]);
-  const [urlPathQueries, setUrlPathQueries] = useState([]);
   const [update, setUpdate] = useState("");
   const [urlPathParameters] = useState([]);
   const [basedata, setBasedata] = React.useState({});
@@ -283,8 +405,6 @@ const AppCreator = (defaultprops) => {
   const [filteredActions, setFilteredActions] = useState([]);
   const [errorCode, setErrorCode] = useState("");
   const [appBuilding, setAppBuilding] = useState(false);
-  const [extraBodyFields, setExtraBodyFields] = useState([]);
-  const [fileUploadEnabled, setFileUploadEnabled] = useState(false);
   const [fileDownloadEnabled, setFileDownloadEnabled] = useState(false);
   const [actionAmount, setActionAmount] = useState(increaseAmount);
   const defaultAuth = {
@@ -299,50 +419,14 @@ const AppCreator = (defaultprops) => {
   const [selectedAction, setSelectedAction] = useState({});
   const [authLoaded, setAuthLoaded] = useState(false);
 
-  //const [actions, setActions] = useState([{
-  //	"name": "Get workflows",
-  //	"description": "Get workflows",
-  //	"url": "/workflows",
-  //	"headers": "",
-  //	"queries": [],
-  //	"paths": [],
-  //	"body": "",
-  //	"errors": ["wutface", "WOAH"],
-  //	"method": actionNonBodyRequest[0],
-  //}, {
-  //	"name": "Get workflow",
-  //	"description": "Get workflow",
-  //	"url": "/workflows/{id}",
-  //	"headers": "",
-  //	"queries": [],
-  //	"paths": ["id"],
-  //	"body": "",
-  //	"errors": ["wutface", "WOAH"],
-  //	"method": actionNonBodyRequest[0],
-  //},
-  //
-  //])
+	// From 2023: Example to handle action labels
+	// Goal: Make this dynamically load from the backend
+	// and make categories + labels modifyable.
+	// Categories are the main categories in the App Framework
+  const [categories, setCategories] = useState(appCategories)
+  
 
-  const [currentActionMethod, setCurrentActionMethod] = useState(
-    actionNonBodyRequest[0]
-  )
-  const [currentAction, setCurrentAction] = useState({
-    name: "",
-    file_field: "",
-    description: "",
-    url: "",
-    headers: "",
-    paths: [],
-    queries: [],
-    body: "",
-    errors: [],
-    example_response: "",
-    method: actionNonBodyRequest[0],
-  });
-
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
   useEffect(() => {
 		if (window.location.pathname.includes("apps/edit")) {
@@ -456,8 +540,8 @@ const AppCreator = (defaultprops) => {
     }
 
     var newitem = data;
-    for (var key in paramsplit) {
-      var tmpparam = paramsplit[key];
+    for (let paramkey in paramsplit) {
+      var tmpparam = paramsplit[paramkey];
       if (tmpparam === "#") {
         continue;
       }
@@ -472,16 +556,7 @@ const AppCreator = (defaultprops) => {
     return newitem;
   };
 
-  const base64_decode = (str) => {
-    return decodeURIComponent(
-      atob(str)
-        .split("")
-        .map(function (c) {
-          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-        })
-        .join("")
-    );
-  };
+
 
   // Sets the data up as it should be at later points
   // This is the data FROM the database, not what's being saved
@@ -535,78 +610,103 @@ const AppCreator = (defaultprops) => {
 
     setBasedata(data);
 		console.log("Info: ", data)
-    if (data.info !== null && data.info !== undefined) {
-      if (data.info.title !== undefined && data.info.title !== null) {
-        if (data.info.title.length > 29) {
-          setName(data.info.title.slice(0, 29));
-        } else {
-          setName(data.info.title);
-        }
-      }
 
-      setDescription(data.info.description);
-      document.title = "Apps - " + data.info.title;
+		try { 
+			if (data.info !== null && data.info !== undefined) {
+				if (data.info.title !== undefined && data.info.title !== null) {
+					if (data.info.title.endsWith(" API")) {
+						data.info.title = data.info.title.substring(0, data.info.title.length - 4)
+					} else if (data.info.title.endsWith("API")) {
+						data.info.title = data.info.title.substring(0, data.info.title.length - 3)
+					}
 
-      if (data.info["x-logo"] !== undefined) {
-        if (data.info["x-logo"].url !== undefined) {
-          //console.log("PARSED LOGO: ", data.info["x-logo"].url);
-          setFileBase64(data.info["x-logo"].url);
-        } else {
-          setFileBase64(data.info["x-logo"]);
-        }
-        //console.log("");
-        //console.log("");
-        //console.log("LOGO: ", data.info["x-logo"]);
-        //console.log("");
-        //console.log("");
-      }
+					if (data.info.title.length > 29) {
+						setName(data.info.title.slice(0, 29));
+					} else {
+						setName(data.info.title);
+					}
+				}
 
-      if (data.info.contact !== undefined) {
-        setContact(data.info.contact);
-      }
+				setDescription(data.info.description);
+				document.title = "Apps - " + data.info.title;
 
-      if (
-        data.info["x-categories"] !== undefined &&
-        data.info["x-categories"].length > 0
-      ) {
-        if (typeof data.info["x-categories"] === "array") {
-        } else {
-        }
-        setNewWorkflowCategories(data.info["x-categories"]);
-      }
-    }
+				if (data.info["x-logo"] !== undefined) {
+					if (data.info["x-logo"].url !== undefined) {
+						//console.log("PARSED LOGO: ", data.info["x-logo"].url);
+						setFileBase64(data.info["x-logo"].url);
+					} else {
+						setFileBase64(data.info["x-logo"]);
+					}
+					//console.log("");
+					//console.log("");
+					//console.log("LOGO: ", data.info["x-logo"]);
+					//console.log("");
+					//console.log("");
+				}
+
+				if (data.info.contact !== undefined) {
+					setContact(data.info.contact);
+				}
+
+				if (data.info["x-categories"] !== undefined && data.info["x-categories"].length > 0) {
+					if (typeof data.info["x-categories"] === "array") {
+					} else {
+					}
+					setNewWorkflowCategories(data.info["x-categories"]);
+				}
+			}
+		} catch (e) {
+			console.log("Failed setting info: ", e)
+		}
 
 		console.log("Tags: ", data.tags)
-    if (data.tags !== undefined && data.tags.length > 0) {
-      var newtags = [];
-      for (var key in data.tags) {
-        if (data.tags[key].name.length > 50) {
-          console.log(
-            "Skipping tag because it's too long: ",
-            data.tags[key].name.length
-          );
-          continue;
-        }
+		try {
+			if (data.tags !== undefined && data.tags.length > 0) {
+				var newtags = [];
+				for (let tagkey in data.tags) {
+					if (data.tags[tagkey].name.length > 50) {
+						console.log("Skipping tag because it's too long: ",data.tags[tagkey].name.length);
 
-        newtags.push(data.tags[key].name);
-      }
+						continue;
+					}
 
-      if (newtags.length > 10) {
-        newtags = newtags.slice(0, 9);
-      }
+					newtags.push(data.tags[tagkey].name);
+				}
 
-      setNewWorkflowTags(newtags);
-    }
+				if (newtags.length > 10) {
+					newtags = newtags.slice(0, 9);
+				}
+
+				setNewWorkflowTags(newtags);
+			}
+		} catch (e) {
+			console.log("Failed to parse tags: ", e)
+		}
 
     // This is annoying (:
-    var securitySchemes = data.components.securityDefinitions;
-    if (securitySchemes === undefined) {
-      securitySchemes = data.securitySchemes;
-    }
+		console.log("Security schemes 1: ", data.securitySchemes)
 
-    if (securitySchemes === undefined) {
-      securitySchemes = data.components.securitySchemes;
-    }
+		// Weird generator problems to be handle
+		var securitySchemes = undefined
+		try { 
+			if (data.securitySchemes !== undefined) {
+				securitySchemes = data.securitySchemes
+				if (securitySchemes === undefined) {
+					securitySchemes = data.securityDefinitions;
+				}
+			}
+			
+			if (securitySchemes === undefined && data.components !== undefined) { 
+				securitySchemes = data.components.securitySchemes;
+				if (securitySchemes === undefined) {
+					securitySchemes = data.components.securityDefinitions;
+				}
+			}
+		} catch (e) {
+			console.log("Failed to parse security schemes: ", e)
+		}
+
+		console.log("Security schemes 2: ", securitySchemes)
 
     const allowedfunctions = [
       "GET",
@@ -622,9 +722,12 @@ const AppCreator = (defaultprops) => {
     var newActions = [];
     var wordlist = {};
     var all_categories = [];
+		var parentUrl = ""
+
 		console.log("Paths: ", data.paths)
     if (data.paths !== null && data.paths !== undefined) {
       for (let [path, pathvalue] of Object.entries(data.paths)) {
+
         for (let [method, methodvalue] of Object.entries(pathvalue)) {
           if (methodvalue === null) {
             alert.info("Skipped method (null)" + method);
@@ -635,7 +738,7 @@ const AppCreator = (defaultprops) => {
             // Typical YAML issue
             if (method !== "parameters") {
               console.log("Invalid method: ", method, "data: ", methodvalue);
-              alert.info("Skipped method (not allowed): " + method);
+              //alert.info("Skipped method (not allowed): " + method);
             }
             continue;
           }
@@ -671,7 +774,18 @@ const AppCreator = (defaultprops) => {
             body: "",
             errors: [],
             example_response: "",
+						action_label: "No Label",
+						required_bodyfields: [],
           };
+
+					if (methodvalue["x-label"] !== undefined && methodvalue["x-label"] !== null) {
+						// FIX: Map labels only if they're actually in the category list
+						newaction.action_label = methodvalue["x-label"]
+					}
+
+					if (methodvalue["x-required-fields"] !== undefined && methodvalue["x-required-fields"] !== null) {
+						newaction.required_bodyfields = methodvalue["x-required-fields"]
+					}
 
 					if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
 						const regex = /_shuffle_replace_\d/i;
@@ -685,24 +799,24 @@ const AppCreator = (defaultprops) => {
             const pathsplit = path.split("/");
             var categoryindex = -1;
             // Stupid way of finding a category/grouping
-            for (var key in pathsplit) {
-							if (pathsplit[key].includes("_shuffle_replace_")) {
+            for (let splitkey in pathsplit) {
+							if (pathsplit[splitkey].includes("_shuffle_replace_")) {
 								const regex = /_shuffle_replace_\d/i;
 								//console.log("NEW: ", 
-								pathsplit[key] = pathsplit[key].replaceAll(new RegExp(regex, 'g'), "")
+								pathsplit[splitkey] = pathsplit[splitkey].replaceAll(new RegExp(regex, 'g'), "")
 							}
 
               if (
-                pathsplit[key].length > 0 &&
-                pathsplit[key] !== "v1" &&
-                pathsplit[key] !== "v2" &&
-                pathsplit[key] !== "api" &&
-                pathsplit[key] !== "1.0" &&
-                pathsplit[key] !== "apis"
+                pathsplit[splitkey].length > 0 &&
+                pathsplit[splitkey] !== "v1" &&
+                pathsplit[splitkey] !== "v2" &&
+                pathsplit[splitkey] !== "api" &&
+                pathsplit[splitkey] !== "1.0" &&
+                pathsplit[splitkey] !== "apis"
               ) {
-                newaction["category"] = pathsplit[key];
-                if (!all_categories.includes(pathsplit[key])) {
-                  all_categories.push(pathsplit[key]);
+                newaction["category"] = pathsplit[splitkey];
+                if (!all_categories.includes(pathsplit[splitkey])) {
+                  all_categories.push(pathsplit[splitkey]);
                 }
                 break;
               }
@@ -710,7 +824,7 @@ const AppCreator = (defaultprops) => {
           }
 					
 					if (path === "/files/{file_id}/content") {
-						console.log("FILE DOWNLOAD Method: ", path, method, methodvalue)
+						//console.log("FILE DOWNLOAD Method: ", path, method, methodvalue)
 					}
 
 
@@ -727,7 +841,7 @@ const AppCreator = (defaultprops) => {
 								console.log("Set content!")
 							}
 						}
-						
+
 						if (methodvalue["requestBody"]["content"] !== undefined) {
 							// Handle content - XML or JSON
 							//
@@ -740,46 +854,56 @@ const AppCreator = (defaultprops) => {
                 if (
                   methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null
                 ) {
-                  console.log("Schema: ", methodvalue["requestBody"]["content"]["application/json"]["schema"])
-                  if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
-                    var tmpobject = {};
-                    for (let [prop, propvalue] of Object.entries(
-                      methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"]
-                    )) {
-                      tmpobject[prop] = `\$\{${prop}\}`;
-                    }
+                  //console.log("Schema: ", methodvalue["requestBody"]["content"]["application/json"]["schema"])
 
-                    //console.log("Data: ", data)
-                    for (var subkey in methodvalue["requestBody"]["content"][
-                      "application/json"
-                    ]["schema"]["required"]) {
-                      const tmpitem =
-                        methodvalue["requestBody"]["content"][
-                          "application/json"
-                        ]["schema"]["required"][subkey];
-                      tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
-                    }
+									try {
+										if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
+											// Read out properties from a JSON object
+											const jsonObject = getJsonObject(methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"])
+											//console.log("JSON OBJECT: ", jsonObject)
+											if (jsonObject !== undefined && jsonObject !== null) {
+												try {
+													newaction["body"] = JSON.stringify(jsonObject, null, 2)
+												} catch (e) {
+													console.log("JSON object parse error: ", e)
+												}
+											}
 
-                    newaction["body"] = JSON.stringify(tmpobject, null, 2);
-                  } else if (
-                    methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== null) {
-                    const retRef = handleGetRef(
-                      methodvalue["requestBody"]["content"]["application/json"][
-                        "schema"
-                      ],
-                      data
-                    );
-                    var newbody = {};
-                    // Can handle default, required, description and type
-                    for (var propkey in retRef.properties) {
-											console.log("replace: ", propkey)
 
-                      const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
-                      newbody[parsedkey] = "${" + parsedkey + "}";
-                    }
+											//newaction["body"] = JSON.stringify(jsonObject, null, 2);
 
-                    newaction["body"] = JSON.stringify(newbody, null, 2);
-                  }
+											var tmpobject = {};
+											for (let prop of methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"]) {
+												tmpobject[prop] = `\$\{${prop}\}`;
+											}
+
+											//console.log("Data: ", data)
+											for (let subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
+												const tmpitem = methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"][subkey];
+												tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
+											}
+
+											newaction["body"] = JSON.stringify(tmpobject, null, 2);
+
+										} else if (
+
+											methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== null) {
+											const retRef = handleGetRef(methodvalue["requestBody"]["content"]["application/json"]["schema"], data);
+											
+											var newbody = {};
+											// Can handle default, required, description and type
+											for (let propkey in retRef.properties) {
+												console.log("replace: ", propkey)
+
+												const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
+												newbody[parsedkey] = "${" + parsedkey + "}";
+											}
+
+											newaction["body"] = JSON.stringify(newbody, null, 2);
+										}
+									} catch (e) {
+										console.log("RequestBody json error: ", e, path)
+									}
                 }
               } else if (
                 methodvalue["requestBody"]["content"]["application/xml"] !==
@@ -796,33 +920,32 @@ const AppCreator = (defaultprops) => {
                     "schema"
                   ] !== null
                 ) {
-                  if (
-                    methodvalue["requestBody"]["content"]["application/xml"][
-                      "schema"
-                    ]["properties"] !== undefined
-                  ) {
-                    var tmpobject = {};
-                    for (let [prop, propvalue] of Object.entries(
-                      methodvalue["requestBody"]["content"]["application/xml"][
-                        "schema"
-                      ]["properties"]
-                    )) {
-                      tmpobject[prop] = `\$\{${prop}\}`;
-                    }
+									try {
+										if (
+											methodvalue["requestBody"]["content"]["application/xml"][
+												"schema"
+											]["properties"] !== undefined
+										) {
+											var tmpobject = {};
+											for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
+											
+												tmpobject[prop] = `\$\{${prop}\}`;
+											}
 
-                    for (var subkey in methodvalue["requestBody"]["content"][
-                      "application/xml"
-                    ]["schema"]["required"]) {
-                      const tmpitem =
-                        methodvalue["requestBody"]["content"][
-                          "application/xml"
-                        ]["schema"]["required"][subkey];
-                      tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
-                    }
+											for (let [subkey,subkeyval] in Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"])) {
+												const tmpitem =
+													methodvalue["requestBody"]["content"][
+														"application/xml"
+													]["schema"]["required"][subkey];
+												tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
+											}
 
-                    //console.log("OBJ XML: ", tmpobject)
-                    //newaction["body"] = XML.stringify(tmpobject, null, 2)
-                  }
+											//console.log("OBJ XML: ", tmpobject)
+											//newaction["body"] = XML.stringify(tmpobject, null, 2)
+										}
+									} catch (e) {
+										console.log("RequestBody xml error: ", e, path)
+									}
                 }
               } else {
                 if (
@@ -854,34 +977,34 @@ const AppCreator = (defaultprops) => {
                       "multipart/form-data"
                     ]["schema"] !== null
                   ) {
-                    if (
-                      methodvalue["requestBody"]["content"][
-                        "multipart/form-data"
-                      ]["schema"]["type"] === "object"
-                    ) {
-                      const fieldname =
-                        methodvalue["requestBody"]["content"][
-                          "multipart/form-data"
-                        ]["schema"]["properties"]["fieldname"];
+										try {
+											if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
+												const fieldname =
+													methodvalue["requestBody"]["content"][
+														"multipart/form-data"
+													]["schema"]["properties"]["fieldname"];
 
-                      if (fieldname !== undefined) {
-                        //console.log("FIELDNAME: ", fieldname);
-                        newaction.file_field = fieldname["value"];
-                      } else {
-												for (const [subkey, subvalue] of Object.entries(methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])) {
-													if (subkey.includes("file")) {
-														console.log("Found subkey field for file: ", path, method, methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])
-														newaction.file_field = subkey
-														break
+												if (fieldname !== undefined) {
+													//console.log("FIELDNAME: ", fieldname);
+													newaction.file_field = fieldname["value"];
+												} else {
+													for (const [subkey, subvalue] of Object.entries(methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])) {
+														if (subkey.includes("file")) {
+															console.log("Found subkey field for file: ", path, method, methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])
+															newaction.file_field = subkey
+															break
+														}
+													}
+
+													if (newaction.file_field === undefined || newaction.file_field === null || newaction.file_field.length === 0) {
+														console.log("No file fieldname found: ", methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])
 													}
 												}
-
-												if (newaction.file_field === undefined || newaction.file_field === null || newaction.file_field.length === 0) {
-													console.log("No file fieldname found: ", methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])
-												}
+											} else {
+												console.log("No type found: ", methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"])
 											}
-                    } else {
-											console.log("No type found: ", methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"])
+										} catch (e) {
+											console.log("Multipart/form error: ", e, path)
 										}
                   }
                 } else {
@@ -909,74 +1032,76 @@ const AppCreator = (defaultprops) => {
                     }
                   }
 
-                  if (schemas.length === 1) {
-                    const parameter = handleGetRef({ $ref: schemas[0] }, data);
+									try {
+                  	if (schemas.length === 1) {
+                  	  const parameter = handleGetRef({ $ref: schemas[0] }, data);
 
-                    if (
-                      parameter.properties !== undefined &&
-                      parameter["type"] === "object"
-                    ) {
-                      var newbody = {};
-                      for (var propkey in parameter.properties) {
-												console.log("propkey2: ", propkey)
-                      	const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
-                        if (parameter.properties[propkey].type === undefined) {
-                          console.log(
-                            "Skipping (4): ",
-                            parameter.properties[propkey]
-                          );
-                          continue;
-                        }
+											console.log("Reading type from parameter: ", parameter)
+                  	  if (parameter.properties !== undefined && parameter["type"] === "object") {
+                  	  
+                  	    var newbody = {};
+                  	    for (let propkey in parameter.properties) {
+													console.log("propkey2: ", propkey)
+                  	    	const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
+                  	      if (parameter.properties[propkey].type === undefined) {
+                  	        console.log(
+                  	          "Skipping (4): ",
+                  	          parameter.properties[propkey]
+                  	        );
+                  	        continue;
+                  	      }
 
-                        if (parameter.properties[propkey].type === "string") {
-                          if (
-                            parameter.properties[propkey].description !==
-                            undefined
-                          ) {
-                            newbody[parsedkey] =
-                              parameter.properties[propkey].description;
-                          } else {
-                            newbody[parsedkey] = "";
-                          }
-                        } else if (
-                          parameter.properties[propkey].type.includes("int") ||
-                          parameter.properties[propkey].type.includes("uint64")
-                        ) {
-                          newbody[parsedkey] = 0;
-                        } else if (
-                          parameter.properties[propkey].type.includes("boolean")
-                        ) {
-                          newbody[parsedkey] = false;
-                        } else if (
-                          parameter.properties[propkey].type.includes("array")
-                        ) {
-                          newbody[parsedkey] = [];
-                        } else {
-                          console.log(
-                            "CANT HANDLE JSON TYPE (4)",
-                            parameter.properties[propkey].type,
-                            parameter.properties[propkey],
-														path
-                          );
-                          newbody[parsedkey] = [];
-                        }
-                      }
+                  	      if (parameter.properties[propkey].type === "string") {
+                  	        if (
+                  	          parameter.properties[propkey].description !==
+                  	          undefined
+                  	        ) {
+                  	          newbody[parsedkey] =
+                  	            parameter.properties[propkey].description;
+                  	        } else {
+                  	          newbody[parsedkey] = "";
+                  	        }
+                  	      } else if (
+                  	        parameter.properties[propkey].type.includes("int") ||
+                  	        parameter.properties[propkey].type.includes("uint64")
+                  	      ) {
+                  	        newbody[parsedkey] = 0;
+                  	      } else if (
+                  	        parameter.properties[propkey].type.includes("boolean")
+                  	      ) {
+                  	        newbody[parsedkey] = false;
+                  	      } else if (
+                  	        parameter.properties[propkey].type.includes("array")
+                  	      ) {
+                  	        newbody[parsedkey] = [];
+                  	      } else {
+                  	        console.log(
+                  	          "CANT HANDLE JSON TYPE (4)",
+                  	          parameter.properties[propkey].type,
+                  	          parameter.properties[propkey],
+															path
+                  	        );
+                  	        newbody[parsedkey] = [];
+                  	      }
+                  	    }
 
-                      newaction["body"] = JSON.stringify(newbody, null, 2);
-                    } else {
-                      console.log(
-                        "CANT HANDLE PARAM: (4) ",
-                        parameter.properties,
-												path
-                      );
-                    }
-                  }
+                  	    newaction["body"] = JSON.stringify(newbody, null, 2);
+                  	  } else {
+                  	    console.log(
+                  	      "CANT HANDLE PARAM: (4) ",
+                  	      parameter.properties,
+													path
+                  	    );
+                  	  }
+                  	}
+									} catch (e) {
+										console.log("Param Error: ", e, path)
+									}
                 }
               }
             }
           }
 
-          // HAHAHA wtf is this.
           if (
             methodvalue.responses !== undefined &&
             methodvalue.responses !== null
@@ -987,7 +1112,6 @@ const AppCreator = (defaultprops) => {
                   methodvalue.responses.default.content["text/plain"] !==
                   undefined
                 ) {
-									console.log("RESP: ", path, methodvalue.responses.default.content["text/plain"])
                   if (
                     methodvalue.responses.default.content["text/plain"][
                       "schema"
@@ -1030,7 +1154,19 @@ const AppCreator = (defaultprops) => {
                       selectedExample["content"]["application/json"]["schema"] !== undefined &&
                     	selectedExample["content"]["application/json"]["schema"] !== null
                     ) {
-											console.log("JSON: ", selectedExample["content"]["application/json"]["schema"])
+											//console.log("JSON Output: ", selectedExample["content"]["application/json"]["schema"])
+
+											if (selectedExample["content"]["application/json"]["schema"]["properties"] !== undefined && selectedExample["content"]["application/json"]["schema"]["properties"] !== null) {
+												const jsonObject = getJsonObject(selectedExample["content"]["application/json"]["schema"]["properties"]) 
+												if (jsonObject !== undefined && jsonObject !== null) {
+													try {
+                          	newaction.example_response = JSON.stringify(jsonObject, null, 2)
+													} catch (e) {
+														console.log("JSON object output parse error: ", e)
+													}
+												}
+											}
+
                       if (selectedExample["content"]["application/json"]["schema"]["$ref"] !== undefined) {
                         //console.log("REF EXAMPLE: ", selectedExample["content"]["application/json"]["schema"])
                         const parameter = handleGetRef(
@@ -1039,19 +1175,15 @@ const AppCreator = (defaultprops) => {
                           ],
                           data
                         );
-                        //console.log("GOT REF RETURN AS EXAMPLE: ", parameter)
 
-                        if (
-                          parameter.properties !== undefined &&
-                          parameter["type"] === "object"
-                        ) {
+                        //console.log("Reading parameter type 2", parameter)
+                        if (parameter.properties !== undefined && parameter["type"] === "object") {
                           var newbody = {};
-                          for (var propkey in parameter.properties) {
-														console.log("propkey3: ", propkey)
+                          for (let propkey in parameter.properties) {
+														//console.log("propkey3: ", propkey)
+
                             const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
-                            if (
-                              parameter.properties[propkey].type === undefined
-                            ) {
+                            if (parameter.properties[propkey].type === undefined) {
                               console.log(
                                 "Skipping (1): ",
                                 parameter.properties[propkey]
@@ -1091,10 +1223,7 @@ const AppCreator = (defaultprops) => {
                               //const parameter = handleGetRef(selectedExample["content"]["application/json"]["schema"], data)
                               newbody[parsedkey] = [];
                             } else {
-                              console.log(
-                                "CANT HANDLE JSON TYPE ",
-                                parameter.properties[propkey].type,
-                                parameter.properties[propkey]
+                              console.log("CANT HANDLE JSON TYPE ", parameter.properties[propkey].type,parameter.properties[propkey]
                               );
                               newbody[parsedkey] = [];
                             }
@@ -1130,12 +1259,11 @@ const AppCreator = (defaultprops) => {
                               selectedComponent,
                               data
                             );
-                            if (
-                              parameter.properties !== undefined &&
-                              parameter["type"] === "object"
-                            ) {
+
+														console.log("Reading parameter type 3!")
+                            if (parameter.properties !== undefined && parameter["type"] === "object") {
                               var newbody = {};
-                              for (var propkey in parameter.properties) {
+                              for (let propkey in parameter.properties) {
 																console.log("propkey4: ", propkey)
                                 const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                                 if (
@@ -1214,12 +1342,11 @@ const AppCreator = (defaultprops) => {
                               ]["properties"]["data"],
                               data
                             );
-                            if (
-                              parameter.properties !== undefined &&
-                              parameter["type"] === "object"
-                            ) {
+
+														console.log("Reading type 3: ", parameter)
+                            if (parameter.properties !== undefined && parameter["type"] === "object") {
                               var newbody = {};
-                              for (var propkey in parameter.properties) {
+                              for (let propkey in parameter.properties) {
 																console.log("propkey5: ", propkey)
                                 const parsedkey = propkey
                                   .replaceAll(" ", "_")
@@ -1287,8 +1414,8 @@ const AppCreator = (defaultprops) => {
             }
           }
 
-          for (var key in methodvalue.parameters) {
-            const parameter = handleGetRef(methodvalue.parameters[key], data);
+          for (let paramkey in methodvalue.parameters) {
+            const parameter = handleGetRef(methodvalue.parameters[paramkey], data);
             if (parameter.in === "query") {
               var tmpaction = {
                 description: parameter.description,
@@ -1334,8 +1461,9 @@ const AppCreator = (defaultprops) => {
             if (Object.getOwnPropertyNames(wordlist).length === 0) {
               for (let [newpath, pathvalue] of Object.entries(data.paths)) {
                 const newpathsplit = newpath.split("/");
-                for (var key in newpathsplit) {
-                  const pathitem = newpathsplit[key].toLowerCase();
+
+                for (let splitkey in newpathsplit) {
+                  const pathitem = newpathsplit[splitkey].toLowerCase();
                   if (wordlist[pathitem] === undefined) {
                     wordlist[pathitem] = 1;
                   } else {
@@ -1351,8 +1479,8 @@ const AppCreator = (defaultprops) => {
             const urlsplit = path.split("/");
             if (urlsplit.length > 0) {
               var curname = "";
-              for (var key in urlsplit) {
-                var subpath = urlsplit[key];
+              for (let urlkey in urlsplit) {
+                var subpath = urlsplit[urlkey];
                 if (wordlist[subpath] > 2 || subpath.length < 1) {
                   continue;
                 }
@@ -1384,7 +1512,8 @@ const AppCreator = (defaultprops) => {
                 const searchactions = newActions.find(
                   (data) => data.name === newname
                 );
-                console.log("SEARCH: ", searchactions);
+
+                //console.log("SEARCH: ", searchactions);
                 if (searchactions !== undefined) {
                   newaction.errors.push("Missing name");
                 } else {
@@ -1396,8 +1525,7 @@ const AppCreator = (defaultprops) => {
             }
           }
 
-
-
+					//newaction.action_label = "No Label"
           newActions.push(newaction);
         }
       }
@@ -1413,11 +1541,11 @@ const AppCreator = (defaultprops) => {
           const regex = /{\w+}/g;
           const found = firstUrl.match(regex);
           if (found !== null) {
-            for (var key in found) {
-              const item = found[key].slice(1, found[key].length - 1);
+            for (let foundkey in found) {
+              const item = found[foundkey].slice(1, found[foundkey].length - 1);
               const foundVar = data.servers[0].variables[item];
               if (foundVar["default"] !== undefined) {
-                firstUrl = firstUrl.replace(found[key], foundVar["default"]);
+                firstUrl = firstUrl.replace(found[foundkey], foundVar["default"]);
               }
             }
           }
@@ -1425,23 +1553,22 @@ const AppCreator = (defaultprops) => {
 
         if (firstUrl.endsWith("/")) {
           setBaseUrl(firstUrl.slice(0, firstUrl.length - 1));
+					parentUrl = firstUrl.slice(0, firstUrl.length - 1)
         } else {
-          setBaseUrl(firstUrl);
+          setBaseUrl(firstUrl)
+					parentUrl = firstUrl
         }
       }
     }
 
-    //console.log("SECURITYSCHEMES: ", securitySchemes)
     if (securitySchemes !== undefined) {
-			console.log("NEWAUTH: ", securitySchemes)
-      // FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
-      //console.log("SECURITY: ", securitySchemes)
-      //if (Object.entries(securitySchemes) > 1 &&
+      
+			console.log("SECURITY: ", securitySchemes)
       var newauth = [];
 			try {
 				var optionset = false 
       	for (const [key, value] of Object.entries(securitySchemes)) {
-      	  console.log(key, value);
+      	  console.log("AUTH: ", key, value);
 
       	  if (key === "jwt") {
       	    setAuthenticationOption("JWT");
@@ -1558,9 +1685,7 @@ const AppCreator = (defaultprops) => {
       	          setOauth2Scopes(value[flowkey][basekey].scopes);
       	        } else {
       	          var newscopes = [];
-      	          for (let [scopekey, scopevalue] of Object.entries(
-      	            value[flowkey][basekey].scopes
-      	          )) {
+      	          for (let [scopekey, scopevalue] of Object.entries(value[flowkey][basekey].scopes)) {
       	            if (scopekey.startsWith("http")) {
       	              const scopekeysplit = scopekey.split("/");
       	              if (scopekeysplit.length < 5) {
@@ -1605,6 +1730,62 @@ const AppCreator = (defaultprops) => {
       }
     }
 
+		console.log("PARent: ", parentUrl)
+		var prefixCheck = "/v1"
+		if (parentUrl.includes("/")) {
+			const urlsplit = parentUrl.split("/")
+			if (urlsplit.length > 2) {
+				// Skip if http:// in it too
+				prefixCheck = "/" + urlsplit.slice(3).join("/")
+			}
+
+			console.log("Prefix: ", prefixCheck)
+			if (prefixCheck.length > 0 && prefixCheck !== "/" && prefixCheck.startsWith("/")) {
+				for (var actionKey in newActions) {
+					const action = newActions[actionKey]
+
+					if (action.url !== undefined && action.url !== null && action.url.startsWith(prefixCheck)) {
+						newActions[actionKey].url = action.url.slice(prefixCheck.length, action.url.length)
+					}
+
+					console.log("Action: ", newActions[actionKey].url)
+				}
+			}
+		}
+
+		console.log("Actions: ", newActions.length, " BaseURL: ", parentUrl)
+	
+		var newActions2 = []
+		// Remove with duplicate action URLs
+		for (var actionKey in newActions) {
+			const action = newActions[actionKey]
+			if (action.url === undefined || action.url === null) {
+				continue
+			}
+
+			var found = false
+			for (var actionKey2 in newActions2) {
+				const action2 = newActions2[actionKey2]
+				if (action2.url === undefined || action2.url === null) {
+					continue
+				}
+
+				if (action.url === action2.url) {
+					found = true
+					break
+				}
+			}
+
+			if (!found) {
+				newActions2.push(action)
+			} else {
+				console.log("NOT skipping duplicate action: ", action.url, ". Should merge contents")
+				newActions2.push(action)
+			}
+		}
+
+		console.log("Actions: ", newActions.length, " Actions2: ", newActions2.length)
+		newActions = newActions2
     if (newActions.length > increaseAmount - 1) {
       setActionAmount(increaseAmount);
     } else {
@@ -1613,16 +1794,21 @@ const AppCreator = (defaultprops) => {
 
     //const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io"
     if (newActions.length > 1000 && isCloud) {
-      alert.error(
-        "Cut down actions from " +
-          newActions.length +
-          " to 999 because of limit"
-      );
+      alert.error("Cut down actions from " + newActions.length + " to 999 because of limit");
       newActions = newActions.slice(0, 999);
     }
 
     setProjectCategories(all_categories);
+
+		// Rearrange them by which has action_label
+		const firstActions = newActions.filter(data => data.action_label !== undefined && data.action_label !== null && data.action_label !== "No Label")
+		console.log("First actions: ", firstActions)
+		const secondActions = newActions.filter(data => data.action_label === undefined || data.action_label === null || data.action_label === "No Label")
+		newActions = firstActions.concat(secondActions)
     setActions(newActions);
+		//data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
+
+
     setFilteredActions(newActions);
     setIsAppLoaded(true);
   };
@@ -1683,8 +1869,8 @@ const AppCreator = (defaultprops) => {
 
     if (newWorkflowTags.length > 0) {
       var newtags = [];
-      for (var key in newWorkflowTags) {
-        newtags.push({ name: newWorkflowTags[key] });
+      for (let tagkey in newWorkflowTags) {
+        newtags.push({ name: newWorkflowTags[tagkey] });
       }
 
       data["tags"] = newtags;
@@ -1696,8 +1882,8 @@ const AppCreator = (defaultprops) => {
 
     // Handles actions
 		var handledPaths = []
-    for (var key in actions) {
-      var item = JSON.parse(JSON.stringify(actions[key]))
+    for (let actionkey in actions) {
+      var item = JSON.parse(JSON.stringify(actions[actionkey]))
       if (item.errors.length > 0) {
         alert.error("Saving with error in action " + item.name);
       }
@@ -1712,7 +1898,7 @@ const AppCreator = (defaultprops) => {
 			if (handledPaths.includes(pathjoin)) {
 
 				// Max 100 of same lol
-				for (var i = 0; i < 100; i++) {
+				for (let i = 0; i < 100; i++) {
 					item.url = item.url+"_shuffle_replace_"+i
 
 					pathjoin = item.url+"_"+item.method.toLowerCase()
@@ -1764,6 +1950,16 @@ const AppCreator = (defaultprops) => {
           content: {},
         },
       };
+
+			if (item.action_label !== undefined && item.action_label !== "" && item.action_label !== "No Label") {
+				console.log("Action label: ", item.action_label)
+				data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
+			}
+
+			if (item.required_bodyfields !== undefined && item.required_bodyfields !== null && item.required_bodyfields.length > 0) {
+				console.log("Required bodyfields: ", item.required_bodyfields)
+				data.paths[item.url][item.method.toLowerCase()]["x-required-fields"] = item.required_bodyfields
+			}
 
       //console.log("ACTION: ", item)
 
@@ -1822,7 +2018,7 @@ const AppCreator = (defaultprops) => {
       if (item.queries.length > 0) {
         var skipped = false;
 				var querynames = []
-        for (var querykey in item.queries) {
+        for (let querykey in item.queries) {
           const queryitem = item.queries[querykey];
 
 					if (queryitem === undefined || queryitem === null || queryitem.name === undefined || queryitem.name === null || queryitem.name === "") {
@@ -1857,7 +2053,9 @@ const AppCreator = (defaultprops) => {
             queryitem.name.toLowerCase() == "ssl_verify" ||
             queryitem.name.toLowerCase() == "queries" ||
             queryitem.name.toLowerCase() == "headers" ||
-            queryitem.name.toLowerCase() == "access_token" ||
+            queryitem.name.toLowerCase() == "access_token") {
+						/*
+
             queryitem.name.includes("[") ||
             queryitem.name.includes("]") ||
             queryitem.name.includes("{") ||
@@ -1878,10 +2076,11 @@ const AppCreator = (defaultprops) => {
             queryitem.name.includes('"') ||
             queryitem.name.includes("'")
           ) {
-            console.log(
-              item.name + " error: uses a bad query - not adding: ",
-              queryitem.name
-            )
+							*/
+            console.log(item.name + " error: uses a bad query - not adding: ",queryitem.name)
+            
+
+						// Find a replacement for the invalid ones first.
 
             continue;
           }
@@ -1923,7 +2122,7 @@ const AppCreator = (defaultprops) => {
       //data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 
       if (item.paths.length > 0) {
-        for (querykey in item.paths) {
+        for (let querykey in item.paths) {
           const queryitem = item.paths[querykey];
 
           if (queryitem.toLowerCase() == "url") {
@@ -1948,9 +2147,7 @@ const AppCreator = (defaultprops) => {
             newitem.description = queryitem.description;
           }
 
-          data.paths[item.url][item.method.toLowerCase()].parameters.push(
-            newitem
-          );
+          data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem);
           //console.log(queryitem)
         }
       } else {
@@ -1958,7 +2155,7 @@ const AppCreator = (defaultprops) => {
         const values = getCurrentPaths(item.url);
         const paths = values[0];
 
-        for (querykey in paths) {
+        for (let querykey in paths) {
           const queryitem = paths[querykey];
           newitem = {
             in: "path",
@@ -1988,7 +2185,7 @@ const AppCreator = (defaultprops) => {
       	  item.body !== null &&
       	  item.body.length > 0
       	) {
-					console.log("GOT BODY: ", item.url, item.method, item.body)
+					//console.log("GOT BODY: ", item.url, item.method, item.body)
 
 					// Replacing dollarsign insertions that aren't escaped
 					// This is to stop it from messing with systems in Shuffle.
@@ -1996,29 +2193,29 @@ const AppCreator = (defaultprops) => {
 					// but it's the only way we can properly support e.g. GraphQL
 					// with good examples
 					var newbody = ""
-					for (var key in item.body) {
-						if (item.body[key] === "$") {
-							if (key > 0) {
-								//console.log("Found: ", item.body[key-1])
-								const newkey = parseInt(key, 10)
+					for (let bodykey in item.body) {
+						if (item.body[bodykey] === "$") {
+							if (bodykey > 0) {
+
+								const newkey = parseInt(bodykey, 10)
 								if (item.body[newkey-1] !== "\\") {
 									if (item.body[newkey+1] !== "\{") {
 										newbody += "\\"
 									} 
 								} 
 
-								newbody += item.body[key]
+								newbody += item.body[bodykey]
 							} else {
 								newbody += "\\"
-								newbody += item.body[key]
+								newbody += item.body[bodykey]
 							}
-							//newbody += item.body[key]
+
 						} else {
-							newbody += item.body[key]
+							newbody += item.body[bodykey]
 						}
 					}
 
-					console.log("New body: ", newbody)
+					//console.log("New body: ", newbody)
 					if (newbody !== item.body) {
 						item.body = newbody
 					}
@@ -2087,12 +2284,7 @@ const AppCreator = (defaultprops) => {
 			}
 
       // https://swagger.io/docs/specification/describing-request-body/file-upload/
-      if (
-        item.file_field !== undefined &&
-        item.file_field !== null &&
-        item.file_field.length > 0
-      ) {
-        console.log("HANDLE FILEFIELD SAVE: ", item.file_field);
+      if (item.file_field !== undefined && item.file_field !== null && item.file_field.length > 0) {
         data.paths[item.url][item.method.toLowerCase()]["requestBody"][
           "content"
         ]["multipart/form-data"] = {
@@ -2107,53 +2299,50 @@ const AppCreator = (defaultprops) => {
           },
         };
 
-        console.log(
-          data.paths[item.url][item.method.toLowerCase()]["requestBody"][
-            "content"
-          ]["multipart/form-data"]
-        );
+        //console.log(data.paths[item.url][item.method.toLowerCase()]["requestBody"]["content"]["multipart/form-data"])
       }
 
       if (item.headers.length > 0) {
         const required = false;
 
         const headersSplit = item.headers.split("\n");
-        for (var key in headersSplit) {
-          const header = headersSplit[key];
-          var key = "";
+        for (let headerkey in headersSplit) {
+          const header = headersSplit[headerkey];
+
+					var innerkey = ""
           var value = "";
           if (header.length > 0 && header.includes("= ")) {
             const headersplit = header.split("= ");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else if (header.length > 0 && header.includes(" =")) {
             const headersplit = header.split(" =");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else if (header.length > 0 && header.includes("=")) {
             const headersplit = header.split("=");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else if (header.length > 0 && header.includes(": ")) {
             const headersplit = header.split(": ");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else if (header.length > 0 && header.includes(" :")) {
             const headersplit = header.split(" :");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else if (header.length > 0 && header.includes(":")) {
             const headersplit = header.split(":");
-            key = headersplit[0];
+            innerkey = headersplit[0];
             value = headersplit[1];
           } else {
             continue;
           }
 
-          if (key.length > 0 && value.length > 0) {
+          if (innerkey.length > 0 && value.length > 0) {
             newitem = {
               in: "header",
-              name: key,
+              name: innerkey,
               multiline: false,
               description: "Header generated by shuffler.io OpenAPI",
               required: false,
@@ -2235,8 +2424,8 @@ const AppCreator = (defaultprops) => {
     }
 
     if (setExtraAuth.length > 0) {
-      for (var key in extraAuth) {
-        const curauth = extraAuth[key];
+      for (let authkey in extraAuth) {
+        const curauth = extraAuth[authkey];
 
         if (curauth.name.toLowerCase() == "url") {
           alert.error("Can't add extra auth with Name URL");
@@ -2327,64 +2516,12 @@ const AppCreator = (defaultprops) => {
       </div>
     ) : null;
 
-  // API key
-  //const verifyBaseUrl = () => {
-  //	if (baseUrl.startsWith("http://") || baseUrl.startsWith("https://")) {
-  //		return true
-  //	}
-
-  //	if (baseUrl.endsWith("/")) {
-  //		return true
-  //	}
-  //
-  //	return false
-  //}
-
-  //const verifyApiParameter = () => {
-  //	const notAllowed = ["!","#","$","%","&","'","^","+","-",".","_","~","|","]","+","$",]
-  //	for (var key in notAllowed) {
-  //		if (parameterName.includes(notAllowed[key])) {
-  //			return false
-  //		}
-  //	}
-
-  //	return true
-  //}
-
   const testAction = (index) => {
     console.log("Should test action at index " + index);
     console.log(actions[index]);
   };
 
-  const addPathQuery = () => {
-    urlPathQueries.push({ name: "", required: true, example: "", });
-    if (updater === "addupdater") {
-      setUpdater("updater");
-    } else {
-      setUpdater("addupdater");
-    }
-    setUrlPathQueries(urlPathQueries);
-  };
-
-  const flipRequired = (index) => {
-    urlPathQueries[index].required = !urlPathQueries[index].required;
-    if (updater === "flipupdater") {
-      setUpdater("updater");
-    } else {
-      setUpdater("flipupdater");
-    }
-    setUrlPathQueries(urlPathQueries);
-  };
-
-  const deletePathQuery = (index) => {
-    urlPathQueries.splice(index, 1);
-    if (updater === "deleteupdater") {
-      setUpdater("updater");
-    } else {
-      setUpdater("deleteupdater");
-    }
-    setUrlPathQueries(urlPathQueries);
-  };
+  
 
   const duplicateAction = (index) => {
     var newAction = JSON.parse(JSON.stringify(actions[index]));
@@ -2404,18 +2541,18 @@ const AppCreator = (defaultprops) => {
 
   const deleteAction = (index) => {
     actions.splice(index, 1);
-    setCurrentAction({
-      name: "",
-      description: "",
-      url: "",
-      file_field: "",
-      headers: "",
-      paths: [],
-      queries: [],
-      body: "",
-      errors: [],
-      method: actionNonBodyRequest[0],
-    });
+    //setCurrentAction({
+    //  name: "",
+    //  description: "",
+    //  url: "",
+    //  file_field: "",
+    //  headers: "",
+    //  paths: [],
+    //  queries: [],
+    //  body: "",
+    //  errors: [],
+    //  method: actionNonBodyRequest[0],
+    //});
 
     setActions(actions);
     setFilteredActions(actions);
@@ -2918,8 +3055,237 @@ const AppCreator = (defaultprops) => {
       </div>
     ) : null;
 
-  const loopQueries =
-    urlPathQueries.length === 0 ? null : (
+  
+
+		const getCurrentPaths = (urlPath) => {
+  	  var paths = [];
+  	  var queries = [];
+
+  	  if (urlPath.includes("{") && urlPath.includes("}")) {
+  	    var tmpWord = "";
+  	    var record = false;
+
+  	    var query = false;
+  	    for (var key in urlPath) {
+  	      if (urlPath[key] === "?") {
+  	        query = true;
+  	      }
+
+  	      if (urlPath[key] === "}") {
+  	        if (tmpWord === parameterName) {
+  	          tmpWord = "";
+  	          record = false;
+  	          continue;
+  	        } else if (query) {
+  	          queries.push(tmpWord);
+  	        } else {
+  	          paths.push(tmpWord);
+  	        }
+
+  	        tmpWord = "";
+  	        record = false;
+  	      }
+
+  	      if (record) {
+  	        tmpWord += urlPath[key];
+  	      }
+
+  	      //if (urlPath[key] === "{" && urlPath[key-1] === "/") {
+  	      if (urlPath[key] === "{") {
+  	        record = true;
+  	      }
+  	    }
+  	  }
+
+  	  if (urlPath.includes("<") && urlPath.includes(">")) {
+  	    var tmpWord = "";
+  	    var record = false;
+
+  	    var query = false;
+  	    for (var key in urlPath) {
+  	      if (urlPath[key] === "?") {
+  	        query = true;
+  	      }
+
+  	      if (urlPath[key] === ">") {
+  	        if (tmpWord === parameterName) {
+  	          tmpWord = "";
+  	          record = false;
+  	          continue;
+  	        } else if (query) {
+  	          queries.push(tmpWord);
+  	        } else {
+  	          paths.push(tmpWord);
+  	        }
+
+  	        tmpWord = "";
+  	        record = false;
+  	      }
+
+  	      if (record) {
+  	        tmpWord += urlPath[key];
+  	      }
+
+  	      //if (urlPath[key] === "{" && urlPath[key-1] === "/") {
+  	      if (urlPath[key] === "<") {
+  	        record = true;
+  	      }
+  	    }
+  	  }
+
+  	  return [paths, queries];
+  	};
+
+	const foundCategory = newWorkflowCategories !== undefined && newWorkflowCategories !== null && newWorkflowCategories.length > 0 ? categories.find((x) => x.name === newWorkflowCategories[0]) : undefined
+	const actionLabels = foundCategory !== undefined && foundCategory !== null  && foundCategory.action_labels.length > 0 ? ["No Label"].concat(foundCategory.action_labels) : []
+
+	const ActionPaper = (props) => {
+		const { data, index } = props
+
+  	const [updater, setUpdater] = useState("tmp");
+  	const [actionsModalOpen, setActionsModalOpen] = useState(false);
+  	const [urlPath, setUrlPath] = useState("");
+  	const [fileUploadEnabled, setFileUploadEnabled] = useState(false);
+  	const [currentActionMethod, setCurrentActionMethod] = useState(actionNonBodyRequest[0])
+  	const [extraBodyFields, setExtraBodyFields] = useState([]);
+  	const [urlPathQueries, setUrlPathQueries] = useState([]);
+		const [currentAction, setCurrentAction] = useState({
+			name: "",
+			file_field: "",
+			description: "",
+			url: "",
+			headers: "",
+			paths: [],
+			queries: [],
+			body: "",
+			errors: [],
+			example_response: "",
+			method: actionNonBodyRequest[0],
+			action_label: "No Label",
+			required_bodyfields: [],
+		});
+
+		const findBodyParams = (body) => {
+			const regex = /\${(\w+)}/g;
+			const found = body.match(regex);
+			if (found === null) {
+				setExtraBodyFields([]);
+			} else {
+				setExtraBodyFields(found);
+			}
+  	};
+
+		const UrlPathParameters = () => {
+			const values = getCurrentPaths(urlPath);
+			const paths = values[0];
+			const queries = values[1];
+
+			if (currentAction.paths !== paths && urlPath.length > 0) {
+				//console.log("IN PATHS SETTER: !", paths)
+				setActionField("paths", paths);
+			}
+
+			var tmpQueries = [];
+
+			// No overlapping of names
+			for (var key in queries) {
+				const tmpquery = queries[key];
+				const found = tmpQueries.find((query) => query.name === tmpquery);
+				if (found === undefined) {
+					tmpQueries.push({ name: queries[key], required: true });
+				}
+			}
+
+			// FIXME: Frontend isn't updating..
+			if (tmpQueries.length > 0 && JSON.stringify(tmpQueries) !== JSON.stringify(urlPathQueries)) {
+				setUrlPathQueries(tmpQueries);
+			}
+
+			return paths.length > 0 ? (
+				<div>Required parameters: {paths.join(", ")}</div>
+			) : null;
+		};
+
+
+		const HandleIndividualChip = (props) => {
+    		const { chipData, index } = props;
+    		const [chipRequired, setChipRequired] = useState(currentAction.required_bodyfields !== undefined ? currentAction.required_bodyfields.includes(chipData) : false);
+
+				const parsedChip = chipData.startsWith("${") && chipData.endsWith("}") ? chipData.substring(2, chipData.length - 1) : chipData
+
+    		return (
+    		  <Tooltip title={chipRequired ? "Make not required" : "Make required"}>
+    		    <Chip
+    		      style={{
+    		        backgroundColor: chipRequired ? "#f86a3e" : "#3d3f43",
+    		        height: 30,
+    		        margin: 3,
+    		        paddingLeft: 5,
+    		        paddingRight: 5,
+    		        height: 28,
+    		        cursor: "pointer",
+    		        borderColor: "#3d3f43",
+    		        color: "white",
+    		      }}
+    		      label={parsedChip}
+    		      onClick={() => {
+								if (chipRequired) {
+									currentAction["required_bodyfields"].splice(currentAction["required_bodyfields"].indexOf(chipData), 1)
+								} else {
+    							currentAction["required_bodyfields"].push(chipData) 
+								}
+
+    						setCurrentAction(currentAction);
+    		        setChipRequired(!chipRequired);
+    		      }}
+    		    />
+    		  </Tooltip>
+    		);
+  	};
+
+		const setActionField = (field, value) => {
+			currentAction[field] = value
+			setCurrentAction(currentAction)
+
+			//setUrlPathQueries(currentAction.queries)
+		};
+
+		const addPathQuery = () => {
+  	  urlPathQueries.push({ name: "", required: true, example: "", });
+  	  if (updater === "addupdater") {
+  	    setUpdater("updater");
+  	  } else {
+  	    setUpdater("addupdater");
+  	  }
+  	  setUrlPathQueries(urlPathQueries);
+  	};
+
+  	const flipRequired = (index) => {
+  	  urlPathQueries[index].required = !urlPathQueries[index].required;
+  	  if (updater === "flipupdater") {
+  	    setUpdater("updater");
+  	  } else {
+  	    setUpdater("flipupdater");
+  	  }
+  	  setUrlPathQueries(urlPathQueries);
+  	};
+
+  	const deletePathQuery = (index) => {
+			console.log("Should delete index: ", index)
+			var tmpqueries = JSON.parse(JSON.stringify(urlPathQueries))
+			tmpqueries.splice(index, 1)
+
+			console.log("Queries: ", tmpqueries)
+  	  setUrlPathQueries(tmpqueries);
+
+  	  if (updater === "deleteupdater") {
+  	    setUpdater("updater");
+  	  } else {
+  	    setUpdater("deleteupdater");
+  	  }
+  	};
+
+		const loopQueries = urlPathQueries.length === 0 ? null : (
       <div>
         <Divider
           style={{
@@ -2931,17 +3297,17 @@ const AppCreator = (defaultprops) => {
           }}
         />
         Queries
-        {urlPathQueries.map((data, index) => {
-          const requiredColor = data.required === true ? "green" : "red";
+        {urlPathQueries.map((query, queryIndex) => {
+          const requiredColor = query.required === true ? "green" : "red";
           //const required = data.required === true ? <div style={{color: "green", cursor: "pointer"}}>{data.required.toString()}</div> : <div onClick={() => {flipRequired(index)}} style={{display: "inline", color: "red", cursor: "pointer"}}>{data.required.toString()}</div>
           return (
-            <Paper key={index} style={actionListStyle}>
+            <Paper key={queryIndex} style={actionListStyle}>
               <div style={{ marginLeft: "5px", width: "100%" }}>
 								<div style={{display: "flex"}}>
 									<TextField
 										required
 										fullWidth={true}
-										defaultValue={data.name}
+										defaultValue={query.name}
 										placeholder={"Query name (key)"}
 										label={"Query Key"}
 										helperText={
@@ -2951,11 +3317,7 @@ const AppCreator = (defaultprops) => {
 										}
 										onBlur={(e) => {
 											console.log("IN BLUR: ", e.target.value);
-											urlPathQueries[index].name = e.target.value.replaceAll(
-												"=",
-												""
-											);
-
+											urlPathQueries[queryIndex].name = e.target.value.replaceAll("=", "");
 											setUrlPathQueries(urlPathQueries);
 										}}
 										style={{flex: 3}}
@@ -2967,11 +3329,11 @@ const AppCreator = (defaultprops) => {
 									/>
 									<TextField
 										fullWidth={true}
-										defaultValue={data.example}
+										defaultValue={query.example}
 										placeholder={"Default value"}
 										label={"Example"}
 										onBlur={(e) => {
-											urlPathQueries[index].example = e.target.value.replaceAll(
+											urlPathQueries[queryIndex].example = e.target.value.replaceAll(
 												"=",
 												""
 											)
@@ -2989,19 +3351,19 @@ const AppCreator = (defaultprops) => {
                 <div
                   style={{ cursor: "pointer" }}
                   onClick={() => {
-                    flipRequired(index);
+                    flipRequired(queryIndex);
                   }}
                 >
                   Required:{" "}
                   <div style={{ display: "inline", color: requiredColor }}>
-                    {data.required.toString()}
+                    {query.required.toString()}
                   </div>
                 </div>
               </div>
               <div
                 style={{ float: "right", color: "#f85a3e", cursor: "pointer" }}
                 onClick={() => {
-                  deletePathQuery(index);
+                  deletePathQuery(queryIndex);
                 }}
               >
   							<DeleteIcon />
@@ -3021,1052 +3383,963 @@ const AppCreator = (defaultprops) => {
       </div>
     );
 
-  const loopActions =
-    actions.length === 0 ? null : (
-      <div>
-        {filteredActions.slice(0, actionAmount).map((data, index) => {
-          var error =
-            data.errors.length > 0 ? (
-              <Tooltip
-                color="primary"
-                title={data.errors.join("\n")}
-                placement="bottom"
-              >
-                <ErrorOutlineIcon />
-              </Tooltip>
-            ) : (
-              <Tooltip
-                color="secondary"
-                title={data.errors.join("\n")}
-                placement="bottom"
-              >
-                <CheckCircleIcon style={{ marginTop: 6 }} />
-              </Tooltip>
-            );
+  	const SetExtraBodyField = (props) => {
+  	  const { extraBodyFields } = props;
 
-          var bgColor = "#61afee";
-          if (data.method === "POST") {
-            bgColor = "#49cc90";
-          } else if (data.method === "PUT") {
-            bgColor = "#fca130";
-          } else if (data.method === "PATCH") {
-            bgColor = "#50e3c2";
-          } else if (data.method === "DELETE") {
-            bgColor = "#f93e3e";
-          } else if (data.method === "HEAD") {
-            bgColor = "#9012fe";
-          }
+  	  if (extraBodyFields === undefined || extraBodyFields === null) {
+  	    return null;
+  	  }
 
-          const url = data.url;
-          const hasFile =
-            (data["file_field"] !== undefined &&
-            data["file_field"] !== null &&
-            data["file_field"].length > 0) || data["example_response"] === "shuffle_file_download"
+  	  //const parsedlist = extraBodyFields.join(", ")
+  	  //console.log("LIST: ", parsedlist)
 
-					// In case of extremely long summaries/names from OpenAPI def
-					//const maxlen = 35
-					//if (data.description === undefined || data.description === null || data.description.length === 0) {
-					//	if (data.name !== undefined && data.name !== null && data.name.length > maxlen ) {
-					//		var newname = []
-					//		for (var key in data.name.split(" ")) {
-					//			console.log("Name: ", data.name[key])
-					//			if (newname.join(" ").length < maxlen) {
-					//				newname.push(data.name[key])
-					//			}
-					//		}
+  	  return (
+  	    <span>
+  	      {extraBodyFields.map((data, index) => {
+  	        return <HandleIndividualChip key={index} chipData={data} />;
+  	      })}
+  	    </span>
+  	  );
+  	};
 
-					//		data.description = data.name.valueOf()
-					//		data.name = newname.join(" ")
-					//	}
-					//}
+  	const bodyInfo = actionBodyRequest.includes(currentActionMethod) ? (
+  	  <div style={{ marginTop: 10 }}>
+  	    <b>Request Body</b>:{" "}
+  	    {extraBodyFields.length > 0 ? (
+  	      <Typography style={{ display: "inline-block" }}>
+  	        <SetExtraBodyField extraBodyFields={extraBodyFields} />
+  	      </Typography>
+  	    ) : (
+  	      <Typography style={{ display: "inline-block" }}>
+  	        {`Add variables with \$\{ variable_name }`}
+  	      </Typography>
+  	    )}
+  	    <TextField
+  	      required
+  	      style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
+  	      fullWidth={true}
+  	      placeholder={
+  	        '{\n\t"example": "${example}",\n\t"apikey": "${apikey}",\n\t"search": "1.2.3.5"\n}'
+  	      }
+  	      margin="normal"
+  	      variant="outlined"
+  	      multiline
+  	      minRows="5"
+  	      defaultValue={currentAction["body"]}
+  	      onChange={(e) => {
+  	        setActionField("body", e.target.value);
+  	        findBodyParams(e.target.value);
+  	      }}
+  	      key={currentAction}
+  	      helperText={
+  	        <span style={{ color: "white", marginBottom: "2px" }}>
+  	          Shows an example body to the user. ${} creates variables.
+  	        </span>
+  	      }
+  	      InputProps={{
+  	        classes: {
+  	          notchedOutline: classes.notchedOutline,
+  	        },
+  	        style: {
+  	          color: "white",
+  	        },
+  	      }}
+  	    />
+  	    <div></div>
+  	  </div>
+  	) : null;
 
-          return (
-            <Paper key={index} style={actionListStyle}>
-              {error}
-              <Tooltip title="Edit action" placement="bottom">
-                <div
-                  style={{
-                    marginLeft: "5px",
-                    width: "100%",
-                    cursor: "pointer",
-                    maxWidth: 725,
-                    overflowX: "hidden",
-                  }}
-                  onClick={() => {
-										console.log("Data: ", data)
-                    if (hasFile) {
-                      setFileUploadEnabled(true);
-											//setActionField("headers", "")
-											console.log("It has a file: ", data["file_field"])
-											data.headers = ""
-                    } else {
-											console.log("No file")
-										}
+  	const exampleResponse = fileDownloadEnabled ? null : (
+  	  <div style={{}}>
+  	    <b>Example success response</b>
+  	    <TextField
+  	      required
+  	      style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
+  	      fullWidth={true}
+  	      placeholder={
+  	        '{\n\t"email": "testing@test.com",\n\t"firstname": "testing"\n}'
+  	      }
+  	      margin="normal"
+  	      variant="outlined"
+  	      multiline
+  	      minRows="2"
+  	      defaultValue={currentAction["example_response"]}
+  	      onChange={(e) => setActionField("example_response", e.target.value)}
+  	      helperText={
+  	        <span style={{ color: "white", marginBottom: "2px" }}>
+  	          Helps with autocompletion and understanding of the endpoint
+  	        </span>
+  	      }
+  	      key={currentAction}
+  	      InputProps={{
+  	        style: {
+  	          color: "white",
+  	        },
+  	      }}
+  	    />
+  	  </div>
+  	);
 
-                    setCurrentAction(data);
-                    setCurrentActionMethod(data.method);
-                    setUrlPathQueries(data.queries);
-                    setUrlPath(data.url);
-                    setActionsModalOpen(true);
+  	const addActionToView = (errors) => {
+  	  currentAction.errors = errors;
+  	  currentAction.queries = urlPathQueries;
+  	  setUrlPathQueries([]);
 
-                    if (
-                      data["body"] !== undefined &&
-                      data["body"] !== null &&
-                      data["body"].length > 0
-                    ) {
-                      findBodyParams(data["body"]);
-                    } else {
-											console.log("No body param")
-										}
+  	  const actionIndex = actions.findIndex((data) => data.name === currentAction.name);
+  	  
+  	  if (actionIndex < 0) {
+  	    actions.push(currentAction);
+  	  } else {
+  	    actions[actionIndex] = currentAction;
+  	  }
 
-                  }}
-                >
-                  <div style={{ display: "flex" }}>
-                    <Chip
-                      style={{
-                        backgroundColor: bgColor,
-                        color: "white",
-                        borderRadius: 5,
-                        minWidth: 80,
-                        marginRight: 10,
-                        marginTop: 2,
-                        cursor: "pointer",
-                        fontSize: 14,
-                      }}
-                      label={data.method}
-                    />
-                    <span
-                      style={{
-                        fontSize: 16,
-                        marginTop: "auto",
-                        marginBottom: "auto",
-                      }}
-                    >
-                      {hasFile ? (
-                        <AttachFileIcon style={{ height: 20, width: 20 }} />
-                      ) : null}{" "}
-                      {url} - {data.name}
-                    </span>
-                  </div>
-                </div>
-              </Tooltip>
-              {/*
-					 	<Tooltip title="Test action" placement="bottom">
-							<div style={{color: "#f85a3e", cursor: "pointer", marginRight: "10px", }} onClick={() => {testAction(index)}}>
-								Test
-							</div>
-						</Tooltip>
-						*/}
-              <Tooltip
-                title="Duplicate action"
-                placement="bottom"
-                style={{ minWidth: 60 }}
-              >
-                <div
-                  style={{
-                    color: "#f85a3e",
-                    cursor: "pointer",
-                    marginRight: 15,
-                  }}
-                  onClick={() => {
-                    duplicateAction(index);
-                  }}
-                >
-                  <FileCopyIcon color="secondary" />
-                </div>
-              </Tooltip>
-              <Tooltip
-                title="Delete action"
-                placement="bottom"
-                style={{ minWidth: 60 }}
-              >
-                <div
-                  style={{ color: "#f85a3e", cursor: "pointer" }}
-                  onClick={() => {
-                    deleteAction(index);
-                  }}
-                >
-                  <DeleteIcon color="secondary" />
-                </div>
-              </Tooltip>
-            </Paper>
-          );
-        })}
-      </div>
-    );
+  	  if (actions.length > actionAmount) {
+  	    setActionAmount(actions.length);
+  	  }
 
-  const setActionField = (field, value) => {
-    currentAction[field] = value;
-    setCurrentAction(currentAction);
+  	  setActions(actions);
+  	  setFilteredActions(actions);
+  	};
 
-    //setUrlPathQueries(currentAction.queries)
-  };
+  	const getActionErrors = () => {
+  	  var errormessage = [];
+  	  if (currentAction.name === undefined || currentAction.name.length === 0) {
+  	    errormessage.push("Name can't be empty");
+  	  }
 
-  const findBodyParams = (body) => {
-    const regex = /\${(\w+)}/g;
-    const found = body.match(regex);
-    if (found === null) {
-      setExtraBodyFields([]);
-    } else {
-      setExtraBodyFields(found);
-    }
-  };
+  	  // Url verification
+  	  //if (currentAction.url.length === 0) {
+  	  //	errormessage.push("URL path can't be empty.")
+  	  if (!currentAction.url.startsWith("/") && baseUrl.length > 0 && currentAction.url.length > 0) {
+  	    errormessage.push("URL must start with /");
+  	  }
 
-  const HandleIndividualChip = (props) => {
-    const { chipData, index } = props;
-    const [chipRequired, setChipRequired] = useState(false);
+  	  const check = urlPathQueries.findIndex((data) => data.name.length === 0);
+  	  if (check >= 0) {
+  	    errormessage.push("All queries must have a value");
+  	  }
 
-    return (
-      <Tooltip title={chipRequired ? "Make not required" : "Make required"}>
-        <Chip
-          style={{
-            backgroundColor: chipRequired ? "#f86a3e" : "#3d3f43",
-            height: 30,
-            margin: 3,
-            paddingLeft: 5,
-            paddingRight: 5,
-            height: 28,
-            cursor: "pointer",
-            borderColor: "#3d3f43",
-            color: "white",
-          }}
-          label={chipData}
-          onClick={() => {
-            console.log("CLICK: ", chipData);
-            setChipRequired(!chipRequired);
-          }}
-        />
-      </Tooltip>
-    );
-  };
+  	  return errormessage;
+  	};
 
-  const SetExtraBodyField = (props) => {
-    const { extraBodyFields } = props;
+  	
 
-    if (extraBodyFields === undefined || extraBodyFields === null) {
-      return null;
-    }
+		const newActionModal = (
+    		<Dialog
+    		  open={actionsModalOpen}
+    		  fullWidth
+					PaperProps={{
+    		    style: {
+    		      backgroundColor: surfaceColor,
+    		      color: "white",
+    		      minWidth: 500,
+    		      maxWidth: 500,
+							maxHeight: 800,
+    		    },
+    		  }}
+    		  onClose={() => {
+    		    setUrlPath("");
+    		    setCurrentAction({
+    		      name: "",
+    		      description: "",
+    		      url: "",
+    		      file_field: "",
+    		      headers: "",
+    		      paths: [],
+    		      queries: [],
+    		      body: "",
+    		      errors: [],
+    		      method: actionNonBodyRequest[0],
+							action_label: "No Label",
+							required_bodyfields: [],
+    		    });
+    		    setCurrentActionMethod(apikeySelection[0]);
+    		    setUrlPathQueries([]);
+    		    setActionsModalOpen(false);
+    		    setFileUploadEnabled(false);
+    		  }}
+    		>
+    		  <FormControl style={{ backgroundColor: surfaceColor, color: "white" }}>
+    		    <DialogTitle>
+    		      <div style={{ color: "white" }}>New action</div>
+    		    </DialogTitle>
+    		    <DialogContent>
+    		      <a
+    		        target="_blank"
+    		        href="https://shuffler.io/docs/app_creation#actions"
+    		        style={{ textDecoration: "none", color: "#f85a3e" }}
+    		      >
+    		        Learn more about actions
+    		      </a>
+    		      <div style={{ marginTop: "15px" }} />
+    		      Name
+    		      <TextField
+    		        required
+    		        style={{
+    		          flex: "1",
+    		          marginTop: 5,
+    		          marginRight: 15,
+    		          backgroundColor: inputColor,
+    		        }}
+    		        fullWidth={true}
+    		        placeholder="Name"
+    		        type="name"
+    		        id="standard-required"
+    		        margin="normal"
+    		        variant="outlined"
+    		        defaultValue={currentAction["name"]}
+    		        onChange={(e) => {
+    		          setActionField("name", e.target.value);
+    		        }}
+    		        onBlur={(e) => {
+    		          // Fix basic issues in frontend. Python functions run a-zA-Z0-9_
+    		          const regex = /[A-Za-z0-9 _]/g;
+    		          const found = e.target.value.match(regex);
+    		          if (found !== null) {
+    		            setActionField("name", found.join(""));
+    		          }
+    		        }}
+    		        key={currentAction}
+    		        InputProps={{
+    		          classes: {
+    		            notchedOutline: classes.notchedOutline,
+    		          },
+    		          style: {
+    		            color: "white",
+    		          },
+    		        }}
+    		      />
+    		      <div style={{ marginTop: 10 }} />
+    		      Description
+    		      <TextField
+    		        required
+    		        style={{
+    		          flex: "1",
+    		          marginTop: "5px",
+    		          marginRight: "15px",
+    		          backgroundColor: inputColor,
+    		        }}
+    		        fullWidth={true}
+    		        placeholder="Description"
+    		        type="description"
+    		        id="standard-required"
+    		        margin="normal"
+    		        variant="outlined"
+    		        defaultValue={currentAction["description"]}
+    		        onChange={(e) => setActionField("description", e.target.value)}
+    		        InputProps={{
+    		          style: {
+    		            color: "white",
+    		          },
+    		        }}
+    		      />
+    		      <Divider
+    		        style={{
+    		          marginBottom: "10px",
+    		          marginTop: "30px",
+    		          height: "1px",
+    		          width: "100%",
+    		          backgroundColor: "grey",
+    		        }}
+    		      />
+    		      <h2>Request</h2>
+    		      <Select
+    		        fullWidth
+    		        onChange={(e) => {
+    		          setActionField("method", e.target.value);
+    		          setCurrentActionMethod(e.target.value);
+    		        }}
+    		        value={currentActionMethod}
+    		        style={{
+    		          backgroundColor: inputColor,
+    		          paddingLeft: "10px",
+    		          color: "white",
+    		          height: "50px",
+    		        }}
+    		        inputProps={{
+    		          name: "Method",
+    		          id: "method-option",
+    		        }}
+    		      >
+    		        {actionNonBodyRequest.map((data, index) => {
+    		          return (
+    		            <MenuItem
+    		              key={index}
+    		              style={{ backgroundColor: inputColor, color: "white" }}
+    		              value={data}
+    		            >
+    		              {data}
+    		            </MenuItem>
+    		          );
+    		        })}
+    		        {actionBodyRequest.map((data, index) => (
+    		          <MenuItem
+    		            key={index}
+    		            style={{ backgroundColor: inputColor, color: "white" }}
+    		            value={data}
+    		          >
+    		            {data}
+    		          </MenuItem>
+    		        ))}
+    		      </Select>
+    		      <div style={{ marginTop: "15px" }} />
+    		      URL path / Curl statement
+    		      <TextField
+    		        required
+    		        style={{
+    		          flex: "1",
+    		          marginRight: "15px",
+    		          marginTop: "5px",
+    		          backgroundColor: inputColor,
+    		        }}
+    		        fullWidth={true}
+    		        placeholder="URL path"
+    		        id="standard-required"
+    		        margin="normal"
+    		        variant="outlined"
+    		        value={urlPath}
+    		        onChange={(e) => {
+    		          setActionField("url", e.target.value);
+    		          setUrlPath(e.target.value);
+    		        }}
+    		        helperText={
+    		          <span style={{ color: "white", marginBottom: "2px" }}>
+    		            The path to use. Must start with /. Use {"{variablename}"} to
+    		            have path variables
+    		          </span>
+    		        }
+    		        InputProps={{
+    		          classes: {
+    		            notchedOutline: classes.notchedOutline,
+    		            input: classes.input,
+    		          },
+    		          style: {
+    		            color: "white",
+    		          },
+    		        }}
+    		        onBlur={(event) => {
+    		          var parsedurl = event.target.value;
+    		          //console.log("URL: ", parsedurl)
+    		          if (parsedurl.includes("   ")) {
+    		            parsedurl = parsedurl.replaceAll("   ", " ");
+    		          }
 
-    //const parsedlist = extraBodyFields.join(", ")
-    //console.log("LIST: ", parsedlist)
+    		          if (parsedurl.includes("  ")) {
+    		            parsedurl = parsedurl.replaceAll("  ", " ");
+    		          }
 
-    return (
-      <span>
-        {extraBodyFields.map((data, index) => {
-          return <HandleIndividualChip key={index} chipData={data} />;
-        })}
-      </span>
-    );
-  };
+    		          if (parsedurl.includes("[") && parsedurl.includes("]")) {
+    		            //console.log("REPLACE1")
+    		            parsedurl = parsedurl.replaceAll("[", "{");
+    		            parsedurl = parsedurl.replaceAll("]", "}");
+    		          }
 
-  const bodyInfo = actionBodyRequest.includes(currentActionMethod) ? (
-    <div style={{ marginTop: 10 }}>
-      <b>Request Body</b>:{" "}
-      {extraBodyFields.length > 0 ? (
-        <Typography style={{ display: "inline-block" }}>
-          <SetExtraBodyField extraBodyFields={extraBodyFields} />
-        </Typography>
-      ) : (
-        <Typography style={{ display: "inline-block" }}>
-          {`Add variables with \$\{ variable_name }`}
-        </Typography>
-      )}
-      <TextField
-        required
-        style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
-        fullWidth={true}
-        placeholder={
-          '{\n\t"example": "${example}",\n\t"apikey": "${apikey}",\n\t"search": "1.2.3.5"\n}'
-        }
-        margin="normal"
-        variant="outlined"
-        multiline
-        minRows="5"
-        defaultValue={currentAction["body"]}
-        onChange={(e) => {
-          setActionField("body", e.target.value);
-          findBodyParams(e.target.value);
-        }}
-        key={currentAction}
-        helperText={
-          <span style={{ color: "white", marginBottom: "2px" }}>
-            Shows an example body to the user. ${} creates variables.
-          </span>
-        }
-        InputProps={{
-          classes: {
-            notchedOutline: classes.notchedOutline,
-          },
-          style: {
-            color: "white",
-          },
-        }}
-      />
-      <div></div>
-    </div>
-  ) : null;
+    		          if (parsedurl.includes("<") && parsedurl.includes(">")) {
+    		            //console.log("REPLACE2")
+    		            parsedurl = parsedurl.replaceAll("<", "{");
+    		            parsedurl = parsedurl.replaceAll(">", "}");
+    		          }
 
-  const exampleResponse = fileDownloadEnabled ? null : (
-    <div style={{}}>
-      <b>Example success response</b>
-      <TextField
-        required
-        style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
-        fullWidth={true}
-        placeholder={
-          '{\n\t"email": "testing@test.com",\n\t"firstname": "testing"\n}'
-        }
-        margin="normal"
-        variant="outlined"
-        multiline
-        minRows="2"
-        defaultValue={currentAction["example_response"]}
-        onChange={(e) => setActionField("example_response", e.target.value)}
-        helperText={
-          <span style={{ color: "white", marginBottom: "2px" }}>
-            Helps with autocompletion and understanding of the endpoint
-          </span>
-        }
-        key={currentAction}
-        InputProps={{
-          style: {
-            color: "white",
-          },
-        }}
-      />
-    </div>
-  );
+    		          //console.log("URL2: ", parsedurl)
+    		          if (
+    		            parsedurl.startsWith("PUT ") ||
+    		            parsedurl.startsWith("GET ") ||
+    		            parsedurl.startsWith("POST ") ||
+    		            parsedurl.startsWith("DELETE ") ||
+    		            parsedurl.startsWith("PATCH ") ||
+    		            parsedurl.startsWith("CONNECT ")
+    		          ) {
+    		            const tmp = parsedurl.split(" ");
 
-  const addActionToView = (errors) => {
-    currentAction.errors = errors;
-    currentAction.queries = urlPathQueries;
-    setUrlPathQueries([]);
+    		            if (tmp.length > 1) {
+    		              parsedurl = tmp[1].trim();
+    		              setActionField("url", parsedurl);
 
-    const actionIndex = actions.findIndex(
-      (data) => data.name === currentAction.name
-    );
-    if (actionIndex < 0) {
-      actions.push(currentAction);
-    } else {
-      actions[actionIndex] = currentAction;
-    }
+    		              setCurrentActionMethod(tmp[0].toUpperCase());
+    		              setActionField("method", tmp[0].toUpperCase());
+    		            }
 
-    if (actions.length > actionAmount) {
-      setActionAmount(actions.length);
-    }
+    		            console.log("URL3: ", parsedurl);
 
-    setActions(actions);
-    setFilteredActions(actions);
-  };
+    		            //setUpdate(Math.random());
+    		          } else if (parsedurl.startsWith("curl")) {
+    		            console.log("URL4: ", parsedurl);
 
-  const getActionErrors = () => {
-    var errormessage = [];
-    if (currentAction.name === undefined || currentAction.name.length === 0) {
-      errormessage.push("Name can't be empty");
-    }
+    		            const request = parseCurl(event.target.value);
+    		            if (
+    		              request !== event.target.value &&
+    		              request.method !== undefined &&
+    		              request.method !== null
+    		            ) {
+    		              if (request.method.toUpperCase() !== currentAction.Method) {
+    		                setCurrentActionMethod(request.method.toUpperCase());
+    		                setActionField("method", request.method.toUpperCase());
+    		              }
 
-    // Url verification
-    //if (currentAction.url.length === 0) {
-    //	errormessage.push("URL path can't be empty.")
-    if (
-      !currentAction.url.startsWith("/") &&
-      baseUrl.length > 0 &&
-      currentAction.url.length > 0
-    ) {
-      errormessage.push("URL must start with /");
-    }
+    		              if (request.header !== undefined && request.header !== null) {
+    		                var headers = [];
+    		                for (let [key, value] of Object.entries(request.header)) {
+													if (value === undefined) {
+														if (key.includes(":")) {
+															const keysplit = key.split(":")
+															key = keysplit[0].trim()
+															value = keysplit[1].trim()
 
-    const check = urlPathQueries.findIndex((data) => data.name.length === 0);
-    if (check >= 0) {
-      errormessage.push("All queries must have a value");
-    }
+														} else if (key.includes("=")) {
+															const keysplit = key.split("=")
+															key = keysplit[0].trim()
+															value = keysplit[1].trim()
 
-    return errormessage;
-  };
+														} else {
+															alert.error("Removed key: ", key)
+															continue
+														}
+													}
 
-  const getCurrentPaths = (urlPath) => {
-    var paths = [];
-    var queries = [];
+    		                  if (
+    		                    parameterName !== undefined &&
+    		                    key.toLowerCase() === parameterName.toLowerCase()
+    		                  ) {
+    		                    continue;
+    		                  }
 
-    if (urlPath.includes("{") && urlPath.includes("}")) {
-      var tmpWord = "";
-      var record = false;
+    		                  if (key === "Authorization") {
+    		                    continue;
+    		                  }
 
-      var query = false;
-      for (var key in urlPath) {
-        if (urlPath[key] === "?") {
-          query = true;
-        }
+    		                  headers += key + "=" + value + "\n";
+    		                }
 
-        if (urlPath[key] === "}") {
-          if (tmpWord === parameterName) {
-            tmpWord = "";
-            record = false;
-            continue;
-          } else if (query) {
-            queries.push(tmpWord);
-          } else {
-            paths.push(tmpWord);
-          }
-
-          tmpWord = "";
-          record = false;
-        }
-
-        if (record) {
-          tmpWord += urlPath[key];
-        }
-
-        //if (urlPath[key] === "{" && urlPath[key-1] === "/") {
-        if (urlPath[key] === "{") {
-          record = true;
-        }
-      }
-    }
-
-    if (urlPath.includes("<") && urlPath.includes(">")) {
-      var tmpWord = "";
-      var record = false;
-
-      var query = false;
-      for (var key in urlPath) {
-        if (urlPath[key] === "?") {
-          query = true;
-        }
-
-        if (urlPath[key] === ">") {
-          if (tmpWord === parameterName) {
-            tmpWord = "";
-            record = false;
-            continue;
-          } else if (query) {
-            queries.push(tmpWord);
-          } else {
-            paths.push(tmpWord);
-          }
-
-          tmpWord = "";
-          record = false;
-        }
-
-        if (record) {
-          tmpWord += urlPath[key];
-        }
-
-        //if (urlPath[key] === "{" && urlPath[key-1] === "/") {
-        if (urlPath[key] === "<") {
-          record = true;
-        }
-      }
-    }
-
-    return [paths, queries];
-  };
-
-  const UrlPathParameters = () => {
-    const values = getCurrentPaths(urlPath);
-    const paths = values[0];
-    const queries = values[1];
-
-    if (currentAction.paths !== paths && urlPath.length > 0) {
-      //console.log("IN PATHS SETTER: !", paths)
-      setActionField("paths", paths);
-    }
-
-    var tmpQueries = [];
-
-    // No overlapping of names
-    for (var key in queries) {
-      const tmpquery = queries[key];
-      const found = tmpQueries.find((query) => query.name === tmpquery);
-      if (found === undefined) {
-        tmpQueries.push({ name: queries[key], required: true });
-      }
-    }
-
-    // FIXME: Frontend isn't updating..
-    if (
-      tmpQueries.length > 0 &&
-      JSON.stringify(tmpQueries) !== JSON.stringify(urlPathQueries)
-    ) {
-      setUrlPathQueries(tmpQueries);
-    }
-
-    return paths.length > 0 ? (
-      <div>Required parameters: {paths.join(", ")}</div>
-    ) : null;
-  };
-
-  const newActionModal = (
-    <Dialog
-      open={actionsModalOpen}
-      fullWidth
-			PaperProps={{
-        style: {
-          backgroundColor: surfaceColor,
-          color: "white",
-          minWidth: 500,
-          maxWidth: 500,
-					maxHeight: 800,
-        },
-      }}
-      onClose={() => {
-        setUrlPath("");
-        setCurrentAction({
-          name: "",
-          description: "",
-          url: "",
-          file_field: "",
-          headers: "",
-          paths: [],
-          queries: [],
-          body: "",
-          errors: [],
-          method: actionNonBodyRequest[0],
-        });
-        setCurrentActionMethod(apikeySelection[0]);
-        setUrlPathQueries([]);
-        setActionsModalOpen(false);
-        setFileUploadEnabled(false);
-      }}
-    >
-      <FormControl style={{ backgroundColor: surfaceColor, color: "white" }}>
-        <DialogTitle>
-          <div style={{ color: "white" }}>New action</div>
-        </DialogTitle>
-        <DialogContent>
-          <a
-            target="_blank"
-            href="https://shuffler.io/docs/app_creation#actions"
-            style={{ textDecoration: "none", color: "#f85a3e" }}
-          >
-            Learn more about actions
-          </a>
-          <div style={{ marginTop: "15px" }} />
-          Name
-          <TextField
-            required
-            style={{
-              flex: "1",
-              marginTop: 5,
-              marginRight: 15,
-              backgroundColor: inputColor,
-            }}
-            fullWidth={true}
-            placeholder="Name"
-            type="name"
-            id="standard-required"
-            margin="normal"
-            variant="outlined"
-            defaultValue={currentAction["name"]}
-            onChange={(e) => {
-              setActionField("name", e.target.value);
-            }}
-            onBlur={(e) => {
-              // Fix basic issues in frontend. Python functions run a-zA-Z0-9_
-              const regex = /[A-Za-z0-9 _]/g;
-              const found = e.target.value.match(regex);
-              if (found !== null) {
-                setActionField("name", found.join(""));
-              }
-            }}
-            key={currentAction}
-            InputProps={{
-              classes: {
-                notchedOutline: classes.notchedOutline,
-              },
-              style: {
-                color: "white",
-              },
-            }}
-          />
-          <div style={{ marginTop: 10 }} />
-          Description
-          <TextField
-            required
-            style={{
-              flex: "1",
-              marginTop: "5px",
-              marginRight: "15px",
-              backgroundColor: inputColor,
-            }}
-            fullWidth={true}
-            placeholder="Description"
-            type="description"
-            id="standard-required"
-            margin="normal"
-            variant="outlined"
-            defaultValue={currentAction["description"]}
-            onChange={(e) => setActionField("description", e.target.value)}
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-          />
-          <Divider
-            style={{
-              marginBottom: "10px",
-              marginTop: "30px",
-              height: "1px",
-              width: "100%",
-              backgroundColor: "grey",
-            }}
-          />
-          <h2>Request</h2>
-          <Select
-            fullWidth
-            onChange={(e) => {
-              setActionField("method", e.target.value);
-              setCurrentActionMethod(e.target.value);
-            }}
-            value={currentActionMethod}
-            style={{
-              backgroundColor: inputColor,
-              paddingLeft: "10px",
-              color: "white",
-              height: "50px",
-            }}
-            inputProps={{
-              name: "Method",
-              id: "method-option",
-            }}
-          >
-            {actionNonBodyRequest.map((data, index) => {
-              return (
-                <MenuItem
-                  key={index}
-                  style={{ backgroundColor: inputColor, color: "white" }}
-                  value={data}
-                >
-                  {data}
-                </MenuItem>
-              );
-            })}
-            {actionBodyRequest.map((data, index) => (
-              <MenuItem
-                key={index}
-                style={{ backgroundColor: inputColor, color: "white" }}
-                value={data}
-              >
-                {data}
-              </MenuItem>
-            ))}
-          </Select>
-          <div style={{ marginTop: "15px" }} />
-          URL path / Curl statement
-          <TextField
-            required
-            style={{
-              flex: "1",
-              marginRight: "15px",
-              marginTop: "5px",
-              backgroundColor: inputColor,
-            }}
-            fullWidth={true}
-            placeholder="URL path"
-            id="standard-required"
-            margin="normal"
-            variant="outlined"
-            value={urlPath}
-            onChange={(e) => {
-              setActionField("url", e.target.value);
-              setUrlPath(e.target.value);
-            }}
-            helperText={
-              <span style={{ color: "white", marginBottom: "2px" }}>
-                The path to use. Must start with /. Use {"{variablename}"} to
-                have path variables
-              </span>
-            }
-            InputProps={{
-              classes: {
-                notchedOutline: classes.notchedOutline,
-                input: classes.input,
-              },
-              style: {
-                color: "white",
-              },
-            }}
-            onBlur={(event) => {
-              var parsedurl = event.target.value;
-              //console.log("URL: ", parsedurl)
-              if (parsedurl.includes("   ")) {
-                parsedurl = parsedurl.replaceAll("   ", " ");
-              }
-
-              if (parsedurl.includes("  ")) {
-                parsedurl = parsedurl.replaceAll("  ", " ");
-              }
-
-              if (parsedurl.includes("[") && parsedurl.includes("]")) {
-                //console.log("REPLACE1")
-                parsedurl = parsedurl.replaceAll("[", "{");
-                parsedurl = parsedurl.replaceAll("]", "}");
-              }
-
-              if (parsedurl.includes("<") && parsedurl.includes(">")) {
-                //console.log("REPLACE2")
-                parsedurl = parsedurl.replaceAll("<", "{");
-                parsedurl = parsedurl.replaceAll(">", "}");
-              }
-
-              //console.log("URL2: ", parsedurl)
-              if (
-                parsedurl.startsWith("PUT ") ||
-                parsedurl.startsWith("GET ") ||
-                parsedurl.startsWith("POST ") ||
-                parsedurl.startsWith("DELETE ") ||
-                parsedurl.startsWith("PATCH ") ||
-                parsedurl.startsWith("CONNECT ")
-              ) {
-                const tmp = parsedurl.split(" ");
-
-                if (tmp.length > 1) {
-                  parsedurl = tmp[1].trim();
-                  setActionField("url", parsedurl);
-
-                  setCurrentActionMethod(tmp[0].toUpperCase());
-                  setActionField("method", tmp[0].toUpperCase());
-                }
-
-                console.log("URL3: ", parsedurl);
-
-                setUpdate(Math.random());
-              } else if (parsedurl.startsWith("curl")) {
-                console.log("URL4: ", parsedurl);
-
-                const request = parseCurl(event.target.value);
-                if (
-                  request !== event.target.value &&
-                  request.method !== undefined &&
-                  request.method !== null
-                ) {
-                  if (request.method.toUpperCase() !== currentAction.Method) {
-                    setCurrentActionMethod(request.method.toUpperCase());
-                    setActionField("method", request.method.toUpperCase());
-                  }
-
-                  if (request.header !== undefined && request.header !== null) {
-                    var headers = [];
-                    for (let [key, value] of Object.entries(request.header)) {
-											if (value === undefined) {
-												if (key.includes(":")) {
-													const keysplit = key.split(":")
-													key = keysplit[0].trim()
-													value = keysplit[1].trim()
-
-												} else if (key.includes("=")) {
-													const keysplit = key.split("=")
-													key = keysplit[0].trim()
-													value = keysplit[1].trim()
-
-												} else {
-													alert.error("Removed key: ", key)
-													continue
+												try {
+    		                	setActionField("headers", headers.trim());
+												} catch (e) {
+													console.log("Failed to parse header: ", e)
 												}
+    		              }
+
+    		              if (request.body !== undefined && request.body !== null) {
+    		                setActionField("body", request.body);
+    		              }
+
+    		              // Parse URL
+    		              if (request.url !== undefined) {
+    		                parsedurl = request.url;
+    		              }
+    		            }
+
+    		            console.log("PARSED: ", parsedurl);
+    		            if (parsedurl !== undefined) {
+    		              if (parsedurl.includes("<") && parsedurl.includes(">")) {
+    		                parsedurl = parsedurl.split("<").join("{");
+    		                parsedurl = parsedurl.split(">").join("}");
+    		              }
+
+    		              if (
+    		                parsedurl.startsWith("http") ||
+    		                parsedurl.startsWith("ftp")
+    		              ) {
+    		                if (
+    		                  parsedurl !== undefined &&
+    		                  parsedurl.includes(parameterName)
+    		                ) {
+    		                  // Remove <> etc.
+    		                  //
+
+    		                  console.log("IT HAS THE PARAM NAME!");
+    		                  const newurl = new URL(encodeURI(parsedurl));
+    		                  newurl.searchParams.delete(parameterName);
+    		                  parsedurl = decodeURI(newurl.href);
+    		                }
+
+    		                // Remove the base URL itself
+    		                if (
+    		                  parsedurl !== undefined &&
+    		                  baseUrl !== undefined &&
+    		                  baseUrl.length > 0 &&
+    		                  parsedurl.includes(baseUrl)
+    		                ) {
+    		                  parsedurl = parsedurl.replace(baseUrl, "");
+    		                }
+
+    		                // Check URL query && headers
+    		                //setActionField("url", parsedurl)
+    		              }
+    		            }
+    		          }
+
+									if (baseUrl !== undefined && baseUrl !== null && parsedurl.startsWith(baseUrl)) {
+    		  					parsedurl = parsedurl.replaceAll(baseUrl, "");
+									}
+
+									if (parsedurl.includes("?")) {
+										const parsedurlsplit = parsedurl.split("?")
+										parsedurl = parsedurlsplit[0]
+										
+										//var newqueries = selectedAction.queries === undefined || selectedAction.queries === null ? [] : selectedAction.queries
+
+										const datasplit = parsedurlsplit[1].split("&")
+										for (var key in datasplit) {
+											console.log("Data: ", datasplit[key])
+											var actualkey = datasplit[key]
+											var example = ""
+											if (datasplit[key].includes("=")) {
+												actualkey = datasplit[key].split("=")[0]
+												example = datasplit[key].split("=")[1]
 											}
 
-                      if (
-                        parameterName !== undefined &&
-                        key.toLowerCase() === parameterName.toLowerCase()
-                      ) {
-                        continue;
-                      }
-
-                      if (key === "Authorization") {
-                        continue;
-                      }
-
-                      headers += key + "=" + value + "\n";
-                    }
-
-										try {
-                    	setActionField("headers", headers.trim());
-										} catch (e) {
-											console.log("Failed to parse header: ", e)
+											const foundPath = urlPathQueries.find(data => data.name === actualkey)
+											if (foundPath === null || foundPath === undefined) {
+												urlPathQueries.push({ name: actualkey, example: example, required: true })
+											}
 										}
-                  }
+									}
 
-                  if (request.body !== undefined && request.body !== null) {
-                    setActionField("body", request.body);
-                  }
+									// Found that dashes in the URL doesn't work
+									//parsedurl = parsedurl.replace("-", "_")
+									//console.log("Actions: ", actions)
 
-                  // Parse URL
-                  if (request.url !== undefined) {
-                    parsedurl = request.url;
-                  }
-                }
+									if (baseUrl.length === 0 && parsedurl.includes("http")) {
+										try {
+											const newurl = new URL(encodeURI(parsedurl))
+											newurl.searchParams.delete(parameterName)
+											console.log("New url: ", newurl)
+											parsedurl = newurl.pathname
+											setBaseUrl(newurl.origin)
+										} catch (e) {
+											console.log("Failed to parse URL: ", e)
+										}
+									}
 
-                console.log("PARSED: ", parsedurl);
-                if (parsedurl !== undefined) {
-                  if (parsedurl.includes("<") && parsedurl.includes(">")) {
-                    parsedurl = parsedurl.split("<").join("{");
-                    parsedurl = parsedurl.split(">").join("}");
-                  }
-
-                  if (
-                    parsedurl.startsWith("http") ||
-                    parsedurl.startsWith("ftp")
-                  ) {
-                    if (
-                      parsedurl !== undefined &&
-                      parsedurl.includes(parameterName)
-                    ) {
-                      // Remove <> etc.
-                      //
-
-                      console.log("IT HAS THE PARAM NAME!");
-                      const newurl = new URL(encodeURI(parsedurl));
-                      newurl.searchParams.delete(parameterName);
-                      parsedurl = decodeURI(newurl.href);
-                    }
-
-                    // Remove the base URL itself
-                    if (
-                      parsedurl !== undefined &&
-                      baseUrl !== undefined &&
-                      baseUrl.length > 0 &&
-                      parsedurl.includes(baseUrl)
-                    ) {
-                      parsedurl = parsedurl.replace(baseUrl, "");
-                    }
-
-                    // Check URL query && headers
-                    //setActionField("url", parsedurl)
-                  }
-                }
-              }
-
-							if (baseUrl !== undefined && baseUrl !== null && parsedurl.startsWith(baseUrl)) {
-      					parsedurl = parsedurl.replaceAll(baseUrl, "");
+    		          if (event.target.value !== parsedurl) {
+    		            setUrlPath(parsedurl);
+    		            setActionField("url", parsedurl);
+    		          }
+    		          //console.log("URL: ", request.url)
+    		        }}
+    		      />
+    		      <UrlPathParameters />
+    		      {loopQueries}
+    		      <Button
+    		        color="primary"
+    		        style={{
+    		          marginTop: "5px",
+    		          marginBottom: "10px",
+    		          borderRadius: "0px",
+    		        }}
+    		        variant="outlined"
+    		        onClick={() => {
+    		          addPathQuery();
+    		        }}
+    		      >
+    		        New query
+    		      </Button>
+    		      {currentActionMethod === "POST" ? (
+    		        <Button
+    		          color="primary"
+    		          variant={fileUploadEnabled ? "contained" : "outlined"}
+    		          style={{
+    		            marginLeft: 10,
+    		            marginTop: "5px",
+    		            marginBottom: "10px",
+    		            borderRadius: "0px",
+    		          }}
+    		          onClick={() => {
+    		            setFileUploadEnabled(!fileUploadEnabled);
+    		            if (
+    		              fileUploadEnabled &&
+    		              currentAction["file_field"].length > 0
+    		            ) {
+    		              setActionField("file_field", "");
+    		            }
+    		            //setUpdate(Math.random());
+    		          }}
+    		        >
+    		          Enable Fileupload
+    		        </Button>
+    		      ) : null}
+    		      {/*currentActionMethod === "GET" ? (
+    		        <Button
+    		          color="primary"
+    		          variant={fileDownloadEnabled ? "contained" : "outlined"}
+    		          style={{
+    		            marginLeft: 10,
+    		            marginTop: "5px",
+    		            marginBottom: "10px",
+    		            borderRadius: "0px",
+    		          }}
+    		          onClick={() => {
+    		            setFileDownloadEnabled(!fileDownloadEnabled);
+    		            if (fileDownloadEnabled) {
+    		              setActionField("example_response", "");
+										} else {
+    		              setActionField("example_response", "shuffle_file_download");
+										}
+    		            //setUpdate(Math.random());
+    		          }}
+    		        >
+									Download as file
+    		        </Button>
+    		      ) : null*/}
+    		      {fileUploadEnabled ? (
+    		        <TextField
+    		          required
+    		          style={{
+    		            backgroundColor: inputColor,
+    		            display: "inline-block",
+    		            marginLeft: 10,
+    		            maxWidth: 210,
+    		            marginTop: 7,
+    		          }}
+    		          placeholder={"file"}
+    		          margin="normal"
+    		          variant="outlined"
+    		          id="standard-required"
+    		          defaultValue={currentAction["file_field"]}
+    		          onChange={(e) => setActionField("file_field", e.target.value)}
+    		          helperText={
+    		            <span style={{ color: "white", marginBottom: "2px" }}>
+    		              The File field to interact with
+    		            </span>
+    		          }
+    		          InputProps={{
+    		            classes: {
+    		              notchedOutline: classes.notchedOutline,
+    		            },
+    		            style: {
+    		              color: "white",
+    		            },
+    		          }}
+    		        />
+    		      ) : null}
+    		      <div />
+							{fileUploadEnabled ? null :
+								<span>
+									<b>Headers</b>
+									<TextField
+										required
+										style={{
+											flex: "1",
+											marginRight: "15px",
+											marginTop: "5px",
+											backgroundColor: inputColor,
+										}}
+										fullWidth={true}
+										placeholder={
+											"Accept: application/json\r\nContent-Type: application/json"
+										}
+										margin="normal"
+										variant="outlined"
+										id="standard-required"
+										defaultValue={currentAction["headers"]}
+										multiline
+										minRows="2"
+										onChange={(e) => setActionField("headers", e.target.value)}
+										helperText={
+											<span style={{ color: "white", marginBottom: "2px" }}>
+												Headers that are part of the request. Default: EMPTY
+											</span>
+										}
+										InputProps={{
+											style: {
+												color: "white",
+											},
+										}}
+									/>
+								</span>
 							}
+    		      {bodyInfo}
+    		      <Divider
+    		        style={{
+    		          backgroundColor: "rgba(255,255,255,0.5)",
+    		          marginTop: 15,
+    		          marginBottom: 15,
+    		        }}
+    		      />
+    		      {exampleResponse}
+    		    </DialogContent>
+    		    <DialogActions>
+    		      <Button
+    		        style={{ borderRadius: "0px" }}
+    		        onClick={() => {
+    		          setActionsModalOpen(false);
+    		        }}
+    		      >
+    		        Cancel
+    		      </Button>
+    		      <Button
+    		        color="primary"
+    		        variant={urlPath.length > 0 ? "contained" : "outlined"}
+    		        style={{ borderRadius: "0px" }}
+    		        onClick={() => {
+    		          //console.log(urlPathQueries)
+    		          //console.log(urlPath)
+    		          console.log(currentAction);
+    		          const errors = getActionErrors();
+    		          addActionToView(errors);
+    		          setActionsModalOpen(false);
+    		          setUrlPathQueries([]);
+    		          setUrlPath("");
+    		          setFileUploadEnabled(false);
+    		        }}
+    		      >
+    		        Submit
+    		      </Button>
+    		    </DialogActions>
+    		  </FormControl>
+    		</Dialog>
+  		);
 
-							if (parsedurl.includes("?")) {
-								const parsedurlsplit = parsedurl.split("?")
-								parsedurl = parsedurlsplit[0]
+
+		var error =
+			data.errors.length > 0 ? (
+				<Tooltip
+					color="primary"
+					title={data.errors.join("\n")}
+					placement="bottom"
+				>
+					<ErrorOutlineIcon />
+				</Tooltip>
+			) : (
+				<Tooltip
+					color="secondary"
+					title={data.errors.join("\n")}
+					placement="bottom"
+				>
+					<CheckCircleIcon style={{ marginTop: 6 }} />
+				</Tooltip>
+			);
+
+		var bgColor = "#61afee";
+		if (data.method === "POST") {
+			bgColor = "#49cc90";
+		} else if (data.method === "PUT") {
+			bgColor = "#fca130";
+		} else if (data.method === "PATCH") {
+			bgColor = "#50e3c2";
+		} else if (data.method === "DELETE") {
+			bgColor = "#f93e3e";
+		} else if (data.method === "HEAD") {
+			bgColor = "#9012fe";
+		}
+
+		const url = data.url;
+		const hasFile = (data["file_field"] !== undefined && data["file_field"] !== null && data["file_field"].length > 0) || data["example_response"] === "shuffle_file_download"
+			
+				
+		return (
+			<Paper key={index} style={actionListStyle}>
+        {newActionModal}
+
+				{error}
+				<Tooltip title="Edit action" placement="bottom">
+					<div
+						id={data.name}
+						style={{
+							marginLeft: "5px",
+							width: "100%",
+							cursor: "pointer",
+							maxWidth: 725,
+							overflowX: "hidden",
+						}}
+						onClick={() => {
+							console.log("Data: ", data)
+							if (hasFile) {
+								//setActionField("headers", "")
+								//console.log("It has a file: ", data["file_field"])
 								
-								//var newqueries = selectedAction.queries === undefined || selectedAction.queries === null ? [] : selectedAction.queries
-
-								const datasplit = parsedurlsplit[1].split("&")
-								for (var key in datasplit) {
-									console.log("Data: ", datasplit[key])
-									var actualkey = datasplit[key]
-									var example = ""
-									if (datasplit[key].includes("=")) {
-										actualkey = datasplit[key].split("=")[0]
-										example = datasplit[key].split("=")[1]
-									}
-
-									const foundPath = urlPathQueries.find(data => data.name === actualkey)
-									if (foundPath === null || foundPath === undefined) {
-										urlPathQueries.push({ name: actualkey, example: example, required: true })
-									}
-								}
+								setFileUploadEnabled(true);
+								data.headers = ""
+							} else {
+								console.log("No file")
 							}
 
-							// Found that dashes in the URL doesn't work
-							//parsedurl = parsedurl.replace("-", "_")
-							//console.log("Actions: ", actions)
+							setCurrentAction(data);
+							setCurrentActionMethod(data.method);
+							setUrlPathQueries(data.queries);
+							setUrlPath(data.url);
+							setActionsModalOpen(true);
 
-							if (baseUrl.length === 0 && parsedurl.includes("http")) {
-								const newurl = new URL(encodeURI(parsedurl))
-								newurl.searchParams.delete(parameterName)
-								console.log("New url: ", newurl)
-								parsedurl = newurl.pathname
-								setBaseUrl(newurl.origin)
+							if (data["body"] !== undefined && data["body"] !== null && data["body"].length > 0) {
+								findBodyParams(data["body"]);
+							} else {
+								console.log("No body param")
 							}
 
-              if (event.target.value !== parsedurl) {
-                setUrlPath(parsedurl);
-                setActionField("url", parsedurl);
-              }
-              //console.log("URL: ", request.url)
-            }}
-          />
-          <UrlPathParameters />
-          {loopQueries}
-          <Button
-            color="primary"
-            style={{
-              marginTop: "5px",
-              marginBottom: "10px",
-              borderRadius: "0px",
-            }}
-            variant="outlined"
-            onClick={() => {
-              addPathQuery();
-            }}
-          >
-            New query
-          </Button>
-          {currentActionMethod === "POST" ? (
-            <Button
-              color="primary"
-              variant={fileUploadEnabled ? "contained" : "outlined"}
-              style={{
-                marginLeft: 10,
-                marginTop: "5px",
-                marginBottom: "10px",
-                borderRadius: "0px",
-              }}
-              onClick={() => {
-                setFileUploadEnabled(!fileUploadEnabled);
-                if (
-                  fileUploadEnabled &&
-                  currentAction["file_field"].length > 0
-                ) {
-                  setActionField("file_field", "");
-                }
-                setUpdate(Math.random());
-              }}
-            >
-              Enable Fileupload
-            </Button>
-          ) : null}
-          {/*currentActionMethod === "GET" ? (
-            <Button
-              color="primary"
-              variant={fileDownloadEnabled ? "contained" : "outlined"}
-              style={{
-                marginLeft: 10,
-                marginTop: "5px",
-                marginBottom: "10px",
-                borderRadius: "0px",
-              }}
-              onClick={() => {
-                setFileDownloadEnabled(!fileDownloadEnabled);
-                if (fileDownloadEnabled) {
-                  setActionField("example_response", "");
-								} else {
-                  setActionField("example_response", "shuffle_file_download");
-								}
-                setUpdate(Math.random());
-              }}
-            >
-							Download as file
-            </Button>
-          ) : null*/}
-          {fileUploadEnabled ? (
-            <TextField
-              required
-              style={{
-                backgroundColor: inputColor,
-                display: "inline-block",
-                marginLeft: 10,
-                maxWidth: 210,
-                marginTop: 7,
-              }}
-              placeholder={"file"}
-              margin="normal"
-              variant="outlined"
-              id="standard-required"
-              defaultValue={currentAction["file_field"]}
-              onChange={(e) => setActionField("file_field", e.target.value)}
-              helperText={
-                <span style={{ color: "white", marginBottom: "2px" }}>
-                  The File field to interact with
-                </span>
-              }
-              InputProps={{
-                classes: {
-                  notchedOutline: classes.notchedOutline,
-                },
-                style: {
-                  color: "white",
-                },
-              }}
-            />
-          ) : null}
-          <div />
-					{fileUploadEnabled ? null :
-						<span>
-							<b>Headers</b>
-							<TextField
-								required
+						}}
+					>
+						<div style={{ display: "flex" }}>
+							<Chip
 								style={{
-									flex: "1",
-									marginRight: "15px",
-									marginTop: "5px",
-									backgroundColor: inputColor,
+									backgroundColor: bgColor,
+									color: "white",
+									borderRadius: 5,
+									minWidth: 80,
+									marginRight: 10,
+									marginTop: 2,
+									cursor: "pointer",
+									fontSize: 14,
 								}}
-								fullWidth={true}
-								placeholder={
-									"Accept: application/json\r\nContent-Type: application/json"
-								}
-								margin="normal"
-								variant="outlined"
-								id="standard-required"
-								defaultValue={currentAction["headers"]}
-								multiline
-								minRows="2"
-								onChange={(e) => setActionField("headers", e.target.value)}
-								helperText={
-									<span style={{ color: "white", marginBottom: "2px" }}>
-										Headers that are part of the request. Default: EMPTY
-									</span>
-								}
-								InputProps={{
-									style: {
-										color: "white",
-									},
-								}}
+								label={data.method}
 							/>
-						</span>
-					}
-          {bodyInfo}
-          <Divider
-            style={{
-              backgroundColor: "rgba(255,255,255,0.5)",
-              marginTop: 15,
-              marginBottom: 15,
-            }}
-          />
-          {exampleResponse}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            style={{ borderRadius: "0px" }}
-            onClick={() => {
-              setActionsModalOpen(false);
-            }}
-          >
-            Cancel
-          </Button>
+							<span
+								style={{
+									fontSize: 16,
+									marginTop: "auto",
+									marginBottom: "auto",
+								}}
+							>
+								{hasFile ? (
+									<AttachFileIcon style={{ height: 20, width: 20 }} />
+								) : null}{" "}
+								{url} - {data.name}
+							</span>
+						</div>
+					</div>
+				</Tooltip>
+				{/*
+			<Tooltip title="Test action" placement="bottom">
+				<div style={{color: "#f85a3e", cursor: "pointer", marginRight: "10px", }} onClick={() => {testAction(index)}}>
+					Test
+				</div>
+			</Tooltip>
+			*/}
+
+				{/* From 2023: Example of handling action labels */}
+				{actionLabels.length > 0 && newWorkflowCategories !== undefined && newWorkflowCategories !== null && newWorkflowCategories.length > 0 && categories.length > 0 ? 
+						<Select
+							fullWidth
+							onChange={(e) => {
+								console.log("Should change: ", e.target.value, " Index: ", index)
+
+								const foundIndex = actions.findIndex((action) => action.name === data.name)
+								console.log("Found index: ", foundIndex)
+								if (foundIndex !== undefined && foundIndex !== null && foundIndex >= 0) {
+									actions[foundIndex].action_label = e.target.value
+									setActions(actions)
+									setUpdate(Math.random())
+								}
+							}}
+							value={data.action_label}
+							style={{
+								border: data.action_label === undefined || data.action_label === "No Label" ? "" : `2px solid ${bgColor}`,
+								borderRadius: theme.shape.borderRadius,
+								backgroundColor: inputColor,
+								paddingLeft: 10,
+								color: "white",
+								height: 30,
+								maxWidth: 35, 
+								marginLeft: 10, 
+								marginRight: 10, 
+								overflow: "hidden",
+							}}
+							inputProps={{
+								name: "Method",
+								id: "method-option",
+							}}
+						>
+							{actionLabels.map((label, labelindex) => {
+								return (
+									<MenuItem
+										key={labelindex}
+										value={label}
+										style={{ 
+										}}
+									>
+										{label}
+									</MenuItem>
+								)
+							})}
+						</Select>
+				: null}
+
+				<Tooltip
+					title="Duplicate action"
+					placement="bottom"
+					style={{ minWidth: 60 }}
+				>
+					<div
+						style={{
+							color: "#f85a3e",
+							cursor: "pointer",
+							marginRight: 15,
+						}}
+						onClick={() => {
+							duplicateAction(index);
+						}}
+					>
+						<FileCopyIcon color="secondary" />
+					</div>
+				</Tooltip>
+				<Tooltip
+					title="Delete action"
+					placement="bottom"
+					style={{ minWidth: 60 }}
+				>
+					<div
+						style={{ color: "#f85a3e", cursor: "pointer" }}
+						onClick={() => {
+							deleteAction(index);
+						}}
+					>
+						<DeleteIcon color="secondary" />
+					</div>
+				</Tooltip>
+
+
+				{ index === filteredActions.length - 1 || index === actionAmount - 1 ?
           <Button
             color="primary"
-            variant={urlPath.length > 0 ? "contained" : "outlined"}
-            style={{ borderRadius: "0px" }}
-            onClick={() => {
-              //console.log(urlPathQueries)
-              //console.log(urlPath)
-              console.log(currentAction);
-              const errors = getActionErrors();
-              addActionToView(errors);
-              setActionsModalOpen(false);
-              setUrlPathQueries([]);
-              setUrlPath("");
-              setFileUploadEnabled(false);
+            style={{ borderRadius: 0, position: "absolute", top: 70, }}
+            variant={actions.length === 0 ? "contained" : "outlined"}
+            onClick={(e) => {
+							e.preventDefault();
+
+              setCurrentActionMethod(actionNonBodyRequest[0]);
+              setCurrentAction({
+                name: "",
+                description: "",
+                url: "",
+                file_field: "",
+                headers: "",
+                queries: [],
+                paths: [],
+                body: "",
+                errors: [],
+                method: actionNonBodyRequest[0],
+								action_label: "No Label",
+								required_bodyfields: [],
+              });
+              setActionsModalOpen(true);
             }}
           >
-            Submit
+            New action
           </Button>
-        </DialogActions>
-      </FormControl>
-    </Dialog>
-  );
+				: null}
+			</Paper>
+		)
+	}
 
-  const categories = [
-    "Communication",
-    "Cases",
-    "SIEM",
-    "Assets",
-    "Intel",
-    "IAM",
-    "Network",
-    "Eradication",
-    "Other",
-  ];
+  const LoopActions = (props) => {
+		const { filteredActions } = props;
+
+		console.log("Actions: ", filteredActions)
+    if (filteredActions === null || filteredActions === undefined || filteredActions.length === 0) {
+			return null
+		}
+		
+		return (
+      <div>
+        {filteredActions.slice(0, actionAmount).map((data, index) => {
+					//console.log("Found action: ", data)
+          return (
+						<ActionPaper key={index} index={index} data={data} />
+					)
+			})}
+		</div>
+		)
+	}
+
+
 
   const tagView = (
     <div style={{ color: "white" }}>
@@ -4094,7 +4367,7 @@ const AppCreator = (defaultprops) => {
 				}}
 			/>
 			*/}
-      <h4>Categories</h4>
+      <h4>Choose a Category</h4>
       <Select
         fullWidth
         SelectDisplayProps={{
@@ -4106,15 +4379,12 @@ const AppCreator = (defaultprops) => {
           setNewWorkflowCategories([e.target.value]);
           setUpdate("added " + e.target.value);
         }}
-        value={
-          newWorkflowCategories.length === 0
-            ? "Select a category"
-            : newWorkflowCategories[0]
-        }
+        value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
+        
         style={{ backgroundColor: inputColor, color: "white", height: "50px" }}
       >
         {categories.map((data, index) => {
-					if (data === undefined || data === null || data === "") {
+					if (data === undefined || data === null || data === "" || data === undefined || data === null || data === "") {
 						return null
 					}
 
@@ -4122,9 +4392,9 @@ const AppCreator = (defaultprops) => {
 						<MenuItem
 							key={index}
 							style={{ backgroundColor: inputColor, color: "white" }}
-							value={data}
+							value={data.name}
 						>
-							{data}
+							{data.name}
 						</MenuItem>
         	)
 				})}
@@ -4286,7 +4556,6 @@ const AppCreator = (defaultprops) => {
       console.log(selectedAction);
     };
 
-    //{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ?
     const getAppAuthentication = () => {
       fetch(globalUrl + "/api/v1/apps/authentication", {
         method: "GET",
@@ -4361,26 +4630,16 @@ const AppCreator = (defaultprops) => {
         });
     };
 
-    if (
-      !authLoaded &&
-      appAuthentication.length === 0 &&
-      selectedAction.id !== undefined
-    ) {
+    if (!authLoaded && appAuthentication.length === 0 && selectedAction.id !== undefined) {
       setAuthLoaded(true);
       getAppAuthentication();
-    } else if (
-      selectedAction.id === undefined &&
-      currentAction.name !== undefined &&
-      currentAction.name !== null &&
-      currentAction.name.length > 0
-    ) {
+    } 
+
+		/*
+		else if (selectedAction.id === undefined && currentAction.name !== undefined && currentAction.name !== null && currentAction.name.length > 0) {
       var methodName = `${currentAction.method}_${currentAction.name}`;
-      if (
-        currentAction.method.toLowerCase() === "custom" ||
-        currentAction.name
-          .toLowerCase()
-          .startsWith(currentAction.method.toLowerCase())
-      ) {
+      if (currentAction.method.toLowerCase() === "custom" ||
+        currentAction.name.toLowerCase().startsWith(currentAction.method.toLowerCase())) {
         methodName = currentAction.name;
       }
 
@@ -4389,6 +4648,7 @@ const AppCreator = (defaultprops) => {
         var newselectedaction = app.actions.find(
           (item) => item.name.toLowerCase().replaceAll(" ", "_") === methodName
         );
+
         if (newselectedaction !== undefined && newselectedaction !== null) {
           newselectedaction.app_id = app.id;
           newselectedaction.app_name = app.name;
@@ -4400,6 +4660,7 @@ const AppCreator = (defaultprops) => {
         }
       }
     }
+		*/
 
     const setNewAppAuth = (appAuthData) => {
       //console.log("DAta: ", appAuthData)
@@ -4754,15 +5015,15 @@ const AppCreator = (defaultprops) => {
         </div>
       ) : null}
       <div>
-        {loopActions}
-        <div style={{ display: "flex" }}>
+        <LoopActions filteredActions={filteredActions} />
+				{ actions.length === 0 || filteredActions.length === 0 ? 
           <Button
             color="primary"
-            style={{ marginTop: "20px", borderRadius: "0px" }}
+            style={{ borderRadius: 0, marginTop: 15, marginBottom: 10, }}
             variant={actions.length === 0 ? "contained" : "outlined"}
-            onClick={() => {
-              setCurrentAction({
-                name: "",
+            onClick={(e) => {
+              actions.push({
+                name: "Change Me",
                 description: "",
                 url: "",
                 file_field: "",
@@ -4772,17 +5033,75 @@ const AppCreator = (defaultprops) => {
                 body: "",
                 errors: [],
                 method: actionNonBodyRequest[0],
+								action_label: "No Label",
+								required_bodyfields: [],
               });
-              setCurrentActionMethod(actionNonBodyRequest[0]);
-              setActionsModalOpen(true);
+
+							console.log("Added: ", actions)
+              setActions(actions)
+							setFilteredActions(actions)
+              setActionAmount(50);
+    					setUpdate(Math.random());
             }}
           >
             New action
           </Button>
-          {/*
+					: null}
+				{/*
+        <div style={{ display: "flex" }}>
+          <Button
+            color="primary"
+            style={{ marginTop: "20px", borderRadius: "0px" }}
+            variant={actions.length === 0 ? "contained" : "outlined"}
+            onClick={() => {
+  	    			//actions.push({
+              //  name: "Change name",
+              //  description: "",
+              //  url: "",
+              //  file_field: "",
+              //  headers: "",
+              //  queries: [],
+              //  paths: [],
+              //  body: "",
+              //  errors: [],
+              //  method: actionNonBodyRequest[0],
+							//	action_label: "No Label",
+							//	required_bodyfields: [],
+              //})
+							//setActions(actions)
+							//setFilteredActions(actions)
+    					//setUpdate(Math.random());
+
+    					//const foundPaper = document.getElementById("Change name");
+							//if (foundPaper !== null) {
+							//	console.log("Found: ", foundPaper)
+							//} else {
+							//	console.log("Not found")
+							//}
+
+							// Find the item and click if possible
+
+              //setCurrentActionMethod(actionNonBodyRequest[0]);
+              //setCurrentAction({
+              //  name: "",
+              //  description: "",
+              //  url: "",
+              //  file_field: "",
+              //  headers: "",
+              //  queries: [],
+              //  paths: [],
+              //  body: "",
+              //  errors: [],
+              //  method: actionNonBodyRequest[0],
+              //});
+              //setActionsModalOpen(true);
+            }}
+          >
+            New action
+          </Button>
 						{actionAmount} {actions.length}
-					*/}
         </div>
+				*/}
       </div>
     </div>
   );
@@ -5354,9 +5673,9 @@ const AppCreator = (defaultprops) => {
 
         <Divider
           style={{
-            marginBottom: "10px",
-            marginTop: "30px",
-            height: "1px",
+            marginBottom: 10,
+            marginTop: 70,
+            height: 1,
             width: "100%",
             backgroundColor: "grey",
           }}
@@ -5390,7 +5709,6 @@ const AppCreator = (defaultprops) => {
     isLoaded && isAppLoaded ? (
       <div>
         <div style={bodyDivStyle}>{landingpageDataBrowser}</div>
-        {newActionModal}
       </div>
     ) : (
       <div></div>

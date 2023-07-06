@@ -55,6 +55,7 @@ const ConfigureWorkflow = (props) => {
 		workflowExecutions,
 		getWorkflowExecution,
   } = props;
+
   const [requiredActions, setRequiredActions] = React.useState([]);
   const [requiredVariables, setRequiredVariables] = React.useState([]);
   const [requiredTriggers, setRequiredTriggers] = React.useState([]);
@@ -77,6 +78,17 @@ const ConfigureWorkflow = (props) => {
 			}
 		},
 	});
+
+	// ONLY when component is being unloaded, run stop() function
+	// This is to prevent the interval from running when the component is not being used
+	
+	/*
+	useEffect(() => {
+		return () => {
+			stop()
+		}
+	}, [])
+	*/
 
 	// Where is this from?
   if (workflow === undefined || workflow === null) {
@@ -129,7 +141,7 @@ const ConfigureWorkflow = (props) => {
 
     setFirstLoad(workflow.id)
     const newactions = [];
-    for (var key in workflow.actions) {
+    for (let [key, keyval] in Object.entries(workflow.actions)) {
       const action = workflow.actions[key];
       var newaction = {
         large_image: action.large_image,
@@ -145,17 +157,18 @@ const ConfigureWorkflow = (props) => {
         app: {},
 				steps: [],
 				show_steps: false,
-      };
+      }
 
-      const app = apps.find(
-        (app) =>
-          app.name === action.app_name &&
-          (app.app_version === action.app_version ||
-            (app.loop_versions !== null &&
-              app.loop_versions.includes(action.app_version)))
+			//console.log("Action: ", key, keyval)
+
+      const app = apps.find((app) =>
+				app.id === action.app_id || 
+				(app.name === action.app_name &&
+				(app.app_version === action.app_version || (app.loop_versions !== null && app.loop_versions.includes(action.app_version))))
       )
 
-			//newaction.steps = wazuhSteps
+			//console.log("FOUND APP: ", app)
+
       if (app === undefined || app === null) {
       	const subapp = apps.find(app => app.name === action.app_name)
 				if (subapp !== undefined && subapp !== null) {
@@ -169,13 +182,10 @@ const ConfigureWorkflow = (props) => {
 					"required": true,
 				})
       } else {
-        if (
-          action.authentication_id === "" &&
-          app.authentication.required === true
-        ) {
+        if (action.authentication_id === "" && app.authentication.required === true && action.parameters !== undefined && action.parameters !== null) {
           // Check if configuration is filled or not
           var filled = true;
-          for (var key in action.parameters) {
+          for (let [key,keyval] in Object.entries(action.parameters)) {
             if (action.parameters[key].configuration) {
               //console.log("Found config: ", action.parameters[key])
               if (
@@ -216,7 +226,7 @@ const ConfigureWorkflow = (props) => {
 
       if (newaction.must_authenticate) {
         var authenticationOptions = [];
-        for (var key in appAuthentication) {
+        for (let [key,keyval] in Object.entries(appAuthentication)) {
           const auth = appAuthentication[key];
           if (auth.app.name === app.name && auth.active) {
             //console.log("Found auth: ", auth)
@@ -264,20 +274,20 @@ const ConfigureWorkflow = (props) => {
       }
     }
 
-    for (var key in workflow.workflow_variables) {
+	if (workflow.workflow_variables !== undefined && workflow.workflow_variables !== null && workflow.workflow_variables.length !== 0) {
+    for (let [key,keyval] in Object.entries(workflow.workflow_variables)) {
       const variable = workflow.workflow_variables[key];
-      if (
-        variable.value === undefined ||
-        variable.value === undefined ||
-        variable.value.length < 2
-      ) {
+      if (variable.value === undefined || variable.value === undefined || variable.value.length === 0) {
         variable.value = "";
-        variable.index = key;
         requiredVariables.push(variable);
       }
-    }
 
-    for (var key in workflow.triggers) {
+			variable.index = key;
+    }
+	}
+
+	if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length !== 0) {
+    for (let [key,keyval] in Object.entries(workflow.triggers)) {
       var trigger = workflow.triggers[key];
       trigger.index = key;
 
@@ -299,7 +309,7 @@ const ConfigureWorkflow = (props) => {
 							}
 						]
 
-						for (var subkey in tmpsteps) {
+						for (let [subkey,subkeyval] in Object.entries(tmpsteps)) {
 							newactions[foundindex].steps.push(tmpsteps[subkey])
 						}
 				
@@ -326,6 +336,7 @@ const ConfigureWorkflow = (props) => {
 
       requiredTriggers.push(trigger);
     }
+}
 
     if (
       requiredTriggers.length === 0 &&
@@ -340,13 +351,13 @@ const ConfigureWorkflow = (props) => {
     setRequiredActions(newactions);
 	}
 
-  if (appAuthentication.length !== previousAuth.length) {
+  if (appAuthentication !== undefined && previousAuth !== undefined && appAuthentication.length !== previousAuth.length) {
     var newactions = []
-    for (var actionkey in requiredActions) {
+    for (let [actionkey, actionkeyval] in Object.entries(requiredActions)) {
       var newaction = requiredActions[actionkey];
       const app = newaction.app;
 
-      for (var key in appAuthentication) {
+      for (let [key,keyval] in Object.entries(appAuthentication)) {
         const auth = appAuthentication[key];
 
 				// Does this account for all the different ones of the same? 
@@ -690,7 +701,7 @@ const ConfigureWorkflow = (props) => {
 							if (workflow.actions !== null) {
 								//console.log(workflow.actions)
 								alert.info("Setting action to version "+action.update_version)
-								for (var key in workflow.actions) {
+								for (let [key,keyval] in Object.entries(workflow.actions)) {
 									if (workflow.actions[key].app_name === action.app_name && workflow.actions[key].app_version === action.app_version) {
 										workflow.actions[key].app_version = action.update_version
 
@@ -1013,7 +1024,7 @@ const ConfigureWorkflow = (props) => {
       	    <List>
       	      {requiredActions.map((data, index) => {
       	        return (
-									<div>
+									<div key={index}>
 										{data.steps !== undefined && data.steps !== null && data.show_steps === true ?
 											<AppWrapper data={data} parentindex={index} />
 										: 

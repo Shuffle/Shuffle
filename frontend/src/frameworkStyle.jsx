@@ -64,7 +64,7 @@ const data = [{
 		{
 			selector: `node[?middle_node]`,
 			css: {
-				'background-image': '/images/Shuffle_logo.png',
+				'background-image': 'data(large_image)',
 				'height': 'data(width)',
 				'width': 'data(height)',
 				'background-width': 'data(width)',

@@ -1,15 +1,21 @@
 import React, { useState } from "react";
 
 import { Typography, CircularProgress } from "@material-ui/core";
-import theme from '../theme';
+import theme from '../theme.jsx';
 
 const SetAuthentication = (props) => {
   const { globalUrl } = props;
+
+	var headers = {
+		"Content-Type": "application/json",
+		"Accept": "application/json",
+	}
 
   const [firstRequest, setFirstRequest] = useState(true);
   const [finished, setFinished] = useState(false);
   const [response, setResponse] = useState("");
   const [failed, setFailed] = useState(false);
+  const [requestHeaders, setRequestHeaders] = useState(headers);
 
   if (firstRequest) {
     setFirstRequest(false);
@@ -19,6 +25,8 @@ const SetAuthentication = (props) => {
     const urlSearchParams = new URLSearchParams(window.location.search);
     const params = Object.fromEntries(urlSearchParams.entries());
 		console.log("PARAMS: ", params)
+
+
 
     //const authenticationStore = [];
     var appAuthData = {
@@ -39,7 +47,6 @@ const SetAuthentication = (props) => {
         value: window.location.origin + window.location.pathname,
       });
     }
-
 
     if (params.session_state !== undefined && params.session_state !== null) {
       appAuthData.fields.push({
@@ -82,6 +89,14 @@ const SetAuthentication = (props) => {
           console.log("INVALID QUERY: ", query);
           continue;
         }
+
+				if (query[0] === "org_id") {
+					headers["Org-Id"] = query[1]
+				}
+
+				if (query[0] === "authorization") {
+					headers["Authorization"] = "Bearer " + query[1]
+				}
 
         if (query[0] === "workflow_id") {
           appAuthData.reference_workflow = query[1];
@@ -136,6 +151,8 @@ const SetAuthentication = (props) => {
           appAuthData.fields.push({ key: "refresh_url", value: query[1] });
         }
       }
+
+  		setRequestHeaders(headers)
     }
 
 		if (foundScope !== undefined && foundScope !== null && foundScope.length > 0) {
@@ -153,15 +170,13 @@ const SetAuthentication = (props) => {
 			setFailed(true)
 			setResponse(`${foundTab}`)
 		} else {
+
 			if (externalData.handleExternal) {
 					console.log("RUN EXTERNAL!!: ", externalData)
 					
 					fetch(globalUrl + "/api/v1/triggers/github/register", {
 						method: "PUT",
-						headers: {
-							"Content-Type": "application/json",
-							Accept: "application/json",
-						},
+						headers: requestHeaders,
 						credentials: "include",
 						body: JSON.stringify(externalData),
 					})
@@ -191,7 +206,6 @@ const SetAuthentication = (props) => {
 					.then((responseJson) => {
 						//setUserSettings(responseJson)
 						console.log("Resp: ", responseJson);
-
 						if (responseJson.reason !== undefined) {
 							setResponse(responseJson.reason);
 							setFinished(true);
@@ -227,23 +241,16 @@ const SetAuthentication = (props) => {
 
     	fetch(globalUrl + "/api/v1/apps/authentication", {
     	  method: "PUT",
-    	  headers: {
-    	    "Content-Type": "application/json",
-    	    Accept: "application/json",
-    	  },
+    	  headers: requestHeaders,
     	  credentials: "include",
     	  body: JSON.stringify(appAuthData),
     	})
     	  .then((response) => {
-    	      const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
-						const tmpView = new URLSearchParams(cursearch).get("state");
-    	  		if (
-    	  		  tmpView !== undefined &&
-    	  		  tmpView !== null &&
-    	  		  tmpView.length > 0
-    	  		) {
-							console.log("State to find app name from: ", tmpView)
-    	  		}
+					const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+					const tmpView = new URLSearchParams(cursearch).get("state");
+					if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
+						console.log("State to find app name from: ", tmpView)
+					}
 
     	    if (response.status !== 200) {
     	      console.log("Status not 200 for oauth2 authentication");

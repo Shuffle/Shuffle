@@ -43,7 +43,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       #- DOCKER_HOST=tcp://docker-socket-proxy:2375
-      - SHUFFLE_WORKER_VERSION=latest
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
       - DOCKER_API_VERSION=1.40
@@ -114,4 +113,10 @@ services:
 networks:
   shuffle:
     driver: bridge
-    #driver: overlay 
+
+    # uncomment to set MTU for swarm mode.
+    # MTU should be whatever is your host's preferred MTU is.
+    # Refer to this doc to figure out what your host's MTU is:
+    # https://shuffler.io/docs/troubleshooting#TLS_timeout_error/Timeout_Errors/EOF_Errors 
+    # driver_opts:
+    #   com.docker.network.driver.mtu: 1460

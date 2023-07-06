@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import theme from '../theme';
+import theme from '../theme.jsx';
 import { useNavigate, Link } from "react-router-dom";
 import { useAlert } from "react-alert";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
@@ -27,7 +27,7 @@ import {
 		Divider,
 } from "@material-ui/core";
 
-const defaultValue = {"id": "", "name": "", 
+const defaultValue = {"id": "", "name": "Build your own", 
 		"source": {"text": "No trigger selected", "error": ""}, 
 		"destination": {"text": "No subflow selected", "error": ""}, 
 		"middle": []
@@ -35,6 +35,7 @@ const defaultValue = {"id": "", "name": "",
 
 export const usecaseTypes = [{
 	"name": "enrichment",
+	"aliases": ["enrichment", "enrich"],
 	"value": [{
 		"name": "EDR Ticket Enrichment",
 		"usecase_references": ["EDR to ticket"],
@@ -51,6 +52,7 @@ export const usecaseTypes = [{
 	},
 	{
 		"name": "SIEM alert Enrichment",
+		"aliases": ["siem alert enrichment", "siem alert enrich"],
 		"usecase_references": ["SIEM to ticket"],
 		"active": true,
 		"items": [{
@@ -66,6 +68,7 @@ export const usecaseTypes = [{
 	},
 	{
 		"name": "Email Enrichment",
+		"aliases": ["email enrichment", "email enrich"],
 		"usecase_references": ["Email management"],
 		"active": true,
 		"items": [{
@@ -82,6 +85,7 @@ export const usecaseTypes = [{
 },
 {
 	"name": "phishing",
+	"aliases": ["ransomware", "ransomware handling"],
 	"value": [
 		{
 			"name": "Email analysis",
@@ -100,6 +104,7 @@ export const usecaseTypes = [{
 	},
 	{
 	"name": "detection",
+	"aliases": ["detection", "detect", "siem alerts", "new detections",],
 	"value": [
 		{
 			"name": "Sigma rule detection",
@@ -118,12 +123,13 @@ export const usecaseTypes = [{
 	},
 	{
 	"name": "response",
+	"aliases": ["response", "respond", "exploits", "eradication",],
 	"value": [
 		{
 			"name": "EDR host isolation",
 			"active": false,
 			"items": [{
-				"name": "When malicious endpoint activity is detected",
+				"name": "When exploits are detected",
 				"app_type": "edr",
 				"type": "trigger",
 			},
@@ -133,7 +139,45 @@ export const usecaseTypes = [{
 				"type": "subflow",
 			}],
 		}]
-	}
+	},
+	{
+	"name": "vulnerabilities",
+	"aliases": [],
+	"value": [
+		{
+			"name": "Vulnerability is found",
+			"active": false,
+			"items": [{
+				"name": "When a vulnerability is found",
+				"app_type": "assets",
+				"type": "trigger",
+			},
+			{
+				"name": "Patch the vulnerability",
+				"app_type": "edr",
+				"type": "subflow",
+			}],
+		}]
+	},
+	{
+	"name": "approvals",
+	"aliases": ["approval"],
+	"value": [
+		{
+			"name": "Approval is needed",
+			"active": false,
+			"items": [{
+				"name": "When approval is needed",
+				"app_type": "iam",
+				"type": "trigger",
+			},
+			{
+				"name": "Notify the user",
+				"app_type": "communication",
+				"type": "subflow",
+			}],
+		}]
+	},
 ]
 
 export const triggerlist = [
@@ -284,7 +328,7 @@ export const subflows = [
 ]
 
 const UsecaseSearch = (props) => {
-	const { defaultSearch, appFramework, globalUrl, showTitle, canExpand, apps, setFoundWorkflowId, getFramework, userdata, usecaseSearch, setUsecaseSearch, autotry, setCloseWindow, } = props
+	const { defaultSearch, appFramework, globalUrl, showTitle, canExpand, apps, setFoundWorkflowId, getFramework, userdata, usecaseSearch, setUsecaseSearch, autotry, setCloseWindow, sourceapp, destinationapp} = props
 
 		
   const [allusecases, setAllUsecases] = React.useState([
@@ -371,20 +415,17 @@ const UsecaseSearch = (props) => {
 				setUpdate(Math.random())
 			}
 		} else {
-			console.log("NOT FOUND FOR: ", defaultSearch)
 			setAllUsecases([JSON.parse(JSON.stringify(defaultValue))])
 			setUpdate(Math.random())
 		}
 	}
 
  	if (defaultSearch !== undefined && defaultSearch !== null && defaultSearch !== searchType) {
-		console.log("Setting searchtype to", defaultSearch)
-
-
 		setSearchType(defaultSearch)
 		setUsecaseIndex(0)
 		rerunWorkflowCheck(defaultSearch, usecaseSearch)
 	} 
+
 
 	//if (defaultSearch !== undefined && defaultSearch.length > 0 && allusecases[usecaseIndex].name === "") {
 	//	rerunWorkflowCheck()
@@ -442,10 +483,10 @@ const UsecaseSearch = (props) => {
 	var usecases = JSON.parse(JSON.stringify(allusecases))
 
 	const imagestyle = {
-		height: 50,
-		width: 50,
+		height: 40,
+		width: 40,
 		borderRadius: 25, 
-		border: "1px solid rgba(255,255,255,0.3)",
+		border: "1px solid rgba(255,255,255,0.7)",
 		cursor: "pointer",
 	}
 
@@ -869,8 +910,8 @@ const UsecaseSearch = (props) => {
   }
 
 	const mergeWorkflowUsecases = (usecasedata) => {
-		//const url = `${globalUrl}/api/v1/workflows/merge`;
-		const url = `https://shuffler.io/api/v1/workflows/merge`;
+		// To properly handle multiple-locations 
+		const url = isCloud ? `${globalUrl}/api/v1/workflows/merge` : `https://shuffler.io/api/v1/workflows/merge`;
 		fetch(url, {
 			mode: "cors",
 			method: "POST",
@@ -981,7 +1022,6 @@ const UsecaseSearch = (props) => {
 						} else if (isCloud) {
 							if (responseJson.workflow_id !== null && responseJson.workflow_id !== undefined) {
 								if (responseJson.added_auth !== undefined && responseJson.added_auth !== null && responseJson.added_auth.length > 0) {
-									console.log("SHOULD HANDLE AUTH: ", responseJson.added_auth)
 									setConfigureWorkflowAuth(responseJson.added_auth)
 				
 									if (setFoundWorkflowId !== undefined) {
@@ -1021,7 +1061,11 @@ const UsecaseSearch = (props) => {
 		});
 	}
 
-	//console.log("Filled in: ", appFramework, usecases)
+	// Autosearch in framework & set it?
+	if (sourceapp !== undefined && destinationapp !== undefined) {
+		console.log("FIND APPS", sourceapp, destinationapp)
+	}
+		
 	if (appFramework !== undefined && usecases !== undefined) {
 
 		for (var key in usecases) {
@@ -1163,11 +1207,11 @@ const UsecaseSearch = (props) => {
 			}
 
 			if (changed) {
-				alert.error("Errors were found. Click them to sort sort them out or go to the next usecase.")
+				//alert.error("Errors were found. Click them to sort sort them out or go to the next usecase.")
 
-				setUpdate(Math.random())
-				setIsUploading(false)
-				return
+				//setUpdate(Math.random())
+				//setIsUploading(false)
+				//return
 			}
 
 			// Auto finding these during deploy
@@ -1180,10 +1224,10 @@ const UsecaseSearch = (props) => {
 			mergeWorkflowUsecases(data) 
 		}
 
-	if (autotry === true && firstRequest === true) {
-			console.log("Should autotry the usecase! Make sure data is in order first. Usecase: ", usecases)
+	if (autotry === true && firstRequest === true && appFramework !== undefined && usecases !== undefined && isUploading === false) {
+		console.log("Should autotry the usecase! Make sure data is in order first. Usecase: ", usecases)
 
-		if (usecases !== undefined && usecases !== null && usecases.length > 0 && usecases[0].name !== "") {
+		if (usecases !== undefined && usecases !== null && usecases.length > 0 && usecases[0].name !== "Build your own" && usecases[0].name !== "") {
   		setFirstRequest(false)
 			createWorkflowFromTemplate(usecases[0]) 
 		}
@@ -1332,44 +1376,38 @@ const UsecaseSearch = (props) => {
 		const looplist = type === "source" ? triggerlist : type === "destination" ? subflows : midflows
 		const hasError = data.error !== undefined && data.error !== null && data.error.length > 0
 		const borderColor = hasError ? theme.palette.primary.main : "rgba(255,255,255,0.3)"
+		const startText = miditem ? "" : type === "source" ? "When" : "Then"
+
+		if (data.text.includes(startText)) {
+			data.text = data.text.replace(startText, "")	
+		}
 
 		return (
-			<div style={{border: `1px solid ${borderColor}`, backgroundColor: theme.palette.platformColor, borderRadius: theme.palette.borderRadius, width: miditem === true ? "75%" : "100%", marginLeft: miditem === true ? 25 : 0, }}>
+			<div style={{display: "flex", }}>
+				<Typography variant="body1" style={{color: "rgba(255,255,255,0.5)", marginRight: 20, marginTop: 13, }}>
+					{startText}
+				</Typography>
+				<div style={{border: `1px solid ${borderColor}`, backgroundColor: theme.palette.surfaceColor, width: miditem === true ? "65%" : "85%", marginLeft: miditem === true ? 125 : 0, borderRadius: expanded ? theme.palette.borderRadius : 50, maxHeight: expanded || hasError ? 500 : 50, minHeight: 50, }}>
 
-				{selectionOpen === true ?
-					<AppsearchPopout 
-						paperTitle={paperTitle}
-						setPaperTitle={setPaperTitle}
-						newSelectedApp={newSelectedApp}
-						setNewSelectedApp={setNewSelectedApp}
-						selectionOpen={selectionOpen}
-						setSelectionOpen={setSelectionOpen}
-						discoveryData={discoveryData}
-						setDiscoveryData={setDiscoveryData}
-						userdata={userdata}
-					/>
-				: null}
+					{selectionOpen === true ?
+						<AppsearchPopout 
+							paperTitle={paperTitle}
+							setPaperTitle={setPaperTitle}
+							newSelectedApp={newSelectedApp}
+							setNewSelectedApp={setNewSelectedApp}
+							selectionOpen={selectionOpen}
+							setSelectionOpen={setSelectionOpen}
+							discoveryData={discoveryData}
+							setDiscoveryData={setDiscoveryData}
+							userdata={userdata}
+						/>
+					: null}
 
-				<div style={{display: "flex", margin: 10, }}>
-					<div style={{display: "flex", width: "75%",}}>
-						<Tooltip title={data.text}>
-							<img src={data.image} alt={data.app_name} style={imagestyle} onClick={() => {
+					<div style={{display: "flex", margin: 4, }}>
+						<div style={{display: "flex", width: "75%",}}>
+							<Tooltip title={data.text}>
+								<img src={data.image} alt={data.app_name} style={imagestyle} onClick={() => {
 
-								if (data.type === undefined || data.type === null || data.type === "") {
-									setexpanded(true)
-									console.log("No type. Skipping window open.")
-									return
-								} 
-
-								changeAppType()
-							}}/>
-						</Tooltip>
-						<div>
-							<Typography variant="h6" color="textSecondary" style={{marginLeft: 20, marginTop: hasError ? 0 : 10, maxWidth: 250, overflow: "hidden", }}>
-								{data.text}
-							</Typography>
-							{hasError ?
-								<Typography variant="body2" color="textSecondary" style={{color: theme.palette.primary.main, marginLeft: 20, cursor: "pointer", }} onClick={() => {
 									if (data.type === undefined || data.type === null || data.type === "") {
 										setexpanded(true)
 										console.log("No type. Skipping window open.")
@@ -1377,140 +1415,161 @@ const UsecaseSearch = (props) => {
 									} 
 
 									changeAppType()
-								}}>
-									{data.error}
+								}}/>
+							</Tooltip>
+							<div>
+								<Typography variant="body1" color="textSecondary" style={{marginLeft: 20, marginTop: hasError ? 0 : 8, maxWidth: 250, overflow: "hidden", }}>
+									{data.text}
 								</Typography>
-								: 
-							null}
+								{hasError ?
+									<Typography variant="body2" color="textSecondary" style={{color: theme.palette.primary.main, marginLeft: 20, cursor: "pointer", }} onClick={() => {
+										if (data.type === undefined || data.type === null || data.type === "") {
+											setexpanded(true)
+											console.log("No type. Skipping window open.")
+											return
+										} 
+
+										changeAppType()
+									}}>
+										{data.error}
+									</Typography>
+									: 
+								null}
+							</div>
+						</div>
+						<div style={{display: "flex", }}>
+							<Tooltip
+								color="secondary"
+								title={`See documentation for how to make the usecase '${data.text.toLowerCase()}'`}
+								placement="top"
+							>
+								<span>
+									<IconButton 
+										disabled={true}
+										style={{marginTop: 0, paddingTop: 8,}}
+										onClick={() => {
+										}}
+									>
+										<span>
+											<a
+												href={`https://shuffler.io/docs/creators#${data.text.toLowerCase()}`}
+												rel="norefferer"
+												target="_blank"
+												style={{ textDecoration: "none",  }}
+											>
+												<DescriptionIcon style={{color: "grey", }}/>
+											</a>
+										</span>
+									</IconButton>
+								</span>
+							</Tooltip>
+							{type === "middle" ? 
+								<IconButton 
+									onClick={() => {
+										allusecases[index][type] = []
+
+										setAllUsecases(allusecases)
+										setUpdate(Math.random())
+									}}
+									style={{marginTop: 0, paddingTop: 8,}}
+								>
+									<DeleteIcon />
+								</IconButton>
+							: null}
+							<Tooltip
+								color="secondary"
+								title={`See ${expanded ? "less" : "more"} options`}
+								placement="top"
+							>
+								<span>
+									<IconButton 
+										disabled={canExpand === false}
+										style={{marginTop: 0, paddingTop: 8,}}
+										onClick={() => {
+											setexpanded(!expanded)
+										}}
+									>
+										{expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+									</IconButton>
+								</span>
+							</Tooltip>
 						</div>
 					</div>
-					<div style={{display: "flex", }}>
-						<Tooltip
-							color="secondary"
-							title={`See documentation for how to make the usecase '${data.text.toLowerCase()}'`}
-							placement="top"
-						>
-							<span>
-								<IconButton 
-									disabled={true}
-									onClick={() => {
-									}}
-								>
-									<span>
-										<a
-											href={`https://shuffler.io/docs/creators#${data.text.toLowerCase()}`}
-											rel="norefferer"
-											target="_blank"
-											style={{ textDecoration: "none",  }}
-										>
-											<DescriptionIcon style={{color: "grey", }}/>
-										</a>
-									</span>
-								</IconButton>
-							</span>
-						</Tooltip>
-						{type === "middle" ? 
-							<IconButton 
-								onClick={() => {
-									allusecases[index][type] = []
+
+					{expanded ? 
+						looplist.map((subdata, curindex) => {
+							if (appFramework === undefined) {
+								subdata.image = theme.palette.defaultImage
+							} else {
+								const srctype = getType(subdata.type)
+								const srcinfo = appFramework[srctype]
+
+								if (srcinfo !== undefined && srcinfo.large_image !== undefined && srcinfo.large_image !== "" && (subdata.app_name === undefined || subdata.app_name === "")) {
+									subdata.image = srcinfo.large_image
+									subdata.app_id = srcinfo.id
+									subdata.app_name = srcinfo.name
+								} else {
+									subdata.image = theme.palette.defaultImage
+								}
+							}
+
+							return (
+								<div key={curindex} style={{display: "flex", maxHeight: 40, minHeight: 40, borderTop: "1px solid rgba(255,255,255,0.3)", }} onClick={() => {
+									if (subdata.disabled === true) {
+										//alert.info("Usecase not available yet.")
+										return
+									}
+
+									if (type === "middle") {
+										allusecases[index][type][subindex] = subdata
+									} else { 
+										allusecases[index][type] = subdata
+									}
 
 									setAllUsecases(allusecases)
 									setUpdate(Math.random())
-								}}
-							>
-								<DeleteIcon />
-							</IconButton>
-						: null}
-						<Tooltip
-							color="secondary"
-							title={`See ${expanded ? "less" : "more"} options`}
-							placement="top"
-						>
-							<span>
-								<IconButton 
-									disabled={canExpand === false}
-									onClick={() => {
-										setexpanded(!expanded)
-									}}
-								>
-									{expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-								</IconButton>
-							</span>
-						</Tooltip>
-					</div>
+									setexpanded(false)
+								}}>
+									<img src={subdata.image} alt={subdata.app_name} style={{
+										height: 24,
+										width: 24,
+										borderRadius: 15, 
+										border: "1px solid rgba(255,255,255,0.3)",
+										margin: 7,
+										marginLeft: 24,
+										cursor: subdata.disabled === true ? "auto": "pointer",
+									}} onClick={() => {
+									}}/>
+									<Typography variant="body2" color={subdata.disabled === true ? "textSecondary" : "textPrimary"} style={{cursor: "pointer", margin: 7, marginTop: 10,}}>
+										{subdata.text}
+									</Typography>
+								</div>
+							)
+						})
+						:
+					 null
+					}
 				</div>
-
-				{expanded ? 
-					looplist.map((subdata, curindex) => {
-						if (appFramework === undefined) {
-							subdata.image = theme.palette.defaultImage
-						} else {
-							const srctype = getType(subdata.type)
-							const srcinfo = appFramework[srctype]
-
-							if (srcinfo !== undefined && srcinfo.large_image !== undefined && srcinfo.large_image !== "" && (subdata.app_name === undefined || subdata.app_name === "")) {
-								subdata.image = srcinfo.large_image
-								subdata.app_id = srcinfo.id
-								subdata.app_name = srcinfo.name
-							} else {
-								subdata.image = theme.palette.defaultImage
-							}
-						}
-
-						return (
-							<div key={curindex} style={{display: "flex", maxHeight: 40, minHeight: 40, borderTop: "1px solid rgba(255,255,255,0.3)", }} onClick={() => {
-								if (subdata.disabled === true) {
-									//alert.info("Usecase not available yet.")
-									return
-								}
-
-								if (type === "middle") {
-									allusecases[index][type][subindex] = subdata
-								} else { 
-									allusecases[index][type] = subdata
-								}
-
-								setAllUsecases(allusecases)
-								setUpdate(Math.random())
-								setexpanded(false)
-							}}>
-								<img src={subdata.image} alt={subdata.app_name} style={{
-									height: 24,
-									width: 24,
-									borderRadius: 15, 
-									border: "1px solid rgba(255,255,255,0.3)",
-									margin: 7,
-									marginLeft: 24,
-									cursor: subdata.disabled === true ? "auto": "pointer",
-								}} onClick={() => {
-								}}/>
-								<Typography variant="body2" color={subdata.disabled === true ? "textSecondary" : "textPrimary"} style={{cursor: "pointer", margin: 7, marginTop: 10,}}>
-									{subdata.text}
-								</Typography>
-							</div>
-						)
-					})
-					:
-				 null
-				}
 			</div>
 		)
 	}
 
 	//console.log("ALLUSECASES: ", allusecases)
 
+	// <b>{defaultSearch}: {allusecases[usecaseIndex].name}</b>
+	//console.log("UseCase: ", usecases)
 	return (
-		<div style={{maxWidth: "100%", minWidth: "100%",  }}>
+		<div style={{maxWidth: "100%", minWidth: "100%",  border: "1px solid rgba(255,255,255,0)", borderRadius: theme.palette.borderRadius,}}>
       {configureWorkflowModal}
 			{authenticationModal}
 			{showTitle !== false && defaultSearch !== undefined ?
 				<Typography variant="h6" style={{marginBottom: 10, textAlign: "center",}}>
-					<b>{defaultSearch}: {allusecases[usecaseIndex].name}</b>
+					<b>{allusecases[usecaseIndex].name}</b>
 				</Typography>
 			: null}
 			{usecases.map((data, index) => {
 				return (
-					<div key={index} style={{}}>
+					<div key={index} style={{width: "100%",}}>
 						<ShowBox data={data.source} type={"source"} index={index} />
 
 						{data.middle !== undefined && data.middle !== null && data.middle.length > 0 ?
@@ -1551,19 +1610,17 @@ const UsecaseSearch = (props) => {
 						<ShowBox data={data.destination} type={"destination"} index={index} />
 						{showTitle !== false && workflow.id === undefined ?
 							<Button 
-								fullWidth 
-								style={{marginTop: 50,}} 
+								style={{borderRadius: 25, width: 200, marginLeft: 160, marginTop: 35, }}
 								variant={"contained"} 
 								color="primary" 
 								onClick={() => {
 									createWorkflowFromTemplate(data)
-
 								}}
 							>
 								{isUploading ? 
 									<CircularProgress style={{height: 25, width: 25, marginLeft: "auto", marginRight: "auto", }} /> 
 									: 
-									"Try this Workflow Template"
+									"Try it out"
 								}
 							</Button> 
 						: null}
@@ -1576,9 +1633,13 @@ const UsecaseSearch = (props) => {
 								target="_blank"
 								style={{ textDecoration: "none",  }}
 							>
-								<Button fullWidth style={{marginTop: 50,}} variant={"contained"} color="secondary" onClick={() => {
-								}}>
-									Check out your new Workflow
+								<Button 
+									style={{borderRadius: 25, marginLeft: 130, marginTop: 35, }}
+									variant={"outlined"} 
+									color="secondary" 
+									onClick={() => {
+									}}>
+									Check out the Workflow
 								</Button> 
 							</a>
 						}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import theme from '../theme';
+import theme from '../theme.jsx';
 import AppSearch from './Appsearch.jsx';
 
 import {
@@ -39,8 +39,9 @@ const AppSearchPopout = (props) => {
 		return null
 	}
 	
+	// <Paper style={{width: 275, maxHeight: 400, zIndex: 100000, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -15, left: 50, }}>
 	return (
-		<Paper style={{width: 275, maxHeight: 400, zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -15, left: 50, overflow: "hidden", }}>
+		<Paper style={{minWidth: 275, width: 275, minHeight: 400, maxHeight: 400, zIndex: 100000, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -15, left: 50, }}>
 				{paperTitle !== undefined && paperTitle.length > 0 ? 
 					<span>
 						<Typography variant="h6" style={{textAlign: "center"}}>

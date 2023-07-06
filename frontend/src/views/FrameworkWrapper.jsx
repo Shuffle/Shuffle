@@ -4,7 +4,7 @@ import ReactDOM from "react-dom"
 import AppFramework from "../components/AppFramework.jsx";
 import { useAlert } from "react-alert";
 import { Link, useParams } from "react-router-dom";
-import theme from '../theme';
+import theme from '../theme.jsx';
 
 import {
 	Button,

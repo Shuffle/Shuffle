@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 
-//import { Route, Routes } from "react-router";
 import { Route, Routes, BrowserRouter } from "react-router-dom";
 import { CookiesProvider } from "react-cookie";
 import { removeCookies, useCookies } from "react-cookie";
@@ -10,7 +9,7 @@ import GettingStarted from "./views/GettingStarted";
 import EditWebhook from "./views/EditWebhook";
 import AngularWorkflow from "./views/AngularWorkflow";
 
-import Header from "./components/Header";
+import Header from "./components/Header.jsx";
 import theme from "./theme";
 import Apps from "./views/Apps";
 import AppCreator from "./views/AppCreator";
@@ -25,6 +24,7 @@ import Introduction from "./views/Introduction";
 import SetAuthentication from "./views/SetAuthentication";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
 import Search from "./views/Search.jsx";
+import RunWorkflow from "./views/RunWorkflow.jsx";
 
 import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
@@ -335,7 +335,9 @@ const App = (message, props) => {
           userdata={userdata}
           {...props}
         />
+				{/*
         <div style={{ height: 60 }} />
+				*/}
 				<Routes>
         	<Route
         	  exact
@@ -367,6 +369,7 @@ const App = (message, props) => {
         	      globalUrl={globalUrl}
         	      setCookie={setCookie}
         	      cookies={cookies}
+        	      checkLogin={checkLogin}
         	      {...props}
         	    />
         	  }
@@ -499,6 +502,7 @@ const App = (message, props) => {
         	  path="/workflows"
         	  element={
         	    <Workflows
+          			checkLogin={checkLogin}
         	      cookies={cookies}
         	      removeCookie={removeCookie}
         	      isLoaded={isLoaded}
@@ -540,6 +544,8 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+					<Route exact path="/workflows/:key/run" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
+					<Route exact path="/workflows/:key/execute" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
         	<Route
         	  exact
         	  path="/docs/:key"

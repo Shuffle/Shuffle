@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import ReactGA from 'react-ga';
-import theme from '../theme';
+import ReactGA from 'react-ga4';
+import theme from '../theme.jsx';
 import PaperComponent from "../components/PaperComponent.jsx"
 import UsecaseSearch, { usecaseTypes } from "../components/UsecaseSearch.jsx"
 
@@ -83,6 +83,11 @@ const SuggestedWorkflows = (props) => {
 			dstimage = usecase.items[2].app
 		}
 
+		if (srcimage === undefined || dstimage === undefined) {
+			console.log("Error in src or dst: returning!")
+			return null
+		}
+
 		const finished = finishedUsecases.includes(usecasename)
 		const selectedIcon = finished ? <DoneIcon /> : <AutoFixHighIcon /> 
 
@@ -142,8 +147,6 @@ const SuggestedWorkflows = (props) => {
 						finishedUsecases.push(usecaseSearch)
 						setFinishedUsecases(finishedUsecases)
 
-
-
 						setUsecaseSearch("")
 						setUsecaseSearchType("")
 					}}
@@ -155,7 +158,7 @@ const SuggestedWorkflows = (props) => {
 							minWidth: 450,
 							padding: 50,
 							overflow: "hidden",
-							zIndex: 10012,
+							zIndex: 10050,
 							border: theme.palette.defaultBorder,
 						},
 					}}

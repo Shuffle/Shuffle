@@ -91,7 +91,7 @@ npm start
 ## Backend - Golang
 http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 ```bash
-export SHUFFLE_OPENSEARCH_URL="http://localhost:9200"
+export SHUFFLE_OPENSEARCH_URL="https://localhost:9200"
 export SHUFFLE_ELASTIC=true
 export SHUFFLE_OPENSEARCH_USERNAME=admin
 export SHUFFLE_OPENSEARCH_PASSWORD=admin
