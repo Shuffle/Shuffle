@@ -5,7 +5,7 @@ go 1.19
 //replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
 
 require (
-	github.com/docker/docker v23.0.0+incompatible
+	github.com/docker/docker v23.0.3+incompatible
 	github.com/mackerelio/go-osstat v0.2.3
 	github.com/satori/go.uuid v1.2.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
