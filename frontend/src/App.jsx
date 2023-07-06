@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 
-//import { Route, Routes } from "react-router";
 import { Route, Routes, BrowserRouter } from "react-router-dom";
 import { CookiesProvider } from "react-cookie";
 import { removeCookies, useCookies } from "react-cookie";

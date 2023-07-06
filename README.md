@@ -21,7 +21,7 @@ Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 
 </h4>
 
-![Example Shuffle webhook integration](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/github_shuffle_img.png)
+![Example Shuffle webhook integration](https://github.com/frikky/Shuffle/blob/main/frontend/src/assets/img/github_shuffle_img.png)
 
 ## Try it
 * Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/.github/install-guide.md)
@@ -96,7 +96,7 @@ Shuffle backend: AGPLv3
 Apps, specification and App SDK: MIT
 
 ## Architecture
-![Shuffle Architecture](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_architecture.png)
+![Shuffle Architecture](https://github.com/frikky/Shuffle/blob/main/frontend/src/assets/img/shuffle_architecture.png)
 
 ### Repository overview 
 Below is the folder structure with a short explanation
