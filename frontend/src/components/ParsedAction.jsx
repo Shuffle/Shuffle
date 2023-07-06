@@ -1595,7 +1595,7 @@ const ParsedAction = (props) => {
                     maxWidth: "95%",
                     fontSize: "1em",
                   },
-				disableUnderline: true,
+									disableUnderline: true,
                   endAdornment: hideExtraTypes ? null : (
                     <InputAdornment position="end">
 											<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>

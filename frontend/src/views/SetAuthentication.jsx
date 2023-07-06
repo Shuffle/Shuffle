@@ -206,6 +206,7 @@ const SetAuthentication = (props) => {
 					.then((responseJson) => {
 						//setUserSettings(responseJson)
 						console.log("Resp: ", responseJson);
+
 						if (responseJson.reason !== undefined) {
 							setResponse(responseJson.reason);
 							setFinished(true);

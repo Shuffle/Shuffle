@@ -1390,7 +1390,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start, []string{}, []string{})
 
-	topic := "workflows"
+	//topic := "workflows"
 	startFound := false
 	// FIXME - remove this?
 	newActions := []shuffle.Action{}
@@ -1708,6 +1708,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	workflowExecution.Results = defaultResults
 	workflowExecution.Workflow.Actions = newActions
 	onpremExecution := true
+	_ = onpremExecution
 	environments := []string{}
 
 	if len(workflowExecution.ExecutionOrg) == 0 && len(workflow.ExecutingOrg.Id) > 0 {
@@ -1720,7 +1721,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 		allEnvironments, err := shuffle.GetEnvironments(ctx, workflowExecution.ExecutionOrg)
 		if err != nil {
-			log.Printf("Failed finding environments: %s", err)
+			log.Printf("[WARNING] Failed finding environments: %s", err)
 			return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow environments not found for this org"), errors.New(fmt.Sprintf("Workflow environments not found for this org"))
 		}
 
@@ -1744,6 +1745,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	// Check if the actions are children of the startnode?
 	imageNames := []string{}
 	cloudExec := false
+	_ = cloudExec
 	for _, action := range workflowExecution.Workflow.Actions {
 		// Verify if the action environment exists and append
 		found := false

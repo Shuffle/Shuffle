@@ -68,7 +68,7 @@
     "react-markdown-github": "^3.3.1",
     "react-powerhooks": "0.0.7",
     "react-router": "6.2.1",
-    "react-router-dom": "6.2.1",
+    "react-router-dom": "^6.14.1",
     "react-scripts": "^4.0.1",
     "react-shepherd": "^3.3.6",
     "reactstrap": "^7.1.0",
@@ -104,11 +104,11 @@
     "not op_mini all"
   ],
   "devDependencies": {
+    "@babel/core": "^7.15.8",
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "babel-eslint": "^10.1.0",
     "prettier": "2.4.1",
     "promise-window": "^1.2.1",
-    "@babel/core": "^7.15.8",
-    "babel-eslint": "^10.1.0",
-    "webpack": "^4.44.2",
-	"@babel/plugin-proposal-private-property-in-object": "^7.21.11"
+    "webpack": "^4.44.2"
   }
 }
