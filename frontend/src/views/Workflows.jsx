@@ -462,7 +462,21 @@ export const validateJson = (showResult) => {
 		try {
 			var newstr = showResult.replaceAll("'", '"')
 
-			//console.log("Try replacements and trimming with new value: ", newstr)
+			// Basic workarounds for issues with Python Dicts -> JSON
+			if (newstr.includes(": None")) {
+				newstr = newstr.replaceAll(": None", ': null')
+			}
+
+			if (newstr.includes("[\"{") && newstr.includes("}\"]")) {
+				newstr = newstr.replaceAll("[\"{", '[{')
+				newstr = newstr.replaceAll("}\"]", '}]')
+			}
+
+			if (newstr.includes("{\"[") && newstr.includes("]\"}")) {
+				newstr = newstr.replaceAll("{\"[", '[{')
+				newstr = newstr.replaceAll("]\"}", '}]')
+			}
+
 			result = JSON.parse(newstr)
 			jsonvalid = true
 		} catch (e) {

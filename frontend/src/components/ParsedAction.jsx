@@ -1595,6 +1595,7 @@ const ParsedAction = (props) => {
                     maxWidth: "95%",
                     fontSize: "1em",
                   },
+				disableUnderline: true,
                   endAdornment: hideExtraTypes ? null : (
                     <InputAdornment position="end">
 											<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
@@ -2958,6 +2959,7 @@ const ParsedAction = (props) => {
 								style={theme.palette.textFieldStyle}
 								InputProps={{
 									style: theme.palette.innerTextfieldStyle,
+									disableUnderline: true,
 								}}
 								fullWidth
 								color="primary"
@@ -3177,6 +3179,7 @@ const ParsedAction = (props) => {
 											}}
 											InputProps={{
 												style: theme.palette.innerTextfieldStyle,
+												disableUnderline: true,
 											}}
 											placeholder={selectedAction.execution_delay}
 											defaultValue={selectedAction.execution_delay}
@@ -3492,7 +3495,7 @@ const ParsedAction = (props) => {
 								</li>
 							)	
   					}}
-            options={selectedApp.actions.filter((a) => a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))}
+            options={selectedApp.actions === undefined || selectedApp.actions === null ? [] : selectedApp.actions.filter((a) => a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))}
             ListboxProps={{
               style: {
                 backgroundColor: theme.palette.inputColor,

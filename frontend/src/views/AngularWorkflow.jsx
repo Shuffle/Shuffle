@@ -4638,7 +4638,8 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const addSuggestionButtons = (nodedata, event) => {
-		//console.log("In suggestion buttons: ", nodedata, ". This is not enabled yet. Backend needs further work.")
+		console.log("In suggestion buttons: ", nodedata, ". This is not enabled yet. Backend needs further work.")
+		return
 		// Skipping add for now. Should Re-enable
 
 		// Add a button for autocompletion based on input
@@ -4677,8 +4678,6 @@ const AngularWorkflow = (defaultprops) => {
 
 			cy.add(decoratorNode);
 		}
-
-		return
 	
 		//setWorkflowRecommendations(responseJson.actions)
 		if (workflowRecommendations.length === 0) {
@@ -14561,9 +14560,7 @@ const AngularWorkflow = (defaultprops) => {
         ? "red"
         : yellow;
 
-  const validate = !codeModalOpen
-    ? ""
-    : validateJson(selectedResult.result.trim());
+  const validate = ! codeModalOpen? "" : validateJson(selectedResult.result.trim());
 
   if (validate.valid && typeof validate.result === "string") {
     validate.result = JSON.parse(validate.result);
@@ -14573,12 +14570,17 @@ const AngularWorkflow = (defaultprops) => {
     const [open, setOpen] = React.useState(false)
     const showVariable = data.value.length < 60
 
+		// Check if it's valid JSON
+		const checked = validateJson(data.value.trim())
+
     return (
       <div style={{ maxWidth: 600, overflowX: "hidden", }}>
-        {data.value.length > 60 ?
+        {data.value.length > 60 || checked.valid ?
           <IconButton
             style={{
-              marginBottom: 0, marginTop: 5, cursor: "pointer",
+              marginBottom: 0, 
+							marginTop: 5, 
+							cursor: "pointer",
               padding: 3,
               border: "1px solid rgba(255,255,255,0.3)",
               borderRadius: theme.palette.borderRadius,
@@ -14593,7 +14595,16 @@ const AngularWorkflow = (defaultprops) => {
               variant="body1"
               style={{}}
             >
-              <b>{data.name}</b> {showVariable ? data.value : null}
+              <b>{data.name}</b>
+								{checked.valid ? 
+									<Chip
+										style={{marginLeft: 10, padding: 0, cursor: "pointer",}}
+										label={"JSON"}
+										variant="outlined"
+										color="secondary"
+									/>
+								: null}
+							{showVariable ? data.value : null}
             </Typography>
           </IconButton>
           :
@@ -14605,15 +14616,25 @@ const AngularWorkflow = (defaultprops) => {
           </Typography>
         }
         {open ?
-          <Typography
-            variant="body2"
-            style={{
-              whiteSpace: 'pre-line',
-            }}
-            color="textSecondary"
-          >
-            {data.value}
-          </Typography>
+					checked.valid ?
+						<ReactJson
+							src={checked.result}
+							theme={theme.palette.jsonTheme}
+							style={theme.palette.reactJsonStyle}
+							collapsed={data.value.length < 10000 ? false : true}
+							displayDataTypes={false}
+							name={"Parsed data for variable " + data.name}
+						/>
+					:
+						<Typography
+							variant="body2"
+							style={{
+								whiteSpace: 'pre-line',
+							}}
+							color="textSecondary"
+						>
+							{data.value}
+						</Typography>
           : null}
       </div>
     )
@@ -15071,10 +15092,10 @@ const AngularWorkflow = (defaultprops) => {
       >
         <FormControl>
           <DialogTitle id="draggable-dialog-title" style={{ cursor: "move", }}>
-            <span style={{ color: "white" }}>Execution Variable</span>
+            <span style={{ color: "white" }}>Runtime Variable</span>
           </DialogTitle>
           <DialogContent>
-            Execution Variables are TEMPORARY variables that you can only be set
+            Runtime Variables are TEMPORARY variables that you can only be set
             and used during execution. Learn more{" "}
             <a
               rel="noopener noreferrer"
@@ -15095,7 +15116,7 @@ const AngularWorkflow = (defaultprops) => {
                 },
               }}
               margin="dense"
-							label="Name"
+				label="Name"
               fullWidth
               defaultValue={newVariableName}
             />

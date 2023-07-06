@@ -443,17 +443,17 @@ const Admin = (props) => {
 		// Get drift username from userdata.username before @ in email
 		const username = userdata.username.substring(0, userdata.username.indexOf("@"))
 
-		var body = `Hey,%0D%0AI saw you trying to use Shuffle, and thought we may be able to help. Right now, it looks like you have ${workflow_amount} workflows made, but I'm not sure if you're getting the most out of Shuffle.%0D%0A%0D%0AIf you're interested, I'd love to set up a quick call to see if we can help you get more out of Shuffle. %0D%0A%0D%0A
+		var body = `Hey,%0D%0A%0D%0AI saw you trying to use Shuffle, and thought we may be able to help. Right now, it looks like you have ${workflow_amount} workflows made, but it still doesn't look like you are getting the most out of Shuffle. If you're interested, I'd love to set up a quick call to see if we can help you get more out of Shuffle. %0D%0A%0D%0A
 
 Some of the things we can help with:%0D%0A
 ${your_apps}
-- Properly authenticating and custom building apps%0D%0A
+- Configuring and authenticating your apps%0D%0A
 ${usecases}
-- Creating special usecases%0D%0A%0D%0A
+- Creating special usecases and apps%0D%0A%0D%0A
 
 Let me know if you're interested, or set up a call here: https://drift.me/${username}`
 
-		return `mailto:${admins}?subject=${subject}&body=${body}`
+		return `mailto:${admins}?bcc=frikky@shuffler.io&subject=${subject}&body=${body}`
 	}
 
   const deleteAuthentication = (data) => {
@@ -3532,8 +3532,12 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>App Authentication</h2>
           <span style={{ marginLeft: 25 }}>
+<<<<<<< HEAD
             Control the authentication options for individual apps. PS: Actions
             performed here can be destructive!
+=======
+            Control the authentication options for individual apps. 
+>>>>>>> master
           </span>
           &nbsp;
           <a
@@ -3542,7 +3546,11 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             href="/docs/organizations#app_authentication"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
+<<<<<<< HEAD
             Learn more about authentication
+=======
+            Learn more about App Authentication
+>>>>>>> master
           </a>
         </div>
         <Divider
