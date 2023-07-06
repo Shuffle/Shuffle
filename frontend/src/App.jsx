@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { Route, Routes, BrowserRouter } from "react-router-dom";
+import { Link, Route, Routes, BrowserRouter, useNavigate } from "react-router-dom";
 import { CookiesProvider } from "react-cookie";
 import { removeCookies, useCookies } from "react-cookie";
 
@@ -472,17 +472,18 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route exact path="/apps/authentication" element={<UpdateAuthentication serverside={serverside} userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
         	<Route
         	  exact
         	  path="/apps"
         	  element={
-								<Apps
-									isLoaded={isLoaded}
-									isLoggedIn={isLoggedIn}
-									globalUrl={globalUrl}
-									userdata={userdata}
-									{...props}
-        	    	/>
+				<Apps
+					isLoaded={isLoaded}
+					isLoggedIn={isLoggedIn}
+					globalUrl={globalUrl}
+					userdata={userdata}
+					{...props}
+				/>
         	  }
         	/>
         	<Route
