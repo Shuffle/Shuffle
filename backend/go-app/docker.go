@@ -2,18 +2,21 @@ package main
 
 // Docker
 import (
+	"archive/tar"
+
 	"github.com/shuffle/shuffle-shared"
 
-	"archive/tar"
 	//"bufio"
 	"path/filepath"
 	//"strconv"
 
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	//"github.com/docker/docker"
 	"github.com/docker/docker/api/types"
 	//"github.com/docker/docker/api/types/container"
@@ -238,16 +241,15 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 		BuildArgs: map[string]*string{},
 		Labels:    labels,
 	}
-
 	// NetworkMode: "host",
 
 	httpProxy := os.Getenv("HTTP_PROXY")
 	if len(httpProxy) > 0 {
-		buildOptions.BuildArgs["http_proxy"] = &httpProxy
+		buildOptions.BuildArgs["HTTP_PROXY"] = &httpProxy
 	}
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 	if len(httpProxy) > 0 {
-		buildOptions.BuildArgs["https_proxy"] = &httpsProxy
+		buildOptions.BuildArgs["HTTPS_PROXY"] = &httpsProxy
 	}
 
 	// Build the actual image
@@ -260,7 +262,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 
 	//log.Printf("RESPONSE: %#v", imageBuildResponse)
 	//log.Printf("Response: %#v", imageBuildResponse.Body)
-	log.Printf("[DEBUG] IMAGERESPONSE: %#v", imageBuildResponse.Body)
+	//log.Printf("[DEBUG] IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
 	if imageBuildResponse.Body != nil {
 		defer imageBuildResponse.Body.Close()
@@ -299,6 +301,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 				}
 
 				if !downloaded {
+
 					return errors.New(fmt.Sprintf("Failed to build / download images %s", strings.Join(tags, ",")))
 				}
 				//baseDockerName
@@ -348,7 +351,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 	httpProxy := os.Getenv("HTTP_PROXY")
 	if len(httpProxy) > 0 {
-		buildOptions.BuildArgs["http_proxy"] = &httpProxy
+		buildOptions.BuildArgs["HTTP_PROXY"] = &httpProxy
 	}
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 	if len(httpProxy) > 0 {
@@ -380,170 +383,6 @@ func buildImage(tags []string, dockerfileFolder string) error {
 	}
 
 	return nil
-}
-
-// FIXME - very specific for webhooks. Make it easier?
-func stopWebhook(image string, identifier string) error {
-	ctx := context.Background()
-
-	containername := fmt.Sprintf("%s-%s", image, identifier)
-
-	cli, err := client.NewEnvClient()
-	if err != nil {
-		log.Println("Unable to create docker client")
-		return err
-	}
-
-	//	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{
-	//		All: true,
-	//	})
-
-	if err := cli.ContainerStop(ctx, containername, nil); err != nil {
-		log.Printf("Unable to stop container %s - running removal anyway, just in case: %s", containername, err)
-	}
-
-	removeOptions := types.ContainerRemoveOptions{
-		RemoveVolumes: true,
-		Force:         true,
-	}
-
-	if err := cli.ContainerRemove(ctx, containername, removeOptions); err != nil {
-		log.Printf("Unable to remove container: %s", err)
-	}
-
-	return nil
-}
-
-// Starts a new webhook
-func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if len(fileId) != 32 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	hook, err := shuffle.GetHook(ctx, fileId)
-	if err != nil {
-		log.Printf("Failed getting hook %s (stop docker): %s", fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("Status: %s", hook.Status)
-	log.Printf("Running: %t", hook.Running)
-	if !hook.Running {
-		message := fmt.Sprintf("Error: %s isn't running", hook.Id)
-		log.Println(message)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "%s"}`, message)))
-		return
-	}
-
-	hook.Status = "stopped"
-	hook.Running = false
-	hook.Actions = []shuffle.HookAction{}
-	err = shuffle.SetHook(ctx, *hook)
-	if err != nil {
-		log.Printf("Failed setting hook: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	image := "webhook"
-
-	// This is here to force stop and remove the old webhook
-	err = stopWebhook(image, fileId)
-	if err != nil {
-		log.Printf("Container stop issue for %s-%s: %s", image, fileId, err)
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true, "message": "Stopped webhook"}`))
-}
-
-// THis is an example
-// Can also be used as base data?
-var webhook = `{
-	"id": "d6ef8912e8bd37776e654cbc14c2629c",
-	"info": {
-		"url": "http://localhost:5001",
-		"name": "TheHive",
-		"description": "Webhook for TheHive"
-	},
-	"transforms": {},
-	"actions": {},
-	"type": "webhook",
-	"running": false,
-	"status": "stopped"
-}`
-
-// Starts a new webhook
-func handleDeleteHookDocker(resp http.ResponseWriter, request *http.Request) {
-	ctx := context.Background()
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if len(fileId) != 32 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
-		return
-	}
-
-	err := shuffle.DeleteKey(ctx, "hooks", fileId)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "message": "Can't delete"}`))
-		return
-	}
-
-	image := "webhook"
-
-	// This is here to force stop and remove the old webhook
-	err = stopWebhook(image, fileId)
-	if err != nil {
-		log.Printf("Container stop issue for %s-%s: %s", image, fileId, err)
-		resp.Write([]byte(`{"success": false, "message": "Couldn't stop webhook"}`))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true, "message": "Deleted webhook"}`))
 }
 
 // Checks if an image exists
@@ -591,34 +430,9 @@ func imageCheckBuilder(images []string) error {
 	return nil
 }
 
-func hookTest() {
-	var hook shuffle.Hook
-	err := json.Unmarshal([]byte(webhook), &hook)
-	log.Println(webhook)
-	if err != nil {
-		log.Printf("Failed hook unmarshaling: %s", err)
-		return
-	}
-
-	ctx := context.Background()
-	err = shuffle.SetHook(ctx, hook)
-	if err != nil {
-		log.Printf("Failed setting hook: %s", err)
-	}
-
-	returnHook, err := shuffle.GetHook(ctx, hook.Id)
-	if err != nil {
-		log.Printf("Failed getting hook %s (test): %s", hook.Id, err)
-	}
-
-	if len(returnHook.Id) > 0 {
-		log.Printf("Success! - %s", returnHook.Id)
-	}
-}
-
-//https://stackoverflow.com/questions/23935141/how-to-copy-docker-images-from-one-host-to-another-without-using-a-repository
+// https://stackoverflow.com/questions/23935141/how-to-copy-docker-images-from-one-host-to-another-without-using-a-repository
 func getDockerImage(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -639,14 +453,9 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	type requestCheck struct {
-		Name string `datastore:"name" json:"name" yaml:"name"`
-	}
-
 	// This has to be done in a weird way because Datastore doesn't
 	// support map[string]interface and similar (openapi3.Swagger)
-	var version requestCheck
-
+	var version shuffle.DockerRequestCheck
 	err = json.Unmarshal(body, &version)
 	if err != nil {
 		resp.WriteHeader(422)
@@ -654,7 +463,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[DEBUG] Image to load: %s", version.Name)
+	//log.Printf("[DEBUG] Image to load: %s", version.Name)
 	dockercli, err := client.NewEnvClient()
 	if err != nil {
 		log.Printf("[WARNING] Unable to create docker client: %s", err)
@@ -680,8 +489,11 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		alternativeName = strings.Join(alternativeNameSplit[1:3], "/")
 	}
 
+	log.Printf("[INFO] Trying to download image: %s. Alt: %s", version.Name, alternativeName)
+
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
+			//log.Printf("[DEBUG] Tag: %s", tag)
 			if strings.ToLower(tag) == strings.ToLower(version.Name) {
 				img = image
 				tagFound = tag
@@ -695,6 +507,29 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	pullOptions := types.ImagePullOptions{}
+	if len(img.ID) == 0 {
+		_, err := dockercli.ImagePull(context.Background(), version.Name, pullOptions)
+		if err == nil {
+			tagFound = version.Name
+			img.ID = version.Name
+			img2.ID = version.Name
+
+			dockercli.ImageTag(ctx, version.Name, alternativeName)
+		}
+	}
+
+	if len(img2.ID) == 0 {
+		_, err := dockercli.ImagePull(context.Background(), alternativeName, pullOptions)
+		if err == nil {
+			tagFound = alternativeName
+			img.ID = alternativeName
+			img2.ID = alternativeName
+
+			dockercli.ImageTag(ctx, alternativeName, version.Name)
+		}
+	}
+
 	// REBUILDS THE APP
 	if len(img.ID) == 0 {
 		if len(img2.ID) == 0 {
@@ -705,10 +540,10 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 				imageVersion := ""
 				newNameSplit := strings.Split(version.Name, ":")
 				if len(newNameSplit) == 2 {
-					log.Printf("[DEBUG] Found name %#v", newNameSplit)
+					//log.Printf("[DEBUG] Found name %#v", newNameSplit)
 
 					findVersionSplit := strings.Split(newNameSplit[1], "_")
-					log.Printf("[DEBUG] Found another split %#v", findVersionSplit)
+					//log.Printf("[DEBUG] Found another split %#v", findVersionSplit)
 					if len(findVersionSplit) == 2 {
 						imageVersion = findVersionSplit[len(findVersionSplit)-1]
 						imageName = findVersionSplit[0]
@@ -724,7 +559,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 					foundApp := shuffle.WorkflowApp{}
 					imageName = strings.ToLower(imageName)
 					imageVersion = strings.ToLower(imageVersion)
-					log.Printf("[DEBUG] Looking for appname %s with version %s", imageName, imageVersion)
+					log.Printf("[DEBUG] Docker Looking for appname %s with version %s", imageName, imageVersion)
 
 					for _, app := range workflowapps {
 						if strings.ToLower(strings.Replace(app.Name, " ", "_", -1)) == imageName && app.AppVersion == imageVersion {
@@ -755,7 +590,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 								tagFound = version.Name
 							}
 
-							buildSwaggerApp(resp, []byte(openApiApp.Body), user)
+							buildSwaggerApp(resp, []byte(openApiApp.Body), user, false)
 						}
 					}
 				}
@@ -774,7 +609,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("[INFO] Img found (%s): %#v", tagFound, img)
-	log.Printf("[INFO] Img found to be downloaded by client: %s", tagFound)
+	//log.Printf("[INFO] Img found to be downloaded by client: %s", tagFound)
 
 	newClient, err := newdockerclient.NewClientFromEnv()
 	if err != nil {
@@ -797,4 +632,194 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't export image"}`)))
 		return
 	}
+
+	//resp.WriteHeader(200)
+}
+
+// Downloads and activates an app from shuffler.io if possible
+func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user shuffle.User, appId string) {
+	url := fmt.Sprintf("https://shuffler.io/api/v1/apps/%s/config", appId)
+	log.Printf("Downloading API from %s", url)
+	req, err := http.NewRequest(
+		"GET",
+		url,
+		nil,
+	)
+
+	if err != nil {
+		log.Printf("[ERROR] Failed auto-downloading app %s: %s", appId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+		return
+	}
+
+	httpClient := &http.Client{}
+	newresp, err := httpClient.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Failed running auto-download request for %s: %s", appId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+		return
+	}
+
+	respBody, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed setting respbody for workflow download: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+		return
+	}
+
+	if len(respBody) > 0 {
+		type tmpapp struct {
+			Success bool   `json:"success"`
+			OpenAPI string `json:"openapi"`
+		}
+
+		app := tmpapp{}
+		err := json.Unmarshal(respBody, &app)
+		if err != nil || app.Success == false || len(app.OpenAPI) == 0 {
+			log.Printf("[ERROR] Failed app unmarshal during auto-download. Success: %#v. Applength: %d: %s", app.Success, len(app.OpenAPI), err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			return
+		}
+
+		key, err := base64.StdEncoding.DecodeString(app.OpenAPI)
+		if err != nil {
+			log.Printf("[ERROR] Failed auto-setting OpenAPI app: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			return
+		}
+
+		cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+		shuffle.DeleteCache(ctx, cacheKey)
+		cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+		shuffle.DeleteCache(ctx, cacheKey)
+		cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
+		shuffle.DeleteCache(ctx, cacheKey)
+
+		newapp := shuffle.ParsedOpenApi{}
+		err = json.Unmarshal(key, &newapp)
+		if err != nil {
+			log.Printf("[ERROR] Failed openapi unmarshal during auto-download: %s", app.Success, len(app.OpenAPI), err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			return
+		}
+
+		err = json.Unmarshal(key, &newapp)
+		if err != nil {
+			log.Printf("[ERROR] Failed openapi unmarshal during auto-download: %s", app.Success, len(app.OpenAPI), err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			return
+		}
+
+		buildSwaggerApp(resp, []byte(newapp.Body), user, true)
+		return
+	}
+}
+
+func activateWorkflowAppDocker(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("[WARNING] Api authentication failed in get active apps: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to activate workflow app (shared): %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
+	ctx := context.Background()
+	location := strings.Split(request.URL.String(), "/")
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	app, err := shuffle.GetApp(ctx, fileId, user, false)
+	if err != nil {
+		appName := request.URL.Query().Get("app_name")
+		appVersion := request.URL.Query().Get("app_version")
+
+		if len(appName) > 0 && len(appVersion) > 0 {
+			apps, err := shuffle.FindWorkflowAppByName(ctx, appName)
+			//log.Printf("[INFO] Found %d apps for %s", len(apps), appName)
+			if err != nil || len(apps) == 0 {
+				log.Printf("[WARNING] Error getting app %s (app config). Starting remote download.: %s", appName, err)
+
+				handleRemoteDownloadApp(resp, ctx, user, fileId)
+				return
+			}
+
+			selectedApp := shuffle.WorkflowApp{}
+			for _, app := range apps {
+				if !app.Sharing && !app.Public {
+					continue
+				}
+
+				if app.Name == appName {
+					selectedApp = app
+				}
+
+				if app.Name == appName && app.AppVersion == appVersion {
+					selectedApp = app
+				}
+			}
+
+			app = &selectedApp
+		} else {
+			log.Printf("[WARNING] Error getting app with ID %s (app config): %s. Starting remote download(2)", fileId, err)
+			handleRemoteDownloadApp(resp, ctx, user, fileId)
+			return
+			//resp.WriteHeader(401)
+			//resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			//return
+		}
+	}
+
+	// Just making sure it's being built properly
+	if app == nil {
+		log.Printf("[WARNING] App is nil. This shouldn't happen. Starting remote download(3)")
+		handleRemoteDownloadApp(resp, ctx, user, fileId)
+		return
+	}
+
+	// Check the app.. hmm
+	openApiApp, err := shuffle.GetOpenApiDatastore(ctx, app.ID)
+	if err != nil {
+		log.Printf("[WARNING] Error getting app %s (openapi config): %s", app.ID, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Couldn't find app OpenAPI"}`))
+		return
+	}
+
+	log.Printf("[INFO] User %s (%s) is activating %s. Public: %t, Shared: %t", user.Username, user.Id, app.Name, app.Public, app.Sharing)
+	buildSwaggerApp(resp, []byte(openApiApp.Body), user, true)
+
+	//app.Active = true
+	//app.Generated = true
+	//app, err := shuffle.SetApp(ctx, app)
+
+	//resp.WriteHeader(200)
+	//resp.Write([]byte(`{"success": true}`))
 }

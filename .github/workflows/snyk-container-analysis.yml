@@ -11,7 +11,6 @@ name: Snyk Container
 on:
   push:
     branches: 
-      - master
       - launch 
   pull_request:
     # The branches below must be a subset of the branches above
@@ -25,9 +24,12 @@ jobs:
   snyk:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout
+      uses: actions/checkout@v2
+
     - name: Build a Docker image
-      run: docker build -t your/image-to-test .
+      run: docker build -t frontend .
+
     - name: Run Snyk to check Docker image for vulnerabilities
       # Snyk can be used to break the build when it detects vulnerabilities.
       # In this case we want to upload the issues to GitHub Code Scanning
@@ -41,6 +43,7 @@ jobs:
       with:
         image: your/image-to-test
         args: --file=Dockerfile
+
     - name: Upload result to GitHub Code Scanning
       uses: github/codeql-action/upload-sarif@v1
       with:

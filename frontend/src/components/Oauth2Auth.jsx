@@ -325,7 +325,61 @@ const AuthenticationOauth2 = (props) => {
 			console.log("Adding authorization from user side")
 			state += `%26authorization%3d${userAuth}`;
 		}
+		// write:request:jira-service-management
+	}
 
+
+  const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent, prompt) => {
+    setButtonClicked(true);
+    //console.log("SCOPES: ", scopes);
+
+		client_id = client_id.trim()
+		client_secret = client_secret.trim()
+		oauth_url = oauth_url.trim()
+
+    var resources = "";
+    if (scopes !== undefined && (scopes !== null) & (scopes.length > 0)) {
+			console.log("IN scope 1")
+			if (offlineAccess === true && !scopes.includes("offline_access")) {
+
+				console.log("IN scope 2")
+				if (!authenticationType.redirect_uri.includes("google")) {
+					console.log("Appending offline access")
+					scopes.push("offline_access")
+				}
+			}
+
+      resources = scopes.join(" ");
+      //resources = scopes.join(",");
+    }
+
+    const authentication_url = authenticationType.token_uri;
+    //console.log("AUTH: ", authenticationType)
+    //console.log("SCOPES2: ", resources)
+    const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`;
+		const workflowId = workflow !== undefined ? workflow.id : "";
+    var state = `workflow_id%3D${workflowId}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`;
+    if (oauth_url !== undefined && oauth_url !== null && oauth_url.length > 0) {
+      state += `%26oauth_url%3d${oauth_url}`;
+      console.log("ADDING OAUTH2 URL: ", state);
+    }
+
+    if (
+      authenticationType.refresh_uri !== undefined &&
+      authenticationType.refresh_uri !== null &&
+      authenticationType.refresh_uri.length > 0
+    ) {
+      state += `%26refresh_uri%3d${authenticationType.refresh_uri}`;
+    } else {
+      state += `%26refresh_uri%3d${authentication_url}`;
+    }
+
+		// No prompt forcing
+    //var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=login&scope=${resources}&state=${state}&access_type=offline`;
+		var defaultPrompt = "login"
+   	if (prompt !== undefined && prompt !== null && prompt.length > 0) {
+			defaultPrompt = prompt
+		}
 		// Check for org_id
 		const orgId = urlParams.get("org_id");
 		if (orgId !== undefined && orgId !== null && orgId.length > 0) {
@@ -470,7 +524,6 @@ const AuthenticationOauth2 = (props) => {
           } else {
             alert.info(
               "Field " + selectedApp.authentication.parameters[key].name.replace("_basic", "", -1).replace("_", " ", -1) + " can't be empty"
-                
             );
             return;
           }

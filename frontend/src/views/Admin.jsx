@@ -3532,7 +3532,12 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>App Authentication</h2>
           <span style={{ marginLeft: 25 }}>
+<<<<<<< HEAD
+            Control the authentication options for individual apps. PS: Actions
+            performed here can be destructive!
+=======
             Control the authentication options for individual apps. 
+>>>>>>> master
           </span>
           &nbsp;
           <a
@@ -3541,7 +3546,11 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             href="/docs/organizations#app_authentication"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
+<<<<<<< HEAD
+            Learn more about authentication
+=======
             Learn more about App Authentication
+>>>>>>> master
           </a>
         </div>
         <Divider

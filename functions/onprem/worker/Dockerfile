@@ -1,4 +1,4 @@
-FROM golang:1.17.2-buster as builder
+FROM golang:1.19-buster as builder
 
 WORKDIR /app
 #RUN go get github.com/docker/docker/api/types github.com/docker/docker/api/types/container github.com/docker/docker/client
@@ -6,7 +6,9 @@ WORKDIR /app
 #RUN go env -w GO111MODULE=auto 
 COPY worker.go /app/worker.go
 COPY go.mod /app/go.mod
-COPY go.sum /app/go.sum
+#COPY go.sum /app/go.sum
+#RUN go
+#COPY go.sum /app/go.sum
 RUN go get
 
 #RUN go mod init worker
@@ -25,7 +27,7 @@ RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
 
 ## ALPINE IMAGE
-FROM alpine:3.14.2
+FROM alpine:3.15.0
 
 ENV SHUFFLE_BASE_IMAGE_REGISTRY=docker.io
 ENV SHUFFLE_BASE_IMAGE_NAME=frikky/shuffle

@@ -1,7 +1,25 @@
-# Shuffle 
-[Shuffle](https://shuffler.io) is an automation platform focused on accessibility. We believe everyone should have access to efficient processes, and are striving to make that a possibility by making integrations for YOUR tools. Security Operations is complex, but it doesn't have to be. 
+<h1 align="center">
 
-[![Discord](https://img.shields.io/discord/463752820026376202.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/B2CBzUm)
+[![Shuffle Logo](https://github.com/frikky/Shuffle/blob/launch/frontend/public/images/Shuffle_logo_new.png)](https://shuffler.io)
+
+Shuffle Automation
+
+[![CodeQL](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml)
+[![Autobuild](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml)
+
+</h1><h4 align="center">
+
+[Shuffle](https://shuffler.io) is an automation platform for and by the community, focusing on accessibility for anyone to automate. Security operations is complex, but it doesn't have to be.
+
+[_Key Features_](https://shuffler.io/docs/features) —
+[_Community & Support_](https://discord.gg/B2CBzUm) —
+[_Documentation_](https://shuffler.io/docs) —
+[_Getting Started_](https://shuffler.io/docs/getting_started) —
+[_Development_](https://github.com/frikky/Shuffle/blob/master/.github/CONTRIBUTING.md) 
+
+Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
+
+</h4>
 
 ![Example Shuffle webhook integration](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/github_shuffle_img.png)
 
@@ -85,15 +103,14 @@ Below is the folder structure with a short explanation
 ```bash
 ├── README.md				# What you're reading right now
 ├── backend					# Contains backend related code.
-│   ├── go-app 			# The backend golang webserver
+│   ├── go-app 			# The backend golang webserver
 │   └── app_sdk			# The SDK used for apps
 ├── frontend				# Contains frontend code. ReactJS, Material UI and cytoscape
 ├── functions				# Has execution and extension resources, such as the Wazuh integration
-│   ├── onprem				# Code for onprem solutions
-│   │   ├── Orborus 	# Distributes execution locations
-│   │   ├── Worker		# Runs a workflow
+│   ├── onprem				# Code for onprem solutions
+│   │   ├── Orborus 	# Distributes execution locations
+│   │   ├── Worker		# Runs a workflow
 └ docker-compose.yml 	# Used for deployments
 ```
 
-**It's in BETA (0.8.60)** - [Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
-
+**It's in BETA** - [Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)

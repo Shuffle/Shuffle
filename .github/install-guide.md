@@ -1,7 +1,7 @@
 # Installation guide
 Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
-This document outlines a an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. 
+This document outlines a an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or K8s. 
 
 # Docker - *nix
 The Docker setup is done with docker-compose 
@@ -10,18 +10,19 @@ The Docker setup is done with docker-compose
 
 1. Make sure you have [Docker](https://docs.docker.com/get-docker/) and [docker-compose](https://docs.docker.com/compose/install/) installed.
 2. Download Shuffle
-```
-git clone https://github.com/frikky/Shuffle
+```bash
+git clone https://github.com/Shuffle/Shuffle
 cd Shuffle
 ```
 
 3. Fix prerequisites for the Opensearch database (Elasticsearch): 
-```
-sudo chown 1000:1000 -R shuffle-database 		# Required for Opensearch 
+```bash
+mkdir shuffle-database
+sudo chown -R 1000:1000 shuffle-database
 ```
 
 4. Run docker-compose.
-```
+```bash
 docker-compose up -d
 ```
 
@@ -38,20 +39,20 @@ This step is for setting up with Docker on windows from scratch.
 
 4. Open the .env file and change the line with "OUTER_HOSTNAME" to contain your IP:
 
-```
+```bash
 OUTER_HOSTNAME=YOUR.IP.HERE
 ```
 
 6. Run docker-compose
-```
-docker compose up -d
+```bash
+docker-compose up -d
 ```
 
 ### Configurations (proxies, default users etc.)
 https://shuffler.io/docs/configuration
 
 ### After installation 
-1. After installation, go to http://localhost:3001/adminsetup (or your servername - https is on port 3443)
+1. After installation, go to http://localhost:3001 (or your servername - https is on port 3443)
 2. Now set up your admin account (username & password). Shuffle doesn't have a default username and password. 
 3. Sign in with the same Username & Password! Go to /apps and see if you have any apps yet. If not - you may need to [configure proxies](https://shuffler.io/docs/configuration#production_readiness)
 4. Check out https://shuffler.io/docs/configuration as it has a lot of useful information to get started
@@ -84,11 +85,15 @@ npm start
 ## Backend - Golang
 http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 ```bash
-export SHUFFLE_OPENSEARCH_URL="http://localhost:9200"
+export SHUFFLE_OPENSEARCH_URL="https://localhost:9200"
 export SHUFFLE_ELASTIC=true
+export SHUFFLE_OPENSEARCH_USERNAME=admin
+export SHUFFLE_OPENSEARCH_PASSWORD=admin
+export SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY=true
 cd backend/go-app
-go run *.go
+go run main.go walkoff.go docker.go
 ```
+**WINDOWS USERS:** Follow [this guide](https://www.wikihow.com/Create-an-Environment-Variable-in-Windows-10) to add environment variables in your machine.
 
 Large portions of the backend is written in another repository - [shuffle-shared](https://github.com/frikky/shuffle-shared). If you want to update any of this code and test in realtime, we recommend following these steps:
 1. Clone shuffle-shared to a local repository
@@ -99,8 +104,6 @@ Large portions of the backend is written in another repository - [shuffle-shared
 ```
 4. Make the changes you want, then restart the backend server!
 5. With your changes made, make a pull request :fire:
-
-**WINDOWS USERS:** You'll have to to add the "export" part as an environment variable.
 
 ## Database - Opensearch 
 Make sure this is running through the docker-compose, and that the backend points to it with SHUFFLE_OPENSEARCH_URL defined
@@ -120,7 +123,5 @@ export ENVIRONMENT_NAME=Shuffle
 export BASE_URL=http://YOUR-IP:5001
 export DOCKER_API_VERSION=1.40
 ```
-
-**WINDOWS USERS:** You'll have to to add the "export" part as an environment variable.
 
 AND THAT's it - hopefully it worked. If it didn't please email [frikky@shuffler.io](mailto:frikky@shuffler.io)

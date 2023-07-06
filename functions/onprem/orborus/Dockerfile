@@ -1,4 +1,4 @@
-FROM golang:1.17.2-buster as builder
+FROM golang:1.19-buster as builder
 
 RUN mkdir /app
 WORKDIR /app
@@ -11,11 +11,15 @@ RUN go get github.com/docker/docker/api/types && \
     go get github.com/mackerelio/go-osstat/cpu && \
     go get github.com/mackerelio/go-osstat/memory && \
     go get github.com/satori/go.uuid && \
-    go get github.com/frikky/shuffle-shared
+    go get github.com/shuffle/shuffle-shared && \
+		go get github.com/shirou/gopsutil 
+
+RUN go get
+RUN go mod tidy 
 RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o orborus .
 
-FROM alpine:3.14.2
+FROM alpine:3.15.0
 RUN apk add --no-cache bash tzdata
 COPY --from=builder /app/ /
 

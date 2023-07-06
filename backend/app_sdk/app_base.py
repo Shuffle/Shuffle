@@ -1,19 +1,276 @@
 import os
+import ast
 import copy
 import sys
 import re
 import time 
+import base64
 import json
+import liquid
 import logging
-import requests
-import urllib.parse
-import http.client
 import urllib3
 import hashlib
-from liquid import Liquid
-import liquid
 import zipfile
+import asyncio
+import requests
+import http.client
+import urllib.parse
+import jinja2 
+import datetime
+import dateutil
+
+import threading
+import concurrent.futures
+
+from io import StringIO as StringBuffer
 from io import BytesIO
+from liquid import Liquid, defaults
+
+runtime = os.getenv("SHUFFLE_SWARM_CONFIG", "")
+
+###
+###
+###
+#### Filters for liquidpy
+###
+###
+###
+
+defaults.MODE = 'wild'
+defaults.FROM_FILE = False
+from liquid.filters.manager import FilterManager
+from liquid.filters.standard import standard_filter_manager
+
+shuffle_filters = FilterManager()
+for key, value in standard_filter_manager.filters.items():
+    shuffle_filters.filters[key] = value
+
+#@shuffle_filters.register
+#def plus(a, b):
+#    try:
+#        a = int(a)
+#    except:
+#        a = 0
+#
+#    try:
+#        b = int(b)
+#    except:
+#        b = 0
+#
+#    return standard_filter_manager.filters["plus"](a, b)
+#
+#@shuffle_filters.register
+#def minus(a, b):
+#    a = int(a)
+#    b = int(b)
+#    return standard_filter_manager.filters["minus"](a, b)
+#
+#@shuffle_filters.register
+#def multiply(a, b):
+#    a = int(a)
+#    b = int(b)
+#    return standard_filter_manager.filters["multiply"](a, b)
+#
+#@shuffle_filters.register
+#def divide(a, b):
+#    a = int(a)
+#    b = int(b)
+#    return standard_filter_manager.filters["divide"](a, b)
+
+@shuffle_filters.register
+def md5(a):
+    a = str(a)
+    return hashlib.md5(a.encode('utf-8')).hexdigest()
+    
+@shuffle_filters.register
+def sha256(a):
+    a = str(a)
+    return hashlib.sha256(str(a).encode("utf-8")).hexdigest() 
+
+@shuffle_filters.register
+def md5_base64(a):
+    a = str(a)
+    foundhash = hashlib.md5(a.encode('utf-8')).hexdigest()
+    return base64.b64encode(foundhash.encode('utf-8'))
+    
+@shuffle_filters.register
+def base64_encode(a):
+    a = str(a)
+    try:
+        return base64.b64encode(a.encode('utf-8')).decode()
+    except:
+        return base64.b64encode(a).decode()
+
+@shuffle_filters.register
+def base64_decode(a):
+    a = str(a)
+    try:
+        return base64.b64decode(a).decode()
+    except:
+        return base64.b64decode(a)
+
+@shuffle_filters.register
+def json_parse(a):
+    return json.loads(str(a))
+
+@shuffle_filters.register
+def as_object(a):
+    return json.loads(str(a))
+
+@shuffle_filters.register
+def ast(a):
+    return ast.literal_eval(str(a))
+
+@shuffle_filters.register
+def escape_string(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\'", -1).replace("\"", "\\\"", -1)
+
+@shuffle_filters.register
+def json_escape(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\\\'", -1).replace("\"", "\\\\\"", -1)
+
+@shuffle_filters.register
+def escape_json(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\\\'", -1).replace("\"", "\\\\\"", -1)
+
+# By default using json escape to add all backslashes
+@shuffle_filters.register
+def escape(a):
+    a = str(a)
+    return json_escape(a)
+
+@shuffle_filters.register
+def neat_json(a):
+    try:
+        a = json.loads(a)
+    except:
+        pass 
+
+    return json.dumps(a, indent=4, sort_keys=True)
+
+@shuffle_filters.register
+def flatten(a):
+    a = list(a)
+
+    flat_list = [a for xs in a for a in xs]
+    return flat_list
+
+@shuffle_filters.register
+def last(a):
+    try:
+        a = json.loads(a)
+    except:
+        pass
+
+    if len(a) == 0:
+        return ""
+
+    return a[-1]
+
+@shuffle_filters.register
+def first(a):
+    try:
+        a = json.loads(a)
+    except:
+        pass
+
+    if len(a) == 0:
+        return ""
+
+    return a[0]
+    
+
+@shuffle_filters.register
+def csv_parse(a):
+    a = str(a)
+    splitdata = a.split("\n")
+    columns = []
+    if len(splitdata) > 1:
+        columns = splitdata[0].split(",")
+    else:
+        return a.split("\n")
+
+    allitems = []
+    cnt = -1
+    for item in splitdata[1:]:
+        cnt += 1
+        commasplit = item.split(",")
+
+        fullitem = {}
+        fullitem["unparsed"] = item
+        fullitem["index"] = cnt 
+        fullitem["parsed"] = {}
+        if len(columns) != len(commasplit):
+
+            if len(commasplit) > len(columns):
+                diff = len(commasplit)-len(columns)
+
+                try:
+                    commasplit = commasplit[0:len(commasplit)-diff]
+                except:
+                    pass
+            else:
+                for item in range(0, len(columns)-len(commasplit)):
+                    commasplit.append("")
+
+        for key in range(len(columns)):
+            try:
+                fullitem["parsed"][columns[key]] = commasplit[key]
+            except:
+                continue 
+        
+        allitems.append(fullitem)
+
+    try:
+        return json.dumps(allitems)
+    except:
+        print("[ERROR] Failed dumping from JSON in csv parse")
+        return allitems
+
+@shuffle_filters.register
+def parse_csv(a):
+    return csv_parse(a)
+
+@shuffle_filters.register
+def format_csv(a):
+    return csv_parse(a)
+
+@shuffle_filters.register
+def csv_format(a):
+    return csv_parse(a)@standard_filter_manager.register
+
+@shuffle_filters.register
+def split(base, sep):
+    if not sep:
+        try:
+            return json.dumps(list(base))
+        except:
+            return list(base)
+
+    try:
+        return json.dumps(base.split(sep))
+    except:
+        return base.split(sep)
+
+#print(shuffle_filters.filters)
+#print(Liquid("{{ '10' | plus: 1}}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ '10' | minus: 1}}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ asd | size }}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ 'asd' | md5 }}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ 'asd' | sha256 }}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ 'asd' | md5_base64 | base64_decode }}", filters=shuffle_filters.filters).render())
+
+###
+###
+###
+###
+###
+###
+###
+
 
 class AppBase:
     __version__ = None
@@ -21,13 +278,21 @@ class AppBase:
 
     def __init__(self, redis=None, logger=None, console_logger=None):#, docker_client=None):
         self.logger = logger if logger is not None else logging.getLogger("AppBaseLogger")
+
+        if not os.getenv("SHUFFLE_LOGS_DISABLED") == "true":
+            self.log_capture_string = StringBuffer()
+            ch = logging.StreamHandler(self.log_capture_string)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            ch.setFormatter(formatter)
+            logger.addHandler(ch)
+
         self.redis=redis
         self.console_logger = logger if logger is not None else logging.getLogger("AppBaseLogger")
 
         # apikey is for the user / org
         # authorization is for the specific workflow
 
-        self.url = os.getenv("CALLBACK_URL", "https://shuffler.io")
+        self.url = os.getenv("CALLBACK_URL",  "https://shuffler.io")
         self.base_url = os.getenv("BASE_URL", "https://shuffler.io")
         self.action = os.getenv("ACTION", "")
         self.original_action = os.getenv("ACTION", "")
@@ -51,11 +316,132 @@ class AppBase:
             try:
                 self.action = json.loads(self.action)
                 self.original_action = json.loads(self.action)
-            except:
-                self.logger.info("[WARNING] Failed parsing action as JSON")
+            except Exception as e:
+                self.logger.info(f"[DEBUG] Failed parsing action as JSON (init): {e}. NOT important if running apps with webserver. This is NOT critical.")
+
+        #print(f"ACTION: {self.action}")
 
         if len(self.base_url) == 0:
             self.base_url = self.url
+
+    # Checks output for whether it should be automatically parsed or not
+    def run_magic_parser(self, input_data):
+        if not isinstance(input_data, str):
+            self.logger.info("[DEBUG] Not string. Returning from magic")
+            return input_data
+
+        # Don't touch existing JSON/lists
+        if (input_data.startswith("[") and input_data.endswith("]")) or (input_data.startswith("{") and input_data.endswith("}")):
+            self.logger.info("[DEBUG] Already JSON-like. Returning from magic")
+            return input_data
+
+        if len(input_data) < 3:
+            self.logger.info("[DEBUG] Too short input data")
+            return input_data
+
+        # Don't touch large data.
+        if len(input_data) > 100000:
+            self.logger.info("[DEBUG] Value too large. Returning from magic")
+            return input_data
+
+        if not "\n" in input_data and not "," in input_data: 
+            self.logger.info("[DEBUG] No data to autoparse - requires newline or comma")
+            return input_data
+
+        new_input = input_data
+        try:
+            #new_input.strip()
+            new_input = input_data.split()
+            new_return = []
+
+            index = 0
+            for item in new_input:
+                splititem = ","
+                if ", " in item:
+                    splititem = ", "
+                elif "," in item:
+                    splititem = ","
+                else:
+                    new_return.append(item)
+
+                    index += 1
+                    continue
+
+                #print("FIX ITEM %s" % item)
+                for subitem in item.split(splititem):
+                    new_return.insert(index, subitem) 
+
+                    index += 1
+
+                    # Prevent large data or infinite loops
+                    if index > 10000:
+                        self.logger.info(f"[DEBUG] Infinite loop. Returning default data.")
+                        return input_data
+
+            fixed_return = []
+            for item in new_return:
+                if not item:
+                    continue
+
+                if not isinstance(item, str):
+                    fixed_return.append(item)
+                    continue
+
+                if item.endswith(","):
+                    item = item[0:-1]
+                
+                fixed_return.append(item)
+
+            new_input = fixed_return
+        except Exception as e:
+            # Not used anymore
+            #self.logger.info(f"[ERROR] Failed to run magic parser (2): {e}")
+            return input_data
+
+        try:
+            new_input = input_data.split()
+        except Exception as e:
+            self.logger.info(f"[ERROR] Failed to run parser during split (1): {e}")
+            return input_data
+
+        # Won't ever touch this one?
+        if isinstance(new_input, list) or isinstance(new_input, object):
+            try:
+                return json.dumps(new_input)
+            except Exception as e:
+                self.logger.info(f"[ERROR] Failed to run magic parser (3): {e}")
+            
+        return new_input
+
+    def prepare_response(self, request):
+        try:
+            parsedheaders = {}
+            for key, value in request.headers.items():
+                parsedheaders[key] = value
+
+            cookies = {}
+            if request.cookies:
+                for key, value in request.cookies.items():
+                    cookies[key] = value
+
+            
+            jsondata = request.text
+            try:
+                jsondata = json.loads(jsondata)
+            except:
+                pass
+
+            return json.dumps({
+                "success": True,
+                "status": request.status_code,
+                "url": request.url,
+                "headers": parsedheaders,
+                "body": jsondata,
+                "cookies":cookies,
+            })
+        except Exception as e:
+            print(f"[WARNING] Failed in request: {e}")
+            return request.text
 
     # FIXME: Add more info like logs in here.
     # Docker logs: https://forums.docker.com/t/docker-logs-inside-the-docker-container/68190/2
@@ -63,40 +449,122 @@ class AppBase:
         if action_result["status"] == "EXECUTING":
             action_result["status"] = "FAILURE"
 
+        try:
+            #self.logger.info(f"[DEBUG] ACTION: {self.action}")
+            if self.action["run_magic_output"] == True:
+                self.logger.warning(f"[INFO] Action result ran with Magic parser output.")
+                action_result["result"] = self.run_magic_parser(action_result["result"])
+            else:
+                self.logger.warning(f"[WARNING] Magic output not defined.")
+        except KeyError as e:
+            #self.logger.warning(f"[DEBUG] Failed to run magic autoparser (send result) - keyerror: {e}")
+            pass 
+        except Exception as e:
+            #self.logger.warning(f"[DEBUG] Failed to run magic autoparser (send result): {e}")
+            pass
+
+        # Try it with some magic
+
+        action_result["completed_at"] = int(time.time())
         self.logger.info(f"""[DEBUG] Inside Send result with status {action_result["status"]}""")
+        #if isinstance(action_result, 
 
         # FIXME: Add cleanup of parameters to not send to frontend here
         params = {}
-        #action = action_result["action"]
-        #try:
-        #    for item in action["authentication"]:
-        #        for action["parameters"]
-        #        self.logger.info("AUTH: ", key, value)
-        #        params[item["key"]] = item["value"]
-       #except KeyError:
-        #    self.logger.info("No authentication specified!")
-        #    pass
 
         # I wonder if this actually works 
         self.logger.info(f"[DEBUG] Before last stream result")
         url = "%s%s" % (self.base_url, stream_path)
-        #self.logger.info("[INFO] URL (URL): %s" % url)
+        self.logger.info(f"[INFO] URL FOR RESULT (URL): {url}")
+
         try:
-            ret = requests.post(url, headers=headers, json=action_result)
-            #self.logger.info(f"[DEBUG] Result: {ret.status_code}")
-            #if ret.status_code != 200:
-            #    self.logger.info(f"[DEBUG] Shuffle Response: {ret.text}")
+            log_contents = "disabled: add env SHUFFLE_LOGS_DISABLED=true to Orborus to re-enable logs for apps. Can not be enabled natively in Cloud except in Hybrid mode."
+            if not os.getenv("SHUFFLE_LOGS_DISABLED") == "true":
+                log_contents = self.log_capture_string.getvalue()
+
+            #print("RESULTS: %s" % log_contents)
+            self.logger.info(f"[WARNING] Got logs of length {len(log_contents)}")
+            if len(action_result["action"]["parameters"]) == 0:
+                action_result["action"]["parameters"] = []
+
+            param_found = False
+            for param in action_result["action"]["parameters"]:
+                if param["name"] == "shuffle_action_logs": 
+                    param_found = True
+                    break
+
+            if not param_found:
+                action_result["action"]["parameters"].append({
+                    "name": "shuffle_action_logs",
+                    "value": log_contents,
+                })
+
+        except Exception as e:
+            print(f"[WARNING] Failed adding parameter for logs: {e}") 
+
+        # FIXME: Adding retries here.
+        try:
+            finished = False
+            for i in range (0, 10):
+                try:
+                    ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False)
+
+                    self.logger.info(f"[DEBUG] Result: {ret.status_code} (break on 200 or 201)")
+                    if ret.status_code == 200 or ret.status_code == 201:
+                        finished = True
+                        break
+                    else:
+                        self.logger.info(f"[ERROR] RESP: {ret.text}")
+
+                except requests.exceptions.RequestException as e:
+                    self.logger.info(f"[DEBUG] Request problem: {e}")
+                    time.sleep(0.1)
+
+                    #time.sleep(5)
+                    continue
+                except TimeoutError as e:
+                    self.logger.info(f"[DEBUG] Timeout or request: {e}")
+                    time.sleep(0.1)
+
+                    #time.sleep(5)
+                    continue
+                except requests.exceptions.ConnectionError as e:
+                    self.logger.info(f"[DEBUG] Connectionerror: {e}")
+                    time.sleep(0.1)
+
+                    #time.sleep(5)
+                    continue
+                except http.client.RemoteDisconnected as e:
+                    self.logger.info(f"[DEBUG] Remote: {e}")
+                    time.sleep(0.1)
+
+                    #time.sleep(5)
+                    continue
+                except urllib3.exceptions.ProtocolError as e:
+                    self.logger.info(f"[DEBUG] Protocol err: {e}")
+                    time.sleep(0.1)
+
+                    #time.sleep(5)
+                    continue
+
+                #time.sleep(5)
+
+            if not finished:
+                # Not sure why this would work tho :)
+                action_result["status"] = "FAILURE"
+                action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 10 retries to the backend" % url})
+                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished after 10 requests")
+                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
         
-            self.logger.info(f"[DEBUG] Successful request: Status= {ret.status_code} & Response= {ret.text}")
+            self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:
             self.logger.info(f"[DEBUG] Unexpected ConnectionError happened: {e}")
-            return
         except TypeError as e:
-            #self.logger.exception(e)
             action_result["status"] = "FAILURE"
-            action_result["result"] = f"POST error: {e}"
+            action_result["result"] = json.dumps({"success": False, "reason": "Typeerror when sending to backend URL %s" % url})
+
             self.logger.info(f"[DEBUG] Before typeerror stream result: {e}")
-            ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
+            ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
             #self.logger.info(f"[DEBUG] Result: {ret.status_code}")
             #if ret.status_code != 200:
             #    pr
@@ -104,14 +572,26 @@ class AppBase:
             self.logger.info(f"[DEBUG] TypeError request: Status= {ret.status_code} & Response= {ret.text}")
         except http.client.RemoteDisconnected as e:
             self.logger.info(f"[DEBUG] Expected Remotedisconnect happened: {e}")
-            return
         except urllib3.exceptions.ProtocolError as e:
             self.logger.info(f"[DEBUG] Expected ProtocolError happened: {e}")
-            return
 
-    async def cartesian_product(self, L):
+        
+        # FIXME: Re-enable data flushing otherwise we'll overload it all
+        # Or nah?
+        if not os.getenv("SHUFFLE_LOGS_DISABLED") == "true":
+            try:
+                self.log_capture_string.flush()
+                #self.log_capture_string.close()
+                #pass
+            except Exception as e:
+                print(f"[WARNING] Failed to flush logs: {e}") 
+                pass
+
+    #async def cartesian_product(self, L):
+    def cartesian_product(self, L):
         if L:
-            return {(a, ) + b for a in L[0] for b in await self.cartesian_product(L[1:])}
+            #return {(a, ) + b for a in L[0] for b in await self.cartesian_product(L[1:])}
+            return {(a, ) + b for a in L[0] for b in self.cartesian_product(L[1:])}
         else:
             return {()}
 
@@ -213,7 +693,7 @@ class AppBase:
             #self.logger.info(f"RET: {ret.text}")
             #self.logger.info(f"ID: {ret.status_code}")
             url = f"{self.url}/api/v1/orgs/{org_id}/validate_app_values"
-            ret = requests.post(url, json=data)
+            ret = requests.post(url, json=data, verify=False)
             if ret.status_code == 200:
                 json_value = ret.json()
                 if len(json_value["found"]) > 0: 
@@ -247,7 +727,8 @@ class AppBase:
     # Returns a list of all the executions to be done in the inner loop
     # FIXME: Doesn't take into account whether you actually WANT to loop or not
     # Check if the last part of the value is #?
-    async def get_param_multipliers(self, baseparams):
+    #async def get_param_multipliers(self, baseparams):
+    def get_param_multipliers(self, baseparams):
         # Example:
         # {'call': ['hello', 'hello4'], 'call2': ['hello2', 'hello3'], 'call3': '1'}
         # 
@@ -425,7 +906,8 @@ class AppBase:
 
             self.logger.info("[DEBUG] Newlength of array: %d. Lists: %s" % (newlength, all_lists))
             # Get the cartesian product of the arrays
-            cartesian = await self.cartesian_product(all_lists)
+            #cartesian = await self.cartesian_product(all_lists)
+            cartesian = self.cartesian_product(all_lists)
             newlist = []
             for item in cartesian:
                 newlist.append(list(item))
@@ -454,7 +936,8 @@ class AppBase:
             
 
     # Runs recursed versions with inner loops and such 
-    async def run_recursed_items(self, func, baseparams, loop_wrapper):
+    #async def run_recursed_items(self, func, baseparams, loop_wrapper):
+    def run_recursed_items(self, func, baseparams, loop_wrapper):
         #self.logger.info(f"RECURSED ITEMS: {baseparams}")
         has_loop = False
 
@@ -495,14 +978,18 @@ class AppBase:
         
         results = []
         if has_loop:
-            self.logger.info(f"[DEBUG] Should run inner loop: {newparams}")
-            ret = await self.run_recursed_items(func, newparams, loop_wrapper)
+            #self.logger.info(f"[DEBUG] Should run inner loop: {newparams}")
+            self.logger.info(f"[DEBUG] Should run inner loop")
+            #ret = await self.run_recursed_items(func, newparams, loop_wrapper)
+            ret = self.run_recursed_items(func, newparams, loop_wrapper)
         else:
-            self.logger.info(f"[DEBUG] Should run multiplier check with params (inner): {newparams}")
+            #self.logger.info(f"[DEBUG] Should run multiplier check with params (inner): {newparams}")
+            self.logger.info(f"[DEBUG] Should run multiplier check with params (inner)")
             # 1. Find the loops that are required and create new multipliers
             # If here: check for multipliers within this scope.
             ret = []
-            param_multiplier = await self.get_param_multipliers(newparams)
+            #param_multiplier = await self.get_param_multipliers(newparams)
+            param_multiplier = self.get_param_multipliers(newparams)
 
             # FIXME: This does a deduplication of the data
             new_params = self.validate_unique_fields(param_multiplier)
@@ -520,8 +1007,10 @@ class AppBase:
                 }
 
                 self.send_result(self.action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
-                exit()
-                #return
+                if runtime != "run":
+                    exit()
+                else:
+                    return
             else:
                 #subparams = new_params
                 #self.logger.info(f"NEW PARAMS: {new_params}")
@@ -543,11 +1032,10 @@ class AppBase:
             for subparams in param_multiplier:
                 #self.logger.info(f"SUBPARAMS IN MULTI: {subparams}")
                 try:
-                    #tmp = await func(**subparams)
 
                     while True:
                         try:
-                            tmp = await func(**subparams)
+                            tmp = func(**subparams)
                             break
                         except TypeError as e:
                             self.logger.info("BASE TYPEERROR: %s" % e)
@@ -559,21 +1047,51 @@ class AppBase:
                     
                                     try:
                                         del subparams[field]
-                                        self.logger.info("Removed field invalid field %s" % field)
+                                        self.logger.info("Removed invalid field %s (1)" % field)
                                     except KeyError:
                                         break
                             else:
-                                raise e
+                                raise Exception(json.dumps({
+                                    "success": False,
+                                    "reason": "You may be running an old version of this action. Please delete and remake the node.",
+                                    "exception": f"TypeError: {e}",
+                                }))
+                                break
+                                
 
                 except:
                     e = ""
                     try:
                         e = sys.exc_info()[1]
                     except:
-                        self.logger.info("Exc check fail: %s" % e)
+                        self.logger.info("Exec check fail: %s" % e)
                         pass
 
-                    tmp = "An error occured during execution: %s" % e 
+                    tmp = json.dumps({
+                        "success": False,
+                        "reason": f"An error occured during execution: {e}",
+                    })
+
+
+                # An attempt at decomposing coroutine results
+                # Backwards compatibility
+                try:
+                    if asyncio.iscoroutine(tmp):
+                        self.logger.info("[DEBUG] In coroutine (2)")
+                        async def parse_value(tmp):
+                            value = await asyncio.gather(
+                                tmp 
+                            )
+
+                            return value[0]
+
+
+                        tmp = asyncio.run(parse_value(tmp))
+                    else:
+                        #self.logger.info("[DEBUG] Not in coroutine (2)")
+                        pass
+                except Exception as e:
+                    self.logger.warning("[ERROR] Failed to parse coroutine value for old app: {e}")
 
                 #self.logger.info("RET from execution: %s" % ret)
                 new_value = tmp
@@ -640,21 +1158,68 @@ class AppBase:
 
     # Downloads all files from a namespace
     # Currently only working on local version of Shuffle
+    def get_file_category_ids(self, category):
+        org_id = self.full_execution["workflow"]["execution_org"]["id"]
+
+        get_path = "/api/v1/files/namespaces/%s?execution_id=%s&ids=true" % (category, self.full_execution["execution_id"])
+        headers = {
+            "Authorization": "Bearer %s" % self.authorization,
+            "User-Agent": "Shuffle 1.1.0",
+        }
+
+        ret = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
+        return ret.json()
+        #if ret1.status_code != 200:
+        #    return {
+        #        "success": False,
+        #        "reason": "Status code is %d from backend for category %s" % category,
+        #        "list": [],
+        #    }
+
+        #return {
+        #    "success": True,
+        #    "ids": ret1.json(),
+        #}
+
+
+    # Downloads all files from a namespace
+    # Currently only working on local version of Shuffle
     def get_file_namespace(self, namespace):
         org_id = self.full_execution["workflow"]["execution_org"]["id"]
 
         get_path = "/api/v1/files/namespaces/%s?execution_id=%s" % (namespace, self.full_execution["execution_id"])
         headers = {
-            "Authorization": "Bearer %s" % self.authorization
+            "Authorization": "Bearer %s" % self.authorization,
+            "User-Agent": "Shuffle 1.1.0",
         }
 
-        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
+        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
         if ret1.status_code != 200:
             return None 
 
         filebytes = BytesIO(ret1.content)
         myzipfile = zipfile.ZipFile(filebytes)
+
+        # Unzip and build here!
+        #for member in files.namelist():
+        #    filename = os.path.basename(member)
+        #    if not filename:
+        #        continue
+
+        #    self.logger.info("File: %s" % member)
+        #    source = files.open(member)
+        #    with open("%s/%s" % (basedir, source.name), "wb+") as tmp:
+        #        filedata = source.read()
+        #        self.logger.info("Filedata (%s): %s" % (source.name, filedata))
+        #        tmp.write(filedata)
+
         return myzipfile
+
+    def get_file_namespace_ids(self, namespace):
+        return self.get_file_category_ids(self, namespace)
+
+    def get_file_category(self, category):
+        return self.get_file_namespace(self, category)
 
     # Things to consider for files:
     # - How can you download / stream a file? 
@@ -675,7 +1240,7 @@ class AppBase:
         returns = []
         for item in value:
             self.logger.info("VALUE: %s" % item)
-            if len(item) != 36:
+            if len(item) != 36 and not item.startswith("file_"):
                 self.logger.info("Bad length for file value %s" % item)
                 continue
                 #return {
@@ -687,10 +1252,11 @@ class AppBase:
             get_path = "/api/v1/files/%s?execution_id=%s" % (item, full_execution["execution_id"])
             headers = {
                 "Content-Type": "application/json",     
-                "Authorization": "Bearer %s" % self.authorization
+                "Authorization": "Bearer %s" % self.authorization,
+                "User-Agent": "Shuffle 1.1.0",
             }
 
-            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
+            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
             self.logger.info("RET1 (file get): %s" % ret1.text)
             if ret1.status_code != 200:
                 returns.append({
@@ -701,7 +1267,7 @@ class AppBase:
                 continue
 
             content_path = "/api/v1/files/%s/content?execution_id=%s" % (item, full_execution["execution_id"])
-            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
+            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers, verify=False)
             self.logger.info("RET2 (file get) done")
             if ret2.status_code == 200:
                 tmpdata = ret1.json()
@@ -737,7 +1303,7 @@ class AppBase:
             "value": str(value),
         }
 
-        response = requests.post(url, json=data)
+        response = requests.post(url, json=data, verify=False)
         try:
             allvalues = response.json()
             allvalues["key"] = key
@@ -759,7 +1325,7 @@ class AppBase:
             "key": key,
         }
 
-        value = requests.post(url, json=data)
+        value = requests.post(url, json=data, verify=False)
         try:
             allvalues = value.json()
             self.logger.info("VAL1: ", allvalues)
@@ -778,6 +1344,7 @@ class AppBase:
             #return value.json()
             return {"success": False}
 
+    # Wrapper for set_files
     def set_file(self, infiles):
         return self.set_files(infiles)
 
@@ -788,7 +1355,8 @@ class AppBase:
         org_id = full_execution["workflow"]["execution_org"]["id"]
         headers = {
             "Content-Type": "application/json",     
-            "Authorization": "Bearer %s" % self.authorization
+            "Authorization": "Bearer %s" % self.authorization,
+            "User-Agent": "Shuffle 1.1.0",
         }
 
         if not isinstance(infiles, list):
@@ -811,11 +1379,11 @@ class AppBase:
                 self.logger.info(f"KeyError in file setup: {e}")
                 pass
 
-            ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data)
-            self.logger.info(f"Ret CREATE: {ret.text}")
+            ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data, verify=False)
+            #self.logger.info(f"Ret CREATE: {ret.text}")
             cur_id = ""
             if ret.status_code == 200:
-                self.logger.info("RET: %s" % ret.text)
+                #self.logger.info("RET: %s" % ret.text)
                 ret_json = ret.json()
                 if not ret_json["success"]:
                     self.logger.info("Not success in file upload creation.")
@@ -834,6 +1402,7 @@ class AppBase:
 
             new_headers = {
                 "Authorization": f"Bearer {self.authorization}",
+                "User-Agent": "Shuffle 1.1.0",
             }
 
             upload_path = "/api/v1/files/%s/upload?execution_id=%s" % (cur_id, full_execution["execution_id"])
@@ -842,15 +1411,15 @@ class AppBase:
             files={"shuffle_file": (filename, curfile["data"])}
             #open(filename,'rb')}
 
-            ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers)
+            ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers, verify=False)
             self.logger.info("Ret UPLOAD: %s" % ret.text)
             self.logger.info("Ret2 UPLOAD: %d" % ret.status_code)
 
         self.logger.info("IDS TO RETURN: %s" % file_ids)
         return file_ids
     
-    async def execute_action(self, action):
-
+    #async def execute_action(self, action):
+    def execute_action(self, action):
         # !!! Let this line stay - its used for some horrible codegeneration / stitching !!! # 
         #STARTCOPY
         stream_path = "/api/v1/streams"
@@ -864,35 +1433,40 @@ class AppBase:
         }
 
         # Simple validation of parameters in general
+        replace_params = False
         try:
             tmp_parameters = action["parameters"]
+            for param in tmp_parameters:
+                if param["value"] == "SHUFFLE_AUTO_REMOVED":
+                    replace_params = True
         except KeyError:
             action["parameters"] = []
         except TypeError:
             pass
 
         self.action = copy.deepcopy(action)
-        self.logger.info("[DEBUG] Sending starting action result (EXECUTING)")
+        self.logger.info(f"[DEBUG] Sending starting action result (EXECUTING). Param replace: {replace_params}")
 
         headers = {
             "Content-Type": "application/json",     
-            "Authorization": "Bearer %s" % self.authorization
+            "Authorization": f"Bearer {self.authorization}",
+            "User-Agent": "Shuffle 1.1.0",
         }
 
         if len(self.action) == 0:
-            self.logger.info("ACTION env not defined")
+            self.logger.info("[WARNING] ACTION env not defined")
             self.action_result["result"] = "Error in setup ENV: ACTION not defined"
             self.send_result(self.action_result, headers, stream_path) 
             return
 
         if len(self.authorization) == 0:
-            self.logger.info("AUTHORIZATION env not defined")
+            self.logger.info("[WARING] AUTHORIZATION env not defined")
             self.action_result["result"] = "Error in setup ENV: AUTHORIZATION not defined"
             self.send_result(self.action_result, headers, stream_path) 
             return
 
         if len(self.current_execution_id) == 0:
-            self.logger.info("EXECUTIONID env not defined")
+            self.logger.info("[WARNING] EXECUTIONID env not defined")
             self.action_result["result"] = "Error in setup ENV: EXECUTIONID not defined"
             self.send_result(self.action_result, headers, stream_path) 
             return
@@ -904,7 +1478,7 @@ class AppBase:
 
         # FIXME: Shouldn't skip this, but it's good for minimzing API calls
         #try:
-        #    ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
+        #    ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
         #    self.logger.info("Workflow: %d" % ret.status_code)
         #    if ret.status_code != 200:
         #        self.logger.info(ret.text)
@@ -918,43 +1492,72 @@ class AppBase:
         # Verify whether there are any parameters with ACTION_RESULT required
         # If found, we get the full results list from backend
         fullexecution = {}
-        if len(self.full_execution) == 0:
-            self.logger.info("[DEBUG] NO EXECUTION - LOADING!")
+        if isinstance(self.full_execution, str) and len(self.full_execution) == 0:
+            #self.logger.info("[DEBUG] NO EXECUTION - LOADING!")
             try:
-                tmpdata = {
-                    "authorization": self.authorization,
-                    "execution_id": self.current_execution_id
-                }
+                failed = False
+                rettext = ""
+                for i in range(0, 5):
+                    tmpdata = {
+                        "authorization": self.authorization,
+                        "execution_id": self.current_execution_id
+                    }
 
-                self.logger.info("[DEBUG] Before FULLEXEC stream result")
-                ret = requests.post(
-                    "%s/api/v1/streams/results" % (self.base_url), 
-                    headers=headers, 
-                    json=tmpdata
-                )
+                    self.logger.info("[ERROR] Before FULLEXEC stream result")
+                    ret = requests.post(
+                        "%s/api/v1/streams/results" % (self.base_url), 
+                        headers=headers, 
+                        json=tmpdata,
+                        verify=False
+                    )
 
-                if ret.status_code == 200:
-                    fullexecution = ret.json()
-                else:
-                    try:
-                        self.logger.info("Error: Data: ", ret.json())
-                        self.logger.info("Error with status code for results. Crashing because ACTION_RESULTS or WORKFLOW_VARIABLE can't be handled. Status: %d" % ret.status_code)
-                    except json.decoder.JSONDecodeError:
-                        pass
+                    if ret.status_code == 200:
+                        fullexecution = ret.json()
+                        failed = False
+                        break
 
-                    self.action_result["result"] = "Bad result from backend: %d" % ret.status_code
+                    #elif ret.status_code == 500 or ret.status_code == 400:
+                    elif ret.status_code >= 400:
+                        self.logger.info("[ERROR] (fails: %d) Error in app with status code %d for results (1). RETRYING because results can't be handled" % (i+1, ret.status_code))
+                    
+                        rettext = ret.text
+                        failed = True 
+                        time.sleep(8)
+                        continue
+
+                    else:
+                        self.logger.info("[ERROR] Error in app with status code %d for results (2). Crashing because results can't be handled" % ret.status_code)
+
+                        rettext = ret.text
+                        failed = True 
+                        time.sleep(8)
+                        break
+
+                if failed:
+                    self.action_result["result"] = json.dumps({
+                        "success": False,
+                        "reason": f"Bad result from backend during startup of app: {ret.status_code}",
+                        "extended_reason": f"{rettext}"
+                    })
+
                     self.send_result(self.action_result, headers, stream_path) 
                     return
+
             except requests.exceptions.ConnectionError as e:
-                self.logger.info("Connectionerror: %s" %  e)
-                self.action_result["result"] = "Connection error during startup: %s" % e
+                self.logger.info("[ERROR] FullExec Connectionerror: %s" %  e)
+                self.action_result["result"] = json.dumps({
+                    "success": False,
+                    "reason": f"Connection error during startup: {e}"
+                })
+
                 self.send_result(self.action_result, headers, stream_path) 
                 return
         else:
+            self.logger.info(f"[DEBUG] Setting execution to default value with type {type(self.full_execution)}")
             try:
                 fullexecution = json.loads(self.full_execution)
             except json.decoder.JSONDecodeError as e:
-                self.logger.info("[WARNING] Json decode execution error: %s" % e)  
+                self.logger.info("[ERROR] Json decode execution error: %s" % e)  
                 self.action_result["result"] = "Json error during startup: %s" % e
                 self.send_result(self.action_result, headers, stream_path) 
                 return
@@ -963,7 +1566,40 @@ class AppBase:
 
 
         self.full_execution = fullexecution
-        self.logger.info("[DEBUG] AFTER FULLEXEC stream result (init)")
+
+        #try:
+        #    if "backend_url" in self.full_execution:
+        #        self.url = self.full_execution["backend_url"]
+        #        self.base_url = self.full_execution["backend_url"]
+        #except KeyError:
+        #    pass
+
+        try:
+            if replace_params == True:
+                for inner_action in self.full_execution["workflow"]["actions"]:
+                    self.logger.info("[DEBUG] ID: %s vs %s" % (inner_action["id"], self.action["id"]))
+
+                    # In case of some kind of magic, we're just doing params
+                    if inner_action["id"] == self.action["id"]:
+                        self.logger.info("FOUND!")
+
+                        if isinstance(self.action, str):
+                            self.logger.info("Params is in string object for self.action?")
+                        else:
+                            self.action["parameters"] = inner_action["parameters"]
+                            self.action_result["action"]["parameters"] = inner_action["parameters"]
+
+                        if isinstance(self.original_action, str):
+                            self.logger.info("Params for original actions is in string object?")
+                        else:
+                            self.original_action["parameters"] = inner_action["parameters"]
+
+                        break
+
+        except Exception as e:
+            self.logger.info(f"[WARNING] Failed in replace params action parsing: {e}")
+
+        self.logger.info(f"[DEBUG] AFTER FULLEXEC stream result (init): {self.current_execution_id}")
 
         # Gets the value at the parenthesis level you want
         def parse_nested_param(string, level):
@@ -1147,6 +1783,11 @@ class AppBase:
             except TypeError:
                 return data, False
 
+            # Because liquid can handle ALL of this now.
+            # Implemented for >0.9.25
+            #self.logger.info("[DEBUG] Skipping parser because use of its been deprecated >0.9.25 due to Liquid implementation")
+            return data, False
+
             wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght", "join", "replace"]
 
             if not any(wrapper in data for wrapper in wrappers):
@@ -1197,7 +1838,7 @@ class AppBase:
                     else:
                         parse_string = inner_result
 
-            print("PARSE STRING: %s" % parse_string)
+            #print("PARSE STRING: %s" % parse_string)
             return parse_string, True
 
         # Looks for parantheses to grab special cases within a string, e.g:
@@ -1219,7 +1860,7 @@ class AppBase:
 
             if isinstance(data, str) and len(data) > 4:
                 if (data[0] == "{" or data[0] == "[") and (data[len(data)-1] == "]" or data[len(data)-1] == "}"):
-                    self.logger.info("Skipping parser because use of {[ and ]}")
+                    self.logger.info("[DEBUG] Skipping parser because use of {[ and ]}")
                     return data
 
             newdata = []
@@ -1305,6 +1946,7 @@ class AppBase:
                     #    value = value.replace(" ", "_", -1)
 
                     actualitem = re.findall(match, value, re.MULTILINE)
+                    # Goes here if loop 
                     if value == "#":
                         newvalue = []
                         for innervalue in basejson:
@@ -1323,18 +1965,24 @@ class AppBase:
                         # it as multi execution
                         return newvalue, True
 
+                    # Checks specific regex like #1-2 for index 1-2 in a loop
                     elif len(actualitem) > 0:
 
                         is_loop = True
                         newvalue = []
                         firstitem = actualitem[0][0]
                         seconditem = actualitem[0][1]
-                        print("[DEBUG] ACTUAL PARSED: %s" % actualitem)
+                        if isinstance(firstitem, int):
+                            firstitem = str(firstitem)
+                        if isinstance(seconditem, int):
+                            seconditem = str(seconditem)
+
+                        #print("[DEBUG] ACTUAL PARSED: %s" % actualitem)
 
                         # Means it's a single item -> continue
                         if seconditem == "":
                             print("[INFO] In first - handling %s. Len: %d" % (firstitem, len(basejson)))
-                            if firstitem.lower() == "max" or firstitem.lower() == "last": 
+                            if firstitem.lower() == "max" or firstitem.lower() == "last" or firstitem.lower() == "end": 
                                 firstitem = len(basejson)-1
                             elif firstitem.lower() == "min" or firstitem.lower() == "first": 
                                 firstitem = 0
@@ -1349,17 +1997,23 @@ class AppBase:
                                 newvalue, is_loop = (tmpitem, parsersplit[outercnt+1:])
                         else:
                             print("[INFO] In ELSE - handling %s and %s" % (firstitem, seconditem))
-                            if firstitem.lower() == "max" or firstitem.lower() == "last": 
-                                firstitem = len(basejson)-1
-                            elif firstitem.lower() == "min" or firstitem.lower() == "first": 
-                                firstitem = 0
+                            if isinstance(firstitem, str):
+                                if firstitem.lower() == "max" or firstitem.lower() == "last" or firstitem.lower() == "end": 
+                                    firstitem = len(basejson)-1
+                                elif firstitem.lower() == "min" or firstitem.lower() == "first": 
+                                    firstitem = 0
+                                else:
+                                    firstitem = int(firstitem)
                             else:
                                 firstitem = int(firstitem)
 
-                            if seconditem.lower() == "max" or seconditem.lower() == "last": 
-                                seconditem = len(basejson)-1
-                            elif seconditem.lower() == "min" or seconditem.lower() == "first": 
-                                seconditem = 0
+                            if isinstance(seconditem, str): 
+                                if seconditem.lower() == "max" or seconditem.lower() == "last" or firstitem.lower() == "end": 
+                                    seconditem = len(basejson)-1
+                                elif seconditem.lower() == "min" or seconditem.lower() == "first": 
+                                    seconditem = 0
+                                else:
+                                    seconditem = int(seconditem)
                             else:
                                 seconditem = int(seconditem)
 
@@ -1394,9 +2048,12 @@ class AppBase:
                                 return basejson, False
                             elif isinstance(basejson[value], str):
                                 try:
-                                    basejson = json.loads(basejson[value])
+                                    if (basejson[value].endswith("}") and basejson[value].endswith("}")) or (basejson[value].startswith("[") and basejson[value].endswith("]")):
+                                        basejson = json.loads(basejson[value])
+                                    else:
+                                        return str(basejson[value]), False
                                 except json.decoder.JSONDecodeError as e:
-                                    return basejson[value], False
+                                    return str(basejson[value]), False
                             else:
                                 basejson = basejson[value]
                         except KeyError as e:
@@ -1412,11 +2069,14 @@ class AppBase:
                             elif isinstance(basejson[value], str):
                                 print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
                                 try:
-                                    basejson = json.loads(basejson[value])
                                     print("[DEBUG] BASEJSON: %s" % basejson)
+                                    if (basejson[value].endswith("}") and basejson[value].endswith("}")) or (basejson[value].startswith("[") and basejson[value].endswith("]")):
+                                        basejson = json.loads(basejson[value])
+                                    else:
+                                        return str(basejson[value]), False
                                 except json.decoder.JSONDecodeError as e:
                                     print("[DEBUG] RETURNING BECAUSE '%s' IS A NORMAL STRING (1)" % basejson[value])
-                                    return basejson[value], False
+                                    return str(basejson[value]), False
                             else:
                                 basejson = basejson[value]
                             
@@ -1439,13 +2099,13 @@ class AppBase:
             actionname_lower = parsersplit[0][1:].lower()
 
             #Actionname: Start_node
-            print(f"\n[INFO] Actionname: {actionname_lower}")
+            #print(f"\n[INFO] Actionname: {actionname_lower}")
 
             # 1. Find the action
             baseresult = ""
 
             appendresult = "" 
-            print("[INFO] Parsersplit length: %d" % len(parsersplit))
+            #print("[INFO] Parsersplit length: %d" % len(parsersplit))
             if (actionname_lower.startswith("exec ") or actionname_lower.startswith("webhook ") or actionname_lower.startswith("schedule ") or actionname_lower.startswith("userinput ") or actionname_lower.startswith("email_trigger ") or actionname_lower.startswith("trigger ")) and len(parsersplit) == 1:
                 record = False
                 for char in actionname_lower:
@@ -1456,7 +2116,7 @@ class AppBase:
                         appendresult += char
 
                 actionname_lower = "exec"
-            elif actionname_lower.startswith("shuffle_cache "): 
+            elif actionname_lower.startswith("shuffle_cache ") or actionname_lower.startswith("shuffle_db "): 
                 actionname_lower = "shuffle_cache"
 
             actionname_lower = actionname_lower.replace(" ", "_", -1)
@@ -1488,7 +2148,6 @@ class AppBase:
                         print("[DEBUG] No results to get values from.")
                         baseresult = "$" + parsersplit[0][1:] 
                     
-                    print("[DEBUG] BEFORE VARIABLES!")
                     if len(baseresult) == 0:
                         try:
                             for variable in execution_data["workflow"]["workflow_variables"]:
@@ -1499,13 +2158,12 @@ class AppBase:
                                     break
 
                         except KeyError as e:
-                            print("[INFO] KeyError wf variables: %s" % e)
+                            #print("[INFO] KeyError wf variables: %s" % e)
                             pass
                         except TypeError as e:
-                            print("[INFO] TypeError wf variables: %s" % e)
+                            #print("[INFO] TypeError wf variables: %s" % e)
                             pass
         
-                    print("[DEBUG] BEFORE EXECUTION VAR")
                     if len(baseresult) == 0:
                         try:
                             for variable in execution_data["execution_variables"]:
@@ -1514,22 +2172,24 @@ class AppBase:
                                     baseresult = variable["value"]
                                     break
                         except KeyError as e:
-                            print("[INFO] KeyError exec variables: %s" % e)
+                            #print("[INFO] KeyError exec variables: %s" % e)
                             pass
                         except TypeError as e:
-                            print("[INFO] TypeError exec variables: %s" % e)
+                            #print("[INFO] TypeError exec variables: %s" % e)
                             pass
         
             except KeyError as error:
                 print(f"[DEBUG] KeyError in JSON: {error}")
         
-            print(f"[INFO] After first trycatch. Baseresult")#, baseresult)
+            #print(f"[INFO] After first trycatch. Baseresult")#, baseresult)
         
             # 2. Find the JSON data
+            # Returns if there isn't any JSON in the base ($nodename)
             if len(baseresult) == 0:
                 return ""+appendresult, False
         
-            print("[INFO] After second return")
+            #print("[INFO] After second return")
+            # Returns if the result is JUST something like $nodename, not $nodename.value
             if len(parsersplit) == 1:
                 returndata = str(baseresult)+str(appendresult)
                 print("[DEBUG] RETURNING!")#: %s" % returndata)
@@ -1538,7 +2198,8 @@ class AppBase:
             baseresult = baseresult.replace(" True,", " true,")
             baseresult = baseresult.replace(" False", " false,")
 
-            print("[INFO] After third parser return - Formatted")#, baseresult)
+            # Tries to actually read it as JSON with some stupid formatting
+            #print("[INFO] After third parser return - Formatted")#, baseresult)
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
@@ -1547,10 +2208,11 @@ class AppBase:
                     baseresult = baseresult.replace("\'", "\"")
                     basejson = json.loads(baseresult)
                 except json.decoder.JSONDecodeError as e:
-                    print("Parser issue with JSON: %s" % e)
+                    print(f"[ERROR] Parser issue with JSON for {baseresult}: {e}")
                     return str(baseresult)+str(appendresult), False
 
             print("[INFO] After fourth parser return as JSON")
+            # Finds the ACTUAL value which is in the $nodename.value.test - focusing on value.test
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
 
@@ -1561,7 +2223,6 @@ class AppBase:
                     print("[WARNING] Parseditem issue: %s" % e)
                     pass
 
-            print("[DEBUG] DATA: (%s) %s" % (type(data), data))
             if is_loop:
                 print("[DEBUG] DATA IS A LOOP - SHOULD WRAP")
                 if parsersplit[-1] == "#":
@@ -1573,25 +2234,35 @@ class AppBase:
                     parseditem = "${%s%s}$" % (parsersplit[-1], json.dumps(data))
 
 
-            print("[DEBUG] Before last return with %s" % appendresult)
             returndata = str(parseditem)+str(appendresult)
 
             # New in 0.8.97: Don't return items without lists
             #self.logger.info("RETURNDATA: %s" % returndata)
             #return returndata, is_loop
+
+            # 0.9.70:
+            # The {} and [] checks are required because e.g. 7e7 is valid JSON for some reason...
+            # This breaks EVERYTHING
             try:
-                return json.dumps(json.loads(returndata)), is_loop
+                if (returndata.endswith("}") and returndata.endswith("}")) or (returndata.startswith("[") and returndata.endswith("]")):
+                    return json.dumps(json.loads(returndata)), is_loop
+                else:
+                    return returndata, is_loop
             except json.decoder.JSONDecodeError as e:
-                print("Error in decoder: %s" % e)
                 return returndata, is_loop
 
         # Sending self as it's not a normal function
         def parse_liquid(template, self):
-
-            #self.logger.info("Inside liquid with glob: %s" % globals())
+            
+            errors = False
+            error_msg = ""
             try:
-                if len(template) > 5000000:
+                if len(template) > 10000000:
                     self.logger.info("[DEBUG] Skipping liquid - size too big (%d)" % len(template))
+                    return template
+
+                if "${" in template and "}$" in template:
+                    self.logger.info("[DEBUG] Shuffle loop shouldn't run in liquid. Data length: %d" % len(template))
                     return template
 
                 #if not "{{" in template or not "}}" in template: 
@@ -1603,27 +2274,175 @@ class AppBase:
                 #    return template
 
                 #self.logger.info(globals())
-                self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
-                run = Liquid(template, mode="wild", from_file=False)
+                #if len(template) > 100:
+                #    self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
+                #self.logger.info(f"[DEBUG] Data: {template}")
+                run = Liquid(template, mode="wild", from_file=False, filters=shuffle_filters.filters)
 
                 # Can't handle self yet (?)
                 ret = run.render(**globals())
                 return ret
-                #try:
-                    #run = Liquid(template)
-                    #return ret
-                #except liquid.exceptions.LiquidSyntaxError as  e:
-                #    run = Liquid(template, {'mode': 'python'})
-                #    ret = run.render(**globals())
-                #    return ret
-                #except liquid.exceptions.LiquidRenderError as e:
-                #    self.logger.info("Render error: %s" % e)
             except jinja2.exceptions.TemplateNotFound as e:
-                self.logger.info("[ERROR] Template error: %s" % e)
+                self.logger.info(f"[ERROR] Liquid Template error: {e}")
+                error = True
+                error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_template_error",
+                    "value": f"There was a Liquid input error (1). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+            except SyntaxError as e:
+                self.logger.info(f"[ERROR] Liquid Syntax error: {e}")
+                error = True
+                error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_python_syntax_error",
+                    "value": f"There was a syntax error in your Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+            except IndentationError as e:
+                self.logger.info(f"[ERROR] Liquid IndentationError: {e}")
+                error = True
+                error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_indentiation_error",
+                    "value": f"There was an indentation error in your Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
             except jinja2.exceptions.TemplateSyntaxError as e:
-                self.logger.info("[ERROR] Syntax error: %s" % e)
-            except:
-                self.logger.info("[ERROR] General exception for liquid")
+                self.logger.info(f"[ERROR] Liquid Syntax error: {e}")
+                error = True
+                error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_syntax_error",
+                    "value": f"There was a syntax error in your Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+            except json.decoder.JSONDecodeError as e:
+                self.logger.info(f"[ERROR] Liquid JSON Syntax error: {e}")
+                
+                replace = False
+                skip_next = False
+                newlines = []
+                thisline = []
+                for line in template.split("\n"):
+                    #print("LINE: %s" % repr(line))
+                    if "\"\"\"" in line or "\'\'\'" in line:
+                        if replace:
+                            skip_next = True
+                        else:
+                            replace = not replace 
+
+                    if replace == True:
+                        thisline.append(line)
+                        if skip_next == True:
+                            if len(thisline) > 0:
+                                #print(thisline)
+                                newlines.append(" ".join(thisline))
+                                thisline = []
+
+                            replace = False
+                    else:
+                        newlines.append(line)
+
+                new_template = "\n".join(newlines)
+                if new_template != template:
+                    #check_template(new_template)
+                    return parse_liquid(new_template, self)
+                else:
+                    error = True
+                    error_msg = e
+
+                    self.action["parameters"].append({
+                        "name": "liquid_json_error",
+                        "value": f"There was a syntax error in your input JSON(2). This is typically an issue with escaping newlines. Details: {e}",
+                    })
+
+                    self.action_result["action"] = self.action
+            except TypeError as e:
+                try:
+                    if "string as left operand" in f"{e}":
+                        #print(f"HANDLE REPLACE: {template}")
+                        split_left = template.split("|")
+                        if len(split_left) < 2:
+                            return template
+
+                        splititem = split_left[0]
+                        additem = "{{"
+                        if "{{" in splititem:
+                            splititem = splititem.replace("{{", "", -1)
+
+                        if "{%" in splititem:
+                            splititem = splititem.replace("{%", "", -1)
+                            additem = "{%"
+
+                        splititem = "%s \"%s\"" % (additem, splititem.strip())
+                        parsed_template = template.replace(split_left[0], splititem)
+                        run = Liquid(parsed_template, mode="wild", from_file=False)
+                        return run.render(**globals())
+
+                except Exception as e:
+                    print(f"SubError in Liquid: {e}")
+
+                    self.action["parameters"].append({
+                        "name": "liquid_general_error",
+                        "value": f"There was general error Liquid input (2). Details: {e}",
+                    })
+
+                    self.action_result["action"] = self.action
+                    #return template
+
+                self.logger.info(f"[ERROR] Liquid TypeError error: {e}")
+                error = True
+                error_msg = e
+
+            except Exception as e:
+                self.logger.info(f"[ERROR] General exception for liquid: {e}")
+                error = True
+                error_msg = e
+
+                self.action["parameters"].append({
+                    "name": "liquid_general_exception",
+                    "value": f"There was general exception Liquid input (2). Details: {e}",
+                })
+
+                self.action_result["action"] = self.action
+
+            if "fmt" in error_msg and "liquid_date" in error_msg:
+                return template
+
+            self.logger.info("Done in liquid")
+            if error == True:
+                self.action_result["status"] = "FAILURE" 
+                data = {
+                    "success": False,
+                    "reason": f"Failed to parse LiquidPy: {error_msg}",
+                    "input": template,
+                }
+
+                try:
+                    self.action_result["result"] = json.dumps(data)
+                except Exception as e:
+                    self.action_result["result"] = f"Failed to parse LiquidPy: {error_msg}"
+                    print("[WARNING] Failed to set LiquidPy result")
+
+                self.action_result["completed_at"] = int(time.time())
+                self.send_result(self.action_result, headers, stream_path)
+
+                self.logger.info(f"[ERROR] Sent FAILURE response to backend due to : {e}")
+        
+                if runtime == "run":
+                    return template
+                else:
+                    os.exit()
 
             return template
 
@@ -1663,9 +2482,11 @@ class AppBase:
                         newvalue[key] = recurse_cleanup_script(value)
         
             except json.decoder.JSONDecodeError as e:
-                print(f"[WARNING] Failed JSON replacement for OpenAPI keys (3) {e}")
+                # Since here the data isn't at all JSON compatible..?
+                # Seems to happen with newlines in variables being parsed in as strings?
+                print(f"[ERROR] Failed JSON replacement for OpenAPI keys (3) {e}. Value: {data}")
             except Exception as e:
-                print(f"[WARNING] Failed as an exception (1): {e}") 
+                print(f"[ERROR] Failed as an exception (1): {e}") 
                 
             try:
                 for deletekey in deletekeys:
@@ -1716,7 +2537,8 @@ class AppBase:
             #match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})[$/, ]?"
             #match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})"
 
-            match = ".*?([$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})" # Removed space - no longer ok. Force underscore.
+            #match = ".*?([$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})" # Removed space - no longer ok. Force underscore.
+            match = "([$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})" # Removed .*? to make it work with large amounts of data
 
             # Extra replacements for certain scenarios
             escaped_dollar = "\\$"
@@ -1729,16 +2551,31 @@ class AppBase:
             except:
                 self.logger.info("Error in initial replacement of escaped dollar!")
 
-            #self.logger.info("POST input value: %s" % parameter["value"])
+            paramname = ""
+            try:
+                paramname = parameter["name"]
+            except:
+                pass
+
+            # Basic fix in case variant isn't set
+            # Variant is ALWAYS STATIC_VALUE from mid 2021~ 
+            try:
+                #self.logger.info(f"[DEBUG] Parameter '{paramname}' of length {len(parameter['value'])}")
+                parameter["variant"] = parameter["variant"]
+            except:
+                parameter["variant"] = "STATIC_VALUE"
 
             # Regex to find all the things
+            # Should just go in here if data is ... not so big
+            #if parameter["variant"] == "STATIC_VALUE" and len(parameter["value"]) < 1000000:
+            #if parameter["variant"] == "STATIC_VALUE" and len(parameter["value"]) < 5000000:
             if parameter["variant"] == "STATIC_VALUE":
                 data = parameter["value"]
                 actualitem = re.findall(match, data, re.MULTILINE)
                 #self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
+                #self.logger.info("[INFO] Done with regex matching")
                 if len(actualitem) > 0:
-                    #self.logger.info("[DEACTUAL: ", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
@@ -1750,8 +2587,7 @@ class AppBase:
                         # Trying without string dumping.
 
                         value, is_loop = get_json_value(fullexecution, to_be_replaced) 
-                        #self.logger.info("\n\nType of value: %s. Value: %s" % (type(value), value))
-                        self.logger.info("\n\nType of value: %s" % type(value))
+                        #self.logger.info(f"\n\nType of value: {type(value)}")
                         if isinstance(value, str):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict) or isinstance(value, list):
@@ -1765,13 +2601,15 @@ class AppBase:
                             #    parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
                             #    self.logger.info("Failed parsing value as string?")
                         else:
-                            self.logger.info("Unknown type %s" % type(value))
+                            self.logger.info("[WARNING] Unknown type %s" % type(value))
                             try:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
                             except json.decoder.JSONDecodeError as e:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, value)
 
                         #self.logger.info("VALUE: %s" % parameter["value"])
+            else:
+                self.logger.info(f"[ERROR] Not running static variant regex parsing (slow) on value with length {len(parameter['value'])}. Max is 5Mb~.")
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
                 self.logger.info("[DEBUG] Handling workflow variable")
@@ -1857,7 +2695,7 @@ class AppBase:
                 parameter["value"] = parameter["value"].replace(end_variable, "", -1)
                 parameter["value"] = parameter["value"].replace(escape_replacement, "$", -1)
             except:
-                self.logger.info("Error in datareplacement")
+                self.logger.info(f"[ERROR] Problem in datareplacement: {e}")
 
             # Just here in case it breaks 
             # Implemented 02.08.2021
@@ -1867,9 +2705,6 @@ class AppBase:
             except:
                 pass
 
-            #self.logger.info("Replaced data: %s" % parameter["value"])
-
-            #self.logger.info("POST liquid: %s" % parameter["value"])
             return "", parameter["value"], is_loop
 
         def run_validation(sourcevalue, check, destinationvalue):
@@ -1899,19 +2734,6 @@ class AppBase:
                     return True
 
                 return False
-                #if tmp == "[]":
-                #    tmp = []
-
-                #if type(tmp) == list and len(tmp) == 0 and not flip:
-                #    new_list.append(item)
-                #elif type(tmp) == list and len(tmp) > 0 and flip:
-                #    new_list.append(item)
-                #elif type(tmp) == str and not tmp and not flip:
-                #    new_list.append(item)
-                #elif type(tmp) == str and tmp and flip:
-                #    new_list.append(item)
-                #else:
-                #    failed_list.append(item)
 
             elif check.lower() == "contains_any_of":
                 newvalue = [destinationvalue.lower()]
@@ -1960,7 +2782,7 @@ class AppBase:
                 return True
             else:
                 print("[DEBUG] Condition: can't handle %s yet. Setting to true" % check)
-                    
+
             return False
 
         def check_branch_conditions(action, fullexecution, self):
@@ -1971,65 +2793,92 @@ class AppBase:
             except KeyError:
                 return True, ""
 
+            # Startnode should always run - no need to check incoming
+            try:
+                if action["id"] == fullexecution["start"]:
+                    return True, ""
+            except Exception as error:
+                self.logger.info(f"[WARNING] Failed checking startnode: {error}")
+                return True, ""
+
+            available_checks = [
+                "=",
+                "equals",
+                "!=",
+                "does not equal",
+                ">",
+                "larger than",
+                "<",
+                "less than",
+                ">=",
+                "<=",
+                "startswith",
+                "endswith",
+                "contains",
+                "contains_any_of",
+                "re",
+                "matches regex",
+            ]
+
             relevantbranches = []
+            correct_branches = 0
+            matching_branches = 0
             for branch in fullexecution["workflow"]["branches"]:
                 if branch["destination_id"] != action["id"]:
                     continue
 
+                matching_branches += 1
+
+                # Find if previous is skipped or failed. Skipped != correct branch
+                try:
+                    should_skip = False
+                    for res in fullexecution["results"]:
+                        if res["action"]["id"] == branch["source_id"]:
+                            if res["status"] == "FAILURE" or res["status"] == "SKIPPED":
+                                should_skip = True 
+
+                            break
+
+                    if should_skip:
+                        continue
+                except Exception as e:
+                    self.logger.info("[WARNING] Failed handling check of if parent is skipped") 
+
+
                 # Remove anything without a condition
                 try:
                     if (branch["conditions"]) == 0 or branch["conditions"] == None:
+                        correct_branches += 1
                         continue
                 except KeyError:
+                    correct_branches += 1
                     continue
 
-                self.logger.info("Relevant conditions: %s" % branch["conditions"])
                 successful_conditions = []
                 failed_conditions = []
+                successful_conditions = 0
+                total_conditions = len(branch["conditions"])
                 for condition in branch["conditions"]:
-                    self.logger.info("Getting condition value of %s" % condition)
+                    self.logger.info("[DEBUG] Getting condition value of %s" % condition)
 
                     # Parse all values first here
                     sourcevalue = condition["source"]["value"]
                     check, sourcevalue, is_loop = parse_params(action, fullexecution, condition["source"], self)
                     if check:
-                        return False, {"success": False, "reason": "Failed condition (1): %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
+                        continue
 
-                    #sourcevalue = sourcevalue.encode("utf-8")
                     sourcevalue = parse_wrapper_start(sourcevalue, self)
                     destinationvalue = condition["destination"]["value"]
 
                     check, destinationvalue, is_loop = parse_params(action, fullexecution, condition["destination"], self)
                     if check:
-                        return False, {"success": False, "reason": "Failed condition (2): %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
+                        continue
 
-                    #destinationvalue = destinationvalue.encode("utf-8")
                     destinationvalue = parse_wrapper_start(destinationvalue, self)
-                    available_checks = [
-                        "=",
-                        "equals",
-                        "!=",
-                        "does not equal",
-                        ">",
-                        "larger than",
-                        "<",
-                        "less than",
-                        ">=",
-                        "<=",
-                        "startswith",
-                        "endswith",
-                        "contains",
-                        "contains_any_of",
-                        "re",
-                        "matches regex",
-                    ]
 
                     if not condition["condition"]["value"] in available_checks:
                         self.logger.warning("Skipping %s %s %s because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
                         continue
-
-                    #self.logger.info(destinationvalue)
-                    # NEGATE 
 
                     # Configuration = negated because of WorkflowAppActionParam..
                     validation = run_validation(sourcevalue, condition["condition"]["value"], destinationvalue)
@@ -2039,42 +2888,63 @@ class AppBase:
                     except KeyError:
                         pass
 
-                    if not validation:
-                        self.logger.info("Failed condition check for %s %s %s." % (sourcevalue, condition["condition"]["value"], destinationvalue))
-                        return False, {"success": False, "reason": "Failed condition (3): %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)}
+                    if validation == True:
+                        successful_conditions += 1
 
-
-                # Make a general parser here, at least to get param["name"] = param["value"] in maparameter[string]string
-                #for condition in branch.conditons:
+                if total_conditions == successful_conditions:
+                    correct_branches += 1
     
-            return True, ""
+            if matching_branches == 0:
+                return True, ""
+
+            if matching_branches > 0 and correct_branches > 0:
+                return True, ""
+
+            self.logger.info("[DEBUG] Correct branches vs matching branches: %d vs %d" % (correct_branches, matching_branches))
+            return False, {"success": False, "reason": "Minimum of one branch's conditions must be correct to continue. Total: %d of %d" % (correct_branches, matching_branches)}
 
 
+        #
+        #
+        #
+        #
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        #
+        #
+        #
+        #
 
         # THE START IS ACTUALLY RIGHT HERE :O
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution, self)
-        if isinstance(tmpresult, object) or isinstance(tmpresult, list):
-            self.logger.info("[DEBUG] Fixing branch return as object -> string")
+        if isinstance(tmpresult, object) or isinstance(tmpresult, list) or isinstance(tmpresult, dict):
+            #self.logger.info("[DEBUG] Fixing branch return as object -> string")
             try:
                 #tmpresult = tmpresult.replace("'", "\"")
                 tmpresult = json.dumps(tmpresult) 
             except json.decoder.JSONDecodeError as e:
                 self.logger.info(f"[WARNING] Failed condition parsing {tmpresult} to string")
 
+        # IF branches fail: Exit!
         if not branchcheck:
             self.logger.info("Failed one or more branch conditions.")
             self.action_result["result"] = tmpresult
             self.action_result["status"] = "SKIPPED"
-            try:
-                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=self.action_result)
-                self.logger.info("Result: %d" % ret.status_code)
-                if ret.status_code != 200:
-                    self.logger.info(ret.text)
-            except requests.exceptions.ConnectionError as e:
-                self.logger.exception(e)
+            self.action_result["completed_at"] = int(time.time())
 
-            self.logger.info("\n\n[DEBUG] RETURNING BECAUSE A BRANCH FAILED: %s\n\n" % tmpresult)
+            self.send_result(self.action_result, headers, stream_path)
             return
 
         # Replace name cus there might be issues
@@ -2083,7 +2953,8 @@ class AppBase:
         if " " in actionname:
             actionname.replace(" ", "_", -1) 
 
-
+        #print("ACTION: ", action)
+        #print("exec: ", self.full_execution)
         #if action.generated:
         #    actionname = actionname.lower()
 
@@ -2091,13 +2962,18 @@ class AppBase:
         try:
             func = getattr(self, actionname, None)
             if func == None:
-                self.logger.debug(f"Failed executing {actionname} because func is None.")
+                self.logger.debug(f"[DEBUG] Failed executing {actionname} because func is None (no function specified).")
                 self.action_result["status"] = "FAILURE" 
-                self.action_result["result"] = "Function %s doesn't exist." % actionname
+                self.action_result["result"] = json.dumps({
+                    "success": False,
+                    "reason": f"Function {actionname} doesn't exist, or the App is out of date.",
+                    "details": "If this persists, please restart delete the Docker image locally, restart your Orborus instance and then try again to force-download the latest version. Contact support@shuffler.io with this data if the issue persists.",
+                })
             elif callable(func):
                 try:
                     if len(action["parameters"]) < 1:
-                        result = await func()
+                        #result = await func()
+                        result = func()
                     else:
                         # Potentially parse JSON here
                         # FIXME - add potential authentication as first parameter(s) here
@@ -2106,14 +2982,14 @@ class AppBase:
                         # What variables are necessary here tho hmm
 
                         params = {}
-                        try:
-                            for item in action["authentication"]:
-                                #self.logger.info("AUTH: ", key, value)
-                                params[item["key"]] = item["value"]
-                        except KeyError:
-                            self.logger.info("[DEBUG] No authentication specified!")
-                            pass
-                                #action["authentication"] 
+                        # This replacement should happen in backend as part of params
+                        # error log is useless
+                        #try:
+                        #    for item in action["authentication"]:
+                        #        self.logger.info("AUTH PARAM: ", key, value)
+                        #        #params[item["key"]] = item["value"]
+                        #except KeyError as e:
+                        #    self.logger.info(f"[WARNING] No authentication specified! Is this correct? err: {e}")
 
                         # Fixes OpenAPI body parameters for later.
                         newparams = []
@@ -2143,6 +3019,8 @@ class AppBase:
                             if parameter["name"] == "body": 
                                 bodyindex = counter
                                 #self.logger.info("PARAM: %s" % parameter)
+
+                                # FIXMe: This should also happen after liquid & param parsing..
                                 try:
                                     values = parameter["value_replace"]
                                     if values != None:
@@ -2150,16 +3028,24 @@ class AppBase:
                                         for val in values:
                                             replace_value = val["value"]
                                             replace_key = val["key"]
+
                                             if (val["value"].startswith("{") and val["value"].endswith("}")) or (val["value"].startswith("[") and val["value"].endswith("]")):
                                                 self.logger.info(f"""Trying to parse as JSON: {val["value"]}""")
                                                 try:
-                                                    value_replace = json.loads(val["value"])
-                                                    # If it gets here, remove the "" infront and behind the key as well since this is preventing the JSON from being loaded
+                                                    newval = val["value"]
+
+                                                    # If it gets here, remove the "" infront and behind the key as well 
+                                                    # since this is preventing the JSON from being loaded
+                                                    tmpvalue = json.loads(newval)
                                                     replace_key = f"\"{replace_key}\""
                                                 except json.decoder.JSONDecodeError as e:
-                                                    self.logger.info("Failed JSON replacement for OpenAPI %s", val["key"])
+                                                    self.logger.info("[WARNING] Failed JSON replacement for OpenAPI %s", val["key"])
+
                                             elif val["value"].lower() == "true" or val["value"].lower() == "false":
                                                 replace_key = f"\"{replace_key}\""
+                                            else:
+                                                if "\"" in replace_value and not "\\\"" in replace_value:
+                                                    replace_value = replace_value.replace("\"", "\\\"", -1)
 
                                             action["parameters"][counter]["value"] = action["parameters"][counter]["value"].replace(replace_key, replace_value, 1)
 
@@ -2174,13 +3060,12 @@ class AppBase:
                                     pass
 
                                  
-                                self.logger.info(f"""HANDLING {action["parameters"][counter]["value"]}""")
+                                self.logger.info(f"""HANDLING BODY: {action["parameters"][counter]["value"]}""")
                                 action["parameters"][counter]["value"] = recurse_cleanup_script(action["parameters"][counter]["value"])
 
                         #self.logger.info(action["parameters"])
 
                         # This seems redundant now 
-                        self.logger.info("[DEBUG] Pre parameters")
                         for parameter in newparams:
                             action["parameters"].append(parameter)
 
@@ -2202,7 +3087,6 @@ class AppBase:
 
                         # Multi_parameter has the data for each. variable
                         minlength = 0
-                        self.logger.info("[DEBUG] Pre-loading parameters")
                         multi_parameters = json.loads(json.dumps(params))
                         multiexecution = False
                         multi_execution_lists = []
@@ -2210,7 +3094,14 @@ class AppBase:
                         for parameter in action["parameters"]:
                             check, value, is_loop = parse_params(action, fullexecution, parameter, self)
                             if check:
-                                raise "Value check error: %s" % Exception(check)
+                                raise Exception(json.dumps({
+                                    "success": False,
+                                    "reason": "Parameter {parameter} has an issue",
+                                    "exception": f"Value Error: {check}",
+                                }))
+
+                            if parameter["name"] == "body": 
+                                self.logger.info(f"[INFO] Should debug field with liquid and other checks as it's BODY: {value}")
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
@@ -2280,6 +3171,11 @@ class AppBase:
                                             newvalue = tmpitem.replace(str(actualitem[index][0]), str(json_replacement[i]), 1)
 
                                         try:
+                                            newvalue = parse_liquid(newvalue, self)
+                                        except Exception as e:
+                                            self.logger.info(f"[WARNING] Failed liquid parsing in loop (2): {e}")
+
+                                        try:
                                             newvalue = json.loads(newvalue)
                                         except json.decoder.JSONDecodeError as e:
                                             self.logger.info("DECODER ERROR: %s" % e)
@@ -2289,7 +3185,7 @@ class AppBase:
 
                                     self.logger.info("New replacement: %s" % new_replacement)
 
-                                    # New
+                                    # FIXME: Should this use new_replacement?
                                     tmpitem = tmpitem.replace(actualitem[index][0], replacement, 1)
 
                                     # This code handles files.
@@ -2383,7 +3279,13 @@ class AppBase:
                                     for i in range(0, curminlength): 
                                         tmpitem = json.loads(json.dumps(parameter["value"]))
                                         for key, value in replacements.items():
-                                            replacement = json.dumps(json.loads(value)[i])
+                                            replacement = value
+                                            try:
+                                                replacement = json.dumps(json.loads(value)[i])
+                                            except IndexError as e:
+                                                self.logger.info(f"[ERROR] Failed handling value parsing with index: {e}")
+                                                pass
+
                                             if replacement.startswith("\"") and replacement.endswith("\""):
                                                 replacement = replacement[1:len(replacement)-1]
                                             #except json.decoder.JSONDecodeError as e:
@@ -2391,6 +3293,10 @@ class AppBase:
                                             #self.logger.info("REPLACING %s with %s" % (key, replacement))
                                             #replacement = parse_wrapper_start(replacement)
                                             tmpitem = tmpitem.replace(key, replacement, -1)
+                                            try:
+                                                tmpitem = parse_liquid(tmpitem, self)
+                                            except Exception as e:
+                                                self.logger.info(f"[WARNING] Failed liquid parsing in loop (2): {e}")
 
 
                                         # This code handles files.
@@ -2434,13 +3340,17 @@ class AppBase:
                                     multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
-                                self.logger.info("[DEBUG] Normal parsing (not looping)")#with data %s" % value)
+                                #self.logger.info("[DEBUG] Normal parsing (not looping)")#with data %s" % value)
                                 # This part has fucked over so many random JSON usages because of weird paranthesis parsing
 
                                 value = parse_wrapper_start(value, self)
-                                self.logger.info("[DEBUG] Post return: %s" % value)
 
-                                #self.logger.info("POST data value: %s" % value)
+                                try:
+                                    if str(value).startswith("b'") and str(value).endswith("'"):
+                                        value = value[2:-1]
+                                except Exception as e:
+                                    print(f"Value rawbytes Exception: {e}")
+
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
 
@@ -2522,37 +3432,195 @@ class AppBase:
                                 self.send_result(self.action_result, headers, stream_path)
                                 return
 
-                            self.logger.info("[INFO] Running normal execution (not loop)\n") 
+                            self.logger.info("[INFO] Running normal execution (not loop)\n\n") 
 
-                            #newres = await func(**params)
-                            #self.logger.info("PARAMS: %s" % params)
+                            # Added literal evaluation of anything resembling a string
+                            # The goal is to parse objects that e.g. use single quotes and the like
+                            # FIXME: add this to Multi exec as well.
+                            try:
+                                for key, value in params.items():
+                                    if "-" in key:
+                                        try:
+                                            newkey = key.replace("-", "_", -1).lower()
+                                            params[newkey] = params[key]
+                                        except Exception as e:
+                                            self.logger.info("[DEBUG] Failed updating key with dash in it: %s" % e)
+
+                                    try:
+                                        if isinstance(value, str) and ((value.startswith("{") and value.endswith("}")) or (value.startswith("[") and value.endswith("]"))):
+                                            params[key] = json.loads(value)
+                                    except Exception as e:
+                                        try:
+                                            if isinstance(value, str) and ((value.startswith("{") and value.endswith("}")) or (value.startswith("[") and value.endswith("]"))):
+                                                params[key] = ast.literal_eval(value)
+                                        except Exception as e:
+                                            self.logger.info(f"[DEBUG] Failed parsing value with ast and json.loads - noncritical. Trying next: {e}")
+                                            continue
+                            except Exception as e:
+                                self.logger.info("[DEBUG] Failed looping objects. Non critical: {e}")
+
+                            # Uncomment below to get the param input
+                            # self.logger.info(f"[DEBUG] PARAMS: {params}")
+
                             #newres = ""
+                            iteration_count = 0
+                            found_error = ""
                             while True:
-                                try:
-                                    newres = await func(**params)
+                                iteration_count += 1
+                                if iteration_count >= 10:
+                                    newres = {
+                                        "success": False,
+                                        "reason": "Iteration count more than 10. This happens if the input to the action is wrong. Try remaking the action, and contact support@shuffler.io if this persists.", 
+                                        "details": found_error,
+                                    }
                                     break
+
+                                try:
+                                    #try:
+                                    # Individual functions shouldn't take longer than this
+                                    # This is an attempt to make timeouts occur less, incentivizing users to make use efficient API's
+                                    # PS: Not implemented for lists - only single actions as of May 2023
+                                    timeout = 30 
+
+                                    # Check if current app is Shuffle Tools, then set to 55 due to certain actions being slow (ioc parser..) 
+                                    #uu In general, this should be disabled for onprem 
+                                    if self.action["app_name"].lower() == "shuffle tools":
+                                        timeout = 55
+
+                                    timeout = 30 
+
+                                    try:
+                                        executor = concurrent.futures.ThreadPoolExecutor()
+                                        future = executor.submit(func, **params)
+                                        newres = future.result(timeout)
+
+                                        if not future.done():
+                                            # The future is still running, so we need to cancel it
+                                            future.cancel()
+                                            newres = json.dumps({
+                                                "success": False,
+                                                "reason": "Timeout error within %d seconds. This happens if we can't reach or use the API you're trying to use within the time limit." % timeout,
+                                                "exception": str(e),
+                                            })
+
+                                        else:
+                                            # The future is done, so we can just get the result from newres :)
+                                            #newres = future.result()
+                                            #print("Future is done!")
+                                            pass
+
+                                    except concurrent.futures.TimeoutError as e:
+                                        newres = json.dumps({
+                                            "success": False,
+                                            "reason": "Timeout error within %d seconds (2). This happens if we can't reach or use the API you're trying to use within the time limit" % timeout
+                                        })
+
+                                    break
+
+
+
+                                    #thread = threading.Thread(target=func, args=(**params,))
+                                    #thread.start()
+
+                                    #thread.join(timeout)
+
+                                    #if thread.is_alive():
+                                    #    # The thread is still running, so we need to stop it
+                                    #    # You can handle this as needed, such as raising an exception
+                                    #    timeout_handler()
+
+
+                                    #with Timeout(timeout):
+                                    #    newres = func(**params)
+                                    #    break
+                                    #except Timeout.Timeout as e:
+                                    #    self.logger.info(f"[DEBUG] Timeout error: {e}")
+                                    #    newres = json.dumps({
+                                    #        "success": False,
+                                    #        "reason": "Timeout error within %d seconds. This typically happens if we can't reach the API you're trying to reach." % timeout,
+                                    #        "exception": str(e),
+                                    #    })
+
+                                    #    break
+
                                 except TypeError as e:
                                     newres = ""
-                                    self.logger.info(f"[DEBUG] Got exec error: {errorstring}")
+                                    self.logger.info(f"[DEBUG] Got exec type error: {e}")
+                                    try:
+                                        e = json.loads(f"{e}")
+                                    except:
+                                        e = f"{e}"
+
+                                    found_error = e 
                                     errorstring = f"{e}"
-                                    if "got an unexpected keyword argument" in errorstring:
+
+                                    if "the JSON object must be" in errorstring:
+                                        self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (0)? the JSON object must be in...")
+                                        try:
+                                            e = json.loads(f"{e}")
+                                        except:
+                                            e = f"{e}"
+
+                                        newres = json.dumps({
+                                            "success": False,
+                                            "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@shuffler.io)",
+                                            "exception": e,
+                                        })
+                                        break
+                                    elif "got an unexpected keyword argument" in errorstring:
                                         fieldsplit = errorstring.split("'")
                                         if len(fieldsplit) > 1:
                                             field = fieldsplit[1]
                             
                                             try:
                                                 del params[field]
-                                                self.logger.info("[WARNING] Removed field invalid field %s" % field)
+                                                self.logger.info("[WARNING] Removed invalid field %s (2)" % field)
                                             except KeyError:
                                                 break
                                     else:
-                                        raise e
-                                        #break
+                                        newres = json.dumps({
+                                            "success": False,
+                                            "reason": "You may be running an old version of this action. Try remaking the node, then contact us at support@shuffler.io if it doesn't work with all these details.",
+                                            "exception": f"TypeError: {e}",
+                                        })
+                                        break
+                                except Exception as e:
+                                    self.logger.info(f"[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (1)? err: {e}")
 
-                            self.logger.info("\n[INFO] Returned from execution with types %s" % type(newres))
+                                    try:
+                                        e = json.loads(f"{e}")
+                                    except:
+                                        e = f"{e}"
+
+                                    newres = json.dumps({
+                                        "success": False,
+                                        "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@shuffler.io)",
+                                        "exception": e,
+                                    })
+                                    break
+
+                            # Forcing async wait in case of old apps that use async (backwards compatibility)
+                            try:
+                                if asyncio.iscoroutine(newres):
+                                    self.logger.info("[DEBUG] In coroutine (1)")
+                                    async def parse_value(newres):
+                                        value = await asyncio.gather(
+                                            newres 
+                                        )
+
+                                        return value[0]
+
+                                    newres = asyncio.run(parse_value(newres))
+                                else:
+                                    #self.logger.info("[DEBUG] Not in coroutine (1)")
+                                    pass
+                            except Exception as e:
+                                self.logger.warning("[ERROR] Failed to parse coroutine value for old app: {e}")
+
+                            self.logger.info("\n\n\n[INFO] Returned from execution with type(s) %s" % type(newres))
                             #self.logger.info("\n[INFO] Returned from execution with %s of types %s" % (newres, type(newres)))#, newres)
                             if isinstance(newres, tuple):
-                                self.logger.info("[INFO] Handling return as tuple")
+                                self.logger.info(f"[INFO] Handling return as tuple: {newres}")
                                 # Handles files.
                                 filedata = ""
                                 file_ids = []
@@ -2570,6 +3638,7 @@ class AppBase:
                                     self.logger.info("[INFO] NO FILES TO HANDLE")
 
                                 tmp_result = {
+                                    "success": True,
                                     "result": newres[0], 
                                     "file_ids": file_ids
                                 }
@@ -2582,13 +3651,15 @@ class AppBase:
                                 try:
                                     result += json.dumps(newres, indent=4)
                                 except json.JSONDecodeError as e:
-                                    self.logger.info("Failed decoding result: %s" % e)
-
+                                    self.logger.info("[WARNING] Failed decoding result: %s" % e)
                                     try:
                                         result += str(newres)
                                     except ValueError:
                                         result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                         self.logger.info("Can't handle type %s value from function" % (type(newres)))
+                                except Exception as e:
+                                    self.logger.info("[ERROR] Failed to json dump. Returning as string.")
+                                    result += str(newres)
                             else:
                                 try:
                                     result += str(newres)
@@ -2596,7 +3667,7 @@ class AppBase:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     self.logger.info("Can't handle type %s value from function" % (type(newres)))
 
-                            self.logger.info("[INFO] POST NEWRES RESULT!")#, result)
+                            #self.logger.info("[INFO] POST NEWRES RESULT!")#, result)
                         else:
                             #self.logger.info("[INFO] APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
                             # 1. Use number of executions based on the arrays being similar
@@ -2604,119 +3675,15 @@ class AppBase:
 
                             self.logger.info("[INFO] Running WITHOUT outer loop (looping)")
                             json_object = False
-                            results = await self.run_recursed_items(func, multi_parameters, {})
+                            #results = await self.run_recursed_items(func, multi_parameters, {})
+                            results = self.run_recursed_items(func, multi_parameters, {})
                             if isinstance(results, dict) or isinstance(results, list):
                                 json_object = True
-
-                            #for i in range(0, minlength):
-                            #    # To be able to use the results as a list:
-                            #    self.logger.info("1: %s" % multi_parameters)
-                            #    #baseparams = json.loads(json.dumps(multi_parameters))
-                            #    baseparams = copy.deepcopy(multi_parameters)
-
-                            #    self.logger.info("2: %s: %s" % (type(baseparams), baseparams))
-
-                            #    self.logger.info("4")
-                            #    self.logger.info("Running with params (1): %s" % baseparams) 
-
-                            #    results = await self.run_recursed_items(func, baseparams, {})
-                            #    if isinstance(results, dict) or isinstance(results, list):
-                            #        json_object = True
-
-                                # {'call': ['GoogleSafebrowsing_2_0', 'VirusTotal_GetReport_3_0']}
-                                # 1. Check if list length is same as minlength
-                                # 2. If NOT same length, duplicate based on length of array
-                                # arraylength = 3 ["1", "2", "3"]
-                                # arraylength = 4 ["1", "2", "3", "4"]
-                                # minlength = 12 - 12/3 = 4 per item = ["1", "1", "1", "1", "2", "2", ...]
-
-                                #try:
-                                #    firstlist = True
-                                #    for key, value in baseparams.items():
-                                #        self.logger.info("Itemtype: %s" % type(value))
-                                #        if isinstance(value, list):
-                                #            try:
-                                #                newvalue = value[i]
-                                #            except IndexError:
-                                #                pass
-
-                                #            if len(value) != minlength and len(value) > 0:
-                                #                newarray = []
-                                #                self.logger.info("VALUE: ", value)
-                                #                additiontime = minlength/len(value)
-                                #                self.logger.info("Bad length for value: %d - should be %d. Additiontime: %d" % (len(value), minlength, additiontime))
-                                #                if firstlist:
-                                #                    self.logger.info("Running normal list (FIRST)")
-                                #                    for subvalue in value:
-                                #                        for number in range(int(additiontime)):
-                                #                            newarray.append(subvalue)
-                                #                else:
-                                #                    #self.logger.info("Running secondary lists")
-                                #                    ## 1. Set up length of array
-                                #                    ## 2. Put values spread out
-                                #                    # FIXME: This works well, except if lists are same length
-                                #                    newarray = [""] * minlength
-
-                                #                    cnt = 0
-                                #                    for number in range(int(additiontime)):
-                                #                        for subvaluerange in range(len(value)):
-                                #                            # newlocation = number+(additiontime*subvaluerange)
-                                #                            # self.logger.info("%d+(%d*%d) = %d. VAL: %s" % (number, additiontime, subvaluerange, newlocation, value[subvaluerange]))
-                                #                            # Reverse if same length?
-                                #                            if int(minlength/len(value)) == len(value):
-                                #                                tmp = int(len(value)-subvaluerange-1)
-                                #                                self.logger.info("NEW: %d" % tmp)
-                                #                                newarray[cnt] = value[tmp] 
-                                #                            else:
-                                #                                newarray[cnt] = value[subvaluerange] 
-                                #                            cnt += 1
-
-                                #                #self.logger.info("Newarray =", newarray)
-                                #                newvalue = newarray[i]
-                                #                firstlist = False
-
-                                #            baseparams[key] = newvalue
-
-                                #    self.logger.info("3")
-                                #except IndexError as e:
-                                #    self.logger.info("IndexError: %s" % e)
-                                #    baseparams[key] = "IndexError: %s" % e
-                                #except KeyError as e:
-                                #    self.logger.info("KeyError: %s" % e)
-                                #    baseparams[key] = "KeyError: %s" % e
-                                #self.logger.info("4")
-                                #self.logger.info("Running with params (1): %s" % baseparams) 
-
-                                #results = await self.run_recursed_items(func, baseparams, {})
-                                #if isinstance(results, dict) or isinstance(results, list):
-                                #    json_object = True
-
-                                # Check the structure here. If "isloop", try to recurse?
-                                # ret, is_loop = recurse_json(innervalue, parsersplit[outercnt+1:])
-                                #ret = await func(**baseparams)
-                                #self.logger.info("Return from execution: %s" % ret)
-                                #if ret == None:
-                                #    results.append("")
-                                #    json_object = False
-                                #elif isinstance(ret, dict) or isinstance(ret, list):
-                                #    results.append(ret)
-                                #    json_object = True
-                                #else:
-                                #    ret = ret.replace("\"", "\\\"", -1)
-
-                                #    try:
-                                #        results.append(json.loads(ret))
-                                #        json_object = True
-                                #    except json.decoder.JSONDecodeError as e:
-                                #        #self.logger.info("Json: %s" % e)
-                                #        results.append(ret)
-
-                                #self.logger.info("Inner ret parsed: %s" % ret)
 
                             # Dump the result as a string of a list
                             #self.logger.info("RESULTS: %s" % results)
                             if isinstance(results, list) or isinstance(results, dict):
-                                self.logger.info("JSON OBJECT? ", json_object)
+                                self.logger.info(f"JSON OBJECT? {json_object}")
 
                                 # This part is weird lol
                                 if json_object:
@@ -2758,75 +3725,234 @@ class AppBase:
                     self.logger.debug(f"[DEBUG] Executed {action['label']}-{action['id']}")#with result: {result}")
                     #self.logger.debug(f"Data: %s" % action_result)
                 except TypeError as e:
-                    self.logger.info("TypeError issue: %s" % e)
+                    self.logger.info("[ERROR] TypeError issue: %s" % e)
                     self.action_result["status"] = "FAILURE" 
-                    self.action_result["result"] = "TypeError: %s" % str(e)
+                    self.action_result["result"] = json.dumps({
+                        "success": False, 
+                        "reason": f"Typeerror. Most likely due to a list that should've been a string. See details for more info.",
+                        "details": e,
+                    })
+                    #self.action_result["result"] = "TypeError: %s" % str(e)
             else:
                 self.logger.info("[DEBUG] Function %s doesn't exist?" % action["name"])
                 self.logger.error(f"[ERROR] App {self.__class__.__name__}.{action['name']} is not callable")
                 self.action_result["status"] = "FAILURE" 
-                self.action_result["result"] = "Function %s is not callable." % actionname
+                #self.action_result["result"] = "Function %s is not callable." % actionname
+
+                self.action_result["result"] = json.dumps({
+                    "success": False, 
+                    "reason": f"Function %s doesn't exist." % actionname,
+                })
 
         # https://ptb.discord.com/channels/747075026288902237/882017498550112286/882043773138382890
         except (requests.exceptions.RequestException, TimeoutError) as e:
-            self.logger.info(f"Failed to execute request: {e}")
-            self.logger.exception(f"Failed to execute {e}-{action['id']}")
+            self.logger.info(f"[ERROR] Failed to execute request (requests): {e}")
+            self.logger.exception(f"[ERROR] Failed to execute {e}-{action['id']}")
             self.action_result["status"] = "SUCCESS" 
+            try:
+                e = json.loads(f"{e}")
+            except:
+                e = f"{e}"
+
             try:
                 self.action_result["result"] = json.dumps({
                     "success": False, 
                     "reason": f"Request error - failing silently. Details in detail section",
-                    "details": f"{e}",
+                    "details": e,
                 })
             except json.decoder.JSONDecodeError as e:
                 self.action_result["result"] = f"Request error: {e}"
 
         except Exception as e:
-            self.logger.info(f"Failed to execute: {e}")
-            self.logger.exception(f"Failed to execute {e}-{action['id']}")
+            self.logger.info(f"[ERROR] Failed to execute: {e}")
+            self.logger.exception(f"[ERROR] Failed to execute {e}-{action['id']}")
             self.action_result["status"] = "FAILURE" 
-            self.action_result["result"] = f"General exception: {e}" 
+            try:
+                e = json.loads(f"{e}")
+            except:
+                e = f"{e}"
 
-        self.action_result["completed_at"] = int(time.time())
+            self.action_result["result"] = json.dumps({
+                "success": False,
+                "reason": f"General exception in the app. See shuffle action logs for more details.",
+                "details": e,
+            })
 
         # Send the result :)
+        self.action_result["completed_at"] = int(time.time())
         self.send_result(self.action_result, headers, stream_path)
+
+        #try:
+        #    try:
+        #        self.log_capture_string.flush()
+        #    except Exception as e:
+        #        print(f"[WARNING] Failed to flush logs (2): {e}") 
+        #        pass
+
+        #    self.log_capture_string.close()
+        #except:
+        #    print(f"[WARNING] Failed to close logs (2): {e}") 
+
         return
 
     @classmethod
-    async def run(cls, action=""):
+    def run(cls, action=""):
         logging.basicConfig(format="{asctime} - {name} - {levelname}:{message}", style='{')
         logger = logging.getLogger(f"{cls.__name__}")
         logger.setLevel(logging.DEBUG)
+                
+        logger.info("[DEBUG] Normal execution.")
 
-        #self.logger.info("Started execution: %s!!" % cls)
-        #self.logger.info("Action: %s" % action)
-        #if isinstance(cls, object):
-        #    self.action = cls
+        ##############################################
 
-        app = cls(redis=None, logger=logger, console_logger=logger)
-        if isinstance(action, str):
-            print("[DEBUG] Normal execution. Action is a string.")
-        elif isinstance(action, object):
-            print("[DEBUG] OBJECT execution. Action is NOT a string.")
-            app.action = action
+        exposed_port = os.getenv("SHUFFLE_APP_EXPOSED_PORT", "")
+        logger.info(f"[DEBUG] \"{runtime}\" - run indicates microservices. Port: \"{exposed_port}\"")
+        if runtime == "run" and exposed_port != "":
+            # Base port is 33334. Exposed port may differ based on discovery from Worker
+            port = int(exposed_port)
+            logger.info(f"[DEBUG] Starting webserver on port {port} (same as exposed port)")
+            from flask import Flask, request
+            from waitress import serve
+        
+            flask_app = Flask(__name__)
+            #flask_app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(minutes=5)
+        
+            #async def execute():
+            @flask_app.route("/api/v1/health", methods=["GET", "POST"])
+            def check_health():
+                return "OK"
 
-            try:
-                app.authorization = action["authorization"]
-                app.current_execution_id = action["execution_id"]
-            except:
-                pass
+            @flask_app.route("/api/v1/run", methods=["POST"])
+            def execute():
+                if request.method == "POST":
+                    #print(request.get_json(force=True))
+                    requestdata = {}
+                    try:
+                        requestdata = json.loads(request.data)
+                    except Exception as e:
+                        return {
+                            "success": False,
+                            "reason": f"Invalid Action data {e}",
+                        }
+        
+                    #logger.info(f"[DEBUG] Datatype: {type(requestdata)}: {requestdata}")
 
-            try:
-                app.url = action["url"]
-            except:
-                pass
+                    # Remaking class for each request
+        
+                    app = cls(redis=None, logger=logger, console_logger=logger)
+                    extra_info = ""
+                    try:
+                        #asyncio.run(AppBase.run(action=requestdata), debug=True)
+                        #value = json.dumps(value)
+                        try:
+                            app.full_execution = json.dumps(requestdata["workflow_execution"])
+                        except Exception as e:
+                            logger.info(f"[ERROR] Failed parsing full execution from workflow_execution: {e}")
+                            extra_info += f"\n{e}"
 
-            try:
-                app.base_url = action["base_url"]
-            except:
-                pass
+                        try:
+                            app.action = requestdata["action"] 
+                        except Exception as e:
+                            logger.info(f"[ERROR] Failed parsing action: {e}")
+                            extra_info += f"\n{e}"
+
+                        try:
+                            app.authorization = requestdata["authorization"]
+                            app.current_execution_id = requestdata["execution_id"]
+                        except Exception as e:
+                            logger.info(f"[ERROR] Failed parsing auth and exec id: {e}")
+                            extra_info += f"\n{e}"
+
+                        # BASE URL (backend)
+                        try:
+                            app.url = requestdata["url"]
+                            logger.info(f"BACKEND URL (url): {app.url}")
+                        except Exception as e:
+                            logger.info(f"[ERROR] Failed parsing url (backend): {e}")
+                            extra_info += f"\n{e}"
+
+                        # URL (worker)
+                        try:
+                            app.base_url = requestdata["base_url"]
+                            logger.info(f"WORKER URL (base url): {app.base_url}")
+                        except Exception as e:
+                            logger.info(f"[ERROR] Failed parsing base url (worker): {e}")
+                            extra_info += f"\n{e}"
+                        
+                        #await 
+                        app.execute_action(app.action)
+                        logger.info("[DEBUG] Done awaiting app action running")
+                    except Exception as e:
+                        return {
+                            "success": False,
+                            "reason": f"Problem in execution {e}",
+                            "execution_issues": extra_info,
+                        }
+        
+                    return {
+                        "success": True,
+                        "reason": "App successfully finished",
+                        "execution_issues": extra_info,
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "reason": f"HTTP method {request.method} not allowed",
+                    }
+        
+            logger.info(f"[DEBUG] Serving on port {port}")
+
+            #flask_app.run(
+            #    host="0.0.0.0", 
+            #    port=port, 
+            #    threaded=True, 
+            #    processes=1, 
+            #    debug=False,
+            #)
+
+            serve(
+                flask_app, 
+                host="0.0.0.0", 
+                port=port, 
+                threads=8,
+                channel_timeout=30,
+                expose_tracebacks=True,
+                asyncore_use_poll=True,
+            )
+            #######################
         else:
-            self.logger.info("ACTION TYPE (unhandled): %s" % type(action))
+            # Has to start like this due to imports in other apps
+            # Move it outside everything?
+            app = cls(redis=None, logger=logger, console_logger=logger)
+            #logger.info(f"[DEBUG] Action: {action}")
+            
+            if isinstance(action, str):
+                logger.info("[DEBUG] Normal execution (env var). Action is a string.")
+            elif isinstance(action, object):
+                logger.info("[DEBUG] OBJECT execution (cloud). Action is NOT a string.")
+                app.action = action
 
-        await app.execute_action(app.action)
+                try:
+                    app.authorization = action["authorization"]
+                    app.current_execution_id = action["execution_id"]
+                except:
+                    pass
+
+                # BASE URL (worker)
+                try:
+                    app.url = action["url"]
+                except:
+                    pass
+
+                # Callback URL (backend)
+                try:
+                    app.base_url = action["base_url"]
+                except:
+                    pass
+            else:
+                self.logger.info("ACTION TYPE (unhandled): %s" % type(action))
+
+            app.execute_action(app.action)
+
+if __name__ == "__main__":
+    AppBase.run()

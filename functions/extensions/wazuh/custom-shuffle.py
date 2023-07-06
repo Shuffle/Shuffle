@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Created by Shuffle, AS. <frikky@shuffler.io>.
 # Based on the Slack integration using Webhooks
 
@@ -23,14 +23,19 @@ except Exception as e:
 #  </integration>
 
 # Global vars
-
-debug_enabled = False
+debug_enabled = False 
 pwd = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 json_alert = {}
 now = time.strftime("%a %b %d %H:%M:%S %Z %Y")
 
 # Set paths
 log_file = '{0}/logs/integrations.log'.format(pwd)
+
+try:
+    with open("/tmp/shuffle_start.txt", "w+") as tmp:
+        tmp.write("Script started")
+except:
+    pass
 
 
 def main(args):
@@ -47,10 +52,18 @@ def main(args):
     debug(alert_file_location)
 
     # Load alert. Parse JSON object.
-    with open(alert_file_location) as alert_file:
-        json_alert = json.load(alert_file)
+    try:
+        with open(alert_file_location) as alert_file:
+            json_alert = json.load(alert_file)
+    except:
+        debug("# Alert file %s doesn't exist" % alert_file_location)
+
     debug("# Processing alert")
-    debug(json_alert)
+    try:
+        debug(json_alert)
+    except Exception as e:
+        debug("Failed getting json_alert %s" % e)
+        sys.exit(1)
 
     debug("# Generating message")
     msg = generate_msg(json_alert)
@@ -60,6 +73,14 @@ def main(args):
     debug(msg)
 
     debug("# Sending message")
+
+    try:
+        with open("/tmp/shuffle_end.txt", "w+") as tmp:
+            tmp.write("Script done pre-msg sending")
+    except:
+        pass
+
+
     send_msg(msg, webhook)
 
 
@@ -137,9 +158,10 @@ def generate_msg(alert):
 
 
 def send_msg(msg, url):
+    debug("# In send msg")
     headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8'}
-    res = requests.post(url, data=msg, headers=headers)
-    debug(res)
+    res = requests.post(url, data=msg, headers=headers, verify=False)
+    debug("# After send msg: %s" % res)
 
 
 if __name__ == "__main__":
@@ -154,18 +176,26 @@ if __name__ == "__main__":
                 sys.argv[3],
                 sys.argv[4] if len(sys.argv) > 4 else '',
             )
-            debug_enabled = (len(sys.argv) > 4 and sys.argv[4] == 'debug')
+            #debug_enabled = (len(sys.argv) > 4 and sys.argv[4] == 'debug')
+            debug_enabled = True
         else:
             msg = '{0} Wrong arguments'.format(now)
             bad_arguments = True
 
         # Logging the call
+        try:
+            f = open(log_file, 'a')
+        except:
+            f = open(log_file, 'w+')
+            f.write("")
+            f.close()
+
         f = open(log_file, 'a')
         f.write(msg + '\n')
         f.close()
 
         if bad_arguments:
-            debug("# Exiting: Bad arguments.")
+            debug("# Exiting: Bad arguments. Inputted: %s" % sys.argv)
             sys.exit(1)
 
         # Main function
