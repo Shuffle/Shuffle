@@ -34,12 +34,9 @@ import {
 	Description as DescriptionIcon,
 	EmojiObjects as EmojiObjectsIcon,
   Business as BusinessIcon,
-} from '@material-ui/icons';
-
-import {
 	Analytics as AnalyticsIcon,
 	Lightbulb as LightbulbIcon,
-} from "@mui/icons-material";
+} from '@mui/icons-material';
 
 import { useAlert } from "react-alert";
 

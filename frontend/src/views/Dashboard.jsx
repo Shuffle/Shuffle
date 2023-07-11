@@ -33,7 +33,7 @@ import {
 	CheckBox as CheckBoxIcon,
 	CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
 	OpenInNew as OpenInNewIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
 import { removeParam } from "../views/AngularWorkflow.jsx"

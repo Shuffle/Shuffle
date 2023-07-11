@@ -23,7 +23,7 @@ import {
 import { 
 	Link as LinkIcon, 
 	Edit as EditIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 const Body = {
   //maxWidth: 1000,

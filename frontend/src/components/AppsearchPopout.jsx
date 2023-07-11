@@ -17,7 +17,7 @@ import {
 import {
 	Close as CloseIcon,
   Delete as DeleteIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 const AppSearchPopout = (props) => {
   const { 

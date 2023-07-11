@@ -10,7 +10,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 // import { Prompt } from "react-router"; // FIXME
 import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
-import NestedMenuItem from "material-ui-nested-menu-item";
+import { NestedMenuItem } from "mui-nested-menu"
 import ReactMarkdown from "react-markdown";
 import { useAlert } from "react-alert";
 import theme from '../theme.jsx';
@@ -87,7 +87,7 @@ import {
   ArrowLeft as ArrowLeftIcon,
   Cached as CachedIcon,
   DirectionsRun as DirectionsRunIcon,
-  Polymer as PolymerIcon,
+  Code as CodeIcon,
   FormatListNumbered as FormatListNumberedIcon,
   PlayArrow as PlayArrowIcon,
   AspectRatio as AspectRatioIcon,
@@ -108,15 +108,12 @@ import {
   AddComment as AddCommentIcon,
   Edit as EditIcon,
 	Send as SendIcon,
-} from "@material-ui/icons";
-
-import {
   Preview as PreviewIcon,
   ContentCopy as ContentCopyIcon,
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
 	AutoFixHigh as AutoFixHighIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
 import Autocomplete from "@material-ui/lab/Autocomplete";
 
@@ -4998,6 +4995,8 @@ const AngularWorkflow = (defaultprops) => {
     const edgeData = event.target.data();
     if (edgeData.decorator === true) {
       return;
+
+
     }
 
     const cytoscapeElement = document.getElementById("cytoscape_view")
@@ -12162,7 +12161,7 @@ const AngularWorkflow = (defaultprops) => {
                   margin: "0px 0px 0px 0px",
                 }}
               >
-                <PolymerIcon style={{ marginRight: 10 }} />
+                <CodeIcon style={{ marginRight: 10 }} />
                 Workflows
               </h2>
             </Link>

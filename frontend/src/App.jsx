@@ -7,7 +7,7 @@ import { removeCookies, useCookies } from "react-cookie";
 import Workflows from "./views/Workflows";
 import GettingStarted from "./views/GettingStarted";
 import EditWebhook from "./views/EditWebhook";
-import AngularWorkflow from "./views/AngularWorkflow";
+import AngularWorkflow from "./views/AngularWorkflow.jsx";
 
 import Header from "./components/Header.jsx";
 import theme from "./theme";
@@ -19,7 +19,7 @@ import Dashboard from "./views/Dashboard.jsx";
 import DashboardView from "./views/DashboardViews.jsx";
 import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
-import Docs from "./views/Docs";
+import Docs from "./views/Docs.jsx";
 import Introduction from "./views/Introduction";
 import SetAuthentication from "./views/SetAuthentication";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
@@ -31,10 +31,9 @@ import LoginPage from "./views/LoginPage";
 import SettingsPage from "./views/SettingsPage";
 import KeepAlive from "./views/KeepAlive.jsx";
 
-import MyView from "./views/MyView";
-
 import { createMuiTheme, MuiThemeProvider } from "@material-ui/core/styles";
 
+import UpdateAuthentication from "./views/UpdateAuthentication.jsx";
 import FrameworkWrapper from "./views/FrameworkWrapper.jsx";
 import ScrollToTop from "./components/ScrollToTop";
 import AlertTemplate from "./components/AlertTemplate";
@@ -472,7 +471,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-			<Route exact path="/apps/authentication" element={<UpdateAuthentication serverside={serverside} userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
+			<Route exact path="/apps/authentication" element={<UpdateAuthentication serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
         	<Route
         	  exact
         	  path="/apps"

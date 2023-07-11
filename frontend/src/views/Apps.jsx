@@ -46,7 +46,7 @@ import {
 	Search as SearchIcon,
 	Folder as FolderIcon,
 	LibraryBooks as LibraryBooksIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import {
 	ForkRight as ForkRightIcon,

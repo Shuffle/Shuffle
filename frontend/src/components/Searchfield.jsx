@@ -2,7 +2,6 @@ import React, {useState, useEffect, useRef} from 'react';
 
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { useTheme } from '@material-ui/core/styles';
-import SearchIcon from '@material-ui/icons/Search';
 
 import {
 	Chip, 
@@ -23,7 +22,7 @@ import {
   AvatarGroup,
 } from "@mui/material"
 
-import {Close as CloseIcon, Folder as FolderIcon, Polymer as PolymerIcon, LibraryBooks as LibraryBooksIcon} from '@material-ui/icons'
+import {Search as SearchIcon, Close as CloseIcon, Folder as FolderIcon, Code as CodeIcon, LibraryBooks as LibraryBooksIcon} from '@mui/icons-material'
 
 import algoliasearch from 'algoliasearch/lite';
 import aa from 'search-insights'
@@ -162,7 +161,7 @@ const SearchField = props => {
 		}
 		
 		var type = "workflows"
-		const baseImage = <PolymerIcon /> 
+		const baseImage = <CodeIcon /> 
 
 		return (
 			<Card elevation={0} style={{position: "relative", marginLeft: 10, marginRight: 10, position: "absolute", color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: 405, height: 408, left: 75, boxShadows: "none",}}>

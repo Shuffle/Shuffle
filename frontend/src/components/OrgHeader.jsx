@@ -9,9 +9,12 @@ import TextField from "@material-ui/core/TextField";
 import Typography from "@material-ui/core/Typography";
 import { useAlert } from "react-alert";
 import IconButton from "@material-ui/core/IconButton";
-import ExpandLessIcon from "@material-ui/icons/ExpandLess";
-import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
-import SaveIcon from "@material-ui/icons/Save";
+
+import {
+	ExpandLess as ExpandLessIcon,
+	ExpandMore as ExpandMoreIcon, 
+	Save as SaveIcon, 
+} from "@mui/icons-material";
 
 const useStyles = makeStyles({
   notchedOutline: {

@@ -3,7 +3,7 @@ import ReactGA from 'react-ga4';
 import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
-import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@material-ui/icons';
+import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';
 
 //import algoliasearch from 'algoliasearch/lite';
 import algoliasearch from 'algoliasearch';

@@ -39,11 +39,8 @@ import {
 	ZoomInOutlined as ZoomInOutlinedIcon,
 	ZoomOutOutlined as ZoomOutOutlinedIcon,
 	Loop as LoopIcon,
-} from "@material-ui/icons";
-
-import {
 	AddPhotoAlternate as AddPhotoAlternateIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
 import { v4 as uuidv4 } from "uuid";
 import { Link, useParams } from "react-router-dom";

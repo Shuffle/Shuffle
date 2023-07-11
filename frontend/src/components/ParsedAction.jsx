@@ -5,7 +5,8 @@ import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from "@material-ui/core/styles";
-import NestedMenuItem from "material-ui-nested-menu-item";
+//import NestedMenuItem from "material-ui-nested-menu-item-v5";
+import { NestedMenuItem } from "mui-nested-menu";
 import { useAlert } from "react-alert";
 import theme from '../theme.jsx';
 

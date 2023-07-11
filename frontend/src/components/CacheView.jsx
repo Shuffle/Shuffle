@@ -40,8 +40,7 @@ import {
     Business as BusinessIcon,
     Visibility as VisibilityIcon,
     VisibilityOff as VisibilityOffIcon,
-} from "@material-ui/icons";
-import data from "./frameworkStyle.jsx";
+} from "@mui/icons-material";
 
 const scrollStyle1 = {
     height: 100,

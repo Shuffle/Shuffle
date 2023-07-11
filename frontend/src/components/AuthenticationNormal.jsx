@@ -17,7 +17,7 @@ import {
 
 import {
   LockOpen as LockOpenIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 const AuthenticationData = (props) => {
   const {

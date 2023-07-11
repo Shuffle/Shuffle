@@ -25,7 +25,7 @@ import {
   Edit as EditIcon,
 	Delete as DeleteIcon,
 	SelectAll as SelectAllIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 const AuthenticationItem = (props) => {
 		const { data, index, globalUrl, getAppAuthentication } = props

@@ -1,8 +1,10 @@
 import React from "react";
-import InfoIcon from "@material-ui/icons/Info";
-import CheckIcon from "@material-ui/icons/Check";
-import ErrorOutlineIcon from "@material-ui/icons/ErrorOutline";
-import CloseIcon from "@material-ui/icons/Close";
+import {
+	Info as InfoIcon, 
+	Check as CheckIcon, 
+	ErrorOutline as ErrorOutlineIcon, 
+	Close as CloseIcon, 
+} from "@mui/icons-material";
 import Typography from "@material-ui/core/Typography";
 
 const alertStyle = {

@@ -1,6 +1,8 @@
 import React, { useRef, useState } from "react";
 import { useEffect } from "react";
-import BackupIcon from "@material-ui/icons/Backup";
+import {
+	Backup as BackupIcon 
+} from "@mui/icons-material";
 
 const dragOverStyle = {
   backgroundColor: "rgba(0,0,0,0.8)",

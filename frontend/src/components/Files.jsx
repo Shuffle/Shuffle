@@ -27,7 +27,7 @@ import {
   Publish as PublishIcon,
 	Clear as ClearIcon,
 	Add as AddIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import { useAlert } from "react-alert";
 import Dropzone from "../components/Dropzone.jsx";

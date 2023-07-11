@@ -7,9 +7,7 @@ import CodeEditor from "../components/ShuffleCodeEditor.jsx";
 import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
 import CacheView from "../components/CacheView.jsx";
 import theme from "../theme.jsx";
-import AddIcon from "@mui/icons-material/Add";
-import ClearIcon from '@mui/icons-material/Clear';
-import StorageIcon from '@mui/icons-material/Storage';
+
 //import ToggleButton from '@mui/material/ToggleButton';
 import {
   FormControl,
@@ -57,7 +55,7 @@ import {
   OpenInNew as OpenInNewIcon,
   CloudDownload as CloudDownloadIcon,
   Description as DescriptionIcon,
-  Polymer as PolymerIcon,
+  Code as CodeIcon,
   CheckCircle as CheckCircleIcon,
   Close as CloseIcon,
   Apps as AppsIcon,
@@ -66,13 +64,15 @@ import {
   Cached as CachedIcon,
   AccessibilityNew as AccessibilityNewIcon,
   Lock as LockIcon,
-  Eco as EcoIcon,
   Schedule as ScheduleIcon,
   Cloud as CloudIcon,
   Business as BusinessIcon,
-	Visibility as VisibilityIcon,
-	VisibilityOff as VisibilityOffIcon,
-} from "@material-ui/icons";
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+	Add as AddIcon, 
+	Clear as ClearIcon, 
+	Storage as StorageIcon, 
+} from "@mui/icons-material";
 
 import { useAlert } from "react-alert";
 import Dropzone from "../components/Dropzone.jsx";
@@ -181,6 +181,11 @@ const Admin = (props) => {
 	const [showApiKey, setShowApiKey] = useState(false);
   const [billingInfo, setBillingInfo] = React.useState({});
 	const [selectedStatus, setSelectedStatus] = React.useState([]);
+
+  useEffect(() => {
+		getUsers()
+  }, []);
+
 
   useEffect(() => {
     if (isDropzone) {
@@ -987,6 +992,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 							leads.push("student")
 						}
 
+						if (responseJson.lead_info.internal) {
+							leads.push("internal")
+						}
+
 						setSelectedStatus(leads)
 					}
 
@@ -1484,10 +1493,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         alert.error(error.toString());
       });
   };
-
-  useEffect(() => {
-		getUsers()
-  }, []);
 
   const getSettings = () => {
     fetch(globalUrl + "/api/v1/getsettings", {
@@ -2186,7 +2191,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       primary: "Workflows",
       secondary: "",
       active: true,
-      icon: <PolymerIcon style={{ color: itemColor }} />,
+      icon: <CodeIcon style={{ color: itemColor }} />,
     },
     {
       primary: "Apps",
@@ -2386,7 +2391,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 										renderValue={(selected) => selected.join(', ')}
 										MenuProps={MenuProps}
 									>
-										{["contacted", "lead", "pov", "demo done", "customer", "student", ].map((name) => (
+										{["contacted", "lead", "pov", "demo done", "customer", "student", "internal"].map((name) => (
 											<MenuItem key={name} value={name}>
 												<Checkbox checked={selectedStatus.indexOf(name) > -1} />
 												<ListItemText primary={name} />
@@ -2755,7 +2760,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             		            item.usage === null ? 0 : item.usage,
             		          data_collection: "None",
             		          active: item.active,
-            		          icon: <PolymerIcon style={{ color: itemColor }} />,
+            		          icon: <CodeIcon style={{ color: itemColor }} />,
             		        };
 
             		        return (
@@ -4356,7 +4361,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           <Tab
             disabled={userdata.admin !== "true"}
             label=<span>
-              <EcoIcon style={iconStyle} />
+              <CodeIcon style={iconStyle} />
               Environments
             </span>
           />

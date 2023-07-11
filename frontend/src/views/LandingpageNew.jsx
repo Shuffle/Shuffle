@@ -11,12 +11,14 @@ import Divider from "@material-ui/core/Divider";
 import Grid from "@material-ui/core/Grid";
 import { BrowserView, MobileView } from "react-device-detect";
 
-import ScheduleIcon from "@material-ui/icons/Schedule";
-import Web from "@material-ui/icons/Web";
-import AccountTree from "@material-ui/icons/AccountTree";
-import InfoIcon from "@material-ui/icons/Info";
-import ArrowForwardIcon from "@material-ui/icons/ArrowForward";
-import CreateIcon from "@material-ui/icons/Create";
+import {
+	Schedule as ScheduleIcon, 
+	Web as WebIcon, 
+	AccountTree as AccountTreeIcon, 
+	Info as InfoIcon, 
+	ArrowForward as ArrowForwardIcon, 
+	Create as CreateIcon, 
+} from "@mui/icons-material";
 
 const bodyDivStyle = {
   margin: "auto",
@@ -86,7 +88,7 @@ const LandingPage = (props) => {
       "Simple integrations",
       "Easily use others' or create your own integration",
       "/docs/features",
-      <Web
+      <WebIcon
         style={{ fontSize: iconSize, marginTop: "20px", color: iconColor }}
       />
     ),
@@ -94,7 +96,7 @@ const LandingPage = (props) => {
       "Workflows",
       "Access the power of automation within minutes, whether its on premise or in the cloud",
       "/docs/features",
-      <AccountTree
+      <AccountTreeIcon
         style={{ fontSize: iconSize, marginTop: "20px", color: iconColor }}
       />
     ),
