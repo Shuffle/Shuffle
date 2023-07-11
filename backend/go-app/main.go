@@ -3501,8 +3501,9 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 
 func handleCloudJob(job shuffle.CloudSyncJob) error {
 	// May need authentication in all of these..?
-
 	log.Printf("[INFO] Handle job with type %s and action %s", job.Type, job.Action)
+	shuffle.IncrementCache(ctx, job.OrgId, "org_sync_actions")
+
 	if job.Type == "outlook" {
 		if job.Action == "execute" {
 			// FIXME: Get the email
@@ -6052,7 +6053,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
