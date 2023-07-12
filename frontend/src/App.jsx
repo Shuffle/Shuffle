@@ -29,7 +29,7 @@ import LoginPage from "./views/LoginPage";
 import SettingsPage from "./views/SettingsPage";
 import KeepAlive from "./views/KeepAlive.jsx";
 
-import { createMuiTheme, MuiThemeProvider } from "@material-ui/core/styles";
+import { ThemeProvider } from "@mui/material/styles";
 
 import UpdateAuthentication from "./views/UpdateAuthentication.jsx";
 import FrameworkWrapper from "./views/FrameworkWrapper.jsx";
@@ -666,11 +666,8 @@ const App = (message, props) => {
 				</Routes>
       </div>
 
-  // <div style={{backgroundColor: "rgba(21, 32, 43, 1)", color: "#fffff", minHeight: "100vh"}}>
-  // backgroundColor: "#213243",
-  // This is a mess hahahah
   return (
-    <MuiThemeProvider theme={theme}>
+    <ThemeProvider theme={theme}>
       <CookiesProvider>
         <BrowserRouter>
           <Provider template={AlertTemplate} {...options}>
@@ -678,7 +675,7 @@ const App = (message, props) => {
           </Provider>
         </BrowserRouter>
       </CookiesProvider>
-    </MuiThemeProvider>
+    </ThemeProvider>
   );
 };
 

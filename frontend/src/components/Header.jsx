@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import {BrowserView, MobileView} from "react-device-detect";
+import theme from '../theme.jsx';
 
 import {Link} from 'react-router-dom';
 import ReactGA from 'react-ga4';
@@ -45,7 +46,6 @@ const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
 const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, homePage, userdata, serverside, } = props;
-	const theme = useTheme();
 	const alert = useAlert()
 
 

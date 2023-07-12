@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import ReactGA from 'react-ga4';
 import {Link} from 'react-router-dom';
+import theme from '../theme.jsx';
 
 import { 
 	SkipNext as SkipNextIcon,
@@ -40,7 +41,6 @@ const CreatorGrid = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs }  = props
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 4 : parsedXs
-	const theme = useTheme();
 	//const [apps, setApps] = React.useState([]);
 	//const [filteredApps, setFilteredApps] = React.useState([]);
 	const [formMail, setFormMail] = React.useState("");

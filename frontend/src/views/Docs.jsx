@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { isMobile } from "react-device-detect";
+import theme from '../theme.jsx';
 
 import {
 	Grid,
@@ -56,7 +57,6 @@ const Docs = (defaultprops) => {
   const { globalUrl, selectedDoc, serverside, serverMobile } = defaultprops;
 
 	let navigate = useNavigate();
-  const theme = useTheme();
 
 	// Quickfix for react router 5 -> 6 
 	const params = useParams();

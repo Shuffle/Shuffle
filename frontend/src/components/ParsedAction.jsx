@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import { makeStyles, createStyles } from "@mui/styles";
+import theme from '../theme.jsx';
 
 
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
@@ -8,7 +9,6 @@ import { sortByKey } from "../views/AngularWorkflow.jsx";
 //import NestedMenuItem from "material-ui-nested-menu-item-v5";
 import { NestedMenuItem } from "mui-nested-menu";
 import { useAlert } from "react-alert";
-import theme from '../theme.jsx';
 
 import {
 	ButtonGroup,
@@ -170,7 +170,6 @@ const ParsedAction = (props) => {
 		//setExpansionModalOpen,
   } = props;
 
-  //const theme = useTheme();
   const classes = useStyles();
   const alert = useAlert()
 

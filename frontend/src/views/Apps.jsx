@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 
 import { useInterval } from "react-powerhooks";
+import theme from '../theme.jsx';
 
 import {
   IconButton,
@@ -270,7 +271,6 @@ const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 
   //const [workflows, setWorkflows] = React.useState([]);
-  const theme = useTheme();
   const baseRepository = "https://github.com/frikky/shuffle-apps";
   const alert = useAlert();
 	let navigate = useNavigate();

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { BrowserView, MobileView } from "react-device-detect";
+import theme from '../theme.jsx';
 
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 
 import TextField from '@material-ui/core/TextField';
 
-import { useTheme } from '@material-ui/core/styles';
 
 const bodyDivStyle = {
 	margin: "auto",
@@ -19,8 +19,6 @@ const bodyDivStyle = {
 const Contact = (props) => {
 	const { globalUrl, isLoaded } = props;
 	
-	const theme = useTheme();
-
 	const boxStyle = {
 		flex: "1",
 		marginLeft: "10px",
