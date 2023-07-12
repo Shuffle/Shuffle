@@ -8,7 +8,7 @@ import { Navigate } from "react-router-dom";
 
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import EditWorkflow from "../components/EditWorkflow.jsx" 
-import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
+//import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
 import Priority from "../components/Priority.jsx";
 
 import { isMobile } from "react-device-detect" 
@@ -3459,10 +3459,11 @@ const Workflows = (props) => {
 									return returnData 
 								}
 
+				/*<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>*/
                 return (
-									<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
-										{returnData}
-									</Zoom>
+					<span>
+						{returnData}
+					</span>
               );
             })}
             </div>
@@ -3499,13 +3500,11 @@ const Workflows = (props) => {
 						/>
 					: null}
 
+					{/*<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
 					<div style={{marginTop: 15, marginBottom: 50, }}>
 						{view === "grid" ? (
 							<Grid container spacing={filteredWorkflows.length === 0 ? 12 : filteredWorkflows.length === 1 ? 6 : 4} style={paperAppContainer}>
-								<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-									<NewWorkflowPaper />
-								</Zoom>
-
+								<NewWorkflowPaper />
 								{filteredWorkflows.map((data, index) => {
 									// Shouldn't be a part of this list
 									if (data.public === true) {
@@ -3522,12 +3521,11 @@ const Workflows = (props) => {
 										)
 									}
 
+									/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/
 									return (
-										<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-											<Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
-												<WorkflowPaper key={index} data={data} />
-											</Grid>
-										</Zoom>
+										<Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
+											<WorkflowPaper key={index} data={data} />
+										</Grid>
 									)
 								})}
 							</Grid>

@@ -51,7 +51,7 @@ import {
   IconButton,
   Menu,
   Input,
-  Fade,
+  Collapse,
   FormGroup,
   FormControlLabel,
   Typography,
@@ -119,14 +119,14 @@ import {
 
 import * as cytoscape from "cytoscape";
 import * as edgehandles from "cytoscape-edgehandles";
-import * as clipboard from "cytoscape-clipboard";
+//import * as clipboard from "cytoscape-clipboard";
+//import undoRedo from "cytoscape-undo-redo";
+//import cxtmenu from "cytoscape-cxtmenu";
 import CytoscapeComponent from "react-cytoscapejs";
-import undoRedo from "cytoscape-undo-redo";
 
 import Draggable from "react-draggable";
 
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
-import cxtmenu from "cytoscape-cxtmenu";
 
 import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
@@ -232,9 +232,9 @@ const inputColor = "#383B40";
 
 // http://apps.cytoscape.org/apps/yfileslayoutalgorithms
 cytoscape.use(edgehandles);
-cytoscape.use(clipboard);
-cytoscape.use(undoRedo);
-cytoscape.use(cxtmenu);
+//cytoscape.use(clipboard);
+//cytoscape.use(undoRedo);
+//cytoscape.use(cxtmenu);
 
 // Adds specific text to items
 //import popper from 'cytoscape-popper';
@@ -12880,11 +12880,11 @@ const AngularWorkflow = (defaultprops) => {
           {defaultReturn}
         </SwipeableDrawer>
         :
-        <Fade in={true} style={{ transitionDelay: `$0ms` }}>
+        <Collapse in={true} style={{ transitionDelay: `$0ms` }}>
           <div id="rightside_actions" style={rightsidebarStyle}>
             {defaultReturn}
           </div>
-        </Fade>
+        </Collapse>
     );
 
     //return null;
@@ -14960,7 +14960,7 @@ const AngularWorkflow = (defaultprops) => {
             </Typography>
           </div>
         ) : (
-          <Fade in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
+          <Collapse in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
             <CytoscapeComponent
               elements={elements}
               minZoom={0.35}
@@ -14983,7 +14983,7 @@ const AngularWorkflow = (defaultprops) => {
                 setCy(incy);
               }}
             />
-          </Fade>
+          </Collapse>
         )}
       </div>
       {executionModal}

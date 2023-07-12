@@ -11,7 +11,7 @@ import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import { 
 	Grid, 
 	Container,
-  Fade,
+  Collapse,
 	Typography, 
 	Paper,
 	Button,
@@ -417,7 +417,7 @@ const Welcome = (props) => {
 										<Typography variant="h6" style={{textAlign: "center", marginBottom: 25, }}>
 											App Framework
 										</Typography>
-										<Fade>
+										<Collapse>
 												<AppFramework
 													inputUsecase={inputUsecase}
 													frameworkData={frameworkData}
@@ -435,13 +435,13 @@ const Welcome = (props) => {
 													inputUsecases={usecases}
 													setInputUsecases={setUsecases}
 												/>
-										</Fade>
+										</Collapse>
 									</div>
 								}
 							</Grid>
 						</div>
 						: 
-						<Fade in={true}>
+						<Collapse in={true}>
 							<div style={{maxWidth: 700, margin: "auto", marginTop: 50, }}>
 								{/*
 							<div style={{display:"flex"}}>
@@ -537,7 +537,7 @@ const Welcome = (props) => {
 									</Typography>
 								</div>
 							</div>
-						</Fade>
+						</Collapse>
 					}
 			</div>
    ) 

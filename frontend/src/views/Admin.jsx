@@ -2343,22 +2343,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           </div>
         ) : (
           <div>
-						{/*
-						<Tooltip
-              title={"Go to Organization document"}
-              style={{}}
-              aria-label={"Organization doc"}
-            >
-              <IconButton
-                style={{ top: -10, right: 50, position: "absolute" }}
-                onClick={() => {
-									console.log("Should go to icon")
-                }}
-              >
-                <FileCopyIcon style={{ color: "rgba(255,255,255,0.8)" }} />
-              </IconButton>
-            </Tooltip>
-						*/}
 
 						{userdata.support === true ? 
 							<span style={{display: "flex", top: -10, right: 50, position: "absolute"}}>
@@ -2407,6 +2391,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
               style={{}}
               aria-label={"Copy orgid"}
             >
+			<div>
               <IconButton
                 style={{ top: -10, right: 0, position: "absolute" }}
                 onClick={() => {
@@ -2436,6 +2421,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
               >
                 <FileCopyIcon style={{ color: "rgba(255,255,255,0.8)" }} />
               </IconButton>
+			</div>
             </Tooltip>
 						{selectedOrganization.defaults !== undefined && selectedOrganization.defaults.documentation_reference !== undefined && selectedOrganization.defaults.documentation_reference !== null && selectedOrganization.defaults.documentation_reference.includes("http") ?
 							<Tooltip
@@ -2443,6 +2429,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                 style={{ top: -10, right: 50, position: "absolute" }}
 								aria-label={"Open org docs"}
 							>
+								<div>
 								<a href={selectedOrganization.defaults.documentation_reference} target="_blank" style={{ textDecoration: "none", }} rel="noopener noreferrer">
 									<IconButton
                 		style={{ top: -10, right: 50, position: "absolute" }}
@@ -2450,6 +2437,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 										<DescriptionIcon style={{ color: "rgba(255,255,255,0.8)" }} />
 									</IconButton>
 								</a>
+								</div>
 							</Tooltip>
 						: null}
             {selectedOrganization.name.length > 0 ? (
@@ -2764,8 +2752,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             		        };
 
             		        return (
-            		          <Zoom key={index}>
-            		            <GridItem data={griditem} />
+            		          <Zoom in={true} key={index}>
+							  	<div>
+            		            	<GridItem data={griditem} />
+							  	</div>
             		          </Zoom>
             		        );
             		      })}
@@ -3107,6 +3097,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                             style={{}}
                             aria-label={"Copy APIkey"}
                           >
+						  	<div>
                             <IconButton
                               style={{}}
                               onClick={() => {
@@ -3143,6 +3134,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                                 style={{ color: "rgba(255,255,255,0.8)" }}
                               />
                             </IconButton>
+						  	</div>
                           </Tooltip>
                         )
                       }
@@ -3715,17 +3707,19 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                           title="Set in EVERY workflow"
                           placement="top"
                         >
-                          <IconButton
-                            style={{ marginRight: 10 }}
-                            disabled={data.defined === false}
-                            onClick={() => {
-                              editAuthenticationConfig(data.id);
-                            }}
-                          >
-                            <SelectAllIcon
-                              color={data.defined ? "primary" : "secondary"}
-                            />
-                          </IconButton>
+							<div>
+							  <IconButton
+								style={{ marginRight: 10 }}
+								disabled={data.defined === false}
+								onClick={() => {
+								  editAuthenticationConfig(data.id);
+								}}
+							  >
+								<SelectAllIcon
+								  color={data.defined ? "primary" : "secondary"}
+								/>
+							  </IconButton>
+						  </div>
                         </Tooltip>
                       ) : (
                         <Tooltip
@@ -3733,6 +3727,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                           title="Must edit before you can set in all workflows"
                           placement="top"
                         >
+						<div>
                           <IconButton
                             style={{ marginRight: 10 }}
                             onClick={() => {}}
@@ -3741,6 +3736,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                               color={data.defined ? "primary" : "secondary"}
                             />
                           </IconButton>
+						</div>
                         </Tooltip>
                       )}
                       <IconButton
@@ -3952,6 +3948,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 														style={{}}
 														aria-label={"Copy orborus command"}
 													>
+														<div>
 														<IconButton
 															style={{}}
 															disabled={environment.Type === "cloud"}
@@ -3988,6 +3985,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 														>
 															<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
 														</IconButton>
+														</div>
 													</Tooltip>
 												}
                   	  />

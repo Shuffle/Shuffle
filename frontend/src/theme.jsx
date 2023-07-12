@@ -1,11 +1,11 @@
 import React from "react";
-import { createTheme } from "@mui/material/styles";
+import { createTheme, adaptV4Theme } from "@mui/material/styles";
 
-const theme = createTheme({
+const theme = createTheme(adaptV4Theme({
   palette: {
     primary: {
       main: "#F86743",
-			contrastText: "#ffffff",
+  	  contrastText: "#ffffff",
     },
     secondary: {
       main: "#e8eaf6",
@@ -71,34 +71,20 @@ const theme = createTheme({
       },
     },
     MuiCssBaseline: {
-      '@global': {
-				/*
-          scrollbarColor: "#6b6b6b #2b2b2b",
-          "&::-webkit-scrollbar, & *::-webkit-scrollbar": {
-            backgroundColor: "#2b2b2b",
-          },
-          "&::-webkit-scrollbar-thumb, & *::-webkit-scrollbar-thumb": {
-            borderRadius: 8,
-            backgroundColor: "#6b6b6b",
-            minHeight: 24,
-            border: "3px solid #2b2b2b",
-          },
-          "&::-webkit-scrollbar-thumb:focus, & *::-webkit-scrollbar-thumb:focus": {
-            backgroundColor: "#959595",
-          },
-          "&::-webkit-scrollbar-thumb:active, & *::-webkit-scrollbar-thumb:active": {
-            backgroundColor: "#959595",
-          },
-          "&::-webkit-scrollbar-thumb:hover, & *::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "#959595",
-          },
-          "&::-webkit-scrollbar-corner, & *::-webkit-scrollbar-corner": {
-            backgroundColor: "#2b2b2b",
-          },
-				*/	
-      }
+		MuiCssBaseline: {
+		  styleOverrides: `
+			@font-face {
+			  font-family: 'roboto';
+			  font-style: normal;
+			  font-display: swap;
+			  font-weight: 400;
+			  src: local('roboto'), local('roboto'), format('truetype');
+			  unicodeRange: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF;
+			}
+		  `,
 		},
+	},
   },
-});
+}));
 
 export default theme;

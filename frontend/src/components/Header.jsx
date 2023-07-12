@@ -688,7 +688,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 										{/*
 										<PolymerIcon style={{marginRight: "5px"}} />
 										*/}
-										<span style={{marginTop: 0, marginRight: 8, }}>Workflows</span>
+										<Typography style={{marginTop: 0, marginRight: 8, }}>Workflows</Typography>
 									</div> 
 								</Link>
       	 			</ListItem>
@@ -698,7 +698,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 											{/*
 											<AppsIcon style={{marginRight: "5px"}} />
 											*/}
-											<span style={{marginTop: 0, marginRight: 5,  }}>Apps</span>
+											<Typography style={{marginTop: 0, marginRight: 5,  }}>Apps</Typography>
 										</div>
 								</Link>
       	 			</ListItem>
@@ -715,7 +715,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 											{/*
 											<DescriptionIcon style={{marginRight: "5px"}} />
 											*/}
-											<span style={{marginTop: 0,}}>Docs</span>
+											<Typography style={{marginTop: 0,}}>Docs</Typography>
 										</div>
 								</Link>
       	 			</ListItem>

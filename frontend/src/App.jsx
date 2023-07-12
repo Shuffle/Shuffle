@@ -30,6 +30,7 @@ import SettingsPage from "./views/SettingsPage";
 import KeepAlive from "./views/KeepAlive.jsx";
 
 import { ThemeProvider } from "@mui/material/styles";
+import CssBaseline from '@mui/material/CssBaseline';
 
 import UpdateAuthentication from "./views/UpdateAuthentication.jsx";
 import FrameworkWrapper from "./views/FrameworkWrapper.jsx";
@@ -38,7 +39,6 @@ import AlertTemplate from "./components/AlertTemplate";
 import { useAlert, positions, Provider } from "react-alert";
 import { isMobile } from "react-device-detect";
 
-import detectEthereumProvider from "@metamask/detect-provider";
 import Drift from "react-driftjs";
 
 // Production - backend proxy forwarding in nginx
@@ -143,120 +143,6 @@ const App = (message, props) => {
         }
 
         // Handling Ethereum update
-				{/*
-        detectEthereumProvider().then((provider) => {
-          if (
-            provider &&
-            userInfo.eth_info !== undefined &&
-            userInfo.eth_info !== null
-          ) {
-            if (
-              userInfo.eth_info.account !== undefined &&
-              userInfo.eth_info.account !== null &&
-              userInfo.eth_info.account.length === 0
-            ) {
-              userInfo.eth_info = {};
-              var method = "eth_requestAccounts";
-              var params = [];
-              provider
-                .request({
-                  method: method,
-                  params,
-                })
-                .then((result) => {
-                  if (
-                    result !== undefined &&
-                    result !== null &&
-                    result.length > 0
-                  ) {
-                    userInfo.eth_info.account = result[0];
-
-                    // Getting and setting balance for the current user
-                    method = "eth_getBalance";
-                    params = [userInfo.eth_info.account, "latest"];
-                    provider
-                      .request({
-                        method: method,
-                        params,
-                      })
-                      .then((result) => {
-                        if (
-                          result !== undefined &&
-                          result !== null &&
-                          result.length > 0
-                        ) {
-                          userInfo.parsed_balance =
-                            result / 1000000000000000000;
-                        } else {
-                          alert.error("Couldn't find balance: ", result);
-                        }
-                        // The result varies by RPC method.
-                        // For example, this method will return a transaction hash hexadecimal string on success.
-                      })
-                      .catch((error) => {
-                        // If the request fails, the Promise will reject with an error.
-                        alert.error(
-                          "Failed getting info from ethereum API: " + error
-                        );
-                      });
-                  } else {
-                    alert.error("Couldn't find any user: ", result);
-                  }
-                })
-                .catch((error) => {
-                  // If the request fails, the Promise will reject with an error.
-                  alert.error(
-                    "Failed getting info from ethereum API: " + error
-                  );
-                });
-            }
-
-            // Register hooks here
-            provider.on("message", (event) => {
-              alert.info("Message from MetaMask: ", event);
-            });
-
-            provider.on("chainChanged", (chainId) => {
-              console.log("Changed chain to: ", chainId);
-
-              method = "eth_getBalance";
-              params = [userInfo.eth_info.account, "latest"];
-              provider
-                .request({
-                  method: method,
-                  params,
-                })
-                .then((result) => {
-                  console.log("Got result: ", result);
-                  if (result !== undefined && result !== null) {
-                    userInfo.eth_info.balance = result;
-                    userInfo.eth_info.parsed_balance =
-                      result / 1000000000000000000;
-                    console.log("INFO: ", userInfo);
-                    setUserData(userInfo);
-                  } else {
-                    alert.error("Couldn't find balance: ", result);
-                  }
-                })
-                .catch((error) => {
-                  // If the request fails, the Promise will reject with an error.
-                  alert.error(
-                    "Failed getting info from ethereum API: " + error
-                  );
-                });
-            });
-          }
-        });
-
-        if (
-          userInfo.eth_info !== undefined &&
-          userInfo.eth_info.balance !== undefined
-        ) {
-          //console.log(userInfo.eth_info.balance)
-          userInfo.eth_info.parsed_balance =
-            userInfo.eth_info.balance / 1000000000000000000;
-        }
-				*/}
 
         //console.log("USER: ", userInfo)
         setUserData(userInfo);
@@ -529,8 +415,8 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-					<Route exact path="/workflows/:key/run" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
-					<Route exact path="/workflows/:key/execute" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
+			<Route exact path="/workflows/:key/run" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
+			<Route exact path="/workflows/:key/execute" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
         	<Route
         	  exact
         	  path="/docs/:key"
@@ -631,22 +517,22 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-					<Route
-						exact
-						path="/welcome"
-						element={
-							<Welcome
-								cookies={cookies}
-								removeCookie={removeCookie}
-								isLoaded={isLoaded}
-								isLoggedIn={isLoggedIn}
-								globalUrl={globalUrl}
-								cookies={cookies}
-								userdata={userdata}
-								{...props}
-							/>
-						}
+			<Route
+				exact
+				path="/welcome"
+				element={
+					<Welcome
+						cookies={cookies}
+						removeCookie={removeCookie}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						cookies={cookies}
+						userdata={userdata}
+						{...props}
 					/>
+				}
+			/>
         	<Route
         	  exact
         	  path="/"
@@ -668,6 +554,7 @@ const App = (message, props) => {
 
   return (
     <ThemeProvider theme={theme}>
+	  <CssBaseline />
       <CookiesProvider>
         <BrowserRouter>
           <Provider template={AlertTemplate} {...options}>

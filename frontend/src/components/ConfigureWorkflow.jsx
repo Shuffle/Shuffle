@@ -14,7 +14,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  Fade,
+  Collapse,
 } from "@mui/material";
 import { 
 	FavoriteBorder as FavoriteBorderIcon,
