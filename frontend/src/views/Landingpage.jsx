@@ -4,9 +4,11 @@ import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
 import Divider from "@material-ui/core/Divider";
 import { BrowserView, MobileView } from "react-device-detect";
-import ScheduleIcon from "@material-ui/icons/Schedule";
-import Web from "@material-ui/icons/Web";
-import AccountTree from "@material-ui/icons/AccountTree";
+import {
+	Schedule as ScheduleIcon, 
+	Web as WebIcon,
+	AccountTree as AccountTreeIcon,
+} from "@mui/icons-material";
 
 const bodyDivStyle = {
   margin: "auto",

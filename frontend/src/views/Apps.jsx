@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 
 import { useInterval } from "react-powerhooks";
+import theme from '../theme.jsx';
 
 import {
   IconButton,
@@ -32,7 +33,7 @@ import {
 	ListItemAvatar,
 	ListItemText,
 	Avatar,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   LockOpen as LockOpenIcon,
@@ -46,14 +47,13 @@ import {
 	Search as SearchIcon,
 	Folder as FolderIcon,
 	LibraryBooks as LibraryBooksIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import {
 	ForkRight as ForkRightIcon,
 } from '@mui/icons-material';
 
 import aa from 'search-insights'
-import { useTheme } from "@material-ui/core/styles";
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
 
@@ -271,7 +271,6 @@ const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 
   //const [workflows, setWorkflows] = React.useState([]);
-  const theme = useTheme();
   const baseRepository = "https://github.com/frikky/shuffle-apps";
   const alert = useAlert();
 	let navigate = useNavigate();

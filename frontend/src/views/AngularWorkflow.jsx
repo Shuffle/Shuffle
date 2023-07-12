@@ -1,19 +1,19 @@
 /* eslint-disable react/no-multi-comp */
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import ReactDOM from "react-dom"
+import theme from '../theme.jsx';
 
 import { useInterval } from "react-powerhooks";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles, } from "@mui/styles";
 
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
 // import { Prompt } from "react-router"; // FIXME
 import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
-import NestedMenuItem from "material-ui-nested-menu-item";
+import { NestedMenuItem } from "mui-nested-menu"
 import ReactMarkdown from "react-markdown";
 import { useAlert } from "react-alert";
-import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect"
 import aa from 'search-insights'
 import Drift from "react-driftjs";
@@ -67,7 +67,8 @@ import {
   ListItemText,
   ListItemAvatar,
   Badge,
-} from "@material-ui/core";
+	Autocomplete, 
+} from "@mui/material";
 
 import {
   AvatarGroup,
@@ -87,7 +88,7 @@ import {
   ArrowLeft as ArrowLeftIcon,
   Cached as CachedIcon,
   DirectionsRun as DirectionsRunIcon,
-  Polymer as PolymerIcon,
+  Code as CodeIcon,
   FormatListNumbered as FormatListNumberedIcon,
   PlayArrow as PlayArrowIcon,
   AspectRatio as AspectRatioIcon,
@@ -108,17 +109,13 @@ import {
   AddComment as AddCommentIcon,
   Edit as EditIcon,
 	Send as SendIcon,
-} from "@material-ui/icons";
-
-import {
   Preview as PreviewIcon,
   ContentCopy as ContentCopyIcon,
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
 	AutoFixHigh as AutoFixHighIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import Autocomplete from "@material-ui/lab/Autocomplete";
 
 import * as cytoscape from "cytoscape";
 import * as edgehandles from "cytoscape-edgehandles";
@@ -401,8 +398,6 @@ const AngularWorkflow = (defaultprops) => {
   var props = JSON.parse(JSON.stringify(defaultprops))
   props.match = {}
   props.match.params = params
-
-  //const theme = useTheme();
 
 
   var to_be_copied = "";
@@ -4638,7 +4633,8 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const addSuggestionButtons = (nodedata, event) => {
-		//console.log("In suggestion buttons: ", nodedata, ". This is not enabled yet. Backend needs further work.")
+		console.log("In suggestion buttons: ", nodedata, ". This is not enabled yet. Backend needs further work.")
+		return
 		// Skipping add for now. Should Re-enable
 
 		// Add a button for autocompletion based on input
@@ -4677,8 +4673,6 @@ const AngularWorkflow = (defaultprops) => {
 
 			cy.add(decoratorNode);
 		}
-
-		return
 	
 		//setWorkflowRecommendations(responseJson.actions)
 		if (workflowRecommendations.length === 0) {
@@ -4999,6 +4993,8 @@ const AngularWorkflow = (defaultprops) => {
     const edgeData = event.target.data();
     if (edgeData.decorator === true) {
       return;
+
+
     }
 
     const cytoscapeElement = document.getElementById("cytoscape_view")
@@ -12163,7 +12159,7 @@ const AngularWorkflow = (defaultprops) => {
                   margin: "0px 0px 0px 0px",
                 }}
               >
-                <PolymerIcon style={{ marginRight: 10 }} />
+                <CodeIcon style={{ marginRight: 10 }} />
                 Workflows
               </h2>
             </Link>
@@ -14561,9 +14557,7 @@ const AngularWorkflow = (defaultprops) => {
         ? "red"
         : yellow;
 
-  const validate = !codeModalOpen
-    ? ""
-    : validateJson(selectedResult.result.trim());
+  const validate = ! codeModalOpen? "" : validateJson(selectedResult.result.trim());
 
   if (validate.valid && typeof validate.result === "string") {
     validate.result = JSON.parse(validate.result);
@@ -14573,12 +14567,17 @@ const AngularWorkflow = (defaultprops) => {
     const [open, setOpen] = React.useState(false)
     const showVariable = data.value.length < 60
 
+		// Check if it's valid JSON
+		const checked = validateJson(data.value.trim())
+
     return (
       <div style={{ maxWidth: 600, overflowX: "hidden", }}>
-        {data.value.length > 60 ?
+        {data.value.length > 60 || checked.valid ?
           <IconButton
             style={{
-              marginBottom: 0, marginTop: 5, cursor: "pointer",
+              marginBottom: 0, 
+							marginTop: 5, 
+							cursor: "pointer",
               padding: 3,
               border: "1px solid rgba(255,255,255,0.3)",
               borderRadius: theme.palette.borderRadius,
@@ -14593,7 +14592,16 @@ const AngularWorkflow = (defaultprops) => {
               variant="body1"
               style={{}}
             >
-              <b>{data.name}</b> {showVariable ? data.value : null}
+              <b>{data.name}</b>
+								{checked.valid ? 
+									<Chip
+										style={{marginLeft: 10, padding: 0, cursor: "pointer",}}
+										label={"JSON"}
+										variant="outlined"
+										color="secondary"
+									/>
+								: null}
+							{showVariable ? data.value : null}
             </Typography>
           </IconButton>
           :
@@ -14605,15 +14613,25 @@ const AngularWorkflow = (defaultprops) => {
           </Typography>
         }
         {open ?
-          <Typography
-            variant="body2"
-            style={{
-              whiteSpace: 'pre-line',
-            }}
-            color="textSecondary"
-          >
-            {data.value}
-          </Typography>
+					checked.valid ?
+						<ReactJson
+							src={checked.result}
+							theme={theme.palette.jsonTheme}
+							style={theme.palette.reactJsonStyle}
+							collapsed={data.value.length < 10000 ? false : true}
+							displayDataTypes={false}
+							name={"Parsed data for variable " + data.name}
+						/>
+					:
+						<Typography
+							variant="body2"
+							style={{
+								whiteSpace: 'pre-line',
+							}}
+							color="textSecondary"
+						>
+							{data.value}
+						</Typography>
           : null}
       </div>
     )
@@ -15071,10 +15089,10 @@ const AngularWorkflow = (defaultprops) => {
       >
         <FormControl>
           <DialogTitle id="draggable-dialog-title" style={{ cursor: "move", }}>
-            <span style={{ color: "white" }}>Execution Variable</span>
+            <span style={{ color: "white" }}>Runtime Variable</span>
           </DialogTitle>
           <DialogContent>
-            Execution Variables are TEMPORARY variables that you can only be set
+            Runtime Variables are TEMPORARY variables that you can only be set
             and used during execution. Learn more{" "}
             <a
               rel="noopener noreferrer"
@@ -15095,7 +15113,7 @@ const AngularWorkflow = (defaultprops) => {
                 },
               }}
               margin="dense"
-							label="Name"
+				label="Name"
               fullWidth
               defaultValue={newVariableName}
             />

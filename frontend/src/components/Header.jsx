@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {BrowserView, MobileView} from "react-device-detect";
-import { useTheme } from '@material-ui/core/styles';
+import theme from '../theme.jsx';
 
 import {Link} from 'react-router-dom';
 import ReactGA from 'react-ga4';
@@ -21,7 +21,7 @@ import {
 	IconButton,
 	Divider,
 	LinearProgress, 
-} from '@material-ui/core'
+} from '@mui/material';
 
 import { 
 	MeetingRoom as MeetingRoomIcon, 
@@ -34,12 +34,9 @@ import {
 	Description as DescriptionIcon,
 	EmojiObjects as EmojiObjectsIcon,
   Business as BusinessIcon,
-} from '@material-ui/icons';
-
-import {
 	Analytics as AnalyticsIcon,
 	Lightbulb as LightbulbIcon,
-} from "@mui/icons-material";
+} from '@mui/icons-material';
 
 import { useAlert } from "react-alert";
 
@@ -49,7 +46,6 @@ const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
 const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, homePage, userdata, serverside, } = props;
-	const theme = useTheme();
 	const alert = useAlert()
 
 

@@ -12,13 +12,13 @@ import {
 	Menu,
 	MenuItem,
 	Button,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import theme from '../theme.jsx';
 import Checkbox from '@mui/material/Checkbox';
 import { orange } from '@mui/material/colors';
 import { isMobile } from "react-device-detect" 
-import NestedMenuItem from "material-ui-nested-menu-item";
+import { NestedMenuItem } from "mui-nested-menu"
 import { GetParsedPaths, FindJsonPath } from "../views/Apps.jsx";
 import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
 
@@ -1694,20 +1694,29 @@ const CodeEditor = (props) => {
 						cursor: "pointer"
 					}}
 					onClick={(event) => {
+						// Take localcodedata through the Shuffle JSON parser just in case
+						// This is to make it so we don't need to handle these fixes on the
+						// backend by itself
+						var fixedcodedata = localcodedata
+						const valid = validateJson(localcodedata, true)
+						if (valid.valid) {
+							fixedcodedata = JSON.stringify(valid.result, null, 2)
+						}
+
 						// console.log(codedata)
 						// console.log(fieldCount)
 						if (isFileEditor === true){
-							runUpdateText(localcodedata);
-							setcodedata(localcodedata);
+							runUpdateText(fixedcodedata);
+							setcodedata(fixedcodedata);
 							setExpansionModalOpen(false)
+						} else {
+							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
+							setExpansionModalOpen(false)
+							setcodedata(fixedcodedata)
 						}
-						else {
-						changeActionParameterCodeMirror(event, fieldCount, localcodedata)
-						setExpansionModalOpen(false)
-						setcodedata(localcodedata)}
 					}}
 				>
-					Done
+					Submit	
 				</button>
 			</div>
 		</Dialog>)

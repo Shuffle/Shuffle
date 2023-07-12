@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { makeStyles } from "@material-ui/styles";
-import { useTheme } from "@material-ui/core/styles";
+import { makeStyles } from "@mui/styles";
 import { BrowserView, MobileView } from "react-device-detect";
+import theme from '../theme.jsx';
 
 import {
   Paper,
@@ -22,7 +22,7 @@ import {
   Breadcrumbs,
   CircularProgress,
   Chip,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   LockOpen as LockOpenIcon,
@@ -39,11 +39,8 @@ import {
 	ZoomInOutlined as ZoomInOutlinedIcon,
 	ZoomOutOutlined as ZoomOutOutlinedIcon,
 	Loop as LoopIcon,
-} from "@material-ui/icons";
-
-import {
 	AddPhotoAlternate as AddPhotoAlternateIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
 import { v4 as uuidv4 } from "uuid";
 import { Link, useParams } from "react-router-dom";
@@ -354,7 +351,6 @@ const AppCreator = (defaultprops) => {
   const { globalUrl, isLoaded } = defaultprops;
   const classes = useStyles();
   const alert = useAlert();
-  const theme = useTheme();
 
 	const params = useParams();
 	var props = JSON.parse(JSON.stringify(defaultprops))

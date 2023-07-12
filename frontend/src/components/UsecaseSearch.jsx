@@ -25,7 +25,7 @@ import {
 		CircularProgress, 
 		Tooltip,
 		Divider,
-} from "@material-ui/core";
+} from "@mui/material";
 
 const defaultValue = {"id": "", "name": "Build your own", 
 		"source": {"text": "No trigger selected", "error": ""}, 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import ReactGA from 'react-ga4';
-import Button from "@material-ui/core/Button";
 import Checkbox from '@mui/material/Checkbox';
 
 import AliceCarousel from 'react-alice-carousel';
@@ -16,6 +15,7 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 
 import theme from '../theme.jsx';
 import {
+	Button,
   	Fade,
 		IconButton,
     FormGroup,
@@ -37,7 +37,7 @@ import {
 		Tooltip,
 		Chip,
 		ButtonGroup,
-} from "@material-ui/core";
+} from "@mui/material";
 import { useAlert } from "react-alert";
 
 import { useNavigate, Link } from "react-router-dom";

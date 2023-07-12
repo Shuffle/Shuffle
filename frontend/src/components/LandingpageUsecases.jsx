@@ -4,7 +4,7 @@ import AppFramework, { usecases } from "../components/AppFramework.jsx";
 import {Link} from 'react-router-dom';
 import ReactGA from 'react-ga4';
 
-import { Button, LinearProgress, Typography } from '@material-ui/core';
+import { Button, LinearProgress, Typography } from '@mui/material';
 
 export const securityFramework = [
 		{

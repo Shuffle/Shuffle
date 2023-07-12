@@ -1,10 +1,14 @@
 import React, {useEffect, useState} from 'react';
 
+import theme from '../theme.jsx';
 import ReactGA from 'react-ga4';
-import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
 
-import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@material-ui/icons';
+import { 
+	Search as SearchIcon, 
+	CloudQueue as CloudQueueIcon, 
+	Code as CodeIcon 
+} from '@mui/icons-material';
 
 import algoliasearch from 'algoliasearch/lite';
 import { InstantSearch, Configure, connectSearchBox, connectHits, connectHitInsights } from 'react-instantsearch-dom';
@@ -21,7 +25,7 @@ import {
 	Typography, 
 	Button, 
 	Tooltip
-} from '@material-ui/core';
+} from '@mui/material';
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 //const searchClient = algoliasearch("L55H18ZINA", "a19be455e7e75ee8f20a93d26b9fc6d6")
@@ -34,7 +38,6 @@ const AppGrid = props => {
 
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 2 : parsedXs
-	const theme = useTheme();
 	//const [apps, setApps] = React.useState([]);
 	//const [filteredApps, setFilteredApps] = React.useState([]);
 	const [formMail, setFormMail] = React.useState("");

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@mui/styles";
 // nodejs library that concatenates classes
 import classNames from "classnames";
 import theme from '../theme.jsx';
@@ -9,10 +9,10 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 // react plugin used to create charts
 //import { Line, Bar } from "react-chartjs-2";
 import { useAlert } from "react-alert";
-import Autocomplete from "@material-ui/lab/Autocomplete";
 import Draggable from "react-draggable";
 
 import {
+	Autocomplete, 
 	Tooltip,
 	TextField,
 	IconButton,
@@ -22,7 +22,7 @@ import {
 	Paper,
 	Chip,
 	Checkbox,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   Close as CloseIcon,
@@ -33,7 +33,7 @@ import {
 	CheckBox as CheckBoxIcon,
 	CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
 	OpenInNew as OpenInNewIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
 import { removeParam } from "../views/AngularWorkflow.jsx"

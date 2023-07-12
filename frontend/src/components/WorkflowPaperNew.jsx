@@ -9,7 +9,7 @@ import {
 	Grid,
 	Tooltip,
 	Button,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   AvatarGroup,
@@ -20,7 +20,7 @@ import {
 	Edit as EditIcon,
 	BubbleChart as BubbleChartIcon,
 	MoreVert as MoreVertIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 
 import { useNavigate, Link, useParams } from "react-router-dom";
 

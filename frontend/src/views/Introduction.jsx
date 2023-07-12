@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useTheme } from "@material-ui/core/styles";
 import { Link, useParams } from "react-router-dom";
+import theme from '../theme.jsx';
 
 import Grid from "@material-ui/core/Grid";
 import Card from "@material-ui/core/Card";
@@ -13,7 +13,6 @@ import Button from "@material-ui/core/Button";
 const Workflows = (defaultprops) => {
   const { globalUrl, isLoggedIn, isLoaded } = defaultprops;
 
-  const theme = useTheme();
 	const params = useParams();
 	var props = JSON.parse(JSON.stringify(defaultprops))
 	props.match = {}

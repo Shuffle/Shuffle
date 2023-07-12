@@ -3,8 +3,8 @@ import React, {useState } from 'react';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import {isMobile} from "react-device-detect";
 
-import {Done as DoneIcon, Clear as ClearIcon} from '@material-ui/icons';
-import {Paper, Divider, List, ListItem, ListItemText, Card, CardContent, Grid, Typography, Button, ButtonGroup, FormControl, Dialog, DialogTitle, DialogActions, DialogContent, Tooltip}  from '@material-ui/core';
+import {Done as DoneIcon, Clear as ClearIcon} from '@mui/icons-material';
+import {Paper, Divider, List, ListItem, ListItemText, Card, CardContent, Grid, Typography, Button, ButtonGroup, FormControl, Dialog, DialogTitle, DialogActions, DialogContent, Tooltip}  from '@mui/material';
 import FAQ from "./Faq.jsx";
 import Newsletter from "../components/Newsletter.jsx";
 

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import ReactGA from 'react-ga4';
 import theme from "../theme.jsx";
 
-import { useTheme } from "@material-ui/core/styles";
 import {
 	Paper,
   Typography,
@@ -10,7 +9,7 @@ import {
 	Button,
 	Grid,
 	Card,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import { useAlert } from "react-alert";
 

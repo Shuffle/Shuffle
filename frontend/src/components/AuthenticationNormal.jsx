@@ -13,11 +13,11 @@ import {
 	DialogTitle,
 	DialogContent,
 	Typography,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   LockOpen as LockOpenIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 const AuthenticationData = (props) => {
   const {

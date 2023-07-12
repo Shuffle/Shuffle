@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from "react";
 
-import { makeStyles } from "@material-ui/styles";
+import { makeStyles } from "@mui/styles";
 import { useNavigate, Link } from "react-router-dom";
 import countries from "../components/Countries.jsx";
 import CodeEditor from "../components/ShuffleCodeEditor.jsx";
 import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
 import CacheView from "../components/CacheView.jsx";
 import theme from "../theme.jsx";
-import AddIcon from "@mui/icons-material/Add";
-import ClearIcon from '@mui/icons-material/Clear';
-import StorageIcon from '@mui/icons-material/Storage';
+
 //import ToggleButton from '@mui/material/ToggleButton';
 import {
   FormControl,
@@ -46,7 +44,7 @@ import {
   CircularProgress,
   Box,
 	InputAdornment,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import { Autocomplete } from "@mui/material";
 
@@ -57,7 +55,7 @@ import {
   OpenInNew as OpenInNewIcon,
   CloudDownload as CloudDownloadIcon,
   Description as DescriptionIcon,
-  Polymer as PolymerIcon,
+  Code as CodeIcon,
   CheckCircle as CheckCircleIcon,
   Close as CloseIcon,
   Apps as AppsIcon,
@@ -66,13 +64,15 @@ import {
   Cached as CachedIcon,
   AccessibilityNew as AccessibilityNewIcon,
   Lock as LockIcon,
-  Eco as EcoIcon,
   Schedule as ScheduleIcon,
   Cloud as CloudIcon,
   Business as BusinessIcon,
-	Visibility as VisibilityIcon,
-	VisibilityOff as VisibilityOffIcon,
-} from "@material-ui/icons";
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+	Add as AddIcon, 
+	Clear as ClearIcon, 
+	Storage as StorageIcon, 
+} from "@mui/icons-material";
 
 import { useAlert } from "react-alert";
 import Dropzone from "../components/Dropzone.jsx";
@@ -181,6 +181,11 @@ const Admin = (props) => {
 	const [showApiKey, setShowApiKey] = useState(false);
   const [billingInfo, setBillingInfo] = React.useState({});
 	const [selectedStatus, setSelectedStatus] = React.useState([]);
+
+  useEffect(() => {
+		getUsers()
+  }, []);
+
 
   useEffect(() => {
     if (isDropzone) {
@@ -443,17 +448,17 @@ const Admin = (props) => {
 		// Get drift username from userdata.username before @ in email
 		const username = userdata.username.substring(0, userdata.username.indexOf("@"))
 
-		var body = `Hey,%0D%0AI saw you trying to use Shuffle, and thought we may be able to help. Right now, it looks like you have ${workflow_amount} workflows made, but I'm not sure if you're getting the most out of Shuffle.%0D%0A%0D%0AIf you're interested, I'd love to set up a quick call to see if we can help you get more out of Shuffle. %0D%0A%0D%0A
+		var body = `Hey,%0D%0A%0D%0AI saw you trying to use Shuffle, and thought we may be able to help. Right now, it looks like you have ${workflow_amount} workflows made, but it still doesn't look like you are getting the most out of Shuffle. If you're interested, I'd love to set up a quick call to see if we can help you get more out of Shuffle. %0D%0A%0D%0A
 
 Some of the things we can help with:%0D%0A
 ${your_apps}
-- Properly authenticating and custom building apps%0D%0A
+- Configuring and authenticating your apps%0D%0A
 ${usecases}
-- Creating special usecases%0D%0A%0D%0A
+- Creating special usecases and apps%0D%0A%0D%0A
 
 Let me know if you're interested, or set up a call here: https://drift.me/${username}`
 
-		return `mailto:${admins}?subject=${subject}&body=${body}`
+		return `mailto:${admins}?bcc=frikky@shuffler.io&subject=${subject}&body=${body}`
 	}
 
   const deleteAuthentication = (data) => {
@@ -987,6 +992,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 							leads.push("student")
 						}
 
+						if (responseJson.lead_info.internal) {
+							leads.push("internal")
+						}
+
 						setSelectedStatus(leads)
 					}
 
@@ -1484,10 +1493,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         alert.error(error.toString());
       });
   };
-
-  useEffect(() => {
-		getUsers()
-  }, []);
 
   const getSettings = () => {
     fetch(globalUrl + "/api/v1/getsettings", {
@@ -2186,7 +2191,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       primary: "Workflows",
       secondary: "",
       active: true,
-      icon: <PolymerIcon style={{ color: itemColor }} />,
+      icon: <CodeIcon style={{ color: itemColor }} />,
     },
     {
       primary: "Apps",
@@ -2386,7 +2391,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 										renderValue={(selected) => selected.join(', ')}
 										MenuProps={MenuProps}
 									>
-										{["contacted", "lead", "pov", "demo done", "customer", "student", ].map((name) => (
+										{["contacted", "lead", "pov", "demo done", "customer", "student", "internal"].map((name) => (
 											<MenuItem key={name} value={name}>
 												<Checkbox checked={selectedStatus.indexOf(name) > -1} />
 												<ListItemText primary={name} />
@@ -2755,7 +2760,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             		            item.usage === null ? 0 : item.usage,
             		          data_collection: "None",
             		          active: item.active,
-            		          icon: <PolymerIcon style={{ color: itemColor }} />,
+            		          icon: <CodeIcon style={{ color: itemColor }} />,
             		        };
 
             		        return (
@@ -3532,8 +3537,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>App Authentication</h2>
           <span style={{ marginLeft: 25 }}>
-            Control the authentication options for individual apps. PS: Actions
-            performed here can be destructive!
+            Control the authentication options for individual apps. 
           </span>
           &nbsp;
           <a
@@ -3542,7 +3546,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             href="/docs/organizations#app_authentication"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
-            Learn more about authentication
+            Learn more about App Authentication
           </a>
         </div>
         <Divider
@@ -4357,7 +4361,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           <Tab
             disabled={userdata.admin !== "true"}
             label=<span>
-              <EcoIcon style={iconStyle} />
+              <CodeIcon style={iconStyle} />
               Environments
             </span>
           />

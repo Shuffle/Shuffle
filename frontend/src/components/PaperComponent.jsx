@@ -3,7 +3,7 @@ import React, {useState, useEffect, useLayoutEffect} from 'react';
 import Draggable from "react-draggable";
 import {
 		Paper
-} from "@material-ui/core";
+} from "@mui/material";
 
 const PaperComponent = (props) => {
   return (

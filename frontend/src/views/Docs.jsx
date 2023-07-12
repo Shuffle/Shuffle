@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 
-import { useTheme } from "@material-ui/core/styles";
 import ReactMarkdown from "react-markdown";
 import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { isMobile } from "react-device-detect";
+import theme from '../theme.jsx';
 
 import {
 	Grid,
@@ -18,12 +18,12 @@ import {
   Typography,
   Paper,
   List,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import { 
 	Link as LinkIcon, 
 	Edit as EditIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 const Body = {
   //maxWidth: 1000,
@@ -57,7 +57,6 @@ const Docs = (defaultprops) => {
   const { globalUrl, selectedDoc, serverside, serverMobile } = defaultprops;
 
 	let navigate = useNavigate();
-  const theme = useTheme();
 
 	// Quickfix for react router 5 -> 6 
 	const params = useParams();

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 import { useNavigate } from "react-router-dom";
+import theme from '../theme.jsx';
 import {
   Grid,
   Typography,
@@ -8,15 +9,13 @@ import {
   Button,
   Divider,
   TextField,
-} from "@material-ui/core";
+} from "@mui/material";
 import { useAlert } from "react-alert";
-import { useTheme } from "@material-ui/core/styles";
 
 import detectEthereumProvider from "@metamask/detect-provider";
 
 const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, setUserData } = props;
-  const theme = useTheme();
   const alert = useAlert();
 	let navigate = useNavigate();
 

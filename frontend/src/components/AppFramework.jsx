@@ -23,16 +23,13 @@ import {
 	Dialog,
 	Chip,
 	Avatar,
-} from "@material-ui/core";
-
-import { 
 	Button 
-} from '@material-ui/core';
+} from "@mui/material";
 
 import {
 	Close as CloseIcon,
   Delete as DeleteIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import * as edgehandles from "cytoscape-edgehandles";
 import * as cytoscape from "cytoscape";

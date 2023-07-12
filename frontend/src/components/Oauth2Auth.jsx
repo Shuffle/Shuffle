@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useTheme } from "@material-ui/core/styles";
 import theme from '../theme.jsx';
+import { useAlert } from "react-alert";
 
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -37,7 +37,7 @@ import {
   CircularProgress,
   Switch,
   Fade,
-} from "@material-ui/core";
+} from "@mui/material";
 import { 
 	LockOpen as LockOpenIcon,
 	SupervisorAccount as SupervisorAccountIcon,
@@ -97,6 +97,7 @@ const AuthenticationOauth2 = (props) => {
   } = props;
 
   let navigate = useNavigate();
+  const alert = useAlert()
 
   //const [update, setUpdate] = React.useState("|")
   const [defaultConfigSet, setDefaultConfigSet] = React.useState(
@@ -312,10 +313,30 @@ const AuthenticationOauth2 = (props) => {
     const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`;
 		const workflowId = workflow !== undefined ? workflow.id : "";
     var state = `workflow_id%3D${workflowId}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`;
+
+
+		// This is to make sure authorization can be handled WITHOUT being logged in,
+		// kind of making it act like an api key
+		// https://shuffler.io/authorization -> 3rd party integration auth
+		const urlParams = new URLSearchParams(window.location.search);
+		const userAuth = urlParams.get("authorization");
+		if (userAuth !== undefined && userAuth !== null && userAuth.length > 0) {
+			console.log("Adding authorization from user side")
+			state += `%26authorization%3d${userAuth}`;
+		}
+
+		// Check for org_id
+		const orgId = urlParams.get("org_id");
+		if (orgId !== undefined && orgId !== null && orgId.length > 0) {
+			console.log("Adding org_id from user side")
+			state += `%26org_id%3d${orgId}`;
+		}
+
     if (oauth_url !== undefined && oauth_url !== null && oauth_url.length > 0) {
       state += `%26oauth_url%3d${oauth_url}`;
       console.log("ADDING OAUTH2 URL: ", state);
     }
+
 
     if (
       authenticationType.refresh_uri !== undefined &&
@@ -356,7 +377,7 @@ const AuthenticationOauth2 = (props) => {
     // How can we get a callback properly realtime?
     // How can we properly try-catch without breaks on error?
     try {
-      var newwin = window.open(url, "", "width=800,height=600");
+      var newwin = window.open(url, "", "width=582,height=700");
       //console.log(newwin)
 
       var open = true;
@@ -447,9 +468,8 @@ const AuthenticationOauth2 = (props) => {
             ] = "false";
           } else {
             alert.info(
-              "Field " +
-                selectedApp.authentication.parameters[key].name +
-                " can't be empty"
+              "Field " + selectedApp.authentication.parameters[key].name.replace("_basic", "", -1).replace("_", " ", -1) + " can't be empty"
+                
             );
             return;
           }
