@@ -15,7 +15,7 @@ import {
   ListItem,
   ListItemText,
   Fade,
-} from "@material-ui/core";
+} from "@mui/material";
 import { 
 	FavoriteBorder as FavoriteBorderIcon,
 	Error as ErrorIcon,

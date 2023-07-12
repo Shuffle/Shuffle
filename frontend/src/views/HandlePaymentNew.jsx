@@ -28,7 +28,7 @@ import {
 	DialogActions, 
 	DialogContent, 
 	Tooltip
-}  from '@material-ui/core';
+}  from '@mui/material';
 import FAQ from "./Faq.jsx";
 import Newsletter from "../components/Newsletter.jsx";
 import Services from "./Services.jsx";

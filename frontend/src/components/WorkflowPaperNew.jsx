@@ -9,7 +9,7 @@ import {
 	Grid,
 	Tooltip,
 	Button,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   AvatarGroup,

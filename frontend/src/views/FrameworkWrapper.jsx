@@ -8,7 +8,7 @@ import theme from '../theme.jsx';
 
 import {
 	Button,
-} from "@material-ui/core";
+} from "@mui/material";
 
 const Framework = (props) => {
   const {globalUrl, isLoaded, isLoggedIn, showOptions, selectedOption, rolling, } = props;

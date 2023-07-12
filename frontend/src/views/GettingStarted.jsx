@@ -1,9 +1,9 @@
 import React, { useEffect, useContext } from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import { useTheme } from "@material-ui/core/styles";
+import { makeStyles } from "@mui/material/styles";
 
 import ReactGA from 'react-ga4';
 import SecurityFramework from '../components/SecurityFramework.jsx';
+import theme from '../theme.jsx';
 
 import {
   Badge,
@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogActions,
   DialogContent,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
 	Check as CheckIcon,
@@ -125,7 +125,6 @@ const GettingStarted = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 
   document.title = "Getting Started with Shuffle";
-  const theme = useTheme();
   const alert = useAlert();
   const classes = useStyles(theme);
 	let navigate = useNavigate();

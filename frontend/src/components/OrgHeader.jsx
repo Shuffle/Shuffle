@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { makeStyles } from "@material-ui/styles";
+import theme from '../theme.jsx';
+import { makeStyles } from "@mui/styles";
 import { useTheme } from "@material-ui/core/styles";
 
 import Tooltip from "@material-ui/core/Tooltip";
@@ -36,7 +37,6 @@ const OrgHeader = (props) => {
   	handleEditOrg, 
   } = props;
 
-  const theme = useTheme();
   const alert = useAlert();
   const classes = useStyles();
 

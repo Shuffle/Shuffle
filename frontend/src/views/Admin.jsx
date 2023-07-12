@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { makeStyles } from "@material-ui/styles";
+import { makeStyles } from "@mui/styles";
 import { useNavigate, Link } from "react-router-dom";
 import countries from "../components/Countries.jsx";
 import CodeEditor from "../components/ShuffleCodeEditor.jsx";
@@ -44,7 +44,7 @@ import {
   CircularProgress,
   Box,
 	InputAdornment,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import { Autocomplete } from "@mui/material";
 

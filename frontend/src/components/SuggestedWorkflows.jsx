@@ -13,7 +13,7 @@ import {
   CircularProgress,
 	Tooltip,
 	Dialog,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
 	Close as CloseIcon,

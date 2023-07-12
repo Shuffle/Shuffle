@@ -3,7 +3,7 @@ import React, {useState, useEffect} from 'react';
 import ReactDOM from "react-dom"
 
 import { useInterval } from "react-powerhooks";
-import { makeStyles } from '@material-ui/styles';
+import { makeStyles } from '@mui/material/styles';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import {isMobile} from "react-device-detect";
 import theme from '../theme.jsx';
@@ -20,7 +20,7 @@ import {
 	Paper, 
 	Typography,
 	Divider,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import {
   Preview as PreviewIcon,

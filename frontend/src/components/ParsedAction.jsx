@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
-import { makeStyles, createStyles } from "@material-ui/core/styles";
+import { makeStyles, createStyles } from "@mui/styles";
+
 
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
-import { useTheme } from "@material-ui/core/styles";
 //import NestedMenuItem from "material-ui-nested-menu-item-v5";
 import { NestedMenuItem } from "mui-nested-menu";
 import { useAlert } from "react-alert";
@@ -44,11 +44,8 @@ import {
   CircularProgress,
   Switch,
   Fade,
-} from "@material-ui/core";
-
-import { 
 	Autocomplete 
-} from "@material-ui/lab";
+} from "@mui/material";
 
 import {
   HelpOutline as HelpOutlineIcon,

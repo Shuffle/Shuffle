@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import WelcomeForm2 from "../components/WelcomeForm2.jsx";
-import Stepper from "@material-ui/core/Stepper";
-import Step from "@material-ui/core/Step";
-import StepLabel from "@material-ui/core/StepLabel";
+import {
+	Stepper, 
+	Step, 
+	StepLabel, 
+} from '@mui/material';
 import AppFramework from "../components/AppFramework.jsx";
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import { 

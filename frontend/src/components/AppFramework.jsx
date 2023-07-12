@@ -23,11 +23,8 @@ import {
 	Dialog,
 	Chip,
 	Avatar,
-} from "@material-ui/core";
-
-import { 
 	Button 
-} from '@material-ui/core';
+} from "@mui/material";
 
 import {
 	Close as CloseIcon,

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
-import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
+import theme from '../theme.jsx';
 
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';
 
@@ -18,7 +18,7 @@ import {
 	Tooltip, 
 	Zoom,
 	Chip,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
 import WorkflowPaperNew from "../components/WorkflowPaperNew.jsx"
@@ -33,7 +33,6 @@ const AppGrid = props => {
 
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 4 : parsedXs
-	const theme = useTheme();
 	//const [apps, setApps] = React.useState([]);
 	//const [filteredApps, setFilteredApps] = React.useState([]);
 	const [formMail, setFormMail] = React.useState("");

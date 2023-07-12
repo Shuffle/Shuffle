@@ -1,7 +1,8 @@
 /* eslint-disable react/no-multi-comp */
 import React, { useState, useEffect } from "react";
-import { makeStyles } from "@material-ui/styles";
+import { makeStyles } from "@mui/styles";
 import { useInterval } from "react-powerhooks";
+import theme from '../theme.jsx';
 
 import {
   CircularProgress,
@@ -9,9 +10,8 @@ import {
   Button,
   Paper,
   Typography,
-} from "@material-ui/core";
+} from "@mui/material";
 
-import { useTheme } from "@material-ui/core/styles";
 import { useNavigate } from "react-router-dom";
 
 const hrefStyle = {
@@ -42,7 +42,6 @@ const LoginDialog = (props) => {
     checkLogin,
   } = props;
 
-  const theme = useTheme();
 	let navigate = useNavigate();
   const classes = useStyles();
 

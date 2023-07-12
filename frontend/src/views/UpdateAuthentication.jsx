@@ -5,7 +5,7 @@ import {
 	Typography, 
 	CircularProgress,
 	Button,
-} from "@material-ui/core";
+} from "@mui/material";
 import theme from '../theme.jsx';
 import { useAlert } from "react-alert";
 

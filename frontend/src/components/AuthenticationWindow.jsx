@@ -17,7 +17,7 @@ import {
 	Typography,
 	Select,
 	IconButton,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   LockOpen as LockOpenIcon,

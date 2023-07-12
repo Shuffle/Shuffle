@@ -5,7 +5,10 @@ import {
 	ErrorOutline as ErrorOutlineIcon, 
 	Close as CloseIcon, 
 } from "@mui/icons-material";
-import Typography from "@material-ui/core/Typography";
+
+import {
+	Typography 
+} from "@mui/material";
 
 const alertStyle = {
   backgroundColor: "rgba(0,0,0,0.9)",

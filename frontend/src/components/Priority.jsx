@@ -9,7 +9,7 @@ import {
 	Button,
 	Grid,
 	Card,
-} from "@material-ui/core";
+} from "@mui/material";
 
 // import magic wand icon from material ui icons 
 import {

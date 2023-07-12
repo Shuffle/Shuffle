@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
+import theme from "../theme.jsx";
 import ReactGA from 'react-ga4';
 
-import { useTheme } from "@material-ui/core/styles";
 import {
 	Paper,
   Typography,
@@ -9,7 +9,7 @@ import {
 	Button,
 	Grid,
 	Card,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import { useAlert } from "react-alert";
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
@@ -17,7 +17,6 @@ import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
 const Billing = (props) => {
   const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, } = props;
 	console.log("Billing: ", billingInfo);
-  const theme = useTheme();
   const alert = useAlert();
 
 	const stripe = typeof window === 'undefined' || window.location === undefined ? "" : props.stripeKey === undefined ? "" : window.Stripe ? window.Stripe(props.stripeKey) : ""

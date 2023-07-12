@@ -13,7 +13,7 @@ import {
 	DialogTitle,
 	DialogContent,
 	Typography,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   LockOpen as LockOpenIcon,

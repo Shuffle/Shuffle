@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useTheme } from "@material-ui/core/styles";
 import theme from '../theme.jsx';
 import { useAlert } from "react-alert";
 
@@ -38,7 +37,7 @@ import {
   CircularProgress,
   Switch,
   Fade,
-} from "@material-ui/core";
+} from "@mui/material";
 import { 
 	LockOpen as LockOpenIcon,
 	SupervisorAccount as SupervisorAccountIcon,

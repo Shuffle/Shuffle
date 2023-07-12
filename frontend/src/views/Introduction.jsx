@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useTheme } from "@material-ui/core/styles";
 import { Link, useParams } from "react-router-dom";
 
 import Grid from "@material-ui/core/Grid";

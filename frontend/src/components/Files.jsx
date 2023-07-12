@@ -15,7 +15,7 @@ import {
 	Divider,
 	Select,
 	MenuItem,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   OpenInNew as OpenInNewIcon,

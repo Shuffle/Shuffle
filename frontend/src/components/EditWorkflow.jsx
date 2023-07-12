@@ -37,7 +37,7 @@ import {
 	FormControl,
 	FormLabel,
 
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   ExpandLess as ExpandLessIcon,

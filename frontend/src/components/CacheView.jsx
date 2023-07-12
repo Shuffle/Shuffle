@@ -15,7 +15,7 @@ import {
     Dialog,
     DialogTitle,
     DialogActions,
-} from "@material-ui/core";
+} from "@mui/material";
 import { useAlert } from "react-alert";
 
 import {

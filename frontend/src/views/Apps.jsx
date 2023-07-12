@@ -32,7 +32,7 @@ import {
 	ListItemAvatar,
 	ListItemText,
 	Avatar,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   LockOpen as LockOpenIcon,
@@ -53,7 +53,6 @@ import {
 } from '@mui/icons-material';
 
 import aa from 'search-insights'
-import { useTheme } from "@material-ui/core/styles";
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
 

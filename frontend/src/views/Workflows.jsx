@@ -1,7 +1,7 @@
 import React, { useEffect, useContext } from "react";
 import ReactDOM from "react-dom"
 
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles } from "@mui/styles";
 import { Navigate } from "react-router-dom";
 //import { Redirect } from "react-router-dom";
 
@@ -41,7 +41,7 @@ import {
 	Checkbox,
 	LinearProgress,
 	ListItemText,
-} from "@material-ui/core";
+} from "@mui/material"
 
 import {
   AvatarGroup,

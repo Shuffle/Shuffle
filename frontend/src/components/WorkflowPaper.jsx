@@ -8,7 +8,7 @@ import {
 	Avatar,
 	Grid,
 	Tooltip,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   AvatarGroup,

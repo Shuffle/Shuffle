@@ -1,9 +1,10 @@
 /* eslint-disable react/no-multi-comp */
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import ReactDOM from "react-dom"
+import theme from '../theme.jsx';
 
 import { useInterval } from "react-powerhooks";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles, } from "@mui/styles";
 
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
@@ -13,7 +14,6 @@ import ReactJson from "react-json-view";
 import { NestedMenuItem } from "mui-nested-menu"
 import ReactMarkdown from "react-markdown";
 import { useAlert } from "react-alert";
-import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect"
 import aa from 'search-insights'
 import Drift from "react-driftjs";
@@ -67,7 +67,8 @@ import {
   ListItemText,
   ListItemAvatar,
   Badge,
-} from "@material-ui/core";
+	Autocomplete, 
+} from "@mui/material";
 
 import {
   AvatarGroup,
@@ -115,7 +116,6 @@ import {
 	AutoFixHigh as AutoFixHighIcon,
 } from "@mui/icons-material";
 
-import Autocomplete from "@material-ui/lab/Autocomplete";
 
 import * as cytoscape from "cytoscape";
 import * as edgehandles from "cytoscape-edgehandles";
@@ -398,8 +398,6 @@ const AngularWorkflow = (defaultprops) => {
   var props = JSON.parse(JSON.stringify(defaultprops))
   props.match = {}
   props.match.params = params
-
-  //const theme = useTheme();
 
 
   var to_be_copied = "";

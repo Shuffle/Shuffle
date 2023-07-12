@@ -6,7 +6,6 @@ import { removeCookies, useCookies } from "react-cookie";
 
 import Workflows from "./views/Workflows";
 import GettingStarted from "./views/GettingStarted";
-import EditWebhook from "./views/EditWebhook";
 import AngularWorkflow from "./views/AngularWorkflow.jsx";
 
 import Header from "./components/Header.jsx";
@@ -20,13 +19,12 @@ import DashboardView from "./views/DashboardViews.jsx";
 import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs.jsx";
-import Introduction from "./views/Introduction";
+//import Introduction from "./views/Introduction";
 import SetAuthentication from "./views/SetAuthentication";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
 import Search from "./views/Search.jsx";
 import RunWorkflow from "./views/RunWorkflow.jsx";
 
-import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
 import SettingsPage from "./views/SettingsPage";
 import KeepAlive from "./views/KeepAlive.jsx";
@@ -42,7 +40,6 @@ import { isMobile } from "react-device-detect";
 
 import detectEthereumProvider from "@metamask/detect-provider";
 import Drift from "react-driftjs";
-import DashboardPage from "./views/TempDashboard.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
@@ -282,18 +279,6 @@ const App = (message, props) => {
 	}
 
   const includedData =
-    window.location.pathname === "/home" ||
-    window.location.pathname === "/features" ? (
-      <div>
-				<Routes>
-					<Route
-						exact
-						path="/home"
-						render={(props) => <LandingPageNew isLoaded={isLoaded} {...props} />}
-					/>
-				</Routes>
-      </div>
-    ) : (
       <div
         style={{
           backgroundColor: "#1F2023",
@@ -586,28 +571,6 @@ const App = (message, props) => {
         	/>
         	<Route
         	  exact
-        	  path="/introduction"
-        	  element={
-        	    <Introduction
-        	      isLoaded={isLoaded}
-        	      globalUrl={globalUrl}
-        	      {...props}
-        	    />
-        	  }
-        	/>
-        	<Route
-        	  exact
-        	  path="/introduction/:key"
-        	  element={
-        	    <Introduction
-        	      isLoaded={isLoaded}
-        	      globalUrl={globalUrl}
-        	      {...props}
-        	    />
-        	  }
-        	/>
-        	<Route
-        	  exact
         	  path="/set_authentication"
         	  element={
         	    <SetAuthentication
@@ -652,17 +615,6 @@ const App = (message, props) => {
         	      globalUrl={globalUrl}
         	      setCookie={setCookie}
         	      cookies={cookies}
-        	      {...props}
-        	    />
-        	  }
-        	/>
-			<Route
-        	  exact
-        	  path="/testdashboard"
-        	  element={
-        	    <DashboardPage
-        	      isLoaded={isLoaded}
-        	      globalUrl={globalUrl}
         	      {...props}
         	    />
         	  }
@@ -713,7 +665,6 @@ const App = (message, props) => {
         	/>
 				</Routes>
       </div>
-    );
 
   // <div style={{backgroundColor: "rgba(21, 32, 43, 1)", color: "#fffff", minHeight: "100vh"}}>
   // backgroundColor: "#213243",

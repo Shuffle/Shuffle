@@ -8,9 +8,8 @@ import {
   Button,
   Divider,
   TextField,
-} from "@material-ui/core";
+} from "@mui/material";
 import { useAlert } from "react-alert";
-import { useTheme } from "@material-ui/core/styles";
 
 import detectEthereumProvider from "@metamask/detect-provider";
 

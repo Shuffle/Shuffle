@@ -19,7 +19,7 @@ import {
 	Typography, 
 	TextField,
 	Zoom,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   Edit as EditIcon,

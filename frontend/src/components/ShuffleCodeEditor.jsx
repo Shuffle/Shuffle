@@ -12,7 +12,7 @@ import {
 	Menu,
 	MenuItem,
 	Button,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import theme from '../theme.jsx';
 import Checkbox from '@mui/material/Checkbox';

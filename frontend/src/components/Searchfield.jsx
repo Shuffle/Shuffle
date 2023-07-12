@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useRef} from 'react';
 
+import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { useTheme } from '@material-ui/core/styles';
 
 import {
 	Chip, 
@@ -16,7 +16,7 @@ import {
 	Avatar, 
 	Typography,
 	Tooltip,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import {
   AvatarGroup,
@@ -38,7 +38,6 @@ const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e52
 const SearchField = props => {
 	const { serverside, userdata } = props
 
-	const theme = useTheme();
 	let navigate = useNavigate();
 	const borderRadius = 3
 	const node = useRef()

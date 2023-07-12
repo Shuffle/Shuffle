@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-import { Typography, CircularProgress } from "@material-ui/core";
+import { Typography, CircularProgress } from "@mui/material";
 import theme from '../theme.jsx';
 
 const SetAuthentication = (props) => {
