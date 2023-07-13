@@ -1,14 +1,17 @@
 import React from "react";
 import { createTheme, adaptV4Theme } from "@mui/material/styles";
 
-const theme = createTheme(adaptV4Theme({
+//const theme = createTheme(adaptV4Theme({
+const theme = createTheme({
   palette: {
+    main: "#F86743",
     primary: {
       main: "#F86743",
   	  contrastText: "#ffffff",
     },
     secondary: {
       main: "#e8eaf6",
+	  contrastText: "#000000",
     },
     text: {
       secondary: "rgba(255,255,255,0.7)",
@@ -85,6 +88,6 @@ const theme = createTheme(adaptV4Theme({
 		},
 	},
   },
-}));
+});
 
 export default theme;

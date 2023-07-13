@@ -618,10 +618,10 @@ const ConfigureWorkflow = (props) => {
         />
 				*/}
         {action.must_authenticate ? 
-						<Button
+				<Button
         		  fullWidth
         		  variant="contained"
-							disabled={action.auth_done}
+				  disabled={action.auth_done}
         		  style={{
         		    flex: 1,
         		    textTransform: "none",
@@ -1084,7 +1084,6 @@ const ConfigureWorkflow = (props) => {
 							</Button>
 							*/}
 							<Button
-								color="textSecondary"
 								variant={"outlined"}
 								style={{}}
 								onClick={() => {

@@ -8,7 +8,6 @@ import { useInterval } from "react-powerhooks";
 
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
-// import { Prompt } from "react-router"; // FIXME
 import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
 import { NestedMenuItem } from "mui-nested-menu"
@@ -68,11 +67,8 @@ import {
   ListItemAvatar,
   Badge,
 	Autocomplete, 
-} from "@mui/material";
-
-import {
   AvatarGroup,
-} from "@mui/material"
+} from "@mui/material";
 
 import {
   Folder as FolderIcon,
@@ -356,34 +352,6 @@ export function removeParam(key, sourceURL) {
 
   return rtn;
 }
-
-/*
-const useStyles = makeStyles({
-  notchedOutline: {
-    borderColor: "#f85a3e !important",
-  },
-  root: {
-    "& .MuiAutocomplete-listbox": {
-      border: "2px solid #f85a3e",
-      color: "white",
-      fontSize: 18,
-      "& li:nth-child(even)": {
-        backgroundColor: "#CCC",
-      },
-      "& li:nth-child(odd)": {
-        backgroundColor: "#FFF",
-      },
-    },
-  },
-  inputRoot: {
-    color: "white",
-    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
-    "&:hover .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#f86a3e",
-    },
-  },
-});
-*/
 
 const splitter = "|~|";
 const svgSize = 24;
@@ -16457,9 +16425,6 @@ const AngularWorkflow = (defaultprops) => {
 
   return (
     <div>
-      {/* Removed due to missing react router features
-				<Prompt when={!lastSaved} message={unloadText} />
-			*/}
       {loadedCheck}
     </div>
   );
