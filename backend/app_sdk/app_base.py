@@ -3556,15 +3556,15 @@ class AppBase:
 
                                     if "the JSON object must be" in errorstring:
                                         self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (0)? the JSON object must be in...")
-                                        try:
-                                            e = json.loads(f"{e}")
-                                        except:
-                                            e = f"{e}"
+                                        #try:
+                                        #    e = json.loads(f"{e}")
+                                        #except:
+                                        #    e = f"{e}"
 
                                         newres = json.dumps({
                                             "success": False,
                                             "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@shuffler.io)",
-                                            "exception": e,
+                                            "exception": f"{type(e).__name__} - {e}",
                                         })
                                         break
                                     elif "got an unexpected keyword argument" in errorstring:
@@ -3587,15 +3587,16 @@ class AppBase:
                                 except Exception as e:
                                     self.logger.info(f"[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (1)? err: {e}")
 
-                                    try:
-                                        e = json.loads(f"{e}")
-                                    except:
-                                        e = f"{e}"
+                                    #try:
+                                    #    e = json.loads(f"{e}")
+                                    #except:
+                                    #    e = f"{e}"
 
                                     newres = json.dumps({
                                         "success": False,
                                         "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@shuffler.io)",
-                                        "exception": e,
+                                        "exception": f"{type(e).__name__} - {e}",
+                                        
                                     })
                                     break
 

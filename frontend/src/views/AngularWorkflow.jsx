@@ -4,7 +4,7 @@ import ReactDOM from "react-dom"
 import theme from '../theme.jsx';
 
 import { useInterval } from "react-powerhooks";
-import { makeStyles, } from "@mui/styles";
+//import { makeStyles, } from "@mui/styles";
 
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
@@ -357,6 +357,7 @@ export function removeParam(key, sourceURL) {
   return rtn;
 }
 
+/*
 const useStyles = makeStyles({
   notchedOutline: {
     borderColor: "#f85a3e !important",
@@ -382,6 +383,7 @@ const useStyles = makeStyles({
     },
   },
 });
+*/
 
 const splitter = "|~|";
 const svgSize = 24;
@@ -554,7 +556,6 @@ const AngularWorkflow = (defaultprops) => {
   const appBarSize = isCloud ? 75 : 72;
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
   const unloadText = "Are you sure you want to leave without saving (CTRL+S)?";
-  const classes = useStyles();
 
   const [bodyWidth, bodyHeight] = useWindowSize()
   //console.log("Mobile: ", isMobile, bodyWidth, bodyHeight)
@@ -10080,7 +10081,6 @@ const AngularWorkflow = (defaultprops) => {
 									freeSolo
 									//autoSelect
                   value={subworkflow}
-                  classes={{ inputRoot: classes.inputRoot }}
                   ListboxProps={{
                     style: {
                       backgroundColor: theme.palette.inputColor,
@@ -10199,7 +10199,6 @@ const AngularWorkflow = (defaultprops) => {
                     id="subflow_node_search"
                     autoHighlight
                     value={subworkflowStartnode}
-                    classes={{ inputRoot: classes.inputRoot }}
                     ListboxProps={{
                       style: {
                         backgroundColor: theme.palette.inputColor,
@@ -10707,7 +10706,6 @@ const AngularWorkflow = (defaultprops) => {
                 id="action_search"
                 autoHighlight
                 value={selectedTrigger.app_association}
-                classes={{ inputRoot: classes.inputRoot }}
                 ListboxProps={{
                   style: {
                     backgroundColor: theme.palette.inputColor,
@@ -11678,7 +11676,6 @@ const AngularWorkflow = (defaultprops) => {
               	    id="subflow_search"
               	    autoHighlight
               	    value={subworkflow}
-              	    classes={{ inputRoot: classes.inputRoot }}
               	    ListboxProps={{
               	      style: {
               	        backgroundColor: theme.palette.inputColor,

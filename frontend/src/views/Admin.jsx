@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from "react";
 
-import { makeStyles } from "@mui/styles";
-import { useNavigate, Link } from "react-router-dom";
-import countries from "../components/Countries.jsx";
-import CodeEditor from "../components/ShuffleCodeEditor.jsx";
-import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
+import { useNavigate, } from "react-router-dom";
 import CacheView from "../components/CacheView.jsx";
 import theme from "../theme.jsx";
 
-//import ToggleButton from '@mui/material/ToggleButton';
 import {
   FormControl,
   InputLabel,
@@ -17,7 +12,6 @@ import {
   Checkbox,
   Card,
   Tooltip,
-  FormControlLabel,
   Typography,
   Switch,
   Select,
@@ -33,7 +27,6 @@ import {
   ListItem,
   ListItemText,
   ListItemAvatar,
-  ListItemSecondaryAction,
   IconButton,
   Avatar,
   Zoom,
@@ -42,55 +35,37 @@ import {
   DialogActions,
   DialogContent,
   CircularProgress,
-  Box,
-	InputAdornment,
+  InputAdornment,
 } from "@mui/material";
-
-import { Autocomplete } from "@mui/material";
 
 import {
   Edit as EditIcon,
   FileCopy as FileCopyIcon,
   SelectAll as SelectAllIcon,
-  OpenInNew as OpenInNewIcon,
-  CloudDownload as CloudDownloadIcon,
   Description as DescriptionIcon,
   Code as CodeIcon,
   CheckCircle as CheckCircleIcon,
   Close as CloseIcon,
   Apps as AppsIcon,
-  Image as ImageIcon,
   Delete as DeleteIcon,
   Cached as CachedIcon,
   AccessibilityNew as AccessibilityNewIcon,
   Lock as LockIcon,
   Schedule as ScheduleIcon,
-  Cloud as CloudIcon,
   Business as BusinessIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-	Add as AddIcon, 
-	Clear as ClearIcon, 
 	Storage as StorageIcon, 
 } from "@mui/icons-material";
 
 import { useAlert } from "react-alert";
-import Dropzone from "../components/Dropzone.jsx";
-import HandlePaymentNew from "../views/HandlePaymentNew.jsx";
 import OrgHeader from "../components/OrgHeader.jsx";
 import OrgHeaderexpanded from "../components/OrgHeaderexpanded.jsx";
 import Billing from "../components/Billing.jsx";
 import Priorities from "../components/Priorities.jsx";
 import Branding from "../components/Branding.jsx";
 import Files from "../components/Files.jsx";
-import { display, style } from "@mui/system";
 //import EnvironmentStats from "../components/EnvironmentStats.jsx";
-
-const useStyles = makeStyles({
-  notchedOutline: {
-    borderColor: "#f85a3e !important",
-  },
-});
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -104,37 +79,10 @@ const MenuProps = {
   getContentAnchorEl: () => null,
 };
 
-
-const FileCategoryInput = (props) => {
-  const isSet = props.isSet;
-  console.log("inside filecategoryinput");  
-  console.log("isset value" , isSet);
-  if (isSet){
-    return (
-        <TextField
-              onBlur={""}
-              InputProps={{
-                style: {
-                  color: "white",
-                },
-              }}
-              color="primary"
-              placeholder="File category name"
-              required
-              margin="dense"
-              defaultValue={""}
-              autoFocus
-              fullWidth
-            />
-    )}
-  }
-
-
 const Admin = (props) => {
   const { globalUrl, userdata, serverside, checkLogin } = props;
 
   var to_be_copied = "";
-  const classes = useStyles();
   let navigate = useNavigate();
 
   const [firstRequest, setFirstRequest] = React.useState(true);
@@ -150,11 +98,9 @@ const Admin = (props) => {
   const [selectedOrganization, setSelectedOrganization] = React.useState({});
     
   //console.log("Selected: ", selectedOrganization)
-  const [organizationFeatures, setOrganizationFeatures] = React.useState({});
   const [loginInfo, setLoginInfo] = React.useState("");
   const [curTab, setCurTab] = React.useState(0);
   const [users, setUsers] = React.useState([]);
-  const [organizations, setOrganizations] = React.useState([]);
   const [orgSyncResponse, setOrgSyncResponse] = React.useState("");
   const [userSettings, setUserSettings] = React.useState({});
   const [matchingOrganizations, setMatchingOrganizations] = React.useState([]);
@@ -170,29 +116,20 @@ const Admin = (props) => {
   const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false);
   const [authenticationFields, setAuthenticationFields] = React.useState([]);
   const [showArchived, setShowArchived] = React.useState(false);
-  const [isDropzone, setIsDropzone] = React.useState(false);
 
   const [image2FA, setImage2FA] = React.useState("");
   const [value2FA, setValue2FA] = React.useState("");
   const [secret2FA, setSecret2FA] = React.useState("");
   const [show2faSetup, setShow2faSetup] = useState(false);
+  const [billingInfo, ] = React.useState({});
 
   const [adminTab, setAdminTab] = React.useState(2);
-	const [showApiKey, setShowApiKey] = useState(false);
-  const [billingInfo, setBillingInfo] = React.useState({});
-	const [selectedStatus, setSelectedStatus] = React.useState([]);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [selectedStatus, setSelectedStatus] = React.useState([]);
 
   useEffect(() => {
-		getUsers()
+    getUsers()
   }, []);
-
-
-  useEffect(() => {
-    if (isDropzone) {
-      //redirectOpenApi();
-      setIsDropzone(false);
-    }
-  }, [isDropzone]);
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
@@ -225,39 +162,7 @@ const Admin = (props) => {
       });
   };
 
-  const getApps = () => {
-    fetch(globalUrl + "/api/v1/apps", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for apps :O!");
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        console.log("apps: ", responseJson);
-        //setApps(responseJson)
-        //setFilteredApps(responseJson)
-        //if (responseJson.length > 0) {
-        //	setSelectedApp(responseJson[0])
-        //	if (responseJson[0].actions !== null && responseJson[0].actions.length > 0) {
-        //		setSelectedAction(responseJson[0].actions[0])
-        //	} else {
-        //		setSelectedAction({})
-        //	}
-        //}
-      })
-      .catch((error) => {
-        alert.error(error.toString());
-      });
-  };
+  
 
   const categories = [
     {
@@ -673,7 +578,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         } else if (!responseJson.success) {
           alert.error("Failed to handle sync.");
         } else {
-          getOrgs();
           if (disableSync) {
             alert.success("Successfully disabled sync!");
             setOrgSyncResponse("Successfully disabled syncronization");
@@ -1000,18 +904,18 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 					}
 
           setSelectedOrganization(responseJson)
-          var lists = {
-            active: {
-              triggers: [],
-              features: [],
-              sync: [],
-            },
-            inactive: {
-              triggers: [],
-              features: [],
-              sync: [],
-            },
-          };
+          //var lists = {
+          //  active: {
+          //    triggers: [],
+          //    features: [],
+          //    sync: [],
+          //  },
+          //  inactive: {
+          //    triggers: [],
+          //    features: [],
+          //    sync: [],
+          //  },
+          //};
 
           // FIXME: Set up features
           //Object.keys(responseJson.sync_features).map(function(key, index) {
@@ -1020,7 +924,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 
           //setOrgName(responseJson.name)
           //setOrgDescription(responseJson.description)
-          setOrganizationFeatures(lists);
+          //setOrganizationFeatures(lists);
         }
       })
       .catch((error) => {
@@ -1113,7 +1017,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     alert.info("Setting default env to " + environment.name);
     var newEnv = [];
     for (var key in environments) {
-      if (environments[key].id == environment.id) {
+      if (environments[key].id === environment.id) {
         if (environments[key].archived) {
           alert.error("Can't set archived to default");
           return;
@@ -1121,7 +1025,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 
         environments[key].default = true;
       } else if (
-        environments[key].default == true &&
+        environments[key].default === true &&
         environments[key].id !== environment.id
       ) {
         environments[key].default = false;
@@ -1158,33 +1062,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       )
       .catch((error) => {
         console.log("Error in backend data: ", error);
-      });
-  };
-
-  const flushQueue = (name) => {
-    // Just use this one?
-    const url = globalUrl + "/api/v1/flush_queue";
-    fetch(url, {
-      method: "DELETE",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) =>
-        response.json().then((responseJson) => {
-          if (responseJson["success"] === false) {
-            alert.error(responseJson.reason);
-            getEnvironments();
-          } else {
-            setLoginInfo("");
-            setModalOpen(false);
-            getEnvironments();
-          }
-        })
-      )
-      .catch((error) => {
-        console.log("Error when deleting: ", error);
       });
   };
 
@@ -1277,7 +1154,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     //alert.info("Modifying environment " + environment.Name)
     var newEnv = [];
     for (var key in environments) {
-      if (environments[key].id == id) {
+      if (environments[key].id === id) {
         if (environments[key].default) {
           alert.error("Can't modify the default environment");
           return;
@@ -1356,9 +1233,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       });
   };
 
-  var localData = "";
-
-
   const getSchedules = () => {
     fetch(globalUrl + "/api/v1/workflows/schedules", {
       method: "GET",
@@ -1434,34 +1308,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .then((responseJson) => {
         setEnvironments(responseJson);
-      })
-      .catch((error) => {
-        alert.error(error.toString());
-      });
-  };
-
-  const getOrgs = () => {
-    // API no longer in use, as it's in handleInfo request
-    return;
-
-    fetch(globalUrl + "/api/v1/orgs", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for apps :O!");
-          return;
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        setOrganizations(responseJson);
       })
       .catch((error) => {
         alert.error(error.toString());
@@ -1560,8 +1406,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       document.title = "Shuffle - admin - environments";
       getEnvironments();
     } else if (newValue === 7) {
+      //getOrgs();
       document.title = "Shuffle - admin - orgs";
-      getOrgs();
     } else {
       document.title = "Shuffle - admin";
     }
@@ -2063,7 +1909,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   maxHeight: 200,
                   maxWidth: 200,
                   minWidth: 200,
-                  maxWidth: 200,
                 }}
               />
             ) : (
@@ -2779,7 +2624,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 								selectedOrganization={selectedOrganization}
 								adminTab={adminTab}
 								billingInfo={billingInfo}
-								selectedOrganization={selectedOrganization}
 								stripeKey={props.stripeKey}
 								handleGetOrg={handleGetOrg}
 							/>
@@ -2790,7 +2634,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 								adminTab={adminTab}
 								globalUrl={globalUrl}
 								handleGetOrg={handleGetOrg}
-								selectedOrganization={selectedOrganization}
 								selectedOrganization={selectedOrganization}
 								setSelectedOrganization={setSelectedOrganization}
 							/>
@@ -4077,7 +3920,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   	</ListItem>
 										{showCPUAlert === false ? null : 
                   		<ListItem key={index+"_cpu"} style={{ backgroundColor: bgColor }}>
-												<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+												<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
 													<div style={{flex: 2, overflow: "hidden",}}>
 														<Typography variant="body1" >
 															90% CPU the server(s) hosting the Shuffle App Runner (Orborus) was found.  

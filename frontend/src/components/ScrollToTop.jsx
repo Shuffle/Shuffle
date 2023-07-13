@@ -9,7 +9,7 @@ function ScrollToTop({ getUserNotifications, curpath, setCurpath, history }) {
   useEffect(() => {
 		// Custom handler for certain scroll mechanics
 		//
-		console.log("OLD: ", curpath, "NeW: ", window.location.pathname)
+		//console.log("OLD: ", curpath, "NeW: ", window.location.pathname)
 		if (curpath === window.location.pathname && curpath === "/usecases") {
 		} else { 
 
