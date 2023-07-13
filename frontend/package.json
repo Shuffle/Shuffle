@@ -68,6 +68,7 @@
     "react-router-dom": "^6.14.1",
     "react-scripts": "^5.0.1",
     "reaviz": "^14.9.4",
+    "remark-gfm": "^3.0.1",
     "search-insights": "^2.2.1",
     "shellwords": "^0.1.1",
     "simplebar": "^4.2.3",

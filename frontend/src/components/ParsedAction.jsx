@@ -1159,6 +1159,8 @@ const ParsedAction = (props) => {
           		    const iconInfo = GetIconInfo({ name: data.app_name });
           		    const useIcon = iconInfo.originalIcon;
 
+					console.log("Actionname 1: ", newActionname)
+
           		    newActionname = (
           		      newActionname.charAt(0).toUpperCase() +
           		      newActionname.substring(1)
@@ -1362,7 +1364,7 @@ const ParsedAction = (props) => {
             }
 
             var disabled = false;
-            var rows = "5";
+            var rows = "3";
             var openApiHelperText = "This is an OpenAPI specific field";
 						/*
             if (
@@ -1554,8 +1556,8 @@ const ParsedAction = (props) => {
             }
 
             if (tmpitem === "from_shuffle") {
-							tmpitem = "from"
-						}
+				tmpitem = "from"
+			}
 
             tmpitem = (
               tmpitem.charAt(0).toUpperCase() + tmpitem.substring(1)
@@ -1585,14 +1587,7 @@ const ParsedAction = (props) => {
                   fontSize: "1em",
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    minHeight: 50,
-                    marginLeft: 5,
-                    maxWidth: "95%",
-                    fontSize: "1em",
-                  },
-									disableUnderline: true,
+				  disableUnderline: true,
                   endAdornment: hideExtraTypes ? null : (
                     <InputAdornment position="end">
 											<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
@@ -1940,13 +1935,6 @@ const ParsedAction = (props) => {
                     borderRadius: theme.palette.borderRadius,
                   }}
                   InputProps={{
-                    style: {
-                      color: "white",
-                      minHeight: 50,
-                      marginLeft: "5px",
-                      maxWidth: "95%",
-                      fontSize: "1em",
-                    },
                     endAdornment: hideExtraTypes ? null : (
                       <InputAdornment position="end">
                         <Tooltip title="Autocomplete text" placement="top">
@@ -1969,7 +1957,7 @@ const ParsedAction = (props) => {
                 	helperText={returnHelperText(data.name, data.value)}
                   fullWidth
                   multiline={multiline}
-                  rows="5"
+                  rows={"3"}
                   color="primary"
                   defaultValue={data.value}
                   type={"text"}
@@ -3166,14 +3154,6 @@ const ParsedAction = (props) => {
 									<span>
 										<Typography style={{color: "rgba(255,255,255,0.7)"}}>Delay</Typography>
 										<TextField
-											style={{
-												backgroundColor: theme.palette.inputColor,
-												borderRadius: theme.palette.borderRadius,
-												color: "white",
-												width: 50,
-												height: 50,
-												fontSize: "1em",
-											}}
 											InputProps={{
 												style: theme.palette.innerTextfieldStyle,
 												disableUnderline: true,
@@ -3499,17 +3479,19 @@ const ParsedAction = (props) => {
                 color: "white",
               },
             }}
-						filterOptions={(options, { inputValue }) => {
-							//console.log("Option contains?: ", inputValue, options)
-							const lowercaseValue = inputValue.toLowerCase()
-							options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
+			filterOptions={(options, { inputValue }) => {
+				//console.log("Option contains?: ", inputValue, options)
+				const lowercaseValue = inputValue.toLowerCase()
+				options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
 
-							return options
-						}}
+				return options
+			}}
             getOptionLabel={(option) => {
               if (option === undefined || option === null || option.name === undefined || option.name === null ) {
                 return null;
               }
+
+			  console.log("OPTION: ", option)
 
               const newname = (
                 option.name.charAt(0).toUpperCase() + option.name.substring(1)
@@ -3533,45 +3515,50 @@ const ParsedAction = (props) => {
 								});
               }
             }}
-            renderOption={(data) => {
+            renderOption={(props, data, state) => {
               var newActionname = data.name;
               if (data.label !== undefined && data.label !== null && data.label.length > 0) {
                 newActionname = data.label;
               }
 
               var newActiondescription = data.description;
-							//console.log("DESC: ", newActiondescription)
+			  //console.log("DESC: ", newActiondescription)
               if (data.description === undefined || data.description === null) {
-								newActiondescription = "Description: No description defined for this action"
+				newActiondescription = "Description: No description defined for this action"
               } else {
-								newActiondescription = "Description: "+newActiondescription
-							}
+				newActiondescription = "Description: "+newActiondescription
+			  }
 
               const iconInfo = GetIconInfo({ name: data.name });
               const useIcon = iconInfo.originalIcon;
 
-              newActionname = (
-                newActionname.charAt(0).toUpperCase() +
-                newActionname.substring(1)
-              ).replaceAll("_", " ");
+			  if (newActionname === undefined || newActionname === null) {
+				  newActionname = "No name"
+				  data.name = "No name"
+				  data.label = "No name"
+			  }
 
-							var method = ""
-							var extraDescription = ""
-							if (data.name.includes("get_")) {
-								method = "GET"
-							} else if (data.name.includes("post_")) {
-								method = "POST"
-							} else if (data.name.includes("put_")) {
-								method = "PUT"
-							} else if (data.name.includes("patch_")) {
-								method = "PATCH"
-							} else if (data.name.includes("delete_")) {
-								method = "DELETE"
-							} else if (data.name.includes("options_")) {
-								method = "OPTIONS"
-							} else if (data.name.includes("connect_")) {
-								method = "CONNECT"
-							}
+			  console.log("Name: ", newActionname)
+
+              newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
+
+				var method = ""
+				var extraDescription = ""
+				if (data.name.includes("get_")) {
+					method = "GET"
+				} else if (data.name.includes("post_")) {
+					method = "POST"
+				} else if (data.name.includes("put_")) {
+					method = "PUT"
+				} else if (data.name.includes("patch_")) {
+					method = "PATCH"
+				} else if (data.name.includes("delete_")) {
+					method = "DELETE"
+				} else if (data.name.includes("options_")) {
+					method = "OPTIONS"
+				} else if (data.name.includes("connect_")) {
+					method = "CONNECT"
+				}
 
 							// FIXME: Should it require a base URL?
 							if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {

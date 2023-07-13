@@ -506,13 +506,6 @@ const ConfigureWorkflow = (props) => {
                 borderRadius: 5,
               }}
               InputProps={{
-                style: {
-                  color: "white",
-                  minHeight: 50,
-                  marginLeft: 5,
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                },
                 endAdornment: <InputAdornment position="end"></InputAdornment>,
               }}
               fullWidth

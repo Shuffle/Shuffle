@@ -7080,12 +7080,6 @@ const AngularWorkflow = (defaultprops) => {
       <div style={appViewStyle}>
         <div style={{ flex: "1" }}>
           <TextField
-            style={{
-              backgroundColor: inputColor,
-              borderRadius: theme.palette.borderRadius,
-              marginTop: 5,
-              marginRight: 10,
-            }}
             InputProps={{
               style: {
                 color: "white",
@@ -7788,15 +7782,6 @@ const AngularWorkflow = (defaultprops) => {
         style={{
           backgroundColor: inputColor,
           borderRadius: theme.palette.borderRadius,
-        }}
-        InputProps={{
-          style: {
-            color: "white",
-            minHeight: 50,
-            marginLeft: "5px",
-            maxWidth: "95%",
-            fontSize: "1em",
-          },
         }}
         fullWidth
         multiline={multiline}
@@ -9146,15 +9131,6 @@ const AngularWorkflow = (defaultprops) => {
             backgroundColor: inputColor,
             borderRadius: theme.palette.borderRadius,
           }}
-          InputProps={{
-            style: {
-              color: "white",
-              marginLeft: "5px",
-              maxWidth: "95%",
-              height: 50,
-              fontSize: "1em",
-            },
-          }}
           fullWidth
           color="primary"
           placeholder={selectedTrigger.label}
@@ -9169,13 +9145,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
             }}
             required
             disabled
@@ -9906,15 +9875,6 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
-                InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
-                  },
-                }}
                 fullWidth
                 color="primary"
                 placeholder={selectedTrigger.label}
@@ -9931,14 +9891,6 @@ const AngularWorkflow = (defaultprops) => {
                   <span>
                     <Typography>Delay</Typography>
                     <TextField
-                      style={{
-                        backgroundColor: theme.palette.inputColor,
-                        borderRadius: theme.palette.borderRadius,
-                        color: "white",
-                        width: 50,
-                        height: 50,
-                        fontSize: "1em",
-                      }}
                       InputProps={{
                         style: theme.palette.innerTextfieldStyle,
                       }}
@@ -10259,12 +10211,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    fontSize: "1em",
-                  },
                   endAdornment: (
                     <InputAdornment position="end">
                       <Tooltip title="Autocomplete text" placement="top">
@@ -10411,12 +10357,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                fontSize: "1em",
-              },
             }}
             multiline
             rows="4"
@@ -10438,13 +10378,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
-                  },
                 }}
                 fullWidth
                 color="primary"
@@ -10492,13 +10425,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
-                  },
                 }}
                 fullWidth
                 color="primary"
@@ -10518,13 +10444,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
-                  },
                 }}
                 fullWidth
                 color="primary"
@@ -10544,13 +10463,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
             }}
             fullWidth
             color="primary"
@@ -10655,13 +10567,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
             }}
             fullWidth
             color="primary"
@@ -11008,12 +10913,6 @@ const AngularWorkflow = (defaultprops) => {
                   id="webhook_uri_header"
                   onClick={() => { }}
                   InputProps={{
-                    style: {
-                      color: "white",
-                      marginLeft: "5px",
-                      maxWidth: "95%",
-                      fontSize: "1em",
-                    },
                   }}
                   fullWidth
                   multiline
@@ -11065,12 +10964,6 @@ const AngularWorkflow = (defaultprops) => {
                   id="webhook_uri_header"
                   onClick={() => { }}
                   InputProps={{
-                    style: {
-                      color: "white",
-                      marginLeft: "5px",
-                      maxWidth: "95%",
-                      fontSize: "1em",
-                    },
                   }}
                   fullWidth
                   multiline
@@ -11474,13 +11367,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
             }}
             fullWidth
             color="primary"
@@ -11548,13 +11434,6 @@ const AngularWorkflow = (defaultprops) => {
                 borderRadius: theme.palette.borderRadius,
               }}
               InputProps={{
-                style: {
-                  color: "white",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  marginTop: "3px",
-                  fontSize: "1em",
-                },
               }}
               fullWidth
               rows="4"
@@ -11762,13 +11641,6 @@ const AngularWorkflow = (defaultprops) => {
 									marginTop: 10,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
-                  },
                 }}
                 fullWidth
                 color="primary"
@@ -11851,13 +11723,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
             }}
             fullWidth
             color="primary"
@@ -11955,13 +11820,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    height: 50,
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    fontSize: "1em",
-                  },
                 }}
                 fullWidth
                 disabled={
@@ -12010,13 +11868,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    marginTop: "3px",
-                    fontSize: "1em",
-                  },
                 }}
                 disabled={
                   workflow.triggers[selectedTriggerIndex].status === "running"
