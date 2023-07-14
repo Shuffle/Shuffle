@@ -35,6 +35,10 @@ import (
 	"strings"
 )
 
+type ImageRequest struct {
+	Images []string `json:"images"`
+}
+
 // Parses a directory with a Dockerfile into a tar for Docker images..
 func getParsedTar(tw *tar.Writer, baseDir, extra string) error {
 	return filepath.Walk(baseDir, func(file string, fi os.FileInfo, err error) error {
@@ -387,15 +391,85 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 // Checks if an image exists
 func imageCheckBuilder(images []string) error {
-	//log.Printf("[FIXME] ImageNames to check: %#v", images)
-	return nil
+	// log.Printf("[FIXME] ImageNames to check: %#v", images)
 
-	ctx := context.Background()
+	// return nil
+
+	ctx := context.Bakground()
 	client, err := client.NewEnvClient()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
 		return err
 	}
+
+	serviceName := "shuffle-workers"
+
+	// Get the tasks for the service
+	services, err := client.ServiceList(context.Background(), types.ServiceListOptions{})
+
+	if err != nil {
+		panic(err)
+	}
+
+	var IPs = make(map[string]bool)
+
+	for _, service := range services {
+		if service.Spec.Name == serviceName {
+			fmt.Printf("Service hosted on : %s %s: \n", service.Endpoint.VirtualIPs, service.Endpoint.Ports)
+			for _, vip := range service.Endpoint.VirtualIPs {
+				result, err := client.NetworkInspect(context.Background(), vip.NetworkID, types.NetworkInspectOptions{})
+				if err != nil {
+					fmt.Printf("[ERROR] Error: %s \n", err)
+				}
+
+				peers := result.Peers
+				for _, peer := range peers {
+					if _, ok := IPs[peer.IP]; !ok {
+						IPs[peer.IP] = true
+						fmt.Printf("Peer IP: %s \n", peer.IP)
+					}
+				}
+			}
+		}
+	}
+
+	// loop through the keys of the map IPs
+	for key := range IPs {
+		// make a request to http://IP:33333
+		url := fmt.Sprintf("http://%s:33333/api/v1/download", key)
+		imagesRequest := ImageRequest{
+			Images: images,
+		}
+
+		imageJSON, err := json.Marshal(imagesRequest)
+
+		fmt.Printf("[INFO] Making a request to %s to download images\n", url)
+		req, err := http.NewRequest(
+			"POST",
+			url,
+			bytes.NewBuffer(imageJSON), 
+		)
+
+		if err != nil {
+			fmt.Printf("[ERROR] Error in making request to %s : %s \n", url, err)
+		}
+
+		httpClient := &http.Client{}
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			fmt.Printf("[ERROR] Error in making request to %s : %s \n", url, err)
+		}
+
+		respBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Printf("[ERROR] Error in reading response body : %s \n", err)
+		}
+		
+		fmt.Printf("[INFO] Response body when tried sending images for nodes to download: %s \n", respBody)
+	}
+
+	// this was there before i came in :) ~ Aditya
+	return nil
 
 	allImages, err := client.ImageList(ctx, types.ImageListOptions{
 		All: true,
