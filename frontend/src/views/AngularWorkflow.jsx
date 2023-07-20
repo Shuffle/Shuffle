@@ -4,11 +4,10 @@ import ReactDOM from "react-dom"
 import theme from '../theme.jsx';
 
 import { useInterval } from "react-powerhooks";
-import { makeStyles, } from "@mui/styles";
+//import { makeStyles, } from "@mui/styles";
 
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
-// import { Prompt } from "react-router"; // FIXME
 import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
 import { NestedMenuItem } from "mui-nested-menu"
@@ -51,7 +50,7 @@ import {
   IconButton,
   Menu,
   Input,
-  Fade,
+  Collapse,
   FormGroup,
   FormControlLabel,
   Typography,
@@ -68,11 +67,8 @@ import {
   ListItemAvatar,
   Badge,
 	Autocomplete, 
-} from "@mui/material";
-
-import {
   AvatarGroup,
-} from "@mui/material"
+} from "@mui/material";
 
 import {
   Folder as FolderIcon,
@@ -119,14 +115,14 @@ import {
 
 import * as cytoscape from "cytoscape";
 import * as edgehandles from "cytoscape-edgehandles";
-import * as clipboard from "cytoscape-clipboard";
+//import * as clipboard from "cytoscape-clipboard";
+//import undoRedo from "cytoscape-undo-redo";
+//import cxtmenu from "cytoscape-cxtmenu";
 import CytoscapeComponent from "react-cytoscapejs";
-import undoRedo from "cytoscape-undo-redo";
 
 import Draggable from "react-draggable";
 
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
-import cxtmenu from "cytoscape-cxtmenu";
 
 import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
@@ -232,9 +228,9 @@ const inputColor = "#383B40";
 
 // http://apps.cytoscape.org/apps/yfileslayoutalgorithms
 cytoscape.use(edgehandles);
-cytoscape.use(clipboard);
-cytoscape.use(undoRedo);
-cytoscape.use(cxtmenu);
+//cytoscape.use(clipboard);
+//cytoscape.use(undoRedo);
+//cytoscape.use(cxtmenu);
 
 // Adds specific text to items
 //import popper from 'cytoscape-popper';
@@ -356,32 +352,6 @@ export function removeParam(key, sourceURL) {
 
   return rtn;
 }
-
-const useStyles = makeStyles({
-  notchedOutline: {
-    borderColor: "#f85a3e !important",
-  },
-  root: {
-    "& .MuiAutocomplete-listbox": {
-      border: "2px solid #f85a3e",
-      color: "white",
-      fontSize: 18,
-      "& li:nth-child(even)": {
-        backgroundColor: "#CCC",
-      },
-      "& li:nth-child(odd)": {
-        backgroundColor: "#FFF",
-      },
-    },
-  },
-  inputRoot: {
-    color: "white",
-    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
-    "&:hover .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#f86a3e",
-    },
-  },
-});
 
 const splitter = "|~|";
 const svgSize = 24;
@@ -554,7 +524,6 @@ const AngularWorkflow = (defaultprops) => {
   const appBarSize = isCloud ? 75 : 72;
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
   const unloadText = "Are you sure you want to leave without saving (CTRL+S)?";
-  const classes = useStyles();
 
   const [bodyWidth, bodyHeight] = useWindowSize()
   //console.log("Mobile: ", isMobile, bodyWidth, bodyHeight)
@@ -7111,12 +7080,6 @@ const AngularWorkflow = (defaultprops) => {
       <div style={appViewStyle}>
         <div style={{ flex: "1" }}>
           <TextField
-            style={{
-              backgroundColor: inputColor,
-              borderRadius: theme.palette.borderRadius,
-              marginTop: 5,
-              marginRight: 10,
-            }}
             InputProps={{
               style: {
                 color: "white",
@@ -7819,15 +7782,6 @@ const AngularWorkflow = (defaultprops) => {
         style={{
           backgroundColor: inputColor,
           borderRadius: theme.palette.borderRadius,
-        }}
-        InputProps={{
-          style: {
-            color: "white",
-            minHeight: 50,
-            marginLeft: "5px",
-            maxWidth: "95%",
-            fontSize: "1em",
-          },
         }}
         fullWidth
         multiline={multiline}
@@ -9177,15 +9131,6 @@ const AngularWorkflow = (defaultprops) => {
             backgroundColor: inputColor,
             borderRadius: theme.palette.borderRadius,
           }}
-          InputProps={{
-            style: {
-              color: "white",
-              marginLeft: "5px",
-              maxWidth: "95%",
-              height: 50,
-              fontSize: "1em",
-            },
-          }}
           fullWidth
           color="primary"
           placeholder={selectedTrigger.label}
@@ -9200,13 +9145,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
             }}
             required
             disabled
@@ -9937,15 +9875,6 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
-                InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
-                  },
-                }}
                 fullWidth
                 color="primary"
                 placeholder={selectedTrigger.label}
@@ -9962,14 +9891,6 @@ const AngularWorkflow = (defaultprops) => {
                   <span>
                     <Typography>Delay</Typography>
                     <TextField
-                      style={{
-                        backgroundColor: theme.palette.inputColor,
-                        borderRadius: theme.palette.borderRadius,
-                        color: "white",
-                        width: 50,
-                        height: 50,
-                        fontSize: "1em",
-                      }}
                       InputProps={{
                         style: theme.palette.innerTextfieldStyle,
                       }}
@@ -10080,7 +10001,6 @@ const AngularWorkflow = (defaultprops) => {
 									freeSolo
 									//autoSelect
                   value={subworkflow}
-                  classes={{ inputRoot: classes.inputRoot }}
                   ListboxProps={{
                     style: {
                       backgroundColor: theme.palette.inputColor,
@@ -10199,7 +10119,6 @@ const AngularWorkflow = (defaultprops) => {
                     id="subflow_node_search"
                     autoHighlight
                     value={subworkflowStartnode}
-                    classes={{ inputRoot: classes.inputRoot }}
                     ListboxProps={{
                       style: {
                         backgroundColor: theme.palette.inputColor,
@@ -10292,12 +10211,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    fontSize: "1em",
-                  },
                   endAdornment: (
                     <InputAdornment position="end">
                       <Tooltip title="Autocomplete text" placement="top">
@@ -10444,12 +10357,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                fontSize: "1em",
-              },
             }}
             multiline
             rows="4"
@@ -10471,13 +10378,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
-                  },
                 }}
                 fullWidth
                 color="primary"
@@ -10525,13 +10425,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
-                  },
                 }}
                 fullWidth
                 color="primary"
@@ -10551,13 +10444,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
-                  },
                 }}
                 fullWidth
                 color="primary"
@@ -10577,13 +10463,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
             }}
             fullWidth
             color="primary"
@@ -10688,13 +10567,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
             }}
             fullWidth
             color="primary"
@@ -10707,7 +10579,6 @@ const AngularWorkflow = (defaultprops) => {
                 id="action_search"
                 autoHighlight
                 value={selectedTrigger.app_association}
-                classes={{ inputRoot: classes.inputRoot }}
                 ListboxProps={{
                   style: {
                     backgroundColor: theme.palette.inputColor,
@@ -11042,12 +10913,6 @@ const AngularWorkflow = (defaultprops) => {
                   id="webhook_uri_header"
                   onClick={() => { }}
                   InputProps={{
-                    style: {
-                      color: "white",
-                      marginLeft: "5px",
-                      maxWidth: "95%",
-                      fontSize: "1em",
-                    },
                   }}
                   fullWidth
                   multiline
@@ -11099,12 +10964,6 @@ const AngularWorkflow = (defaultprops) => {
                   id="webhook_uri_header"
                   onClick={() => { }}
                   InputProps={{
-                    style: {
-                      color: "white",
-                      marginLeft: "5px",
-                      maxWidth: "95%",
-                      fontSize: "1em",
-                    },
                   }}
                   fullWidth
                   multiline
@@ -11508,13 +11367,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
             }}
             fullWidth
             color="primary"
@@ -11582,13 +11434,6 @@ const AngularWorkflow = (defaultprops) => {
                 borderRadius: theme.palette.borderRadius,
               }}
               InputProps={{
-                style: {
-                  color: "white",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  marginTop: "3px",
-                  fontSize: "1em",
-                },
               }}
               fullWidth
               rows="4"
@@ -11678,7 +11523,6 @@ const AngularWorkflow = (defaultprops) => {
               	    id="subflow_search"
               	    autoHighlight
               	    value={subworkflow}
-              	    classes={{ inputRoot: classes.inputRoot }}
               	    ListboxProps={{
               	      style: {
               	        backgroundColor: theme.palette.inputColor,
@@ -11797,13 +11641,6 @@ const AngularWorkflow = (defaultprops) => {
 									marginTop: 10,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
-                  },
                 }}
                 fullWidth
                 color="primary"
@@ -11886,13 +11723,6 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
             }}
             fullWidth
             color="primary"
@@ -11990,13 +11820,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    height: 50,
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    fontSize: "1em",
-                  },
                 }}
                 fullWidth
                 disabled={
@@ -12045,13 +11868,6 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    marginTop: "3px",
-                    fontSize: "1em",
-                  },
                 }}
                 disabled={
                   workflow.triggers[selectedTriggerIndex].status === "running"
@@ -12880,11 +12696,11 @@ const AngularWorkflow = (defaultprops) => {
           {defaultReturn}
         </SwipeableDrawer>
         :
-        <Fade in={true} style={{ transitionDelay: `$0ms` }}>
+        <Collapse in={true} style={{ transitionDelay: `$0ms` }}>
           <div id="rightside_actions" style={rightsidebarStyle}>
             {defaultReturn}
           </div>
-        </Fade>
+        </Collapse>
     );
 
     //return null;
@@ -14960,7 +14776,7 @@ const AngularWorkflow = (defaultprops) => {
             </Typography>
           </div>
         ) : (
-          <Fade in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
+          <Collapse in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
             <CytoscapeComponent
               elements={elements}
               minZoom={0.35}
@@ -14983,7 +14799,7 @@ const AngularWorkflow = (defaultprops) => {
                 setCy(incy);
               }}
             />
-          </Fade>
+          </Collapse>
         )}
       </div>
       {executionModal}
@@ -16460,9 +16276,6 @@ const AngularWorkflow = (defaultprops) => {
 
   return (
     <div>
-      {/* Removed due to missing react router features
-				<Prompt when={!lastSaved} message={unloadText} />
-			*/}
       {loadedCheck}
     </div>
   );

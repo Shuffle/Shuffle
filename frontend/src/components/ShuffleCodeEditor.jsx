@@ -46,10 +46,10 @@ import ReactJson from "react-json-view";
 import PaperComponent from "../components/PaperComponent.jsx";
 
 import CodeMirror from '@uiw/react-codemirror';
-import 'codemirror/keymap/sublime';
-import 'codemirror/addon/selection/mark-selection.js'
-import 'codemirror/theme/gruvbox-dark.css';
-import 'codemirror/theme/duotone-light.css';
+//import 'codemirror/keymap/sublime';
+//import 'codemirror/addon/selection/mark-selection.js'
+//import 'codemirror/theme/gruvbox-dark.css';
+//import 'codemirror/theme/duotone-light.css';
 import {indentWithTab} from "@codemirror/commands"
 import { padding, textAlign } from '@mui/system';
 import data from '../frameworkStyle.jsx';

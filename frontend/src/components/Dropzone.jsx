@@ -56,7 +56,11 @@ const Dropzone = ({ children, style, onDrop }) => {
   };
 
   useEffect(() => {
-    if (!dropzoneRef.current) return;
+    if (dropzoneRef === null || dropzoneRef === undefined || dropzoneRef.current === null || dropzoneRef.current === undefined) {
+	  	return
+	}
+
+	// Check if event listene exists for dropzoneRef.current
 
     dropzoneRef.current.addEventListener("dragover", handleDragOver);
     dropzoneRef.current.addEventListener("dragenter", handleDragEnter);
@@ -64,6 +68,10 @@ const Dropzone = ({ children, style, onDrop }) => {
     dropzoneRef.current.addEventListener("drop", handleDrop);
 
     return () => {
+		if (dropzoneRef.current === null || dropzoneRef.current === undefined) {
+			return
+		}
+
       dropzoneRef.current.removeEventListener("dragover", handleDragOver);
       dropzoneRef.current.removeEventListener("dragenter", handleDragEnter);
       dropzoneRef.current.removeEventListener("dragleave", handleDragLeave);
