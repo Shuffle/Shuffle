@@ -206,11 +206,12 @@ const SearchField = props => {
 							const avatar = baseImage
 
 							var parsedUrl = isCloud ? `/workflows/${hit.objectID}` : `https://shuffler.io/workflows/${hit.objectID}`
+
 							parsedUrl += `?queryID=${hit.__queryID}`
 
 							// <a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{textDecoration: "none", color: "white"}}>
 							return (
-								<Link key={hit.objectID} to={{ pathname: parsedUrl }} rel="noopener noreferrer" style={{textDecoration: "none", color: "white",}} onClick={(event) => {
+								<Link key={hit.objectID} to={parsedUrl} rel="noopener noreferrer" style={{textDecoration: "none", color: "white",}} onClick={(event) => {
 									//console.log("CLICK")
 									setSearchOpen(true)
 
@@ -402,7 +403,7 @@ const SearchField = props => {
 							parsedUrl += `?queryID=${hit.__queryID}`
 
 							return (
-								<Link key={hit.objectID} to={{ pathname: parsedUrl }} style={{textDecoration: "none", color: "white",}} onClick={(event) => {
+								<Link key={hit.objectID} to={parsedUrl} style={{textDecoration: "none", color: "white",}} onClick={(event) => {
 									console.log("CLICK")
 									setSearchOpen(true)
 
@@ -558,7 +559,8 @@ const SearchField = props => {
 						if (parsedUrl.includes("/apps/")) {
 							const extraHash = hit.url_hash === undefined ? "" : `#${hit.url_hash}`
 
-							parsedUrl = `/apps/${hit.filename}?tab=docs&queryID=${hit.__queryID}${extraHash}`
+							parsedUrl = `/apps/${hit.filename}`
+							parsedUrl += `?tab=docs&queryID=${hit.__queryID}${extraHash}`
 						}
 
 						return (

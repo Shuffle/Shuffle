@@ -201,6 +201,7 @@ const OrgHeaderexpanded = (props) => {
 
   const orgSaveButton = (
     <Tooltip title="Save any unsaved data" placement="bottom">
+	  <div>
       <Button
         style={{ width: 150, height: 55, flex: 1 }}
         variant="contained"
@@ -237,6 +238,7 @@ const OrgHeaderexpanded = (props) => {
       >
         <SaveIcon />
       </Button>
+	  </div>
     </Tooltip>
   );
 

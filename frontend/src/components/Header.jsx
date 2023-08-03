@@ -688,7 +688,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 										{/*
 										<PolymerIcon style={{marginRight: "5px"}} />
 										*/}
-										<span style={{marginTop: 0, marginRight: 8, }}>Workflows</span>
+										<Typography style={{marginTop: 5, marginRight: 8, }}>Workflows</Typography>
 									</div> 
 								</Link>
       	 			</ListItem>
@@ -698,24 +698,17 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 											{/*
 											<AppsIcon style={{marginRight: "5px"}} />
 											*/}
-											<span style={{marginTop: 0, marginRight: 5,  }}>Apps</span>
+											<Typography style={{marginTop: 5, marginRight: 5,  }}>Apps</Typography>
 										</div>
 								</Link>
       	 			</ListItem>
-							{/*
-							<ListItem style={{textAlign: "center"}}>
-								<Link to="/dashboard" style={hrefStyle}>
-										<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer"}}>Dashboard</div> 
-								</Link>
-      	 			</ListItem>
-							*/}
       	 			<ListItem style={listItemStyle}>
 								<Link to="/docs" style={hrefStyle}>
 										<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer", display: "flex"}}>
 											{/*
 											<DescriptionIcon style={{marginRight: "5px"}} />
 											*/}
-											<span style={{marginTop: 0,}}>Docs</span>
+											<Typography style={{marginTop: 5,}}>Docs</Typography>
 										</div>
 								</Link>
       	 			</ListItem>
@@ -796,8 +789,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 						:
 							<span style={{paddingTop: 12, }}>
 								<Select
-
-									disableUnderline
+									disableunderline
 									SelectDisplayProps={{
 										style: {
 											maxWidth: 50,

@@ -14,7 +14,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  Fade,
+  Collapse,
 } from "@mui/material";
 import { 
 	FavoriteBorder as FavoriteBorderIcon,
@@ -506,13 +506,6 @@ const ConfigureWorkflow = (props) => {
                 borderRadius: 5,
               }}
               InputProps={{
-                style: {
-                  color: "white",
-                  minHeight: 50,
-                  marginLeft: 5,
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                },
                 endAdornment: <InputAdornment position="end"></InputAdornment>,
               }}
               fullWidth
@@ -618,10 +611,10 @@ const ConfigureWorkflow = (props) => {
         />
 				*/}
         {action.must_authenticate ? 
-						<Button
+				<Button
         		  fullWidth
         		  variant="contained"
-							disabled={action.auth_done}
+				  disabled={action.auth_done}
         		  style={{
         		    flex: 1,
         		    textTransform: "none",
@@ -1084,7 +1077,6 @@ const ConfigureWorkflow = (props) => {
 							</Button>
 							*/}
 							<Button
-								color="textSecondary"
 								variant={"outlined"}
 								style={{}}
 								onClick={() => {

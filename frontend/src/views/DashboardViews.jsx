@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
-import { makeStyles, useTheme } from "@mui/styles";
+import { makeStyles, } from "@mui/styles";
 // nodejs library that concatenates classes
 import classNames from "classnames";
 import theme from '../theme.jsx';

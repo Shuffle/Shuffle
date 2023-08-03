@@ -1893,27 +1893,27 @@ const Apps = (props) => {
               filteredApps.length > 0 ? (
                 <div style={{ height: "75vh", overflowY: "auto" }}>
                   {filteredApps.map((app, index) => {
-										if (firstLoad) {
-											appDelay += 75
-										} else {
-											//return returnData 
+					if (firstLoad) {
+						appDelay += 75
+					} else {
+						//return returnData 
                     	return <AppPaper app={app} />
-										}
+					}
 
                     return (
-											<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
-												<span>
-													<AppPaper app={app} />
-												</span>
-											</Zoom>
-										)
+						<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
+							<div>
+								<AppPaper app={app} />
+							</div>
+						</Zoom>
+					)
                   })}
                   {cursearch.length > 0
                     ? null
                     : searchableApps.map((app, index) => {
                         return (
-													<AppPaper app={app} />
-												)
+							<AppPaper app={app} />
+						)
                       })}
                 </div>
               ) : (

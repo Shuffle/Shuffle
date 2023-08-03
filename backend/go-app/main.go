@@ -1064,7 +1064,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		org, err := shuffle.GetOrg(ctx, item)
-		_ = err
 		if len(org.Id) > 0 {
 			userOrgs = append(userOrgs, shuffle.OrgMini{
 				Id:         org.Id,
@@ -1073,7 +1072,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 				Image:      org.Image,
 			})
 		} else {
-			log.Printf("[WARNING] Failed to get org %s for user %s", item, userInfo.Username)
+			log.Printf("[WARNING] Failed to get org %s (%s) for user %s. Error: %#v", org.Name, item, userInfo.Username, err)
 		}
 	}
 

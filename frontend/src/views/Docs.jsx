@@ -5,6 +5,7 @@ import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { isMobile } from "react-device-detect";
 import theme from '../theme.jsx';
+import remarkGfm from 'remark-gfm'
 
 import {
 	Grid,
@@ -364,6 +365,7 @@ const Docs = (defaultprops) => {
   };
 
   function OuterLink(props) {
+	  console.log("Link: ", props.href)
     if (props.href.includes("http") || props.href.includes("mailto")) {
       return (
         <a
@@ -385,7 +387,7 @@ const Docs = (defaultprops) => {
   }
 
   function Img(props) {
-    return <img style={{ borderRadius: theme.palette.borderRadius, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} alt={props.alt} src={props.src} />;
+    return <img style={{ borderRadius: theme.palette.borderRadius, width: 750, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} alt={props.alt} src={props.src} />;
   }
 
   function CodeHandler(props) {
@@ -789,17 +791,21 @@ const Docs = (defaultprops) => {
 					:
 						<div id="markdown_wrapper_outer" style={markdownStyle}>
 							<ReactMarkdown
-								id="markdown_wrapper"
-								escapeHtml={false}
-								source={data}
-								style={{maxWidth: "100%", minWidth: "100%", }}
-								renderers={{
+								components={{
 									link: OuterLink,
 									image: Img,
 									code: CodeHandler,
 									heading: Heading,
 								}}
-							/>
+								id="markdown_wrapper"
+								escapeHtml={false}
+								style={{
+									maxWidth: "100%", minWidth: "100%", 
+								}}
+								remarkPlugins={[remarkGfm]}
+							>
+								{data}
+							</ReactMarkdown>
 						</div>
 					}
 				</div>

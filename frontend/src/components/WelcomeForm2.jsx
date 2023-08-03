@@ -16,7 +16,7 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import theme from '../theme.jsx';
 import {
 	Button,
-  	Fade,
+  	Collapse,
 		IconButton,
     FormGroup,
     FormControl,
@@ -506,7 +506,7 @@ const WelcomeForm = (props) => {
         switch (step) {
             case 0:
                 return (
-									<Fade in={true}>
+									<Collapse in={true}>
                     <Grid container spacing={1} style={{margin: "auto", maxWidth: 500, minWidth: 500, minHeight: sizing, maxHeight: sizing, }}>
 											{/*isCloud ? null :
 												<Typography variant="body1" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
@@ -587,11 +587,11 @@ const WelcomeForm = (props) => {
                             </FormControl>
                         </Grid>
                     </Grid>
-									</Fade>
+									</Collapse>
                 )
             case 1:
                 return (
-									<Fade in={true}>
+									<Collapse in={true}>
                     <div style={{minHeight: sizing, maxHeight: sizing, marginTop: 20, maxWidth: 500, }}>
 												<Typography variant="body1" style={{marginLeft: 8, marginTop: 50, marginRight: 30, marginBottom: 0, }} color="textSecondary">
 													Apps for each category are shown based on your activity and can be changed by clicking their icon. We will help you connect them later.
@@ -684,11 +684,11 @@ const WelcomeForm = (props) => {
                         </Grid>
 												*/}
 											</div>
-									</Fade>
+									</Collapse>
                 )
             case 2:
                 return (
-									<Fade in={true}>
+									<Collapse in={true}>
                     <div style={{marginTop: 0, maxWidth: 700, minWidth: 700, margin: "auto", minHeight: sizing, maxHeight: sizing, }}>
 												<Typography variant="body1" style={{marginTop: 15, marginBottom: 0, maxWidth: 500, margin: "auto", marginBottom: 15, }} color="textSecondary">
 													These are some of our Workflow templates, used to start new Workflows. Use the right and left buttons to find <a href="/usecases" target="_blank" rel="norefferer" style={{color: "#f86a3e", textDecoration: "none", }}>new Usecases</a>, and click the orange button to build it.
@@ -755,7 +755,7 @@ const WelcomeForm = (props) => {
        										</div>
 												</div>
 										</div>
-									</Fade>
+									</Collapse>
                 )
             default:
                 return "unknown step"
