@@ -475,7 +475,7 @@ const EditWorkflow = (props) => {
 		</div>
 
         </DialogContent>
-        <DialogActions>
+        <DialogActions style={{paddingRight: 20, }}>
           <Button
             style={{}}
             onClick={() => {

@@ -2939,6 +2939,10 @@ const AppCreator = (defaultprops) => {
           color="primary"
           fullWidth
           value={oauth2Scopes}
+		  onChange={(chips) => {
+			  setOauth2Scopes(chips)
+			  setUpdate(Math.random())
+		  }}
           onAdd={(chip) => {
             oauth2Scopes.push(chip);
             console.log(oauth2Scopes);
@@ -4407,6 +4411,10 @@ const AppCreator = (defaultprops) => {
         color="primary"
         fullWidth
         value={newWorkflowTags}
+	    onChange={(chips) => {
+			setNewWorkflowTags(chips)
+			setUpdate("added "+chips)
+	    }}
         onAdd={(chip) => {
           newWorkflowTags.push(chip);
           setNewWorkflowTags(newWorkflowTags);

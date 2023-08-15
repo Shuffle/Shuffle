@@ -7647,6 +7647,7 @@ const AngularWorkflow = (defaultprops) => {
     zIndex: 1000,
     resize: "vertical",
     overflow: "auto",
+	paddingBottom: 100, 
   };
 
   var rightsidebarStyle = {
@@ -7967,7 +7968,6 @@ const AngularWorkflow = (defaultprops) => {
               labelId="action-autocompleter"
               SelectDisplayProps={{
                 style: {
-                  marginLeft: 10,
                 },
               }}
               onClose={() => {
@@ -9129,7 +9129,6 @@ const AngularWorkflow = (defaultprops) => {
                     disabled={selectedTrigger.status === "running"}
                     SelectDisplayProps={{
                       style: {
-                        marginLeft: 10,
                       },
                     }}
                     onChange={(e) => {
@@ -9340,7 +9339,7 @@ const AngularWorkflow = (defaultprops) => {
 		setUpdate(Math.random());
 
 		if (e.target.value === undefined || e.target.value === null || e.target.value.id === undefined) {
-			console.log("Returning as there's no id")
+			console.log("Returning as there's no id. Value: ", e.target.value);
 			return null
 		}
 
@@ -10163,27 +10162,27 @@ const AngularWorkflow = (defaultprops) => {
                     borderRadius: theme.palette.borderRadius,
                   }}
                   onChange={(event, newValue) => {
-										console.log("Found value: ", newValue)
+					console.log("Found value: ", newValue)
 
-										var parsedinput = { target: { value: newValue } }
+					var parsedinput = { target: { value: newValue } }
 
-										// For variables
-										if (typeof newValue === 'string' && newValue.startsWith("$")) {
-											parsedinput = { 
-												target: { 
-													value: {
-														"name": newValue, 
-														"id": newValue,
-														"actions": [],
-														"triggers": [],
-													} 
-												} 
-											}
-										}
+					// For variables
+					if (typeof newValue === 'string' && newValue.startsWith("$")) {
+						parsedinput = { 
+							target: { 
+								value: {
+									"name": newValue, 
+									"id": newValue,
+									"actions": [],
+									"triggers": [],
+								} 
+							} 
+						}
+					}
 
                     handleWorkflowSelectionUpdate(parsedinput)
                   }}
-                  renderOption={(data, index) => {
+            	  renderOption={(props, data, state) => {
                     if (data.id === workflow.id) {
                       data = workflow;
                     }
@@ -10205,9 +10204,16 @@ const AngularWorkflow = (defaultprops) => {
                             backgroundColor: theme.palette.inputColor,
                             color: data.id === workflow.id ? "red" : "white",
                           }}
-                          key={index}
                           value={data}
+						  onClick={() => {	
+							handleWorkflowSelectionUpdate({
+								target: {
+									value: data
+								}
+							})
+						  }}
                         >
+						  <PolylineIcon style={{ marginRight: 8 }} />
                           {data.name}
                         </MenuItem>
                       </Tooltip>
@@ -10283,7 +10289,7 @@ const AngularWorkflow = (defaultprops) => {
                     onChange={(event, newValue) => {
                       handleSubflowStartnodeSelection({ target: { value: newValue } })
                     }}
-                    renderOption={(action) => {
+            		renderOption={(props, action, state) => {
                       const isParent = getParents(selectedTrigger).find(
                         (parent) => parent.id === action.id
                       )
@@ -10301,6 +10307,13 @@ const AngularWorkflow = (defaultprops) => {
                             }
                           }}
                           disabled={isCloud && isParent}
+						  onClick={() => {
+                      		handleSubflowStartnodeSelection({ 
+								target: { 
+									value: action 
+								} 
+							})
+						  }}
                           style={{
                             backgroundColor: theme.palette.inputColor,
                             color: isParent ? "red" : "white",
@@ -10319,7 +10332,7 @@ const AngularWorkflow = (defaultprops) => {
                             borderRadius: theme.palette.borderRadius,
                           }}
                           {...params}
-                          label="Find your start-node"
+                          label="Select a start-node (optional)"
                           variant="outlined"
                         />
                       );
@@ -10669,9 +10682,6 @@ const AngularWorkflow = (defaultprops) => {
 
       return (
         <div style={appApiViewStyle}>
-          <div
-            style={{ display: "flex", height: "40px", marginBottom: "30px" }}
-          >
             <div style={{ flex: "1" }}>
               <h3 style={{ marginBottom: "5px" }}>
                 {selectedTrigger.app_name}: {selectedTrigger.status}
@@ -10685,7 +10695,6 @@ const AngularWorkflow = (defaultprops) => {
                 What are webhooks?
               </a>
             </div>
-          </div>
           <Divider
             style={{
               marginBottom: "10px",
@@ -10770,7 +10779,7 @@ const AngularWorkflow = (defaultprops) => {
                   //	});
                   //}
                 }}
-                renderOption={(app) => {
+            	renderOption={(props, app, state) => {
                   var appname = app.name.replaceAll("_", " ")
                   appname = appname.charAt(0).toUpperCase() + appname.substring(1)
 
@@ -10780,7 +10789,19 @@ const AngularWorkflow = (defaultprops) => {
                       title={appname}
                       placement="left"
                     >
-                      <div>
+                      <MenuItem 
+					  	onClick={() => {
+							const newValue = app
+
+                  			if (newValue !== undefined && newValue !== null) {
+                  			  var parsedvalue = JSON.parse(JSON.stringify(newValue))
+                  			  parsedvalue.actions = []
+                  			  parsedvalue.authentication = {}
+                  			  selectedTrigger.app_association = parsedvalue
+                  			  setUpdate(Math.random());
+                  			}
+						}}
+					  >
                         <div style={{ display: "flex", marginBottom: 0, }}>
                           <Avatar variant="rounded">
                             <img
@@ -10793,7 +10814,7 @@ const AngularWorkflow = (defaultprops) => {
                             {appname}
                           </Typography>
                         </div>
-                      </div>
+                      </MenuItem>
                     </Tooltip>
                   )
                 }}
@@ -10817,7 +10838,7 @@ const AngularWorkflow = (defaultprops) => {
             </div>
             : null}
           {selectedTrigger.status === "running" ? null :
-            <div style={{ marginTop: "20px" }}>
+            <div style={{ marginTop: 20 }}>
               <Typography>Environment</Typography>
               <Select
                 MenuProps={{
@@ -10827,7 +10848,6 @@ const AngularWorkflow = (defaultprops) => {
                 disabled={selectedTrigger.status === "running"}
                 SelectDisplayProps={{
                   style: {
-                    marginLeft: 10,
                   },
                 }}
                 fullWidth
@@ -11471,9 +11491,6 @@ const AngularWorkflow = (defaultprops) => {
 
       return (
         <div style={appApiViewStyle}>
-          <div
-            style={{ display: "flex", height: "40px", marginBottom: "30px" }}
-          >
             <div style={{ flex: "1" }}>
               <h3 style={{ marginBottom: "5px" }}>
                 {selectedTrigger.app_name}
@@ -11487,7 +11504,6 @@ const AngularWorkflow = (defaultprops) => {
                 What is the user input trigger?
               </a>
             </div>
-          </div>
           <Divider
             style={{
               marginBottom: "10px",
@@ -11686,19 +11702,18 @@ const AngularWorkflow = (defaultprops) => {
               	      backgroundColor: theme.palette.inputColor,
               	      height: 50,
               	      borderRadius: theme.palette.borderRadius,
-											marginTop: 15,
-											marginBottom: 15,
+						marginTop: 15,
+						marginBottom: 15,
               	    }}
               	    onChange={(event, newValue) => {
-											console.log("Changed autocomplete!")
+					  console.log("Changed autocomplete!")
               	      handleWorkflowSelectionUpdate({ target: { value: newValue } }, true)
               	    }}
-              	    renderOption={(data, index) => {
+            		renderOption={(props, data, state) => {
               	      if (data.id === workflow.id) {
               	        data = workflow;
               	      }
 
-              	      //key={index}
               	      return (
               	        <Tooltip arrow placement="left" title={
               	          <span style={{}}>
@@ -11712,12 +11727,18 @@ const AngularWorkflow = (defaultprops) => {
               	        } placement="bottom">
               	          <MenuItem
               	            style={{
-              	              backgroundColor: theme.palette.inputColor,
               	              color: data.id === workflow.id ? "red" : "white",
               	            }}
-              	            key={index}
               	            value={data}
+							onClick={() => {
+								handleWorkflowSelectionUpdate({ 
+									target: { 
+										value: data,
+									}}, 
+								true)
+							}}
               	          >
+						  	<PolylineIcon style={{ marginRight: 8 }} />
               	            {data.name}
               	          </MenuItem>
               	        </Tooltip>
@@ -11885,7 +11906,6 @@ const AngularWorkflow = (defaultprops) => {
               disabled={selectedTrigger.status === "running"}
               SelectDisplayProps={{
                 style: {
-                  marginLeft: 10,
                 },
               }}
               fullWidth
@@ -15566,7 +15586,6 @@ const AngularWorkflow = (defaultprops) => {
                     }}
                     SelectDisplayProps={{
                       style: {
-                        marginLeft: 10,
                       },
                     }}
                     defaultValue={"false"}
@@ -16310,7 +16329,10 @@ const AngularWorkflow = (defaultprops) => {
 
 		  // Make unix timestamp into ISO timestamp in the format July 27th, 3:05 AM
 		  // Format: July 27th, 3:05 AM	
-		  const translatedDate = new Date(revision.edited).toLocaleString('en-US', { month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })
+		  console.log("Edited time: ", revision.edited)
+		  // Convert 1692128391 to valid timestamp
+		  const validTimestamp = revision.edited.toString().length === 10 ? revision.edited * 1000 : revision.edited
+		  const translatedDate = new Date(validTimestamp).toLocaleString('en-US', { month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })
 
 		  var workflowStatus = revision.status !== undefined  && revision.status !== null && revision.status !== "" ? revision.status : "test"
 		  if (revision.name !== undefined && revision.name !== null && revision.name !== "") {
@@ -16329,7 +16351,7 @@ const AngularWorkflow = (defaultprops) => {
 
 		  return (
 		  	<Paper 
-				style={{padding: "15px 15px 15px 25px", minHeight: 75, maxHeight: 75, cursor: "pointer", backgroundColor: revision.edited === selectedRevision.edited ? "rgba(255,255,255,0.3)" : theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", marginBottom: 10, 
+				style={{padding: "15px 15px 15px 25px", minHeight: 105, maxHeight: 105, cursor: "pointer", backgroundColor: revision.edited === selectedRevision.edited ? "rgba(255,255,255,0.3)" : theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", marginBottom: 10, 
 				}} onClick={(e) => {
 					if (revision.edited === selectedRevision.edited) {
 						console.log("Same revision! No setting.")

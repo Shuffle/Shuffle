@@ -3250,6 +3250,9 @@ const Workflows = (props) => {
 										color="primary"
 										fullWidth
 										value={filters}
+										onChange={(chips) => {
+											setFilters(chips);
+										}}
 										onAdd={(chip) => {
 											addFilter(chip);
 										}}
