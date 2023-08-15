@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from "react";
 
-import { useNavigate, } from "react-router-dom";
+import { makeStyles } from "@material-ui/styles";
+import { useNavigate, Link } from "react-router-dom";
+import countries from "../components/Countries.jsx";
+import CodeEditor from "../components/ShuffleCodeEditor.jsx";
+import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
 import CacheView from "../components/CacheView.jsx";
 import theme from "../theme.jsx";
-
+import AddIcon from "@mui/icons-material/Add";
+import ClearIcon from '@mui/icons-material/Clear';
+import StorageIcon from '@mui/icons-material/Storage';
+//import ToggleButton from '@mui/material/ToggleButton';
 import {
   FormControl,
   InputLabel,
@@ -12,6 +19,7 @@ import {
   Checkbox,
   Card,
   Tooltip,
+  FormControlLabel,
   Typography,
   Switch,
   Select,
@@ -27,6 +35,7 @@ import {
   ListItem,
   ListItemText,
   ListItemAvatar,
+  ListItemSecondaryAction,
   IconButton,
   Avatar,
   Zoom,
@@ -35,37 +44,53 @@ import {
   DialogActions,
   DialogContent,
   CircularProgress,
-  InputAdornment,
-} from "@mui/material";
+  Box,
+	InputAdornment,
+} from "@material-ui/core";
+
+import { Autocomplete } from "@mui/material";
 
 import {
   Edit as EditIcon,
   FileCopy as FileCopyIcon,
   SelectAll as SelectAllIcon,
+  OpenInNew as OpenInNewIcon,
+  CloudDownload as CloudDownloadIcon,
   Description as DescriptionIcon,
-  Code as CodeIcon,
+  Polymer as PolymerIcon,
   CheckCircle as CheckCircleIcon,
   Close as CloseIcon,
   Apps as AppsIcon,
+  Image as ImageIcon,
   Delete as DeleteIcon,
   Cached as CachedIcon,
   AccessibilityNew as AccessibilityNewIcon,
   Lock as LockIcon,
+  Eco as EcoIcon,
   Schedule as ScheduleIcon,
+  Cloud as CloudIcon,
   Business as BusinessIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-	Storage as StorageIcon, 
-} from "@mui/icons-material";
+	Visibility as VisibilityIcon,
+	VisibilityOff as VisibilityOffIcon,
+} from "@material-ui/icons";
 
 import { useAlert } from "react-alert";
+import Dropzone from "../components/Dropzone.jsx";
+import HandlePaymentNew from "../views/HandlePaymentNew.jsx";
 import OrgHeader from "../components/OrgHeader.jsx";
 import OrgHeaderexpanded from "../components/OrgHeaderexpanded.jsx";
 import Billing from "../components/Billing.jsx";
 import Priorities from "../components/Priorities.jsx";
 import Branding from "../components/Branding.jsx";
 import Files from "../components/Files.jsx";
+import { display, style } from "@mui/system";
 //import EnvironmentStats from "../components/EnvironmentStats.jsx";
+
+const useStyles = makeStyles({
+  notchedOutline: {
+    borderColor: "#f85a3e !important",
+  },
+});
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -79,10 +104,37 @@ const MenuProps = {
   getContentAnchorEl: () => null,
 };
 
+
+const FileCategoryInput = (props) => {
+  const isSet = props.isSet;
+  console.log("inside filecategoryinput");  
+  console.log("isset value" , isSet);
+  if (isSet){
+    return (
+        <TextField
+              onBlur={""}
+              InputProps={{
+                style: {
+                  color: "white",
+                },
+              }}
+              color="primary"
+              placeholder="File category name"
+              required
+              margin="dense"
+              defaultValue={""}
+              autoFocus
+              fullWidth
+            />
+    )}
+  }
+
+
 const Admin = (props) => {
   const { globalUrl, userdata, serverside, checkLogin } = props;
 
   var to_be_copied = "";
+  const classes = useStyles();
   let navigate = useNavigate();
 
   const [firstRequest, setFirstRequest] = React.useState(true);
@@ -98,9 +150,11 @@ const Admin = (props) => {
   const [selectedOrganization, setSelectedOrganization] = React.useState({});
     
   //console.log("Selected: ", selectedOrganization)
+  const [organizationFeatures, setOrganizationFeatures] = React.useState({});
   const [loginInfo, setLoginInfo] = React.useState("");
   const [curTab, setCurTab] = React.useState(0);
   const [users, setUsers] = React.useState([]);
+  const [organizations, setOrganizations] = React.useState([]);
   const [orgSyncResponse, setOrgSyncResponse] = React.useState("");
   const [userSettings, setUserSettings] = React.useState({});
   const [matchingOrganizations, setMatchingOrganizations] = React.useState([]);
@@ -116,20 +170,29 @@ const Admin = (props) => {
   const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false);
   const [authenticationFields, setAuthenticationFields] = React.useState([]);
   const [showArchived, setShowArchived] = React.useState(false);
+  const [isDropzone, setIsDropzone] = React.useState(false);
 
   const [image2FA, setImage2FA] = React.useState("");
   const [value2FA, setValue2FA] = React.useState("");
   const [secret2FA, setSecret2FA] = React.useState("");
   const [show2faSetup, setShow2faSetup] = useState(false);
-  const [billingInfo, ] = React.useState({});
 
   const [adminTab, setAdminTab] = React.useState(2);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [selectedStatus, setSelectedStatus] = React.useState([]);
+	const [showApiKey, setShowApiKey] = useState(false);
+  const [billingInfo, setBillingInfo] = React.useState({});
+	const [selectedStatus, setSelectedStatus] = React.useState([]);
 
   useEffect(() => {
-    getUsers()
+		getUsers()
   }, []);
+
+
+  useEffect(() => {
+    if (isDropzone) {
+      //redirectOpenApi();
+      setIsDropzone(false);
+    }
+  }, [isDropzone]);
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
@@ -162,7 +225,39 @@ const Admin = (props) => {
       });
   };
 
-  
+  const getApps = () => {
+    fetch(globalUrl + "/api/v1/apps", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for apps :O!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        console.log("apps: ", responseJson);
+        //setApps(responseJson)
+        //setFilteredApps(responseJson)
+        //if (responseJson.length > 0) {
+        //	setSelectedApp(responseJson[0])
+        //	if (responseJson[0].actions !== null && responseJson[0].actions.length > 0) {
+        //		setSelectedAction(responseJson[0].actions[0])
+        //	} else {
+        //		setSelectedAction({})
+        //	}
+        //}
+      })
+      .catch((error) => {
+        alert.error(error.toString());
+      });
+  };
 
   const categories = [
     {
@@ -191,19 +286,22 @@ const Admin = (props) => {
 	]
 	*/
 
-  const alert = useAlert();
+  	const alert = useAlert();
 	const handleStatusChange = (event) => {
 		const { value } = event.target;
+		console.log("value: ", value)
 
 		setSelectedStatus(value);
-  	handleEditOrg(
+
+		
+		handleEditOrg(
 			"",
 			"",
 			selectedOrganization.id,
 			"",
 			{},
 			{},
-			value,
+			value.length === 0 ? ["none"] : value,
 		)	
 	}
 
@@ -235,67 +333,66 @@ const Admin = (props) => {
 
 		if (org.security_framework !== undefined && org.security_framework !== null) {
 			if (org.security_framework.cases.name !== undefined && org.security_framework.cases.name !== null && org.security_framework.cases.name !== "") {
-				your_apps += org.security_framework.cases.name.replace("_", " ", -1) + ", "
+				your_apps += org.security_framework.cases.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
 
 				if (subject_add < 2) {
 					if (subject_add === 1) {
-						subject += " & "
+						subject += " and "
 					}
 
 					subject_add += 1 
-					subject += org.security_framework.cases.name.replace("_", " ", -1) 
+					subject += org.security_framework.cases.name.replace("_", " ", -1).replace(" API", "", -1) 
 				}
 			}
 
 			if (org.security_framework.siem.name !== undefined && org.security_framework.siem.name !== null && org.security_framework.siem.name !== "") {
-				your_apps += org.security_framework.siem.name.replace("_", " ", -1) + ", "
-
+				your_apps += org.security_framework.siem.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
 				if (subject_add < 2) {
 					if (subject_add === 1) {
-						subject += " & "
+						subject += " and "
 					}
 
 					subject_add += 1 
-					subject += org.security_framework.siem.name.replace("_", " ", -1)
+					subject += org.security_framework.siem.name.replace("_", " ", -1).replace(" API", "", -1)
 				}
 			}
 
 			if (org.security_framework.communication.name !== undefined && org.security_framework.communication.name !== null && org.security_framework.communication.name !== "") {
-				your_apps += org.security_framework.communication.name.replace("_", " ", -1) + ", "
+				your_apps += org.security_framework.communication.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
 
 				if (subject_add < 2) {
 					if (subject_add === 1) {
-						subject += " & "
+						subject += " and "
 					}
 
 					subject_add += 1 
-					subject += org.security_framework.communication.name.replace("_", " ", -1)
+					subject += org.security_framework.communication.name.replace("_", " ", -1).replace(" API", "", -1)
 				}
 			}
 
 			if (org.security_framework.edr.name !== undefined && org.security_framework.edr.name !== null && org.security_framework.edr.name !== "") {
-				your_apps += org.security_framework.edr.name.replace("_", " ", -1) + ", "
+				your_apps += org.security_framework.edr.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
 
 				if (subject_add < 2) {
 					if (subject_add === 1) {
-						subject += " & "
+						subject += " and "
 					}
 
 					subject_add += 1 
-					subject += org.security_framework.edr.name.replace("_", " ", -1)
+					subject += org.security_framework.edr.name.replace("_", " ", -1).replace(" API", "", -1)
 				}
 			}
 
 			if (org.security_framework.intel.name !== undefined && org.security_framework.intel.name !== null && org.security_framework.intel.name !== "") {
-				your_apps += org.security_framework.intel.name.replace("_", " ", -1) + ", "
+				your_apps += org.security_framework.intel.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
 
 				if (subject_add < 2) {
 					if (subject_add === 1) {
-						subject += " & "
+						subject += " and "
 					}
 
 					subject_add += 1 
-					subject += org.security_framework.intel.name.replace("_", " ", -1)
+					subject += org.security_framework.intel.name.replace("_", " ", -1).replace(" API", "", -1)
 				}
 			}
 
@@ -363,7 +460,7 @@ ${usecases}
 
 Let me know if you're interested, or set up a call here: https://drift.me/${username}`
 
-		return `mailto:${admins}?bcc=frikky@shuffler.io&subject=${subject}&body=${body}`
+		return `mailto:${admins}?bcc=frikky@shuffler.io,binu@shuffler.io&subject=${subject}&body=${body}`
 	}
 
   const deleteAuthentication = (data) => {
@@ -578,6 +675,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         } else if (!responseJson.success) {
           alert.error("Failed to handle sync.");
         } else {
+          getOrgs();
           if (disableSync) {
             alert.success("Successfully disabled sync!");
             setOrgSyncResponse("Successfully disabled syncronization");
@@ -900,22 +998,26 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 							leads.push("internal")
 						}
 
+						if (responseJson.lead_info.sub_org) {
+							leads.push("sub_org")
+						}
+
 						setSelectedStatus(leads)
 					}
 
           setSelectedOrganization(responseJson)
-          //var lists = {
-          //  active: {
-          //    triggers: [],
-          //    features: [],
-          //    sync: [],
-          //  },
-          //  inactive: {
-          //    triggers: [],
-          //    features: [],
-          //    sync: [],
-          //  },
-          //};
+          var lists = {
+            active: {
+              triggers: [],
+              features: [],
+              sync: [],
+            },
+            inactive: {
+              triggers: [],
+              features: [],
+              sync: [],
+            },
+          };
 
           // FIXME: Set up features
           //Object.keys(responseJson.sync_features).map(function(key, index) {
@@ -924,7 +1026,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 
           //setOrgName(responseJson.name)
           //setOrgDescription(responseJson.description)
-          //setOrganizationFeatures(lists);
+          setOrganizationFeatures(lists);
         }
       })
       .catch((error) => {
@@ -1017,7 +1119,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     alert.info("Setting default env to " + environment.name);
     var newEnv = [];
     for (var key in environments) {
-      if (environments[key].id === environment.id) {
+      if (environments[key].id == environment.id) {
         if (environments[key].archived) {
           alert.error("Can't set archived to default");
           return;
@@ -1025,7 +1127,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 
         environments[key].default = true;
       } else if (
-        environments[key].default === true &&
+        environments[key].default == true &&
         environments[key].id !== environment.id
       ) {
         environments[key].default = false;
@@ -1062,6 +1164,33 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       )
       .catch((error) => {
         console.log("Error in backend data: ", error);
+      });
+  };
+
+  const flushQueue = (name) => {
+    // Just use this one?
+    const url = globalUrl + "/api/v1/flush_queue";
+    fetch(url, {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) =>
+        response.json().then((responseJson) => {
+          if (responseJson["success"] === false) {
+            alert.error(responseJson.reason);
+            getEnvironments();
+          } else {
+            setLoginInfo("");
+            setModalOpen(false);
+            getEnvironments();
+          }
+        })
+      )
+      .catch((error) => {
+        console.log("Error when deleting: ", error);
       });
   };
 
@@ -1154,7 +1283,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     //alert.info("Modifying environment " + environment.Name)
     var newEnv = [];
     for (var key in environments) {
-      if (environments[key].id === id) {
+      if (environments[key].id == id) {
         if (environments[key].default) {
           alert.error("Can't modify the default environment");
           return;
@@ -1233,6 +1362,9 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       });
   };
 
+  var localData = "";
+
+
   const getSchedules = () => {
     fetch(globalUrl + "/api/v1/workflows/schedules", {
       method: "GET",
@@ -1308,6 +1440,34 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .then((responseJson) => {
         setEnvironments(responseJson);
+      })
+      .catch((error) => {
+        alert.error(error.toString());
+      });
+  };
+
+  const getOrgs = () => {
+    // API no longer in use, as it's in handleInfo request
+    return;
+
+    fetch(globalUrl + "/api/v1/orgs", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for apps :O!");
+          return;
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        setOrganizations(responseJson);
       })
       .catch((error) => {
         alert.error(error.toString());
@@ -1406,8 +1566,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       document.title = "Shuffle - admin - environments";
       getEnvironments();
     } else if (newValue === 7) {
-      //getOrgs();
       document.title = "Shuffle - admin - orgs";
+      getOrgs();
     } else {
       document.title = "Shuffle - admin";
     }
@@ -1423,6 +1583,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
   if (firstRequest) {
     setFirstRequest(false);
     document.title = "Shuffle - admin";
+
+    getEnvironments();
     if (!isCloud) {
       getUsers();
     } else {
@@ -1909,6 +2071,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   maxHeight: 200,
                   maxWidth: 200,
                   minWidth: 200,
+                  maxWidth: 200,
                 }}
               />
             ) : (
@@ -2036,7 +2199,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       primary: "Workflows",
       secondary: "",
       active: true,
-      icon: <CodeIcon style={{ color: itemColor }} />,
+      icon: <PolymerIcon style={{ color: itemColor }} />,
     },
     {
       primary: "Apps",
@@ -2188,25 +2351,40 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           </div>
         ) : (
           <div>
+						{/*
+						<Tooltip
+              title={"Go to Organization document"}
+              style={{}}
+              aria-label={"Organization doc"}
+            >
+              <IconButton
+                style={{ top: -10, right: 50, position: "absolute" }}
+                onClick={() => {
+									console.log("Should go to icon")
+                }}
+              >
+                <FileCopyIcon style={{ color: "rgba(255,255,255,0.8)" }} />
+              </IconButton>
+            </Tooltip>
+						*/}
 
 						{userdata.support === true ? 
 							<span style={{display: "flex", top: -10, right: 50, position: "absolute"}}>
-								<a href={mailsendingButton(selectedOrganization)} target="_blank" rel="noopener noreferrer" style={{textDecoration: "none"}} disabled={selectedStatus.length !== 0}>
-									<Button
-										variant="outlined"
-										color="primary"
-										disabled={selectedStatus.length !== 0}
-										style={{ minWidth: 80, maxWidth: 80, height: "100%", }} 
-										onClick={() => {
-												console.log("Should send mail to admins of org with context")
-												handleStatusChange({target: {value: ["contacted"]}})
-
-												// open a mailto with subject "hello" and sender "frikky@shuffler.io"
-										}}
-									>
-										Sales mail
-									</Button>
-								</a>
+								{/*<a href={mailsendingButton(selectedOrganization)} target="_blank" rel="noopener noreferrer" style={{textDecoration: "none"}} disabled={selectedStatus.length !== 0}>*/}
+								<Button
+									variant="outlined"
+									color="primary"
+									disabled={selectedStatus.length !== 0}
+									style={{ minWidth: 80, maxWidth: 80, height: "100%", }} 
+									onClick={() => {
+											console.log("Should send mail to admins of org with context")
+											handleStatusChange({target: {value: ["contacted"]}})
+											// Open a new tab
+											window.open(mailsendingButton(selectedOrganization), "_blank")
+									}}
+								>
+									Sales mail
+								</Button>
 								<FormControl sx={{ m: 1, width: 300, }} style={{}}>
 									<InputLabel id="">Status</InputLabel>
 									<Select
@@ -2236,7 +2414,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
               style={{}}
               aria-label={"Copy orgid"}
             >
-			<div>
               <IconButton
                 style={{ top: -10, right: 0, position: "absolute" }}
                 onClick={() => {
@@ -2266,7 +2443,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
               >
                 <FileCopyIcon style={{ color: "rgba(255,255,255,0.8)" }} />
               </IconButton>
-			</div>
             </Tooltip>
 						{selectedOrganization.defaults !== undefined && selectedOrganization.defaults.documentation_reference !== undefined && selectedOrganization.defaults.documentation_reference !== null && selectedOrganization.defaults.documentation_reference.includes("http") ?
 							<Tooltip
@@ -2274,7 +2450,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                 style={{ top: -10, right: 50, position: "absolute" }}
 								aria-label={"Open org docs"}
 							>
-								<div>
 								<a href={selectedOrganization.defaults.documentation_reference} target="_blank" style={{ textDecoration: "none", }} rel="noopener noreferrer">
 									<IconButton
                 		style={{ top: -10, right: 50, position: "absolute" }}
@@ -2282,7 +2457,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 										<DescriptionIcon style={{ color: "rgba(255,255,255,0.8)" }} />
 									</IconButton>
 								</a>
-								</div>
 							</Tooltip>
 						: null}
             {selectedOrganization.name.length > 0 ? (
@@ -2341,7 +2515,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 							<Tab
 								disabled={!isCloud}
 								label=<span>
-									Billing
+									Billing (Beta)
 								</span>
 							/>
 							<Tab
@@ -2350,20 +2524,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 									Branding	
 								</span>
 							/>
-							<Tab
-								disabled={true}
-								label=<span>
-									Usage	
-								</span>
-							/>
-							{/*
-							<Tab
-								disabled={true}
-								label=<span>
-									Notifications	
-								</span>
-							/>
-							*/}
 						</Tabs>
 
             <Divider
@@ -2593,14 +2753,12 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             		            item.usage === null ? 0 : item.usage,
             		          data_collection: "None",
             		          active: item.active,
-            		          icon: <CodeIcon style={{ color: itemColor }} />,
+            		          icon: <PolymerIcon style={{ color: itemColor }} />,
             		        };
 
             		        return (
-            		          <Zoom in={true} key={index}>
-							  	<div>
-            		            	<GridItem data={griditem} />
-							  	</div>
+            		          <Zoom key={index}>
+            		            <GridItem data={griditem} />
             		          </Zoom>
             		        );
             		      })}
@@ -2614,6 +2772,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 								adminTab={adminTab}
 								globalUrl={globalUrl}
 								checkLogin={checkLogin}
+								setAdminTab={setAdminTab}
+								setCurTab={setCurTab}
 							/>
 						: adminTab === 3 ? 
 							<Billing 
@@ -2624,6 +2784,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 								selectedOrganization={selectedOrganization}
 								adminTab={adminTab}
 								billingInfo={billingInfo}
+								selectedOrganization={selectedOrganization}
 								stripeKey={props.stripeKey}
 								handleGetOrg={handleGetOrg}
 							/>
@@ -2634,6 +2795,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 								adminTab={adminTab}
 								globalUrl={globalUrl}
 								handleGetOrg={handleGetOrg}
+								selectedOrganization={selectedOrganization}
 								selectedOrganization={selectedOrganization}
 								setSelectedOrganization={setSelectedOrganization}
 							/>
@@ -2940,7 +3102,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                             style={{}}
                             aria-label={"Copy APIkey"}
                           >
-						  	<div>
                             <IconButton
                               style={{}}
                               onClick={() => {
@@ -2977,7 +3138,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                                 style={{ color: "rgba(255,255,255,0.8)" }}
                               />
                             </IconButton>
-						  	</div>
                           </Tooltip>
                         )
                       }
@@ -3550,19 +3710,17 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                           title="Set in EVERY workflow"
                           placement="top"
                         >
-							<div>
-							  <IconButton
-								style={{ marginRight: 10 }}
-								disabled={data.defined === false}
-								onClick={() => {
-								  editAuthenticationConfig(data.id);
-								}}
-							  >
-								<SelectAllIcon
-								  color={data.defined ? "primary" : "secondary"}
-								/>
-							  </IconButton>
-						  </div>
+                          <IconButton
+                            style={{ marginRight: 10 }}
+                            disabled={data.defined === false}
+                            onClick={() => {
+                              editAuthenticationConfig(data.id);
+                            }}
+                          >
+                            <SelectAllIcon
+                              color={data.defined ? "primary" : "secondary"}
+                            />
+                          </IconButton>
                         </Tooltip>
                       ) : (
                         <Tooltip
@@ -3570,7 +3728,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                           title="Must edit before you can set in all workflows"
                           placement="top"
                         >
-						<div>
                           <IconButton
                             style={{ marginRight: 10 }}
                             onClick={() => {}}
@@ -3579,7 +3736,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                               color={data.defined ? "primary" : "secondary"}
                             />
                           </IconButton>
-						</div>
                         </Tooltip>
                       )}
                       <IconButton
@@ -3791,7 +3947,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 														style={{}}
 														aria-label={"Copy orborus command"}
 													>
-														<div>
 														<IconButton
 															style={{}}
 															disabled={environment.Type === "cloud"}
@@ -3828,7 +3983,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 														>
 															<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
 														</IconButton>
-														</div>
 													</Tooltip>
 												}
                   	  />
@@ -3920,7 +4074,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   	</ListItem>
 										{showCPUAlert === false ? null : 
                   		<ListItem key={index+"_cpu"} style={{ backgroundColor: bgColor }}>
-												<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+												<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
 													<div style={{flex: 2, overflow: "hidden",}}>
 														<Typography variant="body1" >
 															90% CPU the server(s) hosting the Shuffle App Runner (Orborus) was found.  
@@ -4202,7 +4356,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           <Tab
             disabled={userdata.admin !== "true"}
             label=<span>
-              <CodeIcon style={iconStyle} />
+              <EcoIcon style={iconStyle} />
               Environments
             </span>
           />

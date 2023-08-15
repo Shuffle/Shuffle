@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import theme from '../theme.jsx';
 import ReactGA from 'react-ga4';
+import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
-import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';
+import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@material-ui/icons';
 
 //import algoliasearch from 'algoliasearch/lite';
 import algoliasearch from 'algoliasearch';
 import { InstantSearch, connectSearchBox, connectHits } from 'react-instantsearch-dom';
-import { Grid, Paper, TextField, ButtonBase, InputAdornment, Typography, Button, Tooltip} from '@mui/material';
+import { Grid, Paper, TextField, ButtonBase, InputAdornment, Typography, Button, Tooltip} from '@material-ui/core';
 import aa from 'search-insights'
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const Appsearch = props => {
@@ -18,6 +18,7 @@ const Appsearch = props => {
   const alert = useAlert();
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? 12 : parsedXs
+	const theme = useTheme();
 	//const [apps, setApps] = React.useState([]);
 	//const [filteredApps, setFilteredApps] = React.useState([]);
 	const [formMail, setFormMail] = React.useState("");
@@ -69,43 +70,6 @@ const Appsearch = props => {
 			console.log(error);
 		  });
 	  };
-	const submitContact = (email, message) => {
-		const data = {
-			"firstname": "",
-			"lastname": "",
-			"title": "",
-			"companyname": "",
-			"email": email,
-			"phone": "",
-			"message": message,
-		}
-	
-		const errorMessage = "Something went wrong. Please contact frikky@shuffler.io directly."
-
-		fetch(globalUrl+"/api/v1/contact", {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify(data),
-		})
-		.then(response => response.json())
-		.then(response => {
-			if (response.success === true) {
-				setFormMessage(response.reason)
-				//alert.info("Thanks for submitting!")
-			} else {
-				setFormMessage(errorMessage)
-			}
-
-			setFormMail("")
-			setMessage("")
-    })
-		.catch(error => {
-			setFormMessage(errorMessage)
-    	console.log(error)
-		});
-	}
 
 	// value={currentRefinement}
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {

@@ -9,13 +9,13 @@ import {
 	Grid,
 	Card,
   Switch,
-} from "@mui/material";
+} from "@material-ui/core";
 
 import Priority from "../components/Priority.jsx";
 import { useAlert } from "react-alert";
 
 const Priorities = (props) => {
-  const { globalUrl, userdata, serverside, billingInfo, stripeKey, checkLogin, } = props;
+  const { globalUrl, userdata, serverside, billingInfo, stripeKey, checkLogin, setAdminTab, setCurTab, } = props;
   const [showDismissed, setShowDismissed] = React.useState(false);
   const [showRead, setShowRead] = React.useState(false);
 
@@ -60,6 +60,8 @@ const Priorities = (props) => {
 							globalUrl={globalUrl}
 							priority={priority}
 							checkLogin={checkLogin}
+							setAdminTab={setAdminTab}
+							setCurTab={setCurTab}
 						/>
 					)
 				})

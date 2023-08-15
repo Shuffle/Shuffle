@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 
+import ReactGA from 'react-ga4';
 import theme from "../theme.jsx";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -9,7 +10,7 @@ import {
 	Button,
 	Grid,
 	Card,
-} from "@mui/material";
+} from "@material-ui/core";
 
 // import magic wand icon from material ui icons 
 import {
@@ -19,9 +20,10 @@ import {
 import { useAlert } from "react-alert";
 
 const Priority = (props) => {
-  const { globalUrl, userdata, serverside, priority, checkLogin, } = props;
+  const { globalUrl, userdata, serverside, priority, checkLogin, setAdminTab, setCurTab, } = props;
 
 
+  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	let navigate = useNavigate();
 	const changeRecommendation = (recommendation, action) => {
     const data = {
@@ -101,14 +103,27 @@ const Priority = (props) => {
 			</div>
 			<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
 				<Button style={{height: 50, borderRadius: 25,  marginTop: 8, width: 175, marginRight: 10, color: priority.active === false ? "white" : "black", backgroundColor: priority.active === false ? theme.palette.inputColor : "white", }} variant="contained" color="secondary" onClick={() => {
-					/*
-					ReactGA.event({
-						category: "",
-						action: `partner_${partner.name}_click`,
-						label: "",
-					})
-					*/
+
+					if (isCloud) {
+						ReactGA.event({
+							category: "recommendation",
+							action: `click_${priority.name}`,
+							label: "",
+						})
+					}
+
 					navigate(priority.url)
+
+					if (setAdminTab !== undefined && setCurTab !== undefined) {
+						if (priority.description.toLowerCase().includes("notification workflow")) {
+							setCurTab(0)
+							setAdminTab(0)
+						}
+
+						if (priority.description.toLowerCase().includes("hybrid shuffle")) {
+							setCurTab(6)
+						}
+					}
 				}}>
 					explore		
 				</Button>

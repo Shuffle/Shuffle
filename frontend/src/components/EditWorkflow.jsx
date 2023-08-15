@@ -3,6 +3,7 @@ import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect" 
 import ChipInput from "material-ui-chip-input";
 import UsecaseSearch from "../components/UsecaseSearch.jsx"
+import dayjs from 'dayjs';
 
 import {
   Badge,
@@ -37,28 +38,35 @@ import {
 	FormControl,
 	FormLabel,
 
-} from "@mui/material";
+} from "@material-ui/core";
+
+import { 
+	DatePicker, 
+	LocalizationProvider,
+} from '@mui/x-date-pickers'
+
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 
 import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   Publish as PublishIcon,
   OpenInNew as OpenInNewIcon,
-} from "@mui/icons-material";
+} from "@material-ui/icons";
 
 const EditWorkflow = (props) => {
 	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, } = props
 
+  const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
   const [submitLoading, setSubmitLoading] = React.useState(false);
   const [showMoreClicked, setShowMoreClicked] = React.useState(false);
 	const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
-  const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
   const [newWorkflowTags, setNewWorkflowTags] = React.useState(workflow.tags !== undefined && workflow.tags !== null ? JSON.parse(JSON.stringify(workflow.tags)) : [])
   const [selectedUsecases, setSelectedUsecases] = React.useState(workflow.usecase_ids !== undefined && workflow.usecase_ids !== null ? JSON.parse(JSON.stringify(workflow.usecase_ids)) : []);
 	const [foundWorkflowId, setFoundWorkflowId] = React.useState("")
 	const [name, setName] = React.useState(workflow.name !== undefined ? workflow.name : "")
 	const [description, setDescription] = React.useState(workflow.description !== undefined ? workflow.description : "")
-
+	const [dueDate, setDueDate] = React.useState(workflow.due_date !== undefined && workflow.due_date !== null && workflow.due_date !== 0 ? dayjs(workflow.due_date*1000) : dayjs().subtract(1, 'day'))
 
 	// Gets the generated workflow 
 	const getGeneratedWorkflow = (workflow_id) => {
@@ -231,24 +239,26 @@ const EditWorkflow = (props) => {
           	  autoFocus
           	  fullWidth
           	/>
-          	<TextField
-          	  onBlur={(event) => {
-								setDescription(event.target.value)
-							}}
-          	  InputProps={{
-          	    style: {
-          	      color: "white",
-          	    },
-          	  }}
-							maxRows={4}
-          	  color="primary"
-          	  defaultValue={innerWorkflow.description}
-          	  placeholder="Description"
-          	  multiline
-							label="Description"
-          	  margin="dense"
-          	  fullWidth
-          	/>
+			<div style={{display: "flex", }}>
+				<TextField
+				  onBlur={(event) => {
+					setDescription(event.target.value)
+				  }}
+				  InputProps={{
+					style: {
+					  color: "white",
+					},
+				  }}
+				  maxRows={4}
+				  color="primary"
+				  defaultValue={innerWorkflow.description}
+				  placeholder="Description"
+				  multiline
+				  label="Description"
+				  margin="dense"
+				  fullWidth
+				/>
+			</div>
 						<div style={{display: "flex", marginTop: 10, }}>
 							<ChipInput
 								style={{ flex: 1, maxHeight: 40, marginTop: 12, overflow: "auto",  }}
@@ -266,8 +276,10 @@ const EditWorkflow = (props) => {
 									setNewWorkflowTags(newWorkflowTags);
 								}}
 								onDelete={(chip, index) => {
+									console.log("Deleting: ", chip, index)
 									newWorkflowTags.splice(index, 1);
 									setNewWorkflowTags(newWorkflowTags);
+									setUpdate(Math.random());
 								}}
 							/>
 							{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
@@ -328,26 +340,41 @@ const EditWorkflow = (props) => {
 
   					{showMoreClicked === true ? 
 							<span style={{marginTop: 25, }}>
+								<div style={{display: "flex"}}>
+									<FormControl style={{marginTop: 15, }}>
+										<FormLabel id="demo-row-radio-buttons-group-label">Status</FormLabel>
+											<RadioGroup
+												row
+												aria-labelledby="demo-row-radio-buttons-group-label"
+												name="row-radio-buttons-group"
+												defaultValue={innerWorkflow.status}
+												onChange={(e) => {
+													console.log("Data: ", e.target.value)
+													
+													innerWorkflow.workflow_type = e.target.value
+													setInnerWorkflow(innerWorkflow)
+												}}
+											>
+												<FormControlLabel value="test" control={<Radio />} label="Test" />
+												<FormControlLabel value="production" control={<Radio />} label="Production" />
 
-								<FormControl style={{marginTop: 15, }}>
-									<FormLabel id="demo-row-radio-buttons-group-label">Status</FormLabel>
-										<RadioGroup
-											row
-											aria-labelledby="demo-row-radio-buttons-group-label"
-											name="row-radio-buttons-group"
-											defaultValue={innerWorkflow.status}
-											onChange={(e) => {
-												console.log("Data: ", e.target.value)
-												
-												innerWorkflow.workflow_type = e.target.value
-												setInnerWorkflow(innerWorkflow)
+											</RadioGroup>
+									</FormControl>
+									<LocalizationProvider dateAdapter={AdapterDayjs}>
+										<DatePicker 
+											sx={{
+												marginTop: 3, 
+												marginLeft: 3, 
 											}}
-										>
-											<FormControlLabel value="test" control={<Radio />} label="Test" />
-											<FormControlLabel value="production" control={<Radio />} label="Production" />
-
-										</RadioGroup>
-								</FormControl>
+											value={dueDate} 
+											label="Due Date"
+											format="YYYY-MM-DD"
+											onChange={(newValue) => {
+												setDueDate(newValue)
+											}}
+										/>
+									</LocalizationProvider>
+								</div>
 								<div />
 
 								<FormControl style={{marginTop: 15, }}>
@@ -430,38 +457,27 @@ const EditWorkflow = (props) => {
 							</span>
 						: null}
           	<Tooltip color="primary" title={"Add more details"} placement="top">
-							<IconButton
-								style={{ color: "white", margin: "auto", marginTop: 10, textAlign: "center", width: 50,}}
-								onClick={() => {
-									setShowMoreClicked(!showMoreClicked);
-								}}
-							>
-								{showMoreClicked ? <ExpandLessIcon /> : <ExpandMoreIcon/>}
-							</IconButton>
-						</Tooltip>
-					</div>
-					{/*newWorkflow === true ? 
-						<div style={{marginLeft: 50, maxWidth: 400, minWidth: 400, position: "relative",}}>
-							<UsecaseSearch
-								globalUrl={globalUrl}
-								appFramework={appFramework}
-								defaultSearch={undefined}
-								apps={undefined}
-								setFoundWorkflowId={setFoundWorkflowId} 
-								userdata={userdata}
-							/>
-						</div>
-					: null*/}
+				<IconButton
+					style={{ color: "white", margin: "auto", marginTop: 10, textAlign: "center", width: 50,}}
+					onClick={() => {
+						setShowMoreClicked(!showMoreClicked);
+					}}
+				>
+					{showMoreClicked ? <ExpandLessIcon /> : <ExpandMoreIcon/>}
+				</IconButton>
+			</Tooltip>
+		</div>
+
         </DialogContent>
         <DialogActions>
           <Button
             style={{}}
             onClick={() => {
-							if (setNewWorkflow !== undefined) {
-								setWorkflow({})
-							}
+				if (setNewWorkflow !== undefined) {
+					setWorkflow({})
+				}
 
-							setModalOpen(false)
+				setModalOpen(false)
             }}
             color="primary"
           >
@@ -482,6 +498,9 @@ const EditWorkflow = (props) => {
 								innerWorkflow.usecase_ids = selectedUsecases
 							}
 
+							if (dueDate > 0) {
+								innerWorkflow.due_date = new Date(`${dueDate["$y"]}-${dueDate["$M"]+1}-${dueDate["$D"]}`).getTime()/1000
+							}
 
 							if (setNewWorkflow !== undefined) {
 								setNewWorkflow(

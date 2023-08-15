@@ -1,18 +1,19 @@
 /* eslint-disable react/no-multi-comp */
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import ReactDOM from "react-dom"
-import theme from '../theme.jsx';
 
 import { useInterval } from "react-powerhooks";
-//import { makeStyles, } from "@mui/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
+// import { Prompt } from "react-router"; // FIXME
 import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
-import { NestedMenuItem } from "mui-nested-menu"
+import NestedMenuItem from "material-ui-nested-menu-item";
 import ReactMarkdown from "react-markdown";
 import { useAlert } from "react-alert";
+import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect"
 import aa from 'search-insights'
 import Drift from "react-driftjs";
@@ -50,7 +51,7 @@ import {
   IconButton,
   Menu,
   Input,
-  Collapse,
+  Fade,
   FormGroup,
   FormControlLabel,
   Typography,
@@ -66,9 +67,11 @@ import {
   ListItemText,
   ListItemAvatar,
   Badge,
-	Autocomplete, 
+} from "@material-ui/core";
+
+import {
   AvatarGroup,
-} from "@mui/material";
+} from "@mui/material"
 
 import {
   Folder as FolderIcon,
@@ -84,7 +87,7 @@ import {
   ArrowLeft as ArrowLeftIcon,
   Cached as CachedIcon,
   DirectionsRun as DirectionsRunIcon,
-  Code as CodeIcon,
+  Polymer as PolymerIcon,
   FormatListNumbered as FormatListNumberedIcon,
   PlayArrow as PlayArrowIcon,
   AspectRatio as AspectRatioIcon,
@@ -104,25 +107,30 @@ import {
   VpnKey as VpnKeyIcon,
   AddComment as AddCommentIcon,
   Edit as EditIcon,
-	Send as SendIcon,
+  Send as SendIcon,
+  Restore as RestoreIcon, 
+} from "@material-ui/icons";
+
+import {
   Preview as PreviewIcon,
   ContentCopy as ContentCopyIcon,
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
 	AutoFixHigh as AutoFixHighIcon,
-} from "@mui/icons-material";
+} from '@mui/icons-material';
 
+import Autocomplete from "@material-ui/lab/Autocomplete";
 
 import * as cytoscape from "cytoscape";
 import * as edgehandles from "cytoscape-edgehandles";
-//import * as clipboard from "cytoscape-clipboard";
-//import undoRedo from "cytoscape-undo-redo";
-//import cxtmenu from "cytoscape-cxtmenu";
+import * as clipboard from "cytoscape-clipboard";
 import CytoscapeComponent from "react-cytoscapejs";
+import undoRedo from "cytoscape-undo-redo";
 
 import Draggable from "react-draggable";
 
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
+import cxtmenu from "cytoscape-cxtmenu";
 
 import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
@@ -228,9 +236,9 @@ const inputColor = "#383B40";
 
 // http://apps.cytoscape.org/apps/yfileslayoutalgorithms
 cytoscape.use(edgehandles);
-//cytoscape.use(clipboard);
-//cytoscape.use(undoRedo);
-//cytoscape.use(cxtmenu);
+cytoscape.use(clipboard);
+cytoscape.use(undoRedo);
+cytoscape.use(cxtmenu);
 
 // Adds specific text to items
 //import popper from 'cytoscape-popper';
@@ -353,6 +361,32 @@ export function removeParam(key, sourceURL) {
   return rtn;
 }
 
+const useStyles = makeStyles({
+  notchedOutline: {
+    borderColor: "#f85a3e !important",
+  },
+  root: {
+    "& .MuiAutocomplete-listbox": {
+      border: "2px solid #f85a3e",
+      color: "white",
+      fontSize: 18,
+      "& li:nth-child(even)": {
+        backgroundColor: "#CCC",
+      },
+      "& li:nth-child(odd)": {
+        backgroundColor: "#FFF",
+      },
+    },
+  },
+  inputRoot: {
+    color: "white",
+    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
+    "&:hover .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#f86a3e",
+    },
+  },
+});
+
 const splitter = "|~|";
 const svgSize = 24;
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
@@ -368,6 +402,8 @@ const AngularWorkflow = (defaultprops) => {
   var props = JSON.parse(JSON.stringify(defaultprops))
   props.match = {}
   props.match.params = params
+
+  //const theme = useTheme();
 
 
   var to_be_copied = "";
@@ -385,6 +421,7 @@ const AngularWorkflow = (defaultprops) => {
   const [editWorkflowDetails, setEditWorkflowDetails] = React.useState(false);
 
   const [workflow, setWorkflow] = React.useState({});
+  const [originalWorkflow, setOriginalWorkflow] = React.useState({});
   const [userSettings, setUserSettings] = React.useState({});
   const [subworkflow, setSubworkflow] = React.useState({});
   const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
@@ -448,6 +485,8 @@ const AngularWorkflow = (defaultprops) => {
   const [destinationValue, setDestinationValue] = React.useState({});
   const [conditionValue, setConditionValue] = React.useState({});
   const [dragging, setDragging] = React.useState(false);
+  const [showWorkflowRevisions, setShowWorkflowRevisions] = React.useState(false);
+  const [selectedRevision, setSelectedRevision] = useState({})
   const [dragPosition, setDragPosition] = React.useState({
     x: 0,
     y: 0,
@@ -461,6 +500,7 @@ const AngularWorkflow = (defaultprops) => {
   const [selectedEdgeIndex, setSelectedEdgeIndex] = React.useState({});
 
   const [visited, setVisited] = React.useState([]);
+  const [allRevisions, setAllRevisions] = useState([])
 
   const [apps, setApps] = React.useState([]);
   const [filteredApps, setFilteredApps] = React.useState([]);
@@ -524,6 +564,7 @@ const AngularWorkflow = (defaultprops) => {
   const appBarSize = isCloud ? 75 : 72;
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
   const unloadText = "Are you sure you want to leave without saving (CTRL+S)?";
+  const classes = useStyles();
 
   const [bodyWidth, bodyHeight] = useWindowSize()
   //console.log("Mobile: ", isMobile, bodyWidth, bodyHeight)
@@ -1539,6 +1580,7 @@ const AngularWorkflow = (defaultprops) => {
         console.log("Save workflow error: ", error.toString());
       });
 
+	setOriginalWorkflow(useworkflow)
     return success;
   };
 
@@ -2076,13 +2118,13 @@ const AngularWorkflow = (defaultprops) => {
 
           var nodefound = false;
           var target = sourcenode.parameters.find((item) => item.name === "startnode");
-					console.log("Got rightclick target: ", target)
-					if (target === undefined || target === null) {
-						target = {
-							"name": "startnode",
-							"value": responseJson.start
-						}
-					}
+			console.log("Got rightclick target: ", target)
+			if (target === undefined || target === null) {
+				target = {
+					"name": "startnode",
+					"value": responseJson.start
+				}
+			}
           
           console.log(sourcenode.parameters);
           console.log(target);
@@ -2223,6 +2265,7 @@ const AngularWorkflow = (defaultprops) => {
           cy.on("add", "node", (e) => onNodeAdded(e));
           cy.on("add", "edge", (e) => onEdgeAdded(e));
         } else {
+          setOriginalWorkflow(responseJson);
           setWorkflow(responseJson);
           setWorkflowDone(true);
 
@@ -2236,7 +2279,7 @@ const AngularWorkflow = (defaultprops) => {
               responseJson.errors !== // what
               responseJson.errors.length > 0
             ) {
-							console.log("Setting configure Modal to open")
+			  console.log("Setting configure Modal to open")
               setConfigureWorkflowModalOpen(true);
             }
           }
@@ -3765,8 +3808,10 @@ const AngularWorkflow = (defaultprops) => {
         workflow.branches[branchkey].source_id === edge.source
       ) {
         console.log(edge.source);
-        alert.error("That branch already exists");
+
+        //alert.error("That branch already exists");
         event.target.remove();
+
         found = true;
         break;
       } else if (edge.target === workflow.start) {
@@ -4005,18 +4050,14 @@ const AngularWorkflow = (defaultprops) => {
         data: newcybranch,
       };
 
-      if (
-        nodedata.name !== "User Input" &&
-        nodedata.name !== "Shuffle Workflow"
-      ) {
-        if (
-          workflow.actions !== undefined &&
-          workflow.actions !== null &&
-          workflow.actions.length > 0
-        ) {
-          cy.add(edgeToBeAdded);
-        }
-      }
+	  if (edgeToBeAdded.data.source !== edgeToBeAdded.data.target && edgeToBeAdded.data.source !== undefined && edgeToBeAdded.data.target !== undefined) {
+		  if (nodedata.name !== "User Input" && nodedata.name !== "Shuffle Workflow") {
+			if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
+				console.log("Edge handle: ", edgeToBeAdded)
+				cy.add(edgeToBeAdded);
+			}
+		  }
+	  }
 
       setWorkflow(workflow);
     }
@@ -4041,7 +4082,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     // Check if the source is trigger and can start
-    console.log("Removed: ", edge.data())
+    //console.log("Removed: ", edge.data())
     const allNodes = cy.nodes().jsons()
 		for (let nodekey in allNodes) {
 			const curnode = allNodes[nodekey]
@@ -4049,33 +4090,33 @@ const AngularWorkflow = (defaultprops) => {
 				continue
 			}
 
-      if (curnode.data.id === edge.data("source")) {
-        console.log("Found matching trigger source: ", curnode)
-        if (curnode.data.app_name !== "Shuffle Workflow" && curnode.data.app_name !== "User Input") {
-          // If it's started, READD the edge
-          if (curnode.data.status === "running") {
-            console.log("Edge is running - readd it: ", edge.data())
+			  if (curnode.data.id === edge.data("source")) {
+				console.log("Found matching trigger source: ", curnode)
+				if (curnode.data.app_name !== "Shuffle Workflow" && curnode.data.app_name !== "User Input") {
+				  // If it's started, READD the edge
+				  if (curnode.data.status === "running") {
+					console.log("Edge is running - readd it: ", edge.data())
 
-            // Just making sure it's not running infinitely
-            var newdata = edge.data()
-            newdata.readded = true
+					// Just making sure it's not running infinitely
+					var newdata = edge.data()
+					newdata.readded = true
 
-            try {
-              cy.add({
-                group: "edges",
-                data: newdata,
-              })
+					try {
+					  cy.add({
+						group: "edges",
+						data: newdata,
+					  })
 
-              alert.error("You must STOP the trigger before deleting its branches")
-            } catch (e) {
-              console.log("Failed re-adding edge: ", e)
-            }
-          }
+					  alert.error("You must STOP the trigger before deleting its branches")
+					} catch (e) {
+					  console.log("Failed re-adding edge: ", e)
+					}
+				  }
 
-          //status: "uninitialized",
-        }
-      }
-    }
+				  //status: "uninitialized",
+				}
+			  }
+		}
 
     workflow.branches = workflow.branches.filter(
       (a) => a.id !== edge.data().id
@@ -5117,8 +5158,36 @@ const AngularWorkflow = (defaultprops) => {
     }
   }
 
-  const setupGraph = () => {
-    const actions = workflow.actions.map((action) => {
+  const setupGraph = (inputworkflow) => {
+	// Reset cytoscape nodes and branches
+	if (cy !== undefined && cy !== null) {
+		if (inputworkflow.actions !== undefined && inputworkflow.actions !== null && inputworkflow.actions.length > 0) {
+			cy.remove('*')
+		}
+		console.log("INPUT: ", inputworkflow)
+	}
+
+	if (inputworkflow.actions === undefined || inputworkflow.actions === null) {
+		inputworkflow.actions = []
+	}
+
+	if (inputworkflow.branches === undefined || inputworkflow.branches === null) {
+		inputworkflow.branches = []
+	}
+
+	if (inputworkflow.triggers === undefined || inputworkflow.triggers === null) {
+		inputworkflow.triggers = []
+	}
+
+	if (inputworkflow.comments === undefined || inputworkflow.comments === null) {
+		inputworkflow.comments = []
+	}
+
+	if (inputworkflow.visual_branches === undefined || inputworkflow.visual_branches === null) {
+		inputworkflow.visual_branches = []
+	}
+
+    const actions = inputworkflow.actions.map((action) => {
       const node = {};
 
       if (!action.isStartNode && action.app_name === "Shuffle Tools") {
@@ -5145,9 +5214,9 @@ const AngularWorkflow = (defaultprops) => {
       node.data.id = action["id"];
       node.data._id = action["id"];
       node.data.type = "ACTION";
-      node.isStartNode = action["id"] === workflow.start;
+      node.isStartNode = action["id"] === inputworkflow.start;
 
-      if (workflow.public === true) {
+      if (inputworkflow.public === true) {
         node.data.is_valid = true
         node.is_valid = true
       }
@@ -5166,7 +5235,7 @@ const AngularWorkflow = (defaultprops) => {
       return node;
     });
 
-    const decoratorNodes = workflow.actions.map((action) => {
+    const decoratorNodes = inputworkflow.actions.map((action) => {
       if (!action.isStartNode) {
         if (action.app_name === "Testing") {
           return null;
@@ -5200,7 +5269,7 @@ const AngularWorkflow = (defaultprops) => {
     });
 
 
-    const foundtriggers = workflow.triggers.map((trigger) => {
+    const foundtriggers = inputworkflow.triggers.map((trigger) => {
       const node = {};
       node.position = trigger.position;
       node.data = trigger;
@@ -5214,11 +5283,11 @@ const AngularWorkflow = (defaultprops) => {
 
     var comments = [];
     if (
-      workflow.comments !== undefined &&
-      workflow.comments !== null &&
-      workflow.comments.length > 0
+      inputworkflow.comments !== undefined &&
+      inputworkflow.comments !== null &&
+      inputworkflow.comments.length > 0
     ) {
-      comments = workflow.comments.map((comment) => {
+      comments = inputworkflow.comments.map((comment) => {
         const node = {};
         node.position = comment.position;
         node.data = comment;
@@ -5230,13 +5299,12 @@ const AngularWorkflow = (defaultprops) => {
       });
     }
 
-    // FIXME - tmp branch update
     var insertedNodes = [].concat(actions, foundtriggers, decoratorNodes, comments);
     insertedNodes = insertedNodes.filter((node) => node !== null);
 
-    var edges = workflow.branches.map((branch, index) => {
+    var edges = inputworkflow.branches.map((branch, index) => {
       const edge = {};
-      var conditions = workflow.branches[index].conditions;
+      var conditions = inputworkflow.branches[index].conditions;
       if (conditions === undefined || conditions === null) {
         conditions = [];
       }
@@ -5247,6 +5315,26 @@ const AngularWorkflow = (defaultprops) => {
       } else if (conditions.length > 1) {
         label = conditions.length + " conditions";
       }
+
+	  // Verify if branch.source_id and branch.destination_id exists in triggers or actions
+	  /*
+	  var sourceExists = false;
+	  var destinationExists = false;
+	  for (var i = 0; i < insertedNodes.length; i++) {
+		  console.log("Insertednode: ", insertedNodes[i].data);
+		if (insertedNodes[i].data._id === branch.source_id) {
+			sourceExists = true;
+		} 
+		if (insertedNodes[i].data._id === branch.destination_id) {
+			destinationExists = true;
+		}
+	  }
+
+	  if (sourceExists === false || destinationExists === false) {
+		  console.log("Couldn't find source node for branch " + branch.id);
+		  return null;
+	  }
+	  */
 
       edge.data = {
         id: branch.id,
@@ -5287,18 +5375,18 @@ const AngularWorkflow = (defaultprops) => {
     });
 
     if (
-      workflow.visual_branches !== undefined &&
-      workflow.visual_branches !== null &&
-      workflow.visual_branches.length > 0
+      inputworkflow.visual_branches !== undefined &&
+      inputworkflow.visual_branches !== null &&
+      inputworkflow.visual_branches.length > 0
     ) {
-      const visualedges = workflow.visual_branches.map((branch, index) => {
+      const visualedges = inputworkflow.visual_branches.map((branch, index) => {
         const edge = {};
 
-        if (workflow.branches[index] === undefined) {
+        if (inputworkflow.branches[index] === undefined) {
           return {};
         }
 
-        var conditions = workflow.branches[index].conditions;
+        var conditions = inputworkflow.branches[index].conditions;
         if (conditions === undefined || conditions === null) {
           conditions = [];
         }
@@ -5319,7 +5407,6 @@ const AngularWorkflow = (defaultprops) => {
       edges = edges.concat(visualedges);
     }
 
-    setWorkflow(workflow);
 
     // Verifies if a branch is valid and skips others
     var newedges = [];
@@ -5343,7 +5430,18 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     insertedNodes = insertedNodes.concat(newedges);
-    setElements(insertedNodes);
+
+	console.log("NODES: ", insertedNodes)
+    setWorkflow(inputworkflow);
+
+	// Reset view for cytoscape
+	if (cy !== undefined && cy !== null) {
+		console.log("In cy add!")
+		cy.add(insertedNodes);
+    	cy.fit(null, 200);
+	} else {
+    	setElements(insertedNodes);
+	}
   };
 
   const removeNode = (nodeId) => {
@@ -5487,11 +5585,47 @@ const AngularWorkflow = (defaultprops) => {
       })
   }
 
+	const getRevisionHistory  = (workflow_id) => {
+	  console.log("Loading revisions for workflow ID ", workflow_id)
+
+	  fetch(`${globalUrl}/api/v1/workflows/${workflow_id}/revisions`, {
+		method: "GET",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		credentials: "include",
+	  })
+	  .then((response) => {
+		if (response.status !== 200) {
+			console.log("Status not 200 for workflows :O!");
+		}
+
+		// Read text from stream
+		//return response.text();
+		return response.json();
+	  })
+	  .then((responseJson) => {
+		console.log("Got workflow revisions: ", responseJson)
+
+		if (responseJson.success === false) {
+			console.log("Error getting workflow revisions: ", responseJson)
+			return
+		}
+
+		setAllRevisions(responseJson)
+	  })
+	  .catch((error) => {
+		console.log("Error getting workflow revisions: ", error)
+	  });
+    }
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   //useEffect(() => {
   if (firstrequest) {
     setFirstrequest(false);
     getWorkflow(props.match.params.key, {});
+	getRevisionHistory(props.match.params.key)
     getApps();
     fetchUsecases()
 
@@ -5532,7 +5666,7 @@ const AngularWorkflow = (defaultprops) => {
   // App length necessary cus of cy initialization
   if (elements.length === 0 && workflow.actions !== undefined && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0) {
     setGraphSetup(true);
-    setupGraph();
+    setupGraph(workflow);
     console.log("In graph setup")
 
     // 2nd load - configures cytoscape
@@ -7080,6 +7214,12 @@ const AngularWorkflow = (defaultprops) => {
       <div style={appViewStyle}>
         <div style={{ flex: "1" }}>
           <TextField
+            style={{
+              backgroundColor: inputColor,
+              borderRadius: theme.palette.borderRadius,
+              marginTop: 5,
+              marginRight: 10,
+            }}
             InputProps={{
               style: {
                 color: "white",
@@ -7187,16 +7327,11 @@ const AngularWorkflow = (defaultprops) => {
 		if (allitems !== undefined && allitems !== null) {
 			for (let itemkey in allitems) {
 				const item = allitems[itemkey];
-				if (
-					item.app_name === appName &&
-					item.label !== undefined &&
-					item.label !== null
-				) {
+				console.log("Appname: ", appName, "Item: ", item);
+
+				if (item.app_name === appName && item.label !== undefined && item.label !== null) {
 					var number = item.label.split("_");
-					if (
-						isNaN(number[-1]) &&
-						parseInt(number[number.length - 1]) > highest
-					) {
+					if (isNaN(number[-1]) && parseInt(number[number.length - 1]) > highest) {
 						highest = number[number.length - 1];
 					}
 				}
@@ -7782,6 +7917,15 @@ const AngularWorkflow = (defaultprops) => {
         style={{
           backgroundColor: inputColor,
           borderRadius: theme.palette.borderRadius,
+        }}
+        InputProps={{
+          style: {
+            color: "white",
+            minHeight: 50,
+            marginLeft: "5px",
+            maxWidth: "95%",
+            fontSize: "1em",
+          },
         }}
         fullWidth
         multiline={multiline}
@@ -9131,6 +9275,15 @@ const AngularWorkflow = (defaultprops) => {
             backgroundColor: inputColor,
             borderRadius: theme.palette.borderRadius,
           }}
+          InputProps={{
+            style: {
+              color: "white",
+              marginLeft: "5px",
+              maxWidth: "95%",
+              height: 50,
+              fontSize: "1em",
+            },
+          }}
           fullWidth
           color="primary"
           placeholder={selectedTrigger.label}
@@ -9145,6 +9298,13 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
+              style: {
+                color: "white",
+                marginLeft: "5px",
+                maxWidth: "95%",
+                height: 50,
+                fontSize: "1em",
+              },
             }}
             required
             disabled
@@ -9875,6 +10035,15 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
+                InputProps={{
+                  style: {
+                    color: "white",
+                    marginLeft: "5px",
+                    maxWidth: "95%",
+                    height: 50,
+                    fontSize: "1em",
+                  },
+                }}
                 fullWidth
                 color="primary"
                 placeholder={selectedTrigger.label}
@@ -9891,6 +10060,14 @@ const AngularWorkflow = (defaultprops) => {
                   <span>
                     <Typography>Delay</Typography>
                     <TextField
+                      style={{
+                        backgroundColor: theme.palette.inputColor,
+                        borderRadius: theme.palette.borderRadius,
+                        color: "white",
+                        width: 50,
+                        height: 50,
+                        fontSize: "1em",
+                      }}
                       InputProps={{
                         style: theme.palette.innerTextfieldStyle,
                       }}
@@ -10001,6 +10178,7 @@ const AngularWorkflow = (defaultprops) => {
 									freeSolo
 									//autoSelect
                   value={subworkflow}
+                  classes={{ inputRoot: classes.inputRoot }}
                   ListboxProps={{
                     style: {
                       backgroundColor: theme.palette.inputColor,
@@ -10119,6 +10297,7 @@ const AngularWorkflow = (defaultprops) => {
                     id="subflow_node_search"
                     autoHighlight
                     value={subworkflowStartnode}
+                    classes={{ inputRoot: classes.inputRoot }}
                     ListboxProps={{
                       style: {
                         backgroundColor: theme.palette.inputColor,
@@ -10211,6 +10390,12 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
+                  style: {
+                    color: "white",
+                    marginLeft: "5px",
+                    maxWidth: "95%",
+                    fontSize: "1em",
+                  },
                   endAdornment: (
                     <InputAdornment position="end">
                       <Tooltip title="Autocomplete text" placement="top">
@@ -10357,6 +10542,12 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
+              style: {
+                color: "white",
+                marginLeft: "5px",
+                maxWidth: "95%",
+                fontSize: "1em",
+              },
             }}
             multiline
             rows="4"
@@ -10378,6 +10569,13 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
+                  style: {
+                    color: "white",
+                    marginLeft: "5px",
+                    maxWidth: "95%",
+                    height: 50,
+                    fontSize: "1em",
+                  },
                 }}
                 fullWidth
                 color="primary"
@@ -10425,6 +10623,13 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
+                  style: {
+                    color: "white",
+                    marginLeft: "5px",
+                    maxWidth: "95%",
+                    height: 50,
+                    fontSize: "1em",
+                  },
                 }}
                 fullWidth
                 color="primary"
@@ -10444,6 +10649,13 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
+                  style: {
+                    color: "white",
+                    marginLeft: "5px",
+                    maxWidth: "95%",
+                    height: 50,
+                    fontSize: "1em",
+                  },
                 }}
                 fullWidth
                 color="primary"
@@ -10463,6 +10675,13 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
+              style: {
+                color: "white",
+                marginLeft: "5px",
+                maxWidth: "95%",
+                height: 50,
+                fontSize: "1em",
+              },
             }}
             fullWidth
             color="primary"
@@ -10567,6 +10786,13 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
+              style: {
+                color: "white",
+                marginLeft: "5px",
+                maxWidth: "95%",
+                height: 50,
+                fontSize: "1em",
+              },
             }}
             fullWidth
             color="primary"
@@ -10579,6 +10805,7 @@ const AngularWorkflow = (defaultprops) => {
                 id="action_search"
                 autoHighlight
                 value={selectedTrigger.app_association}
+                classes={{ inputRoot: classes.inputRoot }}
                 ListboxProps={{
                   style: {
                     backgroundColor: theme.palette.inputColor,
@@ -10913,6 +11140,12 @@ const AngularWorkflow = (defaultprops) => {
                   id="webhook_uri_header"
                   onClick={() => { }}
                   InputProps={{
+                    style: {
+                      color: "white",
+                      marginLeft: "5px",
+                      maxWidth: "95%",
+                      fontSize: "1em",
+                    },
                   }}
                   fullWidth
                   multiline
@@ -10964,6 +11197,12 @@ const AngularWorkflow = (defaultprops) => {
                   id="webhook_uri_header"
                   onClick={() => { }}
                   InputProps={{
+                    style: {
+                      color: "white",
+                      marginLeft: "5px",
+                      maxWidth: "95%",
+                      fontSize: "1em",
+                    },
                   }}
                   fullWidth
                   multiline
@@ -11367,6 +11606,13 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
+              style: {
+                color: "white",
+                marginLeft: "5px",
+                maxWidth: "95%",
+                height: 50,
+                fontSize: "1em",
+              },
             }}
             fullWidth
             color="primary"
@@ -11434,6 +11680,13 @@ const AngularWorkflow = (defaultprops) => {
                 borderRadius: theme.palette.borderRadius,
               }}
               InputProps={{
+                style: {
+                  color: "white",
+                  marginLeft: "5px",
+                  maxWidth: "95%",
+                  marginTop: "3px",
+                  fontSize: "1em",
+                },
               }}
               fullWidth
               rows="4"
@@ -11523,6 +11776,7 @@ const AngularWorkflow = (defaultprops) => {
               	    id="subflow_search"
               	    autoHighlight
               	    value={subworkflow}
+              	    classes={{ inputRoot: classes.inputRoot }}
               	    ListboxProps={{
               	      style: {
               	        backgroundColor: theme.palette.inputColor,
@@ -11641,6 +11895,13 @@ const AngularWorkflow = (defaultprops) => {
 									marginTop: 10,
                 }}
                 InputProps={{
+                  style: {
+                    color: "white",
+                    marginLeft: "5px",
+                    maxWidth: "95%",
+                    height: 50,
+                    fontSize: "1em",
+                  },
                 }}
                 fullWidth
                 color="primary"
@@ -11723,6 +11984,13 @@ const AngularWorkflow = (defaultprops) => {
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
+              style: {
+                color: "white",
+                marginLeft: "5px",
+                maxWidth: "95%",
+                height: 50,
+                fontSize: "1em",
+              },
             }}
             fullWidth
             color="primary"
@@ -11820,6 +12088,13 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
+                  style: {
+                    color: "white",
+                    height: 50,
+                    marginLeft: "5px",
+                    maxWidth: "95%",
+                    fontSize: "1em",
+                  },
                 }}
                 fullWidth
                 disabled={
@@ -11868,6 +12143,13 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
+                  style: {
+                    color: "white",
+                    marginLeft: "5px",
+                    maxWidth: "95%",
+                    marginTop: "3px",
+                    fontSize: "1em",
+                  },
                 }}
                 disabled={
                   workflow.triggers[selectedTriggerIndex].status === "running"
@@ -11975,7 +12257,7 @@ const AngularWorkflow = (defaultprops) => {
                   margin: "0px 0px 0px 0px",
                 }}
               >
-                <CodeIcon style={{ marginRight: 10 }} />
+                <PolymerIcon style={{ marginRight: 10 }} />
                 Workflows
               </h2>
             </Link>
@@ -12517,6 +12799,27 @@ const AngularWorkflow = (defaultprops) => {
               </Button>
             </span>
           </Tooltip>
+          <Tooltip
+            color="secondary"
+            title="Show Workflow Revision History (Beta)"
+            placement="top"
+          >
+            <span>
+              <Button
+                disabled={workflow.public}
+                color="primary"
+                style={{ height: 50, marginLeft: 10 }}
+                variant={allRevisions === undefined || allRevisions === null || allRevisions.length === 0 ? "outlined" : "contained"}
+                onClick={() => {
+                  setShowWorkflowRevisions(true)
+				  setSelectedRevision(workflow)
+				  //setOriginalWorkflow(workflow)
+                }}
+              >
+			  	<RestoreIcon />
+              </Button>
+            </span>
+          </Tooltip>
         </div>
       </div>
     );
@@ -12696,11 +12999,11 @@ const AngularWorkflow = (defaultprops) => {
           {defaultReturn}
         </SwipeableDrawer>
         :
-        <Collapse in={true} style={{ transitionDelay: `$0ms` }}>
+        <Fade in={true} style={{ transitionDelay: `$0ms` }}>
           <div id="rightside_actions" style={rightsidebarStyle}>
             {defaultReturn}
           </div>
-        </Collapse>
+        </Fade>
     );
 
     //return null;
@@ -14776,7 +15079,7 @@ const AngularWorkflow = (defaultprops) => {
             </Typography>
           </div>
         ) : (
-          <Collapse in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
+          <Fade in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
             <CytoscapeComponent
               elements={elements}
               minZoom={0.35}
@@ -14799,7 +15102,7 @@ const AngularWorkflow = (defaultprops) => {
                 setCy(incy);
               }}
             />
-          </Collapse>
+          </Fade>
         )}
       </div>
       {executionModal}
@@ -14835,36 +15138,16 @@ const AngularWorkflow = (defaultprops) => {
         setSelectedActionEnvironment={setSelectedActionEnvironment}
         requiresAuthentication={requiresAuthentication}
       />
-      <BottomCytoscapeBar />
-      <TopCytoscapeBar />
+
+	  {showWorkflowRevisions ? null :
+	  	<span>
+			<BottomCytoscapeBar />
+			<TopCytoscapeBar />
+		</span>
+	  }
     </div>
   );
 
-  const editWorkflowModal =
-    <Dialog
-      open={editWorkflowDetails}
-      PaperComponent={PaperComponent}
-      hideBackdrop={true}
-      disableEnforceFocus={true}
-      disableBackdropClick={true}
-      style={{ pointerEvents: "none" }}
-      aria-labelledby="draggable-dialog-title"
-      onClose={() => {
-        setEditWorkflowDetails(false)
-      }}
-      PaperProps={{
-        style: {
-          pointerEvents: "auto",
-          backgroundColor: surfaceColor,
-          color: "white",
-          border: theme.palette.defaultBorder,
-          maxWidth: "100%",
-          padding: 50,
-        },
-      }}
-    >
-      Edit workflow!
-    </Dialog>
 
   const ExecutionVariableModal = (props) => {
     const { variableInfo } = props
@@ -16140,6 +16423,290 @@ const AngularWorkflow = (defaultprops) => {
 		)
 	}
 
+	  
+	  /*else if (selectedRevision === undefined || selectedRevision === null || selectedRevision == {} && originalWorkflow !== undefined && originalWorkflow !== null && originalWorkflow !== {}) {
+		  console.log("Setting original workflow as selected revision")
+		  setSelectedRevision(originalWorkflow)
+	  }*/
+
+  	const RevisionBox = (props) => {
+		  const { revision, } = props
+
+		  if (revision === undefined || revision === null || revision === {}) {
+			  return null
+		  }
+
+		  // Make unix timestamp into ISO timestamp in the format July 27th, 3:05 AM
+		  // Format: July 27th, 3:05 AM	
+		  const translatedDate = new Date(revision.edited).toLocaleString('en-US', { month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })
+
+		  var workflowStatus = revision.status !== undefined  && revision.status !== null && revision.status !== "" ? revision.status : "test"
+		  if (revision.name !== undefined && revision.name !== null && revision.name !== "") {
+			  if (revision.name.toLowerCase().includes("test")) {
+				  workflowStatus = "test"
+			  }
+
+			  if (revision.name.toLowerCase().includes("dev") || revision.name.toLowerCase().includes("staging") || revision.name.toLowerCase().includes("rollback")) {
+				  workflowStatus = "dev"
+			  }
+
+			  if (revision.name.toLowerCase().includes("prod") || revision.name.toLowerCase().includes("main")) {
+				  workflowStatus = "prod"
+			  }
+		  }
+
+		  return (
+		  	<Paper 
+				style={{padding: "15px 15px 15px 25px", minHeight: 75, maxHeight: 75, cursor: "pointer", backgroundColor: revision.edited === selectedRevision.edited ? "rgba(255,255,255,0.3)" : theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", marginBottom: 10, 
+				}} onClick={(e) => {
+					if (revision.edited === selectedRevision.edited) {
+						console.log("Same revision! No setting.")
+						return
+					}
+
+					// Should render if it's not the same as workflow.edited
+					console.log("Clicked revision: ", revision)
+  					setLastSaved(false)
+					setSelectedRevision(revision)
+					setWorkflow(revision)
+                	setSelectedAction({});
+  					setSelectedApp({})
+
+  					// Remove all cytoscape triggers first?
+					if (cy !== undefined && cy !== null) {
+            			cy.removeListener("select");
+						cy.removeListener("unselect");
+
+          				cy.removeListener("add");
+          				cy.removeListener("remove");
+
+						cy.removeListener("mouseover");
+						cy.removeListener("mouseout");
+
+						cy.removeListener("drag");
+						cy.removeListener("free");
+						cy.removeListener("cxttap");
+					}
+				
+  					setupGraph(revision) 
+
+					// Re-adding cytoscape triggers
+					if (cy !== undefined && cy !== null) {
+    					cy.on("select", "node", (e) => {
+    					  onNodeSelect(e, appAuthentication);
+    					});
+    					cy.on("select", "edge", (e) => onEdgeSelect(e));
+
+    					cy.on("unselect", (e) => onUnselect(e));
+
+    					cy.on("add", "node", (e) => onNodeAdded(e));
+    					cy.on("add", "edge", (e) => onEdgeAdded(e));
+    					cy.on("remove", "node", (e) => onNodeRemoved(e));
+    					cy.on("remove", "edge", (e) => onEdgeRemoved(e));
+
+    					cy.on("mouseover", "edge", (e) => onEdgeHover(e));
+    					cy.on("mouseout", "edge", (e) => onEdgeHoverOut(e));
+    					cy.on("mouseover", "node", (e) => onNodeHover(e));
+    					cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
+
+    					// Handles dragging
+    					cy.on("drag", "node", (e) => onNodeDrag(e, selectedAction));
+    					cy.on("free", "node", (e) => onNodeDragStop(e, selectedAction));
+
+    					cy.on("cxttap", "node", (e) => onCtxTap(e));
+					}
+
+					// Need to run through graph setup with this one
+			}}>
+				<div style={{display: "flex", }}>
+					<span style={{flex: 5, }}>
+						<Typography variant="body1">
+							{translatedDate}
+						</Typography>
+					</span>
+					<span style={{flex: 2, }}>
+						<Chip
+							style={{marginLeft: 10, padding: 0, }}
+							label={workflowStatus}
+							variant="outlined"
+							color="secondary"
+						/>
+					</span>
+				</div>
+				{/*revision.edited === originalWorkflow.edited ?
+					<Typography variant="body2">
+						Current version
+					</Typography>
+				: null*/}
+					<div style={{display: "flex", }}>
+					  {revision.actions !== undefined && revision.actions !== null ?
+						  <Tooltip
+							color="primary"
+							title="Amount of actions"
+							placement="bottom"
+						  >
+							<span
+							  style={{ color: "#979797", display: "flex" }}
+							>
+							  <AppsIcon 
+								style={{
+								  color: "#979797",
+								  marginTop: "auto",
+								  marginBottom: "auto",
+								}}
+							  />
+							  <Typography
+								style={{
+								  marginLeft: 5,
+								  marginTop: "auto",
+								  marginBottom: "auto",
+								}}
+							  >
+								{revision.actions.length}
+							  </Typography>
+							</span>
+						  </Tooltip>
+					  : null}
+					  {revision.triggers !== undefined && revision.triggers !== null  ?
+						  <Tooltip
+							color="primary"
+							title="Amount of triggers"
+							placement="bottom"
+						  >
+							<span
+							  style={{ marginLeft: 15, color: "#979797", display: "flex" }}
+							>
+							  <RestoreIcon
+								style={{
+								  color: "#979797",
+								  marginTop: "auto",
+								  marginBottom: "auto",
+								}}
+							  />
+							  <Typography
+								style={{
+								  marginLeft: 5,
+								  marginTop: "auto",
+								  marginBottom: "auto",
+								}}
+							  >
+								{revision.triggers.length}
+							  </Typography>
+							</span>
+						  </Tooltip>
+					  : null}
+					</div>
+				{revision.updated_by !== undefined && revision.updated_by !== null && revision.updated_by !== "" ?
+					<Typography variant="body2" style={{marginTop: 2, }}>
+						{revision.updated_by}
+					</Typography>
+				: null}
+			</Paper>
+		  )
+	  }
+
+	  const drawerData = originalWorkflow !== undefined && originalWorkflow !== null && originalWorkflow !== {} ?
+	  	<div style={{padding: "0px 25px 100px 25px", }}>
+			<Typography variant="h6" style={{marginTop: 10, marginBottom: 15, }}>
+				Version History	(Beta)
+			</Typography>
+
+			<RevisionBox 
+				revision={originalWorkflow}
+			/>
+
+			{allRevisions.length > 0 ?
+				allRevisions.map((revision, index) => {
+					if (revision.edited === originalWorkflow.edited) {
+						return null
+					}
+
+					return (
+						<RevisionBox 
+							revision={revision} 
+							key={index} 
+							index={index} 
+						/>
+					)
+				})
+			: 
+				<div style={{padding: 5, }}>
+					<Typography variant="body2">
+						No other revisions found. Save your workflow with changes to create a revision.
+					</Typography>
+				</div>
+			}
+		</div>
+		: null
+
+	const workflowRevisions = !showWorkflowRevisions ? null : 
+	  	<div style={{position: "absolute", }}>
+		  <Drawer
+			anchor={"left"}
+			open={showWorkflowRevisions}
+			onClose={() => {
+			  //setShowWorkflowRevisions(false)
+			}}
+			style={{ resize: "both", overflow: "auto", zIndex: 10005 }}
+			hideBackdrop={true}
+			variant="persistent"
+			BackdropProps={{
+				style: {
+			  		//backgroundColor: "transparent",
+				}
+			}}
+			PaperProps={{
+				style: {
+				  resize: "both",
+				  overflow: "auto",
+				  minWidth: isMobile ? "100%" : 360,
+				  maxWidth: isMobile ? "100%" : 360,
+				  backgroundColor: theme.palette.platformColor,
+				  color: "white",
+				  fontSize: 18,
+				  zIndex: 15001,
+				  borderRight: theme.palette.defaultBorder,
+				  paddingTop: 15, 
+				},
+			}}
+		  >
+			{drawerData}
+		  </Drawer>
+			<div style={{position: "fixed", top: 0, left: 0, width: "100%", zIndex: 15000, backgroundColor: theme.palette.platformColor, display: "flex", height: 70, }}>
+				<div style={{flex: 1, display: "flex", paddingLeft: 30, paddingTop: 20, }}>
+					{/*selectedRevision.edited !== undefined && selectedRevision.edited !== null && selectedRevision.edited !== originalWorkflow.edited ?
+						<Button
+							variant="contained"
+							color="primary"
+							style={{marginLeft: 50, }}
+							onClick={() => {
+								console.log("Select and close")
+							}}
+						>
+							Restore Version
+						</Button>
+					: null*/}
+				</div>
+				<div style={{textAlign: "center", color: "white", flex: 1, paddingTop: 20, }}>
+					<Typography variant="h6">
+						{selectedRevision.name}
+					</Typography>
+				</div>
+				{/* Cross icon to close it */}
+				<div style={{flex: 1, itemAlign: "right", textAlign: "right", paddingRight: 25, paddingTop: 10, }}>
+					<IconButton
+						onClick={() => {
+							setShowWorkflowRevisions(false)
+						}}
+						style={{color: "white", height: 50, width: 50, }}
+					>
+						<CloseIcon />
+					</IconButton>
+				</div>
+			</div>
+		</div>
+
+
   const loadedCheck =
     isLoaded && workflowDone ? (
       <div>
@@ -16150,9 +16717,9 @@ const AngularWorkflow = (defaultprops) => {
         {authenticationModal}
         {codePopoutModal}
         {configureWorkflowModal}
-        {editWorkflowModal}
-
-				<SuggestionBoxUi />
+        {/*editWorkflowModal*/}
+		{workflowRevisions}
+		<SuggestionBoxUi />
 
         {editWorkflowModalOpen === true ?
           <EditWorkflow
@@ -16276,6 +16843,9 @@ const AngularWorkflow = (defaultprops) => {
 
   return (
     <div>
+      {/* Removed due to missing react router features
+				<Prompt when={!lastSaved} message={unloadText} />
+			*/}
       {loadedCheck}
     </div>
   );

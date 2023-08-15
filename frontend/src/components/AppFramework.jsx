@@ -23,13 +23,16 @@ import {
 	Dialog,
 	Chip,
 	Avatar,
+} from "@material-ui/core";
+
+import { 
 	Button 
-} from "@mui/material";
+} from '@material-ui/core';
 
 import {
 	Close as CloseIcon,
   Delete as DeleteIcon,
-} from "@mui/icons-material";
+} from "@material-ui/icons";
 
 import * as edgehandles from "cytoscape-edgehandles";
 import * as cytoscape from "cytoscape";
@@ -1856,6 +1859,7 @@ const AppFramework = (props) => {
 	//autounselectify={true}
 	var usecasediff = -100
 	const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
+	console.log("Background: ", bgColor)
 
 	return (	
 		<div style={{margin: "auto", backgroundColor: bgColor, position: "relative", }}>
@@ -1996,7 +2000,7 @@ const AppFramework = (props) => {
 						{paperTitle.length > 0 ? 
 							<span>
 								<Typography variant="h6" style={{textAlign: "center"}}>
-									{paperTitle}
+									{paperTitle.replace("_", " ", -1)}
 								</Typography>
 								<Divider style={{marginTop: 5, marginBottom: 5 }} />
 							</span>

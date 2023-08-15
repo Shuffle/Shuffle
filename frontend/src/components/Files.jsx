@@ -15,7 +15,7 @@ import {
 	Divider,
 	Select,
 	MenuItem,
-} from "@mui/material";
+} from "@material-ui/core";
 
 import {
   OpenInNew as OpenInNewIcon,
@@ -27,7 +27,7 @@ import {
   Publish as PublishIcon,
 	Clear as ClearIcon,
 	Add as AddIcon,
-} from "@mui/icons-material";
+} from "@material-ui/icons";
 
 import { useAlert } from "react-alert";
 import Dropzone from "../components/Dropzone.jsx";
@@ -681,7 +681,7 @@ const Files = (props) => {
 									<ListItemText
 										primary=<span style={{ display:"inline"}}>
 											<Tooltip
-												title={`Edit File (${allowedFileTypes.join(", ")})`}
+												title={`Edit File (${allowedFileTypes.join(", ")}). Max size 2MB`}
 												style={{}}
 												aria-label={"Edit"}
 											>

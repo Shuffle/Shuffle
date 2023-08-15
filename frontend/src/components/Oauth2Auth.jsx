@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useTheme } from "@material-ui/core/styles";
 import theme from '../theme.jsx';
 import { useAlert } from "react-alert";
 
@@ -36,8 +37,8 @@ import {
   Breadcrumbs,
   CircularProgress,
   Switch,
-  Collapse,
-} from "@mui/material";
+  Fade,
+} from "@material-ui/core";
 import { 
 	LockOpen as LockOpenIcon,
 	SupervisorAccount as SupervisorAccountIcon,
@@ -70,6 +71,7 @@ const registeredApps = [
 	"todoist",
 	"microsoft_sentinel",
 	"microsoft_365_defender",
+	"google_chat",
 	"google_sheets",
 	"google_drive",
 	"google_disk",
@@ -260,6 +262,16 @@ const AuthenticationOauth2 = (props) => {
 				admin_consent,
 				"consent",
 			)
+		} else if (selectedApp.name.toLowerCase().includes("google_chat") || selectedApp.name.toLowerCase().includes("google_hangout")) {
+			handleOauth2Request(
+				"253565968129-6pij4g6ojim4gpum0h9m9u3bc357qsq7.apps.googleusercontent.com",
+				"",
+				"https://www.googleapis.com",
+				["https://www.googleapis.com/auth/chat.messages",],
+				admin_consent,
+				"consent",
+			)
+
 		} else if (selectedApp.name.toLowerCase().includes("jira_service_desk") || selectedApp.name.toLowerCase().includes("jira") || selectedApp.name.toLowerCase().includes("jira_service_management")) {
 			handleOauth2Request(
 				"AI02egeCQh1Zskm1QAJaaR6dzjR97V2F",

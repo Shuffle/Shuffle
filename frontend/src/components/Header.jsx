@@ -1,8 +1,8 @@
 import React, {useState} from 'react';
 import {BrowserView, MobileView} from "react-device-detect";
-import theme from '../theme.jsx';
+import { useTheme } from '@material-ui/core/styles';
 
-import {Link} from 'react-router-dom';
+import { useNavigate, Link } from "react-router-dom";
 import ReactGA from 'react-ga4';
 
 import {
@@ -21,7 +21,7 @@ import {
 	IconButton,
 	Divider,
 	LinearProgress, 
-} from '@mui/material';
+} from '@material-ui/core'
 
 import { 
 	MeetingRoom as MeetingRoomIcon, 
@@ -34,9 +34,12 @@ import {
 	Description as DescriptionIcon,
 	EmojiObjects as EmojiObjectsIcon,
   Business as BusinessIcon,
+} from '@material-ui/icons';
+
+import {
 	Analytics as AnalyticsIcon,
 	Lightbulb as LightbulbIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
 import { useAlert } from "react-alert";
 
@@ -46,6 +49,7 @@ const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
 const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, homePage, userdata, serverside, } = props;
+	const theme = useTheme();
 	const alert = useAlert()
 
 
@@ -57,6 +61,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
+  let navigate = useNavigate();
 
 
   const handleClick = (event) => {
@@ -688,7 +693,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 										{/*
 										<PolymerIcon style={{marginRight: "5px"}} />
 										*/}
-										<Typography style={{marginTop: 5, marginRight: 8, }}>Workflows</Typography>
+										<span style={{marginTop: 0, marginRight: 8, }}>Workflows</span>
 									</div> 
 								</Link>
       	 			</ListItem>
@@ -698,17 +703,24 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 											{/*
 											<AppsIcon style={{marginRight: "5px"}} />
 											*/}
-											<Typography style={{marginTop: 5, marginRight: 5,  }}>Apps</Typography>
+											<span style={{marginTop: 0, marginRight: 5,  }}>Apps</span>
 										</div>
 								</Link>
       	 			</ListItem>
+							{/*
+							<ListItem style={{textAlign: "center"}}>
+								<Link to="/dashboard" style={hrefStyle}>
+										<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer"}}>Dashboard</div> 
+								</Link>
+      	 			</ListItem>
+							*/}
       	 			<ListItem style={listItemStyle}>
 								<Link to="/docs" style={hrefStyle}>
 										<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer", display: "flex"}}>
 											{/*
 											<DescriptionIcon style={{marginRight: "5px"}} />
 											*/}
-											<Typography style={{marginTop: 5,}}>Docs</Typography>
+											<span style={{marginTop: 0,}}>Docs</span>
 										</div>
 								</Link>
       	 			</ListItem>
@@ -782,14 +794,13 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 								</ListItem>
 						: null*/}
 
-						
-
 						{userdata === undefined || userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length <= 1 ? 
 							null
 						:
 							<span style={{paddingTop: 12, }}>
 								<Select
-									disableunderline
+
+									disableUnderline
 									SelectDisplayProps={{
 										style: {
 											maxWidth: 50,
@@ -883,13 +894,32 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 							</span>
 							}
 
+						{/* Show on cloud, if not suborg and if not customer/pov/internal */}
+						{isCloud && (userdata.org_status === undefined || userdata.org_status === null || userdata.org_status.length === 0) ? 
+							<ListItem style={{textAlign: "center", marginLeft: 0, marginRight: 7, marginTop: 3, }}>
+								<Link to ="/pricing?tab=cloud&highlight=true" style={hrefStyle}>
+									<Button variant="contained" color="primary" style={{textTransform: "none"}} onClick={() => {
+										ReactGA.event({
+											category: "header",
+											action: "pricing_upgrade_click",
+											label: "",
+										})
+									}}>
+										Upgrade	
+									</Button>
+								</Link>
+							</ListItem>
+						: null}
+
 						{userdata === undefined || userdata.app_execution_limit === undefined || userdata.app_execution_usage === undefined || userdata.app_execution_usage < 1000 ? 
 							null
 							:
 							<Tooltip title={`Amount of executions left: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Shuffle normally, but your Workflow triggers may stop working. Reach out to support@shuffler.io to extend this limit.`}>
-								<div style={{maxHeight: 30, minHeight: 30, padding: 8, textAlign: "center", cursor: "pointer", borderRadius: theme.palette.borderRadius, marginRight: 10, marginTop: 12, backgroundColor: theme.palette.surfaceColor, minWidth: 60, maxWidth: 60,  }} onClick={() => {
+								<div style={{maxHeight: 30, minHeight: 30, padding: 8, textAlign: "center", cursor: "pointer", borderRadius: theme.palette.borderRadius, marginRight: 10, marginTop: 12, backgroundColor: theme.palette.surfaceColor, minWidth: 60, maxWidth: 60, border: userdata.app_execution_usage/userdata.app_execution_limit >= 0.9 ? "#f86a3e" : null, }} onClick={() => {
+										console.log(userdata.appe_execution_usage/userdata.app_execution_limit)
 										if (window.drift !== undefined) {
 											window.drift.api.startInteraction({ interactionId: 326905 })
+											navigate("/pricing")
 										} else {
 											console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
 										}
