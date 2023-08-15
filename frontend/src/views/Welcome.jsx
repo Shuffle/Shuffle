@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import WelcomeForm2 from "../components/WelcomeForm2.jsx";
-import Stepper from "@material-ui/core/Stepper";
-import Step from "@material-ui/core/Step";
-import StepLabel from "@material-ui/core/StepLabel";
 import AppFramework from "../components/AppFramework.jsx";
-import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
+
+import {
+	ArrorForwardIos as ArrowForwardIosIcon,
+} from '@mui/icons-material';
+
 import { 
 	Grid, 
 	Container,
@@ -16,6 +17,9 @@ import {
 	Card,
 	CardContent,
 	CardActionArea,
+	Stepper,
+	Step,
+	StepLabel,
 } from '@mui/material';
 import theme from '../theme.jsx';
 import { useNavigate, Link } from "react-router-dom";

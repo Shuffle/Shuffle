@@ -45,7 +45,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { Link, useParams } from "react-router-dom";
 import YAML from "yaml";
-import ChipInput from "material-ui-chip-input";
+import { MuiChipsInput } from "mui-chips-input";
 import { useAlert } from "react-alert";
 import words from "shellwords";
 
@@ -2925,7 +2925,7 @@ const AppCreator = (defaultprops) => {
         >
           Scopes for Oauth2
         </Typography>
-        <ChipInput
+        <MuiChipsInput
           style={{border: "2px solid #f86a3e", borderRadius: theme.palette.borderRadius,}}
 					required
           InputProps={{
@@ -4396,7 +4396,7 @@ const AppCreator = (defaultprops) => {
 				})}
       </Select>
       <h4>Tags</h4>
-      <ChipInput
+      <MuiChipsInput
         style={{ marginTop: 10 }}
         InputProps={{
           style: {

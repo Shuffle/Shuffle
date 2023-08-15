@@ -69,7 +69,7 @@ import Dropzone from "../components/Dropzone.jsx";
 
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { useAlert } from "react-alert";
-import ChipInput from "material-ui-chip-input";
+import { MuiChipsInput } from "mui-chips-input";
 import { v4 as uuidv4 } from "uuid";
 
 const inputColor = "#383B40";
@@ -1930,7 +1930,7 @@ const GettingStarted = (props) => {
             margin="dense"
             fullWidth
           />
-          <ChipInput
+          <MuiChipsInput
             style={{ marginTop: 10 }}
             InputProps={{
               style: {
@@ -2435,7 +2435,7 @@ const GettingStarted = (props) => {
               </Typography>
             </div>
             <div style={{ flex: 1, float: "right" }}>
-              <ChipInput
+              <MuiChipsInput
                 style={{}}
                 InputProps={{
                   style: {

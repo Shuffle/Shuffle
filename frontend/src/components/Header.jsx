@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
+import theme from '../theme.jsx';
 import {BrowserView, MobileView} from "react-device-detect";
-import { useTheme } from '@material-ui/core/styles';
+//import { useTheme } from '@material-ui/core/styles';
 
 import { useNavigate, Link } from "react-router-dom";
 import ReactGA from 'react-ga4';
@@ -21,7 +22,7 @@ import {
 	IconButton,
 	Divider,
 	LinearProgress, 
-} from '@material-ui/core'
+} from '@mui/material'
 
 import { 
 	MeetingRoom as MeetingRoomIcon, 
@@ -29,12 +30,13 @@ import {
 	Settings as SettingsIcon, 
 	Notifications as NotificationsIcon, 
 	Home as HomeIcon, 
-	Polymer as PolymerIcon, 
 	Apps as AppsIcon, 
 	Description as DescriptionIcon,
 	EmojiObjects as EmojiObjectsIcon,
   Business as BusinessIcon,
-} from '@material-ui/icons';
+
+	Polyline as PolylineIcon, 
+} from '@mui/icons-material';
 
 import {
 	Analytics as AnalyticsIcon,
@@ -49,7 +51,7 @@ const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
 const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, homePage, userdata, serverside, } = props;
-	const theme = useTheme();
+	//const theme = useTheme();
 	const alert = useAlert()
 
 
@@ -519,6 +521,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 	}
 
 	// Handle top bar or something
+  const defaultTop = 7
   const loginTextBrowser = !isLoggedIn ? 
     <div style={{display: "flex", minWidth: 1250, maxWidth: 1250, margin: "auto", textAlign: "center",}}>
 			<div style={{display: "flex", flex: 1, }}>
@@ -669,7 +672,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 			</div>
 	    </div>
     	: 
-		<div style={{display: "flex", backgroundColor: "#1f2023",}}>
+		<div style={{display: "flex", }}>
 			<div style={{minWidth: 1250, maxWidth: 1250, display: "flex", margin: "auto", }}>
 				<div style={{flex: 1, flexDirection: "row"}}>
 					<List style={{height: 56, marginTop: "auto", marginBottom: "auto", display: "flex", flexDirect: "row", alignItems: "baseline", maxWidth: 340, }} component="nav">
@@ -691,9 +694,9 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 								<Link to="/workflows" style={hrefStyle}>
 									<div onMouseOver={handleSoarHover} onMouseOut={handleSoarHoverOut} style={{color: SoarHoverColor, cursor: "pointer", display: "flex"}}>
 										{/*
-										<PolymerIcon style={{marginRight: "5px"}} />
+										<PolylineIcon style={{marginRight: "5px"}} />
 										*/}
-										<span style={{marginTop: 0, marginRight: 8, }}>Workflows</span>
+										<Typography style={{marginTop: defaultTop, marginRight: 8, }}>Workflows</Typography>
 									</div> 
 								</Link>
       	 			</ListItem>
@@ -703,7 +706,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 											{/*
 											<AppsIcon style={{marginRight: "5px"}} />
 											*/}
-											<span style={{marginTop: 0, marginRight: 5,  }}>Apps</span>
+											<Typography style={{marginTop: defaultTop, marginRight: 5,  }}>Apps</Typography>
 										</div>
 								</Link>
       	 			</ListItem>
@@ -720,7 +723,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 											{/*
 											<DescriptionIcon style={{marginRight: "5px"}} />
 											*/}
-											<span style={{marginTop: 0,}}>Docs</span>
+											<Typography style={{marginTop: defaultTop,}}>Docs</Typography>
 										</div>
 								</Link>
       	 			</ListItem>
@@ -1029,16 +1032,16 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 	const loadedCheck = 
 		<div style={{minHeight: 68}}>
 			<BrowserView>
-      	{loginTextBrowser}
+      			{loginTextBrowser}
 			</BrowserView>
 			<MobileView>
-      	{loginTextMobile}
+      			{loginTextMobile}
 			</MobileView>
 		</div>
     // <div style={{backgroundImage: "linear-gradient(-90deg,#342f78 0,#29255e 50%,#1b1947 100%"}}>
   	return (
-    	<div style={{backgroundColor: props.color === "undefined" ? "inherit" : props.color}}>
-				{loadedCheck}
+    	<div style={{backgroundColor: theme.palette.backgroundColor, }}>
+			{loadedCheck}
 	    </div>
   )
 }

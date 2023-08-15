@@ -18,21 +18,19 @@ import {
 	Divider,
 	IconButton, 
 	Badge,
-  CircularProgress,
+  	CircularProgress,
 	Tooltip,
 	Dialog,
 	Chip,
 	Avatar,
-} from "@material-ui/core";
+	Button,
+} from "@mui/material";
 
-import { 
-	Button 
-} from '@material-ui/core';
 
 import {
 	Close as CloseIcon,
   Delete as DeleteIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import * as edgehandles from "cytoscape-edgehandles";
 import * as cytoscape from "cytoscape";
@@ -1996,7 +1994,7 @@ const AppFramework = (props) => {
 
   		{
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
-					<Paper style={{width: 275, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: 50, }}>
+					<Paper style={{width: 300, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 25, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: 50, }}>
 						{paperTitle.length > 0 ? 
 							<span>
 								<Typography variant="h6" style={{textAlign: "center"}}>
@@ -2130,7 +2128,7 @@ const AppFramework = (props) => {
 									? 
 									<span>
 										<Typography variant="body2" color="textSecondary" style={{marginTop: 10}}>
-											Click an app below to select it
+											Search to find your app 
 										</Typography>
 									</span>
 									:
@@ -2165,7 +2163,7 @@ const AppFramework = (props) => {
 				elements={elements} 
 				minZoom={0.35}
 				maxZoom={2.00}
-				style={{width: 560*scale, height: 560*scale, backgroundColor: "transparent", margin: "auto",}} 
+				style={{width: 560*scale, height: 560*scale, backgroundColor: theme.palette.backgroundColor, margin: "auto",}} 
 				stylesheet={frameworkStyle}
 				boxSelectionEnabled={false}
 				panningEnabled={false}

@@ -1,7 +1,7 @@
 import React, { useEffect, useContext } from "react";
 import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect" 
-import ChipInput from "material-ui-chip-input";
+import { MuiChipsInput } from "mui-chips-input";
 import UsecaseSearch from "../components/UsecaseSearch.jsx"
 import dayjs from 'dayjs';
 
@@ -38,7 +38,7 @@ import {
 	FormControl,
 	FormLabel,
 
-} from "@material-ui/core";
+} from "@mui/material";
 
 import { 
 	DatePicker, 
@@ -52,7 +52,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   Publish as PublishIcon,
   OpenInNew as OpenInNewIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 const EditWorkflow = (props) => {
 	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, } = props
@@ -260,7 +260,7 @@ const EditWorkflow = (props) => {
 				/>
 			</div>
 						<div style={{display: "flex", marginTop: 10, }}>
-							<ChipInput
+							<MuiChipsInput
 								style={{ flex: 1, maxHeight: 40, marginTop: 12, overflow: "auto",  }}
 								InputProps={{
 									style: {

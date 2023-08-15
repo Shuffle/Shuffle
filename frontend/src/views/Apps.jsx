@@ -1867,12 +1867,6 @@ const Apps = (props) => {
               style={{ backgroundColor: inputColor, borderRadius: 5 }}
               InputProps={{
                 style: {
-                  color: "white",
-                  minHeight: "50px",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                  borderRadius: 5,
                 },
               }}
               disabled={

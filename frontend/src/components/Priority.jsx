@@ -10,7 +10,7 @@ import {
 	Button,
 	Grid,
 	Card,
-} from "@material-ui/core";
+} from "@mui/material";
 
 // import magic wand icon from material ui icons 
 import {
@@ -69,7 +69,7 @@ const Priority = (props) => {
 
 
 	return (
-		<div style={{border: priority.active === false ? "1px solid #000000" :  priority.severity === 1 ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+		<div style={{border: priority.active === false ? "1px solid #000000" :  priority.severity === 1 ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 95, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
 			<div style={{flex: 2, overflow: "hidden",}}>
 				<span style={{display: "flex", }}>
 					{priority.type === "usecase" || priority.type == "apps" ? <AutoFixHighIcon style={{height: 19, width: 19, marginLeft: 3, marginRight: 10, }}/> : null} 
@@ -102,7 +102,7 @@ const Priority = (props) => {
 				}
 			</div>
 			<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
-				<Button style={{height: 50, borderRadius: 25,  marginTop: 8, width: 175, marginRight: 10, color: priority.active === false ? "white" : "black", backgroundColor: priority.active === false ? theme.palette.inputColor : "white", }} variant="contained" color="secondary" onClick={() => {
+				<Button style={{height: 50, borderRadius: 25,  marginTop: 8, width: 175, marginRight: 10, color: priority.active === false ? "white" : "black", backgroundColor: priority.active === false ? theme.palette.inputColor : "rgba(255,255,255,0.8)", }} variant="contained" color="secondary" onClick={() => {
 
 					if (isCloud) {
 						ReactGA.event({
@@ -125,7 +125,7 @@ const Priority = (props) => {
 						}
 					}
 				}}>
-					explore		
+					Explore		
 				</Button>
 				{priority.active === true ?
 					<Button style={{borderRadius: 25, width: 100, height: 50, marginTop: 8, }} variant="text" color="secondary" onClick={() => {

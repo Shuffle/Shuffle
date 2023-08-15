@@ -6052,9 +6052,16 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
+
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")

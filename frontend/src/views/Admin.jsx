@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from "react";
 
-import { makeStyles } from "@material-ui/styles";
+import theme from "../theme.jsx";
+import { makeStyles } from "@mui/styles";
+
 import { useNavigate, Link } from "react-router-dom";
 import countries from "../components/Countries.jsx";
 import CodeEditor from "../components/ShuffleCodeEditor.jsx";
 import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
 import CacheView from "../components/CacheView.jsx";
-import theme from "../theme.jsx";
-import AddIcon from "@mui/icons-material/Add";
-import ClearIcon from '@mui/icons-material/Clear';
-import StorageIcon from '@mui/icons-material/Storage';
-//import ToggleButton from '@mui/material/ToggleButton';
+
 import {
   FormControl,
   InputLabel,
@@ -45,19 +43,21 @@ import {
   DialogContent,
   CircularProgress,
   Box,
-	InputAdornment,
-} from "@material-ui/core";
-
-import { Autocomplete } from "@mui/material";
+  InputAdornment,
+  Autocomplete 
+} from "@mui/material";
 
 import {
+  Add as AddIcon,
+  Clear as ClearIcon,
+  Storage as StorageIcon,
   Edit as EditIcon,
   FileCopy as FileCopyIcon,
   SelectAll as SelectAllIcon,
   OpenInNew as OpenInNewIcon,
   CloudDownload as CloudDownloadIcon,
   Description as DescriptionIcon,
-  Polymer as PolymerIcon,
+  Polyline as PolylineIcon,
   CheckCircle as CheckCircleIcon,
   Close as CloseIcon,
   Apps as AppsIcon,
@@ -66,13 +66,14 @@ import {
   Cached as CachedIcon,
   AccessibilityNew as AccessibilityNewIcon,
   Lock as LockIcon,
-  Eco as EcoIcon,
   Schedule as ScheduleIcon,
   Cloud as CloudIcon,
   Business as BusinessIcon,
-	Visibility as VisibilityIcon,
-	VisibilityOff as VisibilityOffIcon,
-} from "@material-ui/icons";
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+
+  FmdGood as FmdGoodIcon,
+} from "@mui/icons-material";
 
 import { useAlert } from "react-alert";
 import Dropzone from "../components/Dropzone.jsx";
@@ -2199,7 +2200,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       primary: "Workflows",
       secondary: "",
       active: true,
-      icon: <PolymerIcon style={{ color: itemColor }} />,
+      icon: <PolylineIcon style={{ color: itemColor }} />,
     },
     {
       primary: "Apps",
@@ -2753,7 +2754,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             		            item.usage === null ? 0 : item.usage,
             		          data_collection: "None",
             		          active: item.active,
-            		          icon: <PolymerIcon style={{ color: itemColor }} />,
+            		          icon: <PolylineIcon style={{ color: itemColor }} />,
             		        };
 
             		        return (
@@ -4356,7 +4357,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           <Tab
             disabled={userdata.admin !== "true"}
             label=<span>
-              <EcoIcon style={iconStyle} />
+              <FmdGoodIcon style={iconStyle} />
               Environments
             </span>
           />

@@ -1,17 +1,23 @@
 import React, { useEffect } from "react";
-import { makeStyles } from "@material-ui/styles";
-import { useTheme } from "@material-ui/core/styles";
+import theme from "../theme";
+import { makeStyles } from "@mui/styles";
 
-import Tooltip from "@material-ui/core/Tooltip";
-import Grid from "@material-ui/core/Grid";
-import Button from "@material-ui/core/Button";
-import TextField from "@material-ui/core/TextField";
-import Typography from "@material-ui/core/Typography";
+import {
+	Tooltip,
+	Grid,
+	Button,
+	TextField,
+	Typography,
+	IconButton,
+} from "@mui/material";
+
+import {
+	ExpandLess as ExpandLessIcon,
+	ExpandMore as ExpandMoreIcon,
+	Save as SaveIcon,
+} from "@mui/icons-material";
+
 import { useAlert } from "react-alert";
-import IconButton from "@material-ui/core/IconButton";
-import ExpandLessIcon from "@material-ui/icons/ExpandLess";
-import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
-import SaveIcon from "@material-ui/icons/Save";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -33,7 +39,6 @@ const OrgHeader = (props) => {
   	handleEditOrg, 
   } = props;
 
-  const theme = useTheme();
   const alert = useAlert();
   const classes = useStyles();
 

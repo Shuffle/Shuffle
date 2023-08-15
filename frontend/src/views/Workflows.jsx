@@ -1,14 +1,10 @@
 import React, { useEffect, useContext } from "react";
 import ReactDOM from "react-dom"
 
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles } from "@mui/styles";
 import { Navigate } from "react-router-dom";
-//import { Redirect } from "react-router-dom";
-
-
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import EditWorkflow from "../components/EditWorkflow.jsx" 
-import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
 import Priority from "../components/Priority.jsx";
 
 import { isMobile } from "react-device-detect" 
@@ -32,7 +28,6 @@ import {
   MenuItem,
   Chip,
   Typography,
-  Zoom,
   CircularProgress,
   Dialog,
   DialogTitle,
@@ -41,11 +36,10 @@ import {
 	Checkbox,
 	LinearProgress,
 	ListItemText,
-} from "@material-ui/core";
-
-import {
   AvatarGroup,
-} from "@mui/material"
+
+  Zoom,
+} from "@mui/material";
 
 import {
   GridOn as GridOnIcon,
@@ -79,7 +73,7 @@ import {
 	RadioButtonUnchecked as RadioButtonUncheckedIcon,
   ArrowLeft as ArrowLeftIcon,
   ArrowRight as ArrowRightIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 //import NestedMenuItem from "material-ui-nested-menu-item";
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon,  Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
@@ -93,12 +87,10 @@ import Dropzone from "../components/Dropzone.jsx";
 
 import { useNavigate, Link } from "react-router-dom";
 import { useAlert } from "react-alert";
-import ChipInput from "material-ui-chip-input";
+import { MuiChipsInput } from "mui-chips-input";
 import { v4 as uuidv4 } from "uuid";
 import theme from "../theme.jsx";
 
-const inputColor = "#383B40";
-const surfaceColor = "#27292D";
 const svgSize = 24;
 const imagesize = 22;
 
@@ -780,7 +772,7 @@ const Workflows = (props) => {
       }}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: 500,
           padding: 30,
@@ -835,7 +827,7 @@ const Workflows = (props) => {
       }}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: 500,
           padding: 50,
@@ -892,7 +884,7 @@ const Workflows = (props) => {
       }}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: 500,
         },
@@ -1253,7 +1245,7 @@ const Workflows = (props) => {
     width: "100%",
     height: "250px",
     color: "white",
-    backgroundColor: surfaceColor,
+    backgroundColor: theme.palette.surfaceColor,
     display: "flex",
     flexDirection: "column",
   };
@@ -1271,7 +1263,7 @@ const Workflows = (props) => {
     overflow: "hidden",
     width: "100%",
     color: "white",
-    backgroundColor: surfaceColor,
+    backgroundColor: theme.palette.surfaceColor,
     padding: "12px 12px 0px 15px",
     borderRadius: 5,
     display: "flex",
@@ -1283,7 +1275,7 @@ const Workflows = (props) => {
     height: "auto",
     color: "white",
     margin: "10px",
-    backgroundColor: surfaceColor,
+    backgroundColor: theme.palette.surfaceColor,
   };
 
   const workflowActionStyle = {
@@ -1603,7 +1595,7 @@ const Workflows = (props) => {
     const innerColor = "rgba(255,255,255,0.3)";
     const setupPaperStyle = {
       minHeight: paperAppStyle.minHeight,
-			maxWidth: "100%",
+	  maxWidth: "100%",
       minWidth: paperAppStyle.width,
       color: innerColor,
       padding: paperAppStyle.padding,
@@ -1710,7 +1702,7 @@ const Workflows = (props) => {
         }}
       >
         <MenuItem
-          style={{ backgroundColor: inputColor, color: "white" }}
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={(event) => {
 						event.stopPropagation()
 						ReactDOM.unstable_batchedUpdates(() => {
@@ -1734,7 +1726,7 @@ const Workflows = (props) => {
           {"Edit details"}
         </MenuItem>
         <MenuItem
-          style={{ backgroundColor: inputColor, color: "white" }}
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={() => {
             setSelectedWorkflow(data);
             setPublishModalOpen(true);
@@ -1745,7 +1737,7 @@ const Workflows = (props) => {
           {"Publish Workflow"}
         </MenuItem>
         <MenuItem
-          style={{ backgroundColor: inputColor, color: "white" }}
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={() => {
             copyWorkflow(data);
             setOpen(false);
@@ -1755,7 +1747,7 @@ const Workflows = (props) => {
           <FileCopyIcon style={{ marginLeft: 0, marginRight: 8 }} />
           {"Duplicate Workflow"}
         </MenuItem>
-        {/*<NestedMenuItem disabled={userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length === 1 || userdata.orgs.length >= 0} style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+        {/*<NestedMenuItem disabled={userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length === 1 || userdata.orgs.length >= 0} style={{backgroundColor: theme.palette.inputColor, color: "white"}} onClick={() => {
 					//copyWorkflow(data)		
 					//setOpen(false)
 				}} key={"duplicate"}>
@@ -1763,7 +1755,7 @@ const Workflows = (props) => {
 					{"Copy to Child Org"}
 				</NestedMenuItem>*/}
         <MenuItem
-          style={{ backgroundColor: inputColor, color: "white" }}
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={() => {
             setExportModalOpen(true);
 
@@ -1817,7 +1809,7 @@ const Workflows = (props) => {
           {"Export Workflow"}
         </MenuItem>
         <MenuItem
-          style={{ backgroundColor: inputColor, color: "white" }}
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={() => {
             setDeleteModalOpen(true);
             setSelectedWorkflowId(data.id);
@@ -1909,7 +1901,7 @@ const Workflows = (props) => {
 		}
 
     return (
-			<div style={{width: "100%", position: "relative",}}>
+	  <div style={{width: "100%", position: "relative",}}>
         <Paper square style={paperAppStyle}>
 					{selectedCategory !== "" ?
 						<Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -2704,7 +2696,7 @@ const Workflows = (props) => {
       }}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: isMobile ? "90%" : "800px",
           maxWidth: isMobile ? "90%" : "800px",
@@ -2760,7 +2752,7 @@ const Workflows = (props) => {
             fullWidth
           />
 					<div style={{display: "flex", marginTop: 10, }}>
-						<ChipInput
+						<MuiChipsInput
 							style={{ flex: 1}}
 							InputProps={{
 								style: {
@@ -3245,7 +3237,7 @@ const Workflows = (props) => {
 						{isMobile ? null : 
 							<div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
 								<div style={{ flex: 1, float: "right" }}>
-									<ChipInput
+									<MuiChipsInput
 										style={{}}
 										InputProps={{
 											style: {
@@ -3326,7 +3318,7 @@ const Workflows = (props) => {
 								{usecases.map((usecase, index) => {
 									//console.log(usecase)
 									const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length/usecase.list.length*100) : 0
-									console.log("Usecase Matches: ", usecase.matches, ", Percent: ", percentDone)
+									//console.log("Usecase Matches: ", usecase.matches, ", Percent: ", percentDone)
 
 									return (
 										<Paper
@@ -3461,9 +3453,11 @@ const Workflows = (props) => {
 								}
 
                 return (
-									<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
-										{returnData}
-									</Zoom>
+					<span>
+					{/*<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>*/}
+						{returnData}
+					{/*</Zoom>*/}
+					</span>
               );
             })}
             </div>
@@ -3500,12 +3494,12 @@ const Workflows = (props) => {
 						/>
 					: null}
 
-					<div style={{marginTop: 15, marginBottom: 50, }}>
+					<div style={{marginTop: 30, marginBottom: 50, marginLeft: 30, }}>
 						{view === "grid" ? (
 							<Grid container spacing={filteredWorkflows.length === 0 ? 12 : filteredWorkflows.length === 1 ? 6 : 4} style={paperAppContainer}>
-								<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
+								{/*<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
 									<NewWorkflowPaper />
-								</Zoom>
+								{/*</Zoom>*/}
 
 								{filteredWorkflows.map((data, index) => {
 									// Shouldn't be a part of this list
@@ -3524,11 +3518,13 @@ const Workflows = (props) => {
 									}
 
 									return (
-										<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
+										<span>
+										{/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
 											<Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
 												<WorkflowPaper key={index} data={data} />
 											</Grid>
-										</Zoom>
+										{/*</Zoom>*/}
+										</span>
 									)
 								})}
 							</Grid>
@@ -3613,7 +3609,7 @@ const Workflows = (props) => {
       onClose={() => {}}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: "800px",
           minHeight: "320px",
@@ -3640,7 +3636,7 @@ const Workflows = (props) => {
       <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
         Repository (supported: github, gitlab, bitbucket)
         <TextField
-          style={{ backgroundColor: inputColor }}
+          style={{ backgroundColor: theme.palette.inputColor }}
           variant="outlined"
           margin="normal"
           defaultValue={downloadUrl}
@@ -3660,7 +3656,7 @@ const Workflows = (props) => {
         </span>
         <div style={{ display: "flex" }}>
           <TextField
-            style={{ backgroundColor: inputColor }}
+            style={{ backgroundColor: theme.palette.inputColor }}
             variant="outlined"
             margin="normal"
             defaultValue={downloadBranch}
@@ -3681,7 +3677,7 @@ const Workflows = (props) => {
         </span>
         <div style={{ display: "flex" }}>
           <TextField
-            style={{ flex: 1, backgroundColor: inputColor }}
+            style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
             variant="outlined"
             margin="normal"
             InputProps={{
@@ -3697,7 +3693,7 @@ const Workflows = (props) => {
             fullWidth
           />
           <TextField
-            style={{ flex: 1, backgroundColor: inputColor }}
+            style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
             variant="outlined"
             margin="normal"
             InputProps={{
@@ -3847,7 +3843,7 @@ const Workflows = (props) => {
 				}}
 				PaperProps={{
 					style: {
-						backgroundColor: surfaceColor,
+						backgroundColor: theme.palette.surfaceColor,
 						color: "white",
 						minWidth: 560,
 						minHeight: 415,

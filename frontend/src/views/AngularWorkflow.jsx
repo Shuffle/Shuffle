@@ -2,25 +2,20 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import ReactDOM from "react-dom"
 
+import theme from "../theme.jsx";
 import { useInterval } from "react-powerhooks";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles, } from "@mui/styles";
 
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
-// import { Prompt } from "react-router"; // FIXME
 import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
-import NestedMenuItem from "material-ui-nested-menu-item";
+import { NestedMenuItem } from 'mui-nested-menu';
 import ReactMarkdown from "react-markdown";
 import { useAlert } from "react-alert";
-import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect"
 import aa from 'search-insights'
 import Drift from "react-driftjs";
-
-//import { Cron } from 'react-js-cron';
-//import 'react-js-cron/dist/styles.css'
-
 
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
@@ -67,11 +62,9 @@ import {
   ListItemText,
   ListItemAvatar,
   Badge,
-} from "@material-ui/core";
-
-import {
   AvatarGroup,
-} from "@mui/material"
+  Autocomplete, 
+} from "@mui/material";
 
 import {
   Folder as FolderIcon,
@@ -87,7 +80,6 @@ import {
   ArrowLeft as ArrowLeftIcon,
   Cached as CachedIcon,
   DirectionsRun as DirectionsRunIcon,
-  Polymer as PolymerIcon,
   FormatListNumbered as FormatListNumberedIcon,
   PlayArrow as PlayArrowIcon,
   AspectRatio as AspectRatioIcon,
@@ -109,28 +101,26 @@ import {
   Edit as EditIcon,
   Send as SendIcon,
   Restore as RestoreIcon, 
-} from "@material-ui/icons";
-
-import {
   Preview as PreviewIcon,
   ContentCopy as ContentCopyIcon,
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
 	AutoFixHigh as AutoFixHighIcon,
-} from '@mui/icons-material';
 
-import Autocomplete from "@material-ui/lab/Autocomplete";
+  Polyline as PolylineIcon, 
+} from "@mui/icons-material";
+
 
 import * as cytoscape from "cytoscape";
 import * as edgehandles from "cytoscape-edgehandles";
-import * as clipboard from "cytoscape-clipboard";
+//import * as clipboard from "cytoscape-clipboard";
+//import undoRedo from "cytoscape-undo-redo";
+//import cxtmenu from "cytoscape-cxtmenu";
 import CytoscapeComponent from "react-cytoscapejs";
-import undoRedo from "cytoscape-undo-redo";
 
 import Draggable from "react-draggable";
 
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
-import cxtmenu from "cytoscape-cxtmenu";
 
 import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
@@ -236,9 +226,9 @@ const inputColor = "#383B40";
 
 // http://apps.cytoscape.org/apps/yfileslayoutalgorithms
 cytoscape.use(edgehandles);
-cytoscape.use(clipboard);
-cytoscape.use(undoRedo);
-cytoscape.use(cxtmenu);
+//cytoscape.use(clipboard);
+//cytoscape.use(undoRedo);
+//cytoscape.use(cxtmenu);
 
 // Adds specific text to items
 //import popper from 'cytoscape-popper';
@@ -402,9 +392,6 @@ const AngularWorkflow = (defaultprops) => {
   var props = JSON.parse(JSON.stringify(defaultprops))
   props.match = {}
   props.match.params = params
-
-  //const theme = useTheme();
-
 
   var to_be_copied = "";
   const [firstrequest, setFirstrequest] = React.useState(true);
@@ -12257,7 +12244,7 @@ const AngularWorkflow = (defaultprops) => {
                   margin: "0px 0px 0px 0px",
                 }}
               >
-                <PolymerIcon style={{ marginRight: 10 }} />
+                <PolylineIcon style={{ marginRight: 10 }} />
                 Workflows
               </h2>
             </Link>

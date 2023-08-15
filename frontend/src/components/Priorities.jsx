@@ -9,7 +9,7 @@ import {
 	Grid,
 	Card,
   Switch,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import Priority from "../components/Priority.jsx";
 import { useAlert } from "react-alert";
