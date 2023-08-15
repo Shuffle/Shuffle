@@ -17,8 +17,8 @@ const theme = createTheme(adaptV4Theme({
       secondary: "rgba(255,255,255,0.7)",
     },
     type: "dark",
-    surfaceColor: "#27292d",
     inputColor: "#383B40",
+    surfaceColor: "#27292d",
     platformColor: "#1c1c1d",
     backgroundColor: "#1a1a1a",
     borderRadius: 5,
@@ -34,6 +34,7 @@ const theme = createTheme(adaptV4Theme({
       borderRadius: 5,
     },
     innerTextfieldStyle: {
+	  // Removed since upgrading to mui 18
       //color: "white",
       //minHeight: 50,
       //marginLeft: "5px",

@@ -22,6 +22,8 @@ import algoliasearch from 'algoliasearch/lite';
 
 import {
   Zoom,
+  Fade,
+
   Avatar,
   Popover,
   TextField,
@@ -46,7 +48,6 @@ import {
   IconButton,
   Menu,
   Input,
-  Fade,
   FormGroup,
   FormControlLabel,
   Typography,
@@ -220,9 +221,6 @@ export const triggers = [
     },
   ];
 	// is_valid: cloudSyncEnabled || isCloud ? true : false,
-
-const surfaceColor = "#27292D";
-const inputColor = "#383B40";
 
 // http://apps.cytoscape.org/apps/yfileslayoutalgorithms
 cytoscape.use(edgehandles);
@@ -5899,7 +5897,7 @@ const AngularWorkflow = (defaultprops) => {
     maxWidth: isMobile ? 50 : "100%",
     marginTop: "5px",
     color: "white",
-    backgroundColor: surfaceColor,
+    backgroundColor: theme.palette.surfaceColor,
     cursor: "pointer",
     display: "flex",
   };
@@ -5912,7 +5910,7 @@ const AngularWorkflow = (defaultprops) => {
     maxWidth: "100%",
     marginTop: "5px",
     color: "white",
-    backgroundColor: surfaceColor,
+    backgroundColor: theme.palette.surfaceColor,
     cursor: "pointer",
     display: "flex",
   };
@@ -6014,7 +6012,7 @@ const AngularWorkflow = (defaultprops) => {
 								open={open}
 								PaperProps={{
 									style: {
-										backgroundColor: surfaceColor,
+										backgroundColor: theme.palette.surfaceColor,
 									},
 								}}
 								onClose={() => {
@@ -6024,7 +6022,7 @@ const AngularWorkflow = (defaultprops) => {
 							>
 								<MenuItem
 									style={{
-										backgroundColor: inputColor,
+										backgroundColor: theme.palette.inputColor,
 										color: "white",
 									}}
 									onClick={() => {
@@ -6050,7 +6048,7 @@ const AngularWorkflow = (defaultprops) => {
 								</MenuItem>
 								<MenuItem
 									style={{
-										backgroundColor: inputColor,
+										backgroundColor: theme.palette.inputColor,
 										color: "white",
 									}}
 									onClick={() => {
@@ -6259,7 +6257,7 @@ const AngularWorkflow = (defaultprops) => {
                 <Grid item>
                   <FavoriteBorderIcon style={iconStyle} />
                 </Grid>
-                {isMobile ? null : <Grid item>Variables</Grid>}
+                {isMobile ? null : <Grid item>Vars</Grid>}
               </Grid>
             }
             style={tabStyle}
@@ -6992,10 +6990,6 @@ const AngularWorkflow = (defaultprops) => {
             style={{ backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, maxWidth: leftBarSize - 20, }}
             InputProps={{
               style: {
-                color: "white",
-                fontSize: "1em",
-                height: 50,
-                margin: 0,
               },
               startAdornment: (
                 <InputAdornment position="start">
@@ -7202,18 +7196,13 @@ const AngularWorkflow = (defaultprops) => {
         <div style={{ flex: "1" }}>
           <TextField
             style={{
-              backgroundColor: inputColor,
+              backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette.borderRadius,
               marginTop: 5,
               marginRight: 10,
             }}
             InputProps={{
               style: {
-                color: "white",
-                minHeight: 50,
-                marginLeft: "5px",
-                maxWidth: "95%",
-                fontSize: "1em",
               },
               endAdornment: (
                 <InputAdornment position="end">
@@ -7254,11 +7243,13 @@ const AngularWorkflow = (defaultprops) => {
                 delay += 75
                 return (
                   runDelay ?
-                    <Zoom key={index} in={true} style={{ transitionDelay: `${delay}ms` }}>
+				  	<span>
+                    	{/*<Zoom key={index} in={true} style={{ transitionDelay: `${delay}ms` }}>*/}
                       <div>
                         <ParsedAppPaper key={index} app={app} />
                       </div>
-                    </Zoom>
+                    	{/*</Zoom>*/}
+					</span>
                     :
                     <div key={index}>
                       {extraMessage}
@@ -7902,16 +7893,11 @@ const AngularWorkflow = (defaultprops) => {
     var datafield = (
       <TextField
         style={{
-          backgroundColor: inputColor,
+          backgroundColor: theme.palette.inputColor,
           borderRadius: theme.palette.borderRadius,
         }}
         InputProps={{
           style: {
-            color: "white",
-            minHeight: 50,
-            marginLeft: "5px",
-            maxWidth: "95%",
-            fontSize: "1em",
           },
         }}
         fullWidth
@@ -8068,7 +8054,7 @@ const AngularWorkflow = (defaultprops) => {
                 return (
                   <MenuItem
                     key={data.name}
-                    style={{ backgroundColor: inputColor, color: "white" }}
+                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
                     value={data}
                     onMouseOver={() => {
                       if (data.type === "Execution Argument") {
@@ -8106,7 +8092,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const menuItemStyle = {
     color: "white",
-    backgroundColor: inputColor,
+    backgroundColor: theme.palette.inputColor,
   };
 
   const conditionsModal = (
@@ -8122,7 +8108,7 @@ const AngularWorkflow = (defaultprops) => {
       PaperProps={{
         style: {
           pointerEvents: "auto",
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: isMobile ? "90%" : 800,
           border: theme.palette.defaultBorder,
@@ -8227,7 +8213,7 @@ const AngularWorkflow = (defaultprops) => {
                 anchorEl={variableAnchorEl}
                 PaperProps={{
                   style: {
-                    backgroundColor: surfaceColor,
+                    backgroundColor: theme.palette.surfaceColor,
                   },
                 }}
                 onClose={() => {
@@ -8460,7 +8446,7 @@ const AngularWorkflow = (defaultprops) => {
         maxWidth: "100%",
         marginTop: "5px",
         color: "white",
-        backgroundColor: surfaceColor,
+        backgroundColor: theme.palette.surfaceColor,
         cursor: "pointer",
         display: "flex",
       };
@@ -8571,7 +8557,7 @@ const AngularWorkflow = (defaultprops) => {
                 open={open}
                 PaperProps={{
                   style: {
-                    backgroundColor: surfaceColor,
+                    backgroundColor: theme.palette.surfaceColor,
                   },
                 }}
                 onClose={() => {
@@ -8580,7 +8566,7 @@ const AngularWorkflow = (defaultprops) => {
                 }}
               >
                 <MenuItem
-                  style={{ backgroundColor: inputColor, color: "white" }}
+                  style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
                   onClick={() => {
                     duplicateCondition(index);
                   }}
@@ -8589,7 +8575,7 @@ const AngularWorkflow = (defaultprops) => {
                   {"Duplicate"}
                 </MenuItem>
                 <MenuItem
-                  style={{ backgroundColor: inputColor, color: "white" }}
+                  style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
                   onClick={() => {
                     setOpen(false);
                     deleteCondition(index);
@@ -9158,7 +9144,7 @@ const AngularWorkflow = (defaultprops) => {
                         <option
                           key={folder.displayName}
                           style={{
-                            backgroundColor: inputColor,
+                            backgroundColor: theme.palette.inputColor,
                             fontSize: "1.2em",
                           }}
                           value={folder.displayName}
@@ -9259,16 +9245,11 @@ const AngularWorkflow = (defaultprops) => {
         <div>Name</div>
         <TextField
           style={{
-            backgroundColor: inputColor,
+            backgroundColor: theme.palette.inputColor,
             borderRadius: theme.palette.borderRadius,
           }}
           InputProps={{
             style: {
-              color: "white",
-              marginLeft: "5px",
-              maxWidth: "95%",
-              height: 50,
-              fontSize: "1em",
             },
           }}
           fullWidth
@@ -9281,16 +9262,11 @@ const AngularWorkflow = (defaultprops) => {
           Environment:
           <TextField
             style={{
-              backgroundColor: inputColor,
+              backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
               style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
               },
             }}
             required
@@ -10019,16 +9995,11 @@ const AngularWorkflow = (defaultprops) => {
               <Typography>Name</Typography>
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
                   style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
                   },
                 }}
                 fullWidth
@@ -10049,11 +10020,7 @@ const AngularWorkflow = (defaultprops) => {
                     <TextField
                       style={{
                         backgroundColor: theme.palette.inputColor,
-                        borderRadius: theme.palette.borderRadius,
-                        color: "white",
-                        width: 50,
-                        height: 50,
-                        fontSize: "1em",
+						maxWidth: 50,
                       }}
                       InputProps={{
                         style: theme.palette.innerTextfieldStyle,
@@ -10378,10 +10345,6 @@ const AngularWorkflow = (defaultprops) => {
                 }}
                 InputProps={{
                   style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    fontSize: "1em",
                   },
                   endAdornment: (
                     <InputAdornment position="end">
@@ -10440,11 +10403,6 @@ const AngularWorkflow = (defaultprops) => {
 									}}
 									InputProps={{
 										style: {
-											color: "white",
-											marginLeft: "5px",
-											maxWidth: "95%",
-											fontSize: "1em",
-											height: 50,
 										},
 									}}
 									fullWidth
@@ -10525,15 +10483,11 @@ const AngularWorkflow = (defaultprops) => {
           <div>Name</div>
           <TextField
             style={{
-              backgroundColor: inputColor,
+              backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
               style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                fontSize: "1em",
               },
             }}
             multiline
@@ -10552,16 +10506,11 @@ const AngularWorkflow = (defaultprops) => {
               <div>Height</div>
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
                   style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
                   },
                 }}
                 fullWidth
@@ -10578,16 +10527,11 @@ const AngularWorkflow = (defaultprops) => {
               <div>Width</div>
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
                   style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
                   },
                 }}
                 fullWidth
@@ -10606,16 +10550,11 @@ const AngularWorkflow = (defaultprops) => {
               <div>Background</div>
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
                   style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
                   },
                 }}
                 fullWidth
@@ -10632,16 +10571,11 @@ const AngularWorkflow = (defaultprops) => {
               <div>Text Color</div>
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
                   style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
                   },
                 }}
                 fullWidth
@@ -10658,16 +10592,11 @@ const AngularWorkflow = (defaultprops) => {
           <div style={{ marginTop: 15, }}>Background-Image</div>
           <TextField
             style={{
-              backgroundColor: inputColor,
+              backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
               style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
               },
             }}
             fullWidth
@@ -10769,16 +10698,11 @@ const AngularWorkflow = (defaultprops) => {
           <div>Name</div>
           <TextField
             style={{
-              backgroundColor: inputColor,
+              backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
               style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
               },
             }}
             fullWidth
@@ -10800,7 +10724,7 @@ const AngularWorkflow = (defaultprops) => {
                   },
                 }}
                 filterOptions={(options, { inputValue }) => {
-                  //console.log("Option contains?: ", inputValue, options)
+                  console.log("Option contains?: ", inputValue, options)
                   const lowercaseValue = inputValue.toLowerCase()
                   options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
 
@@ -10928,7 +10852,7 @@ const AngularWorkflow = (defaultprops) => {
                   setUpdate(Math.random());
                 }}
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   color: "white",
                   height: 50,
                 }}
@@ -10941,7 +10865,7 @@ const AngularWorkflow = (defaultprops) => {
                   return (
                     <MenuItem
                       key={data}
-                      style={{ backgroundColor: inputColor, color: "white" }}
+                      style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
                       value={data}
                     >
                       {data}
@@ -10984,7 +10908,7 @@ const AngularWorkflow = (defaultprops) => {
               </div>
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
                 id="webhook_uri_field"
@@ -11009,11 +10933,6 @@ const AngularWorkflow = (defaultprops) => {
                 }
                 InputProps={{
                   style: {
-                    color: "white",
-                    height: 50,
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    fontSize: "1em",
                   },
                   endAdornment:
                     <InputAdornment position="end">
@@ -11121,17 +11040,13 @@ const AngularWorkflow = (defaultprops) => {
               <div>
                 <TextField
                   style={{
-                    backgroundColor: inputColor,
+                    backgroundColor: theme.palette.inputColor,
                     borderRadius: theme.palette.borderRadius,
                   }}
                   id="webhook_uri_header"
                   onClick={() => { }}
                   InputProps={{
                     style: {
-                      color: "white",
-                      marginLeft: "5px",
-                      maxWidth: "95%",
-                      fontSize: "1em",
                     },
                   }}
                   fullWidth
@@ -11178,17 +11093,13 @@ const AngularWorkflow = (defaultprops) => {
               <div style={{ marginBottom: 20, }}>
                 <TextField
                   style={{
-                    backgroundColor: inputColor,
+                    backgroundColor: theme.palette.inputColor,
                     borderRadius: theme.palette.borderRadius,
                   }}
                   id="webhook_uri_header"
                   onClick={() => { }}
                   InputProps={{
                     style: {
-                      color: "white",
-                      marginLeft: "5px",
-                      maxWidth: "95%",
-                      fontSize: "1em",
                     },
                   }}
                   fullWidth
@@ -11213,7 +11124,7 @@ const AngularWorkflow = (defaultprops) => {
               </div>
 							{isCloud && workflow.triggers[selectedTriggerIndex].parameters.length > 4 ? 
 								<FormGroup
-									style={{ paddingLeft: 10, backgroundColor: inputColor, marginBottom: 50,  }}
+									style={{ paddingLeft: 10, backgroundColor: theme.palette.inputColor, marginBottom: 50,  }}
 									row
 								>
 								<FormControlLabel
@@ -11589,16 +11500,11 @@ const AngularWorkflow = (defaultprops) => {
           <div>Name</div>
           <TextField
             style={{
-              backgroundColor: inputColor,
+              backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
               style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
               },
             }}
             fullWidth
@@ -11611,7 +11517,7 @@ const AngularWorkflow = (defaultprops) => {
             Environment:
             <TextField
               style={{
-                backgroundColor: inputColor,
+                backgroundColor: theme.palette.inputColor,
                 borderRadius: theme.palette.borderRadius,
               }}
               InputProps={{
@@ -11663,16 +11569,11 @@ const AngularWorkflow = (defaultprops) => {
             </div>
             <TextField
               style={{
-                backgroundColor: inputColor,
+                backgroundColor: theme.palette.inputColor,
                 borderRadius: theme.palette.borderRadius,
               }}
               InputProps={{
                 style: {
-                  color: "white",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  marginTop: "3px",
-                  fontSize: "1em",
                 },
               }}
               fullWidth
@@ -11708,7 +11609,7 @@ const AngularWorkflow = (defaultprops) => {
               </div>
             </div>
             <FormGroup
-              style={{ paddingLeft: 10, backgroundColor: inputColor }}
+              style={{ paddingLeft: 10, backgroundColor: theme.palette.inputColor }}
               row
             >
               <FormControlLabel
@@ -11844,7 +11745,7 @@ const AngularWorkflow = (defaultprops) => {
               workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email") ? (
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
 									marginTop: 10,
                 }}
@@ -11877,17 +11778,12 @@ const AngularWorkflow = (defaultprops) => {
               ].parameters[2].value.includes("sms") ? (
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
 									marginTop: 10,
                 }}
                 InputProps={{
                   style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    height: 50,
-                    fontSize: "1em",
                   },
                 }}
                 fullWidth
@@ -11967,16 +11863,11 @@ const AngularWorkflow = (defaultprops) => {
           <div>Name</div>
           <TextField
             style={{
-              backgroundColor: inputColor,
+              backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
               style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
               },
             }}
             fullWidth
@@ -12016,7 +11907,7 @@ const AngularWorkflow = (defaultprops) => {
                 setUpdate(Math.random());
               }}
               style={{
-                backgroundColor: inputColor,
+                backgroundColor: theme.palette.inputColor,
                 color: "white",
                 height: 50,
               }}
@@ -12029,7 +11920,7 @@ const AngularWorkflow = (defaultprops) => {
                 return (
                   <MenuItem
                     key={data}
-                    style={{ backgroundColor: inputColor, color: "white" }}
+                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
                     value={data}
                   >
                     {data}
@@ -12071,16 +11962,11 @@ const AngularWorkflow = (defaultprops) => {
               </div>
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
                   style: {
-                    color: "white",
-                    height: 50,
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    fontSize: "1em",
                   },
                 }}
                 fullWidth
@@ -12126,16 +12012,11 @@ const AngularWorkflow = (defaultprops) => {
               </div>
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
                   style: {
-                    color: "white",
-                    marginLeft: "5px",
-                    maxWidth: "95%",
-                    marginTop: "3px",
-                    fontSize: "1em",
                   },
                 }}
                 disabled={
@@ -12562,9 +12443,6 @@ const AngularWorkflow = (defaultprops) => {
                 id="execution_argument_input_field"
                 style={theme.palette.textFieldStyle}
                 disabled={workflow.public}
-                InputProps={{
-                  style: theme.palette.innerTextfieldStyle,
-                }}
                 color="secondary"
                 placeholder={"Execution Argument"}
                 defaultValue={executionText}
@@ -12986,11 +12864,12 @@ const AngularWorkflow = (defaultprops) => {
           {defaultReturn}
         </SwipeableDrawer>
         :
-        <Fade in={true} style={{ transitionDelay: `$0ms` }}>
+		<span>
+        {/*<Fade in={true} style={{ transitionDelay: `$0ms` }}>*/}
           <div id="rightside_actions" style={rightsidebarStyle}>
             {defaultReturn}
           </div>
-        </Fade>
+		</span>
     );
 
     //return null;
@@ -13316,11 +13195,11 @@ const AngularWorkflow = (defaultprops) => {
     color: "white",
     marginBottom: 10,
     padding: 5,
-    backgroundColor: surfaceColor,
+    backgroundColor: theme.palette.surfaceColor,
     cursor: "pointer",
     display: "flex",
-    minHeight: 40,
-    maxHeight: 40,
+    minHeight: 50,
+    maxHeight: 50,
   };
 
   const parsedExecutionArgument = () => {
@@ -13766,7 +13645,6 @@ const AngularWorkflow = (defaultprops) => {
           overflow: "auto",
           minWidth: isMobile ? "100%" : 420,
           maxWidth: isMobile ? "100%" : 420,
-          backgroundColor: "#1F2023",
           color: "white",
           fontSize: 18,
           zIndex: 10005,
@@ -13864,7 +13742,8 @@ const AngularWorkflow = (defaultprops) => {
 								}
 
                 return (
-                  <Zoom key={index} in={true} style={{ transitionDelay: `${executionDelay}ms` }}>
+				  <span>
+                  {/*<Zoom key={index} in={true} style={{ transitionDelay: `${executionDelay}ms` }}>*/}
                     <div>
                       <Tooltip
                         key={data.execution_id}
@@ -14020,16 +13899,32 @@ const AngularWorkflow = (defaultprops) => {
                         </Paper>
                       </Tooltip>
                     </div>
-                  </Zoom>
+				  </span>
                 );
               })}
             </div>
           ) : (
-            <div>There are no executions yet, or they are not loaded.</div>
+            <div>
+				<Typography>
+					There are no executions yet, or they are not loaded.
+				</Typography>
+				<Button 
+					variant="contained"
+					style={{
+						marginTop: 30,
+						marginLeft: 50,
+					}}
+					onClick={() => {
+              			executeWorkflow(executionText, workflow.start, lastSaved);
+					}}
+				>
+					Test Workflow <PlayArrowIcon style={{marginLeft: 15, }} />
+				</Button>
+			</div>
           )}
         </div>
       ) : (
-        <div style={{ padding: isMobile ? "0px 10px 25px 10px" : "25px 15px 25px 15px", maxWidth: isMobile ? "100%" : 365, overflowX: "hidden" }}>
+        <div style={{ padding: isMobile ? "0px 10px 25px 10px" : "25px 15px 25px 15px", maxWidth: isMobile ? "100%" : 400, overflowX: "hidden" }}>
           <Breadcrumbs
             aria-label="breadcrumb"
             separator="›"
@@ -14071,7 +13966,7 @@ const AngularWorkflow = (defaultprops) => {
             }}
           />
           <div style={{ display: "flex", marginLeft: 10, }}>
-            <h2>Execution info</h2>
+            <h2>Details</h2>
             <Tooltip
               color="primary"
               title="Rerun workflow"
@@ -14206,7 +14101,7 @@ const AngularWorkflow = (defaultprops) => {
             style={{
               backgroundColor: "rgba(255,255,255,0.6)",
               marginTop: 15,
-              marginBottom: 30,
+              marginBottom: 20,
             }}
           />
           {executionData.results !== undefined &&
@@ -14241,14 +14136,14 @@ const AngularWorkflow = (defaultprops) => {
 									executionData.status !== "FAILURE" &&
 									executionData.status !== "WAITING" &&
                 !(executionData.results === undefined || executionData.results === null || (executionData.results.length === 0 &&  executionData.status === "EXECUTING")) ? (
-                <div style={{ display: "flex" }}>
-                  <CircularProgress style={{ height: 45, width: 45, marginLeft: 20, marginRight: 20, }} onClick={() => {
-										console.log(environments, defaultEnvironmentIndex, nonskippedResults)
-									}} />
+                <div style={{}}>
+                  <CircularProgress style={{marginLeft: 145, marginBottom: 10, }} onClick={() => {
+					console.log(environments, defaultEnvironmentIndex, nonskippedResults)
+				  }} />
 
                   {environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 && environments[defaultEnvironmentIndex].Name !== "Cloud" ?
                     <Typography variant="body2" color="textSecondary" style={{}}>
-                      No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@shuffler.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@shuffler.io</a>
+                      No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Find out here</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@shuffler.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@shuffler.io</a>
                     </Typography>
                     : null}
                 </div>
@@ -14256,12 +14151,12 @@ const AngularWorkflow = (defaultprops) => {
             </div>
           </div>
           {
-						executionData.results === undefined ||
+			executionData.results === undefined ||
             executionData.results === null ||
             (executionData.results.length === 0 && executionData.status === "EXECUTING") ? (
 
-						<div style={{ display: "flex" }}>
-							<CircularProgress style={{ height: 45, width: 45, marginLeft: 20, marginRight: 20, }} /> 
+						<div style={{}}>
+							<CircularProgress style={{marginLeft: 145, marginBottom: 10, }} /> 
 								{environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 && environments[defaultEnvironmentIndex].Name !== "Cloud" ?
 									<Typography variant="body2" color="textSecondary" style={{}}>
 										No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@shuffler.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@shuffler.io</a>
@@ -14755,7 +14650,7 @@ const AngularWorkflow = (defaultprops) => {
         PaperProps={{
           style: {
             pointerEvents: "auto",
-            backgroundColor: inputColor,
+            backgroundColor: theme.palette.inputColor,
             color: "white",
             minWidth: isMobile ? "90%" : 650,
             padding: 30,
@@ -15066,7 +14961,8 @@ const AngularWorkflow = (defaultprops) => {
             </Typography>
           </div>
         ) : (
-          <Fade in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
+		  <span>
+          {/*<Fade in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>*/}
             <CytoscapeComponent
               elements={elements}
               minZoom={0.35}
@@ -15075,7 +14971,7 @@ const AngularWorkflow = (defaultprops) => {
               style={{
                 width: cytoscapeWidth,
                 height: bodyHeight - appBarSize - 5,
-                backgroundColor: surfaceColor,
+                backgroundColor: theme.palette.surfaceColor,
               }}
               stylesheet={cystyle}
               boxSelectionEnabled={true}
@@ -15089,7 +14985,7 @@ const AngularWorkflow = (defaultprops) => {
                 setCy(incy);
               }}
             />
-          </Fade>
+		  </span>
         )}
       </div>
       {executionModal}
@@ -15165,7 +15061,7 @@ const AngularWorkflow = (defaultprops) => {
         PaperProps={{
           style: {
             pointerEvents: "auto",
-            backgroundColor: surfaceColor,
+            backgroundColor: theme.palette.surfaceColor,
             color: "white",
             border: theme.palette.defaultBorder,
             maxWidth: isMobile ? bodyWidth - 100 : 800,
@@ -15343,7 +15239,7 @@ const AngularWorkflow = (defaultprops) => {
         PaperProps={{
           style: {
             pointerEvents: "auto",
-            backgroundColor: surfaceColor,
+            backgroundColor: theme.palette.surfaceColor,
             color: "white",
             border: theme.palette.defaultBorder,
             maxWidth: isMobile ? bodyWidth - 100 : "100%",
@@ -15632,16 +15528,11 @@ const AngularWorkflow = (defaultprops) => {
           <b>Name - what is this used for?</b>
           <TextField
             style={{
-              backgroundColor: inputColor,
+              backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette.borderRadius,
             }}
             InputProps={{
               style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
               },
             }}
             fullWidth
@@ -15714,16 +15605,11 @@ const AngularWorkflow = (defaultprops) => {
                 ) : (
                   <TextField
                     style={{
-                      backgroundColor: inputColor,
+                      backgroundColor: theme.palette.inputColor,
                       borderRadius: theme.palette.borderRadius,
                     }}
                     InputProps={{
                       style: {
-                        color: "white",
-                        marginLeft: "5px",
-                        maxWidth: "95%",
-                        height: 50,
-                        fontSize: "1em",
                       },
                     }}
                     fullWidth
@@ -15780,7 +15666,6 @@ const AngularWorkflow = (defaultprops) => {
         open={configureWorkflowModalOpen}
         PaperProps={{
           style: {
-            backgroundColor: surfaceColor,
             color: "white",
             minWidth: 650,
             border: theme.palette.defaultBorder,
@@ -15844,7 +15729,7 @@ const AngularWorkflow = (defaultprops) => {
       PaperProps={{
         style: {
           pointerEvents: "auto",
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: 1100,
           minHeight: 700,
@@ -15965,7 +15850,7 @@ const AngularWorkflow = (defaultprops) => {
         <div
           style={{
             flex: 3,
-            borderLeft: `1px solid ${inputColor}`,
+            borderLeft: `1px solid ${theme.palette.inputColor}`,
             padding: "70px 30px 30px 30px",
             maxHeight: 630,
             minHeight: 630,
@@ -15987,7 +15872,7 @@ const AngularWorkflow = (defaultprops) => {
                 style={{
                   marginTop: 25,
                   marginBottom: 25,
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                 }}
               />
               <Typography variant="h6">
@@ -16721,7 +16606,7 @@ const AngularWorkflow = (defaultprops) => {
           : null}
         
         {/*selectionOpen === true ?
-          <div style={{ borderRadius: theme.palette.borderRadius, backgroundColor: surfaceColor, zIndex: 12501,position:"fixed", left: 190, bottom: 20,top:70, width: 950, overflowY: "scroll"}}>
+          <div style={{ borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.surfaceColor, zIndex: 12501,position:"fixed", left: 190, bottom: 20,top:70, width: 950, overflowY: "scroll"}}>
             <div>
             <IconButton
               style={{

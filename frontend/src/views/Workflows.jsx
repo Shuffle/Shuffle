@@ -1263,12 +1263,12 @@ const Workflows = (props) => {
     overflow: "hidden",
     width: "100%",
     color: "white",
-    backgroundColor: theme.palette.surfaceColor,
     padding: "12px 12px 0px 15px",
     borderRadius: 5,
     display: "flex",
     boxSizing: "border-box",
     position: "relative",
+    backgroundColor: theme.palette.surfaceColor,
   };
 
   const gridContainer = {

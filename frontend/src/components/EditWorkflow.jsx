@@ -26,6 +26,7 @@ import {
   Typography,
   Zoom,
   CircularProgress,
+  Drawer,
   Dialog,
   DialogTitle,
   DialogActions,
@@ -58,6 +59,7 @@ const EditWorkflow = (props) => {
 	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, } = props
 
   const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
+
   const [submitLoading, setSubmitLoading] = React.useState(false);
   const [showMoreClicked, setShowMoreClicked] = React.useState(false);
 	const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
@@ -144,18 +146,17 @@ const EditWorkflow = (props) => {
 	var total_count = 0
 
 	return (
-    <Dialog
+    <Drawer
       open={modalOpen}
       onClose={() => {
         setModalOpen(false);
       }}
       PaperProps={{
         style: {
-          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: isMobile ? "90%" : 550,
           maxWidth: isMobile ? "90%" : 550,
-					minHeight: 400,
+		  minHeight: 400,
           //minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
           //maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
         },
@@ -220,11 +221,11 @@ const EditWorkflow = (props) => {
       </DialogTitle>
       <FormControl>
         <DialogContent style={{paddingTop: 10, display: "flex", minHeight: 350, zIndex: 1001, }}>
-					<div style={{minWidth: newWorkflow ? 450 : 500, maxWidth: newWorkflow ? 450 : 500, }}>
+			<div style={{minWidth: newWorkflow ? 450 : 500, maxWidth: newWorkflow ? 450 : 500, }}>
           	<TextField
-          	  onBlur={(event) => {
-								setName(event.target.value)
-							}}
+          	  onChange={(event) => {
+				setName(event.target.value)
+			  }}
           	  InputProps={{
           	    style: {
           	      color: "white",
@@ -261,7 +262,7 @@ const EditWorkflow = (props) => {
 			</div>
 						<div style={{display: "flex", marginTop: 10, }}>
 							<MuiChipsInput
-								style={{ flex: 1, maxHeight: 40, marginTop: 12, overflow: "auto",  }}
+								style={{ flex: 1, maxHeight: 40, }}
 								InputProps={{
 									style: {
 										color: "white",
@@ -271,6 +272,11 @@ const EditWorkflow = (props) => {
 								color="primary"
 								fullWidth
 								value={newWorkflowTags}
+								onChange={(chip) => {
+									console.log("Chip: ", chip)
+									//newWorkflowTags.push(chip);
+									setNewWorkflowTags(chip);
+								}}
 								onAdd={(chip) => {
 									newWorkflowTags.push(chip);
 									setNewWorkflowTags(newWorkflowTags);
@@ -486,41 +492,48 @@ const EditWorkflow = (props) => {
           <Button
             variant="contained"
             style={{}}
-            disabled={name.length === 0}
+            disabled={name.length === 0 || submitLoading === true}
             onClick={() => {
-							innerWorkflow.name = name 
-							innerWorkflow.description = description 
-							if (newWorkflowTags.length > 0) {
-								innerWorkflow.tags = newWorkflowTags
-							}
+				setSubmitLoading(true)
 
-							if (selectedUsecases.length > 0) {
-								innerWorkflow.usecase_ids = selectedUsecases
-							}
+				innerWorkflow.name = name 
+				innerWorkflow.description = description 
+				if (newWorkflowTags.length > 0) {
+					innerWorkflow.tags = newWorkflowTags
+				}
 
-							if (dueDate > 0) {
-								innerWorkflow.due_date = new Date(`${dueDate["$y"]}-${dueDate["$M"]+1}-${dueDate["$D"]}`).getTime()/1000
-							}
+				if (selectedUsecases.length > 0) {
+					innerWorkflow.usecase_ids = selectedUsecases
+				}
 
-							if (setNewWorkflow !== undefined) {
-								setNewWorkflow(
-									innerWorkflow.name,
-									innerWorkflow.description,
-									innerWorkflow.tags,
-									innerWorkflow.default_return_value,
-									innerWorkflow,
-									newWorkflow,
-									innerWorkflow.usecase_ids,
-									innerWorkflow.blogpost,
-									innerWorkflow.status,
-								)
-								setWorkflow({})
-							} else {
-								setWorkflow(innerWorkflow)
-								console.log("editing workflow: ", innerWorkflow)
-							}
-							
-							setModalOpen(false)
+				if (dueDate > 0) {
+					innerWorkflow.due_date = new Date(`${dueDate["$y"]}-${dueDate["$M"]+1}-${dueDate["$D"]}`).getTime()/1000
+				}
+
+				if (setNewWorkflow !== undefined) {
+					setNewWorkflow(
+						innerWorkflow.name,
+						innerWorkflow.description,
+						innerWorkflow.tags,
+						innerWorkflow.default_return_value,
+						innerWorkflow,
+						newWorkflow,
+						innerWorkflow.usecase_ids,
+						innerWorkflow.blogpost,
+						innerWorkflow.status,
+					)
+					setWorkflow({})
+				} else {
+					setWorkflow(innerWorkflow)
+					console.log("editing workflow: ", innerWorkflow)
+				}
+				
+				setSubmitLoading(true)
+
+				// If new workflow, don't close it
+				if (isEditing) {
+					setModalOpen(false)
+				}
             }}
             color="primary"
           >
@@ -528,7 +541,7 @@ const EditWorkflow = (props) => {
           </Button>
         </DialogActions>
       </FormControl>
-    </Dialog>
+    </Drawer>
 	)
 }
 
