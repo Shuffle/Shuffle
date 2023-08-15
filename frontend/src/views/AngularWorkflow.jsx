@@ -8605,7 +8605,6 @@ const AngularWorkflow = (defaultprops) => {
     const conditionId = uuidv4();
     return (
       <div style={appApiViewStyle}>
-        <div style={{ display: "flex", height: "40px", marginBottom: "30px" }}>
           <div style={{ flex: "1" }}>
             <h3 style={{ marginBottom: "5px" }}>
               Branch: Conditions - {selectedEdgeIndex}
@@ -8619,7 +8618,6 @@ const AngularWorkflow = (defaultprops) => {
               What are conditions?
             </a>
           </div>
-        </div>
         <Divider
           style={{
             marginBottom: "10px",
@@ -9217,7 +9215,6 @@ const AngularWorkflow = (defaultprops) => {
 
     return (
       <div style={appApiViewStyle}>
-        <div style={{ display: "flex", height: "40px", marginBottom: "30px" }}>
           <div style={{ flex: "1" }}>
             <h3 style={{ marginBottom: "5px" }}>
               {selectedTrigger.app_name}: {selectedTrigger.status}
@@ -9231,7 +9228,6 @@ const AngularWorkflow = (defaultprops) => {
               What are email triggers?
             </a>
           </div>
-        </div>
         <Divider
           style={{
             marginBottom: "10px",
@@ -9963,9 +9959,6 @@ const AngularWorkflow = (defaultprops) => {
 
       return (
         <div style={appApiViewStyle}>
-          <div
-            style={{ display: "flex", height: "40px", marginBottom: "30px" }}
-          >
             <div style={{ flex: "1" }}>
               <h3 style={{ marginBottom: "5px" }}>
                 {selectedTrigger.app_name}
@@ -9978,7 +9971,6 @@ const AngularWorkflow = (defaultprops) => {
               >
                 What are subflows?
               </a>
-            </div>
           </div>
           <Divider
             style={{
@@ -10469,9 +10461,6 @@ const AngularWorkflow = (defaultprops) => {
 
       return (
         <div style={appApiViewStyle}>
-          <div
-            style={{ display: "flex", height: "40px", marginBottom: "30px" }}
-          >
             <div style={{ flex: "1" }}>
               <h3 style={{ marginBottom: "5px" }}>Comment</h3>
               <a
@@ -10482,7 +10471,6 @@ const AngularWorkflow = (defaultprops) => {
               >
                 What are comments?
               </a>
-            </div>
           </div>
           <Divider
             style={{
@@ -11855,9 +11843,6 @@ const AngularWorkflow = (defaultprops) => {
 
       return (
         <div style={appApiViewStyle}>
-          <div
-            style={{ display: "flex", height: "40px", marginBottom: "30px" }}
-          >
             <div style={{ flex: "1" }}>
               <h3 style={{ marginBottom: "5px" }}>
                 {selectedTrigger.app_name}: {selectedTrigger.status}
@@ -11871,7 +11856,6 @@ const AngularWorkflow = (defaultprops) => {
                 What are schedules?
               </a>
             </div>
-          </div>
           <Divider
             style={{
               marginBottom: "10px",
