@@ -7648,6 +7648,8 @@ const AngularWorkflow = (defaultprops) => {
     resize: "vertical",
     overflow: "auto",
 	paddingBottom: 100, 
+
+	overflowAnchor: "none",
   };
 
   var rightsidebarStyle = {
@@ -7664,6 +7666,8 @@ const AngularWorkflow = (defaultprops) => {
     borderRadius: theme.palette.borderRadius,
     resize: "both",
     overflow: "auto",
+
+	overflowAnchor: "none",
   };
 
   const setTriggerFolderWrapperMulti = (event) => {
@@ -9252,7 +9256,7 @@ const AngularWorkflow = (defaultprops) => {
           placeholder={selectedTrigger.label}
           onChange={selectedTriggerChange}
         />
-
+		{/*
         <div style={{ marginTop: "20px" }}>
           Environment:
           <TextField
@@ -9271,6 +9275,7 @@ const AngularWorkflow = (defaultprops) => {
             value={selectedTrigger.environment}
           />
         </div>
+		*/}
         <Divider
           style={{
             marginTop: "20px",
@@ -10617,58 +10622,75 @@ const AngularWorkflow = (defaultprops) => {
     return null;
   };
 
-  const WebhookSidebar = () => {
-    if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
-      if (workflow.triggers[selectedTriggerIndex] === undefined) {
-        return null;
-      }
+  // Special SCHEDULE handler
+  var trigger_header_auth = ""
+  if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers[selectedTriggerIndex] !== undefined ) {
+      if (selectedTrigger.trigger_type === "SCHEDULE" && workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null || workflow.triggers[selectedTriggerIndex].parameters.length === 0) {
+	    console.log("Autofixing schedule")
 
-      if (
-        workflow.triggers[selectedTriggerIndex].parameters === undefined ||
-        workflow.triggers[selectedTriggerIndex].parameters === null ||
-        workflow.triggers[selectedTriggerIndex].parameters.length === 0
-      ) {
         workflow.triggers[selectedTriggerIndex].parameters = [];
         workflow.triggers[selectedTriggerIndex].parameters[0] = {
-          name: "url",
-          value: referenceUrl + "webhook_" + selectedTrigger.id,
+          name: "cron",
+          value: isCloud ? "*/25 * * * *" : "60",
         };
         workflow.triggers[selectedTriggerIndex].parameters[1] = {
-          name: "tmp",
-          value: "webhook_" + selectedTrigger.id,
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[2] = {
-          name: "auth_headers",
-          value: "",
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[3] = {
-          name: "custom_response_body",
-          value: "",
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[4] = {
-          name: "await_response",
-          value: "v1",
+          name: "execution_argument",
+          value: '{"example": {"json": "is cool"}}',
         };
         setWorkflow(workflow);
-      } else {
-        // Always update
-        const newUrl = referenceUrl + "webhook_" + selectedTrigger.id;
-        //console.log("Validating webhook url: ", newUrl);
-        if (selectedTrigger.environment !== "cloud") {
-          if (newUrl !== workflow.triggers[selectedTriggerIndex].parameters[0].value) {
-            console.log("Url is wrong. NOT updating because of hybrid.");
-            //workflow.triggers[selectedTriggerIndex].parameters[0].value = newUrl;
-            //setWorkflow(workflow);
-          }
-        }
-      }
+      } else if (selectedTrigger.trigger_type === "WEBHOOK") {
+	  	if (workflow.triggers[selectedTriggerIndex] === undefined) {
+      	  return null;
+      	}
 
-      const trigger_header_auth =
-        workflow.triggers[selectedTriggerIndex].parameters.length > 2
-          ? workflow.triggers[selectedTriggerIndex].parameters[2].value
-          : "";
+      	if (
+      	  workflow.triggers[selectedTriggerIndex].parameters === undefined ||
+      	  workflow.triggers[selectedTriggerIndex].parameters === null ||
+      	  workflow.triggers[selectedTriggerIndex].parameters.length === 0
+      	) {
+      	  workflow.triggers[selectedTriggerIndex].parameters = [];
+      	  workflow.triggers[selectedTriggerIndex].parameters[0] = {
+      	    name: "url",
+      	    value: referenceUrl + "webhook_" + selectedTrigger.id,
+      	  };
+      	  workflow.triggers[selectedTriggerIndex].parameters[1] = {
+      	    name: "tmp",
+      	    value: "webhook_" + selectedTrigger.id,
+      	  };
+      	  workflow.triggers[selectedTriggerIndex].parameters[2] = {
+      	    name: "auth_headers",
+      	    value: "",
+      	  };
+      	  workflow.triggers[selectedTriggerIndex].parameters[3] = {
+      	    name: "custom_response_body",
+      	    value: "",
+      	  };
+      	  workflow.triggers[selectedTriggerIndex].parameters[4] = {
+      	    name: "await_response",
+      	    value: "v1",
+      	  };
+      	  setWorkflow(workflow);
+      	} else {
+      	  // Always update
+      	  const newUrl = referenceUrl + "webhook_" + selectedTrigger.id;
+      	  //console.log("Validating webhook url: ", newUrl);
+      	  if (selectedTrigger.environment !== "cloud") {
+      	    if (newUrl !== workflow.triggers[selectedTriggerIndex].parameters[0].value) {
+      	      console.log("Url is wrong. NOT updating because of hybrid.");
+      	      //workflow.triggers[selectedTriggerIndex].parameters[0].value = newUrl;
+      	      //setWorkflow(workflow);
+      	    }
+      	  }
+      	}
 
-      return (
+      	trigger_header_auth =
+      	  workflow.triggers[selectedTriggerIndex].parameters.length > 2
+      	    ? workflow.triggers[selectedTriggerIndex].parameters[2].value
+      	    : "";
+	  	}
+  }
+
+  const WebhookSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "WEBHOOK" ? null :
         <div style={appApiViewStyle}>
             <div style={{ flex: "1" }}>
               <h3 style={{ marginBottom: "5px" }}>
@@ -11170,11 +11192,6 @@ const AngularWorkflow = (defaultprops) => {
 						</div>
           </div>
         </div>
-      );
-    }
-
-    return null;
-  };
 
   const stopMailSub = (trigger, triggerindex) => {
     // DELETE
@@ -11819,29 +11836,9 @@ const AngularWorkflow = (defaultprops) => {
     return null;
   };
 
-  const ScheduleSidebar = () => {
-    if (
-      Object.getOwnPropertyNames(selectedTrigger).length > 0 &&
-      workflow.triggers[selectedTriggerIndex] !== undefined
-    ) {
-      if (
-        workflow.triggers[selectedTriggerIndex].parameters === undefined ||
-        workflow.triggers[selectedTriggerIndex].parameters === null ||
-        workflow.triggers[selectedTriggerIndex].parameters.length === 0
-      ) {
-        workflow.triggers[selectedTriggerIndex].parameters = [];
-        workflow.triggers[selectedTriggerIndex].parameters[0] = {
-          name: "cron",
-          value: isCloud ? "*/25 * * * *" : "60",
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[1] = {
-          name: "execution_argument",
-          value: '{"example": {"json": "is cool"}}',
-        };
-        setWorkflow(workflow);
-      }
 
-      return (
+
+  const ScheduleSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null :
         <div style={appApiViewStyle}>
             <div style={{ flex: "1" }}>
               <h3 style={{ marginBottom: "5px" }}>
@@ -12031,7 +12028,9 @@ const AngularWorkflow = (defaultprops) => {
                 multiline
                 color="primary"
                 defaultValue={
-                  workflow.triggers[selectedTriggerIndex].parameters[1].value
+                  workflow.triggers[selectedTriggerIndex] !== undefined  && workflow.triggers[selectedTriggerIndex].parameters.length > 1 ?
+				  	workflow.triggers[selectedTriggerIndex].parameters[1].value
+					: ""
                 }
                 placeholder='{"example": {"json": "is cool"}}'
                 onBlur={(e) => {
@@ -12079,11 +12078,6 @@ const AngularWorkflow = (defaultprops) => {
             </div>
           </div>
         </div>
-      );
-    }
-
-    return null;
-  };
 
   const cytoscapeViewWidths = isMobile ? 50 : 850;
   const bottomBarStyle = {
@@ -12721,34 +12715,34 @@ const AngularWorkflow = (defaultprops) => {
 
   const RightSideBar = (props) => {
     const {
-      workflow,
-      setWorkflow,
-      setSelectedAction,
-      setUpdate,
-      selectedApp,
-      workflowExecutions,
-      setSelectedResult,
-      selectedAction,
-      setSelectedApp,
-      setSelectedTrigger,
-      setSelectedEdge,
-      setCurrentView,
-      cy,
-      setAuthenticationModalOpen,
-      setVariablesModalOpen,
-      setCodeModalOpen,
-      selectedNameChange,
-      rightsidebarStyle,
-      showEnvironment,
-      selectedActionEnvironment,
-      environments,
-      setNewSelectedAction,
-      appApiViewStyle,
-      globalUrl,
-      setSelectedActionEnvironment,
-      requiresAuthentication,
-      scrollConfig,
-      setScrollConfig,
+      //workflow,
+      //setWorkflow,
+      //setSelectedAction,
+      //setUpdate,
+      //selectedApp,
+      //workflowExecutions,
+      //setSelectedResult,
+      //selectedAction,
+      //setSelectedApp,
+      //setSelectedTrigger,
+      //setSelectedEdge,
+      //setCurrentView,
+      //cy,
+      //setAuthenticationModalOpen,
+      //setVariablesModalOpen,
+      //setCodeModalOpen,
+      //selectedNameChange,
+      //rightsidebarStyle,
+      //showEnvironment,
+      //selectedActionEnvironment,
+      //environments,
+      //setNewSelectedAction,
+      //appApiViewStyle,
+      //globalUrl,
+      //setSelectedActionEnvironment,
+      //requiresAuthentication,
+      //scrollConfig,
+      //setScrollConfig,
     } = props;
 
     if (!rightSideBarOpen) {
@@ -12766,7 +12760,7 @@ const AngularWorkflow = (defaultprops) => {
         files={files}
         isCloud={isCloud}
         getParents={getParents}
-				toolsAppId={toolsApp.id}
+		toolsAppId={toolsApp.id}
         setShowVideo={setShowVideo}
         actionDelayChange={actionDelayChange}
         getAppAuthentication={getAppAuthentication}
@@ -12805,18 +12799,19 @@ const AngularWorkflow = (defaultprops) => {
         setLastSaved={setLastSaved}
         lastSaved={lastSaved}
 
-				aiSubmit={aiSubmit}
+		aiSubmit={aiSubmit}
       />
 
     } else if (Object.getOwnPropertyNames(selectedComment).length > 0) {
       defaultReturn = <CommentSidebar />
     } else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
       if (selectedTrigger.trigger_type === "SCHEDULE") {
-        defaultReturn = <ScheduleSidebar />
+	    // Handled elsewhere as an experiment
+        defaultReturn = null 
       } else if (selectedTrigger.trigger_type === "WEBHOOK") {
-        defaultReturn = <WebhookSidebar />
+        defaultReturn = null
       } else if (selectedTrigger.trigger_type === "SUBFLOW") {
-        defaultReturn = <SubflowSidebar />
+		defaultReturn = <SubflowSidebar />
       } else if (selectedTrigger.trigger_type === "EMAIL") {
         defaultReturn = <EmailSidebar />
       } else if (selectedTrigger.trigger_type === "USERINPUT") {
@@ -14993,6 +14988,25 @@ const AngularWorkflow = (defaultprops) => {
         )}
       </div>
       {executionModal}
+
+      <RightSideBar />
+    
+	  {/* Looks for triggers" */}
+	  {/* Only fixed the ones that require scrolling on a small screen */}
+	  {/* Most prominent: Actions. But these are a lot more complex */}
+	  {rightSideBarOpen ?
+		  <div id="rightside_actions" style={rightsidebarStyle}>
+			  {Object.getOwnPropertyNames(selectedTrigger).length > 0 ? 
+				selectedTrigger.trigger_type === "SCHEDULE" ? 
+					ScheduleSidebar 
+				: selectedTrigger.trigger_type === "WEBHOOK" ? 
+					WebhookSidebar
+				: null 
+			  : null}
+		  </div>
+	  : null}
+	  
+	  {/*
       <RightSideBar
         scrollConfig={scrollConfig}
         setScrollConfig={setScrollConfig}
@@ -15025,6 +15039,7 @@ const AngularWorkflow = (defaultprops) => {
         setSelectedActionEnvironment={setSelectedActionEnvironment}
         requiresAuthentication={requiresAuthentication}
       />
+	  */}
 
 	  {showWorkflowRevisions ? null :
 	  	<span>
