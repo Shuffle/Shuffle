@@ -54,9 +54,10 @@ import {indentWithTab} from "@codemirror/commands"
 import { padding, textAlign } from '@mui/system';
 import data from '../frameworkStyle.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
+import { tags as t } from '@lezer/highlight';
 import { createTheme } from '@uiw/codemirror-themes';
 
-import { tags } from '@lezer/highlight';
+
 
 const liquidFilters = [
 	{"name": "Size", "value": "size", "example": ""},
@@ -81,44 +82,39 @@ const pythonFilters = [
 	{"name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads(r"""$nodename""")\n{% endpython %}`, "example": ``},
 ]
 
-//const shuffleTheme = createTheme({
-//  theme: 'dark',
-//  settings: {
-//    background: '#282828',
-//    foreground: '#282828',
-//    caret: '#5d00ff',
-//    selection: '#036dd626',
-//    selectionMatch: '#036dd626',
-//    lineHighlight: '#8a91991a',
-//    gutterBackground: '#282828',
-//    gutterForeground: '#8a919966',
-//		fontSize: 18,
-//		borderRadius: theme.palette.borderRadius,
-//		border: `2px solid ${theme.palette.inputColor}`,
-//  },
-//  styles: [
-//    { tag: tags.comment, color: '#787b8099' },
-//    { tag: tags.variableName, color: '#0080ff' },
-//    { tag: [tags.string, tags.special(tags.brace)], color: '#5c6166' },
-//    { tag: tags.number, color: '#5c6166' },
-//    { tag: tags.bool, color: '#5c6166' },
-//    { tag: tags.null, color: '#5c6166' },
-//    { tag: tags.keyword, color: '#5c6166' },
-//    { tag: tags.operator, color: '#5c6166' },
-//    { tag: tags.className, color: '#5c6166' },
-//    { tag: tags.definition(tags.typeName), color: '#5c6166' },
-//    { tag: tags.typeName, color: '#5c6166' },
-//    { tag: tags.angleBracket, color: '#5c6166' },
-//    { tag: tags.tagName, color: '#5c6166' },
-//    { tag: tags.attributeName, color: '#5c6166' },
-//  ],
-//});
+const shuffleTheme = createTheme({
+  theme: 'dark',
+  settings: {
+    background: "rgba(40,40,40, 1)",
+    foreground: '#75baff',
+    caret: '#5d00ff',
+    selection: '#036dd626',
+    selectionMatch: '#036dd626',
+    lineHighlight: '#8a91991a',
+    gutterForeground: '#8a919966',
+  },
+  styles: [
+    { tag: t.comment, color: '#787b8099' },
+    { tag: t.variableName, color: '#0080ff' },
+    { tag: [t.string, t.special(t.brace)], color: '#5c6166' },
+    { tag: t.number, color: '#5c6166' },
+    { tag: t.bool, color: '#5c6166' },
+    { tag: t.null, color: '#5c6166' },
+    { tag: t.keyword, color: '#5c6166' },
+    { tag: t.operator, color: '#5c6166' },
+    { tag: t.className, color: '#5c6166' },
+    { tag: t.definition(t.typeName), color: '#5c6166' },
+    { tag: t.typeName, color: '#5c6166' },
+    { tag: t.angleBracket, color: '#5c6166' },
+    { tag: t.tagName, color: '#5c6166' },
+    { tag: t.attributeName, color: '#5c6166' },
+  ],
+});
 
 const CodeEditor = (props) => {
 	const { 
 		globalUrl, 
 		fieldCount, 
-		setFieldCount, 
 		actionlist, 
 		changeActionParameterCodeMirror, 
 		expansionModalOpen, 
@@ -132,6 +128,8 @@ const CodeEditor = (props) => {
 		selectedAction ,
 		workflowExecutions,
 		getParents,
+
+		fieldname,
 	} = props
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
@@ -140,7 +138,7 @@ const CodeEditor = (props) => {
 	const [validation, setValidation] = React.useState(false);
 	const [expOutput, setExpOutput] = React.useState(" ");
 	const [linewrap, setlinewrap] = React.useState(true);
-	const [codeTheme, setcodeTheme] = React.useState("gruvbox-dark");
+	//const [codeTheme, setcodeTheme] = React.useState("gruvbox-dark");
 	const [editorPopupOpen, setEditorPopupOpen] = React.useState(false);
 
 	const [currentCharacter, setCurrentCharacter] = React.useState(-1);
@@ -155,8 +153,8 @@ const CodeEditor = (props) => {
 	const [mainVariables, setMainVariables] = React.useState([]);
 	const [availableVariables, setAvailableVariables] = React.useState([]);
 
-  const [menuPosition, setMenuPosition] = useState(null);
-  const [showAutocomplete, setShowAutocomplete] = React.useState(false);
+    const [menuPosition, setMenuPosition] = useState(null);
+    const [showAutocomplete, setShowAutocomplete] = React.useState(false);
 
 	const [isAiLoading, setIsAiLoading] = React.useState(false);
 
@@ -919,7 +917,6 @@ const CodeEditor = (props) => {
 					maxHeight: isMobile ? "100%" : 720,
 					border: theme.palette.defaultBorder,
 					padding: isMobile ? "25px 10px 25px 10px" : 25,
-					backgroundColor: theme.palette.surfaceColor,
 				},
 			}}
 		>
@@ -1020,6 +1017,7 @@ const CodeEditor = (props) => {
 							aria-controls={liquidOpen ? 'basic-menu' : undefined}
 							aria-expanded={liquidOpen ? 'true' : undefined}
 							variant="outlined"
+							color="secondary"
 							style={{
 							  textTransform: "none",
 								width: 100, 
@@ -1055,6 +1053,7 @@ const CodeEditor = (props) => {
 							aria-controls={mathOpen ? 'basic-menu' : undefined}
 							aria-expanded={mathOpen ? 'true' : undefined}
 							variant="outlined"
+							color="secondary"
 							style={{
 							  textTransform: "none",
 								width: 100, 
@@ -1090,6 +1089,7 @@ const CodeEditor = (props) => {
 							aria-controls={pythonOpen ? 'basic-menu' : undefined}
 							aria-expanded={pythonOpen ? 'true' : undefined}
 							variant="outlined"
+							color="secondary"
 							style={{
 							  textTransform: "none",
 								width: 100, 
@@ -1125,6 +1125,7 @@ const CodeEditor = (props) => {
 							aria-controls={!!menuPosition ? 'basic-menu' : undefined}
 							aria-expanded={!!menuPosition ? 'true' : undefined}
 							variant="outlined"
+							color="secondary"
 							style={{
 							  textTransform: "none",
 								width: 130, 
@@ -1381,7 +1382,7 @@ const CodeEditor = (props) => {
 						position: "relative",
 					}}>
 						<CodeMirror
-							value = {localcodedata}
+							value={localcodedata}
 							height={isFileEditor ? 450 : 525} 
 							width={isFileEditor ? 650 : 600}
 							style={{
@@ -1389,6 +1390,8 @@ const CodeEditor = (props) => {
 								wordBreak: "break-word",
 								marginTop: 0,
 								paddingTop: 0,
+								backgroundColor: "rgba(40,40,40,1)",
+								minHeight: 470, 
 							}}
 							onCursorActivity = {(value) => {
 								// console.log(value.getCursor())
@@ -1398,27 +1401,22 @@ const CodeEditor = (props) => {
 								findIndex(value.getCursor().line, value.getCursor().ch)
 								highlight_variables(value)
 							}}
-							onChange={(value) => {
-								//console.log("Value: '", value.getValue(), "'")
+							onChange={(value, viewUpdate) => {
+								console.log("Value: ", value, viewUpdate)
+								setlocalcodedata(value)
+								expectedOutput(value)
 
-								setlocalcodedata(value.getValue())
-								expectedOutput(value.getValue())
-
-								if(value.display.input.prevInput.startsWith('$') || value.display.input.prevInput.endsWith('$')){
-									setEditorPopupOpen(true)
-								}
-
-								// console.log(findIndex(value.getValue()))
-								// highlight_variables(value)
+								//if(value.display.input.prevInput.startsWith('$') || value.display.input.prevInput.endsWith('$')){
+								//	setEditorPopupOpen(true)
+								//}
 							}}
-							extensions={[indentWithTab]}
+							extensions={[]}//indentWithTab]}
+							theme={shuffleTheme}
 							options={{
 								styleSelectedText: true,
-								theme: codeTheme,
 								keyMap: 'sublime',
 								mode: validation === true ? "json" : "python",
 								lineWrapping: linewrap,
-
 							}}
 						/>
 					</span>
@@ -1664,34 +1662,29 @@ const CodeEditor = (props) => {
 
 
 			<div style={{display: 'flex',}}>
-				<button
+				<Button
 					style={{
-						color: "white",
-						background: "#383b49",
-						border: "none",
 						height: 35,
 						flex: 1,
 						marginLeft: 5,
 						marginTop: 5,
-						cursor: "pointer"
 					}}
+					variant="outlined"
+					color="secondary"
 					onClick={() => {
 						setExpansionModalOpen(false);
 					}}
 				>
 					Cancel
-				</button>
-				<button
+				</Button>
+				<Button
+					variant="contained"
+					color="primary"
 					style={{
-						color: "white",
-						background: "#f85a3e",
-						border: "none",
-
 						height: 35,
 						flex: 1, 
 						marginLeft: 10,
 						marginTop: 5,
-						cursor: "pointer"
 					}}
 					onClick={(event) => {
 						// Take localcodedata through the Shuffle JSON parser just in case
@@ -1709,15 +1702,26 @@ const CodeEditor = (props) => {
 							runUpdateText(fixedcodedata);
 							setcodedata(fixedcodedata);
 							setExpansionModalOpen(false)
-						} else {
-							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
+						} else if (changeActionParameterCodeMirror !== undefined) { 
+							//changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
+							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist)
 							setExpansionModalOpen(false)
 							setcodedata(fixedcodedata)
 						}
+
+						// Check if fieldname is set, and try to find and inject the text
+						if (fieldname !== undefined && fieldname !== null && fieldname.length > 0) {
+							const foundfield = document.getElementById(fieldname)
+							if (foundfield !== undefined && foundfield !== null) {
+								foundfield.value = fixedcodedata
+							}
+						}
+
+						setExpansionModalOpen(false)
 					}}
 				>
 					Submit	
-				</button>
+				</Button>
 			</div>
 		</Dialog>)
 }

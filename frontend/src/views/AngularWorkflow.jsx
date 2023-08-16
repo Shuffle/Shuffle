@@ -16,6 +16,7 @@ import { useAlert } from "react-alert";
 import { isMobile } from "react-device-detect"
 import aa from 'search-insights'
 import Drift from "react-driftjs";
+import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
 
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
@@ -516,7 +517,7 @@ const AngularWorkflow = (defaultprops) => {
   const [selectionOpen, setSelectionOpen] = React.useState(false);
 
   // eslint-disable-next-line no-unused-vars
-  const [_, setUpdate] = useState(""); // Used for rendring, don't remove
+  const [_, setUpdate] = useState(""); // Used to force rendring, don't remove
 
   const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
   const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0);
@@ -532,7 +533,16 @@ const AngularWorkflow = (defaultprops) => {
 		"attachedTo": "",
 	});
 
-	
+  // For code editor
+  const [codeEditorModalOpen, setCodeEditorModalOpen] = React.useState(false);
+  const [codedata, setcodedata] = React.useState("");
+  const [editorData, setEditorData] = React.useState({
+	"name": "",
+	"value": "",
+	"field_number": -1,
+	"actionlist": [],	
+	"field_id": "",
+  })
 
   // This should all be set once, not on every iteration
   // Use states and don't update lol
@@ -12798,8 +12808,11 @@ const AngularWorkflow = (defaultprops) => {
         requiresAuthentication={requiresAuthentication}
         setLastSaved={setLastSaved}
         lastSaved={lastSaved}
-
 		aiSubmit={aiSubmit}
+
+		expansionModalOpen={codeEditorModalOpen}
+		setExpansionModalOpen={setCodeEditorModalOpen}
+		setEditorData={setEditorData}
       />
 
     } else if (Object.getOwnPropertyNames(selectedComment).length > 0) {
@@ -14993,8 +15006,8 @@ const AngularWorkflow = (defaultprops) => {
     
 	  {/* Looks for triggers" */}
 	  {/* Only fixed the ones that require scrolling on a small screen */}
-	  {/* Most prominent: Actions. But these are a lot more complex */}
-	  {rightSideBarOpen ?
+	  {/* Most important: Actions. But these are a lot more complex */}
+	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK") ?
 		  <div id="rightside_actions" style={rightsidebarStyle}>
 			  {Object.getOwnPropertyNames(selectedTrigger).length > 0 ? 
 				selectedTrigger.trigger_type === "SCHEDULE" ? 
@@ -16599,6 +16612,91 @@ const AngularWorkflow = (defaultprops) => {
 			</div>
 		</div>
 
+	const changeActionParameterCodeMirror = (event, count, data, actionlist) => {
+		if (data.startsWith("${") && data.endsWith("}")) {
+			// PARAM FIX - Gonna use the ID field, even though it's a hack
+			const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+			if (paramcheck !== undefined) {
+				// Escapes all double quotes
+				const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
+				console.log("REPLACE WITH: ", toReplace)
+				if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
+					paramcheck["value_replace"] = [{
+						"key": data.name,
+						"value": toReplace,
+					}]
+
+					console.log("IN IF: ", paramcheck)
+
+				} else {
+					const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+					if (subparamindex === -1) {
+						paramcheck["value_replace"].push({
+							"key": data.name,
+							"value": toReplace,
+						})
+					} else {
+						paramcheck["value_replace"][subparamindex]["value"] = toReplace 
+					}
+
+					console.log("IN ELSE: ", paramcheck)
+				}
+
+				if (paramcheck["value_replace"] === undefined) {
+					selectedAction.parameters[count]["value_replace"] = paramcheck
+				} else {
+					//selectedActionParameters[count]["value_replace"] = paramcheck["value_replace"]
+					selectedAction.parameters[count]["value_replace"] = paramcheck["value_replace"]
+				}
+				setSelectedAction(selectedAction)
+				//setUpdate(Math.random())
+				return
+			}
+		}
+
+		if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
+			console.log("GET THE LAST ARGUMENT FOR NODE!")
+
+			var curstring = ""
+			var record = false
+			for (let [key,keyval] in Object.entries(selectedAction.parameters[count].value)) {
+				const item = selectedAction.parameters[count].value[key]
+				if (record) {
+					curstring += item
+				}
+
+				if (item === "$") {
+					record = true
+					curstring = ""
+				}
+			}
+
+			//console.log("CURSTRING: ", curstring)
+			if (curstring.length > 0 && actionlist !== null) {
+				// Search back in the action list
+				curstring = curstring.split(" ").join("_").toLowerCase()
+				var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
+				if (actionItem !== undefined) {
+					console.log("Found item: ", actionItem)
+
+					var jsonvalid = true
+					try {
+						const tmp = String(JSON.parse(actionItem.example))
+						if (!actionItem.example.includes("{") && !actionItem.example.includes("[")) {
+							jsonvalid = false
+						}
+					} catch (e) {
+						jsonvalid = false
+					}
+				}
+			}
+		} 
+
+		selectedAction.parameters[count].autocompleted = false 
+		selectedAction.parameters[count].value = data
+		setSelectedAction(selectedAction)
+		//setUpdate(Math.random())
+	}
 
   const loadedCheck =
     isLoaded && workflowDone ? (
@@ -16613,6 +16711,31 @@ const AngularWorkflow = (defaultprops) => {
         {/*editWorkflowModal*/}
 		{workflowRevisions}
 		<SuggestionBoxUi />
+
+  		{codeEditorModalOpen ?
+	  		<ShuffleCodeEditor
+				expansionModalOpen={codeEditorModalOpen}
+				setExpansionModalOpen={setCodeEditorModalOpen}
+				isCloud={isCloud}
+				globalUrl={globalUrl}
+				workflowExecutions={workflowExecutions}
+				getParents={getParents}
+				selectedAction={selectedAction}
+				aiSubmit={aiSubmit}
+				toolsAppId={toolsApp.id}
+
+				codedata={editorData.value}
+				setcodedata={setcodedata}
+
+				// Not working out of the box
+				parameterName={editorData.name}
+				fieldCount={editorData.field_number}
+				actionlist={editorData.actionlist}
+				fieldname={editorData.field_id}
+
+				changeActionParameterCodeMirror={changeActionParameterCodeMirror}
+	  		/>
+		: null}
 
         {editWorkflowModalOpen === true ?
           <EditWorkflow
@@ -16740,6 +16863,7 @@ const AngularWorkflow = (defaultprops) => {
 				<Prompt when={!lastSaved} message={unloadText} />
 			*/}
       {loadedCheck}
+
     </div>
   );
 };

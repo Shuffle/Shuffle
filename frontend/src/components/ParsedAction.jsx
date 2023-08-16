@@ -92,7 +92,7 @@ import {
 //import CodeMirror from "@uiw/react-codemirror";
 //import "codemirror/keymap/sublime";
 //import "codemirror/theme/gruvbox-dark.css";
-import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
+//import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -158,28 +158,30 @@ const ParsedAction = (props) => {
     authenticationType,
     appAuthentication,
     getAppAuthentication,
-		actionDelayChange,
-		getParents,
-		isCloud,
-		lastSaved,
-		setLastSaved,
-		setShowVideo,
-		toolsAppId,
-		aiSubmit,
-		//expansionModalOpen,
-		//setExpansionModalOpen,
+	actionDelayChange,
+	getParents,
+	isCloud,
+	lastSaved,
+	setLastSaved,
+	setShowVideo,
+	toolsAppId,
+	aiSubmit,
+
+	expansionModalOpen,
+	setExpansionModalOpen,
+	
+	setEditorData,
+	setcodedata,
   } = props;
 
   const classes = useStyles();
   const alert = useAlert()
-
-  const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
+  
   const [hideBody, setHideBody] = React.useState(true);
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
 
-	const [codedata, setcodedata] = React.useState("");
-	const [fieldCount, setFieldCount] = React.useState(0);
-	const [hiddenDescription, setHiddenDescription] = React.useState(true);
+  const [fieldCount, setFieldCount] = React.useState(0);
+  const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
 
   useEffect(() => {
@@ -1518,29 +1520,6 @@ const ParsedAction = (props) => {
 
             const clickedFieldId = "rightside_field_" + count;
 
-						const shufflecode = fieldCount !== count ? null : 
-						(
-							<ShuffleCodeEditor
-								isCloud={isCloud}
-								toolsAppId={toolsAppId}
-								fieldCount = {fieldCount}
-								setFieldCount = {setFieldCount}
-								actionlist = {actionlist}
-								changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
-								codedata={codedata}
-								setcodedata={setcodedata}
-								expansionModalOpen={expansionModalOpen}
-								setExpansionModalOpen={setExpansionModalOpen}
-								globalUrl={globalUrl}
-
-								workflowExecutions={workflowExecutions}
-								getParents={getParents}
-								selectedAction={selectedAction}
-								parameterName={data.name}
-								aiSubmit={aiSubmit}
-							/>
-						)
-
             //<TextareaAutosize
             // <CodeMirror
             //fullWidth
@@ -1590,38 +1569,47 @@ const ParsedAction = (props) => {
 				  disableUnderline: true,
                   endAdornment: hideExtraTypes ? null : (
                     <InputAdornment position="end">
-											<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
-												<Tooltip title="Expand window" placement="top">
-													<AspectRatioIcon
-														style={{ cursor: "pointer", margin: multiline ? 5 : 0 ,}}
-														onClick={(event) => {
-															event.preventDefault()
-															setFieldCount(count)
-															setcodedata(data.value)
-															setExpansionModalOpen(true)
-														}}
-													/>
-												</Tooltip>
-												<Tooltip title="Autocomplete text" placement="top">
-													<AddCircleOutlineIcon
-														style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
-														onClick={(event) => {
-															event.preventDefault()
+					<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
+						<Tooltip title="Expand window" placement="top">
+							<AspectRatioIcon
+								style={{ cursor: "pointer", margin: multiline ? 5 : 0 ,}}
+								onClick={(event) => {
+									event.preventDefault()
+									setFieldCount(count)
+									setExpansionModalOpen(true)
 
-															// Get cursor position
-															// This makes it so we can put it in the right location?
-															setMenuPosition({
-																top: event.pageY + 10,
-																left: event.pageX + 10,
-															});
-															setShowDropdownNumber(count);
-															setShowDropdown(true);
-															setShowAutocomplete(true);
-														}}
-													/>
-												</Tooltip>
-											</ButtonGroup>
-                    </InputAdornment>
+									//setcodedata(data.value)
+
+									setEditorData({
+										"name": data.name,
+										"value": data.value,
+										"field_number": count,
+										"actionlist": actionlist,
+										"field_id": clickedFieldId,
+									})
+								}}
+							/>
+						</Tooltip>
+						<Tooltip title="Autocomplete text" placement="top">
+							<AddCircleOutlineIcon
+								style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
+								onClick={(event) => {
+									event.preventDefault()
+
+									// Get cursor position
+									// This makes it so we can put it in the right location?
+									setMenuPosition({
+										top: event.pageY + 10,
+										left: event.pageX + 10,
+									});
+									setShowDropdownNumber(count);
+									setShowDropdown(true);
+									setShowAutocomplete(true);
+								}}
+							/>
+						</Tooltip>
+					</ButtonGroup>
+				</InputAdornment>
                   ),
                 }}
                 multiline={data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline}
@@ -1651,11 +1639,11 @@ const ParsedAction = (props) => {
 									*/
 
 									//console.log("Clicked field: ", clickedFieldId)
-									if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
-										scrollConfig.selected = clickedFieldId
-										setScrollConfig(scrollConfig)
-										//console.log("Change field id!")
-									}
+					if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
+						scrollConfig.selected = clickedFieldId
+						setScrollConfig(scrollConfig)
+						//console.log("Change field id!")
+					}
                 }}
                 id={clickedFieldId}
                 rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
@@ -2567,7 +2555,7 @@ const ParsedAction = (props) => {
 							*/}
                 </div>
                 {datafield}
-								{shufflecode}
+				{/*shufflecode*/}
                 {showDropdown &&
                 showDropdownNumber === count &&
                 data.variant === "STATIC_VALUE" &&
@@ -3541,8 +3529,6 @@ const ParsedAction = (props) => {
               if (option === undefined || option === null || option.name === undefined || option.name === null ) {
                 return null;
               }
-
-			  console.log("OPTION: ", option)
 
               const newname = (
                 option.name.charAt(0).toUpperCase() + option.name.substring(1)
