@@ -75,14 +75,8 @@ import {
   ArrowRight as ArrowRightIcon,
 } from "@mui/icons-material";
 
-//import NestedMenuItem from "material-ui-nested-menu-item";
-//import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon,  Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
-
-//https://next.material-ui.com/components/material-icons/
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
-//import JSONPretty from 'react-json-pretty';
-//import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import Dropzone from "../components/Dropzone.jsx";
 
 import { useNavigate, Link } from "react-router-dom";
@@ -1747,13 +1741,6 @@ const Workflows = (props) => {
           <FileCopyIcon style={{ marginLeft: 0, marginRight: 8 }} />
           {"Duplicate Workflow"}
         </MenuItem>
-        {/*<NestedMenuItem disabled={userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length === 1 || userdata.orgs.length >= 0} style={{backgroundColor: theme.palette.inputColor, color: "white"}} onClick={() => {
-					//copyWorkflow(data)		
-					//setOpen(false)
-				}} key={"duplicate"}>
-					<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
-					{"Copy to Child Org"}
-				</NestedMenuItem>*/}
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={() => {

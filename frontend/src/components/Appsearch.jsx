@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import theme from '../theme';
-//import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';

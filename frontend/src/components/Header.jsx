@@ -1,7 +1,6 @@
 import React, {useState} from 'react';
 import theme from '../theme.jsx';
 import {BrowserView, MobileView} from "react-device-detect";
-//import { useTheme } from '@material-ui/core/styles';
 
 import { useNavigate, Link } from "react-router-dom";
 import ReactGA from 'react-ga4';

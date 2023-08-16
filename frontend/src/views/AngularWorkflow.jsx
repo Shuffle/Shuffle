@@ -369,7 +369,6 @@ const useStyles = makeStyles({
   },
   inputRoot: {
     color: "white",
-    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
     "&:hover .MuiOutlinedInput-notchedOutline": {
       borderColor: "#f86a3e",
     },

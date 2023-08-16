@@ -6,7 +6,6 @@ import theme from '../theme.jsx';
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
-//import NestedMenuItem from "material-ui-nested-menu-item-v5";
 import { NestedMenuItem } from "mui-nested-menu";
 import { useAlert } from "react-alert";
 
@@ -86,7 +85,6 @@ import {
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
 } from '@mui/icons-material';
-//} from "@material-ui/icons";
 
 
 //import CodeMirror from "@uiw/react-codemirror";
@@ -113,7 +111,6 @@ const useStyles = makeStyles({
   },
   inputRoot: {
     color: "white",
-    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
     "&:hover .MuiOutlinedInput-notchedOutline": {
       borderColor: "#f86a3e",
     },

@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-//import { useTheme } from "@material-ui/core/styles";
 import theme from '../theme.jsx';
 import { useAlert } from "react-alert";
 
