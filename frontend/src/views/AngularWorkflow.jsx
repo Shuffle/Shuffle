@@ -8122,7 +8122,6 @@ const AngularWorkflow = (defaultprops) => {
       PaperProps={{
         style: {
           pointerEvents: "auto",
-          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: isMobile ? "90%" : 800,
           border: theme.palette.defaultBorder,
@@ -14653,8 +14652,8 @@ const AngularWorkflow = (defaultprops) => {
   var draggingDisabled = false;
   const codePopoutModal = !codeModalOpen ? null : (
       <Dialog
-				PaperComponent={PaperComponent}
-				aria-labelledby="draggable-dialog-title"
+		PaperComponent={PaperComponent}
+		aria-labelledby="draggable-dialog-title"
         disableEnforceFocus={true}
         style={{ pointerEvents: "none" }}
         hideBackdrop={true}
@@ -14662,7 +14661,6 @@ const AngularWorkflow = (defaultprops) => {
         PaperProps={{
           style: {
             pointerEvents: "auto",
-            backgroundColor: theme.palette.inputColor,
             color: "white",
             minWidth: isMobile ? "90%" : 650,
             padding: 30,
@@ -15093,7 +15091,6 @@ const AngularWorkflow = (defaultprops) => {
         PaperProps={{
           style: {
             pointerEvents: "auto",
-            backgroundColor: theme.palette.surfaceColor,
             color: "white",
             border: theme.palette.defaultBorder,
             maxWidth: isMobile ? bodyWidth - 100 : 800,
@@ -15271,7 +15268,6 @@ const AngularWorkflow = (defaultprops) => {
         PaperProps={{
           style: {
             pointerEvents: "auto",
-            backgroundColor: theme.palette.surfaceColor,
             color: "white",
             border: theme.palette.defaultBorder,
             maxWidth: isMobile ? bodyWidth - 100 : "100%",
@@ -15760,7 +15756,6 @@ const AngularWorkflow = (defaultprops) => {
       PaperProps={{
         style: {
           pointerEvents: "auto",
-          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: 1100,
           minHeight: 700,
