@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
-import theme from '../theme';
+import theme from '../theme.jsx';
 import {Link} from 'react-router-dom';
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
