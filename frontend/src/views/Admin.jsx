@@ -75,7 +75,8 @@ import {
   FmdGood as FmdGoodIcon,
 } from "@mui/icons-material";
 
-import { useAlert } from "react-alert";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 import Dropzone from "../components/Dropzone.jsx";
 import HandlePaymentNew from "../views/HandlePaymentNew.jsx";
 import OrgHeader from "../components/OrgHeader.jsx";
@@ -216,13 +217,13 @@ const Admin = (props) => {
       .then((responseJson) => {
         //console.log("RESPONSE: ", responseJson)
         if (responseJson.success === true) {
-          //alert.info(responseJson.reason)
+          //toast(responseJson.reason)
           setImage2FA(responseJson.reason);
           setSecret2FA(responseJson.extra);
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -256,7 +257,7 @@ const Admin = (props) => {
         //}
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -287,7 +288,7 @@ const Admin = (props) => {
 	]
 	*/
 
-  	const alert = useAlert();
+  	//const alert = useAlert();
 	const handleStatusChange = (event) => {
 		const { value } = event.target;
 		console.log("value: ", value)
@@ -465,7 +466,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 	}
 
   const deleteAuthentication = (data) => {
-    alert.info("Deleting auth " + data.label);
+    toast("Deleting auth " + data.label);
 
     // Just use this one?
     const url = globalUrl + "/api/v1/apps/authentication/" + data.id;
@@ -480,13 +481,13 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error("Failed deleting auth");
+            toast("Failed deleting auth");
           } else {
             // Need to wait because query in ES is too fast
             setTimeout(() => {
               getAppAuthentication();
             }, 1000);
-            //alert.success("Successfully deleted authentication!")
+            //toast("Successfully deleted authentication!")
           }
         })
       )
@@ -518,12 +519,12 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         response.json().then((responseJson) => {
           console.log("RESP: ", responseJson);
           if (responseJson["success"] === false) {
-            alert.error("Failed stopping schedule");
+            toast("Failed stopping schedule");
           } else {
             setTimeout(() => {
               getSchedules();
             }, 1500);
-            //alert.success("Successfully stopped schedule!")
+            //toast("Successfully stopped schedule!")
           }
         })
       )
@@ -534,7 +535,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 
 
 	if (userdata.support === true && selectedOrganization.id !== "" && selectedOrganization.id !== undefined && selectedOrganization.id !== null && selectedOrganization.id !== userdata.active_org.id) {
-		alert.info("Refreshing window to fix org support access")
+		toast("Refreshing window to fix org support access")
 		window.location.reload()
 		return null
 	}
@@ -559,15 +560,15 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) => {
         if (response.status === 200) {
         } else {
-          //alert.info("Wrong code sent.")
-          //alert.info("Wrong code sent. Please try again.")
+          //toast("Wrong code sent.")
+          //toast("Wrong code sent. Please try again.")
         }
 
         return response.json();
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-          alert.info("Successfully enabled 2fa");
+          toast("Successfully enabled 2fa");
 
           setTimeout(() => {
             getUsers();
@@ -579,19 +580,19 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             setSelectedUserModalOpen(false);
           }, 1000);
         } else {
-          alert.info("Wrong code sent. Please try again.");
-          //alert.error("Failed setting 2fa: ", responseJson.reason)
+          toast("Wrong code sent. Please try again.");
+          //toast("Failed setting 2fa: ", responseJson.reason)
         }
       })
       .catch((error) => {
-        alert.info("Wrong code sent. Please try again.");
-        //alert.error("Err: " + error.toString())
+        toast("Wrong code sent. Please try again.");
+        //toast("Err: " + error.toString())
       });
   };
 
   const handleStopOrgSync = (org_id) => {
     if (org_id === undefined || org_id === null) {
-      alert.error("Couldn't get org " + org_id);
+      toast("Couldn't get org " + org_id);
       return;
     }
 
@@ -612,10 +613,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) => {
         if (response.status === 200) {
           console.log("Cloud sync success?");
-          alert.success("Successfully stopped cloud sync");
+          toast("Successfully stopped cloud sync");
         } else {
           console.log("Cloud sync fail?");
-          alert.error(
+          toast(
             "Failed stopping sync. Try again, and contact support if this persists."
           );
         }
@@ -628,7 +629,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         }, 1000);
       })
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -672,16 +673,16 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           responseJson.reason !== undefined
         ) {
           setOrgSyncResponse(responseJson.reason);
-          alert.error("Failed to handle sync: " + responseJson.reason);
+          toast("Failed to handle sync: " + responseJson.reason);
         } else if (!responseJson.success) {
-          alert.error("Failed to handle sync.");
+          toast("Failed to handle sync.");
         } else {
           getOrgs();
           if (disableSync) {
-            alert.success("Successfully disabled sync!");
+            toast("Successfully disabled sync!");
             setOrgSyncResponse("Successfully disabled syncronization");
           } else {
-            alert.success("Cloud Syncronization successfully set up!");
+            toast("Cloud Syncronization successfully set up!");
             setOrgSyncResponse(
               "Successfully started syncronization. Cloud features you now have access to can be seen below."
             );
@@ -696,7 +697,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .catch((error) => {
         setLoading(false);
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -718,16 +719,16 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error("Failed changing authentication");
+            toast("Failed changing authentication");
           } else {
-            //alert.success("Successfully password!")
+            //toast("Successfully password!")
             setSelectedUserModalOpen(false);
             getAppAuthentication();
           }
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -766,16 +767,16 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error("Failed updating org: ", responseJson.reason);
+            toast("Failed updating org: ", responseJson.reason);
           } else {
 						if (lead_info === undefined || lead_info === null || lead_info === []) {
-            	alert.success("Successfully edited org!");
+            	toast("Successfully edited org!");
 						}
           }
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -800,9 +801,9 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error("Failed overwriting appauth in workflows");
+            toast("Failed overwriting appauth in workflows");
           } else {
-            alert.success("Successfully updated auth everywhere!");
+            toast("Successfully updated auth everywhere!");
             setSelectedUserModalOpen(false);
             setTimeout(() => {
               getAppAuthentication();
@@ -811,7 +812,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -835,12 +836,12 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             if (responseJson.reason !== undefined) {
-              alert.error(responseJson.reason);
+              toast(responseJson.reason);
             } else {
-              alert.error("Failed creating suborg. Please try again");
+              toast("Failed creating suborg. Please try again");
             }
           } else {
-            alert.success(
+            toast(
               "Successfully created suborg. Reloading in 3 seconds!"
             );
             setSelectedUserModalOpen(false);
@@ -855,7 +856,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -878,18 +879,18 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             if (responseJson.reason !== undefined) {
-              alert.error(responseJson.reason);
+              toast(responseJson.reason);
             } else {
-              alert.error("Failed setting new password");
+              toast("Failed setting new password");
             }
           } else {
-            alert.success("Successfully updated password!");
+            toast("Successfully updated password!");
             setSelectedUserModalOpen(false);
           }
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
@@ -914,9 +915,9 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .then((responseJson) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
-          alert.error("Failed to deactivate user: " + responseJson.reason);
+          toast("Failed to deactivate user: " + responseJson.reason);
         } else {
-          alert.success("Changed activation for user " + data.id);
+          toast("Changed activation for user " + data.id);
         }
       })
 
@@ -939,7 +940,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 		}
 
     if (orgId.length === 0) {
-      alert.error("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
+      toast("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
       return;
     }
 
@@ -960,7 +961,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .then((responseJson) => {
         if (responseJson["success"] === false) {
-          alert.error("Failed getting your org. If this persists, please contact support.");
+          toast("Failed getting your org. If this persists, please contact support.");
         } else {
           if (
             responseJson.sync_features === undefined ||
@@ -1032,7 +1033,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .catch((error) => {
         console.log("Error getting org: ", error);
-        alert.error("Error getting current organization");
+        toast("Error getting current organization");
       });
   };
 
@@ -1061,7 +1062,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             setLoginInfo("Error: " + responseJson.reason);
-    				alert.error("Failed to send email (2). Please try again and contact support if this persists.")
+    				toast("Failed to send email (2). Please try again and contact support if this persists.")
           } else {
             setLoginInfo("");
             setModalOpen(false);
@@ -1069,13 +1070,13 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
               getUsers();
             }, 1000);
     				
-						alert.info("Invite sent! They will show up in the list when they have accepted the invite.")
+						toast("Invite sent! They will show up in the list when they have accepted the invite.")
           }
         })
       )
       .catch((error) => {
         console.log("Error in userdata: ", error);
-    		alert.error("Failed to send email. Please try again and contact support if this persists.")
+    		toast("Failed to send email. Please try again and contact support if this persists.")
       });
   };
 
@@ -1117,12 +1118,12 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
   // Horrible frontend fix for environments
   const setDefaultEnvironment = (environment) => {
     // FIXME - add more checks to this
-    alert.info("Setting default env to " + environment.name);
+    toast("Setting default env to " + environment.name);
     var newEnv = [];
     for (var key in environments) {
       if (environments[key].id == environment.id) {
         if (environments[key].archived) {
-          alert.error("Can't set archived to default");
+          toast("Can't set archived to default");
           return;
         }
 
@@ -1150,7 +1151,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error(responseJson.reason);
+            toast(responseJson.reason);
             setTimeout(() => {
               getEnvironments();
             }, 1500);
@@ -1181,7 +1182,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error(responseJson.reason);
+            toast(responseJson.reason);
             getEnvironments();
           } else {
             setLoginInfo("");
@@ -1196,7 +1197,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
   };
 
   const rerunCloudWorkflows = (environment) => {
-		alert.info("Starting execution reruns. This can run in the background.") 
+		toast("Starting execution reruns. This can run in the background.") 
     fetch(
       `${globalUrl}/api/v1/environments/${environment.id}/rerun`,
       {
@@ -1209,8 +1210,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           console.log("Status not 200 for apps :O!");
           return;
         } else {
-          alert.error(response.reason);
-          //alert.info("Aborted all dangling workflows");
+          toast(response.reason);
+          //toast("Aborted all dangling workflows");
         }
 
         return response.json();
@@ -1221,7 +1222,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         //setFiles(responseJson)
       })
       .catch((error) => {
-        //alert.error(error.toString())
+        //toast(error.toString())
       });
   };
 
@@ -1238,10 +1239,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for apps :O!");
-          alert.error("Failed aborting dangling workflows");
+          toast("Failed aborting dangling workflows");
           return;
         } else {
-          alert.info("Aborted all dangling workflows");
+          toast("Aborted all dangling workflows");
         }
 
         return response.json();
@@ -1252,7 +1253,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         //setFiles(responseJson)
       })
       .catch((error) => {
-        //alert.error(error.toString())
+        //toast(error.toString())
       });
   };
 
@@ -1260,17 +1261,17 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     // FIXME - add some check here ROFL
     //const name = environment.name
 
-    //alert.info("Modifying environment " + name)
+    //toast("Modifying environment " + name)
     //var newEnv = []
     //for (var key in environments) {
     //	if (environments[key].Name == name) {
     //		if (environments[key].default) {
-    //			alert.error("Can't modify the default environment")
+    //			toast("Can't modify the default environment")
     //			return
     //		}
 
     //		if (environments[key].type === "cloud" && !environments[key].archived) {
-    //			alert.error("Can't modify cloud environments")
+    //			toast("Can't modify cloud environments")
     //			return
     //		}
 
@@ -1281,17 +1282,17 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     //}
     const id = environment.id;
 
-    //alert.info("Modifying environment " + environment.Name)
+    //toast("Modifying environment " + environment.Name)
     var newEnv = [];
     for (var key in environments) {
       if (environments[key].id == id) {
         if (environments[key].default) {
-          alert.error("Can't modify the default environment");
+          toast("Can't modify the default environment");
           return;
         }
 
         if (environments[key].type === "cloud" && !environments[key].archived) {
-          alert.error("Can't modify cloud environments");
+          toast("Can't modify cloud environments");
           return;
         }
 
@@ -1314,7 +1315,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error(responseJson.reason);
+            toast(responseJson.reason);
             getEnvironments();
           } else {
             setLoginInfo("");
@@ -1387,7 +1388,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         setSchedules(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1414,11 +1415,11 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           //console.log(responseJson)
           setAuthentication(responseJson.data);
         } else {
-          alert.error("Failed getting authentications");
+          toast("Failed getting authentications");
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1443,7 +1444,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         setEnvironments(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1471,7 +1472,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         setOrganizations(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1497,7 +1498,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         setUsers(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1672,10 +1673,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       })
       .then((responseJson) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
-          alert.error("Failed setting user: " + responseJson.reason);
+          toast("Failed setting user: " + responseJson.reason);
         } else {
-          //alert.success("Set the user field " + field + " to " + value);
-          alert.success("Successfully updated user field " + field)
+          //toast("Set the user field " + field + " to " + value);
+          toast("Successfully updated user field " + field)
 
           if (field !== "suborgs") {
             setSelectedUserModalOpen(false);
@@ -1712,9 +1713,9 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       .then((responseJson) => {
         console.log("RESP: ", responseJson);
         if (!responseJson.success && responseJson.reason !== undefined) {
-          alert.error("Failed getting new: " + responseJson.reason);
+          toast("Failed getting new: " + responseJson.reason);
         } else {
-          alert.success("Got new API key");
+          toast("Got new API key");
         }
       })
       .catch((error) => {
@@ -1808,9 +1809,9 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             }
 
             if (error) {
-              alert.error("All fields must have a new value");
+              toast("All fields must have a new value");
             } else {
-              alert.success("Saving new version of this authentication");
+              toast("Saving new version of this authentication");
               selectedAuthentication.fields = authenticationFields;
               saveAuthentication(selectedAuthentication);
               setSelectedAuthentication({});
@@ -1827,7 +1828,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 
   const handleOrgEditChange = (event) => {
     if (userdata.id === selectedUser.id) {
-      alert.info("Can't remove orgs from yourself");
+      toast("Can't remove orgs from yourself");
       return;
     }
 
@@ -2424,7 +2425,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                   if (copyText !== null && copyText !== undefined) {
                     const clipboard = navigator.clipboard;
                     if (clipboard === undefined) {
-                      alert.error("Can only copy over HTTPS (port 3443)");
+                      toast("Can only copy over HTTPS (port 3443)");
                       return;
                     }
 
@@ -2438,7 +2439,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                     /* Copy the text inside the text field */
                     document.execCommand("copy");
 
-                    alert.info(org_id + " copied to clipboard");
+                    toast(org_id + " copied to clipboard");
                   }
                 }}
               >
@@ -3115,7 +3116,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                                 ) {
                                   const clipboard = navigator.clipboard;
                                   if (clipboard === undefined) {
-                                    alert.error(
+                                    toast(
                                       "Can only copy over HTTPS (port 3443)"
                                     );
                                     return;
@@ -3131,7 +3132,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                                   /* Copy the text inside the text field */
                                   document.execCommand("copy");
 
-                                  alert.info("Apikey copied to clipboard");
+                                  toast("Apikey copied to clipboard");
                                 }
                               }}
                             >
@@ -3786,14 +3787,14 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 					}
         } else {
         	if (responseJson.success === false && responseJson.reason !== undefined) {
-          	alert.error("Failed change recommendation: ", responseJson.reason)
+          	toast("Failed change recommendation: ", responseJson.reason)
         	} else {
-          	alert.error("Failed change recommendation");
+          	toast("Failed change recommendation");
 					}
         }
       })
       .catch((error) => {
-        alert.info("Failed dismissing alert. Please contact support@shuffler.io if this persists.");
+        toast("Failed dismissing alert. Please contact support@shuffler.io if this persists.");
       });
 	}
 
@@ -3953,7 +3954,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 															disabled={environment.Type === "cloud"}
 															onClick={() => {
 																if (environment.Type === "cloud") {
-																	alert.info("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
+																	toast("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
 																	return
 																}
 
@@ -3964,7 +3965,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 																if (copyText !== null && copyText !== undefined) {
 																	const clipboard = navigator.clipboard;
 																	if (clipboard === undefined) {
-																		alert.error("Can only copy over HTTPS (port 3443)");
+																		toast("Can only copy over HTTPS (port 3443)");
 																		return;
 																	}
 
@@ -3978,7 +3979,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 																	/* Copy the text inside the text field */
 																	document.execCommand("copy");
 
-																	alert.info("Orborus command copied to clipboard");
+																	toast("Orborus command copied to clipboard");
 																}
 															}}
 														>

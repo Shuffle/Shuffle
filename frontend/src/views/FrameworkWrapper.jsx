@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from "react-dom"
 
 import AppFramework from "../components/AppFramework.jsx";
-import { useAlert } from "react-alert";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 import { Link, useParams } from "react-router-dom";
 import theme from '../theme.jsx';
 
@@ -13,7 +14,7 @@ import {
 const Framework = (props) => {
   const {globalUrl, isLoaded, isLoggedIn, showOptions, selectedOption, rolling, } = props;
 
-  const alert = useAlert()
+  //const alert = useAlert()
   const [frameworkLoaded, setFrameworkLoaded] = useState(false)
   const [frameworkData, setFrameworkData] = useState()
 
@@ -36,9 +37,9 @@ const Framework = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Failed loading: " + responseJson.reason)
+						toast("Failed loading: " + responseJson.reason)
 					} else {
-						alert.error("Failed to load framework for your org.")
+						toast("Failed to load framework for your org.")
 					}
 
 					setFrameworkLoaded(true)
@@ -51,7 +52,7 @@ const Framework = (props) => {
 			})
       .catch((error) => {
 				setFrameworkLoaded(true)
-        alert.error(error.toString());
+        toast(error.toString());
       })
 		}
 

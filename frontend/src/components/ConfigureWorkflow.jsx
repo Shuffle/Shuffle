@@ -112,9 +112,9 @@ const ConfigureWorkflow = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          //alert.success("Successfully GOT app "+appId)
+          //toast("Successfully GOT app "+appId)
         } else {
-          alert.error("Failed getting app");
+          toast("Failed getting app");
         }
 
         return response.json();
@@ -128,7 +128,7 @@ const ConfigureWorkflow = (props) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -566,7 +566,7 @@ const ConfigureWorkflow = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           //window.location.pathname = "/search"
-          //alert.error("Failed to find this app. Is it public?")
+          //toast("Failed to find this app. Is it public?")
         }
 
         return response.json();
@@ -574,16 +574,16 @@ const ConfigureWorkflow = (props) => {
       .then((responseJson) => {
         if (responseJson.success === false) {
         	if (responseJson.reason !== undefined) {
-          	alert.error("Failed to activate the app: "+responseJson.reason);
+          	toast("Failed to activate the app: "+responseJson.reason);
 					} else {
-          	alert.error("Failed to activate the app");
+          	toast("Failed to activate the app");
 					}
         } else {
-          alert.success("App activated for your organization!");
+          toast("App activated for your organization!");
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -693,7 +693,7 @@ const ConfigureWorkflow = (props) => {
 
 							if (workflow.actions !== null) {
 								//console.log(workflow.actions)
-								alert.info("Setting action to version "+action.update_version)
+								toast("Setting action to version "+action.update_version)
 								for (let [key,keyval] in Object.entries(workflow.actions)) {
 									if (workflow.actions[key].app_name === action.app_name && workflow.actions[key].app_version === action.app_version) {
 										workflow.actions[key].app_version = action.update_version
@@ -851,7 +851,7 @@ const ConfigureWorkflow = (props) => {
 									console.log("NAVIGATOR: ", navigator);
 									const clipboard = navigator.clipboard;
 									if (clipboard === undefined) {
-										alert.error("Can only copy over HTTPS (port 3443)");
+										toast("Can only copy over HTTPS (port 3443)");
 										return;
 									}
 
@@ -864,7 +864,7 @@ const ConfigureWorkflow = (props) => {
 
 									/* Copy the text inside the text field */
 									document.execCommand("copy");
-									alert.success("Copied Webhook URL");
+									toast("Copied Webhook URL");
 								}
 							}}>
 								<Typography variant="body2" color="textSecondary">{webhook.description}</Typography>

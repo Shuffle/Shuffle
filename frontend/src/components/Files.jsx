@@ -29,7 +29,7 @@ import {
 	Add as AddIcon,
 } from "@mui/icons-material";
 
-import { useAlert } from "react-alert";
+//import { useAlert 
 import Dropzone from "../components/Dropzone.jsx";
 import CodeEditor from "../components/ShuffleCodeEditor.jsx";
 import theme from "../theme.jsx";
@@ -45,7 +45,7 @@ const Files = (props) => {
   const [openEditor, setOpenEditor] = React.useState(false);
   const [renderTextBox, setRenderTextBox] = React.useState(false);
 
-  const alert = useAlert();
+  //const alert = useAlert();
   const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log"]
   var upload = "";
 
@@ -113,7 +113,7 @@ const Files = (props) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -139,12 +139,12 @@ const Files = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.success) {
-          alert.info("Successfully deleted file " + file.name);
+          toast("Successfully deleted file " + file.name);
         } else if (
           responseJson.reason !== undefined &&
           responseJson.reason !== null
         ) {
-          alert.error("Failed to delete file: " + responseJson.reason);
+          toast("Failed to delete file: " + responseJson.reason);
         }
         setTimeout(() => {
           getFiles();
@@ -153,7 +153,7 @@ const Files = (props) => {
         console.log(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -178,7 +178,7 @@ const Files = (props) => {
           // console.log("respdata type ->", typeof(respdata));
         
         if (respdata.length === 0) {
-          alert.error("Failed getting file. Is it deleted?");
+          toast("Failed getting file. Is it deleted?");
           return;
         }
         return respdata
@@ -189,7 +189,7 @@ const Files = (props) => {
       //console.log("filecontent state ",fileContent);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -210,7 +210,7 @@ const Files = (props) => {
 		})
       .then((respdata) => {
         if (respdata.length === 0) {
-          alert.error("Failed getting file. Is it deleted?");
+          toast("Failed getting file. Is it deleted?");
           return;
         }
 
@@ -249,7 +249,7 @@ const Files = (props) => {
         //setSchedules(responseJson)
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -291,11 +291,11 @@ const Files = (props) => {
         if (responseJson.success === true) {
           handleFileUpload(responseJson.id, file);
         } else {
-          alert.error("Failed to upload file ", filename);
+          toast("Failed to upload file ", filename);
         }
       })
       .catch((error) => {
-        alert.error("Failed to upload file ", filename);
+        toast("Failed to upload file ", filename);
         console.log(error.toString());
       });
   };
@@ -312,7 +312,7 @@ const Files = (props) => {
       .then((response) => {
         if (response.status !== 200 && response.status !== 201) {
           console.log("Status not 200 for apps :O!");
-          alert.error("File was created, but failed to upload.");
+          toast("File was created, but failed to upload.");
           return;
         }
 
@@ -323,7 +323,7 @@ const Files = (props) => {
         //setFiles(responseJson)
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -364,7 +364,7 @@ const Files = (props) => {
     const files = isDropzone ? e.dataTransfer.files : e.target.files;
 
     //const reader = new FileReader();
-    //alert.info("Starting fileupload")
+    //toast("Starting fileupload")
     uploadFiles(files);
   };
 
@@ -742,7 +742,7 @@ const Files = (props) => {
 														) {
 															const clipboard = navigator.clipboard;
 															if (clipboard === undefined) {
-																alert.error(
+																toast(
 																	"Can only copy over HTTPS (port 3443)"
 																);
 																return;
@@ -758,7 +758,7 @@ const Files = (props) => {
 															/* Copy the text inside the text field */
 															document.execCommand("copy");
 
-															alert.info(file.id + " copied to clipboard");
+															toast(file.id + " copied to clipboard");
 														}
 													}}
 												>

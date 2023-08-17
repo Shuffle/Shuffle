@@ -17,7 +17,7 @@ import {
 	AutoFixHigh as AutoFixHighIcon, 
 	ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 const Priority = (props) => {
   const { globalUrl, userdata, serverside, priority, checkLogin, setAdminTab, setCurTab, } = props;
@@ -56,14 +56,14 @@ const Priority = (props) => {
 					}
         } else {
         	if (responseJson.success === false && responseJson.reason !== undefined) {
-          	alert.error("Failed change recommendation: ", responseJson.reason)
+          	toast("Failed change recommendation: ", responseJson.reason)
         	} else {
-          	alert.error("Failed change recommendation");
+          	toast("Failed change recommendation");
 					}
         }
       })
       .catch((error) => {
-        alert.info("Failed dismissing alert. Please contact support@shuffler.io if this persists.");
+        toast("Failed dismissing alert. Please contact support@shuffler.io if this persists.");
       });
 	}
 

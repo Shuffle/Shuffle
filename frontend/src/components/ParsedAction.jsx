@@ -7,7 +7,7 @@ import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { NestedMenuItem } from "mui-nested-menu";
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 import {
 	ButtonGroup,
@@ -172,7 +172,7 @@ const ParsedAction = (props) => {
   } = props;
 
   const classes = useStyles();
-  const alert = useAlert()
+  //const alert = useAlert()
   
   const [hideBody, setHideBody] = React.useState(true);
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
@@ -227,9 +227,9 @@ const ParsedAction = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          //alert.success("Successfully GOT app "+appId)
+          //toast("Successfully GOT app "+appId)
         } else {
-          alert.error("Failed getting app");
+          toast("Failed getting app");
         }
 
         return response.json();
@@ -290,7 +290,7 @@ const ParsedAction = (props) => {
               //foundparams.push(param.name)
             }
           } else {
-            alert.error("Couldn't find action " + selectedAction.name);
+            toast("Couldn't find action " + selectedAction.name);
           }
 
           selectedAction.errors = [];
@@ -306,7 +306,7 @@ const ParsedAction = (props) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 

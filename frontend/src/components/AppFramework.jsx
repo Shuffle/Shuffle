@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
+import theme from '../theme.jsx';
 import CytoscapeComponent from 'react-cytoscapejs';
 import frameworkStyle from '../frameworkStyle.jsx';
 import { v4 as uuidv4 } from "uuid";
-import theme from '../theme.jsx';
-import { useAlert } from "react-alert";
 
 import AppSearch from '../components/Appsearch.jsx';
 import PaperComponent from "../components/PaperComponent.jsx"
@@ -34,9 +33,9 @@ import {
 
 import * as edgehandles from "cytoscape-edgehandles";
 import * as cytoscape from "cytoscape";
+import { toast } from 'react-toastify';
 
 cytoscape.use(edgehandles);
-
 
 const svgSize = "40px" 
 const parsedDatatypeImages = {
@@ -521,7 +520,7 @@ const AppFramework = (props) => {
 
 	const scale = size === undefined ? 1 : size > 5 ? 3 : size
 
-  const alert = useAlert()
+  //const alert = useAlert()
 
 
 	const handleLoadNextSuggestion = (frameworkData) => {
@@ -784,16 +783,16 @@ const AppFramework = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Failed updating: " + responseJson.reason)
+						toast("Failed updating: " + responseJson.reason)
 					} else {
-						alert.error("Failed to update framework for your org.")
+						toast("Failed to update framework for your org.")
 					}
 				} else {
-					alert.info("Updated usecase.")
+					toast("Updated usecase.")
 				}
 			})
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
 				//setFrameworkLoaded(true)
       })
 		}
@@ -816,13 +815,13 @@ const AppFramework = (props) => {
 			})
 			.then((responseJson) => {
 				if (responseJson.success === false) {
-					alert.error("Failed to activate the app")
+					toast("Failed to activate the app")
 				} else {
-					//alert.success("App activated for your organization! Refresh the page to use the app.")
+					//toast("App activated for your organization! Refresh the page to use the app.")
 				}
 			})
 			.catch(error => {
-				//alert.error(error.toString())
+				//toast(error.toString())
 				console.log("Activate app error: ", error.toString())
 			});
 		}
@@ -852,9 +851,9 @@ const AppFramework = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Failed updating: " + responseJson.reason)
+						toast("Failed updating: " + responseJson.reason)
 					} else {
-						alert.error("Failed to update framework for your org.")
+						toast("Failed to update framework for your org.")
 
 					}
 				}
@@ -863,7 +862,7 @@ const AppFramework = (props) => {
 				//setFrameworkData(responseJson)
 			})
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
 				//setFrameworkLoaded(true)
       })
 		}

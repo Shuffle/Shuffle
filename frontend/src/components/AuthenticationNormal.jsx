@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import theme from '../theme.jsx';
 import { v4 as uuidv4 } from "uuid";
-
+import { toast } from 'react-toastify';
 
 import {
   Button,
@@ -54,7 +54,7 @@ const AuthenticationData = (props) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          alert.error("Failed to set app auth: " + responseJson.reason);
+          toast("Failed to set app auth: " + responseJson.reason);
         } else {
 					if (getAppAuthentication !== undefined) {
           	getAppAuthentication()
@@ -65,11 +65,11 @@ const AuthenticationData = (props) => {
 					}
 
           // Needs a refresh with the new authentication..
-          //alert.success("Successfully saved new app auth")
+          //toast("Successfully saved new app auth")
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("New auth error: ", error.toString());
       });
   }
@@ -146,7 +146,7 @@ const AuthenticationData = (props) => {
 							selectedApp.authentication.parameters[key].name
 						] = "false";
 					} else {
-						alert.info(
+						toast(
 							"Field " +
 								selectedApp.authentication.parameters[key].name +
 								" can't be empty"

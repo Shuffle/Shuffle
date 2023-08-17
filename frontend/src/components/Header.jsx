@@ -42,7 +42,7 @@ import {
 	Lightbulb as LightbulbIcon,
 } from "@mui/icons-material";
 
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 import SearchField from '../components/Searchfield.jsx'
 const hoverColor = "#f85a3e"
@@ -51,7 +51,7 @@ const hoverOutColor = "#e8eaf6"
 const Header = props => {
 const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, homePage, userdata, serverside, } = props;
 	//const theme = useTheme();
-	const alert = useAlert()
+	//const alert = useAlert()
 
 
 	const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
@@ -101,7 +101,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				setNotifications([])
 				handleClose()
 			} else {
-				alert.error("Failed dismissing notifications. Please try again later.")
+				toast("Failed dismissing notifications. Please try again later.")
 			}
 		})
 		.catch(error => {
@@ -131,7 +131,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				console.log("NEW NOTIFICATIONS: ", newNotifications)
 				setNotifications(newNotifications)
 			} else {
-				alert.error("Failed dismissing notification. Please try again later.")
+				toast("Failed dismissing notification. Please try again later.")
 			}
 		})
 		.catch(error => {
@@ -406,9 +406,9 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				setTimeout(() => {
 					window.location.reload()
 				}, 2000)
-				alert.success("Successfully changed active organization - refreshing!")
+				toast("Successfully changed active organization - refreshing!")
 			} else {
-				alert.error("Failed changing org: ", responseJson.reason)
+				toast("Failed changing org: ", responseJson.reason)
 			}
 		})
 		.catch(error => {

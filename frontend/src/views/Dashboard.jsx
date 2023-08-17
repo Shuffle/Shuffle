@@ -9,7 +9,8 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 
 // react plugin used to create charts
 //import { Line, Bar } from "react-chartjs-2";
-import { useAlert } from "react-alert";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 
 import {
 	Autocomplete,
@@ -155,7 +156,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 			}, 100);
 })
 		.catch((error) => {
-			//alert.error(error.toString());
+			//toast(error.toString());
 			setInputUsecase({})
 			setExpandedIndex(index)
 			setExpandedItem(subindex)
@@ -212,16 +213,16 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						//alert.error("Failed updating: " + responseJson.reason)
+						//toast("Failed updating: " + responseJson.reason)
 					} else {
-						//alert.error("Failed to update framework for your org.")
+						//toast("Failed to update framework for your org.")
 					}
 				} else {
-					//alert.info("Updated usecase.")
+					//toast("Updated usecase.")
 				}
 			})
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
 				//setFrameworkLoaded(true)
       })
 		}
@@ -249,9 +250,9 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 		.then((responseJson) => {
 			if (responseJson.success === false) {
 				if (responseJson.reason !== undefined) {
-					alert.error("Error updating workflow: ", responseJson.reason)
+					toast("Error updating workflow: ", responseJson.reason)
 				} else {
-					alert.error("Error updating workflow.")
+					toast("Error updating workflow.")
 				}
 
 				return
@@ -260,7 +261,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 			return responseJson;
 		})
 		.catch((error) => {
-			alert.error("Problem setting workflow: ", error.toString());
+			toast("Problem setting workflow: ", error.toString());
 		});
   };
 
@@ -1025,7 +1026,7 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 // What data do we fill in here? Idk
 const Dashboard = (props) => {
   const { globalUrl, isLoggedIn } = props;
-  const alert = useAlert();
+  //const alert = useAlert();
   const [bigChartData, setBgChartData] = useState("data1");
   const [dayAmount, setDayAmount] = useState(7);
   const [firstRequest, setFirstRequest] = useState(true);
@@ -1117,16 +1118,16 @@ const Dashboard = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						//alert.error("Failed loading: " + responseJson.reason)
+						//toast("Failed loading: " + responseJson.reason)
 					} else {
-						//alert.error("Failed to load framework for your org.")
+						//toast("Failed to load framework for your org.")
 					}
 				} else {
 					setFrameworkData(responseJson)
 				}
 			})
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       })
 		}
 
@@ -1157,7 +1158,7 @@ const Dashboard = (props) => {
 		})
 		.catch((error) => {
 			fetchUsecases()
-			//alert.error(error.toString());
+			//toast(error.toString());
 		});
 	}
 
@@ -1257,7 +1258,7 @@ const Dashboard = (props) => {
 				}
       })
       .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
+        //toast("ERROR: " + error.toString());
         console.log("ERROR: " + error.toString());
       });
   };
@@ -1291,7 +1292,7 @@ const Dashboard = (props) => {
         setChangeme(stats_id);
       })
       .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
+        //toast("ERROR: " + error.toString());
         console.log("ERROR: " + error.toString());
       });
   };

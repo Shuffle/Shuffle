@@ -17,7 +17,7 @@ import {
 	Save as SaveIcon,
 } from "@mui/icons-material";
 
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -39,7 +39,7 @@ const OrgHeader = (props) => {
   	handleEditOrg, 
   } = props;
 
-  const alert = useAlert();
+  //const alert = useAlert();
   const classes = useStyles();
 
   var upload = "";
@@ -210,13 +210,13 @@ const OrgHeader = (props) => {
               const invalid = ["#", ":", "."];
               for (var key in invalid) {
                 if (e.target.value.includes(invalid[key])) {
-                  alert.error("Can't use " + invalid[key] + " in name");
+                  toast("Can't use " + invalid[key] + " in name");
                   return;
                 }
               }
 
               if (e.target.value.length > 100) {
-                alert.error("Choose a shorter name.");
+                toast("Choose a shorter name.");
                 return;
               }
 

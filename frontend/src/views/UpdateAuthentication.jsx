@@ -7,7 +7,8 @@ import {
 	Button,
 } from "@mui/material";
 import theme from '../theme.jsx';
-import { useAlert } from "react-alert";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import AuthenticationWindow from "../components/AuthenticationWindow.jsx";
@@ -22,7 +23,7 @@ const SetAuthentication = (props) => {
   const [appAuthentication, setAppAuthentication] = React.useState([]);
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-  const alert = useAlert();
+  //const alert = useAlert();
 
   const parseIncomingOpenapiData = (data) => {
     if (data.app === undefined || data.app === null) {
@@ -84,7 +85,7 @@ const SetAuthentication = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.success === false || responseJson.success === undefined) {
-          alert.error("Failed to get the app. Does it exist?")
+          toast("Failed to get the app. Does it exist?")
           setIsAppLoaded(true)
           return;
         }
@@ -92,7 +93,7 @@ const SetAuthentication = (props) => {
 				parseIncomingOpenapiData(responseJson);
       })
       .catch((error) => {
-        alert.error("Error in app fetch: " + error.toString());
+        toast("Error in app fetch: " + error.toString());
       });
   };
 

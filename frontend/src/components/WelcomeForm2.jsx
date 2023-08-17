@@ -38,7 +38,7 @@ import {
 		Chip,
 		ButtonGroup,
 } from "@mui/material";
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 import { useNavigate, Link } from "react-router-dom";
 import WorkflowSearch from '../components/Workflowsearch.jsx';
@@ -134,7 +134,7 @@ const WelcomeForm = (props) => {
 
 		const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   
-  	const alert = useAlert();
+  	//const alert = useAlert();
 		let navigate = useNavigate();
 
     const onNodeSelect = (label) => {
@@ -262,16 +262,16 @@ const WelcomeForm = (props) => {
 				response.json().then((responseJson) => {
 					if (responseJson["success"] === false) {
 						console.log("Update user success")
-						//alert.error("Failed updating org: ", responseJson.reason);
+						//toast("Failed updating org: ", responseJson.reason);
 					} else {
 						console.log("Update success!")
-						//alert.success("Successfully edited org!");
+						//toast("Successfully edited org!");
 					}
 				})
 			)
 			.catch((error) => {
 				console.log("Update err: ", error.toString())
-				//alert.error("Err: " + error.toString());
+				//toast("Err: " + error.toString());
 			});
 		}
 
@@ -308,15 +308,15 @@ const WelcomeForm = (props) => {
 				response.json().then((responseJson) => {
 					if (responseJson["success"] === false) {
 						console.log("Update of org failed")
-						//alert.error("Failed updating org: ", responseJson.reason);
+						//toast("Failed updating org: ", responseJson.reason);
 					} else {
-						//alert.success("Successfully edited org!");
+						//toast("Successfully edited org!");
 					}
 				})
 			)
 			.catch((error) => {
 				console.log("Update err: ", error.toString())
-				//alert.error("Err: " + error.toString());
+				//toast("Err: " + error.toString());
 			});
 		}
 

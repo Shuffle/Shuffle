@@ -69,7 +69,7 @@ const AppGrid = props => {
 		.then(response => {
 			if (response.success === true) {
 				setFormMessage(response.reason)
-				//alert.info("Thanks for submitting!")
+				//toast("Thanks for submitting!")
 			} else {
 				setFormMessage(errorMessage)
 			}
@@ -158,7 +158,7 @@ const AppGrid = props => {
 			}
       })
       .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
+        //toast("ERROR: " + error.toString());
         console.log("ERROR: " + error.toString());
       });
   };

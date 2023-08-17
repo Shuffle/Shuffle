@@ -127,7 +127,7 @@ const EditWorkflow = (props) => {
 			}
 		})
 		.catch((error) => {
-			//alert.error(error.toString());
+			//toast(error.toString());
 			console.log("Get workflow error: ", error.toString());
 		})
 	}

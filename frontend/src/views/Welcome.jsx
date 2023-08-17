@@ -195,9 +195,9 @@ const Welcome = (props) => {
 					setFrameworkData({})
 
 					if (responseJson.reason !== undefined) {
-						//alert.error("Failed loading: " + responseJson.reason)
+						//toast("Failed loading: " + responseJson.reason)
 					} else {
-						//alert.error("Failed to load framework for your org.")
+						//toast("Failed to load framework for your org.")
 					}
 				} else {
 					setFrameworkData(responseJson)

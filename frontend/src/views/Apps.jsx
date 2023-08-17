@@ -59,7 +59,8 @@ import algoliasearch from 'algoliasearch/lite';
 
 import YAML from "yaml";
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { useAlert } from "react-alert";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 import Dropzone from "../components/Dropzone.jsx";
 
 const surfaceColor = "#27292D";
@@ -272,7 +273,7 @@ const Apps = (props) => {
 
   //const [workflows, setWorkflows] = React.useState([]);
   const baseRepository = "https://github.com/frikky/shuffle-apps";
-  const alert = useAlert();
+  //const alert = useAlert();
 	let navigate = useNavigate();
 
   const [selectedApp, setSelectedApp] = React.useState({});
@@ -454,7 +455,7 @@ const Apps = (props) => {
 				//}, 5000)
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
         setIsLoading(false);
       });
   };
@@ -462,7 +463,7 @@ const Apps = (props) => {
   const downloadApp = (inputdata) => {
     const id = inputdata.id;
 
-    alert.info("Downloading..");
+    toast("Downloading..");
     fetch(globalUrl + "/api/v1/apps/" + id + "/config", {
       method: "GET",
       headers: {
@@ -480,7 +481,7 @@ const Apps = (props) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          alert.error("Failed to download file");
+          toast("Failed to download file");
         } else {
           console.log(responseJson);
           const basedata = atob(responseJson.openapi);
@@ -538,7 +539,7 @@ const Apps = (props) => {
       })
       .catch((error) => {
         console.log(error);
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1152,7 +1153,7 @@ const Apps = (props) => {
               <Select
                 value={sharingConfiguration}
                 onChange={(event) => {
-                  alert.info("Changing sharing to " + event.target.value);
+                  toast("Changing sharing to " + event.target.value);
 
                   setSharingConfiguration(event.target.value);
 
@@ -1479,7 +1480,7 @@ const Apps = (props) => {
     try {
       reader.readAsText(files[0]);
     } catch (error) {
-      alert.error("Failed to read file");
+      toast("Failed to read file");
     }
   };
 
@@ -1578,9 +1579,9 @@ const Apps = (props) => {
 				})
 				.then((responseJson) => {
 					if (responseJson.success === false) {
-						alert.error("Failed to activate the app")
+						toast("Failed to activate the app")
 					} else {
-						alert.success("App activated for your organization! Refresh the page to use the app.")
+						toast("App activated for your organization! Refresh the page to use the app.")
 
 						if (refresh === true) {
 							getApps()
@@ -1588,7 +1589,7 @@ const Apps = (props) => {
 					}
 				})
 				.catch(error => {
-					//alert.error(error.toString())
+					//toast(error.toString())
 					console.log("Activate app error: ", error.toString())
 				});
 		}
@@ -1692,13 +1693,13 @@ const Apps = (props) => {
                 return (
                   <div style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
                     //if (!isCloud) {
-                    //	alert.info("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
+                    //	toast("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
                     //	setTimeout(() => {
                     //		event.preventDefault()
                     //		window.open(parsedUrl, '_blank')
                     //	}, 2000)
                     //} else {
-                    alert.info(`Activating ${name}`)
+                    toast(`Activating ${name}`)
                     //}
 
                     console.log("CLICK: ", hit)
@@ -2010,7 +2011,7 @@ const Apps = (props) => {
 
     parsedData["force_update"] = forceUpdate;
 
-    alert.success("Getting specific apps from your URL.");
+    toast("Getting specific apps from your URL.");
     var cors = "cors";
     fetch(globalUrl + "/api/v1/apps/get_existing", {
       method: "POST",
@@ -2023,7 +2024,7 @@ const Apps = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          alert.success("Loaded existing apps!");
+          toast("Loaded existing apps!");
         }
 
         //stop()
@@ -2034,12 +2035,12 @@ const Apps = (props) => {
       .then((responseJson) => {
         console.log("DATA: ", responseJson);
         if (responseJson.reason !== undefined) {
-          alert.error("Failed loading: " + responseJson.reason);
+          toast("Failed loading: " + responseJson.reason);
         }
       })
       .catch((error) => {
         console.log("ERROR: ", error.toString());
-        //alert.error(error.toString());
+        //toast(error.toString());
         //stop()
         
 				setIsLoading(false);
@@ -2049,7 +2050,7 @@ const Apps = (props) => {
 
   // Locally hotloads app from folder
   const hotloadApps = () => {
-    alert.info("Hotloading apps from location in .env");
+    toast("Hotloading apps from location in .env");
     setIsLoading(true);
     fetch(globalUrl + "/api/v1/apps/run_hotload", {
       mode: "cors",
@@ -2061,7 +2062,7 @@ const Apps = (props) => {
       .then((response) => {
         setIsLoading(false);
         if (response.status === 200) {
-          //alert.success("Hotloaded apps!")
+          //toast("Hotloaded apps!")
           getApps();
         }
 
@@ -2069,14 +2070,14 @@ const Apps = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-          alert.info("Successfully finished hotload");
+          toast("Successfully finished hotload");
         } else {
-          alert.error("Failed hotload: ", responseJson.reason);
+          toast("Failed hotload: ", responseJson.reason);
           //(responseJson.reason !== undefined && responseJson.reason.length > 0) {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -2100,7 +2101,7 @@ const Apps = (props) => {
         });
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -2113,9 +2114,9 @@ const Apps = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          //alert.success("Successfully GOT app "+appId)
+          //toast("Successfully GOT app "+appId)
         } else {
-          alert.error("Failed getting app");
+          toast("Failed getting app");
         }
 
         return response.json();
@@ -2138,7 +2139,7 @@ const Apps = (props) => {
             responseJson.loop_versions = selectedApp.loop_versions;
           }
 
-          //alert.info("Should set app to selected")
+          //toast("Should set app to selected")
           if (
             responseJson.actions !== undefined &&
             responseJson.actions !== null &&
@@ -2152,12 +2153,12 @@ const Apps = (props) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
   const deleteApp = (appId) => {
-    alert.info("Attempting to delete app");
+    toast("Attempting to delete app");
     fetch(globalUrl + "/api/v1/apps/" + appId, {
       method: "DELETE",
       headers: {
@@ -2167,16 +2168,16 @@ const Apps = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          alert.success("Successfully deleted app");
+          toast("Successfully deleted app");
           setTimeout(() => {
             getApps();
           }, 1000);
         } else {
-          alert.error("Failed deleting app. Does it still exist?");
+          toast("Failed deleting app. Does it still exist?");
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -2200,19 +2201,19 @@ const Apps = (props) => {
       })
       .then((responseJson) => {
         //console.log(responseJson)
-        //alert.info(responseJson)
+        //toast(responseJson)
         if (responseJson.success) {
-          alert.success("Successfully updated app configuration");
+          toast("Successfully updated app configuration");
         } else {
 					if (responseJson.reason !== undefined && responseJson.reason !== null) {
-          	alert.error("Error: "+responseJson.reason);
+          	toast("Error: "+responseJson.reason);
 					} else {
-          	alert.error("Error updating app configuration");
+          	toast("Error updating app configuration");
 					}
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -2243,7 +2244,7 @@ const Apps = (props) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -2281,7 +2282,7 @@ const Apps = (props) => {
         validateOpenApi(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
         setOpenApiError(error.toString());
       });
   };
@@ -2338,12 +2339,12 @@ const Apps = (props) => {
           if (responseJson.reason !== undefined) {
             setOpenApiError(responseJson.reason);
           }
-          alert.error("An error occurred in the response");
+          toast("An error occurred in the response");
         }
       })
       .catch((error) => {
         setValidation(false);
-        alert.error(error.toString());
+        toast(error.toString());
         setOpenApiError(error.toString());
       });
   };

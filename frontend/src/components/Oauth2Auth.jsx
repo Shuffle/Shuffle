@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import theme from '../theme.jsx';
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -99,7 +99,7 @@ const AuthenticationOauth2 = (props) => {
   } = props;
 
   let navigate = useNavigate();
-  const alert = useAlert()
+  //const alert = useAlert()
 
   //const [update, setUpdate] = React.useState("|")
   const [defaultConfigSet, setDefaultConfigSet] = React.useState(
@@ -422,7 +422,7 @@ const AuthenticationOauth2 = (props) => {
       //}
       //while(open === true)
     } catch (e) {
-      alert.error(
+      toast(
         "Failed authentication - probably bad credentials. Try again"
       );
       setButtonClicked(false);
@@ -451,7 +451,7 @@ const AuthenticationOauth2 = (props) => {
     console.log("NEW AUTH: ", authenticationOption);
     if (authenticationOption.label.length === 0) {
       authenticationOption.label = `Auth for ${selectedApp.name}`;
-      //alert.info("Label can't be empty")
+      //toast("Label can't be empty")
       //return
     }
 
@@ -479,7 +479,7 @@ const AuthenticationOauth2 = (props) => {
               selectedApp.authentication.parameters[key].name
             ] = "false";
           } else {
-            alert.info(
+            toast(
               "Field " + selectedApp.authentication.parameters[key].name.replace("_basic", "", -1).replace("_", " ", -1) + " can't be empty"
                 
             );

@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 
 import Priority from "../components/Priority.jsx";
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 const Priorities = (props) => {
   const { globalUrl, userdata, serverside, billingInfo, stripeKey, checkLogin, setAdminTab, setCurTab, } = props;

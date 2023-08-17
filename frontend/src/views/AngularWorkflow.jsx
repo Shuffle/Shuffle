@@ -12,7 +12,8 @@ import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
 import { NestedMenuItem } from 'mui-nested-menu';
 import ReactMarkdown from "react-markdown";
-import { useAlert } from "react-alert";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 import { isMobile } from "react-device-detect"
 import aa from 'search-insights'
 import Drift from "react-driftjs";
@@ -384,7 +385,7 @@ const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e52
 const AngularWorkflow = (defaultprops) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata, data_id } = defaultprops;
   const referenceUrl = globalUrl + "/api/v1/hooks/";
-  const alert = useAlert()
+  //const alert = useAlert()
   let navigate = useNavigate();
   const params = useParams();
   var props = JSON.parse(JSON.stringify(defaultprops))
@@ -584,9 +585,9 @@ const AngularWorkflow = (defaultprops) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          //alert.success("Successfully GOT app "+appId)
+          //toast("Successfully GOT app "+appId)
         } else {
-          //alert.error("Failed getting app");
+          //toast("Failed getting app");
         }
 
         return response.json();
@@ -604,7 +605,7 @@ const AngularWorkflow = (defaultprops) => {
 
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -644,7 +645,7 @@ const AngularWorkflow = (defaultprops) => {
 				setListCache(responseJson);
 		})
 		.catch((error) => {
-				alert.error(error.toString());
+				toast(error.toString());
 		});
 	};
 
@@ -746,7 +747,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("Workflow error: ", error.toString())
       });
   };
@@ -893,17 +894,17 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          alert.error("Failed to set app auth: " + responseJson.reason);
+          toast("Failed to set app auth: " + responseJson.reason);
         } else {
           getAppAuthentication(true, false);
           setAuthenticationModalOpen(false);
 
           // Needs a refresh with the new authentication..
-          //alert.success("Successfully saved new app auth")
+          //toast("Successfully saved new app auth")
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("New auth error: ", error.toString());
       });
   };
@@ -992,7 +993,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("Get execution error: ", error.toString());
       });
   };
@@ -1046,7 +1047,7 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("Abort error: ", error.toString());
       });
   };
@@ -1159,7 +1160,7 @@ const AngularWorkflow = (defaultprops) => {
 
 				if (!visited.includes(label)) {
 					//if (item.action.result !== undefined && item.action.result !== null && !item.action.result.includes("failed condition")) {
-					//	alert.error("Error for " + item.action.label + " with result " + item.result);
+					//	toast("Error for " + item.action.label + " with result " + item.result);
 					//}
 					visited.push(label);
 					setVisited(visited);
@@ -1287,7 +1288,7 @@ const AngularWorkflow = (defaultprops) => {
       })
       .catch((error) => {
         console.log("Stream send error: ", error.toString())
-        //alert.error(error.toString());
+        //toast(error.toString());
       })
   }
 
@@ -1458,7 +1459,7 @@ const AngularWorkflow = (defaultprops) => {
 
           newComments.push(curworkflowComment);
         } else {
-          alert.info("No handler for type: " + type);
+          toast("No handler for type: " + type);
         }
       }
     }
@@ -1519,9 +1520,9 @@ const AngularWorkflow = (defaultprops) => {
         if (!responseJson.success) {
           console.log(responseJson);
           if (responseJson.reason !== undefined && responseJson.reason !== null) {
-            alert.error("Failed to save: " + responseJson.reason);
+            toast("Failed to save: " + responseJson.reason);
           } else {
-            alert.error("Failed to save. Please contact your support@shuffler.io or your local admin if this is unexpected.")
+            toast("Failed to save. Please contact your support@shuffler.io or your local admin if this is unexpected.")
           }
         } else {
 
@@ -1570,7 +1571,7 @@ const AngularWorkflow = (defaultprops) => {
       })
       .catch((error) => {
         setSavingState(0);
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("Save workflow error: ", error.toString());
       });
 
@@ -1615,12 +1616,12 @@ const AngularWorkflow = (defaultprops) => {
       }
 
       if (workflow.public) {
-        alert.info("Save it to get a new version");
+        toast("Save it to get a new version");
       }
 
       var returncheck = monitorUpdates();
       if (!returncheck) {
-        alert.error("No startnode set.");
+        toast("No startnode set.");
         return;
       }
 
@@ -1656,7 +1657,7 @@ const AngularWorkflow = (defaultprops) => {
         })
         .then((responseJson) => {
           if (!responseJson.success) {
-            alert.error("Failed to start: " + responseJson.reason);
+            toast("Failed to start: " + responseJson.reason);
             setExecutionRunning(false);
             setExecutionRequestStarted(false);
             stop();
@@ -1676,7 +1677,7 @@ const AngularWorkflow = (defaultprops) => {
             responseJson.authorization === "" ||
             responseJson.authorization === undefined
           ) {
-            alert.error("Something went wrong during execution startup");
+            toast("Something went wrong during execution startup");
             console.log("BAD RESPONSE FOR EXECUTION: ", responseJson);
             setExecutionRunning(false);
             setExecutionRequestStarted(false);
@@ -1698,7 +1699,7 @@ const AngularWorkflow = (defaultprops) => {
           start();
         })
         .catch((error) => {
-          //alert.error(error.toString());
+          //toast(error.toString());
           setExecutionRequestStarted(false)
           console.log("Execute workflow err: ", error.toString());
         });
@@ -1809,16 +1810,16 @@ const AngularWorkflow = (defaultprops) => {
                 setSelectedAction(selectedAction);
                 setWorkflow(workflow);
                 saveWorkflow(workflow);
-                alert.info("Added and updated authentication!");
+                toast("Added and updated authentication!");
 								shouldClose = true 
               } else {
                 console.log("Closing auth modal? FAIL")
 
-                alert.error("Failed to find new authentication. See details in Oauth2 popup window where auth was attempted.");
+                toast("Failed to find new authentication. See details in Oauth2 popup window where auth was attempted.");
 								shouldClose = false 
               }
             } else {
-              alert.info("No authentication to update");
+              toast("No authentication to update");
             }
           } else {
 						shouldClose = true
@@ -1835,7 +1836,7 @@ const AngularWorkflow = (defaultprops) => {
       })
       .catch((error) => {
 				setAppAuthentication([]);
-        //alert.error("Auth loading error: " + error.toString());
+        //toast("Auth loading error: " + error.toString());
         console.log("AppAuth error: " + error.toString());
       });
   };
@@ -1867,7 +1868,7 @@ const AngularWorkflow = (defaultprops) => {
           setFilteredApps(pretend_apps)
           setPrioritizedApps(pretend_apps);
 
-					alert.error("Something went wrong while loading apps. Please refresh the window to try again.")
+					toast("Something went wrong while loading apps. Please refresh the window to try again.")
           return
         }
 
@@ -1930,7 +1931,7 @@ const AngularWorkflow = (defaultprops) => {
       .catch((error) => {
         console.log("App loading error: " + error.toString());
         setAppsLoaded(true)
-        //alert.error("App loading error: "+error.toString());
+        //toast("App loading error: "+error.toString());
       });
   };
 
@@ -2008,7 +2009,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
 				console.log("Error loading files: ", error)
       });
   };
@@ -2027,9 +2028,9 @@ const AngularWorkflow = (defaultprops) => {
           console.log("Status not 200 for workflows :O!");
 
 					if (response.status >= 500) {
-						alert.info("Something went wrong while loading the workflow. Please reload.")
+						toast("Something went wrong while loading the workflow. Please reload.")
 					} else {
-						alert.info("You don't access to this workflow or loading failed.")
+						toast("You don't access to this workflow or loading failed.")
 						window.location.pathname = "/workflows";
 					}
         }
@@ -2064,7 +2065,7 @@ const AngularWorkflow = (defaultprops) => {
 				fetchRecommendations(responseJson) 
 
         if (responseJson.public) {
-          //alert.info("This workflow is public. Save the workflow to use it in your organization.");
+          //toast("This workflow is public. Save the workflow to use it in your organization.");
 
   				setAppAuthentication([])
           console.log("RESP: ", responseJson)
@@ -2280,7 +2281,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("Get workflows error: ", error.toString());
       });
   };
@@ -2411,7 +2412,7 @@ const AngularWorkflow = (defaultprops) => {
         event.target.data("type") !== "COMMENT" &&
         event.target.data().decorator
       ) {
-        alert.info("This edge can't be edited.");
+        toast("This edge can't be edited.");
       } else {
         //console.log("DATA: ", event.target.data())
         const destinationId = event.target.data("target");
@@ -2423,7 +2424,7 @@ const AngularWorkflow = (defaultprops) => {
             curaction.app_name === "Shuffle Tools" &&
             curaction.name === "router"
           ) {
-            alert.info("Router action can't have incoming conditions");
+            toast("Router action can't have incoming conditions");
             event.target.unselect();
             return;
           }
@@ -2455,7 +2456,7 @@ const AngularWorkflow = (defaultprops) => {
     if (nodedata.type === "TRIGGER" && (nodedata.app_name === "Shuffle Workflow" || nodedata.app_name === "User Input")) {
     
       if (nodedata.parameters === null) {
-        alert.error("Set a workflow first");
+        toast("Set a workflow first");
         return;
       }
 
@@ -3045,7 +3046,7 @@ const AngularWorkflow = (defaultprops) => {
             curaction = data
           } else {
             if (workflow.public !== true) {
-              alert.error("Action not found. Please remake it.");
+              toast("Action not found. Please remake it.");
             }
 
             event.target.remove();
@@ -3103,7 +3104,7 @@ const AngularWorkflow = (defaultprops) => {
 
         if (!curapp || curapp === undefined) {
           console.log("APPS - couldn't find it: ", newapps)
-          //alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`);
+          //toast(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`);
 
           const tmpapp = {
             name: curaction.app_name,
@@ -3295,7 +3296,7 @@ const AngularWorkflow = (defaultprops) => {
         //	workflow.actions.push(data)
         //	curaction = data
         //} else {
-        //	alert.error("Action not found. Please remake it.");
+        //	toast("Action not found. Please remake it.");
         //	event.target.remove();
         //	return;
         //}
@@ -3329,7 +3330,7 @@ const AngularWorkflow = (defaultprops) => {
       } else if (data.type === "COMMENT") {
         setSelectedComment(data);
       } else {
-        alert.error("Can't handle node type " + data.type);
+        toast("Can't handle node type " + data.type);
         return;
       }
 
@@ -3383,16 +3384,16 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (responseJson.success === false) {
-          alert.error("Failed to auto-activate the app. Go to /apps and activate it.")
+          toast("Failed to auto-activate the app. Go to /apps and activate it.")
         } else {
           if (refresh === true) {
-          	//alert.success("App activated for your organization! Refresh the page to use the app.")
+          	//toast("App activated for your organization! Refresh the page to use the app.")
             getApps()
           }
         }
       })
       .catch(error => {
-        //alert.error(error.toString())
+        //toast(error.toString())
         console.log("Activate app error: ", error.toString())
       });
   }
@@ -3707,7 +3708,7 @@ const AngularWorkflow = (defaultprops) => {
               event.target.remove()
 
               //console.log("Found branch already!")
-              alert.info("Triggers can have exactly one target node")
+              toast("Triggers can have exactly one target node")
               return
 
 
@@ -3740,7 +3741,7 @@ const AngularWorkflow = (defaultprops) => {
         workflow.triggers[targetnode].app_name === "Shuffle Workflow"
       ) {
       } else {
-        alert.error("Can't have triggers as target of branch");
+        toast("Can't have triggers as target of branch");
         event.target.remove();
       }
     }
@@ -3793,7 +3794,7 @@ const AngularWorkflow = (defaultprops) => {
         workflow.branches[branchkey].destination_id === edge.source &&
         workflow.branches[branchkey].source_id === edge.target
       ) {
-        alert.error("A branch in the opposite direction already exists");
+        toast("A branch in the opposite direction already exists");
         event.target.remove();
         found = true;
         break;
@@ -3803,7 +3804,7 @@ const AngularWorkflow = (defaultprops) => {
       ) {
         console.log(edge.source);
 
-        //alert.error("That branch already exists");
+        //toast("That branch already exists");
         event.target.remove();
 
         found = true;
@@ -3814,7 +3815,7 @@ const AngularWorkflow = (defaultprops) => {
         );
         if (targetnode === -1) {
           if (targetnode.type !== "TRIGGER") {
-            alert.error("Can't make arrow to starting node");
+            toast("Can't make arrow to starting node");
             event.target.remove();
             break;
           }
@@ -3829,7 +3830,7 @@ const AngularWorkflow = (defaultprops) => {
         // console.log("Destination: ", edge.target)
         // console.log("CHECK SOURCE IF ITS A TRIGGER: ", targetnode)
         // if (targetnode !== -1) {
-        // 	alert.error("Triggers can only target one target (startnode)")
+        // 	toast("Triggers can only target one target (startnode)")
         // 	event.target.remove()
         // 	found = true
         // 	break
@@ -3844,7 +3845,7 @@ const AngularWorkflow = (defaultprops) => {
           console.log("TARGETNODE: ", targetnode)
           if (workflow.triggers[targetnode].app_name === "User Input" || workflow.triggers[targetnode].app_name === "Shuffle Workflow") {
           } else {
-            alert.error("Can't have triggers as target of branch")
+            toast("Can't have triggers as target of branch")
             event.target.remove()
             found = true
             break
@@ -3937,7 +3938,7 @@ const AngularWorkflow = (defaultprops) => {
       /*
       var curaction = workflow.actions.find((a) => a.id === nodedata.id);
       if (curaction === null || curaction === undefined) {
-        alert.error("Node not found. Please remake it.")
+        toast("Node not found. Please remake it.")
         event.target.remove();
       }
       */
@@ -4016,7 +4017,7 @@ const AngularWorkflow = (defaultprops) => {
       setWorkflow(workflow);
     } else if (nodedata.type === "TRIGGER") {
       if (nodedata.is_valid === false) {
-        alert.info("This trigger is not available to you");
+        toast("This trigger is not available to you");
         node.remove();
         return;
       }
@@ -4101,7 +4102,7 @@ const AngularWorkflow = (defaultprops) => {
 						data: newdata,
 					  })
 
-					  alert.error("You must STOP the trigger before deleting its branches")
+					  toast("You must STOP the trigger before deleting its branches")
 					} catch (e) {
 					  console.log("Failed re-adding edge: ", e)
 					}
@@ -4258,7 +4259,7 @@ const AngularWorkflow = (defaultprops) => {
               if (copyText !== null && copyText !== undefined) {
                 const clipboard = navigator.clipboard;
                 if (clipboard === undefined) {
-                  alert.error("Can only copy over HTTPS (port 3443)");
+                  toast("Can only copy over HTTPS (port 3443)");
                   return;
                 }
 
@@ -4266,7 +4267,7 @@ const AngularWorkflow = (defaultprops) => {
                 copyText.select();
                 copyText.setSelectionRange(0, 99999); /* For mobile devices */
                 document.execCommand("copy");
-                alert.success(`Copied ${cydata.length} element(s)`);
+                toast(`Copied ${cydata.length} element(s)`);
               }
             }
           }
@@ -4279,7 +4280,7 @@ const AngularWorkflow = (defaultprops) => {
           /*
           const clipboard = navigator.clipboard
           if (clipboard === undefined || window === undefined || window === null) {
-            alert.error("Can only use cliboard over HTTPS (port 3443)")
+            toast("Can only use cliboard over HTTPS (port 3443)")
             return
           } 
 
@@ -4387,7 +4388,7 @@ const AngularWorkflow = (defaultprops) => {
       }
     } catch (e) {
       console.log("Error pasting: ", e);
-      //alert.info("Failed parsing clipboard: ", e)
+      //toast("Failed parsing clipboard: ", e)
     }
   };
 
@@ -4458,7 +4459,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("Get environments error: ", error.toString());
       });
   };
@@ -5478,7 +5479,7 @@ const AngularWorkflow = (defaultprops) => {
     //}
     const parsedSelection = cy.$(":selected");
     if (selectedNode.data().decorator === true && selectedNode.data("type") !== "COMMENT") {
-      alert.info("This node can't be deleted.");
+      toast("This node can't be deleted.");
     } else {
 			console.log("Deleted.")
       selectedNode.remove();
@@ -5545,7 +5546,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
+        //toast("ERROR: " + error.toString());
         console.log("ERROR getting usecases: " + error.toString());
       })
   }
@@ -5574,7 +5575,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
+        //toast("ERROR: " + error.toString());
         console.log("ERROR getting usecases: " + error.toString());
       })
   }
@@ -5749,7 +5750,7 @@ const AngularWorkflow = (defaultprops) => {
       console.log("END: ", cy)
       var cydata = cy.$(":selected").jsons();
       if (cydata !== undefined && cydata !== null && cydata.length > 0) {
-        alert.success(`Selected ${cydata.length} element(s). CTRL+C to copy them.`);
+        toast(`Selected ${cydata.length} element(s). CTRL+C to copy them.`);
       }
     });
 
@@ -5804,10 +5805,10 @@ const AngularWorkflow = (defaultprops) => {
         // No matter what, it's being stopped.
         if (!responseJson.success) {
           if (responseJson.reason !== undefined) {
-            alert.error("Failed to stop schedule: " + responseJson.reason);
+            toast("Failed to stop schedule: " + responseJson.reason);
           }
         } else {
-          alert.success("Successfully stopped schedule");
+          toast("Successfully stopped schedule");
         }
 
         workflow.triggers[triggerindex].status = "stopped";
@@ -5817,14 +5818,14 @@ const AngularWorkflow = (defaultprops) => {
         saveWorkflow(workflow);
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("Stop schedule error: ", error.toString());
       });
   };
 
   const submitSchedule = (trigger, triggerindex) => {
     if (trigger.name.length <= 0) {
-      alert.error("Error: name can't be empty");
+      toast("Error: name can't be empty");
       return;
     }
 
@@ -5841,7 +5842,7 @@ const AngularWorkflow = (defaultprops) => {
 		}
   }
 
-    alert.info("Creating schedule") 
+    toast("Creating schedule") 
     const data = {
       name: trigger.name,
       frequency: workflow.triggers[triggerindex].parameters[0].value,
@@ -5872,9 +5873,9 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          alert.error("Failed to set schedule: " + responseJson.reason);
+          toast("Failed to set schedule: " + responseJson.reason);
         } else {
-          alert.success("Successfully created schedule");
+          toast("Successfully created schedule");
           workflow.triggers[triggerindex].status = "running";
           trigger.status = "running";
           setSelectedTrigger(trigger);
@@ -5884,7 +5885,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("Get schedule error: ", error.toString());
       });
   };
@@ -6397,7 +6398,7 @@ const AngularWorkflow = (defaultprops) => {
         currentnode[0].renderedPosition("y", e.pageY - cycontainer.offsetTop);
       } else {
         if (workflow.start === "" || workflow.start === undefined) {
-          alert.error("Define a starting action first.");
+          toast("Define a starting action first.");
           return;
         }
 
@@ -6602,7 +6603,7 @@ const AngularWorkflow = (defaultprops) => {
           app.actions === null ||
           app.actions.length === 0
         ) {
-          alert.error(
+          toast(
             "App " +
             app.name +
             " currently has no actions to perform. Please go to https://shuffler.io/apps to edit it."
@@ -7131,13 +7132,13 @@ const AngularWorkflow = (defaultprops) => {
                 return (
                   <div style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
                     //if (!isCloud) {
-                    //	alert.info("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
+                    //	toast("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
                     //	setTimeout(() => {
                     //		event.preventDefault()
                     //		window.open(parsedUrl, '_blank')
                     //	}, 2000)
                     //} else {
-                    alert.info(`Activating ${name}`)
+                    toast(`Activating ${name}`)
                     //}
 
                     console.log("CLICK: ", hit)
@@ -7346,7 +7347,7 @@ const AngularWorkflow = (defaultprops) => {
     );
 
     if (newaction === undefined || newaction === null) {
-      alert.error("Failed to find the action");
+      toast("Failed to find the action");
       return;
     }
 
@@ -7696,7 +7697,7 @@ const AngularWorkflow = (defaultprops) => {
     // Max 1 folder for office for some reason. MailFolders('MAILBOX_ID') in resource 
     // Can't parse URL with multiple folders.
     if (selectedTrigger.name === "Office365" & value !== undefined && value !== null && value.length > 1) {
-      alert.info("Max 1 folder at a time allowed for Office365")
+      toast("Max 1 folder at a time allowed for Office365")
       console.log("VALUE: ", value)
       value = [value[0]]
     }
@@ -8900,7 +8901,7 @@ const AngularWorkflow = (defaultprops) => {
               (branch) => branch.source_id === selectedTrigger.id
             );
             if (branch === undefined || branch === null) {
-              alert.error(
+              toast(
                 "No startnode connected to node. Connect it to an action."
               );
               return;
@@ -8996,7 +8997,7 @@ const AngularWorkflow = (defaultprops) => {
               (branch) => branch.source_id === selectedTrigger.id
             );
             if (branch === undefined || branch === null) {
-              alert.error(
+              toast(
                 "No startnode connected to node. Connect it to an action."
               );
               return;
@@ -10982,7 +10983,7 @@ const AngularWorkflow = (defaultprops) => {
                             console.log("NAVIGATOR: ", navigator);
                             const clipboard = navigator.clipboard;
                             if (clipboard === undefined) {
-                              alert.error("Can only copy over HTTPS (port 3443)");
+                              toast("Can only copy over HTTPS (port 3443)");
                               return;
                             }
 
@@ -10995,7 +10996,7 @@ const AngularWorkflow = (defaultprops) => {
 
                             /* Copy the text inside the text field */
                             document.execCommand("copy");
-                            alert.success("Copied Webhook URL");
+                            toast("Copied Webhook URL");
                           } else {
                             console.log("Couldn't find webhook URI field: ", copyText);
                           }
@@ -11207,7 +11208,7 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
 
-    alert.info("Stopping mail trigger");
+    toast("Stopping mail trigger");
     const requesttype = triggerAuthentication.type;
     fetch(
       `${globalUrl}/api/v1/workflows/${props.match.params.key}/${requesttype}/${trigger.id}`,
@@ -11229,7 +11230,7 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (responseJson.success) {
-          alert.success("Successfully stopped trigger");
+          toast("Successfully stopped trigger");
           // Set the status
           workflow.triggers[triggerindex].status = "stopped";
           trigger.status = "stopped";
@@ -11237,11 +11238,11 @@ const AngularWorkflow = (defaultprops) => {
           setSelectedTrigger(trigger);
           saveWorkflow(workflow);
         } else {
-          alert.error("Failed stopping trigger: " + responseJson.reason);
+          toast("Failed stopping trigger: " + responseJson.reason);
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("Stop mailsub error: ", error.toString());
       });
   };
@@ -11263,7 +11264,7 @@ const AngularWorkflow = (defaultprops) => {
       const item = splitItem[splitkey];
       const curfolder = triggerFolders.find((a) => a.displayName === item);
       if (curfolder === undefined) {
-        alert.error("Something went wrong with folder selection: " + item);
+        toast("Something went wrong with folder selection: " + item);
         return;
       }
 
@@ -11277,7 +11278,7 @@ const AngularWorkflow = (defaultprops) => {
     };
 
     const requesttype = triggerAuthentication.type;
-    alert.info(
+    toast(
       "Creating " + requesttype + " subscription with name " + trigger.name
     );
 
@@ -11306,9 +11307,9 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          alert.error("Failed to start trigger: " + responseJson.reason);
+          toast("Failed to start trigger: " + responseJson.reason);
         } else {
-          alert.success(
+          toast(
             "Successfully started folder subscription trigger. Test it by sending yoursend an email"
           );
 
@@ -11320,7 +11321,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("Start mailsub error: ", error.toString());
       });
   };
@@ -11328,12 +11329,12 @@ const AngularWorkflow = (defaultprops) => {
   const newWebhook = (trigger) => {
     const hookname = trigger.label;
     if (hookname.length === 0) {
-      alert.error("Missing name");
+      toast("Missing name");
       return;
     }
 
     if (trigger.id.length !== 36) {
-      alert.error("Missing id");
+      toast("Missing id");
       return;
     }
 
@@ -11343,10 +11344,10 @@ const AngularWorkflow = (defaultprops) => {
       (branch) => branch.source_id === trigger.id
     );
     if (branch === undefined && (workflow.start === undefined || workflow.start === null || workflow.start.length === 0)) {
-      alert.error("No webhook node defined");
+      toast("No webhook node defined");
     }
 
-    alert.info("Starting webhook");
+    toast("Starting webhook");
     if (branch !== undefined) {
       startNode = branch.destination_id;
     }
@@ -11398,14 +11399,14 @@ const AngularWorkflow = (defaultprops) => {
       .then((responseJson) => {
         if (responseJson.success) {
           // Set the status
-          alert.success("Successfully started webhook");
+          toast("Successfully started webhook");
           trigger.status = "running";
           setSelectedTrigger(trigger);
           workflow.triggers[selectedTriggerIndex].status = "running";
           setWorkflow(workflow);
           saveWorkflow(workflow);
         } else {
-          alert.error("Failed starting webhook: " + responseJson.reason);
+          toast("Failed starting webhook: " + responseJson.reason);
         }
       })
       .catch((error) => {
@@ -11444,7 +11445,7 @@ const AngularWorkflow = (defaultprops) => {
           saveWorkflow(workflow);
         } else {
           if (responseJson.reason !== undefined) {
-            alert.error("Failed stopping webhook: " + responseJson.reason);
+            toast("Failed stopping webhook: " + responseJson.reason);
           }
         }
 
@@ -11453,8 +11454,8 @@ const AngularWorkflow = (defaultprops) => {
         setSelectedTrigger(trigger);
       })
       .catch((error) => {
-        //alert.error(error.toString());
-        alert.error("Delete webhook error. Contact support or check logs if this persists.")
+        //toast(error.toString());
+        toast("Delete webhook error. Contact support or check logs if this persists.")
       });
   };
 
@@ -13406,7 +13407,7 @@ const AngularWorkflow = (defaultprops) => {
 
       const clipboard = navigator.clipboard;
       if (clipboard === undefined) {
-        alert.error("Can only copy over HTTPS (port 3443)");
+        toast("Can only copy over HTTPS (port 3443)");
         return;
       }
 
@@ -13423,7 +13424,7 @@ const AngularWorkflow = (defaultprops) => {
       document.execCommand("copy");
 
       console.log("COPYING!");
-      alert.info("Copied value to clipboard, NOT json path.")
+      toast("Copied value to clipboard, NOT json path.")
     } else {
       console.log("Failed to copy from " + elementName + ": ", copyText);
     }
@@ -13494,7 +13495,7 @@ const AngularWorkflow = (defaultprops) => {
       console.log("NAVIGATOR: ", navigator);
       const clipboard = navigator.clipboard;
       if (clipboard === undefined) {
-        alert.error("Can only copy over HTTPS (port 3443)");
+        toast("Can only copy over HTTPS (port 3443)");
         return;
       }
 
@@ -13505,7 +13506,7 @@ const AngularWorkflow = (defaultprops) => {
       /* Copy the text inside the text field */
       document.execCommand("copy");
       console.log("COPYING!");
-      alert.info("Copied JSON path to clipboard.")
+      toast("Copied JSON path to clipboard.")
     } else {
       console.log("Couldn't find element ", elementName);
     }
@@ -14875,7 +14876,7 @@ const AngularWorkflow = (defaultprops) => {
                   console.log("NAVIGATOR: ", navigator);
                   const clipboard = navigator.clipboard;
                   if (clipboard === undefined) {
-                    alert.error("Can only copy over HTTPS (port 3443)");
+                    toast("Can only copy over HTTPS (port 3443)");
                     return;
                   }
 
@@ -15480,7 +15481,7 @@ const AngularWorkflow = (defaultprops) => {
                 selectedApp.authentication.parameters[paramkey].name
               ] = "false";
             } else {
-              alert.info(
+              toast(
                 "Field " +
                 selectedApp.authentication.parameters[paramkey].name +
                 " can't be empty"

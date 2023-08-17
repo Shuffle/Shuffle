@@ -80,7 +80,8 @@ import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import Dropzone from "../components/Dropzone.jsx";
 
 import { useNavigate, Link } from "react-router-dom";
-import { useAlert } from "react-alert";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 import { MuiChipsInput } from "mui-chips-input";
 import { v4 as uuidv4 } from "uuid";
 import theme from "../theme.jsx";
@@ -529,7 +530,7 @@ const Workflows = (props) => {
   document.title = "Shuffle - Workflows";
 	let navigate = useNavigate();
 
-  const alert = useAlert();
+  //const alert = useAlert();
   const classes = useStyles(theme);
   const imgSize = 60;
 
@@ -929,7 +930,7 @@ const Workflows = (props) => {
     const files = isDropzone ? e.dataTransfer.files : e.target.files;
 
     const reader = new FileReader();
-    alert.info("Starting upload. Please wait while we validate the workflows");
+    toast("Starting upload. Please wait while we validate the workflows");
 
     try {
       reader.addEventListener("load", (e) => {
@@ -938,7 +939,7 @@ const Workflows = (props) => {
         try {
           data = JSON.parse(reader.result);
         } catch (e) {
-          alert.error("Invalid JSON: " + e);
+          toast("Invalid JSON: " + e);
           return;
         }
 
@@ -972,13 +973,13 @@ const Workflows = (props) => {
 								data.status
               ).then((response) => {
                 if (response !== undefined) {
-                  alert.success(`Successfully imported ${data.name}`);
+                  toast(`Successfully imported ${data.name}`);
                 }
               });
             }
           })
           .catch((error) => {
-            alert.error("Import error: " + error.toString());
+            toast("Import error: " + error.toString());
           });
       });
     } catch (e) {
@@ -1016,9 +1017,9 @@ const Workflows = (props) => {
 			if (responseJson.success === false) {
 				setAppFramework({})
 				if (responseJson.reason !== undefined) {
-					//alert.error("Failed loading: " + responseJson.reason)
+					//toast("Failed loading: " + responseJson.reason)
 				} else {
-					//alert.error("Failed to load framework for your org.")
+					//toast("Failed to load framework for your org.")
 				}
 			} else {
 				setAppFramework(responseJson)
@@ -1046,7 +1047,7 @@ const Workflows = (props) => {
           //  navigate("/search?tab=workflows")
           //}
 
-          alert.info("Failed getting workflows. Are you logged in?");
+          toast("Failed getting workflows. Are you logged in?");
 
           return;
         }
@@ -1111,14 +1112,14 @@ const Workflows = (props) => {
 
         } else {
           if (isLoggedIn) {
-            alert.error("An error occurred while loading workflows");
+            toast("An error occurred while loading workflows");
           }
 
           return;
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1198,7 +1199,7 @@ const Workflows = (props) => {
 				} 
       })
       .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
+        //toast("ERROR: " + error.toString());
         console.log("ERROR: " + error.toString());
         setWorkflows(workflows);
       	setWorkflowDone(true);
@@ -1288,7 +1289,7 @@ const Workflows = (props) => {
 			}, i * 200);
     }
 
-    alert.info(`exporting and keeping original for all ${allWorkflows.length} workflows`);
+    toast(`exporting and keeping original for all ${allWorkflows.length} workflows`);
   };
 
   const deduplicateIds = (data, skip_sanitize) => {
@@ -1329,7 +1330,7 @@ const Workflows = (props) => {
             trigger.parameters[1].value = "webhook_" + trigger.id;
             // FIXME: Add auth here?
           } else {
-            alert.info("Something is wrong with the webhook in the copy");
+            toast("Something is wrong with the webhook in the copy");
           }
         }
 
@@ -1449,7 +1450,7 @@ const Workflows = (props) => {
       data = sanitizeWorkflow(data);
 
       if (data.subflows !== null && data.subflows !== undefined) {
-        alert.info(
+        toast(
           "Not exporting with subflows when sanitizing. Please manually export them."
         );
         data.subflows = [];
@@ -1477,7 +1478,7 @@ const Workflows = (props) => {
   const publishWorkflow = (data) => {
     data = JSON.parse(JSON.stringify(data));
     data = sanitizeWorkflow(data);
-    alert.info("Sanitizing and publishing " + data.name);
+    toast("Sanitizing and publishing " + data.name);
 
     // This ALWAYS talks to Shuffle cloud
     fetch(globalUrl + "/api/v1/workflows/" + data.id + "/publish", {
@@ -1494,9 +1495,9 @@ const Workflows = (props) => {
 				console.log("Status not 200 for workflow publish :O!");
 			} else {
 				if (isCloud) {
-					alert.success("Successfully published workflow");
+					toast("Successfully published workflow");
 				} else {
-					alert.success(
+					toast(
 						"Successfully published workflow to https://shuffler.io"
 					);
 				}
@@ -1506,20 +1507,20 @@ const Workflows = (props) => {
 		})
 		.then((responseJson) => {
 			if (responseJson.reason !== undefined) {
-				alert.error("Failed publishing: ", responseJson.reason);
+				toast("Failed publishing: ", responseJson.reason);
 			}
 
 			getAvailableWorkflows();
 		})
 		.catch((error) => {
-			alert.error("Failed publishing: is the workflow valid? Remember to save the workflow first.")
+			toast("Failed publishing: is the workflow valid? Remember to save the workflow first.")
 			console.log(error.toString());
 		});
   };
 
   const copyWorkflow = (data) => {
     data = JSON.parse(JSON.stringify(data));
-    alert.success("Copying workflow " + data.name);
+    toast("Copying workflow " + data.name);
     data.id = "";
     data.name = data.name + "_copy";
     data = deduplicateIds(data, true);
@@ -1546,7 +1547,7 @@ const Workflows = (props) => {
         }, 1000);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1562,9 +1563,9 @@ const Workflows = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for setting workflows :O!");
-          alert.error("Failed deleting workflow. Do you have access?");
+          toast("Failed deleting workflow. Do you have access?");
         } else {
-          alert.success("Deleted workflow " + id);
+          toast("Deleted workflow " + id);
         }
 
         return response.json();
@@ -1575,7 +1576,7 @@ const Workflows = (props) => {
         }, 1000);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -2032,7 +2033,7 @@ const Workflows = (props) => {
                   }}
                   onClick={() => {
                     if (subflows === 0) {
-                      alert.info("No subflows for " + data.name);
+                      toast("No subflows for " + data.name);
                       return;
                     }
 
@@ -2207,9 +2208,9 @@ const Workflows = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Error setting workflow: ", responseJson.reason)
+						toast("Error setting workflow: ", responseJson.reason)
 					} else {
-						alert.error("Error setting workflow.")
+						toast("Error setting workflow.")
 					}
 
 					return
@@ -2227,14 +2228,14 @@ const Workflows = (props) => {
 					setSubmitLoading(false)
           setModalOpen(false);
         } else {
-          //alert.info("Successfully changed basic info for workflow");
+          //toast("Successfully changed basic info for workflow");
           setModalOpen(false);
         }
 
         return responseJson;
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
 				setSubmitLoading(false)
         setModalOpen(false);
         setSubmitLoading(false);
@@ -2251,7 +2252,7 @@ const Workflows = (props) => {
         const file = event.target.files[key];
         if (file.type !== "application/json") {
           if (file.type !== undefined) {
-            alert.error("File has to contain valid json");
+            toast("File has to contain valid json");
 						setSubmitLoading(false)
           }
 
@@ -2265,7 +2266,7 @@ const Workflows = (props) => {
           try {
             data = JSON.parse(reader.result);
           } catch (e) {
-            alert.error("Invalid JSON: " + e);
+            toast("Invalid JSON: " + e);
 						setSubmitLoading(false)
             return;
           }
@@ -2305,13 +2306,13 @@ const Workflows = (props) => {
 									data.status,
                 ).then((response) => {
                   if (response !== undefined) {
-                    alert.success("Successfully imported " + data.name);
+                    toast("Successfully imported " + data.name);
                   }
                 });
               }
             })
             .catch((error) => {
-              alert.error("Import error: " + error.toString());
+              toast("Import error: " + error.toString());
             });
         });
 
@@ -2535,7 +2536,7 @@ const Workflows = (props) => {
                       }}
                       onClick={() => {
                         if (subflows === 0) {
-                          alert.info("No subflows for " + data.name);
+                          toast("No subflows for " + data.name);
                           return;
                         }
 
@@ -3554,7 +3555,7 @@ const Workflows = (props) => {
       parsedData["field_2"] = field2;
     }
 
-    alert.success("Getting specific workflows from your URL.");
+    toast("Getting specific workflows from your URL.");
     fetch(globalUrl + "/api/v1/workflows/download_remote", {
       method: "POST",
       mode: "cors",
@@ -3566,7 +3567,7 @@ const Workflows = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          alert.success("Successfully loaded workflows from " + downloadUrl);
+          toast("Successfully loaded workflows from " + downloadUrl);
           setTimeout(() => {
             getAvailableWorkflows();
           }, 1000);
@@ -3577,14 +3578,14 @@ const Workflows = (props) => {
       .then((responseJson) => {
         if (!responseJson.success) {
           if (responseJson.reason !== undefined) {
-            alert.error("Failed loading: " + responseJson.reason);
+            toast("Failed loading: " + responseJson.reason);
           } else {
-            alert.error("Failed loading");
+            toast("Failed loading");
           }
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 

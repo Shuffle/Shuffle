@@ -861,12 +861,12 @@ const CodeEditor = (props) => {
 			var newResult = {}
 			if (responseJson.success === true && responseJson.result !== null && responseJson.result !== undefined && responseJson.result.length > 0) {
 				const result = responseJson.result.slice(0, 50)+"..."
-				//alert.info("SUCCESS: "+result)
+				//toast("SUCCESS: "+result)
 
 				const validate = validateJson(responseJson.result)
 				newResult = validate
 			} else if (responseJson.success === false && responseJson.reason !== undefined && responseJson.reason !== null) {
-				alert.error(responseJson.reason)
+				toast(responseJson.reason)
 				newResult = {"valid": false, "result": responseJson.reason}
 			} else if (responseJson.success === true) {
 				newResult = {"valid": false, "result": "Couldn't finish execution. Please fill all the required fields, and retry the execution."}
@@ -882,7 +882,7 @@ const CodeEditor = (props) => {
 			setExecuting(false)
 		})
 		.catch(error => {
-			//alert.error("Execution error: "+error.toString())
+			//toast("Execution error: "+error.toString())
 			console.log("error: ", error)
 			setExecuting(false)
 		})

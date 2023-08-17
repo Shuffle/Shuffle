@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import theme from '../theme';
 import {Link} from 'react-router-dom';
-import { useAlert } from "react-alert";
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';
+import { toast } from 'react-toastify';
 
 //import algoliasearch from 'algoliasearch/lite';
 import algoliasearch from 'algoliasearch';
@@ -25,7 +25,7 @@ const Appsearch = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList}  = props
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-  const alert = useAlert();
+  //const alert = useAlert();
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? 12 : parsedXs
 	//const theme = useTheme();
@@ -68,12 +68,12 @@ const Appsearch = props => {
 			if (response.status !== 200) {
 			  console.log("Status not 200 for set creator :O!");
 			}
-			alert.success("Sucessfully updated specialzed app.")
+			toast("Sucessfully updated specialzed app.")
 			return response.json();
 		  })
 		  .then((responseJson) => {
 			if (!responseJson.success && responseJson.reason !== undefined) {
-			  alert.error("Failed updating user: " + responseJson.reason);
+			  toast("Failed updating user: " + responseJson.reason);
 			}
 		  })
 		  .catch((error) => {
