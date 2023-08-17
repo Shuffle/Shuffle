@@ -5839,6 +5839,239 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte("OK"))
 }
 
+func runOpsWorkflow(resp http.ResponseWriter, request *http.Request) {
+	// run workflow with id 602c7cf5-500e-4bd1-8a97-aa5bc8a554e6
+	opsWorkflowID := "602c7cf5-500e-4bd1-8a97-aa5bc8a554e6"
+
+	ctx := context.Background()
+
+	// 1. Get workflow
+	workflowPtr, err := shuffle.GetWorkflow(ctx, opsWorkflowID)
+	if err != nil {
+		fmt.Printf("[ERROR] Failed getting workflow: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed getting workflow"}`))
+		return
+	}
+
+	workflow := *workflowPtr
+
+	// 2. Check if workflow ran in last SHUFFLE_OPS_WORKFLOW_RUN_TIME seconds
+	opsShuffleRunTime := os.Getenv("SHUFFLE_OPS_WORKFLOW_RUN_TIME")
+	if len(opsShuffleRunTime) == 0 {
+		opsShuffleRunTime = "3600"
+	}
+
+	opsShuffleRunTimeInt, err := strconv.Atoi(opsShuffleRunTime)
+	if err != nil {
+		fmt.Printf("[ERROR] Failed converting SHUFFLE_OPS_WORKFLOW_RUN_TIME to int: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed converting SHUFFLE_OPS_WORKFLOW_RUN_TIME to int"}`))
+		return
+	}
+
+	// 2.1 Get workflow executions
+	workflowExecutions, err := shuffle.GetAllWorkflowExecutions(ctx, opsWorkflowID, 1)
+
+	// 2.2 Check if workflow ran in last SHUFFLE_OPS_WORKFLOW_RUN_TIME seconds
+	if len(workflowExecutions) != 0 {
+		// get last workflow execution
+		lastWorkflowExecution := workflowExecutions[len(workflowExecutions)-1]
+
+		lastWorkflowExecutionTimeInt := lastWorkflowExecution.StartedAt
+		if err != nil {
+			fmt.Printf("[ERROR] Failed converting last workflow execution time to int: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "Failed converting last workflow execution time to int"}`))
+			return
+		}
+
+		// check if last workflow execution time is less than SHUFFLE_OPS_WORKFLOW_RUN_TIME seconds
+		if lastWorkflowExecutionTimeInt+int64(opsShuffleRunTimeInt) > int64(time.Now().Unix()) {
+			log.Printf("[INFO] Last workflow execution time is less than SHUFFLE_OPS_WORKFLOW_RUN_TIME seconds. Returning last result")
+			resp.WriteHeader(200)
+			// JSONify lastWorkflowExecution.Results
+			lastWorkflowExecutionResultsJson, _ := json.Marshal(lastWorkflowExecution.Results)
+
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "result": %s}`, lastWorkflowExecutionResultsJson)))
+			return
+		}
+	}
+
+	// 3. Run workflow
+	id := workflow.ID
+	orgId := os.Getenv("SHUFFLE_OPS_DASHBOARD_ORG")
+
+	execution, _, err := handleExecution(id, workflow, request, orgId)
+	if err != nil {
+		log.Printf("[ERROR] Failed running workflow: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed running workflow"}`))
+		return
+	}
+
+	// JSONify execution.Results
+	executionResultsJson, _ := json.Marshal(execution.Results)
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "result": %s}`, executionResultsJson)))
+}
+
+func initOpsWorkflow() {
+	opsDashboardApikey := os.Getenv("SHUFFLE_OPS_DASHBOARD_APIKEY")
+	if len(opsDashboardApikey) == 0 {
+		log.Printf("[WARNING] Ops dashboard api key not set. Not setting up ops workflow")
+		return
+	}
+
+	opsDashboardOrgId := os.Getenv("SHUFFLE_OPS_DASHBOARD_ORG")
+	if len(opsDashboardOrgId) == 0 {
+		log.Printf("[WARNING] Ops dashboard org not set. Not setting up ops workflow")
+		return
+	}
+
+	// verify if org with id opsDashboardOrg exists
+	ctx := context.Background()
+	opsDashboardOrg, err := shuffle.GetOrg(ctx, opsDashboardOrgId)
+	if err != nil {
+		log.Printf("[ERROR] Ops dashboard org not found. Not setting up ops workflow")
+		return
+	}
+
+	user, err := shuffle.GetApikey(ctx, opsDashboardApikey)
+	if err != nil {
+		log.Printf("[ERROR] Error in finding user: %s", err)
+		return
+	}
+	
+	if len(user.Id) == 0 && len(user.Username) == 0 {
+		fmt.Println("[ERROR] Ops dashboard user not found. Not setting up ops workflow")
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("[WARNING] Ops dashboard user not admin. Not setting up ops workflow")
+		return
+	}
+
+
+	// make a GET request to https://shuffler.io/api/v1/workflows/602c7cf5-500e-4bd1-8a97-aa5bc8a554e6
+	// to get the workflow
+	workflow, err := shuffle.GetWorkflow(ctx, "602c7cf5-500e-4bd1-8a97-aa5bc8a554e6")
+	if err == nil {
+		log.Printf("[WARNING] Ops workflow exists. Not setting it up.")
+		// JSONify workflow and print it
+		// workflowJson, _ := json.Marshal(workflow)
+		// log.Printf("[DEBUG] Ops workflow: %s", workflowJson)
+		// shuffle.DeleteKey(ctx, "workflow", workflow.ID)
+		// log.Printf("[INFO] Ops workflow deleted successfully")
+		return
+	}
+
+	log.Printf("[INFO] Ops Workflow not found. Moving further.")
+
+	url := "https://shuffler.io/api/v1/workflows/602c7cf5-500e-4bd1-8a97-aa5bc8a554e6"
+
+	// Create a new HTTP GET request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		fmt.Println("[ERROR] creating HTTP request:", err)
+		return
+	}
+
+    // Send the HTTP request using the default HTTP client
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        fmt.Println("[ERROR] sending HTTP request:", err)
+        return
+    }
+
+	defer resp.Body.Close()
+
+    // Read the response body
+    body, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        fmt.Println("[ERROR] reading HTTP response body:", err)
+        return
+    }
+
+	// Unmarshal the JSON data into a Workflow instance
+	var workflowData shuffle.Workflow
+	err = json.Unmarshal(body, &workflowData)
+	if err != nil {
+		fmt.Println("[ERROR] unmarshalling JSON data:", err)
+		return
+	}
+
+	variables := workflow.WorkflowVariables
+	for _, variable := range variables {
+		if variable.Name == "apikey" {
+			variable.Value = opsDashboardApikey
+		} else if variable.Name == "cachekey" {
+			variable.Value = "1234"
+		}
+	}
+
+	// fix workflow org
+	workflowData.OrgId = opsDashboardOrg.Id
+	workflowData.Owner = user.Id
+	workflowData.Public = false
+	workflowData.Status = ""
+	workflowData.Name = "Ops Dashboard Workflow"
+
+	var actions []shuffle.Action
+	var blacklisted = []string{"Date_to_epoch", "input_data", "Compare_timestamps", "Get_current_timestamp"}
+
+	for actionIndex, _ := range workflowData.Actions {
+		action := workflowData.Actions[actionIndex]
+		
+		// capitalise the first letter of the environment
+		if runningEnvironment == "onprem" {
+			action.Environment = "Shuffle"
+		} else {
+			action.Environment = "Cloud"
+		}
+
+		if action.Position.X == 206 {
+			action.Position.X = 206.1
+		}
+
+		action.Position.X = float64(action.Position.X)
+		action.Position.Y = float64(action.Position.Y)
+
+		log.Println(action.Position.X)
+		log.Println(action.Position.Y)
+
+		workflowData.Actions[actionIndex] = action
+		if shuffle.ArrayContains(blacklisted, action.Label) {
+			// dates keep failing in opensearch
+			// this is a grander issue, but for now, we'll just skip these actions
+			log.Printf("[WARNING] Skipping action %s", action.Label)
+			continue
+	}
+
+		actions = append(actions, action)
+	}
+
+	workflowData.Actions = actions
+
+	workflowData.ExecutingOrg = shuffle.OrgMini{
+		Id:   opsDashboardOrg.Id,
+		Name: opsDashboardOrg.Name,
+		Users: []shuffle.UserMini{},
+	}
+	
+	workflowData.WorkflowVariables = variables
+
+	// Save the workflow
+	err = shuffle.SetWorkflow(ctx, workflowData, workflowData.ID)
+	if err != nil {
+		fmt.Println("[ERROR] saving ops dashboard workflow:", err)
+		return
+	}
+	fmt.Println("[INFO] Ops dashboard workflow saved successfully")
+}
+
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -5979,6 +6212,7 @@ func initHandlers() {
 	/* Everything below here increases the counters*/
 	r.HandleFunc("/api/v1/workflows", shuffle.GetWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", shuffle.SetNewWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/health", runOpsWorkflow).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/schedules", shuffle.HandleGetSchedules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions", shuffle.GetWorkflowExecutions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", shuffle.AbortExecution).Methods("GET", "OPTIONS")
@@ -5996,7 +6230,7 @@ func initHandlers() {
 	// New for recommendations in Shuffle
 	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/recommendations/modify", shuffle.HandleRecommendationAction).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
+	// r.HandleFunc("/api/v1/workflows/{key}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
 
 	// Triggers
 	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")
@@ -6103,6 +6337,7 @@ func initHandlers() {
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
 	initHandlers()
+	initOpsWorkflow()
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "MISSING"
