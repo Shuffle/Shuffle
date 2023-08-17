@@ -1,23 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import WelcomeForm2 from "../components/WelcomeForm2.jsx";
-import {
-	Stepper, 
-	Step, 
-	StepLabel, 
-} from '@mui/material';
 import AppFramework from "../components/AppFramework.jsx";
-import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
+
+import {
+	ArrorForwardIos as ArrowForwardIosIcon,
+} from '@mui/icons-material';
+
 import { 
 	Grid, 
 	Container,
-  Collapse,
+  Fade,
 	Typography, 
 	Paper,
 	Button,
 	Card,
 	CardContent,
 	CardActionArea,
+	Stepper,
+	Step,
+	StepLabel,
 } from '@mui/material';
 import theme from '../theme.jsx';
 import { useNavigate, Link } from "react-router-dom";
@@ -193,9 +195,9 @@ const Welcome = (props) => {
 					setFrameworkData({})
 
 					if (responseJson.reason !== undefined) {
-						//alert.error("Failed loading: " + responseJson.reason)
+						//toast("Failed loading: " + responseJson.reason)
 					} else {
-						//alert.error("Failed to load framework for your org.")
+						//toast("Failed to load framework for your org.")
 					}
 				} else {
 					setFrameworkData(responseJson)
@@ -417,7 +419,7 @@ const Welcome = (props) => {
 										<Typography variant="h6" style={{textAlign: "center", marginBottom: 25, }}>
 											App Framework
 										</Typography>
-										<Collapse>
+										<Fade>
 												<AppFramework
 													inputUsecase={inputUsecase}
 													frameworkData={frameworkData}
@@ -428,20 +430,20 @@ const Welcome = (props) => {
 													isLoggedIn={true}
 													globalUrl={globalUrl}
 													size={0.78}
-													color={theme.palette.platformColor}
+													color={theme.palette.backgroundColor}
 													discoveryWrapper={discoveryWrapper}
 													setDiscoveryWrapper={setDiscoveryWrapper}
 													apps={apps}
 													inputUsecases={usecases}
 													setInputUsecases={setUsecases}
 												/>
-										</Collapse>
+										</Fade>
 									</div>
 								}
 							</Grid>
 						</div>
 						: 
-						<Collapse in={true}>
+						<Fade in={true}>
 							<div style={{maxWidth: 700, margin: "auto", marginTop: 50, }}>
 								{/*
 							<div style={{display:"flex"}}>
@@ -537,7 +539,7 @@ const Welcome = (props) => {
 									</Typography>
 								</div>
 							</div>
-						</Collapse>
+						</Fade>
 					}
 			</div>
    ) 

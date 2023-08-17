@@ -1,8 +1,9 @@
 import React, {useState} from 'react';
-import {BrowserView, MobileView} from "react-device-detect";
+import { toast } from 'react-toastify';
 import theme from '../theme.jsx';
+import {BrowserView, MobileView} from "react-device-detect";
 
-import {Link} from 'react-router-dom';
+import { useNavigate, Link } from "react-router-dom";
 import ReactGA from 'react-ga4';
 
 import {
@@ -21,7 +22,7 @@ import {
 	IconButton,
 	Divider,
 	LinearProgress, 
-} from '@mui/material';
+} from '@mui/material'
 
 import { 
 	MeetingRoom as MeetingRoomIcon, 
@@ -29,16 +30,20 @@ import {
 	Settings as SettingsIcon, 
 	Notifications as NotificationsIcon, 
 	Home as HomeIcon, 
-	Polymer as PolymerIcon, 
 	Apps as AppsIcon, 
 	Description as DescriptionIcon,
 	EmojiObjects as EmojiObjectsIcon,
   Business as BusinessIcon,
-	Analytics as AnalyticsIcon,
-	Lightbulb as LightbulbIcon,
+
+	Polyline as PolylineIcon, 
 } from '@mui/icons-material';
 
-import { useAlert } from "react-alert";
+import {
+	Analytics as AnalyticsIcon,
+	Lightbulb as LightbulbIcon,
+} from "@mui/icons-material";
+
+//import { useAlert 
 
 import SearchField from '../components/Searchfield.jsx'
 const hoverColor = "#f85a3e"
@@ -46,7 +51,8 @@ const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
 const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, homePage, userdata, serverside, } = props;
-	const alert = useAlert()
+	//const theme = useTheme();
+	//const alert = useAlert()
 
 
 	const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
@@ -57,6 +63,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
+  let navigate = useNavigate();
 
 
   const handleClick = (event) => {
@@ -95,7 +102,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				setNotifications([])
 				handleClose()
 			} else {
-				alert.error("Failed dismissing notifications. Please try again later.")
+				toast("Failed dismissing notifications. Please try again later.")
 			}
 		})
 		.catch(error => {
@@ -125,7 +132,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				console.log("NEW NOTIFICATIONS: ", newNotifications)
 				setNotifications(newNotifications)
 			} else {
-				alert.error("Failed dismissing notification. Please try again later.")
+				toast("Failed dismissing notification. Please try again later.")
 			}
 		})
 		.catch(error => {
@@ -400,9 +407,9 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				setTimeout(() => {
 					window.location.reload()
 				}, 2000)
-				alert.success("Successfully changed active organization - refreshing!")
+				toast("Successfully changed active organization - refreshing!")
 			} else {
-				alert.error("Failed changing org: ", responseJson.reason)
+				toast("Failed changing org: ", responseJson.reason)
 			}
 		})
 		.catch(error => {
@@ -514,6 +521,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 	}
 
 	// Handle top bar or something
+  const defaultTop = 7
   const loginTextBrowser = !isLoggedIn ? 
     <div style={{display: "flex", minWidth: 1250, maxWidth: 1250, margin: "auto", textAlign: "center",}}>
 			<div style={{display: "flex", flex: 1, }}>
@@ -664,7 +672,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 			</div>
 	    </div>
     	: 
-		<div style={{display: "flex", backgroundColor: "#1f2023",}}>
+		<div style={{display: "flex", }}>
 			<div style={{minWidth: 1250, maxWidth: 1250, display: "flex", margin: "auto", }}>
 				<div style={{flex: 1, flexDirection: "row"}}>
 					<List style={{height: 56, marginTop: "auto", marginBottom: "auto", display: "flex", flexDirect: "row", alignItems: "baseline", maxWidth: 340, }} component="nav">
@@ -686,9 +694,9 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 								<Link to="/workflows" style={hrefStyle}>
 									<div onMouseOver={handleSoarHover} onMouseOut={handleSoarHoverOut} style={{color: SoarHoverColor, cursor: "pointer", display: "flex"}}>
 										{/*
-										<PolymerIcon style={{marginRight: "5px"}} />
+										<PolylineIcon style={{marginRight: "5px"}} />
 										*/}
-										<Typography style={{marginTop: 5, marginRight: 8, }}>Workflows</Typography>
+										<Typography style={{marginTop: defaultTop, marginRight: 8, }}>Workflows</Typography>
 									</div> 
 								</Link>
       	 			</ListItem>
@@ -698,17 +706,24 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 											{/*
 											<AppsIcon style={{marginRight: "5px"}} />
 											*/}
-											<Typography style={{marginTop: 5, marginRight: 5,  }}>Apps</Typography>
+											<Typography style={{marginTop: defaultTop, marginRight: 5,  }}>Apps</Typography>
 										</div>
 								</Link>
       	 			</ListItem>
+							{/*
+							<ListItem style={{textAlign: "center"}}>
+								<Link to="/dashboard" style={hrefStyle}>
+										<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer"}}>Dashboard</div> 
+								</Link>
+      	 			</ListItem>
+							*/}
       	 			<ListItem style={listItemStyle}>
 								<Link to="/docs" style={hrefStyle}>
 										<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer", display: "flex"}}>
 											{/*
 											<DescriptionIcon style={{marginRight: "5px"}} />
 											*/}
-											<Typography style={{marginTop: 5,}}>Docs</Typography>
+											<Typography style={{marginTop: defaultTop,}}>Docs</Typography>
 										</div>
 								</Link>
       	 			</ListItem>
@@ -782,14 +797,13 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 								</ListItem>
 						: null*/}
 
-						
-
 						{userdata === undefined || userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length <= 1 ? 
 							null
 						:
 							<span style={{paddingTop: 12, }}>
 								<Select
-									disableunderline
+
+									disableUnderline
 									SelectDisplayProps={{
 										style: {
 											maxWidth: 50,
@@ -883,13 +897,32 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 							</span>
 							}
 
+						{/* Show on cloud, if not suborg and if not customer/pov/internal */}
+						{isCloud && (userdata.org_status === undefined || userdata.org_status === null || userdata.org_status.length === 0) ? 
+							<ListItem style={{textAlign: "center", marginLeft: 0, marginRight: 7, marginTop: 3, }}>
+								<Link to ="/pricing?tab=cloud&highlight=true" style={hrefStyle}>
+									<Button variant="contained" color="primary" style={{textTransform: "none"}} onClick={() => {
+										ReactGA.event({
+											category: "header",
+											action: "pricing_upgrade_click",
+											label: "",
+										})
+									}}>
+										Upgrade	
+									</Button>
+								</Link>
+							</ListItem>
+						: null}
+
 						{userdata === undefined || userdata.app_execution_limit === undefined || userdata.app_execution_usage === undefined || userdata.app_execution_usage < 1000 ? 
 							null
 							:
 							<Tooltip title={`Amount of executions left: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Shuffle normally, but your Workflow triggers may stop working. Reach out to support@shuffler.io to extend this limit.`}>
-								<div style={{maxHeight: 30, minHeight: 30, padding: 8, textAlign: "center", cursor: "pointer", borderRadius: theme.palette.borderRadius, marginRight: 10, marginTop: 12, backgroundColor: theme.palette.surfaceColor, minWidth: 60, maxWidth: 60,  }} onClick={() => {
+								<div style={{maxHeight: 30, minHeight: 30, padding: 8, textAlign: "center", cursor: "pointer", borderRadius: theme.palette.borderRadius, marginRight: 10, marginTop: 12, backgroundColor: theme.palette.surfaceColor, minWidth: 60, maxWidth: 60, border: userdata.app_execution_usage/userdata.app_execution_limit >= 0.9 ? "#f86a3e" : null, }} onClick={() => {
+										console.log(userdata.appe_execution_usage/userdata.app_execution_limit)
 										if (window.drift !== undefined) {
 											window.drift.api.startInteraction({ interactionId: 326905 })
+											navigate("/pricing")
 										} else {
 											console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
 										}
@@ -999,16 +1032,16 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 	const loadedCheck = 
 		<div style={{minHeight: 68}}>
 			<BrowserView>
-      	{loginTextBrowser}
+      			{loginTextBrowser}
 			</BrowserView>
 			<MobileView>
-      	{loginTextMobile}
+      			{loginTextMobile}
 			</MobileView>
 		</div>
     // <div style={{backgroundImage: "linear-gradient(-90deg,#342f78 0,#29255e 50%,#1b1947 100%"}}>
   	return (
-    	<div style={{backgroundColor: props.color === "undefined" ? "inherit" : props.color}}>
-				{loadedCheck}
+    	<div style={{backgroundColor: theme.palette.backgroundColor, }}>
+			{loadedCheck}
 	    </div>
   )
 }

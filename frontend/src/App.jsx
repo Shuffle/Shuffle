@@ -167,7 +167,7 @@ const App = (message, props) => {
   const includedData =
       <div
         style={{
-          backgroundColor: "#1F2023",
+          backgroundColor: theme.palette.backgroundColor,
           color: "rgba(255, 255, 255, 0.65)",
           minHeight: "100vh",
         }}

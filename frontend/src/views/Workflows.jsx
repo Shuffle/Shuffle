@@ -3,12 +3,8 @@ import ReactDOM from "react-dom"
 
 import { makeStyles } from "@mui/styles";
 import { Navigate } from "react-router-dom";
-//import { Redirect } from "react-router-dom";
-
-
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import EditWorkflow from "../components/EditWorkflow.jsx" 
-//import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
 import Priority from "../components/Priority.jsx";
 
 import { isMobile } from "react-device-detect" 
@@ -32,7 +28,6 @@ import {
   MenuItem,
   Chip,
   Typography,
-  Zoom,
   CircularProgress,
   Dialog,
   DialogTitle,
@@ -41,11 +36,10 @@ import {
 	Checkbox,
 	LinearProgress,
 	ListItemText,
-} from "@mui/material"
-
-import {
   AvatarGroup,
-} from "@mui/material"
+
+  Zoom,
+} from "@mui/material";
 
 import {
   GridOn as GridOnIcon,
@@ -81,24 +75,17 @@ import {
   ArrowRight as ArrowRightIcon,
 } from "@mui/icons-material";
 
-//import NestedMenuItem from "material-ui-nested-menu-item";
-//import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon,  Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
-
-//https://next.material-ui.com/components/material-icons/
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
-//import JSONPretty from 'react-json-pretty';
-//import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import Dropzone from "../components/Dropzone.jsx";
 
 import { useNavigate, Link } from "react-router-dom";
-import { useAlert } from "react-alert";
-import ChipInput from "material-ui-chip-input";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
+import { MuiChipsInput } from "mui-chips-input";
 import { v4 as uuidv4 } from "uuid";
 import theme from "../theme.jsx";
 
-const inputColor = "#383B40";
-const surfaceColor = "#27292D";
 const svgSize = 24;
 const imagesize = 22;
 
@@ -409,16 +396,16 @@ export const validateJson = (showResult) => {
 	}
 
 	if (typeof showResult === "object" || typeof showResult === "array") {
-  	return {
-  	  valid: true,
-  	  result: showResult,
-  	}
+  	  return {
+  	    valid: true,
+  	    result: showResult,
+  	  }
 	}
 
 	if (showResult[0] === "\"") {
-  	return {
-  	  valid: false,
-  	  result: showResult,
+  		return {
+  	  		valid: false,
+  	  		result: showResult,
 		}
 	}
 
@@ -427,10 +414,10 @@ export const validateJson = (showResult) => {
     if (!showResult.includes("{") && !showResult.includes("[")) {
       jsonvalid = false
 
-			return {
-				valid: jsonvalid,
-				result: showResult,
-			};
+		return {
+			valid: jsonvalid,
+			result: showResult,
+		};
     }
   } catch (e) {
     showResult = showResult.split("'").join('"');
@@ -543,7 +530,7 @@ const Workflows = (props) => {
   document.title = "Shuffle - Workflows";
 	let navigate = useNavigate();
 
-  const alert = useAlert();
+  //const alert = useAlert();
   const classes = useStyles(theme);
   const imgSize = 60;
 
@@ -780,7 +767,7 @@ const Workflows = (props) => {
       }}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: 500,
           padding: 30,
@@ -835,7 +822,7 @@ const Workflows = (props) => {
       }}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: 500,
           padding: 50,
@@ -892,7 +879,7 @@ const Workflows = (props) => {
       }}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: 500,
         },
@@ -943,7 +930,7 @@ const Workflows = (props) => {
     const files = isDropzone ? e.dataTransfer.files : e.target.files;
 
     const reader = new FileReader();
-    alert.info("Starting upload. Please wait while we validate the workflows");
+    toast("Starting upload. Please wait while we validate the workflows");
 
     try {
       reader.addEventListener("load", (e) => {
@@ -952,7 +939,7 @@ const Workflows = (props) => {
         try {
           data = JSON.parse(reader.result);
         } catch (e) {
-          alert.error("Invalid JSON: " + e);
+          toast("Invalid JSON: " + e);
           return;
         }
 
@@ -986,13 +973,13 @@ const Workflows = (props) => {
 								data.status
               ).then((response) => {
                 if (response !== undefined) {
-                  alert.success(`Successfully imported ${data.name}`);
+                  toast(`Successfully imported ${data.name}`);
                 }
               });
             }
           })
           .catch((error) => {
-            alert.error("Import error: " + error.toString());
+            toast("Import error: " + error.toString());
           });
       });
     } catch (e) {
@@ -1030,9 +1017,9 @@ const Workflows = (props) => {
 			if (responseJson.success === false) {
 				setAppFramework({})
 				if (responseJson.reason !== undefined) {
-					//alert.error("Failed loading: " + responseJson.reason)
+					//toast("Failed loading: " + responseJson.reason)
 				} else {
-					//alert.error("Failed to load framework for your org.")
+					//toast("Failed to load framework for your org.")
 				}
 			} else {
 				setAppFramework(responseJson)
@@ -1060,7 +1047,7 @@ const Workflows = (props) => {
           //  navigate("/search?tab=workflows")
           //}
 
-          alert.info("Failed getting workflows. Are you logged in?");
+          toast("Failed getting workflows. Are you logged in?");
 
           return;
         }
@@ -1125,14 +1112,14 @@ const Workflows = (props) => {
 
         } else {
           if (isLoggedIn) {
-            alert.error("An error occurred while loading workflows");
+            toast("An error occurred while loading workflows");
           }
 
           return;
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1182,7 +1169,7 @@ const Workflows = (props) => {
 
 			setUsecases(newcategories)
 		} else {
-  		setUsecases(categorydata)
+  			setUsecases(categorydata)
 		}
 	}
 
@@ -1212,7 +1199,7 @@ const Workflows = (props) => {
 				} 
       })
       .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
+        //toast("ERROR: " + error.toString());
         console.log("ERROR: " + error.toString());
         setWorkflows(workflows);
       	setWorkflowDone(true);
@@ -1253,7 +1240,7 @@ const Workflows = (props) => {
     width: "100%",
     height: "250px",
     color: "white",
-    backgroundColor: surfaceColor,
+    backgroundColor: theme.palette.surfaceColor,
     display: "flex",
     flexDirection: "column",
   };
@@ -1271,19 +1258,19 @@ const Workflows = (props) => {
     overflow: "hidden",
     width: "100%",
     color: "white",
-    backgroundColor: surfaceColor,
+    padding: "12px 12px 0px 15px",
     borderRadius: 5,
     display: "flex",
     boxSizing: "border-box",
     position: "relative",
-    padding: "12px 12px 0px 15px",
+    backgroundColor: theme.palette.surfaceColor,
   };
 
   const gridContainer = {
     height: "auto",
     color: "white",
     margin: "10px",
-    backgroundColor: surfaceColor,
+    backgroundColor: theme.palette.surfaceColor,
   };
 
   const workflowActionStyle = {
@@ -1302,7 +1289,7 @@ const Workflows = (props) => {
 			}, i * 200);
     }
 
-    alert.info(`exporting and keeping original for all ${allWorkflows.length} workflows`);
+    toast(`exporting and keeping original for all ${allWorkflows.length} workflows`);
   };
 
   const deduplicateIds = (data, skip_sanitize) => {
@@ -1343,7 +1330,7 @@ const Workflows = (props) => {
             trigger.parameters[1].value = "webhook_" + trigger.id;
             // FIXME: Add auth here?
           } else {
-            alert.info("Something is wrong with the webhook in the copy");
+            toast("Something is wrong with the webhook in the copy");
           }
         }
 
@@ -1463,7 +1450,7 @@ const Workflows = (props) => {
       data = sanitizeWorkflow(data);
 
       if (data.subflows !== null && data.subflows !== undefined) {
-        alert.info(
+        toast(
           "Not exporting with subflows when sanitizing. Please manually export them."
         );
         data.subflows = [];
@@ -1491,7 +1478,7 @@ const Workflows = (props) => {
   const publishWorkflow = (data) => {
     data = JSON.parse(JSON.stringify(data));
     data = sanitizeWorkflow(data);
-    alert.info("Sanitizing and publishing " + data.name);
+    toast("Sanitizing and publishing " + data.name);
 
     // This ALWAYS talks to Shuffle cloud
     fetch(globalUrl + "/api/v1/workflows/" + data.id + "/publish", {
@@ -1508,9 +1495,9 @@ const Workflows = (props) => {
 				console.log("Status not 200 for workflow publish :O!");
 			} else {
 				if (isCloud) {
-					alert.success("Successfully published workflow");
+					toast("Successfully published workflow");
 				} else {
-					alert.success(
+					toast(
 						"Successfully published workflow to https://shuffler.io"
 					);
 				}
@@ -1520,20 +1507,20 @@ const Workflows = (props) => {
 		})
 		.then((responseJson) => {
 			if (responseJson.reason !== undefined) {
-				alert.error("Failed publishing: ", responseJson.reason);
+				toast("Failed publishing: ", responseJson.reason);
 			}
 
 			getAvailableWorkflows();
 		})
 		.catch((error) => {
-			alert.error("Failed publishing: is the workflow valid? Remember to save the workflow first.")
+			toast("Failed publishing: is the workflow valid? Remember to save the workflow first.")
 			console.log(error.toString());
 		});
   };
 
   const copyWorkflow = (data) => {
     data = JSON.parse(JSON.stringify(data));
-    alert.success("Copying workflow " + data.name);
+    toast("Copying workflow " + data.name);
     data.id = "";
     data.name = data.name + "_copy";
     data = deduplicateIds(data, true);
@@ -1560,7 +1547,7 @@ const Workflows = (props) => {
         }, 1000);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1576,9 +1563,9 @@ const Workflows = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for setting workflows :O!");
-          alert.error("Failed deleting workflow. Do you have access?");
+          toast("Failed deleting workflow. Do you have access?");
         } else {
-          alert.success("Deleted workflow " + id);
+          toast("Deleted workflow " + id);
         }
 
         return response.json();
@@ -1589,7 +1576,7 @@ const Workflows = (props) => {
         }, 1000);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1606,6 +1593,7 @@ const Workflows = (props) => {
 	  maxWidth: "100%",
       minWidth: paperAppStyle.width,
       color: innerColor,
+      padding: paperAppStyle.padding,
       borderRadius: paperAppStyle.borderRadius,
       display: "flex",
       boxSizing: "border-box",
@@ -1613,12 +1601,10 @@ const Workflows = (props) => {
       border: `2px solid ${innerColor}`,
       cursor: "pointer",
       backgroundColor: hover ? "rgba(39,41,45,0.5)" : "rgba(39,41,45,1)",
-
-      padding: paperAppStyle.padding,
     };
 
     return (
-      <Grid item xs={isMobile ? 12 : 4} style={{  }}>
+      <Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
         <Paper
           square
           style={setupPaperStyle}
@@ -1711,7 +1697,7 @@ const Workflows = (props) => {
         }}
       >
         <MenuItem
-          style={{ backgroundColor: inputColor, color: "white" }}
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={(event) => {
 						event.stopPropagation()
 						ReactDOM.unstable_batchedUpdates(() => {
@@ -1735,7 +1721,7 @@ const Workflows = (props) => {
           {"Edit details"}
         </MenuItem>
         <MenuItem
-          style={{ backgroundColor: inputColor, color: "white" }}
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={() => {
             setSelectedWorkflow(data);
             setPublishModalOpen(true);
@@ -1746,7 +1732,7 @@ const Workflows = (props) => {
           {"Publish Workflow"}
         </MenuItem>
         <MenuItem
-          style={{ backgroundColor: inputColor, color: "white" }}
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={() => {
             copyWorkflow(data);
             setOpen(false);
@@ -1756,15 +1742,8 @@ const Workflows = (props) => {
           <FileCopyIcon style={{ marginLeft: 0, marginRight: 8 }} />
           {"Duplicate Workflow"}
         </MenuItem>
-        {/*<NestedMenuItem disabled={userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length === 1 || userdata.orgs.length >= 0} style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-					//copyWorkflow(data)		
-					//setOpen(false)
-				}} key={"duplicate"}>
-					<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
-					{"Copy to Child Org"}
-				</NestedMenuItem>*/}
         <MenuItem
-          style={{ backgroundColor: inputColor, color: "white" }}
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={() => {
             setExportModalOpen(true);
 
@@ -1818,7 +1797,7 @@ const Workflows = (props) => {
           {"Export Workflow"}
         </MenuItem>
         <MenuItem
-          style={{ backgroundColor: inputColor, color: "white" }}
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={() => {
             setDeleteModalOpen(true);
             setSelectedWorkflowId(data.id);
@@ -1910,7 +1889,7 @@ const Workflows = (props) => {
 		}
 
     return (
-			<div style={{width: "100%", position: "relative",}}>
+	  <div style={{width: "100%", position: "relative",}}>
         <Paper square style={paperAppStyle}>
 					{selectedCategory !== "" ?
 						<Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -2054,7 +2033,7 @@ const Workflows = (props) => {
                   }}
                   onClick={() => {
                     if (subflows === 0) {
-                      alert.info("No subflows for " + data.name);
+                      toast("No subflows for " + data.name);
                       return;
                     }
 
@@ -2229,9 +2208,9 @@ const Workflows = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Error setting workflow: ", responseJson.reason)
+						toast("Error setting workflow: ", responseJson.reason)
 					} else {
-						alert.error("Error setting workflow.")
+						toast("Error setting workflow.")
 					}
 
 					return
@@ -2249,14 +2228,14 @@ const Workflows = (props) => {
 					setSubmitLoading(false)
           setModalOpen(false);
         } else {
-          //alert.info("Successfully changed basic info for workflow");
+          //toast("Successfully changed basic info for workflow");
           setModalOpen(false);
         }
 
         return responseJson;
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
 				setSubmitLoading(false)
         setModalOpen(false);
         setSubmitLoading(false);
@@ -2273,7 +2252,7 @@ const Workflows = (props) => {
         const file = event.target.files[key];
         if (file.type !== "application/json") {
           if (file.type !== undefined) {
-            alert.error("File has to contain valid json");
+            toast("File has to contain valid json");
 						setSubmitLoading(false)
           }
 
@@ -2287,7 +2266,7 @@ const Workflows = (props) => {
           try {
             data = JSON.parse(reader.result);
           } catch (e) {
-            alert.error("Invalid JSON: " + e);
+            toast("Invalid JSON: " + e);
 						setSubmitLoading(false)
             return;
           }
@@ -2327,13 +2306,13 @@ const Workflows = (props) => {
 									data.status,
                 ).then((response) => {
                   if (response !== undefined) {
-                    alert.success("Successfully imported " + data.name);
+                    toast("Successfully imported " + data.name);
                   }
                 });
               }
             })
             .catch((error) => {
-              alert.error("Import error: " + error.toString());
+              toast("Import error: " + error.toString());
             });
         });
 
@@ -2557,7 +2536,7 @@ const Workflows = (props) => {
                       }}
                       onClick={() => {
                         if (subflows === 0) {
-                          alert.info("No subflows for " + data.name);
+                          toast("No subflows for " + data.name);
                           return;
                         }
 
@@ -2705,7 +2684,7 @@ const Workflows = (props) => {
       }}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: isMobile ? "90%" : "800px",
           maxWidth: isMobile ? "90%" : "800px",
@@ -2761,7 +2740,7 @@ const Workflows = (props) => {
             fullWidth
           />
 					<div style={{display: "flex", marginTop: 10, }}>
-						<ChipInput
+						<MuiChipsInput
 							style={{ flex: 1}}
 							InputProps={{
 								style: {
@@ -2823,7 +2802,7 @@ const Workflows = (props) => {
 																selectedUsecases.push(subcase.name)
 															}
 
-    	  											setUpdate(Math.random());
+    	  													setUpdate(Math.random());
 															setSelectedUsecases(selectedUsecases)
 														}}>
             	  							<Checkbox style={{color: selectedUsecases.includes(subcase.name) ? usecase.color : theme.palette.inputColor}} checked={selectedUsecases.includes(subcase.name)} />
@@ -3067,12 +3046,153 @@ const Workflows = (props) => {
     </span>
   );
 
+	// const tourOptions = {
+	// 	defaultStepOptions: {
+	// 		classes: "shadow-md bg-purple-dark",
+  //   	scrollTo: true
+	// 	},
+	// 	useModalOverlay: true,
+	// 	tourName: workflows,
+	// 	exitOnEsc: true,
+	// }
+
+  //  //classes: "custom-class-name-1 custom-class-name-2",
+	// const newSteps = [
+	// 	{
+  //   	id: "intro",
+  //   	scrollTo: true,
+  //   	beforeShowPromise: function() {
+  //   	  return new Promise(function(resolve) {
+  //   	    setTimeout(function() {
+  //   	      window.scrollTo(0, 0);
+  //   	      resolve();
+  //   	    }, 500);
+  //   	  });
+  //   	},
+  //   	buttons: [
+  //   	  {
+  //   	    classes: "shepherd-button-primary",
+	// 				style: {
+	// 					backgroundColor: "red",	
+	// 					color: "white", 
+	// 				},
+  //   	    text: "Next",
+  //   	    type: "next"
+  //   	  }
+  //   	],
+  //   	highlightClass: "highlight",
+  //   	showCancelLink: true,
+  //   	text: [
+  //   	  "React-Shepherd is a JavaScript library for guiding users through your React app."
+  //   	],
+  //   	when: {
+  //   	  show: () => {
+  //   	    console.log("show step 1");
+  //   	  },
+  //   	  hide: () => {
+  //   	    console.log("hide step 1");
+  //   	  }
+  //   	}
+  // },	
+  // {
+  //   	id: "second",
+  //   	attachTo: {
+  //   	  element: "second-step",
+  //   	  on: "top"
+  //   	},
+  //   	text: [
+  //   	  "Yuk eksplorasi hasil Tes Minat Bakat-mu dan rekomendasi <b>Jurusan</b> dan Karier."
+  //   	],
+  //   	buttons: [
+  //   	  {
+  //   	    classes: "btn btn-info",
+  //   	    text: "Kembali",
+  //   	    type: "back"
+  //   	  },
+  //   	  {
+  //   	    classes: "btn btn-success",
+  //   	    text: "Saya Mengerti",
+  //   	    type: "cancel"
+  //   	  }
+  //   	],
+  //   	when: {
+  //   	  show: () => {
+  //   	    console.log("show stepp");
+  //   	  },
+  //   	  hide: () => {
+  //   	    console.log("complete step");
+  //   	  }
+  //   	},
+  //   	showCancelLink: false,
+  //   	scrollTo: true,
+  //   	modalOverlayOpeningPadding: 4,
+  //   	useModalOverlay: false,
+  //   	canClickTarget: false
+  // 	}
+	// ]
+		
+	// 	function TourButton() {
+	// 	  const tour = useContext(ShepherdTourContext);
+		
+	// 	  return (
+	// 	    <Button variant="contained" color="primary" onClick={tour.start}>
+	// 	      Start Tour
+	// 	    </Button>
+	// 	  );
+	// 	}
+
   const WorkflowView = () => {
     if (workflows.length === 0) {
-		// Not going there yet
-		//if ((userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) || userdata.tutorials === null) {
-		//	return <Navigate to="/getting-started" replace />;
-		//}
+			// Not going there yet
+			//if ((userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) || userdata.tutorials === null) {
+			//	return <Navigate to="/getting-started" replace />;
+			//}
+      //return (
+      //  <div style={emptyWorkflowStyle}>
+      //    <Paper style={boxStyle}>
+      //      <div>
+      //        <h2>Welcome to Shuffle</h2>
+      //      </div>
+      //      <div>
+      //        <p>
+      //          <b>Shuffle</b> is a flexible, easy to use, automation platform
+      //          allowing users to integrate their services and devices freely.
+      //          It's made to significantly reduce the amount of manual labor,
+      //          and is focused on security applications.{" "}
+      //          <a
+      //            href="/docs/about"
+      //            style={{ textDecoration: "none", color: "#f85a3e" }}
+      //          >
+      //            Click here to learn more.
+      //          </a>
+      //        </p>
+      //      </div>
+      //      <div>
+      //        If you want to jump straight into it, click here to create your
+      //        first workflow:
+      //      </div>
+      //      <div style={{ display: "flex" }}>
+      //        <Button
+			//					id="second-step"
+      //          color="primary"
+      //          style={{ marginTop: "20px" }}
+      //          variant="outlined"
+      //          onClick={() => setModalOpen(true)}
+      //        >
+      //          New workflow
+      //        </Button>
+      //        <span style={{ paddingTop: 20, display: "flex" }}>
+      //          <Typography
+      //            style={{ marginTop: 5, marginLeft: 30, marginRight: 15 }}
+      //          >
+      //            ..OR
+      //          </Typography>
+      //          {workflowButtons}
+      //        </span>
+      //      </div>
+      //    </Paper>
+      //  </div>
+      //)
     }
 
 		var workflowDelay = -150
@@ -3084,40 +3204,104 @@ const Workflows = (props) => {
         <div style={workflowViewStyle}>
           <div style={{ display: "flex", marginTop: 25, }}>
             <div style={{ flex: 1 }}>
-				<Typography variant="h1" style={{fontSize: 30}}>
-              		Workflows
-				</Typography>
+							<Typography variant="h1" style={{fontSize: 30}}>
+              	Workflows
+							</Typography>
             </div>
-			{isMobile ? null : 
-				<div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
-					<div style={{ flex: 1, float: "right" }}>
-						<ChipInput
-							style={{}}
-							InputProps={{
-								style: {
-									color: "white",
-									maxWidth: 275,
-									minWidth: 275,
-								},
-							}}
-							placeholder="Add Filter"
-							color="primary"
-							fullWidth
-							value={filters}
-							onAdd={(chip) => {
-								addFilter(chip);
-							}}
-							onDelete={(_, index) => {
-								removeFilter(index);
-							}}
-						/>
-					</div>
-				</div>
-			}
+						{/*
+            <div style={{ flex: 1 }}>
+              <Typography style={{ marginTop: 7, marginBottom: "auto" }}>
+                <a
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  href="https://shuffler.io/docs/workflows"
+                  style={{ textDecoration: "none", color: "#f85a3e" }}
+                >
+                  Learn more about Workflows
+                </a>
+              </Typography>
+            </div>
+						*/}
+						{isMobile ? null : 
+							<div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
+								<div style={{ flex: 1, float: "right" }}>
+									<MuiChipsInput
+										style={{}}
+										InputProps={{
+											style: {
+												color: "white",
+												maxWidth: 275,
+												minWidth: 275,
+											},
+										}}
+										placeholder="Filter Workflows"
+										color="primary"
+										fullWidth
+										value={filters}
+										onChange={(chips) => {
+											setFilters(chips);
+										}}
+										onAdd={(chip) => {
+											addFilter(chip);
+										}}
+										onDelete={(_, index) => {
+											removeFilter(index);
+										}}
+									/>
+								</div>
+							</div>
+						}
             <div style={{ flex: 1, textAlign: "right", }}>
               {workflowButtons}
             </div>
           </div>
+          {/*
+					<div style={flexContainerStyle}>
+						<div style={{...flexBoxStyle, ...activeWorkflowStyle}}>
+							<div style={flexContentStyle}>
+								<div><img src={mobileImage} style={iconStyle} /></div>
+								<div style={ blockRightStyle }>
+									<div style={counterStyle}>{workflows.length}</div>
+									<div style={fontSize_16}>ACTIVE WORKFLOWS</div>
+								</div>
+							</div>
+						</div>
+						<div style={{...flexBoxStyle, ...availableWorkflowStyle}}>
+							<div style={flexContentStyle}>
+								<div><img src={bookImage} style={iconStyle} /></div>
+								<div style={ blockRightStyle }>
+									<div style={counterStyle}>{workflows.length}</div>
+									<div style={fontSize_16}>AVAILABE WORKFLOWS</div>
+								</div>
+							</div>
+						</div>
+						<div style={{...flexBoxStyle, ...notificationStyle}}>
+							<div style={flexContentStyle}>
+								<div><img src={bagImage} style={iconStyle} /></div>
+								<div style={ blockRightStyle }>
+									<div style={counterStyle}>{workflows.length}</div>
+									<div style={fontSize_16}>NOTIFICATIONS</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					*/}
+
+          {/*
+					chipRenderer={({ value, isFocused, isDisabled, handleClick, handleRequestDelete }, key) => {
+						console.log("VALUE: ", value)
+
+						return (
+							<Chip
+								key={key}
+								style={chipStyle}
+
+							>
+								{value}
+							</Chip>
+						)
+					}}
+					*/}
   		
 					<div style={{width: "100%", minHeight: isMobile ? 0 : 51, maxHeight: isMobile ? 0 : 51, marginTop: 10, }}>
 						{!isMobile && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
@@ -3125,6 +3309,7 @@ const Workflows = (props) => {
 								{usecases.map((usecase, index) => {
 									//console.log(usecase)
 									const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length/usecase.list.length*100) : 0
+									//console.log("Usecase Matches: ", usecase.matches, ", Percent: ", percentDone)
 
 									return (
 										<Paper
@@ -3166,7 +3351,10 @@ const Workflows = (props) => {
 					</div>
 
           <div style={{ marginTop: 10, marginBottom: 10, }} />
-          {!isMobile && actionImageList !== undefined && actionImageList !== null && actionImageList.length > 0 ? (
+          {!isMobile &&
+					actionImageList !== undefined &&
+          actionImageList !== null &&
+          actionImageList.length > 0 ? (
             <div
               style={{
                 display: "flex",
@@ -3255,10 +3443,11 @@ const Workflows = (props) => {
 									return returnData 
 								}
 
-				/*<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>*/
                 return (
 					<span>
+					{/*<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>*/}
 						{returnData}
+					{/*</Zoom>*/}
 					</span>
               );
             })}
@@ -3296,11 +3485,13 @@ const Workflows = (props) => {
 						/>
 					: null}
 
-					{/*<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
-					<div style={{marginTop: 15, marginBottom: 50, }}>
+					<div style={{marginTop: 30, marginBottom: 50, marginLeft: 30, }}>
 						{view === "grid" ? (
 							<Grid container spacing={filteredWorkflows.length === 0 ? 12 : filteredWorkflows.length === 1 ? 6 : 4} style={paperAppContainer}>
-								<NewWorkflowPaper />
+								{/*<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+									<NewWorkflowPaper />
+								{/*</Zoom>*/}
+
 								{filteredWorkflows.map((data, index) => {
 									// Shouldn't be a part of this list
 									if (data.public === true) {
@@ -3311,20 +3502,20 @@ const Workflows = (props) => {
 										workflowDelay += 75
 									} else {
 										return (
-											<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-												<Grid key={index} item xs={isMobile ? 12 : 4} style={{}}>
-													<WorkflowPaper key={index} data={data} />
-												</Grid>
-											</Zoom>
+											<Grid key={index} item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
+												<WorkflowPaper key={index} data={data} />
+											</Grid>
 										)
 									}
 
 									return (
-										<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-											<Grid item xs={isMobile ? 12 : 4} style={{}}>
+										<span>
+										{/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+											<Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
 												<WorkflowPaper key={index} data={data} />
 											</Grid>
-										</Zoom>
+										{/*</Zoom>*/}
+										</span>
 									)
 								})}
 							</Grid>
@@ -3364,7 +3555,7 @@ const Workflows = (props) => {
       parsedData["field_2"] = field2;
     }
 
-    alert.success("Getting specific workflows from your URL.");
+    toast("Getting specific workflows from your URL.");
     fetch(globalUrl + "/api/v1/workflows/download_remote", {
       method: "POST",
       mode: "cors",
@@ -3376,7 +3567,7 @@ const Workflows = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          alert.success("Successfully loaded workflows from " + downloadUrl);
+          toast("Successfully loaded workflows from " + downloadUrl);
           setTimeout(() => {
             getAvailableWorkflows();
           }, 1000);
@@ -3387,14 +3578,14 @@ const Workflows = (props) => {
       .then((responseJson) => {
         if (!responseJson.success) {
           if (responseJson.reason !== undefined) {
-            alert.error("Failed loading: " + responseJson.reason);
+            toast("Failed loading: " + responseJson.reason);
           } else {
-            alert.error("Failed loading");
+            toast("Failed loading");
           }
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -3409,7 +3600,7 @@ const Workflows = (props) => {
       onClose={() => {}}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: "800px",
           minHeight: "320px",
@@ -3436,7 +3627,7 @@ const Workflows = (props) => {
       <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
         Repository (supported: github, gitlab, bitbucket)
         <TextField
-          style={{ backgroundColor: inputColor }}
+          style={{ backgroundColor: theme.palette.inputColor }}
           variant="outlined"
           margin="normal"
           defaultValue={downloadUrl}
@@ -3456,7 +3647,7 @@ const Workflows = (props) => {
         </span>
         <div style={{ display: "flex" }}>
           <TextField
-            style={{ backgroundColor: inputColor }}
+            style={{ backgroundColor: theme.palette.inputColor }}
             variant="outlined"
             margin="normal"
             defaultValue={downloadBranch}
@@ -3477,7 +3668,7 @@ const Workflows = (props) => {
         </span>
         <div style={{ display: "flex" }}>
           <TextField
-            style={{ flex: 1, backgroundColor: inputColor }}
+            style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
             variant="outlined"
             margin="normal"
             InputProps={{
@@ -3493,7 +3684,7 @@ const Workflows = (props) => {
             fullWidth
           />
           <TextField
-            style={{ flex: 1, backgroundColor: inputColor }}
+            style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
             variant="outlined"
             margin="normal"
             InputProps={{
@@ -3643,7 +3834,7 @@ const Workflows = (props) => {
 				}}
 				PaperProps={{
 					style: {
-						backgroundColor: surfaceColor,
+						backgroundColor: theme.palette.surfaceColor,
 						color: "white",
 						minWidth: 560,
 						minHeight: 415,
@@ -3728,7 +3919,7 @@ const Workflows = (props) => {
 						setWorkflow={setEditingWorkflow}
 						modalOpen={modalOpen}
 						setModalOpen={setModalOpen}
-  					usecases={usecases}
+  						usecases={usecases}
 						setNewWorkflow={setNewWorkflow}
 						appFramework={appFramework}
 						isEditing={isEditing}

@@ -11,11 +11,11 @@ import {
 	Card,
 } from "@mui/material";
 
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 const Branding = (props) => {
   const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, } = props;
-  const alert = useAlert();
+  //const alert = useAlert();
 	const [publishingInfo, setPublishingInfo] = useState("");
 
 	// Should enable / disable org branding
