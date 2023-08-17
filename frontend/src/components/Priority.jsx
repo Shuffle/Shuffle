@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast } from 'react-toastify';
 
 import ReactGA from 'react-ga4';
 import theme from "../theme.jsx";

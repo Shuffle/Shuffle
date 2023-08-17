@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import { toast } from 'react-toastify';
 import theme from '../theme.jsx';
 import {BrowserView, MobileView} from "react-device-detect";
 
