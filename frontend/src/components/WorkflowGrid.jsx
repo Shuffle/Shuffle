@@ -25,12 +25,9 @@ import WorkflowPaperNew from "../components/WorkflowPaperNew.jsx"
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const AppGrid = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, alternativeView, }  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, alternativeView, onlyResults, inputsearch } = props
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
-
+    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 4 : parsedXs
 	//const [apps, setApps] = React.useState([]);
@@ -38,7 +35,9 @@ const AppGrid = props => {
 	const [formMail, setFormMail] = React.useState("");
 	const [message, setMessage] = React.useState("");
 	const [formMessage, setFormMessage] = React.useState("");
-  const [usecases, setUsecases] = React.useState([]);
+  	const [usecases, setUsecases] = React.useState([]);
+
+	const [localMessage, setLocalMessage] = React.useState("");
 
 	const buttonStyle = {borderRadius: 30, height: 50, width: 220, margin: isMobile ? "15px auto 15px auto" : 20, fontSize: 18,}
 
@@ -153,10 +152,10 @@ const AppGrid = props => {
         return response.json();
       })
       .then((responseJson) => {
-				if (responseJson.success !== false) {
-					console.log("Usecases: ", responseJson)
-					//handleKeysetting(responseJson, workflows)
-				}
+			if (responseJson.success !== false) {
+				console.log("Usecases: ", responseJson)
+				//handleKeysetting(responseJson, workflows)
+			}
       })
       .catch((error) => {
         //alert.error("ERROR: " + error.toString());
@@ -166,7 +165,9 @@ const AppGrid = props => {
 
 	useEffect(() => {
 		fetchUsecases()
+
 	}, [])
+
 
 	// value={currentRefinement}
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {
@@ -182,16 +183,23 @@ const AppGrid = props => {
 			}
 		}, [])
 
+		if (localMessage !== inputsearch && inputsearch !== undefined && inputsearch !== null && inputsearch.length > 0) { 
+			console.log("In refinement: ", inputsearch)
+			//setLocalMessage(inputsearch)
+			refine(inputsearch)
+		} else if (onlyResults === true) {
+			// Don't return anything unless refinement works
+			return null
+		}
+
 		return (
 		  <form noValidate action="" role="search">
+		  	{onlyResults !== true ?
 				<TextField 
 					fullWidth
 					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%",}} 
 					InputProps={{
 						style:{
-							color: "white",
-							fontSize: "1em",
-							height: 50,
 						},
 						startAdornment: (
 							<InputAdornment position="start">
@@ -210,8 +218,8 @@ const AppGrid = props => {
 					}}
 					limit={5}
 				/>
-				{/*isSearchStalled ? 'My search is stalled' : ''*/}
-			</form>
+			: null}
+		</form>
 		)
 	}
 
@@ -228,29 +236,35 @@ const AppGrid = props => {
 		var counted = 0
 
 		return (
-      <Grid container spacing={4} style={paperAppContainer}>
-				{hits.map((data, index) => {
-					workflowDelay += 50
+			<div>
+				{onlyResults === true && hits.length > 0 ?
+					<Typography variant="h6" style={{paddingBottom: 0, }}>
+						Relevant Workflows
+					</Typography>
+				: null}
+				<Grid container spacing={4} style={paperAppContainer}>
+					{hits.map((data, index) => {
+						workflowDelay += 50
 
-					if (counted === 12/xs*rowHandler) {
-						return null
-					}
+						if (counted === 12/xs*rowHandler) {
+							return null
+						}
 
-					counted += 1
+						counted += 1
 
-					return (
-						<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px" }}>
+						return (
+							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px",}}>
+						{/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
 								{alternativeView === true ? 
 									<WorkflowPaperNew key={index} data={data} />
 								: 
 									<WorkflowPaper key={index} data={data} />
 								}
 							</Grid>
-						</Zoom>
-					)
-				})}
-			</Grid>
+						)
+					})}
+				</Grid>
+			</div>
 		)
 	}
 
@@ -331,11 +345,11 @@ const AppGrid = props => {
 							fullWidth={true}
 							placeholder="What apps do you want to see?"
 							type=""
-						  id="standard-required"
+						    id="standard-required"
 							margin="normal"
 							variant="outlined"
 							autoComplete="off"
-      	 			onChange={e => setMessage(e.target.value)}
+      	 					onChange={e => setMessage(e.target.value)}
 						/>
 					</div>
 					<Button
@@ -353,15 +367,16 @@ const AppGrid = props => {
 				</div>
 				: null
 			}
-
-			<span style={{position: "absolute", display: "flex", textAlign: "right", float: "right", right: 0, bottom: 120, }}>
-				<Typography variant="body2" color="textSecondary" style={{}}>
-					Search by 
-				</Typography>
-				<a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{textDecoration: "none", color: "white"}}>
-					<img src={"/images/logo-algolia-nebula-blue-full.svg"} alt="Algolia logo" style={{height: 17, marginLeft: 5, marginTop: 3,}} />
-				</a>
-			</span>
+			{onlyResults === true ? null : 
+				<span style={{position: "absolute", display: "flex", textAlign: "right", float: "right", right: 0, bottom: 120, }}>
+					<Typography variant="body2" color="textSecondary" style={{}}>
+						Search by 
+					</Typography>
+					<a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{textDecoration: "none", color: "white"}}>
+						<img src={"/images/logo-algolia-nebula-blue-full.svg"} alt="Algolia logo" style={{height: 17, marginLeft: 5, marginTop: 3,}} />
+					</a>
+				</span>
+			}
 		</div>
 	)
 }

@@ -3,6 +3,7 @@ import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect" 
 import { MuiChipsInput } from "mui-chips-input";
 import UsecaseSearch from "../components/UsecaseSearch.jsx"
+import WorkflowGrid from "../components/WorkflowGrid.jsx"
 import dayjs from 'dayjs';
 
 import {
@@ -62,12 +63,14 @@ const EditWorkflow = (props) => {
 
   const [submitLoading, setSubmitLoading] = React.useState(false);
   const [showMoreClicked, setShowMoreClicked] = React.useState(false);
-	const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
+  const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
+
   const [newWorkflowTags, setNewWorkflowTags] = React.useState(workflow.tags !== undefined && workflow.tags !== null ? JSON.parse(JSON.stringify(workflow.tags)) : [])
+  const [description, setDescription] = React.useState(workflow.description !== undefined ? workflow.description : "")
+
   const [selectedUsecases, setSelectedUsecases] = React.useState(workflow.usecase_ids !== undefined && workflow.usecase_ids !== null ? JSON.parse(JSON.stringify(workflow.usecase_ids)) : []);
 	const [foundWorkflowId, setFoundWorkflowId] = React.useState("")
 	const [name, setName] = React.useState(workflow.name !== undefined ? workflow.name : "")
-	const [description, setDescription] = React.useState(workflow.description !== undefined ? workflow.description : "")
 	const [dueDate, setDueDate] = React.useState(workflow.due_date !== undefined && workflow.due_date !== null && workflow.due_date !== 0 ? dayjs(workflow.due_date*1000) : dayjs().subtract(1, 'day'))
 
 	// Gets the generated workflow 
@@ -154,58 +157,59 @@ const EditWorkflow = (props) => {
       PaperProps={{
         style: {
           color: "white",
-          minWidth: isMobile ? "90%" : 550,
-          maxWidth: isMobile ? "90%" : 550,
+          minWidth: isMobile ? "90%" : 650,
+          maxWidth: isMobile ? "90%" : 650,
 		  minHeight: 400,
+		  paddingTop: 25, 
           //minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
           //maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
         },
       }}
     >
       <DialogTitle style={{padding: 30, paddingBottom: 0, zIndex: 1000,}}>
-				<div style={{display: "flex"}}>
+		<div style={{display: "flex"}}>
         	<div style={{flex: 1, color: "rgba(255,255,255,0.9)" }}>
-						<div style={{display: "flex"}}>
-							<Typography variant="h6" style={{flex: 9, }}>
-								{newWorkflow ? "New" : "Editing"} workflow
-							</Typography>
-							{newWorkflow === true ? null :
-								<div style={{ marginLeft: 5, flex: 1 }}>
-									<Tooltip title="Open Workflow Form for 'normal' users">
-										<a
-											rel="noopener noreferrer"
-											href={`/workflows/${workflow.id}/run`}
-											target="_blank"
-											style={{
-												textDecoration: "none",
-												color: "#f85a3e",
-												marginLeft: 5,
-												marginTop: 10,
-											}}
-										>
-											<OpenInNewIcon />
-										</a>
-									</Tooltip>
-								</div>
-							}
+				<div style={{display: "flex"}}>
+					<Typography variant="h6" style={{flex: 9, }}>
+						{newWorkflow ? "New" : "Editing"} workflow
+					</Typography>
+					{newWorkflow === true ? null :
+						<div style={{ marginLeft: 5, flex: 1 }}>
+							<Tooltip title="Open Workflow Form for 'normal' users">
+								<a
+									rel="noopener noreferrer"
+									href={`/workflows/${workflow.id}/run`}
+									target="_blank"
+									style={{
+										textDecoration: "none",
+										color: "#f85a3e",
+										marginLeft: 5,
+										marginTop: 10,
+									}}
+								>
+									<OpenInNewIcon />
+								</a>
+							</Tooltip>
 						</div>
-						<Typography variant="body2" color="textSecondary" style={{maxWidth: 440,}}>
-							Workflows can be built from scratch, or from templates. <a href="/usecases" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
-						</Typography>
-						{showUpload === true ? 
-							<div style={{ float: "right" }}>
-								<Tooltip color="primary" title={"Import manually"} placement="top">
-									<Button
-										color="primary"
-										style={{}}
-										variant="text"
-										onClick={() => upload.click()}
-									>
-										<PublishIcon />
-									</Button>
-								</Tooltip>
-        	  	</div>
-						: null}
+					}
+				</div>
+				<Typography variant="body2" color="textSecondary" style={{maxWidth: 440,}}>
+					Workflows can be built from scratch, or from templates. <a href="/usecases" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
+				</Typography>
+				{showUpload === true ? 
+					<div style={{ float: "right" }}>
+						<Tooltip color="primary" title={"Import manually"} placement="top">
+							<Button
+								color="primary"
+								style={{}}
+								variant="text"
+								onClick={() => upload.click()}
+							>
+								<PublishIcon />
+							</Button>
+						</Tooltip>
+        	  		</div>
+				: null}
         	</div>
 					{/*newWorkflow === true ? 
 						<div style={{flex: 1, marginLeft: 45, }}>
@@ -220,8 +224,8 @@ const EditWorkflow = (props) => {
 				</div>
       </DialogTitle>
       <FormControl>
-        <DialogContent style={{paddingTop: 10, display: "flex", minHeight: 350, zIndex: 1001, }}>
-			<div style={{minWidth: newWorkflow ? 450 : 500, maxWidth: newWorkflow ? 450 : 500, }}>
+        <DialogContent style={{paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, }}>
+			<div style={{minWidth: newWorkflow ? 500 : 550, maxWidth: newWorkflow ? 450 : 500, }}>
           	<TextField
           	  onChange={(event) => {
 				setName(event.target.value)
@@ -475,7 +479,8 @@ const EditWorkflow = (props) => {
 		</div>
 
         </DialogContent>
-        <DialogActions style={{paddingRight: 20, }}>
+
+        <DialogActions style={{paddingRight: 20,  }}>
           <Button
             style={{}}
             onClick={() => {
@@ -540,6 +545,23 @@ const EditWorkflow = (props) => {
             {submitLoading ? <CircularProgress color="secondary" /> : "Submit"}
           </Button>
         </DialogActions>
+
+		  {newWorkflow === true && name.length > 5 ?
+			<div style={{marginLeft: 30, }}>
+				<WorkflowGrid 
+					maxRows={1}
+					globalUrl={globalUrl}
+					showSuggestions={false}
+					isMobile={isMobile}
+					userdata={userdata}
+					inputsearch={name+description+newWorkflowTags.join(" ")}
+
+					parsedXs={6}
+					alternativeView={false}
+					onlyResults={true}
+				/>
+			</div> 
+		  : null}
       </FormControl>
     </Drawer>
 	)
