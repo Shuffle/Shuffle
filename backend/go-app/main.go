@@ -3066,8 +3066,8 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		// FIXME: Check whether it's in use.
 		if user.Id != app.Owner && user.Role != "admin" {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
-			resp.WriteHeader(400)
-			resp.Write([]byte(`{"success": false}`))
+			resp.WriteHeader(403)
+			resp.Write([]byte(`{"success": false, "reason": "You don't have permissions to edit this app. Contact support@shuffler.io if this persists."}`))
 			return
 		}
 
@@ -5780,6 +5780,8 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
+
+
 
 func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
