@@ -436,7 +436,7 @@ const Docs = (defaultprops) => {
                   href={selectedMeta.link}
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
-                  <Button style={{}} variant="outlined">
+                  <Button style={{}} variant="outlined" color="secondary">
                     <EditIcon /> &nbsp;&nbsp;Edit
                   </Button>
                 </a>
@@ -792,17 +792,21 @@ const Docs = (defaultprops) => {
 						<div id="markdown_wrapper_outer" style={markdownStyle}>
 							<ReactMarkdown
 								components={{
-									link: OuterLink,
-									image: Img,
+									img: Img,
 									code: CodeHandler,
-									heading: Heading,
+									h1: Heading,
+									h2: Heading,
+									h3: Heading,
+									h4: Heading,
+									h5: Heading,
+									h6: Heading,
+									a: OuterLink,
 								}}
 								id="markdown_wrapper"
 								escapeHtml={false}
 								style={{
 									maxWidth: "100%", minWidth: "100%", 
 								}}
-								remarkPlugins={[remarkGfm]}
 							>
 								{data}
 							</ReactMarkdown>
@@ -811,6 +815,7 @@ const Docs = (defaultprops) => {
 				</div>
       </div>
     );
+	// remarkPlugins={[remarkGfm]}
 
   const mobileStyle = {
     color: "white",

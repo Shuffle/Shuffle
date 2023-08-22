@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
+import theme from '../theme.jsx';
 import CytoscapeComponent from 'react-cytoscapejs';
 import frameworkStyle from '../frameworkStyle.jsx';
 import { v4 as uuidv4 } from "uuid";
-import theme from '../theme.jsx';
-import { useAlert } from "react-alert";
 
 import AppSearch from '../components/Appsearch.jsx';
 import PaperComponent from "../components/PaperComponent.jsx"
@@ -18,13 +17,14 @@ import {
 	Divider,
 	IconButton, 
 	Badge,
-  CircularProgress,
+  	CircularProgress,
 	Tooltip,
 	Dialog,
 	Chip,
 	Avatar,
-	Button 
+	Button,
 } from "@mui/material";
+
 
 import {
 	Close as CloseIcon,
@@ -33,9 +33,9 @@ import {
 
 import * as edgehandles from "cytoscape-edgehandles";
 import * as cytoscape from "cytoscape";
+import { toast } from 'react-toastify';
 
 cytoscape.use(edgehandles);
-
 
 const svgSize = "40px" 
 const parsedDatatypeImages = {
@@ -520,7 +520,7 @@ const AppFramework = (props) => {
 
 	const scale = size === undefined ? 1 : size > 5 ? 3 : size
 
-  const alert = useAlert()
+  //const alert = useAlert()
 
 
 	const handleLoadNextSuggestion = (frameworkData) => {
@@ -783,16 +783,16 @@ const AppFramework = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Failed updating: " + responseJson.reason)
+						toast("Failed updating: " + responseJson.reason)
 					} else {
-						alert.error("Failed to update framework for your org.")
+						toast("Failed to update framework for your org.")
 					}
 				} else {
-					alert.info("Updated usecase.")
+					toast("Updated usecase.")
 				}
 			})
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
 				//setFrameworkLoaded(true)
       })
 		}
@@ -815,13 +815,13 @@ const AppFramework = (props) => {
 			})
 			.then((responseJson) => {
 				if (responseJson.success === false) {
-					alert.error("Failed to activate the app")
+					toast("Failed to activate the app")
 				} else {
-					//alert.success("App activated for your organization! Refresh the page to use the app.")
+					//toast("App activated for your organization! Refresh the page to use the app.")
 				}
 			})
 			.catch(error => {
-				//alert.error(error.toString())
+				//toast(error.toString())
 				console.log("Activate app error: ", error.toString())
 			});
 		}
@@ -851,9 +851,9 @@ const AppFramework = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Failed updating: " + responseJson.reason)
+						toast("Failed updating: " + responseJson.reason)
 					} else {
-						alert.error("Failed to update framework for your org.")
+						toast("Failed to update framework for your org.")
 
 					}
 				}
@@ -862,7 +862,7 @@ const AppFramework = (props) => {
 				//setFrameworkData(responseJson)
 			})
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
 				//setFrameworkLoaded(true)
       })
 		}
@@ -1856,6 +1856,7 @@ const AppFramework = (props) => {
 	//autounselectify={true}
 	var usecasediff = -100
 	const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
+	console.log("Background: ", bgColor)
 
 	return (	
 		<div style={{margin: "auto", backgroundColor: bgColor, position: "relative", }}>
@@ -1992,11 +1993,11 @@ const AppFramework = (props) => {
 
   		{
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
-					<Paper style={{width: 275, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: 50, }}>
+					<Paper style={{width: 300, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 25, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: 50, }}>
 						{paperTitle.length > 0 ? 
 							<span>
 								<Typography variant="h6" style={{textAlign: "center"}}>
-									{paperTitle}
+									{paperTitle.replace("_", " ", -1)}
 								</Typography>
 								<Divider style={{marginTop: 5, marginBottom: 5 }} />
 							</span>
@@ -2126,7 +2127,7 @@ const AppFramework = (props) => {
 									? 
 									<span>
 										<Typography variant="body2" color="textSecondary" style={{marginTop: 10}}>
-											Click an app below to select it
+											Search to find your app 
 										</Typography>
 									</span>
 									:
@@ -2161,7 +2162,7 @@ const AppFramework = (props) => {
 				elements={elements} 
 				minZoom={0.35}
 				maxZoom={2.00}
-				style={{width: 560*scale, height: 560*scale, backgroundColor: "transparent", margin: "auto",}} 
+				style={{width: 560*scale, height: 560*scale, backgroundColor: theme.palette.backgroundColor, margin: "auto",}} 
 				stylesheet={frameworkStyle}
 				boxSelectionEnabled={false}
 				panningEnabled={false}

@@ -10,11 +10,12 @@ import {
   Divider,
   TextField,
 } from "@mui/material";
-import { useAlert } from "react-alert";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 
 const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, setUserData } = props;
-  const alert = useAlert();
+  //const alert = useAlert();
 	let navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -142,7 +143,7 @@ const Settings = (props) => {
           if (responseJson["success"] === false) {
             setPasswordFormMessage(responseJson["reason"]);
           } else {
-            alert.success("Changed password!");
+            toast("Changed password!");
             setPasswordFormMessage("");
           }
         })
@@ -294,22 +295,22 @@ const Settings = (props) => {
   //   detectEthereumProvider().then((provider) => {
   //     if (provider) {
   //       if (!provider.isMetaMask) {
-  //         alert.error("Only MetaMask is supported as of now.");
+  //         toast("Only MetaMask is supported as of now.");
   //         return;
   //       }
 
   //       // Find the ethereum network
   //       // Get the users' account(s)
-  //       //alert.info("Connecting to MetaMask")
+  //       //toast("Connecting to MetaMask")
   //       //console.log("Connected: ", provider.isConnected())
 
   //       if (!provider.isConnected()) {
-  //         alert.error("Metamask is not connected.");
+  //         toast("Metamask is not connected.");
   //         return;
   //       }
 
   //       provider.on("message", (event) => {
-  //         alert.info("Ethereum message: ", event);
+  //         toast("Ethereum message: ", event);
   //       });
 
   //       provider.on("chainChanged", (chainId) => {
@@ -330,12 +331,12 @@ const Settings = (props) => {
   //               console.log("INFO: ", userdata);
   //               setUserData(userdata);
   //             } else {
-  //               alert.error("Couldn't find balance: ", result);
+  //               toast("Couldn't find balance: ", result);
   //             }
   //           })
   //           .catch((error) => {
   //             // If the request fails, the Promise will reject with an error.
-  //             alert.error("Failed getting info from ethereum API: " + error);
+  //             toast("Failed getting info from ethereum API: " + error);
   //           });
   //       });
   //     }
@@ -858,7 +859,7 @@ const Settings = (props) => {
       })
       .then((responseJson) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
-          alert.error("Failed updating user: " + responseJson.reason);
+          toast("Failed updating user: " + responseJson.reason);
         }
       })
       .catch((error) => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 
 import theme from '../theme.jsx';
 import { v4 as uuidv4 } from "uuid";
-import { useAlert } from "react-alert";
+import { toast } from 'react-toastify';
 
 import { 
 	Divider,
@@ -44,7 +44,7 @@ const AuthenticationData = (props) => {
 		authFieldsOnly, 
 	} = props
 
-  const alert = useAlert()
+  //const alert = useAlert()
   let navigate = useNavigate();
 	const [submitSuccessful, setSubmitSuccessful] = useState(false)
 	const [authenticationOption, setAuthenticationOptions] = React.useState({
@@ -99,9 +99,9 @@ const AuthenticationData = (props) => {
       .then((responseJson) => {
         if (!responseJson.success) {
           if (responseJson.reason === undefined) {
-          	alert.error("Failed to set app auth. Are you logged in?")
+          	toast("Failed to set app auth. Are you logged in?")
 					} else { 
-          	alert.error("Failed to set app auth: " + responseJson.reason);
+          	toast("Failed to set app auth: " + responseJson.reason);
 					}
         } else {
 					setSubmitSuccessful(true)
@@ -115,7 +115,7 @@ const AuthenticationData = (props) => {
         }
       })
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
         console.log("New auth error: ", error.toString());
       });
   };
@@ -175,7 +175,7 @@ const AuthenticationData = (props) => {
 							selectedApp.authentication.parameters[paramkey].name
 						] = "false";
 					} else {
-						alert.info(
+						toast(
 							"Field " +
 							selectedApp.authentication.parameters[paramkey].name +
 							" can't be empty"

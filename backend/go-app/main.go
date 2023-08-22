@@ -5841,6 +5841,8 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte("OK"))
 }
 
+
+
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -5890,6 +5892,7 @@ func initHandlers() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
+	r.HandleFunc("/api/v1/health", shuffle.RunOpsHealthCheck).Methods("GET", "OPTIONS")
 
 	// Make user related locations
 	// Fix user changes with org
@@ -5998,7 +6001,7 @@ func initHandlers() {
 	// New for recommendations in Shuffle
 	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/recommendations/modify", shuffle.HandleRecommendationAction).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
+	// r.HandleFunc("/api/v1/workflows/{key}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
 
 	// Triggers
 	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")
@@ -6054,9 +6057,16 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
+
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
@@ -6098,6 +6108,7 @@ func initHandlers() {
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
 	initHandlers()
+	go shuffle.InitOpsWorkflow()
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "MISSING"

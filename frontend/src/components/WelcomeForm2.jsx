@@ -38,7 +38,7 @@ import {
 		Chip,
 		ButtonGroup,
 } from "@mui/material";
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 import { useNavigate, Link } from "react-router-dom";
 import WorkflowSearch from '../components/Workflowsearch.jsx';
@@ -134,7 +134,7 @@ const WelcomeForm = (props) => {
 
 		const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   
-  	const alert = useAlert();
+  	//const alert = useAlert();
 		let navigate = useNavigate();
 
     const onNodeSelect = (label) => {
@@ -262,16 +262,16 @@ const WelcomeForm = (props) => {
 				response.json().then((responseJson) => {
 					if (responseJson["success"] === false) {
 						console.log("Update user success")
-						//alert.error("Failed updating org: ", responseJson.reason);
+						//toast("Failed updating org: ", responseJson.reason);
 					} else {
 						console.log("Update success!")
-						//alert.success("Successfully edited org!");
+						//toast("Successfully edited org!");
 					}
 				})
 			)
 			.catch((error) => {
 				console.log("Update err: ", error.toString())
-				//alert.error("Err: " + error.toString());
+				//toast("Err: " + error.toString());
 			});
 		}
 
@@ -308,15 +308,15 @@ const WelcomeForm = (props) => {
 				response.json().then((responseJson) => {
 					if (responseJson["success"] === false) {
 						console.log("Update of org failed")
-						//alert.error("Failed updating org: ", responseJson.reason);
+						//toast("Failed updating org: ", responseJson.reason);
 					} else {
-						//alert.success("Successfully edited org!");
+						//toast("Successfully edited org!");
 					}
 				})
 			)
 			.catch((error) => {
 				console.log("Update err: ", error.toString())
-				//alert.error("Err: " + error.toString());
+				//toast("Err: " + error.toString());
 			});
 		}
 
@@ -615,7 +615,7 @@ const WelcomeForm = (props) => {
                         <Grid item xs={11} style={{marginTop: 25, }}>
                             {/*<FormLabel style={{ color: "#B9B9BA" }}>Find your integrations!</FormLabel>*/}
                             <div style={{display: "flex"}}>
-															<Button disabled={finishedApps.includes("CASES")} variant={defaultSearch === "CASES" ? "contained" : "outlined"}  style={{
+															<Button disabled={finishedApps.includes("CASES")} variant={defaultSearch === "CASES" ? "contained" : "outlined"} color="secondary" style={{
 																flex: 1,
 																width: "100%", 
 																padding: 25,
@@ -627,20 +627,20 @@ const WelcomeForm = (props) => {
 															</Button>
                             </div>
                             <div style={{display: "flex"}}>
-															<Button disabled={finishedApps.includes("SIEM")} variant={defaultSearch === "SIEM" ? "contained" : "outlined"} style={buttonStyle} startIcon={<SearchIcon />} onClick={(event) => { onNodeSelect("SIEM") }} >
+															<Button disabled={finishedApps.includes("SIEM")} variant={defaultSearch === "SIEM" ? "contained" : "outlined"} style={buttonStyle} startIcon={<SearchIcon />} color="secondary" onClick={(event) => { onNodeSelect("SIEM") }} >
 																	SIEM
 															</Button>
-															<Button disabled={finishedApps.includes("EDR & AV") || finishedApps.includes("ERADICATION")} variant={defaultSearch === "Eradication" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<NewReleasesIcon />} onClick={(event) => { onNodeSelect("ERADICATION") }} >
+															<Button disabled={finishedApps.includes("EDR & AV") || finishedApps.includes("ERADICATION")} variant={defaultSearch === "Eradication" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<NewReleasesIcon />} color="secondary" onClick={(event) => { onNodeSelect("ERADICATION") }} >
 																	Endpoint
 															</Button>
                             </div>
                             <div style={{display: "flex"}}>
-															<Button disabled={finishedApps.includes("INTEL")} variant={defaultSearch === "INTEL" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<ExtensionIcon />} onClick={(event) => { onNodeSelect("INTEL") }} >
+															<Button disabled={finishedApps.includes("INTEL")} variant={defaultSearch === "INTEL" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<ExtensionIcon />} color="secondary" onClick={(event) => { onNodeSelect("INTEL") }} >
 															
 
 																	Intel
 															</Button>
-															<Button disabled={finishedApps.includes("COMMS") || finishedApps.includes("EMAIL")} variant={defaultSearch === "EMAIL" ? "contained" : "outlined"} style={buttonStyle} startIcon={<EmailIcon />} onClick={(event) => { onNodeSelect("EMAIL") }} >
+															<Button disabled={finishedApps.includes("COMMS") || finishedApps.includes("EMAIL")} variant={defaultSearch === "EMAIL" ? "contained" : "outlined"} style={buttonStyle} startIcon={<EmailIcon />} color="secondary" onClick={(event) => { onNodeSelect("EMAIL") }} >
 																	Email
 															</Button>
                             </div>

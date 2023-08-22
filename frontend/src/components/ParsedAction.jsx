@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
+import { toast } from 'react-toastify';
 import { makeStyles, createStyles } from "@mui/styles";
 import theme from '../theme.jsx';
 
@@ -6,9 +7,8 @@ import theme from '../theme.jsx';
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
-//import NestedMenuItem from "material-ui-nested-menu-item-v5";
 import { NestedMenuItem } from "mui-nested-menu";
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 import {
 	ButtonGroup,
@@ -86,13 +86,12 @@ import {
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
 } from '@mui/icons-material';
-//} from "@material-ui/icons";
 
 
 //import CodeMirror from "@uiw/react-codemirror";
 //import "codemirror/keymap/sublime";
 //import "codemirror/theme/gruvbox-dark.css";
-import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
+//import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -113,7 +112,6 @@ const useStyles = makeStyles({
   },
   inputRoot: {
     color: "white",
-    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
     "&:hover .MuiOutlinedInput-notchedOutline": {
       borderColor: "#f86a3e",
     },
@@ -158,28 +156,30 @@ const ParsedAction = (props) => {
     authenticationType,
     appAuthentication,
     getAppAuthentication,
-		actionDelayChange,
-		getParents,
-		isCloud,
-		lastSaved,
-		setLastSaved,
-		setShowVideo,
-		toolsAppId,
-		aiSubmit,
-		//expansionModalOpen,
-		//setExpansionModalOpen,
+	actionDelayChange,
+	getParents,
+	isCloud,
+	lastSaved,
+	setLastSaved,
+	setShowVideo,
+	toolsAppId,
+	aiSubmit,
+
+	expansionModalOpen,
+	setExpansionModalOpen,
+	
+	setEditorData,
+	setcodedata,
   } = props;
 
   const classes = useStyles();
-  const alert = useAlert()
-
-  const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
+  //const alert = useAlert()
+  
   const [hideBody, setHideBody] = React.useState(true);
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
 
-	const [codedata, setcodedata] = React.useState("");
-	const [fieldCount, setFieldCount] = React.useState(0);
-	const [hiddenDescription, setHiddenDescription] = React.useState(true);
+  const [fieldCount, setFieldCount] = React.useState(0);
+  const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
 
   useEffect(() => {
@@ -228,9 +228,9 @@ const ParsedAction = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          //alert.success("Successfully GOT app "+appId)
+          //toast("Successfully GOT app "+appId)
         } else {
-          alert.error("Failed getting app");
+          toast("Failed getting app");
         }
 
         return response.json();
@@ -291,7 +291,7 @@ const ParsedAction = (props) => {
               //foundparams.push(param.name)
             }
           } else {
-            alert.error("Couldn't find action " + selectedAction.name);
+            toast("Couldn't find action " + selectedAction.name);
           }
 
           selectedAction.errors = [];
@@ -307,7 +307,7 @@ const ParsedAction = (props) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1146,7 +1146,7 @@ const ParsedAction = (props) => {
           		    //  setNewSelectedAction({ target: { value: newValue.name } });
           		    //}
           		  }}
-          		  renderOption={(data) => {
+            	  renderOption={(props, data, state) => {
           		    var newActionname = data.app_name;
           		    if (
           		      data.label !== undefined &&
@@ -1518,29 +1518,6 @@ const ParsedAction = (props) => {
 
             const clickedFieldId = "rightside_field_" + count;
 
-						const shufflecode = fieldCount !== count ? null : 
-						(
-							<ShuffleCodeEditor
-								isCloud={isCloud}
-								toolsAppId={toolsAppId}
-								fieldCount = {fieldCount}
-								setFieldCount = {setFieldCount}
-								actionlist = {actionlist}
-								changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
-								codedata={codedata}
-								setcodedata={setcodedata}
-								expansionModalOpen={expansionModalOpen}
-								setExpansionModalOpen={setExpansionModalOpen}
-								globalUrl={globalUrl}
-
-								workflowExecutions={workflowExecutions}
-								getParents={getParents}
-								selectedAction={selectedAction}
-								parameterName={data.name}
-								aiSubmit={aiSubmit}
-							/>
-						)
-
             //<TextareaAutosize
             // <CodeMirror
             //fullWidth
@@ -1590,38 +1567,47 @@ const ParsedAction = (props) => {
 				  disableUnderline: true,
                   endAdornment: hideExtraTypes ? null : (
                     <InputAdornment position="end">
-											<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
-												<Tooltip title="Expand window" placement="top">
-													<AspectRatioIcon
-														style={{ cursor: "pointer", margin: multiline ? 5 : 0 ,}}
-														onClick={(event) => {
-															event.preventDefault()
-															setFieldCount(count)
-															setcodedata(data.value)
-															setExpansionModalOpen(true)
-														}}
-													/>
-												</Tooltip>
-												<Tooltip title="Autocomplete text" placement="top">
-													<AddCircleOutlineIcon
-														style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
-														onClick={(event) => {
-															event.preventDefault()
+					<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
+						<Tooltip title="Expand window" placement="top">
+							<AspectRatioIcon
+								style={{ cursor: "pointer", margin: multiline ? 5 : 0 ,}}
+								onClick={(event) => {
+									event.preventDefault()
+									setFieldCount(count)
+									setExpansionModalOpen(true)
 
-															// Get cursor position
-															// This makes it so we can put it in the right location?
-															setMenuPosition({
-																top: event.pageY + 10,
-																left: event.pageX + 10,
-															});
-															setShowDropdownNumber(count);
-															setShowDropdown(true);
-															setShowAutocomplete(true);
-														}}
-													/>
-												</Tooltip>
-											</ButtonGroup>
-                    </InputAdornment>
+									//setcodedata(data.value)
+
+									setEditorData({
+										"name": data.name,
+										"value": data.value,
+										"field_number": count,
+										"actionlist": actionlist,
+										"field_id": clickedFieldId,
+									})
+								}}
+							/>
+						</Tooltip>
+						<Tooltip title="Autocomplete text" placement="top">
+							<AddCircleOutlineIcon
+								style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
+								onClick={(event) => {
+									event.preventDefault()
+
+									// Get cursor position
+									// This makes it so we can put it in the right location?
+									setMenuPosition({
+										top: event.pageY + 10,
+										left: event.pageX + 10,
+									});
+									setShowDropdownNumber(count);
+									setShowDropdown(true);
+									setShowAutocomplete(true);
+								}}
+							/>
+						</Tooltip>
+					</ButtonGroup>
+				</InputAdornment>
                   ),
                 }}
                 multiline={data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline}
@@ -1651,11 +1637,11 @@ const ParsedAction = (props) => {
 									*/
 
 									//console.log("Clicked field: ", clickedFieldId)
-									if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
-										scrollConfig.selected = clickedFieldId
-										setScrollConfig(scrollConfig)
-										//console.log("Change field id!")
-									}
+					if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
+						scrollConfig.selected = clickedFieldId
+						setScrollConfig(scrollConfig)
+						//console.log("Change field id!")
+					}
                 }}
                 id={clickedFieldId}
                 rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
@@ -1696,10 +1682,10 @@ const ParsedAction = (props) => {
 										null : null	
                 }
                 onBlur={(event) => {
-									baseHelperText = calculateHelpertext(event.target.value)
-									if (setLastSaved !== undefined) {
-										setLastSaved(false)
-									}
+					baseHelperText = calculateHelpertext(event.target.value)
+					if (setLastSaved !== undefined) {
+						setLastSaved(false)
+					}
                 }}
               />
             );
@@ -2003,12 +1989,11 @@ const ParsedAction = (props) => {
 
               datafield = (
                 <Select
-									MenuProps={{
-										disableScrollLock: true,
-									}}
+					MenuProps={{
+						disableScrollLock: true,
+					}}
                   SelectDisplayProps={{
                     style: {
-                      marginLeft: 10,
                     },
                   }}
                   value={selectedActionParameters[count].value}
@@ -2568,7 +2553,7 @@ const ParsedAction = (props) => {
 							*/}
                 </div>
                 {datafield}
-								{shufflecode}
+				{/*shufflecode*/}
                 {showDropdown &&
                 showDropdownNumber === count &&
                 data.variant === "STATIC_VALUE" &&
@@ -2587,7 +2572,6 @@ const ParsedAction = (props) => {
                       labelId="action-autocompleter"
                       SelectDisplayProps={{
                         style: {
-                          marginLeft: 10,
                         },
                       }}
                       onClose={() => {
@@ -2679,6 +2663,62 @@ const ParsedAction = (props) => {
     }
     return null;
   };
+
+
+	const ActionSelectOption = (actionprops) => {
+		const { data, newActionname, newActiondescription, useIcon, extraDescription, } = actionprops;
+  		const [hover, setHover] = React.useState(false);
+
+		console.log("Extra desc: ", extraDescription)
+
+		return (
+			<Tooltip
+			  color="secondary"
+			  title={newActiondescription}
+			  placement="left"
+			>
+				<div style={{
+					cursor: "pointer", 
+					padding: 8, 
+					paddingLeft: 14, 
+					paddingBottom: 4,
+					backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor,
+				}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+				onClick={() => {
+					//setSelectedAction(actionprops)
+					//setShowActionList(false)
+					//setUpdate(Math.random())
+					//
+					if (data !== undefined && data !== null) { 
+                		setNewSelectedAction({ 
+							target: { 
+								value: data.name 
+							} 
+						});
+              		}
+				}}
+				>
+					<div style={{ display: "flex", marginBottom: 0,}}>
+						<span
+							style={{
+								marginRight: 10,
+								marginTop: "auto",
+								marginBottom: 0,
+							}}
+						>
+							{useIcon}
+						</span>
+						<span style={{marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
+					</div>
+					{extraDescription.length > 0 ? 
+						<Typography variant="body2" color="textSecondary" style={{marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block",}}>
+							{extraDescription}	
+						</Typography>
+					: null}
+				</div>
+			</Tooltip>
+		)
+	}
 
   //const CustomPopper = function (props) {
   //	const classes = useStyles()
@@ -2906,7 +2946,6 @@ const ParsedAction = (props) => {
                   }}
                   SelectDisplayProps={{
                     style: {
-                      marginLeft: 10,
                     },
                   }}
                 >
@@ -2941,6 +2980,7 @@ const ParsedAction = (props) => {
 						<div style={{flex: 5}}>
 							<Typography style={{color: "rgba(255,255,255,0.7)"}}>Name</Typography>
 							<TextField
+
 								style={theme.palette.textFieldStyle}
 								InputProps={{
 									style: theme.palette.innerTextfieldStyle,
@@ -3227,8 +3267,7 @@ const ParsedAction = (props) => {
               }
               SelectDisplayProps={{
                 style: {
-                  marginLeft: 10,
-									maxWidth: 250,
+					maxWidth: 250,
                 },
               }}
               fullWidth
@@ -3329,7 +3368,6 @@ const ParsedAction = (props) => {
             }
             SelectDisplayProps={{
               style: {
-                marginLeft: 10,
               },
             }}
             fullWidth
@@ -3375,9 +3413,9 @@ const ParsedAction = (props) => {
         <div style={{ marginTop: "20px" }}>
           <Typography>Execution variable (optional)</Typography>
           <Select
-						MenuProps={{
-							disableScrollLock: true,
-						}}
+			MenuProps={{
+				disableScrollLock: true,
+			}}
             value={
               selectedAction.execution_variable !== undefined
               && selectedAction.execution_variable !== null 
@@ -3389,7 +3427,6 @@ const ParsedAction = (props) => {
             }
             SelectDisplayProps={{
               style: {
-                marginLeft: 10,
               },
             }}
             fullWidth
@@ -3458,20 +3495,20 @@ const ParsedAction = (props) => {
             autoHighlight
             value={selectedAction}
             classes={{ inputRoot: classes.inputRoot }}
-						groupBy={(option) => {
-							// Most popular
-							// Is categorized
-							// Uncategorized
-							return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
-						}}
-						renderGroup={(params) => {
-							return (
-								<li key={params.key}>
-									<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
-									<Typography variant="body2">{params.children}</Typography>
-								</li>
-							)	
-  					}}
+			groupBy={(option) => {
+				// Most popular
+				// Is categorized
+				// Uncategorized
+				return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
+			}}
+			renderGroup={(params) => {
+				return (
+					<li key={params.key}>
+						<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
+						<Typography variant="body2">{params.children}</Typography>
+					</li>
+				)	
+			}}
             options={selectedApp.actions === undefined || selectedApp.actions === null ? [] : selectedApp.actions.filter((a) => a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))}
             ListboxProps={{
               style: {
@@ -3491,8 +3528,6 @@ const ParsedAction = (props) => {
                 return null;
               }
 
-			  console.log("OPTION: ", option)
-
               const newname = (
                 option.name.charAt(0).toUpperCase() + option.name.substring(1)
               ).replaceAll("_", " ");
@@ -3509,10 +3544,10 @@ const ParsedAction = (props) => {
               // Workaround with event lol
               if (newValue !== undefined && newValue !== null) {
                 setNewSelectedAction({ 
-									target: { 
-										value: newValue.name 
-									} 
-								});
+					target: { 
+						value: newValue.name 
+					} 
+				});
               }
             }}
             renderOption={(props, data, state) => {
@@ -3560,100 +3595,87 @@ const ParsedAction = (props) => {
 					method = "CONNECT"
 				}
 
-							// FIXME: Should it require a base URL?
-							if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
-								var extraUrl = ""
-								const descSplit = data.description.split("\n")
-								// Last line of descSplit
-								if (descSplit.length > 0) {
-									extraUrl = descSplit[descSplit.length-1]
-								} 
+				// FIXME: Should it require a base URL?
+				if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
+					var extraUrl = ""
+					const descSplit = data.description.split("\n")
+					// Last line of descSplit
+					if (descSplit.length > 0) {
+						extraUrl = descSplit[descSplit.length-1]
+					} 
 
-								//for (let [line,lineval] in Object.entries(descSplit)) {
-								//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
-								//		const urlsplit = descSplit[line].split("/")
-								//		try {
-								//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
-								//		} catch (e) {
-								//			//console.log("Failed - running with -1")
-								//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
-								//		}
+					//for (let [line,lineval] in Object.entries(descSplit)) {
+					//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
+					//		const urlsplit = descSplit[line].split("/")
+					//		try {
+					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
+					//		} catch (e) {
+					//			//console.log("Failed - running with -1")
+					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
+					//		}
 
 
-								//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
-								//		//break
-								//	} 
-								//}
+					//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
+					//		//break
+					//	} 
+					//}
 
-								if (extraUrl.length > 0) {
-									if (extraUrl.includes(" ")) {
-										extraUrl = extraUrl.split(" ")[0]
-									}
+					if (extraUrl.length > 0) {
+						if (extraUrl.includes(" ")) {
+							extraUrl = extraUrl.split(" ")[0]
+						}
 
-									if (extraUrl.includes("#")) {
-										extraUrl = extraUrl.split("#")[0]
-									}
+						if (extraUrl.includes("#")) {
+							extraUrl = extraUrl.split("#")[0]
+						}
 
-									extraDescription = `${method} ${extraUrl}`
-								} else {
-									//console.log("No url found. Check again :)")
-								}
-							}
+						extraDescription = `${method} ${extraUrl}`
+					} else {
+						//console.log("No url found. Check again :)")
+					}
+				}
 
               return (
-                <Tooltip
-                  color="secondary"
-                  title={newActiondescription}
-                  placement="left"
-                >
-									<div>
-										<div style={{ display: "flex", marginBottom: 0,}}>
-											<span
-												style={{
-													marginRight: 10,
-													marginTop: "auto",
-													marginBottom: 0,
-												}}
-											>
-												{useIcon}
-											</span>
-											<span style={{marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
-										</div>
-										{extraDescription.length > 0 ? 
-											<Typography variant="body2" color="textSecondary" style={{marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block",}}>
-												{extraDescription}	
-											</Typography>
-										: null}
-									</div>
-								</Tooltip>
+			  	<ActionSelectOption
+					data={data}
+					newActiondescription={newActiondescription}
+					useIcon={useIcon}
+					newActionname={newActionname}
+					extraDescription={extraDescription}
+				/>
               );
             }}
             renderInput={(params) => {
-							if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
-								const prefixes = ["Post", "Put", "Patch"]
-								for (let [key,keyval] in Object.entries(prefixes)) {
-									if (params.inputProps.value.startsWith(prefixes[key])) {
-										params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
-										if (params.inputProps.value.length > 1) {
-											params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
-										}
-										break
-									}
-								}
+				if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
+					const prefixes = ["Post", "Put", "Patch"]
+					for (let [key,keyval] in Object.entries(prefixes)) {
+						if (params.inputProps.value.startsWith(prefixes[key])) {
+							params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
+							if (params.inputProps.value.length > 1) {
+								params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
 							}
+							break
+						}
+					}
+				}
 
               return (
-								<TextField
-									color="primary"
-									variant="body1"
-									style={{
-										backgroundColor: theme.palette.inputColor,
-										borderRadius: theme.palette.borderRadius,
-									}}
-									{...params}
-									label="Find Actions"
-									variant="outlined"
-								/>
+					<TextField
+						data-lpignore="true"
+						autocomplete="off"
+						dataLPIgnore="true"
+
+						color="primary"
+						id="checkbox-search"
+						variant="body1"
+						style={{
+							backgroundColor: theme.palette.inputColor,
+							borderRadius: theme.palette.borderRadius,
+						}}
+						{...params}
+						label="Find Actions"
+						variant="outlined"
+					/>
               );
             }}
           />

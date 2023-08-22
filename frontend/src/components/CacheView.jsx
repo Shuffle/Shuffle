@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import theme from "../theme.jsx";
+import { toast } from 'react-toastify';
+
 import {
     Tooltip,
     Divider,
@@ -16,7 +18,7 @@ import {
     DialogTitle,
     DialogActions,
 } from "@mui/material";
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 import {
     Edit as EditIcon,
@@ -72,7 +74,7 @@ const CacheView = (props) => {
     const [dataValue, setDataValue] = React.useState({});
     const [editCache, setEditCache] = React.useState(false);
     const [show, setShow] = useState({});
-    const alert = useAlert();
+    //const alert = useAlert();
     useEffect(() => {
         listOrgCache(orgId);
         console.log("orgid", orgId);
@@ -105,7 +107,7 @@ const CacheView = (props) => {
                 }
             })
             .catch((error) => {
-                alert.error(error.toString());
+                toast(error.toString());
             });
     };
 
@@ -148,7 +150,7 @@ const CacheView = (props) => {
 
 
     const deleteCache = (orgId, key) => {
-        alert.info("Attempting to delete Cache");
+        toast("Attempting to delete Cache");
         fetch(globalUrl + `/api/v1/orgs/${orgId}/cache/${key}`, {
             method: "DELETE",
             headers: {
@@ -158,16 +160,16 @@ const CacheView = (props) => {
         })
             .then((response) => {
                 if (response.status === 200) {
-                    alert.success("Successfully deleted Cache");
+                    toast("Successfully deleted Cache");
                     setTimeout(() => {
                         listOrgCache(orgId);
                     }, 1000);
                 } else {
-                    alert.error("Failed deleting Cache. Does it still exist?");
+                    toast("Failed deleting Cache. Does it still exist?");
                 }
             })
             .catch((error) => {
-                alert.error(error.toString());
+                toast(error.toString());
             });
     };
 
@@ -197,12 +199,12 @@ const CacheView = (props) => {
             })
             .then((responseJson) => {
                 setAddCache(responseJson);
-                alert.success("Cache Edited Successfully!");
+                toast("Cache Edited Successfully!");
                 listOrgCache(orgId);
                 setModalOpen(false);
             })
             .catch((error) => {
-                alert.error(error.toString());
+                toast(error.toString());
             });
     };
 
@@ -231,12 +233,12 @@ const CacheView = (props) => {
             })
             .then((responseJson) => {
                 setAddCache(responseJson);
-                alert.success("New Cache Added Successfully!");
+                toast("New Cache Added Successfully!");
                 listOrgCache(orgId);
                 setModalOpen(false);
             })
             .catch((error) => {
-                alert.error(error.toString());
+                toast(error.toString());
             });
     };
 

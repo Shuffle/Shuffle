@@ -1,8 +1,10 @@
 import React, { useEffect, useContext } from "react";
 import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect" 
-import ChipInput from "material-ui-chip-input";
+import { MuiChipsInput } from "mui-chips-input";
 import UsecaseSearch from "../components/UsecaseSearch.jsx"
+import WorkflowGrid from "../components/WorkflowGrid.jsx"
+import dayjs from 'dayjs';
 
 import {
   Badge,
@@ -25,6 +27,7 @@ import {
   Typography,
   Zoom,
   CircularProgress,
+  Drawer,
   Dialog,
   DialogTitle,
   DialogActions,
@@ -39,6 +42,13 @@ import {
 
 } from "@mui/material";
 
+import { 
+	DatePicker, 
+	LocalizationProvider,
+} from '@mui/x-date-pickers'
+
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+
 import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
@@ -49,16 +59,19 @@ import {
 const EditWorkflow = (props) => {
 	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, } = props
 
+  const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
+
   const [submitLoading, setSubmitLoading] = React.useState(false);
   const [showMoreClicked, setShowMoreClicked] = React.useState(false);
-	const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
-  const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
+  const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
+
   const [newWorkflowTags, setNewWorkflowTags] = React.useState(workflow.tags !== undefined && workflow.tags !== null ? JSON.parse(JSON.stringify(workflow.tags)) : [])
+  const [description, setDescription] = React.useState(workflow.description !== undefined ? workflow.description : "")
+
   const [selectedUsecases, setSelectedUsecases] = React.useState(workflow.usecase_ids !== undefined && workflow.usecase_ids !== null ? JSON.parse(JSON.stringify(workflow.usecase_ids)) : []);
 	const [foundWorkflowId, setFoundWorkflowId] = React.useState("")
 	const [name, setName] = React.useState(workflow.name !== undefined ? workflow.name : "")
-	const [description, setDescription] = React.useState(workflow.description !== undefined ? workflow.description : "")
-
+	const [dueDate, setDueDate] = React.useState(workflow.due_date !== undefined && workflow.due_date !== null && workflow.due_date !== 0 ? dayjs(workflow.due_date*1000) : dayjs().subtract(1, 'day'))
 
 	// Gets the generated workflow 
 	const getGeneratedWorkflow = (workflow_id) => {
@@ -114,7 +127,7 @@ const EditWorkflow = (props) => {
 			}
 		})
 		.catch((error) => {
-			//alert.error(error.toString());
+			//toast(error.toString());
 			console.log("Get workflow error: ", error.toString());
 		})
 	}
@@ -136,67 +149,67 @@ const EditWorkflow = (props) => {
 	var total_count = 0
 
 	return (
-    <Dialog
+    <Drawer
       open={modalOpen}
       onClose={() => {
         setModalOpen(false);
       }}
       PaperProps={{
         style: {
-          backgroundColor: theme.palette.surfaceColor,
           color: "white",
-          minWidth: isMobile ? "90%" : 550,
-          maxWidth: isMobile ? "90%" : 550,
-					minHeight: 400,
+          minWidth: isMobile ? "90%" : 650,
+          maxWidth: isMobile ? "90%" : 650,
+		  minHeight: 400,
+		  paddingTop: 25, 
           //minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
           //maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
         },
       }}
     >
       <DialogTitle style={{padding: 30, paddingBottom: 0, zIndex: 1000,}}>
-				<div style={{display: "flex"}}>
+		<div style={{display: "flex"}}>
         	<div style={{flex: 1, color: "rgba(255,255,255,0.9)" }}>
-						<div style={{display: "flex"}}>
-							<Typography variant="h6" style={{flex: 9, }}>
-								{newWorkflow ? "New" : "Editing"} workflow
-							</Typography>
-							{newWorkflow === true ? null :
-								<div style={{ marginLeft: 5, flex: 1 }}>
-									<Tooltip title="Open Workflow Form for 'normal' users">
-										<a
-											rel="noopener noreferrer"
-											href={`/workflows/${workflow.id}/run`}
-											target="_blank"
-											style={{
-												textDecoration: "none",
-												color: "#f85a3e",
-												marginLeft: 5,
-												marginTop: 10,
-											}}
-										>
-											<OpenInNewIcon />
-										</a>
-									</Tooltip>
-								</div>
-							}
+				<div style={{display: "flex"}}>
+					<Typography variant="h6" style={{flex: 9, }}>
+						{newWorkflow ? "New" : "Editing"} workflow
+					</Typography>
+					{newWorkflow === true ? null :
+						<div style={{ marginLeft: 5, flex: 1 }}>
+							<Tooltip title="Open Workflow Form for 'normal' users">
+								<a
+									rel="noopener noreferrer"
+									href={`/workflows/${workflow.id}/run`}
+									target="_blank"
+									style={{
+										textDecoration: "none",
+										color: "#f85a3e",
+										marginLeft: 5,
+										marginTop: 10,
+									}}
+								>
+									<OpenInNewIcon />
+								</a>
+							</Tooltip>
 						</div>
-						<Typography variant="body2" color="textSecondary" style={{maxWidth: 440,}}>
-							Workflows can be built from scratch, or from templates. <a href="/usecases" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
-						</Typography>
-						{showUpload === true ? 
-							<div style={{ float: "right" }}>
-								<Tooltip color="primary" title={"Import manually"} placement="top">
-									<Button
-										color="primary"
-										style={{}}
-										variant="text"
-										onClick={() => upload.click()}
-									>
-										<PublishIcon />
-									</Button>
-								</Tooltip>
-        	  	</div>
-						: null}
+					}
+				</div>
+				<Typography variant="body2" color="textSecondary" style={{maxWidth: 440,}}>
+					Workflows can be built from scratch, or from templates. <a href="/usecases" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
+				</Typography>
+				{showUpload === true ? 
+					<div style={{ float: "right" }}>
+						<Tooltip color="primary" title={"Import manually"} placement="top">
+							<Button
+								color="primary"
+								style={{}}
+								variant="text"
+								onClick={() => upload.click()}
+							>
+								<PublishIcon />
+							</Button>
+						</Tooltip>
+        	  		</div>
+				: null}
         	</div>
 					{/*newWorkflow === true ? 
 						<div style={{flex: 1, marginLeft: 45, }}>
@@ -211,12 +224,12 @@ const EditWorkflow = (props) => {
 				</div>
       </DialogTitle>
       <FormControl>
-        <DialogContent style={{paddingTop: 10, display: "flex", minHeight: 350, zIndex: 1001, }}>
-					<div style={{minWidth: newWorkflow ? 450 : 500, maxWidth: newWorkflow ? 450 : 500, }}>
+        <DialogContent style={{paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, }}>
+			<div style={{minWidth: newWorkflow ? 500 : 550, maxWidth: newWorkflow ? 450 : 500, }}>
           	<TextField
-          	  onBlur={(event) => {
-								setName(event.target.value)
-							}}
+          	  onChange={(event) => {
+				setName(event.target.value)
+			  }}
           	  InputProps={{
           	    style: {
           	      color: "white",
@@ -231,27 +244,29 @@ const EditWorkflow = (props) => {
           	  autoFocus
           	  fullWidth
           	/>
-          	<TextField
-          	  onBlur={(event) => {
-								setDescription(event.target.value)
-							}}
-          	  InputProps={{
-          	    style: {
-          	      color: "white",
-          	    },
-          	  }}
-							maxRows={4}
-          	  color="primary"
-          	  defaultValue={innerWorkflow.description}
-          	  placeholder="Description"
-          	  multiline
-							label="Description"
-          	  margin="dense"
-          	  fullWidth
-          	/>
+			<div style={{display: "flex", }}>
+				<TextField
+				  onBlur={(event) => {
+					setDescription(event.target.value)
+				  }}
+				  InputProps={{
+					style: {
+					  color: "white",
+					},
+				  }}
+				  maxRows={4}
+				  color="primary"
+				  defaultValue={innerWorkflow.description}
+				  placeholder="Description"
+				  multiline
+				  label="Description"
+				  margin="dense"
+				  fullWidth
+				/>
+			</div>
 						<div style={{display: "flex", marginTop: 10, }}>
-							<ChipInput
-								style={{ flex: 1, maxHeight: 40, marginTop: 12, overflow: "auto",  }}
+							<MuiChipsInput
+								style={{ flex: 1, maxHeight: 40, }}
 								InputProps={{
 									style: {
 										color: "white",
@@ -261,13 +276,20 @@ const EditWorkflow = (props) => {
 								color="primary"
 								fullWidth
 								value={newWorkflowTags}
+								onChange={(chip) => {
+									console.log("Chip: ", chip)
+									//newWorkflowTags.push(chip);
+									setNewWorkflowTags(chip);
+								}}
 								onAdd={(chip) => {
 									newWorkflowTags.push(chip);
 									setNewWorkflowTags(newWorkflowTags);
 								}}
 								onDelete={(chip, index) => {
+									console.log("Deleting: ", chip, index)
 									newWorkflowTags.splice(index, 1);
 									setNewWorkflowTags(newWorkflowTags);
+									setUpdate(Math.random());
 								}}
 							/>
 							{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
@@ -328,26 +350,41 @@ const EditWorkflow = (props) => {
 
   					{showMoreClicked === true ? 
 							<span style={{marginTop: 25, }}>
+								<div style={{display: "flex"}}>
+									<FormControl style={{marginTop: 15, }}>
+										<FormLabel id="demo-row-radio-buttons-group-label">Status</FormLabel>
+											<RadioGroup
+												row
+												aria-labelledby="demo-row-radio-buttons-group-label"
+												name="row-radio-buttons-group"
+												defaultValue={innerWorkflow.status}
+												onChange={(e) => {
+													console.log("Data: ", e.target.value)
+													
+													innerWorkflow.workflow_type = e.target.value
+													setInnerWorkflow(innerWorkflow)
+												}}
+											>
+												<FormControlLabel value="test" control={<Radio />} label="Test" />
+												<FormControlLabel value="production" control={<Radio />} label="Production" />
 
-								<FormControl style={{marginTop: 15, }}>
-									<FormLabel id="demo-row-radio-buttons-group-label">Status</FormLabel>
-										<RadioGroup
-											row
-											aria-labelledby="demo-row-radio-buttons-group-label"
-											name="row-radio-buttons-group"
-											defaultValue={innerWorkflow.status}
-											onChange={(e) => {
-												console.log("Data: ", e.target.value)
-												
-												innerWorkflow.workflow_type = e.target.value
-												setInnerWorkflow(innerWorkflow)
+											</RadioGroup>
+									</FormControl>
+									<LocalizationProvider dateAdapter={AdapterDayjs}>
+										<DatePicker 
+											sx={{
+												marginTop: 3, 
+												marginLeft: 3, 
 											}}
-										>
-											<FormControlLabel value="test" control={<Radio />} label="Test" />
-											<FormControlLabel value="production" control={<Radio />} label="Production" />
-
-										</RadioGroup>
-								</FormControl>
+											value={dueDate} 
+											label="Due Date"
+											format="YYYY-MM-DD"
+											onChange={(newValue) => {
+												setDueDate(newValue)
+											}}
+										/>
+									</LocalizationProvider>
+								</div>
 								<div />
 
 								<FormControl style={{marginTop: 15, }}>
@@ -430,38 +467,28 @@ const EditWorkflow = (props) => {
 							</span>
 						: null}
           	<Tooltip color="primary" title={"Add more details"} placement="top">
-							<IconButton
-								style={{ color: "white", margin: "auto", marginTop: 10, textAlign: "center", width: 50,}}
-								onClick={() => {
-									setShowMoreClicked(!showMoreClicked);
-								}}
-							>
-								{showMoreClicked ? <ExpandLessIcon /> : <ExpandMoreIcon/>}
-							</IconButton>
-						</Tooltip>
-					</div>
-					{/*newWorkflow === true ? 
-						<div style={{marginLeft: 50, maxWidth: 400, minWidth: 400, position: "relative",}}>
-							<UsecaseSearch
-								globalUrl={globalUrl}
-								appFramework={appFramework}
-								defaultSearch={undefined}
-								apps={undefined}
-								setFoundWorkflowId={setFoundWorkflowId} 
-								userdata={userdata}
-							/>
-						</div>
-					: null*/}
+				<IconButton
+					style={{ color: "white", margin: "auto", marginTop: 10, textAlign: "center", width: 50,}}
+					onClick={() => {
+						setShowMoreClicked(!showMoreClicked);
+					}}
+				>
+					{showMoreClicked ? <ExpandLessIcon /> : <ExpandMoreIcon/>}
+				</IconButton>
+			</Tooltip>
+		</div>
+
         </DialogContent>
-        <DialogActions>
+
+        <DialogActions style={{paddingRight: 20,  }}>
           <Button
             style={{}}
             onClick={() => {
-							if (setNewWorkflow !== undefined) {
-								setWorkflow({})
-							}
+				if (setNewWorkflow !== undefined) {
+					setWorkflow({})
+				}
 
-							setModalOpen(false)
+				setModalOpen(false)
             }}
             color="primary"
           >
@@ -470,46 +497,73 @@ const EditWorkflow = (props) => {
           <Button
             variant="contained"
             style={{}}
-            disabled={name.length === 0}
+            disabled={name.length === 0 || submitLoading === true}
             onClick={() => {
-							innerWorkflow.name = name 
-							innerWorkflow.description = description 
-							if (newWorkflowTags.length > 0) {
-								innerWorkflow.tags = newWorkflowTags
-							}
+				setSubmitLoading(true)
 
-							if (selectedUsecases.length > 0) {
-								innerWorkflow.usecase_ids = selectedUsecases
-							}
+				innerWorkflow.name = name 
+				innerWorkflow.description = description 
+				if (newWorkflowTags.length > 0) {
+					innerWorkflow.tags = newWorkflowTags
+				}
 
+				if (selectedUsecases.length > 0) {
+					innerWorkflow.usecase_ids = selectedUsecases
+				}
 
-							if (setNewWorkflow !== undefined) {
-								setNewWorkflow(
-									innerWorkflow.name,
-									innerWorkflow.description,
-									innerWorkflow.tags,
-									innerWorkflow.default_return_value,
-									innerWorkflow,
-									newWorkflow,
-									innerWorkflow.usecase_ids,
-									innerWorkflow.blogpost,
-									innerWorkflow.status,
-								)
-								setWorkflow({})
-							} else {
-								setWorkflow(innerWorkflow)
-								console.log("editing workflow: ", innerWorkflow)
-							}
-							
-							setModalOpen(false)
+				if (dueDate > 0) {
+					innerWorkflow.due_date = new Date(`${dueDate["$y"]}-${dueDate["$M"]+1}-${dueDate["$D"]}`).getTime()/1000
+				}
+
+				if (setNewWorkflow !== undefined) {
+					setNewWorkflow(
+						innerWorkflow.name,
+						innerWorkflow.description,
+						innerWorkflow.tags,
+						innerWorkflow.default_return_value,
+						innerWorkflow,
+						newWorkflow,
+						innerWorkflow.usecase_ids,
+						innerWorkflow.blogpost,
+						innerWorkflow.status,
+					)
+					setWorkflow({})
+				} else {
+					setWorkflow(innerWorkflow)
+					console.log("editing workflow: ", innerWorkflow)
+				}
+				
+				setSubmitLoading(true)
+
+				// If new workflow, don't close it
+				if (isEditing) {
+					setModalOpen(false)
+				}
             }}
             color="primary"
           >
             {submitLoading ? <CircularProgress color="secondary" /> : "Submit"}
           </Button>
         </DialogActions>
+
+		  {newWorkflow === true && name.length > 5 ?
+			<div style={{marginLeft: 30, }}>
+				<WorkflowGrid 
+					maxRows={1}
+					globalUrl={globalUrl}
+					showSuggestions={false}
+					isMobile={isMobile}
+					userdata={userdata}
+					inputsearch={name+description+newWorkflowTags.join(" ")}
+
+					parsedXs={6}
+					alternativeView={false}
+					onlyResults={true}
+				/>
+			</div> 
+		  : null}
       </FormControl>
-    </Dialog>
+    </Drawer>
 	)
 }
 

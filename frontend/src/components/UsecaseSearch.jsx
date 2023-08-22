@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { toast } from 'react-toastify';
 import theme from '../theme.jsx';
 import { useNavigate, Link } from "react-router-dom";
-import { useAlert } from "react-alert";
+//import { useAlert 
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 import PaperComponent from "../components/PaperComponent.jsx"
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
@@ -349,14 +350,14 @@ const UsecaseSearch = (props) => {
   const [firstRequest, setFirstRequest] = React.useState(true);
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-  const alert = useAlert()
+  //const alert = useAlert()
 
 	useEffect(() => {
 		// if (firstRequest !== true && workflow.id !== undefined && autotry === true && setUsecaseSearch !== undefined && authenticationModalOpen === false && configureWorkflowModalOpen === false) {
 		//
 		if (autotry === true && configureWorkflowModalOpen === false && workflow.id !== undefined && setUsecaseSearch !== undefined) {
 			console.log("Close it?")
-			alert.info("Workflow successfully added! Add more apps, and we will suggest more workflows")
+			toast("Workflow successfully added! Add more apps, and we will suggest more workflows")
 
 			if (setCloseWindow !== undefined) {
 				setCloseWindow(true)
@@ -793,7 +794,7 @@ const UsecaseSearch = (props) => {
 			console.log("Deleted workflow")
 		})
 		.catch((error) => {
-			//alert.error(error.toString());
+			//toast(error.toString());
 			console.log("Delete workflow error: ", error.toString());
 		})
 	}
@@ -822,7 +823,7 @@ const UsecaseSearch = (props) => {
 			}
 		})
 		.catch((error) => {
-			//alert.error(error.toString());
+			//toast(error.toString());
 			console.log("Get workflows error: ", error.toString());
 		})
 	}
@@ -894,9 +895,9 @@ const UsecaseSearch = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Error setting workflow: ", responseJson.reason)
+						toast("Error setting workflow: ", responseJson.reason)
 					} else {
-						alert.error("Error setting workflow.")
+						toast("Error setting workflow.")
 					}
 
 					return
@@ -905,7 +906,7 @@ const UsecaseSearch = (props) => {
         return responseJson;
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   }
 
@@ -930,7 +931,7 @@ const UsecaseSearch = (props) => {
 
 					if (responseJson.success === false) {
 						if (responseJson.reason !== null && responseJson.reason !== undefined) {
-							//alert.error(responseJson.reason)
+							//toast(responseJson.reason)
 						}
 
 						if (responseJson.source === "") {
@@ -1009,13 +1010,13 @@ const UsecaseSearch = (props) => {
 										responseJson.status,
 									).then((response) => {
 										if (response !== undefined) {
-											alert.success("Successfully generated " + responseJson.name);
+											toast("Successfully generated " + responseJson.name);
 										}
 									});
 								}
 							})
 							.catch((error) => {
-								alert.error("Generate error: " + error.toString());
+								toast("Generate error: " + error.toString());
 							})
 
 
@@ -1057,7 +1058,7 @@ const UsecaseSearch = (props) => {
 		.catch((error) => {
 			setIsUploading(false)
 			console.log("Merge err: ", error.toString())
-			//alert.error("Err: " + error.toString());
+			//toast("Err: " + error.toString());
 		});
 	}
 
@@ -1207,7 +1208,7 @@ const UsecaseSearch = (props) => {
 			}
 
 			if (changed) {
-				//alert.error("Errors were found. Click them to sort sort them out or go to the next usecase.")
+				//toast("Errors were found. Click them to sort sort them out or go to the next usecase.")
 
 				//setUpdate(Math.random())
 				//setIsUploading(false)
@@ -1268,13 +1269,13 @@ const UsecaseSearch = (props) => {
 			})
 			.then((responseJson) => {
 				if (responseJson.success === false) {
-					alert.error("Failed to activate the app")
+					toast("Failed to activate the app")
 				} else {
-					//alert.success("App activated for your organization! Refresh the page to use the app.")
+					//toast("App activated for your organization! Refresh the page to use the app.")
 				}
 			})
 			.catch(error => {
-				//alert.error(error.toString())
+				//toast(error.toString())
 				console.log("Activate app error: ", error.toString())
 			});
 		}
@@ -1304,9 +1305,9 @@ const UsecaseSearch = (props) => {
 				.then((responseJson) => {
 					if (responseJson.success === false) {
 						if (responseJson.reason !== undefined) {
-							alert.error("Failed updating default app: " + responseJson.reason)
+							toast("Failed updating default app: " + responseJson.reason)
 						} else {
-							alert.error("Failed to update framework for your org.")
+							toast("Failed to update framework for your org.")
 
 						}
 					} else {
@@ -1319,7 +1320,7 @@ const UsecaseSearch = (props) => {
 					//setFrameworkData(responseJson)
 				})
 				.catch((error) => {
-					alert.error(error.toString());
+					toast(error.toString());
 					//setFrameworkLoaded(true)
 				})
 		}
@@ -1516,7 +1517,7 @@ const UsecaseSearch = (props) => {
 							return (
 								<div key={curindex} style={{display: "flex", maxHeight: 40, minHeight: 40, borderTop: "1px solid rgba(255,255,255,0.3)", }} onClick={() => {
 									if (subdata.disabled === true) {
-										//alert.info("Usecase not available yet.")
+										//toast("Usecase not available yet.")
 										return
 									}
 

@@ -1,22 +1,21 @@
 import React, { useEffect } from "react";
-import theme from '../theme.jsx';
+import theme from "../theme.jsx";
 import { makeStyles } from "@mui/styles";
+import { toast } from 'react-toastify';
 
 import {
 	Tooltip,
-	Grid, 
-	Button, 
+	Grid,
+	Button,
 	TextField,
-	Typography, 
+	Typography,
 	IconButton,
 } from "@mui/material";
 
-import { useAlert } from "react-alert";
-
 import {
 	ExpandLess as ExpandLessIcon,
-	ExpandMore as ExpandMoreIcon, 
-	Save as SaveIcon, 
+	ExpandMore as ExpandMoreIcon,
+	Save as SaveIcon,
 } from "@mui/icons-material";
 
 const useStyles = makeStyles({
@@ -39,7 +38,7 @@ const OrgHeader = (props) => {
   	handleEditOrg, 
   } = props;
 
-  const alert = useAlert();
+  //const alert = useAlert();
   const classes = useStyles();
 
   var upload = "";
@@ -101,10 +100,9 @@ const OrgHeader = (props) => {
   //console.log("USER: ", userdata)
   const orgSaveButton = (
     <Tooltip title="Save any unsaved data" placement="bottom">
-	  <div>
       <Button
         style={{ width: 150, height: 55, flex: 1 }}
-        variant="contained"
+        variant="outlined"
         color="primary"
         disabled={
           userdata === undefined || userdata === null || userdata.admin !== "true"
@@ -123,7 +121,6 @@ const OrgHeader = (props) => {
       >
         <SaveIcon />
       </Button>
-	  </div>
     </Tooltip>
   );
 
@@ -212,13 +209,13 @@ const OrgHeader = (props) => {
               const invalid = ["#", ":", "."];
               for (var key in invalid) {
                 if (e.target.value.includes(invalid[key])) {
-                  alert.error("Can't use " + invalid[key] + " in name");
+                  toast("Can't use " + invalid[key] + " in name");
                   return;
                 }
               }
 
               if (e.target.value.length > 100) {
-                alert.error("Choose a shorter name.");
+                toast("Choose a shorter name.");
                 return;
               }
 

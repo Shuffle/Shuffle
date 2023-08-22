@@ -74,7 +74,7 @@ const AppGrid = props => {
 		.then(response => {
 			if (response.success === true) {
 				setFormMessage(response.reason)
-				//alert.info("Thanks for submitting!")
+				//toast("Thanks for submitting!")
 			} else {
 				setFormMessage(errorMessage)
 			}
