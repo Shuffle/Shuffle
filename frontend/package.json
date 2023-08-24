@@ -78,7 +78,7 @@
     "styled-components": "^4.4.0",
     "yaml": "^1.7.2",
     "yamljs": "^0.3.0",
-    "zone.js": "^0.13.1"
+    "zone.js": "^0.13.1",
     "webpack": "^5.88.2"
   },
   "scripts": {
@@ -111,6 +111,6 @@
     "promise-window": "^1.2.1",
     "react-16": "npm:react@16.13.1",
     "react-dom-16": "npm:react-dom@16.13.1",
-    "react-error-overlay": "6.0.9",
+    "react-error-overlay": "6.0.9"
   }
 }
