@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: orborus
+  name: orborus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: orborus
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.version: 1.26.0 (40646f47)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/shuffle: "true"
+        io.kompose.service: orborus
+    spec:
+      volumes:
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock
+      containers:
+        - env:
+            - name: BASE_URL
+              value: "http://192.168.49.2:30009"
+            - name: DOCKER_API_VERSION
+              value: "1.40"
+            - name: ENVIRONMENT_NAME
+              value: Shuffle
+            - name: ORG_ID
+              value: Shuffle
+            - name: SHUFFLE_APP_SDK_VERSION
+              value: nightly
+            - name: SHUFFLE_SCALE_REPLICAS
+              value: "5"
+              #- name: SHUFFLE_SWARM_CONFIG
+              #value: run
+            - name: SHUFFLE_WORKER_VERSION
+              value: nightly
+
+          image: orborus:v2
+          imagePullPolicy: Never
+          name: shuffle-orborus
+          resources: {}
+          volumeMounts:
+            - name: docker-socket 
+              mountPath: /var/run/docker.sock
+      hostname: shuffle-orborus
+      restartPolicy: Always
+status: {}

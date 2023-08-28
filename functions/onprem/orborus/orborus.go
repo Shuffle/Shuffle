@@ -36,11 +36,21 @@ import (
 
 	//"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
-	uuid "github.com/satori/go.uuid"
+	// uuid "github.com/satori/go.uuid"
 
 	//"github.com/mackerelio/go-osstat/disk"
 	"github.com/mackerelio/go-osstat/memory"
 	"github.com/shirou/gopsutil/cpu"
+
+	//k8s deps
+	"k8s.io/client-go/kubernetes"
+    "k8s.io/client-go/tools/clientcmd"
+    "k8s.io/client-go/util/homedir"
+	"k8s.io/client-go/rest"
+    "path/filepath"
+
+    corev1 "k8s.io/api/core/v1"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Starts jobs in bulk, so this could be increased
@@ -559,6 +569,15 @@ func deployServiceWorkers(image string) {
 
 // Deploys the internal worker whenever something happens
 // https://docs.docker.com/engine/api/sdk/examples/
+
+func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
+	var envVars []corev1.EnvVar
+	for key, value := range envMap {
+		envVars = append(envVars, corev1.EnvVar{Name: key, Value: value})
+	}
+	return envVars
+}
+
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
 	// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
@@ -566,157 +585,200 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	//CPUQuota:  25000,
 	//CPUPeriod: 100000,
 	//CPUShares: 256,
-	hostConfig := &container.HostConfig{
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-			Config: map[string]string{
-				"max-size": "10m",
+	// fmt.Printf("IMAGE NAME: %s",image)
+	// fmt.Printf("EEXECUTION REQUEST IN ORBORUS: %+v",executionRequest)
+	fmt.Printf("ENV: %+v", env)
+	image = "shuffle-worker:v1"
+
+	envMap := make(map[string]string)
+	for _, envStr := range env {
+		parts := strings.SplitN(envStr, "=", 2)
+		if len(parts) == 2 {
+			envMap[parts[0]] = parts[1]
+		}
+	}
+
+	clientset, err := getKubernetesClient()
+	if err != nil {
+		fmt.Println("[ERROR]Error getting kubernetes client:", err)
+		os.Exit(1)
+	}
+
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: identifier,
 			},
-		},
-		Resources: container.Resources{},
-	}
-
-	if len(os.Getenv("DOCKER_HOST")) == 0 {
-		if runtime.GOOS == "windows" {
-			hostConfig.Binds = []string{`\\.\pipe\docker_engine:\\.\pipe\docker_engine`}
-		} else {
-			hostConfig.Binds = []string{"/var/run/docker.sock:/var/run/docker.sock:rw"}
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  identifier,
+						Image: image,
+						Env:  buildEnvVars(envMap),
+					},
+				},
+			},
 		}
-	}
-
-	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-
-	if strings.ToLower(cleanupEnv) == "true" {
-		hostConfig.AutoRemove = true
-	}
-
-	config := &container.Config{
-		Image: image,
-		Env:   env,
-	}
-
-	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
-	parsedUuid := uuid.NewV4()
-	if swarmConfig == "run" || swarmConfig == "swarm" {
-		// FIXME: Should we handle replies properly?
-		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
-		// a 401 from the worker, which returns an error here
-		go sendWorkerRequest(executionRequest)
-		//sendWorkerRequest(executionRequest)
-
-		//err := sendWorkerRequest(executionRequest)
-		//if err != nil {
-		//	log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
-
-		//	if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
-		//		workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-		//		deployServiceWorkers(workerImage)
-
-		//		time.Sleep(time.Duration(10) * time.Second)
-		//		err = sendWorkerRequest(executionRequest)
-		//	}
-		//}
-
-		//if err == nil {
-		//	// FIXME: Readd this? Removed for rerun reasons
-		//	// executionIds = append(executionIds, executionRequest.ExecutionId)
-		//}
-		//}()
-
-		return nil
-	}
-
-	//log.Printf("[INFO] Identifier: %s", identifier)
-	cont, err := dockercli.ContainerCreate(
-		context.Background(),
-		config,
-		hostConfig,
-		nil,
-		nil,
-		identifier,
-	)
-
-	if err != nil {
-		if strings.Contains(fmt.Sprintf("%s", err), "Conflict. The container name ") {
-			identifier = fmt.Sprintf("%s-%s", identifier, parsedUuid)
-			//log.Printf("[INFO] 2 - Identifier: %s", identifier)
-			cont, err = dockercli.ContainerCreate(
-				context.Background(),
-				config,
-				hostConfig,
-				nil,
-				nil,
-				identifier,
-			)
-
-			if err != nil {
-				log.Printf("[ERROR] Container create error(2): %s", err)
-				return err
-			}
-		} else {
-			log.Printf("[ERROR] Container create error: %s", err)
-			return err
-		}
-	}
-
-	containerStartOptions := types.ContainerStartOptions{}
-	err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
-	if err != nil {
-		// Trying to recreate and start WITHOUT network if it's possible. No extended checks. Old execution system (<0.9.30)
-		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
-			hostConfig.NetworkMode = ""
-			//container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-			cont, err = dockercli.ContainerCreate(
-				context.Background(),
-				config,
-				hostConfig,
-				nil,
-				nil,
-				identifier+"-2",
-			)
-			if err != nil {
-				log.Printf("[ERROR] Failed to CREATE container (2): %s", err)
-			}
-
-			err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
-			if err != nil {
-				log.Printf("[ERROR] Failed to start container (2): %s", err)
-			}
-		} else {
-			log.Printf("[ERROR] Failed initial container start. Quitting as this is NOT a simple network issue. Err: %s", err)
-		}
-
+	
+		createdPod, err := clientset.CoreV1().Pods("shuffle").Create(context.Background(), pod, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf("[ERROR] Failed to start worker container in environment %s: %s", environment, err)
-			return err
-		} else {
-			log.Printf("[INFO] Worker Container %s was created under environment %s for execution %s: docker logs %s", cont.ID, environment, executionRequest.ExecutionId, cont.ID)
+			fmt.Fprintf(os.Stderr, "Error creating pod: %v\n", err)
+			os.Exit(1)
 		}
+	
+		fmt.Printf("Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
+		/////////////////////////////////////////////
 
-		//stats, err := cli.ContainerInspect(context.Background(), containerName)
-		//if err != nil {
-		//	log.Printf("Failed checking worker %s", containerName)
-		//	return
-		//}
+	// hostConfig := &container.HostConfig{
+	// 	LogConfig: container.LogConfig{
+	// 		Type: "json-file",
+	// 		Config: map[string]string{
+	// 			"max-size": "10m",
+	// 		},
+	// 	},
+	// 	Resources: container.Resources{},
+	// }
 
-		//containerStatus := stats.ContainerJSONBase.State.Status
-		//if containerStatus != "running" {
-		//	log.Printf("Status of %s is %s. Should be running. Will reset", containerName, containerStatus)
-		//	err = stopWorker(containerName)
-		//	if err != nil {
-		//		log.Printf("Failed stopping worker %s", execution.ExecutionId)
-		//		return
-		//	}
+	// if len(os.Getenv("DOCKER_HOST")) == 0 {
+	// 	if runtime.GOOS == "windows" {
+	// 		hostConfig.Binds = []string{`\\.\pipe\docker_engine:\\.\pipe\docker_engine`}
+	// 	} else {
+	// 		hostConfig.Binds = []string{"/var/run/docker.sock:/var/run/docker.sock:rw"}
+	// 	}
+	// }
 
-		//	err = deployWorke(cli, workerImage, containerName, env)
-		//	if err != nil {
-		//		log.Printf("Failed executing worker %s in state %s", execution.ExecutionId, containerStatus)
-		//		return
-		//	}
-		//}
-	} else {
-		log.Printf("[INFO] Worker Container %s was created under environment %s: docker logs %s", cont.ID, environment, cont.ID)
-	}
+	// hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+
+	// if strings.ToLower(cleanupEnv) == "true" {
+	// 	hostConfig.AutoRemove = true
+	// }
+
+	// config := &container.Config{
+	// 	Image: image,
+	// 	Env:   env,
+	// }
+
+	// //var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
+	// parsedUuid := uuid.NewV4()
+	// if swarmConfig == "run" || swarmConfig == "swarm" {
+	// 	// FIXME: Should we handle replies properly?
+	// 	// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
+	// 	// a 401 from the worker, which returns an error here
+	// 	go sendWorkerRequest(executionRequest)
+	// 	//sendWorkerRequest(executionRequest)
+
+	// 	//err := sendWorkerRequest(executionRequest)
+	// 	//if err != nil {
+	// 	//	log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
+
+	// 	//	if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
+	// 	//		workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+	// 	//		deployServiceWorkers(workerImage)
+
+	// 	//		time.Sleep(time.Duration(10) * time.Second)
+	// 	//		err = sendWorkerRequest(executionRequest)
+	// 	//	}
+	// 	//}
+
+	// 	//if err == nil {
+	// 	//	// FIXME: Readd this? Removed for rerun reasons
+	// 	//	// executionIds = append(executionIds, executionRequest.ExecutionId)
+	// 	//}
+	// 	//}()
+
+	// 	return nil
+	// }
+
+	// //log.Printf("[INFO] Identifier: %s", identifier)
+	// cont, err := dockercli.ContainerCreate(
+	// 	context.Background(),
+	// 	config,
+	// 	hostConfig,
+	// 	nil,
+	// 	nil,
+	// 	identifier,
+	// )
+
+	// if err != nil {
+	// 	if strings.Contains(fmt.Sprintf("%s", err), "Conflict. The container name ") {
+	// 		identifier = fmt.Sprintf("%s-%s", identifier, parsedUuid)
+	// 		//log.Printf("[INFO] 2 - Identifier: %s", identifier)
+	// 		cont, err = dockercli.ContainerCreate(
+	// 			context.Background(),
+	// 			config,
+	// 			hostConfig,
+	// 			nil,
+	// 			nil,
+	// 			identifier,
+	// 		)
+
+	// 		if err != nil {
+	// 			log.Printf("[ERROR] Container create error(2): %s", err)
+	// 			return err
+	// 		}
+	// 	} else {
+	// 		log.Printf("[ERROR] Container create error: %s", err)
+	// 		return err
+	// 	}
+	// }
+
+	// containerStartOptions := types.ContainerStartOptions{}
+	// err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
+	// if err != nil {
+	// 	// Trying to recreate and start WITHOUT network if it's possible. No extended checks. Old execution system (<0.9.30)
+	// 	if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
+	// 		hostConfig.NetworkMode = ""
+	// 		//container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+	// 		cont, err = dockercli.ContainerCreate(
+	// 			context.Background(),
+	// 			config,
+	// 			hostConfig,
+	// 			nil,
+	// 			nil,
+	// 			identifier+"-2",
+	// 		)
+	// 		if err != nil {
+	// 			log.Printf("[ERROR] Failed to CREATE container (2): %s", err)
+	// 		}
+
+	// 		err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
+	// 		if err != nil {
+	// 			log.Printf("[ERROR] Failed to start container (2): %s", err)
+	// 		}
+	// 	} else {
+	// 		log.Printf("[ERROR] Failed initial container start. Quitting as this is NOT a simple network issue. Err: %s", err)
+	// 	}
+
+	// 	if err != nil {
+	// 		log.Printf("[ERROR] Failed to start worker container in environment %s: %s", environment, err)
+	// 		return err
+	// 	} else {
+	// 		log.Printf("[INFO] Worker Container %s was created under environment %s for execution %s: docker logs %s", cont.ID, environment, executionRequest.ExecutionId, cont.ID)
+	// 	}
+
+	// 	//stats, err := cli.ContainerInspect(context.Background(), containerName)
+	// 	//if err != nil {
+	// 	//	log.Printf("Failed checking worker %s", containerName)
+	// 	//	return
+	// 	//}
+
+	// 	//containerStatus := stats.ContainerJSONBase.State.Status
+	// 	//if containerStatus != "running" {
+	// 	//	log.Printf("Status of %s is %s. Should be running. Will reset", containerName, containerStatus)
+	// 	//	err = stopWorker(containerName)
+	// 	//	if err != nil {
+	// 	//		log.Printf("Failed stopping worker %s", execution.ExecutionId)
+	// 	//		return
+	// 	//	}
+
+	// 	//	err = deployWorke(cli, workerImage, containerName, env)
+	// 	//	if err != nil {
+	// 	//		log.Printf("Failed executing worker %s in state %s", execution.ExecutionId, containerStatus)
+	// 	//		return
+	// 	//	}
+	// 	//}
+	// } else {
+	// 	log.Printf("[INFO] Worker Container %s was created under environment %s: docker logs %s", cont.ID, environment, cont.ID)
+	// }
 
 	return nil
 }
@@ -930,8 +992,47 @@ func getOrborusStats() shuffle.OrborusStats {
 	return newStats
 }
 
+func isRunningInCluster() bool {
+	_, existsHost := os.LookupEnv("KUBERNETES_SERVICE_HOST")
+	_, existsPort := os.LookupEnv("KUBERNETES_SERVICE_PORT")
+	return existsHost && existsPort
+}
+
+func getKubernetesClient() (*kubernetes.Clientset, error) {
+	if isRunningInCluster() {
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, err
+		}
+		return clientset, nil
+	} else {
+		home := homedir.HomeDir()
+		kubeconfigPath := filepath.Join(home, ".kube", "config")
+		config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		if err != nil {
+			return nil, err
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, err
+		}
+		return clientset, nil
+	}
+}
+
 // Initial loop etc
 func main() {
+
+	if isRunningInCluster(){
+		log.Printf("[INFO] Running inside k8s cluster")
+	}
+
+	/////////////////////////
+
 	startupDelay := os.Getenv("SHUFFLE_ORBORUS_STARTUP_DELAY")
 	if len(startupDelay) > 0 {
 		log.Printf("[DEBUG] Setting startup delay to %#v", startupDelay)
@@ -946,7 +1047,7 @@ func main() {
 
 	log.Println("[INFO] Setting up execution environment")
 
-	//FIXME
+	// //FIXME
 	if baseUrl == "" {
 		baseUrl = "https://shuffler.io"
 		//baseUrl = "http://localhost:5001"
@@ -1015,7 +1116,8 @@ func main() {
 
 	ctx := context.Background()
 	// Run by default from now
-	zombiecheck(ctx, workerTimeout)
+	//commenting for now as its stoppoing minikube
+		// zombiecheck(ctx, workerTimeout)
 
 	log.Printf("[INFO] Running towards %s (BASE_URL) with environment name %s", baseUrl, environment)
 
