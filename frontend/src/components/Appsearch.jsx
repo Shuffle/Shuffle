@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-
-import ReactGA from 'react-ga';
+import ReactGA from 'react-ga4';
 import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
-
+import { useAlert } from "react-alert";
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@material-ui/icons';
 
 //import algoliasearch from 'algoliasearch/lite';
@@ -11,13 +10,12 @@ import algoliasearch from 'algoliasearch';
 import { InstantSearch, connectSearchBox, connectHits } from 'react-instantsearch-dom';
 import { Grid, Paper, TextField, ButtonBase, InputAdornment, Typography, Button, Tooltip} from '@material-ui/core';
 import aa from 'search-insights'
-
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const Appsearch = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, }  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList}  = props
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-
+  const alert = useAlert();
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? 12 : parsedXs
 	const theme = useTheme();
@@ -27,13 +25,51 @@ const Appsearch = props => {
 	const [message, setMessage] = React.useState("");
 	const [formMessage, setFormMessage] = React.useState("");
 	const [selectedApp, setSelectedApp] = React.useState({});
-
 	const buttonStyle = {borderRadius: 30, height: 50, width: 220, margin: isMobile ? "15px auto 15px auto" : 20, fontSize: 18,}
 
 	const innerColor = "rgba(255,255,255,0.65)"
 	const borderRadius = 3
 	window.title = "Shuffle | Apps | Find and integration any app"
 
+	const setUserSpecialzedApp = (user, data) => {
+		// var data = newfields]
+		console.log("data value", data)
+		const appData = {"user_id":user,"specialized_apps":[{}]}
+		console.log("User Check for appdata:", user)
+		appData["specialized_apps"][0]["name"] = data["name"]
+		appData["specialized_apps"][0]["image"] = data["image_url"]
+		appData["specialized_apps"][0]["category"] = data["categories"].toString()
+		console.log("AppData:",appData)
+		console.log("setActionImageList",setActionImageList)
+		console.log("actionImageList",actionImageList)
+
+		const finalData = actionImageList.concat(appData["specialized_apps"])
+		appData["specialized_apps"]=finalData
+		fetch(globalUrl + "/api/v1/users/updateuser", {
+		  method: "PUT",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  body: JSON.stringify(appData),
+		  credentials: "include",
+		})
+		  .then((response) => {
+			if (response.status !== 200) {
+			  console.log("Status not 200 for set creator :O!");
+			}
+			alert.success("Sucessfully updated specialzed app.")
+			return response.json();
+		  })
+		  .then((responseJson) => {
+			if (!responseJson.success && responseJson.reason !== undefined) {
+			  alert.error("Failed updating user: " + responseJson.reason);
+			}
+		  })
+		  .catch((error) => {
+			console.log(error);
+		  });
+	  };
 	const submitContact = (email, message) => {
 		const data = {
 			"firstname": "",
@@ -170,6 +206,16 @@ const Appsearch = props => {
 						}} onMouseOut={() => {
 							setMouseHoverIndex(-1)
 						}} onClick={() => {
+							if(isCreatorPage === true){
+								console.log("data:",data)
+								console.log("userdata.id",userdata.id)
+								console.log("is creator", isCreatorPage)
+								if (setNewSelectedApp !== undefined) {
+									// setUserSpecialzedApp = data
+									setUserSpecialzedApp(userdata.id, data)
+									//setActionImageList(userdata.id, data)
+								}	
+							}
 							if (setNewSelectedApp !== undefined) {
 								setNewSelectedApp(data)
 							}

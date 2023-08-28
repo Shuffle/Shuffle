@@ -26,6 +26,12 @@ import {
   DialogContent,
   CircularProgress,
   Zoom,
+  InputAdornment,
+	List,
+	ListItem,
+	ListItemAvatar,
+	ListItemText,
+	Avatar,
 } from "@material-ui/core";
 
 import {
@@ -37,18 +43,24 @@ import {
   CloudDownload as CloudDownloadIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+	Search as SearchIcon,
+	Folder as FolderIcon,
+	LibraryBooks as LibraryBooksIcon,
 } from "@material-ui/icons";
 
 import {
 	ForkRight as ForkRightIcon,
 } from '@mui/icons-material';
 
+import aa from 'search-insights'
 import { useTheme } from "@material-ui/core/styles";
+import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
+import algoliasearch from 'algoliasearch/lite';
 
 import YAML from "yaml";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { useAlert } from "react-alert";
-import Dropzone from "../components/Dropzone";
+import Dropzone from "../components/Dropzone.jsx";
 
 const surfaceColor = "#27292D";
 const inputColor = "#383B40";
@@ -254,6 +266,7 @@ export const GetParsedPaths = (inputdata, basekey) => {
   return parsedValues;
 };
 
+const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 
@@ -1486,6 +1499,268 @@ const Apps = (props) => {
   }, [appValidation, isDropzone]);
 
 	var appDelay = -75 
+
+	const leftBarSize = viewWidth 
+	const SearchBox = ({ currentRefinement, refine, isSearchStalled, }) => {
+
+      useEffect(() => {
+        if (document !== undefined) {
+          const appsearchValue = document.getElementById("app_search_field")
+          if (appsearchValue !== undefined && appsearchValue !== null) {
+            console.log("Value2: ", appsearchValue.value)
+            if (appsearchValue.value !== undefined && appsearchValue.value !== null && appsearchValue.value.length > 0) {
+              refine(appsearchValue.value)
+            }
+          }
+          //}
+        }
+      }, [])
+
+      return (
+        <form id="search_form" noValidate type="searchbox" action="" role="search" style={{ margin: 0, display: "none", }} onClick={() => {
+        }}>
+          <TextField
+            fullWidth
+            style={{ backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, maxWidth: leftBarSize - 20, }}
+            InputProps={{
+              style: {
+                color: "white",
+                fontSize: "1em",
+                height: 50,
+                margin: 0,
+              },
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon style={{ marginLeft: 5 }} />
+                </InputAdornment>
+              ),
+            }}
+            autoComplete='off'
+            type="search"
+            color="primary"
+            placeholder="Find Public Apps, Workflows, Documentation and more"
+            value={currentRefinement}
+            id="shuffle_search_field"
+            onClick={(event) => {
+              console.log("Click!")
+            }}
+            onBlur={(event) => {
+              //setSearchOpen(false)
+            }}
+            onChange={(event) => {
+              //if (event.currentTarget.value.length > 0 && !searchOpen) {
+              //	setSearchOpen(true)
+              //}
+
+              refine(event.currentTarget.value)
+            }}
+            limit={5}
+          />
+          {/*isSearchStalled ? 'My search is stalled' : ''*/}
+        </form>
+      )
+    }
+
+		const activateApp = (appid, refresh) => {
+			fetch(globalUrl + "/api/v1/apps/" + appid + "/activate", {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+				credentials: "include",
+			})
+				.then((response) => {
+					if (response.status !== 200) {
+						console.log("Failed to activate")
+					}
+
+					return response.json()
+				})
+				.then((responseJson) => {
+					if (responseJson.success === false) {
+						alert.error("Failed to activate the app")
+					} else {
+						alert.success("App activated for your organization! Refresh the page to use the app.")
+
+						if (refresh === true) {
+							getApps()
+						}
+					}
+				})
+				.catch(error => {
+					//alert.error(error.toString())
+					console.log("Activate app error: ", error.toString())
+				});
+		}
+
+
+		const AppHits = ({ hits }) => {
+      const [mouseHoverIndex, setMouseHoverIndex] = React.useState(0)
+
+      //var tmp = searchOpen
+      //if (!searchOpen) {
+      //	return null
+      //}
+
+      const positionInfo = document.activeElement.getBoundingClientRect()
+      const outerlistitemStyle = {
+        width: "100%",
+        overflowX: "hidden",
+        overflowY: "hidden",
+        borderBottom: "1px solid rgba(255,255,255,0.4)",
+      }
+
+      if (hits.length > 4) {
+        hits = hits.slice(0, 4)
+      }
+
+      var type = "app"
+      const baseImage = <LibraryBooksIcon />
+
+      return (
+        <div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, minWidth: leftBarSize - 10, maxWidth: leftBarSize - 10, boxShadows: "none", overflowX: "hidden", }}>
+          <List style={{ backgroundColor: theme.palette.inputColor, }}>
+            {hits.length === 0 ?
+              <ListItem style={outerlistitemStyle}>
+                <ListItemAvatar onClick={() => console.log(hits)}>
+                  <Avatar>
+                    <FolderIcon />
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={"No public apps found."}
+                  secondary={"Try a broader search term"}
+                />
+              </ListItem>
+              :
+              hits.map((hit, index) => {
+                const innerlistitemStyle = {
+                  width: positionInfo.width + 35,
+                  overflowX: "hidden",
+                  overflowY: "hidden",
+                  borderBottom: "1px solid rgba(255,255,255,0.4)",
+                  backgroundColor: mouseHoverIndex === index ? "#1f2023" : "inherit",
+                  cursor: "pointer",
+                  marginLeft: 0,
+                  marginRight: 0,
+                  maxHeight: 75,
+                  minHeight: 75,
+                  maxWidth: 420,
+                  minWidth: "100%",
+                }
+
+                const name = hit.name === undefined ?
+                  hit.filename.charAt(0).toUpperCase() + hit.filename.slice(1).replaceAll("_", " ") + " - " + hit.title :
+                  (hit.name.charAt(0).toUpperCase() + hit.name.slice(1)).replaceAll("_", " ")
+
+                var secondaryText = hit.data !== undefined ? hit.data.slice(0, 40) + "..." : ""
+                const avatar = hit.image_url === undefined ?
+                  baseImage
+                  :
+                  <Avatar
+                    src={hit.image_url}
+                    variant="rounded"
+                  />
+
+                //console.log(hit)
+                if (hit.categories !== undefined && hit.categories !== null && hit.categories.length > 0) {
+                  secondaryText = hit.categories.slice(0, 3).map((data, index) => {
+                    if (index === 0) {
+                      return data
+                    }
+
+                    return ", " + data
+
+                    /*
+                      <Chip
+                        key={index}
+                        style={chipStyle}
+                        label={data}
+                        onClick={() => {
+                          //handleChipClick
+                        }}
+                        variant="outlined"
+                        color="primary"
+                      />
+                    */
+                  })
+                }
+
+                var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://shuffler.io/apps/${hit.objectID}`
+                parsedUrl += `?queryID=${hit.__queryID}`
+
+                return (
+                  <div style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
+                    //if (!isCloud) {
+                    //	alert.info("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
+                    //	setTimeout(() => {
+                    //		event.preventDefault()
+                    //		window.open(parsedUrl, '_blank')
+                    //	}, 2000)
+                    //} else {
+                    alert.info(`Activating ${name}`)
+                    //}
+
+                    console.log("CLICK: ", hit)
+
+                    const queryID = hit.__queryID
+                    console.log("QUERY: ", queryID)
+
+                    if (queryID !== undefined && queryID !== null) {
+                      aa('init', {
+                        appId: "JNSS5CFDZZ",
+                        apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+                      })
+
+                      const timestamp = new Date().getTime()
+                      aa('sendEvents', [
+                        {
+                          eventType: 'conversion',
+                          eventName: 'Public App Activated',
+                          index: 'appsearch',
+                          objectIDs: [hit.objectID],
+                          timestamp: timestamp,
+                          queryID: queryID,
+                          userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
+                        }
+                      ])
+                    } else {
+                      console.log("No query to handle when activating")
+                    }
+
+                    activateApp(hit.objectID, true)
+                  }}>
+                    <ListItem key={hit.objectID} style={innerlistitemStyle} onMouseOver={() => {
+                      setMouseHoverIndex(index)
+                    }}>
+                      <ListItemAvatar>
+                        {avatar}
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={name}
+                        secondary={secondaryText}
+                      />
+                      {/*
+											<ListItemSecondaryAction>
+												<IconButton edge="end" aria-label="delete">
+													<DeleteIcon />
+												</IconButton>
+											</ListItemSecondaryAction>
+											*/}
+                    </ListItem>
+                  </div>
+                )
+              })
+            }
+          </List>
+        </div>
+      )
+    }
+
+
+	const CustomSearchBox = connectSearchBox(SearchBox)
+	const CustomAppHits = connectHits(AppHits)
               
   const appView = isLoggedIn ? (
     <Dropzone
@@ -1643,28 +1918,42 @@ const Apps = (props) => {
                       })}
                 </div>
               ) : (
-                <Paper square style={uploadViewPaperStyle}>
-                  <Typography style={{ margin: 10 }}>
-                    <span>
-                      <a
-                        rel="noopener noreferrer"
-                        href={"https://shuffler.io/search"}
-                        style={{ textDecoration: "none", color: "#f85a3e" }}
-                        target="_blank"
-                      >
-                        Click here
-                      </a>{" "}
-                      to search ALL apps, not just your activated ones.
-                    </span>
-                  </Typography>
-                  <div />
-
+                <Paper square style={{
+    							minWidth: viewWidth,
+    							maxWidth: viewWidth,
+    							color: "white",
+    							borderRadius: 5,
+    							//display: "flex",
+    							marginBottom: 10,
+    							overflow: "hidden",
+									backgroundColor: theme.palette.platformColor,
+									border: null,
+								}}>
                   {appSearchLoading ? (
                     <CircularProgress
                       color="primary"
                       style={{ margin: "auto" }}
                     />
                   ) : null}
+
+            			<div
+            			  style={{ textAlign: "center", width: leftBarSize, marginTop: 10 }}
+            			  onLoad={() => {
+            			    console.log("Should load in extra apps?")
+            			  }}
+            			>
+            			  <Typography variant="body1" color="textSecondary">
+            			    Couldn't find the app you're looking for? Searching unactivated apps. Click one of the below apps to Activate it for your organization.
+            			  </Typography>
+            			  <InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
+            			    console.log("CLICKED")
+            			  }}>
+            			    <CustomSearchBox />
+            			    <Index indexName="appsearch">
+            			      <CustomAppHits />
+            			    </Index>
+            			  </InstantSearch>
+            			</div>
                 </Paper>
               )
             ) : isLoading ? (
@@ -1757,10 +2046,10 @@ const Apps = (props) => {
       })
       .catch((error) => {
         console.log("ERROR: ", error.toString());
-        alert.error(error.toString());
-
+        //alert.error(error.toString());
         //stop()
-        setIsLoading(false);
+        
+				setIsLoading(false);
         setValidation(false);
       });
   };
@@ -2339,7 +2628,7 @@ const Apps = (props) => {
             hidden
             type="file"
             ref={upload}
-            accept="application/JSON, application/YAML, text/yaml, text/x-yaml, application/x-yaml, application/vnd.yaml"
+            accept="application/JSON,application/YAML,application/yaml,text/yaml,text/x-yaml,application/x-yaml,application/vnd.yaml,.yml,.yaml"
             multiple={false}
             onChange={uploadFile}
           />

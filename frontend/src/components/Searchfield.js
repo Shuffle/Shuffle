@@ -625,7 +625,7 @@ const SearchField = props => {
 	const CustomDocHits = connectHits(DocHits)
 
 	return (
-		<div ref={node} style={{width: "100%", maxWidth: 425, margin: "auto", position: "relative",}}>
+		<div ref={node} style={{width: "100%", maxWidth: 425, margin: "auto", position: "relative", zIndex: 12500,}}>
 			<InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
 				console.log("CLICKED")	
 			}}>

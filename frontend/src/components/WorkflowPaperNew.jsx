@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
-import theme from '../theme';
+import theme from '../theme.jsx';
 
 import {
 	Chip,

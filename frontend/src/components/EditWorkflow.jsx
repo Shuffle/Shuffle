@@ -1,5 +1,5 @@
 import React, { useEffect, useContext } from "react";
-import theme from '../theme';
+import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect" 
 import ChipInput from "material-ui-chip-input";
 import UsecaseSearch from "../components/UsecaseSearch.jsx"
@@ -43,6 +43,7 @@ import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   Publish as PublishIcon,
+  OpenInNew as OpenInNewIcon,
 } from "@material-ui/icons";
 
 const EditWorkflow = (props) => {
@@ -144,18 +145,41 @@ const EditWorkflow = (props) => {
         style: {
           backgroundColor: theme.palette.surfaceColor,
           color: "white",
-          minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
-          maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
+          minWidth: isMobile ? "90%" : 550,
+          maxWidth: isMobile ? "90%" : 550,
 					minHeight: 400,
+          //minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
+          //maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
         },
       }}
     >
       <DialogTitle style={{padding: 30, paddingBottom: 0, zIndex: 1000,}}>
 				<div style={{display: "flex"}}>
         	<div style={{flex: 1, color: "rgba(255,255,255,0.9)" }}>
-						<Typography variant="h6">
-        	  	{newWorkflow ? "New" : "Editing"} workflow
-						</Typography>
+						<div style={{display: "flex"}}>
+							<Typography variant="h6" style={{flex: 9, }}>
+								{newWorkflow ? "New" : "Editing"} workflow
+							</Typography>
+							{newWorkflow === true ? null :
+								<div style={{ marginLeft: 5, flex: 1 }}>
+									<Tooltip title="Open Workflow Form for 'normal' users">
+										<a
+											rel="noopener noreferrer"
+											href={`/workflows/${workflow.id}/run`}
+											target="_blank"
+											style={{
+												textDecoration: "none",
+												color: "#f85a3e",
+												marginLeft: 5,
+												marginTop: 10,
+											}}
+										>
+											<OpenInNewIcon />
+										</a>
+									</Tooltip>
+								</div>
+							}
+						</div>
 						<Typography variant="body2" color="textSecondary" style={{maxWidth: 440,}}>
 							Workflows can be built from scratch, or from templates. <a href="/usecases" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
 						</Typography>
@@ -174,7 +198,7 @@ const EditWorkflow = (props) => {
         	  	</div>
 						: null}
         	</div>
-					{newWorkflow === true ? 
+					{/*newWorkflow === true ? 
 						<div style={{flex: 1, marginLeft: 45, }}>
 							<Typography variant="h6">
 								Use a Template
@@ -183,7 +207,7 @@ const EditWorkflow = (props) => {
 								Start your workflow from our templating system. This uses publied workflows from our <a href="/creators" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Creators</a> to generate full Usecases or parts of your Workflow.
 							</Typography>
 						</div>
-					: null}
+					: null*/}
 				</div>
       </DialogTitle>
       <FormControl>
@@ -416,7 +440,7 @@ const EditWorkflow = (props) => {
 							</IconButton>
 						</Tooltip>
 					</div>
-					{newWorkflow === true ? 
+					{/*newWorkflow === true ? 
 						<div style={{marginLeft: 50, maxWidth: 400, minWidth: 400, position: "relative",}}>
 							<UsecaseSearch
 								globalUrl={globalUrl}
@@ -427,7 +451,7 @@ const EditWorkflow = (props) => {
 								userdata={userdata}
 							/>
 						</div>
-					: null}
+					: null*/}
         </DialogContent>
         <DialogActions>
           <Button
@@ -474,7 +498,9 @@ const EditWorkflow = (props) => {
 								setWorkflow({})
 							} else {
 								setWorkflow(innerWorkflow)
+								console.log("editing workflow: ", innerWorkflow)
 							}
+							
 							setModalOpen(false)
             }}
             color="primary"

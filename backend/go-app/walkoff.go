@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -104,7 +105,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		}
 	}
 
-	log.Printf("Starting frequency: %d", newfrequency)
+	log.Printf("[INFO] Starting frequency for execution: %d", newfrequency)
 	jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
 	if err != nil {
 		log.Printf("Failed to schedule workflow: %s", err)
@@ -164,7 +165,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id, 100)
 	if err != nil {
 		log.Printf("[WARNING] (1) Failed reading body for workflowqueue: %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Entity parsing error - confirm"}`)))
 		return
 	}
@@ -178,8 +179,8 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Println("Failed reading body for stream result queue")
-		resp.WriteHeader(401)
+		log.Println("[WARNING] Failed reading body for stream result queue")
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
@@ -189,16 +190,16 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	var removeExecutionRequests shuffle.ExecutionRequestWrapper
 	err = json.Unmarshal(body, &removeExecutionRequests)
 	if err != nil {
-		log.Printf("Failed executionrequest in queue unmarshaling: %s", err)
-		resp.WriteHeader(401)
+		log.Printf("[WARNING] Failed executionrequest in queue unmarshaling: %s", err)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
 
 	if len(removeExecutionRequests.Data) == 0 {
-		log.Printf("No requests to fix remove from DB")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Some removal error"}`)))
+		log.Printf("[WARNING] No requests to fix remove from DB")
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Queue removal error"}`)))
 		return
 	}
 
@@ -251,16 +252,42 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	id := request.Header.Get("Org-Id")
-	if len(id) == 0 {
-		log.Printf("[INFO] No org-id header set")
+	// This is really the environment's name - NOT org-id
+	orgId := request.Header.Get("Org-Id")
+	if len(orgId) == 0 {
+		log.Printf("[AUDIT] No org-id header set")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the org-id header."}`)))
 		return
 	}
 
-	ctx := context.Background()
-	env, err := shuffle.GetEnvironment(ctx, id, "")
+	environment := request.Header.Get("org")
+	if len(environment) == 0 {
+		//log.Printf("[AUDIT] No 'org' header set (get workflow queue). ")
+		/*
+			resp.WriteHeader(403)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the org header. This can be done by setting the 'ORG' environment variable for Orborus to your Org ID in Shuffle"}`)))
+			return
+		*/
+	}
+
+	orborusLabel := request.Header.Get("x-orborus-label")
+
+	// This section is cloud custom for now
+	auth := request.Header.Get("Authorization")
+	if len(auth) == 0 {
+		//log.Printf("[AUDIT] No Authorization header set. Env: %s, org: %s", orgId, environment)
+		/*
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the auth header (only applicable for cloud for now)."}`)))
+			return
+		*/
+	}
+
+	//log.Printf("[AUDIT] Get workflow queue for org %s, env %s, orborus label %s", orgId, environment, orborusLabel)
+
+	ctx := shuffle.GetContext(request)
+	env, err := shuffle.GetEnvironment(ctx, orgId, "")
 	timeNow := time.Now().Unix()
 	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 {
 		if time.Now().Unix() > env.Edited+60 {
@@ -273,7 +300,155 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id, 100)
+	//log.Printf("Found env: %#v", env)
+	if len(env.OrgId) > 0 {
+		environment = env.OrgId
+	}
+
+	if request.Method == "POST" {
+		if rand.Intn(1) == 0 {
+			// Parse out body
+			body, err := ioutil.ReadAll(request.Body)
+			if err == nil {
+
+				// Parse out CPU, memory and disk.
+
+				var envData shuffle.OrborusStats
+				err = json.Unmarshal(body, &envData)
+				if err == nil && !envData.Swarm && !envData.Kubernetes && (envData.CPU > 0 || envData.Memory > 0 || envData.Disk > 0) {
+
+					// Set the input in memory
+					envData.OrgId = orgId
+					envData.Environment = environment
+					envData.OrborusLabel = orborusLabel
+					envData.Timestamp = time.Now().Unix()
+
+					if envData.CPU > 0 && envData.MaxCPU > 0 {
+						envData.CPUPercent = float64(envData.CPU) / float64(envData.MaxCPU)
+					}
+
+					if envData.Memory > 0 && envData.MaxMemory > 0 {
+						envData.MemoryPercent = float64(envData.Memory) / float64(envData.MaxMemory)
+					}
+
+					// Check if CPU percent constantly has stayed above X% for the last Y requests
+					percentageCheck := 90
+					concurrentChecks := 2
+
+					//if int(envData.CPUPercent) > percentageCheck {
+					// Get cached data
+					percentages := []float64{}
+					cacheKey := fmt.Sprintf("%s_%s_percent", orgId, strings.ToLower(environment))
+
+					// Marshal float list into []byte
+					cacheData := []byte{}
+					cache, err := shuffle.GetCache(ctx, cacheKey)
+					if err == nil {
+						// Unmarshal into percentages
+						cacheData := []byte(cache.([]uint8))
+						err = json.Unmarshal(cacheData, &percentages)
+						if err != nil {
+							log.Printf("[INFO] error in cache unmarshal for percentages: %s", err)
+						}
+
+						if len(percentages) > concurrentChecks {
+							percentages = percentages[:concurrentChecks]
+						}
+
+						percentages = append(percentages, envData.CPUPercent)
+						if len(percentages) > concurrentChecks {
+							//log.Printf("[INFO] Checking percentages: %v", percentages)
+
+							// percentageCheck := 1
+							sendAlert := true
+							for _, p := range percentages {
+								if int(p) < percentageCheck {
+									//log.Printf("[AUDIT] CPU percent is below %d: %d", percentageCheck, int(p))
+									sendAlert = false
+									break
+								}
+							}
+
+							if sendAlert {
+								log.Printf("[INFO] CPU percent has been above %d percent for the last 5 requests. Sending alert. Env: %s, org: %s", percentageCheck, environment, orgId)
+
+								// Set notification + alert for organization
+								err = shuffle.CreateOrgNotification(
+									ctx,
+									fmt.Sprintf("CPU percent has been above %d percent", percentageCheck),
+									fmt.Sprintf("A environment %s has been using more than %d\\% CPU for the last 5 requests.", environment, percentageCheck),
+									fmt.Sprintf("/admin?tab=environments"),
+									environment,
+									true,
+								)
+
+								if err != nil {
+									log.Printf("[ERROR] error creating notification: %s", err)
+								}
+
+								org, err := shuffle.GetOrg(ctx, environment)
+								if err == nil {
+									foundRecommendation := false
+									for _, recommendation := range org.Priorities {
+										if strings.Contains(recommendation.Name, "CPU") {
+											foundRecommendation = true
+											break
+										}
+									}
+
+									if !foundRecommendation {
+										// Add to start of org.Priorities
+										org, _ = shuffle.AddPriority(*org, shuffle.Priority{
+											Name:        fmt.Sprintf("High CPU in environment %s", orgId),
+											Description: fmt.Sprintf("The environment %s has been using more than %d percent CPU. This indicates you may need to look at scaling.", orgId, percentageCheck),
+											Type:        "scale",
+											Active:      true,
+											URL:         fmt.Sprintf("/admin?tab=environments"),
+											Severity:    1,
+										}, false)
+
+										//Make last item the first item
+										org.Priorities = append([]shuffle.Priority{org.Priorities[len(org.Priorities)-1]}, org.Priorities[:len(org.Priorities)-1]...)
+										err = shuffle.SetOrg(ctx, *org, org.Id)
+										if err != nil {
+											log.Printf("[ERROR] Problem setting org: %s", err)
+										}
+									}
+								}
+							}
+
+							if len(percentages) > 1 {
+								percentages = percentages[1:]
+							}
+						}
+
+						// Marshal float list into []byte
+					} else {
+						//log.Printf("[ERROR] Failed getting cache: %s", err)
+						percentages = append(percentages, envData.CPUPercent)
+					}
+
+					if len(percentages) > 0 {
+						//log.Printf("[DEBUG] Setting cache for %s: %#v", cacheKey, percentages)
+						cacheData, err = json.Marshal(percentages)
+						if err != nil {
+							log.Printf("[INFO] error in cache marshal: %s", err)
+						}
+
+						// Add the new data
+						go shuffle.SetCache(ctx, cacheKey, cacheData, 5)
+					}
+				}
+
+				//log.Printf("CPU percent: %f", envData.CPUPercent)
+				//log.Printf("Memory percent: %f", envData.MemoryPercent*100)
+
+				go shuffle.SetenvStats(ctx, envData)
+			}
+		}
+	}
+
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, orgId, 100)
 	if err != nil {
 		// Skipping as this comes up over and over
 		//log.Printf("(2) Failed reading body for workflowqueue: %s", err)
@@ -290,21 +465,21 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 		// Try again :)
 		if len(env.Id) == 0 && len(env.Name) == 0 {
-			orgId := ""
+			foundId := ""
 			for _, requestData := range executionRequests.Data {
 				execution, err := shuffle.GetWorkflowExecution(ctx, requestData.ExecutionId)
 				if err == nil {
 					if len(execution.ExecutionOrg) > 0 {
-						orgId = execution.ExecutionOrg
+						foundId = execution.ExecutionOrg
 						break
 					}
 				}
 			}
 
 			if len(orgId) > 0 {
-				env, err := shuffle.GetEnvironment(ctx, id, orgId)
+				env, err := shuffle.GetEnvironment(ctx, orgId, foundId)
 				if err != nil {
-					log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", id, err)
+					log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", orgId, err)
 					//resp.WriteHeader(401)
 					//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No env found matching %s"}`, id)))
 					//return
@@ -361,15 +536,15 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 	err = json.Unmarshal(body, &actionResult)
 	if err != nil {
 		log.Printf("[WARNING] Failed ActionResult unmarshaling (stream result): %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
+		//resp.WriteHeader(401)
+		//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		//return
 	}
 
 	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
-		log.Printf("[WARNING] Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
+		log.Printf("[WARNING][%s] Failed getting execution (streamresult): %s", actionResult.ExecutionId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
@@ -386,7 +561,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(workflowExecution.ExecutionOrg) > 0 && user.ActiveOrg.Id == workflowExecution.ExecutionOrg && user.Role == "admin" {
-			log.Printf("[DEBUG] Correct org for execution!")
+			log.Printf("[DEBUG] User %s is in correct org. Allowing org continuation for execution!", user.Username)
 		} else {
 			log.Printf("[WARNING] Bad authorization key when getting stream results %s.", actionResult.ExecutionId)
 			resp.WriteHeader(401)
@@ -461,23 +636,26 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Actionresult unmarshal: %s", string(body))
-	log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
-	err = shuffle.ValidateNewWorkerExecution(body)
+	log.Printf("[DEBUG] Got workflow result from %s of length %d", request.RemoteAddr, len(body))
+	ctx := context.Background()
+	err = shuffle.ValidateNewWorkerExecution(ctx, body)
 	if err == nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "success"}`)))
 		return
 	} else {
-		log.Printf("[DEBUG] Handling other execution variant (subflow): %s", err)
+		log.Printf("[DEBUG] Handling other execution variant (subflow?): %s", err)
 	}
+
+	log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
 
 	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
 	if err != nil {
 		log.Printf("[WARNING] Failed ActionResult unmarshaling (queue): %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
+		//resp.WriteHeader(401)
+		//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		//return
 	}
 
 	//log.Printf("Received action: %#v", actionResult)
@@ -488,7 +666,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	// 4. Push to db
 	// IF FAIL: Set executionstatus: abort or cancel
 
-	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, err)
@@ -523,66 +700,71 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
-		log.Printf("[INFO] SHOULD WAIT A BIT AND RUN CLOUD STUFF WITH USER INPUT! WAITING!")
+	/*
+		// Removed as UserInput is now handled as an app
+			if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
+				log.Printf("[INFO] SHOULD WAIT A BIT AND RUN USER INPUT! WAITING!")
 
-		var trigger shuffle.Trigger
-		err = json.Unmarshal([]byte(actionResult.Result), &trigger)
-		if err != nil {
-			log.Printf("[WARNING] Failed unmarshaling actionresult for user input: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
+				var trigger shuffle.Trigger
+				err = json.Unmarshal([]byte(actionResult.Result), &trigger)
+				if err != nil {
+					log.Printf("[WARNING] Failed unmarshaling actionresult for user input: %s", err)
+					resp.WriteHeader(401)
+					resp.Write([]byte(`{"success": false}`))
+					return
+				}
 
-		orgId := workflowExecution.ExecutionOrg
-		if len(workflowExecution.OrgId) == 0 && len(workflowExecution.Workflow.OrgId) > 0 {
-			orgId = workflowExecution.Workflow.OrgId
-		}
+				orgId := workflowExecution.ExecutionOrg
+				if len(workflowExecution.OrgId) == 0 && len(workflowExecution.Workflow.OrgId) > 0 {
+					orgId = workflowExecution.Workflow.OrgId
+				}
 
-		err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
-		if err != nil {
-			log.Printf("[WARNING] Failed userinput handler: %s", err)
+				err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+				if err != nil {
+					log.Printf("[WARNING] Failed userinput handler: %s", err)
 
-			actionResult.Result = fmt.Sprintf(`{"success": False, "reason": "%s"}`, err)
+					actionResult.Result = fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)
 
-			workflowExecution.Results = append(workflowExecution.Results, actionResult)
-			workflowExecution.Status = "ABORTED"
-			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-			if err != nil {
-				log.Printf("[WARNING] Failed to set execution during wait: %s", err)
-			} else {
-				log.Printf("[INFO] Successfully set the execution %s to waiting.", workflowExecution.ExecutionId)
+					workflowExecution.Results = append(workflowExecution.Results, actionResult)
+					workflowExecution.Status = "ABORTED"
+					err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
+					if err != nil {
+						log.Printf("[WARNING] Failed to set execution during wait: %s", err)
+					} else {
+						log.Printf("[INFO] Successfully set the execution %s to waiting.", workflowExecution.ExecutionId)
+					}
+
+					resp.WriteHeader(401)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
+					return
+				} else {
+					log.Printf("[INFO] Successful userinput handler")
+					resp.WriteHeader(200)
+					resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
+
+					actionResult.Result = `{"success": True, "reason": "Waiting for user feedback based on configuration"}`
+
+					workflowExecution.Results = append(workflowExecution.Results, actionResult)
+					workflowExecution.Status = actionResult.Status
+					err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
+					if err != nil {
+						log.Printf("[WARNING] Failed setting userinput: %s", err)
+					} else {
+						log.Printf("[DEBUG] Successfully set the execution to waiting.")
+					}
+				}
+
+				return
 			}
-
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
-			return
-		} else {
-			log.Printf("[INFO] Successful userinput handler")
-			resp.WriteHeader(200)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
-
-			actionResult.Result = `{"success": True, "reason": "Waiting for user feedback based on configuration"}`
-
-			workflowExecution.Results = append(workflowExecution.Results, actionResult)
-			workflowExecution.Status = actionResult.Status
-			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-			if err != nil {
-				log.Printf("[WARNING] Failed setting userinput: %s", err)
-			} else {
-				log.Printf("[DEBUG] Successfully set the execution to waiting.")
-			}
-		}
-
-		return
-	}
+	*/
 
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 }
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
+	log.Printf("[DEBUG] Running workflow execution transaction for %s", workflowExecutionId)
+
 	// Should start a tx for the execution here
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
 	if err != nil {
@@ -593,7 +775,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	//log.Printf("BASE LENGTH: %d", len(workflowExecution.Results))
-
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false, 0)
 	if err != nil {
 		b, suberr := json.Marshal(actionResult)
@@ -638,7 +819,7 @@ func JSONCheck(str string) bool {
 
 func handleExecutionStatistics(execution shuffle.WorkflowExecution) {
 	// FIXME: CLEAN UP THE JSON THAT'S SAVED.
-	// https://github.com/frikky/Shuffle/issues/172
+	// https://github.com/shuffle/Shuffle/issues/172
 	appResults := []shuffle.AppExecutionExample{}
 	for _, result := range execution.Results {
 		resultCheck := JSONCheck(result.Result)
@@ -872,14 +1053,16 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		workflow = *tmpworkflow
 	}
 
-	if len(workflow.ExecutingOrg.Id) == 0 {
-		if len(orgId) > 0 {
-			workflow.ExecutingOrg.Id = orgId
-		} else {
-			log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
-			return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
+	/*
+		if len(workflow.ExecutingOrg.Id) == 0 {
+			if len(orgId) > 0 {
+				workflow.ExecutingOrg.Id = orgId
+			} else {
+				log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
+				return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
+			}
 		}
-	}
+	*/
 
 	if len(workflow.Actions) == 0 {
 		workflow.Actions = []shuffle.Action{}
@@ -923,13 +1106,692 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, 10)
 	if err != nil {
-		log.Printf("[WARNING] Failed in prepareExecution for execution Id %s: %s", workflowExecution.ExecutionId, err)
-		return workflowExecution, fmt.Sprintf("Failed preparration: %s", err), err
+		if strings.Contains(fmt.Sprintf("%s", err), "User Input") {
+			// Special for user input callbacks
+			return workflowExecution, fmt.Sprintf("%s", err), nil
+		} else {
+			log.Printf("[WARNING] Failed in prepareExecution: %s", err)
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed starting workflow: %s", err), err
+		}
 	}
 
 	err = imageCheckBuilder(execInfo.ImageNames)
 	if err != nil {
 		log.Printf("[ERROR] Failed building the required images from %#v: %s", execInfo.ImageNames, err)
+		return shuffle.WorkflowExecution{}, "Failed unmarshal during execution", err
+	}
+
+	makeNew := true
+	start, startok := request.URL.Query()["start"]
+	if request.Method == "POST" {
+		body, err := ioutil.ReadAll(request.Body)
+		if err != nil {
+			log.Printf("[ERROR] Failed request POST read: %s", err)
+			return shuffle.WorkflowExecution{}, "Failed getting body", err
+		}
+
+		// This one doesn't really matter.
+		log.Printf("[INFO] Running POST execution with body of length %d for workflow %s", len(string(body)), workflowExecution.Workflow.ID)
+
+		if len(body) >= 4 {
+			if body[0] == 34 && body[len(body)-1] == 34 {
+				body = body[1 : len(body)-1]
+			}
+			if body[0] == 34 && body[len(body)-1] == 34 {
+				body = body[1 : len(body)-1]
+			}
+		}
+
+		sourceAuth, sourceAuthOk := request.URL.Query()["source_auth"]
+		if sourceAuthOk {
+			//log.Printf("\n\n\nSETTING SOURCE WORKFLOW AUTH TO %s!!!\n\n\n", sourceAuth[0])
+			workflowExecution.ExecutionSourceAuth = sourceAuth[0]
+		} else {
+			//log.Printf("Did NOT get source workflow")
+		}
+
+		sourceNode, sourceNodeOk := request.URL.Query()["source_node"]
+		if sourceNodeOk {
+			//log.Printf("\n\n\nSETTING SOURCE WORKFLOW NODE TO %s!!!\n\n\n", sourceNode[0])
+			workflowExecution.ExecutionSourceNode = sourceNode[0]
+		} else {
+			//log.Printf("Did NOT get source workflow")
+		}
+
+		//workflowExecution.ExecutionSource = "default"
+		sourceWorkflow, sourceWorkflowOk := request.URL.Query()["source_workflow"]
+		if sourceWorkflowOk {
+			//log.Printf("Got source workflow %s", sourceWorkflow)
+			workflowExecution.ExecutionSource = sourceWorkflow[0]
+		} else {
+			//log.Printf("Did NOT get source workflow")
+		}
+
+		sourceExecution, sourceExecutionOk := request.URL.Query()["source_execution"]
+		if sourceExecutionOk {
+			//log.Printf("[INFO] Got source execution%s", sourceExecution)
+			workflowExecution.ExecutionParent = sourceExecution[0]
+		} else {
+			//log.Printf("Did NOT get source execution")
+		}
+
+		if len(string(body)) < 50 {
+			//log.Println(body)
+			// String in string
+			//log.Println(body)
+
+			//if string(body)[0] == "\"" && string(body)[string(body)
+			log.Printf("[DEBUG] Body: %s", string(body))
+		}
+
+		var execution shuffle.ExecutionRequest
+		err = json.Unmarshal(body, &execution)
+		if err != nil {
+			log.Printf("[WARNING] Failed execution POST unmarshaling - continuing anyway: %s", err)
+			//return shuffle.WorkflowExecution{}, "", err
+		}
+
+		if execution.Start == "" && len(body) > 0 {
+			execution.ExecutionArgument = string(body)
+		}
+
+		// FIXME - this should have "execution_argument" from executeWorkflow frontend
+		//log.Printf("EXEC: %#v", execution)
+		if len(execution.ExecutionArgument) > 0 {
+			workflowExecution.ExecutionArgument = execution.ExecutionArgument
+		}
+
+		if len(execution.ExecutionSource) > 0 {
+			workflowExecution.ExecutionSource = execution.ExecutionSource
+		}
+
+		//log.Printf("Execution data: %#v", execution)
+		if len(execution.Start) == 36 && len(workflow.Actions) > 0 {
+			log.Printf("[INFO] Should start execution on node %s", execution.Start)
+			workflowExecution.Start = execution.Start
+
+			found := false
+			for _, action := range workflow.Actions {
+				if action.ID == execution.Start {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("[ERROR] Action %s was NOT found! Exiting execution.", execution.Start)
+				return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", workflow.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", workflow.Start))
+			}
+		} else if len(execution.Start) > 0 {
+			//log.Printf("[INFO] !")
+			//log.Printf("[ERROR] START ACTION %s IS WRONG ID LENGTH %d!", execution.Start, len(execution.Start))
+			//return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", execution.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", execution.Start))
+		}
+
+		if len(execution.ExecutionId) == 36 {
+			workflowExecution.ExecutionId = execution.ExecutionId
+		} else {
+			sessionToken := uuid.NewV4()
+			workflowExecution.ExecutionId = sessionToken.String()
+		}
+	} else {
+		// Check for parameters of start and ExecutionId
+		// This is mostly used for user input trigger
+
+		answer, answerok := request.URL.Query()["answer"]
+		referenceId, referenceok := request.URL.Query()["reference_execution"]
+		if answerok && referenceok {
+			// If answer is false, reference execution with result
+			log.Printf("[INFO] Answer is OK AND reference is OK!")
+			if answer[0] == "false" {
+				log.Printf("Should update reference and return, no need for further execution!")
+
+				// Get the reference execution
+				oldExecution, err := shuffle.GetWorkflowExecution(ctx, referenceId[0])
+				if err != nil {
+					log.Printf("Failed getting execution (execution) %s: %s", referenceId[0], err)
+					return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed getting execution ID %s because it doesn't exist.", referenceId[0]), err
+				}
+
+				if oldExecution.Workflow.ID != id {
+					log.Println("Wrong workflowid!")
+					return shuffle.WorkflowExecution{}, fmt.Sprintf("Bad ID %s", referenceId), errors.New("Bad ID")
+				}
+
+				newResults := []shuffle.ActionResult{}
+				//log.Printf("%#v", oldExecution.Results)
+				for _, result := range oldExecution.Results {
+					log.Printf("%s - %s", result.Action.ID, start[0])
+					if result.Action.ID == start[0] {
+						note, noteok := request.URL.Query()["note"]
+						if noteok {
+							result.Result = fmt.Sprintf("User note: %s", note[0])
+						} else {
+							result.Result = fmt.Sprintf("User clicked %s", answer[0])
+						}
+
+						// Stopping the whole thing
+						result.CompletedAt = int64(time.Now().Unix())
+						result.Status = "ABORTED"
+						oldExecution.Status = result.Status
+						oldExecution.Result = result.Result
+						oldExecution.LastNode = result.Action.ID
+					}
+
+					newResults = append(newResults, result)
+				}
+
+				oldExecution.Results = newResults
+				err = shuffle.SetWorkflowExecution(ctx, *oldExecution, true)
+				if err != nil {
+					log.Printf("Error saving workflow execution actionresult setting: %s", err)
+					return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed setting workflowexecution actionresult in execution: %s", err), err
+				}
+
+				return shuffle.WorkflowExecution{}, "", nil
+			}
+		}
+
+		if referenceok {
+			log.Printf("Handling an old execution continuation!")
+			// Will use the old name, but still continue with NEW ID
+			oldExecution, err := shuffle.GetWorkflowExecution(ctx, referenceId[0])
+			if err != nil {
+				log.Printf("Failed getting execution (execution) %s: %s", referenceId[0], err)
+				return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed getting execution ID %s because it doesn't exist.", referenceId[0]), err
+			}
+
+			workflowExecution = *oldExecution
+		}
+
+		if len(workflowExecution.ExecutionId) == 0 {
+			sessionToken := uuid.NewV4()
+			workflowExecution.ExecutionId = sessionToken.String()
+		} else {
+			log.Printf("Using the same executionId as before: %s", workflowExecution.ExecutionId)
+			makeNew = false
+		}
+
+		// Don't override workflow defaults
+	}
+
+	if startok {
+		//log.Printf("\n\n[INFO] Setting start to %s based on query!\n\n", start[0])
+		//workflowExecution.Workflow.Start = start[0]
+		workflowExecution.Start = start[0]
+	}
+
+	// FIXME - regex uuid, and check if already exists?
+	if len(workflowExecution.ExecutionId) != 36 {
+		log.Printf("Invalid uuid: %s", workflowExecution.ExecutionId)
+		return shuffle.WorkflowExecution{}, "Invalid uuid", err
+	}
+
+	// FIXME - find owner of workflow
+	// FIXME - get the actual workflow itself and build the request
+	// MAYBE: Don't send the workflow within the pubsub, as this requires more data to be sent
+	// Check if a worker already exists for company, else run one with:
+	// locations, project IDs and subscription names
+
+	// When app is executed:
+	// Should update with status execution (somewhere), which will trigger the next node
+	// IF action.type == internal, we need the internal watcher to be running and executing
+	// This essentially means the WORKER has to be the responsible party for new actions in the INTERNAL landscape
+	// Results are ALWAYS posted back to cloud@execution_id?
+	if makeNew {
+		workflowExecution.Type = "workflow"
+		//workflowExecution.Stream = "tmp"
+		//workflowExecution.WorkflowQueue = "tmp"
+		//workflowExecution.SubscriptionNameNodestream = "testcompany-nodestream"
+		//workflowExecution.Locations = []string{"europe-west2"}
+		workflowExecution.ProjectId = gceProject
+		workflowExecution.WorkflowId = workflow.ID
+		workflowExecution.StartedAt = int64(time.Now().Unix())
+		workflowExecution.CompletedAt = 0
+		workflowExecution.Authorization = uuid.NewV4().String()
+
+		// Status for the entire workflow.
+		workflowExecution.Status = "EXECUTING"
+	}
+
+	if len(workflowExecution.ExecutionSource) == 0 {
+		log.Printf("[INFO] No execution source (trigger) specified. Setting to default")
+		workflowExecution.ExecutionSource = "default"
+	} else {
+		log.Printf("[INFO] Execution source is %s for execution ID %s in workflow %s", workflowExecution.ExecutionSource, workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+	}
+
+	workflowExecution.ExecutionVariables = workflow.ExecutionVariables
+	if len(workflowExecution.Start) == 0 && len(workflowExecution.Workflow.Start) > 0 {
+		workflowExecution.Start = workflowExecution.Workflow.Start
+	}
+
+	startnodeFound := false
+	newStartnode := ""
+	for _, item := range workflowExecution.Workflow.Actions {
+		if item.ID == workflowExecution.Start {
+			startnodeFound = true
+		}
+
+		if item.IsStartNode {
+			newStartnode = item.ID
+		}
+	}
+
+	if !startnodeFound {
+		log.Printf("[INFO] Couldn't find startnode %s. Remapping to %#v", workflowExecution.Start, newStartnode)
+
+		if len(newStartnode) > 0 {
+			workflowExecution.Start = newStartnode
+		} else {
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode couldn't be found"), errors.New("Startnode isn't defined in this workflow..")
+		}
+	}
+
+	childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start, []string{}, []string{})
+
+	//topic := "workflows"
+	startFound := false
+	// FIXME - remove this?
+	newActions := []shuffle.Action{}
+	defaultResults := []shuffle.ActionResult{}
+
+	allAuths := []shuffle.AppAuthenticationStorage{}
+	for _, action := range workflowExecution.Workflow.Actions {
+		//action.LargeImage = ""
+		if action.ID == workflowExecution.Start {
+			startFound = true
+		}
+		//log.Println(action.Environment)
+
+		if action.Environment == "" {
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Environment is not defined for %s", action.Name), errors.New("Environment not defined!")
+		}
+
+		// FIXME: Authentication parameters
+		if len(action.AuthenticationId) > 0 {
+			if len(allAuths) == 0 {
+				allAuths, err = shuffle.GetAllWorkflowAppAuth(ctx, workflow.ExecutingOrg.Id)
+				if err != nil {
+					log.Printf("Api authentication failed in get all app auth: %s", err)
+					return shuffle.WorkflowExecution{}, fmt.Sprintf("Api authentication failed in get all app auth: %s", err), err
+				}
+			}
+
+			curAuth := shuffle.AppAuthenticationStorage{Id: ""}
+			for _, auth := range allAuths {
+				if auth.Id == action.AuthenticationId {
+					curAuth = auth
+					break
+				}
+			}
+
+			if len(curAuth.Id) == 0 {
+				return shuffle.WorkflowExecution{}, fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId), errors.New(fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId))
+			}
+
+			if curAuth.Encrypted {
+				setField := true
+				newFields := []shuffle.AuthenticationStore{}
+				for _, field := range curAuth.Fields {
+					parsedKey := fmt.Sprintf("%s_%d_%s_%s", curAuth.OrgId, curAuth.Created, curAuth.Label, field.Key)
+					newValue, err := shuffle.HandleKeyDecryption([]byte(field.Value), parsedKey)
+					if err != nil {
+						log.Printf("[WARNING] Failed decryption for %s: %s", field.Key, err)
+						setField = false
+						break
+					}
+
+					field.Value = string(newValue)
+					newFields = append(newFields, field)
+				}
+
+				if setField {
+					curAuth.Fields = newFields
+				}
+			} else {
+				log.Printf("[INFO] AUTH IS NOT ENCRYPTED - attempting encrypting!")
+				err = shuffle.SetWorkflowAppAuthDatastore(ctx, curAuth, curAuth.Id)
+				if err != nil {
+					log.Printf("[WARNING] Failed running encryption during execution: %s", err)
+				}
+			}
+
+			newParams := []shuffle.WorkflowAppActionParameter{}
+			if strings.ToLower(curAuth.Type) == "oauth2" {
+				log.Printf("[DEBUG] Should replace auth parameters (Oauth2)")
+
+				for _, param := range curAuth.Fields {
+					if param.Key == "expiration" {
+						continue
+					}
+
+					newParams = append(newParams, shuffle.WorkflowAppActionParameter{
+						Name:  param.Key,
+						Value: param.Value,
+					})
+				}
+
+				for _, param := range action.Parameters {
+					//log.Printf("Param: %#v", param)
+					if param.Configuration {
+						continue
+					}
+
+					newParams = append(newParams, param)
+				}
+			} else {
+				// Rebuild params with the right data. This is to prevent issues on the frontend
+				for _, param := range action.Parameters {
+
+					for _, authparam := range curAuth.Fields {
+						if param.Name == authparam.Key {
+							param.Value = authparam.Value
+							//log.Printf("Name: %s - value: %s", param.Name, param.Value)
+							//log.Printf("Name: %s - value: %s\n", param.Name, param.Value)
+							break
+						}
+					}
+
+					newParams = append(newParams, param)
+				}
+			}
+
+			action.Parameters = newParams
+		}
+
+		action.LargeImage = ""
+		if len(action.Label) == 0 {
+			action.Label = action.ID
+		}
+		//log.Printf("LABEL: %s", action.Label)
+		newActions = append(newActions, action)
+
+		// If the node is NOT found, it's supposed to be set to SKIPPED,
+		// as it's not a childnode of the startnode
+		// This is a configuration item for the workflow itself.
+		if len(workflowExecution.Results) > 0 {
+			defaultResults = []shuffle.ActionResult{}
+			for _, result := range workflowExecution.Results {
+				if result.Status == "WAITING" {
+					result.Status = "FINISHED"
+					result.Result = "Continuing"
+				}
+
+				defaultResults = append(defaultResults, result)
+			}
+		} else if len(workflowExecution.Results) == 0 && !workflowExecution.Workflow.Configuration.StartFromTop {
+			found := false
+			for _, nodeId := range childNodes {
+				if nodeId == action.ID {
+					//log.Printf("Found %s", action.ID)
+					found = true
+				}
+			}
+
+			if !found {
+				if action.ID == workflowExecution.Start {
+					continue
+				}
+
+				//log.Printf("[WARNING] Set %s to SKIPPED as it's NOT a childnode of the startnode.", action.ID)
+				curaction := shuffle.Action{
+					AppName:    action.AppName,
+					AppVersion: action.AppVersion,
+					Label:      action.Label,
+					Name:       action.Name,
+					ID:         action.ID,
+				}
+				//action
+				//curaction.Parameters = []
+				defaultResults = append(defaultResults, shuffle.ActionResult{
+					Action:        curaction,
+					ExecutionId:   workflowExecution.ExecutionId,
+					Authorization: workflowExecution.Authorization,
+					Result:        "Skipped because it's not under the startnode",
+					StartedAt:     0,
+					CompletedAt:   0,
+					Status:        "SKIPPED",
+				})
+			}
+		}
+	}
+
+	removeTriggers := []string{}
+	for triggerIndex, trigger := range workflowExecution.Workflow.Triggers {
+		//log.Printf("[INFO] ID: %s vs %s", trigger.ID, workflowExecution.Start)
+		if trigger.ID == workflowExecution.Start {
+			if trigger.AppName == "User Input" {
+				startFound = true
+				break
+			}
+		}
+
+		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
+			found := false
+			for _, node := range childNodes {
+				if node == trigger.ID {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				//log.Printf("SHOULD SET TRIGGER %s TO BE SKIPPED", trigger.ID)
+
+				curaction := shuffle.Action{
+					AppName:    "shuffle-subflow",
+					AppVersion: trigger.AppVersion,
+					Label:      trigger.Label,
+					Name:       trigger.Name,
+					ID:         trigger.ID,
+				}
+
+				defaultResults = append(defaultResults, shuffle.ActionResult{
+					Action:        curaction,
+					ExecutionId:   workflowExecution.ExecutionId,
+					Authorization: workflowExecution.Authorization,
+					Result:        "Skipped because it's not under the startnode",
+					StartedAt:     0,
+					CompletedAt:   0,
+					Status:        "SKIPPED",
+				})
+			} else {
+				// Replaces trigger with the subflow
+				//if trigger.AppName == "Shuffle Workflow" {
+				//	replaceActions := false
+				//	workflowAction := ""
+				//	for _, param := range trigger.Parameters {
+				//		if param.Name == "argument" && !strings.Contains(param.Value, ".#") {
+				//			replaceActions = true
+				//		}
+
+				//		if param.Name == "startnode" {
+				//			workflowAction = param.Value
+				//		}
+				//	}
+
+				//	if replaceActions {
+				//		replacementNodes, newBranches, lastnode := shuffle.GetReplacementNodes(ctx, workflowExecution, trigger, trigger.Label)
+				//		log.Printf("REPLACEMENTS: %d, %d", len(replacementNodes), len(newBranches))
+				//		if len(replacementNodes) > 0 {
+				//			for _, action := range replacementNodes {
+				//				found := false
+
+				//				for subActionIndex, subaction := range newActions {
+				//					if subaction.ID == action.ID {
+				//						found = true
+				//						//newActions[subActionIndex].Name = action.Name
+				//						newActions[subActionIndex].Label = action.Label
+				//						break
+				//					}
+				//				}
+
+				//				if !found {
+				//					action.SubAction = true
+				//					newActions = append(newActions, action)
+				//				}
+
+				//				// Check if it's already set to have a value
+				//				for resultIndex, result := range defaultResults {
+				//					if result.Action.ID == action.ID {
+				//						defaultResults = append(defaultResults[:resultIndex], defaultResults[resultIndex+1:]...)
+				//						break
+				//					}
+				//				}
+				//			}
+
+				//			for _, branch := range newBranches {
+				//				workflowExecution.Workflow.Branches = append(workflowExecution.Workflow.Branches, branch)
+				//			}
+
+				//			// Append branches:
+				//			// parent -> new inner node (FIRST one)
+				//			for branchIndex, branch := range workflowExecution.Workflow.Branches {
+				//				if branch.DestinationID == trigger.ID {
+				//					log.Printf("REPLACE DESTINATION WITH %s!!", workflowAction)
+				//					workflowExecution.Workflow.Branches[branchIndex].DestinationID = workflowAction
+				//				}
+
+				//				if branch.SourceID == trigger.ID {
+				//					log.Printf("REPLACE SOURCE WITH LASTNODE %s!!", lastnode)
+				//					workflowExecution.Workflow.Branches[branchIndex].SourceID = lastnode
+				//				}
+				//			}
+
+				//			// Remove the trigger
+				//			removeTriggers = append(removeTriggers, workflowExecution.Workflow.Triggers[triggerIndex].ID)
+				//		}
+
+				//		log.Printf("NEW ACTION LENGTH %d, RESULT: %d, Triggers: %d, BRANCHES: %d", len(newActions), len(defaultResults), len(workflowExecution.Workflow.Triggers), len(workflowExecution.Workflow.Branches))
+				//	}
+				//}
+				_ = triggerIndex
+			}
+		}
+	}
+
+	//newTriggers := []shuffle.Trigger{}
+	//for _, trigger := range workflowExecution.Workflow.Triggers {
+	//	found := false
+	//	for _, triggerId := range removeTriggers {
+	//		if trigger.ID == triggerId {
+	//			found = true
+	//			break
+	//		}
+	//	}
+
+	//	if found {
+	//		log.Printf("[WARNING] Removed trigger %s during execution", trigger.ID)
+	//		continue
+	//	}
+
+	//	newTriggers = append(newTriggers, trigger)
+	//}
+	//workflowExecution.Workflow.Triggers = newTriggers
+	_ = removeTriggers
+
+	if !startFound {
+		if len(workflowExecution.Start) == 0 && len(workflowExecution.Workflow.Start) > 0 {
+			workflowExecution.Start = workflow.Start
+		} else if len(workflowExecution.Workflow.Actions) > 0 {
+			workflowExecution.Start = workflowExecution.Workflow.Actions[0].ID
+		} else {
+			log.Printf("[ERROR] Startnode %s doesn't exist!!", workflowExecution.Start)
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf(`Workflow start node "%s" doesn't exist. Exiting!`, workflowExecution.Start))
+		}
+	}
+
+	//log.Printf("EXECUTION START: %s", workflowExecution.Start)
+
+	// Verification for execution environments
+	workflowExecution.Results = defaultResults
+	workflowExecution.Workflow.Actions = newActions
+	onpremExecution := true
+	_ = onpremExecution
+	environments := []string{}
+
+	if len(workflowExecution.ExecutionOrg) == 0 && len(workflow.ExecutingOrg.Id) > 0 {
+		workflowExecution.ExecutionOrg = workflow.ExecutingOrg.Id
+	}
+
+	var allEnvs []shuffle.Environment
+	if len(workflowExecution.ExecutionOrg) > 0 {
+		//log.Printf("[INFO] Executing ORG: %s", workflowExecution.ExecutionOrg)
+
+		allEnvironments, err := shuffle.GetEnvironments(ctx, workflowExecution.ExecutionOrg)
+		if err != nil {
+			log.Printf("[WARNING] Failed finding environments: %s", err)
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow environments not found for this org"), errors.New(fmt.Sprintf("Workflow environments not found for this org"))
+		}
+
+		for _, curenv := range allEnvironments {
+			if curenv.Archived {
+				continue
+			}
+
+			allEnvs = append(allEnvs, curenv)
+		}
+	} else {
+		log.Printf("[ERROR] No org identified for execution of %s. Returning", workflowExecution.Workflow.ID)
+		return shuffle.WorkflowExecution{}, "No org identified for execution", errors.New("No org identified for execution")
+	}
+
+	if len(allEnvs) == 0 {
+		log.Printf("[ERROR] No active environments found for org: %s", workflowExecution.ExecutionOrg)
+		return shuffle.WorkflowExecution{}, "No active environments found", errors.New(fmt.Sprintf("No active env found for org %s", workflowExecution.ExecutionOrg))
+	}
+
+	// Check if the actions are children of the startnode?
+	imageNames := []string{}
+	cloudExec := false
+	_ = cloudExec
+	for _, action := range workflowExecution.Workflow.Actions {
+		// Verify if the action environment exists and append
+		found := false
+		for _, env := range allEnvs {
+			if env.Name == action.Environment {
+				found = true
+
+				if env.Type == "cloud" {
+					cloudExec = true
+				} else if env.Type == "onprem" {
+					onpremExecution = true
+				} else {
+					log.Printf("[ERROR] No handler for environment type %s", env.Type)
+					return shuffle.WorkflowExecution{}, "No active environments found", errors.New(fmt.Sprintf("No handler for environment type %s", env.Type))
+				}
+				break
+			}
+		}
+
+		if !found {
+			log.Printf("[ERROR] Couldn't find environment %s. Maybe it's inactive?", action.Environment)
+			return shuffle.WorkflowExecution{}, "Couldn't find the environment", errors.New(fmt.Sprintf("Couldn't find env %s in org %s", action.Environment, workflowExecution.ExecutionOrg))
+		}
+
+		found = false
+		for _, env := range environments {
+			if env == action.Environment {
+
+				found = true
+				break
+			}
+		}
+
+		// Check if the app exists?
+		newName := action.AppName
+		newName = strings.ReplaceAll(newName, " ", "-")
+		imageNames = append(imageNames, fmt.Sprintf("%s:%s_%s", baseDockerName, newName, action.AppVersion))
+
+		if !found {
+			environments = append(environments, action.Environment)
+		}
+	}
+
+	err = imageCheckBuilder(imageNames)
+	if err != nil {
+		log.Printf("[ERROR] Failed building the required images from %#v: %s", imageNames, err)
 		return shuffle.WorkflowExecution{}, "Failed building missing Docker images", err
 	}
 
@@ -1116,7 +1978,8 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
+	log.Printf("[INFO] Inside execute workflow for ID %s", fileId)
+
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil && workflow.ID == "" {
@@ -1133,6 +1996,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		// 1. Parent workflow contains this workflow ID in the source trigger?
 		// 2. Parent workflow's owner is same org?
 		// 3. Parent execution auth is correct
+		log.Printf("[INFO] Inside execute workflow access validation!")
 
 		executionAuthValid, newOrgId = shuffle.RunExecuteAccessValidation(request, workflow)
 		if !executionAuthValid {
@@ -1161,12 +2025,18 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("[INFO] Starting execution of %s!", fileId)
+	log.Printf("[AUDIT] Starting execution of workflow '%s' by user %s (%s)!", fileId, user.Username, user.Id)
 
 	user.ActiveOrg.Users = []shuffle.UserMini{}
 	workflow.ExecutingOrg = user.ActiveOrg
 	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request, user.ActiveOrg.Id)
 	if err == nil {
+		if strings.Contains(executionResp, "User Input:") {
+			resp.WriteHeader(400)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
+			return
+		}
+
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
 		return
@@ -1627,15 +2497,15 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		log.Printf("Action: %#v", action)
+		//log.Printf("Starting Cloud schedule Action: %#v", action)
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
-			log.Printf("Failed cloud action START schedule: %s", err)
+			log.Printf("[WARNING] Failed cloud action START schedule: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
 		} else {
-			log.Printf("Successfully set up cloud action schedule")
+			log.Printf("[INFO] Successfully set up cloud action schedule")
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Done"}`)))
 			return
@@ -1923,7 +2793,7 @@ func loadGithubWorkflows(url, username, password, userId, branch, orgId string) 
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
-			log.Printf("Failed loading repo %s into memory (github workflows): %s", url, err)
+			log.Printf("[INFO] Failed loading repo %s into memory (github workflows): %s", url, err)
 			return err
 		}
 
@@ -2194,7 +3064,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				if !found {
 					err = shuffle.SetWorkflowAppDatastore(ctx, api, api.ID)
 					if err != nil {
-						log.Printf("[WARNING] Failed setting workflowapp in loop: %s", err)
+						log.Printf("[WARNING] Failed setting workflowapp %s (%s) in loop: %s", api.Name, api.ID, err)
 						continue
 					} else {
 						appCounter += 1
@@ -2423,7 +3293,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		// Might require reflection into the python code to append the fields as well
 		for index, action := range workflowapp.Actions {
 			if action.AuthNotRequired {
-				log.Printf("Skipping auth setup: %s", action.Name)
+				log.Printf("[WARNING] Skipping auth setup for: %s", action.Name)
 				continue
 			}
 
@@ -2471,7 +3341,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 
 	err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 	if err != nil {
-		log.Printf("Failed setting workflowapp: %s", err)
+		log.Printf("[WARNING] Failed setting workflowapp: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2514,7 +3384,7 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 
 	if len(triggerType) == 0 {
 		log.Printf("[WARNING] No type specified for user input node")
-		return errors.New("No type specified for user input node")
+		//return errors.New("No type specified for user input node")
 	}
 
 	// FIXME: This is not the right time to send them, BUT it's well served for testing. Save -> send email / sms
@@ -2597,7 +3467,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 
 	if user.Role == "org-reader" {
 		log.Printf("[WARNING] Org-reader doesn't have access to execute single action: %s (%s)", user.Username, user.Id)
-		resp.WriteHeader(401)
+		resp.WriteHeader(403)
 		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
 		return
 	}
@@ -2664,10 +3534,14 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	time.Sleep(2 * time.Second)
 	log.Printf("[INFO] Starting validation of execution %s", workflowExecution.ExecutionId)
 
-	returnBytes := shuffle.HandleRetValidation(ctx, workflowExecution)
+	returnBody := shuffle.HandleRetValidation(ctx, workflowExecution, 1)
+	returnBytes, err := json.Marshal(returnBody)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
+	}
 
 	resp.WriteHeader(200)
-	resp.Write(returnBytes)
+	resp.Write([]byte(returnBytes))
 }
 
 // Onlyname is used to
@@ -2696,6 +3570,11 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		// Folder?
 		switch mode := file.Mode(); {
 		case mode.IsDir():
+			// Specific folder for skipping
+			if file.Name() == "unsupported" {
+				continue
+			}
+
 			tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
 			dir, err := fs.ReadDir(tmpExtra)
 			if err != nil {
@@ -2719,7 +3598,8 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 				//buildFirst, buildLast, err := IterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate)
 
 				if !forceUpdate {
-					return buildLaterFirst, buildLaterList, err
+					continue
+					//return buildLaterFirst, buildLaterList, err
 				}
 			}
 
@@ -2737,7 +3617,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 					fullPath = fmt.Sprintf("%s%s", extra, "api.yml")
 					fileReader, err = fs.Open(fullPath)
 					if err != nil {
-						log.Printf("Failed finding api.yaml/yml: %s", err)
+						log.Printf("[INFO] Failed finding api.yaml/yml for file %s: %s", filename, err)
 						continue
 					}
 				}
@@ -2793,7 +3673,8 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 				err = gyaml.Unmarshal(appfileData, &workflowapp)
 				if err != nil {
 					log.Printf("[WARNING] Failed building workflowapp %s: %s", extra, err)
-					return buildLaterFirst, buildLaterList, errors.New(fmt.Sprintf("Failed building %s: %s", extra, err))
+					continue
+					//return buildLaterFirst, buildLaterList, errors.New(fmt.Sprintf("Failed building %s: %s", extra, err))
 					//continue
 				}
 
@@ -2841,7 +3722,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 					}
 				}
 
-				workflowapp.ReferenceInfo.GithubUrl = fmt.Sprintf("https://github.com/frikky/shuffle-apps/tree/master/%s/%s", strings.ToLower(newName), workflowapp.AppVersion)
+				workflowapp.ReferenceInfo.GithubUrl = fmt.Sprintf("https://github.com/shuffle/shuffle-apps/tree/master/%s/%s", strings.ToLower(newName), workflowapp.AppVersion)
 
 				tags := []string{
 					fmt.Sprintf("%s:%s_%s", baseDockerName, strings.ToLower(newName), workflowapp.AppVersion),
@@ -3008,6 +3889,32 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
 	shuffle.DeleteCache(ctx, cacheKey)
 
+	newSortedList := []shuffle.BuildLaterStruct{}
+	initApps := []string{
+		"tools",
+		"http",
+		"email",
+	}
+	for _, buildLater := range buildLaterFirst {
+		found := false
+		for _, appname := range initApps {
+			for _, tag := range buildLater.Tags {
+				if strings.Contains(strings.ToLower(tag), appname) {
+					newSortedList = append(newSortedList, buildLater)
+					found = true
+					break
+				}
+			}
+
+			if found {
+				break
+			}
+		}
+	}
+
+	// Prepend newSortedList to buildLaterFirst
+	buildLaterFirst = append(newSortedList, buildLaterFirst...)
+
 	if len(extra) == 0 {
 		log.Printf("[INFO] Starting build of %d containers (FIRST)", len(buildLaterFirst))
 		for _, item := range buildLaterFirst {
@@ -3103,8 +4010,8 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	var tmpBody tmpStruct
 	err = json.Unmarshal(body, &tmpBody)
 	if err != nil {
-		log.Printf("Error with unmarshal tmpBody: %s", err)
-		resp.WriteHeader(401)
+		log.Printf("[WARNING] Error with unmarshal app git clone: %s", err)
+		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -3131,20 +4038,20 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
-			log.Printf("Failed loading repo %s into memory (github workflows 2): %s", tmpBody.URL, err)
-			resp.WriteHeader(401)
+			log.Printf("[WARNING] Failed loading repo %s into memory (github apps 2): %s", tmpBody.URL, err)
+			resp.WriteHeader(500)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
 		}
 
 		dir, err := fs.ReadDir("/")
 		if err != nil {
-			log.Printf("FAiled reading folder: %s", err)
+			log.Printf("[WARNING] FAiled reading folder: %s", err)
 		}
 		_ = r
 
 		if tmpBody.ForceUpdate {
-			log.Printf("[AUDIT] Running with force update from user %s (%s) for %s!", user.Username, user.Id, tmpBody.URL)
+			log.Printf("[AUDIT] Running app get with force update from user %s (%s) for %s!", user.Username, user.Id, tmpBody.URL)
 		} else {
 			log.Printf("[AUDIT] Updating apps with updates for user %s (%s) for %s (no force)", user.Username, user.Id, tmpBody.URL)
 		}

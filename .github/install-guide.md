@@ -1,7 +1,7 @@
 # Installation guide
 Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
-This document outlines a an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or K8s. 
+This document outlines a an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
 
 # Docker - *nix
 The Docker setup is done with docker-compose 
@@ -19,6 +19,7 @@ cd Shuffle
 ```bash
 mkdir shuffle-database
 sudo chown -R 1000:1000 shuffle-database
+# IF you get an error using 'chown', add the user first with 'sudo useradd opensearch'
 ```
 
 4. Run docker-compose.
@@ -26,7 +27,12 @@ sudo chown -R 1000:1000 shuffle-database
 docker-compose up -d
 ```
 
-When you're done, skip to the "After installation" step below.
+5. Recommended for Opensearch to work well
+```bash
+sudo sysctl -w vm.max_map_count=262144             # https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
+```
+
+When you're done, skip to the [After installation](#after-installation) step below.
 
 ## Windows with WSL  
 This step is for setting up with Docker on windows from scratch.
@@ -57,7 +63,7 @@ https://shuffler.io/docs/configuration
 3. Sign in with the same Username & Password! Go to /apps and see if you have any apps yet. If not - you may need to [configure proxies](https://shuffler.io/docs/configuration#production_readiness)
 4. Check out https://shuffler.io/docs/configuration as it has a lot of useful information to get started
 
-![Admin account setup](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_adminaccount.png)
+![Admin account setup](https://github.com/Shuffle/Shuffle/blob/main/frontend/src/assets/img/shuffle_adminaccount.png?raw=true)
 
 ### Useful info
 * Check out [getting started](https://shuffler.io/docs/getting_started)
@@ -85,7 +91,7 @@ npm start
 ## Backend - Golang
 http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 ```bash
-export SHUFFLE_OPENSEARCH_URL="http://localhost:9200"
+export SHUFFLE_OPENSEARCH_URL="https://localhost:9200"
 export SHUFFLE_ELASTIC=true
 export SHUFFLE_OPENSEARCH_USERNAME=admin
 export SHUFFLE_OPENSEARCH_PASSWORD=admin

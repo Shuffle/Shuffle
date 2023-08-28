@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 
 import { makeStyles } from "@material-ui/styles";
-import { useTheme } from "@material-ui/core/styles";
 import { useNavigate, Link } from "react-router-dom";
 import countries from "../components/Countries.jsx";
 import CodeEditor from "../components/ShuffleCodeEditor.jsx";
 import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
-
-
+import CacheView from "../components/CacheView.jsx";
+import theme from "../theme.jsx";
 import AddIcon from "@mui/icons-material/Add";
 import ClearIcon from '@mui/icons-material/Clear';
+import StorageIcon from '@mui/icons-material/Storage';
 //import ToggleButton from '@mui/material/ToggleButton';
 import {
   FormControl,
@@ -27,6 +27,7 @@ import {
   Divider,
   TextField,
   Button,
+  ButtonGroup,
   Tabs,
   Tab,
   Grid,
@@ -44,6 +45,7 @@ import {
   DialogContent,
   CircularProgress,
   Box,
+	InputAdornment,
 } from "@material-ui/core";
 
 import { Autocomplete } from "@mui/material";
@@ -51,7 +53,6 @@ import { Autocomplete } from "@mui/material";
 import {
   Edit as EditIcon,
   FileCopy as FileCopyIcon,
-  Publish as PublishIcon,
   SelectAll as SelectAllIcon,
   OpenInNew as OpenInNewIcon,
   CloudDownload as CloudDownloadIcon,
@@ -69,13 +70,21 @@ import {
   Schedule as ScheduleIcon,
   Cloud as CloudIcon,
   Business as BusinessIcon,
+	Visibility as VisibilityIcon,
+	VisibilityOff as VisibilityOffIcon,
 } from "@material-ui/icons";
 
 import { useAlert } from "react-alert";
-import Dropzone from "../components/Dropzone";
-import HandlePayment from "./HandlePayment";
+import Dropzone from "../components/Dropzone.jsx";
+import HandlePaymentNew from "../views/HandlePaymentNew.jsx";
 import OrgHeader from "../components/OrgHeader.jsx";
+import OrgHeaderexpanded from "../components/OrgHeaderexpanded.jsx";
+import Billing from "../components/Billing.jsx";
+import Priorities from "../components/Priorities.jsx";
+import Branding from "../components/Branding.jsx";
+import Files from "../components/Files.jsx";
 import { display, style } from "@mui/system";
+//import EnvironmentStats from "../components/EnvironmentStats.jsx";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -122,11 +131,9 @@ const FileCategoryInput = (props) => {
 
 
 const Admin = (props) => {
-  const { globalUrl, userdata, serverside } = props;
+  const { globalUrl, userdata, serverside, checkLogin } = props;
 
-  var upload = "";
   var to_be_copied = "";
-  const theme = useTheme();
   const classes = useStyles();
   let navigate = useNavigate();
 
@@ -141,8 +148,7 @@ const Admin = (props) => {
   const [loading, setLoading] = React.useState(false);
 
   const [selectedOrganization, setSelectedOrganization] = React.useState({});
-  const [selectedDealModalOpen, setSelectedDealModalOpen] =
-    React.useState(false);
+    
   //console.log("Selected: ", selectedOrganization)
   const [organizationFeatures, setOrganizationFeatures] = React.useState({});
   const [loginInfo, setLoginInfo] = React.useState("");
@@ -156,19 +162,12 @@ const Admin = (props) => {
   const [environments, setEnvironments] = React.useState([]);
   const [authentication, setAuthentication] = React.useState([]);
   const [schedules, setSchedules] = React.useState([]);
-  const [files, setFiles] = React.useState([]);
-  const [selectedNamespace, setSelectedNamespace] = React.useState("default");
-  const [fileNamespaces, setFileNamespaces] = React.useState([]);
   const [selectedUser, setSelectedUser] = React.useState({});
   const [newUsername, setNewUsername] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
-  const [selectedUserModalOpen, setSelectedUserModalOpen] =
-    React.useState(false);
-  const [selectedAuthentication, setSelectedAuthentication] = React.useState(
-    {}
-  );
-  const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] =
-    React.useState(false);
+  const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false);
+  const [selectedAuthentication, setSelectedAuthentication] = React.useState({});
+  const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false);
   const [authenticationFields, setAuthenticationFields] = React.useState([]);
   const [showArchived, setShowArchived] = React.useState(false);
   const [isDropzone, setIsDropzone] = React.useState(false);
@@ -178,19 +177,11 @@ const Admin = (props) => {
   const [secret2FA, setSecret2FA] = React.useState("");
   const [show2faSetup, setShow2faSetup] = useState(false);
 
-  const [dealName, setDealName] = React.useState("");
-  const [dealAddress, setDealAddress] = React.useState("");
-  const [dealType, setDealType] = React.useState("MSSP");
-  const [dealCountry, setDealCountry] = React.useState("United States");
-  const [dealCurrency, setDealCurrency] = React.useState("USD");
-  const [dealStatus, setDealStatus] = React.useState("initiated");
-  const [dealValue, setDealValue] = React.useState("");
-  const [dealDiscount, setDealDiscount] = React.useState("");
-  const [dealerror, setDealerror] = React.useState("");
-  const [dealList, setDealList] = React.useState([]);
+  const [adminTab, setAdminTab] = React.useState(2);
+	const [showApiKey, setShowApiKey] = useState(false);
+  const [billingInfo, setBillingInfo] = React.useState({});
+	const [selectedStatus, setSelectedStatus] = React.useState([]);
 
-  const [fileContent, setFileContent] = React.useState("");
-  
   useEffect(() => {
     if (isDropzone) {
       //redirectOpenApi();
@@ -198,49 +189,7 @@ const Admin = (props) => {
     }
   }, [isDropzone]);
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
-
-  const [openEditor, setOpenEditor] = React.useState(false);
-  const [renderTextBox, setRenderTextBox] = React.useState(false);
-  const [openFileId, setOpenFileId] = React.useState(false);
-  const allowedFileTypes = ["txt", "py", "yaml","yml","json"]
-
-  const runUpdateText = (text) =>{
-    fetch(`${globalUrl}/api/v1/files/${openFileId}/edit`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body:text,
-      credentials: "include",
-    }).then((response) => {
-        if (response.status !== 200) {
-          console.log("Can't update file");
-        }
-        return response.json();
-      })
-    //console.log(text);
-  }
-
-  const handleKeyDown = (event) => {
-    if (event.key === 'Enter') {
-
-      console.log('do validate')
-      console.log("new namespace name->",event.target.value);      
-      fileNamespaces.push(event.target.value);
-      setSelectedNamespace(event.target.value);
-      setRenderTextBox(false);
-    }
-    if (event.key === 'Escape'){ // not working for some reasons
-      console.log('escape pressed')
-      setRenderTextBox(false);  
-    }
-
-  }
-  
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
   const get2faCode = (userId) => {
     fetch(`${globalUrl}/api/v1/users/${userId}/get2fa`, {
@@ -333,6 +282,179 @@ const Admin = (props) => {
 	*/
 
   const alert = useAlert();
+	const handleStatusChange = (event) => {
+		const { value } = event.target;
+
+		setSelectedStatus(value);
+  	handleEditOrg(
+			"",
+			"",
+			selectedOrganization.id,
+			"",
+			{},
+			{},
+			value,
+		)	
+	}
+
+	// Basically just a simple way to get a generated email
+	// This also may help understand how to communicate with users 
+	// both inside and outside Shuffle
+	// This could also be generated on the backend
+	const mailsendingButton = (org) => {
+		if (org === undefined || org === null) {
+			return ""
+		}
+
+		if (users.length === 0) {
+			return ""
+		}
+
+		// 1 mail based on users that have only apps
+		// Another based on those doing workflows
+		// Another based on those trying usecases(?) or templates
+		//
+		// Start based on edr, siem & ticketing
+		// Talk about enrichment?
+		// Check suggested usecases
+		// Check suggested workflows 
+		var your_apps = "- Connecting "
+
+		var subject_add = 0
+		var subject = "Want to automate "
+
+		if (org.security_framework !== undefined && org.security_framework !== null) {
+			if (org.security_framework.cases.name !== undefined && org.security_framework.cases.name !== null && org.security_framework.cases.name !== "") {
+				your_apps += org.security_framework.cases.name.replace("_", " ", -1) + ", "
+
+				if (subject_add < 2) {
+					if (subject_add === 1) {
+						subject += " & "
+					}
+
+					subject_add += 1 
+					subject += org.security_framework.cases.name.replace("_", " ", -1) 
+				}
+			}
+
+			if (org.security_framework.siem.name !== undefined && org.security_framework.siem.name !== null && org.security_framework.siem.name !== "") {
+				your_apps += org.security_framework.siem.name.replace("_", " ", -1) + ", "
+
+				if (subject_add < 2) {
+					if (subject_add === 1) {
+						subject += " & "
+					}
+
+					subject_add += 1 
+					subject += org.security_framework.siem.name.replace("_", " ", -1)
+				}
+			}
+
+			if (org.security_framework.communication.name !== undefined && org.security_framework.communication.name !== null && org.security_framework.communication.name !== "") {
+				your_apps += org.security_framework.communication.name.replace("_", " ", -1) + ", "
+
+				if (subject_add < 2) {
+					if (subject_add === 1) {
+						subject += " & "
+					}
+
+					subject_add += 1 
+					subject += org.security_framework.communication.name.replace("_", " ", -1)
+				}
+			}
+
+			if (org.security_framework.edr.name !== undefined && org.security_framework.edr.name !== null && org.security_framework.edr.name !== "") {
+				your_apps += org.security_framework.edr.name.replace("_", " ", -1) + ", "
+
+				if (subject_add < 2) {
+					if (subject_add === 1) {
+						subject += " & "
+					}
+
+					subject_add += 1 
+					subject += org.security_framework.edr.name.replace("_", " ", -1)
+				}
+			}
+
+			if (org.security_framework.intel.name !== undefined && org.security_framework.intel.name !== null && org.security_framework.intel.name !== "") {
+				your_apps += org.security_framework.intel.name.replace("_", " ", -1) + ", "
+
+				if (subject_add < 2) {
+					if (subject_add === 1) {
+						subject += " & "
+					}
+
+					subject_add += 1 
+					subject += org.security_framework.intel.name.replace("_", " ", -1)
+				}
+			}
+
+
+			// Remove comma
+			subject += "?"
+			your_apps = your_apps.substring(0, your_apps.length - 2)
+		}
+
+
+		// Add usecases they may not have tried (from recommendations): org.priorities where item type is usecase
+		var usecases = "- Building usecases like "
+		const active_usecase = org.priorities.filter((item) => item.type === "usecase" && item.active === true)
+		if (active_usecase.length > 0) {
+			for (var i = 0; i < active_usecase.length; i++) {
+				if (active_usecase[i].name.includes("Suggested Usecase: ")) {
+					usecases += active_usecase[i].name.replace("Suggested Usecase: ", "", -1) + ", "
+				} else {
+					usecases += active_usecase[i].name + ", "
+				}
+			}
+
+			usecases = usecases.substring(0, usecases.length - 2)
+		}
+
+		if (your_apps.length <= 15) {
+			your_apps = ""
+		} 
+
+		if (usecases.length <= 30) {
+			usecases = ""
+		}
+
+		var workflow_amount = "a few"
+		var admins = "" 
+
+		// Loop users
+		for (var i = 0; i < users.length; i++) {
+			if (users[i].role === "admin") {
+				admins += users[i].username + ","
+			}
+		}
+
+		// Remove last comma
+		admins = admins.substring(0, admins.length - 1)
+
+		if (your_apps.length > 5) {
+			your_apps += "%0D%0A"
+		}
+
+		if (usecases.length > 5) {
+			usecases += "%0D%0A"
+		}
+
+		// Get drift username from userdata.username before @ in email
+		const username = userdata.username.substring(0, userdata.username.indexOf("@"))
+
+		var body = `Hey,%0D%0A%0D%0AI saw you trying to use Shuffle, and thought we may be able to help. Right now, it looks like you have ${workflow_amount} workflows made, but it still doesn't look like you are getting the most out of Shuffle. If you're interested, I'd love to set up a quick call to see if we can help you get more out of Shuffle. %0D%0A%0D%0A
+
+Some of the things we can help with:%0D%0A
+${your_apps}
+- Configuring and authenticating your apps%0D%0A
+${usecases}
+- Creating special usecases and apps%0D%0A%0D%0A
+
+Let me know if you're interested, or set up a call here: https://drift.me/${username}`
+
+		return `mailto:${admins}?bcc=frikky@shuffler.io&subject=${subject}&body=${body}`
+	}
 
   const deleteAuthentication = (data) => {
     alert.info("Deleting auth " + data.label);
@@ -401,6 +523,13 @@ const Admin = (props) => {
         console.log("Error in userdata: ", error);
       });
   };
+
+
+	if (userdata.support === true && selectedOrganization.id !== "" && selectedOrganization.id !== undefined && selectedOrganization.id !== null && selectedOrganization.id !== userdata.active_org.id) {
+		alert.info("Refreshing window to fix org support access")
+		window.location.reload()
+		return null
+	}
 
   const handleVerify2FA = (userId, code) => {
     const data = {
@@ -594,6 +723,54 @@ const Admin = (props) => {
       });
   };
 
+  const handleEditOrg = (
+    name,
+    description,
+    orgId,
+    image,
+    defaults,
+    sso_config,
+		lead_info,
+  ) => {
+
+    const data = {
+      name: name,
+      description: description,
+      org_id: orgId,
+      image: image,
+      defaults: defaults,
+      sso_config: sso_config,
+			lead_info: lead_info,
+    };
+
+    const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+    fetch(url, {
+      mode: "cors",
+      method: "POST",
+      body: JSON.stringify(data),
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then((response) =>
+        response.json().then((responseJson) => {
+          if (responseJson["success"] === false) {
+            alert.error("Failed updating org: ", responseJson.reason);
+          } else {
+						if (lead_info === undefined || lead_info === null || lead_info === []) {
+            	alert.success("Successfully edited org!");
+						}
+          }
+        })
+      )
+      .catch((error) => {
+        alert.error("Err: " + error.toString());
+      });
+  };
+
   const editAuthenticationConfig = (id) => {
     const data = {
       id: id,
@@ -740,59 +917,27 @@ const Admin = (props) => {
       });
   };
 
-  const handleGetDeals = (orgId) => {
-    console.log("Get deals!");
-
-    if (orgId.length === 0) {
-      alert.error(
-        "Organization ID not defined (get deals). Please contact us on https://shuffler.io if this persists logout."
-      );
-      return;
-    }
-
-    const url = `${globalUrl}/api/v1/orgs/${orgId}/deals`;
-    fetch(url, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Bad status code in get deals: ", response.status);
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        console.log("Got deals: ", responseJson);
-        if (responseJson.success === false) {
-          alert.error("Failed loading deals. Contact support if this persists");
-        } else {
-          setDealList(responseJson);
-        }
-      })
-      .catch((error) => {
-        console.log("Error getting org deals: ", error);
-        alert.error(
-          "Failed getting deals for your org. Contact support if this persists."
-        );
-      });
-  };
+  
 
   const handleGetOrg = (orgId) => {
+
+    if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
+			const urlSearchParams = new URLSearchParams(window.location.search);
+			const params = Object.fromEntries(urlSearchParams.entries());
+			const foundorgid = params["org_id"];
+			if (foundorgid !== undefined && foundorgid !== null) {
+				orgId = foundorgid;
+			}
+		}
+
     if (orgId.length === 0) {
-      alert.error(
-        "Organization ID not defined. Please contact us on https://shuffler.io if this persists logout."
-      );
+      alert.error("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
       return;
     }
 
     // Just use this one?
-    var baseurl = globalUrl;
-    const url = baseurl + "/api/v1/orgs/" + orgId;
-    fetch(url, {
+    
+    fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
       method: "GET",
       credentials: "include",
       headers: {
@@ -807,7 +952,7 @@ const Admin = (props) => {
       })
       .then((responseJson) => {
         if (responseJson["success"] === false) {
-          alert.error("Failed getting your org: ", responseJson.readon);
+          alert.error("Failed getting your org. If this persists, please contact support.");
         } else {
           if (
             responseJson.sync_features === undefined ||
@@ -816,13 +961,34 @@ const Admin = (props) => {
             responseJson.sync_features = {};
           }
 
-          if (
-            isCloud &&
-            responseJson.partner_info !== undefined &&
-            responseJson.partner_info.reseller === true
-          ) {
-            handleGetDeals(orgId);
-          }
+					if (responseJson.lead_info !== undefined && responseJson.lead_info !== null) {
+						var leads = []
+						if (responseJson.lead_info.contacted) {
+							leads.push("contacted")
+						}
+
+						if (responseJson.lead_info.customer) {
+							leads.push("customer")
+						}
+
+						if (responseJson.lead_info.demo_done) {
+							leads.push("demo done")
+						}
+
+						if (responseJson.lead_info.pov) {
+							leads.push("pov")
+						}
+
+						if (responseJson.lead_info.lead) {
+							leads.push("lead")
+						}
+
+						if (responseJson.lead_info.student) {
+							leads.push("student")
+						}
+
+						setSelectedStatus(leads)
+					}
 
           setSelectedOrganization(responseJson)
           var lists = {
@@ -879,17 +1045,21 @@ const Admin = (props) => {
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             setLoginInfo("Error: " + responseJson.reason);
+    				alert.error("Failed to send email (2). Please try again and contact support if this persists.")
           } else {
             setLoginInfo("");
             setModalOpen(false);
             setTimeout(() => {
               getUsers();
             }, 1000);
+    				
+						alert.info("Invite sent! They will show up in the list when they have accepted the invite.")
           }
         })
       )
       .catch((error) => {
         console.log("Error in userdata: ", error);
+    		alert.error("Failed to send email. Please try again and contact support if this persists.")
       });
   };
 
@@ -1006,6 +1176,36 @@ const Admin = (props) => {
       )
       .catch((error) => {
         console.log("Error when deleting: ", error);
+      });
+  };
+
+  const rerunCloudWorkflows = (environment) => {
+		alert.info("Starting execution reruns. This can run in the background.") 
+    fetch(
+      `${globalUrl}/api/v1/environments/${environment.id}/rerun`,
+      {
+        method: "GET",
+        credentials: "include",
+      }
+    )
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for apps :O!");
+          return;
+        } else {
+          alert.error(response.reason);
+          //alert.info("Aborted all dangling workflows");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        console.log("Got response for execution: ", responseJson);
+        //console.log("RESPONSE: ", responseJson)
+        //setFiles(responseJson)
+      })
+      .catch((error) => {
+        //alert.error(error.toString())
       });
   };
 
@@ -1147,252 +1347,8 @@ const Admin = (props) => {
       });
   };
 
-  const handleFileUpload = (file_id, file) => {
-    //console.log("FILE: ", file_id, file)
-    fetch(`${globalUrl}/api/v1/files/${file_id}/upload`, {
-      method: "POST",
-      credentials: "include",
-      body: file,
-    })
-      .then((response) => {
-        if (response.status !== 200 && response.status !== 201) {
-          console.log("Status not 200 for apps :O!");
-          alert.error("File was created, but failed to upload.");
-          return;
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        //console.log("RESPONSE: ", responseJson)
-        //setFiles(responseJson)
-      })
-      .catch((error) => {
-        alert.error(error.toString());
-      });
-  };
-
-  const handleCreateFile = (filename, file) => {
-    var data = {
-      filename: filename,
-      org_id: selectedOrganization.id,
-      workflow_id: "global",
-    };
-
-    if (
-      selectedNamespace !== undefined &&
-      selectedNamespace !== null &&
-      selectedNamespace.length > 0 &&
-      selectedNamespace !== "default"
-    ) {
-      data.namespace = selectedNamespace;
-    }
-
-    fetch(globalUrl + "/api/v1/files/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(data),
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for apps :O!");
-          return;
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        //console.log("RESP: ", responseJson)
-        if (responseJson.success === true) {
-          handleFileUpload(responseJson.id, file);
-        } else {
-          alert.error("Failed to upload file ", filename);
-        }
-      })
-      .catch((error) => {
-        alert.error("Failed to upload file ", filename);
-        console.log(error.toString());
-      });
-  };
-
-  const getFiles = () => {
-    fetch(globalUrl + "/api/v1/files", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for apps :O!");
-          return;
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        if (responseJson.files !== undefined && responseJson.files !== null) {
-          setFiles(responseJson.files);
-        } else {
-          setFiles([]);
-        }
-
-        console.log("NAMESPACES: ", responseJson.namespaces);
-        if (
-          responseJson.namespaces !== undefined &&
-          responseJson.namespaces !== null
-        ) {
-          setFileNamespaces(responseJson.namespaces);
-        }
-      })
-      .catch((error) => {
-        alert.error(error.toString());
-      });
-  };
-
-  const deleteFile = (file) => {
-    fetch(globalUrl + "/api/v1/files/" + file.id, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for file delete :O!");
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        if (responseJson.success) {
-          alert.info("Successfully deleted file " + file.name);
-        } else if (
-          responseJson.reason !== undefined &&
-          responseJson.reason !== null
-        ) {
-          alert.error("Failed to delete file: " + responseJson.reason);
-        }
-        setTimeout(() => {
-          getFiles();
-        }, 1500);
-
-        console.log(responseJson);
-      })
-      .catch((error) => {
-        alert.error(error.toString());
-      });
-  };
-
-  const readFileData = (file) => {
-    fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for file :O!");
-          return "";
-        }
-        return response.text();
-      })
-      .then((respdata) => {
-          // console.log("respdata ->", respdata);
-          // console.log("respdata type ->", typeof(respdata));
-        
-        if (respdata.length === 0) {
-          alert.error("Failed getting file. Is it deleted?");
-          return;
-        }
-        return respdata
-      })
-      .then((responseData) => {
-      
-      setFileContent(responseData);
-      //console.log("filecontent state ",fileContent);
-      })
-      .catch((error) => {
-        alert.error(error.toString());
-      });
-  };
-
   var localData = "";
 
-  // useEffect(() => {
-  //   console.log('confirm', fileContent);
-  // }, [fileContent])
-
-  const downloadFile = (file) => {
-    fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
-      method: "GET",
-      credentials: "include",
-    })
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for apps :O!");
-				return "";
-			}
-
-			console.log("Resp: ", response)
-
-			return response.blob()
-		})
-      .then((respdata) => {
-        if (respdata.length === 0) {
-          alert.error("Failed getting file. Is it deleted?");
-          return;
-        }
-
-        var blob = new Blob([respdata], {
-          type: "application/octet-stream",
-        });
-
-        var url = URL.createObjectURL(blob);
-        var link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `${file.filename}`);
-        var event = document.createEvent("MouseEvents");
-        event.initMouseEvent(
-          "click",
-          true,
-          true,
-          window,
-          1,
-          0,
-          0,
-          0,
-          0,
-          false,
-          false,
-          false,
-          false,
-          0,
-          null
-        );
-        link.dispatchEvent(event);
-
-        //return response.json()
-      })
-      .then((responseJson) => {
-        //console.log(responseJson)
-        //setSchedules(responseJson)
-      })
-      .catch((error) => {
-        alert.error(error.toString());
-      });
-  };
 
   const getSchedules = () => {
     fetch(globalUrl + "/api/v1/workflows/schedules", {
@@ -1529,6 +1485,10 @@ const Admin = (props) => {
       });
   };
 
+  useEffect(() => {
+		getUsers()
+  }, []);
+
   const getSettings = () => {
     fetch(globalUrl + "/api/v1/getsettings", {
       method: "GET",
@@ -1558,10 +1518,20 @@ const Admin = (props) => {
     1: "users",
     2: "app_auth",
     3: "files",
-    4: "schedules",
-    5: "environments",
-    6: "suborgs",
+    4: "cache",
+    5: "schedules",
+    6: "environments",
+    7: "suborgs",
   };
+
+  const admin_views = {
+    0: "organization",
+    1: "cloud_sync",
+		2: "priorities",
+    3: "billing",
+    4: "branding",
+  };
+
   const setConfig = (event, inputValue) => {
     const newValue = parseInt(inputValue);
 
@@ -1573,22 +1543,25 @@ const Admin = (props) => {
       document.title = "Shuffle - admin - app authentication";
       getAppAuthentication();
     } else if (newValue === 3) {
-      document.title = "Shuffle - admin - files";
-      getFiles();
+      document.title = "Shuffle - admin - Files";
     } else if (newValue === 4) {
+      document.title = "Shuffle - admin - Datastore";
+
+      //listOrgCache("3fd181b9-fb29-41b7-b2f5-15292265d420");
+    } else if (newValue === 5) {
       document.title = "Shuffle - admin - schedules";
       getSchedules();
-    } else if (newValue === 5) {
+    } else if (newValue === 6) {
       document.title = "Shuffle - admin - environments";
       getEnvironments();
-    } else if (newValue === 6) {
+    } else if (newValue === 7) {
       document.title = "Shuffle - admin - orgs";
       getOrgs();
     } else {
       document.title = "Shuffle - admin";
     }
 
-    if (newValue === 6) {
+    if (newValue === 8) {
       console.log("Should get apps for categories.");
     }
 
@@ -1612,17 +1585,29 @@ const Admin = (props) => {
     ) {
       const urlSearchParams = new URLSearchParams(window.location.search);
       const params = Object.fromEntries(urlSearchParams.entries());
-      const foundTab = params["tab"];
-      if (foundTab !== null && foundTab !== undefined) {
-        for (var key in Object.keys(views)) {
-          const value = views[key];
-          console.log(key, value);
-          if (value === foundTab) {
-            setConfig("", key);
+
+      const adminTab = params["admin_tab"];
+      if (adminTab !== null && adminTab !== undefined) {
+				for (var key in Object.keys(admin_views)) {
+          const value = admin_views[key];
+          if (value === adminTab) {
+						setAdminTab(parseInt(key));
+            setConfig("", 0);
             break;
           }
         }
-      }
+			} else { 
+				const foundTab = params["tab"];
+				if (foundTab !== null && foundTab !== undefined) {
+					for (var key in Object.keys(views)) {
+						const value = views[key];
+						if (value === foundTab) {
+							setConfig("", key);
+							break;
+						}
+					}
+				}
+			}
     }
   }
 
@@ -1675,7 +1660,8 @@ const Admin = (props) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
           alert.error("Failed setting user: " + responseJson.reason);
         } else {
-          alert.success("Set the user field " + field + " to " + value);
+          //alert.success("Set the user field " + field + " to " + value);
+          alert.success("Successfully updated user field " + field)
 
           if (field !== "suborgs") {
             setSelectedUserModalOpen(false);
@@ -1879,248 +1865,9 @@ const Admin = (props) => {
       </FormControl>
     ) : null;
 
-  const products = [
-    { code: "", label: "MSSP", phone: "" },
-    { code: "", label: "Enterprise", phone: "" },
-    { code: "", label: "Consultancy", phone: "" },
-    { code: "", label: "Support", phone: "" },
-  ];
+  
 
-  const addDealModal = (
-    <Dialog
-      open={selectedDealModalOpen}
-      onClose={() => {
-        setSelectedDealModalOpen(false);
-      }}
-      PaperProps={{
-        style: {
-          backgroundColor: theme.palette.surfaceColor,
-          color: "white",
-          minWidth: "800px",
-          minHeight: "320px",
-        },
-      }}
-    >
-      <DialogTitle style={{ maxWidth: 450, margin: "auto" }}>
-        <span style={{ color: "white" }}>Register new deal</span>
-      </DialogTitle>
-      <DialogContent>
-        <div style={{ display: "flex" }}>
-          <TextField
-            style={{
-              marginTop: 0,
-              backgroundColor: theme.palette.inputColor,
-              flex: 3,
-              marginRight: 10,
-            }}
-            InputProps={{
-              style: {
-                height: 50,
-                color: "white",
-              },
-            }}
-            color="primary"
-            required
-            fullWidth={true}
-            placeholder="Name"
-            type="text"
-            id="standard-required"
-            autoComplete="username"
-            margin="normal"
-            label="Name"
-            variant="outlined"
-            defaultValue={dealName}
-            onChange={(e) => {
-              setDealName(e.target.value);
-            }}
-          />
-          <TextField
-            style={{
-              marginTop: 0,
-              backgroundColor: theme.palette.inputColor,
-              flex: 3,
-              marginRight: 10,
-            }}
-            InputProps={{
-              style: {
-                height: 50,
-                color: "white",
-              },
-            }}
-            color="primary"
-            required
-            fullWidth={true}
-            placeholder="Address"
-            label="Address"
-            type="text"
-            id="standard-required"
-            autoComplete="username"
-            margin="normal"
-            variant="outlined"
-            defaultValue={dealAddress}
-            onChange={(e) => {
-              setDealAddress(e.target.value);
-            }}
-          />
-        </div>
-        <div style={{ display: "flex", marginTop: 10 }}>
-          <TextField
-            style={{
-              marginTop: 0,
-              backgroundColor: theme.palette.inputColor,
-              flex: 1,
-              marginRight: 10,
-            }}
-            InputProps={{
-              style: {
-                height: 50,
-                color: "white",
-              },
-            }}
-            color="primary"
-            required
-            fullWidth={true}
-            placeholder="1000"
-            label="Value (USD)"
-            type="text"
-            id="standard-required"
-            margin="normal"
-            variant="outlined"
-            defaultValue={dealValue}
-            onChange={(e) => {
-              setDealValue(e.target.value);
-            }}
-          />
-          <Autocomplete
-            id="country-select"
-            sx={{ width: 250 }}
-            options={countries}
-            variant="outlined"
-            autoHighlight
-            getOptionLabel={(option) => option.label}
-            onChange={(event, newValue) => {
-              setDealCountry(newValue.label);
-            }}
-            renderOption={(props, option) => (
-              <Box
-                component="li"
-                sx={{ "& > img": { mr: 2, flexShrink: 0 } }}
-                {...props}
-              >
-                <img
-                  loading="lazy"
-                  width="20"
-                  src={`https://flagcdn.com/w20/${option.code.toLowerCase()}.png`}
-                  srcSet={`https://flagcdn.com/w40/${option.code.toLowerCase()}.png 2x`}
-                  alt=""
-                />
-                {option.label} ({option.code}) +{option.phone}
-              </Box>
-            )}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  flex: 1,
-                  marginTop: 0,
-                  marginRight: 10,
-                }}
-                variant="outlined"
-                label="Choose a country"
-                defaultValue={dealCountry}
-                inputProps={{
-                  ...params.inputProps,
-                  autoComplete: "new-password", // disable autocomplete and autofill
-                }}
-              />
-            )}
-          />
-          <Autocomplete
-            id="product-select"
-            sx={{ width: 250 }}
-            options={products}
-            variant="outlined"
-            autoHighlight
-            onChange={(event, newValue) => {
-              setDealType(newValue);
-            }}
-            getOptionLabel={(option) => option.label}
-            renderOption={(props, option) => (
-              <Box
-                component="li"
-                sx={{ "& > img": { mr: 2, flexShrink: 0 } }}
-                {...props}
-              >
-                {option.label}
-              </Box>
-            )}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  flex: 1,
-                  marginTop: 0,
-                }}
-                variant="outlined"
-                label="Choose a product"
-                defaultValue={dealType}
-                inputProps={{
-                  ...params.inputProps,
-                  autoComplete: "new-password", // disable autocomplete and autofill
-                }}
-              />
-            )}
-          />
-        </div>
-        {dealerror.length > 0 ? (
-          <Typography
-            variant="body1"
-            color="textSecondary"
-            style={{ margin: 10 }}
-          >
-            error registering: {dealerror}
-          </Typography>
-        ) : null}
-        <div style={{ display: "flex", width: 300, margin: "auto" }}>
-          <Button
-            style={{ maxHeight: 50, flex: 1, margin: 5 }}
-            variant="outlined"
-            color="secondary"
-            disabled={false}
-            onClick={() => {
-              setSelectedDealModalOpen(false);
-
-              //setDealName("")
-              //setDealAddress("")
-              //setDealCountry("")
-              //setDealValue("")
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            style={{ maxHeight: 50, flex: 1, margin: 5 }}
-            variant="contained"
-            color="primary"
-            disabled={
-              dealName.length <= 3 ||
-              dealAddress.length <= 3 ||
-              dealCountry.length === 0 ||
-              dealValue.length === 0 ||
-              dealType.length === 0
-            }
-            onClick={() => {
-              submitDeal(dealName, dealAddress, dealCountry, dealValue);
-            }}
-          >
-            Submit
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  
 
   const editUserModal = (
     <Dialog
@@ -2473,11 +2220,12 @@ const Admin = (props) => {
       <DialogTitle>
         <span style={{ color: "white" }}>Enable cloud features</span>
       </DialogTitle>
-      <DialogContent>
+      <DialogContent color="textSecondary">
         What does{" "}
         <a
-          href="https://shuffler.io/docs/organizations#cloud_sync"
+          href="/docs/organizations#cloud_sync"
           target="_blank"
+					rel="noopener noreferrer"
           style={{ textDecoration: "none", color: "#f85a3e" }}
         >
           cloud sync
@@ -2556,104 +2304,8 @@ const Admin = (props) => {
     </Dialog>
   );
 
-  const submitDeal = (dealName, dealAddress, dealCountry, dealValue) => {
-    if (dealerror.length > 0) {
-      setDealerror("");
-    }
 
-    const orgId = selectedOrganization.id;
-    const data = {
-      reseller_org: orgId,
-      name: dealName,
-      address: dealAddress,
-      country: dealCountry,
-      value: dealValue,
-    };
-
-    const url = `${globalUrl}/api/v1/orgs/${orgId}/deals`;
-    fetch(url, {
-      mode: "cors",
-      method: "POST",
-      body: JSON.stringify(data),
-      credentials: "include",
-      crossDomain: true,
-      withCredentials: true,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    })
-      .then(function (response) {
-        if (response.status !== 200) {
-          console.log("Error in response");
-        }
-
-        return response.json();
-      })
-      .then(function (responseJson) {
-        if (responseJson.success === true) {
-          setSelectedDealModalOpen(false);
-          alert.success(
-            "Added new deal! We will be in touch shortly with an update."
-          );
-
-          setDealName("");
-          setDealAddress("");
-          setDealValue("");
-          setDealCountry("United States");
-          setDealType("MSSP");
-        } else {
-          setDealerror(responseJson.reason);
-        }
-      })
-      .catch(function (error) {
-        //console.log("Error: ", error);
-        setDealerror(error.toString());
-        alert.error("Failed adding deal reg: ", error);
-      });
-  };
-
-  const cancelSubscriptions = (subscription_id) => {
-    console.log(selectedOrganization);
-    const orgId = selectedOrganization.id;
-    const data = {
-      subscription_id: subscription_id,
-      action: "cancel",
-      org_id: selectedOrganization.id,
-    };
-
-    const url = globalUrl + `/api/v1/orgs/${orgId}`;
-    fetch(url, {
-      mode: "cors",
-      method: "POST",
-      body: JSON.stringify(data),
-      credentials: "include",
-      crossDomain: true,
-      withCredentials: true,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    })
-      .then(function (response) {
-        if (response.status !== 200) {
-          console.log("Error in response");
-        }
-
-        handleGetOrg(selectedOrganization.id);
-        return response.json();
-      })
-      .then(function (responseJson) {
-        if (responseJson.success !== undefined && responseJson.success) {
-          alert.success("Successfully stopped subscription!");
-        } else {
-          alert.error("Failed stopping subscription. Please contact us.");
-        }
-      })
-      .catch(function (error) {
-        console.log("Error: ", error);
-        alert.error("Failed stopping subscription. Please contact us.");
-      });
-  };
-
+  
   const organizationView =
     curTab === 0 && selectedOrganization.id !== undefined ? (
       <div style={{ position: "relative" }}>
@@ -2664,7 +2316,8 @@ const Admin = (props) => {
             organization.{" "}
             <a
               target="_blank"
-              href="https://shuffler.io/docs/organizations#organization"
+							rel="noopener noreferrer"
+              href="/docs/organizations#organization"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               Learn more
@@ -2701,6 +2354,49 @@ const Admin = (props) => {
               </IconButton>
             </Tooltip>
 						*/}
+
+						{userdata.support === true ? 
+							<span style={{display: "flex", top: -10, right: 50, position: "absolute"}}>
+								<a href={mailsendingButton(selectedOrganization)} target="_blank" rel="noopener noreferrer" style={{textDecoration: "none"}} disabled={selectedStatus.length !== 0}>
+									<Button
+										variant="outlined"
+										color="primary"
+										disabled={selectedStatus.length !== 0}
+										style={{ minWidth: 80, maxWidth: 80, height: "100%", }} 
+										onClick={() => {
+												console.log("Should send mail to admins of org with context")
+												handleStatusChange({target: {value: ["contacted"]}})
+
+												// open a mailto with subject "hello" and sender "frikky@shuffler.io"
+										}}
+									>
+										Sales mail
+									</Button>
+								</a>
+								<FormControl sx={{ m: 1, width: 300, }} style={{}}>
+									<InputLabel id="">Status</InputLabel>
+									<Select
+										style={{minWidth: 150, maxWidth: 150, }}
+										labelId="multiselect-status"
+										id="multiselect-status"
+										multiple
+										value={selectedStatus}
+										onChange={handleStatusChange}
+										input={<OutlinedInput label="Status" />}
+										renderValue={(selected) => selected.join(', ')}
+										MenuProps={MenuProps}
+									>
+										{["contacted", "lead", "pov", "demo done", "customer", "student", ].map((name) => (
+											<MenuItem key={name} value={name}>
+												<Checkbox checked={selectedStatus.indexOf(name) > -1} />
+												<ListItemText primary={name} />
+											</MenuItem>
+										))}
+									</Select>
+								</FormControl>
+							</span>
+						: null}
+
             <Tooltip
               title={"Copy Organization ID"}
               style={{}}
@@ -2758,6 +2454,8 @@ const Admin = (props) => {
                 setSelectedOrganization={setSelectedOrganization}
                 globalUrl={globalUrl}
                 selectedOrganization={selectedOrganization}
+								adminTab={adminTab}
+  							handleEditOrg={handleEditOrg}
               />
             ) : (
               <div
@@ -2772,6 +2470,64 @@ const Admin = (props) => {
                 <Typography>Loading Organization</Typography>
               </div>
             )}
+
+						<Tabs
+							value={adminTab}
+							indicatorColor="primary"
+							textColor="secondary"
+							style={{marginTop: 20, }}
+							onChange={(event, inputValue) => {
+    						const newValue = parseInt(inputValue);
+								setAdminTab(newValue);
+
+  							//const setConfig = (event, inputValue) => {
+    						navigate(`/admin?admin_tab=${admin_views[newValue]}`);
+							}}
+							aria-label="disabled tabs example"
+						>
+							<Tab
+								label=<span>
+									Edit Details
+								</span>
+							/>
+							<Tab
+								label=<span>
+									Cloud Synchronization	
+								</span>
+							/>
+							<Tab
+								label=<span>
+									Priorities	
+								</span>
+							/>
+							<Tab
+								disabled={!isCloud}
+								label=<span>
+									Billing
+								</span>
+							/>
+							<Tab
+								disabled={!isCloud || true}
+								label=<span>
+									Branding	
+								</span>
+							/>
+							<Tab
+								disabled={true}
+								label=<span>
+									Usage	
+								</span>
+							/>
+							{/*
+							<Tab
+								disabled={true}
+								label=<span>
+									Notifications	
+								</span>
+							/>
+							*/}
+						</Tabs>
+
             <Divider
               style={{
                 marginTop: 20,
@@ -2779,205 +2535,272 @@ const Admin = (props) => {
                 backgroundColor: theme.palette.inputColor,
               }}
             />
-            <Typography
-              variant="h6"
-              style={{ marginBottom: "10px", color: "white" }}
-            >
-              Cloud syncronization
-            </Typography>
-            What does{" "}
-            <a
-              href="https://shuffler.io/docs/organizations#cloud_sync"
-              target="_blank"
-							rel="noopener noreferrer"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
-            >
-              cloud sync
-            </a>{" "}
-            do? Cloud syncronization is a way of getting more out of Shuffle.
-            Shuffle will <b>ALWAYS</b> make every option open source, but
-            features relying on other users can't be done without a
-            collaborative approach.
-            {isCloud ? (
-              <div style={{ marginTop: 15, display: "flex" }}>
-                <div style={{ flex: 1 }}>
-                  <Typography style={{}}>
-                    Currently syncronizing:{" "}
-                    {selectedOrganization.cloud_sync_active === true
-                      ? "True"
-                      : "False"}
-                  </Typography>
-                  {selectedOrganization.cloud_sync_active ? (
-                    <Typography style={{}}>
-                      Syncronization interval:{" "}
-                      {selectedOrganization.sync_config.interval === 0
-                        ? "60"
-                        : selectedOrganization.sync_config.interval}
-                    </Typography>
-                  ) : null}
-                  <Typography
-                    style={{
-                      whiteSpace: "nowrap",
-                      marginTop: 25,
-                      marginRight: 10,
-                    }}
-                  >
-                    Your Apikey
-                  </Typography>
-                  <div style={{ display: "flex" }}>
-                    <TextField
-                      color="primary"
-                      style={{ backgroundColor: theme.palette.inputColor }}
-                      InputProps={{
-                        style: {
-                          height: "50px",
-                          color: "white",
-                          fontSize: "1em",
-                        },
-                      }}
-                      required
-                      fullWidth={true}
-                      disabled={true}
-                      autoComplete="cloud apikey"
-                      id="apikey_field"
-                      margin="normal"
-                      placeholder="Cloud Apikey"
-                      variant="outlined"
-                      defaultValue={userSettings.apikey}
-                    />
-                    {selectedOrganization.cloud_sync_active ? (
-                      <Button
-                        style={{
-                          width: 150,
-                          height: 50,
-                          marginLeft: 10,
-                          marginTop: 17,
-                        }}
-                        variant={
-                          selectedOrganization.cloud_sync_active === true
-                            ? "outlined"
-                            : "contained"
-                        }
-                        color="primary"
-                        onClick={() => {
-                          handleStopOrgSync(selectedOrganization.id);
-                        }}
-                      >
-                        Stop Sync
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div style={{ display: "flex", marginBottom: 20 }}>
-                  <TextField
-                    color="primary"
-                    style={{
-                      backgroundColor: theme.palette.inputColor,
-                      marginRight: 10,
-                    }}
-                    InputProps={{
-                      style: {
-                        height: "50px",
-                        color: "white",
-                        fontSize: "1em",
-                      },
-                    }}
-                    required
-                    fullWidth={true}
-                    disabled={selectedOrganization.cloud_sync}
-                    autoComplete="cloud apikey"
-                    id="apikey_field"
-                    margin="normal"
-                    placeholder="Cloud Apikey"
-                    variant="outlined"
-                    onChange={(event) => {
-                      setCloudSyncApikey(event.target.value);
-                    }}
-                  />
-                  <Button
-                    disabled={
-                      (!selectedOrganization.cloud_sync &&
-                        cloudSyncApikey.length === 0) ||
-                      loading
-                    }
-                    style={{ marginTop: 15, height: 50, width: 150 }}
-                    onClick={() => {
-                      setLoading(true);
-                      enableCloudSync(
-                        cloudSyncApikey,
-                        selectedOrganization,
-                        selectedOrganization.cloud_sync
-                      );
-                    }}
-                    color="primary"
-                    variant={
-                      selectedOrganization.cloud_sync === true
-                        ? "outlined"
-                        : "contained"
-                    }
-                  >
-                    {selectedOrganization.cloud_sync
-                      ? "Stop sync"
-                      : "Start sync"}
-                  </Button>
-                </div>
-                {orgSyncResponse.length > 0 ? (
-                  <Typography style={{ marginTop: 5, marginBottom: 10 }}>
-                    Message from Shuffle Cloud: <b>{orgSyncResponse}</b>
-                  </Typography>
-                ) : null}
-              </div>
-            )}
-            <Typography
-              style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
-            >
-              Cloud sync features (monthly usage)
-            </Typography>
-            <Grid container style={{ width: "100%", marginBottom: 15 }}>
-              {selectedOrganization.sync_features === undefined ||
-              selectedOrganization.sync_features === null
-                ? null
-                : Object.keys(selectedOrganization.sync_features).map(function (
-                    key,
-                    index
-                  ) {
-										// unnecessary parts
-                    if (key === "schedule" || key === "apps" || key === "updates") {
-                      return null;
-                    }
 
-                    const item = selectedOrganization.sync_features[key];
-										if (item === null) {
-											return null
-										}
+						{adminTab === 0 ? (
+							<OrgHeaderexpanded
+									isCloud={isCloud}
+									userdata={userdata}
+									setSelectedOrganization={setSelectedOrganization}
+									globalUrl={globalUrl}
+									selectedOrganization={selectedOrganization}
+									adminTab={adminTab}
+							/>
+						)
+						: adminTab === 1 ? (
+							<div>
+            		<Typography
+            		  variant="h6"
+            		  style={{ marginBottom: "10px", color: "white" }}
+            		>
+            		  Cloud syncronization
+            		</Typography>
+            		What does{" "}
+            		<a
+            		  href="/docs/organizations#cloud_sync"
+            		  target="_blank"
+									rel="noopener noreferrer"
+            		  style={{ textDecoration: "none", color: "#f85a3e" }}
+            		>
+            		  cloud sync
+            		</a>{" "}
+            		do? Cloud syncronization is a way of getting more out of Shuffle.
+            		Shuffle will <b>ALWAYS</b> make every option open source, but
+            		features relying on other users can't be done without a
+            		collaborative approach.
+            		{isCloud ? (
+            		  <div style={{ marginTop: 15, display: "flex" }}>
+            		    <div style={{ flex: 1 }}>
+            		      <Typography style={{}}>
+            		        Currently syncronizing:{" "}
+            		        {selectedOrganization.cloud_sync_active === true
+            		          ? "True"
+            		          : "False"}
+            		      </Typography>
+            		      {selectedOrganization.cloud_sync_active ? (
+            		        <Typography style={{}}>
+            		          Syncronization interval:{" "}
+            		          {selectedOrganization.sync_config.interval === 0
+            		            ? "60"
+            		            : selectedOrganization.sync_config.interval}
+            		        </Typography>
+            		      ) : null}
+            		      <Typography
+            		        style={{
+            		          whiteSpace: "nowrap",
+            		          marginTop: 25,
+            		          marginRight: 10,
+            		        }}
+            		      >
+            		        Your Apikey
+            		      </Typography>
+            		      <div style={{ display: "flex" }}>
+            		        <TextField
+            		          color="primary"
+            		          style={{ 
+														backgroundColor: theme.palette.inputColor,
+														maxWidth: 500,
+													}}
+            		          InputProps={{
+            		            style: {
+            		              height: "50px",
+            		              color: "white",
+            		              fontSize: "1em",
+            		            },
+														endAdornment: (
+															<InputAdornment position="end">
+																<IconButton
+																	aria-label="toggle password visibility"
+																	onClick={() => {
+																		setShowApiKey(!showApiKey)
+																	}}
+																>
+																	{showApiKey ? <VisibilityIcon /> : <VisibilityOffIcon />}
+																</IconButton>
+															</InputAdornment>
+														)
+            		          }}
+            		          required
+            		          fullWidth={true}
+            		          disabled={true}
+            		          autoComplete="cloud apikey"
+            		          id="apikey_field"
+            		          margin="normal"
+            		          placeholder="Cloud Apikey"
+            		          variant="outlined"
+            		          defaultValue={userSettings.apikey}
+													type={!isCloud || showApiKey ? "text" : "password"}
+            		        />
+            		        {selectedOrganization.cloud_sync_active ? (
+            		          <Button
+            		            style={{
+            		              width: 150,
+            		              height: 50,
+            		              marginLeft: 10,
+            		              marginTop: 17,
+            		            }}
+            		            variant={
+            		              selectedOrganization.cloud_sync_active === true
+            		                ? "outlined"
+            		                : "contained"
+            		            }
+            		            color="primary"
+            		            onClick={() => {
+            		              handleStopOrgSync(selectedOrganization.id);
+            		            }}
+            		          >
+            		            Stop Sync
+            		          </Button>
+            		        ) : null}
+            		      </div>
+            		    </div>
+            		  </div>
+            		) : (
+            		  <div>
+            		    <div style={{ display: "flex", marginBottom: 20 }}>
+            		      <TextField
+            		        color="primary"
+            		        style={{
+            		          backgroundColor: theme.palette.inputColor,
+            		          marginRight: 10,
+            		        }}
+            		        InputProps={{
+            		          style: {
+            		            height: "50px",
+            		            color: "white",
+            		            fontSize: "1em",
+            		          },
+            		        }}
+            		        required
+            		        fullWidth={true}
+            		        disabled={selectedOrganization.cloud_sync}
+            		        autoComplete="cloud apikey"
+            		        id="apikey_field"
+            		        margin="normal"
+            		        placeholder="Cloud Apikey"
+            		        variant="outlined"
+            		        onChange={(event) => {
+            		          setCloudSyncApikey(event.target.value);
+            		        }}
+            		      />
+            		      <Button
+            		        disabled={
+            		          (!selectedOrganization.cloud_sync &&
+            		            cloudSyncApikey.length === 0) ||
+            		          loading
+            		        }
+            		        style={{ marginTop: 15, height: 50, width: 150 }}
+            		        onClick={() => {
+            		          setLoading(true);
+            		          enableCloudSync(
+            		            cloudSyncApikey,
+            		            selectedOrganization,
+            		            selectedOrganization.cloud_sync
+            		          );
+            		        }}
+            		        color="primary"
+            		        variant={
+            		          selectedOrganization.cloud_sync === true
+            		            ? "outlined"
+            		            : "contained"
+            		        }
+            		      >
+            		        {selectedOrganization.cloud_sync
+            		          ? "Stop sync"
+            		          : "Start sync"}
+            		      </Button>
+            		    </div>
+            		    {orgSyncResponse.length > 0 ? (
+            		      <Typography style={{ marginTop: 5, marginBottom: 10 }}>
+            		        Message from Shuffle Cloud: <b>{orgSyncResponse}</b>
+            		      </Typography>
+            		    ) : null}
+            		  </div>
+            		)}
+            		<Typography variant="h6" style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}>
+            		  Cloud sync features 
+            		</Typography>
+            		<Typography variant="body2" color="textSecondary" style={{marginBottom: 10, marginLeft: 5, }}>
+									If not otherwise specified, Usage will reset monthly
+            		</Typography>
+            		<Grid container style={{ width: "100%", marginBottom: 15 }}>
 
-                    const newkey = key.replaceAll("_", " ");
-                    const griditem = {
-                      primary: newkey,
-                      secondary:
-                        item.description === undefined ||
-                        item.description === null ||
-                        item.description.length === 0
-                          ? "Not defined yet"
-                          : item.description,
-                      limit: item.limit,
-                      usage: item.usage === undefined ||
-                        item.usage === null ? 0 : item.usage,
-                      data_collection: "None",
-                      active: item.active,
-                      icon: <PolymerIcon style={{ color: itemColor }} />,
-                    };
+            		  {selectedOrganization.sync_features === undefined ||
+            		  selectedOrganization.sync_features === null
+            		    ? null
+            		    : Object.keys(selectedOrganization.sync_features).map(function (
+            		        key,
+            		        index
+            		      ) {
+												// unnecessary parts
+            		        if (key === "schedule" || key === "apps" || key === "updates") {
+            		          return null;
+            		        }
 
-                    return (
-                      <Zoom key={index}>
-                        <GridItem data={griditem} />
-                      </Zoom>
-                    );
-                  })}
-            </Grid>
+            		        const item = selectedOrganization.sync_features[key];
+												if (item === null) {
+													return null
+												}
+
+            		        const newkey = key.replaceAll("_", " ");
+            		        const griditem = {
+            		          primary: newkey,
+            		          secondary:
+            		            item.description === undefined ||
+            		            item.description === null ||
+            		            item.description.length === 0
+            		              ? "Not defined yet"
+            		              : item.description,
+            		          limit: item.limit,
+            		          usage: item.usage === undefined ||
+            		            item.usage === null ? 0 : item.usage,
+            		          data_collection: "None",
+            		          active: item.active,
+            		          icon: <PolymerIcon style={{ color: itemColor }} />,
+            		        };
+
+            		        return (
+            		          <Zoom key={index}>
+            		            <GridItem data={griditem} />
+            		          </Zoom>
+            		        );
+            		      })}
+            		</Grid>
+							</div>
+							)
+						: adminTab === 2 ? 
+							<Priorities
+								isCloud={isCloud}
+								userdata={userdata}
+								adminTab={adminTab}
+								globalUrl={globalUrl}
+								checkLogin={checkLogin}
+							/>
+						: adminTab === 3 ? 
+							<Billing 
+								isCloud={isCloud}
+								userdata={userdata}
+								setSelectedOrganization={setSelectedOrganization}
+								globalUrl={globalUrl}
+								selectedOrganization={selectedOrganization}
+								adminTab={adminTab}
+								billingInfo={billingInfo}
+								selectedOrganization={selectedOrganization}
+								stripeKey={props.stripeKey}
+								handleGetOrg={handleGetOrg}
+							/>
+						: adminTab === 4 ? 
+							<Branding
+								isCloud={isCloud}
+								userdata={userdata}
+								adminTab={adminTab}
+								globalUrl={globalUrl}
+								handleGetOrg={handleGetOrg}
+								selectedOrganization={selectedOrganization}
+								selectedOrganization={selectedOrganization}
+								setSelectedOrganization={setSelectedOrganization}
+							/>
+							: null
+						}
             <Divider
               style={{
                 marginTop: 20,
@@ -2985,273 +2808,10 @@ const Admin = (props) => {
                 backgroundColor: theme.palette.inputColor,
               }}
             />
-            {isCloud &&
-            selectedOrganization.partner_info !== undefined &&
-            selectedOrganization.partner_info.reseller === true ? (
-              <div style={{ marginTop: 30, marginBottom: 200 }}>
-                <Typography
-                  style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
-                  variant="h6"
-                >
-                  Reseller dashboard
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  style={{ margin: 15 }}
-                  onClick={() => {
-                    setSelectedDealModalOpen(true);
-                  }}
-                >
-                  Add deal
-                </Button>
-                <Button
-                  style={{ marginLeft: 5, marginRight: 15 }}
-                  variant="contained"
-                  color="primary"
-                  onClick={() => {
-                    handleGetDeals(userdata.active_org.id);
-                  }}
-                >
-                  <CachedIcon />
-                </Button>
-                <List>
-                  <ListItem>
-                    <ListItemText
-                      primary="Name"
-                      style={{
-                        minWidth: 200,
-                        maxWidth: 200,
-                      }}
-                    />
-                    <ListItemText
-                      primary="Status"
-                      style={{ minWidth: 150, maxWidth: 150, marginLeft: 5 }}
-                    />
-                    <ListItemText
-                      primary="Value"
-                      style={{ minWidth: 125, maxWidth: 125 }}
-                    />
-                    <ListItemText
-                      primary="Discount"
-                      style={{ minWidth: 100, maxWidth: 100 }}
-                    />
-
-                    <ListItemText
-                      primary="Address"
-                      style={{
-                        marginleft: 10,
-                        minWidth: 100,
-                        maxWidth: 100,
-                        overflow: "hidden",
-                      }}
-                    />
-                    <ListItemText
-                      primary="Country"
-                      style={{
-                        marginleft: 10,
-                        minWidth: 100,
-                        maxWidth: 100,
-                        overflow: "hidden",
-                      }}
-                    />
-
-                    <ListItemText
-                      primary="Created"
-                      style={{ minWidth: 200, maxWidth: 100 }}
-                    />
-                    <ListItemText
-                      primary="Last edited"
-                      style={{ minWidth: 200, maxWidth: 100 }}
-                    />
-                  </ListItem>
-                  <Divider />
-                  {dealList.length === 0 ? (
-                    <Typography
-                      variant="h6"
-                      style={{
-                        textAlign: "center",
-                        margin: "auto",
-                        width: 600,
-                        marginTop: 50,
-                        marginBottom: 50,
-                      }}
-                    >
-                      No deals registered yet. Click "Add deal" to register one
-                    </Typography>
-                  ) : (
-                    dealList.map((deal, index) => {
-                      var bgColor = "#27292d";
-                      if (index % 2 === 0) {
-                        bgColor = "#1f2023";
-                      }
-
-                      return (
-                        <ListItem
-                          key={index}
-                          style={{ backgroundColor: bgColor }}
-                        >
-                          <ListItemText
-                            primary={deal.name}
-                            style={{
-                              minWidth: 200,
-                              maxWidth: 200,
-                              overflow: "hidden",
-                            }}
-                          />
-                          <ListItemText
-                            primary={deal.status}
-                            style={{
-                              minWidth: 150,
-                              maxWidth: 150,
-                              marginLeft: 5,
-                              color:
-                                deal.status.toLowerCase() === "requested"
-                                  ? "yellow"
-                                  : deal.status.toLowerCase() === "denied" ||
-                                    deal.status.toLowerCase() === "cancelled"
-                                  ? "red"
-                                  : "green",
-                            }}
-                          />
-                          <ListItemText
-                            primary={`\$${deal.value}`}
-                            style={{ minWidth: 125, maxWidth: 125 }}
-                          />
-                          <ListItemText
-                            primary={
-                              deal.discount.length === 0 ? "TBD" : deal.discount
-                            }
-                            style={{ minWidth: 100, maxWidth: 100 }}
-                          />
-
-                          <ListItemText
-                            primary={deal.address}
-                            style={{
-                              marginleft: 10,
-                              minWidth: 100,
-                              maxWidth: 100,
-                              overflow: "hidden",
-                            }}
-                          />
-                          <ListItemText
-                            primary={deal.country}
-                            style={{
-                              marginleft: 10,
-                              minWidth: 100,
-                              maxWidth: 100,
-                              overflow: "hidden",
-                            }}
-                          />
-
-                          <ListItemText
-                            primary={new Date(
-                              deal.created * 1000
-                            ).toISOString()}
-                            style={{ minWidth: 200, maxWidth: 200 }}
-                          />
-                          <ListItemText
-                            primary={new Date(deal.edited * 1000).toISOString()}
-                            style={{ minWidth: 200, maxWidth: 200 }}
-                          />
-                        </ListItem>
-                      );
-                    })
-                  )}
-                </List>
-
-                <Divider
-                  style={{
-                    marginTop: 20,
-                    marginBottom: 20,
-                    backgroundColor: theme.palette.inputColor,
-                  }}
-                />
-              </div>
-            ) : null}
-            {isCloud &&
-            selectedOrganization.subscriptions !== undefined &&
-            selectedOrganization.subscriptions !== null &&
-            selectedOrganization.subscriptions.length > 0 ? (
-              <div style={{ marginTop: 30, marginBottom: 20 }}>
-                <Typography
-                  style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
-                >
-                  Your subscription
-                  {selectedOrganization.subscriptions.length > 1 ? "s" : ""}
-                </Typography>
-                <Grid container spacing={3} style={{ marginTop: 15 }}>
-                  {selectedOrganization.subscriptions
-                    .reverse()
-                    .map((sub, index) => {
-                      return (
-                        <Grid item key={index} xs={4}>
-                          <Card
-                            elevation={6}
-                            style={{
-                              backgroundColor: theme.palette.inputColor,
-                              color: "white",
-                              padding: 25,
-                              textAlign: "left",
-                            }}
-                          >
-                            <b>Type</b>: {sub.level}
-                            <div />
-                            <b>Recurrence</b>: {sub.recurrence}
-                            <div />
-                            {sub.active ? (
-                              <div>
-                                <b>Started</b>:{" "}
-                                {new Date(sub.startdate * 1000).toISOString()}
-                                <div />
-                                <Button
-                                  variant="outlined"
-                                  color="primary"
-                                  style={{ marginTop: 15 }}
-                                  onClick={() => {
-                                    cancelSubscriptions(sub.reference);
-                                  }}
-                                >
-                                  Cancel subscription
-                                </Button>
-                              </div>
-                            ) : (
-                              <div>
-                                <b>Cancelled</b>:{" "}
-                                {new Date(
-                                  sub.cancellationdate * 1000
-                                ).toISOString()}
-                                <div />
-                                <Typography color="textSecondary">
-                                  <b>Status</b>: Deactivated
-                                </Typography>
-                              </div>
-                            )}
-                          </Card>
-                        </Grid>
-                      );
-                    })}
-                </Grid>
-                <Divider
-                  style={{
-                    marginTop: 20,
-                    backgroundColor: theme.palette.inputColor,
-                  }}
-                />
-              </div>
-            ) : null}
+            
+            
           </div>
         )}
-
-        <div style={{ backgroundColor: "#1f2023", paddingTop: 25 }}>
-          <HandlePayment
-            theme={theme}
-            stripeKey={props.stripeKey}
-            userdata={userdata}
-            globalUrl={globalUrl}
-            {...props}
-          />
-        </div>
       </div>
     ) : null;
 
@@ -3272,19 +2832,15 @@ const Admin = (props) => {
     >
       <DialogTitle>
         <span style={{ color: "white" }}>
-          {curTab === 1
-            ? "Add user"
-            : curTab === 6
-            ? "Add Sub-Organization"
-            : "Add environment"}
+          {curTab === 1 ? "Add user" : curTab === 7 ? "Add Sub-Organization" : "Add environment"}
         </span>
       </DialogTitle>
       <DialogContent>
         {curTab === 1 && isCloud ? (
           <Typography variant="body1" style={{ marginBottom: 10 }}>
-            We'll send an email to invite them to your organization.
+            We will send an email to invite them to your organization.
           </Typography>
-        ) : curTab === 6 ? (
+        ) : curTab === 7 ? (
           <Typography variant="body1" style={{ marginBottom: 10 }}>
             The organization created will become a child of your current
             organization, and be available to you.
@@ -3343,7 +2899,7 @@ const Admin = (props) => {
               </span>
             )}
           </div>
-        ) : curTab === 6 ? (
+        ) : curTab === 7 ? (
           <div>
             Name
             <TextField
@@ -3368,7 +2924,7 @@ const Admin = (props) => {
               }}
             />
           </div>
-        ) : curTab === 5 ? (
+        ) : curTab === 6 ? (
           <div>
             Environment Name
             <TextField
@@ -3414,9 +2970,9 @@ const Admin = (props) => {
               } else {
                 submitUser(modalUser);
               }
-            } else if (curTab === 6) {
+            } else if (curTab === 7) {
               createSubOrg(selectedOrganization.id, orgName);
-            } else if (curTab === 5) {
+            } else if (curTab === 6) {
               submitEnvironment(modalUser);
             }
           }}
@@ -3438,7 +2994,7 @@ const Admin = (props) => {
             <a
               target="_blank"
 							rel="noopener noreferrer"
-              href="https://shuffler.io/docs/organizations#user_management"
+              href="/docs/organizations#user_management"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               Learn more
@@ -3755,490 +3311,19 @@ const Admin = (props) => {
     //setShow2faSetup(true);
   };
 
-  const uploadFiles = (files) => {
-    for (var key in files) {
-      try {
-        const filename = files[key].name;
-        var filedata = new FormData();
-        filedata.append("shuffle_file", files[key]);
-
-        if (typeof files[key] === "object") {
-          handleCreateFile(filename, filedata);
-        }
-
-        /*
-				reader.addEventListener('load', (e) => {
-					var data = e.target.result;
-					setIsDropzone(false)
-					console.log(filename)	
-					console.log(data)
-					console.log(files[key])
-				})
-				reader.readAsText(files[key])
-				*/
-      } catch (e) {
-        console.log("Error in dropzone: ", e);
-      }
-    }
-
-    setTimeout(() => {
-      getFiles();
-    }, 2500);
-  };
-
-  const uploadFile = (e) => {
-    const isDropzone =
-      e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
-    const files = isDropzone ? e.dataTransfer.files : e.target.files;
-
-    //const reader = new FileReader();
-    //alert.info("Starting fileupload")
-    uploadFiles(files);
-  };
 
 
-  const filesView =
-    curTab === 3 ? (
-      <Dropzone
-        style={{
-          maxWidth: window.innerWidth > 1366 ? 1366 : 1200,
-          margin: "auto",
-          padding: 20,
-        }}
-        onDrop={uploadFile}
-      >
-        <div>
-          <div style={{ marginTop: 20, marginBottom: 20 }}>
-            <h2 style={{ display: "inline" }}>Files</h2>
-            <span style={{ marginLeft: 25 }}>
-              Files from Workflows.{" "}
-              <a
-                target="_blank"
-								rel="noopener noreferrer"
-                href="https://shuffler.io/docs/organizations#files"
-                style={{ textDecoration: "none", color: "#f85a3e" }}
-              >
-                Learn more
-              </a>
-            </span>
-          </div>
-          <Button
-            color="primary"
-            variant="contained"
-            onClick={() => {
-              upload.click();
-            }}
-          >
-            <PublishIcon /> Upload files
-          </Button>
-          {/* <FileCategoryInput
-                   isSet={renderTextBox} /> */}
-          <input
-            hidden
-            type="file"
-            multiple
-            ref={(ref) => (upload = ref)}
-            onChange={(event) => {
-              //const file = event.target.value
-              //const fileObject = URL.createObjectURL(actualFile)
-              //setFile(fileObject)
-              //const files = event.target.files[0]
-              uploadFiles(event.target.files);
-            }}
-          />
-          <Button
-            style={{ marginLeft: 5, marginRight: 15 }}
-            variant="contained"
-            color="primary"
-            onClick={() => getFiles()}
-          >
-            <CachedIcon />
-          </Button>
-
-          {fileNamespaces !== undefined &&
-          fileNamespaces !== null &&
-          fileNamespaces.length > 1 ? (
-            <FormControl style={{ minWidth: 150, maxWidth: 150 }}>
-              <InputLabel id="input-namespace-label">File Category</InputLabel>
-              <Select
-                labelId="input-namespace-select-label"
-                id="input-namespace-select-id"
-                style={{
-                  color: "white",
-                  minWidth: 150,
-                  maxWidth: 150,
-                  float: "right",
-                }}
-                value={selectedNamespace}
-                onChange={(event) => {
-                  console.log("CHANGE NAMESPACE: ", event.target);
-                  setSelectedNamespace(event.target.value);
-                }}
-              >
-                {fileNamespaces.map((data, index) => {
-                  return (
-                    <MenuItem
-                      key={index}
-                      value={data}
-                      style={{ color: "white" }}
-                    >
-                      {data}
-                    </MenuItem>
-                  );
-                })}
-              </Select>
-            </FormControl>
-          ) : null}
-          <div style={{display: "inline-flex", position:"relative"}}>
-          {renderTextBox ? 
-          
-          <Tooltip title={"Close"} style={{}} aria-label={""}>
-            <Button
-              style={{ marginLeft: 5, marginRight: 15 }}
-              color="primary"
-              onClick={() => {
-                setRenderTextBox(false);
-                console.log(" close clicked")
-                }}
-            >
-              <ClearIcon/>
-            </Button>
-          </Tooltip>
-          :
-          <Tooltip title={"Add new file category"} style={{}} aria-label={""}>
-            <Button
-              style={{ marginLeft: 5, marginRight: 15 }}
-              color="primary"
-              onClick={() => {
-                setRenderTextBox(true);
-                }}
-            >
-              <AddIcon/>
-            </Button>
-          </Tooltip> }
-          {renderTextBox && <TextField
-                onKeyPress={(event)=>{
-                  handleKeyDown(event);
-                }}
-                InputProps={{
-                  style: {
-                    color: "white",
-                  },
-                }}
-                color="primary"
-                placeholder="File category name"
-                required
-                margin="dense"
-                defaultValue={""}
-                autoFocus
-              />}</div>
-
-          <CodeEditor
-            expansionModalOpen={openEditor}
-            setExpansionModalOpen={setOpenEditor}
-            setcodedata = {setFileContent}
-            codedata={fileContent}
-            isFileEditor = {true}
-            key = {fileContent} //https://reactjs.org/docs/reconciliation.html#recursing-on-children
-            runUpdateText = {runUpdateText}
-          />
-
-          <Divider
-            style={{
-              marginTop: 20,
-              marginBottom: 20,
-              backgroundColor: theme.palette.inputColor,
-            }}
-          />
-
-          <List>
-            <ListItem>
-              <ListItemText
-                primary="Created"
-                style={{ maxWidth: 225, minWidth: 225 }}
-              />
-              <ListItemText
-                primary="Name"
-                style={{
-                  maxWidth: 150,
-                  minWidth: 150,
-                  overflow: "hidden",
-                  marginLeft: 10,
-                }}
-              />
-              <ListItemText
-                primary="Workflow"
-                style={{ maxWidth: 100, minWidth: 100, overflow: "hidden" }}
-              />
-              <ListItemText
-                primary="Md5"
-                style={{ minWidth: 300, maxWidth: 300, overflow: "hidden" }}
-              />
-              <ListItemText
-                primary="Status"
-                style={{ minWidth: 75, maxWidth: 75, marginLeft: 10 }}
-              />
-              <ListItemText
-                primary="Filesize"
-                style={{ minWidth: 125, maxWidth: 125 }}
-              />
-              <ListItemText primary="Actions" />
-            </ListItem>
-            {files === undefined || files === null || files.length === 0
-              ? null
-              : files.map((file, index) => {
-                  if (file.namespace === "") {
-                    file.namespace = "default";
-                  }
-
-                  if (file.namespace !== selectedNamespace) {
-                    return null;
-                  }
-
-                  var bgColor = "#27292d";
-                  if (index % 2 === 0) {
-                    bgColor = "#1f2023";
-                  }
-
-									const isDisabledButton = isCloud || file.filesize < 100000 && file.status === ("active") && allowedFileTypes.includes(file.filename.split(".")[1]) === true
-
-                  return (
-                    <ListItem
-                      key={index}
-                      style={{
-                        backgroundColor: bgColor,
-                        maxHeight: 100,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <ListItemText
-                        style={{
-                          maxWidth: 225,
-                          minWidth: 225,
-                          overflow: "hidden",
-                        }}
-                        primary={new Date(file.created_at * 1000).toISOString()}
-                      />
-                      <ListItemText
-                        style={{
-                          maxWidth: 150,
-                          minWidth: 150,
-                          overflow: "hidden",
-                          marginLeft: 10,
-                        }}
-                        primary={file.filename}
-                      />
-                      <ListItemText
-                        primary={
-                          file.workflow_id === "global" ? (
-                            <IconButton
-                              disabled={file.workflow_id === "global"}
-                            >
-                              <OpenInNewIcon
-                                style={{
-                                  color:
-                                    file.workflow_id !== "global"
-                                      ? "white"
-                                      : "grey",
-                                }}
-                              />
-                            </IconButton>
-                          ) : (
-                            <Tooltip
-                              title={"Go to workflow"}
-                              style={{}}
-                              aria-label={"Download"}
-                            >
-                              <span>
-                                <a
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    textDecoration: "none",
-                                    color: "#f85a3e",
-                                  }}
-                                  href={`/workflows/${file.workflow_id}`}
-                                  target="_blank"
-                                >
-                                  <IconButton
-                                    disabled={file.workflow_id === "global"}
-                                  >
-                                    <OpenInNewIcon
-                                      style={{
-                                        color:
-                                          file.workflow_id !== "global"
-                                            ? "white"
-                                            : "grey",
-                                      }}
-                                    />
-                                  </IconButton>
-                                </a>
-                              </span>
-                            </Tooltip>
-                          )
-                        }
-                        style={{
-                          minWidth: 100,
-                          maxWidth: 100,
-                          overflow: "hidden",
-                        }}
-                      />
-                      <ListItemText
-                        primary={file.md5_sum}
-                        style={{
-                          minWidth: 300,
-                          maxWidth: 300,
-                          overflow: "hidden",
-                        }}
-                      />
-                      <ListItemText
-                        primary={file.status}
-                        style={{
-                          minWidth: 75,
-                          maxWidth: 75,
-                          overflow: "hidden",
-                          marginLeft: 10,
-                        }}
-                      />
-                      <ListItemText
-                        primary={file.filesize}
-                        style={{
-                          minWidth: 125,
-                          maxWidth: 125,
-                          overflow: "hidden",
-                        }}
-                      />
-                      <ListItemText
-                        primary=<span style={{ display:"inline"}}>
-                          <Tooltip
-                            title={"Edit File"}
-                            style={{}}
-                            aria-label={"Edit"}
-                          >
-                            <span>
-                              <IconButton
-                                disabled={isDisabledButton ? false : true}
-                                style = {{padding: "6px"}}
-                                onClick={() => {
-                                  setOpenEditor(true)
-                                  setOpenFileId(file.id)
-                                  readFileData(file)
-                                }}
-                              >
-                                <EditIcon
-                                  style={{
-                                    color: isDisabledButton === true 
-                                        ? "white"
-                                        : "grey",
-                                  }}
-                                />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          <Tooltip
-                            title={"Download file"}
-                            style={{}}
-                            aria-label={"Download"}
-                          >
-                            <span>
-                              <IconButton
-                                style = {{padding: "6px"}}
-                                disabled={file.status !== "active"}
-                                onClick={() => {
-                                  downloadFile(file);
-                                }}
-                              >
-                                <CloudDownloadIcon
-                                  style={{
-                                    color:
-                                      file.status === "active"
-                                        ? "white"
-                                        : "grey",
-                                  }}
-                                />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          <Tooltip
-                            title={"Delete file"}
-                            style={{}}
-                            aria-label={"Delete"}
-                          >
-                            <span>
-                              <IconButton
-                                disabled={file.status !== "active"}
-                                style = {{padding: "6px"}}
-                                onClick={() => {
-                                  deleteFile(file);
-                                }}
-                              >
-                                <DeleteIcon
-                                  style={{
-                                    color:
-                                      file.status === "active"
-                                        ? "white"
-                                        : "grey",
-                                  }}
-                                />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          <Tooltip
-                            title={"Copy file ID"}
-                            style={{}}
-                            aria-label={"copy"}
-                          >
-                            <IconButton
-                              style = {{padding: "6px"}}
-                              onClick={() => {
-                                const elementName = "copy_element_shuffle";
-                                var copyText =
-                                  document.getElementById(elementName);
-                                if (
-                                  copyText !== null &&
-                                  copyText !== undefined
-                                ) {
-                                  const clipboard = navigator.clipboard;
-                                  if (clipboard === undefined) {
-                                    alert.error(
-                                      "Can only copy over HTTPS (port 3443)"
-                                    );
-                                    return;
-                                  }
-
-                                  navigator.clipboard.writeText(file.id);
-                                  copyText.select();
-                                  copyText.setSelectionRange(
-                                    0,
-                                    99999
-                                  ); /* For mobile devices */
-
-                                  /* Copy the text inside the text field */
-                                  document.execCommand("copy");
-
-                                  alert.info(file.id + " copied to clipboard");
-                                }
-                              }}
-                            >
-                              <FileCopyIcon style={{ color: "white" }} />
-                            </IconButton>
-                          </Tooltip>
-                        </span>
-                        style={{
-                          minWidth: 250,
-                          maxWidth: 250,
-                          // overflow: "hidden",
-                        }}
-                      />
-                    </ListItem>
-                  );
-                })}
-          </List>
-        </div>
-      </Dropzone>
-    ) : null;
+  const filesView = curTab !== 3 ? null : 
+		<Files 
+			isCloud={isCloud}
+			globalUrl={globalUrl}
+			userdata={userdata}
+			serverside={serverside} 
+			selectedOrganization={selectedOrganization}
+		/>
 
   const schedulesView =
-    curTab === 4 ? (
+    curTab === 5 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Schedules</h2>
@@ -4246,7 +3331,8 @@ const Admin = (props) => {
             Schedules used in Workflows. Makes locating and control easier.{" "}
             <a
               target="_blank"
-              href="https://shuffler.io/docs/organizations#schedules"
+							rel="noopener noreferrer"
+              href="/docs/organizations#schedules"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               Learn more
@@ -4311,6 +3397,7 @@ const Admin = (props) => {
                           style={{ textDecoration: "none", color: "#f85a3e" }}
                           href={`/workflows/${schedule.workflow_id}`}
                           target="_blank"
+													rel="noopener noreferrer"
                         >
                           {schedule.workflow_id}
                         </a>
@@ -4342,7 +3429,7 @@ const Admin = (props) => {
     ) : null;
 
   const appCategoryView =
-    curTab === 7 ? (
+    curTab === 8 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Categories</h2>
@@ -4445,16 +3532,16 @@ const Admin = (props) => {
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>App Authentication</h2>
           <span style={{ marginLeft: 25 }}>
-            Control the authentication options for individual apps. PS: Actions
-            performed here can be destructive!
+            Control the authentication options for individual apps. 
           </span>
           &nbsp;
           <a
             target="_blank"
-            href="https://shuffler.io/docs/organizations#app_authentication"
+						rel="noopener noreferrer"
+            href="/docs/organizations#app_authentication"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
-            Learn more about authentication
+            Learn more about App Authentication
           </a>
         </div>
         <Divider
@@ -4666,8 +3753,51 @@ const Admin = (props) => {
       </div>
     ) : null;
 
+	const changeRecommendation = (recommendation, action) => {
+    const data = {
+      action: action,
+      name: recommendation.name,
+    };
+
+    fetch(`${globalUrl}/api/v1/recommendations/modify`, {
+      mode: "cors",
+      method: "POST",
+      body: JSON.stringify(data),
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then((response) => {
+        if (response.status === 200) {
+        } else {
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success === true) {
+					if (checkLogin !== undefined) {
+						checkLogin()
+  					getEnvironments()
+					}
+        } else {
+        	if (responseJson.success === false && responseJson.reason !== undefined) {
+          	alert.error("Failed change recommendation: ", responseJson.reason)
+        	} else {
+          	alert.error("Failed change recommendation");
+					}
+        }
+      })
+      .catch((error) => {
+        alert.info("Failed dismissing alert. Please contact support@shuffler.io if this persists.");
+      });
+	}
+
   const environmentView =
-    curTab === 5 ? (
+    curTab === 6 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Environments</h2>
@@ -4676,7 +3806,8 @@ const Admin = (props) => {
             in.{" "}
             <a
               target="_blank"
-              href="https://shuffler.io/docs/organizations#environments"
+							rel="noopener noreferrer"
+              href="/docs/organizations#environments"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               Learn more
@@ -4756,7 +3887,6 @@ const Admin = (props) => {
                 }
 
                 if (environment.archived === undefined) {
-                  getEnvironments();
                   return null;
                 }
 
@@ -4765,174 +3895,215 @@ const Admin = (props) => {
                   bgColor = "#1f2023";
                 }
 
+								// Check if there's a notification for it in userdata.priorities
+								var showCPUAlert = false	
+								var foundIndex = -1
+								if (userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
+									foundIndex = userdata.priorities.findIndex(prio => prio.name.includes("CPU") && prio.active === true)
+
+									if (foundIndex >= 0 && userdata.priorities[foundIndex].name.endsWith(environment.Name)) {
+											showCPUAlert = true
+									}
+								}
+
+								console.log("Show CPU alert: ", showCPUAlert)
+
                 return (
-                  <ListItem key={index} style={{ backgroundColor: bgColor }}>
-                    <ListItemText
-                      primary={environment.Name}
-                      style={{
-                        minWidth: 150,
-                        maxWidth: 150,
-                        overflow: "hidden",
-                      }}
-                    />
-                    <ListItemText
-                      primary={
-                        environment.Type !== "cloud"
-                          ? environment.running_ip === undefined ||
-                            environment.running_ip === null ||
-                            environment.running_ip.length === 0
-                            ? 
-														<div>
-															Not running
-														</div>
-                            : environment.running_ip
-                          : "N/A"
-                      }
-                      style={{
-                        minWidth: 200,
-                        maxWidth: 200,
-                        overflow: "hidden",
-                      }}
-                    />
+									<span key={index}>
+                  	<ListItem key={index} style={{ backgroundColor: bgColor }}>
+                  	  <ListItemText
+                  	    primary={environment.Name}
+                  	    style={{
+                  	      minWidth: 150,
+                  	      maxWidth: 150,
+                  	      overflow: "hidden",
+                  	    }}
+                  	  />
+                  	  <ListItemText
+                  	    primary={
+                  	      environment.Type !== "cloud"
+                  	        ? environment.running_ip === undefined ||
+                  	          environment.running_ip === null ||
+                  	          environment.running_ip.length === 0
+                  	          ? 
+															<div>
+																Not running
+															</div>
+                  	          : environment.running_ip.split(":")[0] 
+                  	        : "N/A"
+                  	    }
+                  	    style={{
+                  	      minWidth: 200,
+                  	      maxWidth: 200,
+                  	      overflow: "hidden",
+                  	    }}
+                  	  />
 
-                    <ListItemText
-                      style={{ minWidth: 100, maxWidth: 100 }}
-                      primary={
-												<Tooltip
-													title={"Copy Orborus command"}
-													style={{}}
-													aria-label={"Copy orborus command"}
-												>
-													<IconButton
+                  	  <ListItemText
+                  	    style={{ minWidth: 100, maxWidth: 100 }}
+                  	    primary={
+													<Tooltip
+														title={"Copy Orborus command"}
 														style={{}}
-														disabled={environment.Type === "cloud"}
-														onClick={() => {
-															if (environment.Type === "cloud") {
-																alert.info("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
-																return
-															}
-
-															const elementName = "copy_element_shuffle";
-															const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
-															const commandData = `docker run --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${globalUrl}"  -d ghcr.io/shuffle/shuffle-orborus:latest`
-															var copyText = document.getElementById(elementName);
-															if (copyText !== null && copyText !== undefined) {
-																const clipboard = navigator.clipboard;
-																if (clipboard === undefined) {
-																	alert.error("Can only copy over HTTPS (port 3443)");
-																	return;
+														aria-label={"Copy orborus command"}
+													>
+														<IconButton
+															style={{}}
+															disabled={environment.Type === "cloud"}
+															onClick={() => {
+																if (environment.Type === "cloud") {
+																	alert.info("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
+																	return
 																}
 
-																navigator.clipboard.writeText(commandData);
-																copyText.select();
-																copyText.setSelectionRange(
-																	0,
-																	99999
-																); /* For mobile devices */
+																const elementName = "copy_element_shuffle";
+																const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
+																const commandData = `docker run --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${globalUrl}" --name="shuffle-orborus" -d ghcr.io/shuffle/shuffle-orborus:latest`
+																var copyText = document.getElementById(elementName);
+																if (copyText !== null && copyText !== undefined) {
+																	const clipboard = navigator.clipboard;
+																	if (clipboard === undefined) {
+																		alert.error("Can only copy over HTTPS (port 3443)");
+																		return;
+																	}
 
-																/* Copy the text inside the text field */
-																document.execCommand("copy");
+																	navigator.clipboard.writeText(commandData);
+																	copyText.select();
+																	copyText.setSelectionRange(
+																		0,
+																		99999
+																	); /* For mobile devices */
 
-																alert.info("Orborus command copied to clipboard");
-															}
-														}}
-													>
-														<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
-													</IconButton>
-												</Tooltip>
-											}
-                    />
+																	/* Copy the text inside the text field */
+																	document.execCommand("copy");
 
-                    <ListItemText
-                      primary={environment.Type}
-                      style={{ minWidth: 125, maxWidth: 125 }}
-                    />
-                    <ListItemText
-                      style={{
-                        minWidth: 125,
-                        maxWidth: 125,
-                        overflow: "hidden",
-                      }}
-                      primary={environment.default ? "true" : null}
-                    >
-                      {environment.default ? null : (
-                        <Button
-                          variant="outlined"
-                          style={{ borderRadius: "0px", marginRight: 5 }}
-                          onClick={() => setDefaultEnvironment(environment)}
-                          color="primary"
-                        >
-                          Make default
-                        </Button>
-                      )}
-                    </ListItemText>
-                    <ListItemText
-                      style={{
-                        minWidth: 100,
-                        maxWidth: 100,
-                        overflow: "hidden",
-                        marginLeft: 10,
-                      }}
-                      primary={environment.archived.toString()}
-                    />
-                    <ListItemText
-                      style={{
-                        minWidth: 150,
-                        maxWidth: 150,
-                        overflow: "hidden",
-                      }}
-                      primary={
-                        environment.edited !== undefined &&
-                        environment.edited !== null &&
-                        environment.edited !== 0
-                          ? new Date(environment.edited * 1000).toISOString()
-                          : 0
-                      }
-                    />
-                    <ListItemText
-                      style={{
-                        minWidth: 300,
-                        maxWidth: 300,
-                        overflow: "hidden",
-                        marginLeft: 10,
-                      }}
-                    >
-                      <div style={{ display: "flex" }}>
-                        <Button
-                          variant={
-                            environment.archived ? "contained" : "outlined"
-                          }
-                          style={{ borderRadius: "0px" }}
-                          onClick={() => deleteEnvironment(environment)}
-                          color="primary"
-                        >
-                          {environment.archived ? "Activate" : "Disable"}
-                        </Button>
-                        <Button
-                          variant={"outlined"}
-                          style={{ borderRadius: "0px" }}
-                          onClick={() => {
-                            console.log(
-                              "Should clear executions for: ",
-                              environment
-                            );
-                            abortEnvironmentWorkflows(environment);
-                          }}
-                          color="primary"
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                    </ListItemText>
-                  </ListItem>
+																	alert.info("Orborus command copied to clipboard");
+																}
+															}}
+														>
+															<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
+														</IconButton>
+													</Tooltip>
+												}
+                  	  />
+
+                  	  <ListItemText
+                  	    primary={environment.Type}
+                  	    style={{ minWidth: 125, maxWidth: 125 }}
+                  	  />
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 125,
+                  	      maxWidth: 125,
+                  	      overflow: "hidden",
+                  	    }}
+                  	    primary={environment.default ? "true" : null}
+                  	  >
+                  	    {environment.default ? null : (
+                  	      <Button
+                  	        variant="outlined"
+                  	        style={{ marginRight: 5 }}
+                  	        onClick={() => setDefaultEnvironment(environment)}
+                  	        color="primary"
+                  	      >
+                  	        Make default
+                  	      </Button>
+                  	    )}
+                  	  </ListItemText>
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 100,
+                  	      maxWidth: 100,
+                  	      overflow: "hidden",
+                  	      marginLeft: 10,
+                  	    }}
+                  	    primary={environment.archived.toString()}
+                  	  />
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 150,
+                  	      maxWidth: 150,
+                  	      overflow: "hidden",
+                  	    }}
+                  	    primary={
+                  	      environment.edited !== undefined &&
+                  	      environment.edited !== null &&
+                  	      environment.edited !== 0
+                  	        ? new Date(environment.edited * 1000).toISOString()
+                  	        : 0
+                  	    }
+                  	  />
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 300,
+                  	      maxWidth: 300,
+                  	      overflow: "hidden",
+                  	      marginLeft: 10,
+                  	    }}
+                  	  >
+                  	    <div style={{ display: "flex" }}>
+													<ButtonGroup style={{borderRadius: "5px 5px 5px 5px",}}>
+														<Button
+															variant={environment.archived ? "contained" : "outlined"}
+															style={{ }}
+															onClick={() => deleteEnvironment(environment)}
+															color="primary"
+														>
+															{environment.archived ? "Activate" : "Disable"}
+														</Button>
+														<Button
+															variant={"outlined"}
+															style={{ }}
+															disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
+															onClick={() => {
+																console.log("Should clear executions for: ", environment);
+
+																if (isCloud && environment.Name.toLowerCase() === "cloud") {
+																	rerunCloudWorkflows(environment);
+																} else { 
+																	abortEnvironmentWorkflows(environment);
+																}
+															}}
+															color="primary"
+														>
+															{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
+														</Button>
+													</ButtonGroup>
+                  	    </div>
+                  	  </ListItemText>
+                  	</ListItem>
+										{showCPUAlert === false ? null : 
+                  		<ListItem key={index+"_cpu"} style={{ backgroundColor: bgColor }}>
+												<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+													<div style={{flex: 2, overflow: "hidden",}}>
+														<Typography variant="body1" >
+															90% CPU the server(s) hosting the Shuffle App Runner (Orborus) was found.  
+														</Typography>
+														<Typography variant="body2" color="textSecondary">
+															Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://shuffler.io/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
+														</Typography>
+													</div>
+													<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
+														<Button style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="outlined" color="secondary" onClick={() => {
+															// dismiss -> get envs
+														 	changeRecommendation(userdata.priorities[foundIndex], "dismiss")
+														}}>
+															Dismiss	
+														</Button>
+													</div> 
+												</div>
+											</ListItem>
+										}
+									</span>
                 );
               })}
         </List>
+				{/*<EnvironmentStats />*/}
       </div>
     ) : null;
 
   const organizationsTab =
-    curTab === 6 ? (
+    curTab === 7 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Organizations</h2>
@@ -5062,7 +4233,7 @@ const Admin = (props) => {
     ) : null;
 
   const hybridTab =
-    curTab === 7 ? (
+    curTab === 8 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Hybrid</h2>
@@ -5082,7 +4253,7 @@ const Admin = (props) => {
               style={{ minWidth: 150, maxWidth: 150 }}
             />
             <ListItemText
-              primary="Orborus running"
+              primary="Orborus source"
               style={{ minWidth: 200, maxWidth: 200 }}
             />
             <ListItemText
@@ -5113,6 +4284,16 @@ const Admin = (props) => {
       </div>
     ) : null;
 
+    const cacheOrgView =
+    curTab === 4 ? (
+      <div>
+        <CacheView
+					globalUrl={globalUrl}
+					orgId = {selectedOrganization.id}
+        />
+      </div>
+    ) : null;
+
   // primary={environment.Registered ? "true" : "false"}
 
   const iconStyle = { marginRight: 10 };
@@ -5132,6 +4313,8 @@ const Admin = (props) => {
           textColor="secondary"
           onChange={setConfig}
           aria-label="disabled tabs example"
+          variant="scrollable"
+          scrollButtons="auto"
         >
           <Tab
             label=<span>
@@ -5159,6 +4342,11 @@ const Admin = (props) => {
             </span>
           />
           <Tab
+            label=<span>
+              <StorageIcon style={iconStyle} /> Datastore 
+            </span>
+          />
+          <Tab
             disabled={userdata.admin !== "true"}
             label=<span>
               <ScheduleIcon style={iconStyle} />
@@ -5166,7 +4354,6 @@ const Admin = (props) => {
             </span>
           />
           <Tab
-            index={5}
             disabled={userdata.admin !== "true"}
             label=<span>
               <EcoIcon style={iconStyle} />
@@ -5174,12 +4361,11 @@ const Admin = (props) => {
             </span>
           />
           <Tab
-            index={6}
-            value={6}
             label=<span>
-              <BusinessIcon style={iconStyle} /> Organizations
+              <BusinessIcon style={iconStyle} /> Tenants
             </span>
           />
+
           {/*window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null*/}
           {/*window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null*/}
         </Tabs>
@@ -5200,6 +4386,7 @@ const Admin = (props) => {
           {hybridTab}
           {organizationsTab}
           {appCategoryView}
+          {cacheOrgView}
         </div>
       </Paper>
     </div>
@@ -5210,7 +4397,6 @@ const Admin = (props) => {
       {modalView}
       {cloudSyncModal}
       {editUserModal}
-      {addDealModal}
       {editAuthenticationModal}
       {data}
       <TextField

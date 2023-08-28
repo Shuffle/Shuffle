@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import theme from '../theme';
+import theme from '../theme.jsx';
 import {isMobile} from "react-device-detect";
 import AppGrid from "../components/AppGrid.jsx"
 import WorkflowGrid from "../components/WorkflowGrid.jsx"
@@ -118,7 +118,7 @@ const Search = (props) => {
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 
-		<div style={{paddingBottom: hidemargins === true ? 0 : 100, color: "white", backgroundColor: theme.palette.surfacColor}}>
+		<div style={{paddingBottom: hidemargins === true ? 0 : 100, color: "white", }}>
 			<div style={boxStyle}>
 				<Tabs
 					style={{width: 610, margin: "auto", marginTop: hidemargins === true ? 0 : 25, }}
@@ -127,6 +127,8 @@ const Search = (props) => {
 					textColor="secondary"
 					onChange={setConfig}
 					aria-label="disabled tabs example"
+					variant="scrollable"
+          			scrollButtons="auto"
 				>
 					<Tab
 						label=<span>
@@ -179,7 +181,7 @@ const Search = (props) => {
 
 	// #1f2023?
 	return(
-		<div style={{backgroundColor: "#1f2023",}}>
+		<div style={{}}>
 			{loadedCheck}
 		</div>
 	)
