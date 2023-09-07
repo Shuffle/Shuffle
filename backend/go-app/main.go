@@ -6115,6 +6115,16 @@ func main() {
 		hostname = "MISSING"
 	}
 
+	encryptionEnabled := (
+		len(os.Getenv("SHUFFLE_ENCRYPTION_MODIFIER")) > 0 && 
+		len(os.Getenv("SHUFFLE_MEMCACHE_ENCRYPTION_PASSPHRASE")) > 0)
+
+	if !(encryptionEnabled) {
+		log.Printf("[INFO] env variables SHUFFLE_ENCRYPTION_MODIFIER and SHUFFLE_MEMCACHE_ENCRYPTION_PASSPHRASE required for encryption to be enabled are not set")
+	} else {
+		log.Printf("[INFO] env variables SHUFFLE_ENCRYPTION_MODIFIER and SHUFFLE_MEMCACHE_ENCRYPTION_PASSPHRASE are set! Enabling encryption.")	
+	}
+
 	innerPort := os.Getenv("BACKEND_PORT")
 	if innerPort == "" {
 		log.Printf("[DEBUG] Running on %s:5001", hostname)
