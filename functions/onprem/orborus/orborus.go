@@ -585,10 +585,9 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	//CPUQuota:  25000,
 	//CPUPeriod: 100000,
 	//CPUShares: 256,
-	// fmt.Printf("IMAGE NAME: %s",image)
-	// fmt.Printf("EEXECUTION REQUEST IN ORBORUS: %+v",executionRequest)
+
 	fmt.Printf("ENV: %+v", env)
-	image = "shuffle-worker:v1"
+	image = "shuffle-worker:v1" //hard coded image name to test locally 
 
 	envMap := make(map[string]string)
 	for _, envStr := range env {
