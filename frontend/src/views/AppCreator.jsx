@@ -286,7 +286,7 @@ const getJsonObject = (properties) => {
 	for (let key in properties) {
 		const property = properties[key];
 
-		const subloop = false
+		let subloop = false
 		if (property.hasOwnProperty("type")) {
 			if (property.type === "object" || property.type === "array") {
 				subloop = true
