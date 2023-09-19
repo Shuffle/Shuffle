@@ -43,6 +43,7 @@ const SearchField = props => {
 	const node = useRef()
 	const [searchOpen, setSearchOpen] = useState(false)
 	const [oldPath, setOldPath] = useState("")
+	const [value, setValue] = useState("");
 
 	if (serverside === true) {
 		return null
@@ -67,7 +68,13 @@ const SearchField = props => {
 	//}, searchOpen)
 
 	const SearchBox = ({currentRefinement, refine, isSearchStalled, } ) => {
-
+		const keyPressHandler = (e) => {
+			// e.preventDefault();
+			if (e.which === 13) {
+			  // alert("You pressed enter!");
+			  navigate("/search?q=" + currentRefinement, { state: value, replace: true });
+			}
+		};
 			/*
 				endAdornment: (
 					<InputAdornment position="end" style={{textAlign: "right", zIndex: 5001, cursor: "pointer", width: 100, }} onMouseOver={(event) => {
@@ -108,6 +115,7 @@ const SearchField = props => {
 					color="primary"
 					placeholder="Find Public Apps, Workflows, Documentation..."
 					value={currentRefinement}
+					onKeyDown={keyPressHandler}
 					id="shuffle_search_field"
 					onClick={(event) => {
 						if (!searchOpen) {

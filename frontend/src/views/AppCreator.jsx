@@ -196,8 +196,9 @@ const parseCurl = (s) => {
           case "data":
             if (out.method === "GET" || out.method === "HEAD")
               out.method = "POST";
-            out.header["Content-Type"] =
-              out.header["Content-Type"] || "application/x-www-form-urlencoded";
+
+            out.header["Content-Type"] = out.header["Content-Type"] || "application/x-www-form-urlencoded";
+              
             out.body = out.body ? out.body + "&" + arg : arg;
             state = "";
             break;
@@ -223,52 +224,52 @@ const parseCurl = (s) => {
 
 // Basically CRUD for each category + special
 export const appCategories = [
-		{
-    	"name": "Communication",
-			"color": "#FFC107",
-			"icon": "communication",
-			"action_labels": ["List Messages", "Send Message", "Get Message", "Search messages"],
-		}, {
-			"name": "SIEM",
-			"color": "#FFC107",
-			"icon": "siem",
-			"action_labels": ["Search", "List Alerts", "Close Alert", "Create detection", "Add to lookup list",],
-		}, {
-			"name": "Eradication",
-			"color": "#FFC107",
-			"icon": "eradication",
-			"action_labels": ["List Alerts", "Close Alert", "Create detection", "Block hash", "Search Hosts", "Isolate host", "Unisolate host"],
-		}, {
-			"name": "Cases",
-			"color": "#FFC107",
-			"icon": "cases",
-			"action_labels": ["List tickets", "Get ticket", "Create ticket", "Close ticket", "Add comment", "Update ticket",],
-		}, {
-			"name": "Assets",
-			"color": "#FFC107",
-			"icon": "assets",
-			"action_labels": ["List Assets", "Get Asset", "Search Assets", "Search Users", "Search endpoints", "Search vulnerabilities"],
-		}, {
-			"name": "Intel",
-			"color": "#FFC107",
-			"icon": "intel",
-			"action_labels": ["Get IOC", "Search IOC", "Create IOC", "Update IOC", "Delete IOC",],
-		}, {
-			"name": "IAM",
-			"color": "#FFC107",
-			"icon": "iam",
-			"action_labels": ["Reset Password", "Enable user", "Disable user", "Get Identity", "Get Asset", "Search Identity", ],
-		}, {
-			"name": "Network",
-			"color": "#FFC107",
-			"icon": "network",
-			"action_labels": ["Get Rules", "Allow IP", "Block IP",],
-		}, {
-			"name": "Other",
-			"color": "#FFC107",
-			"icon": "other",
-			"action_labels": ["Update Info", "Get Info", "Get Status", "Get Version", "Get Health", "Get Config", "Get Configs", "Get Configs by type", "Get Configs by name", "Run script"],
-		},
+	{
+	"name": "Communication",
+		"color": "#FFC107",
+		"icon": "communication",
+		"action_labels": ["List Messages", "Send Message", "Get Message", "Search messages", "List Attachments", "Get Attachment", "Get Contact"],
+	}, {
+		"name": "SIEM",
+		"color": "#FFC107",
+		"icon": "siem",
+		"action_labels": ["Search", "List Alerts", "Close Alert",  "Get Alert",  "Create detection", "Add to lookup list",],
+	}, {
+		"name": "Eradication",
+		"color": "#FFC107",
+		"icon": "eradication",
+		"action_labels": ["List Alerts", "Close Alert", "Get Alert", "Create detection", "Block hash", "Search Hosts", "Isolate host", "Unisolate host"],
+	}, {
+		"name": "Cases",
+		"color": "#FFC107",
+		"icon": "cases",
+		"action_labels": ["List tickets", "Get ticket", "Create ticket", "Close ticket", "Add comment", "Update ticket", "Search tickets"],
+	}, {
+		"name": "Assets",
+		"color": "#FFC107",
+		"icon": "assets",
+		"action_labels": ["List Assets", "Get Asset", "Search Assets", "Search Users", "Search endpoints", "Search vulnerabilities"],
+	}, {
+		"name": "Intel",
+		"color": "#FFC107",
+		"icon": "intel",
+		"action_labels": ["Get IOC", "Search IOC", "Create IOC", "Update IOC", "Delete IOC",],
+	}, {
+		"name": "IAM",
+		"color": "#FFC107",
+		"icon": "iam",
+		"action_labels": ["Reset Password", "Enable user", "Disable user", "Get Identity", "Get Asset", "Search Identity", ],
+	}, {
+		"name": "Network",
+		"color": "#FFC107",
+		"icon": "network",
+		"action_labels": ["Get Rules", "Allow IP", "Block IP",],
+	}, {
+		"name": "Other",
+		"color": "#FFC107",
+		"icon": "other",
+		"action_labels": ["Update Info", "Get Info", "Get Status", "Get Version", "Get Health", "Get Config", "Get Configs", "Get Configs by type", "Get Configs by name", "Run script"],
+	},
 ]
 
 export const base64_decode = (str) => {
@@ -570,11 +571,11 @@ const AppCreator = (defaultprops) => {
 
 		if (data.openapi === null)  {
 			toast("Failed to load OpenAPI for app. Please contact support if this persists.")
-    	setIsAppLoaded(true);
+    		setIsAppLoaded(true);
 			return
 		}
 
-		console.log("Decoded: ", parsedDecoded)
+		//console.log("Decoded: ", parsedDecoded)
     const parsedapp =
       data.openapi === undefined || data.openapi === null 
         ? data
@@ -719,9 +720,9 @@ const AppCreator = (defaultprops) => {
     var newActions = [];
     var wordlist = {};
     var all_categories = [];
-		var parentUrl = ""
+	var parentUrl = ""
 
-		console.log("Paths: ", data.paths)
+	console.log("Paths: ", data.paths)
     if (data.paths !== null && data.paths !== undefined) {
       for (let [path, pathvalue] of Object.entries(data.paths)) {
 
@@ -751,45 +752,44 @@ const AppCreator = (defaultprops) => {
             tmpname = methodvalue.operationId;
           }
 
-					if (tmpname !== undefined && tmpname !== null) {
-          	tmpname = tmpname.replaceAll(".", " ");
-					}
+			if (tmpname !== undefined && tmpname !== null) {
+	tmpname = tmpname.replaceAll(".", " ");
+			}
 
-					if ((tmpname === undefined || tmpname === null) && methodvalue.description !== undefined && methodvalue.description !== null && methodvalue.description.length > 0) {
-						tmpname = methodvalue.description.replaceAll(".", " ").replaceAll("_", " ")
-					}
+			if ((tmpname === undefined || tmpname === null) && methodvalue.description !== undefined && methodvalue.description !== null && methodvalue.description.length > 0) {
+				tmpname = methodvalue.description.replaceAll(".", " ").replaceAll("_", " ")
+			}
 
-          var newaction = {
-            name: tmpname,
-            description: methodvalue.description,
-            url: path,
-            file_field: "",
-            method: method.toUpperCase(),
-            headers: "",
-            queries: [],
-            paths: [],
-            body: "",
-            errors: [],
-            example_response: "",
-						action_label: "No Label",
-						required_bodyfields: [],
-          };
+            var newaction = {
+              name: tmpname,
+              description: methodvalue.description,
+              url: path,
+              file_field: "",
+              method: method.toUpperCase(),
+              headers: "",
+              queries: [],
+              paths: [],
+              body: "",
+              errors: [],
+              example_response: "",
+		      action_label: "No Label",
+		      required_bodyfields: [],
+            };
 
-					if (methodvalue["x-label"] !== undefined && methodvalue["x-label"] !== null) {
-						// FIX: Map labels only if they're actually in the category list
-						newaction.action_label = methodvalue["x-label"]
-					}
+			if (methodvalue["x-label"] !== undefined && methodvalue["x-label"] !== null) {
+				// FIX: Map labels only if they're actually in the category list
+				newaction.action_label = methodvalue["x-label"]
+			}
 
-					if (methodvalue["x-required-fields"] !== undefined && methodvalue["x-required-fields"] !== null) {
-						newaction.required_bodyfields = methodvalue["x-required-fields"]
-					}
+			if (methodvalue["x-required-fields"] !== undefined && methodvalue["x-required-fields"] !== null) {
+				newaction.required_bodyfields = methodvalue["x-required-fields"]
+			}
 
-					if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
-						const regex = /_shuffle_replace_\d/i;
-						//console.log("NEW: ", 
-						newaction.url = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
-						console.log("Replaced: ", newaction.url) 
-					}
+			if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
+				const regex = /_shuffle_replace_\d/i;
+				//console.log("NEW: ", 
+				newaction.url = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
+			}
 
           // Finding category
           if (path.includes("/")) {
@@ -1110,19 +1110,11 @@ const AppCreator = (defaultprops) => {
                   undefined
                 ) {
                   if (
-                    methodvalue.responses.default.content["text/plain"][
-                      "schema"
-                    ] !== undefined
-                  ) {
-                    if (
-                      methodvalue.responses.default.content["text/plain"][
-                        "schema"
-                      ]["example"] !== undefined
-                    ) {
-                      newaction.example_response =
-                        methodvalue.responses.default.content["text/plain"][
-                          "schema"
-                        ]["example"]
+                    methodvalue.responses.default.content["text/plain"]["schema"] !== undefined) {
+                    if (methodvalue.responses.default.content["text/plain"]["schema"]["example"] !== undefined) {
+                      newaction.example_response = methodvalue.responses.default.content["text/plain"]["schema"]["example"]
+                        
+                        
 
                     }
 
@@ -1560,12 +1552,12 @@ const AppCreator = (defaultprops) => {
 
     if (securitySchemes !== undefined) {
       
-			console.log("SECURITY: ", securitySchemes)
-      var newauth = [];
-			try {
-				var optionset = false 
+	  //console.log("SECURITY: ", securitySchemes)
+	  var newauth = [];
+	  try {
+		var optionset = false 
       	for (const [key, value] of Object.entries(securitySchemes)) {
-      	  console.log("AUTH: ", key, value);
+      	  //console.log("AUTH: ", key, value);
 
       	  if (key === "jwt") {
       	    setAuthenticationOption("JWT");
@@ -1776,12 +1768,12 @@ const AppCreator = (defaultprops) => {
 			if (!found) {
 				newActions2.push(action)
 			} else {
-				console.log("NOT skipping duplicate action: ", action.url, ". Should merge contents")
+				//console.log("NOT skipping duplicate action: ", action.url, ". Should merge contents")
 				newActions2.push(action)
 			}
 		}
 
-		console.log("Actions: ", newActions.length, " Actions2: ", newActions2.length)
+		//console.log("Actions: ", newActions.length, " Actions2: ", newActions2.length)
 		newActions = newActions2
     if (newActions.length > increaseAmount - 1) {
       setActionAmount(increaseAmount);
@@ -3880,7 +3872,7 @@ const AppCreator = (defaultprops) => {
 
 										const datasplit = parsedurlsplit[1].split("&")
 										for (var key in datasplit) {
-											console.log("Data: ", datasplit[key])
+											//console.log("Data: ", datasplit[key])
 											var actualkey = datasplit[key]
 											var example = ""
 											if (datasplit[key].includes("=")) {
@@ -4143,7 +4135,7 @@ const AppCreator = (defaultprops) => {
 							overflowX: "hidden",
 						}}
 						onClick={() => {
-							console.log("Data: ", data)
+							//console.log("Data: ", data)
 							if (hasFile) {
 								//setActionField("headers", "")
 								//console.log("It has a file: ", data["file_field"])
@@ -4321,9 +4313,9 @@ const AppCreator = (defaultprops) => {
 	}
 
   const LoopActions = (props) => {
-		const { filteredActions } = props;
+	const { filteredActions } = props;
 
-		console.log("Actions: ", filteredActions)
+	//console.log("Actions: ", filteredActions)
     if (filteredActions === null || filteredActions === undefined || filteredActions.length === 0) {
 			return null
 		}
@@ -4745,7 +4737,7 @@ const AppCreator = (defaultprops) => {
       }
 
       const handleSubmitCheck = () => {
-        console.log("NEW AUTH: ", authenticationOption);
+        //console.log("NEW AUTH: ", authenticationOption);
         if (authenticationOption.label.length === 0) {
           authenticationOption.label = `Auth for ${selectedApp.name}`;
           //toast("Label can't be empty")
@@ -4968,10 +4960,10 @@ const AppCreator = (defaultprops) => {
           {projectCategories.map((tag, index) => {
             const newname = tag.charAt(0).toUpperCase() + tag.slice(1);
 
-						//var regex = /_shuffle_replace_\d/i;
-						////console.log("NEW: ", 
-						//newname = newname.replaceAll(regex, "")
-						//console.log("Replaced: ", newname) 
+			//var regex = /_shuffle_replace_\d/i;
+			////console.log("NEW: ", 
+			//newname = newname.replaceAll(regex, "")
+			//console.log("Replaced: ", newname) 
 
             return (
               <Chip

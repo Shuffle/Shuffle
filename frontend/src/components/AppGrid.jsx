@@ -3,6 +3,7 @@ import React, {useEffect, useState} from 'react';
 import theme from '../theme.jsx';
 import ReactGA from 'react-ga4';
 import {Link} from 'react-router-dom';
+import { removeQuery } from '../components/ScrollToTop.jsx';
 
 import { 
 	Search as SearchIcon, 
@@ -89,21 +90,24 @@ const AppGrid = props => {
 	}
 
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {
-		useEffect(() => {
-			if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
-				const urlSearchParams = new URLSearchParams(window.location.search)
-				const params = Object.fromEntries(urlSearchParams.entries())
-				const foundQuery = params["q"]
-				if (foundQuery !== null && foundQuery !== undefined) {
-					console.log("Got query: ", foundQuery)
-					refine(foundQuery)
-				}
+		var defaultSearch = "" 
+		//useEffect(() => {
+		if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
+			const urlSearchParams = new URLSearchParams(window.location.search)
+			const params = Object.fromEntries(urlSearchParams.entries())
+			const foundQuery = params["q"]
+			if (foundQuery !== null && foundQuery !== undefined) {
+				console.log("Got query: ", foundQuery)
+				refine(foundQuery)
+				defaultSearch = foundQuery
 			}
-		}, [])
+		}
+		//}, [])
 
 		return (
 		  <form noValidate action="" role="search">
 				<TextField 
+					defaultValue={defaultSearch}
 					fullWidth
 					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%",}} 
 					InputProps={{
@@ -121,10 +125,12 @@ const AppGrid = props => {
 					autoComplete='off'
 					type="search"
 					color="primary"
-					defaultValue={currentRefinement}
 					placeholder="Find Apps..."
 					id="shuffle_search_field"
 					onChange={(event) => {
+						// Remove "q" from URL
+						removeQuery("q")
+
 						refine(event.currentTarget.value)
 					}}
 					limit={5}
@@ -150,8 +156,6 @@ const AppGrid = props => {
 		//if (hits.length > 0 && hits.length !== innerHits.length) {
 		//	setInnerHits(hits)
 		//}
-
-		console.log("In appgrid")
 
 		return (
 			<Grid container spacing={2}>

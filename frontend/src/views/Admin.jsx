@@ -3381,11 +3381,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                     <ListItemText
                       style={{ maxWidth: 200, minWidth: 200 }}
                       primary={
-                        schedule.environment === "cloud" ? (
+                        schedule.environment === "cloud" || schedule.environment === "" || schedule.frequency.length > 0 ? 
                           schedule.frequency
-                        ) : (
+                         : 
                           <span>{schedule.seconds} seconds</span>
-                        )
                       }
                     />
                     <ListItemText
@@ -3399,14 +3398,14 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                           style={{ textDecoration: "none", color: "#f85a3e" }}
                           href={`/workflows/${schedule.workflow_id}`}
                           target="_blank"
-													rel="noopener noreferrer"
+						  rel="noopener noreferrer"
                         >
                           {schedule.workflow_id}
                         </a>
                       }
                     />
                     <ListItemText
-                      primary={schedule.argument}
+                      primary={schedule.argument.replaceAll('\\\"', '\"')}
                       style={{
                         minWidth: 300,
                         maxWidth: 300,

@@ -393,6 +393,9 @@ export const validateJson = (showResult) => {
 	if (typeof showResult === 'string') {
 		showResult = showResult.split(" False").join(" false")
 		showResult = showResult.split(" True").join(" true")
+
+		showResult.replaceAll("False,", "false,")
+		showResult.replaceAll("True,", "true,")
 	}
 
 	if (typeof showResult === "object" || typeof showResult === "array") {
@@ -1247,9 +1250,9 @@ const Workflows = (props) => {
 
 	//flexDirection: !isMobile ? "column" : "row",
   const paperAppContainer = {
-    display: "flex",
-    flexWrap: "wrap",
-    alignContent: "space-between",
+    //display: "flex",
+    //flexWrap: "wrap",
+    //alignContent: "space-between",
   };
 
   const paperAppStyle = {
@@ -1587,7 +1590,7 @@ const Workflows = (props) => {
   const NewWorkflowPaper = () => {
     const [hover, setHover] = React.useState(false);
 
-    const innerColor = "rgba(255,255,255,0.3)";
+    const innerColor = "rgba(255,255,255,0.3)"
     const setupPaperStyle = {
       minHeight: paperAppStyle.minHeight,
 	  maxWidth: "100%",
@@ -1609,9 +1612,9 @@ const Workflows = (props) => {
           square
           style={setupPaperStyle}
           onClick={() => {
-						setModalOpen(true)
-  					setIsEditing(false)
-					}}
+			setModalOpen(true)
+			setIsEditing(false)
+		  }}
           onMouseOver={() => {
             setHover(true);
           }}
@@ -1682,7 +1685,7 @@ const Workflows = (props) => {
     }
 
     const actions = data.actions !== null ? data.actions.length : 0;
-		const appGroup = getWorkflowAppgroup(data)
+	const appGroup = getWorkflowAppgroup(data)
     const [triggers, subflows] = getWorkflowMeta(data);
 
     const workflowMenuButtons = (
@@ -1699,22 +1702,22 @@ const Workflows = (props) => {
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={(event) => {
-						event.stopPropagation()
-						ReactDOM.unstable_batchedUpdates(() => {
-            	setModalOpen(true);
-            	setEditingWorkflow(JSON.parse(JSON.stringify(data)));
-            	setNewWorkflowName(data.name);
-            	setNewWorkflowDescription(data.description);
-            	setDefaultReturnValue(data.default_return_value);
-            	if (data.tags !== undefined && data.tags !== null) {
-            	  setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
-            	}
+				event.stopPropagation()
+				ReactDOM.unstable_batchedUpdates(() => {
+					setModalOpen(true);
+					setEditingWorkflow(JSON.parse(JSON.stringify(data)));
+					setNewWorkflowName(data.name);
+					setNewWorkflowDescription(data.description);
+					setDefaultReturnValue(data.default_return_value);
+					if (data.tags !== undefined && data.tags !== null) {
+					  setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
+					}
 
-							if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
-								setSelectedUsecases(data.usecase_ids)
-							}
-						})
-          }}
+					if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
+						setSelectedUsecases(data.usecase_ids)
+					}
+				})
+  		  }}
           key={"change"}
         >
           <EditIcon style={{ marginLeft: 0, marginRight: 8 }} />
@@ -2122,18 +2125,18 @@ const Workflows = (props) => {
                 : null}
             </Grid>
           {data.actions !== undefined && data.actions !== null ? (
-						<div style={{position: "absolute", top: 10, right: 10, }}>
-							<IconButton
-								aria-label="more"
-								aria-controls="long-menu"
-								aria-haspopup="true"
-								onClick={menuClick}
-								style={{ padding: "0px", color: "#979797" }}
-							>
-								<MoreVertIcon />
-							</IconButton>
-							{workflowMenuButtons}
-						</div>
+			<div style={{position: "absolute", top: 10, right: 10, }}>
+				<IconButton
+					aria-label="more"
+					aria-controls="long-menu"
+					aria-haspopup="true"
+					onClick={menuClick}
+					style={{ padding: "0px", color: "#979797" }}
+				>
+					<MoreVertIcon />
+				</IconButton>
+				{workflowMenuButtons}
+			</div>
           ) : null}
 				</Grid>
 			</Paper>
@@ -2180,13 +2183,13 @@ const Workflows = (props) => {
       workflowdata["default_return_value"] = defaultReturnValue;
     }
 
-		if (currentUsecases !== undefined && currentUsecases !== null) {
-			workflowdata["usecase_ids"] = currentUsecases 
-			//workflows[0].category = ["detect"]
-			//workflows[0].usecase_ids = ["Correlate tickets"]
-		}
+	if (currentUsecases !== undefined && currentUsecases !== null) {
+		workflowdata["usecase_ids"] = currentUsecases 
+		//workflows[0].category = ["detect"]
+		//workflows[0].usecase_ids = ["Correlate tickets"]
+	}
 
-		const new_url = `${globalUrl}/api/v1/workflows${extraData}`
+	const new_url = `${globalUrl}/api/v1/workflows${extraData}`
     return fetch(new_url, {
       method: method,
       headers: {
@@ -2206,15 +2209,15 @@ const Workflows = (props) => {
         return response.json();
       })
       .then((responseJson) => {
-				if (responseJson.success === false) {
-					if (responseJson.reason !== undefined) {
-						toast("Error setting workflow: ", responseJson.reason)
-					} else {
-						toast("Error setting workflow.")
-					}
-
-					return
+			if (responseJson.success === false) {
+				if (responseJson.reason !== undefined) {
+					toast("Error setting workflow: ", responseJson.reason)
+				} else {
+					toast("Error setting workflow.")
 				}
+
+				return
+			}
 
         if (redirect) {
           //window.location.pathname = "/workflows/" + responseJson["id"];
@@ -2224,7 +2227,7 @@ const Workflows = (props) => {
           // Update :)
           setTimeout(() => {
             getAvailableWorkflows();
-          }, 2500);
+          }, 4000);
 					setSubmitLoading(false)
           setModalOpen(false);
         } else {
@@ -2244,7 +2247,7 @@ const Workflows = (props) => {
 
   const importFiles = (event) => {
     console.log("Importing!");
-		setSubmitLoading(true)
+	setSubmitLoading(true)
 
     if (event.target.files.length > 0) {
     	console.log("Files: !", event.target.files.length);
@@ -2281,9 +2284,9 @@ const Workflows = (props) => {
             data.default_return_value,
             {},
             false,
-						[],
-						"",
-						data.status,
+			[],
+			"",
+			data.status,
           )
             .then((response) => {
               if (response !== undefined) {
@@ -2301,9 +2304,9 @@ const Workflows = (props) => {
                   data.default_return_value,
                   data,
                   false,
-									[],
-									"",
-									data.status,
+				  [],
+				  "",
+				  data.status,
                 ).then((response) => {
                   if (response !== undefined) {
                     toast("Successfully imported " + data.name);
@@ -3239,14 +3242,18 @@ const Workflows = (props) => {
 										fullWidth
 										value={filters}
 										onChange={(chips) => {
+											console.log("CHANGE: ", chips);
 											setFilters(chips);
+    										findWorkflow(chips);
 										}}
-										onAdd={(chip) => {
-											addFilter(chip);
-										}}
-										onDelete={(_, index) => {
-											removeFilter(index);
-										}}
+										//onAdd={(chip) => {
+										//	console.log("ADd: ", chip);
+										//	addFilter(chip);
+										//}}
+										//onDelete={(_, index) => {
+										//	console.log("Remove: ", index);
+										//	removeFilter(index);
+										//}}
 									/>
 								</div>
 							</div>
@@ -3485,11 +3492,11 @@ const Workflows = (props) => {
 						/>
 					: null}
 
-					<div style={{marginTop: 30, marginBottom: 50, marginLeft: 30, }}>
+					<div style={{}}>
 						{view === "grid" ? (
-							<Grid container spacing={filteredWorkflows.length === 0 ? 12 : filteredWorkflows.length === 1 ? 6 : 4} style={paperAppContainer}>
+							<Grid container spacing={0/*filteredWorkflows.length === 0 ? 12 : filteredWorkflows.length === 1 ? 6 : 4*/} style={paperAppContainer}>
 								{/*<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
-									<NewWorkflowPaper />
+								<NewWorkflowPaper />
 								{/*</Zoom>*/}
 
 								{filteredWorkflows.map((data, index) => {

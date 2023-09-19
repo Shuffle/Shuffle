@@ -63,7 +63,7 @@ const data = [
       "z-index": 4999,
       "border-radius": "5px",
       "background-opacity": "0.5",
-			"text-wrap": "wrap",
+	  "text-wrap": "wrap",
     },
   },
   {
@@ -125,8 +125,8 @@ const data = [
       "border-radius": "5px",
       "border-color": "orange",
       "background-color": "#213243",
-      "background-width": "100%",
-      "background-height": "100%",
+      "background-width": "100px",
+      "background-height": "100px",
     },
   },
   {
@@ -163,15 +163,16 @@ const data = [
   {
     selector: "node[?isSuggestion]",
     css: {
-      shape: "ellipse",
-      width: "50px",
-      height: "50px",
+      shape: "roundrectangle",
+      width: "30px",
+      height: "30px",
       "z-index": "5002",
-      "font-size": "0px",
+	  filter: "grayscale(100%)",
       border: "1px solid rgba(255,255,255,0.9)",
       "background-image": "data(large_image)",
-      "background-color": "data(iconBackground)",
-      label: "data(label)",
+	  "background-fit": "cover",
+      "font-size": "20px",
+      label: "data(label_replaced)",
     },
   },
   {
@@ -199,7 +200,7 @@ const data = [
       "text-margin-x": "0px",
       "background-color": "data(imageColor)",
       "background-image": "data(image)",
-			label: "data(label)",
+		label: "data(label)",
     },
   },
   {
@@ -337,9 +338,9 @@ const data = [
       width: "1px",
       "line-style": "dashed",
       "line-fill": "linear-gradient",
-      "target-arrow-color": "#f34079",
+      "target-arrow-color": "#555555",
       "line-gradient-stop-positions": ["0.0", "100"],
-      "line-gradient-stop-colors": ["#f86a3e", "#f34079"],
+      "line-gradient-stop-colors": ["#555555", "#555555"],
     },
   },
   {

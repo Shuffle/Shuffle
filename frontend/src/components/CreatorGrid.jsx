@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import ReactGA from 'react-ga4';
 import {Link} from 'react-router-dom';
 import theme from '../theme.jsx';
+import { removeQuery } from '../components/ScrollToTop.jsx';
 
 import { 
 	SkipNext as SkipNextIcon,
@@ -97,20 +98,21 @@ const CreatorGrid = props => {
 
 	// value={currentRefinement}
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {
-		useEffect(() => {
-			if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
-				const urlSearchParams = new URLSearchParams(window.location.search)
-				const params = Object.fromEntries(urlSearchParams.entries())
-				const foundQuery = params["q"]
-				if (foundQuery !== null && foundQuery !== undefined) {
-					refine(foundQuery)
-				}
+		var defaultSearch = ""
+		if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
+			const urlSearchParams = new URLSearchParams(window.location.search)
+			const params = Object.fromEntries(urlSearchParams.entries())
+			const foundQuery = params["q"]
+			if (foundQuery !== null && foundQuery !== undefined) {
+				refine(foundQuery)
+				defaultSearch = foundQuery
 			}
-		}, [])
+		}
 
 		return (
 		  <form noValidate action="" role="search">
 				<TextField 
+					defaultValue={defaultSearch}
 					fullWidth
 					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%",}} 
 					InputProps={{
@@ -128,10 +130,10 @@ const CreatorGrid = props => {
 					autoComplete='off'
 					type="search"
 					color="primary"
-					value={currentRefinement}
 					placeholder="Find Creators..."
 					id="shuffle_search_field"
 					onChange={(event) => {
+						removeQuery("q")
 						refine(event.currentTarget.value)
 					}}
 				/>

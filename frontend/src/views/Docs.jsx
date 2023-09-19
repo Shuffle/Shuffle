@@ -391,19 +391,28 @@ const Docs = (defaultprops) => {
   }
 
   function CodeHandler(props) {
+	console.log("PROPS: ", props)
+
+	const propvalue = props.value !== undefined && props.value !== null ? props.value : props.children !== undefined && props.children !== null && props.children.length > 0 ? props.children[0] : ""
+
     return (
-      <pre
+      <div
         style={{
           padding: 15,
           minWidth: "50%",
           maxWidth: "100%",
           backgroundColor: theme.palette.inputColor,
-          overflowX: "auto",
-          overflowY: "hidden",
+          overflowY: "auto",
         }}
       >
-        <code>{props.value}</code>
-      </pre>
+        <code
+			style={{
+				// Wrap if larger than X
+				whiteSpace: "pre-wrap",
+				overflow: "auto",
+			}}
+		>{propvalue}</code>
+      </div>
     );
   }
 
@@ -436,7 +445,7 @@ const Docs = (defaultprops) => {
                   href={selectedMeta.link}
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
-                  <Button style={{}} variant="outlined" color="secondary">
+                  <Button style={{color: "white", }} variant="outlined" color="secondary">
                     <EditIcon /> &nbsp;&nbsp;Edit
                   </Button>
                 </a>
@@ -638,7 +647,7 @@ const Docs = (defaultprops) => {
 
 					<Typography variant="h6" style={headerStyle}>Why Shuffle?</Typography>
 					<Typography variant="body1">
-						<b>Security first.</b> We incentivize trying before buying, and give you the full set of tools you need to automate your operations. What's more is we also help you <a href="https://shuffler.io/pricing?tag=docs" target="_blank" style={hrefStyle2}>find usecases</a> that fit your your unique needs. Accessibility is key, and we intend to help every SOC globally use and share their usecases.
+						<b>Security first.</b> We incentivize trying before buying, and give you the full set of tools you need to automate your operations. What's more is we also help you <a href="https://shuffler.io/pricing?tag=docs" target="_blank" style={hrefStyle2}>find usecases</a> that fit your unique needs. Accessibility is key, and we intend to help every SOC globally use and share their usecases.
 					</Typography>
 
 					<Typography variant="h6" style={headerStyle}>Get help</Typography>
@@ -878,16 +887,25 @@ const Docs = (defaultprops) => {
 				:
 					<div id="markdown_wrapper_outer" style={markdownStyle}>
 						<ReactMarkdown
+							components={{
+								img: Img,
+								code: CodeHandler,
+								h1: Heading,
+								h2: Heading,
+								h3: Heading,
+								h4: Heading,
+								h5: Heading,
+								h6: Heading,
+								a: OuterLink,
+							}}
 							id="markdown_wrapper"
 							escapeHtml={false}
-							source={data}
-							renderers={{
-								link: OuterLink,
-								image: Img,
-								code: CodeHandler,
-								heading: Heading,
+							style={{
+								maxWidth: "100%", minWidth: "100%", 
 							}}
-						/>
+						>
+							{data}
+						</ReactMarkdown>
 					</div>
 				}
         <Divider

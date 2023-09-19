@@ -218,7 +218,7 @@ const AuthenticationOauth2 = (props) => {
 				"31cb4c84-658e-43d5-ae84-22c9142e967a",
 				"",
 				"https://graph.microsoft.com",
-				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read", "offline_access"],
+				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read", "offline_access", "Team.ReadBasic.All"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("todoist")) {
@@ -607,7 +607,7 @@ const AuthenticationOauth2 = (props) => {
     <div>
       <DialogTitle>
         <div style={{ color: "white" }}>
-          Authentication for {selectedApp.name}
+          Authenticate {selectedApp.name.replaceAll("_", " ")}
         </div>
       </DialogTitle>
       <DialogContent>
@@ -674,11 +674,6 @@ const AuthenticationOauth2 = (props) => {
 						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
-								color: "white",
-								marginLeft: "5px",
-								maxWidth: "95%",
-								height: 50, 
-								fontSize: "1em",
 							},
 						}}
 						fullWidth
@@ -763,11 +758,6 @@ const AuthenticationOauth2 = (props) => {
                       }}
                       InputProps={{
                         style: {
-                          color: "white",
-                          marginLeft: "5px",
-                          maxWidth: "95%",
-                          height: 50,
-                          fontSize: "1em",
                         },
                       }}
                       fullWidth
@@ -804,11 +794,6 @@ const AuthenticationOauth2 = (props) => {
               }}
               InputProps={{
                 style: {
-                  color: "white",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                  height: "50px",
                 },
               }}
               fullWidth
@@ -827,11 +812,6 @@ const AuthenticationOauth2 = (props) => {
               }}
               InputProps={{
                 style: {
-                  color: "white",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                  height: "50px",
                 },
               }}
               fullWidth
@@ -848,6 +828,7 @@ const AuthenticationOauth2 = (props) => {
 									Scopes
 									<Select
 										multiple
+										underline={false}
 										value={selectedScopes}
 										style={{
 											backgroundColor: theme.palette.inputColor,

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import {Link} from 'react-router-dom';
 import theme from '../theme.jsx';
+import { removeQuery } from '../components/ScrollToTop.jsx';
 
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@mui/icons-material';
 
@@ -171,6 +172,7 @@ const AppGrid = props => {
 
 	// value={currentRefinement}
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {
+		var defaultSearch = ""
 		useEffect(() => {
 			if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
 				const urlSearchParams = new URLSearchParams(window.location.search)
@@ -179,6 +181,7 @@ const AppGrid = props => {
 				if (foundQuery !== null && foundQuery !== undefined) {
 					console.log("Got query: ", foundQuery)
 					refine(foundQuery)
+					defaultSearch = foundQuery
 				}
 			}
 		}, [])
@@ -187,6 +190,7 @@ const AppGrid = props => {
 			console.log("In refinement: ", inputsearch)
 			//setLocalMessage(inputsearch)
 			refine(inputsearch)
+			defaultSearch = inputsearch 
 		} else if (onlyResults === true) {
 			// Don't return anything unless refinement works
 			return null
@@ -196,6 +200,7 @@ const AppGrid = props => {
 		  <form noValidate action="" role="search">
 		  	{onlyResults !== true ?
 				<TextField 
+					defaultValue={defaultSearch}
 					fullWidth
 					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%",}} 
 					InputProps={{
@@ -214,6 +219,7 @@ const AppGrid = props => {
 					placeholder="Find Workflows..."
 					id="shuffle_search_field"
 					onChange={(event) => {
+						removeQuery("q")
 						refine(event.currentTarget.value)
 					}}
 					limit={5}

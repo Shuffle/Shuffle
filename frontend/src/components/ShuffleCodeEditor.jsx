@@ -205,6 +205,9 @@ const CodeEditor = (props) => {
 
 		setAvailableVariables(allVariables)
 		setMainVariables(tmpVariables)
+	
+		console.log("Checking local codedata: ", localcodedata)
+		expectedOutput(localcodedata)
 	}, [])
 
 	const aiSubmit = (value, inputAction) => {

@@ -24,12 +24,12 @@ const theme = createTheme(adaptV4Theme({
     backgroundColor: "#1a1a1a",
     borderRadius: 5,
     defaultBorder: "1px solid rgba(255,255,255,0.3)",
-		jsonTheme: "brewer",
-		reactJsonStyle: {
-			borderRadius: 5,
-			border: "1px solid rgba(255,255,255,0.7)",
-			padding: 5, 
-		},
+	jsonTheme: "brewer",
+	reactJsonStyle: {
+		borderRadius: 5,
+		border: "1px solid rgba(255,255,255,0.7)",
+		padding: 5, 
+	},
     textFieldStyle: {
       backgroundColor: "#383B40",
       borderRadius: 5,
@@ -70,6 +70,11 @@ const theme = createTheme(adaptV4Theme({
     },
   },
   overrides: {
+    MuiPaper: {
+		root: {
+			backgroundColor: "#1c1c1d",
+		},
+    },
     MuiMenu: {
       list: {
         backgroundColor: "#27292d",

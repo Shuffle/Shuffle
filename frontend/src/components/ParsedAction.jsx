@@ -11,7 +11,7 @@ import { NestedMenuItem } from "mui-nested-menu";
 //import { useAlert 
 
 import {
-	ButtonGroup,
+  ButtonGroup,
   Popper,
   TextField,
   TextareaAutosize,
@@ -376,66 +376,57 @@ const ParsedAction = (props) => {
     const [menuPosition, setMenuPosition] = useState(null);
 
     useEffect(() => {
-      if (
-        selectedActionParameters !== null &&
-        selectedActionParameters.length === 0
+      if (selectedActionParameters !== undefined && selectedActionParameters !== null && selectedActionParameters.length === 0
       ) {
-        if (
-          selectedAction.parameters !== null &&
-          selectedAction.parameters.length > 0
-        ) {
+        if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
           setSelectedActionParameters(selectedAction.parameters);
         }
       }
 
-      if (
-        (selectedVariableParameter === null ||
-          selectedVariableParameter === undefined) &&
-        workflow.workflow_variables !== null &&
-        workflow.workflow_variables.length > 0
-      ) {
+      if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && workflow.workflow_variables !== null && workflow.workflow_variables.length > 0) {
+      
         // FIXME - this is the bad thing
         setSelectedVariableParameter(workflow.workflow_variables[0].name);
       }
 
       if (actionlist.length === 0) {
         // FIXME: Have previous execution values in here
-				if (workflowExecutions.length > 0) {
-					for (let [key,keyval] in Object.entries(workflowExecutions)) {
-						if (
-							workflowExecutions[key].execution_argument === undefined ||
-							workflowExecutions[key].execution_argument === null ||
-							workflowExecutions[key].execution_argument.length === 0 
-						) {
-							continue;
-						}
-
-						const valid = validateJson(workflowExecutions[key].execution_argument)
-						if (valid.valid) {
-							actionlist.push({
-								type: "Execution Argument",
-								name: "Execution Argument",
-								value: "$exec",
-								highlight: "exec",
-								autocomplete: "exec",
-								example: valid.result,
-							})
-							break
-						}
+			if (workflowExecutions.length > 0) {
+				for (let [key,keyval] in Object.entries(workflowExecutions)) {
+					if (
+						workflowExecutions[key].execution_argument === undefined ||
+						workflowExecutions[key].execution_argument === null ||
+						workflowExecutions[key].execution_argument.length === 0 
+					) {
+						continue;
 					}
 
+					const valid = validateJson(workflowExecutions[key].execution_argument)
+					if (valid.valid) {
+						actionlist.push({
+							type: "Execution Argument",
+							name: "Execution Argument",
+							value: "$exec",
+							highlight: "exec",
+							autocomplete: "exec",
+							example: valid.result,
+						})
+						break
+					}
 				}
 
-				if (actionlist.length === 0) {
-					actionlist.push({
-						type: "Execution Argument",
-						name: "Execution Argument",
-						value: "$exec",
-						highlight: "exec",
-						autocomplete: "exec",
-						example: "",
-					})
-				}
+			}
+
+			if (actionlist.length === 0) {
+				actionlist.push({
+					type: "Execution Argument",
+					name: "Execution Argument",
+					value: "$exec",
+					highlight: "exec",
+					autocomplete: "exec",
+					example: "",
+				})
+			}
 
         actionlist.push({
           type: "Shuffle DB",
@@ -1313,26 +1304,26 @@ const ParsedAction = (props) => {
                 data.value = data.example;
               }
 
-							// In case of data.example
-							if (data.value === undefined || data.value === null) {
+					// In case of data.example
+					if (data.value === undefined || data.value === null) {
+						data.value = ""
+					}
+
+					if (data.value.length === 0) {
+              			if (data.name.toLowerCase() === "headers") {
+							console.log("Should show headers field instead with + and -!")
+
+							// Check if file ID exists
+							//
+							const fileFound = selectedActionParameters.find(param => param.name === "file_id")
+							if (fileFound === undefined || fileFound === null) {
+								data.value = data.example
+							} else {
+								// Purposely unset it if set by default when using files
 								data.value = ""
 							}
-
-							if (data.value.length === 0) {
-              	if (data.name.toLowerCase() === "headers") {
-									console.log("Should show headers field instead with + and -!")
-
-									// Check if file ID exists
-									//
-									const fileFound = selectedActionParameters.find(param => param.name === "file_id")
-									if (fileFound === undefined || fileFound === null) {
-										data.value = data.example
-									} else {
-										// Purposely unset it if set by default when using files
-										data.value = ""
-									}
-								}
-							}
+						}
+					}
 
 							/*
               	if (data.name !== "queries" && data.name !== "key" && data.name !== "value" ) {
@@ -1391,7 +1382,7 @@ const ParsedAction = (props) => {
             var hideBodyButton = "";
             const hideBodyButtonValue = (
               <div
-								key={data.name}
+				key={data.name}
                 style={{
                   marginTop: 25,
                   border: "1px solid rgba(255,255,255,0.7)",
@@ -1403,7 +1394,7 @@ const ParsedAction = (props) => {
               >
                 <Tooltip
                   color="secondary"
-                  title={"Automatically change body"}
+                  title={"Show all body fields"}
                   placement="top"
                 >
                   <FormControlLabel
@@ -1424,15 +1415,15 @@ const ParsedAction = (props) => {
 			
                           for (let paramkey in Object.entries(selectedActionParameters)) {
                             var currentItem = selectedActionParameters[paramkey];
-														if (currentItem.name === "ssl_verify") {
+							if (currentItem.name === "ssl_verify") {
 
-														}
+							}
 
-														if (currentItem.name === "body") {
-															// FIXME: Workaround for toggling, as actions don't have IDs. 
-															// May screw up something in the future.
-															currentItem.id = tag
-														}
+							if (currentItem.name === "body") {
+								// FIXME: Workaround for toggling, as actions don't have IDs. 
+								// May screw up something in the future.
+								currentItem.id = tag
+							}
 
                             if (currentItem.description === openApiFieldDesc) {
                               currentItem.field_active = !hideBody;
@@ -1458,8 +1449,8 @@ const ParsedAction = (props) => {
                 if (found === null) {
                   setActivateHidingBodyButton(true);
                 } else {
-									//console.log("In found: ", found, hideBody)
-								}
+					//console.log("In found: ", found, hideBody)
+				}
               } else {
                 //console.log("SHOW BUTTON");
 
@@ -1485,6 +1476,17 @@ const ParsedAction = (props) => {
                   }
 
                   changed = true;
+				  var isRequired = false
+				  // Check if original field name is in the selectedAction.required_body_fields
+				  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null) {
+					  for (let innerkey in selectedAction.required_body_fields) {
+						  if (selectedAction.required_body_fields[innerkey] === tmpitem) {
+							  isRequired = true
+							  break
+						  }
+					  }
+				  }
+
                   selectedActionParameters.push({
                     action_field: "",
                     configuration: false,
@@ -1494,7 +1496,7 @@ const ParsedAction = (props) => {
                     multiline: true,
                     name: tmpitem,
                     options: null,
-                    required: false,
+                    required: isRequired,
                     schema: { type: "string" },
                     skip_multicheck: false,
                     tags: null,
@@ -2443,8 +2445,8 @@ const ParsedAction = (props) => {
 
 						//console.log(data.configuration)
 
-						const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
-						const hasAutocomplete = data.autocompleted === true
+			const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
+			const hasAutocomplete = data.autocompleted === true
             return (
               <div key={data.name}>
                 {hideBodyButton}
@@ -2669,8 +2671,6 @@ const ParsedAction = (props) => {
 		const { data, newActionname, newActiondescription, useIcon, extraDescription, } = actionprops;
   		const [hover, setHover] = React.useState(false);
 
-		console.log("Extra desc: ", extraDescription)
-
 		return (
 			<Tooltip
 			  color="secondary"
@@ -2893,15 +2893,35 @@ const ParsedAction = (props) => {
                 >
                   <Tooltip
                     color="primary"
-                    title={"Find related workflows"}
+                    title={"Find related tworkflows"}
                     placement="top"
                   >
-										<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
-											<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
-										</a>
+					<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
+						<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
+					</a>
                   </Tooltip>
                 </IconButton>
-
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+					  // aiSubmit(aiMsg, undefined, undefined, newSelectedAction)
+					  aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title={"Autocompletes fields. Uses NAME of the action and previous values' results."}
+                    placement="top"
+                  >
+						<AutoFixHighIcon style={{ color: "rgba(255,255,255,0.7)", height: 24, }} />
+                  </Tooltip>
+                </IconButton>
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
@@ -2992,14 +3012,21 @@ const ParsedAction = (props) => {
 								defaultValue={selectedAction.label}
 								onChange={selectedNameChange}
 								onBlur={(e) => {
-									const name = e.target.value;
+									// Copy the name value
+									const name = e.target.value
 									const parsedBaseLabel = "$"+baselabel.toLowerCase().replaceAll(" ", "_")
 									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
 
+									console.log("NAME: ", name)
+
+									// Check if it's the same as the current name in use
+									//if (name === selectedAction.label) { 
+									//	console.log("Returning from name thing")
+									//	return
+									//}
+
 									// Change in actions, triggers & conditions
 									// Highlight the changes somehow with a glow?
-									//
-									// Should make it a function lol
 									if (workflow.branches !== undefined && workflow.branches !== null) {	
 										for (let [key,keyval] in Object.entries(workflow.branches)) {
 											if (workflow.branches[key].conditions !== undefined && workflow.branches[key].conditions !== null) {
@@ -3117,7 +3144,13 @@ const ParsedAction = (props) => {
 											continue
 										}
 
-										for (let [subkey, subkeyval] in Object.entries(workflow.actions[key].parameters)) {
+										const params = workflow.actions[key].parameters
+										console.log(params)
+										if (params === null || params === undefined) {
+											continue
+										}
+
+										for (let [subkey, subkeyval] in Object.entries(params)) {
 											const param = workflow.actions[key].parameters[subkey];
 											if (!param.value.includes("$")) {
 												continue
@@ -3179,7 +3212,7 @@ const ParsedAction = (props) => {
 
 									console.log("DID NAME REPLACE ACTUALLY WORK? - may be missing it in certain triggers");
 									setWorkflow(workflow);
-                  setUpdate(Math.random());
+                  					setUpdate(Math.random());
 									baselabel = name
 								}}
 							/>
@@ -3240,7 +3273,7 @@ const ParsedAction = (props) => {
                 }}
               >
                 <AddIcon style={{ marginRight: 10 }} /> Authenticate{" "}
-                {selectedApp.name}
+                {selectedApp.name.replaceAll("_", " ")}
               </Button>
             </span>
           </Tooltip>
@@ -3572,8 +3605,6 @@ const ParsedAction = (props) => {
 				  data.name = "No name"
 				  data.label = "No name"
 			  }
-
-			  console.log("Name: ", newActionname)
 
               newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
 
