@@ -105,9 +105,12 @@ def base64_encode(a):
 def base64_decode(a):
     a = str(a)
     try:
-        return base64.b64decode(a).decode()
+        return base64.b64decode(a).encode("utf-8").decode("unicode_escape")
     except:
-        return base64.b64decode(a)
+        try:
+            return base64.b64decode(a).decode()
+        except:
+            return base64.b64decode(a)
 
 @shuffle_filters.register
 def json_parse(a):
