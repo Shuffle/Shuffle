@@ -521,7 +521,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 	}
 
 	// Handle top bar or something
-  const defaultTop =  0
+  const defaultTop = isCloud ? 0 : 6
   const loginTextBrowser = !isLoggedIn ? 
     <div style={{display: "flex", minWidth: 1250, maxWidth: 1250, margin: "auto", textAlign: "center",}}>
 			<div style={{display: "flex", flex: 1, }}>

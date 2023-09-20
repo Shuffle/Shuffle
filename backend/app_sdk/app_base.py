@@ -105,7 +105,7 @@ def base64_encode(a):
 def base64_decode(a):
     a = str(a)
     try:
-        return base64.b64decode(a).encode("utf-8").decode("unicode_escape")
+        return base64.b64decode(a).decode("unicode_escape")
     except:
         try:
             return base64.b64decode(a).decode()

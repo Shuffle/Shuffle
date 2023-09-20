@@ -10904,13 +10904,7 @@ const AngularWorkflow = (defaultprops) => {
                     .value === "true"
                 }
                 onChange={() => {
-                  const newvalue =
-                    workflow.triggers[selectedTriggerIndex].parameters[4] ===
-                      undefined ||
-                      workflow.triggers[selectedTriggerIndex].parameters[4]
-                        .value === "false"
-                      ? "true"
-                      : "false";
+                  const newvalue = workflow.triggers[selectedTriggerIndex].parameters[4] === undefined || workflow.triggers[selectedTriggerIndex].parameters[4].value === "false"? "true" : "false";
                   workflow.triggers[selectedTriggerIndex].parameters[4] = {
                     name: "check_result",
                     value: newvalue,
@@ -11997,43 +11991,43 @@ const AngularWorkflow = (defaultprops) => {
                   }}
                 />
               </div>
-							{isCloud && workflow.triggers[selectedTriggerIndex].parameters.length > 4 ? 
-								<FormGroup
-									style={{ paddingLeft: 10, backgroundColor: theme.palette.inputColor, marginBottom: 50,  }}
-									row
-								>
-								<FormControlLabel
-									control={
-										<Checkbox
-											checked={workflow.triggers[selectedTriggerIndex].parameters[4].value.includes("v2")}
-											disabled={selectedTrigger.status === "running"}
-											onChange={(e) => {
-												if (selectedTrigger.parameters === null) {
-													selectedTrigger.parameters = [];
-												}
+			{workflow.triggers[selectedTriggerIndex].parameters.length > 4 ? 
+				<FormGroup
+					style={{ paddingLeft: 10, backgroundColor: theme.palette.inputColor, marginBottom: 50,  }}
+					row
+				>
+				<FormControlLabel
+					control={
+						<Checkbox
+							checked={workflow.triggers[selectedTriggerIndex].parameters[4].value.includes("v2")}
+							disabled={selectedTrigger.status === "running"}
+							onChange={(e) => {
+								if (selectedTrigger.parameters === null) {
+									selectedTrigger.parameters = [];
+								}
 
-												// Sets the webhook to run as version 2.. kinda
-												var value = "v2"
-												if (workflow.triggers[selectedTriggerIndex].parameters[4].value.includes("v2")) {
-													value = "v1"
-												}
+								// Sets the webhook to run as version 2.. kinda
+								var value = "v2"
+								if (workflow.triggers[selectedTriggerIndex].parameters[4].value.includes("v2")) {
+									value = "v1"
+								}
 
-												workflow.triggers[selectedTriggerIndex].parameters[4] = {
-													name: "await_response",
-													value: value
-												}
+								workflow.triggers[selectedTriggerIndex].parameters[4] = {
+									name: "await_response",
+									value: value
+								}
 
-												setWorkflow(workflow)
-												setUpdate(Math.random())
-											}}
-											color="primary"
-											value="await_response"
-										/>
-									}
-									label={<div style={{ color: "white" }}>Wait For Response</div>}
-								/>
-							</FormGroup>
-						: null}
+								setWorkflow(workflow)
+								setUpdate(Math.random())
+							}}
+							color="primary"
+							value="await_response"
+						/>
+					}
+					label={<div style={{ color: "white" }}>Wait For Response</div>}
+				/>
+			</FormGroup>
+		: null}
 						</div>
           </div>
         </div>
