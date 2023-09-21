@@ -36,6 +36,7 @@ import {
 } from "@mui/material";
 
 import {
+  AutoFixHigh as AutoFixHighIcon,
   LockOpen as LockOpenIcon,
   OpenInNew as OpenInNewIcon,
   Apps as AppsIcon,
@@ -293,6 +294,8 @@ const Apps = (props) => {
   const [loadAppsModalOpen, setLoadAppsModalOpen] = React.useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
   const [openApiModal, setOpenApiModal] = React.useState(false);
+  const [generateAppModal, setGenerateAppModal] = React.useState(false);
+
   const [openApiModalType, setOpenApiModalType] = React.useState("");
   const [openApiError, setOpenApiError] = React.useState("");
   const [field1, setField1] = React.useState("");
@@ -1333,11 +1336,79 @@ const Apps = (props) => {
         </div>
       ) : null;
 
+	const AppCreateButton = (props) => {
+		const { text, func, icon } = props;
+
+		const [hover, setHover] = React.useState(false);
+
+		return (
+			<Paper 
+				onMouseEnter={() => setHover(true)}
+				onMouseLeave={() => setHover(false)}
+				onClick={func}
+				style={{
+					flex: 1, 
+					padding: 15, 
+					margin: 10, 
+					backgroundColor: hover ? theme.palette.surfaceColor : "transparent",
+					border: hover ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)",
+					cursor: hover ? "pointer" : "default",
+					textAlign: "center",
+					height: 150, 
+				}}
+			>
+				{icon} 
+				<Typography>
+					{text}
+				</Typography>
+			</Paper>
+		)
+	}
+
     return (
       <div style={{}}>
         <Paper square style={uploadViewPaperStyle}>
           <div style={{ margin: 25 }}>
-            <h2>App Creator</h2>
+            <h2 style={{
+				textAlign: "center",
+			}}>
+				App Creator
+			</h2>
+			<div style={{display: "flex"}}>
+				<AppCreateButton 
+					text="Generate from OpenAPI/Swagger"
+					func={() => {
+                  		setOpenApiModal(true)
+					}}
+					icon={<PublishIcon style={{minHeight: 50, maxHeigth: 50, }} />}
+				/>
+				<AppCreateButton 
+					text="Generate from Documentation"
+					func={() => {
+  						setGenerateAppModal(true)
+					}}
+					icon={<AutoFixHighIcon style={{minHeight: 50, maxHeigth: 50, }} />}
+				/>
+			</div>
+		    <Link
+		      to="/apps/new"
+		      style={{
+		        marginLeft: 5,
+		        textDecoration: "none",
+		        color: "#f85a3e",
+		      }}
+		    >
+		      <Button
+		        variant="outlined"
+		        component="label"
+		        color="secondary"
+		        style={{}}
+				fullWidth
+		      >
+		        Create from scratch
+		      </Button>
+		    </Link>
+			{/*
             <a
               rel="noopener noreferrer"
               href="https://shuffler.io/docs/apps"
@@ -1420,6 +1491,7 @@ const Apps = (props) => {
                 </Button>
               </Link>
             </div>
+		    */}
           </div>
         </Paper>
         <Paper square style={uploadViewPaperStyle}>
@@ -1457,6 +1529,30 @@ const Apps = (props) => {
     //	//runAppSearch(searchfield)
     //} else {
     //}
+  };
+
+  const uploadFileDocumentation = (e) => {
+    const isDropzone = e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
+    const files = isDropzone ? e.dataTransfer.files : e.target.files;
+
+    const reader = new FileReader();
+
+    try {
+      reader.addEventListener("load", (e) => {
+        const content = e.target.result;
+        setOpenApiData(content);
+        setIsDropzone(isDropzone);
+        setOpenApiModal(true);
+      });
+    } catch (e) {
+      console.log("Error in dropzone: ", e);
+    }
+
+    try {
+      reader.readAsText(files[0]);
+    } catch (error) {
+      toast("Failed to read file");
+    }
   };
 
   const uploadFile = (e) => {
@@ -2248,6 +2344,58 @@ const Apps = (props) => {
       });
   };
 
+  const validateDocumentationUrl  = () => {
+    setValidation(true);
+
+	// curl https://doc-to-openapi-stbuwivzoq-nw.a.run.app/doc_to_openapi -d '{"url": "https://gitlab.com/rhab/PyOTRS/-/raw/main/pyotrs/lib.py?ref_type=heads"}' -H "Content-Type: application/json"
+	const urldata = {
+		"url": openApi,
+	}
+
+    //fetch("http://localhost:8080/doc_to_openapi", {
+    fetch("https://doc-to-openapi-stbuwivzoq-nw.a.run.app/doc_to_openapi", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+		"Content-Type": "application/json",
+      },
+      body: JSON.stringify(urldata),
+    })
+    .then((response) => {
+      setValidation(false);
+      if (response.status !== 200) {
+	    toast("Error in generation: "+response.status);
+	    setOpenApiError("Error in generation - bad status: "+response.status);
+		return response.text();
+      }
+
+      return response.json();
+    })
+    .then((responseJson) => {
+		// Check if openapi or swagger in string of the json
+		try {
+			const parsedtext = JSON.stringify(responseJson);
+			if (parsedtext.indexOf("openapi") === -1 && parsedtext.indexOf("swagger") === -1) {
+				setValidation(false);
+				setOpenApiError("Error in generation: "+parsedtext);
+				return;
+			}
+		} catch (e) {
+			setValidation(false);
+			setOpenApiError("Error in generation (2): "+e.toString());
+			return;
+		}
+
+	    console.log("Validating response!");
+	    validateOpenApi(responseJson);
+    })
+    .catch((error) => {
+      setValidation(false);
+      toast(error.toString());
+      setOpenApiError(error.toString());
+    });
+  }
+
   const validateRemote = () => {
     setValidation(true);
 
@@ -2544,14 +2692,13 @@ const Apps = (props) => {
     </Dialog>
   ) : null;
 
-  const errorText =
-    openApiError.length > 0 ? (
-      <div style={{ marginTop: 10 }}>Error: {openApiError}</div>
-    ) : null;
-  const modalView = openApiModal ? (
+  const errorText = openApiError.length > 0 ? ( <div style={{ marginTop: 10 }}>Error: {openApiError}</div>) : null;
+
+  const generateAppView = generateAppModal ? (
     <Dialog
-      open={openApiModal}
+      open={generateAppModal}
       onClose={() => {
+        setGenerateAppModal(false);
         setOpenApiModal(false);
       }}
       PaperProps={{
@@ -2566,7 +2713,124 @@ const Apps = (props) => {
       <FormControl>
         <DialogTitle>
           <div style={{ color: "rgba(255,255,255,0.9)" }}>
-            Create a new app 
+		  	Generate an app based on documentation (beta)
+          </div>
+        </DialogTitle>
+        <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
+		  <Typography variant="body1">
+		  	Paste in a URL, and we will make it into an app for you. This may take multiple minutes based on the size of the documentation. {isCloud ? "" : "Uses to Shuffle Cloud (https://shuffler.io) for processing."} 
+		  </Typography>
+		  <TextField
+            style={{ backgroundColor: inputColor }}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              style: {
+                color: "white",
+                height: "50px",
+                fontSize: "1em",
+              },
+              endAdornment: (
+                <Button
+                  style={{
+                    borderRadius: "0px",
+                    marginTop: "0px",
+                    height: "50px",
+                  }}
+                  variant="contained"
+                  disabled={openApi.length === 0 || appValidation.length > 0}
+                  color="primary"
+                  onClick={() => {
+                    setOpenApiError("");
+                    validateDocumentationUrl();
+                  }}
+                >
+                  Validate
+                </Button>
+              ),
+            }}
+            onChange={(e) => {
+              setOpenApi(e.target.value);
+            }}
+            helperText={
+              <span style={{ color: "white", marginBottom: "2px" }}>
+			  	Should be a documentation page containing an API.
+              </span>
+            }
+            placeholder="API Documentation URL"
+            fullWidth
+          />
+          <p>Or upload document with the content (coming soon)</p>
+          <input
+            hidden
+            type="file"
+            ref={upload}
+            multiple={false}
+            onChange={uploadFileDocumentation}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+			disabled
+            onClick={() => upload.current.click()}
+          >
+            Upload
+          </Button>
+          {errorText}
+        </DialogContent>
+        <DialogActions>
+          {circularLoader}
+          <Button
+            style={{ borderRadius: "0px" }}
+            onClick={() => {
+        	  setGenerateAppModal(false);
+              setOpenApiModal(false);
+              setAppValidation("");
+              setOpenApiError("");
+              setOpenApi("");
+              setOpenApiData("");
+            }}
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            style={{ borderRadius: "0px" }}
+            disabled={appValidation.length === 0}
+            onClick={() => {
+              redirectOpenApi();
+            }}
+            color="primary"
+          >
+            Continue
+          </Button>
+        </DialogActions>
+	  </FormControl>
+	</Dialog>
+  ) : null
+    
+
+  const modalView = openApiModal ? (
+    <Dialog
+      open={openApiModal}
+      onClose={() => {
+        setOpenApiModal(false);
+		setGenerateAppModal(false);
+      }}
+      PaperProps={{
+        style: {
+          backgroundColor: surfaceColor,
+          color: "white",
+          minWidth: "800px",
+          minHeight: "320px",
+        },
+      }}
+    >
+      <FormControl>
+        <DialogTitle>
+          <div style={{ color: "rgba(255,255,255,0.9)" }}>
+            Create a new app from OpenAPI / Swagger
           </div>
         </DialogTitle>
         <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
@@ -2671,6 +2935,7 @@ const Apps = (props) => {
       <div>
         {appView}
         {modalView}
+  		{generateAppView} 
         {appsModalLoad}
         {deleteModal}
       </div>

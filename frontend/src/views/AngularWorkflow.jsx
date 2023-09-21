@@ -2538,6 +2538,8 @@ const AngularWorkflow = (defaultprops) => {
   	const timeout = 60000 
   
   	while (true) {
+		// Wait 1 second before next request just in case of timeouts
+		await new Promise(r => setTimeout(r, 1000));
 		await fetchWithTimeout(`${globalUrl}/api/v1/workflows/${workflowId}/stream`, {
 		  method: "GET",
 		  headers: {

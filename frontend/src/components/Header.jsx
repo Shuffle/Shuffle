@@ -521,7 +521,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 	}
 
 	// Handle top bar or something
-  const defaultTop = isCloud ? 0 : 6
+  const defaultTop = isCloud ? 0 : 7
   const loginTextBrowser = !isLoggedIn ? 
     <div style={{display: "flex", minWidth: 1250, maxWidth: 1250, margin: "auto", textAlign: "center",}}>
 			<div style={{display: "flex", flex: 1, }}>
@@ -813,7 +813,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 									}}
 									MenuProps={{
 										style: {
-											zIndex: 10002,
+											zIndex: 15000,
 										},
 									}}
 									style={{
@@ -823,6 +823,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 										color: "white", 
 										height: 45, 
 										width: 85, 
+										zIndex: 14999,
 									}}
 
 									value={userdata.active_org.id}
@@ -887,7 +888,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 
 												<Tooltip color="primary" title={parsedTitle} placement="left">
 													<div style={{display: "flex"}}>
-														<Typography variant="body2" style={{borderRadius: theme.palette.borderRadius, float: "left", margin: "0 0 0 0", marginRight: 25, }}>{regiontag}</Typography> {image} <span style={{marginLeft: 8}}>{data.name}</span> 
+														{isCloud?<Typography variant="body2" style={{borderRadius: theme.palette.borderRadius, float: "left", margin: "0 0 0 0", marginRight: 25, }}>{regiontag}</Typography>:null} {image} <span style={{marginLeft: 8}}>{data.name}</span> 
 													</div>
 												</Tooltip>
 											</MenuItem>
