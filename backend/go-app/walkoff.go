@@ -992,6 +992,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	shuffle.DeleteCache(ctx, cacheKey)
+	shuffle.DeleteCache(ctx, fmt.Sprintf("%s_workflows", user.ActiveOrg.Id))
 	log.Printf("[DEBUG] Cleared workflow cache for %s (%s)", user.Username, user.Id)
 
 	resp.WriteHeader(200)
