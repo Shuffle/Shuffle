@@ -1294,6 +1294,27 @@ class AppBase:
         else:
             return returns
 
+    def delete_cache(self, key):
+        org_id = self.full_execution["workflow"]["execution_org"]["id"]
+        url = "%s/api/v1/orgs/%s/delete_cache" % (self.url, org_id, key)
+
+        data = {
+            "workflow_id": self.full_execution["workflow"]["id"],
+            "execution_id": self.current_execution_id,
+            "authorization": self.authorization,
+            "org_id": org_id,
+            "key": key,
+        }
+
+        response = requests.post(url, json=data, verify=False)
+        try:
+            allvalues = response.json()
+            return allvalues
+        except Exception as e:
+            self.logger.info("[ERROR} Failed to parse response from delete_cache: %s" % e)
+            #return response.json()
+            return {"success": False, "reason": f"Failed to delete cache for key {key}"}
+
     def set_cache(self, key, value):
         org_id = self.full_execution["workflow"]["execution_org"]["id"]
         url = "%s/api/v1/orgs/%s/set_cache" % (self.url, org_id)
@@ -1312,8 +1333,8 @@ class AppBase:
             allvalues["key"] = key
             allvalues["value"] = str(value)
             return allvalues
-        except:
-            self.logger.info("Value couldn't be parsed")
+        except Exception as e:
+            self.logger.info("[ERROR} Failed to parse response from set cache: %s" % e)
             #return response.json()
             return {"success": False}
 
@@ -2283,7 +2304,10 @@ class AppBase:
                 run = Liquid(template, mode="wild", from_file=False, filters=shuffle_filters.filters)
 
                 # Can't handle self yet (?)
-                ret = run.render(**globals())
+                all_globals = globals()
+                all_globals["self"] = self 
+
+                ret = run.render(**all_globals)
                 return ret
             except jinja2.exceptions.TemplateNotFound as e:
                 self.logger.info(f"[ERROR] Liquid Template error: {e}")
