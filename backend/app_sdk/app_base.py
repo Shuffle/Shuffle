@@ -22,8 +22,7 @@ import dateutil
 import threading
 import concurrent.futures
 
-from io import StringIO as StringBuffer
-from io import BytesIO
+from io import StringIO as StringBuffer, BytesIO 
 from liquid import Liquid, defaults
 
 runtime = os.getenv("SHUFFLE_SWARM_CONFIG", "")
@@ -1296,7 +1295,7 @@ class AppBase:
 
     def delete_cache(self, key):
         org_id = self.full_execution["workflow"]["execution_org"]["id"]
-        url = "%s/api/v1/orgs/%s/delete_cache" % (self.url, org_id, key)
+        url = "%s/api/v1/orgs/%s/delete_cache" % (self.url, org_id)
 
         data = {
             "workflow_id": self.full_execution["workflow"]["id"],
@@ -1309,11 +1308,11 @@ class AppBase:
         response = requests.post(url, json=data, verify=False)
         try:
             allvalues = response.json()
-            return allvalues
+            return json.dumps(allvalues)
         except Exception as e:
             self.logger.info("[ERROR} Failed to parse response from delete_cache: %s" % e)
             #return response.json()
-            return {"success": False, "reason": f"Failed to delete cache for key {key}"}
+            return json.dumps({"success": False, "reason": f"Failed to delete cache for key '{key}'"})
 
     def set_cache(self, key, value):
         org_id = self.full_execution["workflow"]["execution_org"]["id"]
@@ -2301,13 +2300,13 @@ class AppBase:
                 #if len(template) > 100:
                 #    self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
                 #self.logger.info(f"[DEBUG] Data: {template}")
-                run = Liquid(template, mode="wild", from_file=False, filters=shuffle_filters.filters)
 
-                # Can't handle self yet (?)
                 all_globals = globals()
-                all_globals["self"] = self 
+                all_globals["self"] = self
+                run = Liquid(template, mode="wild", from_file=False, filters=shuffle_filters.filters, globals=all_globals)
 
-                ret = run.render(**all_globals)
+                # Add locals that are missing to globals
+                ret = run.render()
                 return ret
             except jinja2.exceptions.TemplateNotFound as e:
                 self.logger.info(f"[ERROR] Liquid Template error: {e}")

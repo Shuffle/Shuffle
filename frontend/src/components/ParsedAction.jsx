@@ -1131,7 +1131,7 @@ const ParsedAction = (props) => {
           		    borderRadius: theme.palette.borderRadius,
           		  }}
           		  onChange={(event, newValue) => {
-									console.log("SELECT: ", event, newValue)
+					console.log("SELECT: ", event, newValue)
           		    // Workaround with event lol
           		    //if (newValue !== undefined && newValue !== null) {
           		    //  setNewSelectedAction({ target: { value: newValue.name } });

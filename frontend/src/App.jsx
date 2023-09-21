@@ -39,6 +39,9 @@ import AlertTemplate from "./components/AlertTemplate";
 import { useAlert, positions, Provider } from "react-alert";
 import { isMobile } from "react-device-detect";
 
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import Drift from "react-driftjs";
 
 // Production - backend proxy forwarding in nginx
@@ -561,6 +564,18 @@ const App = (message, props) => {
             {includedData}
           </Provider>
         </BrowserRouter>
+		<ToastContainer 
+			position="bottom-center"
+			autoClose={5000}
+			hideProgressBar={false}
+			newestOnTop={false}
+			closeOnClick
+			rtl={false}
+			pauseOnFocusLoss
+			draggable
+			pauseOnHover
+			theme="dark"
+		/>
       </CookiesProvider>
     </ThemeProvider>
   );

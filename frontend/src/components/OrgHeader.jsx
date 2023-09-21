@@ -38,7 +38,6 @@ const OrgHeader = (props) => {
   	handleEditOrg, 
   } = props;
 
-  //const alert = useAlert();
   const classes = useStyles();
 
   var upload = "";

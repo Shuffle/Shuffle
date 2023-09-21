@@ -2718,7 +2718,7 @@ const Apps = (props) => {
         </DialogTitle>
         <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
 		  <Typography variant="body1">
-		  	Paste in a URL, and we will make it into an app for you. This may take multiple minutes based on the size of the documentation. {isCloud ? "" : "Uses to Shuffle Cloud (https://shuffler.io) for processing."} 
+		  	Paste in a URL, and we will make it into an app for you. This may take multiple minutes based on the size of the documentation. <b>{isCloud ? "" : "Uses Shuffle Cloud (https://shuffler.io) for processing (for now)."}</b> 
 		  </Typography>
 		  <TextField
             style={{ backgroundColor: inputColor }}
