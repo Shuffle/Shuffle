@@ -1188,7 +1188,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		var execution shuffle.ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
-			log.Printf("[WARNING] Failed execution POST unmarshaling - continuing anyway: %s", err)
+			log.Printf("[WARNING] Failed execution POST unmarshalling for execution %s - continuing anyway: %s", execution.ExecutionId, err)
 			//return shuffle.WorkflowExecution{}, "", err
 		}
 
@@ -1391,13 +1391,10 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start, []string{}, []string{})
 
-	//topic := "workflows"
 	startFound := false
-	// FIXME - remove this?
 	newActions := []shuffle.Action{}
 	defaultResults := []shuffle.ActionResult{}
 
-	allAuths := []shuffle.AppAuthenticationStorage{}
 	for _, action := range workflowExecution.Workflow.Actions {
 		//action.LargeImage = ""
 		if action.ID == workflowExecution.Start {
@@ -1407,98 +1404,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 		if action.Environment == "" {
 			return shuffle.WorkflowExecution{}, fmt.Sprintf("Environment is not defined for %s", action.Name), errors.New("Environment not defined!")
-		}
-
-		// FIXME: Authentication parameters
-		if len(action.AuthenticationId) > 0 {
-			if len(allAuths) == 0 {
-				allAuths, err = shuffle.GetAllWorkflowAppAuth(ctx, workflow.ExecutingOrg.Id)
-				if err != nil {
-					log.Printf("Api authentication failed in get all app auth: %s", err)
-					return shuffle.WorkflowExecution{}, fmt.Sprintf("Api authentication failed in get all app auth: %s", err), err
-				}
-			}
-
-			curAuth := shuffle.AppAuthenticationStorage{Id: ""}
-			for _, auth := range allAuths {
-				if auth.Id == action.AuthenticationId {
-					curAuth = auth
-					break
-				}
-			}
-
-			if len(curAuth.Id) == 0 {
-				return shuffle.WorkflowExecution{}, fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId), errors.New(fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId))
-			}
-
-			if curAuth.Encrypted {
-				setField := true
-				newFields := []shuffle.AuthenticationStore{}
-				for _, field := range curAuth.Fields {
-					parsedKey := fmt.Sprintf("%s_%d_%s_%s", curAuth.OrgId, curAuth.Created, curAuth.Label, field.Key)
-					newValue, err := shuffle.HandleKeyDecryption([]byte(field.Value), parsedKey)
-					if err != nil {
-						log.Printf("[WARNING] Failed decryption for %s: %s", field.Key, err)
-						setField = false
-						break
-					}
-
-					field.Value = string(newValue)
-					newFields = append(newFields, field)
-				}
-
-				if setField {
-					curAuth.Fields = newFields
-				}
-			} else {
-				log.Printf("[INFO] AUTH IS NOT ENCRYPTED - attempting encrypting!")
-				err = shuffle.SetWorkflowAppAuthDatastore(ctx, curAuth, curAuth.Id)
-				if err != nil {
-					log.Printf("[WARNING] Failed running encryption during execution: %s", err)
-				}
-			}
-
-			newParams := []shuffle.WorkflowAppActionParameter{}
-			if strings.ToLower(curAuth.Type) == "oauth2" {
-				log.Printf("[DEBUG] Should replace auth parameters (Oauth2)")
-
-				for _, param := range curAuth.Fields {
-					if param.Key == "expiration" {
-						continue
-					}
-
-					newParams = append(newParams, shuffle.WorkflowAppActionParameter{
-						Name:  param.Key,
-						Value: param.Value,
-					})
-				}
-
-				for _, param := range action.Parameters {
-					//log.Printf("Param: %#v", param)
-					if param.Configuration {
-						continue
-					}
-
-					newParams = append(newParams, param)
-				}
-			} else {
-				// Rebuild params with the right data. This is to prevent issues on the frontend
-				for _, param := range action.Parameters {
-
-					for _, authparam := range curAuth.Fields {
-						if param.Name == authparam.Key {
-							param.Value = authparam.Value
-							//log.Printf("Name: %s - value: %s", param.Name, param.Value)
-							//log.Printf("Name: %s - value: %s\n", param.Name, param.Value)
-							break
-						}
-					}
-
-					newParams = append(newParams, param)
-				}
-			}
-
-			action.Parameters = newParams
 		}
 
 		action.LargeImage = ""
