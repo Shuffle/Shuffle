@@ -1354,7 +1354,7 @@ const Apps = (props) => {
 					border: hover ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)",
 					cursor: hover ? "pointer" : "default",
 					textAlign: "center",
-					height: 150, 
+					height: 125, 
 				}}
 			>
 				{icon} 
@@ -2556,6 +2556,7 @@ const Apps = (props) => {
   const circularLoader = validation ? (
     <CircularProgress color="primary" />
   ) : null;
+
   const appsModalLoad = loadAppsModalOpen ? (
     <Dialog
       open={loadAppsModalOpen}

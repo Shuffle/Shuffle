@@ -638,7 +638,7 @@ const Workflows = (props) => {
     window.location.host === "shuffler.io";
 
   const findWorkflow = (filters) => {
-		console.log("Using filters: ", filters)
+	console.log("Using filters: ", filters)
     if (filters.length === 0) {
       setFilteredWorkflows(workflows);
 			handleKeysetting(allUsecases, workflows)
@@ -656,6 +656,12 @@ const Workflows = (props) => {
         );
       }
 
+	  if (curWorkflow.tags !== undefined && curWorkflow.tags !== null && curWorkflow.tags.length > 0) {
+		  // Make them all lowercase
+		  curWorkflow.tags = curWorkflow.tags.map((tag) => tag.toLowerCase())
+	  }
+
+
       if (found.every((v) => v !== true)) {
         found = filters.map((filter) => {
           if (filter === undefined || filter === null) {
@@ -666,7 +672,7 @@ const Workflows = (props) => {
 
           if (curWorkflow.name.toLowerCase().includes(filter.toLowerCase())) {
             return true;
-          } else if (curWorkflow.tags !== undefined && curWorkflow.tags !== null && curWorkflow.tags.includes(filter)) {
+          } else if (curWorkflow.tags !== undefined && curWorkflow.tags !== null && curWorkflow.tags.includes(filter.toLowerCase())) {
             return true;
           } else if (curWorkflow.owner === filter) {
             return true;
@@ -674,17 +680,17 @@ const Workflows = (props) => {
             return true;
           } else if (curWorkflow.usecase_ids !== undefined && curWorkflow.usecase_ids !== null && curWorkflow.usecase_ids.length > 0) {
 						// Check if the usecase is the right category
-						for (var key in usecases) {
-							if (usecases[key].name.toLowerCase() !== newfilter) {
-								continue
-							}
+				for (var key in usecases) {
+					if (usecases[key].name.toLowerCase() !== newfilter) {
+						continue
+					}
 
-							for (var subkey in usecases[key].list) {
-								if (curWorkflow.usecase_ids.includes(usecases[key].list[subkey].name)) {
-									return true
-								}
-							}
+					for (var subkey in usecases[key].list) {
+						if (curWorkflow.usecase_ids.includes(usecases[key].list[subkey].name)) {
+							return true
 						}
+					}
+				}
           } else if (
             curWorkflow.actions !== null &&
             curWorkflow.actions !== undefined

@@ -224,7 +224,7 @@ func deployServiceWorkers(image string) {
 		}
 
 		if err != nil {
-			log.Printf("[ERROR] Failed to convert the default MTU to int: %s. Using 1500 instead", err)
+			log.Printf("[DEBUG] Failed to convert the default MTU to int: %s. Using 1500 instead", err)
 			mtu = 1500
 		}
 
@@ -1601,6 +1601,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	_ = body
 
-	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING: docker service logs shuffle-workers 2&>1 | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
+	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING: docker service logs shuffle-workers 2>&1 | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
 	return nil
 }

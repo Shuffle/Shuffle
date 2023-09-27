@@ -749,7 +749,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       image: image,
       defaults: defaults,
       sso_config: sso_config,
-			lead_info: lead_info,
+	  lead_info: lead_info,
     };
 
     const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
@@ -2371,7 +2371,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 						*/}
 
 						{userdata.support === true ? 
-							<span style={{display: "flex", top: -10, right: 50, position: "absolute"}}>
+							<span style={{display: "flex", top: -10, right: -50, position: "absolute"}}>
 								{/*<a href={mailsendingButton(selectedOrganization)} target="_blank" rel="noopener noreferrer" style={{textDecoration: "none"}} disabled={selectedStatus.length !== 0}>*/}
 								<Button
 									variant="outlined"
@@ -2468,8 +2468,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                 setSelectedOrganization={setSelectedOrganization}
                 globalUrl={globalUrl}
                 selectedOrganization={selectedOrganization}
-								adminTab={adminTab}
-  							handleEditOrg={handleEditOrg}
+				adminTab={adminTab}
+				handleEditOrg={handleEditOrg}
               />
             ) : (
               <div
@@ -2517,13 +2517,13 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 							<Tab
 								disabled={!isCloud}
 								label=<span>
-									Billing (Beta)
+									Billing 
 								</span>
 							/>
 							<Tab
-								disabled={!isCloud || true}
+								disabled={!isCloud}
 								label=<span>
-									Branding	
+									Branding (Beta)
 								</span>
 							/>
 						</Tabs>
@@ -2798,7 +2798,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 								globalUrl={globalUrl}
 								handleGetOrg={handleGetOrg}
 								selectedOrganization={selectedOrganization}
-								selectedOrganization={selectedOrganization}
 								setSelectedOrganization={setSelectedOrganization}
 							/>
 							: null
@@ -2995,7 +2994,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             Add, edit, block or change passwords.{" "}
             <a
               target="_blank"
-							rel="noopener noreferrer"
+			  rel="noopener noreferrer"
               href="/docs/organizations#user_management"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >

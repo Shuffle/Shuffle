@@ -22,10 +22,9 @@ import {
 import aa from 'search-insights'
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const Appsearch = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList}  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList, setUserSpecialzedApp }  = props
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-  //const alert = useAlert();
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? 12 : parsedXs
 	//const theme = useTheme();
@@ -41,45 +40,6 @@ const Appsearch = props => {
 	const borderRadius = 3
 	window.title = "Shuffle | Apps | Find and integration any app"
 
-	const setUserSpecialzedApp = (user, data) => {
-		// var data = newfields]
-		console.log("data value", data)
-		const appData = {"user_id":user,"specialized_apps":[{}]}
-		console.log("User Check for appdata:", user)
-		appData["specialized_apps"][0]["name"] = data["name"]
-		appData["specialized_apps"][0]["image"] = data["image_url"]
-		appData["specialized_apps"][0]["category"] = data["categories"].toString()
-		console.log("AppData:",appData)
-		console.log("setActionImageList",setActionImageList)
-		console.log("actionImageList",actionImageList)
-
-		const finalData = actionImageList.concat(appData["specialized_apps"])
-		appData["specialized_apps"]=finalData
-		fetch(globalUrl + "/api/v1/users/updateuser", {
-		  method: "PUT",
-		  headers: {
-			"Content-Type": "application/json",
-			Accept: "application/json",
-		  },
-		  body: JSON.stringify(appData),
-		  credentials: "include",
-		})
-		  .then((response) => {
-			if (response.status !== 200) {
-			  console.log("Status not 200 for set creator :O!");
-			}
-			toast("Sucessfully updated specialzed app.")
-			return response.json();
-		  })
-		  .then((responseJson) => {
-			if (!responseJson.success && responseJson.reason !== undefined) {
-			  toast("Failed updating user: " + responseJson.reason);
-			}
-		  })
-		  .catch((error) => {
-			console.log(error);
-		  });
-	  };
 
 	// value={currentRefinement}
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {
@@ -180,13 +140,8 @@ const Appsearch = props => {
 							setMouseHoverIndex(-1)
 						}} onClick={() => {
 							if(isCreatorPage === true){
-								console.log("data:",data)
-								console.log("userdata.id",userdata.id)
-								console.log("is creator", isCreatorPage)
-								if (setNewSelectedApp !== undefined) {
-									// setUserSpecialzedApp = data
+								if (setNewSelectedApp !== undefined && setUserSpecialzedApp !== undefined) {
 									setUserSpecialzedApp(userdata.id, data)
-									//setActionImageList(userdata.id, data)
 								}	
 							}
 							if (setNewSelectedApp !== undefined) {

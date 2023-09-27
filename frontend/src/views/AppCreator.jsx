@@ -22,9 +22,11 @@ import {
   Breadcrumbs,
   CircularProgress,
   Chip,
+  IconButton,
 } from "@mui/material";
 
 import {
+  Publish as PublishIcon,
   LockOpen as LockOpenIcon,
   FileCopy as FileCopyIcon,
   Delete as DeleteIcon,
@@ -40,10 +42,11 @@ import {
 	ZoomOutOutlined as ZoomOutOutlinedIcon,
 	Loop as LoopIcon,
 	AddPhotoAlternate as AddPhotoAlternateIcon,
+	CallMerge as CallMergeIcon,
 } from "@mui/icons-material";
 
 import { v4 as uuidv4 } from "uuid";
-import { Link, useParams } from "react-router-dom";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import YAML from "yaml";
 import { MuiChipsInput } from "mui-chips-input";
 //import { useAlert
@@ -360,6 +363,8 @@ const AppCreator = (defaultprops) => {
 	props.match.params = params
 
   var upload = "";
+  let navigate = useNavigate();
+
   const increaseAmount = 50;
   const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"];
   const actionBodyRequest = ["POST", "PUT", "PATCH"];
@@ -422,6 +427,109 @@ const AppCreator = (defaultprops) => {
 	// and make categories + labels modifyable.
 	// Categories are the main categories in the App Framework
   const [categories, setCategories] = useState(appCategories)
+
+  
+
+  const redirectOpenApi = () => {
+    navigate(`/apps/new?id=${appValidation}`)
+  }
+
+  const newUpload = React.useRef(null);
+  const [openApiError, setOpenApiError] = React.useState("");
+  const [validation, setValidation] = React.useState("");
+  const [appValidation, setAppValidation] = React.useState("");
+  const [openApi, setOpenApi] = React.useState("");
+  const [openApiData, setOpenApiData] = React.useState("");
+  const [openApiModal, setOpenApiModal] = React.useState(false);
+
+  useEffect(() => {
+	  console.log("In useEffect for openApiData: ", openApiData)
+  }, [openApiData]);
+
+  const uploadFile = (e) => {
+	console.log("In uploadFile")
+    const isDropzone =
+      e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
+    const files = isDropzone ? e.dataTransfer.files : e.target.files;
+    const reader = new FileReader();
+
+    try {
+      reader.addEventListener("load", (e) => {
+        const content = e.target.result;
+		console.log("set openapi data! ", content)
+        setOpenApiData(content);
+        setOpenApiModal(true);
+      });
+    } catch (e) {
+      console.log("Error in dropzone: ", e);
+    }
+
+    try {
+      reader.readAsText(files[0]);
+    } catch (error) {
+      toast("Failed to read file");
+    }
+  }
+
+  const escapeApiData = (apidata) => {
+    //console.log(apidata)
+    try {
+      return JSON.stringify(JSON.parse(apidata));
+    } catch (error) {
+      console.log("JSON DECODE ERROR - TRY YAML");
+    }
+
+    try {
+      const parsed = YAML.parse(YAML.stringify(apidata));
+      //const parsed = YAML.parse(apidata))
+      return YAML.stringify(parsed);
+    } catch (error) {
+      console.log("YAML DECODE ERROR - TRY SOMETHING ELSE?: " + error);
+      setOpenApiError("Local error: " + error.toString());
+    }
+
+    return "";
+  }
+
+  const validateOpenApi = (openApidata) => {
+    var newApidata = escapeApiData(openApidata);
+    if (newApidata === "") {
+      // Used to return here
+      newApidata = openApidata;
+      return;
+    }
+
+    //console.log(newApidata)
+
+    setValidation(true);
+    fetch(globalUrl + "/api/v1/validate_openapi", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+      body: openApidata,
+      credentials: "include",
+    })
+      .then((response) => {
+        setValidation(false);
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success) {
+          setAppValidation(responseJson.id);
+        } else {
+          if (responseJson.reason !== undefined) {
+            setOpenApiError(responseJson.reason);
+          }
+          toast("An error occurred in the response");
+        }
+      })
+      .catch((error) => {
+        setValidation(false);
+        toast(error.toString());
+        setOpenApiError(error.toString());
+      });
+  };
   
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
@@ -2084,9 +2192,9 @@ const AppCreator = (defaultprops) => {
             },
           };
 
-					if (queryitem.example !== undefined) {
-						newitem.example = queryitem.example
-					}
+		  if (queryitem.example !== undefined) {
+		  	newitem.example = queryitem.example
+		  }
 
           if (queryitem.description !== undefined) {
             newitem.description = queryitem.description;
@@ -2936,18 +3044,6 @@ const AppCreator = (defaultprops) => {
 			  setOauth2Scopes(chips)
 			  setUpdate(Math.random())
 		  }}
-          onAdd={(chip) => {
-            oauth2Scopes.push(chip);
-            console.log(oauth2Scopes);
-            setOauth2Scopes(oauth2Scopes);
-            setUpdate(Math.random());
-          }}
-          onDelete={(chip, index) => {
-            oauth2Scopes.splice(index, 1);
-            console.log(oauth2Scopes);
-            setOauth2Scopes(oauth2Scopes);
-            setUpdate(Math.random());
-          }}
         />
       </div>
     ) : null;
@@ -4408,16 +4504,7 @@ const AppCreator = (defaultprops) => {
 			setNewWorkflowTags(chips)
 			setUpdate("added "+chips)
 	    }}
-        onAdd={(chip) => {
-          newWorkflowTags.push(chip);
-          setNewWorkflowTags(newWorkflowTags);
-          setUpdate("added" + chip);
-        }}
-        onDelete={(chip, index) => {
-          newWorkflowTags.splice(index, 1);
-          setNewWorkflowTags(newWorkflowTags);
-          setUpdate("delete " + chip);
-        }}
+
       />
     </div>
   );
@@ -5360,6 +5447,167 @@ const AppCreator = (defaultprops) => {
     </Dialog>
   ) : null;
 
+  const validateRemote = () => {
+    setValidation(true);
+
+    fetch(globalUrl + "/api/v1/get_openapi_uri", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+      body: JSON.stringify(openApi),
+      credentials: "include",
+    })
+      .then((response) => {
+        setValidation(false);
+        if (response.status !== 200) {
+          return response.json();
+        }
+
+        return response.text();
+      })
+      .then((responseJson) => {
+        if (typeof responseJson !== "string" && !responseJson.success) {
+          console.log(responseJson.reason);
+          if (responseJson.reason !== undefined) {
+            setOpenApiError(responseJson.reason);
+          } else {
+            setOpenApiError("Undefined issue with OpenAPI validation");
+          }
+          return;
+        }
+
+        console.log("Validating response!");
+        validateOpenApi(responseJson);
+      })
+      .catch((error) => {
+        toast(error.toString());
+        setOpenApiError(error.toString());
+      });
+  }
+
+  const circularLoader = validation ? (
+    <CircularProgress color="primary" />
+  ) : null;
+
+  const newApimodalView = openApiModal ? 
+    <Dialog
+      open={openApiModal}
+      onClose={() => {
+        setOpenApiModal(false)
+      }}
+      PaperProps={{
+        style: {
+          backgroundColor: surfaceColor,
+          color: "white",
+          minWidth: "800px",
+          minHeight: "320px",
+        },
+      }}
+    >
+      <FormControl>
+        <DialogTitle>
+          <div style={{ color: "rgba(255,255,255,0.9)" }}>
+			Merge with another OpenAPI document. You will get to choose Actions before they are merged.
+          </div>
+        </DialogTitle>
+        <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
+          Paste in the URI for the OpenAPI
+          <TextField
+            style={{ backgroundColor: inputColor }}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              style: {
+                color: "white",
+                height: "50px",
+                fontSize: "1em",
+              },
+              endAdornment: (
+                <Button
+                  style={{
+                    borderRadius: "0px",
+                    marginTop: "0px",
+                    height: "50px",
+                  }}
+                  variant="contained"
+                  disabled={openApi.length === 0 || appValidation.length > 0}
+                  color="primary"
+                  onClick={() => {
+                    setOpenApiError("");
+                    validateRemote();
+                  }}
+                >
+                  Validate
+                </Button>
+              ),
+            }}
+            onChange={(e) => {
+              setOpenApi(e.target.value);
+            }}
+            helperText={
+              <span style={{ color: "white", marginBottom: "2px" }}>
+                Must point to a version 2 or 3 OpenAPI specification.
+              </span>
+            }
+            placeholder="OpenAPI URI"
+            fullWidth
+          />
+          {/*
+					  <div style={{marginTop: "15px"}}/>
+					  Example: 
+					  <div />
+					  https://raw.githubusercontent.com/OAI/OpenAPI-Specification/master/examples/v2.0/json/uber.json
+						*/}
+          <p>Or upload a YAML/JSON specification</p>
+          <input
+            hidden
+            type="file"
+            ref={newUpload}
+            accept="application/JSON,application/YAML,application/yaml,text/yaml,text/x-yaml,application/x-yaml,application/vnd.yaml,.yml,.yaml"
+            multiple={false}
+            onChange={uploadFile}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => newUpload.current.click()}
+          >
+            Upload
+          </Button>
+          {errorText}
+        </DialogContent>
+        <DialogActions>
+          {circularLoader}
+          <Button
+            style={{ borderRadius: "0px" }}
+            onClick={() => {
+              setOpenApiModal(false);
+              setAppValidation("");
+              setOpenApiError("");
+              setOpenApi("");
+              setOpenApiData("");
+            }}
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            style={{ borderRadius: "0px" }}
+            disabled={appValidation.length === 0}
+            onClick={() => {
+              redirectOpenApi();
+            }}
+            color="primary"
+          >
+            Continue
+          </Button>
+        </DialogActions>
+      </FormControl>
+    </Dialog>
+   : null
+
   // Random names for type & autoComplete. Didn't research :^)
   const landingpageDataBrowser = (
     <div style={{ paddingBottom: 100, color: "white" }}>
@@ -5391,9 +5639,30 @@ const AppCreator = (defaultprops) => {
         onChange={editHeaderImage}
       />
       <Paper style={boxStyle}>
-        <h2 style={{ marginBottom: "10px", color: "white" }}>
-          General information
-        </h2>
+	  	<div style={{display: "flex", }}>
+			<div style={{flex: 1, }}>
+				<h2 style={{ marginBottom: "10px", color: "white" }}>
+				  General information
+				</h2>
+			</div>
+			<div style={{flex: 1, itemAlign: "right", textAlign: "right",}}>
+          		<Tooltip title="Merge with another API (coming soon)" placement="bottom">
+					<IconButton
+						disabled
+						onClick={() => {
+							setOpenApiModal(true)
+						}}
+					>
+						<CallMergeIcon 
+							style={{}} 
+							onClick={() => {
+								setOpenApiModal(true)
+							}}
+						/>
+					</IconButton>
+				</Tooltip>
+			</div>
+		</div>
         <a
           target="_blank"
           href="https://shuffler.io/docs/app_creation#app-creator-instructions"
@@ -5706,6 +5975,7 @@ const AppCreator = (defaultprops) => {
     isLoaded && isAppLoaded ? (
       <div>
         <div style={bodyDivStyle}>{landingpageDataBrowser}</div>
+  		{newApimodalView} 
       </div>
     ) : (
       <div></div>

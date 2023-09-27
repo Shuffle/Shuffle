@@ -1,11 +1,12 @@
 import os
 import ast
-import copy
 import sys
 import re
+import copy
 import time 
 import base64
 import json
+import random
 import liquid
 import logging
 import urllib3
@@ -504,10 +505,12 @@ class AppBase:
         except Exception as e:
             print(f"[WARNING] Failed adding parameter for logs: {e}") 
 
-        # FIXME: Adding retries here.
         try:
             finished = False
             for i in range (0, 10):
+                # Random sleeptime between 0 and 1 second, with 0.1 increments
+                sleeptime = float(random.randint(0, 10) / 10)
+
                 try:
                     ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False)
 
@@ -516,29 +519,29 @@ class AppBase:
                         finished = True
                         break
                     else:
-                        self.logger.info(f"[ERROR] RESP: {ret.text}")
+                        self.logger.info(f"[ERROR] Bad resp {ret.status_code}: {ret.text}")
 
                 except requests.exceptions.RequestException as e:
                     self.logger.info(f"[DEBUG] Request problem: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except TimeoutError as e:
                     self.logger.info(f"[DEBUG] Timeout or request: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except requests.exceptions.ConnectionError as e:
                     self.logger.info(f"[DEBUG] Connectionerror: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except http.client.RemoteDisconnected as e:
                     self.logger.info(f"[DEBUG] Remote: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
@@ -555,8 +558,11 @@ class AppBase:
                 # Not sure why this would work tho :)
                 action_result["status"] = "FAILURE"
                 action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 10 retries to the backend" % url})
-                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished after 10 requests")
-                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
+                self.logger.info(f"[ERROR] Before typeerror stream result - NOT finished after 10 requests")
+
+                #ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
+                self.send_result(action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
+                return
         
             self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:

@@ -823,7 +823,6 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 										color: "white", 
 										height: 45, 
 										width: 85, 
-										zIndex: 14999,
 									}}
 
 									value={userdata.active_org.id}
