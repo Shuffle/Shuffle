@@ -17,7 +17,7 @@ jobs:
            experimental: true
          - app: backend
            path: backend
-           version: 1.2.1
+           version: nightly
            experimental: true
          - app: app_sdk 
            path: backend/app_sdk
