@@ -17,7 +17,7 @@ jobs:
            experimental: true
          - app: backend
            path: backend
-           version: nightly
+           version: 1.2.1
            experimental: true
          - app: app_sdk 
            path: backend/app_sdk
@@ -71,7 +71,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
             ghcr.io/shuffle/shuffle-${{ matrix.app }}:nightly
-            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly
+            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:{{ matrix.version }}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
