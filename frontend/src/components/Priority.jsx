@@ -21,8 +21,7 @@ import {
 //import { useAlert 
 
 const Priority = (props) => {
-  const { globalUrl, userdata, serverside, priority, checkLogin, setAdminTab, setCurTab, } = props;
-
+  	const { globalUrl, userdata, serverside, priority, checkLogin, setAdminTab, setCurTab, } = props;
 
   	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	let navigate = useNavigate();
@@ -52,15 +51,15 @@ const Priority = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-					if (checkLogin !== undefined) {
-						checkLogin()
-					}
+			if (checkLogin !== undefined) {
+				checkLogin()
+			}
         } else {
         	if (responseJson.success === false && responseJson.reason !== undefined) {
-          	toast("Failed change recommendation: ", responseJson.reason)
+          		toast("Failed change recommendation: ", responseJson.reason)
         	} else {
-          	toast("Failed change recommendation");
-					}
+          		toast("Failed change recommendation");
+			}
         }
       })
       .catch((error) => {
@@ -70,7 +69,7 @@ const Priority = (props) => {
 
 
 	return (
-		<div style={{border: priority.active === false ? "1px solid #000000" :  priority.severity === 1 ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", minHeight: 70, maxHeight: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+		<div style={{border: priority.active === false ? "1px solid #000000" :  priority.severity === 1 ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", minHeight: 100, maxHeight: 100, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
 			<div style={{flex: 2, overflow: "hidden",}}>
 				<span style={{display: "flex", }}>
 					{priority.type === "usecase" || priority.type == "apps" ? <AutoFixHighIcon style={{height: 19, width: 19, marginLeft: 3, marginRight: 10, }}/> : null} 
