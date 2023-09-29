@@ -3500,6 +3500,7 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 }
 
 func handleCloudJob(job shuffle.CloudSyncJob) error {
+	ctx := context.Background()
 	// May need authentication in all of these..?
 	log.Printf("[INFO] Handle job with type %s and action %s", job.Type, job.Action)
 	shuffle.IncrementCache(ctx, job.OrgId, "org_sync_actions")
@@ -6097,6 +6098,7 @@ func initHandlers() {
 
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
+
 	initHandlers()
 	hostname, err := os.Hostname()
 	if err != nil {

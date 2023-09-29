@@ -1,3 +1,4 @@
+
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -5,20 +6,29 @@ metadata:
 spec:
   template:
     spec:
+      nodeSelector:
+        node: master
       containers:
       - name: kaniko
-        image: gcr.io/kaniko-project/executor:latest
-        args: ["--verbosity=debug",
-               "--dockerfile=/workspace/Dockerfile",
-               "--context=dir:///workspace",
-               "--insecure",
-               "--destination=shuffle-registry:5000/shuffle/dhaval-repo:1.0"
-               ] 
+        image: gcr.io/kaniko-project/executor:debug
+        # command: ["/busybox/sh", "-c"]
+        # args: ["-c","while true; do sleep 3600; done"]    
+        args:  [
+            "--verbosity=debug",
+            "--context=dir:///app/generated/ok-349ec164d4ad2409152dcb901257f718",
+            "--dockerfile=./Dockerfile",
+            #"--no-push",
+            "--skip-tls-verify",
+            # "--registry-certificate=172.17.14.71:5000=/workspace/certs/cert.pem",
+            "--destination=172.17.14.71:5000/shuffle/dhaval-kaniko:1.0"
+              ] 
         volumeMounts:
         - name: kaniko-workspace
-          mountPath: /workspace
+          mountPath: /app/generated
+      nodeSelector:
+        node: master
       restartPolicy: Never
       volumes:
       - name: kaniko-workspace
-        hostPath:
-          path: /home/docker/kaniko
+        persistentVolumeClaim:
+            claimName: backend-apps-claim

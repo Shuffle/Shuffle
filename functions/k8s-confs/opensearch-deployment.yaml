@@ -10,7 +10,7 @@ spec:
   accessModes:
     - ReadWriteOnce  # This allows read-write access to a single node
   persistentVolumeReclaimPolicy: Retain  # Adjust the reclaim policy as per your needs
-  storageClassName: shuffle-storage  # Set the desired storage class
+  storageClassName: fast  # Set the desired storage class
   hostPath:
     path: /mnt/shuffle-data/open-search
 
@@ -26,6 +26,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: fast
   resources:
     requests:
       storage: 500Mi
@@ -58,6 +59,11 @@ spec:
         io.kompose.network/shuffle: "true"
         io.kompose.service: opensearch
     spec:
+     # securityContext:
+     #   runAsUser: 1000  # UID
+     #   fsGroup: 1000    # GID
+      nodeSelector:
+        node: worker1
       containers:
         - env:
             - name: OPENSEARCH_JAVA_OPTS

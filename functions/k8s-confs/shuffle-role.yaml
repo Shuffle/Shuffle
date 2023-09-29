@@ -7,4 +7,6 @@ rules:
 - apiGroups: [""]
   resources: ["pods"]
   verbs: ["get", "list", "create", "update", "delete"]
-
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "get", "list", "watch", "delete"]

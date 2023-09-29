@@ -31,7 +31,7 @@ spec:
       containers:
         - env:
             - name: BASE_URL
-              value: "http://192.168.49.2:30009"
+              value: "http://shuffle-backend:5001"
             - name: DOCKER_API_VERSION
               value: "1.40"
             - name: ENVIRONMENT_NAME
@@ -46,8 +46,18 @@ spec:
               #value: run
             - name: SHUFFLE_WORKER_VERSION
               value: nightly
+            - name: IS_KUBERNETES
+              valueFrom:
+                configMapKeyRef:
+                  key: IS_KUBERNETES
+                  name: env
+            - name: REGISTRY_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: REGISTRY_URL
+                  name: env
 
-          image: orborus:v2
+          image: shuffle-orborus:v1
           imagePullPolicy: Never
           name: shuffle-orborus
           resources: {}

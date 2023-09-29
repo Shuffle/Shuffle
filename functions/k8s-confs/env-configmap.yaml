@@ -2,7 +2,7 @@ apiVersion: v1
 data:
   BACKEND_HOSTNAME: shuffle-backend
   BACKEND_PORT: "5001"
-  BASE_URL: http://10.0.244.224:5001
+  BASE_URL: http://shuffle-backend:5001
   DATASTORE_EMULATOR_HOST: shuffle-database:8000
   DB_LOCATION: /mnt/shuffle-data/open-search
   DOCKER_API_VERSION: "1.40"
@@ -44,7 +44,7 @@ data:
   SHUFFLE_OPENSEARCH_PASSWORD: admin
   SHUFFLE_OPENSEARCH_PROXY: ""
   SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY: "true"
-  SHUFFLE_OPENSEARCH_URL: https://192.168.49.2:31001
+  SHUFFLE_OPENSEARCH_URL: https://opensearch:9200
   SHUFFLE_OPENSEARCH_USERNAME: admin
   SHUFFLE_ORBORUS_STARTUP_DELAY: "\t\t"
   SHUFFLE_PASS_APP_PROXY: "FALSE"
@@ -52,6 +52,9 @@ data:
   SHUFFLE_RERUN_SCHEDULE: "300"
   SSO_REDIRECT_URL: ""
   TZ: "Europe/Amsterdam \t\t\t\t\t"
+  IS_KUBERNETES: "true"
+  REGISTRY_URL: "172.17.14.71:5000"
+  #REGISTRY_AUTH: ""
 kind: ConfigMap
 metadata:
   creationTimestamp: null

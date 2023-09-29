@@ -38,13 +38,13 @@ import (
 	"cloud.google.com/go/storage"
 
 	//k8s deps
-	"k8s.io/client-go/kubernetes"
-    "k8s.io/client-go/tools/clientcmd"
-    "k8s.io/client-go/util/homedir"
-	"k8s.io/client-go/rest"
-    "path/filepath"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+	"path/filepath"
 	// "k8s.io/client-go/util/retry"
 )
 
@@ -223,12 +223,13 @@ func getKubernetesClient() (*kubernetes.Clientset, error) {
 
 // Deploys the internal worker whenever something happens
 func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution, action shuffle.Action) error {
-	// form basic hostConfig
 	log.Printf("HELLO FROM DEPLOYAPP")
-	// log.Printf("workflow execution: %+v", workflowExecution)
 	log.Printf("image: %s", image)
+
+	log.Printf("IS_KUBERNETES: %s", os.Getenv("IS_KUBERNETES"))
+	log.Printf("REGISTRY_NAME: %s", os.Getenv("REGISTRY_NAME"))
+
 	namespace := "shuffle"
-	// ctx := context.Background()
 
 	envMap := make(map[string]string)
 	for _, envStr := range env {
@@ -243,16 +244,16 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		fmt.Println("[ERROR]Error getting kubernetes client:", err)
 		os.Exit(1)
 	}
-	
+
 	log.Printf("[DEBUG] Got kubernetes client")
 	str := strings.ToLower(identifier)
-    strSplit := strings.Split(str, "_")
-    value := strSplit[0]
+	strSplit := strings.Split(str, "_")
+	value := strSplit[0]
 	value = strings.ReplaceAll(value, "_", "-")
 
 	//fix naming convention
-    podUuid := uuid.NewV4().String()
-    podName := fmt.Sprintf("%s-%s", value, podUuid)
+	podUuid := uuid.NewV4().String()
+	podName := fmt.Sprintf("%s-%s", value, podUuid)
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -266,7 +267,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				{
 					Name:  value,
 					Image: image,
-					Env:  buildEnvVars(envMap),
+					Env:   buildEnvVars(envMap),
 				},
 			},
 		},
@@ -291,22 +292,22 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	// container := corev1.EphemeralContainer{
 	// 	EphemeralContainerCommon: corev1.EphemeralContainerCommon{
 	// 	Image:           image,
-    //     Env:             buildEnvVars(envMap),
-    //     ImagePullPolicy: corev1.PullIfNotPresent,
+	//     Env:             buildEnvVars(envMap),
+	//     ImagePullPolicy: corev1.PullIfNotPresent,
 	// 	},
 	// }
 
 	// pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, container)
 
 	// err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-    //     _, err := clientset.CoreV1().Pods(namespace).Update(context.Background(), pod, metav1.UpdateOptions{})
-    //     return err
-    // })
-    // if err != nil {
-    //     log.Fatalf("Failed to update Pod %v", err)
-    // }
+	//     _, err := clientset.CoreV1().Pods(namespace).Update(context.Background(), pod, metav1.UpdateOptions{})
+	//     return err
+	// })
+	// if err != nil {
+	//     log.Fatalf("Failed to update Pod %v", err)
+	// }
 
-    // fmt.Printf("Ephemeral container added to Pod \n")
+	// fmt.Printf("Ephemeral container added to Pod \n")
 
 	// ephemeralContainer := corev1.EphemeralContainer{
 	// 	EphemeralContainerCommon: corev1.EphemeralContainerCommon{
@@ -350,7 +351,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	//CPUShares: 128,
 	//CPUQuota:  10000,
 	//CPUPeriod: 100000,
-	
+
 	// hostConfig := &container.HostConfig{
 	// 	LogConfig: container.LogConfig{
 	// 		Type: "json-file",

@@ -3,33 +3,58 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: shuffle-pv
+  name: shuffle-apps-pv
 spec:
   capacity:
-    storage: 10Gi  
-  accessModes:
-    - ReadWriteOnce  
-  persistentVolumeReclaimPolicy: Retain  
-  storageClassName: shuffle-storage  
-  hostPath:
-    path: /mnt/shuffle-data/backend
-
----
-
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  creationTimestamp: null
-  labels:
-    io.kompose.service: backend-files-claim
-  name: backend-files-claim
-spec:
+    storage: 10Gi
   accessModes:
     - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-status: {}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: fast
+  local:
+    path: /mnt/shuffle-data/backend
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node
+              operator: In
+              values:
+                - master
+
+# ---
+
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: shuffle-files-pv
+# spec:
+#   capacity:
+#     storage: 5Gi  
+#   accessModes:
+#     - ReadWriteOnce  
+#   persistentVolumeReclaimPolicy: Retain  
+#   storageClassName: fast
+#   hostPath:
+#     path: /mnt/shuffle-data/backend
+
+# ---
+
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   creationTimestamp: null
+#   labels:
+#     io.kompose.service: backend-files-claim
+#   name: backend-files-claim
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   storageClassName: fast
+#   resources:
+#     requests:
+#       storage: 1Gi
+# status: {}
 
 ---
 
@@ -43,10 +68,11 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: fast
   resources:
     requests:
       storage: 1Gi
-status: {}
+# status: {}
 
 ---
 apiVersion: apps/v1
@@ -79,15 +105,21 @@ spec:
       name: shuffle-backend
     spec:
       volumes:
-        - name: shuffle-files
-          persistentVolumeClaim:
-            claimName: backend-files-claim
+        # - name: shuffle-files
+        #   persistentVolumeClaim:
+        #     claimName: backend-files-claim
+        # - name: shuffle-apps
+        #   hostPath:
+        #     path: /mnt/shuffle-data/backend
+        #     type: DirectoryOrCreate
         - name: shuffle-apps
           persistentVolumeClaim:
             claimName: backend-apps-claim
-        - name: docker-socket
-          hostPath:
-            path: /var/run/docker.sock
+        # - name: docker-socket
+        #   hostPath:
+        #     path: /var/run/docker.sock
+      nodeSelector:
+        node: master
       containers:
         - env:
             - name: BACKEND_HOSTNAME
@@ -350,18 +382,29 @@ spec:
                 configMapKeyRef:
                   key: TZ
                   name: env
-          image: ghcr.io/shuffle/shuffle-backend:latest
+            - name: IS_KUBERNETES
+              valueFrom:
+                configMapKeyRef:
+                  key: IS_KUBERNETES
+                  name: env
+            - name: REGISTRY_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: REGISTRY_URL
+                  name: env
+          image: shuffle-backend:v1
+          imagePullPolicy: Never
           name: shuffle-backend
           ports:
             - containerPort: 5001
           resources: {}
           volumeMounts:
-            - name: docker-socket 
-              mountPath: /var/run/docker.sock
+            # - name: docker-socket 
+            #   mountPath: /var/run/docker.sock
             - name: shuffle-apps
-              mountPath: /shuffle-apps
-            - name: shuffle-files 
-              mountPath: /shuffle-files
+              mountPath: /app/generated
+            # - name: shuffle-files 
+            #   mountPath: /shuffle-files
       restartPolicy: Always
 status: {}
 

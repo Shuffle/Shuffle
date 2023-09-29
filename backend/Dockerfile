@@ -8,6 +8,8 @@ ADD ./go-app/main.go /app
 ADD ./go-app/walkoff.go /app
 ADD ./go-app/docker.go /app
 
+ADD ./go-app/shuffle-shared /app/shuffle-shared
+
 ADD ./go-app/go.mod /app
 
 # Required files for code generation
