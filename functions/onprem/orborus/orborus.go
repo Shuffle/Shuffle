@@ -612,6 +612,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 				Labels: map[string]string{"app": "shuffle-worker"},
 			},
 			Spec: corev1.PodSpec{
+				RestartPolicy: "Never",
 				NodeSelector: map[string]string{
 					"node": "master",
 				},
@@ -1306,58 +1307,86 @@ func main() {
 // Is this ok to do with Docker? idk :)
 func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	//log.Printf("[DEBUG] Getting running workers with API version %s", dockerApiVersion)
-	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-		All: true,
-	})
+	counter := 0
+	if os.Getenv("IS_KUBERNETES") == "true" {
+		log.Printf("[INFO] getting running workers in kubernetes")
 
-	// Automatically updates the version
-	if err != nil {
-		log.Printf("[ERROR] Error getting containers: %s", err)
+		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
 
-		newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
-		if len(newVersionSplit) > 1 {
-			//dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
-			log.Printf("[DEBUG] WANT to change the API version to default to %s?", strings.TrimSpace(newVersionSplit[1]))
+		clientset, err := getKubernetesClient()
+		if err != nil {
+			log.Printf("[ERROR] Failed getting kubernetes client: %s", err)
+			return 0
 		}
 
-		return maxConcurrency
-	}
+		labelSelector := "app=shuffle-worker"
+		pods, podErr := clientset.CoreV1().Pods("shuffle").List(ctx, metav1.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if podErr != nil {
+			log.Printf("[ERROR] Failed getting running workers: %s", podErr)
+			return 0
+		}
 
-	currenttime := time.Now().Unix()
-	counter := 0
-	for _, container := range containers {
-		// Skip random containers. Only handle things related to Shuffle.
-		if !strings.Contains(container.Image, baseimagename) {
-			shuffleFound := false
-			for _, item := range container.Labels {
-				if item == "shuffle" {
-					shuffleFound = true
+		for _, pod := range pods.Items {
+			if pod.Status.Phase == "Running" && pod.CreationTimestamp.Time.After(thresholdTime) {
+				counter++
+			}
+		}
+	} else {
+
+		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+			All: true,
+		})
+	
+		// Automatically updates the version
+		if err != nil {
+			log.Printf("[ERROR] Error getting containers: %s", err)
+	
+			newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
+			if len(newVersionSplit) > 1 {
+				//dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
+				log.Printf("[DEBUG] WANT to change the API version to default to %s?", strings.TrimSpace(newVersionSplit[1]))
+			}
+	
+			return maxConcurrency
+		}
+	
+		currenttime := time.Now().Unix()
+
+		for _, container := range containers {
+			// Skip random containers. Only handle things related to Shuffle.
+			if !strings.Contains(container.Image, baseimagename) {
+				shuffleFound := false
+				for _, item := range container.Labels {
+					if item == "shuffle" {
+						shuffleFound = true
+						break
+					}
+				}
+	
+				// Check image name
+				if !shuffleFound {
+					continue
+				}
+				//} else {
+				//	log.Printf("NAME: %s", container.Image)
+			}
+	
+			for _, name := range container.Names {
+				// FIXME - add name_version_uid_uid regex check as well
+				if !strings.HasPrefix(name, "/worker") {
+					continue
+				}
+	
+				//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
+				if container.State == "running" && currenttime-container.Created < int64(workerTimeout) {
+					counter += 1
 					break
 				}
 			}
-
-			// Check image name
-			if !shuffleFound {
-				continue
-			}
-			//} else {
-			//	log.Printf("NAME: %s", container.Image)
-		}
-
-		for _, name := range container.Names {
-			// FIXME - add name_version_uid_uid regex check as well
-			if !strings.HasPrefix(name, "/worker") {
-				continue
-			}
-
-			//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
-			if container.State == "running" && currenttime-container.Created < int64(workerTimeout) {
-				counter += 1
-				break
-			}
 		}
 	}
-
 	return counter
 }
 

@@ -24,10 +24,10 @@ spec:
         io.kompose.network/shuffle: "true"
         io.kompose.service: orborus
     spec:
-      volumes:
-        - name: docker-socket
-          hostPath:
-            path: /var/run/docker.sock
+      # volumes:
+      #   - name: docker-socket
+      #     hostPath:
+      #       path: /var/run/docker.sock
       containers:
         - env:
             - name: BASE_URL
@@ -61,9 +61,9 @@ spec:
           imagePullPolicy: Never
           name: shuffle-orborus
           resources: {}
-          volumeMounts:
-            - name: docker-socket 
-              mountPath: /var/run/docker.sock
+          # volumeMounts:
+          #   - name: docker-socket 
+          #     mountPath: /var/run/docker.sock
       hostname: shuffle-orborus
       restartPolicy: Always
 status: {}

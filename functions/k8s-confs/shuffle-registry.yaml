@@ -1,0 +1,68 @@
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shuffle-registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shuffle-registry
+  template:
+    metadata:
+      labels:
+        app: shuffle-registry
+    spec:
+      initContainers:
+      - name: generate-certs
+        image: frapsoft/openssl
+        command: ["openssl"]
+        args:
+        - req
+        - -newkey
+        - rsa:4096
+        - -nodes
+        - -sha256
+        - -x509
+        - -days
+        - "365"
+        - -keyout
+        - /certs/domain.key
+        - -out
+        - /certs/domain.crt
+        - -subj
+        - "/CN=shuffle-registry.default.svc.cluster.local"
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
+      containers:
+      - name: registry
+        image: registry:2
+        ports:
+        - containerPort: 5000
+        env:
+        - name: REGISTRY_HTTP_TLS_CERTIFICATE
+          value: "/certs/domain.crt"
+        - name: REGISTRY_HTTP_TLS_KEY
+          value: "/certs/domain.key"
+        volumeMounts:
+        - name: certs
+          mountPath: "/certs"
+      volumes:
+      - name: certs
+        emptyDir: {}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: shuffle-registry
+spec:
+  selector:
+    app: shuffle-registry
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
