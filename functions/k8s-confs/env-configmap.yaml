@@ -53,7 +53,7 @@ data:
   SSO_REDIRECT_URL: ""
   TZ: "Europe/Amsterdam \t\t\t\t\t"
   IS_KUBERNETES: "true"
-  REGISTRY_URL: "shuffle-registry:5000"
+  REGISTRY_URL: "172.17.14.71:5000"
   #REGISTRY_AUTH: ""
 kind: ConfigMap
 metadata:
