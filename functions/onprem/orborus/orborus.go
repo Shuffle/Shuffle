@@ -614,9 +614,10 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			Spec: corev1.PodSpec{
 				RestartPolicy: "Never",
 				// once images is pushed, we can remove this
-				NodeSelector: map[string]string{
-					"node": "master",
-				},
+				// keep this when running locally
+				// NodeSelector: map[string]string{
+				// 	"node": "master",
+				// },
 				Containers: []corev1.Container{
 					{
 						Name:  identifier,

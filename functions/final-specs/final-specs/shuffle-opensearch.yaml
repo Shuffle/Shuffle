@@ -1,0 +1,129 @@
+#---
+#
+#apiVersion: v1
+#kind: PersistentVolume
+#metadata:
+#  name: shuffle-os-pv
+#spec:
+#  capacity:
+#    storage: 10Gi  # Adjust the storage size as per your requirements
+#  accessModes:
+#    - ReadWriteOnce  # This allows read-write access to a single node
+#  persistentVolumeReclaimPolicy: Retain  # Adjust the reclaim policy as per your needs
+#  storageClassName: shuffle-data  # Set the desired storage class
+#  hostPath:
+#    path: /mnt/shuffle-data/open-search
+#
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: opensearch-claim0
+  name: opensearch-claim0
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: shuffle-data
+  resources:
+    requests:
+      storage: 500Mi
+status: {}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: opensearch
+  name: opensearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: opensearch
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.version: 1.26.0 (40646f47)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/shuffle: "true"
+        io.kompose.service: opensearch
+    spec:
+     # securityContext:
+     #   runAsUser: 1000  # UID
+     #   fsGroup: 1000    # GID
+      nodeSelector:
+        node: worker1
+      containers:
+        - env:
+            - name: OPENSEARCH_JAVA_OPTS
+              value: -Xms1024m -Xmx1024m
+              #- name: bootstrap.memory_lock
+              #value: "true"
+            - name: cluster.initial_master_nodes
+              value: shuffle-opensearch
+            - name: cluster.name
+              value: shuffle-cluster
+            - name: cluster.routing.allocation.disk.threshold_enabled
+              value: "false"
+            - name: discovery.seed_hosts
+              value: shuffle-opensearch
+            - name: node.name
+              value: shuffle-opensearch
+            - name: node.store.allow_mmap
+              value: "false"
+            - name: DB_LOCATION
+              valueFrom: 
+                configMapKeyRef:
+                  name: env
+                  key: DB_LOCATION
+          image: opensearchproject/opensearch:2.5.0
+          name: shuffle-opensearch
+          ports:
+            - containerPort: 9200
+          resources: {}
+          volumeMounts:
+            - mountPath: /usr/share/opensearch/data
+              name: opensearch-claim0
+      hostname: shuffle-opensearch
+      restartPolicy: Always
+      volumes:
+        - name: opensearch-claim0
+          persistentVolumeClaim:
+            claimName: opensearch-claim0
+status: {}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: opensearch
+  name: opensearch
+spec:
+  type: NodePort
+  ports:
+    - name: "9200"
+      port: 9200
+      targetPort: 9200
+      nodePort: 31001
+  selector:
+    io.kompose.service: opensearch
+status:
+  loadBalancer: {}
+
