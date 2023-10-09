@@ -6111,7 +6111,6 @@ func initHandlers() {
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
 	initHandlers()
-	go shuffle.InitOpsWorkflow()
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "MISSING"
