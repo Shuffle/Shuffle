@@ -1,19 +1,19 @@
-#---
-#
-#apiVersion: v1
-#kind: PersistentVolume
-#metadata:
-#  name: shuffle-os-pv
-#spec:
-#  capacity:
-#    storage: 10Gi  # Adjust the storage size as per your requirements
-#  accessModes:
-#    - ReadWriteOnce  # This allows read-write access to a single node
-#  persistentVolumeReclaimPolicy: Retain  # Adjust the reclaim policy as per your needs
-#  storageClassName: shuffle-data  # Set the desired storage class
-#  hostPath:
-#    path: /mnt/shuffle-data/open-search
-#
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+ name: shuffle-os-pv
+spec:
+ capacity:
+   storage: 10Gi  # Adjust the storage size as per your requirements
+ accessModes:
+   - ReadWriteOnce  # This allows read-write access to a single node
+ persistentVolumeReclaimPolicy: Retain  # Adjust the reclaim policy as per your needs
+ storageClassName: shuffle-data  # Set the desired storage class
+ hostPath:
+   path: /mnt/shuffle-data/open-search
+
 ---
 
 apiVersion: v1
