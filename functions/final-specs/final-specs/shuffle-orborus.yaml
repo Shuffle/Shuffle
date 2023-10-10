@@ -52,6 +52,11 @@ spec:
                 configMapKeyRef:
                   key: REGISTRY_URL
                   name: env
+            - name: SHUFFLE_KUBERNETES_WORKER
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_KUBERNETES_WORKER
+                  name: env
 
           image: dhavald055/shuffle-k8s:shuffle-orborus-kubernetes
           #imagePullPolicy: Never

@@ -55,6 +55,7 @@ data:
   IS_KUBERNETES: "true"
   REGISTRY_URL: "172.17.14.71:5000"
   #REGISTRY_AUTH: ""
+  SHUFFLE_KUBERNETES_WORKER: "dhavald055/shuffle-k8s:shuffle-worker-kubernetes"
 kind: ConfigMap
 metadata:
   creationTimestamp: null

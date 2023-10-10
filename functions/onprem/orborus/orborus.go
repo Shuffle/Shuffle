@@ -589,7 +589,9 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			env = append(env, fmt.Sprintf("IS_KUBERNETES=%s", os.Getenv("IS_KUBERNETES")))
 		}
 
-		image = "shuffle-worker:v1" //hard coded image name to test locally
+		image = os.Getenv("SHUFFLE_KUBERNETES_WORKER")
+		log.Printf("[DEBUG] using worker image:", image)
+		// image = "shuffle-worker:v1" //hard coded image name to test locally
 
 		envMap := make(map[string]string)
 		for _, envStr := range env {
