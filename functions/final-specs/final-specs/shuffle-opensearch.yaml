@@ -62,8 +62,8 @@ spec:
      # securityContext:
      #   runAsUser: 1000  # UID
      #   fsGroup: 1000    # GID
-      nodeSelector:
-        node: worker1
+      # nodeSelector:
+      #   node: worker1
       containers:
         - env:
             - name: OPENSEARCH_JAVA_OPTS
