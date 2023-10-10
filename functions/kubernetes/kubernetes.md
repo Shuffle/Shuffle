@@ -1,7 +1,7 @@
 ## How to deploy Shuffle on Kubernetes?
 
 ### Prerequisites:
--	Clone the https://github.com/dhaval055/shuffle repository using Git and change the branch to shuffle-k8s navigate to the functions/kubernetes directory, which contains all the necessary Kubernetes configuration files for deployment.
+-	Clone the https://github.com/dhaval055/shuffle repository using Git and change the branch to shuffle-k8s then navigate to the functions/kubernetes directory, which contains all the necessary Kubernetes configuration files for deployment.
 -	Running Kubernetes cluster.
 - Run the following command for setting up Opensearch and Backend volumes.
 - Ensure you have a local Docker registry set up to store and manage Docker images for applications built with Shuffle. While the registry is crucial for handling custom-built apps, you’ll still be able to run workflows without it.
@@ -33,6 +33,6 @@ Step 8: Ensure that the Shuffle Backend is successfully deployed and running bef
 
 Step 9: Run ```kubectl apply -f shuffle-orborus.yaml```. This final step ensures that Shuffle Orborus is deployed, enabling the workflow executions in your Kubernetes-based Shuffle setup.
 
-Now, open https://<YOUR_NODE_IP>:30008. You should be seeing a signup page. NODE_IP should be where the frontend is deployed.
+Now, open ```https://<YOUR_NODE_IP>:30008``` or ```http://<YOUR_NODE_IP>:30007```. You should be seeing a signup page. NODE_IP should be where the frontend is deployed.
 
 
