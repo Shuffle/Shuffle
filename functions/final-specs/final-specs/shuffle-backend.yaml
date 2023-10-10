@@ -10,7 +10,7 @@ spec:
  accessModes:
    - ReadWriteOnce
  persistentVolumeReclaimPolicy: Retain
- storageClassName: fast
+ storageClassName: shuffle-data
  hostPath:
    path: /mnt/shuffle-data/backend
 
