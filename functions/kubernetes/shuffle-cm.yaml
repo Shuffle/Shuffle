@@ -54,7 +54,7 @@ data:
   TZ: "Europe/Amsterdam \t\t\t\t\t"
   IS_KUBERNETES: "true"
   REGISTRY_URL: "172.17.14.71:5000"
-  #REGISTRY_AUTH: ""
+  REGISTRY_AUTH: "true" #set it to true if you are using registry with authentication
   SHUFFLE_KUBERNETES_WORKER: "dhavald055/shuffle-k8s:shuffle-worker-kubernetes"
 kind: ConfigMap
 metadata:

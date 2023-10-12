@@ -384,6 +384,11 @@ spec:
                 configMapKeyRef:
                   key: REGISTRY_URL
                   name: env
+            - name: REGISTRY_AUTH
+              valueFrom:
+                configMapKeyRef:
+                  key: REGISTRY_AUTH
+                  name: env
           image: dhavald055/shuffle-k8s:shuffle-backend-kubernetes
           #imagePullPolicy: Never
           name: shuffle-backend
