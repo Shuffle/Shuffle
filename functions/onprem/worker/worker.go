@@ -225,9 +225,9 @@ func getKubernetesClient() (*kubernetes.Clientset, error) {
 
 // Deploys the internal worker whenever something happens
 func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution, action shuffle.Action) error {
-	log.Printf("################################### new call to deployApp ###################################")
-	log.Printf("image: %s", image)
-	log.Printf("identifier: %s", identifier)
+	// log.Printf("################################### new call to deployApp ###################################")
+	// log.Printf("image: %s", image)
+	// log.Printf("identifier: %s", identifier)
 	// log.Printf("execution: %+v", workflowExecution)
 
 	if os.Getenv("IS_KUBERNETES") == "true" {
@@ -246,7 +246,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		clientset, err := getKubernetesClient()
 		if err != nil {
 			fmt.Println("[ERROR]Error getting kubernetes client:", err)
-			os.Exit(1)
+			// os.Exit(1)
 		}
 
 		log.Printf("[DEBUG] Got kubernetes client")
@@ -264,8 +264,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		log.Printf("APP VERSION IS: %s", appVersion)
 
 		for _, app := range workflowExecution.Workflow.Actions {
-			log.Printf("[DEBUG] App: %s, Version: %s", appName, appVersion)
-			log.Printf("[DEBUG] Checking app %s with version %s", app.AppName, app.AppVersion)
+			// log.Printf("[DEBUG] App: %s, Version: %s", appName, appVersion)
+			// log.Printf("[DEBUG] Checking app %s with version %s", app.AppName, app.AppVersion)
 			if app.AppName == appName && app.AppVersion == appVersion {
 				if app.Generated == true {
 					log.Printf("[DEBUG] Generated app, setting local registry")
@@ -290,7 +290,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				},
 			},
 			Spec: corev1.PodSpec{
-				NodeName:      "worker1",  // change this in prod
+				// NodeName:      "worker1"
 				RestartPolicy: "Never",
 				Containers: []corev1.Container{
 					{
