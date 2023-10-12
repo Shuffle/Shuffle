@@ -233,6 +233,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	if os.Getenv("IS_KUBERNETES") == "true" {
 
 		namespace := "shuffle"
+		localRegistry := os.Getenv("REGISTRY_URL")
 
 		envMap := make(map[string]string)
 		for _, envStr := range env {
@@ -257,8 +258,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		// checking if app is generated or not
 		appDetails := strings.Split(image, ":")[1]
 		appDetailsSplit := strings.Split(appDetails, "_")
-		appName := appDetailsSplit[0]
-		appVersion := appDetailsSplit[1]
+		appName := strings.Join(appDetailsSplit[:len(appDetailsSplit)-1], "_")
+		appVersion := appDetailsSplit[len(appDetailsSplit)-1]
+
+		log.Printf("APP VERSION IS: %s", appVersion)
 
 		for _, app := range workflowExecution.Workflow.Actions {
 			log.Printf("[DEBUG] App: %s, Version: %s", appName, appVersion)
@@ -266,7 +269,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			if app.AppName == appName && app.AppVersion == appVersion {
 				if app.Generated == true {
 					log.Printf("[DEBUG] Generated app, setting local registry")
-					image = fmt.Sprintf("%s/%s", registryName, image)
+					image = fmt.Sprintf("%s/%s", localRegistry, image)
 					break
 				} else {
 					log.Printf("[DEBUG] Not generated app, setting shuffle registry")
@@ -287,6 +290,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				},
 			},
 			Spec: corev1.PodSpec{
+				NodeName:      "worker1",  // change this in prod
 				RestartPolicy: "Never",
 				Containers: []corev1.Container{
 					{
@@ -301,113 +305,113 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		createdPod, err := clientset.CoreV1().Pods(namespace).Create(context.Background(), pod, metav1.CreateOptions{})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating pod: %v\n", err)
-			os.Exit(1)
+			// os.Exit(1)
 		}
 		fmt.Printf("[DEBUG] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
 	} else {
 		// form basic hostConfig
-	ctx := context.Background()
+		ctx := context.Background()
 
-	if action.AppName == "shuffle-subflow" {
-		// Automatic replacement of URL
-		for paramIndex, param := range action.Parameters {
-			if param.Name != "backend_url" {
-				continue
-			}
+		if action.AppName == "shuffle-subflow" {
+			// Automatic replacement of URL
+			for paramIndex, param := range action.Parameters {
+				if param.Name != "backend_url" {
+					continue
+				}
 
-			if strings.Contains(param.Value, "shuffle-backend") {
-				// Automatic replacement as this is default
-				action.Parameters[paramIndex].Value = os.Getenv("BASE_URL")
-				log.Printf("[DEBUG][%s] Replaced backend_url with %s", workflowExecution.ExecutionId, os.Getenv("BASE_URL"))
+				if strings.Contains(param.Value, "shuffle-backend") {
+					// Automatic replacement as this is default
+					action.Parameters[paramIndex].Value = os.Getenv("BASE_URL")
+					log.Printf("[DEBUG][%s] Replaced backend_url with %s", workflowExecution.ExecutionId, os.Getenv("BASE_URL"))
+				}
 			}
 		}
-	}
 
-	// Max 10% CPU every second
-	//CPUShares: 128,
-	//CPUQuota:  10000,
-	//CPUPeriod: 100000,
-	hostConfig := &container.HostConfig{
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-			Config: map[string]string{
-				"max-size": "10m",
+		// Max 10% CPU every second
+		//CPUShares: 128,
+		//CPUQuota:  10000,
+		//CPUPeriod: 100000,
+		hostConfig := &container.HostConfig{
+			LogConfig: container.LogConfig{
+				Type: "json-file",
+				Config: map[string]string{
+					"max-size": "10m",
+				},
 			},
-		},
-		Resources: container.Resources{},
-	}
-
-	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId))
-
-	// Removing because log extraction should happen first
-	if cleanupEnv == "true" {
-		hostConfig.AutoRemove = true
-	}
-
-	// FIXME: Add proper foldermounts here
-	//log.Printf("\n\nPRE FOLDERMOUNT\n\n")
-	//volumeBinds := []string{"/tmp/shuffle-mount:/rules"}
-	//volumeBinds := []string{"/tmp/shuffle-mount:/rules"}
-	volumeBinds := []string{}
-	if len(volumeBinds) > 0 {
-		log.Printf("[DEBUG] Setting up binds for container!")
-		hostConfig.Binds = volumeBinds
-		hostConfig.Mounts = []mount.Mount{}
-		for _, bind := range volumeBinds {
-			if !strings.Contains(bind, ":") || strings.Contains(bind, "..") || strings.HasPrefix(bind, "~") {
-				log.Printf("[WARNING] Bind %s is invalid.", bind)
-				continue
-			}
-
-			log.Printf("[DEBUG] Appending bind %s", bind)
-			bindSplit := strings.Split(bind, ":")
-			sourceFolder := bindSplit[0]
-			destinationFolder := bindSplit[0]
-			hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
-				Type:   mount.TypeBind,
-				Source: sourceFolder,
-				Target: destinationFolder,
-			})
+			Resources: container.Resources{},
 		}
-	} else {
-		//log.Printf("[WARNING] Not mounting folders")
-	}
 
-	config := &container.Config{
-		Image: image,
-		Env:   env,
-	}
+		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId))
 
-	// Checking as late as possible, just in case.
-	newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
-	_, err := shuffle.GetCache(ctx, newExecId)
-	if err == nil {
-		log.Printf("\n\n[DEBUG] Result for %s already found - returning\n\n", newExecId)
+		// Removing because log extraction should happen first
+		if cleanupEnv == "true" {
+			hostConfig.AutoRemove = true
+		}
+
+		// FIXME: Add proper foldermounts here
+		//log.Printf("\n\nPRE FOLDERMOUNT\n\n")
+		//volumeBinds := []string{"/tmp/shuffle-mount:/rules"}
+		//volumeBinds := []string{"/tmp/shuffle-mount:/rules"}
+		volumeBinds := []string{}
+		if len(volumeBinds) > 0 {
+			log.Printf("[DEBUG] Setting up binds for container!")
+			hostConfig.Binds = volumeBinds
+			hostConfig.Mounts = []mount.Mount{}
+			for _, bind := range volumeBinds {
+				if !strings.Contains(bind, ":") || strings.Contains(bind, "..") || strings.HasPrefix(bind, "~") {
+					log.Printf("[WARNING] Bind %s is invalid.", bind)
+					continue
+				}
+
+				log.Printf("[DEBUG] Appending bind %s", bind)
+				bindSplit := strings.Split(bind, ":")
+				sourceFolder := bindSplit[0]
+				destinationFolder := bindSplit[0]
+				hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+					Type:   mount.TypeBind,
+					Source: sourceFolder,
+					Target: destinationFolder,
+				})
+			}
+		} else {
+			//log.Printf("[WARNING] Not mounting folders")
+		}
+
+		config := &container.Config{
+			Image: image,
+			Env:   env,
+		}
+
+		// Checking as late as possible, just in case.
+		newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
+		_, err := shuffle.GetCache(ctx, newExecId)
+		if err == nil {
+			log.Printf("\n\n[DEBUG] Result for %s already found - returning\n\n", newExecId)
+			return nil
+		}
+
+		cacheData := []byte("1")
+		err = shuffle.SetCache(ctx, newExecId, cacheData, 30)
+		if err != nil {
+			log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
+		} else {
+			log.Printf("[DEBUG] Adding %s to cache. Name: %s", newExecId, action.Name)
+		}
+
+		if action.ExecutionDelay > 0 {
+			log.Printf("[DEBUG] Running app %s in docker with delay of %d", action.Name, action.ExecutionDelay)
+			waitTime := time.Duration(action.ExecutionDelay) * time.Second
+
+			time.AfterFunc(waitTime, func() {
+				DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
+			})
+		} else {
+			log.Printf("[DEBUG] Running app %s in docker NORMALLY as there is no delay set with identifier %s", action.Name, identifier)
+			returnvalue := DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
+			log.Printf("[DEBUG] Normal deploy ret: %s", returnvalue)
+			return returnvalue
+		}
 		return nil
-	}
-
-	cacheData := []byte("1")
-	err = shuffle.SetCache(ctx, newExecId, cacheData, 30)
-	if err != nil {
-		log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
-	} else {
-		log.Printf("[DEBUG] Adding %s to cache. Name: %s", newExecId, action.Name)
-	}
-
-	if action.ExecutionDelay > 0 {
-		log.Printf("[DEBUG] Running app %s in docker with delay of %d", action.Name, action.ExecutionDelay)
-		waitTime := time.Duration(action.ExecutionDelay) * time.Second
-
-		time.AfterFunc(waitTime, func() {
-			DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
-		})
-	} else {
-		log.Printf("[DEBUG] Running app %s in docker NORMALLY as there is no delay set with identifier %s", action.Name, identifier)
-		returnvalue := DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
-		log.Printf("[DEBUG] Normal deploy ret: %s", returnvalue)
-		return returnvalue
-	}
-	return nil
 	}
 	return nil
 }
