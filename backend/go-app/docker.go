@@ -33,6 +33,15 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"time"
+	// "k8s.io/client-go/tools/clientcmd"
+	// "k8s.io/client-go/util/homedir"
 )
 
 // Parses a directory with a Dockerfile into a tar for Docker images..
@@ -318,7 +327,142 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	return nil
 }
 
+func getK8sClient() (*kubernetes.Clientset, error) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, fmt.Errorf("[ERROR] failed to get in-cluster config: %v", err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("[ERROR] failed to create Kubernetes client: %v", err)
+	}
+
+	return clientset, nil
+}
+
+func deleteJob(client *kubernetes.Clientset, jobName, namespace string) error {
+	deletePolicy := metav1.DeletePropagationForeground
+	return client.BatchV1().Jobs(namespace).Delete(context.TODO(), jobName, metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	})
+}
+
 func buildImage(tags []string, dockerfileFolder string) error {
+
+	isKubernetes := false
+	if os.Getenv("IS_KUBERNETES") == "true" {
+		isKubernetes = true
+	}
+
+	if isKubernetes {
+		log.Printf("K8S ###################")
+		log.Print("dockerfileFolder: ", dockerfileFolder)
+		log.Print("tags: ", tags)
+		log.Print("only tag: ", tags[1])
+
+		registryName := ""
+		if len(os.Getenv("REGISTRY_URL")) > 0 {
+			registryName = os.Getenv("REGISTRY_URL")
+		}
+
+		log.Printf("[INFO] registry name: %s", registryName)
+
+		contextDir := strings.Replace(dockerfileFolder, "Dockerfile", "", -1)
+		contextDir = "/app/" + contextDir
+		log.Print("contextDir: ", contextDir)
+		dockerFile := "./Dockerfile"
+
+		client, err := getK8sClient()
+		if err != nil {
+			fmt.Printf("Unable to authencticate : %v\n", err)
+			return err
+		}
+
+		job := &batchv1.Job{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "shuffle-app-builder",
+			},
+			Spec: batchv1.JobSpec{
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  "kaniko",
+								Image: "gcr.io/kaniko-project/executor:latest",
+								Args: []string{
+									"--verbosity=debug",
+									"--dockerfile=" + dockerFile,
+									"--context=dir://" + contextDir,
+									"--skip-tls-verify",
+									"--destination=" + registryName + "/" + tags[1],
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "kaniko-workspace",
+										MountPath: "/app/generated",
+									},
+								},
+							},
+						},
+						NodeSelector: map[string]string{
+							"node": "master",
+						},
+						RestartPolicy: corev1.RestartPolicyNever,
+						Volumes: []corev1.Volume{
+							{
+								Name: "kaniko-workspace",
+								VolumeSource: corev1.VolumeSource{
+									PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+										ClaimName: "backend-apps-claim",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		createdJob, err := client.BatchV1().Jobs("shuffle").Create(context.TODO(), job, metav1.CreateOptions{})
+		if err != nil {
+			log.Printf("Failed to start image builder job: %s", err)
+			return err
+		}
+
+		timeout := time.After(5 * time.Minute)
+		tick := time.Tick(5 * time.Second)
+
+		for {
+			select {
+			case <-timeout:
+				return fmt.Errorf("job didn't complete within the expected time")
+			case <-tick:
+				currentJob, err := client.BatchV1().Jobs("shuffle").Get(context.TODO(), createdJob.Name, metav1.GetOptions{})
+				if err != nil {
+					return fmt.Errorf("[ERROR] failed to fetch %s status: %v", createdJob.Name, err)
+				}
+
+				if currentJob.Status.Succeeded > 0 {
+					log.Printf("[INFO] Job %s completed successfully!", createdJob.Name)
+					log.Printf("[INFO] Cleaning up the job %s", createdJob.Name)
+					err := deleteJob(client, createdJob.Name, "shuffle")
+					if err != nil {
+						return fmt.Errorf("[ERROR] failed deleting job %s with error: %s", createdJob.Name, err)
+					}
+					log.Println("Job deleted successfully!")
+					return nil
+				} else if currentJob.Status.Failed > 0 {
+					log.Printf("[ERROR] %s job failed with error: %s", createdJob.Name, err)
+					err := deleteJob(client, createdJob.Name, "shuffle")
+					if err != nil {
+						return fmt.Errorf("[ERROR] failed deleting job %s with error: %s", createdJob.Name, err)
+					}
+				}
+			}
+		}
+	} else {
+
 	ctx := context.Background()
 	client, err := client.NewEnvClient()
 	if err != nil {
@@ -382,6 +526,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 		}
 	}
 
+	}
 	return nil
 }
 
