@@ -581,8 +581,8 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
 
 	if os.Getenv("IS_KUBERNETES") == "true" {
-		log.Printf("IS_KUBERNETS", os.Getenv("IS_KUBERNETES"))
-		log.Printf("REGISTRY_URL", os.Getenv("REGISTRY_URL"))
+		// log.Printf("IS_KUBERNETS", os.Getenv("IS_KUBERNETES"))
+		// log.Printf("REGISTRY_URL", os.Getenv("REGISTRY_URL"))
 
 		if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
 			env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
@@ -601,11 +601,11 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			}
 		}
 
-		log.Printf("envMap", envMap)
+		// log.Printf("envMap", envMap)
 		clientset, err := getKubernetesClient()
 		if err != nil {
 			fmt.Println("[ERROR]Error getting kubernetes client:", err)
-			os.Exit(1)
+			// os.Exit(1)
 		}
 
 		pod := &corev1.Pod{
