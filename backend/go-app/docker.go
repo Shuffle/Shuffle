@@ -356,10 +356,10 @@ func buildImage(tags []string, dockerfileFolder string) error {
 	}
 
 	if isKubernetes {
-		log.Printf("K8S ###################")
-		log.Print("dockerfileFolder: ", dockerfileFolder)
-		log.Print("tags: ", tags)
-		log.Print("only tag: ", tags[1])
+		// log.Printf("K8S ###################")
+		// log.Print("dockerfileFolder: ", dockerfileFolder)
+		// log.Print("tags: ", tags)
+		// log.Print("only tag: ", tags[1])
 
 		registryName := ""
 		if len(os.Getenv("REGISTRY_URL")) > 0 {
@@ -405,9 +405,9 @@ func buildImage(tags []string, dockerfileFolder string) error {
 								},
 							},
 						},
-						NodeSelector: map[string]string{
-							"node": "master",
-						},
+						// NodeSelector: map[string]string{
+						// 	"node": "master",
+						// },
 						RestartPolicy: corev1.RestartPolicyNever,
 						Volumes: []corev1.Volume{
 							{
