@@ -3,17 +3,7 @@
 ### Prerequisites:
 -	Clone the https://github.com/dhaval055/shuffle repository using Git and change the branch to shuffle-k8s then navigate to the functions/kubernetes directory, which contains all the necessary Kubernetes configuration files for deployment.
 -	Running Kubernetes cluster.
-- Run the following command for setting up Opensearch and Backend volumes.
-- Ensure you have a local Docker registry set up to store and manage Docker images for applications built with Shuffle. While the registry is crucial for handling custom-built apps, you’ll still be able to run workflows without it. If you're using Minikube for testing, run commands in box below after running ```minikube ssh```.
-
-```
-cd /mnt
-mkdir shuffle-data
-cd shuffle-data
-mkdir open-search
-mkdir backend
-sudo chown –R 1000:1000 open-search
-```
+- Ensure you have a local Docker registry set up to store and manage Docker images for applications built with Shuffle. While the registry is crucial for handling custom-built apps, you’ll still be able to run workflows without it. 
 
 Step 1: Create a namespace called shuffle in a cluster by running ```kubectl create ns shuffle```.  
 
