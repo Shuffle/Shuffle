@@ -390,7 +390,7 @@ spec:
                   key: REGISTRY_AUTH
                   name: env
           image: dhavald055/shuffle-k8s:shuffle-backend-kubernetes
-          #imagePullPolicy: Never
+          imagePullPolicy: Always
           name: shuffle-backend
           ports:
             - containerPort: 5001

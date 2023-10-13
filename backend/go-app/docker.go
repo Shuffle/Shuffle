@@ -379,6 +379,20 @@ func buildImage(tags []string, dockerfileFolder string) error {
 			return err
 		}
 
+		BackendPodLabel := "io.kompose.service=backend"
+
+		backendPodList, podListErr := client.CoreV1().Pods("shuffle").List(context.TODO(), metav1.ListOptions{
+			LabelSelector: BackendPodLabel,
+		})
+
+		if podListErr != nil || len(backendPodList.Items) == 0 {
+			fmt.Println("Error getting backend pod or no pod found:", podListErr)
+			return podListErr
+		}
+
+		backendNodeName := backendPodList.Items[0].Spec.NodeName
+		log.Printf("[INFO] Backend running on: %s", backendNodeName)
+
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "shuffle-app-builder",
@@ -405,9 +419,9 @@ func buildImage(tags []string, dockerfileFolder string) error {
 								},
 							},
 						},
-						// NodeSelector: map[string]string{
-						// 	"node": "master",
-						// },
+						NodeSelector: map[string]string{
+							"node": backendNodeName,
+						},
 						RestartPolicy: corev1.RestartPolicyNever,
 						Volumes: []corev1.Volume{
 							{
@@ -463,68 +477,68 @@ func buildImage(tags []string, dockerfileFolder string) error {
 		}
 	} else {
 
-	ctx := context.Background()
-	client, err := client.NewEnvClient()
-	if err != nil {
-		log.Printf("Unable to create docker client: %s", err)
-		return err
-	}
-
-	log.Printf("[INFO] Docker Tags: %s", tags)
-	dockerfileSplit := strings.Split(dockerfileFolder, "/")
-
-	// Create a buffer
-	buf := new(bytes.Buffer)
-	tw := tar.NewWriter(buf)
-	defer tw.Close()
-	baseDir := strings.Join(dockerfileSplit[0:len(dockerfileSplit)-1], "/")
-
-	// Builds the entire folder into buf
-	err = getParsedTar(tw, baseDir, "")
-	if err != nil {
-		log.Printf("Tar issue: %s", err)
-	}
-
-	dockerFileTarReader := bytes.NewReader(buf.Bytes())
-	buildOptions := types.ImageBuildOptions{
-		Remove:    true,
-		Tags:      tags,
-		BuildArgs: map[string]*string{},
-	}
-	//NetworkMode: "host",
-
-	httpProxy := os.Getenv("HTTP_PROXY")
-	if len(httpProxy) > 0 {
-		buildOptions.BuildArgs["HTTP_PROXY"] = &httpProxy
-	}
-	httpsProxy := os.Getenv("HTTPS_PROXY")
-	if len(httpProxy) > 0 {
-		buildOptions.BuildArgs["https_proxy"] = &httpsProxy
-	}
-
-	// Build the actual image
-	imageBuildResponse, err := client.ImageBuild(
-		ctx,
-		dockerFileTarReader,
-		buildOptions,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	// Read the STDOUT from the build process
-	defer imageBuildResponse.Body.Close()
-	buildBuf := new(strings.Builder)
-	_, err = io.Copy(buildBuf, imageBuildResponse.Body)
-	if err != nil {
-		return err
-	} else {
-		if strings.Contains(buildBuf.String(), "errorDetail") {
-			log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
-			return errors.New(fmt.Sprintf("Failed building %s. Check backend logs for details. Most likely means you have an old version of Docker.", strings.Join(tags, ",")))
+		ctx := context.Background()
+		client, err := client.NewEnvClient()
+		if err != nil {
+			log.Printf("Unable to create docker client: %s", err)
+			return err
 		}
-	}
+
+		log.Printf("[INFO] Docker Tags: %s", tags)
+		dockerfileSplit := strings.Split(dockerfileFolder, "/")
+
+		// Create a buffer
+		buf := new(bytes.Buffer)
+		tw := tar.NewWriter(buf)
+		defer tw.Close()
+		baseDir := strings.Join(dockerfileSplit[0:len(dockerfileSplit)-1], "/")
+
+		// Builds the entire folder into buf
+		err = getParsedTar(tw, baseDir, "")
+		if err != nil {
+			log.Printf("Tar issue: %s", err)
+		}
+
+		dockerFileTarReader := bytes.NewReader(buf.Bytes())
+		buildOptions := types.ImageBuildOptions{
+			Remove:    true,
+			Tags:      tags,
+			BuildArgs: map[string]*string{},
+		}
+		//NetworkMode: "host",
+
+		httpProxy := os.Getenv("HTTP_PROXY")
+		if len(httpProxy) > 0 {
+			buildOptions.BuildArgs["HTTP_PROXY"] = &httpProxy
+		}
+		httpsProxy := os.Getenv("HTTPS_PROXY")
+		if len(httpProxy) > 0 {
+			buildOptions.BuildArgs["https_proxy"] = &httpsProxy
+		}
+
+		// Build the actual image
+		imageBuildResponse, err := client.ImageBuild(
+			ctx,
+			dockerFileTarReader,
+			buildOptions,
+		)
+
+		if err != nil {
+			return err
+		}
+
+		// Read the STDOUT from the build process
+		defer imageBuildResponse.Body.Close()
+		buildBuf := new(strings.Builder)
+		_, err = io.Copy(buildBuf, imageBuildResponse.Body)
+		if err != nil {
+			return err
+		} else {
+			if strings.Contains(buildBuf.String(), "errorDetail") {
+				log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
+				return errors.New(fmt.Sprintf("Failed building %s. Check backend logs for details. Most likely means you have an old version of Docker.", strings.Join(tags, ",")))
+			}
+		}
 
 	}
 	return nil
