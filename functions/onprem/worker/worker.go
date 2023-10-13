@@ -261,7 +261,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		appName := strings.Join(appDetailsSplit[:len(appDetailsSplit)-1], "_")
 		appVersion := appDetailsSplit[len(appDetailsSplit)-1]
 
-		log.Printf("APP VERSION IS: %s", appVersion)
+		// log.Printf("APP VERSION IS: %s", appVersion)
 
 		for _, app := range workflowExecution.Workflow.Actions {
 			// log.Printf("[DEBUG] App: %s, Version: %s", appName, appVersion)
@@ -294,9 +294,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				RestartPolicy: "Never",
 				Containers: []corev1.Container{
 					{
-						Name:  value,
-						Image: image,
-						Env:   buildEnvVars(envMap),
+						Name:            value,
+						Image:           image,
+						Env:             buildEnvVars(envMap),
+						// ImagePullPolicy: corev1.PullAlways,
 					},
 				},
 			},

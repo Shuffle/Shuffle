@@ -64,6 +64,13 @@ spec:
      #   fsGroup: 1000    # GID
       # nodeSelector:
       #   node: worker1
+      initContainers:
+      - name: volume-permissions
+        image: busybox
+        command: ["sh", "-c", "chown -R 1000:1000 /usr/share/opensearch/data"]
+        volumeMounts:
+        - name: opensearch-claim0
+          mountPath: /usr/share/opensearch/data
       containers:
         - env:
             - name: OPENSEARCH_JAVA_OPTS
