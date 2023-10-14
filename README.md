@@ -75,7 +75,7 @@ These are the main areas to contribute in:
 Contributing guidelines are outlined [here](https://github.com/frikky/Shuffle/blob/master/.github/CONTRIBUTING.md).
 
 ## Contributors 
-![ICPL logo](https://github.com/frikky/Shuffle/blob/launch/frontend/src/assets/img/icpl_logo.png)
+![ICPL logo](https://github.com/Shuffle/Shuffle/blob/main/frontend/src/assets/img/icpl_logo.png)
 
 **Shuffle**
 <a href="https://github.com/frikky/shuffle/graphs/contributors">
