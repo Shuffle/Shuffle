@@ -5894,6 +5894,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
 	r.HandleFunc("/api/v1/health", shuffle.RunOpsHealthCheck).Methods("GET", "OPTIONS")
 
+	r.HandleFunc("/api/v1/health/stats", shuffle.GetOpsDashboardStats).Methods("GET", "OPTIONS")
+
 	// Make user related locations
 	// Fix user changes with org
 	r.HandleFunc("/api/v1/users/login", shuffle.HandleLogin).Methods("POST", "OPTIONS")
@@ -6111,7 +6113,6 @@ func initHandlers() {
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
 	initHandlers()
-	go shuffle.InitOpsWorkflow()
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "MISSING"
