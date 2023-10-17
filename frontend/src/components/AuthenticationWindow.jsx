@@ -294,9 +294,6 @@ const AuthenticationData = (props) => {
 						InputProps={{
 							style: {
 								color: "white",
-								marginLeft: "5px",
-								maxWidth: "95%",
-								height: 50,
 								fontSize: "1em",
 							},
 							disableUnderline: true,
@@ -386,7 +383,6 @@ const AuthenticationData = (props) => {
       PaperProps={{
         style: {
           pointerEvents: "auto",
-          backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: 600,
           minHeight: 600,
@@ -441,9 +437,6 @@ const AuthenticationData = (props) => {
 					InputProps={{
 						style: {
 							color: "white",
-							marginLeft: "5px",
-							maxWidth: "95%",
-							height: 50,
 							fontSize: "1em",
 						},
 					}}

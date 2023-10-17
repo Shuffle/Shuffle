@@ -1354,7 +1354,8 @@ const Apps = (props) => {
 					border: hover ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)",
 					cursor: hover ? "pointer" : "default",
 					textAlign: "center",
-					height: 125, 
+					minHeight: 150, 
+					maxHeight: 150, 
 				}}
 			>
 				{icon} 

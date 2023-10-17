@@ -580,15 +580,39 @@ const AngularWorkflow = (defaultprops) => {
   const cytoscapeWidth = isMobile ? bodyWidth - leftBarSize : bodyWidth - leftBarSize - 25
 	
   const [elements, setElements] = useState([]);
+  const [loopRunning, setLoopRunning] = useState(false)
+
+  const stop = () => {
+	  setLoopRunning(false)
+  }
+
+  const start = () => {
+	  setLoopRunning(true)
+  }
+
+  useEffect(() => {
+	  console.log("In useeffect for loopRunning: ", loopRunning)
+	  if (loopRunning) {
+		  const intervalId = setInterval(() => {
+			  if (!loopRunning) {
+        		clearInterval(intervalId);
+      		  }
+
+			  fetchUpdates()
+		  }, 3000)
+
+		  return () => clearInterval(intervalId);
+	  }
+  }, [loopRunning])
+
   // No point going as fast, as the nodes aren't realtime anymore, but bulk updated.
-  // Set it from 2500 to 6000 to reduce overall load
-  const { start, stop } = useInterval({
-    duration: 3000,
-    startImmediate: false,
-    callback: () => {
-      fetchUpdates();
-    },
-  });
+  //const { start, stop } = useInterval({
+  //  duration: 3000,
+  //  startImmediate: false,
+  //  callback: () => {
+  //    fetchUpdates();
+  //  },
+  //});
 
   const getAppDocs = (appname, location, version) => {
     fetch(`${globalUrl}/api/v1/docs/${appname}?location=${location}&version=${version}`, {
@@ -924,7 +948,7 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const getWorkflowExecution = (id, execution_id) => {
-    fetch(`${globalUrl}/api/v1/workflows/${id}/executions`, {
+    fetch(`${globalUrl}/api/v2/workflows/${id}/executions`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -940,11 +964,10 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
-        if (responseJson !== undefined && responseJson !== null && responseJson.length > 0) {
-          // FIXME: Sort this by time
+        if (responseJson !== undefined && responseJson !== null && responseJson.executions !== undefined && responseJson.executions !== null && responseJson.executions.length > 0) {
 
           // - means it's opposite
-          const newkeys = sortByKey(responseJson, "-started_at");
+          const newkeys = sortByKey(responseJson.executions, "-started_at");
           setWorkflowExecutions(newkeys);
 
           const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
@@ -1021,6 +1044,7 @@ const AngularWorkflow = (defaultprops) => {
       },
       body: JSON.stringify(executionRequest),
       credentials: "include",
+	  cors: "no-cors",
     })
       .then((response) => {
         if (response.status !== 200) {
@@ -1279,7 +1303,7 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const sendStreamRequest = (body) => {
-    console.log("Stream not activated yet.")
+    //console.log("Stream not activated yet.")
     return
 
     // Session may be important here huh 
@@ -15302,6 +15326,10 @@ const AngularWorkflow = (defaultprops) => {
                     overflow: "hidden",
                   }}
                   onMouseOver={() => {
+					  if (cy == undefined || cy == null) {
+						  return
+					  }
+
                     var currentnode = cy.getElementById(data.action.id);
                     if (currentnode !== undefined && currentnode !== null && currentnode.length !== 0) {
                       currentnode.addClass("shuffle-hover-highlight");
@@ -15314,6 +15342,10 @@ const AngularWorkflow = (defaultprops) => {
                     //)
                   }}
                   onMouseOut={() => {
+					  if (cy == undefined || cy == null) {
+						  return
+					  }
+
                     var currentnode = cy.getElementById(data.action.id);
                     if (currentnode.length !== 0) {
                       currentnode.removeClass("shuffle-hover-highlight");

@@ -212,7 +212,8 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 
 	const notificationWidth = 300
 	const imagesize = 22;
-  const boxColor = "#86c142";
+  	const boxColor = "#86c142";
+
 	const NotificationItem = (props) => {
 		const {data} = props
 
@@ -263,7 +264,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				{data.reference_url !== undefined && data.reference_url !== null && data.reference_url.length > 0 ?
 					<Link to={data.reference_url} style={{color: "#f86a3e", textDecoration: "none",}}>
 						<Typography variant="body1">
-							{data.title}
+							{data.title} ({data.amount})
 						</Typography >
 					</Link>
 				: 
@@ -277,7 +278,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 					: 
 					null
 				}
-				<Typography variant="body2">
+				<Typography variant="body2" style={{maxHeight: 200, overflowX: "hidden", overflowY: "auto", }}>
 					{data.description}
 				</Typography >
 				{/*data.tags !== undefined && data.tags !== null && data.tags.length > 0 ? 

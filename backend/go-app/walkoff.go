@@ -700,64 +700,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	/*
-		// Removed as UserInput is now handled as an app
-			if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
-				log.Printf("[INFO] SHOULD WAIT A BIT AND RUN USER INPUT! WAITING!")
-
-				var trigger shuffle.Trigger
-				err = json.Unmarshal([]byte(actionResult.Result), &trigger)
-				if err != nil {
-					log.Printf("[WARNING] Failed unmarshaling actionresult for user input: %s", err)
-					resp.WriteHeader(401)
-					resp.Write([]byte(`{"success": false}`))
-					return
-				}
-
-				orgId := workflowExecution.ExecutionOrg
-				if len(workflowExecution.OrgId) == 0 && len(workflowExecution.Workflow.OrgId) > 0 {
-					orgId = workflowExecution.Workflow.OrgId
-				}
-
-				err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
-				if err != nil {
-					log.Printf("[WARNING] Failed userinput handler: %s", err)
-
-					actionResult.Result = fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)
-
-					workflowExecution.Results = append(workflowExecution.Results, actionResult)
-					workflowExecution.Status = "ABORTED"
-					err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-					if err != nil {
-						log.Printf("[WARNING] Failed to set execution during wait: %s", err)
-					} else {
-						log.Printf("[INFO] Successfully set the execution %s to waiting.", workflowExecution.ExecutionId)
-					}
-
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
-					return
-				} else {
-					log.Printf("[INFO] Successful userinput handler")
-					resp.WriteHeader(200)
-					resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
-
-					actionResult.Result = `{"success": True, "reason": "Waiting for user feedback based on configuration"}`
-
-					workflowExecution.Results = append(workflowExecution.Results, actionResult)
-					workflowExecution.Status = actionResult.Status
-					err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-					if err != nil {
-						log.Printf("[WARNING] Failed setting userinput: %s", err)
-					} else {
-						log.Printf("[DEBUG] Successfully set the execution to waiting.")
-					}
-				}
-
-				return
-			}
-	*/
-
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 }
 

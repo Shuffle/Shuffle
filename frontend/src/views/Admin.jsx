@@ -1692,15 +1692,24 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     const userId = user.id;
     const data = { user_id: userId };
 
-    fetch(globalUrl + "/api/v1/generateapikey", {
+	console.log(user, userdata)
+
+    var fetchdata = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify(data),
       credentials: "include",
-    })
+    }
+
+    if (userId === userdata.id) {
+		fetchdata.method = "GET"
+	} else {
+      	fetchdata.body = JSON.stringify(data)
+	}
+
+    fetch(globalUrl + "/api/v1/generateapikey", fetchdata)
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for WORKFLOW EXECUTION :O!");
@@ -1889,8 +1898,11 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
       open={selectedUserModalOpen}
       onClose={() => {
         setSelectedUserModalOpen(false);
-        setImage2FA("");
-        setSecret2FA("");
+
+		setImage2FA("");
+		setValue2FA("");
+		setSecret2FA("");
+		setShow2faSetup(false);
       }}
       PaperProps={{
         style: {
@@ -2156,7 +2168,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         <Card
           style={{
             margin: 4,
-            backgroundColor: theme.palette.inputColor,
+            backgroundColor: theme.palette.surfaceColor,
             color: "white",
             minHeight: expanded ? 250 : "inherit",
             maxHeight: expanded ? 250 : "inherit",
@@ -2515,9 +2527,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 								</span>
 							/>
 							<Tab
-								disabled={!isCloud}
 								label=<span>
-									Billing 
+									Billing (Beta)
 								</span>
 							/>
 							<Tab
@@ -3246,10 +3257,8 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                             selectedOrganization.child_orgs !== null &&
                             selectedOrganization.child_orgs.length > 0
                           ) {
-                            console.log("In here?");
                             var active = [];
                             for (var key in userdata.orgs) {
-                              console.log("ORG: ", userdata.orgs[key]);
                               const found =
                                 selectedOrganization.child_orgs.find(
                                   (item) => item.id === userdata.orgs[key].id
@@ -3299,7 +3308,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     ) : null;
 
   const run2FASetup = (data) => {
-    console.log("2fa: ", data, show2faSetup);
     if (!show2faSetup) {
       get2faCode(data.id);
     } else {

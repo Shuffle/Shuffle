@@ -1856,8 +1856,6 @@ const AppFramework = (props) => {
 	//autounselectify={true}
 	var usecasediff = -100
 	const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
-	console.log("Background: ", bgColor)
-
 	return (	
 		<div style={{margin: "auto", backgroundColor: bgColor, position: "relative", }}>
 			<div style={{position: "absolute"}}>

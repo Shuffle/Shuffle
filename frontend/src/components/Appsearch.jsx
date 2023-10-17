@@ -200,7 +200,7 @@ const Appsearch = props => {
 	const CustomHits = connectHits(InputHits)
 
 	return (
-		<div style={{width: "100%", textAlign: "center", position: "relative", height: "100%",}}>
+		<div style={{width: 287, height: 295, padding: "16px 16px 267px 16px", alignItems: "center", gap: 138,}}>
 			<InstantSearch searchClient={searchClient} indexName="appsearch">
 				{/* showSearch === false ? null : 
 					<div style={{maxWidth: 450, margin: "auto", }}>
