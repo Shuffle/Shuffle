@@ -84,7 +84,6 @@ var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
-var syncSubUrl = "https://shuffler.io"
 
 var dbclient *datastore.Client
 
@@ -1102,7 +1101,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	userOrgs = shuffle.SortOrgList(userOrgs)
 	orgPriorities := org.Priorities
 	if len(org.Priorities) < 10 {
-		log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
+		//log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
 		newPriorities, err := shuffle.GetPriorities(ctx, userInfo, org)
 		if err != nil {
 			log.Printf("[WARNING] Failed getting new priorities for org %s: %s", org.Id, err)
@@ -3748,16 +3747,69 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	return nil
 }
 
+
 func remoteOrgJobHandler(org shuffle.Org, interval int) error {
+
+	// Check if it's 1 in 10 (10% chance random)
+	backupJob := shuffle.BackupJob{} 
+
+	// Check if workflow backup is active
+	// Check if app backup is active
+	ctx := context.Background()
+
+	foundUser := org.Users[0]
+	for _, user := range org.Users {
+		if user.Role == "admin" {
+			foundUser = user
+			break
+		}
+	}
+
+	if org.SyncConfig.WorkflowBackup {
+		workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Workflows = workflows
+		}
+	}
+
+	if org.SyncConfig.AppBackup && len(org.Users) > 0 {
+
+		apps, err := shuffle.GetPrioritizedApps(ctx, foundUser)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting backup apps for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Apps = apps
+		}
+	}
+
+	info, err := shuffle.GetOrgStatistics(ctx, org.Id)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
+	} else {
+		backupJob.Stats = *info
+	}
+
+	backupJobData, err := json.Marshal(backupJob)
+	if err != nil {
+		log.Printf("[ERROR] Failed marshalling backup job: %s", err)
+		backupJobData = []byte{}
+	}
+
+
 	client := &http.Client{}
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync", syncUrl)
 	req, err := http.NewRequest(
-		"GET",
+		"POST",
 		syncUrl,
-		nil,
+		bytes.NewBuffer(backupJobData),
 	)
 
 	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
+
+	//log.Printf("[INFO] Sending org sync with autho %s", org.SyncConfig.Apikey)
+
 	newresp, err := client.Do(req)
 	if err != nil {
 		//log.Printf("Failed request in org sync: %s", err)
@@ -4758,7 +4810,7 @@ func runInit(ctx context.Context) {
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("[ERROR] Failed request with remote org setup (2): %s", err)
+				log.Printf("[ERROR] Failed request with remote org setup (3): %s", err)
 			}
 		}
 
@@ -5242,7 +5294,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	b, err := json.Marshal(requestData)
 	if err != nil {
-		log.Printf("Failed marshaling api key data: %s", err)
+		log.Printf("[ERROR] Failed marshaling api key data: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync: %s"}`, err)))
 		return
@@ -5269,7 +5321,8 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//log.Printf("Respbody: %s", string(respBody))
+	log.Printf("[DEBUG] Respbody from sync: %s", string(respBody))
+
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
 	if err != nil {
@@ -5967,10 +6020,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", shuffle.SetAuthenticationConfig).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", shuffle.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
 
-	// Related to NFT things
-	r.HandleFunc("/api/v1/workflows/collections/load", shuffle.LoadCollections).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/collections/{key}", shuffle.HandleGetCollection).Methods("GET", "OPTIONS")
-
 	// Related to use-cases that are not directly workflows.
 	r.HandleFunc("/api/v1/workflows/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
@@ -5999,6 +6048,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.SaveWorkflow).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.GetSpecificWorkflow).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/recommend", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
+
+	// First v2 API
+	r.HandleFunc("/api/v2/workflows/{key}/executions", shuffle.GetWorkflowExecutionsV2).Methods("GET", "OPTIONS")
 
 	// New for recommendations in Shuffle
 	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
