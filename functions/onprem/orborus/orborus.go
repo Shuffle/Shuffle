@@ -41,6 +41,16 @@ import (
 	//"github.com/mackerelio/go-osstat/disk"
 	"github.com/mackerelio/go-osstat/memory"
 	"github.com/shirou/gopsutil/cpu"
+
+	//k8s deps
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+	"path/filepath"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Starts jobs in bulk, so this could be increased
@@ -236,11 +246,11 @@ func deployServiceWorkers(image string) {
 			// this assumes that the machine should have at least 2 network
 			// interfaces. If not, we will use the default MTU.
 			// interface 1 is the loopback interface
-			// interface 2 is eth0, The eth0 interface inside a 
+			// interface 2 is eth0, The eth0 interface inside a
 			// Docker container corresponds to the virtual Ethernet
 			// interface that connects the container to the docker0
 			log.Printf("[ERROR] Failed to get enough network interfaces")
-		} else {		
+		} else {
 			// Get the preferred interface
 			for _, iface := range interfaces {
 				if strings.Contains(iface.Name, bridgeName) {
@@ -250,7 +260,7 @@ func deployServiceWorkers(image string) {
 					break
 				}
 			}
-		}		
+		}
 
 		// Create the network options with the specified MTU
 		options := make(map[string]string)
@@ -562,8 +572,76 @@ func deployServiceWorkers(image string) {
 
 // Deploys the internal worker whenever something happens
 // https://docs.docker.com/engine/api/sdk/examples/
+
+func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
+	var envVars []corev1.EnvVar
+	for key, value := range envMap {
+		envVars = append(envVars, corev1.EnvVar{Name: key, Value: value})
+	}
+	return envVars
+}
+
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
-	// Binds is the actual "-v" volume.
+
+	if os.Getenv("IS_KUBERNETES") == "true" {
+		// log.Printf("IS_KUBERNETS", os.Getenv("IS_KUBERNETES"))
+		// log.Printf("REGISTRY_URL", os.Getenv("REGISTRY_URL"))
+
+		if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
+			env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
+			env = append(env, fmt.Sprintf("IS_KUBERNETES=%s", os.Getenv("IS_KUBERNETES")))
+		}
+
+		image = os.Getenv("SHUFFLE_KUBERNETES_WORKER")
+		log.Printf("[DEBUG] using worker image:", image)
+		// image = "shuffle-worker:v1" //hard coded image name to test locally
+
+		envMap := make(map[string]string)
+		for _, envStr := range env {
+			parts := strings.SplitN(envStr, "=", 2)
+			if len(parts) == 2 {
+				envMap[parts[0]] = parts[1]
+			}
+		}
+
+		// log.Printf("envMap", envMap)
+		clientset, err := getKubernetesClient()
+		if err != nil {
+			fmt.Println("[ERROR]Error getting kubernetes client:", err)
+			// os.Exit(1)
+		}
+
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   identifier,
+				Labels: map[string]string{"app": "shuffle-worker"},
+			},
+			Spec: corev1.PodSpec{
+				RestartPolicy: "Never",
+				// once images is pushed, we can remove this
+				// keep this when running locally
+				// NodeSelector: map[string]string{
+				// 	"node": "master",
+				// },
+				Containers: []corev1.Container{
+					{
+						Name:  identifier,
+						Image: image,
+						Env:   buildEnvVars(envMap),
+					},
+				},
+			},
+		}
+
+		createdPod, err := clientset.CoreV1().Pods("shuffle").Create(context.Background(), pod, metav1.CreateOptions{})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating pod: %v\n", err)
+		}
+
+		fmt.Printf("Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
+	} else {
+
+		// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
 
 	//CPUQuota:  25000,
@@ -719,6 +797,9 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		//}
 	} else {
 		log.Printf("[INFO] Worker Container %s was created under environment %s: docker logs %s", cont.ID, environment, cont.ID)
+	}
+
+	return nil
 	}
 
 	return nil
@@ -933,8 +1014,46 @@ func getOrborusStats() shuffle.OrborusStats {
 	return newStats
 }
 
+func isRunningInCluster() bool {
+	_, existsHost := os.LookupEnv("KUBERNETES_SERVICE_HOST")
+	_, existsPort := os.LookupEnv("KUBERNETES_SERVICE_PORT")
+	return existsHost && existsPort
+}
+
+func getKubernetesClient() (*kubernetes.Clientset, error) {
+	if isRunningInCluster() {
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, err
+		}
+		return clientset, nil
+	} else {
+		home := homedir.HomeDir()
+		kubeconfigPath := filepath.Join(home, ".kube", "config")
+		config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		if err != nil {
+			return nil, err
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, err
+		}
+		return clientset, nil
+	}
+}
+
 // Initial loop etc
 func main() {
+
+	if isRunningInCluster() {
+		log.Printf("[INFO] Running inside k8s cluster")
+	}
+
+
 	startupDelay := os.Getenv("SHUFFLE_ORBORUS_STARTUP_DELAY")
 	if len(startupDelay) > 0 {
 		log.Printf("[DEBUG] Setting startup delay to %#v", startupDelay)
@@ -949,7 +1068,7 @@ func main() {
 
 	log.Println("[INFO] Setting up execution environment")
 
-	//FIXME
+	// //FIXME
 	if baseUrl == "" {
 		baseUrl = "https://shuffler.io"
 		//baseUrl = "http://localhost:5001"
@@ -1016,7 +1135,8 @@ func main() {
 
 	ctx := context.Background()
 	// Run by default from now
-	zombiecheck(ctx, workerTimeout)
+	//commenting for now as its stoppoing minikube
+	// zombiecheck(ctx, workerTimeout)
 
 	log.Printf("[INFO] Running towards %s (BASE_URL) with environment name %s", baseUrl, environment)
 
@@ -1348,58 +1468,86 @@ func main() {
 // Is this ok to do with Docker? idk :)
 func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	//log.Printf("[DEBUG] Getting running workers with API version %s", dockerApiVersion)
-	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-		All: true,
-	})
+	counter := 0
+	if os.Getenv("IS_KUBERNETES") == "true" {
+		log.Printf("[INFO] getting running workers in kubernetes")
 
-	// Automatically updates the version
-	if err != nil {
-		log.Printf("[ERROR] Error getting containers: %s", err)
+		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
 
-		newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
-		if len(newVersionSplit) > 1 {
-			//dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
-			log.Printf("[DEBUG] WANT to change the API version to default to %s?", strings.TrimSpace(newVersionSplit[1]))
+		clientset, err := getKubernetesClient()
+		if err != nil {
+			log.Printf("[ERROR] Failed getting kubernetes client: %s", err)
+			return 0
 		}
 
-		return maxConcurrency
-	}
+		labelSelector := "app=shuffle-worker"
+		pods, podErr := clientset.CoreV1().Pods("shuffle").List(ctx, metav1.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if podErr != nil {
+			log.Printf("[ERROR] Failed getting running workers: %s", podErr)
+			return 0
+		}
 
-	currenttime := time.Now().Unix()
-	counter := 0
-	for _, container := range containers {
-		// Skip random containers. Only handle things related to Shuffle.
-		if !strings.Contains(container.Image, baseimagename) {
-			shuffleFound := false
-			for _, item := range container.Labels {
-				if item == "shuffle" {
-					shuffleFound = true
+		for _, pod := range pods.Items {
+			if pod.Status.Phase == "Running" && pod.CreationTimestamp.Time.After(thresholdTime) {
+				counter++
+			}
+		}
+	} else {
+
+		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+			All: true,
+		})
+	
+		// Automatically updates the version
+		if err != nil {
+			log.Printf("[ERROR] Error getting containers: %s", err)
+	
+			newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
+			if len(newVersionSplit) > 1 {
+				//dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
+				log.Printf("[DEBUG] WANT to change the API version to default to %s?", strings.TrimSpace(newVersionSplit[1]))
+			}
+	
+			return maxConcurrency
+		}
+	
+		currenttime := time.Now().Unix()
+
+		for _, container := range containers {
+			// Skip random containers. Only handle things related to Shuffle.
+			if !strings.Contains(container.Image, baseimagename) {
+				shuffleFound := false
+				for _, item := range container.Labels {
+					if item == "shuffle" {
+						shuffleFound = true
+						break
+					}
+				}
+	
+				// Check image name
+				if !shuffleFound {
+					continue
+				}
+				//} else {
+				//	log.Printf("NAME: %s", container.Image)
+			}
+	
+			for _, name := range container.Names {
+				// FIXME - add name_version_uid_uid regex check as well
+				if !strings.HasPrefix(name, "/worker") {
+					continue
+				}
+	
+				//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
+				if container.State == "running" && currenttime-container.Created < int64(workerTimeout) {
+					counter += 1
 					break
 				}
 			}
-
-			// Check image name
-			if !shuffleFound {
-				continue
-			}
-			//} else {
-			//	log.Printf("NAME: %s", container.Image)
-		}
-
-		for _, name := range container.Names {
-			// FIXME - add name_version_uid_uid regex check as well
-			if !strings.HasPrefix(name, "/worker") {
-				continue
-			}
-
-			//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
-			if container.State == "running" && currenttime-container.Created < int64(workerTimeout) {
-				counter += 1
-				break
-			}
 		}
 	}
-
 	return counter
 }
 
