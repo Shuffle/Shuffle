@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    image: ghcr.io/shuffle/shuffle-frontend:latest
+    image: ghcr.io/shuffle/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -61,8 +61,9 @@ services:
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
-      - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - bootstrap.memory_lock=true
+      - DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI=true
       - cluster.initial_master_nodes=shuffle-opensearch
       - cluster.routing.allocation.disk.threshold_enabled=false
       - cluster.name=shuffle-cluster

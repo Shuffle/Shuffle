@@ -3419,8 +3419,8 @@ const Workflows = (props) => {
 													>
 														<img
 															style={{
-																height: imgSize,
-																width: imgSize,
+																height: imgSize+4,
+																width: imgSize+4,
 																position: "absolute",
 																top: -2,
 																left: -2,

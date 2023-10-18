@@ -12,6 +12,7 @@ import {
 	Drawer,
 	CircularProgress,
 	IconButton,
+	Tooltip,
 } from "@mui/material";
 
 import {
@@ -34,11 +35,37 @@ const WorkflowTemplatePopup = (props) => {
 	const [workflow, setWorkflow] = useState({});
 
   	const [appAuthentication, setAppAuthentication] = React.useState(undefined);
+    const imagestyleWrapper = {
+        height: 40,
+		width: 40,
+        borderRadius: 40,
+		border: "1px solid rgba(255,255,255,0.3)",
+		overflow: "hidden",
+		display: "flex",
+    }
+
+	const imagestyleWrapperDefault = {
+        height: 40,
+		width: 40,
+        borderRadius: 40,
+		border: "1px solid red",
+		overflow: "hidden",
+		display: "flex",
+	}
+
     const imagestyle = {
         height: 40,
 		width: 40,
         borderRadius: 40,
+		border: "1px solid rgba(255,255,255,0.3)",
+		overflow: "hidden",
     }
+
+	const imagestyleDefault = {
+		display: "block",
+		marginLeft: 9,
+		marginTop: 10,
+	}
 
 	if (title === undefined || title === null || title === "") {
 		console.log("No title for workflow template popup!");
@@ -297,7 +324,10 @@ const WorkflowTemplatePopup = (props) => {
 		parsedTitle = title.substring(0, maxlength) + "..."
 	}
 
-	parsedTitle.replaceAll("_", " ")
+	parsedTitle = parsedTitle.replaceAll("_", " ")
+
+	const parsedDescription = description !== undefined && description !== null ? description.replaceAll("_", " ") : ""
+
 
 	return (
 		<div style={{ display: "flex", maxWidth: 470, minWidth: 470, height: 78, borderRadius: 8 }}>
@@ -334,7 +364,7 @@ const WorkflowTemplatePopup = (props) => {
 					if (errorMessage !== "") {
 						toast("Already failed to generate workflow for these apps. Please try again later or contact support@shuffler.io.")
 					} else if (isActive) {
-						toast("Workflow already generated. Please try another template, or continue to the next page.")
+						toast("Workflow already generated. Please try another workflow template!")
 
 						// FIXME: Remove these?
 						loadAppAuth() 
@@ -350,22 +380,32 @@ const WorkflowTemplatePopup = (props) => {
 			>
 				<div style={{ display: "flex", itemAlign: "left", textAlign: "left", }}>
 					<div style={{display: "flex", flex: 1, marginTop: 3, }}>
-						<img src={img1} style={imagestyle} />
-						{img2 !== "" ?
-							<span style={{display: "flex", }}>
-								<TrendingFlatIcon style={{ marginTop: 7 }} />
-								<img src={img2} style={imagestyle} />
-							</span>
+						{img1 !== undefined && img1 !== "" && srcapp !== undefined && srcapp !== "" ?
+							<Tooltip title={srcapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
+								<span style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
+									<img src={img1} style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleDefault : imagestyle} />
+								</span>
+							</Tooltip>
+						: 
+							<span style={{width: 50, }} />
+						}
+						{img2 !== undefined && img2 !== "" && dstapp !== undefined && dstapp !== "" ?
+							<Tooltip title={dstapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
+								<span style={{display: "flex", }}>
+									<TrendingFlatIcon style={{ marginTop: 7, }} />
+									<img src={img2} style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleDefault : imagestyleWrapper} />
+								</span>
+							</Tooltip>
 						:
 							<span style={{width: 50, }} />
 						}	
 					</div>
 					<div style={{ flex: 3, marginLeft: 20, }}>
-						<Typography variant="body1" style={{ marginTop: description.length === 0 ? 10 : 0, }} color="rgba(241, 241, 241, 1)">
+						<Typography variant="body1" style={{ marginTop: parsedDescription.length === 0 ? 10 : 0, }} color="rgba(241, 241, 241, 1)">
 							{parsedTitle}
 						</Typography>
 						<Typography variant="body2" color="textSecondary" style={{ marginTop: 0, marginRight: 0, maxHeight: 16, overflow: "hidden",}} color="rgba(158, 158, 158, 1)">
-							{description}
+							{parsedDescription}
 						</Typography>
 					</div>
 				</div>

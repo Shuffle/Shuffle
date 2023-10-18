@@ -86,102 +86,12 @@ var runningEnvironment = "onprem"
 var syncUrl = "https://shuffler.io"
 
 var dbclient *datastore.Client
-
-type Userapi struct {
-	Username string `datastore:"username"`
-	ApiKey   string `datastore:"apikey"`
-}
-
-type ExecutionInfo struct {
-	TotalApiUsage           int64 `json:"total_api_usage" datastore:"total_api_usage"`
-	TotalWorkflowExecutions int64 `json:"total_workflow_executions" datastore:"total_workflow_executions"`
-	TotalAppExecutions      int64 `json:"total_app_executions" datastore:"total_app_executions"`
-	TotalCloudExecutions    int64 `json:"total_cloud_executions" datastore:"total_cloud_executions"`
-	TotalOnpremExecutions   int64 `json:"total_onprem_executions" datastore:"total_onprem_executions"`
-	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
-	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
-	DailyAppExecutions      int64 `json:"daily_app_executions" datastore:"daily_app_executions"`
-	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
-	DailyOnpremExecutions   int64 `json:"daily_onprem_executions" datastore:"daily_onprem_executions"`
-}
-
-// "Execution by status"
-// Execution history
-//type GlobalStatistics struct {
-//	BackendExecutions     int64            `json:"backend_executions" datastore:"backend_executions"`
-//	WorkflowCount         int64            `json:"workflow_count" datastore:"workflow_count"`
-//	ExecutionCount        int64            `json:"execution_count" datastore:"execution_count"`
-//	ExecutionSuccessCount int64            `json:"execution_success_count" datastore:"execution_success_count"`
-//	ExecutionAbortCount   int64            `json:"execution_abort_count" datastore:"execution_abort_count"`
-//	ExecutionFailureCount int64            `json:"execution_failure_count" datastore:"execution_failure_count"`
-//	ExecutionPendingCount int64            `json:"execution_pending_count" datastore:"execution_pending_count"`
-//	AppUsageCount         int64            `json:"app_usage_count" datastore:"app_usage_count"`
-//	TotalAppsCount        int64            `json:"total_apps_count" datastore:"total_apps_count"`
-//	SelfMadeAppCount      int64            `json:"self_made_app_count" datastore:"self_made_app_count"`
-//	WebhookUsageCount     int64            `json:"webhook_usage_count" datastore:"webhook_usage_count"`
-//	Baseline              map[string]int64 `json:"baseline" datastore:"baseline"`
-//}
-
-type ParsedOpenApi struct {
-	Body    string `datastore:"body,noindex" json:"body"`
-	ID      string `datastore:"id" json:"id"`
-	Success bool   `datastore:"success,omitempty" json:"success,omitempty"`
-}
-
-// Limits set for a user so that they can't do a shitload
-type UserLimits struct {
-	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
-	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
-	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
-	DailyTriggers           int64 `json:"daily_triggers" datastore:"daily_triggers"`
-	DailyMailUsage          int64 `json:"daily_mail_usage" datastore:"daily_mail_usage"`
-	MaxTriggers             int64 `json:"max_triggers" datastore:"max_triggers"`
-	MaxWorkflows            int64 `json:"max_workflows" datastore:"max_workflows"`
-}
-
 type retStruct struct {
 	Success         bool                 `json:"success"`
 	SyncFeatures    shuffle.SyncFeatures `json:"sync_features"`
 	SessionKey      string               `json:"session_key"`
 	IntervalSeconds int64                `json:"interval_seconds"`
 	Reason          string               `json:"reason"`
-}
-
-// Saves some data, not sure what to have here lol
-type UserAuth struct {
-	Description string          `json:"description" datastore:"description,noindex" yaml:"description"`
-	Name        string          `json:"name" datastore:"name" yaml:"name"`
-	Workflows   []string        `json:"workflows" datastore:"workflows"`
-	Username    string          `json:"username" datastore:"username"`
-	Fields      []UserAuthField `json:"fields" datastore:"fields"`
-}
-
-type UserAuthField struct {
-	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value,noindex"`
-}
-
-// Not environment, but execution environment
-//type Environment struct {
-//	Name       string `datastore:"name"`
-//	Type       string `datastore:"type"`
-//	Registered bool   `datastore:"registered"`
-//	Default    bool   `datastore:"default" json:"default"`
-//	Archived   bool   `datastore:"archived" json:"archived"`
-//	Id         string `datastore:"id" json:"id"`
-//	OrgId      string `datastore:"org_id" json:"org_id"`
-//}
-
-// timeout maybe? idk
-type session struct {
-	Username string `datastore:"Username,noindex"`
-	Id       string `datastore:"Id,noindex"`
-	Session  string `datastore:"session,noindex"`
-}
-
-type loginStruct struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
 }
 
 type Contact struct {
@@ -3825,7 +3735,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	//log.Printf("Remote Data: %s", respBody)
 	err = remoteOrgJobController(org, respBody)
 	if err != nil {
-		log.Printf("[ERROR] Failed job controller run for %s: %s", respBody, err)
+		//log.Printf("[ERROR] Failed cloud sync job controller run for '%s': %s", respBody, err)
 		return err
 	}
 	return nil
@@ -3869,7 +3779,7 @@ func runInitEs(ctx context.Context) {
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
 
 	setUsers := false
-	//log.Printf("ORGS: %d", len(activeOrgs))
+	_ = setUsers
 	if err != nil {
 		if fmt.Sprintf("%s", err) == "EOF" {
 			time.Sleep(7 * time.Second)
@@ -3924,7 +3834,7 @@ func runInitEs(ctx context.Context) {
 
 			if len(activeOrgs) == 1 {
 				if len(activeOrgs[0].Users) == 0 {
-					log.Printf("ORG doesn't have any users??")
+					log.Printf("[ERROR] Main Org doesn't have any user. Creating.")
 
 					users, err := shuffle.GetAllUsers(ctx)
 					if err != nil && len(users) == 0 {
@@ -3957,10 +3867,9 @@ func runInitEs(ctx context.Context) {
 
 	if strings.Contains(os.Getenv("SHUFFLE_OPENSEARCH_URL"), "https") {
 		log.Printf("[INFO] Waiting during init to make sure the opensearch instance is up and running with security features properly")
-		time.Sleep(30 * time.Second)
+		time.Sleep(15 * time.Second)
 	}
 
-	_ = setUsers
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
 		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
@@ -4104,11 +4013,11 @@ func runInitEs(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("[DEBUG] Should start schedule for org %s (%s)", org.Name, org.Id)
+		log.Printf("[DEBUG] Should start cloud schedule for org %s (%s)", org.Name, org.Id)
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("[ERROR] Failed request with remote org setup (2): %s", err)
+				log.Printf("[ERROR] Failed request with remote org setup for org %s (2): %s", org.Id, err)
 			}
 		}
 

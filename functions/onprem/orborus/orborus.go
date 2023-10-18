@@ -45,7 +45,10 @@ import (
 
 // Starts jobs in bulk, so this could be increased
 var sleepTime = 3
-var maxConcurrency = 15
+
+// Making it work on low-end machines even during busy times :)
+// May cause some things to run slowly 
+var maxConcurrency = 2
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
@@ -586,7 +589,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 
-	if strings.ToLower(cleanupEnv) == "true" {
+	if strings.ToLower(cleanupEnv) != "false" {
 		hostConfig.AutoRemove = true
 	}
 
@@ -976,10 +979,8 @@ func main() {
 		}
 	}
 
-	// Handle Cleanup
-	// var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
-	// SHUFFLE_CONTAINER_AUTO_CLEANUP=false
-	if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) == "true" {
+	// Handle Cleanup - made it cleanup by default
+	if strings.ToLower(os.Getenv("SHUFFLE_CONTAINER_AUTO_CLEANUP")) != "false" {
 		cleanupEnv = "true"
 	}
 
@@ -1145,7 +1146,7 @@ func main() {
 
 		// FIXME - add check for StatusCode
 		if newresp.StatusCode != 200 {
-			log.Printf("[ERROR] Backend configuration missing (%d): %s", newresp.StatusCode, string(body))
+			log.Printf("[ERROR] Backend connection failed, or is missing (%d): %s", newresp.StatusCode, string(body))
 		} else {
 			if !hasStarted {
 				log.Printf("[DEBUG] Starting iteration on environment %#v (default = Shuffle). Got statuscode %d from backend on first request", environment, newresp.StatusCode)
@@ -1220,7 +1221,7 @@ func main() {
 			}
 
 			if shuffle.ArrayContains(executionIds, execution.ExecutionId) {
-				log.Printf("[INFO] Execution already handled: %s", execution.ExecutionId)
+				log.Printf("[INFO] Execution already handled (rerun of old executions): %s", execution.ExecutionId)
 				toBeRemoved.Data = append(toBeRemoved.Data, execution)
 				continue
 			}

@@ -12,6 +12,7 @@ import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx";
 //import { Line, Bar } from "react-chartjs-2";
 //import { useAlert
 import { ToastContainer, toast } from "react-toastify" 
+import { parsedDatatypeImages } from "../components/AppFramework.jsx"
 
 import {
 	Autocomplete,
@@ -159,12 +160,165 @@ const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData
 		return null
 	}
 
-  const parseUsecase = (parsedUsecase, subcase) => {
-	  console.log("parseUsecase: ", parsedUsecase, subcase)
+  const findSpecificApp = (framework, inputcategory) => {
+	  // Get the frameworkinfo for the org and fill in
+	  //
+	  if (framework === undefined || framework === null) {
+		  console.log("findSpecificApp: frameworkData is null")
+		  return null 
+	  }
+
+	  if (inputcategory === undefined || inputcategory === null) {
+		  console.log("findSpecificApp: category is null")
+		  return null 
+	  }
+
+	  const category = inputcategory.toLowerCase()
+
+	  console.log("findSpecificApp: ", category, frameworkData)
+	  if (category === "edr" || category === "eradication" || category === "edr & av") {
+		  if (frameworkData["EDR & AV"] !== undefined && frameworkData["EDR & AV"].name !== undefined) { 
+			  return frameworkData["EDR & AV"]	
+		  }
+
+		  return {
+			  name: "EDR :default",
+			  large_image: parsedDatatypeImages["EDR & AV"],
+			  count: 0,
+			  description: "",
+			  id: "",
+		  }
+	  } else if (category === "communication") {
+		  if (frameworkData["Comms"] !== undefined && frameworkData["Comms"].name !== undefined) {
+			  return frameworkData["Comms"]	
+		  }
+
+		  return {
+			  name: "COMMS :default",
+			  large_image: parsedDatatypeImages["COMMS"],
+			  count: 0,
+			  description: "",
+			  id: "",
+		  }
+	  } else if (category === "email") {
+		  if (frameworkData["Email"] !== undefined && frameworkData["Email"].name !== undefined) {
+			  return frameworkData["Email"]	
+		  }
+
+		  return {
+			  name: "COMMS :default",
+			  large_image: parsedDatatypeImages["COMMS"],
+			  count: 0,
+			  description: "",
+			  id: "",
+		  }
+	  } else if (category === "assets") {
+		  if (frameworkData["Assets"] !== undefined && frameworkData["Assets"].name !== undefined) {
+			  return frameworkData["Assets"]	
+		  }
+
+		  return {
+			  name: "ASSETS :default",
+			  large_image: parsedDatatypeImages["ASSETS"],
+			  count: 0,
+			  description: "",
+			  id: "",
+		  }
+	  } else if (category === "cases") {
+		  if (frameworkData["Cases"] !== undefined && frameworkData["Cases"].name !== undefined) {
+			  return frameworkData["Cases"]
+		  }
+
+		  return {
+			  name: "CASES :default",
+			  large_image: parsedDatatypeImages["CASES"],
+			  count: 0,
+			  description: "",
+			  id: "",
+		  }
+	  } else if (category === "iam") {
+		  if (frameworkData["IAM"] !== undefined &&	frameworkData["IAM"].name !== undefined) {
+			  return frameworkData["IAM"]
+		  }
+
+		  return {
+			  name: "EDR :default",
+			  large_image: parsedDatatypeImages["EDR & AV"],
+			  count: 0,
+			  description: "",
+			  id: "",
+		  }
+	  } else if (category === "network") {
+		  if (frameworkData["Network"] !== undefined && frameworkData["Network"].name !== undefined) {
+			  return frameworkData["Network"]
+		  }
+
+		  return {
+			  name: "Network :default",
+			  large_image: parsedDatatypeImages["NETWORK"],
+			  count: 0,
+			  description: "",
+			  id: "",
+		  }
+	  } else if (category === "intel") {
+		  if (frameworkData["Intel"] !== undefined && frameworkData["Intel"].name !== undefined) {
+			  return frameworkData["Intel"]
+		  }
+
+		  return {
+			  name: "INTEL :default",
+			  large_image: parsedDatatypeImages["INTEL"],
+			  count: 0,
+			  description: "",
+			  id: "",
+		  }
+	  } else if (category === "siem") {
+		  if (frameworkData["SIEM"] !== undefined && frameworkData["SIEM"].name !== undefined) {
+			  return frameworkData["SIEM"]
+		  }
+
+		  return {
+			  name: "SIEM :default",
+			  large_image: parsedDatatypeImages["SIEM"],
+			  count: 0,
+			  description: "",
+			  id: "",
+		  } 
+	  } else {
+		  console.log("findSpecificApp: unknown category: ", category)
+	  }
+
+	  return null
+  } 
+
+  const parseUsecase = (subcase) => {
+	  console.log("parseUsecase: ", subcase)
+	  const srcdata = findSpecificApp(frameworkData, subcase.type)
+	  const dstdata = findSpecificApp(frameworkData, subcase.last)
+
+	  console.log("srcdata: ", srcdata)
+	  console.log("dstdata: ", dstdata)
+	
+	  if (srcdata !== undefined && srcdata !== null) { 
+		subcase.srcimg = srcdata.large_image 
+		subcase.srcapp = srcdata.name
+	  }
+
+	  if (dstdata !== undefined && dstdata !== null) {
+		  subcase.dstimg = dstdata.large_image
+		  subcase.dstapp = dstdata.name
+	  }
+
+	  return subcase 
   }
 
   const getUsecase = (subcase, index, subindex) => {
-	console.log(subcase)
+	subcase = parseUsecase(subcase)
+
+	// Timeout 50ms to delay it slightly 
+	setTimeout(() => {
+		setInputUsecase(subcase)
+	}, 50)
 
     fetch(`${globalUrl}/api/v1/workflows/usecases/${escape(subcase.name.replaceAll(" ", "_"))}`, {
       method: "GET",
@@ -174,62 +328,68 @@ const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData
       },
       credentials: "include",
     })
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for framework!");
+	.then((response) => {
+		if (response.status !== 200) {
+			console.log("Status not 200 for framework!");
+		}
+
+		return response.json();
+	})
+	.then((responseJson) => {
+		console.log("In responseJson for usecase: ", responseJson)
+		var parsedUsecase = responseJson
+
+		if (responseJson.success === false) {
+
+			//img1={inputUsecase.srcimg}
+			//srcapp={inputUsecase.srcapp}
+			//img2={inputUsecase.dstimg}
+			//dstapp={inputUsecase.dstapp}
+			//title={inputUsecase.name}
+			parsedUsecase = subcase
+		} else {
+			parsedUsecase = responseJson
+
+			parsedUsecase.srcimg = subcase.srcimg
+			parsedUsecase.srcapp = subcase.srcapp
+			parsedUsecase.dstimg = subcase.dstimg
+			parsedUsecase.dstapp = subcase.dstapp
+
+			//parsedUsecase = parseUsecase(responseJson)
+		}
+
+		// Look for the type of app and fill in img1, srcapp...
+		console.log("USECASE: ", parsedUsecase)
+
+		setInputUsecase(parsedUsecase)
+		setExpandedIndex(index)
+		setExpandedItem(subindex)
+
+		setTimeout(() => {
+			//console.log("Scroll!")
+			const found = document.getElementById("selected_box");
+			if (found !== undefined && found !== null) {
+				//console.log("FOUND!!")
+				found.scrollTo({
+					top: 100,
+					behavior: "smooth",
+				})
 			}
-
-			return response.json();
-		})
-		.then((responseJson) => {
-			var parsedUsecase = responseJson
-			if (responseJson.success === false) {
-				parsedUsecase = subcase
-
-				//img1={inputUsecase.srcimg}
-				//srcapp={inputUsecase.srcapp}
-				//img2={inputUsecase.dstimg}
-				//dstapp={inputUsecase.dstapp}
-				//title={inputUsecase.name}
-				parsedUsecase = parseUsecase(parsedUsecase, subcase)
-			} else {
-				parsedUsecase = responseJson
-
-				parsedUsecase = parseUsecase(parsedUsecase, responseJson)
-			}
-
-			// Look for the type of app and fill in img1, srcapp...
-
-
-			setInputUsecase(parsedUsecase)
-			setExpandedIndex(index)
-			setExpandedItem(subindex)
-
-			setTimeout(() => {
-				//console.log("Scroll!")
-				const found = document.getElementById("selected_box");
-				if (found !== undefined && found !== null) {
-					//console.log("FOUND!!")
-					found.scrollTo({
-						top: 100,
-						behavior: "smooth",
-					})
-				}
-
-				setFirstLoad(true)
-				setSelectedWorkflows([])
-			}, 100);
-})
-		.catch((error) => {
-			//toast(error.toString());
-			setInputUsecase({})
-			setExpandedIndex(index)
-			setExpandedItem(subindex)
 
 			setFirstLoad(true)
 			setSelectedWorkflows([])
-		})
-	}
+		}, 100);
+	})
+	.catch((error) => {
+		//toast(error.toString());
+		setInputUsecase({})
+		setExpandedIndex(index)
+		setExpandedItem(subindex)
+
+		setFirstLoad(true)
+		setSelectedWorkflows([])
+	})
+  }
 
 	const setUsecaseItem = (inputUsecase) => {
 		var parsedUsecase = inputUsecase
@@ -290,7 +450,7 @@ const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData
         //toast(error.toString());
 				//setFrameworkLoaded(true)
       })
-		}
+	}
 
   const setWorkflow = (workflowdata) => {
 		const new_url = `${globalUrl}/api/v1/workflows/${workflowdata.id}`
@@ -845,7 +1005,7 @@ const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData
 															: null}
 															<span style={{top: 30, position: "relative",}}>
 																<Typography variant="body1" style={{marginTop: 0,}} onClick={() => {}}>
-																	Try it out
+																	Try this Usecase
 																</Typography>
 																<WorkflowTemplatePopup 
 																	userdata={userdata}

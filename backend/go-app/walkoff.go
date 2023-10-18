@@ -1692,6 +1692,8 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			return shuffle.WorkflowExecution{}, "Cloud not implemented yet", errors.New("Cloud not implemented yet")
 		}
 
+		shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions_cloud")
+
 		// What it needs to know:
 		// 1. Parameters
 		if len(workflowExecution.Workflow.Actions) == 1 {
@@ -1705,13 +1707,11 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			// If worker, should this backend be a proxy? I think so.
 			return shuffle.WorkflowExecution{}, "Cloud not implemented yet (2)", errors.New("Cloud not implemented yet")
 		}
+	} else {
+		shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions_onprem")
 	}
 
-	//err = increaseStatisticsField(ctx, "workflow_executions", workflow.ID, 1, workflowExecution.ExecutionOrg)
-	//if err != nil {
-	//	log.Printf("Failed to increase stats execution stats: %s", err)
-	//}
-
+	shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
 	return workflowExecution, "", nil
 }
 
