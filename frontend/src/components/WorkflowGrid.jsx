@@ -154,7 +154,6 @@ const AppGrid = props => {
       })
       .then((responseJson) => {
 			if (responseJson.success !== false) {
-				console.log("Usecases: ", responseJson)
 				//handleKeysetting(responseJson, workflows)
 			}
       })
@@ -187,10 +186,10 @@ const AppGrid = props => {
 		}, [])
 
 		if (localMessage !== inputsearch && inputsearch !== undefined && inputsearch !== null && inputsearch.length > 0) { 
-			console.log("In refinement: ", inputsearch)
 			//setLocalMessage(inputsearch)
 			refine(inputsearch)
 			defaultSearch = inputsearch 
+			return null
 		} else if (onlyResults === true) {
 			// Don't return anything unless refinement works
 			return null
@@ -244,9 +243,7 @@ const AppGrid = props => {
 		return (
 			<div>
 				{onlyResults === true && hits.length > 0 ?
-					<Typography variant="h6" style={{paddingBottom: 0, }}>
-						Relevant Workflows
-					</Typography>
+					null
 				: null}
 				<Grid container spacing={4} style={paperAppContainer}>
 					{hits.map((data, index) => {

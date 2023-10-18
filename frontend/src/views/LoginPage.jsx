@@ -305,7 +305,6 @@ const LoginDialog = (props) => {
                 paddingBottom: "30px",
                 paddingTop: "30px",
                 position: "relative",
-                backgroundColor: theme.palette.inputColor,
                 textAlign: "left",
                 marginTop: 15,
               }}
@@ -331,17 +330,25 @@ const LoginDialog = (props) => {
                 variant="body2"
                 style={{ marginBottom: 20, color: "white" }}
               >
-                <b>1.</b> Make sure shuffle-database folder has correct access:{" "}
+                <b>1.</b> Make sure shuffle-database folder has correct access, and that you have a minimum of <b>2Gb of RAM available</b>:{" "}
                 <br />
                 <br />
                 sudo chown 1000:1000 -R shuffle-database
               </Typography>
-
               <Typography
                 variant="body2"
                 style={{ marginBottom: 20, color: "white" }}
               >
-                <b>2</b>. Restart docker-compose:
+                <b>2.</b> Disable memory swap on the host
+                <br />
+                <br />
+				sudo swapoff -a
+              </Typography>
+              <Typography
+                variant="body2"
+                style={{ marginBottom: 20, color: "white" }}
+              >
+                <b>3</b>. Restart docker-compose:
                 <br />
                 <br />
                 sudo docker-compose restart
@@ -513,7 +520,7 @@ const LoginDialog = (props) => {
 				//id="sso_button"
     		const ssoBtn = document.getElementById("sso_button");
 				if (ssoBtn !== undefined && ssoBtn !== null) {
-					console.log("SSO BTN: ", ssoBtn)
+					//console.log("SSO BTN: ", ssoBtn)
 					const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
 					var tmpView = new URLSearchParams(cursearch).get("autologin");
 					if (tmpView !== undefined && tmpView !== null) {
@@ -527,7 +534,7 @@ const LoginDialog = (props) => {
 		}, 200);
 	}, [ssoUrl])
 
-  return <div>{loadedCheck}</div>;
+  return <div style={{paddingBottom: 150, }}>{loadedCheck}</div>;
 };
 
 export default LoginDialog;

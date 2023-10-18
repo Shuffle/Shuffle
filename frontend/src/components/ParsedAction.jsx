@@ -2278,30 +2278,30 @@ const ParsedAction = (props) => {
                           handleItemClick([innerdata]);
                         }}
                       >
-												<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition1.top-200, left: menuPosition1.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
-													<MenuItem
-														key={innerdata.name}
-														style={{
-															backgroundColor: theme.palette.inputColor,
-															marginLeft: 15,
-															color: "white",
-															minWidth: 250,
-															maxWidth: 250,
-															padding: 0, 
-															position: "relative",
-														}}
-														value={innerdata}
-														onMouseOver={() => {
-															//console.log("HOVER: ", pathdata);
-														}}
-														onClick={() => {
-															handleItemClick([innerdata]);
-														}}
-													>
-														<Typography variant="h6" style={{paddingBottom: 5}}>
-                        			{innerdata.name}
-														</Typography>
-													</MenuItem>
+						<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition1.top-200, left: menuPosition1.left-455, padding: "10px 0px 10px 10px", overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+							<MenuItem
+								key={innerdata.name}
+								style={{
+									backgroundColor: theme.palette.inputColor,
+									marginLeft: 15,
+									color: "white",
+									minWidth: 250,
+									maxWidth: 250,
+									padding: 0, 
+									position: "relative",
+								}}
+								value={innerdata}
+								onMouseOver={() => {
+									//console.log("HOVER: ", pathdata);
+								}}
+								onClick={() => {
+									handleItemClick([innerdata]);
+								}}
+							>
+								<Typography variant="h6" style={{paddingBottom: 5}}>
+									{innerdata.name}
+								</Typography>
+							</MenuItem>
                         	{parsedPaths.map((pathdata, index) => {
                         	  // FIXME: Should be recursive in here
                         	  //<VpnKeyIcon style={iconStyle} />

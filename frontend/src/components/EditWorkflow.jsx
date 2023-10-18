@@ -5,6 +5,7 @@ import { MuiChipsInput } from "mui-chips-input";
 import UsecaseSearch from "../components/UsecaseSearch.jsx"
 import WorkflowGrid from "../components/WorkflowGrid.jsx"
 import dayjs from 'dayjs';
+import WorkflowTemplatePopup from "./WorkflowTemplatePopup.jsx";
 
 import {
   Badge,
@@ -57,7 +58,7 @@ import {
 } from "@mui/icons-material";
 
 const EditWorkflow = (props) => {
-	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, } = props
+	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, } = props
 
   const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
 
@@ -143,7 +144,9 @@ const EditWorkflow = (props) => {
 		return null
 	}
 
-	const newWorkflow = isEditing === true ? false : true
+  const newWorkflow = isEditing === true ? false : true
+  const priority = userdata === undefined || userdata === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
+  console.log("PRIO: ", priority)
 
   var upload = "";
 	var total_count = 0
@@ -161,6 +164,7 @@ const EditWorkflow = (props) => {
           maxWidth: isMobile ? "90%" : 650,
 		  minHeight: 400,
 		  paddingTop: 25, 
+		  paddingLeft: 50, 
           //minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
           //maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
         },
@@ -170,7 +174,7 @@ const EditWorkflow = (props) => {
 		<div style={{display: "flex"}}>
         	<div style={{flex: 1, color: "rgba(255,255,255,0.9)" }}>
 				<div style={{display: "flex"}}>
-					<Typography variant="h6" style={{flex: 9, }}>
+					<Typography variant="h4" style={{flex: 9, }}>
 						{newWorkflow ? "New" : "Editing"} workflow
 					</Typography>
 					{newWorkflow === true ? null :
@@ -193,7 +197,7 @@ const EditWorkflow = (props) => {
 						</div>
 					}
 				</div>
-				<Typography variant="body2" color="textSecondary" style={{maxWidth: 440,}}>
+				<Typography variant="body2" color="textSecondary" style={{marginTop: 20, maxWidth: 440,}}>
 					Workflows can be built from scratch, or from templates. <a href="/usecases" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
 				</Typography>
 				{showUpload === true ? 
@@ -480,7 +484,7 @@ const EditWorkflow = (props) => {
 
         </DialogContent>
 
-        <DialogActions style={{paddingRight: 20,  }}>
+        <DialogActions style={{paddingRight: 100,  }}>
           <Button
             style={{}}
             onClick={() => {
@@ -542,11 +546,38 @@ const EditWorkflow = (props) => {
             }}
             color="primary"
           >
-            {submitLoading ? <CircularProgress color="secondary" /> : "Submit"}
+            {submitLoading ? <CircularProgress color="secondary" /> : "Done"}
           </Button>
         </DialogActions>
+		{newWorkflow === true ?
+			<span style={{marginTop: 30, }}>
+			  <Typography variant="h6" style={{marginLeft: 30, paddingBottom: 0, }}>
+				Relevant Workflows
+			  </Typography>
 
-		  {newWorkflow === true && name.length > 5 ?
+			  {priority === null || priority === undefined ? null : 
+				<div style={{marginLeft: 30, }}>
+				  <WorkflowTemplatePopup 
+					userdata={userdata}
+					globalUrl={globalUrl}
+
+					srcapp={priority.description.split("&").length > 2 ? priority.description.split("&")[0] : ""}
+					img1={priority.description.split("&").length > 2 ? priority.description.split("&")[1] : ""}
+
+					dstapp={priority.description.split("&").length > 3 ? priority.description.split("&")[2] : ""}
+					img2={priority.description.split("&").length > 3 ? priority.description.split("&")[3] : ""}
+					title={priority.name}
+					description={priority.description.split("&").length > 4 ? priority.description.split("&")[4] : ""}
+
+					apps={apps}
+				  />
+				</div>
+				}
+			  
+			</span>
+		: null}
+
+		  {newWorkflow === true && name.length > 2 ?
 			<div style={{marginLeft: 30, }}>
 				<WorkflowGrid 
 					maxRows={1}

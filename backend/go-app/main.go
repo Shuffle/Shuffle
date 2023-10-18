@@ -84,105 +84,14 @@ var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
-var syncSubUrl = "https://shuffler.io"
 
 var dbclient *datastore.Client
-
-type Userapi struct {
-	Username string `datastore:"username"`
-	ApiKey   string `datastore:"apikey"`
-}
-
-type ExecutionInfo struct {
-	TotalApiUsage           int64 `json:"total_api_usage" datastore:"total_api_usage"`
-	TotalWorkflowExecutions int64 `json:"total_workflow_executions" datastore:"total_workflow_executions"`
-	TotalAppExecutions      int64 `json:"total_app_executions" datastore:"total_app_executions"`
-	TotalCloudExecutions    int64 `json:"total_cloud_executions" datastore:"total_cloud_executions"`
-	TotalOnpremExecutions   int64 `json:"total_onprem_executions" datastore:"total_onprem_executions"`
-	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
-	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
-	DailyAppExecutions      int64 `json:"daily_app_executions" datastore:"daily_app_executions"`
-	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
-	DailyOnpremExecutions   int64 `json:"daily_onprem_executions" datastore:"daily_onprem_executions"`
-}
-
-// "Execution by status"
-// Execution history
-//type GlobalStatistics struct {
-//	BackendExecutions     int64            `json:"backend_executions" datastore:"backend_executions"`
-//	WorkflowCount         int64            `json:"workflow_count" datastore:"workflow_count"`
-//	ExecutionCount        int64            `json:"execution_count" datastore:"execution_count"`
-//	ExecutionSuccessCount int64            `json:"execution_success_count" datastore:"execution_success_count"`
-//	ExecutionAbortCount   int64            `json:"execution_abort_count" datastore:"execution_abort_count"`
-//	ExecutionFailureCount int64            `json:"execution_failure_count" datastore:"execution_failure_count"`
-//	ExecutionPendingCount int64            `json:"execution_pending_count" datastore:"execution_pending_count"`
-//	AppUsageCount         int64            `json:"app_usage_count" datastore:"app_usage_count"`
-//	TotalAppsCount        int64            `json:"total_apps_count" datastore:"total_apps_count"`
-//	SelfMadeAppCount      int64            `json:"self_made_app_count" datastore:"self_made_app_count"`
-//	WebhookUsageCount     int64            `json:"webhook_usage_count" datastore:"webhook_usage_count"`
-//	Baseline              map[string]int64 `json:"baseline" datastore:"baseline"`
-//}
-
-type ParsedOpenApi struct {
-	Body    string `datastore:"body,noindex" json:"body"`
-	ID      string `datastore:"id" json:"id"`
-	Success bool   `datastore:"success,omitempty" json:"success,omitempty"`
-}
-
-// Limits set for a user so that they can't do a shitload
-type UserLimits struct {
-	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
-	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
-	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
-	DailyTriggers           int64 `json:"daily_triggers" datastore:"daily_triggers"`
-	DailyMailUsage          int64 `json:"daily_mail_usage" datastore:"daily_mail_usage"`
-	MaxTriggers             int64 `json:"max_triggers" datastore:"max_triggers"`
-	MaxWorkflows            int64 `json:"max_workflows" datastore:"max_workflows"`
-}
-
 type retStruct struct {
 	Success         bool                 `json:"success"`
 	SyncFeatures    shuffle.SyncFeatures `json:"sync_features"`
 	SessionKey      string               `json:"session_key"`
 	IntervalSeconds int64                `json:"interval_seconds"`
 	Reason          string               `json:"reason"`
-}
-
-// Saves some data, not sure what to have here lol
-type UserAuth struct {
-	Description string          `json:"description" datastore:"description,noindex" yaml:"description"`
-	Name        string          `json:"name" datastore:"name" yaml:"name"`
-	Workflows   []string        `json:"workflows" datastore:"workflows"`
-	Username    string          `json:"username" datastore:"username"`
-	Fields      []UserAuthField `json:"fields" datastore:"fields"`
-}
-
-type UserAuthField struct {
-	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value,noindex"`
-}
-
-// Not environment, but execution environment
-//type Environment struct {
-//	Name       string `datastore:"name"`
-//	Type       string `datastore:"type"`
-//	Registered bool   `datastore:"registered"`
-//	Default    bool   `datastore:"default" json:"default"`
-//	Archived   bool   `datastore:"archived" json:"archived"`
-//	Id         string `datastore:"id" json:"id"`
-//	OrgId      string `datastore:"org_id" json:"org_id"`
-//}
-
-// timeout maybe? idk
-type session struct {
-	Username string `datastore:"Username,noindex"`
-	Id       string `datastore:"Id,noindex"`
-	Session  string `datastore:"session,noindex"`
-}
-
-type loginStruct struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
 }
 
 type Contact struct {
@@ -1102,7 +1011,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	userOrgs = shuffle.SortOrgList(userOrgs)
 	orgPriorities := org.Priorities
 	if len(org.Priorities) < 10 {
-		log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
+		//log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
 		newPriorities, err := shuffle.GetPriorities(ctx, userInfo, org)
 		if err != nil {
 			log.Printf("[WARNING] Failed getting new priorities for org %s: %s", org.Id, err)
@@ -3750,16 +3659,69 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	return nil
 }
 
+
 func remoteOrgJobHandler(org shuffle.Org, interval int) error {
+
+	// Check if it's 1 in 10 (10% chance random)
+	backupJob := shuffle.BackupJob{} 
+
+	// Check if workflow backup is active
+	// Check if app backup is active
+	ctx := context.Background()
+
+	foundUser := org.Users[0]
+	for _, user := range org.Users {
+		if user.Role == "admin" {
+			foundUser = user
+			break
+		}
+	}
+
+	if org.SyncConfig.WorkflowBackup {
+		workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Workflows = workflows
+		}
+	}
+
+	if org.SyncConfig.AppBackup && len(org.Users) > 0 {
+
+		apps, err := shuffle.GetPrioritizedApps(ctx, foundUser)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting backup apps for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Apps = apps
+		}
+	}
+
+	info, err := shuffle.GetOrgStatistics(ctx, org.Id)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
+	} else {
+		backupJob.Stats = *info
+	}
+
+	backupJobData, err := json.Marshal(backupJob)
+	if err != nil {
+		log.Printf("[ERROR] Failed marshalling backup job: %s", err)
+		backupJobData = []byte{}
+	}
+
+
 	client := &http.Client{}
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync", syncUrl)
 	req, err := http.NewRequest(
-		"GET",
+		"POST",
 		syncUrl,
-		nil,
+		bytes.NewBuffer(backupJobData),
 	)
 
 	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
+
+	//log.Printf("[INFO] Sending org sync with autho %s", org.SyncConfig.Apikey)
+
 	newresp, err := client.Do(req)
 	if err != nil {
 		//log.Printf("Failed request in org sync: %s", err)
@@ -3775,7 +3737,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	//log.Printf("Remote Data: %s", respBody)
 	err = remoteOrgJobController(org, respBody)
 	if err != nil {
-		log.Printf("[ERROR] Failed job controller run for %s: %s", respBody, err)
+		//log.Printf("[ERROR] Failed cloud sync job controller run for '%s': %s", respBody, err)
 		return err
 	}
 	return nil
@@ -3819,7 +3781,7 @@ func runInitEs(ctx context.Context) {
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
 
 	setUsers := false
-	//log.Printf("ORGS: %d", len(activeOrgs))
+	_ = setUsers
 	if err != nil {
 		if fmt.Sprintf("%s", err) == "EOF" {
 			time.Sleep(7 * time.Second)
@@ -3874,7 +3836,7 @@ func runInitEs(ctx context.Context) {
 
 			if len(activeOrgs) == 1 {
 				if len(activeOrgs[0].Users) == 0 {
-					log.Printf("ORG doesn't have any users??")
+					log.Printf("[ERROR] Main Org doesn't have any user. Creating.")
 
 					users, err := shuffle.GetAllUsers(ctx)
 					if err != nil && len(users) == 0 {
@@ -3907,10 +3869,9 @@ func runInitEs(ctx context.Context) {
 
 	if strings.Contains(os.Getenv("SHUFFLE_OPENSEARCH_URL"), "https") {
 		log.Printf("[INFO] Waiting during init to make sure the opensearch instance is up and running with security features properly")
-		time.Sleep(30 * time.Second)
+		time.Sleep(15 * time.Second)
 	}
 
-	_ = setUsers
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
 		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
@@ -4054,11 +4015,11 @@ func runInitEs(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("[DEBUG] Should start schedule for org %s (%s)", org.Name, org.Id)
+		log.Printf("[DEBUG] Should start cloud schedule for org %s (%s)", org.Name, org.Id)
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("[ERROR] Failed request with remote org setup (2): %s", err)
+				log.Printf("[ERROR] Failed request with remote org setup for org %s (2): %s", org.Id, err)
 			}
 		}
 
@@ -4760,7 +4721,7 @@ func runInit(ctx context.Context) {
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("[ERROR] Failed request with remote org setup (2): %s", err)
+				log.Printf("[ERROR] Failed request with remote org setup (3): %s", err)
 			}
 		}
 
@@ -5244,7 +5205,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	b, err := json.Marshal(requestData)
 	if err != nil {
-		log.Printf("Failed marshaling api key data: %s", err)
+		log.Printf("[ERROR] Failed marshaling api key data: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync: %s"}`, err)))
 		return
@@ -5271,7 +5232,8 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//log.Printf("Respbody: %s", string(respBody))
+	log.Printf("[DEBUG] Respbody from sync: %s", string(respBody))
+
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
 	if err != nil {
@@ -5896,6 +5858,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
 	r.HandleFunc("/api/v1/health", shuffle.RunOpsHealthCheck).Methods("GET", "OPTIONS")
 
+	r.HandleFunc("/api/v1/health/stats", shuffle.GetOpsDashboardStats).Methods("GET", "OPTIONS")
+
 	// Make user related locations
 	// Fix user changes with org
 	r.HandleFunc("/api/v1/users/login", shuffle.HandleLogin).Methods("POST", "OPTIONS")
@@ -5967,10 +5931,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", shuffle.SetAuthenticationConfig).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", shuffle.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
 
-	// Related to NFT things
-	r.HandleFunc("/api/v1/workflows/collections/load", shuffle.LoadCollections).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/collections/{key}", shuffle.HandleGetCollection).Methods("GET", "OPTIONS")
-
 	// Related to use-cases that are not directly workflows.
 	r.HandleFunc("/api/v1/workflows/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
@@ -5999,6 +5959,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.SaveWorkflow).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.GetSpecificWorkflow).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/recommend", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
+
+	// First v2 API
+	r.HandleFunc("/api/v2/workflows/{key}/executions", shuffle.GetWorkflowExecutionsV2).Methods("GET", "OPTIONS")
 
 	// New for recommendations in Shuffle
 	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
@@ -6114,7 +6077,6 @@ func initHandlers() {
 func main() {
 
 	initHandlers()
-	go shuffle.InitOpsWorkflow()
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "MISSING"

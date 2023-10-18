@@ -26,7 +26,7 @@ const SetAuthentication = (props) => {
   //const alert = useAlert();
 
   const parseIncomingOpenapiData = (data) => {
-    if (data.app === undefined || data.app === null) {
+    	if (data.app === undefined || data.app === null) {
 			return 
 		} 
 
@@ -43,11 +43,11 @@ const SetAuthentication = (props) => {
 		parsedapp.name = parsedapp.name.replaceAll("_", " ");
 		setApp(parsedapp);
 
-    document.title = parsedapp.name + " App Auth";
+		document.title = parsedapp.name + " App Auth";
 
 	}
 
-	console.log("App: ", app)
+  console.log("App: ", app)
 
   const getApp = (appid) => {
     if (serverside === true) {
@@ -64,21 +64,21 @@ const SetAuthentication = (props) => {
     })
       .then((response) => {
         if (response.status !== 200) {
-					if (isCloud) {
-						ReactGA.event({
-							category: "appauth",
-							action: `app_not_found`,
-							label: appid,
-						});
-					}
+			if (isCloud) {
+				ReactGA.event({
+					category: "appauth",
+					action: `app_not_found`,
+					label: appid,
+				});
+			}
         } else {
-					if (isCloud) {
-						ReactGA.event({
-							category: "appauth",
-							action: `app_found`,
-							label: appid,
-						});
-					}
+			if (isCloud) {
+				ReactGA.event({
+					category: "appauth",
+					action: `app_found`,
+					label: appid,
+				});
+			}
         }
 
         return response.json();

@@ -228,15 +228,16 @@ const parseCurl = (s) => {
 // Basically CRUD for each category + special
 export const appCategories = [
 	{
-	"name": "Communication",
+		"name": "Communication",
 		"color": "#FFC107",
 		"icon": "communication",
 		"action_labels": ["List Messages", "Send Message", "Get Message", "Search messages", "List Attachments", "Get Attachment", "Get Contact"],
-	}, {
+	}, 
+	{
 		"name": "SIEM",
 		"color": "#FFC107",
 		"icon": "siem",
-		"action_labels": ["Search", "List Alerts", "Close Alert",  "Get Alert",  "Create detection", "Add to lookup list",],
+		"action_labels": ["Search", "List Alerts", "Close Alert",  "Get Alert",  "Create detection", "Add to lookup list", "Isolate endpoint",],
 	}, {
 		"name": "Eradication",
 		"color": "#FFC107",

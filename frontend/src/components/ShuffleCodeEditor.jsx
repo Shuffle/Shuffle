@@ -26,21 +26,20 @@ import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
 import {
 	FullscreenExit as FullscreenExitIcon,
 	Extension as ExtensionIcon, 
-  Apps as AppsIcon,
-  FavoriteBorder as FavoriteBorderIcon,
-  Schedule as ScheduleIcon,
-  FormatListNumbered as FormatListNumberedIcon,
+	Apps as AppsIcon,
+	FavoriteBorder as FavoriteBorderIcon,
+	Schedule as ScheduleIcon,
+	FormatListNumbered as FormatListNumberedIcon,
 	SquareFoot as SquareFootIcon,
-  Circle as  CircleIcon,
-  Add as AddIcon,
+	Circle as  CircleIcon,
+	Add as AddIcon,
 	PlayArrow as PlayArrowIcon, 
-} from '@mui/icons-material';
-
-import {
 	AutoFixHigh as AutoFixHighIcon, 
+	Close as CloseIcon,
 	CompressOutlined, 
 	QrCodeScannerOutlined,
 } from '@mui/icons-material';
+
 
 import { validateJson } from "../views/Workflows.jsx";
 import ReactJson from "react-json-view";
@@ -823,10 +822,6 @@ const CodeEditor = (props) => {
 	}
 
 	const executeSingleAction = (inputdata) => {
-		//if (serverside === true) {
-		//	return
-		//}
-	
 		if (validation === true) {
 			inputdata = JSON.stringify(inputdata)
 		}
@@ -834,7 +829,10 @@ const CodeEditor = (props) => {
 		// Shuffle Tools 1.2.0 (in most cases?)
 		const appid = toolsAppId !== undefined && toolsAppId !== null && toolsAppId.length > 0 ? toolsAppId : "3e2bdf9d5069fe3f4746c29d68785a6a"
 
-		const actiondata = {"description":"Repeats the call parameter","id":"","name":"repeat_back_to_me","label":"","node_type":"","environment":"","sharing":false,"private_id":"","public_id":"","app_id": appid,"tags":null,"authentication":[],"tested":false,"parameters":[{"description":"The message to repeat","id":"","name":"call","example":"REPEATING: Hello world","value":inputdata,"multiline":true,"options":null,"action_field":"","variant":"STATIC_VALUE","required":true,"configuration":false,"tags":null,"schema":{"type":"string"},"skip_multicheck":false,"value_replace":null,"unique_toggled":false,"autocompleted":false}],"execution_variable":{"description":"","id":"","name":"","value":""},"returns":{"description":"","example":"","id":"","schema":{"type":"string"}},"authentication_id":"","example":"","auth_not_required":false,"source_workflow":"","run_magic_output":false,"run_magic_input":false,"execution_delay":0,"app_name":"Shuffle Tools","app_version":"1.2.0","selectedAuthentication":{}}
+		const actionname = selectedAction.name === "execute_python" && !inputdata.replaceAll(" ", "").includes("{%python%}") ? "execute_python" : "repeat_back_to_me"
+		const params = actionname === "execute_python" ? [{"name": "code", "value":inputdata}] : [{"name":"call", "value": inputdata}]
+
+		const actiondata = {"description":"Repeats the call parameter","id":"","name":actionname,"label":"","node_type":"","environment":"","sharing":false,"private_id":"","public_id":"","app_id": appid,"tags":null,"authentication":[],"tested":false,"parameters": params, "execution_variable":{"description":"","id":"","name":"","value":""},"returns":{"description":"","example":"","id":"","schema":{"type":"string"}},"authentication_id":"","example":"","auth_not_required":false,"source_workflow":"","run_magic_output":false,"run_magic_input":false,"execution_delay":0,"app_name":"Shuffle Tools","app_version":"1.2.0","selectedAuthentication":{}}
 
 		setExecutionResult({
 			"valid": false,		
@@ -924,6 +922,20 @@ const CodeEditor = (props) => {
 				},
 			}}
 		>
+		  <IconButton
+			style={{
+			  zIndex: 5000,
+			  position: "absolute",
+			  top: 14,
+			  right: 18,
+			  color: "grey",
+			}}
+			onClick={() => {
+				setExpansionModalOpen(false)
+			}}
+		  >
+			<CloseIcon />
+		  </IconButton>
 			<div style={{display: "flex"}}>
 				<div style={{flex: 1, }}>
 					{ isFileEditor ? 
@@ -1555,7 +1567,7 @@ const CodeEditor = (props) => {
 									<IconButton disabled={executing} color="primary" style={{border: `1px solid ${theme.palette.primary.main}`, marginLeft: 100, padding: 8}} variant="contained" onClick={() => {
 										executeSingleAction(expOutput)
 									}}>
-										<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
+										<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
 											{executing ? <CircularProgress style={{height: 18, width: 18, }} /> : <PlayArrowIcon style={{height: 18, width: 18, }} /> }
 														 
 										</Tooltip>

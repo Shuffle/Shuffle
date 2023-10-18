@@ -277,7 +277,7 @@ const WorkflowPaper = (props) => {
             >
               {data.tags !== undefined && data.tags !== null 
                 ? data.tags.map((tag, index) => {
-                    if (index >= 3) {
+                    if (index >= 2) {
                       return null;
                     }
 

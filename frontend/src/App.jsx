@@ -326,6 +326,7 @@ const App = (message, props) => {
         	  path="/usecases"
         	  element={
         	    <Dashboard
+				  userdata={userdata}
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}

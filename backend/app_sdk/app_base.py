@@ -3519,7 +3519,7 @@ class AppBase:
                                     if self.action["app_name"].lower() == "shuffle tools":
                                         timeout = 55
 
-                                    timeout = 30 
+                                    #timeout = 30 
 
                                     try:
                                         executor = concurrent.futures.ThreadPoolExecutor()

@@ -11,13 +11,13 @@ import { isMobile } from "react-device-detect"
 
 import {
   Badge,
-	Divider,
+  Divider,
   Avatar,
   Drawer,
   Grid,
-	InputLabel,
-	Select,
-	ListSubheader,
+  InputLabel,
+  Select,
+  ListSubheader,
   Paper,
   Tooltip,
   Button,
@@ -533,7 +533,6 @@ const Workflows = (props) => {
   document.title = "Shuffle - Workflows";
 	let navigate = useNavigate();
 
-  //const alert = useAlert();
   const classes = useStyles(theme);
   const imgSize = 60;
 
@@ -590,6 +589,9 @@ const Workflows = (props) => {
   const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [videoViewOpen, setVideoViewOpen] = React.useState(false)
   const [gettingStartedItems, setGettingStartedItems] = React.useState([])
+  const [selectedWorkflowIndexes, setSelectedWorkflowIndexes] = React.useState([])
+
+  const [apps, setApps] = React.useState([]);
 
 	const drawerWidth = drawerOpen ? 325 : 0
 
@@ -724,6 +726,30 @@ const Workflows = (props) => {
       setFilteredWorkflows(newWorkflows);
     }
   };
+
+	const getApps = () => {
+		fetch(`${globalUrl}/api/v1/apps`, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!");
+			}
+	
+			return response.json();
+		})
+		.then((responseJson) => {
+			setApps(responseJson);
+		})
+		.catch((error) => {
+			console.log("App loading error: "+error.toString());
+		});
+	}
 
   const addFilter = (data) => {
     if (data === null || data === undefined) {
@@ -891,13 +917,15 @@ const Workflows = (props) => {
           backgroundColor: theme.palette.surfaceColor,
           color: "white",
           minWidth: 500,
+		  padding: 50, 
         },
       }}
     >
       <DialogTitle>
         <div style={{ textAlign: "center", color: "rgba(255,255,255,0.9)" }}>
-          Are you sure you want to delete this workflow? <div />
-          Other workflows relying on this one may stop working
+          Are you sure you want to delete {selectedWorkflowId.length > 0 ? filteredWorkflows.find((w) => w.id === selectedWorkflowId).name : `${selectedWorkflowIndexes.length} workflow${selectedWorkflowIndexes.length === 1 ? '' : 's'}`}? <div />
+
+          Other workflows relying on {selectedWorkflowIndexes.length > 0 ? "them" : "it"} one will stop working
         </div>
       </DialogTitle>
       <DialogContent
@@ -912,7 +940,21 @@ const Workflows = (props) => {
               setTimeout(() => {
                 getAvailableWorkflows();
               }, 1000);
-            }
+            } else if (selectedWorkflowIndexes.length > 0) {
+				// Do backwards so it doesn't change 
+				for (var i = selectedWorkflowIndexes.length - 1; i >= 0; i--) {
+					const workflow = filteredWorkflows[selectedWorkflowIndexes[i]-1]
+					if (workflow !== undefined && workflow !== null && workflow.id !== undefined && workflow.id !== null) {
+						deleteWorkflow(workflow.id);
+					}
+				}
+
+				setTimeout(() => {
+					getAvailableWorkflows();
+				}, 1000);
+
+				setSelectedWorkflowIndexes([]);
+			}
             setDeleteModalOpen(false);
           }}
           color="primary"
@@ -1115,9 +1157,9 @@ const Workflows = (props) => {
 
 					// Ensures the zooming happens only once per load
         	setTimeout(() => {
-						fetchUsecases(newarray)
-						setFirstLoad(false)
-					}, 100)
+				fetchUsecases(newarray)
+				setFirstLoad(false)
+			}, 100)
 
         } else {
           if (isLoggedIn) {
@@ -1223,8 +1265,9 @@ const Workflows = (props) => {
         setView(tmpView);
       }
 
+	  getApps() 
       getAvailableWorkflows();
-			getFramework()
+	  getFramework()
     }
   }, [])
 
@@ -1280,6 +1323,7 @@ const Workflows = (props) => {
     color: "white",
     margin: "10px",
     backgroundColor: theme.palette.surfaceColor,
+	position: "relative", 
   };
 
   const workflowActionStyle = {
@@ -1708,21 +1752,22 @@ const Workflows = (props) => {
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={(event) => {
-				event.stopPropagation()
-				ReactDOM.unstable_batchedUpdates(() => {
-					setModalOpen(true);
-					setEditingWorkflow(JSON.parse(JSON.stringify(data)));
-					setNewWorkflowName(data.name);
-					setNewWorkflowDescription(data.description);
-					setDefaultReturnValue(data.default_return_value);
-					if (data.tags !== undefined && data.tags !== null) {
-					  setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
-					}
+			event.stopPropagation()
+			ReactDOM.unstable_batchedUpdates(() => {
+				setIsEditing(true)
+				setModalOpen(true);
+				setEditingWorkflow(JSON.parse(JSON.stringify(data)));
+				setNewWorkflowName(data.name);
+				setNewWorkflowDescription(data.description);
+				setDefaultReturnValue(data.default_return_value);
+				if (data.tags !== undefined && data.tags !== null) {
+				  setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
+				}
 
-					if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
-						setSelectedUsecases(data.usecase_ids)
-					}
-				})
+				if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
+					setSelectedUsecases(data.usecase_ids)
+				}
+			})
   		  }}
           key={"change"}
         >
@@ -2654,6 +2699,7 @@ const Workflows = (props) => {
           renderCell: (params) => {},
         },
       ];
+
       let rows = [];
       rows = filteredWorkflows.map((data, index) => {
         let obj = {
@@ -2671,17 +2717,55 @@ const Workflows = (props) => {
           className={classes.datagrid}
           rows={rows}
           columns={columns}
-          pageSize={20}
+          pageSize={25}
           checkboxSelection
           autoHeight
           density="standard"
+		  onSelectionModelChange={(newSelection) => {
+		      //setSelectedWorkflows(newSelection.selectionModel);
+			  console.log(newSelection)
+  
+			  setSelectedWorkflowIndexes(newSelection)
+		  }}
+		  selectionModel={selectedWorkflowIndexes}
           components={{
             Toolbar: GridToolbar,
           }}
         />
       );
     }
-    return <div style={gridContainer}>{workflowData}</div>;
+    return (
+		<div style={gridContainer}>
+            <Tooltip title={`New Workflow`} placement="bottom">
+              <IconButton 
+		      	style={{position: "absolute", top: 10, right: 50, zIndex: 1000}}
+		      	onClick={() => {
+		      		setModalOpen(true)
+					setIsEditing(false)
+		      	}}
+		      >
+                <AddCircleIcon style={{}} />
+              </IconButton>
+            </Tooltip>
+			{filteredWorkflows.length === 0 ? null :
+				<IconButton 
+					style={{position: "absolute", top: 10, right: 10, zIndex: 1000}}
+					disabled={selectedWorkflowIndexes.length === 0}
+					onClick={() => {
+						setDeleteModalOpen(true)
+					}}
+				>
+				  <Tooltip 
+					title={`Delete ${selectedWorkflowIndexes.length} workflows`}
+					placement="top"
+				  >
+					<DeleteIcon />
+				  </Tooltip>
+				</IconButton>
+			}
+			{workflowData}
+		</div>
+	)
   };
 
 	var total_count = 0
@@ -3152,70 +3236,20 @@ const Workflows = (props) => {
 
   const WorkflowView = () => {
     if (workflows.length === 0) {
-			// Not going there yet
-			//if ((userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) || userdata.tutorials === null) {
-			//	return <Navigate to="/getting-started" replace />;
-			//}
-      //return (
-      //  <div style={emptyWorkflowStyle}>
-      //    <Paper style={boxStyle}>
-      //      <div>
-      //        <h2>Welcome to Shuffle</h2>
-      //      </div>
-      //      <div>
-      //        <p>
-      //          <b>Shuffle</b> is a flexible, easy to use, automation platform
-      //          allowing users to integrate their services and devices freely.
-      //          It's made to significantly reduce the amount of manual labor,
-      //          and is focused on security applications.{" "}
-      //          <a
-      //            href="/docs/about"
-      //            style={{ textDecoration: "none", color: "#f85a3e" }}
-      //          >
-      //            Click here to learn more.
-      //          </a>
-      //        </p>
-      //      </div>
-      //      <div>
-      //        If you want to jump straight into it, click here to create your
-      //        first workflow:
-      //      </div>
-      //      <div style={{ display: "flex" }}>
-      //        <Button
-			//					id="second-step"
-      //          color="primary"
-      //          style={{ marginTop: "20px" }}
-      //          variant="outlined"
-      //          onClick={() => setModalOpen(true)}
-      //        >
-      //          New workflow
-      //        </Button>
-      //        <span style={{ paddingTop: 20, display: "flex" }}>
-      //          <Typography
-      //            style={{ marginTop: 5, marginLeft: 30, marginRight: 15 }}
-      //          >
-      //            ..OR
-      //          </Typography>
-      //          {workflowButtons}
-      //        </span>
-      //      </div>
-      //    </Paper>
-      //  </div>
-      //)
     }
 
-		var workflowDelay = -150
-		var appDelay = -75	
+	var workflowDelay = -150
+	var appDelay = -75	
 
-		const foundPriority = userdata === undefined || userdata === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
+	const foundPriority = userdata === undefined || userdata === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
     return (
       <div style={viewStyle}>
         <div style={workflowViewStyle}>
           <div style={{ display: "flex", marginTop: 25, }}>
             <div style={{ flex: 1 }}>
-							<Typography variant="h1" style={{fontSize: 30}}>
-              	Workflows
-							</Typography>
+			 	<Typography variant="h1" style={{fontSize: 30}}>
+              		Workflows
+				</Typography>
             </div>
 						{/*
             <div style={{ flex: 1 }}>
@@ -3243,6 +3277,7 @@ const Workflows = (props) => {
 												minWidth: 275,
 											},
 										}}
+										rows={1}
 										placeholder="Filter Workflows"
 										color="primary"
 										fullWidth
@@ -3268,53 +3303,6 @@ const Workflows = (props) => {
               {workflowButtons}
             </div>
           </div>
-          {/*
-					<div style={flexContainerStyle}>
-						<div style={{...flexBoxStyle, ...activeWorkflowStyle}}>
-							<div style={flexContentStyle}>
-								<div><img src={mobileImage} style={iconStyle} /></div>
-								<div style={ blockRightStyle }>
-									<div style={counterStyle}>{workflows.length}</div>
-									<div style={fontSize_16}>ACTIVE WORKFLOWS</div>
-								</div>
-							</div>
-						</div>
-						<div style={{...flexBoxStyle, ...availableWorkflowStyle}}>
-							<div style={flexContentStyle}>
-								<div><img src={bookImage} style={iconStyle} /></div>
-								<div style={ blockRightStyle }>
-									<div style={counterStyle}>{workflows.length}</div>
-									<div style={fontSize_16}>AVAILABE WORKFLOWS</div>
-								</div>
-							</div>
-						</div>
-						<div style={{...flexBoxStyle, ...notificationStyle}}>
-							<div style={flexContentStyle}>
-								<div><img src={bagImage} style={iconStyle} /></div>
-								<div style={ blockRightStyle }>
-									<div style={counterStyle}>{workflows.length}</div>
-									<div style={fontSize_16}>NOTIFICATIONS</div>
-								</div>
-							</div>
-						</div>
-					</div>
-					*/}
-
-          {/*
-					chipRenderer={({ value, isFocused, isDisabled, handleClick, handleRequestDelete }, key) => {
-						console.log("VALUE: ", value)
-
-						return (
-							<Chip
-								key={key}
-								style={chipStyle}
-
-							>
-								{value}
-							</Chip>
-						)
-					}}
-					*/}
   		
 					<div style={{width: "100%", minHeight: isMobile ? 0 : 51, maxHeight: isMobile ? 0 : 51, marginTop: 10, }}>
 						{!isMobile && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
@@ -3431,8 +3419,8 @@ const Workflows = (props) => {
 													>
 														<img
 															style={{
-																height: imgSize,
-																width: imgSize,
+																height: imgSize+4,
+																width: imgSize+4,
 																position: "absolute",
 																top: -2,
 																left: -2,
@@ -3772,12 +3760,12 @@ const Workflows = (props) => {
 	}
 
 	const gettingStartedDrawer = 
-		<Drawer
-      anchor={"right"}
-      open={drawerOpen}
-			variant="persistent"
-			keepMounted={true}
-      PaperProps={{
+	<Drawer
+		anchor={"right"}
+		open={drawerOpen}
+		variant="persistent"
+		keepMounted={true}
+      	PaperProps={{
         style: {
           resize: "both",
           overflow: "auto",
@@ -3928,6 +3916,7 @@ const Workflows = (props) => {
 				{modalOpen === true ? 
 					<EditWorkflow
 						globalUrl={globalUrl}
+						userdata={userdata}
 						workflow={editingWorkflow}
 						setWorkflow={setEditingWorkflow}
 						modalOpen={modalOpen}
@@ -3938,6 +3927,7 @@ const Workflows = (props) => {
 						isEditing={isEditing}
 
 						workflows={workflows}
+						apps={apps}
 						setWorkflows={setWorkflows}
 					/>
 				: null}

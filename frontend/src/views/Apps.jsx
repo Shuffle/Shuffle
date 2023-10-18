@@ -287,6 +287,7 @@ const Apps = (props) => {
   const [selectedAction, setSelectedAction] = React.useState({});
   const [searchBackend, setSearchBackend] = React.useState(false);
   const [searchableApps, setSearchableApps] = React.useState([]);
+  const [publishModalOpen, setPublishModalOpen] = React.useState(false);
 
   const [openApi, setOpenApi] = React.useState("");
   const [openApiData, setOpenApiData] = React.useState("");
@@ -441,6 +442,7 @@ const Apps = (props) => {
         if (privateapps.length > 0) {
           if (selectedApp.id === undefined || selectedApp.id === null) {
             setSelectedApp(privateapps[0]);
+			setSharingConfiguration(privateapps[0].sharing === true ? "public" : "you")
           }
 
           if (
@@ -646,6 +648,7 @@ const Apps = (props) => {
           if (selectedApp.id !== data.id) {
             data.name = newAppname;
             setSelectedApp(data);
+			setSharingConfiguration(data.sharing === true ? "public" : "you")
 
             if (
               data.actions !== undefined &&
@@ -658,7 +661,7 @@ const Apps = (props) => {
             }
 
             if (data.sharing) {
-              setSharingConfiguration(isCloud ? "public" : "everyone");
+              setSharingConfiguration("public");
             }
           }
         }}
@@ -999,11 +1002,11 @@ const Apps = (props) => {
       );
     };
 
-    const userRoles = ["you", isCloud ? "public" : "everyone"];
+    const userRoles = ["you", "public"];
 
-		// Admin in org or creator of app
-		// FIXME: Missing check for if same creator account
-		const canEditApp = userdata !== undefined && (userdata.admin === "true" || userdata.id === selectedApp.owner || selectedApp.owner === "" || (userdata.admin === "true" && userdata.active_org.id === selectedApp.reference_org)) || !selectedApp.generated 
+	// Admin in org or creator of app
+	// FIXME: Missing check for if same creator account
+	const canEditApp = userdata !== undefined && (userdata.admin === "true" || userdata.id === selectedApp.owner || selectedApp.owner === "" || (userdata.admin === "true" && userdata.active_org.id === selectedApp.reference_org)) || !selectedApp.generated 
 
     //fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"),
     var baseInfo =
@@ -1054,6 +1057,7 @@ const Apps = (props) => {
                 console.log("New version: ", newversion);
                 selectedApp.app_version = selectedApp.app_version;
                 setSelectedApp(selectedApp);
+				setSharingConfiguration(selectedApp.sharing === true ? "public" : "you")
 
                 if (newversion !== undefined && newversion !== null) {
                   getApp(newversion.id, true);
@@ -1156,17 +1160,22 @@ const Apps = (props) => {
               <Select
                 value={sharingConfiguration}
                 onChange={(event) => {
-                  toast("Changing sharing to " + event.target.value);
 
                   setSharingConfiguration(event.target.value);
 
                   if (event.target.value === "you") {
+                  	toast("Changing sharing to " + event.target.value);
                     updateAppField(selectedApp.id, "sharing", false);
                   } else if (
                     event.target.value === "everyone" ||
                     event.target.value === "public"
                   ) {
-                    updateAppField(selectedApp.id, "sharing", true);
+
+					if (!isCloud) {
+  						setPublishModalOpen(true)
+					} else {
+                    	updateAppField(selectedApp.id, "sharing", true);
+					}
                   } else {
                     console.log(
                       "Can't handle value for sharing: ",
@@ -1354,7 +1363,8 @@ const Apps = (props) => {
 					border: hover ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)",
 					cursor: hover ? "pointer" : "default",
 					textAlign: "center",
-					height: 125, 
+					minHeight: 150, 
+					maxHeight: 150, 
 				}}
 			>
 				{icon} 
@@ -2246,6 +2256,7 @@ const Apps = (props) => {
             setSelectedAction({});
           }
           setSelectedApp(responseJson);
+		  setSharingConfiguration(responseJson.sharing === true ? "public" : "you")
         }
       })
       .catch((error) => {
@@ -2281,6 +2292,7 @@ const Apps = (props) => {
     const data = {};
     data[fieldname] = fieldvalue;
 
+
     console.log("DATA: ", data);
 
     fetch(globalUrl + "/api/v1/apps/" + app_id, {
@@ -2304,8 +2316,8 @@ const Apps = (props) => {
 					if (responseJson.reason !== undefined && responseJson.reason !== null) {
           	toast("Error: "+responseJson.reason);
 					} else {
-          	toast("Error updating app configuration");
-					}
+          	toast("Error updating app configuration. Are you the owner of this app?");
+			}
         }
       })
       .catch((error) => {
@@ -2505,6 +2517,61 @@ const Apps = (props) => {
     getSpecificApps(openApi, forceUpdate);
     setLoadAppsModalOpen(false);
   };
+
+  const publishModal = publishModalOpen ? (
+    <Dialog
+      open={publishModalOpen}
+      onClose={() => {
+        setPublishModalOpen(false);
+      }}
+      PaperProps={{
+        style: {
+          backgroundColor: theme.palette.surfaceColor,
+          color: "white",
+          minWidth: 500,
+          padding: 50,
+        },
+      }}
+    >
+      <DialogTitle style={{ marginBottom: 0 }}>
+        <div style={{ textAlign: "center", color: "rgba(255,255,255,0.9)" }}>
+          Are you sure you want to PUBLISH this app?
+        </div>
+      </DialogTitle>
+      <DialogContent
+        style={{ color: "rgba(255,255,255,0.65)", textAlign: "center" }}
+      >
+        <div>
+          <Typography variant="body1" style={{ marginBottom: 20 }}>
+            Before publishing, make sure to sanitize the App for anything you don't want public. 
+          </Typography>
+          <Typography variant="body1" style={{ marginBottom: 20 }}>
+			The published App is yours, and you can always change your public Apps after they are released.
+          </Typography>
+        </div>
+        <Button
+          variant="contained"
+          style={{}}
+          onClick={() => {
+			updateAppField(selectedApp.id, "sharing", true);
+            setPublishModalOpen(false);
+          }}
+          color="primary"
+        >
+          Yes
+        </Button>
+        <Button
+          style={{}}
+          onClick={() => {
+            setPublishModalOpen(false);
+          }}
+          color="primary"
+        >
+          No
+        </Button>
+      </DialogContent>
+    </Dialog>
+  ) : null;
 
   const deleteModal = deleteModalOpen ? (
     <Dialog
@@ -2936,6 +3003,7 @@ const Apps = (props) => {
       <div>
         {appView}
         {modalView}
+  		{publishModal} 
   		{generateAppView} 
         {appsModalLoad}
         {deleteModal}
