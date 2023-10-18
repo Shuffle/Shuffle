@@ -367,8 +367,8 @@ const AppCreator = (defaultprops) => {
   let navigate = useNavigate();
 
   const increaseAmount = 50;
-  const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"];
-  const actionBodyRequest = ["POST", "PUT", "PATCH"];
+  const actionNonBodyRequest = ["GET", "HEAD", "CONNECT"];
+  const actionBodyRequest = ["POST", "PUT", "PATCH", "DELETE"];
   const authenticationOptions = [
     "No authentication",
     "API key",

@@ -3483,6 +3483,7 @@ const Workflows = (props) => {
 							globalUrl={globalUrl}
 							priority={foundPriority}
 							checkLogin={checkLogin}
+							appFramework={appFramework}
 						/>
 					: null}
 
@@ -3531,6 +3532,7 @@ const Workflows = (props) => {
 								globalUrl={globalUrl}
 								priority={foundPriority}
 								checkLogin={checkLogin}
+								appFramework={appFramework}
 							/>
 					: null}
 

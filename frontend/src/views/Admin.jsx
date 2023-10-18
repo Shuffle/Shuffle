@@ -480,7 +480,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     })
       .then((response) =>
         response.json().then((responseJson) => {
-          if (responseJson["success"] === false) {
+          if (responseJson.success === false) {
             toast("Failed deleting auth");
           } else {
             // Need to wait because query in ES is too fast
@@ -1410,7 +1410,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
         return response.json();
       })
       .then((responseJson) => {
-        if (responseJson.success) {
+        if (responseJson.success === true) {
           //console.log(responseJson.data)
           //console.log(responseJson)
           setAuthentication(responseJson.data);

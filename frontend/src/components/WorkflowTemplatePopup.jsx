@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 
 import { toast } from "react-toastify" 
 import theme from '../theme.jsx';
+import { useNavigate, Link, useParams } from "react-router-dom";
 import {
 	Button,
 	Typography,
@@ -33,8 +34,11 @@ const WorkflowTemplatePopup = (props) => {
 	const [errorMessage, setErrorMessage] = useState("");
 	const [workflowLoading, setWorkflowLoading] = useState(false);
 	const [workflow, setWorkflow] = useState({});
-
   	const [appAuthentication, setAppAuthentication] = React.useState(undefined);
+
+  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+	let navigate = useNavigate();
+
     const imagestyleWrapper = {
         height: 40,
 		width: 40,
@@ -48,7 +52,7 @@ const WorkflowTemplatePopup = (props) => {
         height: 40,
 		width: 40,
         borderRadius: 40,
-		border: "1px solid red",
+		border: "1px solid rgba(255,255,255,0.3)",
 		overflow: "hidden",
 		display: "flex",
 	}
@@ -63,8 +67,10 @@ const WorkflowTemplatePopup = (props) => {
 
 	const imagestyleDefault = {
 		display: "block",
-		marginLeft: 9,
-		marginTop: 10,
+		marginLeft: 11,
+		marginTop: 11,
+		height: 35,
+		width: "auto",
 	}
 
 	if (title === undefined || title === null || title === "") {
@@ -102,6 +108,22 @@ const WorkflowTemplatePopup = (props) => {
 	}
 
 	const loadAppAuth = () => {	
+		if (userdata === undefined || userdata === null) { 
+			setErrorMessage("You need to be logged in to try usecases. Redirecting in 5 seconds...")
+			// Send the user to the login screen after 3 seconds
+			setTimeout(() => {	
+				// Make it cancel if the state modalOpen changes
+				if (modalOpen === false) {
+					return
+				}
+				
+				navigate("/login?view=" + window.location.pathname + window.location.search)
+			}, 4500)
+
+			return
+		}
+
+
 		fetch(`${globalUrl}/api/v1/apps/authentication`, {
     	  method: "GET",
     	  headers: {
@@ -168,7 +190,8 @@ const WorkflowTemplatePopup = (props) => {
 			},
 		}
 
-		fetch(globalUrl + "/api/v1/workflows/merge", {
+		//fetch(globalUrl + "/api/v1/workflows/merge", {
+		fetch("https://shuffler.io/api/v1/workflows/merge", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -225,8 +248,6 @@ const WorkflowTemplatePopup = (props) => {
 		if (appconfig === null || appconfig == undefined) {
 			return true
 		}
-
-		console.log("APPCONFIG: ", appconfig)
 
 		return false
 	}
@@ -309,6 +330,9 @@ const WorkflowTemplatePopup = (props) => {
 						<Button
 							style={{marginTop: 50, }}
 							variant={isFinished() ? "contained" : "outlined"}
+							onClick={() => {
+								setModalOpen(false);
+							}}
 						>
 							Done
 						</Button>
@@ -330,7 +354,7 @@ const WorkflowTemplatePopup = (props) => {
 
 
 	return (
-		<div style={{ display: "flex", maxWidth: 470, minWidth: 470, height: 78, borderRadius: 8 }}>
+		<div style={{ display: "flex", maxWidth: isCloud ? 470 : 450, minWidth: isCloud ? 470 : 450, height: 78, borderRadius: 8 }}>
 			<ModalView />
 			<div
 				// variant={isActive === 1 ? "contained" : "outlined"} 
@@ -362,7 +386,7 @@ const WorkflowTemplatePopup = (props) => {
 
 					//setIsActive(!isActive)
 					if (errorMessage !== "") {
-						toast("Already failed to generate workflow for these apps. Please try again later or contact support@shuffler.io.")
+						toast("Already failed to generate a workflow for this usecase. Please try again later or contact support@shuffler.io.")
 					} else if (isActive) {
 						toast("Workflow already generated. Please try another workflow template!")
 
@@ -393,7 +417,9 @@ const WorkflowTemplatePopup = (props) => {
 							<Tooltip title={dstapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
 								<span style={{display: "flex", }}>
 									<TrendingFlatIcon style={{ marginTop: 7, }} />
-									<img src={img2} style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleDefault : imagestyleWrapper} />
+									<span style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
+										<img src={img2} style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleDefault : imagestyle} />
+									</span>
 								</span>
 							</Tooltip>
 						:

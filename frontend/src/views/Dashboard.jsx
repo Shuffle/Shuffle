@@ -13,6 +13,7 @@ import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx";
 //import { useAlert
 import { ToastContainer, toast } from "react-toastify" 
 import { parsedDatatypeImages } from "../components/AppFramework.jsx"
+import { findSpecificApp } from "../components/AppFramework.jsx"
 
 import {
 	Autocomplete,
@@ -92,6 +93,8 @@ const useStyles = makeStyles({
   },
 });
 
+
+
 const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData, isLoggedIn, workflows, setWorkflows}) => {
 	const [expandedIndex, setExpandedIndex] = useState(-1);
 	const [expandedItem, setExpandedItem] = useState(-1);
@@ -160,136 +163,6 @@ const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData
 		return null
 	}
 
-  const findSpecificApp = (framework, inputcategory) => {
-	  // Get the frameworkinfo for the org and fill in
-	  //
-	  if (framework === undefined || framework === null) {
-		  console.log("findSpecificApp: frameworkData is null")
-		  return null 
-	  }
-
-	  if (inputcategory === undefined || inputcategory === null) {
-		  console.log("findSpecificApp: category is null")
-		  return null 
-	  }
-
-	  const category = inputcategory.toLowerCase()
-
-	  console.log("findSpecificApp: ", category, frameworkData)
-	  if (category === "edr" || category === "eradication" || category === "edr & av") {
-		  if (frameworkData["EDR & AV"] !== undefined && frameworkData["EDR & AV"].name !== undefined) { 
-			  return frameworkData["EDR & AV"]	
-		  }
-
-		  return {
-			  name: "EDR :default",
-			  large_image: parsedDatatypeImages["EDR & AV"],
-			  count: 0,
-			  description: "",
-			  id: "",
-		  }
-	  } else if (category === "communication") {
-		  if (frameworkData["Comms"] !== undefined && frameworkData["Comms"].name !== undefined) {
-			  return frameworkData["Comms"]	
-		  }
-
-		  return {
-			  name: "COMMS :default",
-			  large_image: parsedDatatypeImages["COMMS"],
-			  count: 0,
-			  description: "",
-			  id: "",
-		  }
-	  } else if (category === "email") {
-		  if (frameworkData["Email"] !== undefined && frameworkData["Email"].name !== undefined) {
-			  return frameworkData["Email"]	
-		  }
-
-		  return {
-			  name: "COMMS :default",
-			  large_image: parsedDatatypeImages["COMMS"],
-			  count: 0,
-			  description: "",
-			  id: "",
-		  }
-	  } else if (category === "assets") {
-		  if (frameworkData["Assets"] !== undefined && frameworkData["Assets"].name !== undefined) {
-			  return frameworkData["Assets"]	
-		  }
-
-		  return {
-			  name: "ASSETS :default",
-			  large_image: parsedDatatypeImages["ASSETS"],
-			  count: 0,
-			  description: "",
-			  id: "",
-		  }
-	  } else if (category === "cases") {
-		  if (frameworkData["Cases"] !== undefined && frameworkData["Cases"].name !== undefined) {
-			  return frameworkData["Cases"]
-		  }
-
-		  return {
-			  name: "CASES :default",
-			  large_image: parsedDatatypeImages["CASES"],
-			  count: 0,
-			  description: "",
-			  id: "",
-		  }
-	  } else if (category === "iam") {
-		  if (frameworkData["IAM"] !== undefined &&	frameworkData["IAM"].name !== undefined) {
-			  return frameworkData["IAM"]
-		  }
-
-		  return {
-			  name: "EDR :default",
-			  large_image: parsedDatatypeImages["EDR & AV"],
-			  count: 0,
-			  description: "",
-			  id: "",
-		  }
-	  } else if (category === "network") {
-		  if (frameworkData["Network"] !== undefined && frameworkData["Network"].name !== undefined) {
-			  return frameworkData["Network"]
-		  }
-
-		  return {
-			  name: "Network :default",
-			  large_image: parsedDatatypeImages["NETWORK"],
-			  count: 0,
-			  description: "",
-			  id: "",
-		  }
-	  } else if (category === "intel") {
-		  if (frameworkData["Intel"] !== undefined && frameworkData["Intel"].name !== undefined) {
-			  return frameworkData["Intel"]
-		  }
-
-		  return {
-			  name: "INTEL :default",
-			  large_image: parsedDatatypeImages["INTEL"],
-			  count: 0,
-			  description: "",
-			  id: "",
-		  }
-	  } else if (category === "siem") {
-		  if (frameworkData["SIEM"] !== undefined && frameworkData["SIEM"].name !== undefined) {
-			  return frameworkData["SIEM"]
-		  }
-
-		  return {
-			  name: "SIEM :default",
-			  large_image: parsedDatatypeImages["SIEM"],
-			  count: 0,
-			  description: "",
-			  id: "",
-		  } 
-	  } else {
-		  console.log("findSpecificApp: unknown category: ", category)
-	  }
-
-	  return null
-  } 
 
   const parseUsecase = (subcase) => {
 	  console.log("parseUsecase: ", subcase)
@@ -340,12 +213,6 @@ const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData
 		var parsedUsecase = responseJson
 
 		if (responseJson.success === false) {
-
-			//img1={inputUsecase.srcimg}
-			//srcapp={inputUsecase.srcapp}
-			//img2={inputUsecase.dstimg}
-			//dstapp={inputUsecase.dstapp}
-			//title={inputUsecase.name}
 			parsedUsecase = subcase
 		} else {
 			parsedUsecase = responseJson
@@ -354,13 +221,9 @@ const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData
 			parsedUsecase.srcapp = subcase.srcapp
 			parsedUsecase.dstimg = subcase.dstimg
 			parsedUsecase.dstapp = subcase.dstapp
-
-			//parsedUsecase = parseUsecase(responseJson)
 		}
 
 		// Look for the type of app and fill in img1, srcapp...
-		console.log("USECASE: ", parsedUsecase)
-
 		setInputUsecase(parsedUsecase)
 		setExpandedIndex(index)
 		setExpandedItem(subindex)
@@ -861,18 +724,30 @@ const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData
 																</div>
 															</div>
 															: 
-																<div style={{flex: 1, textAlign: "left", marginRight: 10, }}>
-																	<Typography variant="body1" color="textSecondary">
-																		{subcase.description}
-																	</Typography>
+												<div style={{flex: 1, textAlign: "left", marginRight: 10, }}>
+													<Typography variant="body1" color="textSecondary">
+														{subcase.description}
+													</Typography>
 
-																	{workflows !== undefined && workflows !== null && workflows.length > 0 ?
-																		<Typography variant="body1" style={{marginTop: 15, marginBottom: 10, }}>
-																			Select relevant workflows
-																		</Typography>
-																	: null}
+													{workflows !== undefined && workflows !== null && workflows.length > 0 ?
+														<Typography variant="body1" style={{marginTop: 15, marginBottom: 10, }}>
+															Select relevant workflows
+														</Typography>
+													: 
+														<span style={{display: "flex"}}>
+															<Typography variant="body1" style={{marginTop: 15, marginBottom: 10, }}>
+																Find workflows related to this usecase: 
+																	
+															</Typography>
+															<a href={`https://shuffler.io/search?tab=workflows&q=${subcase.name}`} style={{textDecoration: "none", }} target="_blank" rel="noopener noreferrer">
+																<IconButton style={{paddingTop: 15, }}>
+																	<OpenInNewIcon   style={{color: "#f85a3e", }}/>
+																</IconButton>
+															</a>
+														</span>
+													}
 
-																	{workflows !== undefined && workflows !== null && workflows.length > 0 ?
+													{workflows !== undefined && workflows !== null && workflows.length > 0 ?
 														<Autocomplete
 															  multiple
           													  id="workflow_matching"
@@ -1004,8 +879,13 @@ const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData
           													/>
 															: null}
 															<span style={{top: 30, position: "relative",}}>
-																<Typography variant="body1" style={{marginTop: 0,}} onClick={() => {}}>
-																	Try this Usecase
+																<Typography 
+																	variant="body2" 
+																	color="textSecondary"
+																	style={{marginTop: 0, marginLeft: 5, }} 
+																	onClick={() => {}}
+																>
+																	Try it out:
 																</Typography>
 																<WorkflowTemplatePopup 
 																	userdata={userdata}

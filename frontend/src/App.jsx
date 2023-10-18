@@ -377,7 +377,7 @@ const App = (message, props) => {
         	  path="/workflows"
         	  element={
         	    <Workflows
-          			checkLogin={checkLogin}
+				  checkLogin={checkLogin}
         	      cookies={cookies}
         	      removeCookie={removeCookie}
         	      isLoaded={isLoaded}
@@ -533,6 +533,7 @@ const App = (message, props) => {
 						globalUrl={globalUrl}
 						cookies={cookies}
 						userdata={userdata}
+				  		checkLogin={checkLogin}
 						{...props}
 					/>
 				}

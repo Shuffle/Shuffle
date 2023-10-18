@@ -27,26 +27,26 @@ import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import Drift from "react-driftjs";
 
 const Welcome = (props) => {
-    const { globalUrl, surfaceColor, newColor, mini, inputColor, userdata, isLoggedIn, isLoaded, serverside } = props;
+    const { globalUrl, surfaceColor, newColor, mini, inputColor, userdata, isLoggedIn, isLoaded, serverside, checkLogin } = props;
     const [skipped, setSkipped] = React.useState(new Set());
     const [inputUsecase, setInputUsecase] = useState({});
   	const [frameworkData, setFrameworkData] = useState(undefined);
   	const [discoveryWrapper, setDiscoveryWrapper] = useState(undefined);
     const [activeStep, setActiveStep] = React.useState(1);
   	const [apps, setApps] = React.useState([]);
-		const [defaultSearch, setDefaultSearch] = React.useState("")
-		const [selectionOpen, setSelectionOpen] = React.useState(false)
-		const [showWelcome, setShowWelcome] = React.useState(false)
+	const [defaultSearch, setDefaultSearch] = React.useState("")
+	const [selectionOpen, setSelectionOpen] = React.useState(false)
+	const [showWelcome, setShowWelcome] = React.useState(false)
   	const [usecases, setUsecases] = React.useState([]);
   	const [workflows, setWorkflows] = React.useState([]);
 
-		let navigate = useNavigate();
-    //if (serverside === false && isLoaded === true && isLoggedIn === false) {
-		//	console.log("Redirecting to login?")
-		//	console.log(window.location.pathname)
-		//	console.log(window.location)
-		//	navigate(`/login?view=${window.location.pathname}${window.location.search}`)
-		//}
+	let navigate = useNavigate();
+	useEffect(() => {
+		console.log("IN USEEFFECT FOR ACTIVESTEP: ", activeStep, " and with login: ", checkLogin)
+		if (checkLogin !== undefined) {
+			checkLogin()
+		}
+	}, [activeStep])
 
   	const isCloud =
 			window.location.host === "localhost:3002" ||
@@ -396,6 +396,7 @@ const Welcome = (props) => {
 											/>
 											*/}
 											<WelcomeForm2
+												checkLogin={checkLogin}
 												userdata={userdata}
 												globalUrl={globalUrl}
 												discoveryWrapper={discoveryWrapper}

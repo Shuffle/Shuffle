@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactGA from "react-ga4";
 import Checkbox from "@mui/material/Checkbox";
 
@@ -13,8 +13,6 @@ import LightbulbIcon from "@mui/icons-material/Lightbulb";
 import TrendingFlatIcon from "@mui/icons-material/TrendingFlat";
 import theme from "../theme.jsx";
 import CheckBoxSharpIcon from "@mui/icons-material/CheckBoxSharp";
-import AppSearch from "../components/Appsearch.jsx";
-import CloseIcon from "@mui/icons-material/Close";
 import {
   Button,
   Collapse,
@@ -47,6 +45,7 @@ import AuthenticationItem from "../components/AuthenticationItem.jsx";
 import WorkflowPaper from "../components/WorkflowPaper.jsx";
 import UsecaseSearch from "../components/UsecaseSearch.jsx";
 import ExploreWorkflow from "../components/ExploreWorkflow.jsx";
+import AppSelection from "../components/AppSelection.jsx";
 
 const responsive = {
   0: { items: 1 },
@@ -79,9 +78,10 @@ const WelcomeForm = (props) => {
     setDefaultSearch,
     selectionOpen,
     setSelectionOpen,
+    checkLogin,
   } = props;
-  const [isActive, setIsActive] = useState(0);
-
+  const [moreButton, setMoreButton] = useState(false);
+  const ref = useRef()
   const [usecaseItems, setUsecaseItems] = useState([
     {
       search: "Phishing",
@@ -101,89 +101,70 @@ const WelcomeForm = (props) => {
     },
   ]);
   /*
-			<div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
-				<UsecaseSearch
-					globalUrl={globalUrl}
-					defaultSearch={"Phishing"}
-					appFramework={appFramework}
-					apps={apps}
-					getFramework={getFramework}
-					userdata={userdata}
-				/>
-			</div>
-			,
-			<div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
-				<UsecaseSearch
-					globalUrl={globalUrl}
-					defaultSearch={"Enrichment"}
-					appFramework={appFramework}
-					apps={apps}
-					getFramework={getFramework}
-					userdata={userdata}
-				/>
-			</div>
-			,
-			<div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
-				<UsecaseSearch
-					globalUrl={globalUrl}
-					defaultSearch={"Enrichment"}
-					usecaseSearch={"SIEM alert enrichment"}
-					appFramework={appFramework}
-					apps={apps}
-					getFramework={getFramework}
-					userdata={userdata}
-				/>
-			</div>
-			,
-			<div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
-				<UsecaseSearch
-					globalUrl={globalUrl}
-					defaultSearch={"Build your own"}
-					appFramework={appFramework}
-					apps={apps}
-					getFramework={getFramework}
-					userdata={userdata}
-				/>
-			</div>
-		])
-		*/
+      <div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
+        <UsecaseSearch
+          globalUrl={globalUrl}
+          defaultSearch={"Phishing"}
+          appFramework={appFramework}
+          apps={apps}
+          getFramework={getFramework}
+          userdata={userdata}
+        />
+      </div>
+      ,
+      <div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
+        <UsecaseSearch
+          globalUrl={globalUrl}
+          defaultSearch={"Enrichment"}
+          appFramework={appFramework}
+          apps={apps}
+          getFramework={getFramework}
+          userdata={userdata}
+        />
+      </div>
+      ,
+      <div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
+        <UsecaseSearch
+          globalUrl={globalUrl}
+          defaultSearch={"Enrichment"}
+          usecaseSearch={"SIEM alert enrichment"}
+          appFramework={appFramework}
+          apps={apps}
+          getFramework={getFramework}
+          userdata={userdata}
+        />
+      </div>
+      ,
+      <div style={{minWidth: "95%", maxWidth: "95%", marginLeft: 5, marginRight: 5, }}>
+        <UsecaseSearch
+          globalUrl={globalUrl}
+          defaultSearch={"Build your own"}
+          appFramework={appFramework}
+          apps={apps}
+          getFramework={getFramework}
+          userdata={userdata}
+        />
+      </div>
+    ])
+    */
+  const [name, setName] = React.useState("")
+  const [orgName, setOrgName] = React.useState("")
+  const [role, setRole] = React.useState("")
+  const [orgType, setOrgType] = React.useState("")
+  const [finishedApps, setFinishedApps] = React.useState([])
+  const [authentication, setAuthentication] = React.useState([]);
 
-    const [discoveryData, setDiscoveryData] = React.useState({})
-    const [name, setName] = React.useState("")
-    const [orgName, setOrgName] = React.useState("")
-    const [role, setRole] = React.useState("")
-    const [orgType, setOrgType] = React.useState("")
-    const [finishedApps, setFinishedApps] = React.useState([])
-  	const [authentication, setAuthentication] = React.useState([]);
-	const [newSelectedApp, setNewSelectedApp] = React.useState({})
-	const [thumbIndex, setThumbIndex] = useState(0);
-    const [thumbAnimation, setThumbAnimation] = useState(false);
-    const [clickdiff, setclickdiff] = useState(0);
+  const [thumbIndex, setThumbIndex] = useState(0);
+  const [thumbAnimation, setThumbAnimation] = useState(false);
+  const [clickdiff, setclickdiff] = useState(0);
+  const [mouseHoverIndex, setMouseHoverIndex] = useState(-1)
 
-	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-  
-  	//const alert = useAlert();
-		let navigate = useNavigate();
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  //const alert = useAlert();
+  let navigate = useNavigate();
 
   const iconStyles = {
     color: "rgba(255, 255, 255, 1)",
-  };
-
-  const onNodeSelect = (label) => {
-    if (setDiscoveryWrapper !== undefined) {
-      setDiscoveryWrapper({ id: label });
-    }
-
-    if (isCloud) {
-      ReactGA.event({
-        category: "welcome",
-        action: `click_${label}`,
-        label: "",
-      });
-    }
-
-    setSelectionOpen(true);
-    setDefaultSearch(label);
   };
 
   useEffect(() => {
@@ -407,6 +388,7 @@ const WelcomeForm = (props) => {
       console.log("Should send basic information about org (fetch)");
       setclickdiff(240);
       navigate(`/welcome?tab=2`);
+	  setActiveStep(1);
 
       if (isCloud) {
         ReactGA.event({
@@ -440,6 +422,7 @@ const WelcomeForm = (props) => {
       //handleSetSearch("Enrichment", "2. Enrich")
       handleSetSearch(usecaseButtons[0].name, usecaseButtons[0].usecase);
       getApps();
+	  setActiveStep(2);
 
       // Make sure it's up to date
       if (getFramework !== undefined) {
@@ -493,16 +476,13 @@ const WelcomeForm = (props) => {
     setActiveStep(0);
   };
 
-  useEffect(() => {
-    console.log("Selected app changed (effect)");
-  }, [newSelectedApp]);
-
   //const buttonWidth = 145
   const buttonWidth = 450;
   const buttonMargin = 10;
-  const sizing = 475;
+  const sizing = 510;
   const bottomButtonStyle = {
     borderRadius: 200,
+    marginTop: moreButton ? 44 : "",
     height: 51,
     width: 464,
     fontSize: 16,
@@ -510,22 +490,9 @@ const WelcomeForm = (props) => {
     background: "linear-gradient(90deg, #F86744 0%, #F34475 100%)",
     padding: "16px 24px",
     // top: 20,
-    margin: "auto",
+    // margin: "auto",
     itemAlign: "center",
     // marginLeft: "65px",
-  };
-
-  const buttonStyle = {
-    flex: 1,
-    width: 224,
-    padding: 25,
-    margin: buttonMargin,
-	color : "var(--White-text, #F1F1F1)",
-	fontWeight: 400,
-    fontSize: 16,
-    background: "rgba(33, 33, 33, 1)",
-    borderColor: "rgba(33, 33, 33, 1)",
-    borderRadius: 8,
   };
 
   const slideNext = () => {
@@ -557,30 +524,30 @@ const WelcomeForm = (props) => {
     appFramework === undefined || appFramework === null
       ? []
       : usecaseItems.map((item, index) => {
-          return (
-            <div
-              style={{
-                minWidth: "95%",
-                maxWidth: "95%",
-                marginLeft: 5,
-                marginRight: 5,
-              }}
-            >
-              <UsecaseSearch
-                globalUrl={globalUrl}
-                defaultSearch={item.search}
-                usecaseSearch={item.usecase_search}
-                appFramework={appFramework}
-                apps={apps}
-                getFramework={getFramework}
-                userdata={userdata}
-                autotry={item.autotry}
-                sourceapp={item.sourceapp}
-                destinationapp={item.destinationapp}
-              />
-            </div>
-          );
-        });
+        return (
+          <div
+            style={{
+              minWidth: "95%",
+              maxWidth: "95%",
+              marginLeft: 5,
+              marginRight: 5,
+            }}
+          >
+            <UsecaseSearch
+              globalUrl={globalUrl}
+              defaultSearch={item.search}
+              usecaseSearch={item.usecase_search}
+              appFramework={appFramework}
+              apps={apps}
+              getFramework={getFramework}
+              userdata={userdata}
+              autotry={item.autotry}
+              sourceapp={item.sourceapp}
+              destinationapp={item.destinationapp}
+            />
+          </div>
+        );
+      });
 
   const getStepContent = (step) => {
     switch (step) {
@@ -695,287 +662,41 @@ const WelcomeForm = (props) => {
         );
       case 1:
         return (
+          <AppSelection
+            globalUrl={globalUrl}
+            userdata={userdata}
+            appFramework={appFramework}
+            setActiveStep={setActiveStep}
+            defaultSearch={defaultSearch}
+            setDefaultSearch={setDefaultSearch}
+			selectionOpen={selectionOpen}
+			setSelectionOpen={setSelectionOpen}
+    		checkLogin={checkLogin}
+          />
+        )
+      case 2:
+        return (
           <Collapse in={true}>
-            <div
-              style={{
-                minHeight: sizing,
-                maxHeight: sizing,
-                marginTop: 20,
-                width: 500,
-              }}
-            >
-				{selectionOpen ? (
-                  <div
-                    style={{
-                      width: 319,
-                      height: 395,
-                      flexShrink: 0,
-					  marginLeft:70,
-					  marginTop: 68,
-					  position:"absolute",
-					  zIndex:100,
-                      borderRadius: 6,
-                      border: "1px solid var(--Container-Stroke, #494949)",
-                      background: "var(--Container, #212121)",
-                      boxShadow: "8px 8px 32px 24px rgba(0, 0, 0, 0.16)",
-                    }}
-                  >
-                    <div style={{display: "flex", textAlign:"center"}}>
-                      <Typography style={{padding:16}}> {defaultSearch} </Typography>
-					  <Button
-					  style={{
-						flex: 1,
-						width: 224,
-						paddingLeft: 172,
-						fontSize: 16,
-						background: "rgba(33, 33, 33, 1)",
-						borderColor: "rgba(33, 33, 33, 1)",
-						borderRadius: 8,
-					  }}
-					  onClick={() => {
-						setSelectionOpen(false)
-					  }}
-					  >
-					  <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="11"
-                        height="11"
-                        viewBox="0 0 11 11"
-                        fill="none"
-                      >
-                        <path
-                          d="M1 1L10.5 10.5"
-                          stroke="#9E9E9E"
-                          stroke-linecap="round"
-                        />
-                        <path
-                          d="M10.5 1L1 10.5"
-                          stroke="#9E9E9E"
-                          stroke-linecap="round"
-                        />
-                      </svg>
-					  </Button>
-                    </div>
-                    <div
-                      style={{ width: "100%", border: "1px #494949 solid" }}
-                    />
-                    <AppSearch
-                      defaultSearch={defaultSearch}
-                      newSelectedApp={newSelectedApp}
-                      setNewSelectedApp={setNewSelectedApp}
+            <div style={{ marginTop: 0, maxWidth: 700, minWidth: 700, margin: "auto", minHeight: sizing, maxHeight: sizing, }}>
+
+              <div style={{ marginTop: 0, }}>
+                <div className="thumbs" style={{ display: "flex" }}>
+                  <div style={{ minWidth: 554, maxWidth: 554, borderRadius: theme.palette.borderRadius, }}>
+                    <ExploreWorkflow
+                      globalUrl={globalUrl}
                       userdata={userdata}
-                      // cy={cy}
+					  appFramework={appFramework}	
                     />
                   </div>
-                ) : null}
-              {/* <Typography variant="body1" style={{marginLeft: 8, marginTop: 50, marginRight: 30, marginBottom: 0, }} color="textSecondary">
-													Apps for each category are shown based on your activity and can be changed by clicking their icon. We will help you connect them later.
-												</Typography> */}
-              {/* <div style={{display:"flex"}}>
-													<ArrowBackIosNewIcon style={{color: "#9E9E9E", width: "16px",}} onClick={() => {
-														navigate("/welcome")
-													}}/>
-													<Typography variant="h8" style={{color: "#9E9E9E",textAlign: "center", marginLeft: 5}} onClick={() => {
-														navigate("/welcome")
-													}}>
-													Back
-													</Typography>
-												</div> */}
-              <Typography
-                variant="h4"
-                style={{
-                  marginLeft: 8,
-                  marginTop: 40,
-                  marginRight: 30,
-                  marginBottom: 0,
-                }}
-                color="rgba(241, 241, 241, 1)"
-              >
-                Find your apps
-              </Typography>
-              <Typography
-                variant="body2"
-                style={{
-                  marginLeft: 8,
-                  marginTop: 10,
-                  marginRight: 30,
-                  marginBottom: 40,
-                }}
-                color="rgba(158, 158, 158, 1)"
-              >
-                Select the apps you work with and we will connect the for you.
-              </Typography>
-              {/*The app framework helps us access and authenticate the most important APIs for you. */}
-
-              {/*
-                        <Grid item xs={10}>
-                            <FormControl fullWidth={true}>
-                                <InputLabel style={{ color: "#B9B9BA" }}>What is your development experience?</InputLabel>
-                                <Select
-                                    required
-                                >
-                                    <MenuItem value={10}>Beginner</MenuItem>
-                                    <MenuItem value={20}>Intermediate</MenuItem>
-                                    <MenuItem value={30}>Automation Ninja</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-												*/}
-              <Grid item xs={11} style={{}}>
-                {/*<FormLabel style={{ color: "#B9B9BA" }}>Find your integrations!</FormLabel>*/}
-                <div style={{ display: "flex", width: 464 }}>
-                  <Button
-                    disabled={finishedApps.includes("CASES")}
-                    variant={
-                      defaultSearch === "CASES" ? "contained" : "outlined"
-                    }
-                    color="secondary"
-                    style={{
-                      flex: 1,
-                      width: "100%",
-                      padding: 25,
-                      margin: buttonMargin,
-                      fontSize: 16,
-					  color : "var(--White-text, #F1F1F1)",
-					  fontWeight: 400,
-                      background: "rgba(33, 33, 33, 1)",
-                      borderColor: finishedApps.includes("CASES")
-                        ? "inherit"
-                        : "rgba(33, 33, 33, 1)",
-                      borderRadius: 8,
-                    }}
-                    startIcon = {<LightbulbIcon/>}
-                    onClick={(event) => {
-                      onNodeSelect("CASES");
-                    }}
-                  >
-                    Case Management
-                  </Button>
                 </div>
-                <div style={{ display: "flex", width: 464 }}>
-                  <Button
-                    disabled={finishedApps.includes("SIEM")}
-                    variant={
-                      defaultSearch === "SIEM" ? "contained" : "outlined"
-                    }
-                    style={buttonStyle}
-                    startIcon={<SearchIcon />}
-                    color="secondary"
-                    onClick={(event) => {
-                      onNodeSelect("SIEM");
-                    }}
-                  >
-                    SIEM
-                  </Button>
-                  <Button
-                    disabled={
-                      finishedApps.includes("EDR & AV") ||
-                      finishedApps.includes("ERADICATION")
-                    }
-                    variant={
-                      defaultSearch === "Eradication" ? "contained" : "outlined"
-                    }
-                    style={buttonStyle}
-                    startIcon={<NewReleasesIcon />}
-                    color="secondary"
-                    onClick={(event) => {
-                      onNodeSelect("ERADICATION");
-                    }}
-                  >
-                    Endpoint
-                  </Button>
-                </div>
-                <div style={{ display: "flex", width: 464 }}>
-                  <Button
-                    disabled={finishedApps.includes("INTEL")}
-                    variant={
-                      defaultSearch === "INTEL" ? "contained" : "outlined"
-                    }
-                    style={buttonStyle}
-                    startIcon={<ExtensionIcon />}
-                    color="secondary"
-                    onClick={(event) => {
-                      onNodeSelect("INTEL");
-                    }}
-                  >
-                    Intel
-                  </Button>
-                  <Button
-                    disabled={
-                      finishedApps.includes("COMMS") ||
-                      finishedApps.includes("EMAIL")
-                    }
-                    variant={
-                      defaultSearch === "EMAIL" ? "contained" : "outlined"
-                    }
-                    style={buttonStyle}
-                    startIcon={<EmailIcon />}
-                    color="secondary"
-                    onClick={(event) => {
-                      onNodeSelect("EMAIL");
-                    }}
-                  >
-                    Email
-                  </Button>
-                </div>
-                {/* <FormControl>
-                                <FormLabel style={{ color: "#B9B9BA" }}>What do you want to automate first ?</FormLabel>
-                                <FormGroup>
-                                    <FormControlLabel
-                                        value="Email"
-                                        control={<Checkbox style={{ color: "#F85A3E" }} onChange={(event) => { onNodeSelect("Email") }} />}
-                                        label="Email"
-                                        labelPlacement="Email"
-                                    />
-                                    <FormControlLabel
-                                        value="SIEM"
-                                        control={<Checkbox style={{ color: "#F85A3E" }} onChange={(event) => { onNodeSelect("SIEM") }} />}
-                                        label="SIEM"
-                                        labelPlacement="SIEM"
-                                    />
-                                    <FormControlLabel
-                                        value="EDR"
-                                        control={<Checkbox style={{ color: "#F85A3E" }} onChange={(event) => { onNodeSelect("EDR") }} />}
-                                        label="EDR"
-                                        labelPlacement="EDR"
-                                    />
-                                </FormGroup>
-                            </FormControl> */}
-                        </Grid>
-							</div>
-							<div style={{ flexDirection: "row", }}>
-					<Button variant="contained" type="submit" fullWidth style={bottomButtonStyle} onClick={() => {
-						navigate("/welcome?tab=3")
-        				setActiveStep(2)
-					}}>
-						Continue
-					</Button>
-				</div>
-			</Collapse>
-					
-                )
-            case 2:
-                return (
-									<Collapse in={true}>
-                    <div style={{marginTop: 0, maxWidth: 700, minWidth: 700, margin: "auto", minHeight: sizing, maxHeight: sizing, }}>
-
-												<div style={{marginTop: 0, }}>
-		  										<div className="thumbs" style={{display: "flex"}}>
-														<div style={{minWidth: 554, maxWidth: 554, borderRadius: theme.palette.borderRadius, }}>
-															<ExploreWorkflow
-																globalUrl={globalUrl}
-																userdata={userdata}
-															/>
-														</div>
-       											</div> 
-											</div>
-										</div>
-									</Collapse>
-                )
-            default:
-                return "unknown step"
-        }
+              </div>
+            </div>
+          </Collapse>
+        )
+      default:
+        return "unknown step"
     }
+  }
 
 
   const extraHeight = isCloud ? -7 : 0;
@@ -1081,7 +802,7 @@ const WelcomeForm = (props) => {
                     			</div>
 												}*/}
           </div>
-		)}
+        )}
       </div>
     </div>
   );

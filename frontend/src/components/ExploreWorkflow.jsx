@@ -5,6 +5,7 @@ import 'react-alice-carousel/lib/alice-carousel.css';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import theme from '../theme.jsx';
 import CheckBoxSharpIcon from '@mui/icons-material/CheckBoxSharp';
+import { findSpecificApp } from "../components/AppFramework.jsx"
 import {
 	Checkbox,
     Button,
@@ -39,7 +40,7 @@ import { useNavigate, Link } from "react-router-dom";
 import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx";
 
 const ExploreWorkflow = (props) => {
-    const { userdata, globalUrl } = props
+    const { userdata, globalUrl, appFramework } = props
 	const [activeUsecases, setActiveUsecases] = useState(0);
     const [modalOpen, setModalOpen] = React.useState(false);
 	const [suggestedUsecases, setSuggestedUsecases] = useState([])
@@ -105,7 +106,64 @@ const ExploreWorkflow = (props) => {
 				continue
 			}
 
+			const descsplit = userdata.priorities[i].description.split("&")
+			if (descsplit.length === 5) {
+				console.log("descsplit: ", descsplit)
+				if (descsplit[1] === "") {
+					const item = findSpecificApp(appFramework, descsplit[0])
+					console.log("item: ", item)
+					if (item !== null) {
+						descsplit[1] = item.large_image
+					}
+				}
+
+				if (descsplit[3] === "") {
+					const item = findSpecificApp(appFramework, descsplit[2])
+					console.log("item: ", item)
+					if (item !== null) {
+						descsplit[3] = item.large_image
+					}
+				}
+
+				console.log("descsplit: ", descsplit)
+				userdata.priorities[i].description = descsplit.join("&")
+			}
+
 			tmpUsecases.push(userdata.priorities[i])
+		}
+
+		console.log("USECASES: ", tmpUsecases)
+		if (tmpUsecases.length === 0) {
+			console.log("Add some random ones, as everything is done")
+
+			const comms = findSpecificApp(appFramework, "communication") 
+			const cases = findSpecificApp(appFramework, "cases") 
+			const edr = findSpecificApp(appFramework, "edr") 
+			const siem = findSpecificApp(appFramework, "siem") 
+
+			tmpUsecases = [{
+				"name": "Suggested Usecase: Email management",
+				"description": comms.name+"&"+comms.large_image+"&"+cases.name+"&"+cases.large_image,
+				"type": "usecase",
+				"url": "/usecases?selected_object=Email management",
+				"severity": 0,
+				"active": false,
+			},{
+				"name": "Suggested Usecase: EDR to ticket",
+				"description": edr.name+"&"+edr.large_image+"&"+cases.name+"&"+cases.large_image,
+				"type": "usecase",
+				"url": "/usecases?selected_object=EDR to ticket",
+				"severity": 0,
+				"active": false,
+			},{
+				"name": "Suggested Usecase: SIEM to ticket",
+				"description": siem.name+"&"+siem.large_image+"&"+cases.name+"&"+cases.large_image,
+				"type": "usecase",
+				"url": "/usecases?selected_object=SIEM to ticket",
+				"severity": 0,
+				"active": false,
+			}
+			]
 		}
 
 		setSuggestedUsecases(tmpUsecases)

@@ -37,6 +37,137 @@ import { toast } from 'react-toastify';
 
 cytoscape.use(edgehandles);
 
+export const findSpecificApp = (framework, inputcategory) => {
+  // Get the frameworkinfo for the org and fill in
+  //
+  if (framework === undefined || framework === null) {
+	  console.log("findSpecificApp: framework is null")
+	  return null 
+  }
+
+  if (inputcategory === undefined || inputcategory === null) {
+	  console.log("findSpecificApp: category is null")
+	  return null 
+  }
+
+  const category = inputcategory.toLowerCase().split(":")[0].trim()
+
+  console.log("findSpecificApp: ", category, framework)
+  if (category === "edr" || category === "eradication" || category === "edr & av") {
+	  if (framework["EDR & AV"] !== undefined && framework["EDR & AV"].name !== undefined) { 
+		  return framework["EDR & AV"]	
+	  }
+
+	  return {
+		  name: "EDR :default",
+		  large_image: parsedDatatypeImages["EDR & AV"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "communication") {
+	  if (framework["Comms"] !== undefined && framework["Comms"].name !== undefined) {
+		  return framework["Comms"]	
+	  }
+
+	  return {
+		  name: "COMMS :default",
+		  large_image: parsedDatatypeImages["COMMS"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "email") {
+	  if (framework["Email"] !== undefined && framework["Email"].name !== undefined) {
+		  return framework["Email"]	
+	  }
+
+	  return {
+		  name: "COMMS :default",
+		  large_image: parsedDatatypeImages["COMMS"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "assets") {
+	  if (framework["Assets"] !== undefined && framework["Assets"].name !== undefined) {
+		  return framework["Assets"]	
+	  }
+
+	  return {
+		  name: "ASSETS :default",
+		  large_image: parsedDatatypeImages["ASSETS"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "cases") {
+	  if (framework["Cases"] !== undefined && framework["Cases"].name !== undefined) {
+		  return framework["Cases"]
+	  }
+
+	  return {
+		  name: "CASES :default",
+		  large_image: parsedDatatypeImages["CASES"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "iam") {
+	  if (framework["IAM"] !== undefined &&	framework["IAM"].name !== undefined) {
+		  return framework["IAM"]
+	  }
+
+	  return {
+		  name: "EDR :default",
+		  large_image: parsedDatatypeImages["EDR & AV"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "network") {
+	  if (framework["Network"] !== undefined && framework["Network"].name !== undefined) {
+		  return framework["Network"]
+	  }
+
+	  return {
+		  name: "Network :default",
+		  large_image: parsedDatatypeImages["NETWORK"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "intel") {
+	  if (framework["Intel"] !== undefined && framework["Intel"].name !== undefined) {
+		  return framework["Intel"]
+	  }
+
+	  return {
+		  name: "INTEL :default",
+		  large_image: parsedDatatypeImages["INTEL"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "siem") {
+	  if (framework["SIEM"] !== undefined && framework["SIEM"].name !== undefined) {
+		  return framework["SIEM"]
+	  }
+
+	  return {
+		  name: "SIEM :default",
+		  large_image: parsedDatatypeImages["SIEM"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  } 
+  } else {
+	  console.log("findSpecificApp: unknown category: ", category)
+  }
+
+  return null
+} 
+
 const svgSize = "40px" 
 export const parsedDatatypeImages = {
 	"SIEM": encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M6.93767 0C8.71083 0 10.4114 0.704386 11.6652 1.9582C12.919 3.21202 13.6234 4.91255 13.6234 6.68571C13.6234 8.34171 13.0165 9.864 12.0188 11.0366L12.2965 11.3143H13.1091L18.252 16.4571L16.7091 18L11.5662 12.8571V12.0446L11.2885 11.7669C10.116 12.7646 8.59367 13.3714 6.93767 13.3714C5.16451 13.3714 3.46397 12.667 2.21015 11.4132C0.956339 10.1594 0.251953 8.45888 0.251953 6.68571C0.251953 4.91255 0.956339 3.21202 2.21015 1.9582C3.46397 0.704386 5.16451 0 6.93767 0ZM6.93767 2.05714C4.36624 2.05714 2.3091 4.11429 2.3091 6.68571C2.3091 9.25714 4.36624 11.3143 6.93767 11.3143C9.5091 11.3143 11.5662 9.25714 11.5662 6.68571C11.5662 4.11429 9.5091 2.05714 6.93767 2.05714Z" /></svg>`), 
