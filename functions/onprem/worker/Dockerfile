@@ -33,6 +33,10 @@ ENV SHUFFLE_BASE_IMAGE_REGISTRY=docker.io
 ENV SHUFFLE_BASE_IMAGE_NAME=frikky/shuffle
 ENV SHUFFLE_BASE_IMAGE_TAG_SUFFIX=0.8.70
 
+#for k8s
+ENV SHUFFLE_OPENSEARCH_URL=https://opensearch:9200
+ENV SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY=true
+
 RUN apk add --no-cache bash tzdata
 COPY --from=builder /app/ /
 
