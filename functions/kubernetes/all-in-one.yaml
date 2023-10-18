@@ -230,17 +230,14 @@ metadata:
     io.kompose.service: opensearch
   name: opensearch
 spec:
-  type: NodePort
   ports:
     - name: "9200"
       port: 9200
       targetPort: 9200
-      nodePort: 31001
   selector:
     io.kompose.service: opensearch
 status:
   loadBalancer: {}
-
 
 ---
 
@@ -250,7 +247,7 @@ metadata:
  name: shuffle-apps-pv
 spec:
  capacity:
-   storage: 10Gi
+   storage: 5Gi
  accessModes:
    - ReadWriteOnce
  persistentVolumeReclaimPolicy: Retain
@@ -258,39 +255,38 @@ spec:
  hostPath:
    path: /mnt/shuffle-data/backend
 
-## ---
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+ name: shuffle-files-pv
+spec:
+ capacity:
+   storage: 5Gi
+ accessModes:
+   - ReadWriteOnce
+ persistentVolumeReclaimPolicy: Retain
+ storageClassName: shuffle-data
+ hostPath:
+   path: /mnt/shuffle-data/backend
 
-# apiVersion: v1
-# kind: PersistentVolume
-# metadata:
-#   name: shuffle-files-pv
-# spec:
-#   capacity:
-#     storage: 5Gi  
-#   accessModes:
-#     - ReadWriteOnce  
-#   persistentVolumeReclaimPolicy: Retain  
-#   storageClassName: fast
-#   hostPath:
-#     path: /mnt/shuffle-data/backend
+---
 
-# ---
-
-# apiVersion: v1
-# kind: PersistentVolumeClaim
-# metadata:
-#   creationTimestamp: null
-#   labels:
-#     io.kompose.service: backend-files-claim
-#   name: backend-files-claim
-# spec:
-#   accessModes:
-#     - ReadWriteOnce
-#   storageClassName: fast
-#   resources:
-#     requests:
-#       storage: 1Gi
-# status: {}
+ apiVersion: v1
+ kind: PersistentVolumeClaim
+ metadata:
+   creationTimestamp: null
+   labels:
+     io.kompose.service: backend-files-claim
+   name: backend-files-claim
+ spec:
+   accessModes:
+     - ReadWriteOnce
+   storageClassName: shuffle-data
+   resources:
+     requests:
+       storage: 5Gi
+#  status: {}
 
 ---
 
@@ -307,10 +303,11 @@ spec:
   storageClassName: shuffle-data
   resources:
     requests:
-      storage: 1Gi
+      storage: 5Gi
 # status: {}
 
 ---
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -341,19 +338,12 @@ spec:
       name: shuffle-backend
     spec:
       volumes:
-        # - name: shuffle-files
-        #   persistentVolumeClaim:
-        #     claimName: backend-files-claim
-        # - name: shuffle-apps
-        #   hostPath:
-        #     path: /mnt/shuffle-data/backend
-        #     type: DirectoryOrCreate
+        - name: shuffle-files
+          persistentVolumeClaim:
+            claimName: backend-files-claim
         - name: shuffle-apps
           persistentVolumeClaim:
             claimName: backend-apps-claim
-        # - name: docker-socket
-        #   hostPath:
-        #     path: /var/run/docker.sock
 #      nodeSelector:
 #        node: master
       containers:
@@ -640,12 +630,10 @@ spec:
             - containerPort: 5001
           resources: {}
           volumeMounts:
-            # - name: docker-socket 
-            #   mountPath: /var/run/docker.sock
             - name: shuffle-apps
               mountPath: /app/generated
-            # - name: shuffle-files 
-            #   mountPath: /shuffle-files
+            - name: shuffle-files 
+              mountPath: /shuffle-files
       restartPolicy: Always
 status: {}
 
@@ -662,12 +650,10 @@ metadata:
     io.kompose.service: backend
   name: shuffle-backend
 spec:
-  type: NodePort
   ports:
-    - name: "50001"
+    - name: "5001"
       port: 5001
       targetPort: 5001
-      nodePort: 30009
   selector:
     io.kompose.service: backend
 status:
