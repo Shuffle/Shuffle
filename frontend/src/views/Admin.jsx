@@ -2528,7 +2528,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 							/>
 							<Tab
 								label=<span>
-									Billing (Beta)
+									Licensing (Beta)
 								</span>
 							/>
 							<Tab

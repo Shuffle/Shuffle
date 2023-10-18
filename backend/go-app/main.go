@@ -4017,7 +4017,7 @@ func runInitEs(ctx context.Context) {
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("[ERROR] Failed request with remote org setup for org %s (2): %s", org.Id, err)
+				log.Printf("[ERROR] Failed request with remote org sync for org %s (2): %s", org.Id, err)
 			}
 		}
 
@@ -4719,7 +4719,7 @@ func runInit(ctx context.Context) {
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("[ERROR] Failed request with remote org setup (3): %s", err)
+				log.Printf("[ERROR] Failed request with remote org sync (3): %s", err)
 			}
 		}
 
@@ -5269,7 +5269,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	job := func() {
 		err := remoteOrgJobHandler(*org, interval)
 		if err != nil {
-			log.Printf("[ERROR] Failed request with remote org setup (1): %s", err)
+			log.Printf("[ERROR] Failed request with remote org sync (1): %s", err)
 		}
 	}
 

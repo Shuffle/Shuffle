@@ -731,7 +731,8 @@ const Billing = (props) => {
 								name: "Scale",
 								limit: 0,
 								features: [
-									"Scale License. Runs faster than Open Source.",
+									"All Open Source features",
+									"Scale License. Runs faster, and across multiple servers.",
 									"Priority Support",
 									"Workflow & App development help",
 								],
@@ -995,7 +996,7 @@ const Billing = (props) => {
 				  style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
 				  variant="h6"
 				>
-					Billing Usage Overview 
+					Shuffle Utilization 
 				</Typography>
 			  </div>
 			  <BillingStats
