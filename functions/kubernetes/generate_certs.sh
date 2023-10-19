@@ -1,16 +1,10 @@
 #!/bin/bash
 
-read -p "Are you using Minikube? (yes/no): " is_minikube
-
 default_ip=$(ifconfig | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}')
 
-if [ "$is_minikube" == "yes" ]; then
-  node_ip=$(minikube ip)
-else
-  read -p "Enter your node IP (default is $default_ip): " custom_ip
-  # Use localhost as the default value
-  node_ip=${custom_ip:-$default_ip}
-fi
+read -p "Enter your node public IP (default is $default_ip): " custom_ip
+# Use localhost as the default value
+node_ip=${custom_ip:-$default_ip}
 
 echo "Using node IP: $node_ip to generate SSL certs!"
 
