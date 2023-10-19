@@ -1554,8 +1554,10 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 // FIXME - add this to remove exited workers
 // Should it check what happened to the execution? idk
 func zombiecheck(ctx context.Context, workerTimeout int) error {
+	isK8s := os.Getenv("IS_KUBERNETES") == "true"
+
 	executionIds = []string{}
-	if swarmConfig == "run" || swarmConfig == "swarm" {
+	if swarmConfig == "run" || swarmConfig == "swarm" || isK8s {
 		//log.Printf("[DEBUG] Skipping Zombie check due to new execution model (swarm)")
 		return nil
 	}
