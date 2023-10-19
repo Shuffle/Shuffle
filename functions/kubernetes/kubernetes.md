@@ -11,6 +11,8 @@
 
 This will give you a NODE_IP which is you're local IP if you're not sure about what to use.
 
+- 8 GB RAM and 4 CPUs are recommended as **minimum configs** for running Shuffle on Kubernetes. K8s is a resource-intensive application, and you may experience performance issues if you run it on a machine with fewer resources.
+
 - If you've used the above commands to set up a registry, you'll need to skip an SSL verification for your registry. If you're using Containerd as a runtime
     add the following lines in /etc/containerd/config.toml
     ```
@@ -20,7 +22,7 @@ This will give you a NODE_IP which is you're local IP if you're not sure about w
     [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_NODE_IP:PORT>".tls]
       insecure_skip_verify = true
     ```
-Step 1: Create a namespace called shuffle in a cluster by running ```kubectl create ns shuffle```.  
+Step 1: Create a namespace called shuffle in a cluster by running ```kubectl create ns shuffle```.
 
 Step 2: Open the ```all-in-one.yaml``` file and review the configuration values. Change the value of REGISTRY_URL with '<NODE_IP>:5000' where the registry is at. Adjust other variables as per your deployment requirements; otherwise, the application will deploy using the default settings provided within the file. Then apply the configmap and deploy with ```kubectl apply -f all-in-one.yaml -n shuffle```
 
