@@ -690,7 +690,7 @@ spec:
       containers:
         - env:
             - name: BACKEND_HOSTNAME
-          image: ghcr.io/shuffle/shuffle-frontend::1.3.0
+          image: ghcr.io/shuffle/shuffle-frontend:1.3.0
           name: shuffle-frontend
           ports:
             - containerPort: 80
