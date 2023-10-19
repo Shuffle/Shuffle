@@ -171,8 +171,13 @@ const WorkflowTemplatePopup = (props) => {
 		// name: "Email analysis"
 		// source:{app_id: "accdaaf2eeba6a6ed43b2efc0112032d", app_name
 		
-		setWorkflowLoading(true)
+
+		if (srcapp.includes(":default") || dstapp.includes(":default")) {
+			toast("You need to select both a source and destination app before generating this workflow.")
+			return
+		}
 		
+		setWorkflowLoading(true)
 
 		// FIXME: Remove hardcoding here after testing, and user srcapp/dstapp
 		const newsrcapp = srcapp
@@ -387,6 +392,8 @@ const WorkflowTemplatePopup = (props) => {
 					//setIsActive(!isActive)
 					if (errorMessage !== "") {
 						toast("Already failed to generate a workflow for this usecase. Please try again later or contact support@shuffler.io.")
+
+						setModalOpen(true)
 					} else if (isActive) {
 						toast("Workflow already generated. Please try another workflow template!")
 
@@ -418,7 +425,7 @@ const WorkflowTemplatePopup = (props) => {
 								<span style={{display: "flex", }}>
 									<TrendingFlatIcon style={{ marginTop: 7, }} />
 									<span style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
-										<img src={img2} style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleDefault : imagestyle} />
+										<img src={img2} style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleDefault : imagestyle} />
 									</span>
 								</span>
 							</Tooltip>

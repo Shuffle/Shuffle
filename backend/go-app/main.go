@@ -4147,8 +4147,8 @@ func runInitEs(ctx context.Context) {
 
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
-	} else if err == nil {
-		log.Printf("[DEBUG] Downloading default apps")
+	} else if err == nil && len(workflowapps) < 10 {
+		log.Printf("[DEBUG] Downloading default apps as %d were found", len(workflowapps))
 		fs := memfs.New()
 		storer := memory.NewStorage()
 
@@ -4204,6 +4204,8 @@ func runInitEs(ctx context.Context) {
 		if len(location) != 0 {
 			handleAppHotload(ctx, location, false)
 		}
+	} else {
+		log.Printf("[DEBUG] Skipping download of default apps as %d were found", len(workflowapps))
 	}
 
 	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
@@ -4219,7 +4221,7 @@ func runInitEs(ctx context.Context) {
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
 		log.Printf("[WARNING] Failed loading repo %s into memory: %s", apis, err)
-	} else {
+	} else if err == nil && len(workflowapps) < 10 {
 		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
 		dir, err := fs.ReadDir("")
 		if err != nil {
@@ -4228,6 +4230,8 @@ func runInitEs(ctx context.Context) {
 
 		iterateOpenApiGithub(fs, dir, "", "")
 		log.Printf("[INFO] Finished downloading extra API samples")
+	} else {
+		log.Printf("[INFO] Skipping download of extra API samples as %d were found", len(workflowapps))
 	}
 
 	log.Printf("[INFO] Finished INIT (ES)")
@@ -5857,7 +5861,6 @@ func initHandlers() {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
 	r.HandleFunc("/api/v1/health", shuffle.RunOpsHealthCheck).Methods("GET", "OPTIONS")
-
 	r.HandleFunc("/api/v1/health/stats", shuffle.GetOpsDashboardStats).Methods("GET", "OPTIONS")
 
 	// Make user related locations
