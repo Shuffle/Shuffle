@@ -2,7 +2,7 @@
 
 default_ip=$(ifconfig | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}')
 
-read -p "Enter your node public IP (default is $default_ip): " custom_ip
+read -p "Enter your node IP to use for cert generation (default is $default_ip): " custom_ip
 # Use localhost as the default value
 node_ip=${custom_ip:-$default_ip}
 
