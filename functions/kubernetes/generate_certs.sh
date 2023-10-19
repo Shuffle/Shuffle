@@ -1,6 +1,16 @@
 #!/bin/bash
+# Check if ifconfig is present and use it to get the default IP
+if command -v ifconfig &> /dev/null; then
+    default_ip=$(ifconfig | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}')
+# Check if ip is present and use it if ifconfig is not available
+elif command -v ip &> /dev/null; then
+    default_ip=$(ip addr show | grep -oP 'inet \K[\d.]+' |  sed -n '2p')
+# If both tools are not available, error out
+else
+    echo "Error: Neither ifconfig nor ip command found in the machine. Exiting.."
+    exit 1
+fi
 
-default_ip=$(ifconfig | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}')
 
 read -p "Enter your node IP to use for cert generation (default is $default_ip): " custom_ip
 # Use localhost as the default value
