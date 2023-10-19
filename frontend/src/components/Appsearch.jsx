@@ -54,14 +54,14 @@ const Appsearch = props => {
 		  <form noValidate action="" role="search">
 				<TextField 
 					fullWidth
-					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, width: "100%",}} 
+					style={{backgroundColor: "#2F2F2F", borderRadius: borderRadius, width: "100%",}} 
 					InputProps={{
 						style:{
 							color: "white",
 							fontSize: "1em",
 							height: 50,
 						},
-						startAdornment: (
+						endAdornment: (
 							<InputAdornment position="start">
 								<SearchIcon style={{marginLeft: 5}}/>
 							</InputAdornment>
@@ -71,7 +71,8 @@ const Appsearch = props => {
 					type="search"
 					color="primary"
 					defaultValue={defaultSearch}
-					placeholder={`Find ${defaultSearch} Apps...`}
+					// placeholder={`Find ${defaultSearch} Apps...`}
+					placeholder= {defaultSearch ? `${defaultSearch}` : "Search Cases "}
 					id="shuffle_workflow_search_field"
 					onChange={(event) => {
 						refine(event.currentTarget.value)
@@ -92,9 +93,9 @@ const Appsearch = props => {
 			<Grid container spacing={0} style={{border: "1px solid rgba(255,255,255,0.2)", maxHeight: 250, minHeight: 250, overflowY: "auto", overflowX: "hidden", }}>
 				{hits.map((data, index) => {
 					const paperStyle = {
-						backgroundColor: index === mouseHoverIndex ? "rgba(255,255,255,0.8)" : theme.palette.inputColor,
+						backgroundColor: index === mouseHoverIndex ? "rgba(255,255,255,0.8)" : "#2F2F2F",
 						color: index === mouseHoverIndex ? theme.palette.inputColor : "rgba(255,255,255,0.8)", 
-						border: newSelectedApp.objectID !== data.objectID ? `1px solid rgba(255,255,255,0.2)` : "2px solid #f86a3e", 
+						// border: newSelectedApp.objectID !== data.objectID ? `1px solid rgba(255,255,255,0.2)` : "2px solid #f86a3e", 
 						textAlign: "left",
 						padding: 10,
 						cursor: "pointer",
@@ -183,7 +184,7 @@ const Appsearch = props => {
 							}
 						}}>
 							<div style={{display: "flex"}}>
-								<img alt={data.name} src={data.image_url} style={{width: "100%", maxWidth: 30, minWidth: 30, minHeight: 30, maxHeight: 30, display: "block", }} />
+								<img alt={data.name} src={data.image_url} style={{width: "100%", maxWidth: 30, minWidth: 30, minHeight: 30, borderRadius: 40, maxHeight: 30, display: "block", }} />
 								<Typography variant="body1" style={{marginTop: 2, marginLeft: 10, }}>
 									{parsedname}
 								</Typography>

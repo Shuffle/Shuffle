@@ -295,7 +295,7 @@ const ExploreWorkflow = (props) => {
                 Start using workflows
             </Typography>
             <Typography variant="body2" style={{ marginLeft: 8, marginTop: 10, marginRight: 30, marginBottom: 40, }} color="rgba(158, 158, 158, 1)">
-                Based on what you selected here’s our recommendations!
+                Based on what you selected workflows, here are our recommendations! You will see more of these later.
             </Typography>
 
             <div style={{ marginTop: 0, }}>

@@ -13321,7 +13321,7 @@ const AngularWorkflow = (defaultprops) => {
   		<Typography
   			variant="body2"
   		>
-  			{workflow.errors.slice(0,4).map((error) => {
+  			{workflow.errors.slice(0,3).map((error) => {
   				return (
   					<div>
   						- {error}

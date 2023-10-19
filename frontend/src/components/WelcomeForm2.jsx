@@ -200,20 +200,10 @@ const WelcomeForm = (props) => {
   }, [discoveryWrapper]);
 
   useEffect(() => {
-    if (
-      window.location.search !== undefined &&
-      window.location.search !== null
-    ) {
+    if (window.location.search !== undefined && window.location.search !== null) {
+    
       const urlSearchParams = new URLSearchParams(window.location.search);
       const params = Object.fromEntries(urlSearchParams.entries());
-      const foundTab = params["tab"];
-      if (foundTab !== null && foundTab !== undefined && !isNaN(foundTab)) {
-        if (foundTab === 3 || foundTab === "3") {
-          //console.log("Set search!")
-        }
-      } else {
-        //navigate(`/welcome?tab=1`)
-      }
 
       const foundTemplate = params["workflow_template"];
       if (foundTemplate !== null && foundTemplate !== undefined) {
@@ -730,77 +720,6 @@ const WelcomeForm = (props) => {
         ) : (
           <div>
             {getStepContent(activeStep)}
-            {/* 	<div style={{marginBottom: 20, }}/>
-													{activeStep === 2 || activeStep === 1 ? 
-														<div style={{margin: "auto", minWidth: 500, maxWidth: 500, position: "relative", }}>
-															<Button 
-																disabled={activeStep === 0} 
-																onClick={handleBack}
-																variant={"outlined"}
-																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -625-extraHeight : -576, left: activeStep === 1 ? 125 : -125+clickdiff, borderRadius: "50px 0px 0px 50px", }} 
-															>
-																	Back
-															</Button>
-															<Button 
-																variant={"outlined"}
-																color="primary" 
-																onClick={handleNext} 
-																style={{marginLeft: 10, height: 64, width: 100, position: "absolute", top: activeStep === 1 ? -625-extraHeight : -576, left: activeStep === 1 ? 738 : 489+clickdiff, borderRadius: "0px 50px 50px 0px", }}
-																disabled={activeStep === 0 ? orgName.length === 0 || name.length === 0 : false}
-															>
-																	{activeStep === steps.length - 1 ? "Finish" : "Next"}
-															</Button>
-														</div>
-														: 
-														<div style={{margin: "auto", minWidth: 500, maxWidth: 500, marginLeft: activeStep === 1 ? 250 : "auto", marginTop: activeStep === 0 ? 25 : 0, }}>
-															<Button disabled={activeStep === 0} onClick={handleBack}>
-																	Back
-															</Button>
-															// (commented) isStepOptional(activeStep) && (
-																	<Button
-																			variant="contained"
-																			color="primary"
-																			onClick={handleSkip}
-																	>
-																			Skip
-																	</Button>
-															) //commented
-															<Button 
-																variant={activeStep === 1 ? finishedApps.length >= 4 ? "contained" : "outlined" : "outlined"}
-																color="primary" 
-																onClick={handleNext} 
-																style={{marginLeft: 10, }} 
-																disabled={activeStep === 0 ? orgName.length === 0 || name.length === 0 : false}
-															>
-																	{activeStep === steps.length - 1 ? "Finish" : "Next"}
-															</Button>
-															{activeStep === 0 ? 
-																<Button 
-																	variant={"outlined"}
-																	color="secondary" 
-																	onClick={() => {
-																		console.log("Skip!")
-    		
-																		setclickdiff(240)
-																		if (isCloud) {
-																				ReactGA.event({
-																					category: "welcome",
-																					action: "click_page_one_skip",
-																					label: "",
-																				})
-																		}
-
-																		setActiveStep(1)
-																		navigate(`/welcome?tab=2`)
-																	}} 
-																	style={{marginLeft: 240, }} 
-																	disabled={activeStep !== 0}
-																>
-																	Skip
-																</Button>
-															: null}
-                    			</div>
-												}*/}
           </div>
         )}
       </div>

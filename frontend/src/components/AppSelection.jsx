@@ -48,12 +48,20 @@ const AppSelection = props => {
     const [selectionOpen, setSelectionOpen] = React.useState(false)
     const [newSelectedApp, setNewSelectedApp] = React.useState({})
     const [finishedApps, setFinishedApps] = React.useState([])
+    const [appName, setAppName] = React.useState();
     const [moreButton, setMoreButton] = useState(false);
-    const [mouseHoverIndex, setMouseHoverIndex] = useState(-1)
+    
+    // const [mouseHoverIndex, setMouseHoverIndex] = useState(-1)
     const ref = useRef()
     let navigate = useNavigate();
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
+    const mouseOver = (e) => {
+        e.target.style.border = "1px solid #f85a3e";
+    }
+    const mouseOut = (e) => {
+        e.target.style.border = "1px solid rgb(33, 33, 33)";
+    }
     const setFrameworkItem = (data) => {
         console.log("Setting framework item: ", data, isCloud)
         // if (!isCloud) {
@@ -89,7 +97,6 @@ const AppSelection = props => {
 
                     }
                 }
-
                 //setFrameworkLoaded(true)
                 //setFrameworkData(responseJson)
             })
@@ -118,7 +125,6 @@ const AppSelection = props => {
         setDiscoveryData(label)
         setSelectionOpen(true)
         setNewSelectedApp({})
-
         setDefaultSearch(label.charAt(0).toUpperCase() + (label.substring(1)).toLowerCase())
     };
 
@@ -140,13 +146,13 @@ const AppSelection = props => {
             appFramework.siem = submitNewApp
         }
         else if (discoveryData === "ERADICATION") {
-            appFramework.eradication = submitNewApp
+            appFramework.edr = submitNewApp
         }
         else if (discoveryData === "INTEL") {
             appFramework.intel = submitNewApp
         }
         else if (discoveryData === "EMAIL") {
-            appFramework.email = submitNewApp
+            appFramework.communication = submitNewApp
         }
         else if (discoveryData === "NETWORK") {
             appFramework.network = submitNewApp
@@ -158,27 +164,27 @@ const AppSelection = props => {
             appFramework.iam = submitNewApp
         }
         setFrameworkItem(submitNewApp);
-
         setSelectionOpen(false);
         console.log("Selected app changed (effect)");
-
     }, [newSelectedApp]);
 
-    const sizing = 510;
-    const buttonWidth = 450;
-  const buttonMargin = 10;
+    const sizing = moreButton ? 510 : 480;
+    const buttonWidth = 450;    
+    const buttonMargin = 10;
     const bottomButtonStyle = {
         borderRadius: 200,
         marginTop: moreButton ? 44 : "",
         height: 51,
-        width: 464,
+        width: 510,
         fontSize: 16,
         // background: "linear-gradient(89.83deg, #FF8444 0.13%, #F2643B 99.84%)",
         background: "linear-gradient(90deg, #F86744 0%, #F34475 100%)",
         padding: "16px 24px",
         // top: 20,
         // margin: "auto",
+        textTransform: 'capitalize',
         itemAlign: "center",
+        // marginTop: 25
         // marginLeft: "65px",
       };
     const buttonStyle = {
@@ -191,18 +197,18 @@ const AppSelection = props => {
         fontSize: 17,
         background: "rgba(33, 33, 33, 1)",
         textTransform: 'capitalize',
-        border: mouseHoverIndex ? "1px solid rgba(33, 33, 33, 1)" : "1px solid #f85a3e",
+        border: "1px solid rgba(33, 33, 33, 1)",
         borderRadius: 8,
         marginRight: 8,
     };
-
+    // console.log("appFramework",appFramework.cases.name)
     return (
         <Collapse in={true}>
             <div
                 style={{
                     minHeight: sizing,
                     maxHeight: sizing,
-                    marginTop: 20,
+                    marginTop: 10,
                     width: 500,
                 }}
             >
@@ -223,8 +229,8 @@ const AppSelection = props => {
                         }}
                     >
                         <div style={{ display: "flex" }}>
-                            <div style={{ display: "flex", textAlign: "center" }}>
-                                <Typography style={{ padding: 16 }}> {discoveryData} </Typography>
+                            <div style={{ display: "flex", textAlign: "center", textTransform: "capitalize"}}>
+                                <Typography style={{ padding: 16, color:"#FFFFFF", textTransform: "capitalize" }}> {discoveryData} </Typography>
                             </div>
                             <div style={{ display: "flex" }}>
                                 <Tooltip
@@ -275,6 +281,7 @@ const AppSelection = props => {
                                                 setFrameworkItem(submitDeletedApp)
                                                 setNewSelectedApp({})
                                             }, 1000)
+                                            //setAppName(discoveryData.cases.name)
                                         }}
                                     >
                                         <DeleteIcon style={{ color: "white", height: 15, width: 15, }} />
@@ -319,14 +326,9 @@ const AppSelection = props => {
                     Select the apps you work with and we will connect the for you.
                 </Typography>
                 <Grid item xs={11} style={{}}>
+                    
                     {/*<FormLabel style={{ color: "#B9B9BA" }}>Find your integrations!</FormLabel>*/}
-                    <div style={{ display: "flex", width: 464 }}
-                        onMouseOver={() => {
-                            setMouseHoverIndex()
-                        }} onMouseOut={() => {
-                            setMouseHoverIndex(-1)
-                        }}
-                    >
+                    <div style={{ display: "flex", width: 510, height:100 }}>
                         <Button
                             disabled={finishedApps.includes("CASES")}
                             variant={
@@ -344,8 +346,10 @@ const AppSelection = props => {
                                 background: "rgba(33, 33, 33, 1)",
                                 borderRadius: 8,
                                 textTransform: 'capitalize',
-                                border: mouseHoverIndex ? "1px solid rgba(33, 33, 33, 1)" : "1px solid #f85a3e",
+                                border: "1px solid rgba(33, 33, 33, 1)" ,
                             }}
+                            onMouseOver={mouseOver} 
+                            onMouseOut={mouseOut}
                             // startIcon = {defaultSearch === "CASES" ? newSelectedApp.image_url : <LightbulbIcon/>}
                             onClick={(event) => {
                                 onNodeSelect("CASES");
@@ -354,23 +358,28 @@ const AppSelection = props => {
                         >
                             {appFramework === undefined || appFramework.cases === undefined || appFramework.cases.large_image === undefined ||
                                 appFramework === null || appFramework.cases === null || appFramework.cases.large_image === null || appFramework.cases.large_image.length === 0 ?
-                                <LightbulbIcon style={{ marginRight: 8, borderRadius: 40, }} />
+                                <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
+                                <LightbulbIcon style={{ marginTop: 6 }} />
+                                </div>
                                 : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.cases.large_image} />}
-                                <div >
-                                    <Typography style={{display:"flex"}}>Case Management</Typography>
-                                    <Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }}>{newSelectedApp.name}</Typography>
+                                <div style={{marginLeft: 8, }}>
+                                    <Typography style={{display:"flex",border:"none"}} >Case Management</Typography>
+                                    {appFramework === undefined || appFramework.cases === undefined || appFramework.cases.name === undefined ||
+                                    appFramework === null || appFramework.cases === null || appFramework.cases.name === null || appFramework.cases.name.length === 0 ?
+                                    "":<Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.cases.name.split('_').join(' ')}</Typography>}
                                 </div>
                         </Button>
                     </div>
-                    <div style={{ display: "flex", width: 464 }}>
+                    <div style={{ display: "flex", width: 510, height: 100 }}>
                         <Button
-                            // disabled={finishedApps.includes("SIEM")}
+                            disabled={finishedApps.includes("SIEM")}
                             variant={
                                 defaultSearch === "SIEM" ? "contained" : "outlined"
                             }
                             style={buttonStyle}
-
                             // startIcon={<SearchIcon />}
+                            onMouseOver={mouseOver} 
+                            onMouseOut={mouseOut}
                             color="secondary"
                             onClick={(event) => {
                                 onNodeSelect("SIEM");
@@ -379,15 +388,24 @@ const AppSelection = props => {
                         >
                             {appFramework === undefined || appFramework.siem === undefined || appFramework.siem.large_image === undefined ||
                                 appFramework === null || appFramework.siem === null || appFramework.siem.large_image === null || appFramework.siem.large_image.length === 0 ?
-                                <SearchIcon style={{ marginRight: 8, borderRadius: 40, }} />
+                                <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
+                                <SearchIcon style={{ marginTop: 6 }} />
+                                </div>
                                 : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.siem.large_image} />}
-                            SIEM
+                            <div style={{marginLeft: 8,}}>
+                            <Typography style={{display:"flex",}}>SIEM</Typography>
+                            {appFramework === undefined || appFramework.siem === undefined || appFramework.siem.name === undefined ||
+                                appFramework === null || appFramework.siem === null || appFramework.siem.name === null || appFramework.siem.name.length === 0 ?
+                                    "":<Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.siem.name.split('_').join(' ')}</Typography>}
+                            </div>
                         </Button>
                         <Button
                             disabled={
                                 finishedApps.includes("EDR & AV") ||
                                 finishedApps.includes("ERADICATION")
                             }
+                            onMouseOver={mouseOver} 
+                            onMouseOut={mouseOut}
                             variant={
                                 defaultSearch === "Eradication" ? "contained" : "outlined"
                             }
@@ -398,19 +416,28 @@ const AppSelection = props => {
                                 onNodeSelect("ERADICATION");
                             }}
                         >
-                            {appFramework === undefined || appFramework.eradication === undefined || appFramework.eradication.large_image === undefined ||
-                                appFramework === null || appFramework.eradication === null || appFramework.eradication.large_image === null || appFramework.eradication.large_image.length === 0 ?
-                                <NewReleasesIcon style={{ marginRight: 8, borderRadius: 40, }} />
-                                : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.eradication.large_image} />}
-                            Endpoint
+                            {appFramework === undefined || appFramework.edr === undefined || appFramework.edr.large_image === undefined ||
+                                appFramework === null || appFramework.edr === null || appFramework.edr.large_image === null || appFramework.edr.large_image.length === 0 ?
+                                <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
+                                <NewReleasesIcon style={{marginTop: 8 }} />
+                                </div>
+                                : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.edr.large_image} />}
+                            <div style={{marginLeft: 8,}}>
+                            <Typography style={{display:"flex",}}>Endpoint</Typography>
+                            {appFramework === undefined || appFramework.edr === undefined || appFramework.edr.name === undefined ||
+                                appFramework === null || appFramework.edr === null || appFramework.edr.name === null || appFramework.edr.name.length === 0 ?
+                                    "":<Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.edr.name.split('_').join(' ')}</Typography>}
+                            </div>
                         </Button>
                     </div>
-                    <div style={{ display: "flex", width: 464 }}>
+                    <div style={{ display: "flex", width: 510, height: 100 }}>
                         <Button
                             disabled={finishedApps.includes("INTEL")}
                             variant={
                                 defaultSearch === "INTEL" ? "contained" : "outlined"
                             }
+                            onMouseOver={mouseOver} 
+                            onMouseOut={mouseOut}
                             style={buttonStyle}
                             // startIcon={<ExtensionIcon />}
                             color="secondary"
@@ -420,9 +447,16 @@ const AppSelection = props => {
                         >
                             {appFramework === undefined || appFramework.intel === undefined || appFramework.intel.large_image === undefined ||
                                 appFramework === null || appFramework.intel === null || appFramework.intel.large_image === null || appFramework.intel.large_image.length === 0 ?
-                                <ExtensionIcon style={{ marginRight: 8, borderRadius: 40, }} />
+                                <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
+                                <ExtensionIcon style={{ marginTop: 8 }} />
+                                </div>
                                 : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.intel.large_image} />}
-                            Intel
+                            <div style={{marginLeft: 8,}}>
+                            <Typography style={{display:"flex",}}>Intel</Typography>
+                            {appFramework === undefined || appFramework.intel === undefined || appFramework.intel.name === undefined ||
+                                appFramework === null || appFramework.intel === null || appFramework.intel.name === null || appFramework.intel.name.length === 0 ?
+                                    "":<Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.intel.name.split('_').join(' ')}</Typography>}
+                            </div>
                         </Button>
                         <Button
                             disabled={
@@ -432,6 +466,8 @@ const AppSelection = props => {
                             variant={
                                 defaultSearch === "EMAIL" ? "contained" : "outlined"
                             }
+                            onMouseOver={mouseOver} 
+                            onMouseOut={mouseOut}
                             style={buttonStyle}
                             // startIcon={<EmailIcon />}
                             color="secondary"
@@ -439,26 +475,29 @@ const AppSelection = props => {
                                 onNodeSelect("EMAIL");
                             }}
                         >
-                            {appFramework === undefined || appFramework.email === undefined || appFramework.email.large_image === undefined ||
-                                appFramework === null || appFramework.email === null || appFramework.email.large_image === null || appFramework.email.large_image.length === 0 ?
-                                <EmailIcon style={{ marginRight: 8, borderRadius: 40, }} />
-                                : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.email.large_image} />}
-                            Email
+                            {appFramework === undefined || appFramework.communication === undefined || appFramework.communication.large_image === undefined ||
+                                appFramework === null || appFramework.communication === null || appFramework.communication.large_image === null || appFramework.communication.large_image.length === 0 ?
+                                <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
+                                <EmailIcon style={{ marginTop: 8 }} />
+                                </div>
+                                : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.communication.large_image} />}
+                            <div style={{marginLeft: 8,}}>
+                            <Typography style={{display:"flex",}}>Email</Typography>
+                            {appFramework === undefined || appFramework.communication === undefined || appFramework.communication.name === undefined ||
+                                appFramework === null || appFramework.communication === null || appFramework.communication.name === null || appFramework.communication.name.length === 0 ?
+                                    "":<Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.communication.name.split('_').join(' ')}</Typography>}
+                            </div>
                         </Button>
                     </div>
                     {moreButton ? (
-                        <div style={{ display: "flex", width: 464 }}
-                            onMouseOver={() => {
-                                setMouseHoverIndex()
-                            }} onMouseOut={() => {
-                                setMouseHoverIndex(-1)
-                            }}
-                        >
+                        <div style={{ display: "flex", width: 510, height: 100, marginBottom: 20 }}>
                             <Button
                                 disabled={finishedApps.includes("NETWORK")}
                                 variant={
                                     defaultSearch === "NETWORK" ? "contained" : "outlined"
                                 }
+                                onMouseOver={mouseOver}
+                                onMouseOut={mouseOut}
                                 style={buttonStyle}
                                 // startIcon={<ExtensionIcon />}
                                 color="secondary"
@@ -468,9 +507,16 @@ const AppSelection = props => {
                             >
                                 {appFramework === undefined || appFramework.network === undefined || appFramework.network.large_image === undefined ||
                                     appFramework === null || appFramework.network === null || appFramework.network.large_image === null || appFramework.network.large_image.length === 0 ?
-                                    <ShowChartIcon style={{ marginRight: 8, borderRadius: 40, }} />
+                                    <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
+                                    <ShowChartIcon style={{ marginTop: 8 }} />
+                                    </div>
                                     : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.network.large_image} />}
-                                Network
+                                <div style={{marginLeft: 8,}}>
+                            <Typography style={{display:"flex",}}>Network</Typography>
+                            {appFramework === undefined || appFramework.network === undefined || appFramework.network.name === undefined ||
+                                appFramework === null || appFramework.network === null || appFramework.network.name === null || appFramework.network.name.length === 0 ?
+                                    "":<Typography style={{fontSize: 10, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.network.name}</Typography>}
+                            </div>
                             </Button>
                             <Button
                                 disabled={
@@ -479,6 +525,8 @@ const AppSelection = props => {
                                 variant={
                                     defaultSearch === "ASSETS" ? "contained" : "outlined"
                                 }
+                                onMouseOver={mouseOver}
+                                onMouseOut={mouseOut}
                                 style={buttonStyle}
                                 // startIcon={<EmailIcon />}
                                 color="secondary"
@@ -488,9 +536,16 @@ const AppSelection = props => {
                             >
                                 {appFramework === undefined || appFramework.assets === undefined || appFramework.assets.large_image === undefined ||
                                     appFramework === null || appFramework.assets === null || appFramework.assets.large_image === null || appFramework.assets.large_image.length === 0 ?
-                                    <ExploreIcon style={{ marginRight: 8, borderRadius: 40, }} />
+                                    <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
+                                    <ExploreIcon style={{ marginTop: 8 }} />
+                                    </div>
                                     : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.assets.large_image} />}
-                                Assets
+                                <div style={{marginLeft: 8,}}>
+                            <Typography style={{display:"flex",}}>Assets</Typography>
+                            {appFramework === undefined || appFramework.assets === undefined || appFramework.assets.name === undefined ||
+                                appFramework === null || appFramework.assets === null || appFramework.assets.name === null || appFramework.assets.name.length === 0 ?
+                                    "":<Typography style={{fontSize: 10, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.assets.name}</Typography>}
+                            </div>
                             </Button>
                             <Button
                                 disabled={
@@ -499,6 +554,8 @@ const AppSelection = props => {
                                 variant={
                                     defaultSearch === "IAM" ? "contained" : "outlined"
                                 }
+                                onMouseOver={mouseOver}
+                                onMouseOut={mouseOut}
                                 style={buttonStyle}
                                 // startIcon={<EmailIcon />}
                                 color="secondary"
@@ -508,14 +565,21 @@ const AppSelection = props => {
                             >
                                 {appFramework === undefined || appFramework.iam === undefined || appFramework.iam.large_image === undefined ||
                                     appFramework === null || appFramework.iam === null || appFramework.iam.large_image === null || appFramework.iam.large_image.length === 0 ?
-                                    <FingerprintIcon style={{ marginRight: 8, borderRadius: 40, }} />
+                                    <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
+                                    <FingerprintIcon style={{ marginTop: 8 }} />
+                                    </div>
                                     : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.iam.large_image} />}
-                                IAM
+                                <div style={{marginLeft: 8,}}>
+                            <Typography style={{display:"flex",}}>IAM</Typography>
+                            {appFramework === undefined || appFramework.iam === undefined || appFramework.iam.name === undefined ||
+                                appFramework === null || appFramework.iam === null || appFramework.iam.name === null || appFramework.iam.name.length === 0 ?
+                                    "":<Typography style={{fontSize: 8, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.iam.name}</Typography>}
+                            </div>
                             </Button>
                         </div>
                     )
                         :
-                        <div style={{ display: "flex", width: 464, paddingLeft: 140, paddingTop: 25 }}>
+                        <div style={{ display: "flex", width: 510, paddingLeft: 165,  }}>
                             <Button
                                 style={{ color: "#f86a3e", textTransform: 'capitalize', border: 2, backgroundColor: "var(--Background-color, #1A1A1A)" }}
                                 className="btn btn-primary"
@@ -528,30 +592,6 @@ const AppSelection = props => {
                                 </Typography>
                             </Button>
                         </div>}
-
-                    {/* <FormControl>
-                                <FormLabel style={{ color: "#B9B9BA" }}>What do you want to automate first ?</FormLabel>
-                                <FormGroup>
-                                    <FormControlLabel
-                                        value="Email"
-                                        control={<Checkbox style={{ color: "#F85A3E" }} onChange={(event) => { onNodeSelect("Email") }} />}
-                                        label="Email"
-                                        labelPlacement="Email"
-                                    />
-                                    <FormControlLabel
-                                        value="SIEM"
-                                        control={<Checkbox style={{ color: "#F85A3E" }} onChange={(event) => { onNodeSelect("SIEM") }} />}
-                                        label="SIEM"
-                                        labelPlacement="SIEM"
-                                    />
-                                    <FormControlLabel
-                                        value="EDR"
-                                        control={<Checkbox style={{ color: "#F85A3E" }} onChange={(event) => { onNodeSelect("EDR") }} />}
-                                        label="EDR"
-                                        labelPlacement="EDR"
-                                    />
-                                </FormGroup>
-                            </FormControl> */}
                 </Grid>
             </div>
             <div style={{ flexDirection: "row", }}>

@@ -42,7 +42,6 @@ const Welcome = (props) => {
 
 	let navigate = useNavigate();
 	useEffect(() => {
-		console.log("IN USEEFFECT FOR ACTIVESTEP: ", activeStep, " and with login: ", checkLogin)
 		if (checkLogin !== undefined) {
 			checkLogin()
 		}
@@ -280,7 +279,7 @@ const Welcome = (props) => {
 				const urlSearchParams = new URLSearchParams(window.location.search);
 				const params = Object.fromEntries(urlSearchParams.entries());
 				const foundTab = params["tab"];
-				if (foundTab !== null && foundTab !== undefined && !isNaN(foundTab)) {
+				if (foundTab !== null && foundTab !== undefined && !isNaN(foundTab) && foundTab >= 1 && foundTab <= 3) {
 					setShowWelcome(true)
 					if (foundTab === 3 || foundTab === "3") {
 						handleSetSearch(usecaseButtons[0].name, usecaseButtons[0].usecase)
@@ -288,8 +287,7 @@ const Welcome = (props) => {
 
 					setActiveStep(foundTab-1)
 				} else { 
-    			//navigate(`/welcome?tab=1`)
-    			navigate(`/welcome?tab=2`)
+					navigate(`/welcome?tab=2`)
 				}
 			}
 		}, [])
@@ -528,6 +526,8 @@ const Welcome = (props) => {
 								
 								<div style={{ flexDirection: "row", }}>
 									<Button variant="contained" type="submit" fullWidth style={buttonStyle} onClick={() => {
+										navigate(`/welcome?tab=2`)
+										setActiveStep(1)
 										ReactGA.event({
 											category: "welcome",
 											action: "click_welcome_continue",

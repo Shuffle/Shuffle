@@ -27,6 +27,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	// import httptest
+	"net/http/httptest"
+
 	//"regexp"
 	"strings"
 	"time"
@@ -4025,7 +4028,7 @@ func runInitEs(ctx context.Context) {
 
 		jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
 		if err != nil {
-			log.Printf("[CRITICAL] Failed to schedule org: %s", err)
+			log.Printf("[ERROR] Failed to schedule org: %s", err)
 		} else {
 			log.Printf("[INFO] Started sync on interval %d for org %s (%s)", interval, org.Name, org.Id)
 			scheduledOrgs[org.Id] = jobret
@@ -4232,6 +4235,32 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Finished downloading extra API samples")
 	} else {
 		log.Printf("[INFO] Skipping download of extra API samples as %d were found", len(workflowapps))
+	}
+
+	
+	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
+		healthcheckInterval := 15
+		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
+		job := func() {
+			// Prepare a fake http.responsewriter 
+			resp := httptest.NewRecorder()
+
+			request := http.Request{}
+			// Add the "force=true" query to the fake request
+			request.URL, err  = url.Parse("/api/v1/health/stats?force=true")
+			if err != nil {
+				log.Printf("[ERROR] Failed to parse test url for healthstats: %s", err)
+			}
+
+			shuffle.RunOpsHealthCheck(resp, &request)
+		}
+
+		_, err := newscheduler.Every(int(healthcheckInterval)).Minutes().Run(job)
+		if err != nil {
+			log.Printf("[ERROR] Failed to schedule healthcheck: %s", err)
+		} else {
+			log.Printf("[DEBUG] Successfully started healthcheck interval of %d minutes", healthcheckInterval)
+		}
 	}
 
 	log.Printf("[INFO] Finished INIT (ES)")
@@ -4731,9 +4760,9 @@ func runInit(ctx context.Context) {
 
 		jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
 		if err != nil {
-			log.Printf("[CRITICAL] Failed to schedule org: %s", err)
+			log.Printf("[ERROR] Failed to schedule org: %s", err)
 		} else {
-			log.Printf("Started sync on interval %d for org %s", interval, org.Name)
+			log.Printf("[INFO] Started sync on interval %d for org %s", interval, org.Name)
 			scheduledOrgs[org.Id] = jobret
 		}
 	}
@@ -5281,7 +5310,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
 	if err != nil {
-		log.Printf("[CRITICAL] Failed to schedule org: %s", err)
+		log.Printf("[ERROR] Failed to schedule org: %s", err)
 	} else {
 		log.Printf("[INFO] Started sync on interval %d for org %s", interval, org.Name)
 		scheduledOrgs[org.Id] = jobret

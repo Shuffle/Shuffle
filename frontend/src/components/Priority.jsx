@@ -112,7 +112,7 @@ const Priority = (props) => {
 				</span>
 				{priority.type === "usecase" && priority.description.includes("&") ?
 					<span style={{display: "flex", marginTop: 10,  }}>
-						<img src={newdescription.split("&")[1]} alt={priority.name} style={{height: realigned ? 30 : "auto", width: realigned ? 30 : 40, marginRight: realigned ? -10 : 10,	borderRadius: theme.palette.borderRadius, marginTop: realigned ? 5 : 0 }} />
+						<img src={newdescription.split("&")[1]} alt={priority.name} style={{height: "auto", width: 30, marginRight: realigned ? -10 : 10,	borderRadius: theme.palette.borderRadius, marginTop: realigned ? 5 : 0 }} />
 						<Typography variant="body2" color="textSecondary" style={{marginTop: 3, }}>
 							{newdescription.split("&")[0]} 
 						</Typography>
@@ -120,7 +120,7 @@ const Priority = (props) => {
 						{newdescription.split("&").length > 3 ?
 							<span style={{display: "flex", }}>
 								<ArrowForwardIcon style={{marginLeft: 15, marginRight: 15, }}/>
-								<img src={newdescription.split("&")[3]} alt={priority.name+"2"} style={{height: realigned ? 30 : "auto", width: realigned ? 30 : 40, marginRight: realigned ? -10 : 10,	borderRadius: theme.palette.borderRadius, marginTop: realigned ? 5 : 0 }} />
+								<img src={newdescription.split("&")[3]} alt={priority.name+"2"} style={{height: "auto", width: 30, marginRight: realigned ? -10 : 10,	borderRadius: theme.palette.borderRadius, marginTop: realigned ? 5 : 0 }} />
 								<Typography variant="body2" color="textSecondary" style={{marginTop: 3}}>
 									{newdescription.split("&")[2]} 
 								</Typography>
