@@ -2,7 +2,7 @@
 
 ### Prerequisites:
 -	Clone the https://github.com/shuffle/shuffle repository using Git then, navigate to the functions/kubernetes directory, which contains all the necessary Kubernetes configuration files for deployment.
--	[Running a Kubernetes cluster](https://kubernetes.io/docs/setup/). You can do that with either minikube or run the cluster locally. If you're running on minikube and you can't access the ports 30007-30008, you can use ```kubectl port-forward svc/frontend 3000:80 -n shuffle``` to access the frontend on port 3000
+-	[Running a Kubernetes cluster](https://kubernetes.io/docs/setup/). You can do that with either minikube or run the cluster locally.
 - Ensure you have a local Docker registry set up to store and manage Docker images for applications built with Shuffle. While the registry is crucial for handling custom-built apps, you’ll still be able to run workflows without it. To setup a docker registry, if you have docker installed on one of your node run following commands.
   ```
   chmod +x generate_certs.sh
@@ -27,4 +27,6 @@ Step 1: Create a namespace called shuffle in a cluster by running ```kubectl cre
 Step 2: Open the ```all-in-one.yaml``` file and review the configuration values. Change the value of REGISTRY_URL with '<NODE_IP>:5000' where the registry is at. Adjust other variables as per your deployment requirements; otherwise, the application will deploy using the default settings provided within the file. Then apply the configmap and deploy with ```kubectl apply -f all-in-one.yaml -n shuffle```
 
 Now, open ```https://<YOUR_NODE_IP>:30008``` or ```http://<YOUR_NODE_IP>:30007```. You should be seeing a signup page. NODE_IP should be where the frontend is deployed.
+
+If you're running on minikube and you can't access the ports 30007-30008, you can use ```kubectl port-forward svc/frontend 3001:80 -n shuffle``` to access the frontend on port 3000
 
