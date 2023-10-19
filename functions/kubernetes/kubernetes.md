@@ -2,7 +2,7 @@
 
 ### Prerequisites:
 -	Clone the https://github.com/shuffle/shuffle repository using Git then, navigate to the functions/kubernetes directory, which contains all the necessary Kubernetes configuration files for deployment.
--	Running Kubernetes cluster. You can do that with either minikube or run the cluster locally. If you're running on minikube, make sure to have exposed the ports ```30007-30008```, which you can do by running minikube like this: ```minikube start --extra-config=apiserver.service-node-port-range=30007-30008```
+-	[Running a Kubernetes cluster](https://kubernetes.io/docs/setup/). You can do that with either minikube or run the cluster locally. If you're running on minikube, make sure to have exposed the ports ```30007-30008```, which you can do by running minikube like this: ```minikube start --extra-config=apiserver.service-node-port-range=30007-30008```
 - Ensure you have a local Docker registry set up to store and manage Docker images for applications built with Shuffle. While the registry is crucial for handling custom-built apps, you’ll still be able to run workflows without it. To setup a docker registry, if you have docker installed on one of your node run following commands.
   ```
   openssl req -newkey rsa:4096 -nodes -sha256 -keyout certs/reg.key -x509 -days 365 -out certs/reg.crt -subj "/CN=<YOUR_NODE_LOCAL_IP>"
