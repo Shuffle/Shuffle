@@ -5861,7 +5861,6 @@ func initHandlers() {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
 	r.HandleFunc("/api/v1/health", shuffle.RunOpsHealthCheck).Methods("GET", "OPTIONS")
-
 	r.HandleFunc("/api/v1/health/stats", shuffle.GetOpsDashboardStats).Methods("GET", "OPTIONS")
 
 	// Make user related locations

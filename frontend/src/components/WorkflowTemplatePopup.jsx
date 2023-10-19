@@ -171,8 +171,13 @@ const WorkflowTemplatePopup = (props) => {
 		// name: "Email analysis"
 		// source:{app_id: "accdaaf2eeba6a6ed43b2efc0112032d", app_name
 		
-		setWorkflowLoading(true)
+
+		if (srcapp.includes(":default") || dstapp.includes(":default")) {
+			toast("You need to select both a source and destination app before generating this workflow.")
+			return
+		}
 		
+		setWorkflowLoading(true)
 
 		// FIXME: Remove hardcoding here after testing, and user srcapp/dstapp
 		const newsrcapp = srcapp
