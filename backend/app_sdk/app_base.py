@@ -3588,10 +3588,6 @@ class AppBase:
 
                                     if "the JSON object must be" in errorstring:
                                         self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (0)? the JSON object must be in...")
-                                        #try:
-                                        #    e = json.loads(f"{e}")
-                                        #except:
-                                        #    e = f"{e}"
 
                                         newres = json.dumps({
                                             "success": False,

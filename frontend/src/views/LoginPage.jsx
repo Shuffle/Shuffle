@@ -339,7 +339,7 @@ const LoginDialog = (props) => {
                 variant="body2"
                 style={{ marginBottom: 20, color: "white" }}
               >
-                <b>2.</b> Disable memory swap on the host
+                <b>2.</b> Disable memory swap on the host:
                 <br />
                 <br />
 				sudo swapoff -a
@@ -348,10 +348,10 @@ const LoginDialog = (props) => {
                 variant="body2"
                 style={{ marginBottom: 20, color: "white" }}
               >
-                <b>3</b>. Restart docker-compose:
+                <b>3</b>. Restart the database:
                 <br />
                 <br />
-                sudo docker-compose restart
+                sudo docker restart shuffle-opensearch
               </Typography>
             </Paper>
             <Typography

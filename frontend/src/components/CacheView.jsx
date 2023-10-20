@@ -18,7 +18,6 @@ import {
     DialogTitle,
     DialogActions,
 } from "@mui/material";
-//import { useAlert 
 
 import {
     Edit as EditIcon,
@@ -74,7 +73,7 @@ const CacheView = (props) => {
     const [dataValue, setDataValue] = React.useState({});
     const [editCache, setEditCache] = React.useState(false);
     const [show, setShow] = useState({});
-    //const alert = useAlert();
+
     useEffect(() => {
         listOrgCache(orgId);
         console.log("orgid", orgId);
