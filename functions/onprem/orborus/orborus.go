@@ -1364,8 +1364,9 @@ func main() {
 				log.Printf("[ERROR] Failed marshalling. Maybe max 4 second timeout? %s", err)
 			}
 
-			if orborusStats.CPUPercent > 80 {
-				log.Printf("[DEBUG] CPU usage is at %f%%. This may be the max limit the machine should be running at.", orborusStats.CPUPercent)
+			maxAmount := 80
+			if orborusStats.CPUPercent > maxAmount {
+				log.Printf("[DEBUG] CPU usage is at %f%%. This is more than the max limit the machine should be running at (%d).", orborusStats.CPUPercent, maxAmount)
 			}
 		}
 
@@ -1893,6 +1894,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	_ = body
 
-	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING: docker service logs shuffle-workers 2>&1 | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
+	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING:\ndocker service logs shuffle-workers 2>&1 -f | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
 	return nil
 }
