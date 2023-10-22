@@ -27,6 +27,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"sync"
+	//"math/rand"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -39,8 +41,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	//"github.com/mackerelio/go-osstat/disk"
-	"github.com/mackerelio/go-osstat/memory"
-	"github.com/shirou/gopsutil/cpu"
+	//"github.com/mackerelio/go-osstat/memory"
+	//"github.com/shirou/gopsutil/cpu"
 
 	//k8s deps
 	"k8s.io/client-go/kubernetes"
@@ -68,6 +70,7 @@ var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 var dockerSwarmBridgeMTU = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_MTU")
 var dockerSwarmBridgeInterface = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_INTERFACE")
+var isKubernetes = os.Getenv("IS_KUBERNETES")
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -229,16 +232,18 @@ func deployServiceWorkers(image string) {
 			log.Printf("[ERROR] Failed to get network interfaces: %s", err)
 		}
 
-		mtu, err := strconv.Atoi(dockerSwarmBridgeMTU) // by default
-		bridgeName := dockerSwarmBridgeInterface
-
-		if bridgeName == "" {
-			bridgeName = "eth0"
+		mtu := 1500
+		if len(dockerSwarmBridgeMTU) == 0 {
+			mtu, err = strconv.Atoi(dockerSwarmBridgeMTU) // by default
+			if err != nil {
+				log.Printf("[DEBUG] Failed to convert the default MTU to int: %s. Using 1500 instead. Input: %s", err, dockerSwarmBridgeMTU)
+				mtu = 1500
+			}
 		}
 
-		if err != nil {
-			log.Printf("[DEBUG] Failed to convert the default MTU to int: %s. Using 1500 instead", err)
-			mtu = 1500
+		bridgeName := dockerSwarmBridgeInterface
+		if bridgeName == "" {
+			bridgeName = "eth0"
 		}
 
 		// Check if there is at least one interface
@@ -583,10 +588,7 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
 
-	if os.Getenv("IS_KUBERNETES") == "true" {
-		// log.Printf("IS_KUBERNETS", os.Getenv("IS_KUBERNETES"))
-		// log.Printf("REGISTRY_URL", os.Getenv("REGISTRY_URL"))
-
+	if isKubernetes == "true" {
 		if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
 			env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
 			env = append(env, fmt.Sprintf("IS_KUBERNETES=%s", os.Getenv("IS_KUBERNETES")))
@@ -944,6 +946,49 @@ func checkSwarmService(ctx context.Context) {
 	log.Printf("[DEBUG] Swarm info: %s\n\n", ret)
 }
 
+func getContainerResourceUsage(ctx context.Context, cli *dockerclient.Client, containerID string) (float64, float64, error) {
+	// Get container stats
+	stats, err := cli.ContainerStats(ctx, containerID, false)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer stats.Body.Close()
+
+	// Parse and return CPU and memory utilization
+	cpuUsage, memoryUsage, err := parseResourceUsage(stats.Body)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return cpuUsage, memoryUsage, nil
+}
+
+func parseResourceUsage(body io.Reader) (float64, float64, error) {
+	var stats types.StatsJSON
+
+	// Decode the stream of stats as JSON
+	decoder := json.NewDecoder(body)
+	if err := decoder.Decode(&stats); err != nil {
+		return 0, 0, err
+	}
+
+	//log.Printf("CPU : %d", stats.CPUStats.CPUUsage.TotalUsage)
+	//log.Printf("CPU2: %d", stats.PreCPUStats.CPUUsage.TotalUsage)
+
+	// Calculate time difference between current and previous stats in nanoseconds
+	timeDelta := float64(stats.Read.Sub(stats.PreRead).Nanoseconds())
+
+	// Calculate CPU usage percentage
+	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
+	cpuUsage := (cpuDelta / timeDelta) * 100.0
+
+	// Calculate memory usage percentage
+	memoryUsage := float64(stats.MemoryStats.Usage) / float64(stats.MemoryStats.Limit) * 100.0
+
+	return cpuUsage, memoryUsage, nil
+
+}
+
 func getOrborusStats() shuffle.OrborusStats {
 	newStats := shuffle.OrborusStats{
 		OrgId:        org,
@@ -956,25 +1001,97 @@ func getOrborusStats() shuffle.OrborusStats {
 		newStats.Swarm = true
 	}
 
-	if runningMode == "kubernetes" || runningMode == "k8s" {
-		newStats.Kubernetes = true
-	}
+
+	// Run this 1/10 times
+	//if rand.Intn(10) != 1 {
+	//	return newStats
+	//}
 
 	newStats.PollTime = sleepTime
 	newStats.MaxQueue = maxConcurrency
 	newStats.Queue = executionCount
 
-	// Get CPU usage and max CPU
-	/*
-		before, err := cpu.Get()
-		if err != nil {
-			log.Printf("[ERROR] Failed getting CPU stats: %s", err)
-		} else {
-			newStats.CPU = int(before.User)
-			newStats.MaxCPU = int(before.Total)
-		}
-	*/
+	if isKubernetes == "true" || runningMode == "kubernetes" || runningMode == "k8s"  {
+		newStats.Kubernetes = true
+		return newStats
+	}
 
+	// Use the docker API to get the CPU usage of the docker engine machine
+	ctx := context.Background()
+	pers, err := dockercli.Info(ctx)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting docker info: %s", err)
+	} else {
+		newStats.TotalContainers = pers.Containers
+		newStats.StoppedContainers = pers.ContainersStopped
+
+		// Calculate the amount of CPU utilization on the host
+		newStats.CPU = int(pers.NCPU)
+		newStats.MaxCPU = int(pers.NCPU)
+		newStats.Memory = int(pers.MemTotal)
+		newStats.MaxMemory = int(pers.MemTotal)
+	}
+
+		// Get list of all running containers
+	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Failed getting container list: %s", err)
+		return newStats
+	}
+
+	// Iterate through containers and get CPU usage
+	totalCPU := 0.0
+	memUsage := 0.0
+
+	// Use a WaitGroup to wait for all goroutines to finish
+	var wg sync.WaitGroup
+
+	// Channel to collect results
+	resultCh := make(chan struct {
+		containerID string
+		cpuUsage    float64
+		memoryUsage float64
+	})
+
+	// Iterate through containers and start a goroutine for each container
+	for _, container := range containers {
+		wg.Add(1)
+		go func(container types.Container) {
+			defer wg.Done()
+
+			// Get CPU and memory usage for the container
+			cpuUsage, memoryUsage, err := getContainerResourceUsage(ctx, dockercli, container.ID)
+			if err != nil {
+				fmt.Printf("Error getting resource usage for container %s: %v\n", container.ID, err)
+			}
+
+			// Send the result to the channel
+			resultCh <- struct {
+				containerID string
+				cpuUsage    float64
+				memoryUsage float64
+			}{container.ID, cpuUsage, memoryUsage}
+		}(container)
+	}
+
+	// Close the result channel after all goroutines are done
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
+
+	// Collect results from the channel
+	for result := range resultCh {
+		//fmt.Printf("Container %s CPU utilization: %.2f%%, Memory utilization: %.2f%%\n", result.containerID, result.cpuUsage, result.memoryUsage)
+		totalCPU += result.cpuUsage
+		memUsage += result.memoryUsage
+	}
+
+	newStats.CPUPercent = totalCPU
+	newStats.Memory = int(memUsage)
+	log.Printf("[DEBUG] CPU: %f, Memory: %f", totalCPU, memUsage)
+
+	/*
 	cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
 	if err == nil && len(cpuPercent) > 0 {
 		newStats.CPUPercent = cpuPercent[0]
@@ -989,6 +1106,7 @@ func getOrborusStats() shuffle.OrborusStats {
 		newStats.Memory = int(memory.Used)
 		newStats.MaxMemory = int(memory.Total)
 	}
+	*/
 
 	// Get disk usage
 	/*
@@ -1048,11 +1166,9 @@ func getKubernetesClient() (*kubernetes.Clientset, error) {
 
 // Initial loop etc
 func main() {
-
 	if isRunningInCluster() {
 		log.Printf("[INFO] Running inside k8s cluster")
 	}
-
 
 	startupDelay := os.Getenv("SHUFFLE_ORBORUS_STARTUP_DELAY")
 	if len(startupDelay) > 0 {
@@ -1469,7 +1585,7 @@ func main() {
 func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	//log.Printf("[DEBUG] Getting running workers with API version %s", dockerApiVersion)
 	counter := 0
-	if os.Getenv("IS_KUBERNETES") == "true" {
+	if isKubernetes  == "true" {
 		log.Printf("[INFO] getting running workers in kubernetes")
 
 		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
@@ -1554,7 +1670,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 // FIXME - add this to remove exited workers
 // Should it check what happened to the execution? idk
 func zombiecheck(ctx context.Context, workerTimeout int) error {
-	isK8s := os.Getenv("IS_KUBERNETES") == "true"
+	isK8s := isKubernetes == "true"
 
 	executionIds = []string{}
 	if swarmConfig == "run" || swarmConfig == "swarm" || isK8s {
