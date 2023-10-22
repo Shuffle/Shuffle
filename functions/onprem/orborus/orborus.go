@@ -1198,8 +1198,6 @@ func main() {
 	//sigCh := make(chan os.Signal, 1)
 	//signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	//defer cleanup()
-	//sig := <-sigCh
-	//log.Printf("[INFO] Received signal %s. Exiting.", sig)
 
 	// Block until a signal is received
 	if isRunningInCluster() {
@@ -1510,13 +1508,15 @@ func main() {
 			}
 
 			if shuffle.ArrayContains(executionIds, execution.ExecutionId) {
-				log.Printf("[INFO] Execution already handled (rerun of old executions): %s", execution.ExecutionId)
+				log.Printf("[INFO] Execution already handled (rerun of old executions?): %s", execution.ExecutionId)
 				toBeRemoved.Data = append(toBeRemoved.Data, execution)
-				continue
+
+				if swarmConfig != "run" && swarmConfig != "swarm" {
+					continue
+				}
 			}
 
 			// Now, how do I execute this one?
-			// FIXME - if error, check the status of the running one. If it's bad, send data back.
 			containerName := fmt.Sprintf("worker-%s", execution.ExecutionId)
 			env := []string{
 				fmt.Sprintf("AUTHORIZATION=%s", execution.Authorization),
