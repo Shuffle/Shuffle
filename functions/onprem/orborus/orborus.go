@@ -1105,7 +1105,7 @@ func getOrborusStats() shuffle.OrborusStats {
 
 	newStats.CPUPercent = totalCPU
 	newStats.MemoryPercent = memUsage
-	//log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
+	log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
 
 	/*
 	cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
