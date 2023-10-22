@@ -1818,12 +1818,17 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 	}
 
 	streamUrl := fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
-	if (containerId == "" || containerId == "shuffle-orborus") && !strings.Contains(workerServerUrl, "shuffle-backend") {
+	if containerId == "" || containerId == "shuffle-orborus" {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
 	}
 
-	if len(workerServerUrl) > 0 && !strings.Contains(workerServerUrl, "shuffle-backend") {
+	if len(workerServerUrl) > 0  {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
+	}
+
+	if strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "shuffle-backend") {
+		log.Printf("[INFO] Using default worker server url as previous is invalid: %s", streamUrl)
+		streamUrl = fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
 	}
 
 	client := &http.Client{}
