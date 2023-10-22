@@ -975,7 +975,8 @@ func parseResourceUsage(body io.Reader) (float64, float64, error) {
 	//log.Printf("[DEBUG] CPU : %d", stats.CPUStats.CPUUsage.TotalUsage)
 	//log.Printf("[DEBUG] CPU2: %d", stats.PreCPUStats.CPUUsage.TotalUsage)
 	if stats.CPUStats.CPUUsage.TotalUsage == 0 || stats.PreCPUStats.CPUUsage.TotalUsage == 0 {
-		log.Printf("[DEBUG] BODY: %#v", stats)
+		//log.Printf("[DEBUG] BODY: %#v", stats)
+		return 0, 0, nil
 	}
 
 	// Calculate time difference between current and previous stats in nanoseconds
