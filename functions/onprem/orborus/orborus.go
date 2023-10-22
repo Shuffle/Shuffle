@@ -972,9 +972,8 @@ func parseResourceUsage(body io.Reader) (float64, float64, error) {
 		return 0, 0, err
 	}
 
-	log.Printf("[DEBUG] CPU : %d", stats.CPUStats.CPUUsage.TotalUsage)
-	log.Printf("[DEBUG] CPU2: %d", stats.PreCPUStats.CPUUsage.TotalUsage)
-
+	//log.Printf("[DEBUG] CPU : %d", stats.CPUStats.CPUUsage.TotalUsage)
+	//log.Printf("[DEBUG] CPU2: %d", stats.PreCPUStats.CPUUsage.TotalUsage)
 	if stats.CPUStats.CPUUsage.TotalUsage == 0 || stats.PreCPUStats.CPUUsage.TotalUsage == 0 {
 		log.Printf("[DEBUG] BODY: %#v", stats)
 	}
@@ -1055,6 +1054,11 @@ func getOrborusStats() shuffle.OrborusStats {
 
 	// Iterate through containers and start a goroutine for each container
 	for _, container := range containers {
+		// Check if container is running
+		if container.State != "running" {
+			continue
+		}
+
 		wg.Add(1)
 		go func(container types.Container) {
 			defer wg.Done()
