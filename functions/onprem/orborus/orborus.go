@@ -1170,6 +1170,8 @@ func getKubernetesClient() (*kubernetes.Clientset, error) {
 
 // Initial loop etc
 func main() {
+	getOrborusStats() 
+
 	if isRunningInCluster() {
 		log.Printf("[INFO] Running inside k8s cluster")
 	}
