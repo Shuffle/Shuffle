@@ -30,6 +30,9 @@ import (
 	"sync"
 	"math"
 
+	//"os/signal"
+	//"syscall"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -71,7 +74,7 @@ var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 var dockerSwarmBridgeMTU = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_MTU")
 var dockerSwarmBridgeInterface = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_INTERFACE")
 var isKubernetes = os.Getenv("IS_KUBERNETES")
-var maxCPUPercent = 85 
+var maxCPUPercent = 95 
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -1182,8 +1185,23 @@ func getKubernetesClient() (*kubernetes.Clientset, error) {
 	}
 }
 
+func cleanup() {
+	log.Printf("[INFO] Cleaning up during shutdown")
+	ctx := context.Background()
+	cleanupExistingNodes(ctx)
+	zombiecheck(ctx, 600)
+	os.Exit(0)
+}
+
 // Initial loop etc
 func main() {
+	//sigCh := make(chan os.Signal, 1)
+	//signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	//defer cleanup()
+	//sig := <-sigCh
+	//log.Printf("[INFO] Received signal %s. Exiting.", sig)
+
+	// Block until a signal is received
 	if isRunningInCluster() {
 		log.Printf("[INFO] Running inside k8s cluster")
 	}
@@ -1373,7 +1391,7 @@ func main() {
 				log.Printf("[ERROR] Failed marshalling. Maybe max 4 second timeout? %s", err)
 			}
 
-			if orborusStats.CPUPercent > maxCPUPercent {
+			if int(orborusStats.CPUPercent) > maxCPUPercent {
 				log.Printf("[DEBUG] CPU usage is at %f%%. This is more than the max limit the machine should be running at (%d). Waiting before continue.", orborusStats.CPUPercent, maxCPUPercent)
 				time.Sleep(time.Duration(sleepTime) * time.Second)
 				continue
@@ -1614,6 +1632,7 @@ func main() {
 
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}
+
 }
 
 // Is this ok to do with Docker? idk :)
