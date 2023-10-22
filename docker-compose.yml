@@ -57,7 +57,7 @@ services:
     security_opt:
       - seccomp:unconfined
   opensearch:
-    image: opensearchproject/opensearch:2.5.0
+    image: opensearchproject/opensearch:2.11.0
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
@@ -84,9 +84,17 @@ services:
     networks:
       - shuffle
     restart: unless-stopped
+
+  #memcached:
+  #  image: docker.io/bitnami/memcached:1
+  #  container_name: shuffle-cache
+  #  hostname: shuffle-cache
+  #  ports:
+  #    - 11211:11211
+  
   #docker-socket-proxy:
   #  image: tecnativa/docker-socket-proxy
-  #  container_name: shuffle-frontend
+  #  container_name: docker-socket-proxy 
   #  hostname: docker-socket-proxy
   #  privileged: true
   #  environment:
@@ -111,6 +119,7 @@ services:
   #    - /var/run/docker.sock:/var/run/docker.sock
   #  networks:
   #    - shuffle
+  #
 networks:
   shuffle:
     driver: bridge

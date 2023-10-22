@@ -14,6 +14,7 @@ import ExtensionIcon from "@mui/icons-material/Extension";
 import EmailIcon from "@mui/icons-material/Email";
 import FingerprintIcon from '@mui/icons-material/Fingerprint';
 import AppSearch from "../components/Appsearch.jsx";
+import AppSearchButtons from "../components/AppSearchButtons.jsx";
 import { toast } from 'react-toastify';
 import {
     Zoom,
@@ -42,26 +43,23 @@ const AppSelection = props => {
         setActiveStep,
         defaultSearch,
         setDefaultSearch,
-		checkLogin,
+        checkLogin,
     } = props;
     const [discoveryData, setDiscoveryData] = React.useState({})
     const [selectionOpen, setSelectionOpen] = React.useState(false)
     const [newSelectedApp, setNewSelectedApp] = React.useState({})
     const [finishedApps, setFinishedApps] = React.useState([])
+    const [appButtons, setAppButtons] = useState([])
+    const [apps, setApps] = useState([])
     const [appName, setAppName] = React.useState();
     const [moreButton, setMoreButton] = useState(false);
-    
+
     // const [mouseHoverIndex, setMouseHoverIndex] = useState(-1)
     const ref = useRef()
     let navigate = useNavigate();
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
-    const mouseOver = (e) => {
-        e.target.style.border = "1px solid #f85a3e";
-    }
-    const mouseOut = (e) => {
-        e.target.style.border = "1px solid rgb(33, 33, 33)";
-    }
+
     const setFrameworkItem = (data) => {
         console.log("Setting framework item: ", data, isCloud)
         // if (!isCloud) {
@@ -82,9 +80,9 @@ const AppSelection = props => {
                     console.log("Status not 200 for framework!");
                 }
 
-				if (checkLogin !== undefined) {
-					checkLogin()
-				}
+                if (checkLogin !== undefined) {
+                    checkLogin()
+                }
 
                 return response.json();
             })
@@ -101,12 +99,53 @@ const AppSelection = props => {
                 //setFrameworkData(responseJson)
             })
             .catch((error) => {
-				if (checkLogin !== undefined) {
-					checkLogin()
-				}
+                if (checkLogin !== undefined) {
+                    checkLogin()
+                }
 
                 toast(error.toString());
                 //setFrameworkLoaded(true)
+            })
+    }
+    const GetApps = (data) => {
+        console.log("Setting framework item: ", data, isCloud)
+        // if (!isCloud) {
+        //   activateApp(data.id)
+        // }
+
+        fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify(data),
+            credentials: "include",
+        })
+            .then((responseJson) => {
+                if (responseJson === null) {
+                    console.log("null-response from server")
+                    const pretend_apps = [{
+                        "description": "TBD",
+                        "id": "TBD",
+                        "large_image": "",
+                        "name": "TBD",
+                        "type": "TBD"
+                    }]
+
+                    setApps(pretend_apps)
+                    return
+                }
+
+                if (responseJson.success === false) {
+                    console.log("error loading apps: ", responseJson)
+                    return
+                }
+
+                setApps(responseJson);
+            })
+            .catch((error) => {
+                console.log("App loading error: " + error.toString());
             })
     }
 
@@ -127,6 +166,36 @@ const AppSelection = props => {
         setNewSelectedApp({})
         setDefaultSearch(label.charAt(0).toUpperCase() + (label.substring(1)).toLowerCase())
     };
+
+    useEffect(() => {
+        var tempApps = []
+        if (tempApps.length === 0) {
+            const tempApps =
+                [{
+                    "description": newSelectedApp.description,
+                    "id": newSelectedApp.objectID,
+                    "large_image": newSelectedApp.image_url,
+                    "name": newSelectedApp.name,
+                    "type": discoveryData
+                },
+                    //{
+                    // 	// description: newSelectedApp.siem.description,
+                    //     id: newSelectedApp.siem.objectID,
+                    //     large_image: newSelectedApp.siem.image_url,
+                    //     name: newSelectedApp.siem.name,
+                    //     type: discoveryData.siem
+                    // },{
+                    // 	// description: newSelectedApp.edr.description,
+                    //     id: newSelectedApp.edr.objectID,
+                    //     large_image: newSelectedApp.edr.image_url,
+                    //     name: newSelectedApp.edr.name,
+                    //     type: discoveryData.edr
+                    // }
+                ]
+            setAppButtons(tempApps)
+            GetApps()
+        }
+    }, [])
 
     useEffect(() => {
         if (newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined || newSelectedApp.objectID.length === 0) {
@@ -169,7 +238,7 @@ const AppSelection = props => {
     }, [newSelectedApp]);
 
     const sizing = moreButton ? 510 : 480;
-    const buttonWidth = 450;    
+    const buttonWidth = 450;
     const buttonMargin = 10;
     const bottomButtonStyle = {
         borderRadius: 200,
@@ -186,7 +255,7 @@ const AppSelection = props => {
         itemAlign: "center",
         // marginTop: 25
         // marginLeft: "65px",
-      };
+    };
     const buttonStyle = {
         flex: 1,
         width: 224,
@@ -229,8 +298,8 @@ const AppSelection = props => {
                         }}
                     >
                         <div style={{ display: "flex" }}>
-                            <div style={{ display: "flex", textAlign: "center", textTransform: "capitalize"}}>
-                                <Typography style={{ padding: 16, color:"#FFFFFF", textTransform: "capitalize" }}> {discoveryData} </Typography>
+                            <div style={{ display: "flex", textAlign: "center", textTransform: "capitalize" }}>
+                                <Typography style={{ padding: 16, color: "#FFFFFF", textTransform: "capitalize" }}> {discoveryData} </Typography>
                             </div>
                             <div style={{ display: "flex" }}>
                                 <Tooltip
@@ -325,274 +394,29 @@ const AppSelection = props => {
                 >
                     Select the apps you work with and we will connect the for you.
                 </Typography>
-                <Grid item xs={11} style={{}}>
-                    
-                    {/*<FormLabel style={{ color: "#B9B9BA" }}>Find your integrations!</FormLabel>*/}
-                    <div style={{ display: "flex", width: 510, height:100 }}>
-                        <Button
-                            disabled={finishedApps.includes("CASES")}
-                            variant={
-                                defaultSearch === "CASES" ? "contained" : "outlined"
-                            }
-                            color="secondary"
-                            style={{
-                                flex: 1,
-                                width: "100%",
-                                padding: 25,
-                                margin: buttonMargin,
-                                fontSize: 18,
-                                color: "var(--White-text, #F1F1F1)",
-                                fontWeight: 400,
-                                background: "rgba(33, 33, 33, 1)",
-                                borderRadius: 8,
-                                textTransform: 'capitalize',
-                                border: "1px solid rgba(33, 33, 33, 1)" ,
-                            }}
-                            onMouseOver={mouseOver} 
-                            onMouseOut={mouseOut}
-                            // startIcon = {defaultSearch === "CASES" ? newSelectedApp.image_url : <LightbulbIcon/>}
-                            onClick={(event) => {
-                                onNodeSelect("CASES");
-                                setDefaultSearch(discoveryData.label)
-                            }}
-                        >
-                            {appFramework === undefined || appFramework.cases === undefined || appFramework.cases.large_image === undefined ||
-                                appFramework === null || appFramework.cases === null || appFramework.cases.large_image === null || appFramework.cases.large_image.length === 0 ?
-                                <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
-                                <LightbulbIcon style={{ marginTop: 6 }} />
-                                </div>
-                                : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.cases.large_image} />}
-                                <div style={{marginLeft: 8, }}>
-                                    <Typography style={{display:"flex",border:"none"}} >Case Management</Typography>
-                                    {appFramework === undefined || appFramework.cases === undefined || appFramework.cases.name === undefined ||
-                                    appFramework === null || appFramework.cases === null || appFramework.cases.name === null || appFramework.cases.name.length === 0 ?
-                                    "":<Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.cases.name.split('_').join(' ')}</Typography>}
-                                </div>
-                        </Button>
-                    </div>
-                    <div style={{ display: "flex", width: 510, height: 100 }}>
-                        <Button
-                            disabled={finishedApps.includes("SIEM")}
-                            variant={
-                                defaultSearch === "SIEM" ? "contained" : "outlined"
-                            }
-                            style={buttonStyle}
-                            // startIcon={<SearchIcon />}
-                            onMouseOver={mouseOver} 
-                            onMouseOut={mouseOut}
-                            color="secondary"
-                            onClick={(event) => {
-                                onNodeSelect("SIEM");
-                                setDefaultSearch(discoveryData.label)
-                            }}
-                        >
-                            {appFramework === undefined || appFramework.siem === undefined || appFramework.siem.large_image === undefined ||
-                                appFramework === null || appFramework.siem === null || appFramework.siem.large_image === null || appFramework.siem.large_image.length === 0 ?
-                                <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
-                                <SearchIcon style={{ marginTop: 6 }} />
-                                </div>
-                                : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.siem.large_image} />}
-                            <div style={{marginLeft: 8,}}>
-                            <Typography style={{display:"flex",}}>SIEM</Typography>
-                            {appFramework === undefined || appFramework.siem === undefined || appFramework.siem.name === undefined ||
-                                appFramework === null || appFramework.siem === null || appFramework.siem.name === null || appFramework.siem.name.length === 0 ?
-                                    "":<Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.siem.name.split('_').join(' ')}</Typography>}
-                            </div>
-                        </Button>
-                        <Button
-                            disabled={
-                                finishedApps.includes("EDR & AV") ||
-                                finishedApps.includes("ERADICATION")
-                            }
-                            onMouseOver={mouseOver} 
-                            onMouseOut={mouseOut}
-                            variant={
-                                defaultSearch === "Eradication" ? "contained" : "outlined"
-                            }
-                            style={buttonStyle}
-                            // startIcon={<NewReleasesIcon />}
-                            color="secondary"
-                            onClick={(event) => {
-                                onNodeSelect("ERADICATION");
-                            }}
-                        >
-                            {appFramework === undefined || appFramework.edr === undefined || appFramework.edr.large_image === undefined ||
-                                appFramework === null || appFramework.edr === null || appFramework.edr.large_image === null || appFramework.edr.large_image.length === 0 ?
-                                <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
-                                <NewReleasesIcon style={{marginTop: 8 }} />
-                                </div>
-                                : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.edr.large_image} />}
-                            <div style={{marginLeft: 8,}}>
-                            <Typography style={{display:"flex",}}>Endpoint</Typography>
-                            {appFramework === undefined || appFramework.edr === undefined || appFramework.edr.name === undefined ||
-                                appFramework === null || appFramework.edr === null || appFramework.edr.name === null || appFramework.edr.name.length === 0 ?
-                                    "":<Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.edr.name.split('_').join(' ')}</Typography>}
-                            </div>
-                        </Button>
-                    </div>
-                    <div style={{ display: "flex", width: 510, height: 100 }}>
-                        <Button
-                            disabled={finishedApps.includes("INTEL")}
-                            variant={
-                                defaultSearch === "INTEL" ? "contained" : "outlined"
-                            }
-                            onMouseOver={mouseOver} 
-                            onMouseOut={mouseOut}
-                            style={buttonStyle}
-                            // startIcon={<ExtensionIcon />}
-                            color="secondary"
-                            onClick={(event) => {
-                                onNodeSelect("INTEL");
-                            }}
-                        >
-                            {appFramework === undefined || appFramework.intel === undefined || appFramework.intel.large_image === undefined ||
-                                appFramework === null || appFramework.intel === null || appFramework.intel.large_image === null || appFramework.intel.large_image.length === 0 ?
-                                <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
-                                <ExtensionIcon style={{ marginTop: 8 }} />
-                                </div>
-                                : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.intel.large_image} />}
-                            <div style={{marginLeft: 8,}}>
-                            <Typography style={{display:"flex",}}>Intel</Typography>
-                            {appFramework === undefined || appFramework.intel === undefined || appFramework.intel.name === undefined ||
-                                appFramework === null || appFramework.intel === null || appFramework.intel.name === null || appFramework.intel.name.length === 0 ?
-                                    "":<Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.intel.name.split('_').join(' ')}</Typography>}
-                            </div>
-                        </Button>
-                        <Button
-                            disabled={
-                                finishedApps.includes("COMMS") ||
-                                finishedApps.includes("EMAIL")
-                            }
-                            variant={
-                                defaultSearch === "EMAIL" ? "contained" : "outlined"
-                            }
-                            onMouseOver={mouseOver} 
-                            onMouseOut={mouseOut}
-                            style={buttonStyle}
-                            // startIcon={<EmailIcon />}
-                            color="secondary"
-                            onClick={(event) => {
-                                onNodeSelect("EMAIL");
-                            }}
-                        >
-                            {appFramework === undefined || appFramework.communication === undefined || appFramework.communication.large_image === undefined ||
-                                appFramework === null || appFramework.communication === null || appFramework.communication.large_image === null || appFramework.communication.large_image.length === 0 ?
-                                <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
-                                <EmailIcon style={{ marginTop: 8 }} />
-                                </div>
-                                : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.communication.large_image} />}
-                            <div style={{marginLeft: 8,}}>
-                            <Typography style={{display:"flex",}}>Email</Typography>
-                            {appFramework === undefined || appFramework.communication === undefined || appFramework.communication.name === undefined ||
-                                appFramework === null || appFramework.communication === null || appFramework.communication.name === null || appFramework.communication.name.length === 0 ?
-                                    "":<Typography style={{fontSize: 12, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.communication.name.split('_').join(' ')}</Typography>}
-                            </div>
-                        </Button>
-                    </div>
-                    {moreButton ? (
-                        <div style={{ display: "flex", width: 510, height: 100, marginBottom: 20 }}>
-                            <Button
-                                disabled={finishedApps.includes("NETWORK")}
-                                variant={
-                                    defaultSearch === "NETWORK" ? "contained" : "outlined"
-                                }
-                                onMouseOver={mouseOver}
-                                onMouseOut={mouseOut}
-                                style={buttonStyle}
-                                // startIcon={<ExtensionIcon />}
-                                color="secondary"
-                                onClick={(event) => {
-                                    onNodeSelect("NETWORK");
-                                }}
-                            >
-                                {appFramework === undefined || appFramework.network === undefined || appFramework.network.large_image === undefined ||
-                                    appFramework === null || appFramework.network === null || appFramework.network.large_image === null || appFramework.network.large_image.length === 0 ?
-                                    <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
-                                    <ShowChartIcon style={{ marginTop: 8 }} />
-                                    </div>
-                                    : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.network.large_image} />}
-                                <div style={{marginLeft: 8,}}>
-                            <Typography style={{display:"flex",}}>Network</Typography>
-                            {appFramework === undefined || appFramework.network === undefined || appFramework.network.name === undefined ||
-                                appFramework === null || appFramework.network === null || appFramework.network.name === null || appFramework.network.name.length === 0 ?
-                                    "":<Typography style={{fontSize: 10, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.network.name}</Typography>}
-                            </div>
-                            </Button>
-                            <Button
-                                disabled={
-                                    finishedApps.includes("ASSETS")
-                                }
-                                variant={
-                                    defaultSearch === "ASSETS" ? "contained" : "outlined"
-                                }
-                                onMouseOver={mouseOver}
-                                onMouseOut={mouseOut}
-                                style={buttonStyle}
-                                // startIcon={<EmailIcon />}
-                                color="secondary"
-                                onClick={(event) => {
-                                    onNodeSelect("ASSETS");
-                                }}
-                            >
-                                {appFramework === undefined || appFramework.assets === undefined || appFramework.assets.large_image === undefined ||
-                                    appFramework === null || appFramework.assets === null || appFramework.assets.large_image === null || appFramework.assets.large_image.length === 0 ?
-                                    <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
-                                    <ExploreIcon style={{ marginTop: 8 }} />
-                                    </div>
-                                    : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.assets.large_image} />}
-                                <div style={{marginLeft: 8,}}>
-                            <Typography style={{display:"flex",}}>Assets</Typography>
-                            {appFramework === undefined || appFramework.assets === undefined || appFramework.assets.name === undefined ||
-                                appFramework === null || appFramework.assets === null || appFramework.assets.name === null || appFramework.assets.name.length === 0 ?
-                                    "":<Typography style={{fontSize: 10, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.assets.name}</Typography>}
-                            </div>
-                            </Button>
-                            <Button
-                                disabled={
-                                    finishedApps.includes("IAM")
-                                }
-                                variant={
-                                    defaultSearch === "IAM" ? "contained" : "outlined"
-                                }
-                                onMouseOver={mouseOver}
-                                onMouseOut={mouseOut}
-                                style={buttonStyle}
-                                // startIcon={<EmailIcon />}
-                                color="secondary"
-                                onClick={(event) => {
-                                    onNodeSelect("IAM");
-                                }}
-                            >
-                                {appFramework === undefined || appFramework.iam === undefined || appFramework.iam.large_image === undefined ||
-                                    appFramework === null || appFramework.iam === null || appFramework.iam.large_image === null || appFramework.iam.large_image.length === 0 ?
-                                    <div style={{width: 40, border: "1px solid rgba(33, 33, 33, 1) !importent", height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign:"center"}}>
-                                    <FingerprintIcon style={{ marginTop: 8 }} />
-                                    </div>
-                                    : <img style={{ marginRight: 8, width: 40, height: 40, flexShrink: 0, borderRadius: 40, }} src={appFramework.iam.large_image} />}
-                                <div style={{marginLeft: 8,}}>
-                            <Typography style={{display:"flex",}}>IAM</Typography>
-                            {appFramework === undefined || appFramework.iam === undefined || appFramework.iam.name === undefined ||
-                                appFramework === null || appFramework.iam === null || appFramework.iam.name === null || appFramework.iam.name.length === 0 ?
-                                    "":<Typography style={{fontSize: 8, textAlign:"left", color:"var(--label-grey-text, #9E9E9E)" }} >{appFramework.iam.name}</Typography>}
-                            </div>
-                            </Button>
-                        </div>
+                {appButtons.map((appData, index) => {
+
+                    const appName = appData.name
+                    const AppImage = appData.large_image
+                    const appType = appData.type
+
+                    return (
+
+                        <AppSearchButtons
+                            appFramework={appFramework}
+                            appName={appName}
+                            appType = {appType}
+                            AppImage={AppImage}
+                            defaultSearch={defaultSearch}
+                            finishedApps={finishedApps}
+                            onNodeSelect={onNodeSelect}
+                            discoveryData={discoveryData}
+                            setDiscoveryData={setDiscoveryData}
+                            setDefaultSearch={setDefaultSearch}
+                            apps={apps}
+                        />
                     )
-                        :
-                        <div style={{ display: "flex", width: 510, paddingLeft: 165,  }}>
-                            <Button
-                                style={{ color: "#f86a3e", textTransform: 'capitalize', border: 2, backgroundColor: "var(--Background-color, #1A1A1A)" }}
-                                className="btn btn-primary"
-                                onClick={(event) => {
-                                    setMoreButton(true);
-                                }}
-                            >
-                                <Typography style={{ textDecorationLine: 'underline', }}>
-                                    See more Categories
-                                </Typography>
-                            </Button>
-                        </div>}
-                </Grid>
+                })}
             </div>
             <div style={{ flexDirection: "row", }}>
                 <Button variant="contained" type="submit" fullWidth style={bottomButtonStyle} onClick={() => {
