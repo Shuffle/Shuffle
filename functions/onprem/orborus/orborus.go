@@ -60,7 +60,7 @@ var sleepTime = 2
 
 // Making it work on low-end machines even during busy times :)
 // May cause some things to run slowly 
-var maxConcurrency = 2
+var maxConcurrency = 3 
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
@@ -606,11 +606,10 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			}
 		}
 
-		// log.Printf("envMap", envMap)
 		clientset, err := getKubernetesClient()
 		if err != nil {
-			fmt.Println("[ERROR]Error getting kubernetes client:", err)
-			// os.Exit(1)
+			log.Printf("[ERROR] Error getting kubernetes client:", err)
+			return err
 		}
 
 		pod := &corev1.Pod{
@@ -640,7 +639,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			fmt.Fprintf(os.Stderr, "Error creating pod: %v\n", err)
 		}
 
-		fmt.Printf("Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
+		log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
 	} else {
 
 		// Binds is the actual "-v" volume.
@@ -952,8 +951,8 @@ func getContainerResourceUsage(ctx context.Context, cli *dockerclient.Client, co
 	if err != nil {
 		return 0, 0, err
 	}
-	defer stats.Body.Close()
 
+	defer stats.Body.Close()
 	// Parse and return CPU and memory utilization
 	cpuUsage, memoryUsage, err := parseResourceUsage(stats.Body)
 	if err != nil {
@@ -993,7 +992,7 @@ func parseResourceUsage(body io.Reader) (float64, float64, error) {
 
 }
 
-func getOrborusStats() shuffle.OrborusStats {
+func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 	newStats := shuffle.OrborusStats{
 		OrgId:        org,
 		Environment:  environment,
@@ -1021,10 +1020,10 @@ func getOrborusStats() shuffle.OrborusStats {
 	}
 
 	// Use the docker API to get the CPU usage of the docker engine machine
-	ctx := context.Background()
 	pers, err := dockercli.Info(ctx)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting docker info: %s", err)
+		return newStats
 	} else {
 		newStats.TotalContainers = pers.Containers
 		newStats.StoppedContainers = pers.ContainersStopped
@@ -1068,7 +1067,7 @@ func getOrborusStats() shuffle.OrborusStats {
 			// Get CPU and memory usage for the container
 			cpuUsage, memoryUsage, err := getContainerResourceUsage(ctx, dockercli, container.ID)
 			if err != nil {
-				fmt.Printf("Error getting resource usage for container %s: %v\n", container.ID, err)
+				//log.Printf("[DEBUG] Error getting resource usage for container %s: %v\n", container.ID, err)
 			}
 
 			// Send the result to the channel
@@ -1092,7 +1091,7 @@ func getOrborusStats() shuffle.OrborusStats {
 	totalCPU := float64(0.0)
 	memUsage := float64(0.0)
 	for result := range resultCh {
-		//fmt.Printf("[DEBUG] Container %s CPU utilization: %.2f%%, Memory utilization: %.2f%%\n", result.containerID, result.cpuUsage, result.memoryUsage)
+		//log.Printf("[DEBUG] Container %s CPU utilization: %.2f%%, Memory utilization: %.2f%%\n", result.containerID, result.cpuUsage, result.memoryUsage)
 
 		// check if it's NaN or Inf
 		if !math.IsNaN(result.cpuUsage) {
@@ -1107,7 +1106,7 @@ func getOrborusStats() shuffle.OrborusStats {
 	newStats.CPUPercent = totalCPU/float64(newStats.CPU)
 	newStats.MemoryPercent = memUsage
 
-	log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
+	//log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
 
 	/*
 	cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
@@ -1184,8 +1183,6 @@ func getKubernetesClient() (*kubernetes.Clientset, error) {
 
 // Initial loop etc
 func main() {
-	getOrborusStats() 
-
 	if isRunningInCluster() {
 		log.Printf("[INFO] Running inside k8s cluster")
 	}
@@ -1354,13 +1351,21 @@ func main() {
 		if req.Method == "POST" {
 			// Should find data to send (memory etc.)
 
-			orborusStats := getOrborusStats()
+			// Create timeout of max 4 seconds just in case
+			ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+			defer cancel()
+
 			// Marshal and set body
+			orborusStats := getOrborusStats(ctx)
 			jsonData, err := json.Marshal(orborusStats)
 			if err == nil {
 				req.Body = ioutil.NopCloser(bytes.NewBuffer(jsonData))
 			} else {
-				log.Printf("[ERROR] Failed marshalling json: %s", err)
+				log.Printf("[ERROR] Failed marshalling. Maybe max 4 second timeout? %s", err)
+			}
+
+			if orborusStats.CPUPercent > 80 {
+				log.Printf("[DEBUG] CPU usage is at %f%%. This may be the max limit the machine should be running at.", orborusStats.CPUPercent)
 			}
 		}
 
