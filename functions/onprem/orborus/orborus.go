@@ -28,7 +28,7 @@ import (
 	"strings"
 	"time"
 	"sync"
-	//"math/rand"
+	"math"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -1087,8 +1087,15 @@ func getOrborusStats() shuffle.OrborusStats {
 	memUsage := float64(0.0)
 	for result := range resultCh {
 		fmt.Printf("[DEBUG] Container %s CPU utilization: %.2f%%, Memory utilization: %.2f%%\n", result.containerID, result.cpuUsage, result.memoryUsage)
-		totalCPU += float64(result.cpuUsage)
-		memUsage += float64(result.memoryUsage)
+
+		// check if it's NaN or Inf
+		if !math.IsNaN(result.cpuUsage) {
+			totalCPU += float64(result.cpuUsage)
+		} 
+
+		if !math.IsNaN(result.memoryUsage) {
+			memUsage += float64(result.memoryUsage)
+		}
 	}
 
 	newStats.CPUPercent = totalCPU
