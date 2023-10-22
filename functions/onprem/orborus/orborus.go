@@ -1090,7 +1090,7 @@ func getOrborusStats() shuffle.OrborusStats {
 	totalCPU := float64(0.0)
 	memUsage := float64(0.0)
 	for result := range resultCh {
-		fmt.Printf("[DEBUG] Container %s CPU utilization: %.2f%%, Memory utilization: %.2f%%\n", result.containerID, result.cpuUsage, result.memoryUsage)
+		//fmt.Printf("[DEBUG] Container %s CPU utilization: %.2f%%, Memory utilization: %.2f%%\n", result.containerID, result.cpuUsage, result.memoryUsage)
 
 		// check if it's NaN or Inf
 		if !math.IsNaN(result.cpuUsage) {
@@ -1104,7 +1104,7 @@ func getOrborusStats() shuffle.OrborusStats {
 
 	newStats.CPUPercent = totalCPU
 	newStats.MemoryPercent = memUsage
-	log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
+	//log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
 
 	/*
 	cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
