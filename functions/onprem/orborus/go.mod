@@ -2,7 +2,7 @@ module orborus
 
 go 1.19
 
-replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
+//replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
 
 require (
 	github.com/docker/docker v23.0.3+incompatible
