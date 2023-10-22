@@ -1043,10 +1043,6 @@ func getOrborusStats() shuffle.OrborusStats {
 		return newStats
 	}
 
-	// Iterate through containers and get CPU usage
-	totalCPU := 0.0
-	memUsage := 0.0
-
 	// Use a WaitGroup to wait for all goroutines to finish
 	var wg sync.WaitGroup
 
@@ -1085,6 +1081,10 @@ func getOrborusStats() shuffle.OrborusStats {
 	}()
 
 	// Collect results from the channel
+
+	// Iterate through containers and get CPU usage
+	totalCPU := float64(0.0)
+	memUsage := float64(0.0)
 	for result := range resultCh {
 		fmt.Printf("[DEBUG] Container %s CPU utilization: %.2f%%, Memory utilization: %.2f%%\n", result.containerID, result.cpuUsage, result.memoryUsage)
 		totalCPU += float64(result.cpuUsage)
@@ -1092,8 +1092,8 @@ func getOrborusStats() shuffle.OrborusStats {
 	}
 
 	newStats.CPUPercent = totalCPU
-	newStats.Memory = int(memUsage)
-	log.Printf("[DEBUG] CPU: %f, Memory: %f", totalCPU, memUsage)
+	newStats.MemoryPercent = memUsage
+	log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
 
 	/*
 	cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
