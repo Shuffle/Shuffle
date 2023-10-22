@@ -71,6 +71,7 @@ var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 var dockerSwarmBridgeMTU = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_MTU")
 var dockerSwarmBridgeInterface = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_INTERFACE")
 var isKubernetes = os.Getenv("IS_KUBERNETES")
+var maxCPUPercent = 85 
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -1345,6 +1346,14 @@ func main() {
 		req.Header.Add("X-Orborus-Runmode", "Docker Swarm")
 	}
 
+	if os.Getenv("SHUFFLE_MAX_CPU") != "" {
+		// parse 
+		tmpInt, err := strconv.Atoi(os.Getenv("SHUFFLE_MAX_CPU"))
+		if err == nil {
+			maxCPUPercent = tmpInt
+		}
+	}
+
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
 	for {
@@ -1364,9 +1373,10 @@ func main() {
 				log.Printf("[ERROR] Failed marshalling. Maybe max 4 second timeout? %s", err)
 			}
 
-			maxAmount := 80
-			if orborusStats.CPUPercent > maxAmount {
-				log.Printf("[DEBUG] CPU usage is at %f%%. This is more than the max limit the machine should be running at (%d).", orborusStats.CPUPercent, maxAmount)
+			if orborusStats.CPUPercent > maxCPUPercent {
+				log.Printf("[DEBUG] CPU usage is at %f%%. This is more than the max limit the machine should be running at (%d). Waiting before continue.", orborusStats.CPUPercent, maxCPUPercent)
+				time.Sleep(time.Duration(sleepTime) * time.Second)
+				continue
 			}
 		}
 
