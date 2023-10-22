@@ -1036,6 +1036,7 @@ func getOrborusStats() shuffle.OrborusStats {
 		newStats.MaxMemory = int(pers.MemTotal)
 	}
 
+
 		// Get list of all running containers
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{})
 	if err != nil {
@@ -1103,8 +1104,9 @@ func getOrborusStats() shuffle.OrborusStats {
 		}
 	}
 
-	newStats.CPUPercent = totalCPU
+	newStats.CPUPercent = totalCPU/float64(newStats.CPU)
 	newStats.MemoryPercent = memUsage
+
 	log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
 
 	/*

@@ -561,7 +561,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(workflowExecution.ExecutionOrg) > 0 && user.ActiveOrg.Id == workflowExecution.ExecutionOrg && user.Role == "admin" {
-			log.Printf("[DEBUG] User %s is in correct org. Allowing org continuation for execution!", user.Username)
+			//log.Printf("[DEBUG] User %s is in correct org. Allowing org continuation for execution!", user.Username)
 		} else {
 			log.Printf("[WARNING] Bad authorization key when getting stream results %s.", actionResult.ExecutionId)
 			resp.WriteHeader(401)
