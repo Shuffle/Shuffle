@@ -1370,7 +1370,6 @@ func main() {
 		}
 
 		newresp, err := client.Do(req)
-		//log.Printf("[DEBUG] Postrequest - queue")
 		if err != nil {
 			log.Printf("[WARNING] Failed making request to %s: %s", fullUrl, err)
 
@@ -1809,7 +1808,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		baseUrlSplit := strings.Split(baseUrl, ":")
 		if len(baseUrlSplit) >= 3 {
 			parsedBaseurl = strings.Join(baseUrlSplit[0:2], ":")
-			//parsedRequest.BaseUrl = fmt.Sprintf("%s:33333", parsedBaseurl)
 		}
 	}
 
@@ -1819,15 +1817,12 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		return err
 	}
 
-	//log.Printf("[DEBUG] Data: %s", string(data))
-
 	streamUrl := fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
-	if containerId == "" || containerId == "shuffle-orborus" {
+	if (containerId == "" || containerId == "shuffle-orborus") && !strings.Contains(workerServerUrl, "shuffle-backend") {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
 	}
 
-	// var workerServerUrl = os.Getenv("SHUFFLE_WORKER_SERVER_URL")
-	if len(workerServerUrl) > 0 {
+	if len(workerServerUrl) > 0 && !strings.Contains(workerServerUrl, "shuffle-backend") {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
 	}
 
