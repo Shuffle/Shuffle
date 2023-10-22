@@ -56,7 +56,7 @@ import (
 )
 
 // Starts jobs in bulk, so this could be increased
-var sleepTime = 3
+var sleepTime = 2
 
 // Making it work on low-end machines even during busy times :)
 // May cause some things to run slowly 
@@ -972,8 +972,12 @@ func parseResourceUsage(body io.Reader) (float64, float64, error) {
 		return 0, 0, err
 	}
 
-	//log.Printf("CPU : %d", stats.CPUStats.CPUUsage.TotalUsage)
-	//log.Printf("CPU2: %d", stats.PreCPUStats.CPUUsage.TotalUsage)
+	log.Printf("[DEBUG] CPU : %d", stats.CPUStats.CPUUsage.TotalUsage)
+	log.Printf("[DEBUG] CPU2: %d", stats.PreCPUStats.CPUUsage.TotalUsage)
+
+	if stats.CPUStats.CPUUsage.TotalUsage == 0 || stats.PreCPUStats.CPUUsage.TotalUsage == 0 {
+		log.Printf("[DEBUG] BODY: %#v", stats)
+	}
 
 	// Calculate time difference between current and previous stats in nanoseconds
 	timeDelta := float64(stats.Read.Sub(stats.PreRead).Nanoseconds())
@@ -1082,9 +1086,9 @@ func getOrborusStats() shuffle.OrborusStats {
 
 	// Collect results from the channel
 	for result := range resultCh {
-		//fmt.Printf("Container %s CPU utilization: %.2f%%, Memory utilization: %.2f%%\n", result.containerID, result.cpuUsage, result.memoryUsage)
-		totalCPU += result.cpuUsage
-		memUsage += result.memoryUsage
+		fmt.Printf("[DEBUG] Container %s CPU utilization: %.2f%%, Memory utilization: %.2f%%\n", result.containerID, result.cpuUsage, result.memoryUsage)
+		totalCPU += float64(result.cpuUsage)
+		memUsage += float64(result.memoryUsage)
 	}
 
 	newStats.CPUPercent = totalCPU
