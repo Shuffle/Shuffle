@@ -64,8 +64,8 @@ data:
   SSO_REDIRECT_URL: ""
   TZ: "Europe/Amsterdam \t\t\t\t\t"
   IS_KUBERNETES: "true"
-  REGISTRY_URL: "172.17.14.71:5000"
-  REGISTRY_AUTH: "false" 
+  REGISTRY_URL: "192.168.29.16:5000"
+  REGISTRY_AUTH: "false"
   SHUFFLE_KUBERNETES_WORKER: "ghcr.io/shuffle/shuffle-worker:nightly"
 kind: ConfigMap
 metadata:
