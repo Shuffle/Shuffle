@@ -1626,7 +1626,7 @@ func main() {
 			if len(toBeRemoved.Data) == len(executionRequests.Data) {
 				//log.Println("Should remove ALL!")
 			} else {
-				log.Printf("[INFO] NOT IMPLEMENTED: Should remove %d workflows from backend because they're executed!", len(toBeRemoved.Data))
+				//log.Printf("[INFO] NOT IMPLEMENTED: Should remove %d workflows from backend because they're executed!", len(toBeRemoved.Data))
 			}
 		}
 
