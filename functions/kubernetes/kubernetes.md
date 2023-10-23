@@ -32,5 +32,3 @@ Step 2: Open the ```all-in-one.yaml``` file and review the configuration values.
 
 Step 3: Now, open ```https://<YOUR_NODE_IP>:30008``` or ```http://<YOUR_NODE_IP>:30007```. You should be seeing a signup page. NODE_IP should be where the frontend is deployed.
 
-If you're running on minikube and you **can't** access the ports 30007-30008, you can use ```kubectl port-forward svc/frontend 3001:80 -n shuffle --address 0.0.0.0``` to access the frontend on port 3001
-
