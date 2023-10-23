@@ -8,10 +8,12 @@
 
   ```
   chmod +x generate_certs.sh
-  ./generate_certs.sh
+  ./setup_registry.sh
   ```
 
   > This will give you a NODE_IP which is you're local IP if you're not sure about what to use.
+  
+  > **Make sure that port 5000 is not exposed to the internet!**
 
 - 8 GB RAM and 4 CPUs are recommended as **minimum configs** for running Shuffle on Kubernetes. K8s is a resource-intensive application, and you may experience performance issues if you run it on a machine with fewer resources.
 
