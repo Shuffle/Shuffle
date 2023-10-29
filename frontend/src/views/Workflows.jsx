@@ -3473,7 +3473,7 @@ const Workflows = (props) => {
                 </div>
 							</div>
               <div style={{flex: 1, display: "flex", marginLeft: 30, }}>
-								<Button style={{height: 50, borderRadius: 25,  marginTop: 8, width: 175, }} variant="contained" color="secondary" onClick={() => {navigate(userdata.priorities[0].url)}}>
+								<Button style={{height: 50, borderRadius: 25,  marginTop: 8, width: 175, backgroundColor: "rgba(255,255,255,0.8)"}} variant="contained" color="secondary" onClick={() => {navigate(userdata.priorities[0].url)}}>
 									explore		
 								</Button>
 								{/*
