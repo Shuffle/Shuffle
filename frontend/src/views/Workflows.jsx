@@ -3456,17 +3456,24 @@ const Workflows = (props) => {
           ) : null}
 
 					{userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0 && userdata.priorities[0].name.includes("CPU") && userdata.priorities[0].active === true ?
-						<div style={{border: "1px solid rgba(255,255,255,0.1)", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+						<div style={{border: "1px solid rgba(255,255,255,0.1)" , borderRadius: theme.palette.borderRadius, marginTop: 10,
+            marginBottom: 10, padding: 15, textAlign: "center" , height: 70, textAlign: "left" , backgroundColor:
+            theme.palette.surfaceColor, display: "flex" , maxHeight: "105px", minHeight: "110px"}}
+            >
 							<div style={{flex: 2, overflow: "hidden",}}>
 								<Typography variant="body1" >
 									{userdata.priorities[0].name}
 								</Typography>
-								<Typography variant="body2" color="textSecondary">
-									{userdata.priorities[0].description}
-								</Typography>
+                <div style={{flex: "2 1 0%", overflow: "hidden"}}>
+                  <span style={{display: "flex", marginTop: "10px"}}>
+                    <Typography variant="body2" color="textSecondary" style={{marginTop: "3px"}}>
+                      {userdata.priorities[0].description}
+                    </Typography>
+                  </span>
+                </div>
 							</div>
-							<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
-								<Button style={{height: 50, borderRadius: 25,  marginTop: 8, width: 200, }} variant="contained" color="secondary" onClick={() => {navigate(userdata.priorities[0].url)}}>
+              <div style={{flex: 1, display: "flex", marginLeft: 30, }}>
+								<Button style={{height: 50, borderRadius: 25,  marginTop: 8, width: 175, }} variant="contained" color="secondary" onClick={() => {navigate(userdata.priorities[0].url)}}>
 									explore		
 								</Button>
 								{/*
