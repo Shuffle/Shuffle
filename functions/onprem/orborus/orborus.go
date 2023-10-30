@@ -465,6 +465,7 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", cnt),
 						fmt.Sprintf("TZ=%s", timezone),
 						fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
+						fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
 					},
 					//Hosts: []string{
 					//	innerContainerName,
