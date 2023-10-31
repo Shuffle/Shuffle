@@ -6,7 +6,6 @@ go 1.19
 
 require (
 	cloud.google.com/go/datastore v1.11.0
-	cloud.google.com/go/pubsub v1.31.0
 	cloud.google.com/go/storage v1.30.1
 	github.com/basgys/goxml2json v1.1.0
 	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82
@@ -20,9 +19,8 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/shuffle-shared v0.4.66
-	golang.org/x/crypto v0.9.0
+	golang.org/x/crypto v0.14.0
 	google.golang.org/api v0.125.0
-	google.golang.org/appengine v1.6.7
 	google.golang.org/grpc v1.55.0
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -100,13 +98,13 @@ require (
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sync v0.2.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/term v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
