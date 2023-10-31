@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 
-import { makeStyles } from "@material-ui/styles";
-import { useTheme } from "@material-ui/core/styles";
-import { useAlert } from "react-alert";
+import { makeStyles } from "@mui/styles";
+import theme from '../theme.jsx';
+import { toast } from "react-toastify" 
 
 import {
   FormControl,
@@ -23,12 +23,15 @@ import {
   Tabs,
   Tab,
   Grid,
-} from "@material-ui/core";
+  IconButton,
+  Autocomplete,
+} from "@mui/material";
 
-import IconButton from "@material-ui/core/IconButton";
-import ExpandLessIcon from "@material-ui/icons/ExpandLess";
-import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
-import SaveIcon from "@material-ui/icons/Save";
+import {
+	ExpandLess as ExpandLessIcon, 
+	ExpandMore as ExpandMoreIcon, 
+	Save as SaveIcon,
+} from "@mui/icons-material";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -46,8 +49,6 @@ const OrgHeaderexpanded = (props) => {
 		adminTab,
   } = props;
 
-  const theme = useTheme();
-  const alert = useAlert();
   const classes = useStyles();
   const defaultBranch = "master";
 
@@ -154,6 +155,47 @@ const OrgHeaderexpanded = (props) => {
       : selectedOrganization.sso_config.openid_token
 	)
 
+  const [workflows, setWorkflows] = React.useState([])
+  const [workflow, setWorkflow] = React.useState({})
+
+  const getAvailableWorkflows = (trigger_index) => {
+    fetch(globalUrl + "/api/v1/workflows", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+    .then((response) => {
+      if (response.status !== 200) {
+        console.log("Status not 200 for workflows :O!");
+        return;
+      }
+      return response.json();
+    })
+    .then((responseJson) => {
+      if (responseJson !== undefined) {
+      	setWorkflows(responseJson)
+
+		if (selectedOrganization.defaults !== undefined && selectedOrganization.defaults.notification_workflow !== undefined) {
+
+			const workflow = responseJson.find((workflow) => workflow.id === selectedOrganization.defaults.notification_workflow)
+			if (workflow !== undefined && workflow !== null) {
+				setWorkflow(workflow)
+			}	
+		}
+      }
+    })
+    .catch((error) => {
+      console.log("Error getting workflows: " + error);
+    })
+  }
+
+  useEffect(() => {
+	  getAvailableWorkflows()
+  }, [])
+
   const handleEditOrg = (
     name,
     description,
@@ -187,19 +229,32 @@ const OrgHeaderexpanded = (props) => {
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            alert.error("Failed updating org: ", responseJson.reason);
+            toast("Failed updating org: ", responseJson.reason);
           } else {
-            alert.success("Successfully edited org!");
+            toast("Successfully edited org!");
           }
         })
       )
       .catch((error) => {
-        alert.error("Err: " + error.toString());
+        toast("Err: " + error.toString());
       });
   };
 
+
+	const handleWorkflowSelectionUpdate = (e, isUserinput) => {
+		if (e.target.value === undefined || e.target.value === null || e.target.value.id === undefined) {
+			console.log("Returning as there's no id")
+			return null
+		}
+
+		setWorkflow(e.target.value)
+		setNotificationWorkflow(e.target.value.id)
+		toast("Updated notification workflow. Don't forget to save!") 
+	}
+
   const orgSaveButton = (
     <Tooltip title="Save any unsaved data" placement="bottom">
+	  <div>
       <Button
         style={{ width: 150, height: 55, flex: 1 }}
         variant="contained"
@@ -236,6 +291,7 @@ const OrgHeaderexpanded = (props) => {
       >
         <SaveIcon />
       </Button>
+	  </div>
     </Tooltip>
   );
 
@@ -244,34 +300,149 @@ const OrgHeaderexpanded = (props) => {
 			<Grid container spacing={3} style={{ textAlign: "left" }}>
 				<Grid item xs={12} style={{}}>
 					<span>
-						<Typography>Notification Workflow ID</Typography>
-						<TextField
-							required
-							style={{
-								flex: "1",
-								marginTop: "5px",
-								marginRight: "15px",
-								backgroundColor: theme.palette.inputColor,
-							}}
-							fullWidth={true}
-							type="name"
-							id="outlined-with-placeholder"
-							margin="normal"
-							variant="outlined"
-							placeholder="ID of the workflow to receive notifications"
-							value={notificationWorkflow}
-							onChange={(e) => {
-								setNotificationWorkflow(e.target.value);
-							}}
-							InputProps={{
-								classes: {
-									notchedOutline: classes.notchedOutline,
-								},
-								style: {
-									color: "white",
-								},
-							}}
-						/>
+						<Typography>Notification Workflow</Typography>
+						{/*
+						<Typography variant="body2" color="textSecondary">
+							Add a Workflow that receives notifications from Shuffle when an error occurs in one of your workflows
+						</Typography>
+						*/}
+						<div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
+							{workflows !== undefined && workflows !== null && workflows.length > 0 ?
+								<Autocomplete
+                				  id="notification_workflow_search"
+                				  autoHighlight
+								  freeSolo
+								  //autoSelect
+                				  value={workflow}
+                				  classes={{ inputRoot: classes.inputRoot }}
+                				  ListboxProps={{
+                				    style: {
+                				      backgroundColor: theme.palette.inputColor,
+                				      color: "white",
+                				    },
+                				  }}
+                				  getOptionLabel={(option) => {
+                				    if (
+                				      option === undefined ||
+                				      option === null ||
+                				      option.name === undefined ||
+                				      option.name === null
+                				    ) {
+                				      return "No Workflow Selected";
+                				    }
+
+                				    const newname = (
+                				      option.name.charAt(0).toUpperCase() + option.name.substring(1)
+                				    ).replaceAll("_", " ");
+                				    return newname;
+                				  }}
+                				  options={workflows}
+                				  fullWidth
+                				  style={{
+                				    backgroundColor: theme.palette.inputColor,
+                				    height: 50,
+                				    borderRadius: theme.palette.borderRadius,
+                				  }}
+                				  onChange={(event, newValue) => {
+									console.log("Found value: ", newValue)
+
+									var parsedinput = { target: { value: newValue } }
+
+									// For variables
+									if (typeof newValue === 'string' && newValue.startsWith("$")) {
+										parsedinput = { 
+											target: { 
+												value: {
+													"name": newValue, 
+													"id": newValue,
+													"actions": [],
+													"triggers": [],
+												} 
+											} 
+										}
+									}
+
+									handleWorkflowSelectionUpdate(parsedinput)
+                				  }}
+            	  				  renderOption={(props, data, state) => {
+									if (data.id === workflow.id) {
+									  data = workflow;
+									}
+
+                				    return (
+                				      <Tooltip arrow placement="left" title={
+                				        <span style={{}}>
+                				          {data.image !== undefined && data.image !== null && data.image.length > 0 ?
+                				            <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+                				            : null}
+                				          <Typography>
+                				            Choose {data.name}
+                				          </Typography>
+                				        </span>
+                				      } placement="bottom">
+                				        <MenuItem
+                				          style={{
+                				            backgroundColor: theme.palette.inputColor,
+                				            color: data.id === workflow.id ? "red" : "white",
+                				          }}
+                				          value={data}
+										  onClick={(e) => {
+										    var parsedinput = { target: { value: data } }
+										    handleWorkflowSelectionUpdate(parsedinput)
+										  }}
+                				        >
+                				          {data.name}
+                				        </MenuItem>
+                				      </Tooltip>
+                				    )
+                				  }}
+                				  renderInput={(params) => {
+                				    return (
+                				      <TextField
+                				        style={{
+                				          backgroundColor: theme.palette.inputColor,
+                				          borderRadius: theme.palette.borderRadius,
+                				        }}
+                				        {...params}
+                				        label="Find a notification workflow"
+                				        variant="outlined"
+                				      />
+                				    );
+                				  }}
+                				/>
+							:
+							<TextField
+								required
+								style={{
+									flex: "1",
+									marginTop: "5px",
+									marginRight: "15px",
+									backgroundColor: theme.palette.inputColor,
+								}}
+								fullWidth={true}
+								type="name"
+								id="outlined-with-placeholder"
+								margin="normal"
+								variant="outlined"
+								placeholder="ID of the workflow to receive notifications"
+								value={notificationWorkflow}
+								onChange={(e) => {
+									setNotificationWorkflow(e.target.value);
+								}}
+								InputProps={{
+									classes: {
+										notchedOutline: classes.notchedOutline,
+									},
+									style: {
+										color: "white",
+									},
+								}}
+							/>
+						}
+						<div style={{minWidth: 150, maxWidth: 150, marginTop: 5, marginLeft: 10,  }}>
+							{orgSaveButton}
+						</div>
+						</div>
 					</span>
 				</Grid> 
 				<Grid item xs={12} style={{}}>

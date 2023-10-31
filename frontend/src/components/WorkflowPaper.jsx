@@ -8,7 +8,7 @@ import {
 	Avatar,
 	Grid,
 	Tooltip,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   AvatarGroup,
@@ -19,7 +19,7 @@ import {
 	Edit as EditIcon,
 	BubbleChart as BubbleChartIcon,
 	MoreVert as MoreVertIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 
 import { useNavigate, Link, useParams } from "react-router-dom";
 
@@ -277,7 +277,7 @@ const WorkflowPaper = (props) => {
             >
               {data.tags !== undefined && data.tags !== null 
                 ? data.tags.map((tag, index) => {
-                    if (index >= 3) {
+                    if (index >= 2) {
                       return null;
                     }
 

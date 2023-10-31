@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
-import { makeStyles, createStyles } from "@material-ui/core/styles";
+import { toast } from 'react-toastify';
+import { makeStyles, createStyles } from "@mui/styles";
+import theme from '../theme.jsx';
+
 
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
-import { useTheme } from "@material-ui/core/styles";
-import NestedMenuItem from "material-ui-nested-menu-item";
-import { useAlert } from "react-alert";
-import theme from '../theme.jsx';
+import { NestedMenuItem } from "mui-nested-menu";
+//import { useAlert 
 
 import {
-	ButtonGroup,
+  ButtonGroup,
   Popper,
   TextField,
   TextareaAutosize,
@@ -42,12 +43,9 @@ import {
   Breadcrumbs,
   CircularProgress,
   Switch,
-  Fade,
-} from "@material-ui/core";
-
-import { 
+  Collapse,
 	Autocomplete 
-} from "@material-ui/lab";
+} from "@mui/material";
 
 import {
   HelpOutline as HelpOutlineIcon,
@@ -88,13 +86,12 @@ import {
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
 } from '@mui/icons-material';
-//} from "@material-ui/icons";
 
 
 //import CodeMirror from "@uiw/react-codemirror";
 //import "codemirror/keymap/sublime";
 //import "codemirror/theme/gruvbox-dark.css";
-import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
+//import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -115,7 +112,6 @@ const useStyles = makeStyles({
   },
   inputRoot: {
     color: "white",
-    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
     "&:hover .MuiOutlinedInput-notchedOutline": {
       borderColor: "#f86a3e",
     },
@@ -160,29 +156,30 @@ const ParsedAction = (props) => {
     authenticationType,
     appAuthentication,
     getAppAuthentication,
-		actionDelayChange,
-		getParents,
-		isCloud,
-		lastSaved,
-		setLastSaved,
-		setShowVideo,
-		toolsAppId,
-		aiSubmit,
-		//expansionModalOpen,
-		//setExpansionModalOpen,
+	actionDelayChange,
+	getParents,
+	isCloud,
+	lastSaved,
+	setLastSaved,
+	setShowVideo,
+	toolsAppId,
+	aiSubmit,
+
+	expansionModalOpen,
+	setExpansionModalOpen,
+	
+	setEditorData,
+	setcodedata,
   } = props;
 
-  //const theme = useTheme();
   const classes = useStyles();
-  const alert = useAlert()
-
-  const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
+  //const alert = useAlert()
+  
   const [hideBody, setHideBody] = React.useState(true);
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
 
-	const [codedata, setcodedata] = React.useState("");
-	const [fieldCount, setFieldCount] = React.useState(0);
-	const [hiddenDescription, setHiddenDescription] = React.useState(true);
+  const [fieldCount, setFieldCount] = React.useState(0);
+  const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
 
   useEffect(() => {
@@ -231,9 +228,9 @@ const ParsedAction = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          //alert.success("Successfully GOT app "+appId)
+          //toast("Successfully GOT app "+appId)
         } else {
-          alert.error("Failed getting app");
+          toast("Failed getting app");
         }
 
         return response.json();
@@ -294,7 +291,7 @@ const ParsedAction = (props) => {
               //foundparams.push(param.name)
             }
           } else {
-            alert.error("Couldn't find action " + selectedAction.name);
+            toast("Couldn't find action " + selectedAction.name);
           }
 
           selectedAction.errors = [];
@@ -310,7 +307,7 @@ const ParsedAction = (props) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -379,66 +376,57 @@ const ParsedAction = (props) => {
     const [menuPosition, setMenuPosition] = useState(null);
 
     useEffect(() => {
-      if (
-        selectedActionParameters !== null &&
-        selectedActionParameters.length === 0
+      if (selectedActionParameters !== undefined && selectedActionParameters !== null && selectedActionParameters.length === 0
       ) {
-        if (
-          selectedAction.parameters !== null &&
-          selectedAction.parameters.length > 0
-        ) {
+        if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
           setSelectedActionParameters(selectedAction.parameters);
         }
       }
 
-      if (
-        (selectedVariableParameter === null ||
-          selectedVariableParameter === undefined) &&
-        workflow.workflow_variables !== null &&
-        workflow.workflow_variables.length > 0
-      ) {
+      if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && workflow.workflow_variables !== null && workflow.workflow_variables.length > 0) {
+      
         // FIXME - this is the bad thing
         setSelectedVariableParameter(workflow.workflow_variables[0].name);
       }
 
       if (actionlist.length === 0) {
         // FIXME: Have previous execution values in here
-				if (workflowExecutions.length > 0) {
-					for (let [key,keyval] in Object.entries(workflowExecutions)) {
-						if (
-							workflowExecutions[key].execution_argument === undefined ||
-							workflowExecutions[key].execution_argument === null ||
-							workflowExecutions[key].execution_argument.length === 0 
-						) {
-							continue;
-						}
-
-						const valid = validateJson(workflowExecutions[key].execution_argument)
-						if (valid.valid) {
-							actionlist.push({
-								type: "Execution Argument",
-								name: "Execution Argument",
-								value: "$exec",
-								highlight: "exec",
-								autocomplete: "exec",
-								example: valid.result,
-							})
-							break
-						}
+			if (workflowExecutions.length > 0) {
+				for (let [key,keyval] in Object.entries(workflowExecutions)) {
+					if (
+						workflowExecutions[key].execution_argument === undefined ||
+						workflowExecutions[key].execution_argument === null ||
+						workflowExecutions[key].execution_argument.length === 0 
+					) {
+						continue;
 					}
 
+					const valid = validateJson(workflowExecutions[key].execution_argument)
+					if (valid.valid) {
+						actionlist.push({
+							type: "Execution Argument",
+							name: "Execution Argument",
+							value: "$exec",
+							highlight: "exec",
+							autocomplete: "exec",
+							example: valid.result,
+						})
+						break
+					}
 				}
 
-				if (actionlist.length === 0) {
-					actionlist.push({
-						type: "Execution Argument",
-						name: "Execution Argument",
-						value: "$exec",
-						highlight: "exec",
-						autocomplete: "exec",
-						example: "",
-					})
-				}
+			}
+
+			if (actionlist.length === 0) {
+				actionlist.push({
+					type: "Execution Argument",
+					name: "Execution Argument",
+					value: "$exec",
+					highlight: "exec",
+					autocomplete: "exec",
+					example: "",
+				})
+			}
 
         actionlist.push({
           type: "Shuffle DB",
@@ -1143,13 +1131,13 @@ const ParsedAction = (props) => {
           		    borderRadius: theme.palette.borderRadius,
           		  }}
           		  onChange={(event, newValue) => {
-									console.log("SELECT: ", event, newValue)
+					console.log("SELECT: ", event, newValue)
           		    // Workaround with event lol
           		    //if (newValue !== undefined && newValue !== null) {
           		    //  setNewSelectedAction({ target: { value: newValue.name } });
           		    //}
           		  }}
-          		  renderOption={(data) => {
+            	  renderOption={(props, data, state) => {
           		    var newActionname = data.app_name;
           		    if (
           		      data.label !== undefined &&
@@ -1161,6 +1149,8 @@ const ParsedAction = (props) => {
 
           		    const iconInfo = GetIconInfo({ name: data.app_name });
           		    const useIcon = iconInfo.originalIcon;
+
+					console.log("Actionname 1: ", newActionname)
 
           		    newActionname = (
           		      newActionname.charAt(0).toUpperCase() +
@@ -1314,26 +1304,26 @@ const ParsedAction = (props) => {
                 data.value = data.example;
               }
 
-							// In case of data.example
-							if (data.value === undefined || data.value === null) {
+					// In case of data.example
+					if (data.value === undefined || data.value === null) {
+						data.value = ""
+					}
+
+					if (data.value.length === 0) {
+              			if (data.name.toLowerCase() === "headers") {
+							console.log("Should show headers field instead with + and -!")
+
+							// Check if file ID exists
+							//
+							const fileFound = selectedActionParameters.find(param => param.name === "file_id")
+							if (fileFound === undefined || fileFound === null) {
+								data.value = data.example
+							} else {
+								// Purposely unset it if set by default when using files
 								data.value = ""
 							}
-
-							if (data.value.length === 0) {
-              	if (data.name.toLowerCase() === "headers") {
-									console.log("Should show headers field instead with + and -!")
-
-									// Check if file ID exists
-									//
-									const fileFound = selectedActionParameters.find(param => param.name === "file_id")
-									if (fileFound === undefined || fileFound === null) {
-										data.value = data.example
-									} else {
-										// Purposely unset it if set by default when using files
-										data.value = ""
-									}
-								}
-							}
+						}
+					}
 
 							/*
               	if (data.name !== "queries" && data.name !== "key" && data.name !== "value" ) {
@@ -1365,7 +1355,7 @@ const ParsedAction = (props) => {
             }
 
             var disabled = false;
-            var rows = "5";
+            var rows = "3";
             var openApiHelperText = "This is an OpenAPI specific field";
 						/*
             if (
@@ -1392,7 +1382,7 @@ const ParsedAction = (props) => {
             var hideBodyButton = "";
             const hideBodyButtonValue = (
               <div
-								key={data.name}
+				key={data.name}
                 style={{
                   marginTop: 25,
                   border: "1px solid rgba(255,255,255,0.7)",
@@ -1404,7 +1394,7 @@ const ParsedAction = (props) => {
               >
                 <Tooltip
                   color="secondary"
-                  title={"Automatically change body"}
+                  title={"Show all body fields"}
                   placement="top"
                 >
                   <FormControlLabel
@@ -1425,15 +1415,15 @@ const ParsedAction = (props) => {
 			
                           for (let paramkey in Object.entries(selectedActionParameters)) {
                             var currentItem = selectedActionParameters[paramkey];
-														if (currentItem.name === "ssl_verify") {
+							if (currentItem.name === "ssl_verify") {
 
-														}
+							}
 
-														if (currentItem.name === "body") {
-															// FIXME: Workaround for toggling, as actions don't have IDs. 
-															// May screw up something in the future.
-															currentItem.id = tag
-														}
+							if (currentItem.name === "body") {
+								// FIXME: Workaround for toggling, as actions don't have IDs. 
+								// May screw up something in the future.
+								currentItem.id = tag
+							}
 
                             if (currentItem.description === openApiFieldDesc) {
                               currentItem.field_active = !hideBody;
@@ -1459,8 +1449,8 @@ const ParsedAction = (props) => {
                 if (found === null) {
                   setActivateHidingBodyButton(true);
                 } else {
-									//console.log("In found: ", found, hideBody)
-								}
+					//console.log("In found: ", found, hideBody)
+				}
               } else {
                 //console.log("SHOW BUTTON");
 
@@ -1486,6 +1476,17 @@ const ParsedAction = (props) => {
                   }
 
                   changed = true;
+				  var isRequired = false
+				  // Check if original field name is in the selectedAction.required_body_fields
+				  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null) {
+					  for (let innerkey in selectedAction.required_body_fields) {
+						  if (selectedAction.required_body_fields[innerkey] === tmpitem) {
+							  isRequired = true
+							  break
+						  }
+					  }
+				  }
+
                   selectedActionParameters.push({
                     action_field: "",
                     configuration: false,
@@ -1495,7 +1496,7 @@ const ParsedAction = (props) => {
                     multiline: true,
                     name: tmpitem,
                     options: null,
-                    required: false,
+                    required: isRequired,
                     schema: { type: "string" },
                     skip_multicheck: false,
                     tags: null,
@@ -1519,29 +1520,6 @@ const ParsedAction = (props) => {
 
             const clickedFieldId = "rightside_field_" + count;
 
-						const shufflecode = fieldCount !== count ? null : 
-						(
-							<ShuffleCodeEditor
-								isCloud={isCloud}
-								toolsAppId={toolsAppId}
-								fieldCount = {fieldCount}
-								setFieldCount = {setFieldCount}
-								actionlist = {actionlist}
-								changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
-								codedata={codedata}
-								setcodedata={setcodedata}
-								expansionModalOpen={expansionModalOpen}
-								setExpansionModalOpen={setExpansionModalOpen}
-								globalUrl={globalUrl}
-
-								workflowExecutions={workflowExecutions}
-								getParents={getParents}
-								selectedAction={selectedAction}
-								parameterName={data.name}
-								aiSubmit={aiSubmit}
-							/>
-						)
-
             //<TextareaAutosize
             // <CodeMirror
             //fullWidth
@@ -1557,8 +1535,8 @@ const ParsedAction = (props) => {
             }
 
             if (tmpitem === "from_shuffle") {
-							tmpitem = "from"
-						}
+				tmpitem = "from"
+			}
 
             tmpitem = (
               tmpitem.charAt(0).toUpperCase() + tmpitem.substring(1)
@@ -1588,48 +1566,50 @@ const ParsedAction = (props) => {
                   fontSize: "1em",
                 }}
                 InputProps={{
-                  style: {
-                    color: "white",
-                    minHeight: 50,
-                    marginLeft: 5,
-                    maxWidth: "95%",
-                    fontSize: "1em",
-                  },
-									disableUnderline: true,
+				  disableUnderline: true,
                   endAdornment: hideExtraTypes ? null : (
                     <InputAdornment position="end">
-											<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
-												<Tooltip title="Expand window" placement="top">
-													<AspectRatioIcon
-														style={{ cursor: "pointer", margin: multiline ? 5 : 0 ,}}
-														onClick={(event) => {
-															event.preventDefault()
-															setFieldCount(count)
-															setcodedata(data.value)
-															setExpansionModalOpen(true)
-														}}
-													/>
-												</Tooltip>
-												<Tooltip title="Autocomplete text" placement="top">
-													<AddCircleOutlineIcon
-														style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
-														onClick={(event) => {
-															event.preventDefault()
+					<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
+						<Tooltip title="Expand window" placement="top">
+							<AspectRatioIcon
+								style={{ cursor: "pointer", margin: multiline ? 5 : 0 ,}}
+								onClick={(event) => {
+									event.preventDefault()
+									setFieldCount(count)
+									setExpansionModalOpen(true)
 
-															// Get cursor position
-															// This makes it so we can put it in the right location?
-															setMenuPosition({
-																top: event.pageY + 10,
-																left: event.pageX + 10,
-															});
-															setShowDropdownNumber(count);
-															setShowDropdown(true);
-															setShowAutocomplete(true);
-														}}
-													/>
-												</Tooltip>
-											</ButtonGroup>
-                    </InputAdornment>
+									//setcodedata(data.value)
+
+									setEditorData({
+										"name": data.name,
+										"value": data.value,
+										"field_number": count,
+										"actionlist": actionlist,
+										"field_id": clickedFieldId,
+									})
+								}}
+							/>
+						</Tooltip>
+						<Tooltip title="Autocomplete text" placement="top">
+							<AddCircleOutlineIcon
+								style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
+								onClick={(event) => {
+									event.preventDefault()
+
+									// Get cursor position
+									// This makes it so we can put it in the right location?
+									setMenuPosition({
+										top: event.pageY + 10,
+										left: event.pageX + 10,
+									});
+									setShowDropdownNumber(count);
+									setShowDropdown(true);
+									setShowAutocomplete(true);
+								}}
+							/>
+						</Tooltip>
+					</ButtonGroup>
+				</InputAdornment>
                   ),
                 }}
                 multiline={data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline}
@@ -1659,11 +1639,11 @@ const ParsedAction = (props) => {
 									*/
 
 									//console.log("Clicked field: ", clickedFieldId)
-									if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
-										scrollConfig.selected = clickedFieldId
-										setScrollConfig(scrollConfig)
-										//console.log("Change field id!")
-									}
+					if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
+						scrollConfig.selected = clickedFieldId
+						setScrollConfig(scrollConfig)
+						//console.log("Change field id!")
+					}
                 }}
                 id={clickedFieldId}
                 rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
@@ -1704,10 +1684,10 @@ const ParsedAction = (props) => {
 										null : null	
                 }
                 onBlur={(event) => {
-									baseHelperText = calculateHelpertext(event.target.value)
-									if (setLastSaved !== undefined) {
-										setLastSaved(false)
-									}
+					baseHelperText = calculateHelpertext(event.target.value)
+					if (setLastSaved !== undefined) {
+						setLastSaved(false)
+					}
                 }}
               />
             );
@@ -1943,13 +1923,6 @@ const ParsedAction = (props) => {
                     borderRadius: theme.palette.borderRadius,
                   }}
                   InputProps={{
-                    style: {
-                      color: "white",
-                      minHeight: 50,
-                      marginLeft: "5px",
-                      maxWidth: "95%",
-                      fontSize: "1em",
-                    },
                     endAdornment: hideExtraTypes ? null : (
                       <InputAdornment position="end">
                         <Tooltip title="Autocomplete text" placement="top">
@@ -1972,7 +1945,7 @@ const ParsedAction = (props) => {
                 	helperText={returnHelperText(data.name, data.value)}
                   fullWidth
                   multiline={multiline}
-                  rows="5"
+                  rows={"3"}
                   color="primary"
                   defaultValue={data.value}
                   type={"text"}
@@ -2018,12 +1991,11 @@ const ParsedAction = (props) => {
 
               datafield = (
                 <Select
-									MenuProps={{
-										disableScrollLock: true,
-									}}
+					MenuProps={{
+						disableScrollLock: true,
+					}}
                   SelectDisplayProps={{
                     style: {
-                      marginLeft: 10,
                     },
                   }}
                   value={selectedActionParameters[count].value}
@@ -2306,30 +2278,30 @@ const ParsedAction = (props) => {
                           handleItemClick([innerdata]);
                         }}
                       >
-												<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition1.top-200, left: menuPosition1.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
-													<MenuItem
-														key={innerdata.name}
-														style={{
-															backgroundColor: theme.palette.inputColor,
-															marginLeft: 15,
-															color: "white",
-															minWidth: 250,
-															maxWidth: 250,
-															padding: 0, 
-															position: "relative",
-														}}
-														value={innerdata}
-														onMouseOver={() => {
-															//console.log("HOVER: ", pathdata);
-														}}
-														onClick={() => {
-															handleItemClick([innerdata]);
-														}}
-													>
-														<Typography variant="h6" style={{paddingBottom: 5}}>
-                        			{innerdata.name}
-														</Typography>
-													</MenuItem>
+						<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition1.top-200, left: menuPosition1.left-455, padding: "10px 0px 10px 10px", overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+							<MenuItem
+								key={innerdata.name}
+								style={{
+									backgroundColor: theme.palette.inputColor,
+									marginLeft: 15,
+									color: "white",
+									minWidth: 250,
+									maxWidth: 250,
+									padding: 0, 
+									position: "relative",
+								}}
+								value={innerdata}
+								onMouseOver={() => {
+									//console.log("HOVER: ", pathdata);
+								}}
+								onClick={() => {
+									handleItemClick([innerdata]);
+								}}
+							>
+								<Typography variant="h6" style={{paddingBottom: 5}}>
+									{innerdata.name}
+								</Typography>
+							</MenuItem>
                         	{parsedPaths.map((pathdata, index) => {
                         	  // FIXME: Should be recursive in here
                         	  //<VpnKeyIcon style={iconStyle} />
@@ -2473,8 +2445,8 @@ const ParsedAction = (props) => {
 
 						//console.log(data.configuration)
 
-						const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
-						const hasAutocomplete = data.autocompleted === true
+			const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
+			const hasAutocomplete = data.autocompleted === true
             return (
               <div key={data.name}>
                 {hideBodyButton}
@@ -2583,7 +2555,7 @@ const ParsedAction = (props) => {
 							*/}
                 </div>
                 {datafield}
-								{shufflecode}
+				{/*shufflecode*/}
                 {showDropdown &&
                 showDropdownNumber === count &&
                 data.variant === "STATIC_VALUE" &&
@@ -2602,7 +2574,6 @@ const ParsedAction = (props) => {
                       labelId="action-autocompleter"
                       SelectDisplayProps={{
                         style: {
-                          marginLeft: 10,
                         },
                       }}
                       onClose={() => {
@@ -2694,6 +2665,60 @@ const ParsedAction = (props) => {
     }
     return null;
   };
+
+
+	const ActionSelectOption = (actionprops) => {
+		const { data, newActionname, newActiondescription, useIcon, extraDescription, } = actionprops;
+  		const [hover, setHover] = React.useState(false);
+
+		return (
+			<Tooltip
+			  color="secondary"
+			  title={newActiondescription}
+			  placement="left"
+			>
+				<div style={{
+					cursor: "pointer", 
+					padding: 8, 
+					paddingLeft: 14, 
+					paddingBottom: 4,
+					backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor,
+				}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+				onClick={() => {
+					//setSelectedAction(actionprops)
+					//setShowActionList(false)
+					//setUpdate(Math.random())
+					//
+					if (data !== undefined && data !== null) { 
+                		setNewSelectedAction({ 
+							target: { 
+								value: data.name 
+							} 
+						});
+              		}
+				}}
+				>
+					<div style={{ display: "flex", marginBottom: 0,}}>
+						<span
+							style={{
+								marginRight: 10,
+								marginTop: "auto",
+								marginBottom: 0,
+							}}
+						>
+							{useIcon}
+						</span>
+						<span style={{marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
+					</div>
+					{extraDescription.length > 0 ? 
+						<Typography variant="body2" color="textSecondary" style={{marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block",}}>
+							{extraDescription}	
+						</Typography>
+					: null}
+				</div>
+			</Tooltip>
+		)
+	}
 
   //const CustomPopper = function (props) {
   //	const classes = useStyles()
@@ -2868,15 +2893,35 @@ const ParsedAction = (props) => {
                 >
                   <Tooltip
                     color="primary"
-                    title={"Find related workflows"}
+                    title={"Find related tworkflows"}
                     placement="top"
                   >
-										<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
-											<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
-										</a>
+					<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
+						<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
+					</a>
                   </Tooltip>
                 </IconButton>
-
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+					  // aiSubmit(aiMsg, undefined, undefined, newSelectedAction)
+					  aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title={"Autocompletes fields. Uses NAME of the action and previous values' results."}
+                    placement="top"
+                  >
+						<AutoFixHighIcon style={{ color: "rgba(255,255,255,0.7)", height: 24, }} />
+                  </Tooltip>
+                </IconButton>
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
@@ -2921,7 +2966,6 @@ const ParsedAction = (props) => {
                   }}
                   SelectDisplayProps={{
                     style: {
-                      marginLeft: 10,
                     },
                   }}
                 >
@@ -2956,6 +3000,7 @@ const ParsedAction = (props) => {
 						<div style={{flex: 5}}>
 							<Typography style={{color: "rgba(255,255,255,0.7)"}}>Name</Typography>
 							<TextField
+
 								style={theme.palette.textFieldStyle}
 								InputProps={{
 									style: theme.palette.innerTextfieldStyle,
@@ -2967,14 +3012,21 @@ const ParsedAction = (props) => {
 								defaultValue={selectedAction.label}
 								onChange={selectedNameChange}
 								onBlur={(e) => {
-									const name = e.target.value;
+									// Copy the name value
+									const name = e.target.value
 									const parsedBaseLabel = "$"+baselabel.toLowerCase().replaceAll(" ", "_")
 									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
 
+									console.log("NAME: ", name)
+
+									// Check if it's the same as the current name in use
+									//if (name === selectedAction.label) { 
+									//	console.log("Returning from name thing")
+									//	return
+									//}
+
 									// Change in actions, triggers & conditions
 									// Highlight the changes somehow with a glow?
-									//
-									// Should make it a function lol
 									if (workflow.branches !== undefined && workflow.branches !== null) {	
 										for (let [key,keyval] in Object.entries(workflow.branches)) {
 											if (workflow.branches[key].conditions !== undefined && workflow.branches[key].conditions !== null) {
@@ -3092,7 +3144,13 @@ const ParsedAction = (props) => {
 											continue
 										}
 
-										for (let [subkey, subkeyval] in Object.entries(workflow.actions[key].parameters)) {
+										const params = workflow.actions[key].parameters
+										console.log(params)
+										if (params === null || params === undefined) {
+											continue
+										}
+
+										for (let [subkey, subkeyval] in Object.entries(params)) {
 											const param = workflow.actions[key].parameters[subkey];
 											if (!param.value.includes("$")) {
 												continue
@@ -3154,7 +3212,7 @@ const ParsedAction = (props) => {
 
 									console.log("DID NAME REPLACE ACTUALLY WORK? - may be missing it in certain triggers");
 									setWorkflow(workflow);
-                  setUpdate(Math.random());
+                  					setUpdate(Math.random());
 									baselabel = name
 								}}
 							/>
@@ -3169,14 +3227,6 @@ const ParsedAction = (props) => {
 									<span>
 										<Typography style={{color: "rgba(255,255,255,0.7)"}}>Delay</Typography>
 										<TextField
-											style={{
-												backgroundColor: theme.palette.inputColor,
-												borderRadius: theme.palette.borderRadius,
-												color: "white",
-												width: 50,
-												height: 50,
-												fontSize: "1em",
-											}}
 											InputProps={{
 												style: theme.palette.innerTextfieldStyle,
 												disableUnderline: true,
@@ -3223,7 +3273,7 @@ const ParsedAction = (props) => {
                 }}
               >
                 <AddIcon style={{ marginRight: 10 }} /> Authenticate{" "}
-                {selectedApp.name}
+                {selectedApp.name.replaceAll("_", " ")}
               </Button>
             </span>
           </Tooltip>
@@ -3250,8 +3300,7 @@ const ParsedAction = (props) => {
               }
               SelectDisplayProps={{
                 style: {
-                  marginLeft: 10,
-									maxWidth: 250,
+					maxWidth: 250,
                 },
               }}
               fullWidth
@@ -3352,7 +3401,6 @@ const ParsedAction = (props) => {
             }
             SelectDisplayProps={{
               style: {
-                marginLeft: 10,
               },
             }}
             fullWidth
@@ -3398,9 +3446,9 @@ const ParsedAction = (props) => {
         <div style={{ marginTop: "20px" }}>
           <Typography>Execution variable (optional)</Typography>
           <Select
-						MenuProps={{
-							disableScrollLock: true,
-						}}
+			MenuProps={{
+				disableScrollLock: true,
+			}}
             value={
               selectedAction.execution_variable !== undefined
               && selectedAction.execution_variable !== null 
@@ -3412,7 +3460,6 @@ const ParsedAction = (props) => {
             }
             SelectDisplayProps={{
               style: {
-                marginLeft: 10,
               },
             }}
             fullWidth
@@ -3481,20 +3528,20 @@ const ParsedAction = (props) => {
             autoHighlight
             value={selectedAction}
             classes={{ inputRoot: classes.inputRoot }}
-						groupBy={(option) => {
-							// Most popular
-							// Is categorized
-							// Uncategorized
-							return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
-						}}
-						renderGroup={(params) => {
-							return (
-								<li key={params.key}>
-									<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
-									<Typography variant="body2">{params.children}</Typography>
-								</li>
-							)	
-  					}}
+			groupBy={(option) => {
+				// Most popular
+				// Is categorized
+				// Uncategorized
+				return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
+			}}
+			renderGroup={(params) => {
+				return (
+					<li key={params.key}>
+						<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
+						<Typography variant="body2">{params.children}</Typography>
+					</li>
+				)	
+			}}
             options={selectedApp.actions === undefined || selectedApp.actions === null ? [] : selectedApp.actions.filter((a) => a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))}
             ListboxProps={{
               style: {
@@ -3502,13 +3549,13 @@ const ParsedAction = (props) => {
                 color: "white",
               },
             }}
-						filterOptions={(options, { inputValue }) => {
-							//console.log("Option contains?: ", inputValue, options)
-							const lowercaseValue = inputValue.toLowerCase()
-							options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
+			filterOptions={(options, { inputValue }) => {
+				//console.log("Option contains?: ", inputValue, options)
+				const lowercaseValue = inputValue.toLowerCase()
+				options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
 
-							return options
-						}}
+				return options
+			}}
             getOptionLabel={(option) => {
               if (option === undefined || option === null || option.name === undefined || option.name === null ) {
                 return null;
@@ -3530,146 +3577,136 @@ const ParsedAction = (props) => {
               // Workaround with event lol
               if (newValue !== undefined && newValue !== null) {
                 setNewSelectedAction({ 
-									target: { 
-										value: newValue.name 
-									} 
-								});
+					target: { 
+						value: newValue.name 
+					} 
+				});
               }
             }}
-            renderOption={(data) => {
+            renderOption={(props, data, state) => {
               var newActionname = data.name;
               if (data.label !== undefined && data.label !== null && data.label.length > 0) {
                 newActionname = data.label;
               }
 
               var newActiondescription = data.description;
-							//console.log("DESC: ", newActiondescription)
+			  //console.log("DESC: ", newActiondescription)
               if (data.description === undefined || data.description === null) {
-								newActiondescription = "Description: No description defined for this action"
+				newActiondescription = "Description: No description defined for this action"
               } else {
-								newActiondescription = "Description: "+newActiondescription
-							}
+				newActiondescription = "Description: "+newActiondescription
+			  }
 
               const iconInfo = GetIconInfo({ name: data.name });
               const useIcon = iconInfo.originalIcon;
 
-              newActionname = (
-                newActionname.charAt(0).toUpperCase() +
-                newActionname.substring(1)
-              ).replaceAll("_", " ");
+			  if (newActionname === undefined || newActionname === null) {
+				  newActionname = "No name"
+				  data.name = "No name"
+				  data.label = "No name"
+			  }
 
-							var method = ""
-							var extraDescription = ""
-							if (data.name.includes("get_")) {
-								method = "GET"
-							} else if (data.name.includes("post_")) {
-								method = "POST"
-							} else if (data.name.includes("put_")) {
-								method = "PUT"
-							} else if (data.name.includes("patch_")) {
-								method = "PATCH"
-							} else if (data.name.includes("delete_")) {
-								method = "DELETE"
-							} else if (data.name.includes("options_")) {
-								method = "OPTIONS"
-							} else if (data.name.includes("connect_")) {
-								method = "CONNECT"
-							}
+              newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
 
-							// FIXME: Should it require a base URL?
-							if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
-								var extraUrl = ""
-								const descSplit = data.description.split("\n")
-								// Last line of descSplit
-								if (descSplit.length > 0) {
-									extraUrl = descSplit[descSplit.length-1]
-								} 
+				var method = ""
+				var extraDescription = ""
+				if (data.name.includes("get_")) {
+					method = "GET"
+				} else if (data.name.includes("post_")) {
+					method = "POST"
+				} else if (data.name.includes("put_")) {
+					method = "PUT"
+				} else if (data.name.includes("patch_")) {
+					method = "PATCH"
+				} else if (data.name.includes("delete_")) {
+					method = "DELETE"
+				} else if (data.name.includes("options_")) {
+					method = "OPTIONS"
+				} else if (data.name.includes("connect_")) {
+					method = "CONNECT"
+				}
 
-								//for (let [line,lineval] in Object.entries(descSplit)) {
-								//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
-								//		const urlsplit = descSplit[line].split("/")
-								//		try {
-								//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
-								//		} catch (e) {
-								//			//console.log("Failed - running with -1")
-								//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
-								//		}
+				// FIXME: Should it require a base URL?
+				if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
+					var extraUrl = ""
+					const descSplit = data.description.split("\n")
+					// Last line of descSplit
+					if (descSplit.length > 0) {
+						extraUrl = descSplit[descSplit.length-1]
+					} 
+
+					//for (let [line,lineval] in Object.entries(descSplit)) {
+					//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
+					//		const urlsplit = descSplit[line].split("/")
+					//		try {
+					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
+					//		} catch (e) {
+					//			//console.log("Failed - running with -1")
+					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
+					//		}
 
 
-								//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
-								//		//break
-								//	} 
-								//}
+					//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
+					//		//break
+					//	} 
+					//}
 
-								if (extraUrl.length > 0) {
-									if (extraUrl.includes(" ")) {
-										extraUrl = extraUrl.split(" ")[0]
-									}
+					if (extraUrl.length > 0) {
+						if (extraUrl.includes(" ")) {
+							extraUrl = extraUrl.split(" ")[0]
+						}
 
-									if (extraUrl.includes("#")) {
-										extraUrl = extraUrl.split("#")[0]
-									}
+						if (extraUrl.includes("#")) {
+							extraUrl = extraUrl.split("#")[0]
+						}
 
-									extraDescription = `${method} ${extraUrl}`
-								} else {
-									//console.log("No url found. Check again :)")
-								}
-							}
+						extraDescription = `${method} ${extraUrl}`
+					} else {
+						//console.log("No url found. Check again :)")
+					}
+				}
 
               return (
-                <Tooltip
-                  color="secondary"
-                  title={newActiondescription}
-                  placement="left"
-                >
-									<div>
-										<div style={{ display: "flex", marginBottom: 0,}}>
-											<span
-												style={{
-													marginRight: 10,
-													marginTop: "auto",
-													marginBottom: 0,
-												}}
-											>
-												{useIcon}
-											</span>
-											<span style={{marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
-										</div>
-										{extraDescription.length > 0 ? 
-											<Typography variant="body2" color="textSecondary" style={{marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block",}}>
-												{extraDescription}	
-											</Typography>
-										: null}
-									</div>
-								</Tooltip>
+			  	<ActionSelectOption
+					data={data}
+					newActiondescription={newActiondescription}
+					useIcon={useIcon}
+					newActionname={newActionname}
+					extraDescription={extraDescription}
+				/>
               );
             }}
             renderInput={(params) => {
-							if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
-								const prefixes = ["Post", "Put", "Patch"]
-								for (let [key,keyval] in Object.entries(prefixes)) {
-									if (params.inputProps.value.startsWith(prefixes[key])) {
-										params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
-										if (params.inputProps.value.length > 1) {
-											params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
-										}
-										break
-									}
-								}
+				if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
+					const prefixes = ["Post", "Put", "Patch"]
+					for (let [key,keyval] in Object.entries(prefixes)) {
+						if (params.inputProps.value.startsWith(prefixes[key])) {
+							params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
+							if (params.inputProps.value.length > 1) {
+								params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
 							}
+							break
+						}
+					}
+				}
 
               return (
-								<TextField
-									color="primary"
-									variant="body1"
-									style={{
-										backgroundColor: theme.palette.inputColor,
-										borderRadius: theme.palette.borderRadius,
-									}}
-									{...params}
-									label="Find Actions"
-									variant="outlined"
-								/>
+					<TextField
+						data-lpignore="true"
+						autocomplete="off"
+						dataLPIgnore="true"
+
+						color="primary"
+						id="checkbox-search"
+						variant="body1"
+						style={{
+							backgroundColor: theme.palette.inputColor,
+							borderRadius: theme.palette.borderRadius,
+						}}
+						{...params}
+						label="Find Actions"
+						variant="outlined"
+					/>
               );
             }}
           />

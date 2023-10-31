@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
+import { toast } from 'react-toastify';
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useTheme } from "@material-ui/core/styles";
 import theme from '../theme.jsx';
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -38,7 +38,8 @@ import {
   CircularProgress,
   Switch,
   Fade,
-} from "@material-ui/core";
+} from "@mui/material";
+
 import { 
 	LockOpen as LockOpenIcon,
 	SupervisorAccount as SupervisorAccountIcon,
@@ -71,6 +72,7 @@ const registeredApps = [
 	"todoist",
 	"microsoft_sentinel",
 	"microsoft_365_defender",
+	"google_chat",
 	"google_sheets",
 	"google_drive",
 	"google_disk",
@@ -98,7 +100,7 @@ const AuthenticationOauth2 = (props) => {
   } = props;
 
   let navigate = useNavigate();
-  const alert = useAlert()
+  //const alert = useAlert()
 
   //const [update, setUpdate] = React.useState("|")
   const [defaultConfigSet, setDefaultConfigSet] = React.useState(
@@ -216,7 +218,7 @@ const AuthenticationOauth2 = (props) => {
 				"31cb4c84-658e-43d5-ae84-22c9142e967a",
 				"",
 				"https://graph.microsoft.com",
-				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read", "offline_access"],
+				["ChannelMessage.Edit", "ChannelMessage.Read.All", "ChannelMessage.Send", "Chat.Create", "Chat.ReadWrite", "Chat.Read", "offline_access", "Team.ReadBasic.All"],
 				admin_consent,
 			)
 		} else if (selectedApp.name.toLowerCase().includes("todoist")) {
@@ -261,6 +263,16 @@ const AuthenticationOauth2 = (props) => {
 				admin_consent,
 				"consent",
 			)
+		} else if (selectedApp.name.toLowerCase().includes("google_chat") || selectedApp.name.toLowerCase().includes("google_hangout")) {
+			handleOauth2Request(
+				"253565968129-6pij4g6ojim4gpum0h9m9u3bc357qsq7.apps.googleusercontent.com",
+				"",
+				"https://www.googleapis.com",
+				["https://www.googleapis.com/auth/chat.messages",],
+				admin_consent,
+				"consent",
+			)
+
 		} else if (selectedApp.name.toLowerCase().includes("jira_service_desk") || selectedApp.name.toLowerCase().includes("jira") || selectedApp.name.toLowerCase().includes("jira_service_management")) {
 			handleOauth2Request(
 				"AI02egeCQh1Zskm1QAJaaR6dzjR97V2F",
@@ -411,7 +423,7 @@ const AuthenticationOauth2 = (props) => {
       //}
       //while(open === true)
     } catch (e) {
-      alert.error(
+      toast(
         "Failed authentication - probably bad credentials. Try again"
       );
       setButtonClicked(false);
@@ -440,7 +452,7 @@ const AuthenticationOauth2 = (props) => {
     console.log("NEW AUTH: ", authenticationOption);
     if (authenticationOption.label.length === 0) {
       authenticationOption.label = `Auth for ${selectedApp.name}`;
-      //alert.info("Label can't be empty")
+      //toast("Label can't be empty")
       //return
     }
 
@@ -468,7 +480,7 @@ const AuthenticationOauth2 = (props) => {
               selectedApp.authentication.parameters[key].name
             ] = "false";
           } else {
-            alert.info(
+            toast(
               "Field " + selectedApp.authentication.parameters[key].name.replace("_basic", "", -1).replace("_", " ", -1) + " can't be empty"
                 
             );
@@ -595,7 +607,7 @@ const AuthenticationOauth2 = (props) => {
     <div>
       <DialogTitle>
         <div style={{ color: "white" }}>
-          Authentication for {selectedApp.name}
+          Authenticate {selectedApp.name.replaceAll("_", " ")}
         </div>
       </DialogTitle>
       <DialogContent>
@@ -662,11 +674,6 @@ const AuthenticationOauth2 = (props) => {
 						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
-								color: "white",
-								marginLeft: "5px",
-								maxWidth: "95%",
-								height: 50, 
-								fontSize: "1em",
 							},
 						}}
 						fullWidth
@@ -751,11 +758,6 @@ const AuthenticationOauth2 = (props) => {
                       }}
                       InputProps={{
                         style: {
-                          color: "white",
-                          marginLeft: "5px",
-                          maxWidth: "95%",
-                          height: 50,
-                          fontSize: "1em",
                         },
                       }}
                       fullWidth
@@ -792,11 +794,6 @@ const AuthenticationOauth2 = (props) => {
               }}
               InputProps={{
                 style: {
-                  color: "white",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                  height: "50px",
                 },
               }}
               fullWidth
@@ -815,11 +812,6 @@ const AuthenticationOauth2 = (props) => {
               }}
               InputProps={{
                 style: {
-                  color: "white",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                  height: "50px",
                 },
               }}
               fullWidth
@@ -836,6 +828,7 @@ const AuthenticationOauth2 = (props) => {
 									Scopes
 									<Select
 										multiple
+										underline={false}
 										value={selectedScopes}
 										style={{
 											backgroundColor: theme.palette.inputColor,

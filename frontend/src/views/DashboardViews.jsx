@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles, } from "@mui/styles";
 // nodejs library that concatenates classes
 import classNames from "classnames";
 import theme from '../theme.jsx';
@@ -8,11 +8,12 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 
 // react plugin used to create charts
 //import { Line, Bar } from "react-chartjs-2";
-import { useAlert } from "react-alert";
-import Autocomplete from "@material-ui/lab/Autocomplete";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 import Draggable from "react-draggable";
 
 import {
+	Autocomplete, 
 	Tooltip,
 	TextField,
 	IconButton,
@@ -22,7 +23,7 @@ import {
 	Paper,
 	Chip,
 	Checkbox,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   Close as CloseIcon,
@@ -33,7 +34,7 @@ import {
 	CheckBox as CheckBoxIcon,
 	CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
 	OpenInNew as OpenInNewIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
 import { removeParam } from "../views/AngularWorkflow.jsx"
@@ -93,7 +94,6 @@ const useStyles = makeStyles({
   },
   inputRoot: {
     color: "white",
-    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
     "&:hover .MuiOutlinedInput-notchedOutline": {
       borderColor: "#f86a3e",
     },
@@ -333,7 +333,7 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 // What data do we fill in here? Idk
 const Dashboard = (props) => {
   const { globalUrl, isLoggedIn } = props;
-  const alert = useAlert();
+  //const alert = useAlert();
   const [bigChartData, setBgChartData] = useState("data1");
   const [dayAmount, setDayAmount] = useState(7);
   const [firstRequest, setFirstRequest] = useState(true);
@@ -428,9 +428,9 @@ const Dashboard = (props) => {
 				console.log("Resp: ", responseJson)
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						//alert.error("Failed loading: " + responseJson.reason)
+						//toast("Failed loading: " + responseJson.reason)
 					} else {
-						//alert.error("Failed to load framework for your org.")
+						//toast("Failed to load framework for your org.")
 					}
 				} else {
 					var tmpdata = responseJson
@@ -453,7 +453,7 @@ const Dashboard = (props) => {
 				}
 			})
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
       })
 		}
 
@@ -505,7 +505,7 @@ const Dashboard = (props) => {
         setChangeme(stats_id);
       })
       .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
+        //toast("ERROR: " + error.toString());
         console.log("ERROR: " + error.toString());
       });
   };

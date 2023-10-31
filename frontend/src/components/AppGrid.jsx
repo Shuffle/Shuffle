@@ -1,10 +1,15 @@
 import React, {useEffect, useState} from 'react';
 
+import theme from '../theme.jsx';
 import ReactGA from 'react-ga4';
-import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
+import { removeQuery } from '../components/ScrollToTop.jsx';
 
-import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@material-ui/icons';
+import { 
+	Search as SearchIcon, 
+	CloudQueue as CloudQueueIcon, 
+	Code as CodeIcon 
+} from '@mui/icons-material';
 
 import algoliasearch from 'algoliasearch/lite';
 import { InstantSearch, Configure, connectSearchBox, connectHits, connectHitInsights } from 'react-instantsearch-dom';
@@ -21,7 +26,7 @@ import {
 	Typography, 
 	Button, 
 	Tooltip
-} from '@material-ui/core';
+} from '@mui/material';
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 //const searchClient = algoliasearch("L55H18ZINA", "a19be455e7e75ee8f20a93d26b9fc6d6")
@@ -34,7 +39,6 @@ const AppGrid = props => {
 
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 2 : parsedXs
-	const theme = useTheme();
 	//const [apps, setApps] = React.useState([]);
 	//const [filteredApps, setFilteredApps] = React.useState([]);
 	const [formMail, setFormMail] = React.useState("");
@@ -71,7 +75,7 @@ const AppGrid = props => {
 		.then(response => {
 			if (response.success === true) {
 				setFormMessage(response.reason)
-				//alert.info("Thanks for submitting!")
+				//toast("Thanks for submitting!")
 			} else {
 				setFormMessage(errorMessage)
 			}
@@ -86,21 +90,24 @@ const AppGrid = props => {
 	}
 
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {
-		useEffect(() => {
-			if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
-				const urlSearchParams = new URLSearchParams(window.location.search)
-				const params = Object.fromEntries(urlSearchParams.entries())
-				const foundQuery = params["q"]
-				if (foundQuery !== null && foundQuery !== undefined) {
-					console.log("Got query: ", foundQuery)
-					refine(foundQuery)
-				}
+		var defaultSearch = "" 
+		//useEffect(() => {
+		if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
+			const urlSearchParams = new URLSearchParams(window.location.search)
+			const params = Object.fromEntries(urlSearchParams.entries())
+			const foundQuery = params["q"]
+			if (foundQuery !== null && foundQuery !== undefined) {
+				console.log("Got query: ", foundQuery)
+				refine(foundQuery)
+				defaultSearch = foundQuery
 			}
-		}, [])
+		}
+		//}, [])
 
 		return (
 		  <form noValidate action="" role="search">
 				<TextField 
+					defaultValue={defaultSearch}
 					fullWidth
 					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%",}} 
 					InputProps={{
@@ -118,10 +125,12 @@ const AppGrid = props => {
 					autoComplete='off'
 					type="search"
 					color="primary"
-					defaultValue={currentRefinement}
 					placeholder="Find Apps..."
 					id="shuffle_search_field"
 					onChange={(event) => {
+						// Remove "q" from URL
+						removeQuery("q")
+
 						refine(event.currentTarget.value)
 					}}
 					limit={5}
@@ -147,8 +156,6 @@ const AppGrid = props => {
 		//if (hits.length > 0 && hits.length !== innerHits.length) {
 		//	setInnerHits(hits)
 		//}
-
-		console.log("In appgrid")
 
 		return (
 			<Grid container spacing={2}>

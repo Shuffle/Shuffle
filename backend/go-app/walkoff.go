@@ -561,7 +561,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(workflowExecution.ExecutionOrg) > 0 && user.ActiveOrg.Id == workflowExecution.ExecutionOrg && user.Role == "admin" {
-			log.Printf("[DEBUG] User %s is in correct org. Allowing org continuation for execution!", user.Username)
+			//log.Printf("[DEBUG] User %s is in correct org. Allowing org continuation for execution!", user.Username)
 		} else {
 			log.Printf("[WARNING] Bad authorization key when getting stream results %s.", actionResult.ExecutionId)
 			resp.WriteHeader(401)
@@ -699,64 +699,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			log.Printf("[WARNING] Continuing workflow even though it's aborted (ExitOnError config)")
 		}
 	}
-
-	/*
-		// Removed as UserInput is now handled as an app
-			if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
-				log.Printf("[INFO] SHOULD WAIT A BIT AND RUN USER INPUT! WAITING!")
-
-				var trigger shuffle.Trigger
-				err = json.Unmarshal([]byte(actionResult.Result), &trigger)
-				if err != nil {
-					log.Printf("[WARNING] Failed unmarshaling actionresult for user input: %s", err)
-					resp.WriteHeader(401)
-					resp.Write([]byte(`{"success": false}`))
-					return
-				}
-
-				orgId := workflowExecution.ExecutionOrg
-				if len(workflowExecution.OrgId) == 0 && len(workflowExecution.Workflow.OrgId) > 0 {
-					orgId = workflowExecution.Workflow.OrgId
-				}
-
-				err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
-				if err != nil {
-					log.Printf("[WARNING] Failed userinput handler: %s", err)
-
-					actionResult.Result = fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)
-
-					workflowExecution.Results = append(workflowExecution.Results, actionResult)
-					workflowExecution.Status = "ABORTED"
-					err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-					if err != nil {
-						log.Printf("[WARNING] Failed to set execution during wait: %s", err)
-					} else {
-						log.Printf("[INFO] Successfully set the execution %s to waiting.", workflowExecution.ExecutionId)
-					}
-
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
-					return
-				} else {
-					log.Printf("[INFO] Successful userinput handler")
-					resp.WriteHeader(200)
-					resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
-
-					actionResult.Result = `{"success": True, "reason": "Waiting for user feedback based on configuration"}`
-
-					workflowExecution.Results = append(workflowExecution.Results, actionResult)
-					workflowExecution.Status = actionResult.Status
-					err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-					if err != nil {
-						log.Printf("[WARNING] Failed setting userinput: %s", err)
-					} else {
-						log.Printf("[DEBUG] Successfully set the execution to waiting.")
-					}
-				}
-
-				return
-			}
-	*/
 
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 }
@@ -992,6 +934,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	shuffle.DeleteCache(ctx, cacheKey)
+	shuffle.DeleteCache(ctx, fmt.Sprintf("%s_workflows", user.ActiveOrg.Id))
 	log.Printf("[DEBUG] Cleared workflow cache for %s (%s)", user.Username, user.Id)
 
 	resp.WriteHeader(200)
@@ -1187,7 +1130,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		var execution shuffle.ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
-			log.Printf("[WARNING] Failed execution POST unmarshaling - continuing anyway: %s", err)
+			log.Printf("[WARNING] Failed execution POST unmarshalling for execution %s - continuing anyway: %s", execution.ExecutionId, err)
 			//return shuffle.WorkflowExecution{}, "", err
 		}
 
@@ -1390,13 +1333,10 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start, []string{}, []string{})
 
-	//topic := "workflows"
 	startFound := false
-	// FIXME - remove this?
 	newActions := []shuffle.Action{}
 	defaultResults := []shuffle.ActionResult{}
 
-	allAuths := []shuffle.AppAuthenticationStorage{}
 	for _, action := range workflowExecution.Workflow.Actions {
 		//action.LargeImage = ""
 		if action.ID == workflowExecution.Start {
@@ -1406,98 +1346,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 		if action.Environment == "" {
 			return shuffle.WorkflowExecution{}, fmt.Sprintf("Environment is not defined for %s", action.Name), errors.New("Environment not defined!")
-		}
-
-		// FIXME: Authentication parameters
-		if len(action.AuthenticationId) > 0 {
-			if len(allAuths) == 0 {
-				allAuths, err = shuffle.GetAllWorkflowAppAuth(ctx, workflow.ExecutingOrg.Id)
-				if err != nil {
-					log.Printf("Api authentication failed in get all app auth: %s", err)
-					return shuffle.WorkflowExecution{}, fmt.Sprintf("Api authentication failed in get all app auth: %s", err), err
-				}
-			}
-
-			curAuth := shuffle.AppAuthenticationStorage{Id: ""}
-			for _, auth := range allAuths {
-				if auth.Id == action.AuthenticationId {
-					curAuth = auth
-					break
-				}
-			}
-
-			if len(curAuth.Id) == 0 {
-				return shuffle.WorkflowExecution{}, fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId), errors.New(fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId))
-			}
-
-			if curAuth.Encrypted {
-				setField := true
-				newFields := []shuffle.AuthenticationStore{}
-				for _, field := range curAuth.Fields {
-					parsedKey := fmt.Sprintf("%s_%d_%s_%s", curAuth.OrgId, curAuth.Created, curAuth.Label, field.Key)
-					newValue, err := shuffle.HandleKeyDecryption([]byte(field.Value), parsedKey)
-					if err != nil {
-						log.Printf("[WARNING] Failed decryption for %s: %s", field.Key, err)
-						setField = false
-						break
-					}
-
-					field.Value = string(newValue)
-					newFields = append(newFields, field)
-				}
-
-				if setField {
-					curAuth.Fields = newFields
-				}
-			} else {
-				log.Printf("[INFO] AUTH IS NOT ENCRYPTED - attempting encrypting!")
-				err = shuffle.SetWorkflowAppAuthDatastore(ctx, curAuth, curAuth.Id)
-				if err != nil {
-					log.Printf("[WARNING] Failed running encryption during execution: %s", err)
-				}
-			}
-
-			newParams := []shuffle.WorkflowAppActionParameter{}
-			if strings.ToLower(curAuth.Type) == "oauth2" {
-				log.Printf("[DEBUG] Should replace auth parameters (Oauth2)")
-
-				for _, param := range curAuth.Fields {
-					if param.Key == "expiration" {
-						continue
-					}
-
-					newParams = append(newParams, shuffle.WorkflowAppActionParameter{
-						Name:  param.Key,
-						Value: param.Value,
-					})
-				}
-
-				for _, param := range action.Parameters {
-					//log.Printf("Param: %#v", param)
-					if param.Configuration {
-						continue
-					}
-
-					newParams = append(newParams, param)
-				}
-			} else {
-				// Rebuild params with the right data. This is to prevent issues on the frontend
-				for _, param := range action.Parameters {
-
-					for _, authparam := range curAuth.Fields {
-						if param.Name == authparam.Key {
-							param.Value = authparam.Value
-							//log.Printf("Name: %s - value: %s", param.Name, param.Value)
-							//log.Printf("Name: %s - value: %s\n", param.Name, param.Value)
-							break
-						}
-					}
-
-					newParams = append(newParams, param)
-				}
-			}
-
-			action.Parameters = newParams
 		}
 
 		action.LargeImage = ""
@@ -1844,6 +1692,8 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			return shuffle.WorkflowExecution{}, "Cloud not implemented yet", errors.New("Cloud not implemented yet")
 		}
 
+		shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions_cloud")
+
 		// What it needs to know:
 		// 1. Parameters
 		if len(workflowExecution.Workflow.Actions) == 1 {
@@ -1857,13 +1707,11 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			// If worker, should this backend be a proxy? I think so.
 			return shuffle.WorkflowExecution{}, "Cloud not implemented yet (2)", errors.New("Cloud not implemented yet")
 		}
+	} else {
+		shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions_onprem")
 	}
 
-	//err = increaseStatisticsField(ctx, "workflow_executions", workflow.ID, 1, workflowExecution.ExecutionOrg)
-	//if err != nil {
-	//	log.Printf("Failed to increase stats execution stats: %s", err)
-	//}
-
+	shuffle.IncrementCache(ctx, workflowExecution.OrgId, "workflow_executions")
 	return workflowExecution, "", nil
 }
 

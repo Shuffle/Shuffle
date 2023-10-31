@@ -1,17 +1,22 @@
 import React, { useEffect } from "react";
-import { makeStyles } from "@material-ui/styles";
-import { useTheme } from "@material-ui/core/styles";
+import theme from "../theme.jsx";
+import { makeStyles } from "@mui/styles";
+import { toast } from 'react-toastify';
 
-import Tooltip from "@material-ui/core/Tooltip";
-import Grid from "@material-ui/core/Grid";
-import Button from "@material-ui/core/Button";
-import TextField from "@material-ui/core/TextField";
-import Typography from "@material-ui/core/Typography";
-import { useAlert } from "react-alert";
-import IconButton from "@material-ui/core/IconButton";
-import ExpandLessIcon from "@material-ui/icons/ExpandLess";
-import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
-import SaveIcon from "@material-ui/icons/Save";
+import {
+	Tooltip,
+	Grid,
+	Button,
+	TextField,
+	Typography,
+	IconButton,
+} from "@mui/material";
+
+import {
+	ExpandLess as ExpandLessIcon,
+	ExpandMore as ExpandMoreIcon,
+	Save as SaveIcon,
+} from "@mui/icons-material";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -33,8 +38,6 @@ const OrgHeader = (props) => {
   	handleEditOrg, 
   } = props;
 
-  const theme = useTheme();
-  const alert = useAlert();
   const classes = useStyles();
 
   var upload = "";
@@ -98,7 +101,7 @@ const OrgHeader = (props) => {
     <Tooltip title="Save any unsaved data" placement="bottom">
       <Button
         style={{ width: 150, height: 55, flex: 1 }}
-        variant="contained"
+        variant="outlined"
         color="primary"
         disabled={
           userdata === undefined || userdata === null || userdata.admin !== "true"
@@ -205,13 +208,13 @@ const OrgHeader = (props) => {
               const invalid = ["#", ":", "."];
               for (var key in invalid) {
                 if (e.target.value.includes(invalid[key])) {
-                  alert.error("Can't use " + invalid[key] + " in name");
+                  toast("Can't use " + invalid[key] + " in name");
                   return;
                 }
               }
 
               if (e.target.value.length > 100) {
-                alert.error("Choose a shorter name.");
+                toast("Choose a shorter name.");
                 return;
               }
 

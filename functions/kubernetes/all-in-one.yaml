@@ -1,0 +1,799 @@
+---
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: shuffle-data
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+
+---
+
+apiVersion: v1
+data:
+  BACKEND_HOSTNAME: shuffle-backend
+  BACKEND_PORT: "5001"
+  BASE_URL: http://shuffle-backend:5001
+  DATASTORE_EMULATOR_HOST: shuffle-database:8000
+  DB_LOCATION: /mnt/shuffle-data/open-search
+  DOCKER_API_VERSION: "1.40"
+  ENVIRONMENT_NAME: Shuffle
+  FRONTEND_PORT: "3001"
+  FRONTEND_PORT_HTTPS: "3443"
+  HTTP_PROXY: ""
+  HTTPS_PROXY: ""
+  ORBORUS_CONTAINER_NAME: "\t\t\t\t"
+  ORG_ID: Shuffle
+  OUTER_HOSTNAME: shuffle-backend
+  SHUFFLE_APP_DOWNLOAD_LOCATION: https://github.com/shuffle/python-apps
+  SHUFFLE_APP_FORCE_UPDATE: "false"
+  SHUFFLE_APP_HOTLOAD_FOLDER: /shuffle-apps
+  SHUFFLE_APP_HOTLOAD_LOCATION: ./shuffle-apps
+  SHUFFLE_BASE_IMAGE_NAME: shuffle
+  SHUFFLE_BASE_IMAGE_REGISTRY: ghcr.io
+  SHUFFLE_BASE_IMAGE_TAG_SUFFIX: -1.0.0
+  SHUFFLE_CHAT_DISABLED: "false"
+  SHUFFLE_CONTAINER_AUTO_CLEANUP: "false"
+  SHUFFLE_DEFAULT_APIKEY: ""
+  SHUFFLE_DEFAULT_PASSWORD: ""
+  SHUFFLE_DEFAULT_USERNAME: ""
+  SHUFFLE_DOWNLOAD_AUTH_BRANCH: ""
+  SHUFFLE_DOWNLOAD_AUTH_PASSWORD: ""
+  SHUFFLE_DOWNLOAD_AUTH_USERNAME: ""
+  SHUFFLE_DOWNLOAD_WORKFLOW_BRANCH: ""
+  SHUFFLE_DOWNLOAD_WORKFLOW_LOCATION: ""
+  SHUFFLE_DOWNLOAD_WORKFLOW_PASSWORD: ""
+  SHUFFLE_DOWNLOAD_WORKFLOW_USERNAME: ""
+  SHUFFLE_ELASTIC: "true"
+  SHUFFLE_ENCRYPTION_MODIFIER: ""
+  SHUFFLE_FILE_LOCATION: /shuffle-files
+  SHUFFLE_LOGS_DISABLED: "false"
+  SHUFFLE_OPENSEARCH_APIKEY: ""
+  SHUFFLE_OPENSEARCH_CERTIFICATE_FILE: ""
+  SHUFFLE_OPENSEARCH_CLOUDID: ""
+  SHUFFLE_OPENSEARCH_INDEX_PREFIX: ""
+  SHUFFLE_OPENSEARCH_PASSWORD: admin
+  SHUFFLE_OPENSEARCH_PROXY: ""
+  SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY: "true"
+  SHUFFLE_OPENSEARCH_URL: https://opensearch:9200
+  SHUFFLE_OPENSEARCH_USERNAME: admin
+  SHUFFLE_ORBORUS_STARTUP_DELAY: "\t\t"
+  SHUFFLE_PASS_APP_PROXY: "FALSE"
+  SHUFFLE_PASS_WORKER_PROXY: "TRUE"
+  SHUFFLE_RERUN_SCHEDULE: "300"
+  SSO_REDIRECT_URL: ""
+  TZ: "Europe/Amsterdam \t\t\t\t\t"
+  IS_KUBERNETES: "true"
+  REGISTRY_URL: "192.168.29.16:5000"
+  REGISTRY_AUTH: "false"
+  SHUFFLE_KUBERNETES_WORKER: "ghcr.io/shuffle/shuffle-worker:nightly"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: backend-env
+  name: env
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: shuffle
+  name: pod-manager
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "create", "update", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "get", "list", "watch", "delete"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pod-manager-binding
+  namespace: shuffle
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: shuffle
+roleRef:
+  kind: Role
+  name: pod-manager
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+ name: shuffle-os-pv
+spec:
+ capacity:
+   storage: 10Gi  # Adjust the storage size as per your requirements
+ accessModes:
+   - ReadWriteOnce  # This allows read-write access to a single node
+ persistentVolumeReclaimPolicy: Retain  # Adjust the reclaim policy as per your needs
+ storageClassName: shuffle-data  # Set the desired storage class
+ hostPath:
+   path: /mnt/shuffle-data/open-search
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: opensearch-claim0
+  name: opensearch-claim0
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: shuffle-data
+  resources:
+    requests:
+      storage: 500Mi
+status: {}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: opensearch
+  name: opensearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: opensearch
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.version: 1.26.0 (40646f47)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/shuffle: "true"
+        io.kompose.service: opensearch
+    spec:
+     # securityContext:
+     #   runAsUser: 1000  # UID
+     #   fsGroup: 1000    # GID
+      # nodeSelector:
+      #   node: worker1
+      initContainers:
+      - name: volume-permissions
+        image: busybox
+        command: ["sh", "-c", "chown -R 1000:1000 /usr/share/opensearch/data"]
+        volumeMounts:
+        - name: opensearch-claim0
+          mountPath: /usr/share/opensearch/data
+      containers:
+        - env:
+            - name: OPENSEARCH_JAVA_OPTS
+              value: -Xms1024m -Xmx1024m
+              #- name: bootstrap.memory_lock
+              #value: "true"
+            - name: cluster.initial_master_nodes
+              value: shuffle-opensearch
+            - name: cluster.name
+              value: shuffle-cluster
+            - name: cluster.routing.allocation.disk.threshold_enabled
+              value: "false"
+            - name: discovery.seed_hosts
+              value: shuffle-opensearch
+            - name: node.name
+              value: shuffle-opensearch
+            - name: node.store.allow_mmap
+              value: "false"
+            - name: DB_LOCATION
+              valueFrom: 
+                configMapKeyRef:
+                  name: env
+                  key: DB_LOCATION
+          image: opensearchproject/opensearch:2.5.0
+          name: shuffle-opensearch
+          ports:
+            - containerPort: 9200
+          resources: {}
+          volumeMounts:
+            - mountPath: /usr/share/opensearch/data
+              name: opensearch-claim0
+      hostname: shuffle-opensearch
+      restartPolicy: Always
+      volumes:
+        - name: opensearch-claim0
+          persistentVolumeClaim:
+            claimName: opensearch-claim0
+status: {}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: opensearch
+  name: opensearch
+spec:
+  ports:
+    - name: "9200"
+      port: 9200
+      targetPort: 9200
+  selector:
+    io.kompose.service: opensearch
+status:
+  loadBalancer: {}
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+ name: shuffle-apps-pv
+spec:
+ capacity:
+   storage: 5Gi
+ accessModes:
+   - ReadWriteOnce
+ persistentVolumeReclaimPolicy: Retain
+ storageClassName: shuffle-data
+ hostPath:
+   path: /mnt/shuffle-data/backend
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+ name: shuffle-files-pv
+spec:
+ capacity:
+   storage: 5Gi
+ accessModes:
+   - ReadWriteOnce
+ persistentVolumeReclaimPolicy: Retain
+ storageClassName: shuffle-data
+ hostPath:
+   path: /mnt/shuffle-data/backend
+
+---
+
+ apiVersion: v1
+ kind: PersistentVolumeClaim
+ metadata:
+   creationTimestamp: null
+   labels:
+     io.kompose.service: backend-files-claim
+   name: backend-files-claim
+ spec:
+   accessModes:
+     - ReadWriteOnce
+   storageClassName: shuffle-data
+   resources:
+     requests:
+       storage: 5Gi
+#  status: {}
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: backend-apps-claim
+  name: backend-apps-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: shuffle-data
+  resources:
+    requests:
+      storage: 5Gi
+# status: {}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: backend
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: backend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.version: 1.26.0 (40646f47)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/shuffle: "true"
+        io.kompose.service: backend
+        app: shuffle-backend
+      name: shuffle-backend
+    spec:
+      volumes:
+        - name: shuffle-files
+          persistentVolumeClaim:
+            claimName: backend-files-claim
+        - name: shuffle-apps
+          persistentVolumeClaim:
+            claimName: backend-apps-claim
+#      nodeSelector:
+#        node: master
+      containers:
+        - env:
+            - name: BACKEND_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  key: BACKEND_HOSTNAME
+                  name: env
+            - name: BACKEND_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: BACKEND_PORT
+                  name: env
+            - name: BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: BASE_URL
+                  name: env
+            - name: DATASTORE_EMULATOR_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: DATASTORE_EMULATOR_HOST
+                  name: env
+            - name: DB_LOCATION
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_LOCATION
+                  name: env
+            - name: DOCKER_API_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  key: DOCKER_API_VERSION
+                  name: env
+            - name: ENVIRONMENT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: ENVIRONMENT_NAME
+                  name: env
+            - name: FRONTEND_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: FRONTEND_PORT
+                  name: env
+            - name: FRONTEND_PORT_HTTPS
+              valueFrom:
+                configMapKeyRef:
+                  key: FRONTEND_PORT_HTTPS
+                  name: env
+            - name: HTTPS_PROXY
+              valueFrom:
+                configMapKeyRef:
+                  key: HTTPS_PROXY
+                  name: env
+            - name: HTTP_PROXY
+              valueFrom:
+                configMapKeyRef:
+                  key: HTTP_PROXY
+                  name: env
+            - name: ORBORUS_CONTAINER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: ORBORUS_CONTAINER_NAME
+                  name: env
+            - name: ORG_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: ORG_ID
+                  name: env
+            - name: OUTER_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  key: OUTER_HOSTNAME
+                  name: env
+            - name: SHUFFLE_APP_DOWNLOAD_LOCATION
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_APP_DOWNLOAD_LOCATION
+                  name: env
+            - name: SHUFFLE_APP_FORCE_UPDATE
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_APP_FORCE_UPDATE
+                  name: env
+            - name: SHUFFLE_APP_HOTLOAD_FOLDER
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_APP_HOTLOAD_FOLDER
+                  name: env
+            - name: SHUFFLE_APP_HOTLOAD_LOCATION
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_APP_HOTLOAD_LOCATION
+                  name: env
+            - name: SHUFFLE_BASE_IMAGE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_BASE_IMAGE_NAME
+                  name: env
+            - name: SHUFFLE_BASE_IMAGE_REGISTRY
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_BASE_IMAGE_REGISTRY
+                  name: env
+            - name: SHUFFLE_BASE_IMAGE_TAG_SUFFIX
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_BASE_IMAGE_TAG_SUFFIX
+                  name: env
+            - name: SHUFFLE_CHAT_DISABLED
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_CHAT_DISABLED
+                  name: env
+            - name: SHUFFLE_CONTAINER_AUTO_CLEANUP
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_CONTAINER_AUTO_CLEANUP
+                  name: env
+            - name: SHUFFLE_DEFAULT_APIKEY
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_DEFAULT_APIKEY
+                  name: env
+            - name: SHUFFLE_DEFAULT_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_DEFAULT_PASSWORD
+                  name: env
+            - name: SHUFFLE_DEFAULT_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_DEFAULT_USERNAME
+                  name: env
+            - name: SHUFFLE_DOWNLOAD_AUTH_BRANCH
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_DOWNLOAD_AUTH_BRANCH
+                  name: env
+            - name: SHUFFLE_DOWNLOAD_AUTH_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_DOWNLOAD_AUTH_PASSWORD
+                  name: env
+            - name: SHUFFLE_DOWNLOAD_AUTH_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_DOWNLOAD_AUTH_USERNAME
+                  name: env
+            - name: SHUFFLE_DOWNLOAD_WORKFLOW_BRANCH
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_DOWNLOAD_WORKFLOW_BRANCH
+                  name: env
+            - name: SHUFFLE_DOWNLOAD_WORKFLOW_LOCATION
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_DOWNLOAD_WORKFLOW_LOCATION
+                  name: env
+            - name: SHUFFLE_DOWNLOAD_WORKFLOW_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_DOWNLOAD_WORKFLOW_PASSWORD
+                  name: env
+            - name: SHUFFLE_DOWNLOAD_WORKFLOW_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_DOWNLOAD_WORKFLOW_USERNAME
+                  name: env
+            - name: SHUFFLE_ELASTIC
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_ELASTIC
+                  name: env
+            - name: SHUFFLE_ENCRYPTION_MODIFIER
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_ENCRYPTION_MODIFIER
+                  name: env
+            - name: SHUFFLE_FILE_LOCATION
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_FILE_LOCATION
+                  name: env
+            - name: SHUFFLE_LOGS_DISABLED
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_LOGS_DISABLED
+                  name: env
+            - name: SHUFFLE_OPENSEARCH_APIKEY
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_OPENSEARCH_APIKEY
+                  name: env
+            - name: SHUFFLE_OPENSEARCH_CERTIFICATE_FILE
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_OPENSEARCH_CERTIFICATE_FILE
+                  name: env
+            - name: SHUFFLE_OPENSEARCH_CLOUDID
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_OPENSEARCH_CLOUDID
+                  name: env
+            - name: SHUFFLE_OPENSEARCH_INDEX_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_OPENSEARCH_INDEX_PREFIX
+                  name: env
+            - name: SHUFFLE_OPENSEARCH_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_OPENSEARCH_PASSWORD
+                  name: env
+            - name: SHUFFLE_OPENSEARCH_PROXY
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_OPENSEARCH_PROXY
+                  name: env
+            - name: SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY
+                  name: env
+            - name: SHUFFLE_OPENSEARCH_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_OPENSEARCH_URL
+                  name: env
+            - name: SHUFFLE_OPENSEARCH_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_OPENSEARCH_USERNAME
+                  name: env
+            - name: SHUFFLE_ORBORUS_STARTUP_DELAY
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_ORBORUS_STARTUP_DELAY
+                  name: env
+            - name: SHUFFLE_PASS_APP_PROXY
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_PASS_APP_PROXY
+                  name: env
+            - name: SHUFFLE_PASS_WORKER_PROXY
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_PASS_WORKER_PROXY
+                  name: env
+            - name: SHUFFLE_RERUN_SCHEDULE
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_RERUN_SCHEDULE
+                  name: env
+            - name: SSO_REDIRECT_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: SSO_REDIRECT_URL
+                  name: env
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  key: TZ
+                  name: env
+            - name: IS_KUBERNETES
+              valueFrom:
+                configMapKeyRef:
+                  key: IS_KUBERNETES
+                  name: env
+            - name: REGISTRY_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: REGISTRY_URL
+                  name: env
+            - name: REGISTRY_AUTH
+              valueFrom:
+                configMapKeyRef:
+                  key: REGISTRY_AUTH
+                  name: env
+          image: ghcr.io/shuffle/shuffle-backend:nightly
+          imagePullPolicy: Always
+          name: shuffle-backend
+          ports:
+            - containerPort: 5001
+          resources: {}
+          volumeMounts:
+            - name: shuffle-apps
+              mountPath: /app/generated
+            - name: shuffle-files 
+              mountPath: /shuffle-files
+      restartPolicy: Always
+status: {}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: backend
+  name: shuffle-backend
+spec:
+  ports:
+    - name: "5001"
+      port: 5001
+      targetPort: 5001
+  selector:
+    io.kompose.service: backend
+status:
+  loadBalancer: {}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: frontend
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: frontend
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.version: 1.26.0 (40646f47)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/shuffle: "true"
+        io.kompose.service: frontend
+    spec:
+      containers:
+        - env:
+            - name: BACKEND_HOSTNAME
+          image: ghcr.io/shuffle/shuffle-frontend:nightly
+          name: shuffle-frontend
+          ports:
+            - containerPort: 80
+            - containerPort: 443
+          resources: {}
+      hostname: shuffle-frontend
+      restartPolicy: Always
+status: {}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: frontend
+  name: frontend
+spec:
+  type: NodePort
+  ports:
+    - name: "80"
+      port: 80
+      targetPort: 80
+      nodePort: 30007
+    - name: "443"
+      port: 443
+      targetPort: 443
+      nodePort: 30008
+  selector:
+    io.kompose.service: frontend
+# status:
+#   loadBalancer: {}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: orborus
+  name: orborus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: orborus
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.version: 1.26.0 (40646f47)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/shuffle: "true"
+        io.kompose.service: orborus
+    spec:
+      containers:
+        - env:
+            - name: BASE_URL
+              value: "http://shuffle-backend:5001"
+            - name: DOCKER_API_VERSION
+              value: "1.40"
+            - name: ENVIRONMENT_NAME
+              value: Shuffle
+            - name: ORG_ID
+              value: Shuffle
+            - name: SHUFFLE_APP_SDK_VERSION
+              value: nightly
+            - name: SHUFFLE_SCALE_REPLICAS
+              value: "5"
+              #- name: SHUFFLE_SWARM_CONFIG
+              #value: run
+            - name: SHUFFLE_WORKER_VERSION
+              value: nightly
+            - name: IS_KUBERNETES
+              valueFrom:
+                configMapKeyRef:
+                  key: IS_KUBERNETES
+                  name: env
+            - name: REGISTRY_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: REGISTRY_URL
+                  name: env
+            - name: SHUFFLE_KUBERNETES_WORKER
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_KUBERNETES_WORKER
+                  name: env
+
+          image: ghcr.io/shuffle/shuffle-orborus:nightly
+          #imagePullPolicy: Never
+          name: shuffle-orborus
+          resources: {}
+      hostname: shuffle-orborus
+      restartPolicy: Always
+status: {}

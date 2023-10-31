@@ -1,8 +1,7 @@
 import React, {useState, useEffect, useRef} from 'react';
 
+import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { useTheme } from '@material-ui/core/styles';
-import SearchIcon from '@material-ui/icons/Search';
 
 import {
 	Chip, 
@@ -17,13 +16,13 @@ import {
 	Avatar, 
 	Typography,
 	Tooltip,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import {
   AvatarGroup,
 } from "@mui/material"
 
-import {Close as CloseIcon, Folder as FolderIcon, Polymer as PolymerIcon, LibraryBooks as LibraryBooksIcon} from '@material-ui/icons'
+import {Search as SearchIcon, Close as CloseIcon, Folder as FolderIcon, Code as CodeIcon, LibraryBooks as LibraryBooksIcon} from '@mui/icons-material'
 
 import algoliasearch from 'algoliasearch/lite';
 import aa from 'search-insights'
@@ -39,12 +38,12 @@ const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e52
 const SearchField = props => {
 	const { serverside, userdata } = props
 
-	const theme = useTheme();
 	let navigate = useNavigate();
 	const borderRadius = 3
 	const node = useRef()
 	const [searchOpen, setSearchOpen] = useState(false)
 	const [oldPath, setOldPath] = useState("")
+	const [value, setValue] = useState("");
 
 	if (serverside === true) {
 		return null
@@ -69,7 +68,13 @@ const SearchField = props => {
 	//}, searchOpen)
 
 	const SearchBox = ({currentRefinement, refine, isSearchStalled, } ) => {
-
+		const keyPressHandler = (e) => {
+			// e.preventDefault();
+			if (e.which === 13) {
+			  // alert("You pressed enter!");
+			  navigate("/search?q=" + currentRefinement, { state: value, replace: true });
+			}
+		};
 			/*
 				endAdornment: (
 					<InputAdornment position="end" style={{textAlign: "right", zIndex: 5001, cursor: "pointer", width: 100, }} onMouseOver={(event) => {
@@ -110,6 +115,7 @@ const SearchField = props => {
 					color="primary"
 					placeholder="Find Public Apps, Workflows, Documentation..."
 					value={currentRefinement}
+					onKeyDown={keyPressHandler}
 					id="shuffle_search_field"
 					onClick={(event) => {
 						if (!searchOpen) {
@@ -162,7 +168,7 @@ const SearchField = props => {
 		}
 		
 		var type = "workflows"
-		const baseImage = <PolymerIcon /> 
+		const baseImage = <CodeIcon /> 
 
 		return (
 			<Card elevation={0} style={{position: "relative", marginLeft: 10, marginRight: 10, position: "absolute", color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: 405, height: 408, left: 75, boxShadows: "none",}}>
@@ -208,11 +214,12 @@ const SearchField = props => {
 							const avatar = baseImage
 
 							var parsedUrl = isCloud ? `/workflows/${hit.objectID}` : `https://shuffler.io/workflows/${hit.objectID}`
+
 							parsedUrl += `?queryID=${hit.__queryID}`
 
 							// <a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{textDecoration: "none", color: "white"}}>
 							return (
-								<Link key={hit.objectID} to={{ pathname: parsedUrl }} rel="noopener noreferrer" style={{textDecoration: "none", color: "white",}} onClick={(event) => {
+								<Link key={hit.objectID} to={parsedUrl} rel="noopener noreferrer" style={{textDecoration: "none", color: "white",}} onClick={(event) => {
 									//console.log("CLICK")
 									setSearchOpen(true)
 
@@ -404,7 +411,7 @@ const SearchField = props => {
 							parsedUrl += `?queryID=${hit.__queryID}`
 
 							return (
-								<Link key={hit.objectID} to={{ pathname: parsedUrl }} style={{textDecoration: "none", color: "white",}} onClick={(event) => {
+								<Link key={hit.objectID} to={parsedUrl} style={{textDecoration: "none", color: "white",}} onClick={(event) => {
 									console.log("CLICK")
 									setSearchOpen(true)
 
@@ -560,7 +567,8 @@ const SearchField = props => {
 						if (parsedUrl.includes("/apps/")) {
 							const extraHash = hit.url_hash === undefined ? "" : `#${hit.url_hash}`
 
-							parsedUrl = `/apps/${hit.filename}?tab=docs&queryID=${hit.__queryID}${extraHash}`
+							parsedUrl = `/apps/${hit.filename}`
+							parsedUrl += `?tab=docs&queryID=${hit.__queryID}${extraHash}`
 						}
 
 						return (

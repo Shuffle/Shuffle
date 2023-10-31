@@ -1,10 +1,11 @@
 import React, {useEffect, useState} from 'react';
 
+import theme from '../theme.jsx';
 import ReactGA from 'react-ga4';
-import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
+import { removeQuery } from '../components/ScrollToTop.jsx';
 
-import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@material-ui/icons';
+import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon, Close as CloseIcon, Folder as FolderIcon, LibraryBooks as LibraryBooksIcon } from '@mui/icons-material';
 import aa from 'search-insights'
 
 import algoliasearch from 'algoliasearch/lite';
@@ -24,16 +25,15 @@ import {
 	ListItem,
 	ListItemAvatar,
 	ListItemText,
-} from '@material-ui/core';
+} from '@mui/material';
 
-import {Close as CloseIcon, Folder as FolderIcon, Polymer as PolymerIcon, LibraryBooks as LibraryBooksIcon} from '@material-ui/icons'
+	
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const DocsGrid = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, userdata, }  = props
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 2 : parsedXs
-	const theme = useTheme();
 	//const [apps, setApps] = React.useState([]);
 	//const [filteredApps, setFilteredApps] = React.useState([]);
 	const [formMail, setFormMail] = React.useState("");
@@ -70,7 +70,7 @@ const DocsGrid = props => {
 		.then(response => {
 			if (response.success === true) {
 				setFormMessage(response.reason)
-				//alert.info("Thanks for submitting!")
+				//toast("Thanks for submitting!")
 			} else {
 				setFormMessage(errorMessage)
 			}
@@ -85,21 +85,22 @@ const DocsGrid = props => {
 	}
 
 	const SearchBox = ({currentRefinement, refine, isSearchStalled} ) => {
-		useEffect(() => {
-			if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
-				const urlSearchParams = new URLSearchParams(window.location.search)
-				const params = Object.fromEntries(urlSearchParams.entries())
-				const foundQuery = params["q"]
-				if (foundQuery !== null && foundQuery !== undefined) {
-					console.log("Got query: ", foundQuery)
-					refine(foundQuery)
-				}
+		var defaultSearch = ""
+		if (window !== undefined && window.location !== undefined && window.location.search !== undefined && window.location.search !== null) {
+			const urlSearchParams = new URLSearchParams(window.location.search)
+			const params = Object.fromEntries(urlSearchParams.entries())
+			const foundQuery = params["q"]
+			if (foundQuery !== null && foundQuery !== undefined) {
+				console.log("Got query: ", foundQuery)
+				refine(foundQuery)
+				defaultSearch = foundQuery
 			}
-		}, [])
+		}
 
 		return (
 		  <form noValidate action="" role="search">
 				<TextField 
+					defaultValue={defaultSearch}
 					fullWidth
 					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%",}} 
 					InputProps={{
@@ -117,10 +118,10 @@ const DocsGrid = props => {
 					autoComplete='off'
 					type="search"
 					color="primary"
-					defaultValue={currentRefinement}
 					placeholder="Search our Documentation..."
 					id="shuffle_search_field"
 					onChange={(event) => {
+						removeQuery("q")
 						refine(event.currentTarget.value)
 					}}
 					limit={5}
@@ -182,7 +183,7 @@ const DocsGrid = props => {
 
 					//const secondaryText = data.data !== undefined ? data.data.slice(0, 100)+"..." : ""
 					const secondaryText = data.data !== undefined ? data.data.slice(0, 100)+"..." : ""
-					const baseImage = <PolymerIcon /> 
+					const baseImage = <CodeIcon/> 
 					const avatar = data.image_url === undefined ? 
 						baseImage
 						:

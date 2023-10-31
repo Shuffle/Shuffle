@@ -1,42 +1,49 @@
 import React from "react";
-import { createMuiTheme } from "@material-ui/core/styles";
+import { createTheme, adaptV4Theme } from "@mui/material/styles";
 
-const theme = createMuiTheme({
+//const theme = createTheme({
+const theme = createTheme(adaptV4Theme({
   palette: {
+	theme: "dark",
+    main: "#F86743",
     primary: {
       main: "#F86743",
-			contrastText: "#ffffff",
+  	  contrastText: "#ffffff",
     },
     secondary: {
       main: "#e8eaf6",
+	  contrastText: "#000000",
     },
     text: {
       secondary: "rgba(255,255,255,0.7)",
     },
     type: "dark",
+    inputColor: "rgba(39,41,45,1)",
+    //inputColor: "#383B40",
     surfaceColor: "#27292d",
-    inputColor: "#383B40",
     platformColor: "#1c1c1d",
     backgroundColor: "#1a1a1a",
+    green: "#5cc879",
     borderRadius: 5,
     defaultBorder: "1px solid rgba(255,255,255,0.3)",
-		jsonTheme: "brewer",
-		reactJsonStyle: {
-			borderRadius: 5,
-			border: "1px solid rgba(255,255,255,0.7)",
-			padding: 5, 
-		},
+	jsonTheme: "brewer",
+	reactJsonStyle: {
+		borderRadius: 5,
+		border: "1px solid rgba(255,255,255,0.7)",
+		padding: 5, 
+	},
     textFieldStyle: {
       backgroundColor: "#383B40",
       borderRadius: 5,
     },
     innerTextfieldStyle: {
-      color: "white",
-      minHeight: 50,
-      marginLeft: "5px",
-      maxWidth: "95%",
-      fontSize: "1em",
-      borderRadius: 5,
+	  // Removed since upgrading to mui 18
+      //color: "white",
+      //minHeight: 50,
+      //marginLeft: "5px",
+      //maxWidth: "95%",
+      //fontSize: "1em",
+      //borderRadius: 5,
     },
     tooltip: {
       backgroundColor: "white",
@@ -71,34 +78,20 @@ const theme = createMuiTheme({
       },
     },
     MuiCssBaseline: {
-      '@global': {
-				/*
-          scrollbarColor: "#6b6b6b #2b2b2b",
-          "&::-webkit-scrollbar, & *::-webkit-scrollbar": {
-            backgroundColor: "#2b2b2b",
-          },
-          "&::-webkit-scrollbar-thumb, & *::-webkit-scrollbar-thumb": {
-            borderRadius: 8,
-            backgroundColor: "#6b6b6b",
-            minHeight: 24,
-            border: "3px solid #2b2b2b",
-          },
-          "&::-webkit-scrollbar-thumb:focus, & *::-webkit-scrollbar-thumb:focus": {
-            backgroundColor: "#959595",
-          },
-          "&::-webkit-scrollbar-thumb:active, & *::-webkit-scrollbar-thumb:active": {
-            backgroundColor: "#959595",
-          },
-          "&::-webkit-scrollbar-thumb:hover, & *::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "#959595",
-          },
-          "&::-webkit-scrollbar-corner, & *::-webkit-scrollbar-corner": {
-            backgroundColor: "#2b2b2b",
-          },
-				*/	
-      }
+		MuiCssBaseline: {
+		  styleOverrides: `
+			@font-face {
+			  font-family: 'roboto';
+			  font-style: normal;
+			  font-display: swap;
+			  font-weight: 300;
+			  src: local('roboto'), local('roboto'), format('truetype');
+			  unicodeRange: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF;
+			}
+		  `,
 		},
+	},
   },
-});
+}));
 
 export default theme;

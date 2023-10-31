@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
+import theme from '../theme.jsx';
 import CytoscapeComponent from 'react-cytoscapejs';
 import frameworkStyle from '../frameworkStyle.jsx';
 import { v4 as uuidv4 } from "uuid";
-import theme from '../theme.jsx';
-import { useAlert } from "react-alert";
 
 import AppSearch from '../components/Appsearch.jsx';
 import PaperComponent from "../components/PaperComponent.jsx"
@@ -18,30 +17,159 @@ import {
 	Divider,
 	IconButton, 
 	Badge,
-  CircularProgress,
+  	CircularProgress,
 	Tooltip,
 	Dialog,
 	Chip,
 	Avatar,
-} from "@material-ui/core";
+	Button,
+} from "@mui/material";
 
-import { 
-	Button 
-} from '@material-ui/core';
 
 import {
 	Close as CloseIcon,
   Delete as DeleteIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import * as edgehandles from "cytoscape-edgehandles";
 import * as cytoscape from "cytoscape";
+import { toast } from 'react-toastify';
 
 cytoscape.use(edgehandles);
 
+export const findSpecificApp = (framework, inputcategory) => {
+  // Get the frameworkinfo for the org and fill in
+  //
+  if (framework === undefined || framework === null) {
+	  console.log("findSpecificApp: framework is null")
+	  return null 
+  }
+
+  if (inputcategory === undefined || inputcategory === null) {
+	  console.log("findSpecificApp: category is null")
+	  return null 
+  }
+
+  const category = inputcategory.toLowerCase().split(":")[0].trim()
+
+  console.log("findSpecificApp: ", category, framework)
+  if (category === "edr" || category === "eradication" || category === "edr & av") {
+	  if (framework["EDR & AV"] !== undefined && framework["EDR & AV"].name !== undefined) { 
+		  return framework["EDR & AV"]	
+	  }
+
+	  return {
+		  name: "EDR :default",
+		  large_image: parsedDatatypeImages["EDR & AV"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "communication") {
+	  if (framework["Comms"] !== undefined && framework["Comms"].name !== undefined) {
+		  return framework["Comms"]	
+	  }
+
+	  return {
+		  name: "COMMS :default",
+		  large_image: parsedDatatypeImages["COMMS"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "email") {
+	  if (framework["Email"] !== undefined && framework["Email"].name !== undefined) {
+		  return framework["Email"]	
+	  }
+
+	  return {
+		  name: "COMMS :default",
+		  large_image: parsedDatatypeImages["COMMS"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "assets") {
+	  if (framework["Assets"] !== undefined && framework["Assets"].name !== undefined) {
+		  return framework["Assets"]	
+	  }
+
+	  return {
+		  name: "ASSETS :default",
+		  large_image: parsedDatatypeImages["ASSETS"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "cases") {
+	  if (framework["Cases"] !== undefined && framework["Cases"].name !== undefined) {
+		  return framework["Cases"]
+	  }
+
+	  return {
+		  name: "CASES :default",
+		  large_image: parsedDatatypeImages["CASES"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "iam") {
+	  if (framework["IAM"] !== undefined &&	framework["IAM"].name !== undefined) {
+		  return framework["IAM"]
+	  }
+
+	  return {
+		  name: "EDR :default",
+		  large_image: parsedDatatypeImages["EDR & AV"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "network") {
+	  if (framework["Network"] !== undefined && framework["Network"].name !== undefined) {
+		  return framework["Network"]
+	  }
+
+	  return {
+		  name: "Network :default",
+		  large_image: parsedDatatypeImages["NETWORK"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "intel") {
+	  if (framework["Intel"] !== undefined && framework["Intel"].name !== undefined) {
+		  return framework["Intel"]
+	  }
+
+	  return {
+		  name: "INTEL :default",
+		  large_image: parsedDatatypeImages["INTEL"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  }
+  } else if (category === "siem") {
+	  if (framework["SIEM"] !== undefined && framework["SIEM"].name !== undefined) {
+		  return framework["SIEM"]
+	  }
+
+	  return {
+		  name: "SIEM :default",
+		  large_image: parsedDatatypeImages["SIEM"],
+		  count: 0,
+		  description: "",
+		  id: "",
+	  } 
+  } else {
+	  console.log("findSpecificApp: unknown category: ", category)
+  }
+
+  return null
+} 
 
 const svgSize = "40px" 
-const parsedDatatypeImages = {
+export const parsedDatatypeImages = {
 	"SIEM": encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M6.93767 0C8.71083 0 10.4114 0.704386 11.6652 1.9582C12.919 3.21202 13.6234 4.91255 13.6234 6.68571C13.6234 8.34171 13.0165 9.864 12.0188 11.0366L12.2965 11.3143H13.1091L18.252 16.4571L16.7091 18L11.5662 12.8571V12.0446L11.2885 11.7669C10.116 12.7646 8.59367 13.3714 6.93767 13.3714C5.16451 13.3714 3.46397 12.667 2.21015 11.4132C0.956339 10.1594 0.251953 8.45888 0.251953 6.68571C0.251953 4.91255 0.956339 3.21202 2.21015 1.9582C3.46397 0.704386 5.16451 0 6.93767 0ZM6.93767 2.05714C4.36624 2.05714 2.3091 4.11429 2.3091 6.68571C2.3091 9.25714 4.36624 11.3143 6.93767 11.3143C9.5091 11.3143 11.5662 9.25714 11.5662 6.68571C11.5662 4.11429 9.5091 2.05714 6.93767 2.05714Z" /></svg>`), 
 
 	"CASES": encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M15.6408 8.39233H18.0922V10.0287H15.6408V8.39233ZM0.115234 8.39233H2.56663V10.0287H0.115234V8.39233ZM9.92083 0.21051V2.66506H8.28656V0.21051H9.92083ZM3.31839 2.25596L5.05889 4.00687L3.89856 5.16051L2.15807 3.42596L3.31839 2.25596ZM13.1485 3.99869L14.8808 2.25596L16.0493 3.42596L14.3088 5.16051L13.1485 3.99869ZM9.10369 4.30142C10.404 4.30142 11.651 4.81863 12.5705 5.73926C13.4899 6.65989 14.0065 7.90854 14.0065 9.21051C14.0065 11.0269 13.0178 12.6141 11.5551 13.4651V14.9378C11.5551 15.1548 11.469 15.3629 11.3158 15.5163C11.1625 15.6698 10.9547 15.756 10.738 15.756H7.46943C7.25271 15.756 7.04487 15.6698 6.89163 15.5163C6.73839 15.3629 6.6523 15.1548 6.6523 14.9378V13.4651C5.18963 12.6141 4.2009 11.0269 4.2009 9.21051C4.2009 7.90854 4.71744 6.65989 5.63689 5.73926C6.55635 4.81863 7.80339 4.30142 9.10369 4.30142ZM10.738 16.5741V17.3923C10.738 17.6093 10.6519 17.8174 10.4986 17.9709C10.3454 18.1243 10.1375 18.2105 9.92083 18.2105H8.28656C8.06984 18.2105 7.862 18.1243 7.70876 17.9709C7.55552 17.8174 7.46943 17.6093 7.46943 17.3923V16.5741H10.738ZM8.28656 14.1196H9.92083V12.3769C11.3345 12.0169 12.3722 10.7323 12.3722 9.21051C12.3722 8.34253 12.0279 7.5101 11.4149 6.89634C10.8019 6.28259 9.97056 5.93778 9.10369 5.93778C8.23683 5.93778 7.40546 6.28259 6.79249 6.89634C6.17953 7.5101 5.83516 8.34253 5.83516 9.21051C5.83516 10.7323 6.87292 12.0169 8.28656 12.3769V14.1196Z" /></svg>`),
@@ -523,7 +651,7 @@ const AppFramework = (props) => {
 
 	const scale = size === undefined ? 1 : size > 5 ? 3 : size
 
-  const alert = useAlert()
+  //const alert = useAlert()
 
 
 	const handleLoadNextSuggestion = (frameworkData) => {
@@ -716,7 +844,7 @@ const AppFramework = (props) => {
 	}
 
 	useEffect(() => {
-		console.log("DISCWRAP CHANG: ", discoveryWrapper)
+		//console.log("DISCWRAP CHANG: ", discoveryWrapper)
 		if (discoveryWrapper === undefined || discoveryWrapper.id === "SHUFFLE" || discoveryWrapper.id === undefined || cy === undefined) {
 			setDiscoveryData({})
 
@@ -786,16 +914,16 @@ const AppFramework = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Failed updating: " + responseJson.reason)
+						toast("Failed updating: " + responseJson.reason)
 					} else {
-						alert.error("Failed to update framework for your org.")
+						toast("Failed to update framework for your org.")
 					}
 				} else {
-					alert.info("Updated usecase.")
+					toast("Updated usecase.")
 				}
 			})
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
 				//setFrameworkLoaded(true)
       })
 		}
@@ -818,13 +946,13 @@ const AppFramework = (props) => {
 			})
 			.then((responseJson) => {
 				if (responseJson.success === false) {
-					alert.error("Failed to activate the app")
+					toast("Failed to activate the app")
 				} else {
-					//alert.success("App activated for your organization! Refresh the page to use the app.")
+					//toast("App activated for your organization! Refresh the page to use the app.")
 				}
 			})
 			.catch(error => {
-				//alert.error(error.toString())
+				//toast(error.toString())
 				console.log("Activate app error: ", error.toString())
 			});
 		}
@@ -854,9 +982,9 @@ const AppFramework = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Failed updating: " + responseJson.reason)
+						toast("Failed updating: " + responseJson.reason)
 					} else {
-						alert.error("Failed to update framework for your org.")
+						toast("Failed to update framework for your org.")
 
 					}
 				}
@@ -865,7 +993,7 @@ const AppFramework = (props) => {
 				//setFrameworkData(responseJson)
 			})
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
 				//setFrameworkLoaded(true)
       })
 		}
@@ -877,7 +1005,7 @@ const AppFramework = (props) => {
 	}, [])
 
 	useEffect(() => {
-		console.log("New selected app: ", newSelectedApp, discoveryData)
+		//console.log("New selected app: ", newSelectedApp, discoveryData)
 		if (newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined  || newSelectedApp.objectID.length === 0) {
 			return
 		}
@@ -1859,7 +1987,6 @@ const AppFramework = (props) => {
 	//autounselectify={true}
 	var usecasediff = -100
 	const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
-
 	return (	
 		<div style={{margin: "auto", backgroundColor: bgColor, position: "relative", }}>
 			<div style={{position: "absolute"}}>
@@ -1995,11 +2122,11 @@ const AppFramework = (props) => {
 
   		{
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
-					<Paper style={{width: 275, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: 50, }}>
+					<Paper style={{width: 300, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 25, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: 50, }}>
 						{paperTitle.length > 0 ? 
 							<span>
 								<Typography variant="h6" style={{textAlign: "center"}}>
-									{paperTitle}
+									{paperTitle.replace("_", " ", -1)}
 								</Typography>
 								<Divider style={{marginTop: 5, marginBottom: 5 }} />
 							</span>
@@ -2069,8 +2196,8 @@ const AppFramework = (props) => {
 
 									const foundelement = cy.getElementById(discoveryData.id)
 									if (foundelement !== undefined && foundelement !== null) {
-										console.log("element: ", foundelement)
-										console.log("DISC: ", discoveryData)
+										//console.log("element: ", foundelement)
+										//console.log("DISC: ", discoveryData)
 										foundelement.data("large_image", parsedDatatypeImages[discoveryData.id.toUpperCase()])
 										foundelement.data("text_margin_y", "14px")
 										foundelement.data("margin_x", "32px")
@@ -2129,7 +2256,7 @@ const AppFramework = (props) => {
 									? 
 									<span>
 										<Typography variant="body2" color="textSecondary" style={{marginTop: 10}}>
-											Click an app below to select it
+											Search to find your app 
 										</Typography>
 									</span>
 									:
@@ -2164,7 +2291,7 @@ const AppFramework = (props) => {
 				elements={elements} 
 				minZoom={0.35}
 				maxZoom={2.00}
-				style={{width: 560*scale, height: 560*scale, backgroundColor: "transparent", margin: "auto",}} 
+				style={{width: 560*scale, height: 560*scale, backgroundColor: theme.palette.backgroundColor, margin: "auto",}} 
 				stylesheet={frameworkStyle}
 				boxSelectionEnabled={false}
 				panningEnabled={false}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
+import { toast } from 'react-toastify';
 
 import {
   InputAdornment,
@@ -14,12 +15,18 @@ import {
   List,
   ListItem,
   ListItemText,
-  Fade,
-} from "@material-ui/core";
+  Collapse,
+  IconButton,
+} from "@mui/material";
+
 import { 
 	FavoriteBorder as FavoriteBorderIcon,
 	Error as ErrorIcon,
 	CheckCircleRounded as CheckCircleRoundedIcon,
+    ExpandMore as ExpandMoreIcon,
+    ExpandLess as ExpandLessIcon,
+	Check as CheckIcon,
+	Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { FixName } from "../views/Apps.jsx";
 import aa from 'search-insights'
@@ -33,27 +40,26 @@ import aa from 'search-insights'
 // Specifically used for UNSAVED workflows only?
 const ConfigureWorkflow = (props) => {
   const {
-		userdata,
-    globalUrl,
+    apps,
     theme,
+    isCloud,
     workflow,
+	userdata,
+    globalUrl,
+    newWebhook,
+    referenceUrl,
+    saveWorkflow,
+	showTriggers,
+    submitSchedule,
+    setSelectedApp,
+    selectedAction,
     appAuthentication,
     setSelectedAction,
-    setAuthenticationModalOpen,
-    setSelectedApp,
-    apps,
-    selectedAction,
-    setConfigureWorkflowModalOpen,
-    saveWorkflow,
-    newWebhook,
-    submitSchedule,
-    referenceUrl,
-    isCloud,
+	workflowExecutions,
+	getWorkflowExecution,
     setAuthenticationType,
-    alert,
-		showTriggers,
-		workflowExecutions,
-		getWorkflowExecution,
+    setAuthenticationModalOpen,
+    setConfigureWorkflowModalOpen,
   } = props;
 
   const [requiredActions, setRequiredActions] = React.useState([]);
@@ -63,9 +69,39 @@ const ConfigureWorkflow = (props) => {
   const [itemChanged, setItemChanged] = React.useState(false);
   const [firstLoad, setFirstLoad] = React.useState("");
   const [showFinalizeAnimation, setShowFinalizeAnimation] = React.useState(false);
+  const [loopRunning, setLoopRunning] = useState(false)
 
-	const [checkStarted, setCheckStarted] = React.useState(false);
+  const [checkStarted, setCheckStarted] = React.useState(false);
 
+  const stop = () => {
+	  setLoopRunning(false)
+  }
+
+  const start = () => {
+	  setLoopRunning(true)
+  }
+
+  useEffect(() => {
+	  if (loopRunning) {
+		  const intervalId = setInterval(() => {
+			  if (!loopRunning) {
+        		clearInterval(intervalId);
+      		  }
+
+
+			  if (getWorkflowExecution !== undefined && workflowExecutions !== undefined) {
+			  	const paramkey = workflow.id
+			  	getWorkflowExecution(paramkey)
+			  } else {
+			  	console.log("Executions or getWorkflowExecutions not defined")
+			  }
+		  }, 3000)
+
+		  return () => clearInterval(intervalId);
+	  }
+  }, [loopRunning])
+
+	/*
 	const { start, stop } = useInterval({
 		duration: 3000,
 		startImmediate: false,
@@ -78,6 +114,7 @@ const ConfigureWorkflow = (props) => {
 			}
 		},
 	});
+	*/
 
 	// ONLY when component is being unloaded, run stop() function
 	// This is to prevent the interval from running when the component is not being used
@@ -91,16 +128,18 @@ const ConfigureWorkflow = (props) => {
 	*/
 
 	// Where is this from?
-  if (workflow === undefined || workflow === null) {
+  if (workflow === undefined || workflow === null || workflow.id === undefined) {
     return null;
   }
 
   if (apps === undefined || apps === null) {
-    return null;
+	  console.log("Apps is undefined or null: ", apps)
+      return null;
   }
 
   if (appAuthentication === undefined || appAuthentication === null) {
-    return null;
+	  console.log("App authentication is undefined or null: ", appAuthentication)
+      return null;
   }
 
   const getApp = (actionId, appId) => {
@@ -112,9 +151,9 @@ const ConfigureWorkflow = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          //alert.success("Successfully GOT app "+appId)
+          //toast("Successfully GOT app "+appId)
         } else {
-          alert.error("Failed getting app");
+          toast("Failed getting app");
         }
 
         return response.json();
@@ -128,20 +167,26 @@ const ConfigureWorkflow = (props) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
   if (firstLoad.length === 0 || firstLoad !== workflow.id) {
     if (apps === undefined || apps === null || apps.length === 0) {
       console.log("No apps loaded: ", apps);
-      setConfigureWorkflowModalOpen(false);
+
+	  if (setConfigureWorkflowModalOpen !== undefined) {
+      	setConfigureWorkflowModalOpen(false);
+	  }
+
       return null;
     }
 
     setFirstLoad(workflow.id)
+
     const newactions = [];
     for (let [key, keyval] in Object.entries(workflow.actions)) {
+
       const action = workflow.actions[key];
       var newaction = {
         large_image: action.large_image,
@@ -153,34 +198,36 @@ const ConfigureWorkflow = (props) => {
         auth_done: false,
         action_ids: [],
         action: action,
-				update_version: action.app_version,
+		update_version: action.app_version,
         app: {},
-				steps: [],
-				show_steps: false,
+		steps: [],
+		show_steps: false,
       }
 
-			//console.log("Action: ", key, keyval)
+	  if (action.app_name.toLowerCase().endsWith("_api")) {
+		  action.app_name = action.app_name.slice(0, -4)
+	  }
 
-      const app = apps.find((app) =>
-				app.id === action.app_id || 
-				(app.name === action.app_name &&
-				(app.app_version === action.app_version || (app.loop_versions !== null && app.loop_versions.includes(action.app_version))))
-      )
+	  // ID match OR name match + version match 
+      //const app = apps.find((app) => app.id === action.app_id || (app.name === action.app_name && (app.app_version === action.app_version || (app.loop_versions !== null && app.loop_versions.includes(action.app_version)))))
+		//
 
-			//console.log("FOUND APP: ", app)
-
+	  // without version match
+	  const newappname = action.app_name.toLowerCase().replaceAll(" ", "_")
+      const app = apps.find((app) => app.id === action.app_id || app.name.toLowerCase().replaceAll(" ", "_") === newappname)
       if (app === undefined || app === null) {
+
       	const subapp = apps.find(app => app.name === action.app_name)
-				if (subapp !== undefined && subapp !== null) {
-					newaction.update_version = "1.1.0"
-				}
+		if (subapp !== undefined && subapp !== null) {
+			newaction.update_version = "1.1.0"
+		}
 
         newaction.must_activate = true;
-				newaction.steps.push({
-					"title": "Activate app",
-					"type": "activate",
-					"required": true,
-				})
+		newaction.steps.push({
+			"title": "Activate app",
+			"type": "activate",
+			"required": true,
+		})
       } else {
         if (action.authentication_id === "" && app.authentication.required === true && action.parameters !== undefined && action.parameters !== null) {
           // Check if configuration is filled or not
@@ -198,20 +245,19 @@ const ConfigureWorkflow = (props) => {
             }
           }
 
-					newaction.steps.push({
-						"title": "Authenticate app",
-						"type": "authenticate",
-						"required": true,
-					})
+		  newaction.steps.push({
+		  	"title": "Authenticate app",
+		  	"type": "authenticate",
+		  	"required": true,
+		  })
 
           if (!filled) {
             newaction.must_authenticate = true;
             newaction.action_ids.push(action.id);
           }
         } else if (action.authentication_id !== "" && app.authentication.required === true) {
-					console.log("Should verify authentication ID ", action.authentication_id)
-
-				}
+			console.log("Should verify authentication ID ", action.authentication_id)
+		}
 
         newaction.app = app;
       }
@@ -275,80 +321,78 @@ const ConfigureWorkflow = (props) => {
     }
 
 	if (workflow.workflow_variables !== undefined && workflow.workflow_variables !== null && workflow.workflow_variables.length !== 0) {
-    for (let [key,keyval] in Object.entries(workflow.workflow_variables)) {
-      const variable = workflow.workflow_variables[key];
-      if (variable.value === undefined || variable.value === undefined || variable.value.length === 0) {
-        variable.value = "";
-        requiredVariables.push(variable);
-      }
+		for (let [key,keyval] in Object.entries(workflow.workflow_variables)) {
+		  const variable = workflow.workflow_variables[key];
 
-			variable.index = key;
-    }
+		  if (variable.value === undefined || variable.value === undefined || variable.value.length === 0) {
+			variable.value = "";
+			requiredVariables.push(variable);
+		  }
+
+		  variable.index = key;
+		}
 	}
 
 	if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length !== 0) {
-    for (let [key,keyval] in Object.entries(workflow.triggers)) {
-      var trigger = workflow.triggers[key];
-      trigger.index = key;
+		for (let [key,keyval] in Object.entries(workflow.triggers)) {
+		  var trigger = workflow.triggers[key];
+		  trigger.index = key;
 
-			if (trigger.trigger_type === "WEBHOOK") {
-				console.log("Found webhook: ", trigger)
-				if (trigger.app_association !== undefined && trigger.app_association.name !== null && trigger.app_association.name !== "") {
-					console.log("Actions: ", newactions)
-					const findapp = trigger.app_association.name.toLowerCase()
-					const foundindex = newactions.findIndex(action => action.app_name.toLowerCase() === findapp)
+		  if (trigger.trigger_type === "WEBHOOK") {
+		  	console.log("Found webhook: ", trigger)
 
-					// Adding webhook to start of it
-					if (foundindex >= 0) {
-						const tmpsteps = newactions[foundindex].steps
-						newactions[foundindex].steps = [
-							{
-								"title": "Configure Webhook",
-								"type": "webhook",
-								"required": true,
-							}
-						]
+		  	if (trigger.app_association !== undefined && trigger.app_association.name !== null && trigger.app_association.name !== "") {
+		  		console.log("Actions: ", newactions)
+		  		const findapp = trigger.app_association.name.toLowerCase()
+		  		const foundindex = newactions.findIndex(action => action.app_name.toLowerCase() === findapp)
 
-						for (let [subkey,subkeyval] in Object.entries(tmpsteps)) {
-							newactions[foundindex].steps.push(tmpsteps[subkey])
-						}
-				
-						newactions[foundindex].show_steps = true
+		  		// Adding webhook to start of it
+		  		if (foundindex >= 0) {
+		  			const tmpsteps = newactions[foundindex].steps
+		  			newactions[foundindex].steps = [
+		  				{
+		  					"title": "Configure Webhook",
+		  					"type": "webhook",
+		  					"required": true,
+		  				}
+		  			]
 
-						console.log("CHANGED ACTION: ", newactions[foundindex])
-						//console.log("Index: ", newactions[foundindex])
+		  			for (let [subkey,subkeyval] in Object.entries(tmpsteps)) {
+		  				newactions[foundindex].steps.push(tmpsteps[subkey])
+		  			}
+		  	
+		  			newactions[foundindex].show_steps = true
 
-						continue
-					}
-				}
+		  			console.log("CHANGED ACTION: ", newactions[foundindex])
+		  			//console.log("Index: ", newactions[foundindex])
+
+		  			continue
+		  		}
+		  	}
+		  }
+
+			  if (trigger.status === "running") {
+				continue;
+			  }
+
+			  if (
+				trigger.trigger_type === "SUBFLOW" ||
+				trigger.trigger_type === "USERINPUT"
+			  ) {
+				continue;
+			  }
+
+			  requiredTriggers.push(trigger);
 			}
+		}
 
-      if (trigger.status === "running") {
-        continue;
-      }
+		if (requiredTriggers.length === 0 && requiredVariables.length === 0 && newactions.length === 0 && setConfigureWorkflowModalOpen !== undefined) {
+		  setConfigureWorkflowModalOpen(false);
+		}
 
-      if (
-        trigger.trigger_type === "SUBFLOW" ||
-        trigger.trigger_type === "USERINPUT"
-      ) {
-        continue;
-      }
-
-      requiredTriggers.push(trigger);
-    }
-}
-
-    if (
-      requiredTriggers.length === 0 &&
-      requiredVariables.length === 0 &&
-      newactions.length === 0
-    ) {
-      setConfigureWorkflowModalOpen(false);
-    }
-
-    setRequiredTriggers(requiredTriggers);
-    setRequiredVariables(requiredVariables);
-    setRequiredActions(newactions);
+		setRequiredTriggers(requiredTriggers);
+		setRequiredVariables(requiredVariables);
+		setRequiredActions(newactions);
 	}
 
   if (appAuthentication !== undefined && previousAuth !== undefined && appAuthentication.length !== previousAuth.length) {
@@ -380,7 +424,7 @@ const ConfigureWorkflow = (props) => {
     const { trigger } = props
 
     return (
-      <ListItem>
+      <ListItem style={{padding: 0, }}>
         <ListItemAvatar>
           <Avatar variant="rounded">
             <img
@@ -445,39 +489,6 @@ const ConfigureWorkflow = (props) => {
             {trigger.status !== "running" ? "Start" : "Running"}
           </Button>
         ) : null}
-        {/*
-					<ListItemText
-						primary={
-							<TextField
-								style={{backgroundColor: theme.palette.inputColor, borderRadius: 5,}} 
-								InputProps={{
-									style:{
-										color: "white",
-										minHeight: 50, 
-										marginLeft: 5,
-										maxWidth: "95%",
-										fontSize: "1em",
-									},
-									endAdornment: (
-										<InputAdornment position="end">
-										</InputAdornment>
-									)
-								}}
-								fullWidth
-								color="primary"
-								type={"text"}
-								placeholder={`New value for ${trigger.name}`}
-								onChange={(event) => {
-									console.log("NEW VALUE ON INDEX", trigger.value)
-								}}
-								onBlur={(event) => {
-									//workflow.variables[variable.index] = event.target.value
-								}}
-							/>
-							}
-							style={{}}
-						/>
-						*/}
       </ListItem>
     );
   };
@@ -487,7 +498,7 @@ const ConfigureWorkflow = (props) => {
 
     //<Typography variant="body2">Name: {variable.name} - {variable.value}. </Typography>
     return (
-      <ListItem>
+      <ListItem style={{padding: 0, }}>
         <ListItemAvatar>
           <Avatar>
             <FavoriteBorderIcon />
@@ -506,13 +517,6 @@ const ConfigureWorkflow = (props) => {
                 borderRadius: 5,
               }}
               InputProps={{
-                style: {
-                  color: "white",
-                  minHeight: 50,
-                  marginLeft: 5,
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                },
                 endAdornment: <InputAdornment position="end"></InputAdornment>,
               }}
               fullWidth
@@ -573,7 +577,7 @@ const ConfigureWorkflow = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           //window.location.pathname = "/search"
-          //alert.error("Failed to find this app. Is it public?")
+          //toast("Failed to find this app. Is it public?")
         }
 
         return response.json();
@@ -581,102 +585,326 @@ const ConfigureWorkflow = (props) => {
       .then((responseJson) => {
         if (responseJson.success === false) {
         	if (responseJson.reason !== undefined) {
-          	alert.error("Failed to activate the app: "+responseJson.reason);
+          	toast("Failed to activate the app: "+responseJson.reason);
 					} else {
-          	alert.error("Failed to activate the app");
+          	toast("Failed to activate the app");
 					}
         } else {
-          alert.success("App activated for your organization!");
+          toast("App activated for your organization!");
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
 
+  const AppSectionSelfcontained = (props) => {
+    const { action } = props;
+
+	const [opened, setOpened] = useState(false);
+    const [filled, setFilled] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [finalized, setFinalized] = useState(false);
+
+	const [authFields, setAuthFields] = useState([])
+	const [sensitiveFields, setSensitiveFields] = useState([])
+
+	if (authFields.length === 0 && opened === true) {
+		// Loop through fields of the action
+
+		var newfields = []
+		const params = action.action.parameters
+
+		var sensitiveIndexes = []
+		var index = 0
+		for (let key in params) {
+			const param = params[key]
+
+			if (param.configuration === true) {
+				if (param.name.toLowerCase().includes("key") || param.name.toLowerCase().includes("token") || param.name.toLowerCase().includes("password")) {
+					sensitiveIndexes.push(index)
+				}
+
+				newfields.push({
+					"key": param.name,
+					"example": param.example === undefined ? "" : param.example,
+					"value": param.name === "url" ? param.example : "",
+				})
+
+				index += 1
+			}
+		}
+
+		if (newfields.length > 0) {
+			setSensitiveFields(sensitiveIndexes)
+			setAuthFields(newfields)
+		}
+	}
+
+
+	  const submitLocalAuth = (app, fields) => {
+		const appAuthData = {
+			active: true,
+			app: app,
+			fields: fields,
+			label: "Authentication for " + app.name,
+			usage: [{"workflow_id": workflow.id}],
+			auto_distribute: true,
+		}
+
+
+		fetch(globalUrl + "/api/v1/apps/authentication", {
+		  method: "PUT",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  body: JSON.stringify(appAuthData),
+		  credentials: "include",
+		})
+		  .then((response) => {
+			if (response.status !== 200) {
+			  console.log("Status not 200 for setting app auth :O!");
+			}
+    		
+		    setSubmitted(false)
+
+			return response.json();
+		  })
+		  .then((responseJson) => {
+			if (!responseJson.success) {
+			  toast("Failed to set app auth: " + responseJson.reason);
+			} else {
+			  toast("App auth set for app " + app.name.replace("_", " "));
+			  setFinalized(true)
+			  setOpened(false)
+			}
+		  })
+		  .catch((error) => {
+		    setSubmitted(false)
+			//toast(error.toString());
+			console.log("New auth error: ", error.toString());
+		  });
+	  }
+
+	var parsedName = action.app_name.replaceAll("_", " ");
+	if (action.app_name.toLowerCase().endsWith("_api")) {
+		parsedName = parsedName.substring(0, parsedName.length - 4);
+	}
+
+	// Remove _basic at the end if it exists
+	if (parsedName.toLowerCase().endsWith("_basic")) {
+		parsedName = parsedName.substring(0, parsedName.length - 6);
+	}
+
+	parsedName = (parsedName.charAt(0).toUpperCase() + parsedName.slice(1)).replaceAll("_", " ");
+
+	return (
+		<ListItem 
+			style={{padding: 0, display: "flex", flexDirection: "column", }}
+		>
+			<div 
+				style={{
+					border: filled ? `1px solid ${theme.palette.green}` : "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, width: "100%", padding: 12, cursor: "pointer", 
+				}}
+				id="app-config"
+			>
+				<div style={{display: "flex", }}
+					onClick={() => {
+						setOpened(!opened);
+					}}
+				>
+					<div style={{display: "flex", flex: 7, }}>
+						<span style={{marginTop: 10, marginRight: 10, }}>
+							{!opened ? <ExpandMoreIcon /> : <ExpandLessIcon />}
+						</span>
+						<img
+							alt={parsedName}
+							style={{ margin: 4, minHeight: 40, maxHeight: 40, borderRadius: 30, }}
+							src={action.large_image}
+						/>
+						<Typography style={{ marginLeft: 10, marginTop: 10, }} variant="body1">
+							<b>{finalized ? "Authenticated" : `Configure ${parsedName}`}</b>
+						</Typography>
+					</div>
+					{filled ?
+						<CheckIcon style={{color: theme.palette.green, marginLeft: 10, marginTop: 10, flex: 1, }} />
+						: null}
+				</div>
+				{opened ?
+					<div style={{padding: 12, }}>
+						{authFields.map((field, index) => {
+							var parsedName = field.key
+							// Remove _basic at the end if it exists
+							if (parsedName.toLowerCase().endsWith("_basic")) {
+								parsedName = parsedName.substring(0, parsedName.length - 6);
+							}
+
+							parsedName = (parsedName.charAt(0).toUpperCase() + parsedName.slice(1)).replaceAll("_", " ");
+
+							return (
+								<div key={index} style={{marginBottom: 15, marginLeft: 10, marginRight: 10, }}>
+									<Typography style={{ }} variant="body1">
+										{parsedName}
+									</Typography>
+									<TextField
+										style={{
+											backgroundColor: theme.palette.inputColor,
+										}}
+										defaultValue={field.value}
+										onChange={(event) => {
+											event.preventDefault();
+											authFields[index].value = event.target.value;
+											setAuthFields(authFields);
+
+											var allFilled = true;
+											authFields.forEach((field) => {
+												if (field.value.length === 0) {
+													allFilled = false;
+												} else {
+													//console.log("Field is not filled: "+field.key)
+												}
+											})
+
+											if (allFilled) {
+												console.log("Should test the fields, and submit them")
+												setFilled(true);
+											} else {
+												if (filled) {
+													setFilled(false);
+												}
+											}
+										}}
+
+										endAdornment={
+											// Show item that can show field value if password
+											//field.name.toLowerCase().includes("key") || field.name.toLowerCase().includes("token") || field.name.toLowerCase().includes("password") ?
+											field.key.toLowerCase().includes("key") || field.key.toLowerCase().includes("token") || field.key.toLowerCase().includes("password") ?
+												<InputAdornment position="end">
+													<IconButton
+														aria-label="toggle password visibility"
+														onClick={() => {
+															setSensitiveFields(sensitiveFields.filter((item) => item !== index))
+														}}
+														onMouseDown={(event) => {
+															event.preventDefault();
+														}}
+													>	
+														<VisibilityIcon />
+													</IconButton>
+												</InputAdornment>
+											: null
+										}
+										fullWidth
+										color="primary"
+										type={sensitiveFields.includes(index) ? "password" : "text"}
+										placeholder={field.example ? field.example : `Enter your ${field.key}`}
+										data-lpignore="true"
+										dataLPIgnore="true"
+										autocomplete="off"
+									/>
+								</div>
+							)
+						})}
+						<Button
+							variant="contained"
+							color="primary"
+							style={{
+								marginTop: 15,
+								width: 150,
+								marginLeft: 135, 
+							}}
+							disabled={!filled || submitted}
+							onClick={() => {
+								setSubmitted(true);
+
+								// const submitLocalAuth = (app, fields) => {
+								submitLocalAuth({"id": action.app.id, "name": action.app.name, "version": action.app.version, "large_image": action.large_image, }, authFields);
+									
+							}}
+						>
+							{submitted ? <CircularProgress style={{color: theme.palette.primary.main, }} /> : "Submit"}
+						</Button>
+					</div>
+				: null}
+			</div>
+		</ListItem>
+	)
+  }
 
   const AppSection = (props) => {
     const { action } = props;
 
+    var parsedName = action.app_name.replaceAll("_", " ");
+    if (action.app_name.toLowerCase().endsWith("_api")) {
+		parsedName = parsedName.substring(0, parsedName.length - 4);
+	}
+
     return (
       <ListItem>
-				{/*
-        <ListItemAvatar>
-          <Avatar variant="rounded">
-            <img
-              alt={action.app_name}
-              src={action.large_image}
-              style={{ width: 50 }}
-            />
-          </Avatar>
-        </ListItemAvatar>
-        <ListItemText
-          primary={FixName(action.app_name)}
-          secondary={action.app_version}
-          style={{}}
-        />
-				*/}
         {action.must_authenticate ? 
-						<Button
-        		  fullWidth
-        		  variant="contained"
-							disabled={action.auth_done}
-        		  style={{
-        		    flex: 1,
-        		    textTransform: "none",
-        		    textAlign: "left",
-        		    justifyContent: "flex-start",
-        		    backgroundColor: action.auth_done ? theme.palette.surfaceColor : theme.palette.inputColor,
-        		    color: action.auth_done ? "#686a6c" : "#ffffff",
-								borderRadius: theme.palette.borderRadius,
-								minWidth: 350, 
-								maxHeight: 50,
-								overflow: "hidden",
-								border: `1px solid ${theme.palette.inputColor}`,
-        		  }}
-        		  color="primary"
-        		  onClick={() => {
-        		      setAuthenticationType(
-                  action.app.authentication.type === "oauth2" &&
-                    action.app.authentication.redirect_uri !== undefined &&
-                    action.app.authentication.redirect_uri !== null
-                    ? {
-                        type: "oauth2",
-                        redirect_uri: action.app.authentication.redirect_uri,
-                        token_uri: action.app.authentication.token_uri,
-                        scope: action.app.authentication.scope,
-                      }
-                    : {
-                        type: "",
-                      }
-                )
+			<Button
+			  fullWidth
+			  variant="contained"
+			  disabled={action.auth_done}
+			  style={{
+				flex: 1,
+				textTransform: "none",
+				textAlign: "left",
+				justifyContent: "flex-start",
+				backgroundColor: action.auth_done ? theme.palette.surfaceColor : theme.palette.inputColor,
+				color: action.auth_done ? "#686a6c" : "#ffffff",
+				borderRadius: theme.palette.borderRadius,
+				minWidth: 350, 
+				maxHeight: 50,
+				overflow: "hidden",
+				border: `1px solid ${theme.palette.inputColor}`,
+			  }}
+			  color="primary"
+			  onClick={() => {
+				  if (setAuthenticationType !== undefined) {
+					  setAuthenticationType(action.app.authentication.type === "oauth2" && action.app.authentication.redirect_uri !== undefined && action.app.authentication.redirect_uri !== null
+							? 
+							{
+								type: "oauth2",
+								redirect_uri: action.app.authentication.redirect_uri,
+								token_uri: action.app.authentication.token_uri,
+								scope: action.app.authentication.scope,
+							}
+							: 
+							{
+								type: "",
+							}
+					  )
+					}
 
-                setItemChanged(true);
+					setItemChanged(true);
+					if (setSelectedAction !== undefined) {
+						setSelectedAction(action.action);
+					}
 
-								if (setSelectedAction !== undefined) {
-                	setSelectedAction(action.action);
-								}
+					if (setSelectedApp !== undefined) {
+						setSelectedApp(action.app);
+					}
 
-								if (setSelectedApp !== undefined) {
-                	setSelectedApp(action.app);
-								}
-
-                setAuthenticationModalOpen(true);
-        		  }}
-            >
-						<img
-							alt={action.app_name}
-							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
-							src={action.large_image}
-						/>
-						<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
-							{action.auth_done ? "Authenticated" : `Authenticate ${action.app_name.replaceAll("_", " ")}`}
-						</Typography>
-        	</Button>
+					if (setAuthenticationModalOpen !== undefined) {
+						setAuthenticationModalOpen(true);
+					}
+			  }}
+		>
+			<img
+				alt={action.app_name}
+				style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+				src={action.large_image}
+			/>
+			<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
+				{action.auth_done ? "Authenticated" : `Authenticate ${action.app_name.replaceAll("_", " ")}`}
+			</Typography>
+		</Button>
          : null}
 				{action.update_version !== action.app_version ? 
-          <Button
+          			<Button
 						fullWidth
 						variant="contained"
 						disabled={action.auth_done}
@@ -700,7 +928,7 @@ const ConfigureWorkflow = (props) => {
 
 							if (workflow.actions !== null) {
 								//console.log(workflow.actions)
-								alert.info("Setting action to version "+action.update_version)
+								toast("Setting action to version "+action.update_version)
 								for (let [key,keyval] in Object.entries(workflow.actions)) {
 									if (workflow.actions[key].app_name === action.app_name && workflow.actions[key].app_version === action.app_version) {
 										workflow.actions[key].app_version = action.update_version
@@ -728,28 +956,28 @@ const ConfigureWorkflow = (props) => {
 					: 
 					action.must_activate ? 
 						<Button
-								fullWidth
-								variant="contained"
-								disabled={action.auth_done}
-								style={{
-									flex: 1,
-									textTransform: "none",
-									textAlign: "left",
-									justifyContent: "flex-start",
-									backgroundColor: action.auth_done ? theme.palette.surfaceColor : theme.palette.inputColor,
-									color: action.auth_done ? "#686a6c" : "#ffffff",
-									borderRadius: theme.palette.borderRadius,
-									minWidth: 350, 
-									maxHeight: 50,
-									overflow: "hidden",
-									border: `1px solid ${theme.palette.inputColor}`,
-								}}
-								color="primary"
-								onClick={() => {
-									console.log("ACTION: ", action)
-									activateApp(action.action.app_id, action.app_name, action.app_version);
-									setItemChanged(true);
-								}}
+							fullWidth
+							variant="contained"
+							disabled={action.auth_done}
+							style={{
+								flex: 1,
+								textTransform: "none",
+								textAlign: "left",
+								justifyContent: "flex-start",
+								backgroundColor: action.auth_done ? theme.palette.surfaceColor : theme.palette.inputColor,
+								color: action.auth_done ? "#686a6c" : "#ffffff",
+								borderRadius: theme.palette.borderRadius,
+								minWidth: 350, 
+								maxHeight: 50,
+								overflow: "hidden",
+								border: `1px solid ${theme.palette.inputColor}`,
+							}}
+							color="primary"
+							onClick={() => {
+								console.log("ACTION: ", action)
+								activateApp(action.action.app_id, action.app_name, action.app_version);
+								setItemChanged(true);
+							}}
 					>
 						<img
 							alt={action.app_name}
@@ -771,7 +999,7 @@ const ConfigureWorkflow = (props) => {
 	//backgroundColor: selectedUsecaseCategory === usecase.name ? usecase.color : theme.palette.surfaceColor,
 
 	const BoxHighlight = (props) => {
-		const {data, appname, appinfo, index, activeStep, setActiveStep, finished, } = props
+		const {data, appname, appinfo, index, activeStep, setActiveStep, filled, } = props
 
 		const [hovered, setHovered] = useState(false)
 		const [isOpen, setIsOpen] = useState(false)
@@ -779,7 +1007,6 @@ const ConfigureWorkflow = (props) => {
 
 		// This kind of just works for new workflows..
 		// What if we try many times?	
-
 		var webhook = {
 			"name": "Testhook",
 			"description": `A Webhook Trigger has been started and is ready to receive events from ${appname}. Click to copy the URL to send events to.`,
@@ -787,10 +1014,10 @@ const ConfigureWorkflow = (props) => {
 		}
 
 		useEffect(() => {
-			if (data.type === "webhook" && !finished) {
+			if (data.type === "webhook" && !filled) {
 				if (!checkStarted) {
 					setCheckStarted(true)
-  				start()
+  					start()
 				}
 			}
 		}, [])
@@ -838,8 +1065,8 @@ const ConfigureWorkflow = (props) => {
 			>
 
 				<div style={{display: "flex"}}>
-      		<Typography variant="h6" style={{flex: 10, }}>{data.title}</Typography>
-					{finished ?
+					<Typography variant="h6" style={{flex: 10, }}>{data.title}</Typography>
+					{filled ?
 						<CheckCircleRoundedIcon style={{color: "#0f9d58", flex: 1, }} />
 						:
 						<ErrorIcon style={{color: "#ffd300", flex: 1, }} />
@@ -858,7 +1085,7 @@ const ConfigureWorkflow = (props) => {
 									console.log("NAVIGATOR: ", navigator);
 									const clipboard = navigator.clipboard;
 									if (clipboard === undefined) {
-										alert.error("Can only copy over HTTPS (port 3443)");
+										toast("Can only copy over HTTPS (port 3443)");
 										return;
 									}
 
@@ -871,12 +1098,12 @@ const ConfigureWorkflow = (props) => {
 
 									/* Copy the text inside the text field */
 									document.execCommand("copy");
-									alert.success("Copied Webhook URL");
+									toast("Copied Webhook URL");
 								}
 							}}>
 								<Typography variant="body2" color="textSecondary">{webhook.description}</Typography>
 								{/*<Typography variant="body2" color="textSecondary">{webhook.url}</Typography>*/}
-								{isLoading && finished === false ? 
+								{isLoading && filled === false ? 
 									<div style={{margin: "auto", width: 60, height: 60, marginTop: 5, }}>
 										<CircularProgress  /> 
 									</div>
@@ -885,7 +1112,10 @@ const ConfigureWorkflow = (props) => {
 								}
 							</div>
 						: 
-							<AppSection key={index} action={appinfo} />
+							setConfigureWorkflowModalOpen !== undefined ?
+								<AppSection key={index} action={appinfo} />
+								:
+  								<AppSectionSelfcontained key={index} action={appinfo} />
 						}
 					</div>
 				: null}
@@ -929,10 +1159,10 @@ const ConfigureWorkflow = (props) => {
 				</div>
 				{clicked === true ? 
 					data.steps.map((step, index) => {
-						var finished = false
+						var filled = false
 						if (step.type === "activate") {
 							if (data.activation_done === true) {
-								finished = true
+								filled = true
 
 								if (index === activeStep && firstRun === true) {
 									setActiveStep(activeStep+1)
@@ -947,10 +1177,10 @@ const ConfigureWorkflow = (props) => {
 						if (step.type === "authenticate") {
 							console.log("AUTH STEP: ", step)
 							if (data.must_authenticate === true ) {
-								finished = false
+								filled = false
 							} else {
 								if (data.activation_done === true && data.auth_done === true) {
-									finished = true 
+									filled = true 
 
 									if (firstRun) {
 										setFinishCount(finishCount+1)
@@ -969,7 +1199,7 @@ const ConfigureWorkflow = (props) => {
 								if (exec.execution_argument !== undefined && exec.execution_argument !== null && exec.execution_argument.length > 0 && exec.execution_source === "webhook") {
 									//console.log("Done: ", exec)
 
-									finished = true
+									filled = true
 									if (index === activeStep && firstRun === true) {
 										setActiveStep(activeStep+1)
 									
@@ -997,7 +1227,7 @@ const ConfigureWorkflow = (props) => {
 						}
 
 						return (
-							<BoxHighlight appinfo={data} appname={"Wazuh"} key={index} data={step} index={index} activeStep={activeStep} setActiveStep={setActiveStep} finished={finished} />
+							<BoxHighlight appinfo={data} appname={"Wazuh"} key={index} data={step} index={index} activeStep={activeStep} setActiveStep={setActiveStep} filled={filled} />
 						)
 					})
 				: null}
@@ -1008,36 +1238,48 @@ const ConfigureWorkflow = (props) => {
 	const topColor = "#f86a3e, #fc3922"
   return (
     <div>
-			<div style={{height: 75, width: "100%", background: `linear-gradient(to right, ${topColor}`, position: "relative",}}>
-			</div>
-			<div style={{margin: "25px 50px 50px 50px", maxHeight: 475, }}>
-      	<Typography variant="h6">{workflow.name}</Typography>
-      	<Typography variant="body2" color="textSecondary">
-      	  The following configuration makes the workflow ready immediately.
+	  	{setConfigureWorkflowModalOpen !== undefined ? 
+			<div style={{height: 75, width: "100%", background: `linear-gradient(to right, ${topColor}`, position: "relative",}} />
+		: null}
+		<div style={{margin: setConfigureWorkflowModalOpen !== undefined ? "0px 50px 0px 50px" : "35px 0px 0px", maxHeight: 475, }}>
+			
+
+	  	{setConfigureWorkflowModalOpen !== undefined ? 
+      		<Typography variant="h6">{workflow.name}</Typography>
+			: null
+		}
+
+      	<Typography variant="body2" style={{}}>
+		  Please configure the following apps for automatic startup of automation:
       	</Typography>
       	{requiredActions.length > 0 ? (
       	  <span>
-      	    <Typography variant="body1" style={{ marginTop: 10, }}>
-      	      Required Actions
-      	    </Typography>
+			{setConfigureWorkflowModalOpen !== undefined ?
+				<Typography variant="body1" style={{ marginTop: 10, }}>
+				  Required Actions
+				</Typography>
+			: null}
 
-      	    <List>
+      	    <List style={{paddingBottom: 250, }}>
       	      {requiredActions.map((data, index) => {
       	        return (
-									<div key={index}>
-										{data.steps !== undefined && data.steps !== null && data.show_steps === true ?
-											<AppWrapper data={data} parentindex={index} />
-										: 
-											<AppSection key={index} action={data} />
-										}
-									</div>
-								)
+					<div key={index} style={{marginBottom: 10, }}>
+						{data.steps !== undefined && data.steps !== null && data.show_steps === true && setConfigureWorkflowModalOpen !== undefined ?
+							<AppWrapper data={data} parentindex={index} />
+						: 
+							setConfigureWorkflowModalOpen !== undefined ?
+								<AppSection key={index} action={data} />
+								:
+  								<AppSectionSelfcontained key={index} action={data} />
+						}
+					</div>
+				)
       	      })}
       	    </List>
       	  </span>
       	) : null}
 
-      	{requiredVariables.length > 0 ? (
+      	{setConfigureWorkflowModalOpen !== undefined && requiredVariables.length > 0 ? (
       	  <span>
       	    <Typography variant="body1" style={{ marginTop: 10 }}>
       	      Variables
@@ -1050,7 +1292,7 @@ const ConfigureWorkflow = (props) => {
       	  </span>
       	) : null}
 
-      	{requiredTriggers.length > 0 && showTriggers !== false ? (
+      	{setConfigureWorkflowModalOpen !== undefined && requiredTriggers.length > 0 && showTriggers !== false ? (
       	  <span>
       	    <Typography variant="body1" style={{ marginTop: 10 }}>
       	      Triggers
@@ -1062,52 +1304,52 @@ const ConfigureWorkflow = (props) => {
       	    </List>
       	  </span>
       	) : null}
-
-				<div style={{ textAlign: "center", display: "flex", marginTop: 20 }}>
-					{showFinalizeAnimation ? 
-						<img id="finalize_gif" src="/images/finalize.gif" alt="finalize workflow animation" style={{width: 150, margin: "auto",}} onLoad={() => {
-							console.log("Img loaded.")
+	  {setConfigureWorkflowModalOpen !== undefined ?
+		<div style={{ textAlign: "left", display: "flex", marginTop: 20 }}>
+			{showFinalizeAnimation ? 
+				<img id="finalize_gif" src="/images/finalize.gif" alt="finalize workflow animation" style={{width: 150, margin: "auto",}} onLoad={() => {
+					console.log("Img loaded.")
+					setTimeout(() => {
+						console.log("Img closing.")
+						setConfigureWorkflowModalOpen(false);
+					}, 1250)
+						
+				}}/>
+				:
+				<ButtonGroup style={{ margin: "auto" }}>
+					{/*
+					<Button color="primary" variant={"outlined"} style={{
+					}} onClick={() => {
+						setConfigureWorkflowModalOpen(false)
+					}}>
+						Skip 
+					</Button>
+					*/}
+					<Button
+						variant={"outlined"}
+						style={{}}
+						onClick={() => {
+							stop()
+							setShowFinalizeAnimation(true)
 							setTimeout(() => {
-								console.log("Img closing.")
-								setConfigureWorkflowModalOpen(false);
-							}, 1250)
-								
-						}}/>
-						:
-						<ButtonGroup style={{ margin: "auto" }}>
-							{/*
-							<Button color="primary" variant={"outlined"} style={{
-							}} onClick={() => {
-								setConfigureWorkflowModalOpen(false)
-							}}>
-								Skip 
-							</Button>
-							*/}
-							<Button
-								color="textSecondary"
-								variant={"outlined"}
-								style={{}}
-								onClick={() => {
-									stop()
-									setShowFinalizeAnimation(true)
-									setTimeout(() => {
-										if (itemChanged) {
-											if (saveWorkflow !== undefined) {
-												saveWorkflow(workflow);
-												window.location.reload();
-											}
+								if (itemChanged) {
+									if (saveWorkflow !== undefined) {
+										saveWorkflow(workflow);
+										window.location.reload();
+									}
 
-										} else {
-										}
-									}, 1000)
-								}}
-							>
-								Finalize	
-							</Button>
-						</ButtonGroup>
-					}
-				</div>
-			</div>
+								} else {
+								}
+							}, 1000)
+						}}
+					>
+						Finalize	
+					</Button>
+				</ButtonGroup>
+			}
+		</div>
+	  : null}
+	</div>
     </div>
   );
 };

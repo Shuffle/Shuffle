@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 
 import theme from '../theme.jsx';
-import { useAlert } from "react-alert";
+import { toast } from 'react-toastify';
+
 import {
 	Tooltip,
 	IconButton,
@@ -17,15 +18,14 @@ import {
 	Grid,
 	Paper, 
 	Typography, 
-	TextField,
 	Zoom,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   Edit as EditIcon,
 	Delete as DeleteIcon,
 	SelectAll as SelectAllIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 const AuthenticationItem = (props) => {
 		const { data, index, globalUrl, getAppAuthentication } = props
@@ -34,7 +34,7 @@ const AuthenticationItem = (props) => {
 		const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false);
   	const [authenticationFields, setAuthenticationFields] = React.useState([]);
 
-  	const alert = useAlert();
+  	//const alert = useAlert();
 		var bgColor = "#27292d";
 		if (index % 2 === 0) {
 			bgColor = "#1f2023";
@@ -63,7 +63,7 @@ const AuthenticationItem = (props) => {
 		}
 
 		const deleteAuthentication = (data) => {
-			alert.info("Deleting auth " + data.label);
+			toast("Deleting auth " + data.label);
 
 			// Just use this one?
 			const url = globalUrl + "/api/v1/apps/authentication/" + data.id;
@@ -79,13 +79,13 @@ const AuthenticationItem = (props) => {
 					response.json().then((responseJson) => {
 						console.log("RESP: ", responseJson);
 						if (responseJson["success"] === false) {
-							alert.error("Failed deleting auth");
+							toast("Failed deleting auth");
 						} else {
 							// Need to wait because query in ES is too fast
 							setTimeout(() => {
 								getAppAuthentication();
 							}, 1000);
-							//alert.success("Successfully deleted authentication!")
+							//toast("Successfully deleted authentication!")
 						}
 					})
 				)
@@ -115,9 +115,9 @@ const AuthenticationItem = (props) => {
   	    .then((response) =>
   	      response.json().then((responseJson) => {
   	        if (responseJson["success"] === false) {
-  	          alert.error("Failed overwriting appauth in workflows");
+  	          toast("Failed overwriting appauth in workflows");
   	        } else {
-  	          alert.success("Successfully updated auth everywhere!");
+  	          toast("Successfully updated auth everywhere!");
   	          //setSelectedUserModalOpen(false);
   	          setTimeout(() => {
   	            getAppAuthentication();
@@ -126,7 +126,7 @@ const AuthenticationItem = (props) => {
   	      })
   	    )
   	    .catch((error) => {
-  	      alert.error("Err: " + error.toString());
+  	      toast("Err: " + error.toString());
   	    });
   	};
 

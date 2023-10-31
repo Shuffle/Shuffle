@@ -1,11 +1,12 @@
 import os
 import ast
-import copy
 import sys
 import re
+import copy
 import time 
 import base64
 import json
+import random
 import liquid
 import logging
 import urllib3
@@ -22,8 +23,7 @@ import dateutil
 import threading
 import concurrent.futures
 
-from io import StringIO as StringBuffer
-from io import BytesIO
+from io import StringIO as StringBuffer, BytesIO 
 from liquid import Liquid, defaults
 
 runtime = os.getenv("SHUFFLE_SWARM_CONFIG", "")
@@ -105,9 +105,12 @@ def base64_encode(a):
 def base64_decode(a):
     a = str(a)
     try:
-        return base64.b64decode(a).decode()
+        return base64.b64decode(a).decode("unicode_escape")
     except:
-        return base64.b64decode(a)
+        try:
+            return base64.b64decode(a).decode()
+        except:
+            return base64.b64decode(a)
 
 @shuffle_filters.register
 def json_parse(a):
@@ -502,10 +505,12 @@ class AppBase:
         except Exception as e:
             print(f"[WARNING] Failed adding parameter for logs: {e}") 
 
-        # FIXME: Adding retries here.
         try:
             finished = False
             for i in range (0, 10):
+                # Random sleeptime between 0 and 1 second, with 0.1 increments
+                sleeptime = float(random.randint(0, 10) / 10)
+
                 try:
                     ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False)
 
@@ -514,29 +519,29 @@ class AppBase:
                         finished = True
                         break
                     else:
-                        self.logger.info(f"[ERROR] RESP: {ret.text}")
+                        self.logger.info(f"[ERROR] Bad resp {ret.status_code}: {ret.text}")
 
                 except requests.exceptions.RequestException as e:
                     self.logger.info(f"[DEBUG] Request problem: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except TimeoutError as e:
                     self.logger.info(f"[DEBUG] Timeout or request: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except requests.exceptions.ConnectionError as e:
                     self.logger.info(f"[DEBUG] Connectionerror: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except http.client.RemoteDisconnected as e:
                     self.logger.info(f"[DEBUG] Remote: {e}")
-                    time.sleep(0.1)
+                    time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
@@ -553,8 +558,11 @@ class AppBase:
                 # Not sure why this would work tho :)
                 action_result["status"] = "FAILURE"
                 action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 10 retries to the backend" % url})
-                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished after 10 requests")
-                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
+                self.logger.info(f"[ERROR] Before typeerror stream result - NOT finished after 10 requests")
+
+                #ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
+                self.send_result(action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
+                return
         
             self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:
@@ -1291,6 +1299,27 @@ class AppBase:
         else:
             return returns
 
+    def delete_cache(self, key):
+        org_id = self.full_execution["workflow"]["execution_org"]["id"]
+        url = "%s/api/v1/orgs/%s/delete_cache" % (self.url, org_id)
+
+        data = {
+            "workflow_id": self.full_execution["workflow"]["id"],
+            "execution_id": self.current_execution_id,
+            "authorization": self.authorization,
+            "org_id": org_id,
+            "key": key,
+        }
+
+        response = requests.post(url, json=data, verify=False)
+        try:
+            allvalues = response.json()
+            return json.dumps(allvalues)
+        except Exception as e:
+            self.logger.info("[ERROR} Failed to parse response from delete_cache: %s" % e)
+            #return response.json()
+            return json.dumps({"success": False, "reason": f"Failed to delete cache for key '{key}'"})
+
     def set_cache(self, key, value):
         org_id = self.full_execution["workflow"]["execution_org"]["id"]
         url = "%s/api/v1/orgs/%s/set_cache" % (self.url, org_id)
@@ -1309,8 +1338,8 @@ class AppBase:
             allvalues["key"] = key
             allvalues["value"] = str(value)
             return allvalues
-        except:
-            self.logger.info("Value couldn't be parsed")
+        except Exception as e:
+            self.logger.info("[ERROR} Failed to parse response from set cache: %s" % e)
             #return response.json()
             return {"success": False}
 
@@ -2277,10 +2306,13 @@ class AppBase:
                 #if len(template) > 100:
                 #    self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
                 #self.logger.info(f"[DEBUG] Data: {template}")
-                run = Liquid(template, mode="wild", from_file=False, filters=shuffle_filters.filters)
 
-                # Can't handle self yet (?)
-                ret = run.render(**globals())
+                all_globals = globals()
+                all_globals["self"] = self
+                run = Liquid(template, mode="wild", from_file=False, filters=shuffle_filters.filters, globals=all_globals)
+
+                # Add locals that are missing to globals
+                ret = run.render()
                 return ret
             except jinja2.exceptions.TemplateNotFound as e:
                 self.logger.info(f"[ERROR] Liquid Template error: {e}")
@@ -3487,7 +3519,7 @@ class AppBase:
                                     if self.action["app_name"].lower() == "shuffle tools":
                                         timeout = 55
 
-                                    timeout = 30 
+                                    #timeout = 30 
 
                                     try:
                                         executor = concurrent.futures.ThreadPoolExecutor()
@@ -3556,15 +3588,11 @@ class AppBase:
 
                                     if "the JSON object must be" in errorstring:
                                         self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (0)? the JSON object must be in...")
-                                        try:
-                                            e = json.loads(f"{e}")
-                                        except:
-                                            e = f"{e}"
 
                                         newres = json.dumps({
                                             "success": False,
                                             "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@shuffler.io)",
-                                            "exception": e,
+                                            "exception": f"{type(e).__name__} - {e}",
                                         })
                                         break
                                     elif "got an unexpected keyword argument" in errorstring:
@@ -3587,15 +3615,16 @@ class AppBase:
                                 except Exception as e:
                                     self.logger.info(f"[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly (1)? err: {e}")
 
-                                    try:
-                                        e = json.loads(f"{e}")
-                                    except:
-                                        e = f"{e}"
+                                    #try:
+                                    #    e = json.loads(f"{e}")
+                                    #except:
+                                    #    e = f"{e}"
 
                                     newres = json.dumps({
                                         "success": False,
                                         "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@shuffler.io)",
-                                        "exception": e,
+                                        "exception": f"{type(e).__name__} - {e}",
+                                        
                                     })
                                     break
 

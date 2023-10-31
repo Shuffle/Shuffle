@@ -1,7 +1,7 @@
 urllib3==1.26.18
 requests==2.31.0
 MarkupSafe==2.0.1
-liquidpy==0.7.6
+liquidpy==0.8.1
 flask[async]==2.0.2
 waitress==2.1.0
 #flask==1.1.2

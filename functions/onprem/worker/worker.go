@@ -36,6 +36,16 @@ import (
 	// No necessary outside shared
 	"cloud.google.com/go/datastore"
 	"cloud.google.com/go/storage"
+
+	//k8s deps
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+	"path/filepath"
+	// "k8s.io/client-go/util/retry"
 )
 
 // This is getting out of hand :)
@@ -78,6 +88,7 @@ var downloadedImages []string
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
 	"http:1.3.0":            "frikky/shuffle:http_1.3.0",
+	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
 	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
 	"shuffle-subflow:1.0.0": "frikky/shuffle:shuffle-subflow_1.0.0",
 	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
@@ -171,111 +182,267 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 	os.Exit(3)
 }
 
+// }
+
+func isRunningInCluster() bool {
+	_, existsHost := os.LookupEnv("KUBERNETES_SERVICE_HOST")
+	_, existsPort := os.LookupEnv("KUBERNETES_SERVICE_PORT")
+	return existsHost && existsPort
+}
+
+func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
+	var envVars []corev1.EnvVar
+	for key, value := range envMap {
+		envVars = append(envVars, corev1.EnvVar{Name: key, Value: value})
+	}
+	return envVars
+}
+
+func getKubernetesClient() (*kubernetes.Clientset, error) {
+	if isRunningInCluster() {
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, err
+		}
+		return clientset, nil
+	} else {
+		home := homedir.HomeDir()
+		kubeconfigPath := filepath.Join(home, ".kube", "config")
+		config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		if err != nil {
+			return nil, err
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, err
+		}
+		return clientset, nil
+	}
+}
+
 // Deploys the internal worker whenever something happens
 func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution, action shuffle.Action) error {
-	// form basic hostConfig
-	ctx := context.Background()
+	// log.Printf("################################### new call to deployApp ###################################")
+	// log.Printf("image: %s", image)
+	// log.Printf("identifier: %s", identifier)
+	// log.Printf("execution: %+v", workflowExecution)
 
-	if action.AppName == "shuffle-subflow" {
-		// Automatic replacement of URL
-		for paramIndex, param := range action.Parameters {
-			if param.Name != "backend_url" {
-				continue
-			}
+	if os.Getenv("IS_KUBERNETES") == "true" {
 
-			if strings.Contains(param.Value, "shuffle-backend") {
-				// Automatic replacement as this is default
-				action.Parameters[paramIndex].Value = os.Getenv("BASE_URL")
-				log.Printf("[DEBUG][%s] Replaced backend_url with %s", workflowExecution.ExecutionId, os.Getenv("BASE_URL"))
+		namespace := "shuffle"
+		localRegistry := os.Getenv("REGISTRY_URL")
+
+		envMap := make(map[string]string)
+		for _, envStr := range env {
+			parts := strings.SplitN(envStr, "=", 2)
+			if len(parts) == 2 {
+				envMap[parts[0]] = parts[1]
 			}
 		}
-	}
 
-	// Max 10% CPU every second
-	//CPUShares: 128,
-	//CPUQuota:  10000,
-	//CPUPeriod: 100000,
-	hostConfig := &container.HostConfig{
-		LogConfig: container.LogConfig{
-			Type: "json-file",
-			Config: map[string]string{
-				"max-size": "10m",
+		clientset, err := getKubernetesClient()
+		if err != nil {
+			fmt.Println("[ERROR]Error getting kubernetes client:", err)
+			// os.Exit(1)
+		}
+
+		log.Printf("[DEBUG] Got kubernetes client")
+		str := strings.ToLower(identifier)
+		strSplit := strings.Split(str, "_")
+		value := strSplit[0]
+		value = strings.ReplaceAll(value, "_", "-")
+
+		// checking if app is generated or not
+		appDetails := strings.Split(image, ":")[1]
+		appDetailsSplit := strings.Split(appDetails, "_")
+		appName := strings.Join(appDetailsSplit[:len(appDetailsSplit)-1], "_")
+		appVersion := appDetailsSplit[len(appDetailsSplit)-1]
+
+		// log.Printf("APP VERSION IS: %s", appVersion)
+
+		for _, app := range workflowExecution.Workflow.Actions {
+			// log.Printf("[DEBUG] App: %s, Version: %s", appName, appVersion)
+			// log.Printf("[DEBUG] Checking app %s with version %s", app.AppName, app.AppVersion)
+			if app.AppName == appName && app.AppVersion == appVersion {
+				if app.Generated == true {
+					log.Printf("[DEBUG] Generated app, setting local registry")
+					image = fmt.Sprintf("%s/%s", localRegistry, image)
+					break
+				} else {
+					log.Printf("[DEBUG] Not generated app, setting shuffle registry")
+				}
+			}
+		}
+
+		//fix naming convention
+		podUuid := uuid.NewV4().String()
+		podName := fmt.Sprintf("%s-%s", value, podUuid)
+
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: podName,
+				Labels: map[string]string{
+					"app":         "shuffle-app",
+					"executionId": workflowExecution.ExecutionId,
+				},
 			},
-		},
-		Resources: container.Resources{},
-	}
-
-	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId))
-
-	// Removing because log extraction should happen first
-	if cleanupEnv == "true" {
-		hostConfig.AutoRemove = true
-	}
-
-	// FIXME: Add proper foldermounts here
-	//log.Printf("\n\nPRE FOLDERMOUNT\n\n")
-	//volumeBinds := []string{"/tmp/shuffle-mount:/rules"}
-	//volumeBinds := []string{"/tmp/shuffle-mount:/rules"}
-	volumeBinds := []string{}
-	if len(volumeBinds) > 0 {
-		log.Printf("[DEBUG] Setting up binds for container!")
-		hostConfig.Binds = volumeBinds
-		hostConfig.Mounts = []mount.Mount{}
-		for _, bind := range volumeBinds {
-			if !strings.Contains(bind, ":") || strings.Contains(bind, "..") || strings.HasPrefix(bind, "~") {
-				log.Printf("[WARNING] Bind %s is invalid.", bind)
-				continue
-			}
-
-			log.Printf("[DEBUG] Appending bind %s", bind)
-			bindSplit := strings.Split(bind, ":")
-			sourceFolder := bindSplit[0]
-			destinationFolder := bindSplit[0]
-			hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
-				Type:   mount.TypeBind,
-				Source: sourceFolder,
-				Target: destinationFolder,
-			})
+			Spec: corev1.PodSpec{
+				// NodeName:      "worker1"
+				RestartPolicy: "Never",
+				Containers: []corev1.Container{
+					{
+						Name:            value,
+						Image:           image,
+						Env:             buildEnvVars(envMap),
+						// ImagePullPolicy: corev1.PullAlways,
+					},
+				},
+			},
 		}
+
+		createdPod, err := clientset.CoreV1().Pods(namespace).Create(context.Background(), pod, metav1.CreateOptions{})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating pod: %v\n", err)
+			// os.Exit(1)
+		}
+		fmt.Printf("[DEBUG] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
 	} else {
-		//log.Printf("[WARNING] Not mounting folders")
-	}
+		// form basic hostConfig
+		ctx := context.Background()
 
-	config := &container.Config{
-		Image: image,
-		Env:   env,
-	}
+		if action.AppName == "shuffle-subflow" {
+			// Automatic replacement of URL
+			for paramIndex, param := range action.Parameters {
+				if param.Name != "backend_url" {
+					continue
+				}
 
-	// Checking as late as possible, just in case.
-	newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
-	_, err := shuffle.GetCache(ctx, newExecId)
-	if err == nil {
-		log.Printf("\n\n[DEBUG] Result for %s already found - returning\n\n", newExecId)
+				if strings.Contains(param.Value, "shuffle-backend") {
+					// Automatic replacement as this is default
+					action.Parameters[paramIndex].Value = os.Getenv("BASE_URL")
+					log.Printf("[DEBUG][%s] Replaced backend_url with %s", workflowExecution.ExecutionId, os.Getenv("BASE_URL"))
+				}
+			}
+		}
+
+		// Max 10% CPU every second
+		//CPUShares: 128,
+		//CPUQuota:  10000,
+		//CPUPeriod: 100000,
+		hostConfig := &container.HostConfig{
+			LogConfig: container.LogConfig{
+				Type: "json-file",
+				Config: map[string]string{
+					"max-size": "10m",
+				},
+			},
+			Resources: container.Resources{},
+		}
+
+		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId))
+
+		// Removing because log extraction should happen first
+		if cleanupEnv == "true" {
+			hostConfig.AutoRemove = true
+		}
+
+		// FIXME: Add proper foldermounts here
+		//log.Printf("\n\nPRE FOLDERMOUNT\n\n")
+		//volumeBinds := []string{"/tmp/shuffle-mount:/rules"}
+		//volumeBinds := []string{"/tmp/shuffle-mount:/rules"}
+		volumeBinds := []string{}
+		if len(volumeBinds) > 0 {
+			log.Printf("[DEBUG] Setting up binds for container!")
+			hostConfig.Binds = volumeBinds
+			hostConfig.Mounts = []mount.Mount{}
+			for _, bind := range volumeBinds {
+				if !strings.Contains(bind, ":") || strings.Contains(bind, "..") || strings.HasPrefix(bind, "~") {
+					log.Printf("[WARNING] Bind %s is invalid.", bind)
+					continue
+				}
+
+				log.Printf("[DEBUG] Appending bind %s", bind)
+				bindSplit := strings.Split(bind, ":")
+				sourceFolder := bindSplit[0]
+				destinationFolder := bindSplit[0]
+				hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+					Type:   mount.TypeBind,
+					Source: sourceFolder,
+					Target: destinationFolder,
+				})
+			}
+		} else {
+			//log.Printf("[WARNING] Not mounting folders")
+		}
+
+		config := &container.Config{
+			Image: image,
+			Env:   env,
+		}
+
+		// Checking as late as possible, just in case.
+		newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
+		_, err := shuffle.GetCache(ctx, newExecId)
+		if err == nil {
+			log.Printf("\n\n[DEBUG] Result for %s already found - returning\n\n", newExecId)
+			return nil
+		}
+
+		cacheData := []byte("1")
+		err = shuffle.SetCache(ctx, newExecId, cacheData, 30)
+		if err != nil {
+			log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
+		} else {
+			log.Printf("[DEBUG] Adding %s to cache. Name: %s", newExecId, action.Name)
+		}
+
+		if action.ExecutionDelay > 0 {
+			log.Printf("[DEBUG] Running app %s in docker with delay of %d", action.Name, action.ExecutionDelay)
+			waitTime := time.Duration(action.ExecutionDelay) * time.Second
+
+			time.AfterFunc(waitTime, func() {
+				DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
+			})
+		} else {
+			log.Printf("[DEBUG] Running app %s in docker NORMALLY as there is no delay set with identifier %s", action.Name, identifier)
+			returnvalue := DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
+			log.Printf("[DEBUG] Normal deploy ret: %s", returnvalue)
+			return returnvalue
+		}
 		return nil
 	}
+	return nil
+}
 
-	cacheData := []byte("1")
-	err = shuffle.SetCache(ctx, newExecId, cacheData, 30)
+func cleanupExecution(clientset *kubernetes.Clientset, workflowExecution shuffle.WorkflowExecution, namespace string) error {
+
+	workerName := fmt.Sprintf("worker-%s", workflowExecution.ExecutionId)
+	labelSelector := fmt.Sprintf("app=shuffle-app,executionId=%s", workflowExecution.ExecutionId)
+
+	podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: labelSelector,
+	})
 	if err != nil {
-		log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
-	} else {
-		log.Printf("[DEBUG] Adding %s to cache. Name: %s", newExecId, action.Name)
+		return fmt.Errorf("[ERROR]failed to list apps with label selector %s: %v", labelSelector, err)
 	}
 
-	if action.ExecutionDelay > 0 {
-		log.Printf("[DEBUG] Running app %s in docker with delay of %d", action.Name, action.ExecutionDelay)
-		waitTime := time.Duration(action.ExecutionDelay) * time.Second
-
-		time.AfterFunc(waitTime, func() {
-			DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
-		})
-	} else {
-		log.Printf("[DEBUG] Running app %s in docker NORMALLY as there is no delay set with identifier %s", action.Name, identifier)
-		returnvalue := DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
-		log.Printf("[DEBUG] Normal deploy ret: %s", returnvalue)
-		return returnvalue
+	for _, pod := range podList.Items {
+		err := clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to delete app %s: %v", pod.Name, err)
+		}
+		fmt.Printf("App %s in namespace %s deleted.\n", pod.Name, namespace)
 	}
 
+	podErr := clientset.CoreV1().Pods(namespace).Delete(context.TODO(), workerName, metav1.DeleteOptions{})
+	if podErr != nil {
+		return fmt.Errorf("[ERROR] failed to delete the worker %s in namespace %s: %v", workerName, namespace, podErr)
+	}
+	fmt.Printf("[DEBUG]  %s in namespace %s deleted.\n", workerName, namespace)
 	return nil
 }
 
@@ -869,7 +1036,17 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			log.Printf("[INFO][%s] BREAKING BECAUSE RESULTS IS SAME LENGTH AS ACTIONS. SHOULD CHECK ALL RESULTS FOR WHETHER THEY'RE DONE", workflowExecution.ExecutionId)
 			validateFinished(workflowExecution)
 			log.Printf("[DEBUG][%s] Shutting down (17)", workflowExecution.ExecutionId)
-			shutdown(workflowExecution, "", "", true)
+			if os.Getenv("IS_KUBERNETES") == "true" {
+				// log.Printf("workflow execution: %#v", workflowExecution)
+				clientset, err := getKubernetesClient()
+				if err != nil {
+					fmt.Println("[ERROR]Error getting kubernetes client:", err)
+					os.Exit(1)
+				}
+				cleanupExecution(clientset, workflowExecution, "shuffle")
+			} else {
+				shutdown(workflowExecution, "", "", true)
+			}
 			return
 		}
 	}
@@ -1086,14 +1263,35 @@ func handleDefaultExecution(client *http.Client, req *http.Request, workflowExec
 		if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
 			log.Printf("[INFO][%s] Workflow execution is finished. Exiting worker.", workflowExecution.ExecutionId)
 			log.Printf("[DEBUG] Shutting down (20)")
-			shutdown(workflowExecution, "", "", true)
+			//handle workerssssssssss
+			if os.Getenv("IS_KUBERNETES") == "true" {
+				// log.Printf("workflow execution: %#v", workflowExecution)
+				clientset, err := getKubernetesClient()
+				if err != nil {
+					fmt.Println("[ERROR]Error getting kubernetes client:", err)
+					os.Exit(1)
+				}
+				cleanupExecution(clientset, workflowExecution, "shuffle")
+			} else {
+				shutdown(workflowExecution, "", "", true)
+			}
 		}
 
 		log.Printf("[INFO][%s] Status: %s, Results: %d, actions: %d", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
 		if workflowExecution.Status != "EXECUTING" {
 			log.Printf("[WARNING][%s] Exiting as worker execution has status %s!", workflowExecution.ExecutionId, workflowExecution.Status)
 			log.Printf("[DEBUG] Shutting down (21)")
-			shutdown(workflowExecution, "", "", true)
+			if os.Getenv("IS_KUBERNETES") == "true" {
+				// log.Printf("workflow execution: %#v", workflowExecution)
+				clientset, err := getKubernetesClient()
+				if err != nil {
+					fmt.Println("[ERROR]Error getting kubernetes client:", err)
+					os.Exit(1)
+				}
+				cleanupExecution(clientset, workflowExecution, "shuffle")
+			} else {
+				shutdown(workflowExecution, "", "", true)
+			}
 		}
 
 		setWorkflowExecution(ctx, workflowExecution, false)

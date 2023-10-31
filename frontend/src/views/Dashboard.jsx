@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
 import AppFramework from "../components/AppFramework.jsx";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles, } from "@mui/styles";
 // nodejs library that concatenates classes
 import classNames from "classnames";
 import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
+import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx";
 
 // react plugin used to create charts
 //import { Line, Bar } from "react-chartjs-2";
-import { useAlert } from "react-alert";
-import Autocomplete from "@material-ui/lab/Autocomplete";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
+import { parsedDatatypeImages } from "../components/AppFramework.jsx"
+import { findSpecificApp } from "../components/AppFramework.jsx"
 
 import {
+	Autocomplete,
 	Tooltip,
 	TextField,
 	IconButton,
@@ -22,7 +26,7 @@ import {
 	Paper,
 	Chip,
 	Checkbox,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
   Close as CloseIcon,
@@ -33,7 +37,7 @@ import {
 	CheckBox as CheckBoxIcon,
 	CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
 	OpenInNew as OpenInNewIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
 import { removeParam } from "../views/AngularWorkflow.jsx"
@@ -83,14 +87,15 @@ const useStyles = makeStyles({
   },
   inputRoot: {
     color: "white",
-    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
     "&:hover .MuiOutlinedInput-notchedOutline": {
       borderColor: "#f86a3e",
     },
   },
 });
 
-const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLoggedIn, workflows, setWorkflows}) => {
+
+
+const UsecaseListComponent = ({userdata, keys, isCloud, globalUrl, frameworkData, isLoggedIn, workflows, setWorkflows}) => {
 	const [expandedIndex, setExpandedIndex] = useState(-1);
 	const [expandedItem, setExpandedItem] = useState(-1);
 	const [inputUsecase, setInputUsecase] = useState({});
@@ -103,17 +108,92 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 
 	const [selectedWorkflows, setSelectedWorkflows] = useState([])
 	const [firstLoad, setFirstLoad] = useState(true)
+	const [apps, setApps] = useState([])
 
-  const classes = useStyles();
+    const classes = useStyles();
 	let navigate = useNavigate();
 
 	const [mitreTags, setMitreTags] = useState([]);
+
+	const loadApps = () => {
+		fetch(`${globalUrl}/api/v1/apps`, {
+		  method: "GET",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  credentials: "include",
+		})
+      	.then((response) => {
+        	return response.json();
+      	})
+      	.then((responseJson) => {
+			if (responseJson === null) {
+			  console.log("null-response from server")
+			  const pretend_apps = [{
+				"name": "TBD",
+				"app_name": "TBD",
+				"app_version": "TBD",
+				"description": "TBD",
+				"version": "TBD",
+				"large_image": "",
+			  }]
+				
+			  setApps(pretend_apps)
+			  return
+			}
+
+			if (responseJson.success === false) {
+				console.log("error loading apps: ", responseJson)
+			  	return
+			}
+        
+			setApps(responseJson);
+		})
+		.catch((error) => {
+        	console.log("App loading error: " + error.toString());
+		})
+	}
+
+	  useEffect(() => {
+		loadApps() 
+	  }, [])
+
 	if (keys === undefined || keys === null || keys.length === 0) {
 		return null
 	}
 
-	const getUsecase = (name, index, subindex) => {
-    fetch(`${globalUrl}/api/v1/workflows/usecases/${escape(name.replaceAll(" ", "_"))}`, {
+
+  const parseUsecase = (subcase) => {
+	  console.log("parseUsecase: ", subcase)
+	  const srcdata = findSpecificApp(frameworkData, subcase.type)
+	  const dstdata = findSpecificApp(frameworkData, subcase.last)
+
+	  console.log("srcdata: ", srcdata)
+	  console.log("dstdata: ", dstdata)
+	
+	  if (srcdata !== undefined && srcdata !== null) { 
+		subcase.srcimg = srcdata.large_image 
+		subcase.srcapp = srcdata.name
+	  }
+
+	  if (dstdata !== undefined && dstdata !== null) {
+		  subcase.dstimg = dstdata.large_image
+		  subcase.dstapp = dstdata.name
+	  }
+
+	  return subcase 
+  }
+
+  const getUsecase = (subcase, index, subindex) => {
+	subcase = parseUsecase(subcase)
+
+	// Timeout 50ms to delay it slightly 
+	setTimeout(() => {
+		setInputUsecase(subcase)
+	}, 50)
+
+    fetch(`${globalUrl}/api/v1/workflows/usecases/${escape(subcase.name.replaceAll(" ", "_"))}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -121,50 +201,58 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
       },
       credentials: "include",
     })
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for framework!");
-			}
+	.then((response) => {
+		if (response.status !== 200) {
+			console.log("Status not 200 for framework!");
+		}
 
-			return response.json();
-		})
-		.then((responseJson) => {
-			if (responseJson.success === false) {
-				setInputUsecase({
-					"name": name,
+		return response.json();
+	})
+	.then((responseJson) => {
+		console.log("In responseJson for usecase: ", responseJson)
+		var parsedUsecase = responseJson
+
+		if (responseJson.success === false) {
+			parsedUsecase = subcase
+		} else {
+			parsedUsecase = responseJson
+
+			parsedUsecase.srcimg = subcase.srcimg
+			parsedUsecase.srcapp = subcase.srcapp
+			parsedUsecase.dstimg = subcase.dstimg
+			parsedUsecase.dstapp = subcase.dstapp
+		}
+
+		// Look for the type of app and fill in img1, srcapp...
+		setInputUsecase(parsedUsecase)
+		setExpandedIndex(index)
+		setExpandedItem(subindex)
+
+		setTimeout(() => {
+			//console.log("Scroll!")
+			const found = document.getElementById("selected_box");
+			if (found !== undefined && found !== null) {
+				//console.log("FOUND!!")
+				found.scrollTo({
+					top: 100,
+					behavior: "smooth",
 				})
-			} else {
-				setInputUsecase(responseJson)
 			}
-
-			setExpandedIndex(index)
-			setExpandedItem(subindex)
-
-			setTimeout(() => {
-				//console.log("Scroll!")
-				const found = document.getElementById("selected_box");
-				if (found !== undefined && found !== null) {
-					//console.log("FOUND!!")
-					found.scrollTo({
-						top: 100,
-						behavior: "smooth",
-					})
-				}
-
-				setFirstLoad(true)
-				setSelectedWorkflows([])
-			}, 100);
-})
-		.catch((error) => {
-			//alert.error(error.toString());
-			setInputUsecase({})
-			setExpandedIndex(index)
-			setExpandedItem(subindex)
 
 			setFirstLoad(true)
 			setSelectedWorkflows([])
-		})
-	}
+		}, 100);
+	})
+	.catch((error) => {
+		//toast(error.toString());
+		setInputUsecase({})
+		setExpandedIndex(index)
+		setExpandedItem(subindex)
+
+		setFirstLoad(true)
+		setSelectedWorkflows([])
+	})
+  }
 
 	const setUsecaseItem = (inputUsecase) => {
 		var parsedUsecase = inputUsecase
@@ -213,19 +301,19 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						//alert.error("Failed updating: " + responseJson.reason)
+						//toast("Failed updating: " + responseJson.reason)
 					} else {
-						//alert.error("Failed to update framework for your org.")
+						//toast("Failed to update framework for your org.")
 					}
 				} else {
-					//alert.info("Updated usecase.")
+					//toast("Updated usecase.")
 				}
 			})
       .catch((error) => {
-        //alert.error(error.toString());
+        //toast(error.toString());
 				//setFrameworkLoaded(true)
       })
-		}
+	}
 
   const setWorkflow = (workflowdata) => {
 		const new_url = `${globalUrl}/api/v1/workflows/${workflowdata.id}`
@@ -250,9 +338,9 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 		.then((responseJson) => {
 			if (responseJson.success === false) {
 				if (responseJson.reason !== undefined) {
-					alert.error("Error updating workflow: ", responseJson.reason)
+					toast("Error updating workflow: ", responseJson.reason)
 				} else {
-					alert.error("Error updating workflow.")
+					toast("Error updating workflow.")
 				}
 
 				return
@@ -261,7 +349,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 			return responseJson;
 		})
 		.catch((error) => {
-			alert.error("Problem setting workflow: ", error.toString());
+			toast("Problem setting workflow: ", error.toString());
 		});
   };
 
@@ -289,6 +377,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 									if (selectedItem && subcase.matches.length > 0 && selectedWorkflows.length === 0 && firstLoad === true) {
 										setFirstLoad(false)
 										setSelectedWorkflows(subcase.matches)
+
 									}
 								}
 
@@ -316,10 +405,8 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 									}
 								}
 
-								//const backgroundColor = selectedItem ? "inherit" : finished ?  "inherit" : usecase.color
 								const finished = subcase.matches.length > 0
 								const backgroundColor = theme.palette.surfaceColor
-								//"inherit"
 								const itemBorder = `${selectedItem ? "3px" : expandedItem >= 0 ? "0px" : "1px"} solid ${usecase.color}`
 
 								const fixedName = subcase.name.toLowerCase().replace("_", " ")
@@ -330,14 +417,14 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 										//setSelectedWorkflows([])
 										if (selectedItem) {
 										} else {
-											getUsecase(subcase.name, index, subindex) 
+											getUsecase(subcase, index, subindex) 
 											navigate(`/usecases?selected_object=${fixedName}`)
 
 											//const newitem = removeParam("selected_object", cursearch);
 											//navigate(curpath + newitem)
 										}
 									}}>
-										<Paper style={{padding: 25, minHeight: 75, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor,}} onClick={() => {
+										<Paper style={{padding: 25, minHeight: isCloud ? 75 : 122, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor,}} onClick={() => {
 										}}>
 											{!selectedItem ? 
 												<div style={{textAlign: "left", position: "relative",}}>
@@ -637,24 +724,36 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																</div>
 															</div>
 															: 
-																<div style={{flex: 1, textAlign: "left", marginRight: 10, }}>
-																	<Typography variant="body1" color="textSecondary">
-																		{subcase.description}
-																	</Typography>
+												<div style={{flex: 1, textAlign: "left", marginRight: 10, }}>
+													<Typography variant="body1" color="textSecondary">
+														{subcase.description}
+													</Typography>
 
-																	{workflows !== undefined && workflows !== null && workflows.length > 0 ?
-																		<Typography variant="body1" style={{marginTop: 15, marginBottom: 10, }}>
-																			Select relevant workflows
-																		</Typography>
-																	: null}
+													{workflows !== undefined && workflows !== null && workflows.length > 0 ?
+														<Typography variant="body1" style={{marginTop: 15, marginBottom: 10, }}>
+															Select relevant workflows
+														</Typography>
+													: 
+														<span style={{display: "flex"}}>
+															<Typography variant="body1" style={{marginTop: 15, marginBottom: 10, }}>
+																Find workflows related to this usecase: 
+																	
+															</Typography>
+															<a href={`https://shuffler.io/search?tab=workflows&q=${subcase.name}`} style={{textDecoration: "none", }} target="_blank" rel="noopener noreferrer">
+																<IconButton style={{paddingTop: 15, }}>
+																	<OpenInNewIcon   style={{color: "#f85a3e", }}/>
+																</IconButton>
+															</a>
+														</span>
+													}
 
-																	{workflows !== undefined && workflows !== null && workflows.length > 0 ?
-																		<Autocomplete
-																			multiple
+													{workflows !== undefined && workflows !== null && workflows.length > 0 ?
+														<Autocomplete
+															  multiple
           													  id="workflow_matching"
           													  options={workflows}
           													  autoHighlight
-              											  value={selectedWorkflows}
+              											  	  value={selectedWorkflows}
           													  classes={{ inputRoot: classes.inputRoot }}
           													  ListboxProps={{
           													    style: {
@@ -662,7 +761,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
           													      color: "white",
           													    },
           													  }}
-																			getOptionSelected={(option, value) => option.id === value.id}
+															  getOptionSelected={(option, value) => option.id === value.id}
           													  getOptionLabel={(option) => {
 
           													    if (
@@ -685,120 +784,125 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
           													    borderRadius: theme.palette.borderRadius,
           													  }}
           													  onChange={(event, newValue) => {
-																				console.log("CLICK: ", newValue)
-																				//handleWorkflowSelectionUpdate({ target: { value: newValue} })
-																				//setSelectedWorkflows=
-																				//var newvalue = []
-																				//for (var key in newValue) {
-																				//	if (newValue[key].id !== undefined) {
-																				//		newvalue.push(newValue[key].id)
-																				//	}
-																				//}
+																console.log("CLICK: ", newValue)
+																//handleWorkflowSelectionUpdate({ target: { value: newValue} })
+																//setSelectedWorkflows=
+																//var newvalue = []
+																//for (var key in newValue) {
+																//	if (newValue[key].id !== undefined) {
+																//		newvalue.push(newValue[key].id)
+																//	}
+																//}
 
-																				// Doing this way as you may want to remove some too
-																				for (var key in workflows) {
-																					if (!newValue.find(data => data.id === workflows[key].id)) {
-																						// Check if it has the one in it
-																						if (workflows[key]["usecase_ids"] !== undefined && workflows[key]["usecase_ids"] !== null && workflows[key]["usecase_ids"].includes(subcase.name)) {
-																							const filtered = workflows[key]["usecase_ids"].filter(data => data !== subcase.name)
-																							if (filtered !== undefined && filtered !== null) {
-																								//console.log("Removing: ", workflows[key].name, workflows[key])
-																								workflows[key]["usecase_ids"] = filtered
-  																					
-																								setWorkflow(workflows[key]) 
-																							}
-																						}
+																// Doing this way as you may want to remove some too
+																for (var key in workflows) {
+																	if (!newValue.find(data => data.id === workflows[key].id)) {
+																		// Check if it has the one in it
+																		if (workflows[key]["usecase_ids"] !== undefined && workflows[key]["usecase_ids"] !== null && workflows[key]["usecase_ids"].includes(subcase.name)) {
+																			const filtered = workflows[key]["usecase_ids"].filter(data => data !== subcase.name)
+																			if (filtered !== undefined && filtered !== null) {
+																				//console.log("Removing: ", workflows[key].name, workflows[key])
+																				workflows[key]["usecase_ids"] = filtered
+																	
+																				setWorkflow(workflows[key]) 
+																			}
+																		}
 
-																						continue
-																					}
+																		continue
+																	}
 
-																					if (workflows[key]["usecase_ids"] === undefined || workflows[key]["usecase_ids"] === null) {
-																						workflows[key]["usecase_ids"] = [subcase.name]
-																						console.log("Setting: ", workflows[key].name)
-																						setWorkflow(workflows[key]) 
+																	if (workflows[key]["usecase_ids"] === undefined || workflows[key]["usecase_ids"] === null) {
+																		workflows[key]["usecase_ids"] = [subcase.name]
+																		console.log("Setting: ", workflows[key].name)
+																		setWorkflow(workflows[key]) 
 
-																					} else if (!workflows[key]["usecase_ids"].includes(subcase.name)) {
-																						workflows[key]["usecase_ids"].push(subcase.name)
-																						console.log("Adding: ", workflows[key].name)
-																						setWorkflow(workflows[key]) 
+																	} else if (!workflows[key]["usecase_ids"].includes(subcase.name)) {
+																		workflows[key]["usecase_ids"].push(subcase.name)
+																		console.log("Adding: ", workflows[key].name)
+																		setWorkflow(workflows[key]) 
 
-																					}
-																				}
+																	}
+																}
 
-																				setWorkflows(workflows)
-																				console.log("New: ", newValue)
-																				setSelectedWorkflows(newValue)
+																setWorkflows(workflows)
+																console.log("New: ", newValue)
+																setSelectedWorkflows(newValue)
                 												//setUpdate(Math.random())
           													  }}
-      																renderOption={(props, option) => {
-																				//console.log("In options?: ", props, option)
+            	  										      renderOption={(props, data, state) => {
+																	var newname = data.name
+																	if (newname === undefined || newname === null) {
+																		newname = "placeholder"
+																	}
 
-																				var newname = props.name
-																				if (newname === undefined || newname === null) {
-																					newname = "placeholder"
-																				}
-
-																				if (newname.length > 2) {
-																					newname = newname.charAt(0).toUpperCase() + newname.substring(1)
-																				}
-																				return (
-																					<li {...props}>
-																						<Tooltip arrow placement="left" title={
-																							<span style={{}}>
-																								{props.image !== undefined && props.image !== null && props.image.length > 0 ? 
-																									<img src={props.image} alt={newname} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
-																								: null}
-																								<Typography>
-																									Choose {newname}
-																								</Typography>
-																							</span>
-																							} placement="bottom">
-																							<span>
-																								<Checkbox
-																									icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
-																									checkedIcon={<CheckBoxIcon fontSize="small" />}
-																									style={{ marginRight: 8 }}
-																									checked={option.selected}
-																								/>
-																								{newname}
-																							</span>
-																						</Tooltip>
-																					</li>
-      																	)
-																			}}
+																	if (newname.length > 2) {
+																		newname = newname.charAt(0).toUpperCase() + newname.substring(1)
+																	}
+																	return (
+																		<li {...props}>
+																			<Tooltip arrow placement="left" title={
+																				<span style={{}}>
+																					{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
+																						<img src={data.image} alt={newname} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+																					: null}
+																					<Typography>
+																						Choose {newname}
+																					</Typography>
+																				</span>
+																				} placement="bottom">
+																				<span>
+																					<Checkbox
+																						icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
+																						checkedIcon={<CheckBoxIcon fontSize="small" />}
+																						style={{ marginRight: 8 }}
+																						checked={selectedWorkflows.find(wf => wf.id === data.id) !== undefined}
+																					/>
+																					{newname}
+																				</span>
+																			</Tooltip>
+																		</li>
+																	)
+															  }}
           													  renderInput={(params) => {
           													    return (
-																						<TextField
-																							style={{
-																								backgroundColor: theme.palette.inputColor,
-																								borderRadius: theme.palette.borderRadius,
-																							}}
-																							{...params}
-																							label="Find your workflows"
-																							variant="outlined"
+																	<TextField
+																		style={{
+																			backgroundColor: theme.palette.inputColor,
+																			borderRadius: theme.palette.borderRadius,
+																		}}
+																		{...params}
+																		label="Find your workflows"
+																		variant="outlined"
           													      	/>
           													    );
           													  }}
           													/>
-																	: null}
+															: null}
+															<span style={{top: 30, position: "relative",}}>
+																<Typography 
+																	variant="body2" 
+																	color="textSecondary"
+																	style={{marginTop: 0, marginLeft: 5, }} 
+																	onClick={() => {}}
+																>
+																	Try it out:
+																</Typography>
+																<WorkflowTemplatePopup 
+																	userdata={userdata}
 
-																	{/*subcase.matches.length > 0 ? 
-																		<Grid container style={{maxWidth: 325, marginTop: 10, }}>
-																			{subcase.matches.map((workflow, workflowindex) => {
-																				return (
-																					<Grid key={workflowindex} item index={workflowindex} xs={12}>
-																						<WorkflowPaper key={workflowindex} data={workflow} />
-																					</Grid>
-																				)
-																			})}
-																		</Grid>
-																	: 
-																		<div>
-																			<Typography variant="body1" color="textSecondary">
-																				No workflow selected yet.
-																			</Typography>
-																		</div>
-																	*/}
+																	globalUrl={globalUrl}
+																	img1={inputUsecase.srcimg}
+																	srcapp={inputUsecase.srcapp}
+																	img2={inputUsecase.dstimg}
+																	dstapp={inputUsecase.dstapp}
+																	title={inputUsecase.name}
+																	description={inputUsecase.description}
+
+																	apps={apps}
+																/>
+															</span>
+															{/*
+
 
 																	{subcase.extra_buttons !== undefined && subcase.extra_buttons !== null && subcase.extra_buttons.length > 0 ?
 																		<div style={{marginTop: 25, }}>
@@ -852,15 +956,9 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																			<Typography variant="body1" style={{marginTop: 15, cursor: "pointer",}} onClick={() => {}}>
 																				See other Public Workflows for {} <OpenInNewIcon style={{marginTop: 5, marginLeft: 15, }}/>
 																			</Typography>
-																			{/*
-																			<div>
-																				<Typography variant="body1" color="textSecondary">
-																					No workflows yet.
-																				</Typography>
-																			</div>
-																			*/}
 																		</a>
 																	</div>
+															*/}
 																</div>
 															}
 															<div style={{
@@ -868,6 +966,8 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																	width: 350, 
 																	borderRadius: theme.palette.borderRadius,
 																	border: "1px solid rgba(255,255,255,0.3)",
+																	padding: 5,
+																	backgroundColor: theme.palette.backgroundColor,
 																}}>
 																<AppFramework
 																	inputUsecase={inputUsecase}
@@ -1026,7 +1126,7 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 // What data do we fill in here? Idk
 const Dashboard = (props) => {
   const { globalUrl, isLoggedIn } = props;
-  const alert = useAlert();
+  //const alert = useAlert();
   const [bigChartData, setBgChartData] = useState("data1");
   const [dayAmount, setDayAmount] = useState(7);
   const [firstRequest, setFirstRequest] = useState(true);
@@ -1118,16 +1218,16 @@ const Dashboard = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						//alert.error("Failed loading: " + responseJson.reason)
+						//toast("Failed loading: " + responseJson.reason)
 					} else {
-						//alert.error("Failed to load framework for your org.")
+						//toast("Failed to load framework for your org.")
 					}
 				} else {
 					setFrameworkData(responseJson)
 				}
 			})
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       })
 		}
 
@@ -1158,7 +1258,7 @@ const Dashboard = (props) => {
 		})
 		.catch((error) => {
 			fetchUsecases()
-			//alert.error(error.toString());
+			//toast(error.toString());
 		});
 	}
 
@@ -1258,7 +1358,7 @@ const Dashboard = (props) => {
 				}
       })
       .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
+        //toast("ERROR: " + error.toString());
         console.log("ERROR: " + error.toString());
       });
   };
@@ -1292,7 +1392,7 @@ const Dashboard = (props) => {
         setChangeme(stats_id);
       })
       .catch((error) => {
-        //alert.error("ERROR: " + error.toString());
+        //toast("ERROR: " + error.toString());
         console.log("ERROR: " + error.toString());
       });
   };

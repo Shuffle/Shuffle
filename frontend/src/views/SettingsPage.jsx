@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 import { useNavigate } from "react-router-dom";
+import theme from '../theme.jsx';
 import {
   Grid,
   Typography,
@@ -8,16 +9,13 @@ import {
   Button,
   Divider,
   TextField,
-} from "@material-ui/core";
-import { useAlert } from "react-alert";
-import { useTheme } from "@material-ui/core/styles";
-
-import detectEthereumProvider from "@metamask/detect-provider";
+} from "@mui/material";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 
 const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, setUserData } = props;
-  const theme = useTheme();
-  const alert = useAlert();
+  //const alert = useAlert();
 	let navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -145,7 +143,7 @@ const Settings = (props) => {
           if (responseJson["success"] === false) {
             setPasswordFormMessage(responseJson["reason"]);
           } else {
-            alert.success("Changed password!");
+            toast("Changed password!");
             setPasswordFormMessage("");
           }
         })
@@ -297,22 +295,22 @@ const Settings = (props) => {
   //   detectEthereumProvider().then((provider) => {
   //     if (provider) {
   //       if (!provider.isMetaMask) {
-  //         alert.error("Only MetaMask is supported as of now.");
+  //         toast("Only MetaMask is supported as of now.");
   //         return;
   //       }
 
   //       // Find the ethereum network
   //       // Get the users' account(s)
-  //       //alert.info("Connecting to MetaMask")
+  //       //toast("Connecting to MetaMask")
   //       //console.log("Connected: ", provider.isConnected())
 
   //       if (!provider.isConnected()) {
-  //         alert.error("Metamask is not connected.");
+  //         toast("Metamask is not connected.");
   //         return;
   //       }
 
   //       provider.on("message", (event) => {
-  //         alert.info("Ethereum message: ", event);
+  //         toast("Ethereum message: ", event);
   //       });
 
   //       provider.on("chainChanged", (chainId) => {
@@ -333,12 +331,12 @@ const Settings = (props) => {
   //               console.log("INFO: ", userdata);
   //               setUserData(userdata);
   //             } else {
-  //               alert.error("Couldn't find balance: ", result);
+  //               toast("Couldn't find balance: ", result);
   //             }
   //           })
   //           .catch((error) => {
   //             // If the request fails, the Promise will reject with an error.
-  //             alert.error("Failed getting info from ethereum API: " + error);
+  //             toast("Failed getting info from ethereum API: " + error);
   //           });
   //       });
   //     }
@@ -732,28 +730,28 @@ const Settings = (props) => {
         </Button>
         <h3>{passwordFormMessage}</h3>
         <Divider style={{ marginTop: "40px" }} />
-        <h2>Platform Earnings</h2>
+        <h2>Creator Incentive Program</h2>
         <div style={{ display: runFlex ? "flex" : "", width: "100%" }}>
-					<div>
-  					{isCloud ?
-							<span>
-								<Typography variant="body1" color="textSecondary">
-									By connecting your Github account, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/creators">creator account</a>. This enables you to earn a passive income from Shuffle. This IS reversible. Support: support@shuffler.io
-								</Typography>
-								<Button
-									style={{ height: 40, marginTop: 10 }}
-									variant="outlined"
-									color="primary"
-									fullWidth={true}
-									onClick={() => {
-										handleGithubConnection();
-									}}
-								>
-									Connect to Github
-								</Button>
-							</span>
-						: null}
-					</div>
+			<div>
+			{isCloud ?
+					<span>
+						<Typography variant="body1" color="textSecondary">
+							By <a href="/creators" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>joining the Creator Incentive Program</a> and connecting your Github account, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/creators">creator account</a>. This enables you to earn a passive income from Shuffle. This IS reversible. Support: support@shuffler.io
+						</Typography>
+						<Button
+							style={{ height: 40, marginTop: 10 }}
+							variant="outlined"
+							color="primary"
+							fullWidth={true}
+							onClick={() => {
+								handleGithubConnection();
+							}}
+						>
+							Connect to Github
+						</Button>
+					</span>
+				: null}
+			</div>
           <div style={{ flex: 1, display: "flex" }}>
             <div>
               {userdata.eth_info !== undefined &&
@@ -815,65 +813,6 @@ const Settings = (props) => {
 						) : null}
           </div>
           <div style={{ flex: 1, marginTop: 20 }}>
-          {/*userdata !== undefined &&
-            userdata.eth_info !== undefined &&
-            userdata.eth_info.account !== undefined &&
-            userdata.eth_info.account.length > 0 ? (
-              <div style={{ width: "100%", textAlign: "left" }}>
-                <Typography variant="body2">Network: TBD</Typography>
-                <Typography variant="body2">
-                  Address: {userdata.eth_info.account}
-                </Typography>
-                {loadedWorkflowCollections.length > 0 ? (
-                  <Typography variant="body2">
-                    Collections:&nbsp;
-                    {loadedWorkflowCollections.map((data, index) => {
-                      var collectionname = data.toLowerCase();
-                      collectionname = collectionname.replaceAll("#", "");
-                      collectionname = collectionname.replaceAll(" ", "-");
-
-                      return (
-                        <span key={index}>
-                          <a
-                            rel="noopener noreferrer"
-                            target="_blank"
-                            href={`https://opensea.io/collection/${collectionname}`}
-                            style={{ textDecoration: "none", color: "#f85a3e" }}
-                          >
-                            {data}
-                          </a>
-                          &nbsp;
-                        </span>
-                      );
-                    })}
-                  </Typography>
-                ) : null}
-                <Button
-                  style={{ height: 40, marginTop: 10 }}
-                  variant="contained"
-                  color="primary"
-                  fullWidth={true}
-                  onClick={() => {
-                    //handleEthereumTokenCreation()
-                    loadWorkflowOwnership();
-                  }}
-                >
-                  Validate ownership
-                </Button>
-              </div>
-            ) : (
-              <Button
-                style={{ height: 40, marginTop: 10 }}
-                variant="outlined"
-                color="primary"
-                fullWidth={true}
-                onClick={() => {
-                  handleEthereumConnection();
-                }}
-              >
-                Authenticate Metamask Wallet
-              </Button>
-            )*/}
           </div>
         </div>
 
@@ -920,7 +859,7 @@ const Settings = (props) => {
       })
       .then((responseJson) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
-          alert.error("Failed updating user: " + responseJson.reason);
+          toast("Failed updating user: " + responseJson.reason);
         }
       })
       .catch((error) => {
@@ -986,137 +925,6 @@ const Settings = (props) => {
 
 		//saveWorkflow(workflow);
 	}
-
-  const handleEthereumTokenCreation = async () => {
-    const provider = await detectEthereumProvider();
-    if (!provider) {
-      console.log("Please install MetaMask!");
-      alert.error(
-        "Please download the MetaMask browser extension to authenticate fully!"
-      );
-      return;
-    }
-
-    if (!provider.isMetaMask) {
-      alert.error("Only MetaMask is supported as of now.");
-      return;
-    }
-
-    if (!provider.isConnected()) {
-      alert.error("Metamask is not connected.");
-      return;
-    }
-
-    console.log("Should make a token");
-  };
-
-  const handleEthereumConnection = async () => {
-    const provider = await detectEthereumProvider();
-    if (!provider) {
-      console.log("Please install MetaMask!");
-      alert.error(
-        "Please download the MetaMask browser extension to authenticate fully!"
-      );
-      return;
-    }
-
-    if (!provider.isMetaMask) {
-      alert.error("Only MetaMask is supported as of now.");
-      return;
-    }
-
-    // Find the ethereum network
-    // Get the users' account(s)
-    //alert.info("Connecting to MetaMask")
-    //console.log("Connected: ", provider.isConnected())
-
-    if (!provider.isConnected()) {
-      alert.error("Metamask is not connected.");
-      return;
-    }
-
-    provider.on("message", (event) => {
-      alert.info("Ethereum message: ", event);
-    });
-
-    /*
-		params: [
-			{
-				from: '0xb60e8dd61c5d32be8058bb8eb970870f07233155',
-				to: '0xd46e8dd67c5d32be8058bb8eb970870f07244567',
-				gas: '0x76c0', // 30400
-				gasPrice: '0x9184e72a000', // 10000000000000
-				value: '0x9184e72a', // 2441406250
-				data:
-					'0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675',
-			},
-		]
-		*/
-
-    // https://docs.metamask.io/guide/rpc-api.html
-    // Gets accounts - requires previous permissions
-    //const method = "eth_accounts"
-    //const params = []
-    //
-    // Asks for permission, and gets the accounts
-    var method = "eth_requestAccounts";
-    var params = [];
-    provider
-      .request({
-        method: method,
-        params,
-      })
-      .then((result) => {
-        if (result !== undefined && result !== null && result.length > 0) {
-          userdata.eth_info.account = result[0];
-
-          // Getting and setting balance for the current user
-          method = "eth_getBalance";
-          params = [userdata.eth_info.account, "latest"];
-          provider
-            .request({
-              method: method,
-              params,
-            })
-            .then((result) => {
-              if (
-                result !== undefined &&
-                result !== null &&
-                result.length > 0
-              ) {
-                userdata.eth_info.balance = result;
-                userdata.eth_info.parsed_balance = result / 1000000000000000000;
-                console.log(userdata.eth_info);
-                setUserData(userdata.eth_info);
-
-                // Updating
-                //if (userdata.eth_info !== userdata.userdata.eth_info) {
-                //}
-
-                setUser(userdata.id, "eth_info", userdata.eth_info);
-                userdata.userdata.eth_info = userdata.eth_info;
-              } else {
-                alert.error("Couldn't find balance: ", result);
-              }
-              // The result varies by RPC method.
-              // For example, this method will return a transaction hash hexadecimal string on success.
-            })
-            .catch((error) => {
-              // If the request fails, the Promise will reject with an error.
-              //setEthInfo(userdata.eth_info)
-              alert.error("Failed getting info from ethereum API: " + error);
-            });
-        } else {
-          alert.error("Couldn't find any user: ", result);
-        }
-      })
-      .catch((error) => {
-        // If the request fails, the Promise will reject with an error.
-        alert.error("Failed getting info from ethereum API: " + error);
-      });
-
-    // Gets the users' balance in WEI (one quintilionth ETH)
-  };
 
   const loadedCheck =
     isLoaded && !firstrequest ? (

@@ -2,8 +2,8 @@ import React, {useState} from 'react';
 import {isMobile} from "react-device-detect";
 import {Link} from 'react-router-dom';
 
-import {Divider, List, ListItem, ListItemText, Card, CardContent, Grid, Typography, Button, ButtonGroup, FormControl, Dialog, DialogTitle, DialogActions, DialogContent, Tooltip}  from '@material-ui/core';
-import {ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon} from '@material-ui/icons';
+import {Divider, List, ListItem, ListItemText, Card, CardContent, Grid, Typography, Button, ButtonGroup, FormControl, Dialog, DialogTitle, DialogActions, DialogContent, Tooltip}  from '@mui/material';
+import {ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon} from '@mui/icons-material';
 
 const hrefStyle = {
 	textDecoration: "none",

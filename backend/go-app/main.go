@@ -27,35 +27,21 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	//"regexp"
+	// import httptest
+	"net/http/httptest"
+
 	"strings"
 	"time"
-
-	// Google cloud
-	"cloud.google.com/go/datastore"
-	"cloud.google.com/go/pubsub"
-	"cloud.google.com/go/storage"
-	"google.golang.org/appengine/mail"
 
 	"github.com/frikky/kin-openapi/openapi2"
 	"github.com/frikky/kin-openapi/openapi2conv"
 	"github.com/frikky/kin-openapi/openapi3"
-
-	/*
-		"github.com/frikky/kin-openapi/openapi2"
-		"github.com/frikky/kin-openapi/openapi2conv"
-		"github.com/frikky/kin-openapi/openapi3"
-	*/
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
-
-	//cv "github.com/nirasan/go-oauth-pkce-code-verifier"
-
-	//githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -69,8 +55,6 @@ import (
 
 	// Web
 	"github.com/gorilla/mux"
-	"google.golang.org/api/option"
-	"google.golang.org/grpc"
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
@@ -84,61 +68,6 @@ var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
-var syncSubUrl = "https://shuffler.io"
-
-var dbclient *datastore.Client
-
-type Userapi struct {
-	Username string `datastore:"username"`
-	ApiKey   string `datastore:"apikey"`
-}
-
-type ExecutionInfo struct {
-	TotalApiUsage           int64 `json:"total_api_usage" datastore:"total_api_usage"`
-	TotalWorkflowExecutions int64 `json:"total_workflow_executions" datastore:"total_workflow_executions"`
-	TotalAppExecutions      int64 `json:"total_app_executions" datastore:"total_app_executions"`
-	TotalCloudExecutions    int64 `json:"total_cloud_executions" datastore:"total_cloud_executions"`
-	TotalOnpremExecutions   int64 `json:"total_onprem_executions" datastore:"total_onprem_executions"`
-	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
-	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
-	DailyAppExecutions      int64 `json:"daily_app_executions" datastore:"daily_app_executions"`
-	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
-	DailyOnpremExecutions   int64 `json:"daily_onprem_executions" datastore:"daily_onprem_executions"`
-}
-
-// "Execution by status"
-// Execution history
-//type GlobalStatistics struct {
-//	BackendExecutions     int64            `json:"backend_executions" datastore:"backend_executions"`
-//	WorkflowCount         int64            `json:"workflow_count" datastore:"workflow_count"`
-//	ExecutionCount        int64            `json:"execution_count" datastore:"execution_count"`
-//	ExecutionSuccessCount int64            `json:"execution_success_count" datastore:"execution_success_count"`
-//	ExecutionAbortCount   int64            `json:"execution_abort_count" datastore:"execution_abort_count"`
-//	ExecutionFailureCount int64            `json:"execution_failure_count" datastore:"execution_failure_count"`
-//	ExecutionPendingCount int64            `json:"execution_pending_count" datastore:"execution_pending_count"`
-//	AppUsageCount         int64            `json:"app_usage_count" datastore:"app_usage_count"`
-//	TotalAppsCount        int64            `json:"total_apps_count" datastore:"total_apps_count"`
-//	SelfMadeAppCount      int64            `json:"self_made_app_count" datastore:"self_made_app_count"`
-//	WebhookUsageCount     int64            `json:"webhook_usage_count" datastore:"webhook_usage_count"`
-//	Baseline              map[string]int64 `json:"baseline" datastore:"baseline"`
-//}
-
-type ParsedOpenApi struct {
-	Body    string `datastore:"body,noindex" json:"body"`
-	ID      string `datastore:"id" json:"id"`
-	Success bool   `datastore:"success,omitempty" json:"success,omitempty"`
-}
-
-// Limits set for a user so that they can't do a shitload
-type UserLimits struct {
-	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
-	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
-	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
-	DailyTriggers           int64 `json:"daily_triggers" datastore:"daily_triggers"`
-	DailyMailUsage          int64 `json:"daily_mail_usage" datastore:"daily_mail_usage"`
-	MaxTriggers             int64 `json:"max_triggers" datastore:"max_triggers"`
-	MaxWorkflows            int64 `json:"max_workflows" datastore:"max_workflows"`
-}
 
 type retStruct struct {
 	Success         bool                 `json:"success"`
@@ -146,43 +75,6 @@ type retStruct struct {
 	SessionKey      string               `json:"session_key"`
 	IntervalSeconds int64                `json:"interval_seconds"`
 	Reason          string               `json:"reason"`
-}
-
-// Saves some data, not sure what to have here lol
-type UserAuth struct {
-	Description string          `json:"description" datastore:"description,noindex" yaml:"description"`
-	Name        string          `json:"name" datastore:"name" yaml:"name"`
-	Workflows   []string        `json:"workflows" datastore:"workflows"`
-	Username    string          `json:"username" datastore:"username"`
-	Fields      []UserAuthField `json:"fields" datastore:"fields"`
-}
-
-type UserAuthField struct {
-	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value,noindex"`
-}
-
-// Not environment, but execution environment
-//type Environment struct {
-//	Name       string `datastore:"name"`
-//	Type       string `datastore:"type"`
-//	Registered bool   `datastore:"registered"`
-//	Default    bool   `datastore:"default" json:"default"`
-//	Archived   bool   `datastore:"archived" json:"archived"`
-//	Id         string `datastore:"id" json:"id"`
-//	OrgId      string `datastore:"org_id" json:"org_id"`
-//}
-
-// timeout maybe? idk
-type session struct {
-	Username string `datastore:"Username,noindex"`
-	Id       string `datastore:"Id,noindex"`
-	Session  string `datastore:"session,noindex"`
-}
-
-type loginStruct struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
 }
 
 type Contact struct {
@@ -374,64 +266,6 @@ type Hook struct {
 	Environment string       `json:"environment" datastore:"environment"`
 }
 
-func createFileFromFile(ctx context.Context, bucket *storage.BucketHandle, remotePath, localPath string) error {
-	// [START upload_file]
-	f, err := os.Open(localPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	wc := bucket.Object(remotePath).NewWriter(ctx)
-	if _, err = io.Copy(wc, f); err != nil {
-		return err
-	}
-	if err := wc.Close(); err != nil {
-		return err
-	}
-	// [END upload_file]
-	return nil
-}
-
-func createFileFromBytes(ctx context.Context, bucket *storage.BucketHandle, remotePath string, data []byte) error {
-	wc := bucket.Object(remotePath).NewWriter(ctx)
-
-	byteReader := bytes.NewReader(data)
-	if _, err := io.Copy(wc, byteReader); err != nil {
-		return err
-	}
-
-	if err := wc.Close(); err != nil {
-		return err
-	}
-
-	// [END upload_file]
-	return nil
-}
-
-func readFile(ctx context.Context, bucket *storage.BucketHandle, object string) ([]byte, error) {
-	// [START download_file]
-	rc, err := bucket.Object(object).NewReader(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer rc.Close()
-
-	data, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-	// [END download_file]
-}
-
-func IndexHandler(entrypoint string) func(w http.ResponseWriter, r *http.Request) {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, entrypoint)
-	}
-
-	return http.HandlerFunc(fn)
-}
 
 func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
@@ -478,29 +312,6 @@ func authenticate(request *http.Request) bool {
 	}
 
 	return false
-}
-
-func publishPubsub(ctx context.Context, topic string, data []byte, attributes map[string]string) error {
-	client, err := pubsub.NewClient(ctx, gceProject)
-	if err != nil {
-		return err
-	}
-
-	t := client.Topic(topic)
-	result := t.Publish(ctx, &pubsub.Message{
-		Data:       data,
-		Attributes: attributes,
-	})
-	// Block until the result is returned and a server-generated
-	// ID is returned for the published message.
-	id, err := result.Get(ctx)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Published message for topic %s; msg ID: %v\n", topic, id)
-
-	return nil
 }
 
 func checkError(cmdName string, cmdArgs []string) error {
@@ -710,10 +521,6 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 		}
 	}
 
-	//err = increaseStatisticsField(ctx, "successful_register", username, 1, org.Id)
-	//if err != nil {
-	//	log.Printf("Failed to increase total apps loaded stats: %s", err)
-	//}
 
 	return nil
 }
@@ -1064,7 +871,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		org, err := shuffle.GetOrg(ctx, item)
-		_ = err
 		if len(org.Id) > 0 {
 			userOrgs = append(userOrgs, shuffle.OrgMini{
 				Id:         org.Id,
@@ -1073,7 +879,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 				Image:      org.Image,
 			})
 		} else {
-			log.Printf("[WARNING] Failed to get org %s for user %s", item, userInfo.Username)
+			log.Printf("[WARNING] Failed to get org %s (%s) for user %s. Error: %#v", org.Name, item, userInfo.Username, err)
 		}
 	}
 
@@ -1103,7 +909,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	userOrgs = shuffle.SortOrgList(userOrgs)
 	orgPriorities := org.Priorities
 	if len(org.Priorities) < 10 {
-		log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
+		//log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
 		newPriorities, err := shuffle.GetPriorities(ctx, userInfo, org)
 		if err != nil {
 			log.Printf("[WARNING] Failed getting new priorities for org %s: %s", org.Id, err)
@@ -1171,110 +977,6 @@ type passwordReset struct {
 	Reference string `json:"reference"`
 }
 
-// This might be... a bit off, but that's fine :)
-// This might also be stupid, as we want timelines and such
-// Anyway, these are super basic stupid stats.
-func increaseStatisticsField(ctx context.Context, fieldname, id string, amount int64, orgId string) error {
-
-	// 1. Get current stats
-	// 2. Increase field(s)
-	// 3. Put new stats
-	statisticsId := "global_statistics"
-	nameKey := fieldname
-	key := datastore.NameKey(statisticsId, nameKey, nil)
-
-	statisticsItem := shuffle.StatisticsItem{}
-	newData := shuffle.StatisticsData{
-		Timestamp: int64(time.Now().Unix()),
-		Amount:    amount,
-		Id:        id,
-	}
-
-	if err := dbclient.Get(ctx, key, &statisticsItem); err != nil {
-		// Should init
-		if strings.Contains(fmt.Sprintf("%s", err), "entity") {
-			statisticsItem = shuffle.StatisticsItem{
-				Total:     amount,
-				OrgId:     orgId,
-				Fieldname: fieldname,
-				Data: []shuffle.StatisticsData{
-					newData,
-				},
-			}
-
-			if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
-				log.Printf("Error setting base stats: %s", err)
-				return err
-			}
-
-			return nil
-		}
-		//log.Printf("STATSERR: %s", err)
-
-		return err
-	}
-
-	statisticsItem.Total += amount
-	statisticsItem.Data = append(statisticsItem.Data, newData)
-
-	// New struct, to not add body, author etc
-	// FIXME - reintroduce
-	//if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
-	//	log.Printf("Error stats to %s: %s", fieldname, err)
-	//	return err
-	//}
-
-	//log.Printf("Stats: %#v", statisticsItem)
-
-	return nil
-}
-
-// FIXME - forward this to emails or whatever CRM system in use
-func handleContact(resp http.ResponseWriter, request *http.Request) {
-	cors := shuffle.HandleCors(resp, request)
-	if cors {
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	var t Contact
-	err = json.Unmarshal(body, &t)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	if len(t.Email) < 3 || len(t.Message) == 0 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Please fill a valid email and message"}`)))
-		return
-	}
-
-	ctx := context.Background()
-	mailContent := fmt.Sprintf("Firsname: %s\nLastname: %s\nTitle: %s\nCompanyname: %s\nPhone: %s\nEmail: %s\nMessage: %s", t.Firstname, t.Lastname, t.Title, t.Companyname, t.Phone, t.Email, t.Message)
-	log.Printf("Sending contact from %s", t.Email)
-
-	msg := &mail.Message{
-		Sender:  "Shuffle <frikky@shuffler.io>",
-		To:      []string{"frikky@shuffler.io"},
-		Subject: "Shuffler.io - New contact form",
-		Body:    mailContent,
-	}
-
-	if err := mail.Send(ctx, msg); err != nil {
-		log.Printf("Couldn't send email: %v", err)
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Thanks for reaching out. We will contact you soon!"}`)))
-}
 
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
@@ -3067,8 +2769,8 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		// FIXME: Check whether it's in use.
 		if user.Id != app.Owner && user.Role != "admin" {
 			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
-			resp.WriteHeader(400)
-			resp.Write([]byte(`{"success": false}`))
+			resp.WriteHeader(403)
+			resp.Write([]byte(`{"success": false, "reason": "You don't have permissions to edit this app. Contact support@shuffler.io if this persists."}`))
 			return
 		}
 
@@ -3500,6 +3202,7 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 }
 
 func handleCloudJob(job shuffle.CloudSyncJob) error {
+	ctx := context.Background()
 	// May need authentication in all of these..?
 	log.Printf("[INFO] Handle job with type %s and action %s", job.Type, job.Action)
 	shuffle.IncrementCache(ctx, job.OrgId, "org_sync_actions")
@@ -3750,16 +3453,69 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	return nil
 }
 
+
 func remoteOrgJobHandler(org shuffle.Org, interval int) error {
+
+	// Check if it's 1 in 10 (10% chance random)
+	backupJob := shuffle.BackupJob{} 
+
+	// Check if workflow backup is active
+	// Check if app backup is active
+	ctx := context.Background()
+
+	foundUser := org.Users[0]
+	for _, user := range org.Users {
+		if user.Role == "admin" {
+			foundUser = user
+			break
+		}
+	}
+
+	if org.SyncConfig.WorkflowBackup {
+		workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Workflows = workflows
+		}
+	}
+
+	if org.SyncConfig.AppBackup && len(org.Users) > 0 {
+
+		apps, err := shuffle.GetPrioritizedApps(ctx, foundUser)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting backup apps for org %s: %s", org.Id, err)
+		} else {
+			backupJob.Apps = apps
+		}
+	}
+
+	info, err := shuffle.GetOrgStatistics(ctx, org.Id)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting org statistics backup for org %s: %s", org.Id, err)
+	} else {
+		backupJob.Stats = *info
+	}
+
+	backupJobData, err := json.Marshal(backupJob)
+	if err != nil {
+		log.Printf("[ERROR] Failed marshalling backup job: %s", err)
+		backupJobData = []byte{}
+	}
+
+
 	client := &http.Client{}
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync", syncUrl)
 	req, err := http.NewRequest(
-		"GET",
+		"POST",
 		syncUrl,
-		nil,
+		bytes.NewBuffer(backupJobData),
 	)
 
 	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
+
+	//log.Printf("[INFO] Sending org sync with autho %s", org.SyncConfig.Apikey)
+
 	newresp, err := client.Do(req)
 	if err != nil {
 		//log.Printf("Failed request in org sync: %s", err)
@@ -3775,7 +3531,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	//log.Printf("Remote Data: %s", respBody)
 	err = remoteOrgJobController(org, respBody)
 	if err != nil {
-		log.Printf("[ERROR] Failed job controller run for %s: %s", respBody, err)
+		//log.Printf("[ERROR] Failed cloud sync job controller run for '%s': %s", respBody, err)
 		return err
 	}
 	return nil
@@ -3819,7 +3575,7 @@ func runInitEs(ctx context.Context) {
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
 
 	setUsers := false
-	//log.Printf("ORGS: %d", len(activeOrgs))
+	_ = setUsers
 	if err != nil {
 		if fmt.Sprintf("%s", err) == "EOF" {
 			time.Sleep(7 * time.Second)
@@ -3874,7 +3630,7 @@ func runInitEs(ctx context.Context) {
 
 			if len(activeOrgs) == 1 {
 				if len(activeOrgs[0].Users) == 0 {
-					log.Printf("ORG doesn't have any users??")
+					log.Printf("[ERROR] Main Org doesn't have any user. Creating.")
 
 					users, err := shuffle.GetAllUsers(ctx)
 					if err != nil && len(users) == 0 {
@@ -3907,10 +3663,9 @@ func runInitEs(ctx context.Context) {
 
 	if strings.Contains(os.Getenv("SHUFFLE_OPENSEARCH_URL"), "https") {
 		log.Printf("[INFO] Waiting during init to make sure the opensearch instance is up and running with security features properly")
-		time.Sleep(30 * time.Second)
+		time.Sleep(15 * time.Second)
 	}
 
-	_ = setUsers
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
 		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
@@ -4054,17 +3809,17 @@ func runInitEs(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("[DEBUG] Should start schedule for org %s (%s)", org.Name, org.Id)
+		log.Printf("[DEBUG] Should start cloud schedule for org %s (%s)", org.Name, org.Id)
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("[ERROR] Failed request with remote org setup (2): %s", err)
+				log.Printf("[ERROR] Failed request with remote org sync for org %s (2): %s", org.Id, err)
 			}
 		}
 
 		jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
 		if err != nil {
-			log.Printf("[CRITICAL] Failed to schedule org: %s", err)
+			log.Printf("[ERROR] Failed to schedule org: %s", err)
 		} else {
 			log.Printf("[INFO] Started sync on interval %d for org %s (%s)", interval, org.Name, org.Id)
 			scheduledOrgs[org.Id] = jobret
@@ -4186,8 +3941,8 @@ func runInitEs(ctx context.Context) {
 
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
-	} else if err == nil {
-		log.Printf("[DEBUG] Downloading default apps")
+	} else if err == nil && len(workflowapps) < 10 {
+		log.Printf("[DEBUG] Downloading default apps as %d were found", len(workflowapps))
 		fs := memfs.New()
 		storer := memory.NewStorage()
 
@@ -4243,6 +3998,8 @@ func runInitEs(ctx context.Context) {
 		if len(location) != 0 {
 			handleAppHotload(ctx, location, false)
 		}
+	} else {
+		log.Printf("[DEBUG] Skipping download of default apps as %d were found", len(workflowapps))
 	}
 
 	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
@@ -4258,7 +4015,7 @@ func runInitEs(ctx context.Context) {
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
 		log.Printf("[WARNING] Failed loading repo %s into memory: %s", apis, err)
-	} else {
+	} else if err == nil && len(workflowapps) < 10 {
 		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
 		dir, err := fs.ReadDir("")
 		if err != nil {
@@ -4267,699 +4024,39 @@ func runInitEs(ctx context.Context) {
 
 		iterateOpenApiGithub(fs, dir, "", "")
 		log.Printf("[INFO] Finished downloading extra API samples")
+	} else {
+		log.Printf("[INFO] Skipping download of extra API samples as %d were found", len(workflowapps))
+	}
+
+	
+	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
+		healthcheckInterval := 15
+		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
+		job := func() {
+			// Prepare a fake http.responsewriter 
+			resp := httptest.NewRecorder()
+
+			request := http.Request{}
+			// Add the "force=true" query to the fake request
+			request.URL, err  = url.Parse("/api/v1/health/stats?force=true")
+			if err != nil {
+				log.Printf("[ERROR] Failed to parse test url for healthstats: %s", err)
+			}
+
+			shuffle.RunOpsHealthCheck(resp, &request)
+		}
+
+		_, err := newscheduler.Every(int(healthcheckInterval)).Minutes().Run(job)
+		if err != nil {
+			log.Printf("[ERROR] Failed to schedule healthcheck: %s", err)
+		} else {
+			log.Printf("[DEBUG] Successfully started healthcheck interval of %d minutes", healthcheckInterval)
+		}
 	}
 
 	log.Printf("[INFO] Finished INIT (ES)")
 }
 
-// Handles configuration items during Shuffle startup
-func runInit(ctx context.Context) {
-	// Setting stats for backend starts (failure count as well)
-	//err := increaseStatisticsField(ctx, "backend_executions", "", 1, "")
-	//if err != nil {
-	//	log.Printf("Failed increasing local stats: %s", err)
-	//}
-	//log.Printf("[DEBUG] Finalized init statistics update")
-
-	log.Printf("[DEBUG] Starting INIT setup (NOT Opensearch/Elasticsearch!)")
-	httpProxy := os.Getenv("HTTP_PROXY")
-	if len(httpProxy) > 0 {
-		log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
-	}
-	httpsProxy := os.Getenv("HTTPS_PROXY")
-	if len(httpsProxy) > 0 {
-		log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
-	}
-
-	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
-
-	/*
-			proxyUrl, err := url.Parse(httpProxy)
-			if err != nil {
-				log.Printf("Failed setting up proxy: %s", err)
-			} else {
-				// accept any certificate (might be useful for testing)
-				customClient := &http.Client{
-					Transport: &http.Transport{
-						TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-						Proxy:           http.ProxyURL(proxyUrl),
-					},
-
-					// 15 second timeout
-					Timeout: 15 * 15time.Second,
-
-					// don't follow redirect
-					CheckRedirect: func(req *http.Request, via []*http.Request) error {
-						return http.ErrUseLastResponse
-					},
-				}
-
-				// Override http(s) default protocol to use our custom client
-				client.InstallProtocol("http", githttp.NewClient(customClient))
-				client.InstallProtocol("https", githttp.NewClient(customClient))
-			}
-		}
-
-		httpsProxy := os.Getenv("SHUFFLE_HTTPS_PROXY")
-		if len(httpsProxy) > 0 {
-			log.Printf("Running with HTTPS proxy %s", httpsProxy)
-		}
-	*/
-
-	setUsers := false
-	log.Printf("[DEBUG] Getting organizations")
-	orgQuery := datastore.NewQuery("Organizations")
-	var activeOrgs []shuffle.Org
-	_, err := dbclient.GetAll(ctx, orgQuery, &activeOrgs)
-	if err != nil {
-		log.Printf("Error getting organizations!")
-	} else {
-		// Add all users to it
-		if len(activeOrgs) == 1 {
-			setUsers = true
-		}
-
-		log.Printf("Organizations exist!")
-		if len(activeOrgs) == 0 {
-			log.Printf(`[DEBUG] No orgs. Setting org "default"`)
-			orgSetupName := "default"
-			orgId := uuid.NewV4().String()
-			newOrg := shuffle.Org{
-				Name:      orgSetupName,
-				Id:        orgId,
-				Org:       orgSetupName,
-				Users:     []shuffle.User{},
-				Roles:     []string{"admin", "user"},
-				CloudSync: false,
-			}
-
-			err = shuffle.SetOrg(ctx, newOrg, newOrg.Id)
-			if err != nil {
-				log.Printf("[WARNING] Failed setting organization: %s", err)
-			} else {
-				log.Printf("[WARNING] Successfully created the default org!")
-				setUsers = true
-			}
-		} else {
-			log.Printf("[DEBUG] There are %d org(s).", len(activeOrgs))
-
-			if len(activeOrgs) == 1 {
-				if len(activeOrgs[0].Users) == 0 {
-					log.Printf("[WARNING] ORG doesn't have any users??")
-
-					q := datastore.NewQuery("Users")
-					var users []shuffle.User
-					_, err = dbclient.GetAll(ctx, q, &users)
-					if err != nil && len(users) == 0 {
-						log.Printf("Failed getting users in org fix")
-					} else {
-						// Remapping everyone to admin. This should never happen.
-
-						for _, user := range users {
-							user.ActiveOrg = shuffle.OrgMini{
-								Id:   activeOrgs[0].Id,
-								Name: activeOrgs[0].Name,
-								Role: "admin",
-							}
-
-							activeOrgs[0].Users = append(activeOrgs[0].Users, user)
-						}
-
-						err = shuffle.SetOrg(ctx, activeOrgs[0], activeOrgs[0].Id)
-						if err != nil {
-							log.Printf("Failed setting org: %s", err)
-						} else {
-							log.Printf("Successfully updated org to have users!")
-						}
-					}
-
-				}
-			}
-		}
-	}
-
-	// Adding the users to the base organization since only one exists (default)
-	if setUsers && len(activeOrgs) > 0 {
-		activeOrg := activeOrgs[0]
-
-		q := datastore.NewQuery("Users")
-		var users []shuffle.User
-		_, err = dbclient.GetAll(ctx, q, &users)
-		if err == nil {
-			setOrgBool := false
-			usernames := []string{}
-			for _, user := range users {
-				usernames = append(usernames, user.Username)
-				newUser := shuffle.User{
-					Username: user.Username,
-					Id:       user.Id,
-					ActiveOrg: shuffle.OrgMini{
-						Id: activeOrg.Id,
-					},
-					Orgs: []string{activeOrg.Id},
-					Role: user.Role,
-				}
-
-				found := false
-				for _, orgUser := range activeOrg.Users {
-					if user.Id == orgUser.Id {
-						found = true
-					}
-				}
-
-				if !found && len(user.Username) > 0 {
-					log.Printf("Adding user %s to org %s", user.Username, activeOrg.Name)
-					activeOrg.Users = append(activeOrg.Users, newUser)
-					setOrgBool = true
-				}
-			}
-
-			log.Printf("Users found: %s", strings.Join(usernames, ", "))
-
-			if setOrgBool {
-				err = shuffle.SetOrg(ctx, activeOrg, activeOrg.Id)
-				if err != nil {
-					log.Printf("Failed setting org %s: %s!", activeOrg.Name, err)
-				} else {
-					log.Printf("UPDATED org %s!", activeOrg.Name)
-				}
-			}
-		}
-
-		log.Printf("Should add %d users to organization default", len(users))
-	}
-
-	if len(activeOrgs) == 0 {
-		orgQuery := datastore.NewQuery("Organizations")
-		_, err = dbclient.GetAll(ctx, orgQuery, &activeOrgs)
-		if err != nil {
-			log.Printf("Failed getting orgs the second time around")
-		}
-	}
-
-	// Fix active users etc
-	q := datastore.NewQuery("Users").Filter("active =", true)
-	var activeusers []shuffle.User
-	_, err = dbclient.GetAll(ctx, q, &activeusers)
-	if err != nil && len(activeusers) == 0 {
-		log.Printf("Error getting users during init: %s", err)
-	} else {
-		log.Printf("Parsing all users and setting them to active.")
-		q := datastore.NewQuery("Users")
-		var users []shuffle.User
-		_, err := dbclient.GetAll(ctx, q, &users)
-		//log.Printf("User ret: %s", err)
-
-		if len(activeusers) == 0 && len(users) > 0 {
-			log.Printf("No active users found - setting ALL to active")
-			if err == nil {
-				for _, user := range users {
-					user.Active = true
-					if len(user.Username) == 0 {
-						shuffle.DeleteKey(ctx, "Users", strings.ToLower(user.Username))
-						continue
-					}
-
-					if len(user.Role) > 0 {
-						user.Roles = append(user.Roles, user.Role)
-					}
-
-					if len(user.Orgs) == 0 {
-						defaultName := "default"
-						user.Orgs = []string{defaultName}
-						user.ActiveOrg = shuffle.OrgMini{
-							Name: defaultName,
-							Role: "admin",
-						}
-					}
-
-					err = shuffle.SetUser(ctx, &user, true)
-					if err != nil {
-						log.Printf("Failed to reset user")
-					} else {
-						log.Printf("Remade user %s with ID", user.Id)
-						err = shuffle.DeleteKey(ctx, "Users", strings.ToLower(user.Username))
-						if err != nil {
-							log.Printf("Failed to delete old user by username")
-						}
-					}
-				}
-			}
-		} else if len(users) == 0 {
-			log.Printf("Trying to set up user based on environments SHUFFLE_DEFAULT_USERNAME & SHUFFLE_DEFAULT_PASSWORD")
-			username := os.Getenv("SHUFFLE_DEFAULT_USERNAME")
-			password := os.Getenv("SHUFFLE_DEFAULT_PASSWORD")
-			if len(username) == 0 || len(password) == 0 {
-				log.Printf("SHUFFLE_DEFAULT_USERNAME and SHUFFLE_DEFAULT_PASSWORD not defined as environments. Running without default user.")
-			} else {
-				apikey := os.Getenv("SHUFFLE_DEFAULT_APIKEY")
-
-				tmpOrg := shuffle.OrgMini{
-					Name: "default",
-				}
-
-				err = createNewUser(username, password, "admin", apikey, tmpOrg)
-				if err != nil {
-					log.Printf("Failed to create default user %s: %s", username, err)
-				} else {
-					log.Printf("Successfully created user %s", username)
-				}
-			}
-		} else {
-			if len(users) < 10 && len(users) > 0 {
-				for _, user := range users {
-					log.Printf("[INFO] Username: %s, role: %s", user.Username, user.Role)
-				}
-			} else {
-				log.Printf("[INIT] Found %d users.", len(users))
-			}
-
-			if len(activeOrgs) == 1 && len(users) > 0 {
-				for _, user := range users {
-					if user.ActiveOrg.Id == "" && len(user.Username) > 0 {
-						user.ActiveOrg = shuffle.OrgMini{
-							Id:   activeOrgs[0].Id,
-							Name: activeOrgs[0].Name,
-						}
-
-						err = shuffle.SetUser(ctx, &user, true)
-						if err != nil {
-							log.Printf("Failed updating user %s with org", user.Username)
-						} else {
-							log.Printf("Updated user %s to have org", user.Username)
-						}
-					}
-				}
-			}
-			//log.Printf(users[0].Username)
-		}
-	}
-
-	// Gets environments and inits if it doesn't exist
-	count, err := shuffle.GetEnvironmentCount()
-	if count == 0 && err == nil && len(activeOrgs) == 1 {
-		log.Printf("[INFO] Setting up environment with org %s", activeOrgs[0].Id)
-
-		defaultEnv := os.Getenv("ORG_ID")
-		if len(defaultEnv) == 0 {
-			defaultEnv = "Shuffle"
-			log.Printf("[DEBUG] Setting default environment for org to %s", defaultEnv)
-		}
-
-		item := shuffle.Environment{
-			Name:    defaultEnv,
-			Type:    "onprem",
-			OrgId:   activeOrgs[0].Id,
-			Default: true,
-			Id:      uuid.NewV4().String(),
-		}
-
-		err = shuffle.SetEnvironment(ctx, &item)
-		if err != nil {
-			log.Printf("[WARNING] Failed setting up new environment")
-		}
-	} else if len(activeOrgs) == 1 {
-		log.Printf("[INFO] Setting up all environments with org %s", activeOrgs[0].Id)
-		var environments []shuffle.Environment
-		q := datastore.NewQuery("Environments")
-		_, err = dbclient.GetAll(ctx, q, &environments)
-		if err == nil {
-			existingEnv := []string{}
-			_ = existingEnv
-			for _, item := range environments {
-				//if shuffle.ArrayContains(existingEnv, item.Name) {
-				//	log.Printf("[WARNING] Env %s already exists - deleting it. %#v", item.Name, item)
-				//	err = DeleteKey(ctx, "Environments", item.Name)
-				//	if err != nil {
-				//		log.Printf("[WARNING] Env deletion error: %s", err)
-				//	}
-
-				//	continue
-				//}
-
-				//existingEnv = append(existingEnv, item.Name)
-
-				if item.OrgId == activeOrgs[0].Id && len(item.Id) > 0 {
-					continue
-				}
-
-				if len(item.Id) == 0 {
-					item.Id = uuid.NewV4().String()
-				}
-
-				item.OrgId = activeOrgs[0].Id
-				err = shuffle.SetEnvironment(ctx, &item)
-				if err != nil {
-					log.Printf("[WARNING] Failed adding environment to org %s", activeOrgs[0].Id)
-				}
-			}
-		}
-	}
-
-	// Fixing workflows to have real activeorg IDs
-	//workflowQ := datastore.NewQuery("workflow")
-	//ret, err := dbclient.GetAll(ctx, workflowQ, &workflows)
-	//log.Printf("[INFO] Found %d workflows during startup", workflowCount)
-	//log.Printf("%#v, %s", ret, err)
-
-	var workflows []shuffle.Workflow
-	if len(activeOrgs) == 1 {
-		q := datastore.NewQuery("workflow").Limit(35)
-		_, err = dbclient.GetAll(ctx, q, &workflows)
-		if err != nil && len(workflows) == 0 {
-			log.Printf("Error getting workflows in runinit: %s", err)
-		} else {
-			updated := 0
-			timeNow := time.Now().Unix()
-			for _, workflow := range workflows {
-				setLocal := false
-				if workflow.ExecutingOrg.Id == "" || len(workflow.OrgId) == 0 {
-					workflow.OrgId = activeOrgs[0].Id
-					workflow.ExecutingOrg = shuffle.OrgMini{
-						Id:   activeOrgs[0].Id,
-						Name: activeOrgs[0].Name,
-					}
-
-					setLocal = true
-				} else if workflow.Edited == 0 {
-					workflow.Edited = timeNow
-					setLocal = true
-				}
-
-				if setLocal {
-					err = shuffle.SetWorkflow(ctx, workflow, workflow.ID)
-					if err != nil {
-						log.Printf("Failed setting workflow in init: %s", err)
-					} else {
-						log.Printf("Fixed workflow %s to have the right info.", workflow.ID)
-						updated += 1
-					}
-				}
-			}
-
-			if updated > 0 {
-				log.Printf("Set workflow orgs for %d workflows", updated)
-			}
-		}
-
-		/*
-			fileq := datastore.NewQuery("Files").Limit(1)
-			count, err := dbclient.Count(ctx, fileq)
-			log.Printf("FILECOUNT: %d", count)
-			if err == nil && count < 10 {
-				basepath := "."
-				filename := "testfile.txt"
-				fileId := uuid.NewV4().String()
-				log.Printf("Creating new file reference %s because none exist!", fileId)
-				workflowId := "2cf1169d-b460-41de-8c36-28b2092866f8"
-				downloadPath := fmt.Sprintf("%s/%s/%s/%s", basepath, activeOrgs[0].Id, workflowId, fileId)
-
-				timeNow := time.Now().Unix()
-				newFile := File{
-					Id:           fileId,
-					CreatedAt:    timeNow,
-					UpdatedAt:    timeNow,
-					Description:  "Created by system for testing",
-					Status:       "active",
-					Filename:     filename,
-					OrgId:        activeOrgs[0].Id,
-					WorkflowId:   workflowId,
-					DownloadPath: downloadPath,
-				}
-
-				err = setFile(ctx, newFile)
-				if err != nil {
-					log.Printf("Failed setting file: %s", err)
-				} else {
-					log.Printf("Created file %s in init", newFile.DownloadPath)
-				}
-			}
-		*/
-
-		var allworkflowapps []shuffle.AppAuthenticationStorage
-		q = datastore.NewQuery("workflowappauth")
-		_, err = dbclient.GetAll(ctx, q, &allworkflowapps)
-		if err == nil {
-			log.Printf("Setting up all app auths with org %s", activeOrgs[0].Id)
-			for _, item := range allworkflowapps {
-				if item.OrgId != "" {
-					continue
-				}
-
-				//log.Printf("Should update auth for %#v!", item)
-				item.OrgId = activeOrgs[0].Id
-				err = shuffle.SetWorkflowAppAuthDatastore(ctx, item, item.Id)
-				if err != nil {
-					log.Printf("Failed adding AUTH to org %s", activeOrgs[0].Id)
-				}
-			}
-		}
-
-		var schedules []shuffle.ScheduleOld
-		q = datastore.NewQuery("schedules")
-		_, err = dbclient.GetAll(ctx, q, &schedules)
-		if err == nil {
-			log.Printf("Setting up all schedules with org %s", activeOrgs[0].Id)
-			for _, item := range schedules {
-				if item.Org != "" {
-					continue
-				}
-
-				if item.Environment == "cloud" {
-					log.Printf("Skipping cloud schedule")
-					continue
-				}
-
-				item.Org = activeOrgs[0].Id
-				err = shuffle.SetSchedule(ctx, item)
-				if err != nil {
-					log.Printf("Failed adding schedule to org %s", activeOrgs[0].Id)
-				}
-			}
-		}
-	}
-
-	log.Printf("Starting cloud schedules for orgs!")
-	type requestStruct struct {
-		ApiKey string `json:"api_key"`
-	}
-	for _, org := range activeOrgs {
-		if !org.CloudSync {
-			log.Printf("Skipping org %s because sync isn't set (1).", org.Id)
-			continue
-		}
-
-		//interval := int(org.SyncConfig.Interval)
-		interval := 15
-		if interval == 0 {
-			log.Printf("Skipping org %s because sync isn't set (0).", org.Id)
-			continue
-		}
-
-		log.Printf("[DEBUG] Should start schedule for org %s (%s)", org.Name, org.Id)
-		job := func() {
-			err := remoteOrgJobHandler(org, interval)
-			if err != nil {
-				log.Printf("[ERROR] Failed request with remote org setup (2): %s", err)
-			}
-		}
-
-		jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
-		if err != nil {
-			log.Printf("[CRITICAL] Failed to schedule org: %s", err)
-		} else {
-			log.Printf("Started sync on interval %d for org %s", interval, org.Name)
-			scheduledOrgs[org.Id] = jobret
-		}
-	}
-
-	// Gets schedules and starts them
-	log.Printf("Relaunching schedules")
-	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
-	if err != nil {
-		log.Printf("Failed getting schedules during service init: %s", err)
-	} else {
-		log.Printf("Setting up %d schedule(s)", len(schedules))
-		url := &url.URL{}
-		for _, schedule := range schedules {
-			if schedule.Environment == "cloud" {
-				log.Printf("Skipping cloud schedule")
-				continue
-			}
-
-			//log.Printf("Schedule: %#v", schedule)
-			job := func() {
-				//log.Printf("[INFO] Running schedule %s with interval %d.", schedule.Id, schedule.Seconds)
-				//log.Printf("ARG: %s", schedule.WrappedArgument)
-
-				request := &http.Request{
-					URL:    url,
-					Method: "POST",
-					Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
-				}
-
-				orgId := ""
-				if len(activeOrgs) > 0 {
-					orgId = activeOrgs[0].Id
-				}
-
-				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request, orgId)
-				if err != nil {
-					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
-				}
-			}
-
-			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
-			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job)
-			if err != nil {
-				log.Printf("Failed to schedule workflow: %s", err)
-			}
-
-			scheduledJobs[schedule.Id] = jobret
-		}
-	}
-
-	// form force-flag to download workflow apps
-	forceUpdateEnv := os.Getenv("SHUFFLE_APP_FORCE_UPDATE")
-	forceUpdate := false
-	if len(forceUpdateEnv) > 0 && forceUpdateEnv == "true" {
-		log.Printf("Forcing to rebuild apps")
-		forceUpdate = true
-	}
-
-	// Getting apps to see if we should initialize a test
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
-	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %s", len(workflowapps), err)
-	if err != nil && len(workflowapps) == 0 {
-		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
-	} else if err == nil && len(workflowapps) > 0 {
-		var allworkflowapps []shuffle.WorkflowApp
-		q := datastore.NewQuery("workflowapp")
-		_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
-		if err == nil {
-			for _, workflowapp := range allworkflowapps {
-				if workflowapp.Edited == 0 {
-					err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
-					if err == nil {
-						log.Printf("[INFO] Updating time for workflowapp %s:%s", workflowapp.Name, workflowapp.AppVersion)
-					}
-				}
-			}
-		}
-
-	} else if err == nil && len(workflowapps) == 0 {
-		log.Printf("Downloading default workflow apps")
-		fs := memfs.New()
-		storer := memory.NewStorage()
-
-		url := os.Getenv("SHUFFLE_APP_DOWNLOAD_LOCATION")
-		if len(url) == 0 {
-			url = "https://github.com/shuffle/shuffle-apps"
-		}
-
-		username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
-		password := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_PASSWORD")
-
-		cloneOptions := &git.CloneOptions{
-			URL: url,
-		}
-
-		if len(username) > 0 && len(password) > 0 {
-			cloneOptions.Auth = &http2.BasicAuth{
-				Username: username,
-				Password: password,
-			}
-		}
-		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
-		if len(branch) > 0 && branch != "master" && branch != "main" {
-			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
-		}
-
-		log.Printf("[DEBUG] Getting apps from URL '%s'", url)
-
-		r, err := git.Clone(storer, fs, cloneOptions)
-
-		if err != nil {
-			log.Printf("Failed loading repo into memory (init): %s", err)
-		}
-
-		dir, err := fs.ReadDir("")
-		if err != nil {
-			log.Printf("Failed reading folder: %s", err)
-		}
-		_ = r
-		//iterateAppGithubFolders(fs, dir, "", "testing")
-
-		// FIXME: Get all the apps?
-		_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
-		if err != nil {
-			log.Printf("[WARNING] Error from app load in init: %s", err)
-		}
-		//_, _, err = iterateAppGithubFolders(fs, dir, "", "", forceUpdate)
-
-		// Hotloads locally
-		location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
-		if len(location) != 0 {
-			handleAppHotload(ctx, location, false)
-		}
-	}
-
-	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
-	apis := "https://github.com/shuffle/security-openapis"
-
-	// FIXME: This part gets memory problems. Fix in the future to load these apps too.
-	//apis := "https://github.com/APIs-guru/openapi-directory"
-	fs := memfs.New()
-	storer := memory.NewStorage()
-	cloneOptions := &git.CloneOptions{
-		URL: apis,
-	}
-	_, err = git.Clone(storer, fs, cloneOptions)
-	if err != nil {
-		log.Printf("Failed loading repo %s into memory: %s", apis, err)
-	} else {
-		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
-		dir, err := fs.ReadDir("")
-		if err != nil {
-			log.Printf("Failed reading folder: %s", err)
-		}
-
-		iterateOpenApiGithub(fs, dir, "", "")
-		log.Printf("[INFO] Finished downloading extra API samples")
-	}
-
-	workflowLocation := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_LOCATION")
-	if len(workflowLocation) > 0 {
-		log.Printf("[INFO] Downloading WORKFLOWS from %s if no workflows - EXTRA workflows", workflowLocation)
-		q := datastore.NewQuery("workflow").Limit(35)
-		var workflows []shuffle.Workflow
-		_, err = dbclient.GetAll(ctx, q, &workflows)
-		if err != nil && len(workflows) == 0 {
-			log.Printf("Error getting workflows: %s", err)
-		} else {
-			if len(workflows) == 0 {
-				username := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_USERNAME")
-				password := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_PASSWORD")
-				orgId := ""
-				if len(activeOrgs) > 0 {
-					orgId = activeOrgs[0].Id
-				}
-
-				err = loadGithubWorkflows(workflowLocation, username, password, "", os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_BRANCH"), orgId)
-				if err != nil {
-					log.Printf("Failed to upload workflows from github: %s", err)
-				} else {
-					log.Printf("[INFO] Finished downloading workflows from github!")
-				}
-			} else {
-				log.Printf("[INFO] Skipping because there are %d workflows already", len(workflows))
-			}
-
-		}
-	}
-
-	log.Printf("[INFO] Finished INIT")
-}
 
 func handleVerifyCloudsync(orgId string) (shuffle.SyncFeatures, error) {
 	ctx := context.Background()
@@ -5244,7 +4341,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	b, err := json.Marshal(requestData)
 	if err != nil {
-		log.Printf("Failed marshaling api key data: %s", err)
+		log.Printf("[ERROR] Failed marshaling api key data: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync: %s"}`, err)))
 		return
@@ -5271,7 +4368,8 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//log.Printf("Respbody: %s", string(respBody))
+	log.Printf("[DEBUG] Respbody from sync: %s", string(respBody))
+
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
 	if err != nil {
@@ -5309,13 +4407,13 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	job := func() {
 		err := remoteOrgJobHandler(*org, interval)
 		if err != nil {
-			log.Printf("[ERROR] Failed request with remote org setup (1): %s", err)
+			log.Printf("[ERROR] Failed request with remote org sync (1): %s", err)
 		}
 	}
 
 	jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
 	if err != nil {
-		log.Printf("[CRITICAL] Failed to schedule org: %s", err)
+		log.Printf("[ERROR] Failed to schedule org: %s", err)
 	} else {
 		log.Printf("[INFO] Started sync on interval %d for org %s", interval, org.Name)
 		scheduledOrgs[org.Id] = jobret
@@ -5389,251 +4487,6 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write(respBody)
-}
-
-// Runs DB migration from Datastore to Opensearch
-// If the function has "ALL" in it, that means it's intended to be used for Orgs
-// but that we've added a function to grab everything
-func migrateDatabase(resp http.ResponseWriter, request *http.Request) {
-	cors := shuffle.HandleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, userErr := shuffle.HandleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("[WARNING] Api authentication failed in make workflow public: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Role != "admin" {
-		log.Printf("[WARNING] Failed to migrate because you're not admin")
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if strings.ToLower(os.Getenv("SHUFFLE_ELASTIC")) != "false" {
-		log.Printf("[WARNING] Failed to migrate because main DB is Elastic. Set SHUFFLE_ELASTIC=false in .env")
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	ctx := context.Background()
-	//es := shuffle.GetEsConfig()
-	_, err := shuffle.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", false, "")
-	if err != nil {
-		log.Printf("[WARNING] Failed to start migration because of init issues: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("\n\n------- STARTING MIGRATION TO OPENSEARCH --------")
-	users, err := shuffle.GetAllUsers(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting users: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d user(s) to be migrated", len(users))
-	}
-
-	orgs, err := shuffle.GetAllOrgs(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting orgs: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d org(s) to be migrated", len(orgs))
-	}
-
-	workflows, err := shuffle.GetAllWorkflows(ctx, "ALL")
-	if err != nil {
-		log.Printf("[ERROR] Failed getting workflows: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d workflows(s) to be migrated", len(workflows))
-	}
-
-	apps, err := shuffle.GetAllWorkflowApps(ctx, 0, 0)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting apps: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d app(s) to be migrated", len(apps))
-	}
-
-	openapiApps, err := shuffle.GetAllOpenApi(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting openapi apps: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d openapi(s) to be migrated", len(openapiApps))
-	}
-
-	workflowappauth, err := shuffle.GetAllWorkflowAppAuth(ctx, "ALL")
-	if err != nil {
-		log.Printf("[ERROR] Failed getting app auth: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d appauth(s) to be migrated", len(workflowappauth))
-	}
-
-	environments, err := shuffle.GetEnvironments(ctx, "ALL")
-	if err != nil {
-		log.Printf("[ERROR] Failed getting environments: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d environment(s) to be migrated", len(environments))
-	}
-
-	hooks, err := shuffle.GetAllHooks(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting hooks: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d hook(s) to be migrated", len(hooks))
-	}
-
-	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
-	if err != nil {
-		log.Printf("[ERROR] Failed getting schedules: %#v", err)
-	} else {
-		log.Printf("[DEBUG] Found %d schedule(s) to be migrated", len(schedules))
-	}
-
-	log.Printf("\n\n------- SWAPPING TO OPENSEARCH DB WITH ACQUIRED INFO ---------")
-	userSuccess := 0
-	orgSuccess := 0
-	workflowSuccess := 0
-	appSuccess := 0
-	openapiSuccess := 0
-	authSuccess := 0
-	envSuccess := 0
-	hookSuccess := 0
-	scheduleSuccess := 0
-	_, err = shuffle.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", false, "elasticsearch")
-
-	for _, item := range orgs {
-		err = shuffle.SetOrg(ctx, item, item.Id)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update org in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set org %s (%s) in opensearch", item.Name, item.Id)
-			orgSuccess += 1
-		}
-	}
-
-	log.Printf("----- ORGS FOUND: %d - success: %d - failed: %d", len(orgs), orgSuccess, len(orgs)-orgSuccess)
-
-	for _, item := range workflowappauth {
-		err = shuffle.SetWorkflowAppAuthDatastore(ctx, item, item.Id)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update app auth in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set app auth %s in opensearch", item.Id)
-			authSuccess += 1
-		}
-	}
-
-	log.Printf("----- AUTH FOUND: %d - success: %d - failed: %d", len(workflowappauth), authSuccess, len(workflowappauth)-authSuccess)
-
-	for _, item := range environments {
-		err = shuffle.SetEnvironment(ctx, &item)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update env in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set env %s in opensearch", item.Id)
-			envSuccess += 1
-		}
-	}
-
-	log.Printf("----- ENVS FOUND: %d - success: %d - failed: %d", len(environments), envSuccess, len(environments)-envSuccess)
-
-	for _, item := range hooks {
-		err = shuffle.SetHook(ctx, item)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update hooks in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set hook %s in opensearch", item.Id)
-			hookSuccess += 1
-		}
-	}
-
-	log.Printf("---- HOOKS FOUND: %d - success: %d - failed: %d", len(hooks), hookSuccess, len(hooks)-hookSuccess)
-
-	for _, item := range schedules {
-		err = shuffle.SetSchedule(ctx, item)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update schedule in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set schedule %s in opensearch", item.Id)
-			scheduleSuccess += 1
-		}
-	}
-
-	log.Printf(" SCHEDULES FOUND: %d - success: %d - failed: %d", len(schedules), scheduleSuccess, len(schedules)-scheduleSuccess)
-
-	for _, item := range users {
-		err = shuffle.SetUser(ctx, &item, false)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update user in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set user %s (%s) in opensearch", item.Username, item.Id)
-			userSuccess += 1
-		}
-	}
-
-	log.Printf("---- USERS FOUND: %d - success: %d - failed: %d", len(users), userSuccess, len(users)-userSuccess)
-
-	for _, item := range workflows {
-		err = shuffle.SetWorkflow(ctx, item, item.ID)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update workflow in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set workflow %s (%s) in opensearch", item.Name, item.ID)
-			workflowSuccess += 1
-		}
-	}
-
-	log.Printf(" WORKFLOWS FOUND: %d - success: %d - failed: %d", len(workflows), workflowSuccess, len(workflows)-workflowSuccess)
-
-	for _, item := range openapiApps {
-		err = shuffle.SetOpenApiDatastore(ctx, item.ID, item)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update openapi app in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set openapi %s in opensearch", item.ID)
-			openapiSuccess += 1
-		}
-	}
-
-	log.Printf("-- OpenAPI FOUND: %d - success: %d - failed: %d", len(openapiApps), openapiSuccess, len(openapiApps)-openapiSuccess)
-
-	for _, item := range apps {
-		err = shuffle.SetWorkflowAppDatastore(ctx, item, item.ID)
-		if err != nil {
-			//log.Printf("[WARNING] Failed to update app in opensearch: %s", err)
-		} else {
-			//log.Printf("[DEBUG] Set app %s (%s) in opensearch", item.Name, item.ID)
-			appSuccess += 1
-		}
-	}
-
-	log.Printf("----- APPS FOUND: %d - success: %d - failed: %d", len(apps), appSuccess, len(apps)-appSuccess)
-
-	// Handle users
-	// 1. Get users
-	// 2. Get organizations
-	// 4. Get workflows
-	// 5. Get apps
-	// 6. Get workflowappauth
-	// 7. Get workflowexecution
-	// 9. Get Environments
-	// 10. Get hooks
-	// 11. Get openapi3
-	// 12. Get schedules
-
-	//log.Printf("[INFO] Successfully published workflow %s (%s) TO CLOUD", workflow.Name, workflow.ID)
-	log.Printf("\n\n[DEBUG] Successfully updated ran migration from Datastore to Opensearch!")
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-	log.Printf("[DEBUG] Panicing to force-restart Shuffle post-migration. Stop Shuffle and change database. Docs: https://shuffler.io/docs/configuration#database_migration")
-	os.Exit(0)
 }
 
 func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
@@ -5783,6 +4636,8 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
+
+
 func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -5841,6 +4696,8 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte("OK"))
 }
 
+
+
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -5854,22 +4711,8 @@ func initHandlers() {
 		elasticConfig = ""
 	}
 
-	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
-	if err != nil {
-		if elasticConfig == "" {
-			log.Printf("[ERROR] Database client error during init: %s. Env: SHUFFLE_ELASTIC=false", err)
-		} else {
-			if !strings.Contains(fmt.Sprintf("%s", err), "find default credentials") {
-				log.Printf("[DEBUG] Database client error info during init: %s. Here for backwards compatibility: not critical.", err)
-			}
-			dbclient = &datastore.Client{}
-		}
-	} else {
-		//log.Printf("Database client initiated: %s", dbclient)
-	}
-
 	for {
-		_, err = shuffle.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", true, elasticConfig)
+		_, err = shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), gceProject, "onprem", true, elasticConfig)
 		if err != nil {
 			log.Printf("[ERROR] Error in initial database connection. Retrying in 5 seconds. %s", err)
 			time.Sleep(5 * time.Second)
@@ -5885,11 +4728,15 @@ func initHandlers() {
 		time.Sleep(5 * time.Second)
 		go runInitEs(ctx)
 	} else {
-		go runInit(ctx)
+		//go shuffle.runInit(ctx)
+		log.Printf("[ERROR] Opensearch is the only viable option. Please set SHUFFLE_ELASTIC=true") 
+		os.Exit(1)
 	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
+	r.HandleFunc("/api/v1/health", shuffle.RunOpsHealthCheck).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/health/stats", shuffle.GetOpsDashboardStats).Methods("GET", "OPTIONS")
 
 	// Make user related locations
 	// Fix user changes with org
@@ -5962,10 +4809,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", shuffle.SetAuthenticationConfig).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", shuffle.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
 
-	// Related to NFT things
-	r.HandleFunc("/api/v1/workflows/collections/load", shuffle.LoadCollections).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/collections/{key}", shuffle.HandleGetCollection).Methods("GET", "OPTIONS")
-
 	// Related to use-cases that are not directly workflows.
 	r.HandleFunc("/api/v1/workflows/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
@@ -5994,6 +4837,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.SaveWorkflow).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.GetSpecificWorkflow).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/recommend", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
+
+	// First v2 API
+	r.HandleFunc("/api/v2/workflows/{key}/executions", shuffle.GetWorkflowExecutionsV2).Methods("GET", "OPTIONS")
 
 	// New for recommendations in Shuffle
 	r.HandleFunc("/api/v1/recommendations/get_actions", shuffle.HandleActionRecommendation).Methods("POST", "OPTIONS")
@@ -6045,6 +4891,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/create_sub_org", shuffle.HandleCreateSubOrg).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/change", shuffle.HandleChangeUserOrg).Methods("POST", "OPTIONS") // Swaps to the org
 
+	r.HandleFunc("/api/v1/orgs/{orgId}", shuffle.HandleDeleteOrg).Methods("DELETE", "OPTIONS")
+
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
 	r.HandleFunc("/api/v1/environments/{key}/stop", shuffle.HandleStopExecutions).Methods("GET", "POST", "OPTIONS")
@@ -6053,14 +4901,20 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}/revisions", shuffle.GetWorkflowRevisions).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/statistics", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
+
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/datastore/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
+
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/migrate_database", migrateDatabase).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
 
@@ -6092,11 +4946,13 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets", shuffle.HandleNewWidget).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/dashboards/{key}/widgets/{widget_id}", shuffle.HandleGetWidget).Methods("GET", "OPTIONS")
 
+	r.Use(shuffle.RequestMiddleware)
 	http.Handle("/", r)
 }
 
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
+
 	initHandlers()
 	hostname, err := os.Hostname()
 	if err != nil {

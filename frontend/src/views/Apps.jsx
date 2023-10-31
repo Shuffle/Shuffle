@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 
 import { useInterval } from "react-powerhooks";
+import theme from '../theme.jsx';
 
 import {
   IconButton,
@@ -32,9 +33,10 @@ import {
 	ListItemAvatar,
 	ListItemText,
 	Avatar,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
+  AutoFixHigh as AutoFixHighIcon,
   LockOpen as LockOpenIcon,
   OpenInNew as OpenInNewIcon,
   Apps as AppsIcon,
@@ -46,20 +48,20 @@ import {
 	Search as SearchIcon,
 	Folder as FolderIcon,
 	LibraryBooks as LibraryBooksIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import {
 	ForkRight as ForkRightIcon,
 } from '@mui/icons-material';
 
 import aa from 'search-insights'
-import { useTheme } from "@material-ui/core/styles";
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
 
 import YAML from "yaml";
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { useAlert } from "react-alert";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
 import Dropzone from "../components/Dropzone.jsx";
 
 const surfaceColor = "#27292D";
@@ -271,9 +273,8 @@ const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 
   //const [workflows, setWorkflows] = React.useState([]);
-  const theme = useTheme();
   const baseRepository = "https://github.com/frikky/shuffle-apps";
-  const alert = useAlert();
+  //const alert = useAlert();
 	let navigate = useNavigate();
 
   const [selectedApp, setSelectedApp] = React.useState({});
@@ -286,6 +287,7 @@ const Apps = (props) => {
   const [selectedAction, setSelectedAction] = React.useState({});
   const [searchBackend, setSearchBackend] = React.useState(false);
   const [searchableApps, setSearchableApps] = React.useState([]);
+  const [publishModalOpen, setPublishModalOpen] = React.useState(false);
 
   const [openApi, setOpenApi] = React.useState("");
   const [openApiData, setOpenApiData] = React.useState("");
@@ -293,6 +295,8 @@ const Apps = (props) => {
   const [loadAppsModalOpen, setLoadAppsModalOpen] = React.useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
   const [openApiModal, setOpenApiModal] = React.useState(false);
+  const [generateAppModal, setGenerateAppModal] = React.useState(false);
+
   const [openApiModalType, setOpenApiModalType] = React.useState("");
   const [openApiError, setOpenApiError] = React.useState("");
   const [field1, setField1] = React.useState("");
@@ -438,6 +442,7 @@ const Apps = (props) => {
         if (privateapps.length > 0) {
           if (selectedApp.id === undefined || selectedApp.id === null) {
             setSelectedApp(privateapps[0]);
+			setSharingConfiguration(privateapps[0].sharing === true ? "public" : "you")
           }
 
           if (
@@ -455,7 +460,7 @@ const Apps = (props) => {
 				//}, 5000)
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
         setIsLoading(false);
       });
   };
@@ -463,7 +468,7 @@ const Apps = (props) => {
   const downloadApp = (inputdata) => {
     const id = inputdata.id;
 
-    alert.info("Downloading..");
+    toast("Downloading..");
     fetch(globalUrl + "/api/v1/apps/" + id + "/config", {
       method: "GET",
       headers: {
@@ -481,7 +486,7 @@ const Apps = (props) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          alert.error("Failed to download file");
+          toast("Failed to download file");
         } else {
           console.log(responseJson);
           const basedata = atob(responseJson.openapi);
@@ -539,7 +544,7 @@ const Apps = (props) => {
       })
       .catch((error) => {
         console.log(error);
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -643,6 +648,7 @@ const Apps = (props) => {
           if (selectedApp.id !== data.id) {
             data.name = newAppname;
             setSelectedApp(data);
+			setSharingConfiguration(data.sharing === true ? "public" : "you")
 
             if (
               data.actions !== undefined &&
@@ -655,7 +661,7 @@ const Apps = (props) => {
             }
 
             if (data.sharing) {
-              setSharingConfiguration(isCloud ? "public" : "everyone");
+              setSharingConfiguration("public");
             }
           }
         }}
@@ -996,11 +1002,11 @@ const Apps = (props) => {
       );
     };
 
-    const userRoles = ["you", isCloud ? "public" : "everyone"];
+    const userRoles = ["you", "public"];
 
-		// Admin in org or creator of app
-		// FIXME: Missing check for if same creator account
-		const canEditApp = userdata !== undefined && (userdata.admin === "true" || userdata.id === selectedApp.owner || selectedApp.owner === "" || (userdata.admin === "true" && userdata.active_org.id === selectedApp.reference_org)) || !selectedApp.generated 
+	// Admin in org or creator of app
+	// FIXME: Missing check for if same creator account
+	const canEditApp = userdata !== undefined && (userdata.admin === "true" || userdata.id === selectedApp.owner || selectedApp.owner === "" || (userdata.admin === "true" && userdata.active_org.id === selectedApp.reference_org)) || !selectedApp.generated 
 
     //fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"),
     var baseInfo =
@@ -1051,6 +1057,7 @@ const Apps = (props) => {
                 console.log("New version: ", newversion);
                 selectedApp.app_version = selectedApp.app_version;
                 setSelectedApp(selectedApp);
+				setSharingConfiguration(selectedApp.sharing === true ? "public" : "you")
 
                 if (newversion !== undefined && newversion !== null) {
                   getApp(newversion.id, true);
@@ -1153,17 +1160,22 @@ const Apps = (props) => {
               <Select
                 value={sharingConfiguration}
                 onChange={(event) => {
-                  alert.info("Changing sharing to " + event.target.value);
 
                   setSharingConfiguration(event.target.value);
 
                   if (event.target.value === "you") {
+                  	toast("Changing sharing to " + event.target.value);
                     updateAppField(selectedApp.id, "sharing", false);
                   } else if (
                     event.target.value === "everyone" ||
                     event.target.value === "public"
                   ) {
-                    updateAppField(selectedApp.id, "sharing", true);
+
+					if (!isCloud) {
+  						setPublishModalOpen(true)
+					} else {
+                    	updateAppField(selectedApp.id, "sharing", true);
+					}
                   } else {
                     console.log(
                       "Can't handle value for sharing: ",
@@ -1333,11 +1345,80 @@ const Apps = (props) => {
         </div>
       ) : null;
 
+	const AppCreateButton = (props) => {
+		const { text, func, icon } = props;
+
+		const [hover, setHover] = React.useState(false);
+
+		return (
+			<Paper 
+				onMouseEnter={() => setHover(true)}
+				onMouseLeave={() => setHover(false)}
+				onClick={func}
+				style={{
+					flex: 1, 
+					padding: 15, 
+					margin: 10, 
+					backgroundColor: hover ? theme.palette.surfaceColor : "transparent",
+					border: hover ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)",
+					cursor: hover ? "pointer" : "default",
+					textAlign: "center",
+					minHeight: 150, 
+					maxHeight: 150, 
+				}}
+			>
+				{icon} 
+				<Typography>
+					{text}
+				</Typography>
+			</Paper>
+		)
+	}
+
     return (
       <div style={{}}>
         <Paper square style={uploadViewPaperStyle}>
           <div style={{ margin: 25 }}>
-            <h2>App Creator</h2>
+            <h2 style={{
+				textAlign: "center",
+			}}>
+				App Creator
+			</h2>
+			<div style={{display: "flex"}}>
+				<AppCreateButton 
+					text="Generate from OpenAPI/Swagger"
+					func={() => {
+                  		setOpenApiModal(true)
+					}}
+					icon={<PublishIcon style={{minHeight: 50, maxHeigth: 50, }} />}
+				/>
+				<AppCreateButton 
+					text="Generate from Documentation"
+					func={() => {
+  						setGenerateAppModal(true)
+					}}
+					icon={<AutoFixHighIcon style={{minHeight: 50, maxHeigth: 50, }} />}
+				/>
+			</div>
+		    <Link
+		      to="/apps/new"
+		      style={{
+		        marginLeft: 5,
+		        textDecoration: "none",
+		        color: "#f85a3e",
+		      }}
+		    >
+		      <Button
+		        variant="outlined"
+		        component="label"
+		        color="secondary"
+		        style={{}}
+				fullWidth
+		      >
+		        Create from scratch
+		      </Button>
+		    </Link>
+			{/*
             <a
               rel="noopener noreferrer"
               href="https://shuffler.io/docs/apps"
@@ -1420,6 +1501,7 @@ const Apps = (props) => {
                 </Button>
               </Link>
             </div>
+		    */}
           </div>
         </Paper>
         <Paper square style={uploadViewPaperStyle}>
@@ -1459,6 +1541,30 @@ const Apps = (props) => {
     //}
   };
 
+  const uploadFileDocumentation = (e) => {
+    const isDropzone = e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
+    const files = isDropzone ? e.dataTransfer.files : e.target.files;
+
+    const reader = new FileReader();
+
+    try {
+      reader.addEventListener("load", (e) => {
+        const content = e.target.result;
+        setOpenApiData(content);
+        setIsDropzone(isDropzone);
+        setOpenApiModal(true);
+      });
+    } catch (e) {
+      console.log("Error in dropzone: ", e);
+    }
+
+    try {
+      reader.readAsText(files[0]);
+    } catch (error) {
+      toast("Failed to read file");
+    }
+  };
+
   const uploadFile = (e) => {
     const isDropzone =
       e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
@@ -1480,7 +1586,7 @@ const Apps = (props) => {
     try {
       reader.readAsText(files[0]);
     } catch (error) {
-      alert.error("Failed to read file");
+      toast("Failed to read file");
     }
   };
 
@@ -1579,9 +1685,9 @@ const Apps = (props) => {
 				})
 				.then((responseJson) => {
 					if (responseJson.success === false) {
-						alert.error("Failed to activate the app")
+						toast("Failed to activate the app")
 					} else {
-						alert.success("App activated for your organization! Refresh the page to use the app.")
+						toast("App activated for your organization! Refresh the page to use the app.")
 
 						if (refresh === true) {
 							getApps()
@@ -1589,7 +1695,7 @@ const Apps = (props) => {
 					}
 				})
 				.catch(error => {
-					//alert.error(error.toString())
+					//toast(error.toString())
 					console.log("Activate app error: ", error.toString())
 				});
 		}
@@ -1693,13 +1799,13 @@ const Apps = (props) => {
                 return (
                   <div style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
                     //if (!isCloud) {
-                    //	alert.info("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
+                    //	toast("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
                     //	setTimeout(() => {
                     //		event.preventDefault()
                     //		window.open(parsedUrl, '_blank')
                     //	}, 2000)
                     //} else {
-                    alert.info(`Activating ${name}`)
+                    toast(`Activating ${name}`)
                     //}
 
                     console.log("CLICK: ", hit)
@@ -1868,12 +1974,6 @@ const Apps = (props) => {
               style={{ backgroundColor: inputColor, borderRadius: 5 }}
               InputProps={{
                 style: {
-                  color: "white",
-                  minHeight: "50px",
-                  marginLeft: "5px",
-                  maxWidth: "95%",
-                  fontSize: "1em",
-                  borderRadius: 5,
                 },
               }}
               disabled={
@@ -1894,27 +1994,27 @@ const Apps = (props) => {
               filteredApps.length > 0 ? (
                 <div style={{ height: "75vh", overflowY: "auto" }}>
                   {filteredApps.map((app, index) => {
-										if (firstLoad) {
-											appDelay += 75
-										} else {
-											//return returnData 
+					if (firstLoad) {
+						appDelay += 75
+					} else {
+						//return returnData 
                     	return <AppPaper app={app} />
-										}
+					}
 
                     return (
-											<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
-												<span>
-													<AppPaper app={app} />
-												</span>
-											</Zoom>
-										)
+						<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
+							<div>
+								<AppPaper app={app} />
+							</div>
+						</Zoom>
+					)
                   })}
                   {cursearch.length > 0
                     ? null
                     : searchableApps.map((app, index) => {
                         return (
-													<AppPaper app={app} />
-												)
+							<AppPaper app={app} />
+						)
                       })}
                 </div>
               ) : (
@@ -2017,7 +2117,7 @@ const Apps = (props) => {
 
     parsedData["force_update"] = forceUpdate;
 
-    alert.success("Getting specific apps from your URL.");
+    toast("Getting specific apps from your URL.");
     var cors = "cors";
     fetch(globalUrl + "/api/v1/apps/get_existing", {
       method: "POST",
@@ -2030,7 +2130,7 @@ const Apps = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          alert.success("Loaded existing apps!");
+          toast("Loaded existing apps!");
         }
 
         //stop()
@@ -2041,12 +2141,12 @@ const Apps = (props) => {
       .then((responseJson) => {
         console.log("DATA: ", responseJson);
         if (responseJson.reason !== undefined) {
-          alert.error("Failed loading: " + responseJson.reason);
+          toast("Failed loading: " + responseJson.reason);
         }
       })
       .catch((error) => {
         console.log("ERROR: ", error.toString());
-        //alert.error(error.toString());
+        //toast(error.toString());
         //stop()
         
 				setIsLoading(false);
@@ -2056,7 +2156,7 @@ const Apps = (props) => {
 
   // Locally hotloads app from folder
   const hotloadApps = () => {
-    alert.info("Hotloading apps from location in .env");
+    toast("Hotloading apps from location in .env");
     setIsLoading(true);
     fetch(globalUrl + "/api/v1/apps/run_hotload", {
       mode: "cors",
@@ -2068,7 +2168,7 @@ const Apps = (props) => {
       .then((response) => {
         setIsLoading(false);
         if (response.status === 200) {
-          //alert.success("Hotloaded apps!")
+          //toast("Hotloaded apps!")
           getApps();
         }
 
@@ -2076,14 +2176,14 @@ const Apps = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-          alert.info("Successfully finished hotload");
+          toast("Successfully finished hotload");
         } else {
-          alert.error("Failed hotload: ", responseJson.reason);
+          toast("Failed hotload: ", responseJson.reason);
           //(responseJson.reason !== undefined && responseJson.reason.length > 0) {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -2107,7 +2207,7 @@ const Apps = (props) => {
         });
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -2120,9 +2220,9 @@ const Apps = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          //alert.success("Successfully GOT app "+appId)
+          //toast("Successfully GOT app "+appId)
         } else {
-          alert.error("Failed getting app");
+          toast("Failed getting app");
         }
 
         return response.json();
@@ -2145,7 +2245,7 @@ const Apps = (props) => {
             responseJson.loop_versions = selectedApp.loop_versions;
           }
 
-          //alert.info("Should set app to selected")
+          //toast("Should set app to selected")
           if (
             responseJson.actions !== undefined &&
             responseJson.actions !== null &&
@@ -2156,15 +2256,16 @@ const Apps = (props) => {
             setSelectedAction({});
           }
           setSelectedApp(responseJson);
+		  setSharingConfiguration(responseJson.sharing === true ? "public" : "you")
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
   const deleteApp = (appId) => {
-    alert.info("Attempting to delete app");
+    toast("Attempting to delete app");
     fetch(globalUrl + "/api/v1/apps/" + appId, {
       method: "DELETE",
       headers: {
@@ -2174,22 +2275,23 @@ const Apps = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          alert.success("Successfully deleted app");
+          toast("Successfully deleted app");
           setTimeout(() => {
             getApps();
           }, 1000);
         } else {
-          alert.error("Failed deleting app. Does it still exist?");
+          toast("Failed deleting app. Does it still exist?");
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
   const updateAppField = (app_id, fieldname, fieldvalue) => {
     const data = {};
     data[fieldname] = fieldvalue;
+
 
     console.log("DATA: ", data);
 
@@ -2207,19 +2309,19 @@ const Apps = (props) => {
       })
       .then((responseJson) => {
         //console.log(responseJson)
-        //alert.info(responseJson)
+        //toast(responseJson)
         if (responseJson.success) {
-          alert.success("Successfully updated app configuration");
+          toast("Successfully updated app configuration");
         } else {
 					if (responseJson.reason !== undefined && responseJson.reason !== null) {
-          	alert.error("Error: "+responseJson.reason);
+          	toast("Error: "+responseJson.reason);
 					} else {
-          	alert.error("Error updating app configuration");
-					}
+          	toast("Error updating app configuration. Are you the owner of this app?");
+			}
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -2250,9 +2352,61 @@ const Apps = (props) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
+
+  const validateDocumentationUrl  = () => {
+    setValidation(true);
+
+	// curl https://doc-to-openapi-stbuwivzoq-nw.a.run.app/doc_to_openapi -d '{"url": "https://gitlab.com/rhab/PyOTRS/-/raw/main/pyotrs/lib.py?ref_type=heads"}' -H "Content-Type: application/json"
+	const urldata = {
+		"url": openApi,
+	}
+
+    //fetch("http://localhost:8080/doc_to_openapi", {
+    fetch("https://doc-to-openapi-stbuwivzoq-nw.a.run.app/doc_to_openapi", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+		"Content-Type": "application/json",
+      },
+      body: JSON.stringify(urldata),
+    })
+    .then((response) => {
+      setValidation(false);
+      if (response.status !== 200) {
+	    toast("Error in generation: "+response.status);
+	    setOpenApiError("Error in generation - bad status: "+response.status);
+		return response.text();
+      }
+
+      return response.json();
+    })
+    .then((responseJson) => {
+		// Check if openapi or swagger in string of the json
+		try {
+			const parsedtext = JSON.stringify(responseJson);
+			if (parsedtext.indexOf("openapi") === -1 && parsedtext.indexOf("swagger") === -1) {
+				setValidation(false);
+				setOpenApiError("Error in generation: "+parsedtext);
+				return;
+			}
+		} catch (e) {
+			setValidation(false);
+			setOpenApiError("Error in generation (2): "+e.toString());
+			return;
+		}
+
+	    console.log("Validating response!");
+	    validateOpenApi(responseJson);
+    })
+    .catch((error) => {
+      setValidation(false);
+      toast(error.toString());
+      setOpenApiError(error.toString());
+    });
+  }
 
   const validateRemote = () => {
     setValidation(true);
@@ -2288,7 +2442,7 @@ const Apps = (props) => {
         validateOpenApi(responseJson);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
         setOpenApiError(error.toString());
       });
   };
@@ -2345,12 +2499,12 @@ const Apps = (props) => {
           if (responseJson.reason !== undefined) {
             setOpenApiError(responseJson.reason);
           }
-          alert.error("An error occurred in the response");
+          toast("An error occurred in the response");
         }
       })
       .catch((error) => {
         setValidation(false);
-        alert.error(error.toString());
+        toast(error.toString());
         setOpenApiError(error.toString());
       });
   };
@@ -2363,6 +2517,61 @@ const Apps = (props) => {
     getSpecificApps(openApi, forceUpdate);
     setLoadAppsModalOpen(false);
   };
+
+  const publishModal = publishModalOpen ? (
+    <Dialog
+      open={publishModalOpen}
+      onClose={() => {
+        setPublishModalOpen(false);
+      }}
+      PaperProps={{
+        style: {
+          backgroundColor: theme.palette.surfaceColor,
+          color: "white",
+          minWidth: 500,
+          padding: 50,
+        },
+      }}
+    >
+      <DialogTitle style={{ marginBottom: 0 }}>
+        <div style={{ textAlign: "center", color: "rgba(255,255,255,0.9)" }}>
+          Are you sure you want to PUBLISH this app?
+        </div>
+      </DialogTitle>
+      <DialogContent
+        style={{ color: "rgba(255,255,255,0.65)", textAlign: "center" }}
+      >
+        <div>
+          <Typography variant="body1" style={{ marginBottom: 20 }}>
+            Before publishing, make sure to sanitize the App for anything you don't want public. 
+          </Typography>
+          <Typography variant="body1" style={{ marginBottom: 20 }}>
+			The published App is yours, and you can always change your public Apps after they are released.
+          </Typography>
+        </div>
+        <Button
+          variant="contained"
+          style={{}}
+          onClick={() => {
+			updateAppField(selectedApp.id, "sharing", true);
+            setPublishModalOpen(false);
+          }}
+          color="primary"
+        >
+          Yes
+        </Button>
+        <Button
+          style={{}}
+          onClick={() => {
+            setPublishModalOpen(false);
+          }}
+          color="primary"
+        >
+          No
+        </Button>
+      </DialogContent>
+    </Dialog>
+  ) : null;
 
   const deleteModal = deleteModalOpen ? (
     <Dialog
@@ -2414,6 +2623,7 @@ const Apps = (props) => {
   const circularLoader = validation ? (
     <CircularProgress color="primary" />
   ) : null;
+
   const appsModalLoad = loadAppsModalOpen ? (
     <Dialog
       open={loadAppsModalOpen}
@@ -2550,14 +2760,13 @@ const Apps = (props) => {
     </Dialog>
   ) : null;
 
-  const errorText =
-    openApiError.length > 0 ? (
-      <div style={{ marginTop: 10 }}>Error: {openApiError}</div>
-    ) : null;
-  const modalView = openApiModal ? (
+  const errorText = openApiError.length > 0 ? ( <div style={{ marginTop: 10 }}>Error: {openApiError}</div>) : null;
+
+  const generateAppView = generateAppModal ? (
     <Dialog
-      open={openApiModal}
+      open={generateAppModal}
       onClose={() => {
+        setGenerateAppModal(false);
         setOpenApiModal(false);
       }}
       PaperProps={{
@@ -2572,7 +2781,124 @@ const Apps = (props) => {
       <FormControl>
         <DialogTitle>
           <div style={{ color: "rgba(255,255,255,0.9)" }}>
-            Create a new app 
+		  	Generate an app based on documentation (beta)
+          </div>
+        </DialogTitle>
+        <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
+		  <Typography variant="body1">
+		  	Paste in a URL, and we will make it into an app for you. This may take multiple minutes based on the size of the documentation. <b>{isCloud ? "" : "Uses Shuffle Cloud (https://shuffler.io) for processing (for now)."}</b> 
+		  </Typography>
+		  <TextField
+            style={{ backgroundColor: inputColor }}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              style: {
+                color: "white",
+                height: "50px",
+                fontSize: "1em",
+              },
+              endAdornment: (
+                <Button
+                  style={{
+                    borderRadius: "0px",
+                    marginTop: "0px",
+                    height: "50px",
+                  }}
+                  variant="contained"
+                  disabled={openApi.length === 0 || appValidation.length > 0}
+                  color="primary"
+                  onClick={() => {
+                    setOpenApiError("");
+                    validateDocumentationUrl();
+                  }}
+                >
+                  Validate
+                </Button>
+              ),
+            }}
+            onChange={(e) => {
+              setOpenApi(e.target.value);
+            }}
+            helperText={
+              <span style={{ color: "white", marginBottom: "2px" }}>
+			  	Should be a documentation page containing an API.
+              </span>
+            }
+            placeholder="API Documentation URL"
+            fullWidth
+          />
+          <p>Or upload document with the content (coming soon)</p>
+          <input
+            hidden
+            type="file"
+            ref={upload}
+            multiple={false}
+            onChange={uploadFileDocumentation}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+			disabled
+            onClick={() => upload.current.click()}
+          >
+            Upload
+          </Button>
+          {errorText}
+        </DialogContent>
+        <DialogActions>
+          {circularLoader}
+          <Button
+            style={{ borderRadius: "0px" }}
+            onClick={() => {
+        	  setGenerateAppModal(false);
+              setOpenApiModal(false);
+              setAppValidation("");
+              setOpenApiError("");
+              setOpenApi("");
+              setOpenApiData("");
+            }}
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            style={{ borderRadius: "0px" }}
+            disabled={appValidation.length === 0}
+            onClick={() => {
+              redirectOpenApi();
+            }}
+            color="primary"
+          >
+            Continue
+          </Button>
+        </DialogActions>
+	  </FormControl>
+	</Dialog>
+  ) : null
+    
+
+  const modalView = openApiModal ? (
+    <Dialog
+      open={openApiModal}
+      onClose={() => {
+        setOpenApiModal(false);
+		setGenerateAppModal(false);
+      }}
+      PaperProps={{
+        style: {
+          backgroundColor: surfaceColor,
+          color: "white",
+          minWidth: "800px",
+          minHeight: "320px",
+        },
+      }}
+    >
+      <FormControl>
+        <DialogTitle>
+          <div style={{ color: "rgba(255,255,255,0.9)" }}>
+            Create a new app from OpenAPI / Swagger
           </div>
         </DialogTitle>
         <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
@@ -2677,6 +3003,8 @@ const Apps = (props) => {
       <div>
         {appView}
         {modalView}
+  		{publishModal} 
+  		{generateAppView} 
         {appsModalLoad}
         {deleteModal}
       </div>

@@ -1,8 +1,9 @@
 import React, {useState} from 'react';
+import { toast } from 'react-toastify';
+import theme from '../theme.jsx';
 import {BrowserView, MobileView} from "react-device-detect";
-import { useTheme } from '@material-ui/core/styles';
 
-import {Link} from 'react-router-dom';
+import { useNavigate, Link } from "react-router-dom";
 import ReactGA from 'react-ga4';
 
 import {
@@ -21,7 +22,7 @@ import {
 	IconButton,
 	Divider,
 	LinearProgress, 
-} from '@material-ui/core'
+} from '@mui/material'
 
 import { 
 	MeetingRoom as MeetingRoomIcon, 
@@ -29,19 +30,20 @@ import {
 	Settings as SettingsIcon, 
 	Notifications as NotificationsIcon, 
 	Home as HomeIcon, 
-	Polymer as PolymerIcon, 
 	Apps as AppsIcon, 
 	Description as DescriptionIcon,
 	EmojiObjects as EmojiObjectsIcon,
   Business as BusinessIcon,
-} from '@material-ui/icons';
+
+	Polyline as PolylineIcon, 
+} from '@mui/icons-material';
 
 import {
 	Analytics as AnalyticsIcon,
 	Lightbulb as LightbulbIcon,
 } from "@mui/icons-material";
 
-import { useAlert } from "react-alert";
+//import { useAlert 
 
 import SearchField from '../components/Searchfield.jsx'
 const hoverColor = "#f85a3e"
@@ -49,8 +51,8 @@ const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
 const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, homePage, userdata, serverside, } = props;
-	const theme = useTheme();
-	const alert = useAlert()
+	//const theme = useTheme();
+	//const alert = useAlert()
 
 
 	const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
@@ -61,6 +63,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
+  let navigate = useNavigate();
 
 
   const handleClick = (event) => {
@@ -99,7 +102,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				setNotifications([])
 				handleClose()
 			} else {
-				alert.error("Failed dismissing notifications. Please try again later.")
+				toast("Failed dismissing notifications. Please try again later.")
 			}
 		})
 		.catch(error => {
@@ -129,7 +132,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				console.log("NEW NOTIFICATIONS: ", newNotifications)
 				setNotifications(newNotifications)
 			} else {
-				alert.error("Failed dismissing notification. Please try again later.")
+				toast("Failed dismissing notification. Please try again later.")
 			}
 		})
 		.catch(error => {
@@ -209,7 +212,8 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 
 	const notificationWidth = 300
 	const imagesize = 22;
-  const boxColor = "#86c142";
+  	const boxColor = "#86c142";
+
 	const NotificationItem = (props) => {
 		const {data} = props
 
@@ -260,7 +264,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				{data.reference_url !== undefined && data.reference_url !== null && data.reference_url.length > 0 ?
 					<Link to={data.reference_url} style={{color: "#f86a3e", textDecoration: "none",}}>
 						<Typography variant="body1">
-							{data.title}
+							{data.title} ({data.amount})
 						</Typography >
 					</Link>
 				: 
@@ -274,7 +278,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 					: 
 					null
 				}
-				<Typography variant="body2">
+				<Typography variant="body2" style={{maxHeight: 200, overflowX: "hidden", overflowY: "auto", }}>
 					{data.description}
 				</Typography >
 				{/*data.tags !== undefined && data.tags !== null && data.tags.length > 0 ? 
@@ -404,9 +408,9 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				setTimeout(() => {
 					window.location.reload()
 				}, 2000)
-				alert.success("Successfully changed active organization - refreshing!")
+				toast("Successfully changed active organization - refreshing!")
 			} else {
-				alert.error("Failed changing org: ", responseJson.reason)
+				toast("Failed changing org: ", responseJson.reason)
 			}
 		})
 		.catch(error => {
@@ -518,6 +522,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 	}
 
 	// Handle top bar or something
+  const defaultTop = isCloud ? 0 : 7
   const loginTextBrowser = !isLoggedIn ? 
     <div style={{display: "flex", minWidth: 1250, maxWidth: 1250, margin: "auto", textAlign: "center",}}>
 			<div style={{display: "flex", flex: 1, }}>
@@ -668,7 +673,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 			</div>
 	    </div>
     	: 
-		<div style={{display: "flex", backgroundColor: "#1f2023",}}>
+		<div style={{display: "flex", }}>
 			<div style={{minWidth: 1250, maxWidth: 1250, display: "flex", margin: "auto", }}>
 				<div style={{flex: 1, flexDirection: "row"}}>
 					<List style={{height: 56, marginTop: "auto", marginBottom: "auto", display: "flex", flexDirect: "row", alignItems: "baseline", maxWidth: 340, }} component="nav">
@@ -690,9 +695,9 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 								<Link to="/workflows" style={hrefStyle}>
 									<div onMouseOver={handleSoarHover} onMouseOut={handleSoarHoverOut} style={{color: SoarHoverColor, cursor: "pointer", display: "flex"}}>
 										{/*
-										<PolymerIcon style={{marginRight: "5px"}} />
+										<PolylineIcon style={{marginRight: "5px"}} />
 										*/}
-										<span style={{marginTop: 0, marginRight: 8, }}>Workflows</span>
+										<Typography style={{marginTop: defaultTop, marginRight: 8, }}>Workflows</Typography>
 									</div> 
 								</Link>
       	 			</ListItem>
@@ -702,7 +707,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 											{/*
 											<AppsIcon style={{marginRight: "5px"}} />
 											*/}
-											<span style={{marginTop: 0, marginRight: 5,  }}>Apps</span>
+											<Typography style={{marginTop: defaultTop, marginRight: 5,  }}>Apps</Typography>
 										</div>
 								</Link>
       	 			</ListItem>
@@ -719,7 +724,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 											{/*
 											<DescriptionIcon style={{marginRight: "5px"}} />
 											*/}
-											<span style={{marginTop: 0,}}>Docs</span>
+											<Typography style={{marginTop: defaultTop,}}>Docs</Typography>
 										</div>
 								</Link>
       	 			</ListItem>
@@ -793,8 +798,6 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 								</ListItem>
 						: null*/}
 
-						
-
 						{userdata === undefined || userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length <= 1 ? 
 							null
 						:
@@ -811,7 +814,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 									}}
 									MenuProps={{
 										style: {
-											zIndex: 10002,
+											zIndex: 15000,
 										},
 									}}
 									style={{
@@ -885,7 +888,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 
 												<Tooltip color="primary" title={parsedTitle} placement="left">
 													<div style={{display: "flex"}}>
-														<Typography variant="body2" style={{borderRadius: theme.palette.borderRadius, float: "left", margin: "0 0 0 0", marginRight: 25, }}>{regiontag}</Typography> {image} <span style={{marginLeft: 8}}>{data.name}</span> 
+														{isCloud?<Typography variant="body2" style={{borderRadius: theme.palette.borderRadius, float: "left", margin: "0 0 0 0", marginRight: 25, }}>{regiontag}</Typography>:null} {image} <span style={{marginLeft: 8}}>{data.name}</span> 
 													</div>
 												</Tooltip>
 											</MenuItem>
@@ -895,13 +898,32 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 							</span>
 							}
 
+						{/* Show on cloud, if not suborg and if not customer/pov/internal */}
+						{isCloud && (userdata.org_status === undefined || userdata.org_status === null || userdata.org_status.length === 0) ? 
+							<ListItem style={{textAlign: "center", marginLeft: 0, marginRight: 7, marginTop: 3, }}>
+								<Link to ="/pricing?tab=cloud&highlight=true" style={hrefStyle}>
+									<Button variant="contained" color="primary" style={{textTransform: "none"}} onClick={() => {
+										ReactGA.event({
+											category: "header",
+											action: "pricing_upgrade_click",
+											label: "",
+										})
+									}}>
+										Upgrade	
+									</Button>
+								</Link>
+							</ListItem>
+						: null}
+
 						{userdata === undefined || userdata.app_execution_limit === undefined || userdata.app_execution_usage === undefined || userdata.app_execution_usage < 1000 ? 
 							null
 							:
 							<Tooltip title={`Amount of executions left: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Shuffle normally, but your Workflow triggers may stop working. Reach out to support@shuffler.io to extend this limit.`}>
-								<div style={{maxHeight: 30, minHeight: 30, padding: 8, textAlign: "center", cursor: "pointer", borderRadius: theme.palette.borderRadius, marginRight: 10, marginTop: 12, backgroundColor: theme.palette.surfaceColor, minWidth: 60, maxWidth: 60,  }} onClick={() => {
+								<div style={{maxHeight: 30, minHeight: 30, padding: 8, textAlign: "center", cursor: "pointer", borderRadius: theme.palette.borderRadius, marginRight: 10, marginTop: 12, backgroundColor: theme.palette.surfaceColor, minWidth: 60, maxWidth: 60, border: userdata.app_execution_usage/userdata.app_execution_limit >= 0.9 ? "#f86a3e" : null, }} onClick={() => {
+										console.log(userdata.appe_execution_usage/userdata.app_execution_limit)
 										if (window.drift !== undefined) {
 											window.drift.api.startInteraction({ interactionId: 326905 })
+											navigate("/pricing")
 										} else {
 											console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
 										}
@@ -1011,16 +1033,16 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 	const loadedCheck = 
 		<div style={{minHeight: 68}}>
 			<BrowserView>
-      	{loginTextBrowser}
+      			{loginTextBrowser}
 			</BrowserView>
 			<MobileView>
-      	{loginTextMobile}
+      			{loginTextMobile}
 			</MobileView>
 		</div>
     // <div style={{backgroundImage: "linear-gradient(-90deg,#342f78 0,#29255e 50%,#1b1947 100%"}}>
   	return (
-    	<div style={{backgroundColor: props.color === "undefined" ? "inherit" : props.color}}>
-				{loadedCheck}
+    	<div style={{backgroundColor: theme.palette.backgroundColor, }}>
+			{loadedCheck}
 	    </div>
   )
 }

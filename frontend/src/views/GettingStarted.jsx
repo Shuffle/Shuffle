@@ -1,9 +1,9 @@
 import React, { useEffect, useContext } from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import { useTheme } from "@material-ui/core/styles";
+import { makeStyles } from "@mui/styles";
 
 import ReactGA from 'react-ga4';
 import SecurityFramework from '../components/SecurityFramework.jsx';
+import theme from '../theme.jsx';
 
 import {
   Badge,
@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogActions,
   DialogContent,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
 	Check as CheckIcon,
@@ -58,10 +58,7 @@ import {
   CloudDownload as CloudDownloadIcon,
 } from "@mui/icons-material";
 
-import NestedMenuItem from "material-ui-nested-menu-item";
-//import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
-//https://next.material-ui.com/components/material-icons/
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
 //import JSONPretty from 'react-json-pretty';
@@ -69,8 +66,9 @@ import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import Dropzone from "../components/Dropzone.jsx";
 
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { useAlert } from "react-alert";
-import ChipInput from "material-ui-chip-input";
+//import { useAlert
+import { ToastContainer, toast } from "react-toastify" 
+import { MuiChipsInput } from "mui-chips-input";
 import { v4 as uuidv4 } from "uuid";
 
 const inputColor = "#383B40";
@@ -126,8 +124,7 @@ const GettingStarted = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 
   document.title = "Getting Started with Shuffle";
-  const theme = useTheme();
-  const alert = useAlert();
+  //const alert = useAlert();
   const classes = useStyles(theme);
 	let navigate = useNavigate();
   const imgSize = 60;
@@ -446,7 +443,7 @@ const GettingStarted = (props) => {
     const files = isDropzone ? e.dataTransfer.files : e.target.files;
 
     const reader = new FileReader();
-    alert.info("Starting upload. Please wait while we validate the workflows");
+    toast("Starting upload. Please wait while we validate the workflows");
 
     try {
       reader.addEventListener("load", (e) => {
@@ -455,7 +452,7 @@ const GettingStarted = (props) => {
         try {
           data = JSON.parse(reader.result);
         } catch (e) {
-          alert.error("Invalid JSON: " + e);
+          toast("Invalid JSON: " + e);
           return;
         }
 
@@ -483,13 +480,13 @@ const GettingStarted = (props) => {
                 false
               ).then((response) => {
                 if (response !== undefined) {
-                  alert.success(`Successfully imported ${data.name}`);
+                  toast(`Successfully imported ${data.name}`);
                 }
               });
             }
           })
           .catch((error) => {
-            alert.error("Import error: " + error.toString());
+            toast("Import error: " + error.toString());
           });
       });
     } catch (e) {
@@ -522,7 +519,7 @@ const GettingStarted = (props) => {
             window.location.pathname = "/login";
           }
 
-          alert.info("Failed getting workflows.");
+          toast("Failed getting workflows.");
           setWorkflowDone(true);
 
           return;
@@ -563,7 +560,7 @@ const GettingStarted = (props) => {
 					}, 100)
         } else {
           if (isLoggedIn) {
-            alert.error("An error occurred while loading workflows");
+            toast("An error occurred while loading workflows");
           }
 
           return;
@@ -572,7 +569,7 @@ const GettingStarted = (props) => {
       .catch((error) => {
 				setVideoViewOpen(true)
 
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -689,7 +686,7 @@ const GettingStarted = (props) => {
             trigger.parameters[1].value = "webhook_" + trigger.id;
             // FIXME: Add auth here?
           } else {
-            alert.info("Something is wrong with the webhook in the copy");
+            toast("Something is wrong with the webhook in the copy");
           }
         }
 
@@ -807,7 +804,7 @@ const GettingStarted = (props) => {
       data = sanitizeWorkflow(data);
 
       if (data.subflows !== null && data.subflows !== undefined) {
-        alert.info(
+        toast(
           "Not exporting with subflows when sanitizing. Please manually export them."
         );
         data.subflows = [];
@@ -834,7 +831,7 @@ const GettingStarted = (props) => {
   const publishWorkflow = (data) => {
     data = JSON.parse(JSON.stringify(data));
     data = sanitizeWorkflow(data);
-    alert.info("Sanitizing and publishing " + data.name);
+    toast("Sanitizing and publishing " + data.name);
 
     // This ALWAYS talks to Shuffle cloud
     fetch(globalUrl + "/api/v1/workflows/" + data.id + "/publish", {
@@ -851,9 +848,9 @@ const GettingStarted = (props) => {
           console.log("Status not 200 for workflow publish :O!");
         } else {
           if (isCloud) {
-            alert.success("Successfully published workflow");
+            toast("Successfully published workflow");
           } else {
-            alert.success(
+            toast(
               "Successfully published workflow to https://shuffler.io"
             );
           }
@@ -863,19 +860,19 @@ const GettingStarted = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.reason !== undefined) {
-          alert.error("Failed publishing: ", responseJson.reason);
+          toast("Failed publishing: ", responseJson.reason);
         }
 
         getAvailableWorkflows();
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
   const copyWorkflow = (data) => {
     data = JSON.parse(JSON.stringify(data));
-    alert.success("Copying workflow " + data.name);
+    toast("Copying workflow " + data.name);
     data.id = "";
     data.name = data.name + "_copy";
     data = deduplicateIds(data);
@@ -902,7 +899,7 @@ const GettingStarted = (props) => {
         }, 1000);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -918,9 +915,9 @@ const GettingStarted = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for setting workflows :O!");
-          alert.error("Failed deleting workflow. Do you have access?");
+          toast("Failed deleting workflow. Do you have access?");
         } else {
-          alert.success("Deleted workflow " + id);
+          toast("Deleted workflow " + id);
         }
 
         return response.json();
@@ -931,7 +928,7 @@ const GettingStarted = (props) => {
         }, 1000);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 
@@ -1061,13 +1058,6 @@ const GettingStarted = (props) => {
           <FileCopyIcon style={{ marginLeft: 0, marginRight: 8 }} />
           {"Duplicate Workflow"}
         </MenuItem>
-        {/*<NestedMenuItem disabled={userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length === 1 || userdata.orgs.length >= 0} style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-					//copyWorkflow(data)		
-					//setOpen(false)
-				}} key={"duplicate"}>
-					<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
-					{"Copy to Child Org"}
-				</NestedMenuItem>*/}
         <MenuItem
           style={{ backgroundColor: inputColor, color: "white" }}
           onClick={() => {
@@ -1283,7 +1273,7 @@ const GettingStarted = (props) => {
                   }}
                   onClick={() => {
                     if (subflows === 0) {
-                      alert.info("No subflows for " + data.name);
+                      toast("No subflows for " + data.name);
                       return;
                     }
 
@@ -1445,9 +1435,9 @@ const GettingStarted = (props) => {
       .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
-						alert.error("Error setting workflow: ", responseJson.reason)
+						toast("Error setting workflow: ", responseJson.reason)
 					} else {
-						alert.error("Error setting workflow.")
+						toast("Error setting workflow.")
 					}
 
 					return
@@ -1464,14 +1454,14 @@ const GettingStarted = (props) => {
           setImportLoading(false);
           setModalOpen(false);
         } else {
-          alert.info("Successfully changed basic info for workflow");
+          toast("Successfully changed basic info for workflow");
           setModalOpen(false);
         }
 
         return responseJson;
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
         setImportLoading(false);
         setModalOpen(false);
         setSubmitLoading(false);
@@ -1487,7 +1477,7 @@ const GettingStarted = (props) => {
         const file = event.target.files[key];
         if (file.type !== "application/json") {
           if (file.type !== undefined) {
-            alert.error("File has to contain valid json");
+            toast("File has to contain valid json");
     				setImportLoading(false);
           }
 
@@ -1501,7 +1491,7 @@ const GettingStarted = (props) => {
           try {
             data = JSON.parse(reader.result);
           } catch (e) {
-            alert.error("Invalid JSON: " + e);
+            toast("Invalid JSON: " + e);
             setImportLoading(false);
             return;
           }
@@ -1533,13 +1523,13 @@ const GettingStarted = (props) => {
                   false
                 ).then((response) => {
                   if (response !== undefined) {
-                    alert.success("Successfully imported " + data.name);
+                    toast("Successfully imported " + data.name);
                   }
                 });
               }
             })
             .catch((error) => {
-              alert.error("Import error: " + error.toString());
+              toast("Import error: " + error.toString());
             });
         });
 
@@ -1738,7 +1728,7 @@ const GettingStarted = (props) => {
                       }}
                       onClick={() => {
                         if (subflows === 0) {
-                          alert.info("No subflows for " + data.name);
+                          toast("No subflows for " + data.name);
                           return;
                         }
 
@@ -1939,7 +1929,7 @@ const GettingStarted = (props) => {
             margin="dense"
             fullWidth
           />
-          <ChipInput
+          <MuiChipsInput
             style={{ marginTop: 10 }}
             InputProps={{
               style: {
@@ -2179,7 +2169,7 @@ const GettingStarted = (props) => {
 								})
 								return
 							} else {
-								alert.success("TBD: Coming in version 1.0.0");
+								toast("TBD: Coming in version 1.0.0");
 							}
 
 							const ele = document.getElementById("shuffle_search_field")
@@ -2190,7 +2180,7 @@ const GettingStarted = (props) => {
 								ele.style.borderWidth = "2px"
 
 							} else {
-								//alert.success("TBD: Coming in version 1.0.0");
+								//toast("TBD: Coming in version 1.0.0");
 							}
 						}}>
 						workflows made by other creators</span>!
@@ -2444,7 +2434,7 @@ const GettingStarted = (props) => {
               </Typography>
             </div>
             <div style={{ flex: 1, float: "right" }}>
-              <ChipInput
+              <MuiChipsInput
                 style={{}}
                 InputProps={{
                   style: {
@@ -2610,7 +2600,7 @@ const GettingStarted = (props) => {
       parsedData["field_2"] = field2;
     }
 
-    alert.success("Getting specific workflows from your URL.");
+    toast("Getting specific workflows from your URL.");
     fetch(globalUrl + "/api/v1/workflows/download_remote", {
       method: "POST",
       mode: "cors",
@@ -2622,7 +2612,7 @@ const GettingStarted = (props) => {
     })
       .then((response) => {
         if (response.status === 200) {
-          alert.success("Successfully loaded workflows from " + downloadUrl);
+          toast("Successfully loaded workflows from " + downloadUrl);
           setTimeout(() => {
             getAvailableWorkflows();
           }, 1000);
@@ -2633,14 +2623,14 @@ const GettingStarted = (props) => {
       .then((responseJson) => {
         if (!responseJson.success) {
           if (responseJson.reason !== undefined) {
-            alert.error("Failed loading: " + responseJson.reason);
+            toast("Failed loading: " + responseJson.reason);
           } else {
-            alert.error("Failed loading");
+            toast("Failed loading");
           }
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        toast(error.toString());
       });
   };
 

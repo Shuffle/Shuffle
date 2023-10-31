@@ -1,9 +1,13 @@
 import React, {useState} from 'react';
-import { useTheme } from '@material-ui/core/styles';
+import { useTheme } from '@mui/styles';
 import {isMobile} from "react-device-detect";
 import ReactGA from 'react-ga4';
 
-import {TextField, Typography, Button} from '@material-ui/core';
+import {
+	TextField, 
+	Typography, 
+	Button
+} from '@mui/material';
 
 const Newsletter = (props) => {
   const { globalUrl, } = props;

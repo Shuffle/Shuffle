@@ -11,14 +11,14 @@ import { useNavigate } from "react-router-dom";
 import { 
   Tabs,
   Tab,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import {
 	Apps as AppsIcon,
-	Polymer as PolymerIcon,
+	Code as CodeIcon,
 	EmojiObjects as EmojiObjectsIcon,
   Description as DescriptionIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 
 const bodyDivStyle = {
@@ -137,7 +137,7 @@ const Search = (props) => {
 					/>
 					<Tab
 						label=<span>
-							<PolymerIcon style={iconStyle} /> Workflows
+							<CodeIcon style={iconStyle} /> Workflows
 						</span>
 					/>
 					<Tab

@@ -3,7 +3,7 @@ import React, {useState, useEffect} from 'react';
 import ReactDOM from "react-dom"
 
 import { useInterval } from "react-powerhooks";
-import { makeStyles } from '@material-ui/styles';
+import { makeStyles } from '@mui/material/styles';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import {isMobile} from "react-device-detect";
 import theme from '../theme.jsx';
@@ -20,7 +20,7 @@ import {
 	Paper, 
 	Typography,
 	Divider,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import {
   Preview as PreviewIcon,
@@ -66,10 +66,10 @@ const RunWorkflow = (defaultprops) => {
 		marginBottom: 150, 
 	}
 
-  const params = useParams();
-  var props = JSON.parse(JSON.stringify(defaultprops))
-  props.match = {}
-  props.match.params = params
+    const params = useParams();
+    var props = JSON.parse(JSON.stringify(defaultprops))
+    props.match = {}
+    props.match.params = params
 
 	const defaultTitle = "Run Workflow"
 	if (document != undefined && document.title != defaultTitle) {
@@ -126,12 +126,14 @@ const RunWorkflow = (defaultprops) => {
 		}
 
 		const executionMargin = 20 
-		const defaultReturn = 
+		const defaultReturn = null
+		/*
 			<div style={{marginTop: executionMargin, }}>
 				<Typography variant="h6" style={{color: theme.palette.primaryColor}}>
 					No results yet
 				</Typography>
 			</div>
+		*/
 
 		if (executionData.results === undefined || executionData.results === null)  {
 			return defaultReturn
@@ -271,7 +273,7 @@ const RunWorkflow = (defaultprops) => {
 											width: 30,
 										}}
 										onClick={() => {
-											navigate(`?execution_highlight=${parsed_url}`)
+											//navigate(`?execution_highlight=${parsed_url}`)
 										}}
 									>
 										<PreviewIcon style={{ color: "rgba(255,255,255,0.5)" }} />
@@ -314,10 +316,16 @@ const RunWorkflow = (defaultprops) => {
 		)
 	}
 
-	const onSubmit = (execution_id, authorization, answer) => {
+	const onSubmit = (event, execution_id, authorization, answer) => {
+		if (event !== null) {
+			event.preventDefault()
+		}
+
+		console.log("In submit!")
+
 		stop()
-  	setMessage("")
-  	setExecutionLoading(true)
+  	    setMessage("")
+  	    setExecutionLoading(true)
 		setExecutionData({})
 		setExecutionInfo("")
 
@@ -327,13 +335,13 @@ const RunWorkflow = (defaultprops) => {
 
 		var url = `${globalUrl}/api/v1/workflows/${props.match.params.key}/execute`
 		var fetchBody = {
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
 			mode: 'cors',
 			credentials: 'include',
 			crossDomain: true,
 			withCredentials: true,
-			headers: {
-				'Content-Type': 'application/json; charset=utf-8',
-			},
 		}
 
 		if (answer !== undefined && execution_id !== undefined && authorization !== undefined) {
@@ -345,8 +353,10 @@ const RunWorkflow = (defaultprops) => {
 			fetchBody.body = JSON.stringify(data)
 		}
 
+		console.log("Pre request: ", url, fetchBody)
 		fetch(url, fetchBody)
 		.then((response) => {
+			console.log("Got answer 1")
 			if (response.status !== 200 && response.status !== 201) {
 
 				if (answer !== undefined && execution_id !== undefined && authorization !== undefined) {
@@ -362,9 +372,11 @@ const RunWorkflow = (defaultprops) => {
 				}
 			}
 
+			console.log("Got answer 2")
 			return response.json();
 		})
 		.then(responseJson => {
+			console.log("Got answer 3")
 			setExecutionLoading(false)
 			if (responseJson["success"] === false) {
 				console.log("Failed sending execution request")
@@ -379,6 +391,7 @@ const RunWorkflow = (defaultprops) => {
 					start();
 				}
 			}
+			console.log("Got answer 4")
 		})
 		.catch(error => {
 			//setExecutionInfo("Error in workflow startup: " + error)
@@ -387,14 +400,14 @@ const RunWorkflow = (defaultprops) => {
 	}
 
 	const getWorkflow = (workflow_id) => {
-    fetch(globalUrl + "/api/v1/workflows/" + workflow_id, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    })
+		fetch(globalUrl + "/api/v1/workflows/" + workflow_id, {
+		  method: "GET",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  credentials: "include",
+		})
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for workflows :O!");
@@ -441,35 +454,35 @@ const RunWorkflow = (defaultprops) => {
 			return
 		}
 
-		console.log("Got response: ", responseJson)
+		//console.log("Got response: ", responseJson)
 
-    ReactDOM.unstable_batchedUpdates(() => {
-      if (JSON.stringify(responseJson) !== JSON.stringify(executionData)) {
-        // FIXME: If another is selected, don't edit..
-        // Doesn't work because this is some async garbage
-        if (executionData.execution_id === undefined || (responseJson.execution_id === executionData.execution_id && responseJson.results !== undefined && responseJson.results !== null)) {
-          if (executionData.status !== responseJson.status || executionData.result !== responseJson.result || (executionData.results !== undefined && responseJson.results !== null && executionData.results.length !== responseJson.results.length)) {
-						console.log("Updating data!")
-            setExecutionData(responseJson)
+		ReactDOM.unstable_batchedUpdates(() => {
+		  if (JSON.stringify(responseJson) !== JSON.stringify(executionData)) {
+			// FIXME: If another is selected, don't edit..
+			// Doesn't work because this is some async garbage
+			if (executionData.execution_id === undefined || (responseJson.execution_id === executionData.execution_id && responseJson.results !== undefined && responseJson.results !== null)) {
+			  if (executionData.status !== responseJson.status || executionData.result !== responseJson.result || (executionData.results !== undefined && responseJson.results !== null && executionData.results.length !== responseJson.results.length)) {
+				//console.log("Updating data!")
+				setExecutionData(responseJson)
 
-						for (var key in responseJson.results) {
-							if (responseJson.results[key].status === "WAITING") {
-								console.log("Found: ", responseJson.results[key])
-					
-								const validate = validateJson(responseJson.results[key].result)
-								console.log("Validate: ", validate)
-								if (validate.valid && typeof validate.result === "string") {
-									validate.result = JSON.parse(validate.result)
-								} 
+				for (var key in responseJson.results) {
+					if (responseJson.results[key].status === "WAITING") {
+						console.log("Found: ", responseJson.results[key])
+			
+						const validate = validateJson(responseJson.results[key].result)
+						console.log("Validate: ", validate)
+						if (validate.valid && typeof validate.result === "string") {
+							validate.result = JSON.parse(validate.result)
+						} 
 
-								console.log("Newresult: ", validate.result)
-								if (validate.result["information"] !== undefined && validate.result["information"] !== null) {
-									setWorkflowQuestion(validate.result["information"])
-								}
-
-								break
-							}
+						console.log("Newresult: ", validate.result)
+						if (validate.result["information"] !== undefined && validate.result["information"] !== null) {
+							setWorkflowQuestion(validate.result["information"])
 						}
+
+						break
+					}
+				}
           } else {
             console.log("NOT updating executiondata state.");
           }
@@ -518,9 +531,9 @@ const RunWorkflow = (defaultprops) => {
           if (responseJson.sync_features === undefined || responseJson.sync_features === null) {
           }
 
-					if (document != undefined && document.title != defaultTitle) {
-						document.title = responseJson.name + " - " + defaultTitle
-					}
+		  if (document != undefined && document.title != defaultTitle) {
+		  	document.title = responseJson.name + " - " + defaultTitle
+		  }
           setSelectedOrganization(responseJson)
         }
       })
@@ -530,6 +543,11 @@ const RunWorkflow = (defaultprops) => {
   };
 
 	const fetchUpdates = (execution_id, authorization, getorg) => {
+		if (execution_id === undefined || execution_id === null || execution_id === "") {
+			stop()
+			return
+		}
+
 		const innerRequest = {
 			"execution_id": execution_id,
 			"authorization": authorization
@@ -594,7 +612,7 @@ const RunWorkflow = (defaultprops) => {
 	const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)"
 	const buttonStyle = {borderRadius: 25, height: 50, fontSize: 18, backgroundImage: handleValidateForm(executionArgument) || executionLoading ? buttonBackground : "grey", color: "white"}
 	
-	console.log("execdata: ", executionData)
+	//console.log("execdata: ", executionData)
 	const disabledButtons = message.length > 0 || executionData.status === "FINISHED" || executionData.status === "ABORTED"
 
 	const organization = selectedOrganization !== undefined && selectedOrganization !== null ? selectedOrganization.name : "Unknown"
@@ -603,7 +621,7 @@ const RunWorkflow = (defaultprops) => {
 	
 	const image = selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.image !== undefined && selectedOrganization.image !== null && selectedOrganization.image !== "" ? selectedOrganization.image : theme.palette.defaultImage
 
-	console.log("IMG: ", image, "ORG: ", selectedOrganization)
+	//console.log("IMG: ", image, "ORG: ", selectedOrganization)
 
 	if (!disabledButtons && answer !== undefined && answer !== null && organization !== "Unknown" && buttonClicked.length === 0) {
 		console.log("Finding button!")
@@ -627,7 +645,7 @@ const RunWorkflow = (defaultprops) => {
 	const basedata = 
 		<div style={bodyDivStyle}>
 			<Paper style={boxStyle}>
-      	<form onSubmit={() => {onSubmit()}} style={{margin: "15px 15px 15px 15px"}}>
+      			<form onSubmit={(e) => {onSubmit(e)}} style={{margin: "15px 15px 15px 15px"}}>
 		
 					<img
 						alt={workflow.name}
@@ -676,7 +694,7 @@ const RunWorkflow = (defaultprops) => {
 					
 					{answer !== undefined && answer !== null ? null :
 						<span>
-							Execution Argument
+							Runtime Argument
 							<div style={{marginBottom: 5}}>
 								<TextField
 									color="primary"
@@ -705,9 +723,12 @@ const RunWorkflow = (defaultprops) => {
 					{executionRunning ?
 						<span style={{width: 50, height: 50, margin: "auto", alignItems: "center", justifyContent: "center", textAlign: "center", }}>
 							<CircularProgress style={{marginTop: 20, marginBottom: 20, marginLeft: 185, }}/>
-							<Typography variant="body2" style={{margin: "auto", marginTop: 20, marginBottom: 20, textAlign: "center", alignItem: "center", }} color="textSecondary">
-								Status: {executionData.status}
-							</Typography>
+
+							{executionData.status !== undefined && executionData.status !== null && executionData.status !== "" ?
+								<Typography variant="body2" style={{margin: "auto", marginTop: 20, marginBottom: 20, textAlign: "center", alignItem: "center", }} color="textSecondary">
+									Status: {executionData.status}
+								</Typography>
+							: null}
 						</span>
 						
 						:
@@ -723,7 +744,7 @@ const RunWorkflow = (defaultprops) => {
 								}
 								<div fullWidth style={{width: "100%", marginTop: 10, marginBottom: 10, display: "flex", }}>
 									<Button fullWidth id="continue_execution" variant="contained" disabled={disabledButtons} color="primary" style={{border: answer === "true" ? "2px solid rgba(255,255,255,0.6)" : null, flex: 1,}} onClick={() => {
-										onSubmit(execution_id, authorization, true) 
+										onSubmit(null, execution_id, authorization, true) 
 
 										setButtonClicked("FINISHED")
 										setExecutionData({
@@ -734,7 +755,7 @@ const RunWorkflow = (defaultprops) => {
 										&nbsp;or&nbsp;
 									</Typography>
 									<Button fullWidth id="abort_execution" variant="contained" color="primary" disabled={disabledButtons} style={{border: answer !== "true" ? "2px solid rgba(255,255,255,0.6)" : null, flex: 1, }} onClick={() => {
-										onSubmit(execution_id, authorization, false) 
+										onSubmit(null, execution_id, authorization, false) 
 
 										setButtonClicked("ABORTED")
 										setExecutionData({

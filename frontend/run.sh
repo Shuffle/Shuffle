@@ -10,9 +10,9 @@ docker tag ghcr.io/frikky/shuffle-frontend:nightly ghcr.io/shuffle/shuffle-front
 
 echo "Starting server"
 # Rerun build locally for it to update :)
-#docker run -it \
-#	-p 3001:80 \
-#	-p 3002:443 \
-#	-v $(pwd)/build:/usr/share/nginx/html:ro \
-#	--rm \
-#	nginx	
+docker run -it \
+	-p 3001:80 \
+	-p 3002:443 \
+	-v $(pwd)/build:/usr/share/nginx/html:ro \
+	--rm \
+	ghcr.io/frikky/shuffle-frontend:nightly
