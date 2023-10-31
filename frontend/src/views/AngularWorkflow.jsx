@@ -16678,28 +16678,29 @@ const AngularWorkflow = (defaultprops) => {
         >
           <CloseIcon />
         </IconButton>
-        <ConfigureWorkflow
-          userdata={userdata}
-          alert={alert}
-          theme={theme}
-          setAuthenticationType={setAuthenticationType}
-          globalUrl={globalUrl}
-          workflow={workflow}
-          setSelectedAction={setSelectedAction}
-          setSelectedApp={setSelectedApp}
-          setAuthenticationModalOpen={setAuthenticationModalOpen}
-          appAuthentication={appAuthentication}
-          selectedAction={selectedAction}
-          apps={apps}
-          setConfigureWorkflowModalOpen={setConfigureWorkflowModalOpen}
-          saveWorkflow={saveWorkflow}
-          newWebhook={newWebhook}
-          submitSchedule={submitSchedule}
-          referenceUrl={referenceUrl}
-          workflowExecutions={workflowExecutions}
-          getWorkflowExecution={getWorkflowExecution}
-          isCloud={isCloud}
-        />
+		<div style={{height: 75, width: "100%", background: `linear-gradient(to right, #f86a3e, #fc3922)`, position: "relative",}} />
+		<div style={{ padding: "50px 0px 50px 0px", }}>
+			<ConfigureWorkflow
+			  workflow={workflow}
+			  userdata={userdata}
+			  globalUrl={globalUrl}
+			  apps={apps}
+			  setAuthenticationType={setAuthenticationType}
+			  setSelectedAction={setSelectedAction}
+			  setSelectedApp={setSelectedApp}
+			  setAuthenticationModalOpen={setAuthenticationModalOpen}
+			  appAuthentication={appAuthentication}
+			  selectedAction={selectedAction}
+			  setConfigureWorkflowModalOpen={setConfigureWorkflowModalOpen}
+			  saveWorkflow={saveWorkflow}
+			  newWebhook={newWebhook}
+			  submitSchedule={submitSchedule}
+			  referenceUrl={referenceUrl}
+			  workflowExecutions={workflowExecutions}
+			  getWorkflowExecution={getWorkflowExecution}
+			  isCloud={isCloud}
+			/>
+		</div>
       </Dialog>
     ) : null;
 

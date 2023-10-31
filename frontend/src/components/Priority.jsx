@@ -31,10 +31,10 @@ const Priority = (props) => {
 	let newdescription = priority.description
 	const descsplit = priority.description.split("&")
 	if (appFramework !== undefined && descsplit.length === 5 && priority.description.includes(":default")) {
-		console.log("descsplit: ", descsplit)
+		//console.log("descsplit: ", descsplit)
 		if (descsplit[1] === "") {
 			const item = findSpecificApp(appFramework, descsplit[0])
-			console.log("item: ", item)
+			//console.log("item: ", item)
 			if (item !== null) {
 				descsplit[1] = item.large_image
 				descsplit[0] = descsplit[0].split(":")[0]
@@ -45,7 +45,7 @@ const Priority = (props) => {
 
 		if (descsplit[3] === "") {
 			const item = findSpecificApp(appFramework, descsplit[2])
-			console.log("item: ", item)
+			//console.log("item: ", item)
 			if (item !== null) {
 				descsplit[3] = item.large_image
 				descsplit[2] = descsplit[2].split(":")[0]

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify" 
 import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
+import AppSearchButtons from "../components/AppSearchButtons.jsx";
 import {
 	Button,
 	Typography,
@@ -26,7 +27,7 @@ import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 
 const WorkflowTemplatePopup = (props) => {
-	const { userdata, globalUrl, img1, srcapp, img2, dstapp, title, description, visualOnly, apps } = props;
+	const { userdata, appFramework, globalUrl, img1, srcapp, img2, dstapp, title, description, visualOnly, apps, isLoggedIn } = props;
 
 	const [isActive, setIsActive] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
@@ -35,6 +36,9 @@ const WorkflowTemplatePopup = (props) => {
 	const [workflowLoading, setWorkflowLoading] = useState(false);
 	const [workflow, setWorkflow] = useState({});
   	const [appAuthentication, setAppAuthentication] = React.useState(undefined);
+
+  	const [missingSource, setMissingSource] = React.useState(undefined)
+  	const [missingDestination, setMissingDestination] = React.useState(undefined);
 
   	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	let navigate = useNavigate();
@@ -108,8 +112,10 @@ const WorkflowTemplatePopup = (props) => {
 	}
 
 	const loadAppAuth = () => {	
-		if (userdata === undefined || userdata === null) { 
+		// Check if it exists, and has keys
+		if (userdata === undefined || userdata === null || Object.keys(userdata).length === 0) {
 			setErrorMessage("You need to be logged in to try usecases. Redirecting in 5 seconds...")
+
 			// Send the user to the login screen after 3 seconds
 			setTimeout(() => {	
 				// Make it cancel if the state modalOpen changes
@@ -174,6 +180,21 @@ const WorkflowTemplatePopup = (props) => {
 
 		if (srcapp.includes(":default") || dstapp.includes(":default")) {
 			toast("You need to select both a source and destination app before generating this workflow.")
+
+			if (srcapp.includes(":default")) {
+				setMissingSource({
+					"img": "https://shuffler.io/images/apps/" + srcapp + ".png",
+					"type": srcapp.split(":")[0],
+				})
+			}
+
+			if (dstapp.includes(":default")) {
+				setMissingDestination({
+					"name": dstapp,
+					"img": "https://shuffler.io/images/apps/" + dstapp + ".png",
+				})
+			}
+
 			return
 		}
 		
@@ -320,6 +341,16 @@ const WorkflowTemplatePopup = (props) => {
 							<Typography variant="h6" style={{marginTop: 75, }}>
 								{errorMessage !== "" ? errorMessage : ""}
 							</Typography> 
+						</div>
+					}
+					{!isLoggedIn || missingSource === undefined ? null :
+						<div style={{marginTop: 75, }}>
+							<AppSearchButtons
+								appFramework={appFramework}
+
+								appType={missingSource.type}
+								appImage={missingSource.image}
+							/>
 						</div>
 					}
 					<ConfigureWorkflow

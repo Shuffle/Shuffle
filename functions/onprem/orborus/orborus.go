@@ -463,9 +463,9 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 						fmt.Sprintf("SHUFFLE_SWARM_NETWORK_NAME=%s", networkName),
 						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", cnt),
-						fmt.Sprintf("TZ=%s", timezone),
 						fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
-						fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
+						fmt.Sprintf("SHUFFLE_DEBUG_MEMORY=%s", os.Getenv("SHUFFLE_DEBUG_MEMORY")),
+						fmt.Sprintf("TZ=%s", timezone),
 					},
 					//Hosts: []string{
 					//	innerContainerName,
@@ -1552,6 +1552,14 @@ func main() {
 
 			if len(os.Getenv("SHUFFLE_CLOUDRUN_URL")) > 0 {
 				env = append(env, fmt.Sprintf("SHUFFLE_CLOUDRUN_URL=%s", os.Getenv("SHUFFLE_CLOUDRUN_URL")))
+			}
+
+			if len(os.Getenv("SHUFFLE_SKIPSSL_VERIFY")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_SKIPSSL_VERIFY=%s", os.Getenv("SHUFFLE_SKIPSSL_VERIFY")))
+			}
+
+			if len(os.Getenv("SHUFFLE_DEBUG_MEMORY")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_DEBUG_MEMORY=%s", os.Getenv("SHUFFLE_DEBUG_MEMORY")))
 			}
 
 			err = deployWorker(workerImage, containerName, env, execution)

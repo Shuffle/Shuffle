@@ -47,10 +47,7 @@ const Welcome = (props) => {
 		}
 	}, [activeStep])
 
-  	const isCloud =
-			window.location.host === "localhost:3002" ||
-			window.location.host === "shuffler.io";
-
+  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 		const [steps, setSteps] = useState([
 			"Help us get to know you", 
 			"Find your Apps", 
@@ -512,7 +509,7 @@ const Welcome = (props) => {
 										navigate("/workflows?message=Skipped intro")
 									}}>
 										<CardActionArea style={actionObject}>
-											<img src={experienced_image} style={{padding: experienced_image === defaultImage ? 2 : 10, objectFit: "scale-down", minHeight: experienced_image === defaultImage ? 40 : 70, maxHeight: experienced_image === defaultImage ? 40 : 70, bordeRadius: theme.palette.borderRadius, marginBottom: experienced_image === defaultImage ? 24 : 2 }} />
+											<img src={experienced_image} style={{padding: experienced_image === defaultImage ? 2 : 10, objectFit: "scale-down", minHeight: experienced_image === defaultImage ? 40 : 70, maxHeight: experienced_image === defaultImage ? 40 : 70, bordeRadius: theme.palette.borderRadius*2, marginBottom: experienced_image === defaultImage ? 24 : 2 }} />
 											<Typography variant="h4" style={{color: "#F1F1F1"}}> 
 												Experienced 
 											</Typography>										

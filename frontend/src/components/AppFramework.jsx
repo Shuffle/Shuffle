@@ -39,7 +39,6 @@ cytoscape.use(edgehandles);
 
 export const findSpecificApp = (framework, inputcategory) => {
   // Get the frameworkinfo for the org and fill in
-  //
   if (framework === undefined || framework === null) {
 	  console.log("findSpecificApp: framework is null")
 	  return null 
@@ -52,7 +51,7 @@ export const findSpecificApp = (framework, inputcategory) => {
 
   const category = inputcategory.toLowerCase().split(":")[0].trim()
 
-  console.log("findSpecificApp: ", category, framework)
+  //console.log("findSpecificApp: ", category, framework)
   if (category === "edr" || category === "eradication" || category === "edr & av") {
 	  if (framework["EDR & AV"] !== undefined && framework["EDR & AV"].name !== undefined) { 
 		  return framework["EDR & AV"]	
