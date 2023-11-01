@@ -2,7 +2,7 @@ name: dockerbuild
 
 on:
   push:
-    branches: [1.3.0] 
+    branches: [1.3.0, main] 
 jobs:
   main:
     runs-on: ubuntu-latest
