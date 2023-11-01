@@ -7,7 +7,7 @@ go 1.19
 require (
 	cloud.google.com/go/datastore v1.10.0
 	cloud.google.com/go/storage v1.29.0
-	github.com/docker/docker v23.0.3+incompatible
+	github.com/docker/docker v24.0.7+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/satori/go.uuid v1.2.0
@@ -33,7 +33,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
-	github.com/frikky/go-elasticsearch/v8 v8.13.1 // indirect
 	github.com/frikky/kin-openapi v0.41.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
