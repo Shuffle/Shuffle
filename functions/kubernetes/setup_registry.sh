@@ -23,16 +23,14 @@ mkdir -p certs
 # Generate CA key
 openssl req -newkey rsa:4096 -nodes -sha256 -keyout certs/reg.key -x509 -days 365 -out certs/reg.crt -subj "/CN=$node_ip"
 
-# generate a random string
-random_string=$(openssl rand -hex 3)
+echo "Generated certs/reg.key and certs/reg.crt!"
 
-echo "Starting docker registry with name shuffle-local-registry-$random_string.."
-
-docker run -d -p 5000:5000 --restart=always --name "shuffle-local-registry-$random_string" \
+echo -e "Please run:\n" 
+echo "docker run -d -p 5000:5000 --restart=always --name "shuffle-local-registry" \
   -v $(pwd)/certs:/certs \
   -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/reg.crt \
   -e REGISTRY_HTTP_TLS_KEY=/certs/reg.key \
-  registry:2
+  registry:2"
 
-echo "Done!"
+echo -e  "\nnow to start the reigstry :)!"
 
