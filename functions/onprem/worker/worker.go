@@ -230,6 +230,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	// log.Printf("image: %s", image)
 	// log.Printf("identifier: %s", identifier)
 	// log.Printf("execution: %+v", workflowExecution)
+	log.Printf("[DEBUG] Adding SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT"))
 	env = append(env, fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")))
 
 	if os.Getenv("IS_KUBERNETES") == "true" {
