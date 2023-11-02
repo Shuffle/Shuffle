@@ -13,23 +13,23 @@ jobs:
         include:
          - app: frontend
            path: frontend
-           version: nightly
+           version: latest
            experimental: true
          - app: backend
            path: backend
-           version: nightly
+           version: latest
            experimental: true
          - app: app_sdk 
            path: backend/app_sdk
-           version: nightly
+           version: latest
            experimental: true 
          - app: orborus
            path: functions/onprem/orborus
-           version: nightly
+           version: latest
            experimental: true 
          - app: worker 
            path: functions/onprem/worker
-           version: nightly
+           version: latest
            experimental: true 
     steps:
       - name: Checkout
