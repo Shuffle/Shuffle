@@ -52,7 +52,7 @@ Please follow the steps mentioned [here](https://github.com/Shuffle/Shuffle/blob
 ### People coming from Github octernship
 Please join our discord from the link mentioned in [support](#support) section and ping @frikky or @0x0elliot for any help!
 
-For starting contributions, You can try solving bugs mentioned with the labels: [github octernship](https://github.com/Shuffle/Shuffle/issues?q=label%3Agithub-octernship), [beginner-friendly](https://github.com/Shuffle/Shuffle/issues?q=label%3Abeginner-friendly) or[good-first-issue](https://github.com/Shuffle/Shuffle/issues?q=label%3Agood-first-issue).
+For starting contributions, You can try solving bugs mentioned with the labels: [github octernship](https://github.com/Shuffle/Shuffle/issues?q=label%3Agithub-octernship), [beginner-friendly](https://github.com/Shuffle/Shuffle/issues?q=label%3Abeginner-friendly) or [good-first-issue](https://github.com/Shuffle/Shuffle/issues?q=label%3Agood-first-issue).
 
 However, you can solve any issue you like (Remember, these labels are **just** there to support new people finding shuffle), just make sure to get assigned to it first!
 
