@@ -79,7 +79,7 @@ Local development is pretty straight forward with **ReactJS** and **Golang**. Th
 
 **PS: You have to stop the Backend Docker container to get this one working**
 
-**PPS: Use the "Launch" branch when developing to get it set up easier**
+**PPS: Use the "main" branch when developing to get it set up easier**
 
 ## Frontend - ReactJS /w cytoscape
 http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend.
@@ -107,13 +107,18 @@ Large portions of the backend is written in another repository - [shuffle-shared
 2. Open the Shuffle backend's go.mod file (./shuffle/backend/go.mod)  (**NOT** in shuffle-shared)
 3. Change the following line to point to your directory AFTER the =>
 ```
-//replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
+//replace github.com/frikky/shuffle-shared => ../../shuffle-shared
 ```
 4. Make the changes you want, then restart the backend server!
 5. With your changes made, make a pull request :fire:
 
 ## Database - Opensearch 
-Make sure this is running through the docker-compose, and that the backend points to it with SHUFFLE_OPENSEARCH_URL defined
+Make sure this is running through the docker-compose, and that the backend points to it with SHUFFLE_OPENSEARCH_URL defined.
+
+So essentially, what that means is:
+1. Make sure you have docker-compose installed
+2. Make sure you have the docker-compose.yml file from this repository
+3. Run `docker-compose up opensearch -d`
 
 ## Orborus
 Execution of Workflows:
