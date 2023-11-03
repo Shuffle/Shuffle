@@ -47,20 +47,7 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 
 ### Setting up a local development environment
 
-For the backend, you need to have [Go](https://golang.org/doc/install) installed. For the frontend, you need to have [Node.js](https://nodejs.org/en/download/) installed.
-
-Checkout [this](./backend/README.md) to get started with running the backend locally.
-You can run the frontend locally by running the following commands:
-
-```bash
-cd frontend
-yarn install
-yarn start
-```
-
-And then, you can access the frontend at [http://localhost:3000](http://localhost:3000).
-
-Make sure to also start the database by running `docker-compose up opensearch -d` in the root directory.
+Please follow the steps mentioned [here](https://github.com/Shuffle/Shuffle/blob/main/.github/install-guide.md)!
 
 ## Related repositories
 * OpenAPI apps: [https://github.com/frikky/security-openapis](https://github.com/frikky/security-openapis)
