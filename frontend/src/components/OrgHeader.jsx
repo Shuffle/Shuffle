@@ -138,7 +138,7 @@ const OrgHeader = (props) => {
         maxHeight: 174,
         minWidth: 174,
         minHeight: 174,
-        objectFit: "contain",
+        objectFit: "cover",
       }}
     />
   );
