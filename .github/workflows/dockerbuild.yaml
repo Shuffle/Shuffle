@@ -2,7 +2,12 @@ name: dockerbuild
 
 on:
   push:
-    branches: [main] 
+    branches: 
+      - main
+    paths:
+      - "**"
+      - "!.github/**"
+      - "!**.md"
 jobs:
   main:
     runs-on: ubuntu-latest
