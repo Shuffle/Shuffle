@@ -2,7 +2,11 @@ name: dockerbuild
 
 on:
   push:
-    branches: [main] 
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'  # Ignore changes to markdown files
+
 jobs:
   main:
     runs-on: ubuntu-latest
