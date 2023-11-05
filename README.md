@@ -49,13 +49,6 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 
 Please follow the steps mentioned [here](https://github.com/Shuffle/Shuffle/blob/main/.github/install-guide.md#local-development-installation)!
 
-### People coming from Github octernship
-Please join our discord from the link mentioned in [support](#support) section and ping @frikky or @0x0elliot for any help!
-
-For starting contributions, You can try solving bugs mentioned with the labels: [github octernship](https://github.com/Shuffle/Shuffle/issues?q=label%3Agithub-octernship), [beginner-friendly](https://github.com/Shuffle/Shuffle/issues?q=label%3Abeginner-friendly) or [good-first-issue](https://github.com/Shuffle/Shuffle/issues?q=label%3Agood-first-issue).
-
-However, you can solve any issue you like (Remember, these labels are **just** there to support new people finding shuffle), just make sure to get assigned to it first!
-
 ## Related repositories
 * OpenAPI apps: [https://github.com/frikky/security-openapis](https://github.com/frikky/security-openapis)
 * Documentation: [https://github.com/frikky/shuffle-docs](https://github.com/frikky/shuffle-docs)

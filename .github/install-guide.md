@@ -85,8 +85,8 @@ Local development is pretty straight forward with **ReactJS** and **Golang**. Th
 http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend.
 ```bash
 cd frontend
-npm i
-npm start
+yarn install
+yarn start
 ```
 
 ## Backend - Golang
