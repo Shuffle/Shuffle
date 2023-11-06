@@ -31,7 +31,7 @@ import {
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 //const searchClient = algoliasearch("L55H18ZINA", "a19be455e7e75ee8f20a93d26b9fc6d6")
 const AppGrid = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, userdata }  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, userdata, isHeader }  = props
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -167,7 +167,7 @@ const AppGrid = props => {
 						backgroundColor: index === mouseHoverIndex ? "rgba(255,255,255,0.8)" : theme.palette.inputColor,
 						color: index === mouseHoverIndex ? theme.palette.inputColor : "rgba(255,255,255,0.8)", 
 						border: `1px solid ${innerColor}`, 
-						padding: 15,
+						padding: isHeader ? null : 15,
 						cursor: "pointer",
 						position: "relative",
 						minHeight: 116,

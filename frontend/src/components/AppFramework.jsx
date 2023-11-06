@@ -64,7 +64,7 @@ export const findSpecificApp = (framework, inputcategory) => {
 		  description: "",
 		  id: "",
 	  }
-  } else if (category === "communication") {
+  } else if (category === "communication" || category === "comms") {
 	  if (framework["Comms"] !== undefined && framework["Comms"].name !== undefined) {
 		  return framework["Comms"]	
 	  }

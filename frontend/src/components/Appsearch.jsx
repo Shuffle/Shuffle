@@ -24,7 +24,7 @@ const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e52
 const Appsearch = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits, userdata, cy, isCreatorPage, actionImageList, setActionImageList, setUserSpecialzedApp }  = props
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? 12 : parsedXs
 	//const theme = useTheme();
@@ -112,31 +112,11 @@ const Appsearch = props => {
 
 					counted += 1
 					var parsedname = data.name.valueOf()
-					//for (var key = 0; key < data.name.length; key++) {
-					//	var character = data.name.charAt(key)
-					//	if (character === character.toUpperCase()) {
-					//		//console.log(data.name[key], data.name[key+1])
-					//		if (data.name.charAt(key+1) !== undefined && data.name.charAt(key+1) === data.name.charAt(key+1).toUpperCase()) {
-					//		} else {
-					//			parsedname += " "
-					//		}
-					//	}
-
-					//	parsedname += character
-					//}
-					
 					parsedname = (parsedname.charAt(0).toUpperCase()+parsedname.substring(1)).replaceAll("_", " ")
 
 					return (
 						<Paper key={index} elevation={0} style={paperStyle} onMouseOver={() => {
 							setMouseHoverIndex(index)
-							/*
-							ReactGA.event({
-								category: "app_grid_view",
-								action: `search_bar_click`,
-								label: "",
-							})
-							*/
 						}} onMouseOut={() => {
 							setMouseHoverIndex(-1)
 						}} onClick={() => {
@@ -201,13 +181,8 @@ const Appsearch = props => {
 	const CustomHits = connectHits(InputHits)
 
 	return (
-		<div style={{width: 287, height: 295, padding: "16px 16px 267px 16px", alignItems: "center", gap: 138,}}>
+		<div style={{width: isMobile ? null : 287, height: 295, padding: "16px 16px 267px 16px", alignItems: "center", gap: 138,}}>
 			<InstantSearch searchClient={searchClient} indexName="appsearch">
-				{/* showSearch === false ? null : 
-					<div style={{maxWidth: 450, margin: "auto", }}>
-						<CustomSearchBox />
-					</div>
-				*/}
 				<div style={{maxWidth: 450, margin: "auto", }}>
 					<CustomSearchBox />
 				</div>

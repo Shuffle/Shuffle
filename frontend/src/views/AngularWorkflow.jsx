@@ -977,14 +977,17 @@ const AngularWorkflow = (defaultprops) => {
             tmpView = execution_id;
           }
 
+		  console.log("TMPVIEW: ", tmpView);
+
 		  // Compare with currently selected item
           if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
 			// Don't clean up if it's already open
 		    if (executionModalOpen === true) {
+				console.log("Execution modal already open, not cleaning up")
 		        return
 		    }
 
-            const execution = responseJson.find((data) => data.execution_id === tmpView);
+            const execution = responseJson.executions.find((data) => data.execution_id === tmpView);
 
 		    setExecutionModalOpen(true) 
             if (execution !== null && execution !== undefined) {

@@ -170,9 +170,6 @@ const UsecaseListComponent = (props) => {
 	  //console.log("parseUsecase: ", subcase)
 	  const srcdata = findSpecificApp(frameworkData, subcase.type)
 	  const dstdata = findSpecificApp(frameworkData, subcase.last)
-
-	  //console.log("srcdata: ", srcdata)
-	  //console.log("dstdata: ", dstdata)
 	
 	  if (srcdata !== undefined && srcdata !== null) { 
 		subcase.srcimg = srcdata.large_image 
@@ -192,9 +189,9 @@ const UsecaseListComponent = (props) => {
 	subcase = parseUsecase(subcase)
 
 	// Timeout 50ms to delay it slightly 
-	setTimeout(() => {
-		setInputUsecase(subcase)
-	}, 50)
+	//setTimeout(() => {
+	//	setInputUsecase(subcase)
+	//}, 50)
 
     fetch(`${globalUrl}/api/v1/workflows/usecases/${escape(subcase.name.replaceAll(" ", "_"))}`, {
       method: "GET",
@@ -212,12 +209,13 @@ const UsecaseListComponent = (props) => {
 		return response.json();
 	})
 	.then((responseJson) => {
-		//console.log("In responseJson for usecase: ", responseJson)
 		var parsedUsecase = responseJson
 
 		if (responseJson.success === false) {
 			parsedUsecase = subcase
 		} else {
+			console.log("FOUND: ", JSON.parse(JSON.stringify(responseJson)))
+
 			parsedUsecase = responseJson
 
 			parsedUsecase.srcimg = subcase.srcimg
@@ -417,7 +415,7 @@ const UsecaseListComponent = (props) => {
 								const fixedName = subcase.name.toLowerCase().replace("_", " ")
 
 								return (
-      						<Grid id={fixedName} item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
+      								<Grid id={fixedName} item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
 
 										//setSelectedWorkflows([])
 										if (selectedItem) {
@@ -887,21 +885,23 @@ const UsecaseListComponent = (props) => {
 																>
 																	Try it out:
 																</Typography>
-																<WorkflowTemplatePopup 
-																	isLoggedIn={isLoggedIn}
-																	appFramework={frameworkData}
-																	userdata={userdata}
+																{frameworkData !== undefined && frameworkData !== null && Object.keys(frameworkData).length > 0 ?
+																	<WorkflowTemplatePopup 
+																		isLoggedIn={isLoggedIn}
+																		appFramework={frameworkData}
+																		userdata={userdata}
 
-																	globalUrl={globalUrl}
-																	img1={inputUsecase.srcimg}
-																	srcapp={inputUsecase.srcapp}
-																	img2={inputUsecase.dstimg}
-																	dstapp={inputUsecase.dstapp}
-																	title={inputUsecase.name}
-																	description={inputUsecase.description}
+																		globalUrl={globalUrl}
+																		img1={inputUsecase.srcimg}
+																		srcapp={inputUsecase.srcapp}
+																		img2={inputUsecase.dstimg}
+																		dstapp={inputUsecase.dstapp}
+																		title={inputUsecase.name}
+																		description={inputUsecase.description}
 
-																	apps={apps}
-																/>
+																		apps={apps}
+																	/>
+																: null}
 															</span>
 															{/*
 

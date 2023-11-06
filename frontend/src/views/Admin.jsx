@@ -980,6 +980,22 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 							leads.push("customer")
 						}
 
+						if (responseJson.lead_info.old_customer) {
+							leads.push("old customer")
+						}
+
+						if (responseJson.lead_info.tech_partner) {
+							leads.push("tech partner")
+						}
+
+						if (responseJson.lead_info.creator) {
+							leads.push("creator")
+						}
+
+						if (responseJson.lead_info.opensource) {
+							leads.push("open source")
+						}
+
 						if (responseJson.lead_info.demo_done) {
 							leads.push("demo done")
 						}
@@ -2412,7 +2428,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 										renderValue={(selected) => selected.join(', ')}
 										MenuProps={MenuProps}
 									>
-										{["contacted", "lead", "pov", "demo done", "customer", "student", "internal"].map((name) => (
+										{["contacted", "lead", "pov", "demo done", "customer", "open source", "student", "internal", "old customer", "creator", "tech partner"].map((name) => (
 											<MenuItem key={name} value={name}>
 												<Checkbox checked={selectedStatus.indexOf(name) > -1} />
 												<ListItemText primary={name} />
@@ -3000,7 +3016,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
     curTab === 1 ? (
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <h2 style={{ display: "inline" }}>User management</h2>
+          <h2 style={{ display: "inline" }}>User Management</h2>
           <span style={{ marginLeft: 25 }}>
             Add, edit, block or change passwords.{" "}
             <a
@@ -3080,7 +3096,11 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
             ) : null}
             <ListItemText
               primary="Actions"
-              style={{ minWidth: 180, maxWidth: 180 }}
+              style={{ minWidth: 100, maxWidth: 100, }}
+            />
+            <ListItemText
+              primary="Last Login"
+              style={{ minWidth: 150, maxWidth: 150, }}
             />
           </ListItem>
           {users === undefined || users === null
@@ -3090,6 +3110,24 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                 if (index % 2 === 0) {
                   bgColor = "#1f2023";
                 }
+
+				const timeNow = new Date().getTime();
+				
+				// Get the highest timestamp in data.login_info
+				var lastLogin = "N/A" 
+				if (data.login_info !== undefined && data.login_info !== null) {
+					var loginInfo = 0
+					for (var i = 0; i < data.login_info.length; i++) {
+						if (data.login_info[i].timestamp > loginInfo) {
+							loginInfo = data.login_info[i].timestamp
+						}
+					}
+
+					if (loginInfo > 0) {
+						console.log("SETTING LAST LOGIN: " + loginInfo)
+						lastLogin = new Date(loginInfo * 1000).toISOString().slice(0, 10) + " (" + data.login_info.length + ")"
+					}
+				}
 
                 return (
                   <ListItem key={index} style={{ backgroundColor: bgColor }}>
@@ -3242,7 +3280,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
                         }
                       />
                     ) : null}
-                    <ListItemText style={{ display: "flex" }}>
+                    <ListItemText style={{ display: "flex", minWidth: 100, maxWidth: 100,  }}>
                       <IconButton
                         onClick={() => {
                           setSelectedUserModalOpen(true);
@@ -3300,6 +3338,11 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 						New apikey 
 					</Button>*/}
                     </ListItemText>
+				    <ListItemText 
+				      style={{ minWidth: 150, maxWidth: 150,  }}
+				      primary={lastLogin}
+				    ><span/>
+				    </ListItemText>
                   </ListItem>
                 );
               })}

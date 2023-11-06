@@ -21,20 +21,13 @@ import {
 } from "@mui/icons-material";
 
 
-const bodyDivStyle = {
-	margin: "auto",
-	maxWidth: 1024,
-	scrollX: "hidden",
-	overflowX: "hidden",
-}
-
 // Should be different if logged in :|
 const Search = (props) => {
-  const { globalUrl, isLoaded, serverside, userdata, hidemargins, } = props;
+  const { globalUrl, isLoaded, serverside, userdata, hidemargins, isHeader} = props;
 	let navigate = useNavigate();
 
   const [curTab, setCurTab] = useState(0);
-  const iconStyle = { marginRight: 10 };
+  const iconStyle = { marginRight: isHeader ? null : 10 };
 
 	useEffect(() => {
 		if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
@@ -58,15 +51,23 @@ const Search = (props) => {
 		return null
 	}
 
+	const bodyDivStyle = {
+		margin: "auto",
+		maxWidth: 1024,
+		scrollX: "hidden",
+		overflowX: "hidden",
+		justifyContent: isHeader ? "center" : null, 
+	}
+
 	const boxStyle = {
 		color: "white",
 		flex: "1",
-		marginLeft: 10,
-		marginRight: 10,
-		paddingLeft: 30,
-		paddingRight: 30,
-		paddingBottom: 30,
-		paddingTop: hidemargins === true ? 0 : 30,
+		marginLeft: isHeader ? null : 10,
+		marginRight: isHeader ? null : 10,
+		paddingLeft: isHeader ? null : 30,
+		paddingRight: isHeader ? null : 30,
+		paddingBottom: isHeader ? null : 30,
+		paddingTop: hidemargins === true ? 0 : isHeader ? null : 30,
 		display: "flex", 
 		flexDirection: "column",
 		overflowX: "hidden",
@@ -121,7 +122,7 @@ const Search = (props) => {
 		<div style={{paddingBottom: hidemargins === true ? 0 : 100, color: "white", }}>
 			<div style={boxStyle}>
 				<Tabs
-					style={{width: 610, margin: "auto", marginTop: hidemargins === true ? 0 : 25, }}
+					style={{width: isHeader ? 765 : 610, margin: isHeader? null :"auto", marginTop: hidemargins === true ? 0 : isHeader ? null : 25, }}
 					value={curTab}
 					indicatorColor="primary"
 					textColor="secondary"
@@ -152,7 +153,7 @@ const Search = (props) => {
 					/>
 				</Tabs>
 				{curTab === 0 ? 
-					<AppGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} userdata={userdata} />
+					<AppGrid maxRows={3} isHeader={true} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} userdata={userdata} />
 				: 
 				curTab === 1 ?
     			window.location.pathname === "/search" ? 
@@ -164,7 +165,7 @@ const Search = (props) => {
 					<DocsGrid maxRows={6} parsedXs={12} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				: 
 				curTab === 3 ?
-					<CreatorGrid parsedXs={4} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
+					<CreatorGrid parsedXs={4} isHeader={true} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				: 
 				null}
 			</div>

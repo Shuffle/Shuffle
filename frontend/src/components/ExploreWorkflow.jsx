@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 import 'react-alice-carousel/lib/alice-carousel.css';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import theme from '../theme.jsx';
+import {isMobile} from "react-device-detect";
 import CheckBoxSharpIcon from '@mui/icons-material/CheckBoxSharp';
 import { findSpecificApp } from "../components/AppFramework.jsx"
 import {
@@ -40,7 +41,7 @@ import { useNavigate, Link } from "react-router-dom";
 import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx";
 
 const ExploreWorkflow = (props) => {
-    const { userdata, globalUrl, appFramework } = props
+    const { userdata, globalUrl, appFramework, isLoggedIn, } = props
 	const [activeUsecases, setActiveUsecases] = useState(0);
     const [modalOpen, setModalOpen] = React.useState(false);
 	const [suggestedUsecases, setSuggestedUsecases] = useState([])
@@ -291,7 +292,7 @@ const ExploreWorkflow = (props) => {
     return (
         <div style={{ marginTop: 0, margin: "auto", minHeight: sizing, maxHeight: sizing, }}>
             {modalView}
-            <Typography variant="h4" style={{ marginLeft: 8, marginTop: 40, marginRight: 30, marginBottom: 0, }} color="rgba(241, 241, 241, 1)">
+            <Typography variant="h4" style={{ marginLeft: 8, marginTop: isMobile ? null : 40, marginRight: 30, marginBottom: 0, }} color="rgba(241, 241, 241, 1)">
                 Start using workflows
             </Typography>
             <Typography variant="body2" style={{ marginLeft: 8, marginTop: 10, marginRight: 30, marginBottom: 40, }} color="rgba(158, 158, 158, 1)">
@@ -300,7 +301,7 @@ const ExploreWorkflow = (props) => {
 
             <div style={{ marginTop: 0, }}>
                 <div className="thumbs" style={{ display: "flex" }}>
-                    <div style={{ minWidth: 554, maxWidth: 554, borderRadius: theme.palette.borderRadius, }}>
+                    <div style={{ minWidth: isMobile ? 300 : 554, maxWidth: isMobile ? 300 : 554, borderRadius: theme.palette.borderRadius, }}>
                         <Grid item xs={11} style={{}}>
 							{suggestedUsecases.length === 0 && usecasesSet ? 
 								<Typography variant="h6" style={{ marginTop: 30, marginBottom: 50, }} color="rgba(158, 158, 158, 1)">
@@ -330,7 +331,10 @@ const ExploreWorkflow = (props) => {
 
 								return (
 									<WorkflowTemplatePopup
+										isLoggedIn={isLoggedIn}
 										userdata={userdata}
+										appFramework={appFramework}
+
 										globalUrl={globalUrl}
 										img1={image1}
 										srcapp={srcapp}
@@ -351,7 +355,7 @@ const ExploreWorkflow = (props) => {
 										fullWidth style={{
 											borderRadius: 200,
 											height: 51,
-											width: 464,
+											width: isMobile? null : 464,
 											fontSize: 16,
 											padding: "16px 24px",
 											margin: "auto",
@@ -368,7 +372,7 @@ const ExploreWorkflow = (props) => {
 								</Typography>
 							</div>
                             <Typography variant="body2" style={{ fontSize: 16, marginTop: 24 }} color="rgba(158, 158, 158, 1)">
-                                <Link style={{ color: "#f86a3e", marginLeft: 145 }} to="/usecases" className="btn btn-primary">
+                                <Link style={{ color: "#f86a3e", marginLeft: isMobile ? null : 145 }} to="/usecases" className="btn btn-primary">
 									Explore usecases 
                                 </Link>
                             </Typography>

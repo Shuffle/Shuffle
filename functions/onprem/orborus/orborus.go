@@ -1410,6 +1410,7 @@ func main() {
 			continue
 		}
 
+		//defer newresp.Body.Close()
 		if newresp.StatusCode == 405 {
 			log.Printf("[WARNING] Received 405 from %s. This is likely due to a misconfigured base URL. Automatically swapping to GET request (backwards compatibility)", fullUrl)
 
@@ -1619,6 +1620,7 @@ func main() {
 				continue
 			}
 
+			defer resultResp.Body.Close()
 			body, err := ioutil.ReadAll(resultResp.Body)
 			if err != nil {
 				log.Printf("[ERROR] Failed reading confirm body: %s", err)
@@ -1913,6 +1915,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		return err
 	}
 
+	defer newresp.Body.Close()
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed reading body in worker request body to worker on %s: %s", streamUrl, err)

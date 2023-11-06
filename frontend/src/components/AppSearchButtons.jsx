@@ -3,7 +3,7 @@ import theme from '../theme.jsx';
 import ReactGA from 'react-ga4';
 import { useNavigate, Link } from 'react-router-dom';
 
-import { Search as Searchicon, CloudQueue as CloudQueueicon, Code as Codeicon, Close as Closeicon, Folder as Foldericon, LibraryBooks as LibraryBooksicon } from '@mui/icons-material';
+import { Search as Searchicon, CloudQueue as CloudQueueicon, Code as Codeicon, Close as Closeicon, Folder as Foldericon, LibraryBooks as LibraryBooksicon, Delete as DeleteIcon, Close as CloseIcon, } from '@mui/icons-material';
 import aa from 'search-insights'
 import Deleteicon from '@mui/icons-material/Delete';
 import ShowCharticon from '@mui/icons-material/ShowChart';
@@ -33,16 +33,37 @@ import {
     ListItem,
     ListItemAvatar,
     ListItemText,
+	IconButton,
 } from '@mui/material';
 
 const AppSearchButtons = (props) => {
-    const { userdata, globalUrl, appFramework, finishedApps, appType, totalApps, index, onNodeSelect, setDiscoveryData, appName, AppImage, setDefaultSearch, discoveryData } = props
+    const { userdata, globalUrl, appFramework, finishedApps, appType, totalApps, index, onNodeSelect, setDiscoveryData, appName, AppImage, setDefaultSearch, discoveryData, checkLogin, setMissing, } = props
 
     const ref = useRef()
     let navigate = useNavigate();
 
     const [isHover, setIsHover] = useState(false);
     const [localSearchOpen, setLocalSearchOpen] = useState(false)
+	const [newSelectedApp, setNewSelectedApp] = useState(undefined)
+
+	useEffect(() => {
+		console.log("AppSearchButtons: newSelectedApp: " + JSON.stringify(newSelectedApp))
+
+		if (newSelectedApp !== undefined && setMissing != undefined) {
+			console.log("AppSearchButtons: setMissing is defined!")
+
+			const submitAppFramework = {
+				"description": newSelectedApp.description,
+            	"id": newSelectedApp.objectID,
+				"name": newSelectedApp.name,
+				"type": appType,
+            	"large_image": newSelectedApp.image_url,
+			}
+
+			setFrameworkItem(submitAppFramework)
+			setMissing(newSelectedApp)
+		}
+	}, [newSelectedApp])
 
 	if (appType === undefined) {
 		console.log("Apptype is required in AppSearchButtons")
@@ -63,9 +84,53 @@ const AppSearchButtons = (props) => {
 
 	const foundApp = findSpecificApp(appFramework, appType) 
 	if (foundApp === undefined || foundApp === null) {
-		console.log("AppSearchButtons: App not found in appFramework")
+		console.log("AppSearchButtons: App not found in appFramework: " + appType)
 		return null
 	}
+
+	const setFrameworkItem = (data) => {
+
+        fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify(data),
+            credentials: "include",
+        })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for framework!");
+			}
+
+			if (checkLogin !== undefined) {
+				checkLogin()
+			}
+
+			return response;
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				if (responseJson.reason !== undefined) {
+					toast("Failed updating: " + responseJson.reason)
+				} else {
+					toast("Failed to update framework for your org.")
+
+				}
+			}
+			//setFrameworkLoaded(true)
+			//setFrameworkData(responseJson)
+		})
+		.catch((error) => {
+			if (checkLogin !== undefined) {
+				checkLogin()
+			}
+
+			toast(error.toString());
+			//setFrameworkLoaded(true)
+		})
+    }
 
 	const icon = foundApp.large_image
     let xsValue = 12;
@@ -86,6 +151,94 @@ const AppSearchButtons = (props) => {
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={handleMouseLeave}
         >
+                {localSearchOpen ? (
+                    <div
+                        style={{
+                            width: 319,
+                            height: 395,
+                            flexShrink: 0,
+                            marginLeft: 70,
+                            marginTop: 68,
+                            position: "absolute",
+                            zIndex: 100,
+                            borderRadius: 6,
+                            border: "1px solid var(--Container-Stroke, #494949)",
+                            background: "var(--Container, #212121)",
+                            boxShadow: "8px 8px 32px 24px rgba(0, 0, 0, 0.16)",
+                        }}
+                    >
+                        <div style={{ display: "flex" }}>
+                            <div style={{ display: "flex", textAlign: "center", textTransform: "capitalize" }}>
+                                <Typography style={{ padding: 16, color: "#FFFFFF", textTransform: "capitalize" }}> {discoveryData} </Typography>
+                            </div>
+                            <div style={{ display: "flex" }}>
+                                <Tooltip
+                                    title="Close"
+                                    placement="top"
+                                    style={{ zIndex: 10011 }}
+                                >
+                                    <IconButton
+                                        style={{
+                                            flex: 1,
+                                            // width: 224,
+                                            marginLeft: discoveryData === ("communication") ? 112 : 200,
+                                            width: "100%",
+                                            marginBottom: 23,
+                                            fontSize: 16,
+                                            background: "rgba(33, 33, 33, 1)",
+                                            borderColor: "rgba(33, 33, 33, 1)",
+                                            borderRadius: 8,
+                                        }}
+                                        onClick={() => {
+                                            setLocalSearchOpen(false)
+                                        }}
+                                    >
+                                        <Closeicon style={{ width: 16 }} />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip
+                                    title="Delete app"
+                                    placement="bottom"
+                                    style={{ zIndex: 10011 }}
+                                >
+                                    <IconButton
+                                        style={{ zIndex: 12501, position: "absolute", top: 32, right: 16 }}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setLocalSearchOpen(false)
+                                            setDefaultSearch("")
+                                            const submitDeletedApp = {
+                                                "description": "",
+                                                "id": "remove",
+                                                "name": "",
+                                                "type": discoveryData
+                                            }
+                                            setFrameworkItem(submitDeletedApp)
+                                            setNewSelectedApp({})
+                                            setTimeout(() => {
+                                                setDiscoveryData({})
+                                                setFrameworkItem(submitDeletedApp)
+                                                //setNewSelectedApp({})
+                                            }, 1000)
+                                            //setAppName(discoveryData.cases.name)
+                                        }}
+                                    >
+                                        <DeleteIcon style={{ color: "white", height: 15, width: 15, }} />
+                                    </IconButton>
+                                </Tooltip>
+                            </div>
+                        </div>
+                        <div
+                            style={{ width: "100%", border: "1px #494949 solid" }}
+                        />
+                        <AppSearch
+                            defaultSearch={appType}
+                            userdata={userdata}
+                            newSelectedApp={newSelectedApp}
+                            setNewSelectedApp={setNewSelectedApp}
+                        />
+                    </div>
+                ) : null}
             <div style={{ display: "flex", height: 70, border: isHover ? "1px solid #f85a3e" : "var(--Container, #212121)", borderRadius: 8, background: isHover ? "var(--Container, #212121)":"var(--Container, #212121)",  
                         alignItems: "center", justifyContent: "center",}}
             >
