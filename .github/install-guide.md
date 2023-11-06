@@ -118,7 +118,7 @@ Make sure this is running through the docker-compose, and that the backend point
 So essentially, what that means is:
 1. Make sure you have docker-compose installed
 2. Make sure you have the docker-compose.yml file from this repository
-3. Run `docker-compose up opensearch -d`
+3. Run `docker-compose up -d opensearch`
 
 ## Orborus
 Execution of Workflows:
