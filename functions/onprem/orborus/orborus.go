@@ -406,6 +406,17 @@ func deployServiceWorkers(image string) {
 			cnt = 1
 		}
 
+		appReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
+		appReplicaCnt := 1
+		if len(appReplicas) > 0 {
+			newCnt, err := strconv.Atoi(appReplicas)
+			if err != nil {
+				log.Printf("[ERROR] %s is not a valid number for SHUFFLE_APP_REPLICAS", appReplicas)
+			} else {
+				appReplicaCnt = newCnt
+			}
+		}
+
 		log.Printf("[DEBUG] Found %d node(s) to replicate over. Defaulting to 1 IF we can't auto-discover them.", cnt)
 		replicatedJobs := uint64(replicas * nodeCount)
 
@@ -462,7 +473,7 @@ func deployServiceWorkers(image string) {
 					Env: []string{
 						fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 						fmt.Sprintf("SHUFFLE_SWARM_NETWORK_NAME=%s", networkName),
-						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", cnt),
+						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", appReplicaCnt),
 						fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 						fmt.Sprintf("SHUFFLE_DEBUG_MEMORY=%s", os.Getenv("SHUFFLE_DEBUG_MEMORY")),
 						fmt.Sprintf("TZ=%s", timezone),
