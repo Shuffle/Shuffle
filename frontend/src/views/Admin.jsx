@@ -2428,7 +2428,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 										renderValue={(selected) => selected.join(', ')}
 										MenuProps={MenuProps}
 									>
-										{["contacted", "lead", "pov", "demo done", "customer", "open source", "student", "internal", "old customer", "creator", "tech partner"].map((name) => (
+										{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "old customer", "creator", "tech partner"].map((name) => (
 											<MenuItem key={name} value={name}>
 												<Checkbox checked={selectedStatus.indexOf(name) > -1} />
 												<ListItemText primary={name} />
@@ -2544,7 +2544,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 							/>
 							<Tab
 								label=<span>
-									Licensing (Beta)
+									Licensing 
 								</span>
 							/>
 							<Tab

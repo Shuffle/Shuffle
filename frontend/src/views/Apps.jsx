@@ -1660,7 +1660,6 @@ const Apps = (props) => {
 
               refine(event.currentTarget.value)
             }}
-            limit={5}
           />
           {/*isSearchStalled ? 'My search is stalled' : ''*/}
         </form>

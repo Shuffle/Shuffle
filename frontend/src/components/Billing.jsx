@@ -327,9 +327,9 @@ const Billing = (props) => {
 					  style: {
 						pointerEvents: "auto",
 						color: "white",
-						minWidth: 650,
+						minWidth: 750,
 						padding: 30,
-						maxHeight: 600,
+						maxHeight: 700,
 						overflowY: "auto",
 						overflowX: "hidden",
 						zIndex: 10012,
@@ -353,10 +353,10 @@ const Billing = (props) => {
 						<CloseIcon style={{ color: "white" }} />
 					  </IconButton>
 					</Tooltip>
-					<DialogTitle id="form-dialog-title">Sign EULA</DialogTitle>
+					<DialogTitle id="form-dialog-title">Read and Accept the EULA</DialogTitle>
 					<DialogContent>
 						<TextField
-							rows={13}
+							rows={17}
 							multiline
 							fullWidth
 						    InputProps={{
