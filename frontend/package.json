@@ -76,10 +76,10 @@
     "shellwords": "^0.1.1",
     "simplebar": "^4.2.3",
     "styled-components": "^4.4.0",
+    "webpack": "^5.88.2",
     "yaml": "^1.7.2",
     "yamljs": "^0.3.0",
-    "zone.js": "^0.13.1",
-    "webpack": "^5.88.2"
+    "zone.js": "^0.13.1"
   },
   "scripts": {
     "start": "HTTPS=false&&PORT=3000 GENERATE_SOURCEMAP=false react-scripts --openssl-legacy-provider start",

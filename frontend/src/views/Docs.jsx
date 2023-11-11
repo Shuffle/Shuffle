@@ -6,11 +6,13 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { isMobile } from "react-device-detect";
 import theme from '../theme.jsx';
 import remarkGfm from 'remark-gfm'
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import {
-	Grid,
-	TextField, 
-	IconButton,
+  Grid,
+  TextField,
+  IconButton,
   Tooltip,
   Divider,
   Button,
@@ -19,11 +21,14 @@ import {
   Typography,
   Paper,
   List,
+  Collapse,
+  ListItemButton,
+  ListItemText
 } from "@mui/material";
 
-import { 
-	Link as LinkIcon, 
-	Edit as EditIcon,
+import {
+  Link as LinkIcon,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 
 const Body = {
@@ -34,7 +39,7 @@ const Body = {
   display: "flex",
   height: "100%",
   color: "white",
-	position: "relative",
+  position: "relative",
   //textAlign: "center",
 };
 
@@ -57,27 +62,28 @@ const innerHrefStyle = {
 const Docs = (defaultprops) => {
   const { globalUrl, selectedDoc, serverside, serverMobile } = defaultprops;
 
-	let navigate = useNavigate();
+  let navigate = useNavigate();
 
-	// Quickfix for react router 5 -> 6 
-	const params = useParams();
-	//var props = JSON.parse(JSON.stringify(defaultprops))
-	var props = Object.assign({selected: false}, defaultprops);
-	props.match = {}
-	props.match.params = params
+  // Quickfix for react router 5 -> 6 
+  const params = useParams();
+  //var props = JSON.parse(JSON.stringify(defaultprops))
+  var props = Object.assign({ selected: false }, defaultprops);
+  props.match = {}
+  props.match.params = params
 
-	useEffect(() => {
-		//if (params["key"] === undefined) {
-		//	navigate("/docs/about")
-		//	return
-		//}
-	}, [])
-	//console.log("PARAMS: ", params)
+  useEffect(() => {
+    //if (params["key"] === undefined) {
+    //	navigate("/docs/about")
+    //	return
+    //}
+  }, [])
+  //console.log("PARAMS: ", params)
 
   const [mobile, setMobile] = useState(serverMobile === true || isMobile === true ? true : false);
   const [data, setData] = useState("");
   const [firstrequest, setFirstrequest] = useState(true);
   const [list, setList] = useState([]);
+  const [isopen, setOpen] = useState(-1);
   const [, setListLoaded] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [headingSet, setHeadingSet] = React.useState(false);
@@ -98,29 +104,34 @@ const Docs = (defaultprops) => {
     setAnchorEl(null);
   }
 
+  const handleCollapse = (index) => {
+    setOpen(isopen === index ? -1 : index)
+  };
+
   const SidebarPaperStyle = {
     backgroundColor: theme.palette.surfaceColor,
     overflowX: "hidden",
     position: "relative",
-    padding: 30,
+    paddingLeft: 15,
+    paddingRight: 15,
     paddingTop: 15,
     marginTop: 15,
-		minHeight: "80vh",
+    minHeight: "80vh",
     //height: "50vh",
   };
 
   const SideBar = {
-    minWidth: 250,
-    maxWidth: 300,
-		left: 0,
-		position: "sticky",
-		top: 50,
-		minHeight: "90vh",
-		maxHeight: "90vh",
-		overflowX: "hidden",
-		overflowY: "auto",
-		zIndex: 1000,
-		//borderRight: "1px solid rgba(255,255,255,0.3)",
+    minWidth: 300,
+    width: "20%",
+    left: 0,
+    position: "sticky",
+    top: 50,
+    minHeight: "90vh",
+    maxHeight: "90vh",
+    overflowX: "hidden",
+    overflowY: "auto",
+    zIndex: 1000,
+    //borderRight: "1px solid rgba(255,255,255,0.3)",
   };
 
   const fetchDocList = () => {
@@ -142,7 +153,7 @@ const Docs = (defaultprops) => {
         }
         setListLoaded(true);
       })
-      .catch((error) => {});
+      .catch((error) => { });
   };
 
   const fetchDocs = (docId) => {
@@ -157,16 +168,16 @@ const Docs = (defaultprops) => {
       .then((responseJson) => {
         if (responseJson.success) {
           setData(responseJson.reason);
-					if (docId === undefined) {
-          	document.title = "Shuffle documentation introduction";
-					} else {
-          	document.title = "Shuffle " + docId + " documentation";
-					}
+          if (docId === undefined) {
+            document.title = "Shuffle documentation introduction";
+          } else {
+            document.title = "Shuffle " + docId + " documentation";
+          }
 
-					if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.includes("404: Not Found")) {
-						navigate("/docs")
-						return
-					}
+          if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.includes("404: Not Found")) {
+            navigate("/docs")
+            return
+          }
 
           if (responseJson.meta !== undefined) {
             setSelectedMeta(responseJson.meta);
@@ -226,7 +237,7 @@ const Docs = (defaultprops) => {
           setData("# Error\nThis page doesn't exist.");
         }
       })
-      .catch((error) => {});
+      .catch((error) => { });
   };
 
   if (firstrequest) {
@@ -245,18 +256,18 @@ const Docs = (defaultprops) => {
       if (!serverside) {
         fetchDocList();
 
-				//const propkey = props.match.params.key
-				//if (propkey === undefined) {
-				//	navigate("/docs/about")
-				//	return null
-				//}
-				//
-				if (props.match.params.key === undefined) {
+        //const propkey = props.match.params.key
+        //if (propkey === undefined) {
+        //	navigate("/docs/about")
+        //	return null
+        //}
+        //
+        if (props.match.params.key === undefined) {
 
-				} else {
-					console.log("DOCID: ", props.match.params.key)
-        	fetchDocs(props.match.params.key)
-				}
+        } else {
+          console.log("DOCID: ", props.match.params.key)
+          fetchDocs(props.match.params.key)
+        }
       }
     }
   }
@@ -283,7 +294,7 @@ const Docs = (defaultprops) => {
         .join(" ")
         .split("-")
         .join(" ")
-				.split("?")[0]
+        .split("?")[0]
 
       //console.log(name)
       var found = false;
@@ -357,15 +368,15 @@ const Docs = (defaultprops) => {
     color: "rgba(255, 255, 255, 0.65)",
     overflow: "hidden",
     paddingBottom: 100,
-		margin: "auto",
-		maxWidth: "100%",
-		minWidth: "100%",
-		overflow: "hidden",
-		fontSize: isMobile ? "1.3rem" : "1.0rem",
+    margin: "auto",
+    maxWidth: "100%",
+    minWidth: "100%",
+    overflow: "hidden",
+    fontSize: isMobile ? "1.3rem" : "1.0rem",
   };
 
   function OuterLink(props) {
-	  console.log("Link: ", props.href)
+    console.log("Link: ", props.href)
     if (props.href.includes("http") || props.href.includes("mailto")) {
       return (
         <a
@@ -391,9 +402,9 @@ const Docs = (defaultprops) => {
   }
 
   function CodeHandler(props) {
-	console.log("PROPS: ", props)
+    console.log("PROPS: ", props)
 
-	const propvalue = props.value !== undefined && props.value !== null ? props.value : props.children !== undefined && props.children !== null && props.children.length > 0 ? props.children[0] : ""
+    const propvalue = props.value !== undefined && props.value !== null ? props.value : props.children !== undefined && props.children !== null && props.children.length > 0 ? props.children[0] : ""
 
     return (
       <div
@@ -406,12 +417,12 @@ const Docs = (defaultprops) => {
         }}
       >
         <code
-			style={{
-				// Wrap if larger than X
-				whiteSpace: "pre-wrap",
-				overflow: "auto",
-			}}
-		>{propvalue}</code>
+          style={{
+            // Wrap if larger than X
+            whiteSpace: "pre-wrap",
+            overflow: "auto",
+          }}
+        >{propvalue}</code>
       </div>
     );
   }
@@ -436,7 +447,7 @@ const Docs = (defaultprops) => {
             display: "flex",
           }}
         >
-          <div style={{ flex: 3, display: "flex", vAlign: "center", position: "sticky", top: 50,  }}>
+          <div style={{ flex: 3, display: "flex", vAlign: "center", position: "sticky", top: 50, }}>
             {mobile ? null : (
               <Typography style={{ display: "inline", marginTop: 6 }}>
                 <a
@@ -445,7 +456,7 @@ const Docs = (defaultprops) => {
                   href={selectedMeta.link}
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
-                  <Button style={{color: "white", }} variant="outlined" color="secondary">
+                  <Button style={{ color: "white", }} variant="outlined" color="secondary">
                     <EditIcon /> &nbsp;&nbsp;Edit
                   </Button>
                 </a>
@@ -469,15 +480,15 @@ const Docs = (defaultprops) => {
           </div>
           <div style={{ flex: 2 }}>
             {mobile ||
-            selectedMeta.contributors === undefined ||
-            selectedMeta.contributors === null ? (
+              selectedMeta.contributors === undefined ||
+              selectedMeta.contributors === null ? (
               ""
             ) : (
               <div style={{ margin: 10, height: "100%", display: "inline" }}>
                 {selectedMeta.contributors.slice(0, 7).map((data, index) => {
                   return (
                     <a
-											key={index}
+                      key={index}
                       rel="noopener noreferrer"
                       target="_blank"
                       href={data.url}
@@ -545,133 +556,133 @@ const Docs = (defaultprops) => {
   //}
 
 
-	const CustomButton = (props) => {
-		const {title, icon, link} = props
+  const CustomButton = (props) => {
+    const { title, icon, link } = props
 
-		const [hover, setHover] = useState(false)
+    const [hover, setHover] = useState(false)
 
-		return (
-			<a 
-				href={link}
+    return (
+      <a
+        href={link}
         rel="noopener noreferrer"
         target="_blank"
         style={{ textDecoration: "none", color: "inherit", flex: 1, margin: 10, }}
-			>
-				<div style={{cursor: hover ? "pointer" : "default", borderRadius: theme.palette.borderRadius, flex: 1, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, padding: 25, }} 
-					onClick={(event) => {
-						if (link === "" || link === undefined) { 
-							event.preventDefault()
-							console.log("IN CLICK!")
-							if (window.drift !== undefined) {
-								window.drift.api.startInteraction({ interactionId: 340043 })
-							} else {
-								console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
-							}
-						} else {
-							console.log("Link defined: ", link)
-						}
-					}} onMouseOver={() => {
-						setHover(true)
-					}}
-					onMouseOut={() => {
-						setHover(false);
-					}}
-				>
-					{icon}
-					<Typography variant="body1" style={{}} >
-						{title}
-					</Typography>
-				</div>
-			</a>
-		)
-	}
+      >
+        <div style={{ cursor: hover ? "pointer" : "default", borderRadius: theme.palette.borderRadius, flex: 1, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, padding: 25, }}
+          onClick={(event) => {
+            if (link === "" || link === undefined) {
+              event.preventDefault()
+              console.log("IN CLICK!")
+              if (window.drift !== undefined) {
+                window.drift.api.startInteraction({ interactionId: 340043 })
+              } else {
+                console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+              }
+            } else {
+              console.log("Link defined: ", link)
+            }
+          }} onMouseOver={() => {
+            setHover(true)
+          }}
+          onMouseOut={() => {
+            setHover(false);
+          }}
+        >
+          {icon}
+          <Typography variant="body1" style={{}} >
+            {title}
+          </Typography>
+        </div>
+      </a>
+    )
+  }
 
 
-	const DocumentationButton = (props) => {
-		const {item, link} = props
+  const DocumentationButton = (props) => {
+    const { item, link } = props
 
-		const [hover, setHover] = useState(false);
+    const [hover, setHover] = useState(false);
 
-		console.log("Link: ", link)
-		if (link === undefined || link === null) {
-			return null
-		}
+    console.log("Link: ", link)
+    if (link === undefined || link === null) {
+      return null
+    }
 
-		return (
-			<Link to={link} style={hrefStyle}>
-				<div style={{width: "100%", height: 80, cursor: hover ? "pointer" : "default", borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, }}
-				onMouseOver={() => {
-					setHover(true)
-				}}
-				onMouseOut={() => {
-					setHover(false);
-				}}
-				>
-					<Typography variant="body1" style={{}} >
-						{item}
-					</Typography>
-				</div>
-			</Link>
-		)
-	}
+    return (
+      <Link to={link} style={hrefStyle}>
+        <div style={{ width: "100%", height: 80, cursor: hover ? "pointer" : "default", borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, }}
+          onMouseOver={() => {
+            setHover(true)
+          }}
+          onMouseOut={() => {
+            setHover(false);
+          }}
+        >
+          <Typography variant="body1" style={{}} >
+            {item}
+          </Typography>
+        </div>
+      </Link>
+    )
+  }
 
-	const headerStyle = {
-		marginTop: 25,
-	}
+  const headerStyle = {
+    marginTop: 25,
+  }
 
-	const mainpageInfo = 
-		<div style={{
-			color: "rgba(255, 255, 255, 0.65)",
-			flex: "1",
-			overflow: "hidden",
-			paddingBottom: 100,
-			marginLeft: mobile ? 0 : 50,
-			marginTop: 50, 
-			textAlign: "center",
-			margin: "auto",
-			marginTop: 50, 
-		}}>
-				<Typography variant="h4" style={{textAlign: "center",}}>
-					Documentation
-				</Typography>
-				<div style={{display: "flex", marginTop: 25, }}>
-					<CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> />
-					<CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
-				</div>
+  const mainpageInfo =
+    <div style={{
+      color: "rgba(255, 255, 255, 0.65)",
+      flex: "1",
+      overflow: "hidden",
+      paddingBottom: 100,
+      marginLeft: mobile ? 0 : 50,
+      marginTop: 50,
+      textAlign: "center",
+      margin: "auto",
+      marginTop: 50,
+    }}>
+      <Typography variant="h4" style={{ textAlign: "center", }}>
+        Documentation
+      </Typography>
+      <div style={{ display: "flex", marginTop: 25, }}>
+        <CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> />
+        <CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
+      </div>
 
-				<div style={{textAlign: "left"}}>
-					<Typography variant="h6" style={headerStyle} >Tutorial</Typography>
-					<Typography variant="body1">
-						<b>Dive in.</b> Hands-on is the best approach to see how Shuffle can transform your security operations. Our set of tutorials and videos teach you how to build your skills. Check out the <Link to="/docs/getting-started" style={hrefStyle2}>getting started</Link> section to give it a go!
-					</Typography>
+      <div style={{ textAlign: "left" }}>
+        <Typography variant="h6" style={headerStyle} >Tutorial</Typography>
+        <Typography variant="body1">
+          <b>Dive in.</b> Hands-on is the best approach to see how Shuffle can transform your security operations. Our set of tutorials and videos teach you how to build your skills. Check out the <Link to="/docs/getting-started" style={hrefStyle2}>getting started</Link> section to give it a go!
+        </Typography>
 
-					<Typography variant="h6" style={headerStyle}>Why Shuffle?</Typography>
-					<Typography variant="body1">
-						<b>Security first.</b> We incentivize trying before buying, and give you the full set of tools you need to automate your operations. What's more is we also help you <a href="https://shuffler.io/pricing?tag=docs" target="_blank" style={hrefStyle2}>find usecases</a> that fit your unique needs. Accessibility is key, and we intend to help every SOC globally use and share their usecases.
-					</Typography>
+        <Typography variant="h6" style={headerStyle}>Why Shuffle?</Typography>
+        <Typography variant="body1">
+          <b>Security first.</b> We incentivize trying before buying, and give you the full set of tools you need to automate your operations. What's more is we also help you <a href="https://shuffler.io/pricing?tag=docs" target="_blank" style={hrefStyle2}>find usecases</a> that fit your unique needs. Accessibility is key, and we intend to help every SOC globally use and share their usecases.
+        </Typography>
 
-					<Typography variant="h6" style={headerStyle}>Get help</Typography>
-					<Typography variant="body1">
-						<b>Our promise</b> is to make it easier and easier to automate your operations. In some cases however, it may be good with a helping hand. That's where <a href="https://shuffler.io/pricing?tag=docs" target="_blank" style={hrefStyle2}>Shuffle's consultancy and support</a> services come in handy. We help you build and automate your operational processes to a level you haven't seen before with the help of our <a href="https://shuffler.io/usecases?tag=docs" target="_blank" style={hrefStyle2}>usecases</a>.
-					</Typography>
+        <Typography variant="h6" style={headerStyle}>Get help</Typography>
+        <Typography variant="body1">
+          <b>Our promise</b> is to make it easier and easier to automate your operations. In some cases however, it may be good with a helping hand. That's where <a href="https://shuffler.io/pricing?tag=docs" target="_blank" style={hrefStyle2}>Shuffle's consultancy and support</a> services come in handy. We help you build and automate your operational processes to a level you haven't seen before with the help of our <a href="https://shuffler.io/usecases?tag=docs" target="_blank" style={hrefStyle2}>usecases</a>.
+        </Typography>
 
-					<Typography variant="h6" style={headerStyle}>APIs</Typography>
-					<Typography variant="body1">
-						<b>Learn.</b> We're all about learning, and are continuously creating documentation and video tutorials to better understand how to get started. APIs are an extremely important part of how the internet works today, and our goal is helping every security professional learn about them.
-					</Typography>
+        <Typography variant="h6" style={headerStyle}>APIs</Typography>
+        <Typography variant="body1">
+          <b>Learn.</b> We're all about learning, and are continuously creating documentation and video tutorials to better understand how to get started. APIs are an extremely important part of how the internet works today, and our goal is helping every security professional learn about them.
+        </Typography>
 
-					<Typography variant="h6" style={headerStyle}>Workflow building</Typography>
-					<Typography variant="body1">
-						<b>Build.</b> Creating workflows has never been easier. Jump into things with our <Link to="/getting-started" style={hrefStyle2}>getting Started</Link> section and build to your hearts content. Workflows make it all come together, with an easy to use area.
-					</Typography>
+        <Typography variant="h6" style={headerStyle}>Workflow building</Typography>
+        <Typography variant="body1">
+          <b>Build.</b> Creating workflows has never been easier. Jump into things with our <Link to="/getting-started" style={hrefStyle2}>getting Started</Link> section and build to your hearts content. Workflows make it all come together, with an easy to use area.
+        </Typography>
 
-					<Typography variant="h6" style={headerStyle}>Managing Shuffle</Typography>
-					<Typography variant="body1">
-						<b>Organize.</b> Whether an organization of 1000 or 1, management tools are necessary. In Shuffle we offer full user management, MFA and single-signon options, multi-tenancy and a lot more - for free!
-					</Typography>
-				</div>
+        <Typography variant="h6" style={headerStyle}>Managing Shuffle</Typography>
+        <Typography variant="body1">
+          <b>Organize.</b> Whether an organization of 1000 or 1, management tools are necessary. In Shuffle we offer full user management, MFA and single-signon options, multi-tenancy and a lot more - for free!
+        </Typography>
+      </div>
 
-				{/*
+      {/*
 				<Grid container spacing={2} style={{marginTop: 50, }}>
 					{list.map((data, index) => {
 						const item = data.name;
@@ -696,7 +707,7 @@ const Docs = (defaultprops) => {
 				</Grid>
 				*/}
 
-				{/*
+      {/*
 				<TextField
 					required
 					style={{
@@ -722,8 +733,9 @@ const Docs = (defaultprops) => {
 					}}
 				/>
 				*/}
-		</div>
+    </div>
 
+  // PostDataBrowser Section
   const postDataBrowser =
     list === undefined || list === null ? null : (
       <div style={Body}>
@@ -741,52 +753,53 @@ const Docs = (defaultprops) => {
                   item.charAt(0).toUpperCase() +
                   item.substring(1).split("_").join(" ").split("-").join(" ");
 
-                const itemMatching = props.match.params.key === undefined ? false : 
+                const itemMatching = props.match.params.key === undefined ? false :
                   props.match.params.key.toLowerCase() === item.toLowerCase();
-                //const [tocLines, setTocLines] = React.useState([]);
                 return (
-                  <li key={index} style={{ marginTop: 10 }}>
-                    <Link
+                  <li key={index}>
+                    <ListItemButton
+                      component={Link}
                       key={index}
                       style={hrefStyle}
                       to={path}
                       onClick={() => {
                         setTocLines([]);
                         fetchDocs(item);
+                        handleCollapse(index);
                       }}
                     >
-                      <Typography
+                      <ListItemText
                         style={{ color: itemMatching ? "#f86a3e" : "inherit" }}
                         variant="body1"
                       >
-                        <b>> {newname}</b>
-                      </Typography>
-                    </Link>
+                        {newname}
+                      </ListItemText>
+                      {isopen === index ? <ExpandMoreIcon /> : <KeyboardArrowRightIcon />}
+                    </ListItemButton>
                     {itemMatching &&
-                    tocLines !== null &&
-                    tocLines !== undefined &&
-                    tocLines.length > 0 ? (
-                      <div style={{ marginLeft: 5 }}>
+                      tocLines !== null &&
+                      tocLines !== undefined &&
+                      tocLines.length > 0 ? (
+                      <Collapse in={isopen === index} timeout="auto" unmountOnExit>
                         {tocLines.map((data, index) => {
-                          //console.log(data)
 
                           return (
-                            <Link
+                            <ListItemButton
+                              component={Link}
                               key={index}
                               style={innerHrefStyle}
                               to={data.link}
-                              onClick={() => {}}
                             >
-                              <Typography
+                              <ListItemText
                                 variant="body2"
                                 style={{ cursor: "pointer" }}
                               >
-                                - {data.text}
-                              </Typography>
-                            </Link>
+                                {data.text}
+                              </ListItemText>
+                            </ListItemButton>
                           );
                         })}
-                      </div>
+                      </Collapse>
                     ) : null}
                   </li>
                 );
@@ -794,37 +807,37 @@ const Docs = (defaultprops) => {
             </List>
           </Paper>
         </div>
-				<div style={{maxWidth: 750, minWidth: 750, margin: "auto", overflow: "hidden", marginTop: 50, }}>
-					{props.match.params.key === undefined ?
-						mainpageInfo
-					:
-						<div id="markdown_wrapper_outer" style={markdownStyle}>
-							<ReactMarkdown
-								components={{
-									img: Img,
-									code: CodeHandler,
-									h1: Heading,
-									h2: Heading,
-									h3: Heading,
-									h4: Heading,
-									h5: Heading,
-									h6: Heading,
-									a: OuterLink,
-								}}
-								id="markdown_wrapper"
-								escapeHtml={false}
-								style={{
-									maxWidth: "100%", minWidth: "100%", 
-								}}
-							>
-								{data}
-							</ReactMarkdown>
-						</div>
-					}
-				</div>
+        <div style={{ width: "70%", margin: "auto", overflow: "hidden", marginTop: 50, paddingRight: 50 }}>
+          {props.match.params.key === undefined ?
+            mainpageInfo
+            :
+            <div id="markdown_wrapper_outer" style={markdownStyle}>
+              <ReactMarkdown
+                components={{
+                  img: Img,
+                  code: CodeHandler,
+                  h1: Heading,
+                  h2: Heading,
+                  h3: Heading,
+                  h4: Heading,
+                  h5: Heading,
+                  h6: Heading,
+                  a: OuterLink,
+                }}
+                id="markdown_wrapper"
+                escapeHtml={false}
+                style={{
+                  maxWidth: "100%", minWidth: "100%",
+                }}
+              >
+                {data}
+              </ReactMarkdown>
+            </div>
+          }
+        </div>
       </div>
     );
-	// remarkPlugins={[remarkGfm]}
+  // remarkPlugins={[remarkGfm]}
 
   const mobileStyle = {
     color: "white",
@@ -882,32 +895,32 @@ const Docs = (defaultprops) => {
             })}
           </Menu>
         </div>
-				{props.match.params.key === undefined ?
-					mainpageInfo
-				:
-					<div id="markdown_wrapper_outer" style={markdownStyle}>
-						<ReactMarkdown
-							components={{
-								img: Img,
-								code: CodeHandler,
-								h1: Heading,
-								h2: Heading,
-								h3: Heading,
-								h4: Heading,
-								h5: Heading,
-								h6: Heading,
-								a: OuterLink,
-							}}
-							id="markdown_wrapper"
-							escapeHtml={false}
-							style={{
-								maxWidth: "100%", minWidth: "100%", 
-							}}
-						>
-							{data}
-						</ReactMarkdown>
-					</div>
-				}
+        {props.match.params.key === undefined ?
+          mainpageInfo
+          :
+          <div id="markdown_wrapper_outer" style={markdownStyle}>
+            <ReactMarkdown
+              components={{
+                img: Img,
+                code: CodeHandler,
+                h1: Heading,
+                h2: Heading,
+                h3: Heading,
+                h4: Heading,
+                h5: Heading,
+                h6: Heading,
+                a: OuterLink,
+              }}
+              id="markdown_wrapper"
+              escapeHtml={false}
+              style={{
+                maxWidth: "100%", minWidth: "100%",
+              }}
+            >
+              {data}
+            </ReactMarkdown>
+          </div>
+        }
         <Divider
           style={{
             marginTop: "10px",
@@ -934,9 +947,9 @@ const Docs = (defaultprops) => {
   //	</Dialog>
   // {imageModal}
 
-	// Padding and zIndex etc set because of footer in cloud.
+  // Padding and zIndex etc set because of footer in cloud.
   const loadedCheck = (
-    <div style={{minHeight: 1000, paddingBottom: 100, zIndex: 50000, }}>
+    <div style={{ minHeight: 1000, paddingBottom: 100, zIndex: 50000, }}>
       <BrowserView>{postDataBrowser}</BrowserView>
       <MobileView>{postDataMobile}</MobileView>
     </div>
