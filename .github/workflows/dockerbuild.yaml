@@ -8,6 +8,7 @@ on:
       - "**"
       - "!.github/**"
       - "!**.md"
+      - "!docker-compose.yml"
 jobs:
   main:
     runs-on: ubuntu-latest
