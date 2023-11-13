@@ -1,7 +1,7 @@
 package main
 
 /*
-	Orborus exists to listen for new workflow executions whcih are deployed as workers.
+	Orborus exists to listen for new workflow executions which are deployed as workers.
 */
 
 //  Potential issues:
