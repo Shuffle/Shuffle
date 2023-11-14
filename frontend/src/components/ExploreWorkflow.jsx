@@ -5,6 +5,7 @@ import 'react-alice-carousel/lib/alice-carousel.css';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import theme from '../theme.jsx';
 import {isMobile} from "react-device-detect";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckBoxSharpIcon from '@mui/icons-material/CheckBoxSharp';
 import { findSpecificApp } from "../components/AppFramework.jsx"
 import {
@@ -291,11 +292,29 @@ const ExploreWorkflow = (props) => {
 
     return (
         <div style={{ marginTop: 0, margin: "auto", minHeight: sizing, maxHeight: sizing, }}>
+            <Tooltip
+                title="Back"
+                placement="top"
+                style={{ zIndex: 10011 }}
+            >
+                <IconButton
+                    style={{
+                        marginRight: isMobile ? 230 : null
+                    }}
+                    onClick={() => {
+                        navigate('/welcome?tab=2');
+                        window.location.reload();
+                    }}
+                >
+                    <ArrowBackIcon style={{ width: 20 }} />
+                    <Typography style={{fontSize : 16, marginLeft : 2}}>Back</Typography>
+                </IconButton>
+            </Tooltip>
             {modalView}
             <Typography variant="h4" style={{ marginLeft: 8, marginTop: isMobile ? null : 40, marginRight: 30, marginBottom: 0, }} color="rgba(241, 241, 241, 1)">
                 Start using workflows
             </Typography>
-            <Typography variant="body2" style={{ marginLeft: 8, marginTop: 10, marginRight: 30, marginBottom: 40, }} color="rgba(158, 158, 158, 1)">
+            <Typography variant="body2" style={{ marginLeft: isMobile ? null : 8, marginTop: isMobile ? 5 : 10, marginRight: isMobile ? null : 100, marginBottom: isMobile ? 20 : 40, }} color="rgba(158, 158, 158, 1)">
                 Based on what you selected workflows, here are our recommendations! You will see more of these later.
             </Typography>
 

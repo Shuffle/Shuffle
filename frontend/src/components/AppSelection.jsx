@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import theme from '../theme.jsx';
 import ReactGA from 'react-ga4';
-import { useNavigate, Link } from 'react-router-dom';
-import {isMobile} from "react-device-detect";
+import { useNavigate, Link, } from 'react-router-dom';
+import { isMobile } from "react-device-detect";
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon, Close as CloseIcon, Folder as FolderIcon, LibraryBooks as LibraryBooksIcon } from '@mui/icons-material';
 import aa from 'search-insights'
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -13,6 +13,7 @@ import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import ExtensionIcon from "@mui/icons-material/Extension";
 import EmailIcon from "@mui/icons-material/Email";
 import FingerprintIcon from '@mui/icons-material/Fingerprint';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AppSearch from "../components/Appsearch.jsx";
 import AppSearchButtons from "../components/AppSearchButtons.jsx";
 import { toast } from 'react-toastify';
@@ -60,7 +61,7 @@ const AppSelection = props => {
     let navigate = useNavigate();
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
-	useEffect(() => {
+    useEffect(() => {
         if (newSelectedApp === undefined || newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined || newSelectedApp.objectID.length === 0) {
             return
         }
@@ -109,17 +110,17 @@ const AppSelection = props => {
             //     value.type = key;
             //     tempApps.push(value);
             // });
-            
+
             // // Define the custom sorting order
             // const customSortingOrder = ["CASES", "SIEM", "ENDPOINT", "INTEL", "EMAIL"];
 
             const lastApps = {}
             let endTypes = ["network", "assets", "iam"]
 
-			if (appFramework === undefined || appFramework === null || Object.keys(appFramework).length === 0) {
-				//window.location.href = "/welcome"
-				return 
-			}
+            if (appFramework === undefined || appFramework === null || Object.keys(appFramework).length === 0) {
+                //window.location.href = "/welcome"
+                return
+            }
 
 
             Object.entries(appFramework).forEach(([key, value]) => {
@@ -129,7 +130,7 @@ const AppSelection = props => {
 
                 value.type = key;
 
-                if (endTypes.includes(value.type.toLowerCase())) {                    
+                if (endTypes.includes(value.type.toLowerCase())) {
                     lastApps[value.type] = value
                     return
                 }
@@ -137,7 +138,7 @@ const AppSelection = props => {
                 if (lastPosted.type === value.type) {
                     value = lastPosted
                 }
-                
+
                 tempApps.push(JSON.parse(JSON.stringify(value)));
             });
 
@@ -157,8 +158,8 @@ const AppSelection = props => {
 
             if (moreButton) {
                 tempApps.push(JSON.parse(JSON.stringify(lastApps["network"])))
-				tempApps.push(JSON.parse(JSON.stringify(lastApps["assets"])))
-				tempApps.push(JSON.parse(JSON.stringify(lastApps["iam"])))
+                tempApps.push(JSON.parse(JSON.stringify(lastApps["assets"])))
+                tempApps.push(JSON.parse(JSON.stringify(lastApps["iam"])))
             }
 
             setAppButtons(tempApps)
@@ -167,10 +168,10 @@ const AppSelection = props => {
         }
     }, [lastPosted, moreButton])
 
-	if (appFramework === undefined || appFramework === null || Object.keys(appFramework).length === 0) {
-		//window.location.href = "/welcome"
-		return null
-	}
+    if (appFramework === undefined || appFramework === null || Object.keys(appFramework).length === 0) {
+        //window.location.href = "/welcome"
+        return null
+    }
 
     const setFrameworkItem = (data) => {
         console.log("Setting framework item: ", data, isCloud)
@@ -276,7 +277,7 @@ const AppSelection = props => {
             });
         }
 
-		console.log("NODESELECT: ", label)
+        console.log("NODESELECT: ", label)
 
         setDiscoveryData(label)
         setSelectionOpen(true)
@@ -285,7 +286,7 @@ const AppSelection = props => {
         setNewSelectedApp(undefined)
     };
 
-    
+
 
     // const sizing = moreButton ? 510 : 480;
     const buttonWidth = 450;
@@ -304,12 +305,29 @@ const AppSelection = props => {
 
     return (
         <Collapse in={true}>
+            <Tooltip
+                title="Back"
+                placement="top"
+                style={{ zIndex: 10011 }}
+            >
+                <IconButton
+                    style={{
+                    }}
+                    onClick={() => {
+                        navigate('/welcome');
+                        window.location.reload();
+                    }}
+                >
+                    <ArrowBackIcon style={{ width: 20 }} />
+                    <Typography style={{fontSize : 16, marginLeft : 2}}>Back</Typography>
+                </IconButton>
+            </Tooltip>
             <div
                 style={{
                     // minHeight: sizing,
                     // maxHeight: sizing,
                     marginTop: 10,
-                    width: isMobile ? 380 : 500,
+                    width: isMobile ? 350 : 500,
                     marginBottom: 25,
                     textAlign: isMobile ? "center" : null,
                 }}
@@ -428,59 +446,59 @@ const AppSelection = props => {
                     Select the apps you work with and we will connect the for you.
                 </Typography>
                 <Grid rowSpacing={1} columnSpacing={2} container >
-					{appButtons.map((appData, index) => {
-						// This is here due to a memory issue with setting apps properly
-						if (appData.id === "remove") {
-							console.log("Removed as appdata is overridden: ", appData)
+                    {appButtons.map((appData, index) => {
+                        // This is here due to a memory issue with setting apps properly
+                        if (appData.id === "remove") {
+                            console.log("Removed as appdata is overridden: ", appData)
 
-							appData = {
-								"count": 0,
-								"description": "",
-								"id": "",
-								"large_image": "",
-								"name": "",
-								"type": appData.type,
-							}
-						}
+                            appData = {
+                                "count": 0,
+                                "description": "",
+                                "id": "",
+                                "large_image": "",
+                                "name": "",
+                                "type": appData.type,
+                            }
+                        }
 
-						const appName = appData.name
-						const AppImage = appData.large_image
-						const appType = appData.type
+                        const appName = appData.name
+                        const AppImage = appData.large_image
+                        const appType = appData.type
 
-						return (
-							<AppSearchButtons
-								appFramework={appFramework}
-								index={index}
-								totalApps={appButtons.length}
-								appName={appName}
-								appType={appType}
-								AppImage={AppImage}
-								defaultSearch={defaultSearch}
-								finishedApps={finishedApps}
-								onNodeSelect={onNodeSelect}
-								discoveryData={discoveryData}
-								setDiscoveryData={setDiscoveryData}
-								setDefaultSearch={setDefaultSearch}
-								apps={apps}
-								setMoreButton={setMoreButton}
-								moreButton={moreButton}
-							/>
-						)
-					})}
+                        return (
+                            <AppSearchButtons
+                                appFramework={appFramework}
+                                index={index}
+                                totalApps={appButtons.length}
+                                appName={appName}
+                                appType={appType}
+                                AppImage={AppImage}
+                                defaultSearch={defaultSearch}
+                                finishedApps={finishedApps}
+                                onNodeSelect={onNodeSelect}
+                                discoveryData={discoveryData}
+                                setDiscoveryData={setDiscoveryData}
+                                setDefaultSearch={setDefaultSearch}
+                                apps={apps}
+                                setMoreButton={setMoreButton}
+                                moreButton={moreButton}
+                            />
+                        )
+                    })}
                 </Grid>
             </div>
             {!moreButton ? (
-            <div style={{width: "100%", marginLeft: isMobile ? 100 : 200, marginBottom: 20, textAlign: isMobile ? "center" : null}}>
-                <Link style={{color:"#FF8444"}} onClick={()=>{
-                    setMoreButton(true)
+                <div style={{ width: "100%", marginLeft: isMobile ? 80 : 200, marginBottom: 20, textAlign: isMobile ? "center" : null }}>
+                    <Link style={{ color: "#FF8444" }} onClick={() => {
+                        setMoreButton(true)
 
-					setTimeout(() => {
-                    	navigate("/welcome?tab=2")
-					}, 250)
-                }}
-                >See More Apps</Link>
-            </div>): ""}
-            <div style={{ flexDirection: "row", width: isMobile ? 380 : null, textAlign: isMobile ? "center" : null}}>
+                        setTimeout(() => {
+                            navigate("/welcome?tab=2")
+                        }, 250)
+                    }}
+                    >See More Apps</Link>
+                </div>) : ""}
+            <div style={{ flexDirection: "row", width: isMobile ? 340 : null, textAlign: isMobile ? "center" : null }}>
                 <Button variant="contained" type="submit" fullWidth style={bottomButtonStyle} onClick={() => {
                     navigate("/welcome?tab=3")
                     setActiveStep(2)

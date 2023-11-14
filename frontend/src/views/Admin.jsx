@@ -291,8 +291,6 @@ const Admin = (props) => {
   	//const alert = useAlert();
 	const handleStatusChange = (event) => {
 		const { value } = event.target;
-		console.log("value: ", value)
-
 		setSelectedStatus(value);
 
 		
@@ -331,7 +329,7 @@ const Admin = (props) => {
 		var your_apps = "- Connecting "
 
 		var subject_add = 0
-		var subject = "Want to automate "
+		var subject = "POC to automate "
 
 		if (org.security_framework !== undefined && org.security_framework !== null) {
 			if (org.security_framework.cases.name !== undefined && org.security_framework.cases.name !== null && org.security_framework.cases.name !== "") {
@@ -400,7 +398,7 @@ const Admin = (props) => {
 
 
 			// Remove comma
-			subject += "?"
+			//subject += "?"
 			your_apps = your_apps.substring(0, your_apps.length - 2)
 		}
 
@@ -432,11 +430,24 @@ const Admin = (props) => {
 		var admins = "" 
 
 		// Loop users
+		var lastLogin = 0
 		for (var i = 0; i < users.length; i++) {
+			if (users[i].username.includes("shuffler")) {
+				continue
+			}
+
 			if (users[i].role === "admin") {
 				admins += users[i].username + ","
 			}
+
+			const data = users[i]
+			for (var i = 0; i < data.login_info.length; i++) {
+				if (data.login_info[i].timestamp > lastLogin) {
+					lastLogin = data.login_info[i].timestamp
+				}
+			}
 		}
+
 
 		// Remove last comma
 		admins = admins.substring(0, admins.length - 1)
@@ -452,15 +463,24 @@ const Admin = (props) => {
 		// Get drift username from userdata.username before @ in email
 		const username = userdata.username.substring(0, userdata.username.indexOf("@"))
 
-		var body = `Hey,%0D%0A%0D%0AI saw you trying to use Shuffle, and thought we may be able to help. Right now, it looks like you have ${workflow_amount} workflows made, but it still doesn't look like you are getting the most out of Shuffle. If you're interested, I'd love to set up a quick call to see if we can help you get more out of Shuffle. %0D%0A%0D%0A
+		// Check if timestamp is more than 2 weeks ago and add "a while back" to the message
+		const timeComparison = 1209600
+		const extra_timestamp_text = lastLogin === 0 ? 0 : (Date.now()/1000 - lastLogin) > timeComparison ? " a while back" : ""
+		console.log("LAST LOGIN: " + lastLogin, extra_timestamp_text)
+
+		// Check if cloud sync is active, and if so, add a message about it
+		const cloudSyncInfo = selectedOrganization.cloud_sync === true ? "- Scale your onprem installation" : ""
+
+		var body = `Hey,%0D%0A%0D%0AI noticed you tried to use Shuffle${extra_timestamp_text}, and thought you may be interested in a POC. It looks like you have ${workflow_amount} workflows made, but it still doesn't look like you are getting what you wanted out of  Shuffle. If you're interested, I'd love to set up a quick call to see if we can help you get more out of Shuffle. %0D%0A%0D%0A
 
 Some of the things we can help with:%0D%0A
 ${your_apps}
 - Configuring and authenticating your apps%0D%0A
 ${usecases}
-- Creating special usecases and apps%0D%0A%0D%0A
+- Multi-Tenancy and creating special usecases%0D%0A
+${cloudSyncInfo}%0D%0A
 
-Let me know if you're interested, or set up a call here: https://drift.me/${username}`
+If you're interested, please let me know a time that works for you, or set up a call here: https://drift.me/${username}`
 
 		return `mailto:${admins}?bcc=frikky@shuffler.io,binu@shuffler.io&subject=${subject}&body=${body}`
 	}
@@ -982,6 +1002,10 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 
 						if (responseJson.lead_info.old_customer) {
 							leads.push("old customer")
+						}
+
+						if (responseJson.lead_info.old_lead) {
+							leads.push("old lead")
 						}
 
 						if (responseJson.lead_info.tech_partner) {
@@ -2428,7 +2452,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 										renderValue={(selected) => selected.join(', ')}
 										MenuProps={MenuProps}
 									>
-										{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "old customer", "creator", "tech partner"].map((name) => (
+										{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "old customer", "old lead", ].map((name) => (
 											<MenuItem key={name} value={name}>
 												<Checkbox checked={selectedStatus.indexOf(name) > -1} />
 												<ListItemText primary={name} />
@@ -3124,7 +3148,6 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
 					}
 
 					if (loginInfo > 0) {
-						console.log("SETTING LAST LOGIN: " + loginInfo)
 						lastLogin = new Date(loginInfo * 1000).toISOString().slice(0, 10) + " (" + data.login_info.length + ")"
 					}
 				}
@@ -4382,7 +4405,7 @@ Let me know if you're interested, or set up a call here: https://drift.me/${user
           <Tab
             label=<span>
               <LockIcon style={iconStyle} />
-              App Authentication
+              App Auth 
             </span>
           />
           <Tab

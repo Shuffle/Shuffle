@@ -382,7 +382,7 @@ const Files = (props) => {
 				<div style={{ marginTop: 20, marginBottom: 20 }}>
 					<h2 style={{ display: "inline" }}>Files</h2>
 					<span style={{ marginLeft: 25 }}>
-						Files from Workflows.{" "}
+						Files from Workflows are a way to store as well as edit files.{" "}
 						<a
 							target="_blank"
 							rel="noopener noreferrer"

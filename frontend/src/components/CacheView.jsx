@@ -339,7 +339,7 @@ const CacheView = (props) => {
             <div style={{ marginTop: 20, marginBottom: 20 }}>
                 <h2 style={{ display: "inline" }}>Shuffle Datastore</h2>
                 <span style={{ marginLeft: 25 }}>
-                    Datastore is a key-value store for storing data that can be used cross-workflow.&nbsp;
+                    Datastore is a permanent key-value database for storing data that can be used cross-workflow. You can store anything from lists of IPs to complex configurations.&nbsp;
                     <a
                         target="_blank"
                         rel="noopener noreferrer"

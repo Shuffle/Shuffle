@@ -3125,7 +3125,7 @@ const AppCreator = (defaultprops) => {
         		</Select>
 					</div>
 					<div style={{marginLeft: 5, flex: 1,}}>
-        		Value prefix	
+        				Prefix	
 						<TextField
 							style={{ marginTop: 0, flex: "1", backgroundColor: inputColor }}
 							fullWidth={true}
@@ -3137,7 +3137,7 @@ const AppCreator = (defaultprops) => {
 							value={refreshUrl}
 							onChange={(e) => {
 								// Just reusing this state
-      	        setRefreshUrl(e.target.value);
+      	        				setRefreshUrl(e.target.value);
 							}}
 						/>
 					</div>
@@ -3618,13 +3618,13 @@ const AppCreator = (defaultprops) => {
     		<Dialog
     		  open={actionsModalOpen}
     		  fullWidth
-					PaperProps={{
+			  PaperProps={{
     		    style: {
     		      backgroundColor: surfaceColor,
     		      color: "white",
-    		      minWidth: 500,
-    		      maxWidth: 500,
-							maxHeight: 800,
+    		      minWidth: 550,
+    		      maxWidth: 550,
+				  maxHeight: 750,
     		    },
     		  }}
     		  onClose={() => {

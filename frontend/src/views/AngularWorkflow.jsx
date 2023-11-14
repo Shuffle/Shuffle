@@ -108,10 +108,10 @@ import {
   Preview as PreviewIcon,
   ContentCopy as ContentCopyIcon,
   Circle as  CircleIcon,
-	SquareFoot as SquareFootIcon,
-	AutoFixHigh as AutoFixHighIcon,
-
+  SquareFoot as SquareFootIcon,
+  AutoFixHigh as AutoFixHighIcon,
   Polyline as PolylineIcon, 
+  QueryStats as QueryStatsIcon, 
 } from "@mui/icons-material";
 
 
@@ -14591,7 +14591,7 @@ const AngularWorkflow = (defaultprops) => {
       onClose={() => {
         setExecutionModalOpen(false)
       }}
-      style={{ resize: "both", overflow: "auto", zIndex: 10005 }}
+      style={{ resize: "both", overflow: "auto", }}
       hideBackdrop={false}
       variant="temporary"
       BackdropProps={{
@@ -14607,7 +14607,6 @@ const AngularWorkflow = (defaultprops) => {
           maxWidth: isMobile ? "100%" : 420,
           color: "white",
           fontSize: 18,
-          zIndex: 10005,
           borderLeft: theme.palette.defaultBorder,
         },
       }}
@@ -14631,16 +14630,32 @@ const AngularWorkflow = (defaultprops) => {
         : null}
       {executionModalView === 0 ? (
         <div style={{ padding: isMobile ? "0px 0px 0px 10px" : 25, zIndex: 12502, }}>
-          <Breadcrumbs
-            aria-label="breadcrumb"
-            separator="›"
-            style={{ color: "white", fontSize: 16 }}
-          >
-            <h2 style={{ color: "rgba(255,255,255,0.5)" }}>
-              <DirectionsRunIcon style={{ marginRight: 10 }} />
-              All Workflow Runs 
-            </h2>
-          </Breadcrumbs>
+		  <div style={{display: "flex", }}>
+			  <Breadcrumbs
+				aria-label="breadcrumb"
+				separator="›"
+				style={{ color: "white", fontSize: 16 }}
+			  >
+				<h2 style={{ color: "rgba(255,255,255,0.5)" }}>
+				  <DirectionsRunIcon style={{ marginRight: 10 }} />
+				  All Workflow Runs 
+				</h2>
+			  </Breadcrumbs>
+			  <Tooltip
+				title={"Explore Executions further"}
+				placement="left-start"
+				style={{ zIndex: 10010 }}
+			  >
+		  		<a href={`/workflows/debug?workflow_id=${workflow.id}`} style={{textDecoration: "none", }}>
+				  <Button
+		  			color="secondary"
+		  			style={{marginLeft: 50, maxHeight: 30, marginTop: 20, }}
+				  >
+		  			<QueryStatsIcon style={{color: "white", }}/>
+				  </Button>
+		  		</a>
+		  	</Tooltip>
+		  </div>
           <Button
             style={{ borderRadius: "0px" }}
             variant="outlined"

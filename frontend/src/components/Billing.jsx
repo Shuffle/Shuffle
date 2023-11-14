@@ -887,6 +887,31 @@ const Billing = (props) => {
 					"Shuffle is an Open Source automation platform, and no license is required to use it. You may however activate Cloud Sync, get our Scale license, get help with Kubernetes, or talk to Shuffle's Support team to get automation help."
 				}
 			</Typography>
+
+			{userdata.support === true ? 
+				<div style={{marginBottom: 10, }}>
+					For sales: Create&nbsp;
+					<a href={"https://docs.google.com/document/d/1OeJSi42812EMg7fUAw1HAj1ymOG8rfp8Ma_DGJKvwgI/copy?usp=sharing&organization=" + selectedOrganization.id} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+						New Cloud Contract
+					</a>
+					&nbsp;or&nbsp;
+					<a href={"https://docs.google.com/document/d/1IguxpeV4Wwwr9C0MPyUNhhajEu_PxjRfP7f0hYyRYOI/copy?usp=sharing&organization=" + selectedOrganization.id} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+						New Onprem Contract
+					</a>
+					&nbsp; - &nbsp; 
+					<a href={"https://drive.google.com/drive/folders/1zVvwwkbQXW3p-DJYa0GBDzFo_ZnV_I_5"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+						Google Drive Link
+					</a>
+					&nbsp; - &nbsp;
+					<a href={"https://github.com/Shuffle/Shuffle-docs/tree/master/handbook/Sales"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+						Sales Process
+					</a>
+
+						
+				</div>
+				:
+				null
+			}
 			<div style={{display: "flex", maxWidth: 768, minWidth: 768, }}>
 				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null  ?
 					<SubscriptionObject
@@ -1009,6 +1034,8 @@ const Billing = (props) => {
 									</Grid>
 									*/}
 					</div>
+
+
 					{isCloud &&
 						selectedOrganization.partner_info !== undefined &&
 						selectedOrganization.partner_info.reseller === true ? (
