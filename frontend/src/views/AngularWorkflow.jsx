@@ -4593,7 +4593,6 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
-	console.log("NODE: ", nodedata)
 	if (nodedata.decorator !== true && nodedata.attachedTo === undefined) {
 		var newdata = JSON.parse(JSON.stringify(nodedata))
 		newdata.large_image = "" 

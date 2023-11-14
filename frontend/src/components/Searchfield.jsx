@@ -81,7 +81,7 @@ const SearchField = props => {
 				style: {
 					color: "white",
 					minWidth: 750,
-					height: 685,
+					height: 785,
 					borderRadius: 16,
 					border: "1px solid var(--Container-Stroke, #494949)",
 					background: "var(--Container, #000000)",
