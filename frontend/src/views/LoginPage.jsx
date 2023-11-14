@@ -316,7 +316,7 @@ const LoginDialog = (props) => {
                 <b>
                   Are you sure Shuffle is{" "}
                   <a
-                    rel="norefferer"
+                    rel="norefferer noreferrer"
                     target="_blank"
                     href="https://github.com/frikky/Shuffle/blob/master/.github/install-guide.md"
                     style={{ textDecoration: "none", color: "#f86a3e" }}
@@ -360,7 +360,7 @@ const LoginDialog = (props) => {
             >
               Need help?{" "}
               <a
-                rel="norefferer"
+                rel="norefferer noreferrer"
                 target="_blank"
                 href="https://discord.gg/B2CBzUm"
                 style={{ textDecoration: "none", color: "#f86a3e" }}

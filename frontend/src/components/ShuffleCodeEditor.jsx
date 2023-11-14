@@ -991,7 +991,7 @@ const CodeEditor = (props) => {
 								>
 									<a 
 										href="https://pwwang.github.io/liquidpy/playground/"
-										rel="norefferer"
+										rel="norefferer noreferrer"
       		          target="_blank"
 									>
 										<ExtensionIcon style={{color: "rgba(255,255,255,0.7)"}}/>

@@ -148,7 +148,7 @@ const WorkflowPaper = (props) => {
                 >
                   <a
                     href={parsedUrl}
-										rel="norefferer"
+										rel="norefferer noreferrer"
 										target="_blank"
                     style={{ textDecoration: "none", color: "inherit" }}
                   >

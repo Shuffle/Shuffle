@@ -314,7 +314,7 @@ const Billing = (props) => {
 										<a 
 											href={feature.split("Documentation: ")[1]} 
 											target="_blank"
-											style={{ textDecoration: "none", color: "#f85a3e",}}
+											style={{ textDecoration: "none", color: "#f85a3e",}} rel="noreferrer"
 										>
 											Documentation to get started
 										</a>
@@ -325,7 +325,7 @@ const Billing = (props) => {
 										<a
 											href={feature.split("Licensed Worker: ")[1]}
 											target="_blank"
-											style={{ textDecoration: "none", color: "#f85a3e",}}
+											style={{ textDecoration: "none", color: "#f85a3e",}} rel="noreferrer"
 										>
 											Download the licensed worker
 										</a>

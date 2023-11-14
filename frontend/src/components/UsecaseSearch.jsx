@@ -1454,7 +1454,7 @@ const UsecaseSearch = (props) => {
 										<span>
 											<a
 												href={`https://shuffler.io/docs/creators#${data.text.toLowerCase()}`}
-												rel="norefferer"
+												rel="norefferer noreferrer"
 												target="_blank"
 												style={{ textDecoration: "none",  }}
 											>
@@ -1630,7 +1630,7 @@ const UsecaseSearch = (props) => {
 							:
 							<a
 								href={`/workflows/${workflow.id}`}
-								rel="norefferer"
+								rel="norefferer noreferrer"
 								target="_blank"
 								style={{ textDecoration: "none",  }}
 							>

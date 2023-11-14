@@ -21,7 +21,7 @@ const KeepAlive = (defaultprops) => {
 		var decoder = new TextDecoder();
 		
 		const appendChunks = (result) => {
-			var chunk = decoder.decode(result.value || new Uint8Array, {stream: !result.done});
+			var chunk = decoder.decode(result.value || new Uint8Array(), {stream: !result.done});
 			data.push(chunk)
 			setData(data)
     	setUpdate(Math.random());

@@ -2831,7 +2831,7 @@ const ParsedAction = (props) => {
                 >
                   <a
                     href="https://shuffler.io/docs/workflows#nodes"
-                    rel="norefferer"
+                    rel="norefferer noreferrer"
                     target="_blank"
                     style={{ textDecoration: "none", color: "#f85a3e" }}
                   >
@@ -2896,7 +2896,7 @@ const ParsedAction = (props) => {
                     title={"Find related tworkflows"}
                     placement="top"
                   >
-					<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
+					<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank" rel="noreferrer">
 						<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
 					</a>
                   </Tooltip>

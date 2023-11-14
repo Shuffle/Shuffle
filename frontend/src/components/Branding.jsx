@@ -119,7 +119,7 @@ const Branding = (props) => {
 				<div>
 					<span>
 						<Typography variant="body1" color="textSecondary">
-							By changing publishing settings, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your organization's non-sensitive data will be added as a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/creators">creator account</a>. None of your existing workflows, apps, or other stored data will be published. Any admin in your organization can manage the creator configuration. Becoming a creator organization is reversible.<div/>Support: <a href="mailto:support@shuffler.io"target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>support@shuffler.io</a>
+							By changing publishing settings, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your organization's non-sensitive data will be added as a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/creators" rel="noreferrer">creator account</a>. None of your existing workflows, apps, or other stored data will be published. Any admin in your organization can manage the creator configuration. Becoming a creator organization is reversible.<div/>Support: <a href="mailto:support@shuffler.io"target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} rel="noreferrer">support@shuffler.io</a>
 						</Typography>
 						{selectedOrganization.creator_id == "" ? 
 							<Typography variant="h6" color="textSecondary" style={{ marginTop: 20, marginBottom: 10, color: "grey", }}>
@@ -128,7 +128,7 @@ const Branding = (props) => {
 						:
 							<Typography variant="h6" color="textSecondary" style={{ marginTop: 20, marginBottom: 10, color: "grey", }}>
 								 
-								<a href={`/creators/${selectedOrganization.creator_id}`} target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Modify your creator organization</a>
+								<a href={`/creators/${selectedOrganization.creator_id}`} target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} rel="noreferrer">Modify your creator organization</a>
 							</Typography>
 						}
 

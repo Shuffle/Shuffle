@@ -2486,7 +2486,7 @@ const AngularWorkflow = (defaultprops) => {
 		var decoder = new TextDecoder();
 		
 		const appendChunks = (result) => {
-			var chunk = decoder.decode(result.value || new Uint8Array, {stream: !result.done});
+			var chunk = decoder.decode(result.value || new Uint8Array(), {stream: !result.done});
 			console.log("Got chunk: ", chunk)
 
 			if (chunk === undefined || chunk === null) {

@@ -2586,7 +2586,7 @@ const AppCreator = (defaultprops) => {
           <a
             target="_blank"
             href="https://swagger.io/docs/specification/authentication/bearer-authentication/"
-            style={{ textDecoriation: "none", color: "#f85a3e" }}
+            style={{ textDecoriation: "none", color: "#f85a3e" }} rel="noreferrer"
           >
             Bearer auth
           </a>
@@ -2604,7 +2604,7 @@ const AppCreator = (defaultprops) => {
           <a
             target="_blank"
             href="https://swagger.io/docs/specification/authentication/basic-authentication/"
-            style={{ textDecoriation: "none", color: "#f85a3e" }}
+            style={{ textDecoriation: "none", color: "#f85a3e" }} rel="noreferrer"
           >
             Basic authentication
           </a>
@@ -3657,7 +3657,7 @@ const AppCreator = (defaultprops) => {
     		      <a
     		        target="_blank"
     		        href="https://shuffler.io/docs/app_creation#actions"
-    		        style={{ textDecoration: "none", color: "#f85a3e" }}
+    		        style={{ textDecoration: "none", color: "#f85a3e" }} rel="noreferrer"
     		      >
     		        Learn more about actions
     		      </a>
@@ -4899,7 +4899,7 @@ const AppCreator = (defaultprops) => {
           <DialogContent>
             <a
               target="_blank"
-              rel="norefferer"
+              rel="norefferer noreferrer"
               href="https://shuffler.io/docs/app_creation#authentication"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
@@ -5198,7 +5198,7 @@ const AppCreator = (defaultprops) => {
       <a
         target="_blank"
         href="https://shuffler.io/docs/app_creation#testing"
-        style={{ textDecoration: "none", color: "#f85a3e" }}
+        style={{ textDecoration: "none", color: "#f85a3e" }} rel="noreferrer"
       >
         &nbsp;TBD: Click here to learn more about testing
       </a>
@@ -5667,7 +5667,7 @@ const AppCreator = (defaultprops) => {
         <a
           target="_blank"
           href="https://shuffler.io/docs/app_creation#app-creator-instructions"
-          style={{ textDecoration: "none", color: "#f85a3e" }}
+          style={{ textDecoration: "none", color: "#f85a3e" }} rel="noreferrer"
         >
           Click here to learn more about app creation
         </a>
@@ -5870,7 +5870,7 @@ const AppCreator = (defaultprops) => {
 						<a
 							target="_blank"
 							href="https://shuffler.io/docs/app_creation#authentication"
-							style={{ textDecoration: "none", color: "#f85a3e" }}
+							style={{ textDecoration: "none", color: "#f85a3e" }} rel="noreferrer"
 						>
 							Learn more about app authentication
 						</a>

@@ -43,6 +43,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import Drift from "react-driftjs";
+import FormPage from "./components/Feedback/form.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
@@ -521,6 +522,10 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+
+
+			{/* generate link router */}
+			<Route path="/feedback/:uniqueId" element={FormPage}  />
 			<Route
 				exact
 				path="/welcome"

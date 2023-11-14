@@ -225,7 +225,7 @@ const AppStats = (defaultprops) => {
 			All Stat widgets are monthly and gathered from <a 
 				href={`${globalUrl}/api/v1/orgs/${selectedOrganization.id}/stats`} 
 				target="_blank"
-				style={{ textDecoration: "none", color: "#f85a3e",}}
+				style={{ textDecoration: "none", color: "#f85a3e",}} rel="noreferrer"
 			>Your Organization Statistics. </a>
 			This is a feature to help give you more insight into Shuffle, and will be populating over time.
 		</Typography>

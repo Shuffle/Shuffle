@@ -736,7 +736,7 @@ const Settings = (props) => {
 			{isCloud ?
 					<span>
 						<Typography variant="body1" color="textSecondary">
-							By <a href="/creators" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>joining the Creator Incentive Program</a> and connecting your Github account, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/creators">creator account</a>. This enables you to earn a passive income from Shuffle. This IS reversible. Support: support@shuffler.io
+							By <a href="/creators" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>joining the Creator Incentive Program</a> and connecting your Github account, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/creators" rel="noreferrer">creator account</a>. This enables you to earn a passive income from Shuffle. This IS reversible. Support: support@shuffler.io
 						</Typography>
 						<Button
 							style={{ height: 40, marginTop: 10 }}

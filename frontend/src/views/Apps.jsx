@@ -2082,7 +2082,7 @@ const Apps = (props) => {
                       "https://shuffler.io/docs/troubleshooting#load_all_apps_locally"
                     }
                     style={{ textDecoration: "none", color: "#f85a3e" }}
-                    target="_blank"
+                    target="_blank" rel="noreferrer"
                   >
                     troubleshooting guide for loading apps!
                   </a>

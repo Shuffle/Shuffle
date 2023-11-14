@@ -46,6 +46,7 @@ import {
 //import { useAlert 
 
 import SearchField from '../components/Searchfield.jsx'
+import Feedback from './Feedback/Feedback.jsx';
 const hoverColor = "#f85a3e"
 const hoverOutColor = "#e8eaf6"
 
@@ -701,6 +702,8 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 									</div> 
 								</Link>
       	 			</ListItem>
+
+				
       	 			<ListItem style={listItemStyle}>
 								<Link to="/apps" style={hrefStyle}>
 										<div onMouseOver={handleHelpHover} onMouseOut={handleHelpHoverOut} style={{color: HelpHoverColor, cursor: "pointer", display: "flex",}}>
@@ -728,6 +731,13 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 										</div>
 								</Link>
       	 			</ListItem>
+	{/* generate link */}
+					<ListItem style={listItemStyle}>
+					<Feedback/>
+					
+      	 			</ListItem>
+					
+
 							{/*
       	 			<ListItem style={{textAlign: "center"}}>
 								<Link to="/pricing" style={hrefStyle}>
@@ -898,7 +908,12 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 							</span>
 							}
 
+
+
 						{/* Show on cloud, if not suborg and if not customer/pov/internal */}
+
+
+						
 						{isCloud && (userdata.org_status === undefined || userdata.org_status === null || userdata.org_status.length === 0) ? 
 							<ListItem style={{textAlign: "center", marginLeft: 0, marginRight: 7, marginTop: 3, }}>
 								<Link to ="/pricing?tab=cloud&highlight=true" style={hrefStyle}>
