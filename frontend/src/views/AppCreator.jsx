@@ -929,9 +929,9 @@ const AppCreator = (defaultprops) => {
             }
           }
 					
-					if (path === "/files/{file_id}/content") {
-						//console.log("FILE DOWNLOAD Method: ", path, method, methodvalue)
-					}
+			if (path === "/files/{file_id}/content") {
+				//console.log("FILE DOWNLOAD Method: ", path, method, methodvalue)
+			}
 
 
           // Typescript? I think not ;)
@@ -2137,7 +2137,7 @@ const AppCreator = (defaultprops) => {
           }
 
           if (queryitem.name.toLowerCase() == "file_id") {
-						item.queries[querykey].name = "fileid"
+			item.queries[querykey].name = "fileid"
             continue;
             //skipped = true
             //break
@@ -2525,8 +2525,8 @@ const AppCreator = (defaultprops) => {
       for (let authkey in extraAuth) {
         const curauth = extraAuth[authkey];
 
-        if (curauth.name.toLowerCase() == "url") {
-          toast("Can't add extra auth with Name URL");
+        if (curauth.name.length === 0 || curauth.name.toLowerCase() == "url") {
+          toast("Can't add extra auth with empty name or Name URL");
           setAppBuilding(false);
           return;
         }

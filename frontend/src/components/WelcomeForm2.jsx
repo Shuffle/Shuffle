@@ -4,7 +4,7 @@ import Checkbox from "@mui/material/Checkbox";
 
 import AliceCarousel from "react-alice-carousel";
 import "react-alice-carousel/lib/alice-carousel.css";
-
+import {isMobile} from "react-device-detect";
 import SearchIcon from "@mui/icons-material/Search";
 import EmailIcon from "@mui/icons-material/Email";
 import NewReleasesIcon from "@mui/icons-material/NewReleases";
@@ -79,6 +79,7 @@ const WelcomeForm = (props) => {
     selectionOpen,
     setSelectionOpen,
     checkLogin,
+    isLoggedIn,
   } = props;
   const [moreButton, setMoreButton] = useState(false);
   const ref = useRef()
@@ -449,19 +450,6 @@ const WelcomeForm = (props) => {
     }
   };
 
-  const handleSkip = () => {
-    setclickdiff(240);
-    if (!isStepOptional(activeStep)) {
-      throw new Error("You can't skip a step that isn't optional.");
-    }
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
-    setSkipped((prevSkipped) => {
-      const newSkipped = new Set(prevSkipped.values());
-      newSkipped.add(activeStep);
-      return newSkipped;
-    });
-  };
-
   const handleReset = () => {
     setActiveStep(0);
   };
@@ -652,6 +640,7 @@ const WelcomeForm = (props) => {
         );
       case 1:
         return (
+		  appFramework === undefined || appFramework === null ? null :
           <AppSelection
             globalUrl={globalUrl}
             userdata={userdata}
@@ -667,13 +656,14 @@ const WelcomeForm = (props) => {
       case 2:
         return (
           <Collapse in={true}>
-            <div style={{ marginTop: 0, maxWidth: 700, minWidth: 700, margin: "auto", minHeight: sizing, maxHeight: sizing, }}>
+            <div style={{ marginTop: 0, maxWidth: isMobile ? 300 : 700, minWidth: isMobile ? 300 : 700, textAlign: isMobile ? "center" : null, margin: "auto", minHeight: sizing, maxHeight: sizing, }}>
 
               <div style={{ marginTop: 0, }}>
                 <div className="thumbs" style={{ display: "flex" }}>
-                  <div style={{ minWidth: 554, maxWidth: 554, borderRadius: theme.palette.borderRadius, }}>
+                  <div style={{ minWidth: isMobile ? 300 :  554, maxWidth: isMobile ? 300 : 554, borderRadius: theme.palette.borderRadius, }}>
                     <ExploreWorkflow
                       globalUrl={globalUrl}
+					  isLoggedIn={isLoggedIn}
                       userdata={userdata}
 					  appFramework={appFramework}	
                     />
@@ -692,13 +682,6 @@ const WelcomeForm = (props) => {
   const extraHeight = isCloud ? -7 : 0;
   return (
     <div style={{}}>
-      {/*selectionOpen ?
-							<WorkflowSearch
-									defaultSearch={defaultSearch}
-									newSelectedApp={newSelectedApp}
-									setNewSelectedApp={setNewSelectedApp}
-							/>
-            : null*/}
       <div>
         {activeStep === steps.length ? (
           <div paddingTop="20px">

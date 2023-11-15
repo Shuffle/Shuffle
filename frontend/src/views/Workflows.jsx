@@ -530,6 +530,7 @@ export const validateJson = (showResult) => {
 
 const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata, checkLogin } = props;
+
   document.title = "Shuffle - Workflows";
 	let navigate = useNavigate();
 
@@ -3419,11 +3420,11 @@ const Workflows = (props) => {
 													>
 														<img
 															style={{
-																height: imgSize+4,
-																width: imgSize+4,
+																height: isCloud ? imgSize : imgSize+4,
+																width: isCloud ? imgSize : imgSize+4,
 																position: "absolute",
-																top: -2,
-																left: -2,
+																top: isCloud ? -1 : -2,
+																left: isCloud ? -1 : -2,
 																cursor: "pointer",
 																zIndex: 99,
 																border: "2px solid rgba(255,255,255,0.7)",
@@ -3488,6 +3489,7 @@ const Workflows = (props) => {
 					{foundPriority != null && workflows.length < 6 ? 
 						<Priority
 							globalUrl={globalUrl}
+							userdata={userdata}
 							priority={foundPriority}
 							checkLogin={checkLogin}
 							appFramework={appFramework}

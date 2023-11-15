@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import theme from '../theme.jsx';
 import ReactGA from 'react-ga4';
 import { useNavigate, Link } from 'react-router-dom';
-
+import {isMobile} from "react-device-detect";
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon, Close as CloseIcon, Folder as FolderIcon, LibraryBooks as LibraryBooksIcon } from '@mui/icons-material';
 import aa from 'search-insights'
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -50,6 +50,7 @@ const AppSelection = props => {
     const [newSelectedApp, setNewSelectedApp] = React.useState({})
     const [finishedApps, setFinishedApps] = React.useState([])
     const [appButtons, setAppButtons] = useState([])
+    const [lastPosted, setLastPosted] = useState([])
     const [apps, setApps] = useState([])
     const [appName, setAppName] = React.useState();
     const [moreButton, setMoreButton] = useState(false);
@@ -59,6 +60,117 @@ const AppSelection = props => {
     let navigate = useNavigate();
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
+	useEffect(() => {
+        if (newSelectedApp === undefined || newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined || newSelectedApp.objectID.length === 0) {
+            return
+        }
+
+        const submitNewApp = {
+            description: newSelectedApp.description,
+            id: newSelectedApp.objectID,
+            large_image: newSelectedApp.image_url,
+            name: newSelectedApp.name,
+            type: discoveryData
+        }
+
+        if (discoveryData === "CASES") {
+            appFramework.cases = submitNewApp
+        }
+        else if (discoveryData === "SIEM") {
+            appFramework.siem = submitNewApp
+        }
+        else if (discoveryData === "ERADICATION") {
+            appFramework.edr = submitNewApp
+        }
+        else if (discoveryData === "INTEL") {
+            appFramework.intel = submitNewApp
+        }
+        else if (discoveryData === "EMAIL") {
+            appFramework.communication = submitNewApp
+        }
+        else if (discoveryData === "NETWORK") {
+            appFramework.network = submitNewApp
+        }
+        else if (discoveryData === "ASSETS") {
+            appFramework.assets = submitNewApp
+        }
+        else if (discoveryData === "IAM") {
+            appFramework.iam = submitNewApp
+        }
+        setFrameworkItem(submitNewApp);
+        setSelectionOpen(false);
+        console.log("Selected app changed (effect)");
+    }, [newSelectedApp]);
+
+    useEffect(() => {
+        var tempApps = []
+        if (tempApps.length === 0) {
+            // Object.entries(appFramework).forEach(([key, value]) => {
+            //     value.type = key;
+            //     tempApps.push(value);
+            // });
+            
+            // // Define the custom sorting order
+            // const customSortingOrder = ["CASES", "SIEM", "ENDPOINT", "INTEL", "EMAIL"];
+
+            const lastApps = {}
+            let endTypes = ["network", "assets", "iam"]
+
+			if (appFramework === undefined || appFramework === null || Object.keys(appFramework).length === 0) {
+				//window.location.href = "/welcome"
+				return 
+			}
+
+
+            Object.entries(appFramework).forEach(([key, value]) => {
+                if (key.toLowerCase() === "other" || key.toLowerCase() === "communication") {
+                    return
+                }
+
+                value.type = key;
+
+                if (endTypes.includes(value.type.toLowerCase())) {                    
+                    lastApps[value.type] = value
+                    return
+                }
+
+                if (lastPosted.type === value.type) {
+                    value = lastPosted
+                }
+                
+                tempApps.push(JSON.parse(JSON.stringify(value)));
+            });
+
+            tempApps.sort((a, b) => {
+                if (a.type.length > b.type.length) {
+                    return -1;
+                } else if (a.type.length < b.type.length) {
+                    return 1;
+                }
+            });
+
+            let lastType = lastPosted.type === undefined ? "" : lastPosted.type.toLowerCase()
+
+            if (endTypes.includes(lastType)) {
+                lastApps[lastPosted.type] = lastPosted
+            }
+
+            if (moreButton) {
+                tempApps.push(JSON.parse(JSON.stringify(lastApps["network"])))
+				tempApps.push(JSON.parse(JSON.stringify(lastApps["assets"])))
+				tempApps.push(JSON.parse(JSON.stringify(lastApps["iam"])))
+            }
+
+            setAppButtons(tempApps)
+            console.log("Updated appButtons: ", appButtons)
+            GetApps()
+        }
+    }, [lastPosted, moreButton])
+
+	if (appFramework === undefined || appFramework === null || Object.keys(appFramework).length === 0) {
+		//window.location.href = "/welcome"
+		return null
+	}
 
     const setFrameworkItem = (data) => {
         console.log("Setting framework item: ", data, isCloud)
@@ -75,7 +187,7 @@ const AppSelection = props => {
             body: JSON.stringify(data),
             credentials: "include",
         })
-            .then((response) => {
+            .then(async (response) => {
                 if (response.status !== 200) {
                     console.log("Status not 200 for framework!");
                 }
@@ -84,7 +196,13 @@ const AppSelection = props => {
                     checkLogin()
                 }
 
-                return response.json();
+                let resp = response.json();
+                let respAwaited = await resp;
+
+                if (respAwaited.success === true) {
+                    setLastPosted(data)
+                }
+                return resp;
             })
             .then((responseJson) => {
                 if (responseJson.success === false) {
@@ -150,10 +268,6 @@ const AppSelection = props => {
     }
 
     const onNodeSelect = (label) => {
-        // if (setDiscoveryWrapper !== undefined) {
-        //     setDiscoveryWrapper({ id: label });
-        // }
-
         if (isCloud) {
             ReactGA.event({
                 category: "welcome",
@@ -161,130 +275,49 @@ const AppSelection = props => {
                 label: "",
             });
         }
+
+		console.log("NODESELECT: ", label)
+
         setDiscoveryData(label)
         setSelectionOpen(true)
-        setNewSelectedApp({})
         setDefaultSearch(label.charAt(0).toUpperCase() + (label.substring(1)).toLowerCase())
+
+        setNewSelectedApp(undefined)
     };
 
-    useEffect(() => {
-        var tempApps = []
-        if (tempApps.length === 0) {
-            const tempApps =
-                [{
-                    "description": newSelectedApp.description,
-                    "id": newSelectedApp.objectID,
-                    "large_image": newSelectedApp.image_url,
-                    "name": newSelectedApp.name,
-                    "type": discoveryData
-                },
-                    //{
-                    // 	// description: newSelectedApp.siem.description,
-                    //     id: newSelectedApp.siem.objectID,
-                    //     large_image: newSelectedApp.siem.image_url,
-                    //     name: newSelectedApp.siem.name,
-                    //     type: discoveryData.siem
-                    // },{
-                    // 	// description: newSelectedApp.edr.description,
-                    //     id: newSelectedApp.edr.objectID,
-                    //     large_image: newSelectedApp.edr.image_url,
-                    //     name: newSelectedApp.edr.name,
-                    //     type: discoveryData.edr
-                    // }
-                ]
-            setAppButtons(tempApps)
-            GetApps()
-        }
-    }, [])
+    
 
-    useEffect(() => {
-        if (newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined || newSelectedApp.objectID.length === 0) {
-            return
-        }
-        const submitNewApp = {
-            description: newSelectedApp.description,
-            id: newSelectedApp.objectID,
-            large_image: newSelectedApp.image_url,
-            name: newSelectedApp.name,
-            type: discoveryData
-        }
-        if (discoveryData === "CASES") {
-            appFramework.cases = submitNewApp
-        }
-        else if (discoveryData === "SIEM") {
-            appFramework.siem = submitNewApp
-        }
-        else if (discoveryData === "ERADICATION") {
-            appFramework.edr = submitNewApp
-        }
-        else if (discoveryData === "INTEL") {
-            appFramework.intel = submitNewApp
-        }
-        else if (discoveryData === "EMAIL") {
-            appFramework.communication = submitNewApp
-        }
-        else if (discoveryData === "NETWORK") {
-            appFramework.network = submitNewApp
-        }
-        else if (discoveryData === "ASSETS") {
-            appFramework.assets = submitNewApp
-        }
-        else if (discoveryData === "IAM") {
-            appFramework.iam = submitNewApp
-        }
-        setFrameworkItem(submitNewApp);
-        setSelectionOpen(false);
-        console.log("Selected app changed (effect)");
-    }, [newSelectedApp]);
-
-    const sizing = moreButton ? 510 : 480;
+    // const sizing = moreButton ? 510 : 480;
     const buttonWidth = 450;
     const buttonMargin = 10;
     const bottomButtonStyle = {
         borderRadius: 200,
         marginTop: moreButton ? 44 : "",
         height: 51,
-        width: 510,
+        width: isMobile ? 250 : 500,
         fontSize: 16,
-        // background: "linear-gradient(89.83deg, #FF8444 0.13%, #F2643B 99.84%)",
         background: "linear-gradient(90deg, #F86744 0%, #F34475 100%)",
         padding: "16px 24px",
-        // top: 20,
-        // margin: "auto",
         textTransform: 'capitalize',
         itemAlign: "center",
-        // marginTop: 25
-        // marginLeft: "65px",
     };
-    const buttonStyle = {
-        flex: 1,
-        width: 224,
-        padding: 25,
-        margin: buttonMargin,
-        color: "var(--White-text, #F1F1F1)",
-        fontWeight: 400,
-        fontSize: 17,
-        background: "rgba(33, 33, 33, 1)",
-        textTransform: 'capitalize',
-        border: "1px solid rgba(33, 33, 33, 1)",
-        borderRadius: 8,
-        marginRight: 8,
-    };
-    // console.log("appFramework",appFramework.cases.name)
+
     return (
         <Collapse in={true}>
             <div
                 style={{
-                    minHeight: sizing,
-                    maxHeight: sizing,
+                    // minHeight: sizing,
+                    // maxHeight: sizing,
                     marginTop: 10,
-                    width: 500,
+                    width: isMobile ? 380 : 500,
+                    marginBottom: 25,
+                    textAlign: isMobile ? "center" : null,
                 }}
             >
                 {selectionOpen ? (
                     <div
                         style={{
-                            width: 319,
+                            width: isMobile ? 225 : 319,
                             height: 395,
                             flexShrink: 0,
                             marginLeft: 70,
@@ -311,7 +344,7 @@ const AppSelection = props => {
                                         style={{
                                             flex: 1,
                                             // width: 224,
-                                            marginLeft: discoveryData === ('ERADICATION') ? 120 : 177,
+                                            marginLeft: discoveryData === ("communication") ? 112 : 200,
                                             width: "100%",
                                             marginBottom: 23,
                                             fontSize: 16,
@@ -374,7 +407,7 @@ const AppSelection = props => {
                     variant="h4"
                     style={{
                         marginLeft: 8,
-                        marginTop: 40,
+                        marginTop: isMobile ? null : 40,
                         marginRight: 30,
                         marginBottom: 0,
                     }}
@@ -394,31 +427,60 @@ const AppSelection = props => {
                 >
                     Select the apps you work with and we will connect them for you.
                 </Typography>
-                {appButtons.map((appData, index) => {
+                <Grid rowSpacing={1} columnSpacing={2} container >
+					{appButtons.map((appData, index) => {
+						// This is here due to a memory issue with setting apps properly
+						if (appData.id === "remove") {
+							console.log("Removed as appdata is overridden: ", appData)
 
-                    const appName = appData.name
-                    const AppImage = appData.large_image
-                    const appType = appData.type
+							appData = {
+								"count": 0,
+								"description": "",
+								"id": "",
+								"large_image": "",
+								"name": "",
+								"type": appData.type,
+							}
+						}
 
-                    return (
+						const appName = appData.name
+						const AppImage = appData.large_image
+						const appType = appData.type
 
-                        <AppSearchButtons
-                            appFramework={appFramework}
-                            appName={appName}
-                            appType = {appType}
-                            AppImage={AppImage}
-                            defaultSearch={defaultSearch}
-                            finishedApps={finishedApps}
-                            onNodeSelect={onNodeSelect}
-                            discoveryData={discoveryData}
-                            setDiscoveryData={setDiscoveryData}
-                            setDefaultSearch={setDefaultSearch}
-                            apps={apps}
-                        />
-                    )
-                })}
+						return (
+							<AppSearchButtons
+								appFramework={appFramework}
+								index={index}
+								totalApps={appButtons.length}
+								appName={appName}
+								appType={appType}
+								AppImage={AppImage}
+								defaultSearch={defaultSearch}
+								finishedApps={finishedApps}
+								onNodeSelect={onNodeSelect}
+								discoveryData={discoveryData}
+								setDiscoveryData={setDiscoveryData}
+								setDefaultSearch={setDefaultSearch}
+								apps={apps}
+								setMoreButton={setMoreButton}
+								moreButton={moreButton}
+							/>
+						)
+					})}
+                </Grid>
             </div>
-            <div style={{ flexDirection: "row", }}>
+            {!moreButton ? (
+            <div style={{width: "100%", marginLeft: isMobile ? 100 : 200, marginBottom: 20, textAlign: isMobile ? "center" : null}}>
+                <Link style={{color:"#FF8444"}} onClick={()=>{
+                    setMoreButton(true)
+
+					setTimeout(() => {
+                    	navigate("/welcome?tab=2")
+					}, 250)
+                }}
+                >See More Apps</Link>
+            </div>): ""}
+            <div style={{ flexDirection: "row", width: isMobile ? 380 : null, textAlign: isMobile ? "center" : null}}>
                 <Button variant="contained" type="submit" fullWidth style={bottomButtonStyle} onClick={() => {
                     navigate("/welcome?tab=3")
                     setActiveStep(2)

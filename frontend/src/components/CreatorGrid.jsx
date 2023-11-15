@@ -39,7 +39,7 @@ import {
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const CreatorGrid = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs }  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, isHeader }  = props
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 4 : parsedXs
 	//const [apps, setApps] = React.useState([]);
@@ -165,7 +165,7 @@ const CreatorGrid = props => {
 
 					return (
 						<Zoom key={index} in={true} style={{}}>
-							<Grid item xs={xs} style={{ padding: "12px 10px 12px 10px", }}>
+							<Grid item xs={xs} style={{ padding: isHeader ? null : "12px 10px 12px 10px", }}>
 								<Card style={{border: "1px solid rgba(255,255,255,0.3)", minHeight: 177, maxHeight: 177,}}>
 									<a href={creatorUrl} rel="noopener noreferrer" target={isCloud ? "" : "_blank"} style={{textDecoration: "none", color: "inherit",}}>
 						  			<CardActionArea style={{padding: "5px 10px 5px 10px", minHeight: 177, maxHeight: 177,}}>

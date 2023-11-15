@@ -18,9 +18,47 @@ const Priorities = (props) => {
   const { globalUrl, userdata, serverside, billingInfo, stripeKey, checkLogin, setAdminTab, setCurTab, } = props;
   const [showDismissed, setShowDismissed] = React.useState(false);
   const [showRead, setShowRead] = React.useState(false);
+  const [appFramework, setAppFramework] = React.useState({});
+
+	useEffect(() => {
+		getFramework()
+	}, [])
 
 	if (userdata === undefined || userdata === null) {
 		return 
+	}
+
+	const getFramework = () => {
+		fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for framework!");
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				setAppFramework({})
+				if (responseJson.reason !== undefined) {
+					//toast("Failed loading: " + responseJson.reason)
+				} else {
+					//toast("Failed to load framework for your org.")
+				}
+			} else {
+				setAppFramework(responseJson)
+			}
+		})
+		.catch((error) => {
+			console.log("err in framework: ", error.toString());
+		})
 	}
 
 	return (
@@ -62,6 +100,7 @@ const Priorities = (props) => {
 							checkLogin={checkLogin}
 							setAdminTab={setAdminTab}
 							setCurTab={setCurTab}
+  							appFramework={appFramework}
 						/>
 					)
 				})

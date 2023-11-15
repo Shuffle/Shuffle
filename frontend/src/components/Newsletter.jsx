@@ -16,7 +16,7 @@ const Newsletter = (props) => {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const [buttonActive, setButtonActive] = useState(true);
-	const buttonStyle = {minWidth: 300, borderRadius: 30, height: 60, width: 140, margin: isMobile ? "15px auto 15px auto" : "20px 20px 20px 10px", fontSize: 18,}
+	const buttonStyle = {width: 176, marginTop:16, height: 45, paddingLeft: 24, paddingRight: 24, paddingTop: 16, paddingBottom: 16, background: 'linear-gradient(90deg, #FF8444 0%, #FB47A0 100%)', borderRadius: 200, justifyContent: 'center', alignItems: 'center', gap: 10, display: 'inline-flex', fontSize: 16, fontStyle: "normal", fontWeight: 600}
 
 	const newsletterSignup = (inemail) => {
 		if (inemail.length < 4) {
@@ -52,20 +52,20 @@ const Newsletter = (props) => {
 	}
 
 	return (
-		<div style={{margin: "auto", color: "white", textAlign: "center",}}>
-			<Typography variant="h4" style={{marginTop: 35,}}>
-				Security Automation	Newsletter
+		<div style={{margin: "auto", height:isMobile? 375 :286, color: "white", textAlign: isMobile? "cenetr":"Left", marginTop:24, marginLeft: 24, marginRight: 24}}>
+			<Typography variant="h4" style={{ fontWeight:700, textTransform: 'capitalize', fontSize:32 }}>
+				Security authentication<br/> newsletter
 			</Typography>
-			<Typography variant="h6" style={{color: "#7d7f82", marginTop: 20, }}>
-				Defensive security is 99% noise. Join us to sift through it.
+			<Typography variant="h6" style={{color: "#7d7f82", marginTop: 8, fontSize: 16,}}>
+			Defensive security is 99% noise, join us to sift through it!<br/> Enter your email below:
 			</Typography>
-			<div style={{}}>
+			<div style={{ justifyContent:"center",}}>
 				<TextField
-					style={{minWidth: isMobile ? "90%" : 450, backgroundColor: theme.palette.inputColor, marginTop: 20, borderRadius: 10, }}
+					style={{minWidth: isMobile ? "90%" : 450, height: 45, backgroundColor: theme.palette.inputColor, marginTop: 8,  borderRadius: 10, }}
 					InputProps={{
 						style:{
 							borderRadius: 10,
-							height: 60, 
+							height: 45, 
 							color: "white",
 						},
 					}}
@@ -79,7 +79,6 @@ const Newsletter = (props) => {
 					margin="normal"
 					variant="outlined"
 				/>
-			</div>
 			<Button
 				variant="contained"
 				color="primary"
@@ -96,6 +95,8 @@ const Newsletter = (props) => {
 			>
 				Sign up	
 			</Button>
+
+			</div>
 			<div/>
 			{msg}
 		</div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import WelcomeForm2 from "../components/WelcomeForm2.jsx";
 import AppFramework from "../components/AppFramework.jsx";
-
+import {isMobile} from "react-device-detect";
 import {
 	ArrorForwardIos as ArrowForwardIosIcon,
 } from '@mui/icons-material';
@@ -47,10 +47,7 @@ const Welcome = (props) => {
 		}
 	}, [activeStep])
 
-  	const isCloud =
-			window.location.host === "localhost:3002" ||
-			window.location.host === "shuffler.io";
-
+  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 		const [steps, setSteps] = useState([
 			"Help us get to know you", 
 			"Find your Apps", 
@@ -272,22 +269,22 @@ const Welcome = (props) => {
 			getApps()
 			getAvailableWorkflows() 
 
-			if (
-				window.location.search !== undefined &&
-				window.location.search !== null
-			) {
+			if (window.location.search !== undefined && window.location.search !== null) {
 				const urlSearchParams = new URLSearchParams(window.location.search);
 				const params = Object.fromEntries(urlSearchParams.entries());
 				const foundTab = params["tab"];
+
+				// Make foundtab into a number
+				console.log("foundTab: ", foundTab, activeStep+1)
 				if (foundTab !== null && foundTab !== undefined && !isNaN(foundTab) && foundTab >= 1 && foundTab <= 3) {
+					console.log("SETTING TAB TO: ", foundTab)
+
 					setShowWelcome(true)
 					if (foundTab === 3 || foundTab === "3") {
 						handleSetSearch(usecaseButtons[0].name, usecaseButtons[0].usecase)
 					}
 
 					setActiveStep(foundTab-1)
-				} else { 
-					navigate(`/welcome?tab=2`)
 				}
 			}
 		}, [])
@@ -300,8 +297,8 @@ const Welcome = (props) => {
 			flex: 1, 
 			padding: 0, 
 			textAlign: "center",
-			maxWidth: 275,
-			minWidth: 275,
+			maxWidth: isMobile ? null : 275,
+			minWidth: isMobile ? null : 275, 
 			backgroundColor: theme.palette.surfaceColor,
 			color: "white",
 			borderRadius: theme.palette.borderRadius,
@@ -326,7 +323,7 @@ const Welcome = (props) => {
 		const buttonStyle = { 
 			borderRadius: 200, 
 			height: 51, 
-			width: 464, 
+			width: isMobile ? 300 : 464, 
 			fontSize: 16, 
 			// background: "linear-gradient(89.83deg, #FF8444 0.13%, #F2643B 99.84%)", 
 			background: "linear-gradient(90deg, #F86744 0%, #F34475 100%)",
@@ -334,7 +331,7 @@ const Welcome = (props) => {
 			top: 105, 
 			margin: "auto",
 			itemAlign: "center",
-			marginLeft: "65px",
+			marginLeft: isMobile? null : "65px",
 		}
 
 		const defaultImage = "/images/experienced.png"
@@ -382,7 +379,7 @@ const Welcome = (props) => {
 										})}
 								</Stepper>
 							</div> */}
-        			<Grid container spacing={1} style={{ padding: 0, maxWidth: 500, minWidth: 500, marginRight : "auto" , marginLeft: "auto" }}>
+        			<Grid container spacing={1} style={{ padding: isMobile ? 10 : 0, maxWidth: isMobile ? null : 500, minWidth: isMobile ? null : 500, marginRight : "auto" , marginLeft: "auto" }}>
           		  <Grid item xs={window.location.href.includes("tab=2") ? 6 : 12}>
 									<div>
 											{/*
@@ -394,6 +391,7 @@ const Welcome = (props) => {
 											/>
 											*/}
 											<WelcomeForm2
+												isLoggedIn={isLoggedIn}
 												checkLogin={checkLogin}
 												userdata={userdata}
 												globalUrl={globalUrl}
@@ -417,49 +415,11 @@ const Welcome = (props) => {
 											/>
 									</div>
           		  </Grid>
-								{/* {frameworkData === undefined || window.location.href.includes("tab=1") || window.location.href.includes("tab=3") ? null :
-									<div style={{marginTop: 25, }}>
-										<Typography variant="h6" style={{textAlign: "center", marginBottom: 25, }}>
-											App Framework
-										</Typography>
-										<Fade>
-												<AppFramework
-													inputUsecase={inputUsecase}
-													frameworkData={frameworkData}
-													setFrameworkData={setFrameworkData}
-													selectedOption={"Draw"}
-													showOptions={false}
-													isLoaded={true}
-													isLoggedIn={true}
-													globalUrl={globalUrl}
-													size={0.78}
-													color={theme.palette.backgroundColor}
-													discoveryWrapper={discoveryWrapper}
-													setDiscoveryWrapper={setDiscoveryWrapper}
-													apps={apps}
-													inputUsecases={usecases}
-													setInputUsecases={setUsecases}
-												/>
-										</Fade>
-									</div>
-								} */}
 							</Grid>
 						</div>
 						: 
 						<Fade in={true}>
-							<div style={{maxWidth: 590, margin: "auto", marginTop: 50, }}>
-								
-							{/* <div style={{display:"flex"}}>
-								<ArrowBackIosIcon style={{color: "#9E9E9E", width: "16px",}} onClick={() => {
-										navigate("/workflows")
-									}}/>
-								<Typography variant="h8" style={{color: "#9E9E9E",textAlign: "center", marginBottom: 20, paddingRight: "366px"}} onClick={() => {
-										navigate("/workflows")
-									}}>
-								Back
-								</Typography>
-							</div> */}
-								
+							<div style={{maxWidth: isMobile ? null : 590, margin: "auto", marginTop: 50, }}>
 								<Typography variant="h4" style={{color: "#F1F1F1", marginTop: 50, fontSize: 32}}>
 									Help us get to know you
 								</Typography>
@@ -469,7 +429,7 @@ const Welcome = (props) => {
 								{/* <Typography variant="body1" style={{color: "#9E9E9E", marginTop: 12 ,marginBottom: 50, fontSize: 16}}>
 									We will use this information to personalize your automation
 								</Typography> */}
-								<div style={{display: "flex", marginTop: 70, width: 700, margin: "auto",}}>
+								<div style={{display: isMobile ? null : "flex", marginTop: 70, width: isMobile ? 280 : 700, margin: "auto",}}>
 									<div style={{border: "2px solid #806BFF", borderRadius: theme.palette.borderRadius, }}>
 										<Card style={paperObject} onClick={() => {
 											if (isCloud) {
@@ -482,6 +442,7 @@ const Welcome = (props) => {
 												//setActiveStep(1)
 											}
 
+											navigate("/welcome?tab=2")
 											setShowWelcome(true)
 										}}>
 											<CardActionArea style={actionObject}>
@@ -490,12 +451,13 @@ const Welcome = (props) => {
 													New to Shuffle 
 												</Typography>
 												<Typography variant="body1" style={{marginTop: 10, color: "rgba(255,255,255,0.8)"}}>
-														Let us guide you for an easier experience
+													Let us guide you for an easier experience
 												</Typography>
 											</CardActionArea>
 										</Card>
 									</div>
-									<div style={{marginLeft: 25, marginRight: 25, }}>
+									<div style={{marginLeft: 25, marginRight: 25, 
+			marginTop: isMobile ? 30 : null, }}>
 										{/* <Typography style={{marginTop: 200, }}>
 											OR
 										</Typography> */}
@@ -512,7 +474,7 @@ const Welcome = (props) => {
 										navigate("/workflows?message=Skipped intro")
 									}}>
 										<CardActionArea style={actionObject}>
-											<img src={experienced_image} style={{padding: experienced_image === defaultImage ? 2 : 10, objectFit: "scale-down", minHeight: experienced_image === defaultImage ? 40 : 70, maxHeight: experienced_image === defaultImage ? 40 : 70, bordeRadius: theme.palette.borderRadius, marginBottom: experienced_image === defaultImage ? 24 : 2 }} />
+											<img src={experienced_image} style={{padding: experienced_image === defaultImage ? 2 : 10, objectFit: "scale-down", minHeight: experienced_image === defaultImage ? 40 : 70, maxHeight: experienced_image === defaultImage ? 40 : 70, bordeRadius: theme.palette.borderRadius*2, marginBottom: experienced_image === defaultImage ? 24 : 2 }} />
 											<Typography variant="h4" style={{color: "#F1F1F1"}}> 
 												Experienced 
 											</Typography>										
@@ -524,10 +486,11 @@ const Welcome = (props) => {
 								</div>
 
 								
-								<div style={{ flexDirection: "row", }}>
+								<div style={{ flexDirection: "row", textAlign: isMobile ? "center" : null, margin: isMobile ? "auto" : null }}>
 									<Button variant="contained" type="submit" fullWidth style={buttonStyle} onClick={() => {
 										navigate(`/welcome?tab=2`)
 										setActiveStep(1)
+										setShowWelcome(true)
 										ReactGA.event({
 											category: "welcome",
 											action: "click_welcome_continue",
@@ -537,20 +500,6 @@ const Welcome = (props) => {
 										Continue
 									</Button>
 								</div>
-								
-
-								
-								{/* <div style={{margin: "auto", borderRadius: theme.palette.borderRadius, marginTop: 50, width: 200, overflow: "wrap", padding: 25, cursor: "pointer", }} onClick={() => {
-									if (window.drift !== undefined) {
-										window.drift.api.startInteraction({ interactionId: 340045 })
-									} else {
-										console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
-									}
-								}}>
-									<Typography variant="body1" style={{margin: "auto", textAlign: "center"}}>
-										Want a demo instead?
-									</Typography>
-								</div> */}
 							</div>
 						</Fade>
 					}

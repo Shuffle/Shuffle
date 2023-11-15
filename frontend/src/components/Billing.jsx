@@ -7,7 +7,7 @@ import countries from "../components/Countries.jsx";
 import {
 	Box,
 	Paper,
-  Typography,
+    Typography,
 	Divider,
 	Button,
 	Grid,
@@ -19,6 +19,10 @@ import {
 	DialogTitle,
 	DialogContent,
 	TextField,
+  	InputAdornment,
+	IconButton,
+	Checkbox,
+	Tooltip, 
 } from "@mui/material";
 
 import { useNavigate, Link } from "react-router-dom";
@@ -27,6 +31,9 @@ import { toast } from "react-toastify"
 
 import {
   Cached as CachedIcon,
+  ContentCopy as ContentCopyIcon,
+  Draw as DrawIcon, 
+  Close as CloseIcon,
 } from "@mui/icons-material";
 
 //import { useAlert 
@@ -228,10 +235,44 @@ const Billing = (props) => {
       });
   };
 
-	const SubscriptionObject = (props) => {
-  		const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, subscription, highlight, } = props;
+	const sendSignatureRequest = (subscription) => {
+		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}`;
 
-		var top_text = "Base Access"
+		fetch(url, {
+			body: JSON.stringify({
+				org_id: selectedOrganization.id,
+				subscription: subscription,
+			}),
+		    mode: "cors",
+		    method: "POST",
+		    credentials: "include",
+		    crossDomain: true,
+		    withCredentials: true,
+		    headers: {
+		      "Content-Type": "application/json; charset=utf-8",
+		    },
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Error in response");
+			}
+			return response.json();
+		})
+		.then((responseJson) => {
+			console.log("Response from signature request: ", responseJson);
+		})
+		.catch((error) => {
+			console.log("Error: ", error);
+		})
+	}
+
+	const SubscriptionObject = (props) => {
+  		const { globalUrl, index, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, subscription, highlight, } = props;
+
+  		const [signatureOpen, setSignatureOpen] = React.useState(false);
+  		const [tosChecked, setTosChecked] = React.useState(subscription.eula_signed)
+
+		var top_text = "Base Cloud Access"
 		if (subscription.limit === undefined && subscription.level === undefined || subscription.level === null || subscription.level === 0) {
 			subscription.name = "Enterprise"
 			subscription.currency_text = "$"
@@ -280,10 +321,109 @@ const Billing = (props) => {
 
 		return (
 			<Paper style={newPaperstyle}>
+				<Dialog
+					open={signatureOpen}
+					PaperProps={{
+					  style: {
+						pointerEvents: "auto",
+						color: "white",
+						minWidth: 750,
+						padding: 30,
+						maxHeight: 700,
+						overflowY: "auto",
+						overflowX: "hidden",
+						zIndex: 10012,
+						border: theme.palette.defaultBorder,
+					  },
+					}}
+				>
+					<Tooltip
+					  title="Close window"
+					  placement="top"
+					  style={{ zIndex: 10011 }}
+					>
+					  <IconButton
+						style={{ zIndex: 5000, position: "absolute", top: 34, right: 34 }}
+						onClick={(e) => {
+						  e.preventDefault();
+						  setSignatureOpen(false);
+						  setTosChecked(false)
+						}}
+					  >
+						<CloseIcon style={{ color: "white" }} />
+					  </IconButton>
+					</Tooltip>
+					<DialogTitle id="form-dialog-title">Read and Accept the EULA</DialogTitle>
+					<DialogContent>
+						<TextField
+							rows={17}
+							multiline
+							fullWidth
+						    InputProps={{
+						      readOnly: true,
+							  style: {
+								fontSize: 14, 
+							    color: "rgba(255, 255, 255, 0.6)",
+							  }
+						    }}
+							value={subscription.eula}
+						/>
+						<Checkbox
+							disabled={subscription.eula_signed}
+							checked={tosChecked}
+							onChange={(e) => {
+								setTosChecked(e.target.checked)
+							}}
+							inputProps={{ 'aria-label': 'primary checkbox' }}
+						/>
+						<Typography variant="body1" style={{display: "inline-block", marginLeft: 10, marginTop: 25, cursor: "pointer", }} onClick={() => {
+							setTosChecked(!tosChecked)
+						}}>
+							Accept
+						</Typography>
+						<Typography variant="body2" style={{display: "inline-block", marginLeft: 10, }} color="textSecondary">
+							By clicking the “accept” button, you are signing the document, electronically agreeing that it has the same legal validity and effects as a handwritten signature, and that you have the competent authority to represent and sign on behalf an entity. Need support or have questions? Contact us at support@shuffler.io.
+						</Typography>
+
+						<div style={{display: "flex", marginTop: 25, }}>
+							<Button
+								variant="contained"
+								color="primary"
+								style={{ marginLeft: "auto", }}
+								disabled={!tosChecked || subscription.eula_signed}
+								onClick={() => {
+									setSignatureOpen(false)		
+									subscription.eula_signed = true
+									sendSignatureRequest(subscription)
+								}}
+
+							>
+								Submit	
+							</Button>
+						</div>
+					</DialogContent>
+				</Dialog>
 				<div style={{display: "flex"}}>
-					<Typography variant="h6" style={{ marginTop: 10, marginBottom: 10 }}>
+					<Typography variant="h6" style={{ marginTop: 10, marginBottom: 10, flex: 5, }}>
 						{top_text}
 					</Typography>
+					{isCloud && highlight === true ?
+						<Tooltip
+						  title="Sign EULA"
+						  placement="top"
+						  style={{ zIndex: 10011 }}
+						>
+							<IconButton 
+								disabled={subscription.eula_signed}
+								style={{ marginLeft: "auto", marginTop: 10, marginBottom: 10, flex: 1, }} 
+								onClick={() => {
+									setSignatureOpen(true)
+								}}
+							>
+								<DrawIcon /> 
+							</IconButton>
+						</Tooltip>
+					: null}
 				</div>
 				<Divider />	
 					<div>
@@ -320,15 +460,61 @@ const Billing = (props) => {
 										</a>
 								}
 
-								if (feature.includes("Licensed Worker: ")) {
+								if (feature.includes("Worker License: ")) {
+									const fieldId = "webhook_uri_field_"+index
 									parsedFeature =
-										<a
-											href={feature.split("Licensed Worker: ")[1]}
-											target="_blank"
-											style={{ textDecoration: "none", color: "#f85a3e",}}
-										>
-											Download the licensed worker
-										</a>
+										<span style={{marginTop: 10, }}>
+											<Typography
+												variant="body2"
+											>
+												Use the {feature.split("Worker License: ")[0]} Worker
+											</Typography>
+											<TextField
+												value={feature.split("Worker License: ")[1]}
+                								style={{
+                								  backgroundColor: theme.palette.inputColor,
+                								  borderRadius: theme.palette.borderRadius,
+                								}}
+                								id={fieldId}
+                								onClick={() => {}}
+                								InputProps={{
+                								  endAdornment:
+                								    <InputAdornment position="end">
+                								      <IconButton
+                								        aria-label="Copy webhook"
+                								        onClick={() => {
+                								          var copyText = document.getElementById(fieldId);
+                								          if (copyText !== undefined && copyText !== null) {
+                								            console.log("NAVIGATOR: ", navigator);
+                								            const clipboard = navigator.clipboard;
+                								            if (clipboard === undefined) {
+                								              toast("Can only copy over HTTPS (port 3443)");
+                								              return;
+                								            }
+
+                								            navigator.clipboard.writeText(copyText.value);
+                								            copyText.select();
+                								            copyText.setSelectionRange(
+                								              0,
+                								              99999
+                								            ); /* For mobile devices */
+
+                								            /* Copy the text inside the text field */
+                								            document.execCommand("copy");
+                								            toast("Copied Webhook URL");
+                								          } else {
+                								            console.log("Couldn't find webhook URI field: ", copyText);
+                								          }
+                								        }}
+                								        edge="end"
+                								      >
+                								        <ContentCopyIcon />
+                								      </IconButton>
+                								    </InputAdornment>
+                								}}
+												fullWidth
+											/>
+										</span>
 								}
 
 								return (
@@ -342,7 +528,7 @@ const Billing = (props) => {
 							: null}
 						</ul>
 					</div>
-					{(highlight === true && subscription.name === "Pay as you go" && subscription.limit <= 10000) || subscription.name.includes("Scale") ?
+					{(highlight === true && (subscription.name === "Pay as you go" && subscription.limit <= 10000) || subscription.name === "Open Source") ?
 						<span>
 							<Typography variant="body2" color="textSecondary" style={{ marginTop: 20, marginBottom: 10 }}>
 								{subscription.name.includes("Scale") ? 
@@ -351,6 +537,18 @@ const Billing = (props) => {
 									"You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit."
 								}
 							</Typography>
+							{/*isCloud ? 
+								<Button 
+									variant="contained" 
+									color="primary" 
+									style={{ marginTop: 20, marginBottom: 10, }}
+									onClick={() => {
+										window.open("https://checkout.stripe.com/c/pay/ppage_1O8UttDzMUgUjxHSBh3krC6Y#fidkdWxOYHwnPyd1blpxYHZxWkBhfWJOY3RoVEJdXDBPSW9hR3RxcG1GcjU1R01nbE5PQUcnKSdobGF2Jz9%2BJ2JwbGEnPydjY2M3MjA0NyhnYzcyKDFkMTQoPWFmPSgwYDI9MTA0NGAyZDNhPWZhNmcnKSdocGxhJz8nNWYwMjNnZGMoZGdgPCgxPDxhKD1kNjUoMjZmPTcxYzw9NjBjYzZmMGRnJykndmxhJz8nZGYxYWZhY2MoZ2FjNygxPDA2KDxhZ2MoZjY1PWM8NGcxYzUxMjJkYTRmJ3gpJ2dgcWR2Jz9eWCknaWR8anBxUXx1YCc%2FJ3Zsa2JpYFpscWBoJyknd2BjYHd3YHdKd2xibGsnPydtcXF1PyoqaWpmZGltanZxPzY1NTcnKSdpamZkaWAnP2twaWl4JSUl")
+									}}
+								>
+									Add Payment Method
+								</Button>
+							: null*/}
 							<Button 
 								variant="contained" 
 								color="primary" 
@@ -363,7 +561,7 @@ const Billing = (props) => {
 									}
 								}}
 							>
-								Upgrade Now	
+								Upgrade now	
 							</Button>
 						</span>
 					: null}
@@ -692,6 +890,7 @@ const Billing = (props) => {
 			<div style={{display: "flex", maxWidth: 768, minWidth: 768, }}>
 				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null  ?
 					<SubscriptionObject
+						index={0}
 						globalUrl={globalUrl}
 						userdata={userdata}
 						serverside={serverside}
@@ -704,6 +903,7 @@ const Billing = (props) => {
 				: !isCloud ? 
 					<span style={{display: "flex", }}>
 						<SubscriptionObject
+							index={0}
 							globalUrl={globalUrl}
 							userdata={userdata}
 							serverside={false}
@@ -722,6 +922,7 @@ const Billing = (props) => {
 							highlight={true}
 						/>
 						<SubscriptionObject
+							index={1}
 							globalUrl={globalUrl}
 							userdata={userdata}
 							serverside={false}
@@ -751,6 +952,7 @@ const Billing = (props) => {
 							.map((sub, index) => {
 								return (
 									<SubscriptionObject
+										index={index+1}
 										globalUrl={globalUrl}
 										userdata={userdata}
 										serverside={serverside}
@@ -758,6 +960,7 @@ const Billing = (props) => {
 										stripeKey={stripeKey}
 										selectedOrganization={selectedOrganization}
 										subscription={sub}
+										highlight={true}
 									/>
 								)
 							})

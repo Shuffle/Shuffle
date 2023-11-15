@@ -977,14 +977,17 @@ const AngularWorkflow = (defaultprops) => {
             tmpView = execution_id;
           }
 
+		  console.log("TMPVIEW: ", tmpView);
+
 		  // Compare with currently selected item
           if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
 			// Don't clean up if it's already open
 		    if (executionModalOpen === true) {
+				console.log("Execution modal already open, not cleaning up")
 		        return
 		    }
 
-            const execution = responseJson.find((data) => data.execution_id === tmpView);
+            const execution = responseJson.executions.find((data) => data.execution_id === tmpView);
 
 		    setExecutionModalOpen(true) 
             if (execution !== null && execution !== undefined) {
@@ -16678,28 +16681,29 @@ const AngularWorkflow = (defaultprops) => {
         >
           <CloseIcon />
         </IconButton>
-        <ConfigureWorkflow
-          userdata={userdata}
-          alert={alert}
-          theme={theme}
-          setAuthenticationType={setAuthenticationType}
-          globalUrl={globalUrl}
-          workflow={workflow}
-          setSelectedAction={setSelectedAction}
-          setSelectedApp={setSelectedApp}
-          setAuthenticationModalOpen={setAuthenticationModalOpen}
-          appAuthentication={appAuthentication}
-          selectedAction={selectedAction}
-          apps={apps}
-          setConfigureWorkflowModalOpen={setConfigureWorkflowModalOpen}
-          saveWorkflow={saveWorkflow}
-          newWebhook={newWebhook}
-          submitSchedule={submitSchedule}
-          referenceUrl={referenceUrl}
-          workflowExecutions={workflowExecutions}
-          getWorkflowExecution={getWorkflowExecution}
-          isCloud={isCloud}
-        />
+		<div style={{height: 75, width: "100%", background: `linear-gradient(to right, #f86a3e, #fc3922)`, position: "relative",}} />
+		<div style={{ padding: "50px 0px 50px 0px", }}>
+			<ConfigureWorkflow
+			  workflow={workflow}
+			  userdata={userdata}
+			  globalUrl={globalUrl}
+			  apps={apps}
+			  setAuthenticationType={setAuthenticationType}
+			  setSelectedAction={setSelectedAction}
+			  setSelectedApp={setSelectedApp}
+			  setAuthenticationModalOpen={setAuthenticationModalOpen}
+			  appAuthentication={appAuthentication}
+			  selectedAction={selectedAction}
+			  setConfigureWorkflowModalOpen={setConfigureWorkflowModalOpen}
+			  saveWorkflow={saveWorkflow}
+			  newWebhook={newWebhook}
+			  submitSchedule={submitSchedule}
+			  referenceUrl={referenceUrl}
+			  workflowExecutions={workflowExecutions}
+			  getWorkflowExecution={getWorkflowExecution}
+			  isCloud={isCloud}
+			/>
+		</div>
       </Dialog>
     ) : null;
 

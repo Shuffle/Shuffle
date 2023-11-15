@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
 import { toast } from 'react-toastify';
+import theme from "../theme.jsx";
 
 import {
   InputAdornment,
@@ -41,7 +42,6 @@ import aa from 'search-insights'
 const ConfigureWorkflow = (props) => {
   const {
     apps,
-    theme,
     isCloud,
     workflow,
 	userdata,
@@ -1235,12 +1235,8 @@ const ConfigureWorkflow = (props) => {
 		)
 	}
 
-	const topColor = "#f86a3e, #fc3922"
   return (
     <div>
-	  	{setConfigureWorkflowModalOpen !== undefined ? 
-			<div style={{height: 75, width: "100%", background: `linear-gradient(to right, ${topColor}`, position: "relative",}} />
-		: null}
 		<div style={{margin: setConfigureWorkflowModalOpen !== undefined ? "0px 50px 0px 50px" : "35px 0px 0px", maxHeight: 475, }}>
 			
 

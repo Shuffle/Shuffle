@@ -406,6 +406,17 @@ func deployServiceWorkers(image string) {
 			cnt = 1
 		}
 
+		appReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
+		appReplicaCnt := 1
+		if len(appReplicas) > 0 {
+			newCnt, err := strconv.Atoi(appReplicas)
+			if err != nil {
+				log.Printf("[ERROR] %s is not a valid number for SHUFFLE_APP_REPLICAS", appReplicas)
+			} else {
+				appReplicaCnt = newCnt
+			}
+		}
+
 		log.Printf("[DEBUG] Found %d node(s) to replicate over. Defaulting to 1 IF we can't auto-discover them.", cnt)
 		replicatedJobs := uint64(replicas * nodeCount)
 
@@ -462,8 +473,7 @@ func deployServiceWorkers(image string) {
 					Env: []string{
 						fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 						fmt.Sprintf("SHUFFLE_SWARM_NETWORK_NAME=%s", networkName),
-						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", cnt),
-						fmt.Sprintf("TZ=%s", timezone),
+						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", appReplicaCnt),
 						fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 						fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
 						fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")),
@@ -1411,6 +1421,7 @@ func main() {
 			continue
 		}
 
+		//defer newresp.Body.Close()
 		if newresp.StatusCode == 405 {
 			log.Printf("[WARNING] Received 405 from %s. This is likely due to a misconfigured base URL. Automatically swapping to GET request (backwards compatibility)", fullUrl)
 
@@ -1555,6 +1566,14 @@ func main() {
 				env = append(env, fmt.Sprintf("SHUFFLE_CLOUDRUN_URL=%s", os.Getenv("SHUFFLE_CLOUDRUN_URL")))
 			}
 
+			if len(os.Getenv("SHUFFLE_SKIPSSL_VERIFY")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_SKIPSSL_VERIFY=%s", os.Getenv("SHUFFLE_SKIPSSL_VERIFY")))
+			}
+
+			if len(os.Getenv("SHUFFLE_DEBUG_MEMORY")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_DEBUG_MEMORY=%s", os.Getenv("SHUFFLE_DEBUG_MEMORY")))
+			}
+
 			err = deployWorker(workerImage, containerName, env, execution)
 			zombiecounter += 1
 			if err == nil {
@@ -1612,6 +1631,7 @@ func main() {
 				continue
 			}
 
+			defer resultResp.Body.Close()
 			body, err := ioutil.ReadAll(resultResp.Body)
 			if err != nil {
 				log.Printf("[ERROR] Failed reading confirm body: %s", err)
@@ -1906,6 +1926,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		return err
 	}
 
+	defer newresp.Body.Close()
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed reading body in worker request body to worker on %s: %s", streamUrl, err)
