@@ -242,7 +242,7 @@ export const appCategories = [
 		"name": "Eradication",
 		"color": "#FFC107",
 		"icon": "eradication",
-		"action_labels": ["List Alerts", "Close Alert", "Get Alert", "Create detection", "Block hash", "Search Hosts", "Isolate host", "Unisolate host"],
+		"action_labels": ["List Alerts", "Close Alert", "Get Alert", "Create detection", "Block hash", "Search Hosts", "Isolate host", "Unisolate host", "Trigger host scan",],
 	}, {
 		"name": "Cases",
 		"color": "#FFC107",
@@ -1757,8 +1757,8 @@ const AppCreator = (defaultprops) => {
       	    ) {
       	      if (value[flowkey][basekey].authorizationUrl !== undefined && parameterName.length === 0) {
       	          setParameterName(value[flowkey][basekey].authorizationUrl);
-      	      } else {
-				  setOauth2Type("application")
+				//  } else {
+				//	  setOauth2Type("application")
 			  }
 
       	      var tokenUrl = "";

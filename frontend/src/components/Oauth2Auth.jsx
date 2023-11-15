@@ -125,7 +125,7 @@ const AuthenticationOauth2 = (props) => {
   const allscopes = authenticationType.scope !== undefined ? authenticationType.scope : [];
     
 
-  const [selectedScopes, setSelectedScopes] = React.useState(allscopes.length === 1 ? [allscopes[0]] : [])
+  const [selectedScopes, setSelectedScopes] = React.useState(allscopes.length <= 3 ? allscopes  : [])
   const [manuallyConfigure, setManuallyConfigure] = React.useState(
     defaultConfigSet ? false : true
   );
@@ -883,7 +883,7 @@ const AuthenticationOauth2 = (props) => {
                 //authenticationOption.label = event.target.value
               }}
             />
-            {allscopes.length === 0 ? null : "Scopes"}
+            {allscopes.length === 0 ? null : "Scopes (access rights)"}
             {allscopes.length === 0 ? null : (
 							<div style={{width: "100%", marginTop: 10, display: "flex"}}>
 								<span>

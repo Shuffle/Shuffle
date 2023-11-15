@@ -591,7 +591,7 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   useEffect(() => {
-	  console.log("In useeffect for loopRunning: ", loopRunning)
+	  //console.log("In useeffect for loopRunning: ", loopRunning)
 	  if (loopRunning) {
 		  const intervalId = setInterval(() => {
 			  if (!loopRunning) {
@@ -1244,7 +1244,7 @@ const AngularWorkflow = (defaultprops) => {
         // Doesn't work because this is some async garbage
         if (executionData.execution_id === undefined || (responseJson.execution_id === executionData.execution_id && responseJson.results !== undefined && responseJson.results !== null)) {
           if (executionData.status !== responseJson.status || executionData.result !== responseJson.result || (executionData.results !== undefined && responseJson.results !== null && executionData.results.length !== responseJson.results.length)) {
-			console.log("Updating data!")
+			//console.log("Updating data!")
             setExecutionData(responseJson)
           } else {
       		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status === "WAITING") {
@@ -15381,7 +15381,7 @@ const AngularWorkflow = (defaultprops) => {
                         }}
                         onClick={() => {
                           const oldstartnode = cy.getElementById(data.action.id);
-                          console.log("FOUND NODe: ", oldstartnode)
+                          //console.log("FOUND NODe: ", oldstartnode)
                           if (oldstartnode !== undefined && oldstartnode !== null) {
                             const foundname = oldstartnode.data("label")
                             if (foundname !== undefined && foundname !== null) {
@@ -15389,7 +15389,7 @@ const AngularWorkflow = (defaultprops) => {
                             }
                           }
 
-                          console.log("Click data: ", data)
+                          //console.log("Click data: ", data)
                           //data.action.label = ""
                           setSelectedResult(data);
                           setCodeModalOpen(true);
