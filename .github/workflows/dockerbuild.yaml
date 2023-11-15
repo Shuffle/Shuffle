@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "**"
-      - "!.github/**"
+      # - "!.github/**"
       - "!**.md"
       - "!docker-compose.yml"
 jobs:
