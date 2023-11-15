@@ -1,6 +1,6 @@
 module shuffle-shared
 
-//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 
 go 1.19
 

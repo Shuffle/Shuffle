@@ -3515,7 +3515,7 @@ class AppBase:
                                     timeout = 30 
 
                                     # Check if current app is Shuffle Tools, then set to 55 due to certain actions being slow (ioc parser..) 
-                                    #uu In general, this should be disabled for onprem 
+                                    # In general, this should be disabled for onprem 
                                     if self.action["app_name"].lower() == "shuffle tools":
                                         timeout = 55
 

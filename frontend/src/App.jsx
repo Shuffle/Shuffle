@@ -8,7 +8,8 @@ import Workflows from "./views/Workflows";
 import GettingStarted from "./views/GettingStarted";
 import AngularWorkflow from "./views/AngularWorkflow.jsx";
 
-import Header from "./components/Header.jsx";
+//import Header from "./components/Header.jsx";
+import Header from "./components/NewHeader.jsx";
 import theme from "./theme";
 import Apps from "./views/Apps";
 import AppCreator from "./views/AppCreator";
@@ -347,7 +348,6 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-			<Route exact path="/debug" element={<RuntimeDebugger userdata={userdata} globalUrl={globalUrl} /> }  />
 			<Route exact path="/apps/authentication" element={<UpdateAuthentication serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
         	<Route
         	  exact
@@ -407,6 +407,8 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route exact path="/debug" element={<RuntimeDebugger userdata={userdata} globalUrl={globalUrl} /> }  />
+			<Route exact path="/workflows/debug" element={<RuntimeDebugger userdata={userdata} globalUrl={globalUrl} /> }  />
         	<Route
         	  exact
         	  path="/workflows/:key"
