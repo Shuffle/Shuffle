@@ -1,6 +1,6 @@
 module shuffle-shared
 
-replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 
 go 1.19
 
@@ -19,7 +19,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.4.64
+	github.com/shuffle/shuffle-shared v0.4.78
 	golang.org/x/crypto v0.9.0
 	google.golang.org/api v0.125.0
 	google.golang.org/appengine v1.6.7
