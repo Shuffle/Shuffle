@@ -125,7 +125,7 @@ const AuthenticationOauth2 = (props) => {
   const allscopes = authenticationType.scope !== undefined ? authenticationType.scope : [];
     
 
-  const [selectedScopes, setSelectedScopes] = React.useState(allscopes.length <= 3 ? allscopes  : [])
+  const [selectedScopes, setSelectedScopes] = React.useState(allscopes.length > 0 && allscopes.length <= 3 ? [allscopes[0]] : [])
   const [manuallyConfigure, setManuallyConfigure] = React.useState(
     defaultConfigSet ? false : true
   );
@@ -301,58 +301,47 @@ const AuthenticationOauth2 = (props) => {
 	  if ((authenticationType.redirect_uri === undefined || authenticationType.redirect_uri === null || authenticationType.redirect_uri.length === 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) {
 		  console.log("No redirect URI found, and token URI found. Assuming client credentials flow and saving directly in the database")
 
-		  	// Find app.configuration=true fields in the app.paramters
-			var parsedFields = [{
-				"key": "client_id",
-				"value": client_id,
-			},
-			{
-				"key": "client_secret",
-				"value": client_secret,
-			},
-			{
-				"key": "scope",
-				"value": scopes.join(","),
-			},
-			{
-				"key": "token_uri",
-				"value": authenticationType.token_uri,
-			}]
+		// Find app.configuration=true fields in the app.paramters
+		var parsedFields = [{
+			"key": "client_id",
+			"value": client_id,
+		},
+		{
+			"key": "client_secret",
+			"value": client_secret,
+		},
+		{
+			"key": "scope",
+			"value": scopes.join(","),
+		},
+		{
+			"key": "token_uri",
+			"value": authenticationType.token_uri,
+		}]
 
-		  	// Not necessary yet to do something like this due to not showing the fields anyway
-		  	/*
-		  	if (selectedApp.parameters !== undefined && selectedApp.parameters !== null && selectedApp.parameters.length > 0) {
-
-		  		for (var i = 0; i < selectedApp.parameters.length; i++) {
-					if (selectedApp.parameters[i].configuration !== true) {
-						continue
-					}
-
-					console.log("Found configuration field: ", selectedApp.parameters[i].key, " with example: ", selectedApp.parameters[i].example)
-					parsedFields.push({
-						"key": selectedApp.parameters[i].key,
-						"value": selectedApp.parameters[i].example,
-					})
-				}
-			}
-			*/
-
-  
-		  	const appAuthData = {
-				"label": "OAuth2 for " + selectedApp.name,
-				"app": {
-					"id": selectedApp.id,
-					"name": selectedApp.name,
-					"version": selectedApp.version,
-					"large_image": selectedApp.large_image,
+		const appAuthData = {
+			"label": "OAuth2 for " + selectedApp.name,
+			"app": {
+				"id": selectedApp.id,
+				"name": selectedApp.name,
+				"version": selectedApp.version,
+				"large_image": selectedApp.large_image,
 				},
 				"fields": parsedFields,
 				"type": "oauth2-app",
 				"reference_workflow": workflowId,
-			}
-			setNewAppAuth(appAuthData) 
+		}
 
-		  return
+		setNewAppAuth(appAuthData) 
+		// Wait 1 second, then get app auth with update
+		  //
+		if (getAppAuthentication !== undefined) {
+			setTimeout(() => {
+          		getAppAuthentication(true, true, true);
+			}, 1000)
+		}
+
+	    return
 	  }
 
 
@@ -463,9 +452,9 @@ const AuthenticationOauth2 = (props) => {
           //alert('"Secure Payment" window closed!');
 					//
 
-					if (getAppAuthentication !== undefined) {
-          	getAppAuthentication(true, true, true);
-					}
+			if (getAppAuthentication !== undefined) {
+          		getAppAuthentication(true, true, true);
+			}
         } else {
 					console.log("Not closed")
 				}

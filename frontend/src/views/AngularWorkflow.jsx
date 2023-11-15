@@ -1713,7 +1713,9 @@ const AngularWorkflow = (defaultprops) => {
         })
         .then((responseJson) => {
           if (!responseJson.success) {
-            toast("Failed to start: " + responseJson.reason);
+            //toast("Failed to start: " + responseJson.reason);
+            toast(responseJson.reason);
+		    //toast.error(responseJson.reason);
             setExecutionRunning(false);
             setExecutionRequestStarted(false);
             stop();
@@ -16490,7 +16492,7 @@ const AngularWorkflow = (defaultprops) => {
 
       var newAuthOption = JSON.parse(JSON.stringify(authenticationOption));
       var newFields = [];
-			console.log("Fields: ", newAuthOption.fields)
+	  console.log("Fields: ", newAuthOption.fields)
       for (let authkey in newAuthOption.fields) {
         const value = newAuthOption.fields[authkey];
         newFields.push({
