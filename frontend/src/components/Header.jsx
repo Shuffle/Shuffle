@@ -43,9 +43,8 @@ import {
 	Lightbulb as LightbulbIcon,
 } from "@mui/icons-material";
 
-//import { useAlert 
-
 import SearchField from '../components/Searchfield.jsx'
+
 const hoverColor = "#f85a3e"
 const hoverOutColor = "#e8eaf6"
 
@@ -615,7 +614,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 
 				</List>
 			</div>
-			<div style={{flex: 1, marginTop: 0,}}>
+			<div style={{flex: 1, marginTop: 10,}}>
 				<SearchField serverside={serverside} userdata={userdata} />
 			</div>
 			<div style={{flex: 1, display: "flex", flexDirection: "row-reverse"}}>
@@ -747,7 +746,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 						*/}
 					</List>
 				</div>
-				<div style={{flex: 1, marginTop: 0,}}>
+				<div style={{flex: 1, marginTop: 10,}}>
 					<SearchField serverside={serverside} userdata={userdata} />
 				</div>
 				<div style={{flex: 1, display: "flex", flexDirection: "row-reverse"}}>

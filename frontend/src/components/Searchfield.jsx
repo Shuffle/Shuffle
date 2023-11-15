@@ -106,6 +106,7 @@ const SearchField = props => {
 				{/* <Typography variant="body2" style={{ fontSize: 16, fontWidth: 550, color: "var(--Paragraph-text, #C8C8C8)"}}>
 					Discord 
 				</Typography> */}
+				{/*
 				<a rel="noopener noreferrer" href="https://discord.com/invite/B2CBzUm" target="_blank" style={{ textDecoration: "none", color: "white" }}>
 					<img src={"/images/social/discode.svg"} alt="Algolia logo" style={{ height: 22, marginLeft: 5, marginTop: 3, }} />
 				</a>
@@ -117,6 +118,7 @@ const SearchField = props => {
 				<a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{ textDecoration: "none", color: "white" }}>
 					<img src={"/images/logo-algolia-nebula-blue-full.svg"} alt="Algolia logo" style={{ height: 17, marginLeft: 5, marginTop: 3, }} />
 				</a>
+				*/}
 				</div>
 			</span>
 		</Dialog>
