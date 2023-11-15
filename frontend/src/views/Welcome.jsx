@@ -419,7 +419,7 @@ const Welcome = (props) => {
 						</div>
 						: 
 						<Fade in={true}>
-							<div style={{maxWidth: isMobile ? null : 590, margin: "auto", marginTop: 50, }}>
+							<div style={{maxWidth: isMobile ? null : 590, margin: "auto", marginTop: 50,textAlign : isMobile ? "center" : null }}>
 								<Typography variant="h4" style={{color: "#F1F1F1", marginTop: 50, fontSize: 32}}>
 									Help us get to know you
 								</Typography>

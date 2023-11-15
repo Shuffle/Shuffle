@@ -18,8 +18,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.4.66
-	golang.org/x/crypto v0.14.0
+	github.com/shuffle/shuffle-shared v0.4.79
+	golang.org/x/crypto v0.9.0
 	google.golang.org/api v0.125.0
 	google.golang.org/grpc v1.55.0
 	gopkg.in/src-d/go-git.v4 v4.13.1

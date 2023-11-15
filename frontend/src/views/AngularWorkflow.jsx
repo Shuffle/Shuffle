@@ -108,10 +108,10 @@ import {
   Preview as PreviewIcon,
   ContentCopy as ContentCopyIcon,
   Circle as  CircleIcon,
-	SquareFoot as SquareFootIcon,
-	AutoFixHigh as AutoFixHighIcon,
-
+  SquareFoot as SquareFootIcon,
+  AutoFixHigh as AutoFixHighIcon,
   Polyline as PolylineIcon, 
+  QueryStats as QueryStatsIcon, 
 } from "@mui/icons-material";
 
 
@@ -591,7 +591,7 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   useEffect(() => {
-	  console.log("In useeffect for loopRunning: ", loopRunning)
+	  //console.log("In useeffect for loopRunning: ", loopRunning)
 	  if (loopRunning) {
 		  const intervalId = setInterval(() => {
 			  if (!loopRunning) {
@@ -1244,7 +1244,7 @@ const AngularWorkflow = (defaultprops) => {
         // Doesn't work because this is some async garbage
         if (executionData.execution_id === undefined || (responseJson.execution_id === executionData.execution_id && responseJson.results !== undefined && responseJson.results !== null)) {
           if (executionData.status !== responseJson.status || executionData.result !== responseJson.result || (executionData.results !== undefined && responseJson.results !== null && executionData.results.length !== responseJson.results.length)) {
-			console.log("Updating data!")
+			//console.log("Updating data!")
             setExecutionData(responseJson)
           } else {
       		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status === "WAITING") {
@@ -1713,7 +1713,9 @@ const AngularWorkflow = (defaultprops) => {
         })
         .then((responseJson) => {
           if (!responseJson.success) {
-            toast("Failed to start: " + responseJson.reason);
+            //toast("Failed to start: " + responseJson.reason);
+            toast(responseJson.reason);
+		    //toast.error(responseJson.reason);
             setExecutionRunning(false);
             setExecutionRequestStarted(false);
             stop();
@@ -4593,7 +4595,6 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
-	console.log("NODE: ", nodedata)
 	if (nodedata.decorator !== true && nodedata.attachedTo === undefined) {
 		var newdata = JSON.parse(JSON.stringify(nodedata))
 		newdata.large_image = "" 
@@ -14591,7 +14592,7 @@ const AngularWorkflow = (defaultprops) => {
       onClose={() => {
         setExecutionModalOpen(false)
       }}
-      style={{ resize: "both", overflow: "auto", zIndex: 10005 }}
+      style={{ resize: "both", overflow: "auto", }}
       hideBackdrop={false}
       variant="temporary"
       BackdropProps={{
@@ -14607,7 +14608,6 @@ const AngularWorkflow = (defaultprops) => {
           maxWidth: isMobile ? "100%" : 420,
           color: "white",
           fontSize: 18,
-          zIndex: 10005,
           borderLeft: theme.palette.defaultBorder,
         },
       }}
@@ -14631,16 +14631,32 @@ const AngularWorkflow = (defaultprops) => {
         : null}
       {executionModalView === 0 ? (
         <div style={{ padding: isMobile ? "0px 0px 0px 10px" : 25, zIndex: 12502, }}>
-          <Breadcrumbs
-            aria-label="breadcrumb"
-            separator="›"
-            style={{ color: "white", fontSize: 16 }}
-          >
-            <h2 style={{ color: "rgba(255,255,255,0.5)" }}>
-              <DirectionsRunIcon style={{ marginRight: 10 }} />
-              All Workflow Runs 
-            </h2>
-          </Breadcrumbs>
+		  <div style={{display: "flex", }}>
+			  <Breadcrumbs
+				aria-label="breadcrumb"
+				separator="›"
+				style={{ color: "white", fontSize: 16 }}
+			  >
+				<h2 style={{ color: "rgba(255,255,255,0.5)" }}>
+				  <DirectionsRunIcon style={{ marginRight: 10 }} />
+				  All Workflow Runs 
+				</h2>
+			  </Breadcrumbs>
+			  <Tooltip
+				title={"Explore Executions further"}
+				placement="left-start"
+				style={{ zIndex: 10010 }}
+			  >
+		  		<a href={`/workflows/debug?workflow_id=${workflow.id}`} style={{textDecoration: "none", }}>
+				  <Button
+		  			color="secondary"
+		  			style={{marginLeft: 50, maxHeight: 30, marginTop: 20, }}
+				  >
+		  			<QueryStatsIcon style={{color: "white", }}/>
+				  </Button>
+		  		</a>
+		  	</Tooltip>
+		  </div>
           <Button
             style={{ borderRadius: "0px" }}
             variant="outlined"
@@ -15367,7 +15383,7 @@ const AngularWorkflow = (defaultprops) => {
                         }}
                         onClick={() => {
                           const oldstartnode = cy.getElementById(data.action.id);
-                          console.log("FOUND NODe: ", oldstartnode)
+                          //console.log("FOUND NODe: ", oldstartnode)
                           if (oldstartnode !== undefined && oldstartnode !== null) {
                             const foundname = oldstartnode.data("label")
                             if (foundname !== undefined && foundname !== null) {
@@ -15375,7 +15391,7 @@ const AngularWorkflow = (defaultprops) => {
                             }
                           }
 
-                          console.log("Click data: ", data)
+                          //console.log("Click data: ", data)
                           //data.action.label = ""
                           setSelectedResult(data);
                           setCodeModalOpen(true);
@@ -16476,7 +16492,7 @@ const AngularWorkflow = (defaultprops) => {
 
       var newAuthOption = JSON.parse(JSON.stringify(authenticationOption));
       var newFields = [];
-			console.log("Fields: ", newAuthOption.fields)
+	  console.log("Fields: ", newAuthOption.fields)
       for (let authkey in newAuthOption.fields) {
         const value = newAuthOption.fields[authkey];
         newFields.push({

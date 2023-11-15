@@ -242,7 +242,7 @@ export const appCategories = [
 		"name": "Eradication",
 		"color": "#FFC107",
 		"icon": "eradication",
-		"action_labels": ["List Alerts", "Close Alert", "Get Alert", "Create detection", "Block hash", "Search Hosts", "Isolate host", "Unisolate host"],
+		"action_labels": ["List Alerts", "Close Alert", "Get Alert", "Create detection", "Block hash", "Search Hosts", "Isolate host", "Unisolate host", "Trigger host scan",],
 	}, {
 		"name": "Cases",
 		"color": "#FFC107",
@@ -374,8 +374,8 @@ const AppCreator = (defaultprops) => {
     "API key",
     "Bearer auth",
     "Basic auth",
-    "Oauth2",
     "JWT",
+    "Oauth2",
   ];
   const apikeySelection = ["Header", "Query"];
 
@@ -411,6 +411,7 @@ const AppCreator = (defaultprops) => {
   const [appBuilding, setAppBuilding] = useState(false);
   const [fileDownloadEnabled, setFileDownloadEnabled] = useState(false);
   const [actionAmount, setActionAmount] = useState(increaseAmount);
+  const [oauth2Type, setOauth2Type] = useState("application");
   const defaultAuth = {
     name: "",
     type: "header",
@@ -1678,7 +1679,7 @@ const AppCreator = (defaultprops) => {
       	      value.in.length > 0
       	    ) {
       	      setParameterName(value.in);
-							optionset = true 
+				optionset = true 
       	    }
 
       	  } else if (value.scheme === "bearer") {
@@ -1709,24 +1710,24 @@ const AppCreator = (defaultprops) => {
       	    	newauth.push({
       	    		"name": key,
       	    		"type": value.in.toLowerCase(),
-								"in": value.in.toLowerCase(),
+					"in": value.in.toLowerCase(),
       	    		"example": "",
-							})
-						} else {
-      	    	newauth.push({
-      	    		"name": key,
-      	    		"type": value.in.toLowerCase(),
-								"in": value.in.toLowerCase(),
-      	    		"example": "",
-      	    	})
-						}
+				})
+				} else {
+					newauth.push({
+						"name": key,
+						"type": value.in.toLowerCase(),
+						"in": value.in.toLowerCase(),
+						"example": "",
+					})
+				}
 
       	    if (value.description !== undefined && value.description !== null && value.description.length > 0) {
-							// Don't want a real description - just the ones we're replacing with
-							if ((value.description.split(" ").length - 1) <= 2) {
-  							setRefreshUrl(value.description)
-							}
-						}
+			// Don't want a real description - just the ones we're replacing with
+				if ((value.description.split(" ").length - 1) <= 2) {
+					setRefreshUrl(value.description)
+				}
+			}
 
       	  } else if (value.scheme === "basic") {
       	    setAuthenticationOption("Basic auth");
@@ -1734,15 +1735,15 @@ const AppCreator = (defaultprops) => {
 						optionset = true 
 
       	  } else if (value.scheme === "oauth2") {
-      	    setAuthenticationOption("Oauth2");
-      	    setAuthenticationRequired(true);
-						optionset = true 
+				setAuthenticationOption("Oauth2");
+				setAuthenticationRequired(true);
+				optionset = true 
 
       	  } else if (value.type === "oauth2" || key === "Oauth2" || key === "Oauth2c" || (key !== undefined && key !== null && key.toLowerCase().includes("oauth2"))) {
       	    //toast("Can't handle Oauth2 auth yet.")
       	    setAuthenticationOption("Oauth2");
       	    setAuthenticationRequired(true);
-						optionset = true 
+				optionset = true 
 
       	    //console.log("FLOW-1: ", value)
       	    const flowkey = value.flow === undefined ? "flows" : "flow";
@@ -1754,12 +1755,11 @@ const AppCreator = (defaultprops) => {
       	    //console.log("FLOW2: ", value[flowkey][basekey])
       	    if (value[flowkey] !== undefined && value[flowkey][basekey] !== undefined
       	    ) {
-      	      if (
-      	        value[flowkey][basekey].authorizationUrl !== undefined &&
-      	        parameterName.length === 0
-      	      ) {
-      	        setParameterName(value[flowkey][basekey].authorizationUrl);
-      	      }
+      	      if (value[flowkey][basekey].authorizationUrl !== undefined && parameterName.length === 0) {
+      	          setParameterName(value[flowkey][basekey].authorizationUrl);
+				//  } else {
+				//	  setOauth2Type("application")
+			  }
 
       	      var tokenUrl = "";
       	      if (value[flowkey][basekey].tokenUrl !== undefined) {
@@ -2846,7 +2846,6 @@ const AppCreator = (defaultprops) => {
           style={{ margin: 0, flex: "1", backgroundColor: inputColor }}
           fullWidth={true}
           placeholder="/security/user/authenticate"
-          type="name"
           id="standard-required"
           margin="normal"
           variant="outlined"
@@ -2866,6 +2865,40 @@ const AppCreator = (defaultprops) => {
             },
           }}
         />
+        <Typography
+          variant="body2"
+          color="textSecondary"
+          style={{ marginTop: 10 }}
+        >
+			Optional: Authentication queries 
+        </Typography>
+		{/*
+        <TextField
+          style={{ margin: 0, flex: "1", backgroundColor: inputColor }}
+          fullWidth={true}
+          placeholder="grant_type=client_credentials&scope=connect.api.read"
+          id=""
+          margin="normal"
+          variant="outlined"
+          defaultValue={parameterName}
+          helperText={
+            <span style={{ color: "white", marginBottom: "2px" }}>
+			  Must use 'key=value&key=value' format
+            </span>
+          }
+          onBlur={(e) => {
+			  //setParameterName(e.target.value)
+		  }}
+          InputProps={{
+            classes: {
+              notchedOutline: classes.notchedOutline,
+            },
+            style: {
+              color: "white",
+            },
+          }}
+        />
+		*/}
       </div>
     ) : null;
 
@@ -2878,56 +2911,64 @@ const AppCreator = (defaultprops) => {
           color="textSecondary"
           style={{ marginTop: 10 }}
         >
-					Find the Authorization URL, Token URL and scopes in question for the API. Ensure the app in question is pointed at https://shuffler.io/set_authentication
+			{oauth2Type === "delegated" ?
+				"Find the Authorization URL, Token URL and scopes in question for the API. Ensure your app in the service uses redirect url https://shuffler.io/set_authentication"
+				:
+				"Find the Token URL and scopes in question for the API"
+			}
         </Typography>
 
-        <Typography
-          variant="body2"
-          color="textSecondary"
-          style={{ marginTop: 10 }}
-        >
-          Base Authorization URL for Oauth2
-        </Typography>
-        <TextField
-          required
-          style={{ margin: 0, flex: "1", backgroundColor: inputColor }}
-          fullWidth={true}
-          placeholder="https://.../oauth2/authorize"
-          type="name"
-          id="standard-required"
-          margin="normal"
-          variant="outlined"
-          value={parameterName}
-          onChange={(e) => setParameterName(e.target.value)}
+		{oauth2Type === "delegated" ? 
+			<span>
+        		<Typography
+        		  variant="body2"
+        		  color="textSecondary"
+        		  style={{ marginTop: 10 }}
+        		>
+        		  Base Authorization URL for Oauth2
+        		</Typography>
+        		<TextField
+        		  required
+        		  style={{ margin: 0, flex: "1", backgroundColor: inputColor }}
+        		  fullWidth={true}
+        		  placeholder="https://.../oauth2/authorize"
+        		  type="name"
+        		  id="standard-required"
+        		  margin="normal"
+        		  variant="outlined"
+        		  value={parameterName}
+        		  onChange={(e) => setParameterName(e.target.value)}
 					onBlur={(event) => {
-            var tmpstring = event.target.value.trim();
+        		    var tmpstring = event.target.value.trim();
 
-            if (
-              tmpstring.length > 4 &&
-              !tmpstring.startsWith("http") &&
-              !tmpstring.startsWith("ftp")
-            ) {
-              toast("Auth URL must start with http(s)://");
-            }
+        		    if (
+        		      tmpstring.length > 4 &&
+        		      !tmpstring.startsWith("http") &&
+        		      !tmpstring.startsWith("ftp")
+        		    ) {
+        		      toast("Auth URL must start with http(s)://");
+        		    }
 
-						if (tmpstring.includes("?")) {
-							var newtmp = tmpstring.split("?")
-							if (tmpstring.length > 1) {
-								tmpstring = newtmp[0]
-							}
-						}
+								if (tmpstring.includes("?")) {
+									var newtmp = tmpstring.split("?")
+									if (tmpstring.length > 1) {
+										tmpstring = newtmp[0]
+									}
+								}
 
-						setParameterName(tmpstring)
-					}}
-          InputProps={{
-            classes: {
-              notchedOutline: classes.notchedOutline,
-            },
-            style: {
-              color: "white",
-            },
-          }}
-        />
+								setParameterName(tmpstring)
+							}}
+        		  InputProps={{
+        		    classes: {
+        		      notchedOutline: classes.notchedOutline,
+        		    },
+        		    style: {
+        		      color: "white",
+        		    },
+        		  }}
+        		/>
+			</span>
+		: null}
         <Typography
           variant="body2"
           color="textSecondary"
@@ -2977,75 +3018,79 @@ const AppCreator = (defaultprops) => {
             },
           }}
         />
-        <Typography
-          variant="body2"
-          color="textSecondary"
-          style={{ marginTop: 10 }}
-        >
-          Refresh-token URL for Oauth2 (Optional)
-        </Typography>
-        <TextField
-          style={{ margin: 0, flex: "1", backgroundColor: inputColor }}
-          fullWidth={true}
-          placeholder="The URL to retrieve refresh-tokens at"
-          type="name"
-          id="standard-required"
-          margin="normal"
-          variant="outlined"
-          value={refreshUrl}
-          onChange={(e) => setRefreshUrl(e.target.value)}
-					onBlur={(event) => {
-            var tmpstring = event.target.value.trim();
+		{oauth2Type === "delegated" ? 
+			<span>
+        		<Typography
+        		  variant="body2"
+        		  color="textSecondary"
+        		  style={{ marginTop: 10 }}
+        		>
+        		  Refresh-token URL for Oauth2 (Optional)
+        		</Typography>
+        		<TextField
+        		  style={{ margin: 0, flex: "1", backgroundColor: inputColor }}
+        		  fullWidth={true}
+        		  placeholder="The URL to retrieve refresh-tokens at"
+        		  type="name"
+        		  id="standard-required"
+        		  margin="normal"
+        		  variant="outlined"
+        		  value={refreshUrl}
+        		  onChange={(e) => setRefreshUrl(e.target.value)}
+							onBlur={(event) => {
+        		    var tmpstring = event.target.value.trim();
 
-            if (
-              tmpstring.length > 4 &&
-              !tmpstring.startsWith("http") &&
-              !tmpstring.startsWith("ftp")
-            ) {
-              toast("Refresh URL must start with http(s)://");
-            }
+        		    if (
+        		      tmpstring.length > 4 &&
+        		      !tmpstring.startsWith("http") &&
+        		      !tmpstring.startsWith("ftp")
+        		    ) {
+        		      toast("Refresh URL must start with http(s)://");
+        		    }
 
-						if (tmpstring.includes("?")) {
-							var newtmp = tmpstring.split("?")
-							if (tmpstring.length > 1) {
-								tmpstring = newtmp[0]
-							}
-						}
+								if (tmpstring.includes("?")) {
+									var newtmp = tmpstring.split("?")
+									if (tmpstring.length > 1) {
+										tmpstring = newtmp[0]
+									}
+								}
 
-						setRefreshUrl(tmpstring)
-					}}
-          InputProps={{
-            style: {
-              color: "white",
-            },
-          }}
-        />
-        <Typography
-          variant="body2"
-          color="textSecondary"
-          style={{ marginTop: 10 }}
-        >
-          Scopes for Oauth2
-        </Typography>
-        <MuiChipsInput
-          style={{border: "2px solid #f86a3e", borderRadius: theme.palette.borderRadius,}}
+								setRefreshUrl(tmpstring)
+							}}
+        		  InputProps={{
+        		    style: {
+        		      color: "white",
+        		    },
+        		  }}
+        		/>
+			</span>
+		: null}
+		<Typography
+		  variant="body2"
+		  color="textSecondary"
+		  style={{ marginTop: 10 }}
+		>
+		  Scopes for Oauth2
+		</Typography>
+		<MuiChipsInput
+		  style={{border: "2px solid #f86a3e", borderRadius: theme.palette.borderRadius,}}
 					required
-          InputProps={{
-            style: {
-              color: "white",
-              maxHeight: 50,
-            },
-          }}
-          style={{ maxHeight: 80, overflowX: "hidden", overflowY: "auto" }}
-          placeholder="Available Oauth2 Scopes"
-          color="primary"
-          fullWidth
-          value={oauth2Scopes}
+		  InputProps={{
+			style: {
+			  color: "white",
+			  maxHeight: 50,
+			},
+		  }}
+		  style={{ maxHeight: 80, overflowX: "hidden", overflowY: "auto" }}
+		  placeholder="Available Oauth2 Scopes (enter to add)"
+		  color="primary"
+		  fullWidth
+		  value={oauth2Scopes}
 		  onChange={(chips) => {
 			  setOauth2Scopes(chips)
 			  setUpdate(Math.random())
 		  }}
-        />
+		/>
       </div>
     ) : null;
 
@@ -3125,7 +3170,7 @@ const AppCreator = (defaultprops) => {
         		</Select>
 					</div>
 					<div style={{marginLeft: 5, flex: 1,}}>
-        		Value prefix	
+        				Prefix	
 						<TextField
 							style={{ marginTop: 0, flex: "1", backgroundColor: inputColor }}
 							fullWidth={true}
@@ -3137,7 +3182,7 @@ const AppCreator = (defaultprops) => {
 							value={refreshUrl}
 							onChange={(e) => {
 								// Just reusing this state
-      	        setRefreshUrl(e.target.value);
+      	        				setRefreshUrl(e.target.value);
 							}}
 						/>
 					</div>
@@ -3618,13 +3663,13 @@ const AppCreator = (defaultprops) => {
     		<Dialog
     		  open={actionsModalOpen}
     		  fullWidth
-					PaperProps={{
+			  PaperProps={{
     		    style: {
     		      backgroundColor: surfaceColor,
     		      color: "white",
-    		      minWidth: 500,
-    		      maxWidth: 500,
-							maxHeight: 800,
+    		      minWidth: 550,
+    		      maxWidth: 550,
+				  maxHeight: 750,
     		    },
     		  }}
     		  onClose={() => {
@@ -5865,6 +5910,7 @@ const AppCreator = (defaultprops) => {
           }}
         />
 				<div style={{padding: 25, border: "2px solid rgba(255,255,255,0.7)", borderRadius: theme.palette.borderRadius, }}>
+	  				<span style={{display: "flex", }}>
 					<FormControl style={{ }} variant="outlined">
 						<Typography variant="h6">Authentication</Typography>
 						<a
@@ -5889,7 +5935,7 @@ const AppCreator = (defaultprops) => {
 										setParameterLocation("")
 									}
 
-              		setExtraAuth([])
+									setExtraAuth([])
 								}
 							}}
 							value={authenticationOption}
@@ -5910,6 +5956,42 @@ const AppCreator = (defaultprops) => {
 							))}
 						</Select>
 					</FormControl>
+					{authenticationOption === "Oauth2" ? 
+						<FormControl style={{ marginLeft: 350, maxWidth: 200, }} variant="outlined">
+							{/*
+							<Typography variant="body2">
+								- Delegated: The user will get a popup for access their personal data.
+								- Application: Permissions are set by the app creator in the 3rd party platform. 
+							</Typography>
+							*/}
+							<Select
+								fullWidth
+								label="Oauth2 type"
+								onChange={(e) => {
+									setOauth2Type(e.target.value);
+								}}
+								value={oauth2Type}
+								style={{
+									backgroundColor: inputColor,
+									color: "white",
+									height: "50px",
+								}}
+							>
+								{["delegated", "application"].map((data, index) => (
+									<MenuItem
+										key={index}
+										style={{ backgroundColor: inputColor, color: "white" }}
+										value={data}
+									>
+										{data}
+									</MenuItem>
+								))}
+							</Select>
+						</FormControl>
+					: null}
+	  				</span> 
+
+
 					<div style={{marginTop: 15 }} />
 					{basicAuth}
 					{bearerAuth}

@@ -60,6 +60,7 @@
     "react-driftjs": "^1.2.2",
     "react-dropzone": "^14.2.3",
     "react-ga4": "^2.0.0",
+    "react-hotkeys": "^2.0.0",
     "react-instantsearch-dom": "^6.28.0",
     "react-json-pretty": "^2.2.0",
     "react-json-view": "^1.21.3",

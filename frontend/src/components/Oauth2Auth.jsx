@@ -93,10 +93,10 @@ const AuthenticationOauth2 = (props) => {
     appAuthentication,
     setSelectedAction,
     setNewAppAuth,
-		isCloud,
-		autoAuth, 
-		authButtonOnly, 
-		isLoggedIn,
+	isCloud,
+	autoAuth, 
+	authButtonOnly, 
+	isLoggedIn,
   } = props;
 
   let navigate = useNavigate();
@@ -125,7 +125,7 @@ const AuthenticationOauth2 = (props) => {
   const allscopes = authenticationType.scope !== undefined ? authenticationType.scope : [];
     
 
-  const [selectedScopes, setSelectedScopes] = React.useState(allscopes.length === 1 ? [allscopes[0]] : [])
+  const [selectedScopes, setSelectedScopes] = React.useState(allscopes.length > 0 && allscopes.length <= 3 ? [allscopes[0]] : [])
   const [manuallyConfigure, setManuallyConfigure] = React.useState(
     defaultConfigSet ? false : true
   );
@@ -297,15 +297,63 @@ const AuthenticationOauth2 = (props) => {
 
 
   const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent, prompt) => {
-    setButtonClicked(true);
-    //console.log("SCOPES: ", scopes);
+
+	  if ((authenticationType.redirect_uri === undefined || authenticationType.redirect_uri === null || authenticationType.redirect_uri.length === 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) {
+		  console.log("No redirect URI found, and token URI found. Assuming client credentials flow and saving directly in the database")
+
+		// Find app.configuration=true fields in the app.paramters
+		var parsedFields = [{
+			"key": "client_id",
+			"value": client_id,
+		},
+		{
+			"key": "client_secret",
+			"value": client_secret,
+		},
+		{
+			"key": "scope",
+			"value": scopes.join(","),
+		},
+		{
+			"key": "token_uri",
+			"value": authenticationType.token_uri,
+		}]
+
+		const appAuthData = {
+			"label": "OAuth2 for " + selectedApp.name,
+			"app": {
+				"id": selectedApp.id,
+				"name": selectedApp.name,
+				"version": selectedApp.version,
+				"large_image": selectedApp.large_image,
+				},
+				"fields": parsedFields,
+				"type": "oauth2-app",
+				"reference_workflow": workflowId,
+		}
+
+		setNewAppAuth(appAuthData) 
+		// Wait 1 second, then get app auth with update
+		  //
+		if (getAppAuthentication !== undefined) {
+			setTimeout(() => {
+          		getAppAuthentication(true, true, true);
+			}, 1000)
+		}
+
+	    return
+	  }
+
+
+		setButtonClicked(true);
+		//console.log("SCOPES: ", scopes);
 
 		client_id = client_id.trim()
 		client_secret = client_secret.trim()
 		oauth_url = oauth_url.trim()
 
-    var resources = "";
-    if (scopes !== undefined && (scopes !== null) & (scopes.length > 0)) {
+		var resources = "";
+		if (scopes !== undefined && (scopes !== null) & (scopes.length > 0)) {
 			console.log("IN scope 1")
 			if (offlineAccess === true && !scopes.includes("offline_access")) {
 
@@ -324,26 +372,26 @@ const AuthenticationOauth2 = (props) => {
     //console.log("AUTH: ", authenticationType)
     //console.log("SCOPES2: ", resources)
     const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`;
-		const workflowId = workflow !== undefined ? workflow.id : "";
+	const workflowId = workflow !== undefined ? workflow.id : "";
     var state = `workflow_id%3D${workflowId}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`;
 
 
-		// This is to make sure authorization can be handled WITHOUT being logged in,
-		// kind of making it act like an api key
-		// https://shuffler.io/authorization -> 3rd party integration auth
-		const urlParams = new URLSearchParams(window.location.search);
-		const userAuth = urlParams.get("authorization");
-		if (userAuth !== undefined && userAuth !== null && userAuth.length > 0) {
-			console.log("Adding authorization from user side")
-			state += `%26authorization%3d${userAuth}`;
-		}
+	// This is to make sure authorization can be handled WITHOUT being logged in,
+	// kind of making it act like an api key
+	// https://shuffler.io/authorization -> 3rd party integration auth
+	const urlParams = new URLSearchParams(window.location.search);
+	const userAuth = urlParams.get("authorization");
+	if (userAuth !== undefined && userAuth !== null && userAuth.length > 0) {
+		console.log("Adding authorization from user side")
+		state += `%26authorization%3d${userAuth}`;
+	}
 
-		// Check for org_id
-		const orgId = urlParams.get("org_id");
-		if (orgId !== undefined && orgId !== null && orgId.length > 0) {
-			console.log("Adding org_id from user side")
-			state += `%26org_id%3d${orgId}`;
-		}
+	// Check for org_id
+	const orgId = urlParams.get("org_id");
+	if (orgId !== undefined && orgId !== null && orgId.length > 0) {
+		console.log("Adding org_id from user side")
+		state += `%26org_id%3d${orgId}`;
+	}
 
     if (oauth_url !== undefined && oauth_url !== null && oauth_url.length > 0) {
       state += `%26oauth_url%3d${oauth_url}`;
@@ -363,7 +411,7 @@ const AuthenticationOauth2 = (props) => {
 
 		// No prompt forcing
     //var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=login&scope=${resources}&state=${state}&access_type=offline`;
-		var defaultPrompt = "login"
+	var defaultPrompt = "login"
    	if (prompt !== undefined && prompt !== null && prompt.length > 0) {
 			defaultPrompt = prompt
 		}
@@ -404,9 +452,9 @@ const AuthenticationOauth2 = (props) => {
           //alert('"Secure Payment" window closed!');
 					//
 
-					if (getAppAuthentication !== undefined) {
-          	getAppAuthentication(true, true, true);
-					}
+			if (getAppAuthentication !== undefined) {
+          		getAppAuthentication(true, true, true);
+			}
         } else {
 					console.log("Not closed")
 				}
@@ -798,6 +846,7 @@ const AuthenticationOauth2 = (props) => {
               }}
               fullWidth
               color="primary"
+			  label={"Client ID"}
               placeholder={"Client ID"}
               onChange={(event) => {
                 setClientId(event.target.value);
@@ -816,20 +865,22 @@ const AuthenticationOauth2 = (props) => {
               }}
               fullWidth
               color="primary"
+			  label={"Client Secret"}
               placeholder={"Client Secret"}
               onChange={(event) => {
                 setClientSecret(event.target.value);
                 //authenticationOption.label = event.target.value
               }}
             />
+            {allscopes.length === 0 ? null : "Scopes (access rights)"}
             {allscopes.length === 0 ? null : (
 							<div style={{width: "100%", marginTop: 10, display: "flex"}}>
 								<span>
-									Scopes
 									<Select
 										multiple
 										underline={false}
 										value={selectedScopes}
+										label="Scopes"
 										style={{
 											backgroundColor: theme.palette.inputColor,
 											color: "white",
@@ -855,17 +906,20 @@ const AuthenticationOauth2 = (props) => {
 										})}
 									</Select>
 								</span>
-								<span>
-									<Tooltip
-										color="primary"
-										title={"Automatic Refresh (default: true)"}
-										placement="top"
-									>
-										<Checkbox style={{paddingTop: 20}} color="secondary" checked={offlineAccess} onClick={() => {
-											setOfflineAccess(!offlineAccess)
-										}}/>
-									</Tooltip>
-								</span>
+
+								{((authenticationType.redirect_uri === undefined || authenticationType.redirect_uri === null || authenticationType.redirect_uri.length === 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) ? null : 
+									<span>
+										<Tooltip
+											color="primary"
+											title={"Automatic Refresh (default: true)"}
+											placement="top"
+										>
+											<Checkbox style={{paddingTop: 20}} color="secondary" checked={offlineAccess} onClick={() => {
+												setOfflineAccess(!offlineAccess)
+											}}/>
+										</Tooltip>
+									</span>
+								}
 							</div>
             )}
           </span>
@@ -882,19 +936,14 @@ const AuthenticationOauth2 = (props) => {
           variant="contained"
           fullWidth
           onClick={() => {
-            handleOauth2Request(
-              clientId,
-              clientSecret,
-              oauthUrl,
-              selectedScopes
-            );
+            handleOauth2Request(clientId, clientSecret, oauthUrl, selectedScopes);
           }}
           color="primary"
         >
           {buttonClicked ? (
             <CircularProgress style={{ color: "white" }} />
           ) : (
-            "Manually Authenticate"
+            "Authenticate"
           )}
         </Button>
 

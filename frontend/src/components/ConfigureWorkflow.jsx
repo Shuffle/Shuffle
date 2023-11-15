@@ -1256,7 +1256,7 @@ const ConfigureWorkflow = (props) => {
 				</Typography>
 			: null}
 
-      	    <List style={{paddingBottom: 250, }}>
+      	    <List style={{paddingBottom: window.location.pathname.includes("/workflows/") ? 0 : 250, }}>
       	      {requiredActions.map((data, index) => {
       	        return (
 					<div key={index} style={{marginBottom: 10, }}>

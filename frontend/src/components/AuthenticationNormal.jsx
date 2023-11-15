@@ -56,13 +56,13 @@ const AuthenticationData = (props) => {
         if (!responseJson.success) {
           toast("Failed to set app auth: " + responseJson.reason);
         } else {
-					if (getAppAuthentication !== undefined) {
-          	getAppAuthentication()
-					}
+			if (getAppAuthentication !== undefined) {
+          		getAppAuthentication()
+			}
 
-					if (setAuthenticationModalOpen !== undefined) {
-						setAuthenticationModalOpen(false)
-					}
+			if (setAuthenticationModalOpen !== undefined) {
+				setAuthenticationModalOpen(false)
+			}
 
           // Needs a refresh with the new authentication..
           //toast("Successfully saved new app auth")

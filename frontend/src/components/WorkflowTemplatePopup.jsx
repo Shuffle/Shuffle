@@ -22,6 +22,7 @@ import {
 	Check as CheckIcon,
 	TrendingFlat as TrendingFlatIcon,
 	Close as CloseIcon,
+	East as EastIcon, 
 } from '@mui/icons-material';
 
 import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup.jsx";
@@ -36,6 +37,7 @@ const WorkflowTemplatePopup = (props) => {
 	const [errorMessage, setErrorMessage] = useState("");
 	const [workflowLoading, setWorkflowLoading] = useState(false);
 	const [workflow, setWorkflow] = useState({});
+	const [showLoginButton, setShowLoginButton] = useState(false);
   	const [appAuthentication, setAppAuthentication] = React.useState(undefined);
 
   	const [missingSource, setMissingSource] = React.useState(undefined)
@@ -119,7 +121,8 @@ const WorkflowTemplatePopup = (props) => {
 	const loadAppAuth = () => {	
 		// Check if it exists, and has keys
 		if (userdata === undefined || userdata === null || Object.keys(userdata).length === 0) {
-			setErrorMessage("You need to be logged in to try usecases. Redirecting in 5 seconds...")
+			setErrorMessage("You need to be logged in to try the pre-built Workflow Templates.")
+			setShowLoginButton(true)
 
 			// Send the user to the login screen after 3 seconds
 			setTimeout(() => {	
@@ -350,12 +353,35 @@ const WorkflowTemplatePopup = (props) => {
 							<Typography variant="h6" style={{marginTop: 75, }}>
 								{errorMessage !== "" ? errorMessage : ""}
 							</Typography> 
+							{showLoginButton ?
+          						<Link to="/register?message=Please login to create workflows&view=usecases"
+          						  style={{
+          						    textDecoration: 'none',
+									marginBottom: 50, 
+          						  }}
+          						>
+									<Typography
+									  style={{
+										display: "flex",
+										fontSize: 18,
+										color: "rgba(255, 132, 68, 1)",
+										marginTop: 32,
+										justifyContent: isMobile ? "center" : null,
+										fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
+										fontWeight: 550,
+									  }}
+									>
+									  Sign up
+									  <EastIcon style={{ marginTop: 3, marginLeft: 7 }} />
+									</Typography>
+								</Link>
+							: null}
 						</div>
 					}
 
-					{isLoggedIn && (missingSource !== undefined || missingDestination !== undefined) ? 
-						<Typography variant="body1" style={{marginTop: 75, }}>
-							{"The following app category is required generate this workflow: "}
+					{(missingSource !== undefined || missingDestination !== undefined) ? 
+						<Typography variant="body1" style={{marginTop: 75, marginBottom: 10, }}>
+							{"Find relevevant Apps for this Usecase"}
 						</Typography>
 					: null}
 
@@ -502,7 +528,7 @@ const WorkflowTemplatePopup = (props) => {
 						<Typography variant="body1" style={{ marginTop: parsedDescription.length === 0 ? 10 : 0, fontSize: isMobile ? 13 : 16,fontWeight: isHomePage? 600 : null,textTransform: 'capitalize', color: isHomePage ? "var(--White-text, #F1F1F1)" :"rgba(241, 241, 241, 1)"}} >
 							{parsedTitle}
 						</Typography>
-						<Typography variant="body2" color="textSecondary" style={{ fontSize: isMobile ? 10: 16, fontWeight: isHomePage ? 400 : null, textTransform: 'capitalize', marginTop: 0, overflow: "hidden",}} color="rgba(158, 158, 158, 1)">
+						<Typography variant="body2" color="textSecondary" style={{ fontSize: isMobile ? 10: 16, fontWeight: isHomePage ? 400 : null, textTransform: 'capitalize', marginTop: 0, overflow: "hidden", maxHeight: 21, overflow: "hidden",}} color="rgba(158, 158, 158, 1)">
 							{parsedDescription}
 						</Typography>
 					</div>
