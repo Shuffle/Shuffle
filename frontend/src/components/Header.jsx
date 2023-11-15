@@ -51,10 +51,14 @@ const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
 const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, homePage, userdata, serverside, } = props;
-  const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
-  const [SoarHoverColor, setSoarHoverColor] = useState(hoverOutColor);
-  const [LoginHoverColor, setLoginHoverColor] = useState(hoverOutColor);
-  const [DocsHoverColor, setDocsHoverColor] = useState(hoverOutColor);
+	//const theme = useTheme();
+	//const alert = useAlert()
+
+
+	const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
+	const [SoarHoverColor, setSoarHoverColor] = useState(hoverOutColor);
+	const [LoginHoverColor, setLoginHoverColor] = useState(hoverOutColor);
+	const [DocsHoverColor, setDocsHoverColor] = useState(hoverOutColor);
   const [HelpHoverColor, setHelpHoverColor] = useState(hoverOutColor);
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
@@ -539,8 +543,6 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 							</Button>
 						</Link>
 					</ListItem>
-			</div> 
-			<div style={{display: "flex", flex: 1, }}>
 
 					<ListItem style={{textAlign: "center", marginLeft: "0px",}}>
 						<Link to ="/usecases" style={hrefStyle}>
@@ -557,6 +559,21 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 							</Button>
 						</Link>
 					</ListItem>
+					{/*
+					<ListItem style={{textAlign: "center", marginLeft: "0px", paddingRight: 0, }}>
+						<Link to ="/contact" style={hrefStyle}>
+							<Button variant="text" color="secondary" style={{textTransform: "none"}} onClick={() => {
+								ReactGA.event({
+									category: "header",
+									action: "contact_click",
+									label: "",
+								})
+							}}>
+								Contact	
+							</Button>
+						</Link>
+					</ListItem>
+					*/}
 					{isCloud ? 
 						<ListItem style={{textAlign: "center", marginLeft: "0px", paddingRight: 0,}}>
 							<Link to ="/pricing" style={hrefStyle}>
@@ -598,33 +615,60 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 
 				</List>
 			</div>
-			<div style={{flex: 1, display: "flex", flexDirection: "row-reverse"}}>
+			<div style={{flex: 1, marginTop: 0,}}>
 				<SearchField serverside={serverside} userdata={userdata} />
-				
+			</div>
+			<div style={{flex: 1, display: "flex", flexDirection: "row-reverse"}}>
 				<List style={{display: 'flex', flexDirection: 'row-reverse'}} component="nav">
-					<ButtonGroup>
-						<Button variant="outlined" style={{textTransform: "none", borderRadius: 25, padding: "7px 14px 7px 14px", maxWidth: 100, minWidth: 100, }} onClick={() => {
-							if (isCloud) {
+					<ListItem style={{textAlign: "center"}}>
+						<Link to="/login" style={hrefStyle}>
+							<Button variant="outlined" style={{textTransform: "none", borderRadius: 25, padding: "7px 14px 7px 14px", maxWidth: 100, minWidth: 100, }} onClick={() => {
+								if (isCloud) {
+									ReactGA.event({
+										category: "header",
+										action: "signin_click",
+										label: "",
+									})
+								}
+							}}>Login</Button>
+						</Link> 
+					</ListItem>
+
+					{isCloud ? 
+						<ListItem style={{flextextAlign: "center", marginRight: 10, }}>
+							<Link to="/register" style={hrefStyle}>
+								<Button variant="contained" color="primary" style={{minWidth: 100, maxWidth: 100, padding: "7px 14px 7px 14px", borderRadius: 25, textTransform: "none", backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", color: "white",}} onClick={() => {
+									ReactGA.event({
+										category: "header",
+										action: "register_click",
+										label: "",
+									})
+								}}>Sign Up</Button>
+							</Link> 
+						</ListItem>
+					: null}
+
+					{/*
+					<span style={{marginTop: 8}}>
+						{supportMenu}
+					</span>
+					*/}
+
+					{/*
+					<ListItem style={{textAlign: "center", marginLeft: "0px", paddingRight: 0, }}>
+						<Link rel="noopener noreferrer" to="/docs" style={hrefStyle}>
+							<Button variant="text" color="secondary" style={{textTransform: "none"}} onClick={() => {
 								ReactGA.event({
 									category: "header",
-									action: "signin_click",
+									action: "docs_click_not_signedin",
 									label: "",
 								})
-							}
-						}}>Login</Button>
-						{isCloud ? 
-								<Link to="/register" style={hrefStyle}>
-									<Button variant="contained" color="primary" style={{minWidth: 100, maxWidth: 100, padding: "7px 14px 7px 14px", borderRadius: 25, textTransform: "none", backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", color: "white",}} onClick={() => {
-										ReactGA.event({
-											category: "header",
-											action: "register_click",
-											label: "",
-										})
-									}}>Sign Up</Button>
-								</Link> 
-							</ListItem>
-						: null}
-					</ButtonGroup>
+							}}>
+								Docs	
+							</Button>
+						</Link>
+					</ListItem>
+					*/}
 				</List>
 			</div>
 	    </div>
