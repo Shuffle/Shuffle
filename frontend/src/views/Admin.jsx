@@ -3941,7 +3941,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               style={{ minWidth: 125, maxWidth: 125 }}
             />
             <ListItemText
-              primary="Disabled"
+              primary={isCloud ? "Disabled" : "In Queue"}
               style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
@@ -3981,6 +3981,8 @@ If you're interested, please let me know a time that works for you, or set up a 
 								}
 
 								console.log("Show CPU alert: ", showCPUAlert)
+
+				const queueSize = isCloud ? -1 : environment.queue !== undefined && environment.queue !== null ? environment.queue < 0 ? 0 : environment.queue > 100 ? ">100" : environment.queue : 0
 
                 return (
 									<span key={index}>
@@ -4091,7 +4093,8 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	      overflow: "hidden",
                   	      marginLeft: 10,
                   	    }}
-                  	    primary={environment.archived.toString()}
+
+                  	    primary={isCloud ? environment.archived.toString() : queueSize}
                   	  />
                   	  <ListItemText
                   	    style={{
@@ -4116,59 +4119,59 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	    }}
                   	  >
                   	    <div style={{ display: "flex" }}>
-													<ButtonGroup style={{borderRadius: "5px 5px 5px 5px",}}>
-														<Button
-															variant={environment.archived ? "contained" : "outlined"}
-															style={{ }}
-															onClick={() => deleteEnvironment(environment)}
-															color="primary"
-														>
-															{environment.archived ? "Activate" : "Disable"}
-														</Button>
-														<Button
-															variant={"outlined"}
-															style={{ }}
-															disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
-															onClick={() => {
-																console.log("Should clear executions for: ", environment);
+							<ButtonGroup style={{borderRadius: "5px 5px 5px 5px",}}>
+								<Button
+									variant={environment.archived ? "contained" : "outlined"}
+									style={{ }}
+									onClick={() => deleteEnvironment(environment)}
+									color="primary"
+								>
+									{environment.archived ? "Activate" : "Disable"}
+								</Button>
+								<Button
+									variant={"outlined"}
+									style={{ }}
+									disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
+									onClick={() => {
+										console.log("Should clear executions for: ", environment);
 
-																if (isCloud && environment.Name.toLowerCase() === "cloud") {
-																	rerunCloudWorkflows(environment);
-																} else { 
-																	abortEnvironmentWorkflows(environment);
-																}
-															}}
-															color="primary"
-														>
-															{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
-														</Button>
-													</ButtonGroup>
+										if (isCloud && environment.Name.toLowerCase() === "cloud") {
+											rerunCloudWorkflows(environment);
+										} else { 
+											abortEnvironmentWorkflows(environment);
+										}
+									}}
+									color="primary"
+								>
+									{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
+								</Button>
+							</ButtonGroup>
                   	    </div>
                   	  </ListItemText>
                   	</ListItem>
-										{showCPUAlert === false ? null : 
+					{showCPUAlert === false ? null : 
                   		<ListItem key={index+"_cpu"} style={{ backgroundColor: bgColor }}>
-												<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
-													<div style={{flex: 2, overflow: "hidden",}}>
-														<Typography variant="body1" >
-															90% CPU the server(s) hosting the Shuffle App Runner (Orborus) was found.  
-														</Typography>
-														<Typography variant="body2" color="textSecondary">
-															Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://shuffler.io/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
-														</Typography>
-													</div>
-													<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
-														<Button style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="outlined" color="secondary" onClick={() => {
-															// dismiss -> get envs
-														 	changeRecommendation(userdata.priorities[foundIndex], "dismiss")
-														}}>
-															Dismiss	
-														</Button>
-													</div> 
-												</div>
-											</ListItem>
-										}
-									</span>
+							<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+								<div style={{flex: 2, overflow: "hidden",}}>
+									<Typography variant="body1" >
+										90% CPU the server(s) hosting the Shuffle App Runner (Orborus) was found.  
+									</Typography>
+									<Typography variant="body2" color="textSecondary">
+										Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://shuffler.io/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
+									</Typography>
+								</div>
+								<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
+									<Button style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="outlined" color="secondary" onClick={() => {
+										// dismiss -> get envs
+										changeRecommendation(userdata.priorities[foundIndex], "dismiss")
+									}}>
+										Dismiss	
+									</Button>
+								</div> 
+							</div>
+						</ListItem>
+					}
+				</span>
                 );
               })}
         </List>
