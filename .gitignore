@@ -21,6 +21,7 @@ backend/onprem/app_sdk/apps
 
 *.exe
 *debug*
+!**/RuntimeDebugger.jsx
 
 shuffle-database/batch_metrics_enabled.conf
 shuffle-database/logging_enabled.conf
