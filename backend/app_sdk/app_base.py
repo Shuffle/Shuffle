@@ -3519,6 +3519,12 @@ class AppBase:
                                     if self.action["app_name"].lower() == "shuffle tools":
                                         timeout = 55
 
+                                    timeout_env = os.getenv("SHUFFLE_APP_SDK_TIMEOUT", timeout)
+                                    try:
+                                        timeout = int(timeout_env)
+                                    except Exception as e:
+                                        self.logger.info(f"[WARNING] Failed parsing timeout to int: {e}")
+
                                     #timeout = 30 
 
                                     try:

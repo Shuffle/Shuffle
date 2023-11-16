@@ -1,7 +1,7 @@
 # Installation guide
 Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
-This document outlines a an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
+This document outlines an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
 
 # Docker - *nix
 The Docker setup is done with docker-compose 
@@ -17,9 +17,10 @@ cd Shuffle
 
 3. Fix prerequisites for the Opensearch database (Elasticsearch): 
 ```bash
-mkdir shuffle-database
-sudo chown -R 1000:1000 shuffle-database
-# IF you get an error using 'chown', add the user first with 'sudo useradd opensearch'
+mkdir shuffle-database                    # Create a database folder
+sudo chown -R 1000:1000 shuffle-database  # IF you get an error using 'chown', add the user first with 'sudo useradd opensearch'
+
+sudo swapoff -a                           # Disable swap
 ```
 
 4. Run docker-compose.
@@ -78,14 +79,14 @@ Local development is pretty straight forward with **ReactJS** and **Golang**. Th
 
 **PS: You have to stop the Backend Docker container to get this one working**
 
-**PPS: Use the "Launch" branch when developing to get it set up easier**
+**PPS: Use the "main" branch when developing to get it set up easier**
 
 ## Frontend - ReactJS /w cytoscape
 http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend.
 ```bash
 cd frontend
-npm i
-npm start
+yarn install
+yarn start
 ```
 
 ## Backend - Golang
@@ -106,13 +107,18 @@ Large portions of the backend is written in another repository - [shuffle-shared
 2. Open the Shuffle backend's go.mod file (./shuffle/backend/go.mod)  (**NOT** in shuffle-shared)
 3. Change the following line to point to your directory AFTER the =>
 ```
-//replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
+//replace github.com/frikky/shuffle-shared => ../../shuffle-shared
 ```
 4. Make the changes you want, then restart the backend server!
 5. With your changes made, make a pull request :fire:
 
 ## Database - Opensearch 
-Make sure this is running through the docker-compose, and that the backend points to it with SHUFFLE_OPENSEARCH_URL defined
+Make sure this is running through the docker-compose, and that the backend points to it with SHUFFLE_OPENSEARCH_URL defined.
+
+So essentially, what that means is:
+1. Make sure you have docker-compose installed
+2. Make sure you have the docker-compose.yml file from this repository
+3. Run `docker-compose up opensearch -d`
 
 ## Orborus
 Execution of Workflows:

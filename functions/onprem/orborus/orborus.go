@@ -1,7 +1,7 @@
 package main
 
 /*
-	Orborus exists to listen for new workflow executions whcih are deployed as workers.
+	Orborus exists to listen for new workflow executions which are deployed as workers.
 */
 
 //  Potential issues:
@@ -475,8 +475,8 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("SHUFFLE_SWARM_NETWORK_NAME=%s", networkName),
 						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", appReplicaCnt),
 						fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
-						fmt.Sprintf("SHUFFLE_DEBUG_MEMORY=%s", os.Getenv("SHUFFLE_DEBUG_MEMORY")),
-						fmt.Sprintf("TZ=%s", timezone),
+						fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
+						fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")),
 					},
 					//Hosts: []string{
 					//	innerContainerName,

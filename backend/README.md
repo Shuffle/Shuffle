@@ -12,7 +12,7 @@ This folder has all parts necessary for the backend to run locally and in Docker
 Shuffle's backend is written in Go, with apps being python (for now). More about local development can be seen in the main README.
 
 Running the backend:
-```
+```bash
 cd go-app
-go run *.go
+go run main.go docker.go walkoff.go
 ```

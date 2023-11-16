@@ -45,6 +45,10 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 ## Documentation
 [Documentation](https://shuffler.io/docs) can be found on [https://shuffler.io/docs](https://shuffler.io/docs) and is written here: [https://github.com/frikky/shuffle-docs](https://github.com/frikky/shuffle-docs).
 
+### Setting up a local development environment
+
+Please follow the steps mentioned [here](https://github.com/Shuffle/Shuffle/blob/main/.github/install-guide.md#local-development-installation)!
+
 ## Related repositories
 * OpenAPI apps: [https://github.com/frikky/security-openapis](https://github.com/frikky/security-openapis)
 * Documentation: [https://github.com/frikky/shuffle-docs](https://github.com/frikky/shuffle-docs)
@@ -75,7 +79,7 @@ These are the main areas to contribute in:
 Contributing guidelines are outlined [here](https://github.com/frikky/Shuffle/blob/master/.github/CONTRIBUTING.md).
 
 ## Contributors 
-![ICPL logo](https://github.com/frikky/Shuffle/blob/launch/frontend/src/assets/img/icpl_logo.png)
+![ICPL logo](https://github.com/Shuffle/Shuffle/blob/main/frontend/src/assets/img/icpl_logo.png)
 
 **Shuffle**
 <a href="https://github.com/frikky/shuffle/graphs/contributors">
@@ -113,4 +117,4 @@ Below is the folder structure with a short explanation
 └ docker-compose.yml 	# Used for deployments
 ```
 
-**It's in BETA** - [Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
+[Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)

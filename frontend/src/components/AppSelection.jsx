@@ -443,7 +443,7 @@ const AppSelection = props => {
                     }}
                     color="rgba(158, 158, 158, 1)"
                 >
-                    Select the apps you work with and we will connect the for you.
+                    Select the apps you work with and we will connect them for you.
                 </Typography>
                 <Grid rowSpacing={1} columnSpacing={2} container >
                     {appButtons.map((appData, index) => {

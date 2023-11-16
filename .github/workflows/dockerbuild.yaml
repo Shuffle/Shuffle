@@ -2,7 +2,13 @@ name: dockerbuild
 
 on:
   push:
-    branches: [1.3.0] 
+    branches:
+      - main
+    paths:
+      - "**"
+      - "!.github/**"
+      - "!**.md"
+      - "!docker-compose.yml"
 jobs:
   main:
     runs-on: ubuntu-latest
@@ -11,45 +17,45 @@ jobs:
       fail-fast: false
       matrix:
         include:
-         - app: frontend
-           path: frontend
-           version: nightly
-           experimental: true
-         - app: backend
-           path: backend
-           version: nightly
-           experimental: true
-         - app: app_sdk 
-           path: backend/app_sdk
-           version: nightly
-           experimental: true 
-         - app: orborus
-           path: functions/onprem/orborus
-           version: nightly
-           experimental: true 
-         - app: worker 
-           path: functions/onprem/worker
-           version: nightly
-           experimental: true 
+          - app: frontend
+            path: frontend
+            version: 1.3.0
+            experimental: true
+          - app: backend
+            path: backend
+            version: 1.3.0
+            experimental: true
+          - app: app_sdk
+            path: backend/app_sdk
+            version: 1.3.0
+            experimental: true
+          - app: orborus
+            path: functions/onprem/orborus
+            version: 1.3.0
+            experimental: true
+          - app: worker
+            path: functions/onprem/worker
+            version: 1.3.0
+            experimental: true
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
-          platforms: 'amd64,arm64,arm'
+          platforms: "amd64,arm64,arm"
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
-      - name: Login to Ghcr 
+
+      - name: Login to Ghcr
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -64,14 +70,16 @@ jobs:
         with:
           logout: false
           context: ${{ matrix.path }}/
-          file: ${{ matrix.path }}/Dockerfile          
+          file: ${{ matrix.path }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
             ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ matrix.version }}
+            ghcr.io/shuffle/shuffle-${{ matrix.app }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ matrix.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:latest
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
