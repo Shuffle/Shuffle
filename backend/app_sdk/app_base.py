@@ -2803,9 +2803,12 @@ class AppBase:
                     return False
             elif check.lower() == "re" or check.lower() == "matches regex":
                 try:
-                    found = re.search(destinationvalue, sourcevalue)
+                    found = re.search(str(destinationvalue), str(sourcevalue))
                 except re.error as e:
-                    print("[WARNING] Regex error in condition: %s" % e)
+                    print("[WARNING] Regex error in condition (re.error): %s" % e)
+                    return False
+                except Exception as e:
+                    print("[WARNING] Regex error in condition (catchall): %s" % e)
                     return False
 
                 if found == None:
