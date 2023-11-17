@@ -2829,12 +2829,13 @@ class AppBase:
                 return True, ""
 
             # Startnode should always run - no need to check incoming
-            try:
-                if action["id"] == fullexecution["start"]:
-                    return True, ""
-            except Exception as error:
-                self.logger.info(f"[WARNING] Failed checking startnode: {error}")
-                return True, ""
+            # Removed November 2023 due to people wanting startnode to also check
+            #try:
+            #    if action["id"] == fullexecution["start"]:
+            #        return True, ""
+            #except Exception as error:
+            #    self.logger.info(f"[WARNING] Failed checking startnode: {error}")
+            #    return True, ""
 
             available_checks = [
                 "=",
