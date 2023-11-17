@@ -2830,12 +2830,41 @@ class AppBase:
 
             # Startnode should always run - no need to check incoming
             # Removed November 2023 due to people wanting startnode to also check
-            #try:
-            #    if action["id"] == fullexecution["start"]:
-            #        return True, ""
-            #except Exception as error:
-            #    self.logger.info(f"[WARNING] Failed checking startnode: {error}")
-            #    return True, ""
+            # This is to make it possible ot 
+            try:
+                if action["id"] == fullexecution["start"]:
+                    pass
+                    # Need to validate if the source is a trigger or not
+                    # need to remove branches that are not from trigger to the startnode to make it all work
+
+                    #if "workflow" in fullexecution["workflow"] and "triggers" in fullexecution["workflow"]:
+                    #    cnt = 0
+                    #    found_branch_indexes = []
+                    #    for branch in fullexecution["workflow"]["branches"]:
+                    #        if branch["destination_id"] != action["id"]:
+                    #            continue
+
+                    #        # Check if the source is a trigger
+                    #        # if we can't find it as trigger, remove the branch 
+                    #        print("Found relevant branch: %s" % branch)
+                    #        for action in fullexecution["workflow"]["actions"]:
+                    #            if action["id"] == branch["source_id"]:
+                    #                found_branch_indexes.append(branch["source_id"])
+                    #                break
+
+                    #    if len(found_branch_indexes) > 0:
+                    #        for i in sorted(found_branch_indexes, reverse=True):
+                    #            fullexecution["workflow"]["branches"].pop(i)
+
+                    #        print("Removed %d branches" % len(found_branch_indexes))
+                    #else:
+                    #    print("[WARNING] No branches or triggers found in fullexecution for startnode")
+
+                    #if should_skip:
+                    #    return True, ""
+            except Exception as error:
+                self.logger.info(f"[WARNING] Failed checking startnode: {error}")
+                #return True, ""
 
             available_checks = [
                 "=",
