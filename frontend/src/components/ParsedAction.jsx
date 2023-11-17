@@ -3409,6 +3409,12 @@ const ParsedAction = (props) => {
               setSelectedActionEnvironment(env);
               selectedAction.environment = env.Name;
               setSelectedAction(selectedAction);
+
+			  for (let actionkey in workflow.actions) {
+				  workflow.actions[actionkey].environment = env.Name
+			  }
+			  setWorkflow(workflow)
+			  toast("Set environment for ALL actions to " + env.Name)
             }}
             style={{
               backgroundColor: theme.palette.inputColor,

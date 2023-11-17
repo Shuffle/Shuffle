@@ -3937,20 +3937,20 @@ If you're interested, please let me know a time that works for you, or set up a 
               style={{ minWidth: 125, maxWidth: 125 }}
             />
             <ListItemText
-              primary="Default"
-              style={{ minWidth: 125, maxWidth: 125 }}
+              primary={"In Queue"}
+              style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
-              primary={isCloud ? "Disabled" : "In Queue"}
-              style={{ minWidth: 100, maxWidth: 100 }}
+              primary="Default"
+              style={{ minWidth: 150, maxWidth: 150 }}
+            />
+            <ListItemText
+              primary="Actions"
+              style={{ minWidth: 200, maxWidth: 200}}
             />
             <ListItemText
               primary="Last Edited"
               style={{ minWidth: 170, maxWidth: 170 }}
-            />
-            <ListItemText
-              primary="Actions"
-              style={{ minWidth: 150, maxWidth: 150 }}
             />
           </ListItem>
           {environments === undefined || environments === null
@@ -3969,20 +3969,20 @@ If you're interested, please let me know a time that works for you, or set up a 
                   bgColor = "#1f2023";
                 }
 
-								// Check if there's a notification for it in userdata.priorities
-								var showCPUAlert = false	
-								var foundIndex = -1
-								if (userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
-									foundIndex = userdata.priorities.findIndex(prio => prio.name.includes("CPU") && prio.active === true)
+				// Check if there's a notification for it in userdata.priorities
+				var showCPUAlert = false	
+				var foundIndex = -1
+				if (userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
+					foundIndex = userdata.priorities.findIndex(prio => prio.name.includes("CPU") && prio.active === true)
 
-									if (foundIndex >= 0 && userdata.priorities[foundIndex].name.endsWith(environment.Name)) {
-											showCPUAlert = true
-									}
-								}
+					if (foundIndex >= 0 && userdata.priorities[foundIndex].name.endsWith(environment.Name)) {
+							showCPUAlert = true
+					}
+				}
 
-								console.log("Show CPU alert: ", showCPUAlert)
+				//console.log("Show CPU alert: ", showCPUAlert)
 
-				const queueSize = isCloud ? -1 : environment.queue !== undefined && environment.queue !== null ? environment.queue < 0 ? 0 : environment.queue > 100 ? ">100" : environment.queue : 0
+				const queueSize = environment.queue !== undefined && environment.queue !== null ? environment.queue < 0 ? 0 : environment.queue > 99 ? ">99" : environment.queue : 0
 
                 return (
 									<span key={index}>
@@ -4069,8 +4069,18 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	  />
                   	  <ListItemText
                   	    style={{
-                  	      minWidth: 125,
-                  	      maxWidth: 125,
+                  	      minWidth: 100,
+                  	      maxWidth: 100,
+                  	      overflow: "hidden",
+                  	      marginLeft: 10,
+                  	    }}
+
+                  	    primary={queueSize}
+                  	  />
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 140,
+                  	      maxWidth: 140,
                   	      overflow: "hidden",
                   	    }}
                   	    primary={environment.default ? "true" : null}
@@ -4082,38 +4092,14 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	        onClick={() => setDefaultEnvironment(environment)}
                   	        color="primary"
                   	      >
-                  	        Make default
+                  	        Set Default
                   	      </Button>
                   	    )}
                   	  </ListItemText>
                   	  <ListItemText
                   	    style={{
-                  	      minWidth: 100,
-                  	      maxWidth: 100,
-                  	      overflow: "hidden",
-                  	      marginLeft: 10,
-                  	    }}
-
-                  	    primary={isCloud ? environment.archived.toString() : queueSize}
-                  	  />
-                  	  <ListItemText
-                  	    style={{
-                  	      minWidth: 150,
-                  	      maxWidth: 150,
-                  	      overflow: "hidden",
-                  	    }}
-                  	    primary={
-                  	      environment.edited !== undefined &&
-                  	      environment.edited !== null &&
-                  	      environment.edited !== 0
-                  	        ? new Date(environment.edited * 1000).toISOString()
-                  	        : 0
-                  	    }
-                  	  />
-                  	  <ListItemText
-                  	    style={{
-                  	      minWidth: 300,
-                  	      maxWidth: 300,
+                  	      minWidth: 200,
+                  	      maxWidth: 200,
                   	      overflow: "hidden",
                   	      marginLeft: 10,
                   	    }}
@@ -4145,9 +4131,24 @@ If you're interested, please let me know a time that works for you, or set up a 
 								>
 									{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
 								</Button>
+
 							</ButtonGroup>
                   	    </div>
                   	  </ListItemText>
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 150,
+                  	      maxWidth: 150,
+                  	      overflow: "hidden",
+                  	    }}
+                  	    primary={
+                  	      environment.edited !== undefined &&
+                  	      environment.edited !== null &&
+                  	      environment.edited !== 0
+                  	        ? new Date(environment.edited * 1000).toISOString()
+                  	        : 0
+                  	    }
+                  	  />
                   	</ListItem>
 					{showCPUAlert === false ? null : 
                   		<ListItem key={index+"_cpu"} style={{ backgroundColor: bgColor }}>

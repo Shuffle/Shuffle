@@ -21,6 +21,7 @@ import theme from '../theme.jsx';
 import dayjs from 'dayjs';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import Pagination from '@mui/material/Pagination';
+import { triggers as alltriggers } from "../views/AngularWorkflow.jsx"
 import { 
 	DatePicker, 
 	DateTimePicker,
@@ -29,6 +30,7 @@ import {
 
 import {
 	OpenInNew as OpenInNewIcon,
+    PlayArrow as PlayArrowIcon,
 } from '@mui/icons-material';
 
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
@@ -176,11 +178,42 @@ const RuntimeDebugger = (props) => {
 		}
 	}, [])
 
+	const imageSize = 30
 	const columns: GridColDef[] = [
+		{
+			field: 'execution_source',
+			headerName: 'Source',
+			width: 75,
+			renderCell: (params) => {
+				var foundSource = <PlayArrowIcon style={{color: theme.palette.primary.main, height: imageSize, width: imageSize, }} />
+
+				var source = params.row.execution_source
+				if (source === "schedule") {
+					foundSource = <img src={alltriggers[1].large_image} alt="schedule" style={{borderRadius: theme.palette.borderRadius, height: imageSize, width: imageSize, }} />
+				} else if (source === "webhook") {
+					foundSource = <img src={alltriggers[0].large_image} alt="webhook" style={{borderRadius: theme.palette.borderRadius, height: imageSize, width: imageSize, }} />
+				} else if (source === "subflow" || source.length === 36) {
+					foundSource = <img src={alltriggers[4].large_image} alt="subflow" style={{borderRadius: theme.palette.borderRadius, height: imageSize, width: imageSize, }} />
+					source = "subflow"
+				} else {
+					source = "manual"
+				}
+
+				return (
+					<span style={{}} onClick={() => {
+						//setStatus(params.row.status)
+					}}>
+						<Tooltip title={source} placement="top">
+							{foundSource}
+						</Tooltip>
+					</span>
+				)
+			},
+	    },
 		{
 			field: 'status',
 			headerName: 'Status',
-			width: 150,
+			width: 100,
 			renderCell: (params) => (
 				<span style={{cursor: "pointer", }} onClick={() => {
 					setStatus(params.row.status)
@@ -208,6 +241,7 @@ const RuntimeDebugger = (props) => {
 				</span>
 			),
 		  },
+
 	      {
 			field: 'workflow results',
 			headerName: 'Results',
@@ -231,6 +265,52 @@ const RuntimeDebugger = (props) => {
 					<span style={{}} onClick={() => {
 					}}>
 						{resultLength} / {actionLength} 
+					</span>
+				)
+			},
+		  },
+	      {
+			field: 'finished',
+			headerName: 'Finished',
+			width: 75,
+			renderCell: (params) => {
+				var foundItems = 0
+				var extraItems = 0
+				if (params.row.results !== null && params.row.results !== undefined) {
+					for (let key in params.row.results) {
+						if (params.row.results[key].status === "SUCCESS") {
+							foundItems += 1
+						}
+					}
+				}
+
+				return (
+					<span style={{}} onClick={() => {
+					}}>
+						{foundItems} 
+					</span>
+				)
+			},
+		  },
+	      {
+			field: 'skipped',
+			headerName: 'Skipped',
+			width: 75,
+			renderCell: (params) => {
+				var foundItems = 0
+				var extraItems = 0
+				if (params.row.results !== null && params.row.results !== undefined) {
+					for (let key in params.row.results) {
+						if (params.row.results[key].status === "SKIPPED") {
+							foundItems += 1
+						}
+					}
+				}
+
+				return (
+					<span style={{}} onClick={() => {
+					}}>
+						{foundItems} 
 					</span>
 				)
 			},
@@ -288,7 +368,7 @@ const RuntimeDebugger = (props) => {
 	}
 
 	return (
-		<div style={{minWidth: 1000, maxWidth: 1000, margin: "auto", }}>
+		<div style={{minWidth: 1150, maxWidth: 1150, margin: "auto", }}>
 			<h1>Workflow Run Debugger</h1>
 			<form onSubmit={(e) => {
 				submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage)

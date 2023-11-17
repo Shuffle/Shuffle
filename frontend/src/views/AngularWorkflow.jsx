@@ -395,9 +395,10 @@ const AngularWorkflow = (defaultprops) => {
   var to_be_copied = "";
   const [firstrequest, setFirstrequest] = React.useState(true);
   const [cystyle] = useState(cytoscapestyle);
+
   const [cy, setCy] = React.useState();
 
-	const [toolsApp, setToolsApp] = React.useState({});
+  const [toolsApp, setToolsApp] = React.useState({});
   const [currentView, setCurrentView] = React.useState(0);
   const [triggerAuthentication, setTriggerAuthentication] = React.useState({});
   const [triggerFolders, setTriggerFolders] = React.useState([]);
@@ -6344,6 +6345,9 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   const fetchRecommendations = (inputWorkflow) => {
+	//console.log("Disabled recommendations")
+	//return
+
 	const parsedWorkflow = JSON.parse(JSON.stringify(inputWorkflow))
 
     fetch(globalUrl + "/api/v1/workflows/recommend", {
@@ -14992,6 +14996,18 @@ const AngularWorkflow = (defaultprops) => {
               </Tooltip>
             ) : null}
           </div>
+          {executionData.workflow !== undefined && executionData.workflow !== null && executionData.workflow.actions !== undefined && executionData.workflow.actions !== null && executionData.workflow.actions.length > 0 && executionData.workflow.actions[0].environment !== "Cloud" ?
+            <div style={{ display: "flex", marginLeft: 10, }}>
+              <Typography variant="body1">
+                <b>Env &nbsp;&nbsp;&nbsp;&nbsp;</b>
+              </Typography>
+              <Typography variant="body1" color="textSecondary" style={{color: "#f85a3e", cursor: "pointer", }} onClick={() => {
+				  window.open("/admin?tab=environments", "_blank")
+			  }}>
+                {executionData.workflow.actions[0].environment}
+              </Typography>
+            </div>
+          	: null}
           {executionData.status !== undefined &&
             executionData.status.length > 0 ? (
             <div style={{ display: "flex", marginLeft: 10, }}>
@@ -15973,8 +15989,9 @@ const AngularWorkflow = (defaultprops) => {
               cy={(incy) => {
                 // FIXME: There's something specific loading when
                 // you do the first hover of a node. Why is this different?
-                //console.log("CY: ", incy)
-                setCy(incy);
+                
+
+			    setCy(incy);
               }}
             />
 		  </span>
