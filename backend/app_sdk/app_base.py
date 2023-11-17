@@ -2833,10 +2833,10 @@ class AppBase:
             # This is to make it possible ot 
             try:
                 if action["id"] == fullexecution["start"]:
-                    pass
+                    return True, ""
+
                     # Need to validate if the source is a trigger or not
                     # need to remove branches that are not from trigger to the startnode to make it all work
-
                     #if "workflow" in fullexecution["workflow"] and "triggers" in fullexecution["workflow"]:
                     #    cnt = 0
                     #    found_branch_indexes = []
@@ -2859,11 +2859,9 @@ class AppBase:
                     #        print("Removed %d branches" % len(found_branch_indexes))
                     #else:
                     #    print("[WARNING] No branches or triggers found in fullexecution for startnode")
-
-                    #if should_skip:
-                    #    return True, ""
             except Exception as error:
                 self.logger.info(f"[WARNING] Failed checking startnode: {error}")
+                #return True, ""
                 #return True, ""
 
             available_checks = [
