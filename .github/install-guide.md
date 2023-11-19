@@ -55,8 +55,10 @@ OUTER_HOSTNAME=YOUR.IP.HERE
 docker-compose up -d
 ```
 
-### Configurations (proxies, default users etc.)
+### Configurations (high availability, scale, proxies, default users etc.)
 https://shuffler.io/docs/configuration
+
+![architecture](https://github.com/frikky/Shuffle/raw/main/frontend/src/assets/img/shuffle_architecture.png)
 
 ### After installation 
 1. After installation, go to http://localhost:3001 (or your servername - https is on port 3443)
