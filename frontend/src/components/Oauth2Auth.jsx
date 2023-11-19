@@ -112,20 +112,21 @@ const AuthenticationOauth2 = (props) => {
       authenticationType.client_secret.length > 0
   );	
 
-  const [clientId, setClientId] = React.useState(
-    defaultConfigSet ? authenticationType.client_id : ""
-  );
-  const [clientSecret, setClientSecret] = React.useState(
-    defaultConfigSet ? authenticationType.client_secret : ""
-  );
+  console.log("AUTH: ", authenticationType)
+
+  const [clientId, setClientId] = React.useState(defaultConfigSet ? authenticationType.client_id : "");
+  const [clientSecret, setClientSecret] = React.useState(defaultConfigSet ? authenticationType.client_secret : "");
+
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  
   const [oauthUrl, setOauthUrl] = React.useState("");
   const [buttonClicked, setButtonClicked] = React.useState(false);
-
   const [offlineAccess, setOfflineAccess] = React.useState(true);
-  const allscopes = authenticationType.scope !== undefined ? authenticationType.scope : [];
     
+  const allscopes = authenticationType.scope !== undefined && authenticationType.scope !== null ? authenticationType.scope : [];
+  const [selectedScopes, setSelectedScopes] = React.useState(allscopes !== null && allscopes !== undefined ? allscopes.length > 0 && allscopes.length <= 3 ? [allscopes[0]] : [] : [])
 
-  const [selectedScopes, setSelectedScopes] = React.useState(allscopes.length > 0 && allscopes.length <= 3 ? [allscopes[0]] : [])
   const [manuallyConfigure, setManuallyConfigure] = React.useState(
     defaultConfigSet ? false : true
   );
@@ -157,6 +158,7 @@ const AuthenticationOauth2 = (props) => {
   if (selectedApp.authentication === undefined) {
     return null;
   }
+
 
 	const startOauth2Request = (admin_consent) => {
 		// Admin consent also means to add refresh tokens
@@ -319,6 +321,32 @@ const AuthenticationOauth2 = (props) => {
 			"value": authenticationType.token_uri,
 		}]
 
+		if (authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0) {
+			if (authenticationType.grant_type === "client_credentials") {
+				parsedFields.push({
+					"key": "grant_type",
+					"value": authenticationType.grant_type,
+				})
+			} else if (authenticationType.grant_type === "password") {
+				parsedFields.push({
+					"key": "grant_type",
+					"value": authenticationType.grant_type,
+				})
+
+				parsedFields.push({
+					"key": "username",
+					"value": username,
+				})
+
+				parsedFields.push({
+					"key": "password",
+					"value": password,
+				})
+			} else {
+				toast("Unknown grant type: " + authenticationType.grant_type)
+			}
+		}
+
 		const appAuthData = {
 			"label": "OAuth2 for " + selectedApp.name,
 			"app": {
@@ -478,8 +506,6 @@ const AuthenticationOauth2 = (props) => {
     }
 
     return;
-    //do {
-    //} while (
   };
 
   authenticationOption.app.actions = [];
@@ -647,7 +673,7 @@ const AuthenticationOauth2 = (props) => {
 				)}
 			</Button>
 
-	if (authButtonOnly === true) {
+	if (authButtonOnly === true && (authenticationType.grant_type === undefined || authenticationType.grant_type === null || authenticationType.grant_type === "")) {
 		return autoAuthButton
 	}
 
@@ -872,8 +898,51 @@ const AuthenticationOauth2 = (props) => {
                 //authenticationOption.label = event.target.value
               }}
             />
-            {allscopes.length === 0 ? null : "Scopes (access rights)"}
-            {allscopes.length === 0 ? null : (
+
+			{authenticationType.grant_type !== "password" ? null : 
+				<div>
+					<TextField
+					  style={{
+						backgroundColor: theme.palette.inputColor,
+						borderRadius: theme.palette.borderRadius,
+					  }}
+					  InputProps={{
+						style: {
+						},
+					  }}
+					  fullWidth
+					  color="primary"
+					  label={"Username"}
+					  placeholder={"Username"}
+					  onChange={(event) => {
+						setUsername(event.target.value);
+						//authenticationOption.label = event.target.value
+					  }}
+					/>
+					<TextField
+					  style={{
+						backgroundColor: theme.palette.inputColor,
+						borderRadius: theme.palette.borderRadius,
+						marginBottom: 10, 
+					  }}
+					  InputProps={{
+						style: {
+						},
+					  }}
+					  fullWidth
+					  color="primary"
+					  label={"Password"}
+					  placeholder={"Password"}
+					  onChange={(event) => {
+						setPassword(event.target.value);
+						//authenticationOption.label = event.target.value
+					  }}
+					/>
+				</div>
+			}
+
+            {allscopes === undefined || allscopes === null || allscopes.length === 0 ? null : "Scopes (access rights)"}
+            {allscopes === undefined || allscopes === null || allscopes.length === 0 ? null : (
 							<div style={{width: "100%", marginTop: 10, display: "flex"}}>
 								<span>
 									<Select
@@ -931,7 +1000,7 @@ const AuthenticationOauth2 = (props) => {
             borderRadius: theme.palette.borderRadius,
           }}
           disabled={
-            clientSecret.length === 0 || clientId.length === 0 || buttonClicked || selectedScopes.length === 0
+            clientSecret.length === 0 || clientId.length === 0 || buttonClicked || (allscopes.length !== 0 && selectedScopes.length === 0)
           }
           variant="contained"
           fullWidth

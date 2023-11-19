@@ -11,7 +11,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
 import { NestedMenuItem } from 'mui-nested-menu';
-import ReactMarkdown from "react-markdown";
+import Markdown from "react-markdown";
 //import { useAlert
 import { ToastContainer, toast } from "react-toastify" 
 import { isMobile } from "react-device-detect"
@@ -635,7 +635,11 @@ const AngularWorkflow = (defaultprops) => {
         if (responseJson.success === true) {
           if (responseJson.reason !== undefined && responseJson.reason !== undefined && responseJson.reason.length > 0) {
             if (!responseJson.reason.includes("404: Not Found") && responseJson.reason.length > 25) {
-              selectedApp.documentation = responseJson.reason
+			  // Translate <img> into markdown ![]()
+			  const imgRegex = /<img.*?src="(.*?)"/g;
+			  const newdata = responseJson.reason.replace(imgRegex, '![]($1)');
+
+              selectedApp.documentation = newdata 
               setSelectedApp(selectedApp)
               setUpdate(Math.random())
             }
@@ -977,8 +981,6 @@ const AngularWorkflow = (defaultprops) => {
           if (execution_id !== undefined && execution_id !== null && execution_id.length > 0 && (tmpView === undefined || tmpView === null || tmpView.length === 0)) {
             tmpView = execution_id;
           }
-
-		  console.log("TMPVIEW: ", tmpView);
 
 		  // Compare with currently selected item
           if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
@@ -1669,7 +1671,7 @@ const AngularWorkflow = (defaultprops) => {
       if (hasSaved === false) {
         setExecutionRequestStarted(true);
         saveWorkflow(workflow, executionArgument, startNode);
-        console.log("FIXME: Might have forgotten to save before executing.");
+        //console.log("FIXME: Might have forgotten to save before executing.");
         return;
       }
 
@@ -3783,6 +3785,8 @@ const AngularWorkflow = (defaultprops) => {
           //}
           curaction.app_id = curapp.id
 
+		  console.log("CURAPP: ", curapp.authentication)
+
           setAuthenticationType(
             curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null ? {
               type: "oauth2",
@@ -3792,6 +3796,7 @@ const AngularWorkflow = (defaultprops) => {
               scope: curapp.authentication.scope,
               client_id: curapp.authentication.client_id,
               client_secret: curapp.authentication.client_secret,
+			  grant_type: curapp.authentication.grant_type,
             } : {
               type: "",
             }
@@ -16955,7 +16960,7 @@ const AngularWorkflow = (defaultprops) => {
               )}
             </span>
           ) : (
-		    <ReactMarkdown
+		    <Markdown
 		      components={{
 		      	img: Img,
 		      	code: CodeHandler,
@@ -16974,7 +16979,7 @@ const AngularWorkflow = (defaultprops) => {
 		      }}
 		    >
 			  {selectedApp.documentation}
-		    </ReactMarkdown>
+		    </Markdown>
           )}
         </div>
       </div>

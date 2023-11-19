@@ -44,7 +44,6 @@ const WorkflowTemplatePopup = (props) => {
   	const [missingDestination, setMissingDestination] = React.useState(undefined);
 
 	useEffect(() => {
-		console.log("Source & Dest check:", missingSource, missingDestination)
 	}, [missingSource, missingDestination])
 
   	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
@@ -392,7 +391,7 @@ const WorkflowTemplatePopup = (props) => {
 								appFramework={appFramework}
 
 								appType={missingSource.type}
-								appImage={missingSource.image}
+								AppImage={missingSource.image}
 
 								setMissing={setMissingSource}
 							/>
@@ -406,7 +405,7 @@ const WorkflowTemplatePopup = (props) => {
 								appFramework={appFramework}
 
 								appType={missingDestination.type}
-								appImage={missingDestination.image}
+								AppImage={missingDestination.image}
 
 								setMissing={setMissingDestination}
 							/>
@@ -443,7 +442,7 @@ const WorkflowTemplatePopup = (props) => {
 	if (title.length > maxlength) {
 		parsedTitle = title.substring(0, maxlength) + "..."
 	}
-	console.log("isHomePage", isHomePage)
+	
 	parsedTitle = parsedTitle.replaceAll("_", " ")
 
 	const parsedDescription = description !== undefined && description !== null ? description.replaceAll("_", " ") : ""

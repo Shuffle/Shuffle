@@ -398,7 +398,6 @@ const AppCreator = (defaultprops) => {
     apikeySelection.length > 0 ? apikeySelection[0] : ""
   );
   const [refreshUrl, setRefreshUrl] = useState("");
-  const [oauth2Scopes, setOauth2Scopes] = useState([]);
   const [projectCategories, setProjectCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
 
@@ -411,7 +410,10 @@ const AppCreator = (defaultprops) => {
   const [appBuilding, setAppBuilding] = useState(false);
   const [fileDownloadEnabled, setFileDownloadEnabled] = useState(false);
   const [actionAmount, setActionAmount] = useState(increaseAmount);
-  const [oauth2Type, setOauth2Type] = useState("application");
+
+  const [oauth2Scopes, setOauth2Scopes] = useState([]);
+  const [oauth2Type, setOauth2Type] = useState("delegated");
+  const [oauth2GrantType, setOauth2GrantType] = useState("client_credentials");
   const defaultAuth = {
     name: "",
     type: "header",
@@ -1748,17 +1750,25 @@ const AppCreator = (defaultprops) => {
       	    //console.log("FLOW-1: ", value)
       	    const flowkey = value.flow === undefined ? "flows" : "flow";
       	    //console.log("FLOW: ", value[flowkey])
-      	    const basekey = value[flowkey].authorizationCode !== undefined
-      	        ? "authorizationCode"
-      	        : "implicit";
+			
+
+		    // Doesn't seem to be used for now
+      	    const basekey = value[flowkey].authorizationCode !== undefined ? "authorizationCode" : "implicit";
+			  
+		    // Kind of fucked up, but it works for now?
+		    if (value["x-grant-type"] !== undefined && value["x-grant-type"] !== null && value["x-grant-type"].length !== 0) {
+		        setOauth2Type(value["x-grant-type"])
+		    }
 
       	    //console.log("FLOW2: ", value[flowkey][basekey])
       	    if (value[flowkey] !== undefined && value[flowkey][basekey] !== undefined
       	    ) {
-      	      if (value[flowkey][basekey].authorizationUrl !== undefined && parameterName.length === 0) {
+			  var newparamname = parameterName
+      	      if (value[flowkey][basekey].authorizationUrl !== undefined && value[flowkey][basekey].authorizationUrl !== null && value[flowkey][basekey].authorizationUrl.length !== 0 && parameterName.length === 0) {
       	          setParameterName(value[flowkey][basekey].authorizationUrl);
-				//  } else {
-				//	  setOauth2Type("application")
+			  } else {
+				  setOauth2Type("application")
+
 			  }
 
       	      var tokenUrl = "";
@@ -2519,6 +2529,14 @@ const AppCreator = (defaultprops) => {
           },
         },
       };
+
+
+	  //if (value[flowkey][basekey]["x-grant-type"] !== undefined && value[flowkey][basekey]["x-grant-type"] !== null && value[flowkey][basekey]["x-grant-type"].length !== 0) {
+	  if (oauth2GrantType.length > 0) { 
+		  data.components.securitySchemes["Oauth2"]["x-grant-type"] = oauth2GrantType;
+	  }
+
+		console.log("SECURITYSCHEMES: ", data.components);
     }
 
     if (setExtraAuth.length > 0) {
@@ -3082,7 +3100,7 @@ const AppCreator = (defaultprops) => {
 			},
 		  }}
 		  style={{ maxHeight: 80, overflowX: "hidden", overflowY: "auto" }}
-		  placeholder="Available Oauth2 Scopes (enter to add)"
+		  placeholder="Available Oauth2 Scopes"
 		  color="primary"
 		  fullWidth
 		  value={oauth2Scopes}
@@ -5957,36 +5975,67 @@ const AppCreator = (defaultprops) => {
 						</Select>
 					</FormControl>
 					{authenticationOption === "Oauth2" ? 
-						<FormControl style={{ marginLeft: 350, maxWidth: 200, }} variant="outlined">
+						<FormControl style={{ marginLeft: 310, maxWidth: 240, }} variant="outlined">
 							{/*
 							<Typography variant="body2">
 								- Delegated: The user will get a popup for access their personal data.
 								- Application: Permissions are set by the app creator in the 3rd party platform. 
 							</Typography>
 							*/}
-							<Select
-								fullWidth
-								label="Oauth2 type"
-								onChange={(e) => {
-									setOauth2Type(e.target.value);
-								}}
-								value={oauth2Type}
-								style={{
-									backgroundColor: inputColor,
-									color: "white",
-									height: "50px",
-								}}
-							>
-								{["delegated", "application"].map((data, index) => (
-									<MenuItem
-										key={index}
-										style={{ backgroundColor: inputColor, color: "white" }}
-										value={data}
+							<div style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", }}>
+								<Typography variant="body2" style={{ marginTop: 10, marginRight: 10, }} color="textSecondary">Oauth2 type</Typography>
+								<Select
+									fullWidth
+									onChange={(e) => {
+										setOauth2Type(e.target.value);
+									}}
+									value={oauth2Type}
+									style={{
+										backgroundColor: inputColor,
+										color: "white",
+										height: "50px",
+									}}
+								>
+									{["delegated", "application"].map((data, index) => (
+										<MenuItem
+											key={index}
+											style={{ backgroundColor: inputColor, color: "white" }}
+											value={data}
+										>
+											{data}
+										</MenuItem>
+									))}
+								</Select>
+							</div>
+
+							{oauth2Type === "application" ?
+								<div style={{display: "flex", }}>
+									<Typography variant="body2" style={{ marginTop: 10, marginRight: 10, }} color="textSecondary">Grant Type</Typography>
+									<Select
+										fullWidth
+										label="Grant Type"
+										onChange={(e) => {
+											setOauth2GrantType(e.target.value);
+										}}
+										value={oauth2GrantType}
+										style={{
+											backgroundColor: inputColor,
+											color: "white",
+											height: "50px",
+										}}
 									>
-										{data}
-									</MenuItem>
-								))}
-							</Select>
+										{["client_credentials", "password"].map((data, index) => (
+											<MenuItem
+												key={index}
+												style={{ backgroundColor: inputColor, color: "white" }}
+												value={data}
+											>
+												{data}
+											</MenuItem>
+										))}
+									</Select>
+								</div>
+							: null}
 						</FormControl>
 					: null}
 	  				</span> 

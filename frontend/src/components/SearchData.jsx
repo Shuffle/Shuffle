@@ -50,6 +50,7 @@ const SearchData = props => {
     const [value, setValue] = useState("");
 	const [userTyped, setUserTyped] = useState(false)
 
+
     if (serverside === true) {
         return null
     }
@@ -59,25 +60,16 @@ const SearchData = props => {
     //}
 
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-
-    //if (window.location.pathname !== oldPath) {
-    //    setSearchOpen(false)
-    //    setOldPath(window.location.pathname)
-    //}
-
-    //if (window.location.pathname === "/search") {
-    //    setModalOpen(true)
-    //}
     // if (window.location.pathname === "/docs" || window.location.pathname === "/apps" || window.location.pathname === "/usecases"  ) {
     //     setModalOpen(false)
     // }
 
-    //useEffect(() => {
-    //	if (searchOpen) {
-    //		var tarfield = document.getElementById("shuffle_search_field")
-    //		tarfield.focus()
-    //	}
-    //}, searchOpen)
+    // useEffect(() => {
+    // 	if (searchOpen) {
+    // 		var tarfield = document.getElementById("shuffle_search_field")
+    // 		tarfield.focus()
+    // 	}
+    // }, searchOpen)
 
     const SearchBox = ({ currentRefinement, refine, isSearchStalled, }) => {
         const keyPressHandler = (e) => {
@@ -85,9 +77,11 @@ const SearchData = props => {
             if (e.which === 13) {
                 // alert("You pressed enter!");
                 navigate("/search?q=" + currentRefinement, { state: value, replace: true });
-				setSearchOpen(false)
-				setModalOpen(false)
-				return
+
+				        setSearchOpen(false)
+				        setModalOpen(false)
+				        return
+
             }
         };
         /*
@@ -104,10 +98,11 @@ const SearchData = props => {
 
         return (
             <form id="search_form" noValidate type="searchbox" action="" role="search" onClick={() => {
-            }}>
+            }}
+            >
                 <TextField
                     fullWidth
-                    style={{ backgroundColor: theme.palette.surfaceColor, borderRadius: borderRadius, minWidth: "100%", maxWidth: "100%", }}
+                    style={{ zIndex: 1100, marginTop:-20,marginBottom: 200, position:"fixed", backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, width: 685, }}
                     InputProps={{
                         style: {
                             color: "white",
@@ -120,7 +115,7 @@ const SearchData = props => {
                         disableUnderline: true,
                         startAdornment: (
                             <InputAdornment position="start">
-                            <SearchIcon style={{ marginLeft: 5, marginRight: 10, color: "#f86a3e", }} />
+                                <SearchIcon style={{ marginLeft: 5, marginRight: 10, color: "#f86a3e", }} />
                             </InputAdornment>
                         ),
                         endAdornment: (
@@ -188,8 +183,8 @@ const SearchData = props => {
         const baseImage = <CodeIcon />
 
         return (
-            <Card elevation={0} style={{ marginRight: 10, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 75, boxShadows: "none", }}>
-                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", }}>
+            <Card elevation={0} style={{ marginRight: 10,marginTop:50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 75, boxShadows: "none", }}>
+                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color:"#FF8444", borderBottom: "1px solid", width: 105 }}>
                     Workflows
                 </Typography>
 
@@ -349,13 +344,13 @@ const SearchData = props => {
         const baseImage = <LibraryBooksIcon />
 
         return (
-            <Card elevation={0} style={{ marginRight: 10, color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, width: "100%", left: -30, boxShadows: "none", }}>
+            <Card elevation={0} style={{ marginRight: 10, color: "white", zIndex: 999, backgroundColor: theme.palette.inputColor, width: 685, boxShadows: "none", }}>
                 {/* <IconButton style={{ zIndex: 5000, position: "absolute", right: 14, color: "grey" }} onClick={() => {
                     setSearchOpen(false)
                 }}>
                     <CloseIcon />
                 </IconButton> */}
-                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", }}>
+                <Typography variant="h6" style={{ margin: "40px 10px 0px 20px", color:"#FF8444", borderBottom: "1px solid", width: 50 }}>
                     Apps
                 </Typography>
 
@@ -392,7 +387,6 @@ const SearchData = props => {
                             const name = hit.name === undefined ?
                                 hit.filename.charAt(0).toUpperCase() + hit.filename.slice(1).replaceAll("_", " ") + " - " + hit.title :
                                 (hit.name.charAt(0).toUpperCase() + hit.name.slice(1)).replaceAll("_", " ")
-
                             var secondaryText = hit.data !== undefined ? hit.data.slice(0, 40) + "..." : ""
                             const avatar = hit.image_url === undefined ?
                                 baseImage
@@ -401,7 +395,6 @@ const SearchData = props => {
                                     src={hit.image_url}
                                     variant="rounded"
                                 />
-
                             //console.log(hit)
                             if (hit.categories !== undefined && hit.categories !== null && hit.categories.length > 0) {
                                 secondaryText = hit.categories.slice(0, 3).map((data, index) => {
@@ -520,13 +513,13 @@ const SearchData = props => {
         //console.log(type, hits.length, hits)
 
         return (
-            <Card elevation={0} style={{ marginRight: 10, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 470, boxShadows: "none", }}>
+            <Card elevation={0} style={{ marginRight: 10,marginTop:50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 470, boxShadows: "none", }}>
                 {/* <IconButton style={{ zIndex: 5000, position: "absolute", right: 14, color: "grey" }} onClick={() => {
                     setSearchOpen(false)
                 }}>
                     <CloseIcon />
                 </IconButton> */}
-                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", }}>
+                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color:"#FF8444", borderBottom: "1px solid", width: 152}}>
                     Documentation
                 </Typography>
                 {/*
@@ -643,42 +636,14 @@ const SearchData = props => {
             </Card>
         )
     }
-
-    const CustomSearchBox = connectSearchBox(SearchBox)
-    const CustomAppHits = connectHits(AppHits)
-    const CustomWorkflowHits = connectHits(WorkflowHits)
-    const CustomDocHits = connectHits(DocHits)
-
-    const modalView = (
-        <div>
-            <Grid container style={{ display: "contents" }}>
-                <Grid item xs="auto" style={{ marginTop: 12 }}>
-                    <Index indexName="appsearch">
-                        <CustomAppHits />
-                    </Index>
-                </Grid>
-                <Grid item xs="auto" style={{ marginTop: 12 }}>
-                    <Index indexName="workflows">
-                        <CustomWorkflowHits />
-                    </Index>
-                </Grid>
-                <Grid item xs="auto" style={{ marginTop: 12 }}>
-                    <Index indexName="documentation">
-                        <CustomDocHits />
-                    </Index>
-                </Grid>
-            </Grid>
-        </div>
-    )
-
-    const gettingStartData = (
+    const gettingStartData = !searchOpen ? ( 
         <Grid
             container
             direction="row"
             alignItems="center"
         // justify="space-evenly"
         >
-            <Grid item xs={6} style={{ alignItems: "center", flexDirection: "row" }}>
+            <Grid item xs={6} style={{ alignItems: "center", flexDirection: "row", marginTop: 70,  }}>
                 <List style={{ width: "100%", marginLeft: 10, color: "var(--Paragraph-text, #C8C8C8)" }}>
                     <ListItem>
                         <ArticleIcon style={{ marginRight: 10, display: "flex", width: 22 }} />
@@ -715,7 +680,7 @@ const SearchData = props => {
                     </div>
                 </List>
             </Grid>
-            <Grid item xs={6} style={{ alignItems: "center", flexDirection: "row", width: 22 }}>
+            <Grid item xs={6} style={{ alignItems: "center", flexDirection: "row", width: 22, marginTop: 70 }}>
                 <List style={{ width: "100%", marginLeft: 10, color: "var(--Paragraph-text, #C8C8C8)", }}>
                     <ListItem>
                         <ManageSearchIcon style={{ marginRight: 10, display: "flex" }} />
@@ -749,29 +714,6 @@ const SearchData = props => {
                     </div>
                 </List>
             </Grid>
-            {/* <Grid item xs={12} style={{ alignItems: "center", flexDirection: "row", width: 22 }}>
-                <List style={{ width: "100%", marginLeft: 10, color: "var(--Paragraph-text, #C8C8C8)", }}>
-                    <ListItem>
-                        <ManageSearchIcon style={{ marginRight: 10, display: "flex" }} />
-                        <Typography variant="body1" style={{ display: "flex", fontSize: 16 }}>Popular searches</Typography>
-                    </ListItem>
-                    <div style={{ marginLeft: 35 }}>
-                        <ListItem>
-
-                            <Typography variant="body1" style={{ fontSize: 16,  }}>Apps</Typography>
-                            <KeyboardArrowRightIcon />
-                        </ListItem>
-                        <ListItem>
-                            <Typography variant="body1" style={{ fontSize: 16,  }}>Workflows</Typography>
-                            <KeyboardArrowRightIcon />
-                        </ListItem>
-                        <ListItem>
-                            <Typography variant="body1" style={{ fontSize: 16,  }}>Creator</Typography>
-                            <KeyboardArrowRightIcon />
-                        </ListItem>
-                    </div>
-                </List>
-            </Grid> */}
             <Grid style={{ textAlign: "end", width: "100%", textTransform: 'capitalize', }}>
                 <Button style={{ textAlign: "center", textTransform: 'capitalize' }}
                     onClick={() => { window.location = "/search"; }} >
@@ -779,12 +721,38 @@ const SearchData = props => {
                 </Button>
             </Grid>
         </Grid>
+    ): null
+
+    const CustomSearchBox = connectSearchBox(SearchBox)
+    const CustomAppHits = connectHits(AppHits)
+    const CustomWorkflowHits = connectHits(WorkflowHits)
+    const CustomDocHits = connectHits(DocHits)
+
+    const modalView = (
+        <div>
+            <Grid container style={{ display: "contents", }}>
+                <Grid item xs="auto" style={{ }}>
+                    <Index indexName="appsearch">
+                        <CustomAppHits />
+                    </Index>
+                </Grid>
+                <Grid item xs="auto" style={{ }}>
+                    <Index indexName="workflows">
+                        <CustomWorkflowHits />
+                    </Index>
+                </Grid>
+                <Grid item xs="auto" style={{ }}>
+                    <Index indexName="documentation">
+                        <CustomDocHits />
+                    </Index>
+                </Grid>
+            </Grid>
+        </div>
     )
 
     return (
-        <div ref={node} style={{ width: "100%", maxWidth: "100%", margin: "auto", position: "relative", }}>
+        <div ref={node} style={{ width: "100%", maxWidth: "100%", margin: "auto", }}>
             <InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
-                console.log("CLICKED 1")
             }}>
                 <Configure clickAnalytics />
                 <CustomSearchBox onClick={() => {

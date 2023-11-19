@@ -47,8 +47,6 @@ const AppSearchButtons = (props) => {
     const [newSelectedApp, setNewSelectedApp] = useState(undefined)
 
     useEffect(() => {
-        console.log("AppSearchButtons: newSelectedApp: " + JSON.stringify(newSelectedApp))
-
         if (newSelectedApp !== undefined && setMissing != undefined) {
             console.log("AppSearchButtons: setMissing is defined!")
 
@@ -131,9 +129,12 @@ const AppSearchButtons = (props) => {
                 //setFrameworkLoaded(true)
             })
     }
+
     const icon = foundApp.large_image
-    console.log("index:", moreButton)
-    console.log("totalApps:", totalApps)
+	var foundAppImage = AppImage
+	if (foundApp.name !== undefined && foundApp.name !== null && !foundApp.name.includes(":default")) {
+		foundAppImage = foundApp.large_image
+	}
 
     let xsValue = 12;
     if (index === totalApps - 1 || index === totalApps - 2 || index === totalApps - 3 || index === totalApps - 4) {
@@ -142,6 +143,8 @@ const AppSearchButtons = (props) => {
     if (index === totalApps - 5) {
         xsValue = 12;
     }
+
+	// This is silly huh
     if (moreButton) {
         switch (index) {
           case totalApps - 1:
@@ -159,7 +162,6 @@ const AppSearchButtons = (props) => {
             xsValue = 12;
             break;
           default:
-            // Handle other cases if needed
         }
       }
       
@@ -221,10 +223,11 @@ const AppSearchButtons = (props) => {
                             >
                                 <IconButton
                                     style={{ zIndex: 12501, position: "absolute", top: 32, right: 16 }}
+									disabled
                                     onClick={(e) => {
                                         e.preventDefault();
                                         setLocalSearchOpen(false)
-                                        setDefaultSearch("")
+
                                         const submitDeletedApp = {
                                             "description": "",
                                             "id": "remove",
@@ -233,15 +236,23 @@ const AppSearchButtons = (props) => {
                                         }
                                         setFrameworkItem(submitDeletedApp)
                                         setNewSelectedApp({})
+
+										if (setDefaultSearch !== undefined) {
+                                        	setDefaultSearch("")
+										}
+
                                         setTimeout(() => {
-                                            setDiscoveryData({})
+											if (setDiscoveryData !== undefined) {
+                                            	setDiscoveryData({})
+											}
+
                                             setFrameworkItem(submitDeletedApp)
                                             //setNewSelectedApp({})
                                         }, 1000)
                                         //setAppName(discoveryData.cases.name)
                                     }}
                                 >
-                                    <DeleteIcon style={{ color: "white", height: 15, width: 15, }} />
+                                    <DeleteIcon style={{ height: 15, width: 15, }} />
                                 </IconButton>
                             </Tooltip>
                         </div>
@@ -283,12 +294,12 @@ const AppSearchButtons = (props) => {
                     }}
                 >
                     <div style={{ display: "flex", textAlign: "center", justifyContent: "center", alignItems: "center", marginRight: "auto" }}>
-                        {AppImage === undefined || AppImage === null || AppImage.length === 0 ?
-                            <div style={{ width: 40, height: 40, borderRadius: 9999, backgroundColor: "#2F2F2F", textAlign: "center" }}>
+                        {foundAppImage === undefined || foundAppImage === null || foundAppImage.length === 0 ?
+                            <div style={{ width: 40, height: 40, borderRadius: 40, backgroundColor: "#2F2F2F", textAlign: "center" }}>
                                 <img style={{ paddingLeft: 11, paddingTop: 11, width: 40, height: 40, flexShrink: 0, }} src={icon} />
                             </div>
                             :
-                            <img style={{ marginRight: 8, width: 35, height: 35, flexShrink: 0, borderRadius: 40, }} src={AppImage} />
+                            <img style={{ marginRight: 8, width: 35, height: 35, flexShrink: 0, borderRadius: 40, }} src={foundAppImage} />
                         }
                         <div style={{ marginLeft: 8, }}>
                             <Typography style={{

@@ -3585,36 +3585,9 @@ class AppBase:
                                         })
 
                                     break
-
-
-
-                                    #thread = threading.Thread(target=func, args=(**params,))
-                                    #thread.start()
-
-                                    #thread.join(timeout)
-
-                                    #if thread.is_alive():
-                                    #    # The thread is still running, so we need to stop it
-                                    #    # You can handle this as needed, such as raising an exception
-                                    #    timeout_handler()
-
-
-                                    #with Timeout(timeout):
-                                    #    newres = func(**params)
-                                    #    break
-                                    #except Timeout.Timeout as e:
-                                    #    self.logger.info(f"[DEBUG] Timeout error: {e}")
-                                    #    newres = json.dumps({
-                                    #        "success": False,
-                                    #        "reason": "Timeout error within %d seconds. This typically happens if we can't reach the API you're trying to reach." % timeout,
-                                    #        "exception": str(e),
-                                    #    })
-
-                                    #    break
-
                                 except TypeError as e:
                                     newres = ""
-                                    self.logger.info(f"[DEBUG] Got exec type error: {e}")
+                                    self.logger.info(f"[ERROR] Got function exec type error: {e}")
                                     try:
                                         e = json.loads(f"{e}")
                                     except:
