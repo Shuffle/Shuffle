@@ -1,5 +1,5 @@
 # Installation guide
-Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
+Installation of Shuffle is currently available for docker and kubernetes. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
 This document outlines an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
 
