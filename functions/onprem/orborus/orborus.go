@@ -556,6 +556,23 @@ func deployServiceWorkers(image string) {
 			}
 		}
 
+		// Look for SHUFFLE_VOLUME_BINDS
+		if len(os.Getenv("SHUFFLE_VOLUME_BINDS")) > 0 {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_VOLUME_BINDS=%s", os.Getenv("SHUFFLE_VOLUME_BINDS")))
+		}
+
+		overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
+		overrideHttpsProxy := os.Getenv("SHUFFLE_INTERNAL_HTTPS_PROXY")
+		if len(overrideHttpProxy) > 0 {
+			log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTP_PROXY=%s", overrideHttpProxy))
+		}
+
+		if len(overrideHttpsProxy) > 0 {
+			log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
+		}
+
 		serviceOptions := types.ServiceCreateOptions{}
 		_, err = dockercli.ServiceCreate(
 			ctx,
@@ -1572,6 +1589,25 @@ func main() {
 
 			if len(os.Getenv("SHUFFLE_DEBUG_MEMORY")) > 0 {
 				env = append(env, fmt.Sprintf("SHUFFLE_DEBUG_MEMORY=%s", os.Getenv("SHUFFLE_DEBUG_MEMORY")))
+			}
+
+			// Look for volume binds
+			if len(os.Getenv("SHUFFLE_VOLUME_BINDS")) > 0 {
+				log.Printf("[DEBUG] Added volume binds: %s", os.Getenv("SHUFFLE_VOLUME_BINDS"))
+				env = append(env, fmt.Sprintf("SHUFFLE_VOLUME_BINDS=%s", os.Getenv("SHUFFLE_VOLUME_BINDS")))
+			}
+
+			// Setting up internal proxy config for Shuffle -> shuffle comms
+			overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
+			overrideHttpsProxy := os.Getenv("SHUFFLE_INTERNAL_HTTPS_PROXY")
+			if len(overrideHttpProxy) > 0 {
+				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
+				env = append(env, fmt.Sprintf("HTTP_PROXY=%s", overrideHttpProxy))
+			}
+
+			if len(overrideHttpsProxy) > 0 {
+				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
+				env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", overrideHttpsProxy))
 			}
 
 			err = deployWorker(workerImage, containerName, env, execution)
