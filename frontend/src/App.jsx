@@ -84,13 +84,15 @@ const App = (message, props) => {
   if (
     isLoaded &&
     !isLoggedIn &&
-    !window.location.pathname.startsWith("/login") &&
-    !window.location.pathname.startsWith("/docs") &&
-    !window.location.pathname.startsWith("/support") &&
-    !window.location.pathname.startsWith("/detectionframework") &&
-    !window.location.pathname.startsWith("/appframework") &&
-    !window.location.pathname.startsWith("/adminsetup") &&
-    !window.location.pathname.startsWith("/usecases")
+    ![
+      "/login",
+      "/docs",
+      "/support",
+      "/detectionframework",
+      "/appframework",
+      "/adminsetup",
+      "/usecases",
+    ].some((path) => window.location.pathname.startsWith(path))
   ) {
     window.location = "/login";
   }
