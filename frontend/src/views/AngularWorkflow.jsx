@@ -25,6 +25,7 @@ import algoliasearch from 'algoliasearch/lite';
 import {
   Zoom,
   Fade,
+  ButtonGroup,
 
   Avatar,
   Popover,
@@ -477,6 +478,7 @@ const AngularWorkflow = (defaultprops) => {
   });
 
   // Trigger stuff
+
   const [selectedComment, setSelectedComment] = React.useState({});
   const [selectedTrigger, setSelectedTrigger] = React.useState({});
   const [selectedTriggerIndex, setSelectedTriggerIndex] = React.useState({});
@@ -532,6 +534,7 @@ const AngularWorkflow = (defaultprops) => {
   });
 
   // For code editor
+  const [setExecutionArgument,ExecutionArgument]=React.useState("")
   const [codeEditorModalOpen, setCodeEditorModalOpen] = React.useState(false);
   const [codedata, setcodedata] = React.useState("");
   const [editorData, setEditorData] = React.useState({
@@ -541,6 +544,7 @@ const AngularWorkflow = (defaultprops) => {
 	"actionlist": [],	
 	"field_id": "",
   })
+const [updateshuf,setupdateshuf]=React.useState(null)
 
   // This should all be set once, not on every iteration
   // Use states and don't update lol
@@ -8664,6 +8668,7 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const setTriggerBodyWrapper = (value) => {
+
     if (selectedTrigger.parameters === null) {
       selectedTrigger.parameters = [];
       workflow.triggers[selectedTriggerIndex].parameters[0] = {
@@ -8671,6 +8676,22 @@ const AngularWorkflow = (defaultprops) => {
         name: "cron",
       };
     }
+
+
+    console.log(workflow ,"these are workflows")
+
+    console.log("hiii")
+
+
+    ///this is extremelyyyyyyy
+
+
+
+
+
+
+
+
 
     workflow.triggers[selectedTriggerIndex].parameters[1] = {
       value: value,
@@ -11264,8 +11285,22 @@ const AngularWorkflow = (defaultprops) => {
                   workflow.triggers[selectedTriggerIndex].parameters[1].value
                 }
                 onBlur={(e) => {
+                  console.log(e.target.value)
                   workflow.triggers[selectedTriggerIndex].parameters[1].value =
                     e.target.value;
+
+
+
+
+
+
+
+
+
+
+                    console.log("blurrrr")
+
+                    console.log(workflow)
                   setWorkflow(workflow);
                 }}
               />
@@ -12709,10 +12744,13 @@ const AngularWorkflow = (defaultprops) => {
   };
 
 
+  /// sheduleSidebar is liked with shedulers  
+
 
   const ScheduleSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null :
         <div style={appApiViewStyle}>
 		  <h3 style={{ marginBottom: "5px" }}>
+        hello
 			{selectedTrigger.app_name}: {selectedTrigger.status}
 		  </h3>
 		  <a
@@ -12836,10 +12874,37 @@ const AngularWorkflow = (defaultprops) => {
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
+
                 InputProps={{
-                  style: {
-                  },
-                }}
+                  disableUnderline: true,
+                          endAdornment:  (
+                            <InputAdornment position="end">
+                  <ButtonGroup orientation={"vertical"}>
+                    <Tooltip title="Expand window" placement="top">
+                      <AspectRatioIcon
+                        style={{ cursor: "pointer", margin: true ? 5 : 0 ,}}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          //setFieldCount("count")
+                          //setExpansionModalOpen(true)
+
+                          setCodeEditorModalOpen(true)
+        
+                          //setcodedata(data.value)
+        
+                          // setEditorData({
+                          //   "name": "Execution Argument",
+                          //   "value": E,
+                          //   "field_number": count,
+                          //   "actionlist": actionlist,
+                          //   "field_id": clickedFieldId,
+                          // })
+                        }}
+                      />
+                    </Tooltip>
+                    </ButtonGroup>
+                    </InputAdornment>)
+               }}
                 fullWidth
                 disabled={
                   workflow.triggers[selectedTriggerIndex].status === "running"
@@ -12850,6 +12915,7 @@ const AngularWorkflow = (defaultprops) => {
                 color="primary"
                 placeholder="defaultValue"
                 onBlur={(e) => {
+                  console.log("this is the one")
                   setTriggerCronWrapper(e.target.value);
                 }}
               />
@@ -12878,18 +12944,73 @@ const AngularWorkflow = (defaultprops) => {
                   }}
                 />
                 <div style={{ flex: "10" }}>
-                  <b>Execution argument: </b>
+                  <b>Execution argument:kkkkkkkkk </b>
                 </div>
               </div>
               <TextField
+
+                onChange={(e)=>{
+                 workflow.triggers[selectedTriggerIndex].parameters[1].value=e.target.value
+
+                  console.log(workflow.triggers,"first")
+
+                  //console.log(
+              //  "wait"
+                //  )
+
+
+                 //   console.log(e.target.value,"hbjhbjhbj")
+              // setExecutionArgument(e.tagret.value)
+
+                }}
                 style={{
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
+
                 InputProps={{
-                  style: {
-                  },
-                }}
+                  disableUnderline: true,
+                          endAdornment:  (
+                            <InputAdornment position="end">
+                  <ButtonGroup orientation={"vertical"}>
+                    <Tooltip title="Expand window" placement="top">
+                      <AspectRatioIcon
+                        style={{ cursor: "pointer", margin: true ? 5 : 0 ,}}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          //setFieldCount("count")
+                          setCodeEditorModalOpen(true)
+                          console.log(editorData)
+
+
+
+
+
+                        console.log(workflow.triggers,"hhhh")
+
+
+
+
+        
+                          //setcodedata(data.value)
+
+
+                          console.log(workflow.triggers[0].parameters)
+        
+                          setEditorData({
+                            "name": "expand",
+                            "value":	workflow.triggers[0].parameters[1].value                            ,
+                            "field_number": 1,
+                            "actionlist": undefined,
+                            "field_id": "right_side_feild",
+                          })
+                        }}
+                      />
+                    </Tooltip>
+                    </ButtonGroup>
+                    </InputAdornment>)
+               }}
+
                 disabled={
                   workflow.triggers[selectedTriggerIndex].status === "running"
                 }
@@ -12898,12 +13019,14 @@ const AngularWorkflow = (defaultprops) => {
                 multiline
                 color="primary"
                 defaultValue={
-                  workflow.triggers[selectedTriggerIndex] !== undefined  && workflow.triggers[selectedTriggerIndex].parameters !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== null && workflow.triggers[selectedTriggerIndex].parameters.length > 1 ?
-				  	workflow.triggers[selectedTriggerIndex].parameters[1].value
-					: ""
+                  workflow.triggers[selectedTriggerIndex] !== undefined  && workflow.triggers[selectedTriggerIndex].parameters !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== null && workflow.triggers[selectedTriggerIndex].parameters.length > 1 && updateshuf===null ?
+				  	workflow.triggers[0].parameters[1].value
+					: updateshuf
                 }
                 placeholder='{"example": {"json": "is cool"}}'
                 onBlur={(e) => {
+
+                  console.log("hellloooo")
                   setTriggerBodyWrapper(e.target.value);
                 }}
               />
@@ -15987,6 +16110,20 @@ const AngularWorkflow = (defaultprops) => {
 	  {/* Looks for triggers" */}
 	  {/* Only fixed the ones that require scrolling on a small screen */}
 	  {/* Most important: Actions. But these are a lot more complex */}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK") ?
 		  <div id="rightside_actions" style={rightsidebarStyle}>
 			  {Object.getOwnPropertyNames(selectedTrigger).length > 0 ? 
@@ -17602,6 +17739,25 @@ const AngularWorkflow = (defaultprops) => {
 			</div>
 		</div>
 
+
+function  updateexecution(codeedittorvalue) {
+
+
+  setupdateshuf(codeedittorvalue)
+
+  console.log(updateshuf, "this is the updated shuffel")
+  //setWorkflow()
+
+
+  workflow.triggers[0].parameters[1].value=codeedittorvalue
+
+
+
+
+}
+
+
+
 	const changeActionParameterCodeMirror = (event, count, data, actionlist) => {
 		if (data.startsWith("${") && data.endsWith("}")) {
 			// PARAM FIX - Gonna use the ID field, even though it's a hack
@@ -17682,10 +17838,16 @@ const AngularWorkflow = (defaultprops) => {
 			}
 		} 
 
-		selectedAction.parameters[count].autocompleted = false 
-		selectedAction.parameters[count].value = data
-		setSelectedAction(selectedAction)
-		//setUpdate(Math.random())
+    if(selectedAction.parameters && selectedAction.parameters.length>0){
+
+      selectedAction.parameters[count].autocompleted = false 
+      selectedAction.parameters[count].value = data
+      setSelectedAction(selectedAction)
+  
+
+
+    }
+
 	}
 
   const loadedCheck =
@@ -17722,6 +17884,13 @@ const AngularWorkflow = (defaultprops) => {
 				fieldCount={editorData.field_number}
 				actionlist={editorData.actionlist}
 				fieldname={editorData.field_id}
+        updateexecution={updateexecution}
+
+
+
+
+
+
 
 				changeActionParameterCodeMirror={changeActionParameterCodeMirror}
 	  		/>

@@ -113,6 +113,7 @@ const shuffleTheme = createTheme({
 
 const CodeEditor = (props) => {
 	const { 
+		updateexecution,
 		globalUrl, 
 		fieldCount, 
 		actionlist, 
@@ -1169,7 +1170,7 @@ const CodeEditor = (props) => {
 								maxHeight: 650,
 							}}
 						>
-							{actionlist.map((innerdata) => {
+						{ actionlist &&  actionlist.map((innerdata) => {
 								const icon =
 									innerdata.type === "action" ? (
 										<AppsIcon style={{ marginRight: 10 }} />
@@ -1419,9 +1420,10 @@ const CodeEditor = (props) => {
 							}}
 							onChange={(value, viewUpdate) => {
 								console.log("Value: ", value, viewUpdate)
-								setlocalcodedata(value)
+							    setlocalcodedata(value)
 								expectedOutput(value)
 
+					
 								//if(value.display.input.prevInput.startsWith('$') || value.display.input.prevInput.endsWith('$')){
 								//	setEditorPopupOpen(true)
 								//}
@@ -1712,17 +1714,24 @@ const CodeEditor = (props) => {
 							fixedcodedata = JSON.stringify(valid.result, null, 2)
 						}
 
-						// console.log(codedata)
+						console.log(codedata,"hbkjhkjbk")
+						updateexecution(fixedcodedata)
+
 						// console.log(fieldCount)
 						if (isFileEditor === true){
-							runUpdateText(fixedcodedata);
+						runUpdateText(fixedcodedata);
 							setcodedata(fixedcodedata);
-							setExpansionModalOpen(false)
+							updateexecution(fixedcodedata)
+							console.log(fixedcodedata)
+					 	setExpansionModalOpen(false)
 						} else if (changeActionParameterCodeMirror !== undefined) { 
-							//changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
-							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist)
+					    changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
+						changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist)
 							setExpansionModalOpen(false)
-							setcodedata(fixedcodedata)
+						setcodedata(fixedcodedata)
+						console.log(fixedcodedata)
+
+						updateexecution(fixedcodedata)
 						}
 
 						// Check if fieldname is set, and try to find and inject the text
