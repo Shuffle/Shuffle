@@ -3573,7 +3573,12 @@ func runInitEs(ctx context.Context) {
 	log.Printf("[DEBUG] Getting organizations for Elasticsearch/Opensearch")
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
 
-	log.Printf("[DEBUG] Got %d organizations to look into", len(activeOrgs))
+	log.Printf("[DEBUG] Got %d organizations to look into. If this is 0, we wait 10 more seconds until DB is ready and try again.", len(activeOrgs))
+	if len(activeOrgs) == 0 {
+		time.Sleep(10 * time.Second)
+		activeOrgs, err = shuffle.GetAllOrgs(ctx)
+		return
+	}
 
 	setUsers := false
 	_ = setUsers
