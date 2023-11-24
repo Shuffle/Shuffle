@@ -707,6 +707,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
 	log.Printf("[DEBUG][%s] Running workflow execution update", workflowExecutionId)
 
+
 	// Should start a tx for the execution here
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
 	if err != nil {

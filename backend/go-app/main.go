@@ -4033,7 +4033,7 @@ func runInitEs(ctx context.Context) {
 
 	
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
-		healthcheckInterval := 15
+		healthcheckInterval := 30 
 		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
 		job := func() {
 			// Prepare a fake http.responsewriter 
