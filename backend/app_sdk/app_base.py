@@ -2758,11 +2758,14 @@ class AppBase:
                 if destinationvalue.lower() in sourcevalue.lower():
                     return True
 
-            elif check.lower() == "is empty":
-                if len(sourcevalue) == 0:
-                    return True
+            elif check.lower() == "is empty" or check.lower() == "is_empty":
+                try:
+                    if len(list(sourcevalue)) == 0:
+                        return True
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to check if empty as list: {e}")
 
-                if str(sourcevalue) == 0:
+                if len(str(sourcevalue)) == 0:
                     return True
 
                 return False
@@ -2785,14 +2788,40 @@ class AppBase:
                 return False 
             elif check.lower() == "larger than" or check.lower() == "bigger than":
                 try:
+                    destinationvalue = len(list(destinationvalue))
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
+
+                try:
+                    # Check if it's a list in autocast and if so, check the length
+                    if len(list(sourcevalue)) > int(destinationvalue):
+                        return True
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to check if larger than as list: {e}")
+
+                try:
                     if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
                         if int(sourcevalue) > int(destinationvalue):
                             return True
 
                 except AttributeError as e:
-                    print("[WARNING] Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
+                    self.logger.info("[WARNING] Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
                     return False
+
+
             elif check.lower() == "smaller than" or check.lower() == "less than":
+                try:
+                    destinationvalue = len(list(destinationvalue))
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
+
+
+                try:
+                    # Check if it's a list in autocast and if so, check the length
+                    if len(list(sourcevalue)) < int(destinationvalue):
+                        return True
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to check if smaller than as list: {e}")
                 try:
                     if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
                         if int(sourcevalue) < int(destinationvalue):
@@ -2801,6 +2830,7 @@ class AppBase:
                 except AttributeError as e:
                     print("[WARNING] Condition smaller than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
                     return False
+
             elif check.lower() == "re" or check.lower() == "matches regex":
                 try:
                     found = re.search(str(destinationvalue), str(sourcevalue))

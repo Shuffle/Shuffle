@@ -3577,7 +3577,6 @@ func runInitEs(ctx context.Context) {
 	if len(activeOrgs) == 0 {
 		time.Sleep(10 * time.Second)
 		activeOrgs, err = shuffle.GetAllOrgs(ctx)
-		return
 	}
 
 	setUsers := false
