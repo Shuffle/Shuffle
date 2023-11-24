@@ -3596,7 +3596,7 @@ class AppBase:
                                             future.cancel()
                                             newres = json.dumps({
                                                 "success": False,
-                                                "reason": "Timeout error within %d seconds. This happens if we can't reach or use the API you're trying to use within the time limit." % timeout,
+                                                "reason": "Timeout error within %d seconds (1). This happens if we can't reach or use the API you're trying to use within the time limit. Configure SHUFFLE_APP_SDK_TIMEOUT=100 in Orborus to increase it to 100 seconds. Not changeable for cloud." % timeout,
                                                 "exception": str(e),
                                             })
 
@@ -3609,7 +3609,7 @@ class AppBase:
                                     except concurrent.futures.TimeoutError as e:
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "Timeout error within %d seconds (2). This happens if we can't reach or use the API you're trying to use within the time limit" % timeout
+                                            "reason": "Timeout error within %d seconds (2). This happens if we can't reach or use the API you're trying to use within the time limit. Configure SHUFFLE_APP_SDK_TIMEOUT=100 in Orborus to increase it to 100 seconds. Not changeable for cloud." % timeout,
                                         })
 
                                     break
