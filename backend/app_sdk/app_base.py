@@ -2740,7 +2740,7 @@ class AppBase:
             return "", parameter["value"], is_loop
 
         def run_validation(sourcevalue, check, destinationvalue):
-            print("[DEBUG] Checking %s %s %s" % (sourcevalue, check, destinationvalue))
+            self.logger.info("[DEBUG] Checking %s '%s' %s" % (sourcevalue, check, destinationvalue))
 
             if check == "=" or check.lower() == "equals":
                 if str(sourcevalue).lower() == str(destinationvalue).lower():
@@ -2760,15 +2760,13 @@ class AppBase:
 
             elif check.lower() == "is empty" or check.lower() == "is_empty":
                 try:
-                    if len(list(sourcevalue)) == 0:
+                    if len(json.loads(sourcevalue)) == 0:
                         return True
                 except Exception as e:
                     self.logger.info(f"[WARNING] Failed to check if empty as list: {e}")
 
                 if len(str(sourcevalue)) == 0:
                     return True
-
-                return False
 
             elif check.lower() == "contains_any_of":
                 newvalue = [destinationvalue.lower()]
@@ -2785,20 +2783,7 @@ class AppBase:
                         print("[INFO] Found %s in %s" % (item, sourcevalue))
                         return True
                     
-                return False 
             elif check.lower() == "larger than" or check.lower() == "bigger than":
-                try:
-                    destinationvalue = len(list(destinationvalue))
-                except Exception as e:
-                    self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
-
-                try:
-                    # Check if it's a list in autocast and if so, check the length
-                    if len(list(sourcevalue)) > int(destinationvalue):
-                        return True
-                except Exception as e:
-                    self.logger.info(f"[WARNING] Failed to check if larger than as list: {e}")
-
                 try:
                     if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
                         if int(sourcevalue) > int(destinationvalue):
@@ -2806,22 +2791,22 @@ class AppBase:
 
                 except AttributeError as e:
                     self.logger.info("[WARNING] Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
-                    return False
+
+                try:
+                    destinationvalue = len(json.loads(destinationvalue))
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
+                try:
+                    # Check if it's a list in autocast and if so, check the length
+                    if len(json.loads(sourcevalue)) > int(destinationvalue):
+                        return True
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to check if larger than as list: {e}")
 
 
             elif check.lower() == "smaller than" or check.lower() == "less than":
-                try:
-                    destinationvalue = len(list(destinationvalue))
-                except Exception as e:
-                    self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
+                self.logger.info("In smaller than check: %s %s" % (sourcevalue, destinationvalue))
 
-
-                try:
-                    # Check if it's a list in autocast and if so, check the length
-                    if len(list(sourcevalue)) < int(destinationvalue):
-                        return True
-                except Exception as e:
-                    self.logger.info(f"[WARNING] Failed to check if smaller than as list: {e}")
                 try:
                     if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
                         if int(sourcevalue) < int(destinationvalue):
@@ -2829,7 +2814,18 @@ class AppBase:
 
                 except AttributeError as e:
                     print("[WARNING] Condition smaller than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
-                    return False
+
+                try:
+                    destinationvalue = len(json.loads(destinationvalue))
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
+
+                try:
+                    # Check if it's a list in autocast and if so, check the length
+                    if len(json.loads(sourcevalue)) < int(destinationvalue):
+                        return True
+                except Exception as e:
+                    self.logger.info(f"[WARNING] Failed to check if smaller than as list: {e}")
 
             elif check.lower() == "re" or check.lower() == "matches regex":
                 try:
@@ -2846,7 +2842,7 @@ class AppBase:
 
                 return True
             else:
-                print("[DEBUG] Condition: can't handle %s yet. Setting to true" % check)
+                self.logger.error("[DEBUG] Condition: can't handle %s yet. Setting to true" % check)
 
             return False
 
@@ -2911,6 +2907,8 @@ class AppBase:
                 "contains_any_of",
                 "re",
                 "matches regex",
+                "is empty",
+                "is_empty",
             ]
 
             relevantbranches = []
@@ -2970,7 +2968,7 @@ class AppBase:
                     destinationvalue = parse_wrapper_start(destinationvalue, self)
 
                     if not condition["condition"]["value"] in available_checks:
-                        self.logger.warning("Skipping %s %s %s because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
+                        self.logger.error("[ERROR] Skipping '%s' -> %s -> '%s' because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
                         continue
 
                     # Configuration = negated because of WorkflowAppActionParam..
