@@ -1541,9 +1541,12 @@ func main() {
 				log.Printf("[INFO] Execution already handled (rerun of old executions?): %s", execution.ExecutionId)
 				toBeRemoved.Data = append(toBeRemoved.Data, execution)
 
+				// Should check when last this was ran, and if it's more than 10 minutes ago and it's not finished, we should run it again?
+				/*
 				if swarmConfig != "run" && swarmConfig != "swarm" {
 					continue
 				}
+				*/
 			}
 
 			// Now, how do I execute this one?
@@ -1595,6 +1598,11 @@ func main() {
 			if len(os.Getenv("SHUFFLE_VOLUME_BINDS")) > 0 {
 				log.Printf("[DEBUG] Added volume binds: %s", os.Getenv("SHUFFLE_VOLUME_BINDS"))
 				env = append(env, fmt.Sprintf("SHUFFLE_VOLUME_BINDS=%s", os.Getenv("SHUFFLE_VOLUME_BINDS")))
+			}
+
+
+			if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")))
 			}
 
 			// Setting up internal proxy config for Shuffle -> shuffle comms
