@@ -77,9 +77,9 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
             ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            ghcr.io/shuffle/shuffle-${{ matrix.app }}:latest
+            ghcr.io/shuffle/shuffle-${{ matrix.app }}:nightly
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
