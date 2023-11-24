@@ -315,16 +315,26 @@ const RuntimeDebugger = (props) => {
 				)
 			},
 		  },
-		{ field: 'startTimestamp', headerName: 'Start time', width: 160, },
-		{ field: 'endTimestamp', headerName: 'End time', width: 160, },
+		{ field: 'startTimestamp', headerName: 'Start time (UTC)', width: 160, },
+		{ field: 'endTimestamp', headerName: 'End time (UTC)', width: 160, },
 	    {
 			field: 'id',
 			headerName: 'Explore',
 			width: 65,
 			renderCell: (params) => (
-			  <Link href={`/workflows/${params.row.workflow.id}?execution_id=${params.row.id}`} target="_blank" rel="noopener noreferrer">
-				<OpenInNewIcon fontSize="small" />
-			  </Link>
+			  <Tooltip arrow placement="right" title={
+				  <Typography variant="body2" style={{whiteSpace: "pre-line", }}>
+				  	{params.row.result !== null && params.row.result !== undefined && params.row.result !== "" ?
+					  params.row.result
+					  : 
+					  null
+					}
+				  </Typography>
+			  } >
+				  <Link href={`/workflows/${params.row.workflow.id}?execution_id=${params.row.id}`} target="_blank" rel="noopener noreferrer">
+					<OpenInNewIcon fontSize="small" />
+				  </Link>
+			</Tooltip>
 			),
 		  },
 	]

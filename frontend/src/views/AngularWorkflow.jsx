@@ -501,6 +501,7 @@ const AngularWorkflow = (defaultprops) => {
   const [selectedAction, setSelectedAction] = React.useState({});
   const [selectedActionEnvironment, setSelectedActionEnvironment] = React.useState({});
 
+  const [streamDisabled, setStreamDisabled] = React.useState(false);
   const [executionRequest, setExecutionRequest] = React.useState({});
 
   const [executionRunning, setExecutionRunning] = React.useState(false);
@@ -551,10 +552,18 @@ const AngularWorkflow = (defaultprops) => {
       props.userdata.active_org !== undefined
       ? props.userdata.active_org.cloud_sync === true
       : false;
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
+  useEffect(() => {
+	  return () => {
+		  console.log("UNMOUNTING USER!")
+          sendStreamRequest({
+            "item": "workflow",
+            "type": "leave",
+            "id": workflow.id,
+          })
+	  }
+  }, [])
   /*
   useEffect(() => {
 	  console.log("In useeffect for workflow: ", workflow)
@@ -918,7 +927,7 @@ const AngularWorkflow = (defaultprops) => {
       });
   };
 
-  const setNewAppAuth = (appAuthData) => {
+  const setNewAppAuth = (appAuthData, refresh) => {
     fetch(globalUrl + "/api/v1/apps/authentication", {
       method: "PUT",
       headers: {
@@ -937,9 +946,14 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          toast("Failed to set app auth: " + responseJson.reason);
+          toast("Error: " + responseJson.reason);
         } else {
-          getAppAuthentication(true, false);
+		  if (refresh === true) {
+			getAppAuthentication(true, true, true);
+		  } else {
+          	getAppAuthentication(true, false);
+		  }
+
           setAuthenticationModalOpen(false);
 
           // Needs a refresh with the new authentication..
@@ -1003,16 +1017,15 @@ const AngularWorkflow = (defaultprops) => {
 			  }
 
               setExecutionModalView(1);
-              start();
-
               setExecutionRequest({
                 execution_id: execution.execution_id,
                 authorization: execution.authorization,
               });
 
-              const newitem = removeParam("execution_id", cursearch);
-              navigate(curpath + newitem)
-              //props.history.push(curpath + newitem);
+              start();
+
+              //const newitem = removeParam("execution_id", cursearch);
+              //navigate(curpath + newitem)
             } else {
               console.log("Couldn't find execution for execution ID. Retrying as user to get ", tmpView)
 
@@ -1025,8 +1038,8 @@ const AngularWorkflow = (defaultprops) => {
               setExecutionRequest(cur_execution);
               start();
 
-              const newitem = removeParam("execution_id", cursearch);
-              navigate(curpath + newitem)
+              //const newitem = removeParam("execution_id", cursearch);
+              //navigate(curpath + newitem)
 
               setTimeout(() => {
                 stop()
@@ -1310,12 +1323,28 @@ const AngularWorkflow = (defaultprops) => {
 
   const sendStreamRequest = (body) => {
     //console.log("Stream not activated yet.")
-    return
+    if (!isCloud) {
+		console.log("Stream not activated yet for onprem")
+		return
+    }
+
+	if (streamDisabled) {
+		console.log("Stream disabled")
+		return
+	}
+
 
     // Session may be important here huh 
     body.user_id = userdata.id
 
-    fetch(`${globalUrl}/api/v1/workflows/${props.match.params.key}/stream`, {
+	//const url = ${globalUrl}/api/v1/workflows/${props.match.params.key}/stream
+	//const streamUrl = "http://localhost:5002"
+
+	console.log("Stream request: ", body)
+	const streamUrl = "https://stream.shuffler.io"
+	const url = `${streamUrl}/api/v1/workflows/${props.match.params.key}/stream`
+
+    fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1337,7 +1366,7 @@ const AngularWorkflow = (defaultprops) => {
       })
       .catch((error) => {
         console.log("Stream send error: ", error.toString())
-        //toast(error.toString());
+  		setStreamDisabled(true)
       })
   }
 
@@ -1872,6 +1901,7 @@ const AngularWorkflow = (defaultprops) => {
                 setSelectedAction(selectedAction);
                 setWorkflow(workflow);
                 saveWorkflow(workflow);
+
                 toast("Added and updated authentication!");
 								shouldClose = true 
               } else {
@@ -2084,7 +2114,9 @@ const AngularWorkflow = (defaultprops) => {
 	}
 
 	const onChunkedResponseError = (err) => {
-		  console.error(err)
+		if (streamDisabled) {
+			return
+		}
 	}
 
 
@@ -2570,14 +2602,30 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   const startWorkflowStream = async (workflowId) => {
-  	const timeout = 60000 
+	if (!isCloud) {
+		console.log("Not cloud, not starting workflow stream")
+		return
+	}
 
-	return
-  
+	if (streamDisabled) {
+		console.log("Stream disabled")
+		return
+	}
+
+  	const timeout = 60000 
+    //const url = `${globalUrl}/api/v1/workflows/${workflowId}/stream`
+	//const streamUrl = "https://shuffle-streaming-backend-stbuwivzoq-ew.a.run.app"
+	  //
+	const streamUrl = "https://stream.shuffler.io"
+	const url = `${streamUrl}/api/v1/workflows/${workflowId}/stream`
   	while (true) {
+		if (streamDisabled) {
+			break
+		}
+
 		// Wait 1 second before next request just in case of timeouts
 		await new Promise(r => setTimeout(r, 1000));
-		await fetchWithTimeout(`${globalUrl}/api/v1/workflows/${workflowId}/stream`, {
+		await fetchWithTimeout(url, {
 		  method: "GET",
 		  headers: {
 			"Content-Type": "application/json",
@@ -6261,7 +6309,6 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     insertedNodes = insertedNodes.concat(newedges);
-
     setWorkflow(inputworkflow);
 
 	// Reset view for cytoscape
@@ -6271,6 +6318,8 @@ const AngularWorkflow = (defaultprops) => {
 	} else {
     	setElements(insertedNodes);
 	}
+
+    console.log("Setupgraph done 2!")
   };
 
   const removeNode = (nodeId) => {
@@ -6576,6 +6625,7 @@ const AngularWorkflow = (defaultprops) => {
     }
     // preview: true,
 
+    console.log("In POST graph setup 2")
     cy.fit(null, 200);
 
     cy.on("boxselect", "node", (e) => {
@@ -6624,6 +6674,7 @@ const AngularWorkflow = (defaultprops) => {
 
     document.title = "Workflow - " + workflow.name;
 
+    console.log("In POST graph setup 3")
 	startWorkflowStream(props.match.params.key);
 
     registerKeys();
@@ -7516,14 +7567,30 @@ const AngularWorkflow = (defaultprops) => {
           description = app.actions[actionIndex].description
         }
 
-        const parsedEnvironments =
+        var parsedEnvironments =
           environments === null || environments === []
             ? "cloud"
             : environments[defaultEnvironmentIndex] === undefined
               ? "cloud"
               : environments[defaultEnvironmentIndex].Name;
 
-        // activated: app.generated === true ? app.activated === false ? false : true : true,
+		// List other nodes in the workflow and see if they have an environment set. If they do, use that as the default
+		if (cy !== undefined && cy !== null) {
+			const foundnodes = cy.nodes().jsons()
+			if (foundnodes !== undefined && foundnodes !== null && foundnodes.length > 0) {
+				// As they should all be the same, this is just an override
+				for (let nodekey in foundnodes) {
+					const curnode = foundnodes[nodekey]
+					if (curnode.data.environment !== undefined && curnode.data.environment !== null && curnode.data.environment.length > 0) {
+						console.log("Found environment: ", curnode.data.environment)
+						parsedEnvironments = curnode.data.environment
+						break
+					}
+				}
+			}
+		}
+
+		console.log("Discovered environment: ", parsedEnvironments)
         const newAppData = {
           name: app.actions[actionIndex].name,
           label: actionLabel,
@@ -8139,6 +8206,25 @@ const AngularWorkflow = (defaultprops) => {
                     </div>
                 )
               })}
+			  {visibleApps.length <= 4 ? ( 
+				<div
+				  style={{ textAlign: "center", width: leftBarSize, marginTop: 40, maxWidth: 340, overflow: "hidden",  }}
+				  onLoad={() => {
+				  }}
+				>
+				  <Typography variant="body1" color="textSecondary">
+					Click one of the relevant public apps below to Activate it for your organization. 
+				  </Typography>
+				  <InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
+					console.log("CLICKED")
+				  }}>
+					<CustomSearchBox />
+					<Index indexName="appsearch">
+					  <CustomAppHits />
+					</Index>
+				  </InstantSearch>
+				</div>
+			) : null}
             </div>
           ) : apps.length > 0 ? (
             <div
@@ -8148,7 +8234,7 @@ const AngularWorkflow = (defaultprops) => {
               }}
             >
               <Typography variant="body1" color="textSecondary">
-                Couldn't find the app you're looking for? Searching unactivated apps. Click one of the below apps to Activate it for your organization.
+                Couldn't find the apps you were looking for? Searching unactivated apps. Click one of the below apps to Activate it for your organization.
               </Typography>
               <InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
                 console.log("CLICKED")
@@ -8364,7 +8450,6 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
-    console.log("NEW ACTION: ", newSelectedAction);
     setSelectedAction(newSelectedAction);
     setUpdate(Math.random());
 
@@ -13259,10 +13344,6 @@ const AngularWorkflow = (defaultprops) => {
 		  "user": "Anonymous",
 		  "user_id": "user_id",
 		  "color": "blue",
-	  }, {
-		  "user": "frikky",
-		  "user_id": "user_id",
-		  "color": "red",
 	  }]
 	  
 
@@ -13318,18 +13399,18 @@ const AngularWorkflow = (defaultprops) => {
   const showErrors = !isMobile && !workflow.public && workflow.errors !== undefined && workflow.errors !== null && workflow.errors.length > 0 ?
   	<div
   		style={{
-			border: "1px solid rgba(255,255,255,0.3)",
+			border: "1px solid rgba(255,255,255,0.1)",
   			position: "absolute",
   			bottom: 130,
   			left: leftBarSize+20,
 			color: "white",
-			padding: 5, 
+			padding: 10, 
 			borderRadius: theme.palette.borderRadius,
   		}}
   	>
   		<Typography variant="body22">
-			<WarningIcon style={{color: "yellow", marginRight: 5, height: 15, width: 15, }} />
-  			<b>{workflow.errors.length} Potential Workflow Issue{workflow.errors.length > 1 ? "s" : ""}</b>
+			<WarningIcon style={{marginRight: 5, height: 15, width: 15, }} />
+  			<b>{workflow.errors.length} Workflow Issue{workflow.errors.length > 1 ? "s" : ""}</b>
   		</Typography>
   		<Typography
   			variant="body2"

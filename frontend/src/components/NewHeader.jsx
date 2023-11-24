@@ -1352,14 +1352,17 @@ const Header = (props) => {
   );
 
   // <Divider style={{height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-  return !isMobile ? 
-	  isLoggedIn ? 
+	//
+	/*
+	  !isLoggedIn ? 
 		<div style={{minHeight: 68, maxHeight: 68, backgroundColor: theme.palette.backgroundColor, }}>
 		  <BrowserView style={{position: "sticky", top: 0, }}>
 			{loginTextBrowser}
 		  </BrowserView>
 		</div>
 		:
+		*/
+  return !isMobile ? 
 	  <AppBar 
 	  	position="sticky"
 		color="transparent" 

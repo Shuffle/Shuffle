@@ -112,8 +112,6 @@ const AuthenticationOauth2 = (props) => {
       authenticationType.client_secret.length > 0
   );	
 
-  console.log("AUTH: ", authenticationType)
-
   const [clientId, setClientId] = React.useState(defaultConfigSet ? authenticationType.client_id : "");
   const [clientSecret, setClientSecret] = React.useState(defaultConfigSet ? authenticationType.client_secret : "");
 
@@ -125,7 +123,7 @@ const AuthenticationOauth2 = (props) => {
   const [offlineAccess, setOfflineAccess] = React.useState(true);
     
   const allscopes = authenticationType.scope !== undefined && authenticationType.scope !== null ? authenticationType.scope : [];
-  const [selectedScopes, setSelectedScopes] = React.useState(allscopes !== null && allscopes !== undefined ? allscopes.length > 0 && allscopes.length <= 3 ? [allscopes[0]] : [] : [])
+  const [selectedScopes, setSelectedScopes] = React.useState(allscopes !== null && allscopes !== undefined ? allscopes.length > 0 && allscopes.length <= 3 ? allscopes : [] : [])
 
   const [manuallyConfigure, setManuallyConfigure] = React.useState(
     defaultConfigSet ? false : true
@@ -303,6 +301,23 @@ const AuthenticationOauth2 = (props) => {
 	  if ((authenticationType.redirect_uri === undefined || authenticationType.redirect_uri === null || authenticationType.redirect_uri.length === 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) {
 		  console.log("No redirect URI found, and token URI found. Assuming client credentials flow and saving directly in the database")
 
+
+		  var tokenUri = authenticationType.token_uri;
+		  if (oauthUrl !== undefined && oauthUrl !== null && oauthUrl.length > 0 && selectedApp !== undefined && selectedApp !== null) {
+			  var same = false
+			  for (var i = 0; i < selectedApp.authentication.parameters.length; i++) {
+				  const param = selectedApp.authentication.parameters[i];
+				  if (param.name === "url" && (param.value === oauthUrl || param.example === oauthUrl)) {
+					  same = true
+					  break
+				  }
+			  }
+
+			  if (!same) {
+			  	tokenUri = oauthUrl
+			  }
+		  }
+
 		// Find app.configuration=true fields in the app.paramters
 		var parsedFields = [{
 			"key": "client_id",
@@ -318,7 +333,7 @@ const AuthenticationOauth2 = (props) => {
 		},
 		{
 			"key": "token_uri",
-			"value": authenticationType.token_uri,
+			"value": tokenUri,
 		}]
 
 		if (authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0) {
@@ -360,14 +375,14 @@ const AuthenticationOauth2 = (props) => {
 				"reference_workflow": workflowId,
 		}
 
-		setNewAppAuth(appAuthData) 
+		setNewAppAuth(appAuthData, true) 
+
 		// Wait 1 second, then get app auth with update
-		  //
-		if (getAppAuthentication !== undefined) {
-			setTimeout(() => {
-          		getAppAuthentication(true, true, true);
-			}, 1000)
-		}
+		//if (getAppAuthentication !== undefined) {
+		//	setTimeout(() => {
+        //  		getAppAuthentication(true, true, true);
+		//	}, 1000)
+		//}
 
 	    return
 	  }
@@ -397,8 +412,6 @@ const AuthenticationOauth2 = (props) => {
     }
 
     const authentication_url = authenticationType.token_uri;
-    //console.log("AUTH: ", authenticationType)
-    //console.log("SCOPES2: ", resources)
     const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`;
 	const workflowId = workflow !== undefined ? workflow.id : "";
     var state = `workflow_id%3D${workflowId}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`;
@@ -523,7 +536,6 @@ const AuthenticationOauth2 = (props) => {
   }
 
   const handleSubmitCheck = () => {
-    console.log("NEW AUTH: ", authenticationOption);
     if (authenticationOption.label.length === 0) {
       authenticationOption.label = `Auth for ${selectedApp.name}`;
       //toast("Label can't be empty")
@@ -673,7 +685,7 @@ const AuthenticationOauth2 = (props) => {
 				)}
 			</Button>
 
-	if (authButtonOnly === true && (authenticationType.grant_type === undefined || authenticationType.grant_type === null || authenticationType.grant_type === "")) {
+	if (authButtonOnly === true && (authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null && authenticationType.redirect_uri.length > 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) {
 		return autoAuthButton
 	}
 
@@ -777,10 +789,14 @@ const AuthenticationOauth2 = (props) => {
                 setOauthUrl(data.value);
               }
 
+			  const defaultValue = data.name === "url" && authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0 && (authenticationType.authorizationUrl === undefined || authenticationType.authorizationUrl === null || authenticationType.authorizationUrl.length === 0) ? authenticationType.token_uri : data.value === undefined || data.value === null ? "" : data.value
+			  const fieldname = data.name === "url" && authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0 ? "Token URL" : data.name
+
               return (
                 <div key={index} style={{ marginTop: 10 }}>
                   <LockOpenIcon style={{ marginRight: 10 }} />
-                  <b>{data.name}</b>
+
+				  <b>{fieldname}</b>
 
                   {data.schema !== undefined &&
                   data.schema !== null &&
@@ -793,6 +809,7 @@ const AuthenticationOauth2 = (props) => {
                       }}
                       defaultValue={"false"}
                       fullWidth
+					  label={fieldname}
                       onChange={(e) => {
                         console.log("Value: ", e.target.value);
                         authenticationOption.fields[data.name] = e.target.value;
@@ -842,16 +859,11 @@ const AuthenticationOauth2 = (props) => {
                           : "text"
                       }
                       color="primary"
-                      defaultValue={
-                        data.value !== undefined && data.value !== null
-                          ? data.value
-                          : ""
-                      }
+                      defaultValue={defaultValue}
                       placeholder={data.example}
                       onChange={(event) => {
-                        authenticationOption.fields[data.name] =
-                          event.target.value;
-                        console.log("Setting oauth url");
+                        authenticationOption.fields[data.name] = event.target.value;
+                        console.log("Setting oauth url: ", event.target.value);
                         setOauthUrl(event.target.value);
                         //const [oauthUrl, setOauthUrl] = React.useState("")
                       }}

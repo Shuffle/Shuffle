@@ -181,6 +181,8 @@ const ParsedAction = (props) => {
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
+  const [autoCompleting, setAutocompleting] = React.useState(false);
+
 
   useEffect(() => {
 		if (setLastSaved !== undefined) {
@@ -2909,9 +2911,11 @@ const ParsedAction = (props) => {
                     marginLeft: 15,
                     paddingRight: 0,
                   }}
+		  		  disabled={autoCompleting}
                   onClick={() => {
 					  // aiSubmit(aiMsg, undefined, undefined, newSelectedAction)
 					  aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
+  					  setAutocompleting(true)
                   }}
                 >
                   <Tooltip
@@ -2919,7 +2923,11 @@ const ParsedAction = (props) => {
                     title={"Autocompletes fields. Uses NAME of the action and previous values' results."}
                     placement="top"
                   >
+		  			{autoCompleting ? 
+						<CircularProgress style={{height: 20, width: 20, }} />
+						:
 						<AutoFixHighIcon style={{ color: "rgba(255,255,255,0.7)", height: 24, }} />
+					}
                   </Tooltip>
                 </IconButton>
               </div>

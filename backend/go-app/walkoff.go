@@ -705,7 +705,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
-	log.Printf("[DEBUG] Running workflow execution transaction for %s", workflowExecutionId)
+	log.Printf("[DEBUG][%s] Running workflow execution update", workflowExecutionId)
 
 	// Should start a tx for the execution here
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
@@ -1063,10 +1063,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		}
 	}
 
-	err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
-	if err != nil {
-		log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
-	}
 
 	err = imageCheckBuilder(execInfo.ImageNames)
 	if err != nil {
@@ -1571,6 +1567,11 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	if len(workflowExecution.ExecutionOrg) == 0 && len(workflow.ExecutingOrg.Id) > 0 {
 		workflowExecution.ExecutionOrg = workflow.ExecutingOrg.Id
+	}
+
+	err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
+	if err != nil {
+		log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
 	}
 
 	var allEnvs []shuffle.Environment

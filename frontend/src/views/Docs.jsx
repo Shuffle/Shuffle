@@ -368,14 +368,14 @@ const Docs = (defaultprops) => {
   }
 
   const markdownStyle = {
-    color: "rgba(255, 255, 255, 0.65)",
+    color: "rgba(255, 255, 255, 0.90)",
     overflow: "hidden",
     paddingBottom: 100,
     margin: "auto",
     maxWidth: "100%",
     minWidth: "100%",
     overflow: "hidden",
-    fontSize: isMobile ? "1.3rem" : "1.0rem",
+    fontSize: isMobile ? "1.3rem" : "1.1rem",
   };
 
   function OuterLink(props) {

@@ -1965,6 +1965,7 @@ func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 		return err
 	}
 
+	defer newresp.Body.Close()
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		return err
@@ -3513,15 +3514,13 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	)
 
 	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
-
-	//log.Printf("[INFO] Sending org sync with autho %s", org.SyncConfig.Apikey)
-
 	newresp, err := client.Do(req)
 	if err != nil {
 		//log.Printf("Failed request in org sync: %s", err)
 		return err
 	}
 
+	defer newresp.Body.Close()
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed body read in job sync: %s", err)
@@ -3573,6 +3572,8 @@ func runInitEs(ctx context.Context) {
 
 	log.Printf("[DEBUG] Getting organizations for Elasticsearch/Opensearch")
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
+
+	log.Printf("[DEBUG] Got %d organizations to look into", len(activeOrgs))
 
 	setUsers := false
 	_ = setUsers
@@ -3697,7 +3698,7 @@ func runInitEs(ctx context.Context) {
 
 		for _, schedule := range schedules {
 			if strings.ToLower(schedule.Environment) == "cloud" {
-				log.Printf("Skipping cloud schedule")
+				log.Printf("[DEBUG] Skipping cloud schedule")
 				continue
 			}
 
@@ -3705,7 +3706,9 @@ func runInitEs(ctx context.Context) {
 			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
 			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job(schedule))
 			if err != nil {
-				log.Printf("Failed to schedule workflow: %s", err)
+				log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
+			} else {
+				log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
 			}
 
 			scheduledJobs[schedule.Id] = jobret
@@ -4725,7 +4728,7 @@ func initHandlers() {
 	log.Printf("[DEBUG] Initialized Shuffle database connection. Setting up environment.")
 
 	if elasticConfig == "elasticsearch" {
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 		go runInitEs(ctx)
 	} else {
 		//go shuffle.runInit(ctx)

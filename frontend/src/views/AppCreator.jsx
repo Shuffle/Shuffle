@@ -413,7 +413,9 @@ const AppCreator = (defaultprops) => {
 
   const [oauth2Scopes, setOauth2Scopes] = useState([]);
   const [oauth2Type, setOauth2Type] = useState("delegated");
-  const [oauth2GrantType, setOauth2GrantType] = useState("client_credentials");
+
+  //client_credentials
+  const [oauth2GrantType, setOauth2GrantType] = useState("");
   const defaultAuth = {
     name: "",
     type: "header",
@@ -1757,7 +1759,7 @@ const AppCreator = (defaultprops) => {
 			  
 		    // Kind of fucked up, but it works for now?
 		    if (value["x-grant-type"] !== undefined && value["x-grant-type"] !== null && value["x-grant-type"].length !== 0) {
-		        setOauth2Type(value["x-grant-type"])
+		        setOauth2GrantType(value["x-grant-type"])
 		    }
 
       	    //console.log("FLOW2: ", value[flowkey][basekey])
@@ -5988,6 +5990,10 @@ const AppCreator = (defaultprops) => {
 									fullWidth
 									onChange={(e) => {
 										setOauth2Type(e.target.value);
+
+										if (e.target.value === "application" && oauth2GrantType === "") {
+											setOauth2GrantType("client_credentials")
+										}
 									}}
 									value={oauth2Type}
 									style={{
