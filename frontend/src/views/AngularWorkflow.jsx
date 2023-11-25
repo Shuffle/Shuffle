@@ -25,7 +25,7 @@ import algoliasearch from 'algoliasearch/lite';
 import {
   Zoom,
   Fade,
-
+  ButtonGroup,
   Avatar,
   Popover,
   TextField,
@@ -136,6 +136,8 @@ import ExtraApps from "../components/ExtraApps.jsx"
 import EditWorkflow from "../components/EditWorkflow.jsx"
 // import AppStats from "../components/AppStats.jsx";
 
+
+// these are thriggers for example webhook and all that
 export const triggers = [
     {
       name: "Webhook",
@@ -6285,7 +6287,7 @@ const AngularWorkflow = (defaultprops) => {
       const triggerindex = workflow.triggers.findIndex(
         (data) => data.id === selectedNode.data().id
       );
-
+//set selected trigger index....
       setSelectedTriggerIndex(triggerindex);
       if (selectedNode.data().trigger_type === "SCHEDULE") {
         setSelectedTrigger(selectedNode.data());
@@ -11764,7 +11766,7 @@ const AngularWorkflow = (defaultprops) => {
                   height: 50,
                 }}
               >
-                {triggerEnvironments.map((data) => {
+                {triggerEnvironments.map((data) => {  /// this like is cloud or something like that
                   if (data.archived) {
                     return null;
                   }
@@ -12709,6 +12711,7 @@ const AngularWorkflow = (defaultprops) => {
   };
 
 
+  /// make a seperate component...
 
   const ScheduleSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null :
         <div style={appApiViewStyle}>
@@ -12837,15 +12840,50 @@ const AngularWorkflow = (defaultprops) => {
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
-                  style: {
-                  },
-                }}
-                fullWidth
+                  disableUnderline: true,
+                          endAdornment:  (
+                            <InputAdornment position="end">
+                  <ButtonGroup orientation={"vertical"}>
+                    <Tooltip title="Expand window" placement="top">
+                      <AspectRatioIcon
+                        style={{ cursor: "pointer", margin: 0 ,}}
+                        onClick={(event) => {
+                          event.preventDefault()
+                       //   setFieldCount(0)
+
+                          setCodeEditorModalOpen(true)
+        
+                          //setcodedata(data.value)
+        
+                        //  console.log(actionlist   ,   "      this is actionlist")
+
+                          const data =workflow.triggers[selectedTriggerIndex].parameters[0]
+                          console.log(data)
+
+                      console.log(selectedAction ,"let us see if this works")     
+        
+                          setEditorData({
+                            "name": data.name,
+                            "value": data.value,
+                            "field_number": 1,
+                            "actionlist": [],
+                            "field_id": "clickedFieldId",
+                          })
+                          // after the function is called 
+                        }}
+                      />
+                    </Tooltip>
+                    </ButtonGroup>
+                    </InputAdornment>
+                    
+                    )}}
+                    
+                                    fullWidth
                 disabled={
                   workflow.triggers[selectedTriggerIndex].status === "running"
                 }
                 defaultValue={
-				  workflow.triggers[selectedTriggerIndex].parameters === undefined ? "" : workflow.triggers[selectedTriggerIndex].parameters[0].value
+				  workflow.triggers[selectedTriggerIndex].parameters === undefined ? "" : workflow.triggers[selectedTriggerIndex].parameters[0].value  //the error might be here 
                 }
                 color="primary"
                 placeholder="defaultValue"
@@ -12878,7 +12916,7 @@ const AngularWorkflow = (defaultprops) => {
                   }}
                 />
                 <div style={{ flex: "10" }}>
-                  <b>Execution argument: </b>
+                   <b>Execution argument: </b>
                 </div>
               </div>
               <TextField
@@ -12904,6 +12942,7 @@ const AngularWorkflow = (defaultprops) => {
                 }
                 placeholder='{"example": {"json": "is cool"}}'
                 onBlur={(e) => {
+                  console.log(workflow  , "    this is the whole workflow array")
                   setTriggerBodyWrapper(e.target.value);
                 }}
               />
@@ -17603,6 +17642,19 @@ const AngularWorkflow = (defaultprops) => {
 		</div>
 
 	const changeActionParameterCodeMirror = (event, count, data, actionlist) => {
+    console.log(data)
+    const h= workflow
+    h.triggers[selectedTriggerIndex].parameters[0].value=data
+    setWorkflow(h)
+
+    console.log(selectedAction, "there  is a error as you can we do not know what selectedAction is")
+    console.log(workflow ,"final workflow")
+    return "break"
+
+    if(!selectedAction){
+      return 
+    }
+
 		if (data.startsWith("${") && data.endsWith("}")) {
 			// PARAM FIX - Gonna use the ID field, even though it's a hack
 			const paramcheck = selectedAction.parameters.find(param => param.name === "body")
@@ -17631,8 +17683,9 @@ const AngularWorkflow = (defaultprops) => {
 
 					console.log("IN ELSE: ", paramcheck)
 				}
-
+      
 				if (paramcheck["value_replace"] === undefined) {
+          console.log(selectedAction, "thereis a error")
 					selectedAction.parameters[count]["value_replace"] = paramcheck
 				} else {
 					//selectedActionParameters[count]["value_replace"] = paramcheck["value_replace"]
@@ -17681,13 +17734,19 @@ const AngularWorkflow = (defaultprops) => {
 				}
 			}
 		} 
+    if(selectedAction){
 
-		selectedAction.parameters[count].autocompleted = false 
-		selectedAction.parameters[count].value = data
-		setSelectedAction(selectedAction)
+      selectedAction.parameters[count].autocompleted = false 
+      selectedAction.parameters[count].value = data
+      setSelectedAction(selectedAction)
+  
+
+      
+    }
 		//setUpdate(Math.random())
 	}
 
+  /// this is the final component rendered
   const loadedCheck =
     isLoaded && workflowDone ? (
       <div>

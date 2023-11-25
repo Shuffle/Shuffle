@@ -1580,6 +1580,8 @@ const ParsedAction = (props) => {
 
 									//setcodedata(data.value)
 
+                  console.log(actionlist   ,   "      this is actionlist")
+
 									setEditorData({
 										"name": data.name,
 										"value": data.value,
