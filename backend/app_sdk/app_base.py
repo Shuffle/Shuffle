@@ -2652,10 +2652,10 @@ class AppBase:
                             # 1. Look for the to_be_replaced in the data
                             # 2. Check if there is a quote infront of it and also if there are {} in the data to validate JSON
                             # 3. If there are, sanitize!
-                            if data.find(f'"{to_be_replaced}"') != -1 and data.find("{") != -1 and data.find("}") != -1:
-                                print(f"[DEBUG] Found quotes infront of and after {to_be_replaced}! This probably means it's JSON and should be sanitized.")
-                                returnvalue = fix_json_string_value(value)
-                                value = returnvalue
+                            #if data.find(f'"{to_be_replaced}"') != -1 and data.find("{") != -1 and data.find("}") != -1:
+                            #    print(f"[DEBUG] Found quotes infront of and after {to_be_replaced}! This probably means it's JSON and should be sanitized.")
+                            #    returnvalue = fix_json_string_value(value)
+                            #    value = returnvalue
 
 
 
