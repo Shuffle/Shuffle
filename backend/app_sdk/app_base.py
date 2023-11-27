@@ -1964,6 +1964,8 @@ class AppBase:
         # Parses JSON loops and such down to the item you're looking for
         # $nodename.#.id 
         # $nodename.data.#min-max.info.id
+        # $nodename.data.#1-max.info.id
+        # $nodename.data.#min-1.info.id
         def recurse_json(basejson, parsersplit):
             match = "#([0-9a-z]+):?-?([0-9a-z]+)?#?"
             try:
@@ -2080,6 +2082,8 @@ class AppBase:
                                     if (basejson[value].endswith("}") and basejson[value].endswith("}")) or (basejson[value].startswith("[") and basejson[value].endswith("]")):
                                         basejson = json.loads(basejson[value])
                                     else:
+                                        # Should we sanitize here?
+                                        self.logger.info("[DEBUG] VALUE TO SANITIZE?: %s" % basejson[value])
                                         return str(basejson[value]), False
                                 except json.decoder.JSONDecodeError as e:
                                     return str(basejson[value]), False
@@ -2128,7 +2132,6 @@ class AppBase:
             actionname_lower = parsersplit[0][1:].lower()
 
             #Actionname: Start_node
-            #print(f"\n[INFO] Actionname: {actionname_lower}")
 
             # 1. Find the action
             baseresult = ""
@@ -2558,6 +2561,27 @@ class AppBase:
         
             return data 
 
+        # Makes JSON string values into valid strings in JSON
+        # Mainly by removing newlines and such
+        def fix_json_string_value(value):
+            try:
+                value = value.replace("\r\n", "\\r\\n")
+                value = value.replace("\n", "\\n")
+                value = value.replace("\r", "\\r")
+
+                # Fix quotes in the string
+                value = value.replace("\\\"", "\"")
+                value = value.replace("\"", "\\\"")
+
+                value = value.replace("\\\'", "\'")
+                value = value.replace("\'", "\\\'")
+            except Exception as e:
+                print(f"[WARNING] Failed to fix json string value: {e}")
+
+            return value
+
+
+
         # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter, self):
             # Skip if it starts with $?
@@ -2621,6 +2645,20 @@ class AppBase:
                         value, is_loop = get_json_value(fullexecution, to_be_replaced) 
                         #self.logger.info(f"\n\nType of value: {type(value)}")
                         if isinstance(value, str):
+                            # Could we take it here?
+                            self.logger.info(f"[DEBUG] Got value %s for parameter {paramname}" % value)
+                            # Should check if there is are quotes infront of and after the to_be_replaced
+                            # If there are, then we need to sanitize the value
+                            # 1. Look for the to_be_replaced in the data
+                            # 2. Check if there is a quote infront of it and also if there are {} in the data to validate JSON
+                            # 3. If there are, sanitize!
+                            if data.find(f'"{to_be_replaced}"') != -1 and data.find("{") != -1 and data.find("}") != -1:
+                                print(f"[DEBUG] Found quotes infront of and after {to_be_replaced}! This probably means it's JSON and should be sanitized.")
+                                returnvalue = fix_json_string_value(value)
+                                value = returnvalue
+
+
+
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict) or isinstance(value, list):
                             # Changed from JSON dump to str() 28.05.2021
@@ -2633,7 +2671,7 @@ class AppBase:
                             #    parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
                             #    self.logger.info("Failed parsing value as string?")
                         else:
-                            self.logger.info("[WARNING] Unknown type %s" % type(value))
+                            self.logger.error("[ERROR] Unknown type %s" % type(value))
                             try:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
                             except json.decoder.JSONDecodeError as e:
