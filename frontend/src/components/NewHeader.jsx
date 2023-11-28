@@ -294,49 +294,26 @@ const Header = (props) => {
           borderBottom: "1px solid rgba(255,255,255,0.4)",
         }}
       >
-        {/*<Typography variant="h6">
-					{new Date(data.updated_at).toISOString()}
-				</Typography >*/}
-        {data.reference_url !== undefined &&
-        data.reference_url !== null &&
-        data.reference_url.length > 0 ? (
-          <Link
-            to={data.reference_url}
-            style={{ color: "#f86a3e", textDecoration: "none" }}
-          >
-            <Typography variant="body1">{data.title}</Typography>
-          </Link>
-        ) : (
-          <Typography variant="body1" color="textSecondary">
-            {data.title}
-          </Typography>
-        )}
+		{data.reference_url !== undefined && data.reference_url !== null && data.reference_url.length > 0 ?
+			<Link to={data.reference_url} style={{color: "#f86a3e", textDecoration: "none",}}>
+				<Typography variant="body1">
+					{data.title} ({data.amount})
+				</Typography >
+			</Link>
+		: 
+			<Typography variant="body1" color="textSecondary">
+				{data.title}
+			</Typography >
+		}
 
-        {data.image !== undefined &&
-        data.image !== null &&
-        data.image.length > 0 ? (
-          <img
-            alt={data.title}
-            src={data.image}
-            style={{ height: 100, width: 100 }}
-          />
-        ) : null}
-        <Typography variant="body2">{data.description}</Typography>
-        {/*data.tags !== undefined && data.tags !== null && data.tags.length > 0 ? 
-					data.tags.map((tag, index) => {
-						return (
-							<Chip
-								key={index}
-								style={chipStyle}
-								label={tag}
-								onClick={() => {
-								}}
-								variant="outlined"
-								color="primary"
-							/>
-						)
-					})
-				: null */}
+		{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
+			<img alt={data.title} src={data.image} style={{height: 100, width: 100, }} />
+			: 
+			null
+		}
+		<Typography variant="body2" style={{marginTop: 10, maxHeight: 200, overflowX: "hidden", overflowY: "auto", }}>
+			{data.description}
+		</Typography >
         <div style={{ display: "flex" }}>
           {data.read === false ? (
             <Button
@@ -429,8 +406,9 @@ const Header = (props) => {
             ) : null}
           </div>
           <Typography variant="body2">
-            Notifications are made by Shuffle to help you discover issues or
-            improvements.
+            Notifications generated made by Shuffle to help you discover issues or 
+            improvements. <a href="/docs/organizations#notifications" target="_blank" rel="noopener noreferrer" style={{color: "#f86a3e", textDecoration: "none", }}>
+	  		Learn more</a>
           </Typography>
         </Paper>
         {notifications.map((data, index) => {

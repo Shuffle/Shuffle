@@ -112,6 +112,7 @@ import {
   AutoFixHigh as AutoFixHighIcon,
   Polyline as PolylineIcon, 
   QueryStats as QueryStatsIcon, 
+  AutoAwesome as AutoAwesomeIcon,
 } from "@mui/icons-material";
 
 
@@ -438,6 +439,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const [appAuthentication, setAppAuthentication] = React.useState(undefined);
   const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
+  const [aiQueryModalOpen, setAiQueryModalOpen] = React.useState(false)
   const [executionVariablesModalOpen, setExecutionVariablesModalOpen] =
     React.useState(false);
   const [authenticationModalOpen, setAuthenticationModalOpen] = React.useState(false);
@@ -592,17 +594,22 @@ const AngularWorkflow = (defaultprops) => {
   const [elements, setElements] = useState([]);
   const [loopRunning, setLoopRunning] = useState(false)
 
+  var loopRunning2 = loopRunning
   const stop = () => {
 	  setLoopRunning(false)
+	  loopRunning2 = false
   }
 
   const start = () => {
 	  setLoopRunning(true)
+	  loopRunning2 = true 
   }
 
   useEffect(() => {
-	  //console.log("In useeffect for loopRunning: ", loopRunning)
-	  if (loopRunning) {
+	  // Current variable + future state controlled
+	  // This is so that the loop can stop itself as well 
+	  console.log("In useeffect for loopRunning: ", loopRunning, loopRunning2)
+	  if (loopRunning && loopRunning2) {
 		  const intervalId = setInterval(() => {
 			  if (!loopRunning) {
         		clearInterval(intervalId);
@@ -983,18 +990,20 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
-        if (responseJson !== undefined && responseJson !== null && responseJson.executions !== undefined && responseJson.executions !== null && responseJson.executions.length > 0) {
+		  console.log("GOT A RESPONSE??")
+        if (responseJson !== undefined && responseJson !== null && responseJson.executions !== undefined && responseJson.executions !== null) {
 
           // - means it's opposite
           const newkeys = sortByKey(responseJson.executions, "-started_at");
           setWorkflowExecutions(newkeys);
 
           const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
-
           var tmpView = new URLSearchParams(cursearch).get("execution_id");
           if (execution_id !== undefined && execution_id !== null && execution_id.length > 0 && (tmpView === undefined || tmpView === null || tmpView.length === 0)) {
             tmpView = execution_id;
           }
+
+		  console.log("EXECUTION ID: ", tmpView)
 
 		  // Compare with currently selected item
           if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
@@ -1046,7 +1055,21 @@ const AngularWorkflow = (defaultprops) => {
               }, 5000);
             }
           }
-        }
+        } else {
+          const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+          var tmpView = new URLSearchParams(cursearch).get("execution_id");
+		  console.log("Alertnative execution id check: ", tmpView)
+
+          if (tmpView === undefined || tmpView === null || tmpView.length === 0) {
+            const execution_id = tmpView;
+		    setExecutionModalView(1);
+		    setExecutionRequest({
+		      execution_id: execution_id,
+		    });
+
+			start()
+          }
+		}
       })
       .catch((error) => {
         //toast(error.toString());
@@ -1067,8 +1090,14 @@ const AngularWorkflow = (defaultprops) => {
     })
       .then((response) => {
         if (response.status !== 200) {
-          console.log("Status not 200 for stream results :O!");
           stop();
+	  	  setExecutionModalView(0);
+		  toast("Failed loading the workflow run")
+          console.log("Status not 200 for stream results :O!");
+
+    	  //const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+		  //const newitem = removeParam("execution_id", cursearch);
+		  //navigate(curpath + newitem)
         }
 
         return response.json();
@@ -1247,10 +1276,11 @@ const AngularWorkflow = (defaultprops) => {
   // Controls the colors and direction of execution results.
   // Style is in defaultCytoscapeStyle.js
   const handleUpdateResults = (responseJson, executionRequest) => {
-		if (responseJson === undefined || responseJson === null || responseJson.success === false) {
-			return
-		}
-    //console.log(responseJson)
+	if (responseJson === undefined || responseJson === null || responseJson.success === false) {
+		stop()
+		return
+	}
+//console.log(responseJson)
     // Loop nodes and find results
     // Update on every interval? idk
 
@@ -1263,7 +1293,8 @@ const AngularWorkflow = (defaultprops) => {
 			//console.log("Updating data!")
             setExecutionData(responseJson)
           } else {
-      		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status === "WAITING") {
+      		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status === "WAITING" || responseJson.status === "FINISHED") {
+				console.log("DONE!")
 				stop()
 			}
 
@@ -1321,6 +1352,7 @@ const AngularWorkflow = (defaultprops) => {
     })
   };
 
+  var streamDisabled2 = false
   const sendStreamRequest = (body) => {
     //console.log("Stream not activated yet.")
     if (!isCloud) {
@@ -1356,6 +1388,9 @@ const AngularWorkflow = (defaultprops) => {
       .then((response) => {
         setSavingState(0);
         if (response.status !== 200) {
+
+		  setStreamDisabled(true)
+		  streamDisabled2 = true 
           //console.log("Status not 200 for stream :O!");
         }
 
@@ -1367,6 +1402,7 @@ const AngularWorkflow = (defaultprops) => {
       .catch((error) => {
         console.log("Stream send error: ", error.toString())
   		setStreamDisabled(true)
+  		streamDisabled2 = true 
       })
   }
 
@@ -2537,6 +2573,17 @@ const AngularWorkflow = (defaultprops) => {
 			try {
 				var chunkJson = JSON.parse(chunk)
 
+				if (chunkJson.success === false) {
+					console.log("Chunk failed: ", chunkJson)
+
+					if (!streamDisabled) {
+						setStreamDisabled(true)
+  						streamDisabled2 = true 
+					}
+					return
+				}
+
+
 				if (chunkJson.item !== undefined && chunkJson.item !== null && chunkJson.item !== "") {
 					if (chunkJson.item === "node") {
 						if (chunkJson.type === "move") {
@@ -2561,6 +2608,13 @@ const AngularWorkflow = (defaultprops) => {
 				}
 			} catch (e) {
 				console.log("Chunk JSON error: ", e)
+	
+				if (!streamDisabled) {
+					setStreamDisabled(true)
+  					streamDisabled2 = true 
+				}
+					
+				return
 			}
 
 			//data.push(chunk)
@@ -2619,7 +2673,7 @@ const AngularWorkflow = (defaultprops) => {
 	const streamUrl = "https://stream.shuffler.io"
 	const url = `${streamUrl}/api/v1/workflows/${workflowId}/stream`
   	while (true) {
-		if (streamDisabled) {
+		if (streamDisabled === true || streamDisabled2 === true) {
 			break
 		}
 
@@ -3021,7 +3075,7 @@ const AngularWorkflow = (defaultprops) => {
     sendStreamRequest({
       "item": "node",
       "type": "unselect",
-      "userid": userdata.id,
+      "id": workflow.id,
     })
     //}, 150)
   };
@@ -4071,7 +4125,6 @@ const AngularWorkflow = (defaultprops) => {
         "item": "node",
         "type": "select",
         "id": data.id,
-        "userid": userdata.id,
         "location": {
           "x": event.target.position("x"),
           "y": event.target.position("y"),
@@ -5985,10 +6038,10 @@ const AngularWorkflow = (defaultprops) => {
     const xParsed = destinationnodePosition.x - sourcenodePosition.x
     const yParsed = destinationnodePosition.y - sourcenodePosition.y
 
-    const z = Math.sqrt(xParsed * xParsed + yParsed * yParsed);
-    const costheta = xParsed / z;
-    const alpha = 0.25;
-    var controlPointDistance = [-alpha * yParsed * costheta, alpha * yParsed * costheta];
+    const z = Math.sqrt(xParsed * xParsed + yParsed * yParsed)
+    const costheta = xParsed / z
+    const alpha = 0.3
+    var controlPointDistance = [-alpha * yParsed * costheta, alpha * yParsed * costheta]
     var controlPointWeight = [alpha, 1 - alpha]
 
     //'control-point-weight': ['0.33', '0.66'],
@@ -6151,8 +6204,18 @@ const AngularWorkflow = (defaultprops) => {
     const foundtriggers = inputworkflow.triggers.map((trigger) => {
       const node = {};
       node.position = trigger.position;
-      node.data = trigger;
 
+	  if (trigger.large_image === undefined || trigger.large_image === null || trigger.large_image.length === 0) {
+
+		// Search triggers array for it where the name is matching and set image
+		var foundTrigger = triggers.find((t) => t.name === trigger.name)
+		if (foundTrigger !== undefined && foundTrigger !== null) {
+			console.log("Autofilled missing trigger image")
+			trigger.large_image = foundTrigger.large_image
+		}
+	  }
+
+      node.data = trigger;
       node.data._id = trigger["id"];
       node.data.id = trigger["id"];
       node.data.type = "TRIGGER";
@@ -6394,13 +6457,13 @@ const AngularWorkflow = (defaultprops) => {
     sendStreamRequest({
       "item": "workflow",
       "type": "enter",
-      "userid": userdata.id,
+      "id": workflow.id,
     })
   }
 
   const fetchRecommendations = (inputWorkflow) => {
-	//console.log("Disabled recommendations")
-	//return
+	console.log("Disabled recommendations as they were too inaccurate")
+	return
 
 	const parsedWorkflow = JSON.parse(JSON.stringify(inputWorkflow))
 
@@ -6500,6 +6563,11 @@ const AngularWorkflow = (defaultprops) => {
 		return response.json();
 	  })
 	  .then((responseJson) => {
+		if (responseJson === null) {
+			console.log("No revisions found")
+			return
+		}
+
 		if (responseJson.success === false) {
 			console.log("Error getting workflow revisions: ", responseJson)
 			return
@@ -6553,13 +6621,16 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   // App length necessary cus of cy initialization
-  if (elements.length === 0 && workflow.actions !== undefined && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0 && workflowRecommendations !== undefined) {
+  // Not using recommendations, so skipping this for now
+  //if (elements.length === 0 && workflow.actions !== undefined && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0 && workflowRecommendations !== undefined) {
+  if (elements.length === 0 && workflow.actions !== undefined && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0) {
     setGraphSetup(true);
     setupGraph(workflow);
     console.log("In graph setup")
 
     // 2nd load - configures cytoscape
-  } else if (!established && cy !== undefined && ((apps !== null && apps !== undefined && apps.length > 0) || workflow.public === true) && Object.getOwnPropertyNames(workflow).length > 0 && appAuthentication !== undefined && workflowRecommendations !== undefined) {
+  //} else if (!established && cy !== undefined && ((apps !== null && apps !== undefined && apps.length > 0) || workflow.public === true) && Object.getOwnPropertyNames(workflow).length > 0 && appAuthentication !== undefined && workflowRecommendations !== undefined) {
+  } else if (!established && cy !== undefined && ((apps !== null && apps !== undefined && apps.length > 0) || workflow.public === true) && Object.getOwnPropertyNames(workflow).length > 0 && appAuthentication !== undefined) {
     console.log("In POST graph setup!")
 
 
@@ -9085,6 +9156,33 @@ const AngularWorkflow = (defaultprops) => {
     color: "white",
     backgroundColor: theme.palette.inputColor,
   };
+
+  const aiQueryModal = 
+    <Dialog
+      PaperComponent={PaperComponent}
+      disableEnforceFocus={true}
+      hideBackdrop={true}
+      disableBackdropClick={true}
+      style={{ pointerEvents: "none" }}
+      PaperComponent={PaperComponent}
+      aria-labelledby="draggable-dialog-title"
+      open={aiQueryModalOpen}
+      PaperProps={{
+        style: {
+          pointerEvents: "auto",
+          color: "white",
+          minWidth: isMobile ? "90%" : 800,
+          border: theme.palette.defaultBorder,
+        },
+      }}
+      onClose={() => {
+      }}
+    >
+        <DialogTitle id="draggable-dialog-title" style={{ cursor: "move", }}>
+          <span style={{ color: "white" }}>Condition</span>
+        </DialogTitle>
+    </Dialog>
+
 
   const conditionsModal = (
     <Dialog
@@ -11745,7 +11843,7 @@ const AngularWorkflow = (defaultprops) => {
                 }}
                 onChange={(event, newValue) => {
                   // Workaround with event lol
-                  console.log(event, newValue)
+                  console.log("CHANGE: ", event, newValue)
                   if (newValue !== undefined && newValue !== null) {
                     var parsedvalue = JSON.parse(JSON.stringify(newValue))
                     parsedvalue.actions = []
@@ -11772,6 +11870,7 @@ const AngularWorkflow = (defaultprops) => {
                     >
                       <MenuItem 
 					  	onClick={() => {
+							console.log("CLICK: ", app)
 							const newValue = app
 
                   			if (newValue !== undefined && newValue !== null) {
@@ -13856,6 +13955,7 @@ const AngularWorkflow = (defaultprops) => {
 		expansionModalOpen={codeEditorModalOpen}
 		setExpansionModalOpen={setCodeEditorModalOpen}
 		setEditorData={setEditorData}
+		setAiQueryModalOpen={setAiQueryModalOpen}
       />
 
     } else if (Object.getOwnPropertyNames(selectedComment).length > 0) {
@@ -14402,6 +14502,13 @@ const AngularWorkflow = (defaultprops) => {
           }
           style={{ width: size, height: size }}
         />
+      );
+	} else if (execution.execution_source === "ShuffleGPT") {
+      return (
+		<AutoAwesomeIcon 
+		  color="secondary" 
+		  style={{paddingTop: 8, paddingLeft: 4, height: 25, width: 25, }}
+		/>
       );
     }
 
@@ -15484,19 +15591,23 @@ const AngularWorkflow = (defaultprops) => {
                           width: 30,
                         }}
                         onClick={() => {
-                          const oldstartnode = cy.getElementById(data.action.id);
-                          //console.log("FOUND NODe: ", oldstartnode)
-                          if (oldstartnode !== undefined && oldstartnode !== null) {
-                            const foundname = oldstartnode.data("label")
-                            if (foundname !== undefined && foundname !== null) {
-                              data.action.label = foundname
-                            }
-                          }
+						  if (cy !== undefined) {
+							  const oldstartnode = cy.getElementById(data.action.id);
+							  //console.log("FOUND NODe: ", oldstartnode)
+							  if (oldstartnode !== undefined && oldstartnode !== null) {
+								const foundname = oldstartnode.data("label")
+								if (foundname !== undefined && foundname !== null) {
+								  data.action.label = foundname
+								}
+							  }
 
-                          //console.log("Click data: ", data)
-                          //data.action.label = ""
-                          setSelectedResult(data);
-                          setCodeModalOpen(true);
+							  //console.log("Click data: ", data)
+							  //data.action.label = ""
+							  setSelectedResult(data);
+							  setCodeModalOpen(true);
+						  } else {
+								toast("Please wait until the workflow is loaded and try again")
+							}
                         }}
                       >
                         <Tooltip
@@ -17797,6 +17908,7 @@ const AngularWorkflow = (defaultprops) => {
         {newView}
         <VariablesModal variableInfo={variableInfo} setVariableInfo={setVariableInfo} />
         <ExecutionVariableModal variableInfo={variableInfo} setVariableInfo={setVariableInfo} />
+  		{aiQueryModal} 
         {conditionsModal}
         {authenticationModal}
         {codePopoutModal}

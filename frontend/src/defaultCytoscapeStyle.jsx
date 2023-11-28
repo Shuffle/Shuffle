@@ -4,11 +4,10 @@ const data = [
     css: {
       label: "data(label)",
       "text-valign": "center",
-      "font-family":
-        "Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif",
+      "font-family": "Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif",
       "font-weight": "lighter",
-      "margin-right": "10px",
       "font-size": "18px",
+      "margin-right": "10px",
       width: "80px",
       height: "80px",
       color: "white",

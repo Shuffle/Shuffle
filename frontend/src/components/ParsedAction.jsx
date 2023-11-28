@@ -170,6 +170,7 @@ const ParsedAction = (props) => {
 	
 	setEditorData,
 	setcodedata,
+	setAiQueryModalOpen,
   } = props;
 
   const classes = useStyles();
@@ -2913,14 +2914,17 @@ const ParsedAction = (props) => {
                   }}
 		  		  disabled={autoCompleting}
                   onClick={() => {
-					  // aiSubmit(aiMsg, undefined, undefined, newSelectedAction)
-					  aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
+					  //if (setAiQueryModalOpen !== undefined) {
+					  //  setAiQueryModalOpen(true)
+					  //} else {
+					  	aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
+					  //}
   					  setAutocompleting(true)
                   }}
                 >
                   <Tooltip
                     color="primary"
-                    title={"Autocompletes fields. Uses NAME of the action and previous values' results."}
+                    title={"Autocomplete fields. Will show a popup so that you can query how you would like to fill it in"}
                     placement="top"
                   >
 		  			{autoCompleting ? 

@@ -46,11 +46,6 @@ const RuntimeDebugger = (props) => {
 
   	const classes = useStyles();
 
-	//const [workflowId, setWorkflowId] = useState("");
-	//const [status, setStatus] = useState("FINISHED");
-	//const [endTime, setEndTime] = useState(dayjs().subtract(0, 'day'))
-	//const [startTime, setStartTime] = useState(dayjs().subtract(30, 'day'))
-
 	const [workflowId, setWorkflowId] = useState("")
 	const [status, setStatus] = useState("")
 	const [endTime, setEndTime] = useState("")
@@ -75,7 +70,7 @@ const RuntimeDebugger = (props) => {
 
 	const submitSearch = (workflowId, status, startTime, endTime, cursor, limit) => {
 
-		setResultRows([])
+		//setResultRows([])
 		setSearchLoading(true)
 		const fetchData = {
 			workflow_id: workflowId,
@@ -107,22 +102,29 @@ const RuntimeDebugger = (props) => {
 						//data.runs[key].endTimestamp = data.runs[key].ended_at.toISOString().slice(0, 19).replace('T', ' ')
 						const startTimestamp = new Date(data.runs[key].started_at*1000)
 						data.runs[key].startTimestamp = startTimestamp.toISOString().slice(0, 19).replace('T', ' ')
+
 						const endTimestamp = new Date(data.runs[key].completed_at*1000)
 						data.runs[key].endTimestamp = endTimestamp.toISOString().slice(0, 19).replace('T', ' ')
+						if (data.runs[key].completed_at === 0 || data.runs[key].completed_at === null) {
+							data.runs[key].endTimestamp = ""
+						}
 					}
 
 
 					// Add 20 empty rows to the end of the resultRows array
 					// This is to make sure that the scrollbar is always visible
 					setResultRows(data.runs)
+				} else {
+					toast("No results found. Keeping old runs")
 				}
 			} else {
-				console.error("Search error: ", data.reason)
+				toast("Failed to search for runs. Please try again.")
 			}
 		})
 		.catch((error) => {
 			setSearchLoading(false)
 			console.error("Error:", error);
+			toast("Failed to search for runs. Please try again (2)")
 		})
 	}
 
@@ -315,27 +317,63 @@ const RuntimeDebugger = (props) => {
 				)
 			},
 		  },
-		{ field: 'startTimestamp', headerName: 'Start time (UTC)', width: 160, },
+		{ field: 'startTimestamp', headerName: 'Start time (UTC)', width: 160, 
+			renderCell: (params) => {
+				const hasError = params.row.completed_at-params.row.started_at > 300 
+
+				return (
+					<Tooltip title={hasError ? "More than 5 minutes from start to finish" : ""} placement="top">
+						<span style={{cursor: "pointer", backgroundColor: !hasError ? "inherit" : "rgba(244,0,0,0.4)",}} onClick={() => {
+							console.log("Zoom in on end timestamp is this one: ", params.row.endTimestamp)
+							//setEndTimestamp(params.row.endTimestamp)
+
+							// Make a new Date() from params.row.startTimestamp and set it in the endTime
+							const newEndTime = new Date(params.row.startTimestamp)
+							if (newEndTime !== null && newEndTime !== undefined && newEndTime !== "" && newEndTime !== "Invalid Date") {
+								// Translate newEndTime to UTC no matter what timezone we are in. Based it on local()
+								// Plus 1 minute to make sure it comes in
+								setEndTime(dayjs(newEndTime.setMinutes(newEndTime.getMinutes()+1)))
+
+								// Use dayjs to translate it into something useful
+
+								// Remove 5 minutes from it and set startTime
+								//newEndTime.setMinutes(newEndTime.getMinutes()-5)
+								//setStartTime(dayjs(newEndTime))
+							}
+						}}>
+							{params.row.startTimestamp}
+						</span>
+					</Tooltip>
+				)
+			}
+		},
 		{ field: 'endTimestamp', headerName: 'End time (UTC)', width: 160, },
 	    {
 			field: 'id',
 			headerName: 'Explore',
 			width: 65,
-			renderCell: (params) => (
-			  <Tooltip arrow placement="right" title={
-				  <Typography variant="body2" style={{whiteSpace: "pre-line", }}>
-				  	{params.row.result !== null && params.row.result !== undefined && params.row.result !== "" ?
-					  params.row.result
-					  : 
-					  null
-					}
-				  </Typography>
-			  } >
-				  <Link href={`/workflows/${params.row.workflow.id}?execution_id=${params.row.id}`} target="_blank" rel="noopener noreferrer">
-					<OpenInNewIcon fontSize="small" />
-				  </Link>
-			</Tooltip>
-			),
+			renderCell: (params) => {
+				const parsedResult = params.row.result === null || params.row.result === undefined || params.row.result === "" ? null : params.row.result
+				const hasError = parsedResult !== null && parsedResult !== undefined && parsedResult !== "" ? parsedResult.includes("{%") && parsedResult.includes("%}") : false
+
+				return (
+				  <Tooltip arrow placement="right" title={
+					  <Typography variant="body2" style={{whiteSpace: "pre-line", }}>
+						{params.row.result !== null && params.row.result !== undefined && params.row.result !== "" ?
+						  params.row.result
+						  : 
+						  null
+						}
+					  </Typography>
+				  }>
+					<span style={{backgroundColor: !hasError ? "inherit" : "rgba(244,0,0,0.6)", }}>
+					  <Link href={`/workflows/${params.row.workflow.id}?execution_id=${params.row.id}`} target="_blank" rel="noopener noreferrer">
+						<OpenInNewIcon fontSize="small" />
+					  </Link>
+					</span>
+				</Tooltip>
+				)
+			}
 		  },
 	]
 
@@ -522,6 +560,7 @@ const RuntimeDebugger = (props) => {
 						minWidth: 240,
 					    maxWidth: 240,
 					  }}
+					  ampm={false}
 					  label="Search from"
 					  format="YYYY-MM-DD HH:mm:ss"
 					  value={startTime}
@@ -535,6 +574,7 @@ const RuntimeDebugger = (props) => {
 						minWidth: 240,
 					    maxWidth: 240,
 					  }}
+					  ampm={false}
 					  label="Search until"
 					  format="YYYY-MM-DD HH:mm:ss"
 					  value={endTime}

@@ -550,7 +550,6 @@ const CodeEditor = (props) => {
 		var code_lines = localcodedata.split('\n')
 		for (var i = 0; i < code_lines.length; i++){
 			var current_code_line = code_lines[i]
-			console.log("Codeline: ", current_code_line)
 
 			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 
@@ -612,8 +611,6 @@ const CodeEditor = (props) => {
 					const fixedVariable = fixVariable(variable_occurence[occ])
 					var correctVariable = availableVariables.includes(fixedVariable)
 					if(!correctVariable) {
-						console.log("Line: ", i, "ch: ", dollar_occurence[occ])
-
 						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: rgb(248, 106, 62, 0.9); padding-top: 2px; padding-bottom: 2px; color: white"})
 					} else {
 						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; padding-top: 2px; padding-bottom: 2px; color: white"})
@@ -664,6 +661,23 @@ const CodeEditor = (props) => {
 		setlocalcodedata(updatedCode)
 	}
 
+	const fixStringInput = (new_input) => {
+		// Newline fixes
+		new_input = new_input.replace(/\r\n/g, "\\n")
+		new_input = new_input.replace(/\n/g, "\\n")
+
+		// Quote fixes
+		new_input = new_input.replace(/\\"/g, '"')
+		new_input = new_input.replace(/"/g, '\\"')
+
+		new_input = new_input.replace(/\\'/g, "'")
+		new_input = new_input.replace(/'/g, "\\'")
+
+
+		return new_input
+	}
+
+
 	const expectedOutput = (input) => {
 		
 		//const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
@@ -687,19 +701,25 @@ const CodeEditor = (props) => {
 
 							valuefound = true 
 
+							console.log("Here. Checking if we got an example?")
 							try {
 								if (typeof actionlist[j].example === "object") {
+
 									input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
 
 								} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
 									input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
 								} else {
-									input = input.replace(found[i], actionlist[j].example, -1)
+									console.log("This?")
+	
+									const newExample = fixStringInput(actionlist[j].example)
+									input = input.replace(found[i], newExample, -1)
 								}
 							} catch (e) { 
 								input = input.replace(found[i], actionlist[j].example, -1)
 							}
 						}
+
 
 						//if (!valuefound) {
 						//	console.log("Couldn't find value "+fixedVariable)
@@ -736,7 +756,10 @@ const CodeEditor = (props) => {
 										new_input = JSON.stringify(new_input)
 									} else {
 										if (typeof new_input === "string") {
-											new_input = new_input
+											// Check if it contains any newlines, and replace them with raw newlines
+											new_input = fixStringInput(new_input)	
+
+											// Replace quotes with nothing
 										} else {
 											console.log("NO TYPE? ", typeof new_input)
 											try {
@@ -747,7 +770,6 @@ const CodeEditor = (props) => {
 										}
 									}
 
-									//console.log("FOUND2: ", fixedVariable, actionlist[j].example)
 									input = input.replace(fixedVariable, new_input, -1)
 									input = input.replace(found[i], new_input, -1)
 
@@ -1430,7 +1452,6 @@ const CodeEditor = (props) => {
 								highlight_variables(value)
 							}}
 							onChange={(value, viewUpdate) => {
-								console.log("Value: ", value, viewUpdate)
 								setlocalcodedata(value)
 								expectedOutput(value)
 
