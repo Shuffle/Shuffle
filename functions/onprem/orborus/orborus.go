@@ -63,7 +63,7 @@ var sleepTime = 2
 
 // Making it work on low-end machines even during busy times :)
 // May cause some things to run slowly 
-var maxConcurrency = 3 
+var maxConcurrency = 5
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")

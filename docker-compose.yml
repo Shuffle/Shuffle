@@ -43,6 +43,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - SHUFFLE_APP_SDK_TIMEOUT=300
+      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=5 # The amount of concurrent executions Orborus can handle. 
       #- DOCKER_HOST=tcp://docker-socket-proxy:2375
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:5001

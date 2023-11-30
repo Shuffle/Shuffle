@@ -3706,6 +3706,10 @@ func runInitEs(ctx context.Context) {
 				continue
 			}
 
+			// FIXME: Add a randomized timer to avoid all schedules running at the same time
+			// Many are at 5 minutes / 1 hour. The point is to spread these out 
+			// a bit instead of all of them starting at the exact same time
+
 			//log.Printf("Schedule: %#v", schedule)
 			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
 			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job(schedule))
@@ -3984,7 +3988,7 @@ func runInitEs(ctx context.Context) {
 
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
-			log.Printf("[WARNING] Failed loading repo into memory (init): %s", err)
+			log.Printf("[ERROR] Failed loading repo into memory (init): %s", err)
 		}
 
 		dir, err := fs.ReadDir("")
@@ -4021,7 +4025,7 @@ func runInitEs(ctx context.Context) {
 	}
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
-		log.Printf("[WARNING] Failed loading repo %s into memory: %s", apis, err)
+		log.Printf("[ERROR] Failed loading repo %s into memory: %s", apis, err)
 	} else if err == nil && len(workflowapps) < 10 {
 		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
 		dir, err := fs.ReadDir("")

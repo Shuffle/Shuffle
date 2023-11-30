@@ -302,8 +302,10 @@ class AppBase:
         self.authorization = os.getenv("AUTHORIZATION", "")
         self.current_execution_id = os.getenv("EXECUTIONID", "")
         self.full_execution = os.getenv("FULL_EXECUTION", "") 
-        self.start_time = int(time.time())
         self.result_wrapper_count = 0
+
+        # Make start time with milliseconds
+        self.start_time = int(time.time_ns())
 
         self.action_result = {
             "action": self.action,
@@ -312,7 +314,7 @@ class AppBase:
             "result": f"",
             "started_at": self.start_time,
             "status": "",
-            "completed_at": int(time.time()),
+            "completed_at": int(time.time_ns()),
         }
 
         if isinstance(self.action, str):
@@ -468,7 +470,7 @@ class AppBase:
 
         # Try it with some magic
 
-        action_result["completed_at"] = int(time.time())
+        action_result["completed_at"] = int(time.time_ns())
         self.logger.info(f"""[DEBUG] Inside Send result with status {action_result["status"]}""")
         #if isinstance(action_result, 
 
@@ -1011,7 +1013,7 @@ class AppBase:
                     "result": f"All {len(param_multiplier)} values were non-unique",
                     "started_at": self.start_time,
                     "status": "SKIPPED",
-                    "completed_at": int(time.time()),
+                    "completed_at": int(time.time_ns()),
                 }
 
                 self.send_result(self.action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
@@ -1457,7 +1459,7 @@ class AppBase:
             "authorization": self.authorization,
             "execution_id": self.current_execution_id,
             "result": "",
-            "started_at": int(time.time()),
+            "started_at": int(time.time_ns()),
             "status": "EXECUTING"
         }
 
@@ -2469,7 +2471,7 @@ class AppBase:
                     self.action_result["result"] = f"Failed to parse LiquidPy: {error_msg}"
                     print("[WARNING] Failed to set LiquidPy result")
 
-                self.action_result["completed_at"] = int(time.time())
+                self.action_result["completed_at"] = int(time.time_ns())
                 self.send_result(self.action_result, headers, stream_path)
 
                 self.logger.info(f"[ERROR] Sent FAILURE response to backend due to : {e}")
@@ -3071,7 +3073,7 @@ class AppBase:
             self.logger.info("Failed one or more branch conditions.")
             self.action_result["result"] = tmpresult
             self.action_result["status"] = "SKIPPED"
-            self.action_result["completed_at"] = int(time.time())
+            self.action_result["completed_at"] = int(time.time_ns())
 
             self.send_result(self.action_result, headers, stream_path)
             return
@@ -3557,7 +3559,7 @@ class AppBase:
                                 self.logger.info("[WARNING] SHOULD STOP EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
                                 self.action_result["status"] = "SKIPPED"
                                 self.action_result["result"] = f"A non-unique value was found"  
-                                self.action_result["completed_at"] = int(time.time())
+                                self.action_result["completed_at"] = int(time.time_ns())
                                 self.send_result(self.action_result, headers, stream_path)
                                 return
 
@@ -3885,7 +3887,7 @@ class AppBase:
             })
 
         # Send the result :)
-        self.action_result["completed_at"] = int(time.time())
+        self.action_result["completed_at"] = int(time.time_ns())
         self.send_result(self.action_result, headers, stream_path)
 
         #try:
