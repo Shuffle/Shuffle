@@ -134,7 +134,7 @@ const FileCategoryInput = (props) => {
 
 
 const Admin = (props) => {
-  const { globalUrl, userdata, serverside, checkLogin } = props;
+  const { globalUrl, userdata, serverside, checkLogin, notifications, setNotifications,  } = props;
 
   var to_be_copied = "";
   const classes = useStyles();
@@ -2836,6 +2836,8 @@ If you're interested, please let me know a time that works for you, or set up a 
 								checkLogin={checkLogin}
 								setAdminTab={setAdminTab}
 								setCurTab={setCurTab}
+								notifications={notifications}
+								setNotifications={setNotifications}
 							/>
 						: adminTab === 3 ? 
 							<Billing 

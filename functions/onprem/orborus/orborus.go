@@ -805,7 +805,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			log.Printf("[ERROR] Failed to start worker container in environment %s: %s", environment, err)
 			return err
 		} else {
-			log.Printf("[INFO] Worker Container %s was created under environment %s for execution %s: docker logs %s", cont.ID, environment, executionRequest.ExecutionId, cont.ID)
+			log.Printf("[INFO][%s] Worker Container created. Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 		}
 
 		//stats, err := cli.ContainerInspect(context.Background(), containerName)
@@ -830,7 +830,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		//	}
 		//}
 	} else {
-		log.Printf("[INFO] Worker Container %s was created under environment %s: docker logs %s", cont.ID, environment, cont.ID)
+		log.Printf("[INFO][%s] New Worker created. Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 	}
 
 	return nil

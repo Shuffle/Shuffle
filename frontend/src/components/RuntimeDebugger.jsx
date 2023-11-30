@@ -181,6 +181,7 @@ const RuntimeDebugger = (props) => {
 	}, [])
 
 	const imageSize = 30
+	const timenowUnix = Math.floor(Date.now() / 1000)
 	const columns: GridColDef[] = [
 		{
 			field: 'execution_source',
@@ -319,7 +320,8 @@ const RuntimeDebugger = (props) => {
 		  },
 		{ field: 'startTimestamp', headerName: 'Start time (UTC)', width: 160, 
 			renderCell: (params) => {
-				const hasError = params.row.completed_at-params.row.started_at > 300 
+				const comparisonTimestamp = params.row.completed_at === 0 ? timenowUnix : params.row.completed_at
+				const hasError = comparisonTimestamp-params.row.started_at > 300 
 
 				return (
 					<Tooltip title={hasError ? "More than 5 minutes from start to finish" : ""} placement="top">

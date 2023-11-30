@@ -3619,6 +3619,7 @@ class AppBase:
                                     timeout_env = os.getenv("SHUFFLE_APP_SDK_TIMEOUT", timeout)
                                     try:
                                         timeout = int(timeout_env)
+                                        self.logger.info(f"[DEBUG] Timeout set to {timeout} seconds")  
                                     except Exception as e:
                                         self.logger.info(f"[WARNING] Failed parsing timeout to int: {e}")
 

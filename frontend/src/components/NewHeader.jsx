@@ -106,6 +106,8 @@ const Header = (props) => {
 
   const clearNotifications = () => {
     // Don't really care about the logout
+    
+    toast("Clearing notifications")
     fetch(`${globalUrl}/api/v1/notifications/clear`, {
       credentials: "include",
       method: "GET",
@@ -351,7 +353,7 @@ const Header = (props) => {
           setAnchorEl(event.currentTarget);
         }}
       >
-        <Badge badgeContent={notifications.length} color="primary">
+        <Badge badgeContent={notifications.filter((n) => n.read === false).length} color="primary">
           <NotificationsIcon
             color="secondary"
             style={{ height: 30, width: 30 }}
@@ -390,7 +392,7 @@ const Header = (props) => {
         >
           <div style={{ display: "flex", marginBottom: 5 }}>
             <Typography variant="body1">
-              Your Notifications ({notifications.length})
+              Your Notifications ({notifications.filter((data) => !data.read).length})
             </Typography>
             {notifications.length > 1 ? (
               <Button
@@ -412,7 +414,11 @@ const Header = (props) => {
           </Typography>
         </Paper>
         {notifications.map((data, index) => {
-          return <NotificationItem data={data} key={index} />;
+			if (data.read) {
+				return null
+			}
+
+          	return <NotificationItem data={data} key={index} />;
         })}
       </Menu>
     </span>

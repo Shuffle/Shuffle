@@ -15628,7 +15628,7 @@ const AngularWorkflow = (defaultprops) => {
                             marginBottom: "auto",
                           }}
                         >
-                          <b>{data.action.label}</b>
+                          <b>{data.action.label.replaceAll("_", " ")}</b>
                         </div>
                         <div style={{ fontSize: 14 }}>
                           <Typography variant="body2" color="textSecondary">

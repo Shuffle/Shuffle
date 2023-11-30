@@ -403,7 +403,7 @@ const Apps = (props) => {
         return response.json();
       })
       .then((responseJson) => {
-        //console.log("Apps: ", responseJson)
+        console.log("Apps: ", responseJson)
         //responseJson = sortByKey(responseJson, "large_image")
         //responseJson = sortByKey(responseJson, "is_valid")
         //setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))

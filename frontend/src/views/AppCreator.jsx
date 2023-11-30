@@ -2511,9 +2511,15 @@ const AppCreator = (defaultprops) => {
         scheme: "basic",
       };
     } else if (authenticationOption === "Oauth2") {
-			console.log("oauth2: ", parameterName)
+	  console.log("oauth2: ", parameterName)
       var newparamName = parameterName.replaceAll('"', "");
       newparamName = newparamName.replaceAll("'", "");
+
+	  // FIXME - this is a hack to get around the fact that the oauth2 
+	  // flow is not properly defined 
+	  if (oauth2Type === "application") {
+		  newparamName = ""
+	  }
 
       //parameterName, parameterValue, revocationUrl
       data.components.securitySchemes["Oauth2"] = {
@@ -2945,7 +2951,7 @@ const AppCreator = (defaultprops) => {
         		  color="textSecondary"
         		  style={{ marginTop: 10 }}
         		>
-        		  Base Authorization URL for Oauth2
+        		  Authorization URL for Oauth2
         		</Typography>
         		<TextField
         		  required

@@ -375,7 +375,11 @@ const AuthenticationOauth2 = (props) => {
 				"reference_workflow": workflowId,
 		}
 
-		setNewAppAuth(appAuthData, true) 
+	    if (setNewAppAuth !== undefined) {
+			setNewAppAuth(appAuthData, true) 
+		} else {
+			console.log("setNewAppAuth is undefined")
+	    }
 
 		// Wait 1 second, then get app auth with update
 		//if (getAppAuthentication !== undefined) {
@@ -602,7 +606,10 @@ const AuthenticationOauth2 = (props) => {
 
     console.log("FIELDS: ", newFields);
     newAuthOption.fields = newFields;
-    setNewAppAuth(newAuthOption);
+
+	if (setNewAppAuth !== undefined) {
+    	setNewAppAuth(newAuthOption);
+	}
     //appAuthentication.push(newAuthOption)
     //setAppAuthentication(appAuthentication)
     //
