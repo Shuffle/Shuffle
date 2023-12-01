@@ -12074,7 +12074,7 @@ const AngularWorkflow = (defaultprops) => {
                   workflow.triggers[selectedTriggerIndex].parameters[0].value
                 }
                 color="primary"
-                placeholder="defaultValue"
+                placeholder="10"
                 onBlur={(e) => {
                   setTriggerCronWrapper(e.target.value);
                 }}
@@ -15628,7 +15628,8 @@ const AngularWorkflow = (defaultprops) => {
                             marginBottom: "auto",
                           }}
                         >
-                          <b>{data.action.label.replaceAll("_", " ")}</b>
+                          <b>{data.action.label === undefined || data.action.label === null || data.action.label === "" ? data.action.label : data.action.label.replaceAll("_", " ")}</b>
+							  
                         </div>
                         <div style={{ fontSize: 14 }}>
                           <Typography variant="body2" color="textSecondary">

@@ -4,6 +4,7 @@ import {
 	TextField,
 	Link,
 	Button,
+	ButtonGroup,
 	CircularProgress,
 	Select,
 	MenuList,
@@ -13,6 +14,7 @@ import {
 	Autocomplete,
 	Tooltip,
 	Typography,
+	IconButton,
 } from '@mui/material';
 
 import { toast } from "react-toastify" 
@@ -31,6 +33,8 @@ import {
 import {
 	OpenInNew as OpenInNewIcon,
     PlayArrow as PlayArrowIcon,
+	Insights as InsightsIcon, 
+	Replay as ReplayIcon, 
 } from '@mui/icons-material';
 
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
@@ -56,6 +60,7 @@ const RuntimeDebugger = (props) => {
 	const [rowCursor, setCursor] = useState("")
 	const [rowsPerPage, setRowsPerPage] = useState(10)
 	const [resultRows, setResultRows] = useState([])
+	const [selectedWorkflowExecutions, setSelectedWorkflowExecutions] = useState([])
 	const [workflows, setWorkflows] = useState([
 		{"id": "", "name": "All Workflows",}
 	])
@@ -198,6 +203,9 @@ const RuntimeDebugger = (props) => {
 				} else if (source === "subflow" || source.length === 36) {
 					foundSource = <img src={alltriggers[4].large_image} alt="subflow" style={{borderRadius: theme.palette.borderRadius, height: imageSize, width: imageSize, }} />
 					source = "subflow"
+				} else if (source === "rerun" || source.length === 36) {
+					foundSource = <ReplayIcon style={{color: theme.palette.primary.secondary, height: imageSize, width: imageSize, }} />
+					source = "rerun of a previous run"
 				} else {
 					source = "manual"
 				}
@@ -278,20 +286,31 @@ const RuntimeDebugger = (props) => {
 			width: 75,
 			renderCell: (params) => {
 				var foundItems = 0
-				var extraItems = 0
+				var foundSkipped = 0
 				if (params.row.results !== null && params.row.results !== undefined) {
 					for (let key in params.row.results) {
 						if (params.row.results[key].status === "SUCCESS") {
 							foundItems += 1
 						}
+
+						if (params.row.results[key].status === "SKIPPED") {
+							foundSkipped += 1
+						}
 					}
 				}
 
+				var foundError = ""
+				if (foundItems + foundSkipped < params.row.workflow.actions.length && params.row.status === "FINISHED") {
+					foundError = "Workflow is done, but all nodes are not finished. This most likely indicates a problem with the workflow"
+				}
+
 				return (
-					<span style={{}} onClick={() => {
-					}}>
-						{foundItems} 
-					</span>
+					<Tooltip title={foundError} placement="top">
+						<span style={{backgroundColor: foundError.length > 0 ? "rgba(244,0,0,0.6)" : "inherit"}} onClick={() => {
+						}}>
+							{foundItems} 
+						</span>
+					</Tooltip>
 				)
 			},
 		  },
@@ -301,7 +320,6 @@ const RuntimeDebugger = (props) => {
 			width: 75,
 			renderCell: (params) => {
 				var foundItems = 0
-				var extraItems = 0
 				if (params.row.results !== null && params.row.results !== undefined) {
 					for (let key in params.row.results) {
 						if (params.row.results[key].status === "SKIPPED") {
@@ -353,14 +371,81 @@ const RuntimeDebugger = (props) => {
 	    {
 			field: 'id',
 			headerName: 'Explore',
-			width: 65,
+			width: 100,
 			renderCell: (params) => {
-				const parsedResult = params.row.result === null || params.row.result === undefined || params.row.result === "" ? null : params.row.result
-				const hasError = parsedResult !== null && parsedResult !== undefined && parsedResult !== "" ? parsedResult.includes("{%") && parsedResult.includes("%}") : false
+				const parsedResult = params.row.result === null || params.row.result === undefined || params.row.result === "" ? "" : params.row.result
+
+				var errorReason = ""
+				var hasError = parsedResult !== null && parsedResult !== undefined && parsedResult !== "" ? parsedResult.includes("{%") && parsedResult.includes("%}") : false
+
+				if (hasError) {
+					errorReason = "Liquid parsing error" 
+				}
+
+				// if success: false
+				// if node == FAILURE or ABORTED
+				if (parsedResult.includes(`\"success\": false`)) {
+					errorReason = "success: false in last result"
+					hasError = true
+				}
+
+				if (!hasError && parsedResult.includes(`\"status\":`)) {
+					// Look for any status that is 300 or higher
+					const statusSplit = parsedResult.split(`\"status\":`)
+					if (statusSplit.length > 1) {
+						var foundStatus = statusSplit[1].trim()
+						// Check if pattern is \d, 
+						if (foundStatus.includes(",")) {
+							const foundStatusSplit = foundStatus.split(",")
+
+							if (foundStatusSplit.length > 1) {
+								foundStatus = foundStatusSplit[0].trim()
+								// Check if it's a number
+							}
+						} else {
+							foundStatus = ""
+						}
+
+						if (!isNaN(foundStatus) && foundStatus  >= 300) {
+							errorReason = "Status code: "+foundStatus
+							hasError = true
+						}
+					}
+				}
+
+				if (!hasError) {
+					// Find last node that isn't skipped and check status
+					var lastresult = {}
+					for (var key in params.row.results)	{
+						const result = params.row.results[key]
+						if (result.status === "SKIPPED") {
+							continue
+						}
+
+						if (result.completed_at === undefined || result.completed_at === null) {
+							continue
+						}
+
+						if (result.completed_at >= lastresult.completed_at) {
+							lastresult = result
+						}
+					}
+
+					if (lastresult.id !== undefined && lastresult.status !== "SUCCESS" && lastresult.status !== "SKIPPED") {
+						errorReason = "Bad status for last node: "+lastresult.status
+						hasError = true
+					}
+				}
+
+				if (!hasError && params.row.notifications_created !== null && params.row.notifications_created !== undefined && params.row.notifications_created !== 0) {
+					hasError = true
+					errorReason = "Generated notifications: "+params.row.notifications_created
+				}
 
 				return (
 				  <Tooltip arrow placement="right" title={
-					  <Typography variant="body2" style={{whiteSpace: "pre-line", }}>
+					  <Typography variant="body2" style={{whiteSpace: "pre-line", padding: 10, }}>
+					  	Workflow result: {errorReason}<br/><br/>
 						{params.row.result !== null && params.row.result !== undefined && params.row.result !== "" ?
 						  params.row.result
 						  : 
@@ -368,10 +453,19 @@ const RuntimeDebugger = (props) => {
 						}
 					  </Typography>
 				  }>
-					<span style={{backgroundColor: !hasError ? "inherit" : "rgba(244,0,0,0.6)", }}>
+					<span style={{backgroundColor: !hasError ? "inherit" : "rgba(244,0,0,0.45)", display: "flex", }}>
 					  <Link href={`/workflows/${params.row.workflow.id}?execution_id=${params.row.id}`} target="_blank" rel="noopener noreferrer">
-						<OpenInNewIcon fontSize="small" />
+						<OpenInNewIcon fontSize="small" style={{marginTop: 7, }} />
 					  </Link>
+					  <IconButton
+						style={{marginLeft: 10, }}
+						onClick={() => {
+							window.open(`${globalUrl}/api/v1/workflows/search/${params.row.id}`, "_blank")
+						}}
+						disabled={!userdata.support}
+					  >
+						<InsightsIcon fontSize="small" />
+					  </IconButton>
 					</span>
 				</Tooltip>
 				)
@@ -383,7 +477,6 @@ const RuntimeDebugger = (props) => {
 		// Check if the user is currently focusing a texxtfield or not
 		// If they are, don't submit the search
 		if (document.activeElement.tagName === "INPUT") {
-			console.log("User is focusing a textfield, not submitting search")
 			return
 		}
 
@@ -403,6 +496,29 @@ const RuntimeDebugger = (props) => {
 		setEndTime(date)
 	}
 
+    const abortExecution = (workflowId, executionId) => {
+      fetch(`${globalUrl}/api/v1/workflows/${workflowId}/executions/${executionId}/abort`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          credentials: "include",
+        }
+      )
+        .then((response) => {
+          if (response.status !== 200) {
+            console.log("Status not 200 for ABORT EXECUTION :O!");
+          }
+
+          return response.json();
+        })
+        .catch((error) => {
+			toast.error("Error aborting execution: "+error.toString())
+        });
+    };
+
 	const handleWorkflowSelectionUpdate = (e, isUserinput) => {
 		if (e.target.value === undefined || e.target.value === null || e.target.value.id === undefined) {
 			console.log("Returning as there's no id")
@@ -417,9 +533,106 @@ const RuntimeDebugger = (props) => {
 		submitSearch(e.target.value.id, status, startTime, endTime, rowCursor, rowsPerPage)
 	}
 
+	const executeWorkflow = (execution) => {
+    	  const data = { 
+			  execution_argument: execution.execution_argument, 
+			  start: execution.start,
+			  execution_source: "rerun",
+		  };
+
+    	  fetch(`${globalUrl}/api/v1/workflows/${execution.workflow.id}/execute?start=${execution.start}`,
+    	    {
+    	      method: "POST",
+    	      headers: {
+    	        "Content-Type": "application/json",
+    	        Accept: "application/json",
+    	      },
+    	      credentials: "include",
+    	      body: JSON.stringify(data),
+    	    }
+    	  )
+    	    .then((response) => {
+    	      if (response.status !== 200) {
+    	        console.log("Status not 200 for WORKFLOW EXECUTION :O!");
+    	      }
+
+    	      return response.json();
+    	    })
+    	    .then((responseJson) => {
+    	      if (!responseJson.success) {
+				  toast("Error executing workflow: "+responseJson.error)
+			  } else {
+				  console.log("Executed workflow: ", responseJson)
+			  }
+    	    })
+    	    .catch((error) => {
+				toast("Failed to execute workflow: "+error.toString())
+    	    });
+  	}
+
 	return (
 		<div style={{minWidth: 1150, maxWidth: 1150, margin: "auto", }}>
-			<h1>Workflow Run Debugger</h1>
+
+			<div style={{display: "flex", }}>
+				<h1 style={{flex: 3, }}>Workflow Run Debugger</h1>
+				{selectedWorkflowExecutions.length > 0 ?
+					<ButtonGroup>
+						<Tooltip title="Reruns ALL selected workflows. This will make a new execution for them, and not continue the existing.">
+							<Button
+								variant="outlined"
+								color="secondary"
+								style={{maxHeight: 40, marginTop: 25, }}
+								onClick={() => {
+
+									for (var i = 0; i < selectedWorkflowExecutions.length; i++) {
+										const selected = selectedWorkflowExecutions[i]
+										executeWorkflow(selected)
+									}
+
+									toast("Reran "+selectedWorkflowExecutions.length+" workflow run!")
+									setSelectedWorkflowExecutions([])
+
+								}}
+							>
+								Rerun Selected ({selectedWorkflowExecutions.length})
+							</Button>
+						</Tooltip>
+						<Tooltip title="Aborts ALL selected workflows in EXECUTING state">
+							<Button
+								variant="contained"
+								color="primary"
+								style={{maxHeight: 40, marginTop: 25, }}
+								onClick={() => {
+									toast("Attempting to abort "+selectedWorkflowExecutions.length+" workflow runs...")
+
+									var aborted = 0
+									for (var i = 0; i < selectedWorkflowExecutions.length; i++) {
+										const selected = selectedWorkflowExecutions[i]
+										if (selected.status === "EXECUTING") { 
+											abortExecution(selected.workflow.id, selected.execution_id) 
+											aborted += 1
+										}
+									}
+
+									if (aborted === 0) {
+										toast("No workflows were aborted as they are not executing.")
+									} else {
+										toast("Aborted "+aborted+" workflows.")
+										// Research
+										submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage)
+
+										setSelectedWorkflowExecutions([])
+									}
+		
+								}}
+							>
+								Abort Selected ({selectedWorkflowExecutions.length})
+							</Button>
+						</Tooltip> 
+					</ButtonGroup>
+
+				: null}
+			</div>
 			<form onSubmit={(e) => {
 				submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage)
 			}} style={{display: "flex", }}>
@@ -614,6 +827,26 @@ const RuntimeDebugger = (props) => {
 					onPageChange={(params) => {
 						console.log("params: ", params)
 					}}
+		  			onSelectionModelChange={(newSelection) => {
+						//console.log("newSelection: ", newSelection)
+		  			    //setSelectedWorkflowExecutionsIndexes(newSelection)
+						var found = []	
+						for (var i = 0; i < newSelection.length; i++) {
+							// Find the workflow in the resultRows
+							var selected = resultRows.find((workflow) => {
+								return workflow.id === newSelection[i]
+							})
+
+							if (selected === undefined || selected === null) {
+								continue
+							}
+
+							found.push(selected)
+						}
+
+						setSelectedWorkflowExecutions(found)
+		  			}}
+					// Track which items are selected
 				  />
 			</div> 
 		</div>
