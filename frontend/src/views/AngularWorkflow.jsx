@@ -1043,16 +1043,16 @@ const AngularWorkflow = (defaultprops) => {
                 execution_id: tmpView,
                 //authorization: data.authorization,
               }
+			  setExecutionRunning(true);
               setExecutionModalView(1);
               setExecutionRequest(cur_execution);
               start();
 
               //const newitem = removeParam("execution_id", cursearch);
               //navigate(curpath + newitem)
-
-              setTimeout(() => {
-                stop()
-              }, 5000);
+              //setTimeout(() => {
+              //  stop()
+              //}, 5000);
             }
           }
         } else {
@@ -15114,7 +15114,10 @@ const AngularWorkflow = (defaultprops) => {
                   marginTop: "auto",
                   marginBottom: "auto",
                 }}
-                onClick={() => { }}
+                onClick={() => { 
+                	setExecutionRunning(false);
+					stop()
+				}}
               >
                 <ArrowBackIcon style={{ color: "rgba(255,255,255,0.5)" }} />
               </IconButton>
@@ -15124,6 +15127,8 @@ const AngularWorkflow = (defaultprops) => {
           			const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
 					const newitem = removeParam("execution_id", cursearch);
 				  	navigate(curpath + newitem)
+                	setExecutionRunning(false);
+					stop()
 				}}
               >
                 See more runs 

@@ -56,6 +56,7 @@ const RuntimeDebugger = (props) => {
 	const [startTime, setStartTime] = useState("")
 
 	const [workflow, setWorkflow] = useState({})
+	const [ignoreOrg, setIgnoreOrg] = useState(false)
 	const [searchLoading, setSearchLoading] = useState(false)
 	const [rowCursor, setCursor] = useState("")
 	const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -85,6 +86,7 @@ const RuntimeDebugger = (props) => {
 			status: status.toUpperCase(),
 			start_time: startTime,
 			end_time: endTime,
+			ignore_org: ignoreOrg,
 		}
 
 		fetch(`${globalUrl}/api/v1/workflows/search`, {
@@ -184,6 +186,38 @@ const RuntimeDebugger = (props) => {
 			setStatus(foundStatus)
 		}
 	}, [])
+
+	const forceContinue = (execution) => {
+		console.log(`FORCE CONTINUE execution ${execution.execution_id} for workflow ${execution.workflow.id}`)
+
+		fetch(`${globalUrl}/api/v1/workflows/${execution.workflow.id}/executions/${execution.execution_id}/rerun`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => response.json())
+		.then((data) => {
+			if (data.success) {
+				if (data.reason !== undefined && data.reason !== null && data.reason !== "") {
+					toast("Successful response: " + data.reason)
+				} else {
+					toast("Successfully forced continue")
+				}
+			} else {
+				if (data.reason !== undefined && data.reason !== null && data.reason !== "") {
+					toast(`Failed to force continue: ${data.reason}`)
+				} else {
+					toast("Failed to force continue")
+				}
+			}
+		}) 
+		.catch((error) => {
+			console.error("Error:", error);
+			toast(`Failed to force continue: ${error}`)
+		})
+	}
 
 	const imageSize = 30
 	const timenowUnix = Math.floor(Date.now() / 1000)
@@ -371,7 +405,7 @@ const RuntimeDebugger = (props) => {
 	    {
 			field: 'id',
 			headerName: 'Explore',
-			width: 100,
+			width: 120,
 			renderCell: (params) => {
 				const parsedResult = params.row.result === null || params.row.result === undefined || params.row.result === "" ? "" : params.row.result
 
@@ -443,31 +477,47 @@ const RuntimeDebugger = (props) => {
 				}
 
 				return (
-				  <Tooltip arrow placement="right" title={
-					  <Typography variant="body2" style={{whiteSpace: "pre-line", padding: 10, }}>
-					  	Workflow result: {errorReason}<br/><br/>
-						{params.row.result !== null && params.row.result !== undefined && params.row.result !== "" ?
-						  params.row.result
-						  : 
-						  null
-						}
-					  </Typography>
-				  }>
-					<span style={{backgroundColor: !hasError ? "inherit" : "rgba(244,0,0,0.45)", display: "flex", }}>
-					  <Link href={`/workflows/${params.row.workflow.id}?execution_id=${params.row.id}`} target="_blank" rel="noopener noreferrer">
-						<OpenInNewIcon fontSize="small" style={{marginTop: 7, }} />
-					  </Link>
-					  <IconButton
-						style={{marginLeft: 10, }}
-						onClick={() => {
-							window.open(`${globalUrl}/api/v1/workflows/search/${params.row.id}`, "_blank")
-						}}
-						disabled={!userdata.support}
-					  >
-						<InsightsIcon fontSize="small" />
-					  </IconButton>
-					</span>
-				</Tooltip>
+					<div style={{display: "flex", }}>
+					  <Tooltip arrow placement="right" title={
+						  <Typography variant="body2" style={{whiteSpace: "pre-line", padding: 10, }}>
+							Workflow result: {errorReason}<br/><br/>
+							{params.row.result !== null && params.row.result !== undefined && params.row.result !== "" ?
+							  params.row.result
+							  : 
+							  null
+							}
+						  </Typography>
+					  }>
+						<span style={{backgroundColor: !hasError ? "inherit" : "rgba(244,0,0,0.45)", display: "flex", }}>
+						  <Link href={`/workflows/${params.row.workflow.id}?execution_id=${params.row.id}`} target="_blank" rel="noopener noreferrer">
+							<OpenInNewIcon fontSize="small" style={{marginTop: 7, }} />
+						  </Link>
+						</span>
+						</Tooltip>
+						<Tooltip arrow title="Force continue workflow. Only workflows for workflows in EXECUTING state. This is NOT a rerun, but way for Shuffle to figure out the next steps automatically. If the execution doesn't finish even after trying this, please contact support@shuffler.io"> 
+						  <IconButton
+							style={{marginLeft: 5, }}
+							disabled={params.row.status !== "EXECUTING"}
+							onClick={() => {
+								forceContinue(params.row)
+
+							}}
+						  >
+							<PlayArrowIcon fontSize="small" />
+						  </IconButton>
+						</Tooltip>
+						<Tooltip arrow title="Explore workflow run logs"> 
+						  <IconButton
+							style={{marginLeft: 5, }}
+							onClick={() => {
+								window.open(`${globalUrl}/api/v1/workflows/search/${params.row.id}`, "_blank")
+							}}
+							disabled={!userdata.support}
+						  >
+							<InsightsIcon fontSize="small" />
+						  </IconButton>
+						</Tooltip>
+					</div>
 				)
 			}
 		  },
@@ -631,6 +681,19 @@ const RuntimeDebugger = (props) => {
 						</Tooltip> 
 					</ButtonGroup>
 
+				: null}
+
+				{userdata.support === true ? 
+					<Button
+						variant={ignoreOrg ? "contained" : "outlined"}
+						color="primary"
+						style={{maxHeight: 40, marginTop: 25, }}
+						onClick={() => {
+							setIgnoreOrg(!ignoreOrg)
+						}}
+					>
+						{ignoreOrg ? "Ignoring Org" : "Ignore Org"}
+					</Button>
 				: null}
 			</div>
 			<form onSubmit={(e) => {
@@ -799,7 +862,7 @@ const RuntimeDebugger = (props) => {
 
 				</LocalizationProvider>
 				<Button
-					variant="contained"
+					variant="outlined"
 					color="primary"
 					onClick={() => {
 						submitSearch(workflowId, status, startTime, endTime, rowCursor, rowsPerPage) 

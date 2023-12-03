@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 
+import { toast } from 'react-toastify';
 import Markdown from 'react-markdown'
 
 import { BrowserView, MobileView } from "react-device-detect";
@@ -135,7 +136,7 @@ const Docs = (defaultprops) => {
   };
 
   const fetchDocList = () => {
-    fetch(globalUrl + "/api/v1/docs", {
+    fetch(`${globalUrl}/api/v1/docs`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -147,9 +148,8 @@ const Docs = (defaultprops) => {
         if (responseJson.success) {
           setList(responseJson.list);
         } else {
-          setList([
-            "# Error loading documentation. Please contact us if this persists.",
-          ]);
+          setList(["# Error loading documentation. Please contact us if this persists.",]);
+		  toast("Failed loading documentation. Please reload the window")
         }
         setListLoaded(true);
       })
@@ -157,7 +157,7 @@ const Docs = (defaultprops) => {
   };
 
   const fetchDocs = (docId) => {
-    fetch(globalUrl + "/api/v1/docs/" + docId, {
+    fetch(`${globalUrl}/api/v1/docs/${docId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -166,6 +166,10 @@ const Docs = (defaultprops) => {
     })
       .then((response) => response.json())
       .then((responseJson) => {
+        if (responseJson.success === false) {
+			//toast("Failed loading documentation. Please reload the UI")
+		}
+
         if (responseJson.success && responseJson.reason !== undefined) {
 		  // Find <img> tags and translate them into ![]() format
 		  const imgRegex = /<img.*?src="(.*?)"/g;

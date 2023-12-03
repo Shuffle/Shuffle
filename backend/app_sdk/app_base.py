@@ -522,6 +522,7 @@ class AppBase:
                         break
                     else:
                         self.logger.info(f"[ERROR] Bad resp {ret.status_code}: {ret.text}")
+                        time.sleep(sleeptime)
 
                 except requests.exceptions.RequestException as e:
                     self.logger.info(f"[DEBUG] Request problem: {e}")
