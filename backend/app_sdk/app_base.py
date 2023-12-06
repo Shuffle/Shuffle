@@ -528,6 +528,17 @@ class AppBase:
                     self.logger.info(f"[DEBUG] Request problem: {e}")
                     time.sleep(sleeptime)
 
+                    # Check if we have a read timeout. If we do, exit as we most likely sent the result without getting a good result
+                    if "Read timed out" in str(e):
+                        self.logger.warning(f"[WARNING] Read timed out: {e}")
+                        finished = True
+                        break
+
+                    if "Max retries exceeded with url" in str(e):
+                        self.logger.warning(f"[WARNING] Max retries exceeded with url: {e}")
+                        finished = True
+                        break
+
                     #time.sleep(5)
                     continue
                 except TimeoutError as e:

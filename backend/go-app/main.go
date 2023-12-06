@@ -3660,7 +3660,6 @@ func runInitEs(ctx context.Context) {
 							log.Printf("Successfully updated org to have users!")
 						}
 					}
-
 				}
 			}
 		}
@@ -3691,6 +3690,10 @@ func runInitEs(ctx context.Context) {
 				orgId := ""
 				if len(activeOrgs) > 0 {
 					orgId = activeOrgs[0].Id
+				}
+
+				if len(schedule.Org) == 36 {
+					orgId = schedule.Org
 				}
 
 				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request, orgId)
