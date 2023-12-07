@@ -82,6 +82,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly
             frikky/shuffle-${{ matrix.app }}:${{ matrix.version }}
             frikky/shuffle-${{ matrix.app }}:nightly
+            frikky/shuffle:${{ matrix.app }}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

@@ -44,10 +44,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 
-	// PROXY overrides
-	//"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
-	// githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
-
 	// Web
 	"github.com/gorilla/mux"
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
