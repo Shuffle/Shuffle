@@ -16,6 +16,7 @@ import {
   OutlinedInput,
   Checkbox,
   Card,
+  Chip,
   Tooltip,
   FormControlLabel,
   Typography,
@@ -133,7 +134,7 @@ const FileCategoryInput = (props) => {
 
 
 const Admin = (props) => {
-  const { globalUrl, userdata, serverside, checkLogin } = props;
+  const { globalUrl, userdata, serverside, checkLogin, notifications, setNotifications,  } = props;
 
   var to_be_copied = "";
   const classes = useStyles();
@@ -485,6 +486,14 @@ If you're interested, please let me know a time that works for you, or set up a 
 		return `mailto:${admins}?bcc=frikky@shuffler.io,binu@shuffler.io&subject=${subject}&body=${body}`
 	}
 
+
+  const changeDistribution = (data) => {
+	//changeDistributed(data, !isDistributed)
+	console.log("Should change distribution to be shared among suborgs")
+  
+    editAuthenticationConfig(data.id, "suborg_distribute") 
+  }
+
   const deleteAuthentication = (data) => {
     toast("Deleting auth " + data.label);
 
@@ -800,10 +809,10 @@ If you're interested, please let me know a time that works for you, or set up a 
       });
   };
 
-  const editAuthenticationConfig = (id) => {
+  const editAuthenticationConfig = (id, parentAction) => {
     const data = {
       id: id,
-      action: "assign_everywhere",
+      action: parentAction !== undefined && parentAction !== null ? parentAction : "assign_everywhere",
     };
     const url = globalUrl + "/api/v1/apps/authentication/" + id + "/config";
 
@@ -821,9 +830,9 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            toast("Failed overwriting appauth in workflows");
+            toast("Failed overwriting appauth");
           } else {
-            toast("Successfully updated auth everywhere!");
+            toast("Successfully updated auth!");
             setSelectedUserModalOpen(false);
             setTimeout(() => {
               getAppAuthentication();
@@ -1732,7 +1741,7 @@ If you're interested, please let me know a time that works for you, or set up a 
     const userId = user.id;
     const data = { user_id: userId };
 
-	console.log(user, userdata)
+	toast("Generating new API key") 
 
     var fetchdata = {
       method: "POST",
@@ -2827,6 +2836,8 @@ If you're interested, please let me know a time that works for you, or set up a 
 								checkLogin={checkLogin}
 								setAdminTab={setAdminTab}
 								setCurTab={setCurTab}
+								notifications={notifications}
+								setNotifications={setNotifications}
 							/>
 						: adminTab === 3 ? 
 							<Billing 
@@ -3440,6 +3451,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               style={{ minWidth: 300, maxWidth: 300, overflow: "hidden" }}
             />
             <ListItemText primary="Actions" />
+            <ListItemText primary="Delegation" />
           </ListItem>
           {schedules === undefined || schedules === null
             ? null
@@ -3658,10 +3670,13 @@ If you're interested, please let me know a time that works for you, or set up a 
               style={{ minWidth: 125, maxWidth: 125, overflow: "hidden" }}
             />
             <ListItemText
-              primary="Created"
+              primary="Edited"
               style={{ minWidth: 230, maxWidth: 230, overflow: "hidden" }}
             />
-            <ListItemText primary="Actions" />
+            <ListItemText primary="Actions" 
+              style={{ minWidth: 150, maxWidth: 150, }}
+			/>
+            <ListItemText primary="Distribution" />
           </ListItem>
           {authentication === undefined || authentication === null
             ? null
@@ -3692,6 +3707,8 @@ If you're interested, please let me know a time that works for you, or set up a 
                     },
                   ];
                 }
+
+				const isDistributed = data.suborg_distributed === true ? true : false;
 
                 return (
                   <ListItem key={index} style={{ backgroundColor: bgColor }}>
@@ -3768,31 +3785,32 @@ If you're interested, please let me know a time that works for you, or set up a 
                         minWidth: 230,
                         overflow: "hidden",
                       }}
-                      primary={new Date(data.created * 1000).toISOString()}
+                      primary={new Date(data.edited * 1000).toISOString()}
                     />
                     <ListItemText>
                       <IconButton
                         onClick={() => {
                           updateAppAuthentication(data);
                         }}
+						disabled={data.org_id !== selectedOrganization.id ? true : false}
                       >
-                        <EditIcon color="primary" />
+                        <EditIcon color="secondary" />
                       </IconButton>
                       {data.defined ? (
                         <Tooltip
                           color="primary"
-                          title="Set in EVERY workflow"
+                          title="Set in EVERY workflow in the organization"
                           placement="top"
                         >
                           <IconButton
                             style={{ marginRight: 10 }}
-                            disabled={data.defined === false}
+							disabled={data.defined === false || data.org_id !== selectedOrganization.id ? true : false}
                             onClick={() => {
                               editAuthenticationConfig(data.id);
                             }}
                           >
                             <SelectAllIcon
-                              color={data.defined ? "primary" : "secondary"}
+                              color={"secondary"}
                             />
                           </IconButton>
                         </Tooltip>
@@ -3803,22 +3821,53 @@ If you're interested, please let me know a time that works for you, or set up a 
                           placement="top"
                         >
                           <IconButton
-                            style={{ marginRight: 10 }}
+                            style={{}}
                             onClick={() => {}}
+							disabled={data.org_id !== selectedOrganization.id ? true : false}
                           >
                             <SelectAllIcon
-                              color={data.defined ? "primary" : "secondary"}
+                              color="secondary"
                             />
                           </IconButton>
                         </Tooltip>
                       )}
                       <IconButton
+						style={{marginLeft: 0, }}
+						disabled={data.org_id !== selectedOrganization.id ? true : false}
                         onClick={() => {
                           deleteAuthentication(data);
                         }}
                       >
-                        <DeleteIcon color="primary" />
+                        <DeleteIcon color="secondary" />
                       </IconButton>
+                    </ListItemText>
+                    <ListItemText>
+					  {selectedOrganization.id !== undefined && data.org_id !== selectedOrganization.id ? 
+						  <Tooltip
+							title="Parent organization controlled auth. You can use, but not modify this auth. Contact an admin of your parent organization if you need changes to this."
+							placement="top"
+						  >
+							<Chip
+								label={"Parent"}
+								variant="contained"
+								color="secondary"
+							  />
+						  </Tooltip>
+						  :
+						  <Tooltip
+							title="Distributed to sub-organizations. This means the sub organizations can use this authentication, but not modify it."
+							placement="top"
+						  >
+							  <Checkbox 
+								disabled={selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" ? true : false}
+								checked={isDistributed}
+						  		color="secondary"
+								onClick={() => {
+									changeDistribution(data, !isDistributed)
+								}}
+							  />
+						  </Tooltip>
+					  }
                     </ListItemText>
                   </ListItem>
                 );
@@ -3937,20 +3986,20 @@ If you're interested, please let me know a time that works for you, or set up a 
               style={{ minWidth: 125, maxWidth: 125 }}
             />
             <ListItemText
-              primary="Default"
-              style={{ minWidth: 125, maxWidth: 125 }}
+              primary={"In Queue"}
+              style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
-              primary="Disabled"
-              style={{ minWidth: 100, maxWidth: 100 }}
+              primary="Default"
+              style={{ minWidth: 150, maxWidth: 150 }}
+            />
+            <ListItemText
+              primary="Actions"
+              style={{ minWidth: 200, maxWidth: 200}}
             />
             <ListItemText
               primary="Last Edited"
               style={{ minWidth: 170, maxWidth: 170 }}
-            />
-            <ListItemText
-              primary="Actions"
-              style={{ minWidth: 150, maxWidth: 150 }}
             />
           </ListItem>
           {environments === undefined || environments === null
@@ -3969,18 +4018,20 @@ If you're interested, please let me know a time that works for you, or set up a 
                   bgColor = "#1f2023";
                 }
 
-								// Check if there's a notification for it in userdata.priorities
-								var showCPUAlert = false	
-								var foundIndex = -1
-								if (userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
-									foundIndex = userdata.priorities.findIndex(prio => prio.name.includes("CPU") && prio.active === true)
+				// Check if there's a notification for it in userdata.priorities
+				var showCPUAlert = false	
+				var foundIndex = -1
+				if (userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
+					foundIndex = userdata.priorities.findIndex(prio => prio.name.includes("CPU") && prio.active === true)
 
-									if (foundIndex >= 0 && userdata.priorities[foundIndex].name.endsWith(environment.Name)) {
-											showCPUAlert = true
-									}
-								}
+					if (foundIndex >= 0 && userdata.priorities[foundIndex].name.endsWith(environment.Name)) {
+							showCPUAlert = true
+					}
+				}
 
-								console.log("Show CPU alert: ", showCPUAlert)
+				//console.log("Show CPU alert: ", showCPUAlert)
+
+				const queueSize = environment.queue !== undefined && environment.queue !== null ? environment.queue < 0 ? 0 : environment.queue > 99 ? ">99" : environment.queue : 0
 
                 return (
 									<span key={index}>
@@ -4016,49 +4067,56 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	  <ListItemText
                   	    style={{ minWidth: 100, maxWidth: 100 }}
                   	    primary={
-													<Tooltip
-														title={"Copy Orborus command"}
-														style={{}}
-														aria-label={"Copy orborus command"}
-													>
-														<IconButton
-															style={{}}
-															disabled={environment.Type === "cloud"}
-															onClick={() => {
-																if (environment.Type === "cloud") {
-																	toast("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
-																	return
-																}
+							<Tooltip
+								title={"Copy Orborus command"}
+								style={{}}
+								aria-label={"Copy orborus command"}
+							>
+								<IconButton
+									style={{}}
+									disabled={environment.Type === "cloud"}
+									onClick={() => {
+										if (environment.Type === "cloud") {
+											toast("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
+											return
+										}
 
-																const elementName = "copy_element_shuffle";
-																const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
-																const commandData = `docker run --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${globalUrl}" --name="shuffle-orborus" -d ghcr.io/shuffle/shuffle-orborus:latest`
-																var copyText = document.getElementById(elementName);
-																if (copyText !== null && copyText !== undefined) {
-																	const clipboard = navigator.clipboard;
-																	if (clipboard === undefined) {
-																		toast("Can only copy over HTTPS (port 3443)");
-																		return;
-																	}
+										if (props.userdata.active_org === undefined || props.userdata.active_org === null) {
+											toast("No active organization yet. Are you logged in?")
+											return
+										}
 
-																	navigator.clipboard.writeText(commandData);
-																	copyText.select();
-																	copyText.setSelectionRange(
-																		0,
-																		99999
-																	); /* For mobile devices */
+										const elementName = "copy_element_shuffle";
+										const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
+										const newUrl = globalUrl === "https://shuffler.io" ? "https://shuffle-backend-stbuwivzoq-nw.a.run.app" : globalUrl
 
-																	/* Copy the text inside the text field */
-																	document.execCommand("copy");
+										const commandData = `docker run --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${newUrl}" --name="shuffle-orborus" -d ghcr.io/shuffle/shuffle-orborus:latest`
+										var copyText = document.getElementById(elementName);
+										if (copyText !== null && copyText !== undefined) {
+											const clipboard = navigator.clipboard;
+											if (clipboard === undefined) {
+												toast("Can only copy over HTTPS (port 3443)");
+												return;
+											}
 
-																	toast("Orborus command copied to clipboard");
-																}
-															}}
-														>
-															<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
-														</IconButton>
-													</Tooltip>
-												}
+											navigator.clipboard.writeText(commandData);
+											copyText.select();
+											copyText.setSelectionRange(
+												0,
+												99999
+											); /* For mobile devices */
+
+											/* Copy the text inside the text field */
+											document.execCommand("copy");
+
+											toast("Orborus command copied to clipboard");
+										}
+									}}
+								>
+									<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
+								</IconButton>
+							</Tooltip>
+						}
                   	  />
 
                   	  <ListItemText
@@ -4067,8 +4125,18 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	  />
                   	  <ListItemText
                   	    style={{
-                  	      minWidth: 125,
-                  	      maxWidth: 125,
+                  	      minWidth: 100,
+                  	      maxWidth: 100,
+                  	      overflow: "hidden",
+                  	      marginLeft: 10,
+                  	    }}
+
+                  	    primary={queueSize}
+                  	  />
+                  	  <ListItemText
+                  	    style={{
+                  	      minWidth: 140,
+                  	      maxWidth: 140,
                   	      overflow: "hidden",
                   	    }}
                   	    primary={environment.default ? "true" : null}
@@ -4080,19 +4148,49 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	        onClick={() => setDefaultEnvironment(environment)}
                   	        color="primary"
                   	      >
-                  	        Make default
+                  	        Set Default
                   	      </Button>
                   	    )}
                   	  </ListItemText>
                   	  <ListItemText
                   	    style={{
-                  	      minWidth: 100,
-                  	      maxWidth: 100,
+                  	      minWidth: 200,
+                  	      maxWidth: 200,
                   	      overflow: "hidden",
                   	      marginLeft: 10,
                   	    }}
-                  	    primary={environment.archived.toString()}
-                  	  />
+                  	  >
+                  	    <div style={{ display: "flex" }}>
+							<ButtonGroup style={{borderRadius: "5px 5px 5px 5px",}}>
+								<Button
+									variant={environment.archived ? "contained" : "outlined"}
+									style={{ }}
+									onClick={() => deleteEnvironment(environment)}
+									color="primary"
+								>
+									{environment.archived ? "Activate" : "Disable"}
+								</Button>
+								<Button
+									variant={"outlined"}
+									style={{ }}
+									disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
+									onClick={() => {
+										console.log("Should clear executions for: ", environment);
+
+										if (isCloud && environment.Name.toLowerCase() === "cloud") {
+											rerunCloudWorkflows(environment);
+										} else { 
+											abortEnvironmentWorkflows(environment);
+										}
+									}}
+									color="primary"
+								>
+									{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
+								</Button>
+
+							</ButtonGroup>
+                  	    </div>
+                  	  </ListItemText>
                   	  <ListItemText
                   	    style={{
                   	      minWidth: 150,
@@ -4107,68 +4205,30 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	        : 0
                   	    }
                   	  />
-                  	  <ListItemText
-                  	    style={{
-                  	      minWidth: 300,
-                  	      maxWidth: 300,
-                  	      overflow: "hidden",
-                  	      marginLeft: 10,
-                  	    }}
-                  	  >
-                  	    <div style={{ display: "flex" }}>
-													<ButtonGroup style={{borderRadius: "5px 5px 5px 5px",}}>
-														<Button
-															variant={environment.archived ? "contained" : "outlined"}
-															style={{ }}
-															onClick={() => deleteEnvironment(environment)}
-															color="primary"
-														>
-															{environment.archived ? "Activate" : "Disable"}
-														</Button>
-														<Button
-															variant={"outlined"}
-															style={{ }}
-															disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
-															onClick={() => {
-																console.log("Should clear executions for: ", environment);
-
-																if (isCloud && environment.Name.toLowerCase() === "cloud") {
-																	rerunCloudWorkflows(environment);
-																} else { 
-																	abortEnvironmentWorkflows(environment);
-																}
-															}}
-															color="primary"
-														>
-															{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
-														</Button>
-													</ButtonGroup>
-                  	    </div>
-                  	  </ListItemText>
                   	</ListItem>
-										{showCPUAlert === false ? null : 
+					{showCPUAlert === false ? null : 
                   		<ListItem key={index+"_cpu"} style={{ backgroundColor: bgColor }}>
-												<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
-													<div style={{flex: 2, overflow: "hidden",}}>
-														<Typography variant="body1" >
-															90% CPU the server(s) hosting the Shuffle App Runner (Orborus) was found.  
-														</Typography>
-														<Typography variant="body2" color="textSecondary">
-															Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://shuffler.io/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
-														</Typography>
-													</div>
-													<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
-														<Button style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="outlined" color="secondary" onClick={() => {
-															// dismiss -> get envs
-														 	changeRecommendation(userdata.priorities[foundIndex], "dismiss")
-														}}>
-															Dismiss	
-														</Button>
-													</div> 
-												</div>
-											</ListItem>
-										}
-									</span>
+							<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
+								<div style={{flex: 2, overflow: "hidden",}}>
+									<Typography variant="body1" >
+										90% CPU the server(s) hosting the Shuffle App Runner (Orborus) was found.  
+									</Typography>
+									<Typography variant="body2" color="textSecondary">
+										Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://shuffler.io/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
+									</Typography>
+								</div>
+								<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
+									<Button style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="outlined" color="secondary" onClick={() => {
+										// dismiss -> get envs
+										changeRecommendation(userdata.priorities[foundIndex], "dismiss")
+									}}>
+										Dismiss	
+									</Button>
+								</div> 
+							</div>
+						</ListItem>
+					}
+				</span>
                 );
               })}
         </List>

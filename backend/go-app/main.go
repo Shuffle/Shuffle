@@ -1965,6 +1965,7 @@ func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 		return err
 	}
 
+	defer newresp.Body.Close()
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		return err
@@ -3513,15 +3514,13 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	)
 
 	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
-
-	//log.Printf("[INFO] Sending org sync with autho %s", org.SyncConfig.Apikey)
-
 	newresp, err := client.Do(req)
 	if err != nil {
 		//log.Printf("Failed request in org sync: %s", err)
 		return err
 	}
 
+	defer newresp.Body.Close()
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed body read in job sync: %s", err)
@@ -3573,6 +3572,12 @@ func runInitEs(ctx context.Context) {
 
 	log.Printf("[DEBUG] Getting organizations for Elasticsearch/Opensearch")
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
+
+	log.Printf("[DEBUG] Got %d organizations to look into. If this is 0, we wait 10 more seconds until DB is ready and try again.", len(activeOrgs))
+	if len(activeOrgs) == 0 {
+		time.Sleep(10 * time.Second)
+		activeOrgs, err = shuffle.GetAllOrgs(ctx)
+	}
 
 	setUsers := false
 	_ = setUsers
@@ -3655,7 +3660,6 @@ func runInitEs(ctx context.Context) {
 							log.Printf("Successfully updated org to have users!")
 						}
 					}
-
 				}
 			}
 		}
@@ -3688,6 +3692,10 @@ func runInitEs(ctx context.Context) {
 					orgId = activeOrgs[0].Id
 				}
 
+				if len(schedule.Org) == 36 {
+					orgId = schedule.Org
+				}
+
 				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request, orgId)
 				if err != nil {
 					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
@@ -3697,15 +3705,21 @@ func runInitEs(ctx context.Context) {
 
 		for _, schedule := range schedules {
 			if strings.ToLower(schedule.Environment) == "cloud" {
-				log.Printf("Skipping cloud schedule")
+				log.Printf("[DEBUG] Skipping cloud schedule")
 				continue
 			}
+
+			// FIXME: Add a randomized timer to avoid all schedules running at the same time
+			// Many are at 5 minutes / 1 hour. The point is to spread these out 
+			// a bit instead of all of them starting at the exact same time
 
 			//log.Printf("Schedule: %#v", schedule)
 			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
 			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job(schedule))
 			if err != nil {
-				log.Printf("Failed to schedule workflow: %s", err)
+				log.Printf("[ERROR] Failed to start schedule for workflow %s: %s", schedule.WorkflowId, err)
+			} else {
+				log.Printf("[DEBUG] Successfully started schedule for workflow %s", schedule.WorkflowId)
 			}
 
 			scheduledJobs[schedule.Id] = jobret
@@ -3977,7 +3991,7 @@ func runInitEs(ctx context.Context) {
 
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
-			log.Printf("[WARNING] Failed loading repo into memory (init): %s", err)
+			log.Printf("[ERROR] Failed loading repo into memory (init): %s", err)
 		}
 
 		dir, err := fs.ReadDir("")
@@ -4014,7 +4028,7 @@ func runInitEs(ctx context.Context) {
 	}
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
-		log.Printf("[WARNING] Failed loading repo %s into memory: %s", apis, err)
+		log.Printf("[ERROR] Failed loading repo %s into memory: %s", apis, err)
 	} else if err == nil && len(workflowapps) < 10 {
 		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
 		dir, err := fs.ReadDir("")
@@ -4030,7 +4044,7 @@ func runInitEs(ctx context.Context) {
 
 	
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
-		healthcheckInterval := 15
+		healthcheckInterval := 30 
 		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
 		job := func() {
 			// Prepare a fake http.responsewriter 
@@ -4725,7 +4739,7 @@ func initHandlers() {
 	log.Printf("[DEBUG] Initialized Shuffle database connection. Setting up environment.")
 
 	if elasticConfig == "elasticsearch" {
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 		go runInitEs(ctx)
 	} else {
 		//go shuffle.runInit(ctx)
@@ -4787,6 +4801,7 @@ func initHandlers() {
 	// App specific
 	// From here down isnt checked for org specific
 	r.HandleFunc("/api/v1/apps/{key}/execute", executeSingleAction).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/{key}/run", executeSingleAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/categories", shuffle.GetActiveCategories).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/categories/run", shuffle.RunCategoryAction).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
@@ -4824,11 +4839,14 @@ func initHandlers() {
 	/* Everything below here increases the counters*/
 	r.HandleFunc("/api/v1/workflows", shuffle.GetWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", shuffle.SetNewWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/search", shuffle.HandleWorkflowRunSearch).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/schedules", shuffle.HandleGetSchedules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions", shuffle.GetWorkflowExecutions).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/rerun", checkUnfinishedExecution).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", shuffle.AbortExecution).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/run", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/stream", shuffle.HandleStreamWorkflow).Methods("GET", "OPTIONS")

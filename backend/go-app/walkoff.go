@@ -705,7 +705,8 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
-	log.Printf("[DEBUG] Running workflow execution transaction for %s", workflowExecutionId)
+	log.Printf("[DEBUG][%s] Running workflow execution update", workflowExecutionId)
+
 
 	// Should start a tx for the execution here
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
@@ -1063,10 +1064,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		}
 	}
 
-	err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
-	if err != nil {
-		log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
-	}
 
 	err = imageCheckBuilder(execInfo.ImageNames)
 	if err != nil {
@@ -1573,6 +1570,11 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		workflowExecution.ExecutionOrg = workflow.ExecutingOrg.Id
 	}
 
+	err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
+	if err != nil {
+		log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
+	}
+
 	var allEnvs []shuffle.Environment
 	if len(workflowExecution.ExecutionOrg) > 0 {
 		//log.Printf("[INFO] Executing ORG: %s", workflowExecution.ExecutionOrg)
@@ -1665,7 +1667,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		// FIXME - tmp name based on future companyname-companyId
 		// This leads to issues with overlaps. Should set limits and such instead
 		for _, environment := range execInfo.Environments {
-			log.Printf("[INFO] Execution: %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
+			log.Printf("[INFO][%s] Execution: should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
 
 			executionRequest := shuffle.ExecutionRequest{
 				ExecutionId:   workflowExecution.ExecutionId,
@@ -3358,17 +3360,35 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	workflowExecution.Priority = 10
+
+	workflowExecution.Priority = 11
 	environments, err := shuffle.GetEnvironments(ctx, user.ActiveOrg.Id)
 	environment := "Shuffle"
 	if len(environments) >= 1 {
+		// Find default one
 		environment = environments[0].Name
+
+		for _, env := range environments {
+			if env.Default {
+				environment = env.Name
+				break
+			}
+		}
+
 	} else {
 		log.Printf("[ERROR] No environments found for org %s. Exiting", user.ActiveOrg.Id)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
+
+	// Enforcing same env for job + run to be default
+	// FIXME: Should use environment that is in the source workflow if it exists
+	for i, _ := range workflowExecution.Workflow.Actions {
+		workflowExecution.Workflow.Actions[i].Environment = environment
+		workflowExecution.Workflow.Actions[i].Label = "TMP" 
+	}
+	shuffle.SetWorkflowExecution(ctx, workflowExecution, false)
 
 	log.Printf("[INFO] Execution (single action): %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
 
@@ -3377,6 +3397,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		WorkflowId:    workflowExecution.Workflow.ID,
 		Authorization: workflowExecution.Authorization,
 		Environments:  []string{environment},
+		Priority:      11,
 	}
 
 	executionRequest.Priority = workflowExecution.Priority
@@ -3396,6 +3417,9 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal retStruct in single execution: %s", err)
 	}
+
+	// Deleting as this is a single action and doesn't need to be stored
+	shuffle.DeleteKey(ctx, "workflowexecution", executionRequest.ExecutionId)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnBytes))
@@ -3992,4 +4016,161 @@ func checkWorkflowApp(workflowApp shuffle.WorkflowApp) error {
 	}
 
 	return nil
+}
+
+func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	if len(fileId) != 36 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Workflow ID to abort is not valid"}`))
+		return
+	}
+
+	executionId := location[6]
+	if len(executionId) != 36 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "ExecutionID not valid"}`))
+		return
+	}
+
+	ctx := shuffle.GetContext(request)
+	exec, err := shuffle.GetWorkflowExecution(ctx, executionId)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting execution (rerun workflow - 1) %s: %s", executionId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist (abort)."}`, executionId)))
+		return
+	}
+
+	apikey := request.Header.Get("Authorization")
+	parsedKey := ""
+	if strings.HasPrefix(apikey, "Bearer ") {
+		apikeyCheck := strings.Split(apikey, " ")
+		if len(apikeyCheck) == 2 {
+			parsedKey = apikeyCheck[1]
+		}
+	}
+
+	// ONLY allowed to run automatically with the same auth (july 2022)
+	if exec.Authorization != parsedKey {
+		user, err := shuffle.HandleApiAuthentication(resp, request)
+		if err != nil {
+			log.Printf("[ERROR][%s] Bad authorization key for execution (rerun workflow - 3): %s", executionId, err)
+			resp.WriteHeader(403)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed because you're not authorized to see this workflow (3)."}`)))
+			return
+		}
+
+		// Check if user is in the correct org
+		if user.ActiveOrg.Id == exec.ExecutionOrg && user.Role != "org-reader" {
+			log.Printf("[AUDIT][%s] User %s (%s) is force continuing execution from org access", executionId, user.Username, user.Id)
+		} else if user.SupportAccess {
+			log.Printf("[AUDIT][%s] User %s (%s) is force continuing execution with support access", executionId, user.Username, user.Id)
+		} else {
+			log.Printf("[ERROR][%s] Bad authorization key for continue execution (rerun workflow - 2): %s", executionId, err)
+			resp.WriteHeader(403)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed because you're not authorized to see this workflow (2)."}`)))
+			return
+		}
+	}
+
+	// Meant as a function that periodically checks whether previous executions have finished or not.
+	// Should probably be based on executedIds and finishedIds
+	// Schedule a check in the future instead?
+
+	// Auth vs execution check!
+	extraInputs := 0
+	for _, trigger := range exec.Workflow.Triggers {
+		if trigger.Name == "User Input" && trigger.AppName == "User Input" {
+			extraInputs += 1
+
+			//exec.Workflow.Actions = append(exec.Workflow.Actions, shuffle.Action{
+			//	ID:    trigger.ID,
+			//	Label: trigger.Label,
+			//	Name:  trigger.Name,
+			//})
+		} else if trigger.Name == "Shuffle Workflow" && trigger.AppName == "Shuffle Workflow" {
+			extraInputs += 1
+
+			//exec.Workflow.Actions = append(exec.Workflow.Actions, shuffle.Action{
+			//	ID:    trigger.ID,
+			//	Label: trigger.Label,
+			//	Name:  trigger.Name,
+			//})
+		}
+	}
+
+	if exec.Status != "ABORTED" && exec.Status != "FINISHED" && exec.Status != "FAILURE" {
+		log.Printf("[DEBUG][%s] Rechecking execution and its status to send to backend IF the status is EXECUTING (%s - %d/%d finished)", exec.ExecutionId, exec.Status, len(exec.Results), len(exec.Workflow.Actions)+extraInputs)
+	}
+
+	// Usually caused by issue during startup
+	if exec.Status == "" {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No status for the execution"}`)))
+		return
+	}
+
+	if exec.Status != "EXECUTING" {
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Already finished"}`)))
+		return
+	}
+
+	// Force it back in the queue to be executed
+	if len(exec.Workflow.Actions) == 0 {
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Not a cloud env workflow. Only rerunning cloud env."}`)))
+		return
+	}
+
+	log.Printf("[DEBUG][%s] Workflow: %s (%s)", exec.ExecutionId, exec.Workflow.Name, exec.Workflow.ID)
+	if exec.Workflow.ID == "" || exec.Workflow.Name == "" {
+		log.Printf("[ERROR][%s] No workflow ID found for execution", exec.ExecutionId)
+		shuffle.DeleteKey(ctx, "workflowexecution", exec.ExecutionId)
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "No workflow name / ID found. Can't run. Contact support@shuffler.io if this persists."}`)))
+		return
+	}
+
+	environment := exec.Workflow.Actions[0].Environment
+	log.Printf("[DEBUG][%s] Not a cloud env workflow. Re-adding job in queue for env %s.", exec.ExecutionId, environment)
+
+	parsedEnv := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(environment, " ", "-"), "_", "-")), exec.ExecutionOrg)
+	log.Printf("[DEBUG][%s] Adding new run job to env (2): %s", exec.ExecutionId, parsedEnv)
+
+	executionRequest := shuffle.ExecutionRequest{
+		ExecutionId:   exec.ExecutionId,
+		WorkflowId:    exec.Workflow.ID,
+		Authorization: exec.Authorization,
+		Environments:  []string{environment},
+	}
+
+	// Increase priority on reruns to catch up
+	executionRequest.Priority = 11
+	err = shuffle.SetWorkflowQueue(ctx, executionRequest, parsedEnv)
+	if err != nil {
+		log.Printf("[ERROR] Failed adding execution to db: %s", err)
+	}
+
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Reran workflow in %s"}`, parsedEnv)))
+
 }

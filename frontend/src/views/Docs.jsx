@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
 
-import ReactMarkdown from "react-markdown";
+import { toast } from 'react-toastify';
+import Markdown from 'react-markdown'
+
 import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { isMobile } from "react-device-detect";
 import theme from '../theme.jsx';
-import remarkGfm from 'remark-gfm'
-import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import {
   Grid,
@@ -29,6 +28,8 @@ import {
 import {
   Link as LinkIcon,
   Edit as EditIcon,
+  KeyboardArrowRight as KeyboardArrowRightIcon,
+  ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
 
 const Body = {
@@ -135,7 +136,7 @@ const Docs = (defaultprops) => {
   };
 
   const fetchDocList = () => {
-    fetch(globalUrl + "/api/v1/docs", {
+    fetch(`${globalUrl}/api/v1/docs`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -147,9 +148,8 @@ const Docs = (defaultprops) => {
         if (responseJson.success) {
           setList(responseJson.list);
         } else {
-          setList([
-            "# Error loading documentation. Please contact us if this persists.",
-          ]);
+          setList(["# Error loading documentation. Please contact us if this persists.",]);
+		  toast("Failed loading documentation. Please reload the window")
         }
         setListLoaded(true);
       })
@@ -157,7 +157,7 @@ const Docs = (defaultprops) => {
   };
 
   const fetchDocs = (docId) => {
-    fetch(globalUrl + "/api/v1/docs/" + docId, {
+    fetch(`${globalUrl}/api/v1/docs/${docId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -166,8 +166,15 @@ const Docs = (defaultprops) => {
     })
       .then((response) => response.json())
       .then((responseJson) => {
-        if (responseJson.success) {
-          setData(responseJson.reason);
+        if (responseJson.success === false) {
+			//toast("Failed loading documentation. Please reload the UI")
+		}
+
+        if (responseJson.success && responseJson.reason !== undefined) {
+		  // Find <img> tags and translate them into ![]() format
+		  const imgRegex = /<img.*?src="(.*?)"/g;
+		  const newdata = responseJson.reason.replace(imgRegex, '![]($1)');
+          setData(newdata)
           if (docId === undefined) {
             document.title = "Shuffle documentation introduction";
           } else {
@@ -365,18 +372,17 @@ const Docs = (defaultprops) => {
   }
 
   const markdownStyle = {
-    color: "rgba(255, 255, 255, 0.65)",
+    color: "rgba(255, 255, 255, 0.90)",
     overflow: "hidden",
     paddingBottom: 100,
     margin: "auto",
     maxWidth: "100%",
     minWidth: "100%",
     overflow: "hidden",
-    fontSize: isMobile ? "1.3rem" : "1.0rem",
+    fontSize: isMobile ? "1.3rem" : "1.1rem",
   };
 
   function OuterLink(props) {
-    console.log("Link: ", props.href)
     if (props.href.includes("http") || props.href.includes("mailto")) {
       return (
         <a
@@ -402,7 +408,7 @@ const Docs = (defaultprops) => {
   }
 
   function CodeHandler(props) {
-    console.log("PROPS: ", props)
+    //console.log("Codehandler PROPS: ", props)
 
     const propvalue = props.value !== undefined && props.value !== null ? props.value : props.children !== undefined && props.children !== null && props.children.length > 0 ? props.children[0] : ""
 
@@ -603,7 +609,6 @@ const Docs = (defaultprops) => {
 
     const [hover, setHover] = useState(false);
 
-    console.log("Link: ", link)
     if (link === undefined || link === null) {
       return null
     }
@@ -681,59 +686,19 @@ const Docs = (defaultprops) => {
           <b>Organize.</b> Whether an organization of 1000 or 1, management tools are necessary. In Shuffle we offer full user management, MFA and single-signon options, multi-tenancy and a lot more - for free!
         </Typography>
       </div>
-
-      {/*
-				<Grid container spacing={2} style={{marginTop: 50, }}>
-					{list.map((data, index) => {
-						const item = data.name;
-						if (item === undefined) {
-							return null;
-						}
-
-						const path = "/docs/" + item;
-						const newname =
-							item.charAt(0).toUpperCase() +
-							item.substring(1).split("_").join(" ").split("-").join(" ");
-
-						const itemMatching = props.match.params.key === undefined ? false : 
-							props.match.params.key.toLowerCase() === item.toLowerCase();
-
-						return (
-							<Grid key={index} item xs={4}>
-								<DocumentationButton key={index} item={newname} link={"/docs/"+data.name} />
-							</Grid>
-						)
-					})}
-				</Grid>
-				*/}
-
-      {/*
-				<TextField
-					required
-					style={{
-						flex: "1", 
-						backgroundColor: theme.palette.inputColor,
-						height: 50, 
-					}}
-					InputProps={{
-						style:{
-							color: "white",
-							height: 50, 
-						},
-					}}
-					placeholder={"Search Knowledgebase"}
-					color="primary"
-					fullWidth={true}
-					type="firstname"
-					id={"Searchfield"}
-					margin="normal"
-					variant="outlined"
-					onChange={(event) => {
-						console.log("Change: ", event.target.value)
-					}}
-				/>
-				*/}
     </div>
+
+  const markdownComponents = {
+  	img: Img,
+  	code: CodeHandler,
+  	h1: Heading,
+  	h2: Heading,
+  	h3: Heading,
+  	h4: Heading,
+  	h5: Heading,
+  	h6: Heading,
+  	a: OuterLink,
+  }
 
   // PostDataBrowser Section
   const postDataBrowser =
@@ -812,32 +777,22 @@ const Docs = (defaultprops) => {
             mainpageInfo
             :
             <div id="markdown_wrapper_outer" style={markdownStyle}>
-              <ReactMarkdown
-                components={{
-                  img: Img,
-                  code: CodeHandler,
-                  h1: Heading,
-                  h2: Heading,
-                  h3: Heading,
-                  h4: Heading,
-                  h5: Heading,
-                  h6: Heading,
-                  a: OuterLink,
-                }}
+              <Markdown
+				components={markdownComponents}
                 id="markdown_wrapper"
                 escapeHtml={false}
+			    skipHtml={false}
                 style={{
                   maxWidth: "100%", minWidth: "100%",
                 }}
               >
                 {data}
-              </ReactMarkdown>
+              </Markdown>
             </div>
           }
         </div>
       </div>
     );
-  // remarkPlugins={[remarkGfm]}
 
   const mobileStyle = {
     color: "white",
@@ -848,6 +803,7 @@ const Docs = (defaultprops) => {
     display: "flex",
     flexDirection: "column",
   };
+
 
   const postDataMobile =
     list === undefined || list === null ? null : (
@@ -899,18 +855,8 @@ const Docs = (defaultprops) => {
           mainpageInfo
           :
           <div id="markdown_wrapper_outer" style={markdownStyle}>
-            <ReactMarkdown
-              components={{
-                img: Img,
-                code: CodeHandler,
-                h1: Heading,
-                h2: Heading,
-                h3: Heading,
-                h4: Heading,
-                h5: Heading,
-                h6: Heading,
-                a: OuterLink,
-              }}
+            <Markdown
+              components={markdownComponents}
               id="markdown_wrapper"
               escapeHtml={false}
               style={{
@@ -918,7 +864,7 @@ const Docs = (defaultprops) => {
               }}
             >
               {data}
-            </ReactMarkdown>
+            </Markdown>
           </div>
         }
         <Divider
@@ -941,15 +887,9 @@ const Docs = (defaultprops) => {
       </div>
     );
 
-  //const imageModal =
-  //	<Dialog modal
-  //		open={imageModalOpen}
-  //	</Dialog>
-  // {imageModal}
-
   // Padding and zIndex etc set because of footer in cloud.
   const loadedCheck = (
-    <div style={{ minHeight: 1000, paddingBottom: 100, zIndex: 50000, }}>
+    <div style={{ minHeight: 1000, paddingBottom: 100, zIndex: 50000, maxWidth: 1920, minWidth: 1366, margin: "auto", }}>
       <BrowserView>{postDataBrowser}</BrowserView>
       <MobileView>{postDataMobile}</MobileView>
     </div>

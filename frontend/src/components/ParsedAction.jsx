@@ -170,6 +170,7 @@ const ParsedAction = (props) => {
 	
 	setEditorData,
 	setcodedata,
+	setAiQueryModalOpen,
   } = props;
 
   const classes = useStyles();
@@ -180,6 +181,8 @@ const ParsedAction = (props) => {
 
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
+
+  const [autoCompleting, setAutocompleting] = React.useState(false);
 
 
   useEffect(() => {
@@ -796,7 +799,6 @@ const ParsedAction = (props) => {
 						selectedActionParameters[count].value = splitparsed[0]
 						selectedAction.parameters[count].value = splitparsed[0]
 
-						//changeActionParameter({target: {value: splitparsed[1]}}, 
           	selectedActionParameters[1].value = splitparsed[1] 
       			selectedAction.parameters[1].value = splitparsed[1] 
 						forceUpdate = true
@@ -2909,17 +2911,26 @@ const ParsedAction = (props) => {
                     marginLeft: 15,
                     paddingRight: 0,
                   }}
+		  		  disabled={autoCompleting}
                   onClick={() => {
-					  // aiSubmit(aiMsg, undefined, undefined, newSelectedAction)
-					  aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
+					  //if (setAiQueryModalOpen !== undefined) {
+					  //  setAiQueryModalOpen(true)
+					  //} else {
+					  	aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
+					  //}
+  					  setAutocompleting(true)
                   }}
                 >
                   <Tooltip
                     color="primary"
-                    title={"Autocompletes fields. Uses NAME of the action and previous values' results."}
+                    title={"Autocomplete fields. Will show a popup so that you can query how you would like to fill it in"}
                     placement="top"
                   >
+		  			{autoCompleting ? 
+						<CircularProgress style={{height: 20, width: 20, }} />
+						:
 						<AutoFixHighIcon style={{ color: "rgba(255,255,255,0.7)", height: 24, }} />
+					}
                   </Tooltip>
                 </IconButton>
               </div>
@@ -3409,6 +3420,12 @@ const ParsedAction = (props) => {
               setSelectedActionEnvironment(env);
               selectedAction.environment = env.Name;
               setSelectedAction(selectedAction);
+
+			  for (let actionkey in workflow.actions) {
+				  workflow.actions[actionkey].environment = env.Name
+			  }
+			  setWorkflow(workflow)
+			  toast("Set environment for ALL actions to " + env.Name)
             }}
             style={{
               backgroundColor: theme.palette.inputColor,
