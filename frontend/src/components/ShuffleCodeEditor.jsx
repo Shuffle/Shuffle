@@ -1597,14 +1597,29 @@ const CodeEditor = (props) => {
 										Expected Output
 									</span>
 
-									<IconButton disabled={executing} color="secondary" style={{border: `1px solid ${theme.palette.primary.main}`, marginLeft: 250, padding: 8}} variant="contained" onClick={() => {
-										executeSingleAction(expOutput)
-									}}>
-										<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
-											{executing ? <CircularProgress style={{height: 18, width: 18, }} /> : <PlayArrowIcon style={{height: 18, width: 18, }} /> }
-														 
-										</Tooltip>
-									</IconButton>
+									<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
+										<Button 
+											variant="outlined" 
+											disabled={executing} 
+											color="primary" 
+											style={{
+												border: `1px solid ${theme.palette.primary.main}`, 
+												marginLeft: 200, 
+												maxHeight: 35, 
+												minWidth: 70, 
+											}} 
+											variant="contained" 
+											onClick={() => {
+												executeSingleAction(expOutput)
+											}}
+										>
+											{executing ? 
+												<CircularProgress style={{height: 18, width: 18, }} /> 
+													: 						
+												<span>Try it <PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
+											}
+										</Button>
+									</Tooltip>
 
 								</DialogTitle>
 							}

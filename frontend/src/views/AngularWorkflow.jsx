@@ -11151,15 +11151,7 @@ const AngularWorkflow = (defaultprops) => {
             style={{ marginTop: 10 }}
             label={<div style={{ color: "white" }}>Wait for results</div>}
           />
-          <Divider
-            style={{
-              marginTop: "20px",
-              height: "1px",
-              width: "100%",
-              backgroundColor: "rgb(91, 96, 100)",
-            }}
-          />
-          <div style={{ flex: "6", marginTop: "20px" }}>
+          <div style={{ flex: "6", marginTop: 10, }}>
             <div>
               <div style={{ display: "flex" }}>
                 <div
@@ -12543,7 +12535,7 @@ const AngularWorkflow = (defaultprops) => {
         // email,sms,app ...
         workflow.triggers[selectedTriggerIndex].parameters[2] = {
           name: "type",
-          value: "email",
+          value: "subflow",
         };
 
         workflow.triggers[selectedTriggerIndex].parameters[3] = {
@@ -12624,16 +12616,7 @@ const AngularWorkflow = (defaultprops) => {
             />
           </div>
 					*/}
-          <Divider
-            style={{
-              marginTop: "20px",
-              height: "1px",
-              width: "100%",
-              backgroundColor: "rgb(91, 96, 100)",
-            }}
-          />
-          <div style={{ flex: "6", marginTop: "20px" }}>
-            <b>Parameters</b>
+          <div style={{ flex: "6", marginTop: 10, }}>
             <div
               style={{
                 marginTop: "20px",
@@ -12641,17 +12624,11 @@ const AngularWorkflow = (defaultprops) => {
                 display: "flex",
               }}
             >
-              <div
-                style={{
-                  width: "17px",
-                  height: "17px",
-                  borderRadius: 17 / 2,
-                  backgroundColor: "#f85a3e",
-                  marginRight: "10px",
-                }}
-              />
               <div style={{ flex: "10" }}>
                 <b>Information</b>
+		  		<Typography variant="body2" color="textSecondary">
+		  			The information you want to show the user. Supports variables.
+		  		</Typography>
               </div>
             </div>
             <TextField
@@ -12682,17 +12659,11 @@ const AngularWorkflow = (defaultprops) => {
                 display: "flex",
               }}
             >
-              <div
-                style={{
-                  width: "17px",
-                  height: "17px",
-                  borderRadius: 17 / 2,
-                  backgroundColor: "#f85a3e",
-                  marginRight: "10px",
-                }}
-              />
               <div style={{ flex: "10" }}>
-                <b>Contact options</b>
+                <b>Input options</b>
+			    <Typography variant="body2" color="textSecondary">
+			      Use subflows to connect to any app you want, or use the default email and sms options
+			    </Typography>
               </div>
             </div>
             <FormGroup
@@ -12702,6 +12673,20 @@ const AngularWorkflow = (defaultprops) => {
               <FormControlLabel
                 control={
                   <Checkbox
+                    checked={workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("subflow")}
+                    onChange={() => {
+                      setTriggerOptionsWrapper("subflow");
+                    }}
+                    color="primary"
+                    value="subflow"
+                  />
+                }
+                label={<div style={{ color: "white" }}>Subflow</div>}
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+					disabled={!isCloud}
                     checked={
                       workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email")
                     }
@@ -12717,6 +12702,7 @@ const AngularWorkflow = (defaultprops) => {
               <FormControlLabel
                 control={
                   <Checkbox
+					disabled={!isCloud}
                     checked={workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers[selectedTriggerIndex].parameters !== undefined && workflow.triggers[selectedTriggerIndex].parameters.length > 0  && workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value !== undefined ? workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms") : false}
                     onChange={() => {
                       setTriggerOptionsWrapper("sms");
@@ -12728,21 +12714,8 @@ const AngularWorkflow = (defaultprops) => {
                 }
                 label={<div style={{ color: "white" }}>SMS</div>}
               />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("subflow")}
-                    onChange={() => {
-                      setTriggerOptionsWrapper("subflow");
-                    }}
-                    color="primary"
-                    value="subflow"
-                  />
-                }
-                label={<div style={{ color: "white" }}>Subflow</div>}
-              />
             </FormGroup>
-						{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("subflow") ? (
+			{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("subflow") ? (
 							<div style={{  }}>
               	{workflows === undefined ||
               	  workflows === null ||
@@ -12848,7 +12821,7 @@ const AngularWorkflow = (defaultprops) => {
                   },
                 }}
                 fullWidth
-								label="Email"
+				label="Email"
                 color="primary"
                 required
                 placeholder={"mail1@company.com,mail2@company.com"}
