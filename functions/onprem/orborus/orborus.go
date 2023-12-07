@@ -1055,7 +1055,7 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 	// Use the docker API to get the CPU usage of the docker engine machine
 	pers, err := dockercli.Info(ctx)
 	if err != nil {
-		log.Printf("[ERROR] Failed getting docker info: %s", err)
+		log.Printf("[ERROR] Failed getting docker info: %s. This is normal IF there are many containers running.", err)
 		return newStats
 	} else {
 		newStats.TotalContainers = pers.Containers
@@ -1407,7 +1407,7 @@ func main() {
 			// Should find data to send (memory etc.)
 
 			// Create timeout of max 4 seconds just in case
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			// Marshal and set body
