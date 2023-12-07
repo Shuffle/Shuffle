@@ -27,9 +27,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	// import httptest
 	"net/http/httptest"
-
 	"strings"
 	"time"
 
