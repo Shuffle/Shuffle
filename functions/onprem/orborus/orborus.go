@@ -1315,7 +1315,6 @@ func main() {
 	ctx := context.Background()
 	// Run by default from now
 	//commenting for now as its stoppoing minikube
-	// zombiecheck(ctx, workerTimeout)
 
 	log.Printf("[INFO] Running towards %s (BASE_URL) with environment name %s", baseUrl, environment)
 
@@ -1349,6 +1348,8 @@ func main() {
 
 		//deployServiceWorkers(workerImage)
 	}
+
+	zombiecheck(ctx, workerTimeout)
 
 	client := shuffle.GetExternalClient(baseUrl)
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
@@ -1798,7 +1799,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 		return nil
 	}
 
-	log.Println("[INFO] Looking for old containers (zombies)")
+	log.Println("[INFO] Looking for old containers to remove")
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
@@ -1815,10 +1816,11 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	stopContainers := []string{}
 	removeContainers := []string{}
 	log.Printf("[INFO] Baseimage: %s, Workertimeout: %d", baseimagename, int64(workerTimeout))
-	baseString := `/bin/sh -c 'python app.py --log-level DEBUG'`
+	//baseString := `/bin/sh -c 'python app.py --log-level DEBUG'`
+	baseString := `python app.py`
 	for _, container := range containers {
 		// Skip random containers. Only handle things related to Shuffle.
-		if !strings.Contains(container.Image, baseimagename) && container.Command != baseString && container.Command != "./worker" {
+		if !strings.Contains(container.Image, baseimagename) && !strings.Contains(container.Command, baseString) && container.Command != "./worker" {
 			shuffleFound := false
 			for _, item := range container.Labels {
 				if item == "shuffle" {
@@ -1829,7 +1831,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Check image name
 			if !shuffleFound {
-				//log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
+				log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
 				continue
 			}
 			//} else {
@@ -1864,7 +1866,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	}
 
 	// FIXME - add killing of apps with same execution ID too
-	log.Printf("[INFO] Should STOP %d containers.", len(stopContainers))
+	log.Printf("[INFO] Should STOP and remove %d containers.", len(stopContainers))
 	var options container.StopOptions
 	for _, containername := range stopContainers {
 		log.Printf("[INFO] Stopping and removing container %s", containerNames[containername])
@@ -1922,7 +1924,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
 	}
 
-	if strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "shuffle-backend") {
+	if strings.Contains(streamUrl, "shuffler.io") || strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "shuffle-backend") {
 		log.Printf("[INFO] Using default worker server url as previous is invalid: %s", streamUrl)
 		streamUrl = fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
 	}
