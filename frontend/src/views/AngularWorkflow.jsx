@@ -71,6 +71,7 @@ import {
 
 import {
   Folder as FolderIcon,
+  Insights as InsightsIcon, 
   LibraryBooks as LibraryBooksIcon,
   OpenInNew as OpenInNewIcon,
   Undo as UndoIcon,
@@ -15189,6 +15190,27 @@ const AngularWorkflow = (defaultprops) => {
                     }}
                   >
                     <PauseIcon style={{}} />
+                  </Button>
+                </span>
+              </Tooltip>
+            ) : null}
+            {isCloud ? (
+              <Tooltip
+                color="primary"
+                title="Explore logs for the workflow"
+                placement="top"
+                style={{ zIndex: 50000 }}
+              >
+                <span style={{}}>
+                  <Button
+                    color="primary"
+                    style={{ float: "right", marginTop: 20, marginLeft: 10 }}
+					disabled={!userdata.support}
+                    onClick={() => {
+						window.open(`/api/v1/workflows/search/${executionData.execution_id}`, "_blank")
+                    }}
+                  >
+					<InsightsIcon color="secondary" />
                   </Button>
                 </span>
               </Tooltip>

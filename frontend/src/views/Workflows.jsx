@@ -1344,7 +1344,7 @@ const Workflows = (props) => {
 			}, i * 200);
     }
 
-    toast(`exporting and keeping original for all ${allWorkflows.length} workflows`);
+    toast(`Exporting and keeping original for all ${allWorkflows.length} workflows`);
   };
 
   const deduplicateIds = (data, skip_sanitize) => {

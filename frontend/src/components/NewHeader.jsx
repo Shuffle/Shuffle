@@ -610,6 +610,11 @@ const Header = (props) => {
         >
           <MeetingRoomIcon style={{ marginRight: 5 }} /> &nbsp;Logout
         </MenuItem>
+        <Divider style={{marginBottom: 10, }}/>
+
+	  	<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 5, marginBottom: 5,}}>
+	  		Version: 1.3.1
+	  	</Typography>
       </Menu>
     </span>
   );

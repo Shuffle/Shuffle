@@ -799,7 +799,6 @@ const ParsedAction = (props) => {
 						selectedActionParameters[count].value = splitparsed[0]
 						selectedAction.parameters[count].value = splitparsed[0]
 
-						//changeActionParameter({target: {value: splitparsed[1]}}, 
           	selectedActionParameters[1].value = splitparsed[1] 
       			selectedAction.parameters[1].value = splitparsed[1] 
 						forceUpdate = true

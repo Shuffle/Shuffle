@@ -478,7 +478,7 @@ const RuntimeDebugger = (props) => {
 
 				return (
 					<div style={{display: "flex", }}>
-					  <Tooltip arrow placement="right" title={
+					  <Tooltip arrow placement="left" title={
 						  <Typography variant="body2" style={{whiteSpace: "pre-line", padding: 10, }}>
 							Workflow result: {errorReason}<br/><br/>
 							{params.row.result !== null && params.row.result !== undefined && params.row.result !== "" ?

@@ -284,6 +284,8 @@ github.com/shuffle/shuffle-shared v0.4.50 h1:fJLfhWIJ5mYap4JwHnD/B5aaLyIULwylFSl
 github.com/shuffle/shuffle-shared v0.4.50/go.mod h1:X613gbo0dT3fnYvXDRwjQZyLC+T49T2nSQOrCV5QMlI=
 github.com/shuffle/shuffle-shared v0.4.57 h1:o+mMPRY4ourkE3R0qdi80jg6RlCtvAJ/VVrPk4y75Hk=
 github.com/shuffle/shuffle-shared v0.4.57/go.mod h1:X613gbo0dT3fnYvXDRwjQZyLC+T49T2nSQOrCV5QMlI=
+github.com/shuffle/shuffle-shared v0.5.29 h1:n4vThl7v3mFVXbrIW71XREFdmZZo7mOBAWxnsdiNjDk=
+github.com/shuffle/shuffle-shared v0.5.29/go.mod h1:X613gbo0dT3fnYvXDRwjQZyLC+T49T2nSQOrCV5QMlI=
 github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e h1:MRM5ITcdelLK2j1vwZ3Je0FKVCfqOLp5zO6trqMLYs0=
 github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e/go.mod h1:XV66xRDqSt+GTGFMVlhk3ULuV0y9ZmzeVGR4mloJI3M=
 github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
