@@ -3,7 +3,7 @@ name: dockerbuild
 on:
   push:
     branches:
-      - 1.4.0
+      - main
     paths:
       - "**"
       - "!.github/**"
