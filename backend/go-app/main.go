@@ -11,9 +11,6 @@ import (
 	"crypto/md5"
 	"strconv"
 
-	//"crypto/tls"
-	//"crypto/x509"
-	//"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
