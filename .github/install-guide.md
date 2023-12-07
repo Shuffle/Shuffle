@@ -1,5 +1,12 @@
-# Installation guide
-Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
+<h1 align="center">
+
+[![Shuffle Logo](https://github.com/Shuffle/Shuffle/blob/main/frontend/public/images/Shuffle_logo_new.png)](https://shuffler.io)
+
+Shuffle Installation
+
+</h1>
+
+Installation of Shuffle is currently available for docker and kubernetes. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
 This document outlines an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
 
@@ -55,8 +62,10 @@ OUTER_HOSTNAME=YOUR.IP.HERE
 docker-compose up -d
 ```
 
-### Configurations (proxies, default users etc.)
+### Configurations (high availability, scale, proxies, default users etc.)
 https://shuffler.io/docs/configuration
+
+![architecture](https://github.com/frikky/Shuffle/raw/main/frontend/src/assets/img/shuffle_architecture.png)
 
 ### After installation 
 1. After installation, go to http://localhost:3001 (or your servername - https is on port 3443)
