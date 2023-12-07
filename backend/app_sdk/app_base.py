@@ -317,6 +317,21 @@ class AppBase:
             "completed_at": int(time.time_ns()),
         }
 
+        self.proxy_config = {
+            "http": os.getenv("HTTP_PROXY", ""),
+            "https": os.getenv("HTTPS_PROXY", ""),
+            "no_proxy": os.getenv("NO_PROXY", ""),
+        }
+
+        if len(os.getenv("SHUFFLE_INTERNAL_HTTP_PROXY", "")) > 0:
+            self.proxy_config["http"] = os.getenv("SHUFFLE_INTERNAL_HTTP_PROXY", "")
+
+        if len(os.getenv("SHUFFLE_INTERNAL_HTTPS_PROXY", "")) > 0:
+            self.proxy_config["https"] = os.getenv("SHUFFLE_INTERNAL_HTTP_PROXY", "")
+
+        if len(os.getenv("SHUFFLE_INTERNAL_NO_PROXY", "")) > 0:
+            self.proxy_config["no_proxy"] = os.getenv("SHUFFLE_INTERNAL_NO_PROXY", "")
+
         if isinstance(self.action, str):
             try:
                 self.action = json.loads(self.action)
@@ -514,7 +529,7 @@ class AppBase:
                 sleeptime = float(random.randint(0, 10) / 10)
 
                 try:
-                    ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False)
+                    ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False, proxies=self.proxy_config)
 
                     self.logger.info(f"[DEBUG] Result: {ret.status_code} (break on 200 or 201)")
                     if ret.status_code == 200 or ret.status_code == 201:
@@ -523,6 +538,12 @@ class AppBase:
                     else:
                         self.logger.info(f"[ERROR] Bad resp {ret.status_code}: {ret.text}")
                         time.sleep(sleeptime)
+
+                # Proxyerrror
+                except requests.exceptions.ProxyError as e:
+                    self.logger.info(f"[ERROR] Proxy error: {e}")
+                    self.proxy_config = {}
+                    continue
 
                 except requests.exceptions.RequestException as e:
                     self.logger.info(f"[DEBUG] Request problem: {e}")
@@ -574,7 +595,6 @@ class AppBase:
                 action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 10 retries to the backend" % url})
                 self.logger.info(f"[ERROR] Before typeerror stream result - NOT finished after 10 requests")
 
-                #ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
                 self.send_result(action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
                 return
         
@@ -586,7 +606,7 @@ class AppBase:
             action_result["result"] = json.dumps({"success": False, "reason": "Typeerror when sending to backend URL %s" % url})
 
             self.logger.info(f"[DEBUG] Before typeerror stream result: {e}")
-            ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
+            ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False, proxies=self.proxy_config)
             #self.logger.info(f"[DEBUG] Result: {ret.status_code}")
             #if ret.status_code != 200:
             #    pr
@@ -715,7 +735,7 @@ class AppBase:
             #self.logger.info(f"RET: {ret.text}")
             #self.logger.info(f"ID: {ret.status_code}")
             url = f"{self.url}/api/v1/orgs/{org_id}/validate_app_values"
-            ret = requests.post(url, json=data, verify=False)
+            ret = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
             if ret.status_code == 200:
                 json_value = ret.json()
                 if len(json_value["found"]) > 0: 
@@ -1189,7 +1209,7 @@ class AppBase:
             "User-Agent": "Shuffle 1.1.0",
         }
 
-        ret = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
+        ret = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False, proxies=self.proxy_config)
         return ret.json()
         #if ret1.status_code != 200:
         #    return {
@@ -1215,7 +1235,7 @@ class AppBase:
             "User-Agent": "Shuffle 1.1.0",
         }
 
-        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
+        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False, proxies=self.proxy_config)
         if ret1.status_code != 200:
             return None 
 
@@ -1278,7 +1298,7 @@ class AppBase:
                 "User-Agent": "Shuffle 1.1.0",
             }
 
-            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False)
+            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False, proxies=self.proxy_config)
             self.logger.info("RET1 (file get): %s" % ret1.text)
             if ret1.status_code != 200:
                 returns.append({
@@ -1289,7 +1309,7 @@ class AppBase:
                 continue
 
             content_path = "/api/v1/files/%s/content?execution_id=%s" % (item, full_execution["execution_id"])
-            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers, verify=False)
+            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers, verify=False, proxies=self.proxy_config)
             self.logger.info("RET2 (file get) done")
             if ret2.status_code == 200:
                 tmpdata = ret1.json()
@@ -1325,7 +1345,7 @@ class AppBase:
             "key": key,
         }
 
-        response = requests.post(url, json=data, verify=False)
+        response = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
         try:
             allvalues = response.json()
             return json.dumps(allvalues)
@@ -1346,7 +1366,7 @@ class AppBase:
             "value": str(value),
         }
 
-        response = requests.post(url, json=data, verify=False)
+        response = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
         try:
             allvalues = response.json()
             allvalues["key"] = key
@@ -1368,7 +1388,7 @@ class AppBase:
             "key": key,
         }
 
-        value = requests.post(url, json=data, verify=False)
+        value = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
         try:
             allvalues = value.json()
             self.logger.info("VAL1: ", allvalues)
@@ -1422,7 +1442,7 @@ class AppBase:
                 self.logger.info(f"KeyError in file setup: {e}")
                 pass
 
-            ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data, verify=False)
+            ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data, verify=False, proxies=self.proxy_config)
             #self.logger.info(f"Ret CREATE: {ret.text}")
             cur_id = ""
             if ret.status_code == 200:
@@ -1454,7 +1474,7 @@ class AppBase:
             files={"shuffle_file": (filename, curfile["data"])}
             #open(filename,'rb')}
 
-            ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers, verify=False)
+            ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers, verify=False, proxies=self.proxy_config)
             self.logger.info("Ret UPLOAD: %s" % ret.text)
             self.logger.info("Ret2 UPLOAD: %d" % ret.status_code)
 
@@ -1551,7 +1571,8 @@ class AppBase:
                         "%s/api/v1/streams/results" % (self.base_url), 
                         headers=headers, 
                         json=tmpdata,
-                        verify=False
+                        verify=False,
+                        proxies=self.proxy_config,
                     )
 
                     if ret.status_code == 200:

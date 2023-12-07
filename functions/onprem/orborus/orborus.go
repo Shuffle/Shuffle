@@ -1820,7 +1820,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	baseString := `python app.py`
 	for _, container := range containers {
 		// Skip random containers. Only handle things related to Shuffle.
-		if !strings.Contains(container.Image, baseimagename) && !strings.Contains(container.Command, baseString) && container.Command != "./worker" {
+		if !strings.Contains(container.Image, baseimagename) && !strings.Contains(container.Command, baseString) && !strings.Contains(container.Command, "walkoff") && container.Command != "./worker" {
 			shuffleFound := false
 			for _, item := range container.Labels {
 				if item == "shuffle" {
