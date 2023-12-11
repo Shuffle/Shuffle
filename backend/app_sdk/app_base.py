@@ -332,6 +332,14 @@ class AppBase:
         if len(os.getenv("SHUFFLE_INTERNAL_NO_PROXY", "")) > 0:
             self.proxy_config["no_proxy"] = os.getenv("SHUFFLE_INTERNAL_NO_PROXY", "")
 
+        try:
+            if self.proxy_config["http"].lower() == "noproxy":
+                self.proxy_config["http"] = ""
+            if self.proxy_config["https"].lower() == "noproxy":
+                self.proxy_config["https"] = ""
+        except Exception as e:
+            self.logger.info(f"[DEBUG] Failed setting proxy config: {e}. NOT important if running apps with webserver. This is NOT critical.")
+
         if isinstance(self.action, str):
             try:
                 self.action = json.loads(self.action)
