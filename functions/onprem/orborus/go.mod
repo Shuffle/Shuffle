@@ -9,7 +9,7 @@ require (
 	github.com/mackerelio/go-osstat v0.2.3
 	github.com/satori/go.uuid v1.2.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/shuffle/shuffle-shared v0.5.29
+	github.com/shuffle/shuffle-shared v0.5.31
 	k8s.io/api v0.28.1
 	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.1
