@@ -340,6 +340,8 @@ class AppBase:
         except Exception as e:
             self.logger.info(f"[DEBUG] Failed setting proxy config: {e}. NOT important if running apps with webserver. This is NOT critical.")
 
+        self.logger.info(f"[DEBUG] Proxy config: {self.proxy_config}")
+
         if isinstance(self.action, str):
             try:
                 self.action = json.loads(self.action)

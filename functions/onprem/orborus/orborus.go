@@ -1611,12 +1611,12 @@ func main() {
 			overrideHttpsProxy := os.Getenv("SHUFFLE_INTERNAL_HTTPS_PROXY")
 			if len(overrideHttpProxy) > 0 {
 				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
-				env = append(env, fmt.Sprintf("HTTP_PROXY=%s", overrideHttpProxy))
+				env = append(env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTP_PROXY=%s", overrideHttpProxy))
 			}
 
 			if len(overrideHttpsProxy) > 0 {
 				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
-				env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", overrideHttpsProxy))
+				env = append(env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
 			}
 
 			err = deployWorker(workerImage, containerName, env, execution)
