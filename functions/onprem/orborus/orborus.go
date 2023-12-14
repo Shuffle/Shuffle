@@ -63,7 +63,7 @@ var sleepTime = 2
 
 // Making it work on low-end machines even during busy times :)
 // May cause some things to run slowly 
-var maxConcurrency = 3 
+var maxConcurrency = 7 
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
@@ -556,6 +556,23 @@ func deployServiceWorkers(image string) {
 			}
 		}
 
+		// Look for SHUFFLE_VOLUME_BINDS
+		if len(os.Getenv("SHUFFLE_VOLUME_BINDS")) > 0 {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_VOLUME_BINDS=%s", os.Getenv("SHUFFLE_VOLUME_BINDS")))
+		}
+
+		overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
+		overrideHttpsProxy := os.Getenv("SHUFFLE_INTERNAL_HTTPS_PROXY")
+		if len(overrideHttpProxy) > 0 {
+			log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTP_PROXY=%s", overrideHttpProxy))
+		}
+
+		if len(overrideHttpsProxy) > 0 {
+			log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
+		}
+
 		serviceOptions := types.ServiceCreateOptions{}
 		_, err = dockercli.ServiceCreate(
 			ctx,
@@ -788,7 +805,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			log.Printf("[ERROR] Failed to start worker container in environment %s: %s", environment, err)
 			return err
 		} else {
-			log.Printf("[INFO] Worker Container %s was created under environment %s for execution %s: docker logs %s", cont.ID, environment, executionRequest.ExecutionId, cont.ID)
+			log.Printf("[INFO][%s] Worker Container created. Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 		}
 
 		//stats, err := cli.ContainerInspect(context.Background(), containerName)
@@ -813,7 +830,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		//	}
 		//}
 	} else {
-		log.Printf("[INFO] Worker Container %s was created under environment %s: docker logs %s", cont.ID, environment, cont.ID)
+		log.Printf("[INFO][%s] New Worker created. Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 	}
 
 	return nil
@@ -1038,7 +1055,7 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 	// Use the docker API to get the CPU usage of the docker engine machine
 	pers, err := dockercli.Info(ctx)
 	if err != nil {
-		log.Printf("[ERROR] Failed getting docker info: %s", err)
+		log.Printf("[ERROR] Failed getting docker info: %s. This is normal IF there are many containers running.", err)
 		return newStats
 	} else {
 		newStats.TotalContainers = pers.Containers
@@ -1298,7 +1315,6 @@ func main() {
 	ctx := context.Background()
 	// Run by default from now
 	//commenting for now as its stoppoing minikube
-	// zombiecheck(ctx, workerTimeout)
 
 	log.Printf("[INFO] Running towards %s (BASE_URL) with environment name %s", baseUrl, environment)
 
@@ -1332,6 +1348,8 @@ func main() {
 
 		//deployServiceWorkers(workerImage)
 	}
+
+	zombiecheck(ctx, workerTimeout)
 
 	client := shuffle.GetExternalClient(baseUrl)
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
@@ -1389,7 +1407,7 @@ func main() {
 			// Should find data to send (memory etc.)
 
 			// Create timeout of max 4 seconds just in case
-			ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			// Marshal and set body
@@ -1524,9 +1542,12 @@ func main() {
 				log.Printf("[INFO] Execution already handled (rerun of old executions?): %s", execution.ExecutionId)
 				toBeRemoved.Data = append(toBeRemoved.Data, execution)
 
+				// Should check when last this was ran, and if it's more than 10 minutes ago and it's not finished, we should run it again?
+				/*
 				if swarmConfig != "run" && swarmConfig != "swarm" {
 					continue
 				}
+				*/
 			}
 
 			// Now, how do I execute this one?
@@ -1572,6 +1593,30 @@ func main() {
 
 			if len(os.Getenv("SHUFFLE_DEBUG_MEMORY")) > 0 {
 				env = append(env, fmt.Sprintf("SHUFFLE_DEBUG_MEMORY=%s", os.Getenv("SHUFFLE_DEBUG_MEMORY")))
+			}
+
+			// Look for volume binds
+			if len(os.Getenv("SHUFFLE_VOLUME_BINDS")) > 0 {
+				log.Printf("[DEBUG] Added volume binds: %s", os.Getenv("SHUFFLE_VOLUME_BINDS"))
+				env = append(env, fmt.Sprintf("SHUFFLE_VOLUME_BINDS=%s", os.Getenv("SHUFFLE_VOLUME_BINDS")))
+			}
+
+
+			if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")))
+			}
+
+			// Setting up internal proxy config for Shuffle -> shuffle comms
+			overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
+			overrideHttpsProxy := os.Getenv("SHUFFLE_INTERNAL_HTTPS_PROXY")
+			if len(overrideHttpProxy) > 0 {
+				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
+				env = append(env, fmt.Sprintf("HTTP_PROXY=%s", overrideHttpProxy))
+			}
+
+			if len(overrideHttpsProxy) > 0 {
+				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
+				env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", overrideHttpsProxy))
 			}
 
 			err = deployWorker(workerImage, containerName, env, execution)
@@ -1754,7 +1799,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 		return nil
 	}
 
-	log.Println("[INFO] Looking for old containers (zombies)")
+	log.Println("[INFO] Looking for old containers to remove")
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
@@ -1771,10 +1816,11 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	stopContainers := []string{}
 	removeContainers := []string{}
 	log.Printf("[INFO] Baseimage: %s, Workertimeout: %d", baseimagename, int64(workerTimeout))
-	baseString := `/bin/sh -c 'python app.py --log-level DEBUG'`
+	//baseString := `/bin/sh -c 'python app.py --log-level DEBUG'`
+	baseString := `python app.py`
 	for _, container := range containers {
 		// Skip random containers. Only handle things related to Shuffle.
-		if !strings.Contains(container.Image, baseimagename) && container.Command != baseString && container.Command != "./worker" {
+		if !strings.Contains(container.Image, baseimagename) && !strings.Contains(container.Command, baseString) && !strings.Contains(container.Command, "walkoff") && container.Command != "./worker" {
 			shuffleFound := false
 			for _, item := range container.Labels {
 				if item == "shuffle" {
@@ -1785,7 +1831,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Check image name
 			if !shuffleFound {
-				//log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
+				log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
 				continue
 			}
 			//} else {
@@ -1820,7 +1866,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	}
 
 	// FIXME - add killing of apps with same execution ID too
-	log.Printf("[INFO] Should STOP %d containers.", len(stopContainers))
+	log.Printf("[INFO] Should STOP and remove %d containers.", len(stopContainers))
 	var options container.StopOptions
 	for _, containername := range stopContainers {
 		log.Printf("[INFO] Stopping and removing container %s", containerNames[containername])
@@ -1878,7 +1924,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
 	}
 
-	if strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "shuffle-backend") {
+	if strings.Contains(streamUrl, "shuffler.io") || strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "shuffle-backend") {
 		log.Printf("[INFO] Using default worker server url as previous is invalid: %s", streamUrl)
 		streamUrl = fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
 	}

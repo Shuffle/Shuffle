@@ -22,6 +22,7 @@ import { isMobile } from "react-device-detect"
 import { NestedMenuItem } from "mui-nested-menu"
 import { GetParsedPaths, FindJsonPath } from "../views/Apps.jsx";
 import { SetJsonDotnotation } from "../views/AngularWorkflow.jsx";
+import { vscodeDark, vscodeDarkInit } from '@uiw/codemirror-theme-vscode';
 
 import {
 	FullscreenExit as FullscreenExitIcon,
@@ -82,6 +83,7 @@ const pythonFilters = [
 	{"name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads(r"""$nodename""")\n{% endpython %}`, "example": ``},
 ]
 
+/*
 const shuffleTheme = createTheme({
   theme: 'dark',
   settings: {
@@ -110,6 +112,7 @@ const shuffleTheme = createTheme({
     { tag: t.attributeName, color: '#5c6166' },
   ],
 });
+*/
 
 const CodeEditor = (props) => {
 	const { 
@@ -547,7 +550,6 @@ const CodeEditor = (props) => {
 		var code_lines = localcodedata.split('\n')
 		for (var i = 0; i < code_lines.length; i++){
 			var current_code_line = code_lines[i]
-			// console.log(current_code_line)
 
 			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 
@@ -610,8 +612,7 @@ const CodeEditor = (props) => {
 					var correctVariable = availableVariables.includes(fixedVariable)
 					if(!correctVariable) {
 						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: rgb(248, 106, 62, 0.9); padding-top: 2px; padding-bottom: 2px; color: white"})
-					}
-					else{
+					} else {
 						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; padding-top: 2px; padding-bottom: 2px; color: white"})
 					}
 					// console.log(correctVariables)
@@ -660,6 +661,23 @@ const CodeEditor = (props) => {
 		setlocalcodedata(updatedCode)
 	}
 
+	const fixStringInput = (new_input) => {
+		// Newline fixes
+		new_input = new_input.replace(/\r\n/g, "\\n")
+		new_input = new_input.replace(/\n/g, "\\n")
+
+		// Quote fixes
+		new_input = new_input.replace(/\\"/g, '"')
+		new_input = new_input.replace(/"/g, '\\"')
+
+		new_input = new_input.replace(/\\'/g, "'")
+		new_input = new_input.replace(/'/g, "\\'")
+
+
+		return new_input
+	}
+
+
 	const expectedOutput = (input) => {
 		
 		//const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
@@ -674,35 +692,38 @@ const CodeEditor = (props) => {
 			try { 
 				for (var i = 0; i < found.length; i++) {
 					try {
-						// For found specifically, should replace .#\d with .# with regex
-						
-
-						//found[i] = found[i].toLowerCase()
 						const fixedVariable = fixVariable(found[i])
-						//var correctVariable = availableVariables.includes(fixedVariable)
-
-						// 
 						var valuefound = false
 						for (var j = 0; j < actionlist.length; j++) {
-							if(fixedVariable.slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
-								valuefound = true 
+							if(fixedVariable.slice(1,).toLowerCase() !== actionlist[j].autocomplete.toLowerCase()){
+								continue
+							}
 
-								try {
-									if (typeof actionlist[j].example === "object") {
-										input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
+							valuefound = true 
 
-									} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
-										input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
-									} else {
-										input = input.replace(found[i], actionlist[j].example, -1)
-									}
-								} catch (e) { 
-									input = input.replace(found[i], actionlist[j].example, -1)
+							console.log("Here. Checking if we got an example?")
+							try {
+								if (typeof actionlist[j].example === "object") {
+
+									input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
+
+								} else if (actionlist[j].example.trim().startsWith("{") || actionlist[j].example.trim().startsWith("[")) {
+									input = input.replace(found[i], JSON.stringify(actionlist[j].example), -1);
+								} else {
+									console.log("This?")
+	
+									const newExample = fixStringInput(actionlist[j].example)
+									input = input.replace(found[i], newExample, -1)
 								}
-							} else {
-								// Couldn't find the correct example value
+							} catch (e) { 
+								input = input.replace(found[i], actionlist[j].example, -1)
 							}
 						}
+
+
+						//if (!valuefound) {
+						//	console.log("Couldn't find value "+fixedVariable)
+						//}
 
 						if (!valuefound && availableVariables.includes(fixedVariable)) {
 							var shouldbreak = false
@@ -714,46 +735,50 @@ const CodeEditor = (props) => {
 
 								for (var key in parsedPaths) {
 									const fullpath = "$"+actionlist[k].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
-									if (fullpath === fixedVariable) {
-										//if (actionlist[k].example === undefined) {
-										//	actionlist[k].example = "TMP"
-										//}
+									if (fullpath !== fixedVariable) {
+										continue
+									}
 
-										var new_input = ""
-										try {
-											new_input = FindJsonPath(fullpath, actionlist[k].example)
-										} catch (e) {
-											console.log("ERR IN INPUT: ", e)
-										}
+									//if (actionlist[k].example === undefined) {
+									//	actionlist[k].example = "TMP"
+									//}
 
-										//console.log("Got output for: ", fullpath, new_input, actionlist[k].example, typeof new_input)
+									var new_input = ""
+									try {
+										new_input = FindJsonPath(fullpath, actionlist[k].example)
+									} catch (e) {
+										console.log("ERR IN INPUT: ", e)
+									}
 
-										if (typeof new_input === "object") {
-											new_input = JSON.stringify(new_input)
+									console.log("Got output for: ", fullpath, new_input, actionlist[k].example, typeof new_input)
+
+									if (typeof new_input === "object") {
+										new_input = JSON.stringify(new_input)
+									} else {
+										if (typeof new_input === "string") {
+											// Check if it contains any newlines, and replace them with raw newlines
+											new_input = fixStringInput(new_input)	
+
+											// Replace quotes with nothing
 										} else {
-											if (typeof new_input === "string") {
-												new_input = new_input
-											} else {
-												console.log("NO TYPE? ", typeof new_input)
-												try {
-													new_input = new_input.toString()
-												} catch (e) {
-													new_input = ""
-												}
+											console.log("NO TYPE? ", typeof new_input)
+											try {
+												new_input = new_input.toString()
+											} catch (e) {
+												new_input = ""
 											}
 										}
-
-										//console.log("FOUND2: ", fixedVariable, actionlist[j].example)
-										input = input.replace(fixedVariable, new_input, -1)
-										input = input.replace(found[i], new_input, -1)
-
-										//} catch (e) {
-										//	input = input.replace(found[i], actionlist[k].example)
-										//}
-
-										shouldbreak = true 
-										break
 									}
+
+									input = input.replace(fixedVariable, new_input, -1)
+									input = input.replace(found[i], new_input, -1)
+
+									//} catch (e) {
+									//	input = input.replace(found[i], actionlist[k].example)
+									//}
+
+									shouldbreak = true 
+									break
 								}
 
 								if (shouldbreak) {
@@ -766,7 +791,7 @@ const CodeEditor = (props) => {
 					}
 				}
 			} catch (e) {
-				//console.log("Outer replace error: ", e)
+				console.log("Outer replace error: ", e)
 			}
 		}
 
@@ -895,7 +920,7 @@ const CodeEditor = (props) => {
 			aria-labelledby="draggable-code-modal"
 			disableBackdropClick={true}
 			disableEnforceFocus={true}
-      //style={{ pointerEvents: "none" }}
+      		//style={{ pointerEvents: "none" }}
 			hideBackdrop={true}
 			open={expansionModalOpen}
 			onClose={() => {
@@ -964,6 +989,7 @@ const CodeEditor = (props) => {
 						}}
 					>
 						<div style={{display: "flex"}}>
+							{/*
 							<DialogTitle
 								id="draggable-dialog-title"
 								style={{
@@ -974,59 +1000,9 @@ const CodeEditor = (props) => {
 							>
 									Code Editor
 							</DialogTitle>
-							<IconButton
-								style={{
-									marginLeft: isMobile ? "80%" : 350, 
-									height: 50, 
-									width: 50, 
-								}}
-								onClick={() => {
-									
-								}}
-							>
-								<Tooltip
-									color="primary"
-									title={"Test Liquid in the playground"}
-									placement="top"
-								>
-									<a 
-										href="https://pwwang.github.io/liquidpy/playground/"
-										rel="norefferer"
-      		          target="_blank"
-									>
-										<ExtensionIcon style={{color: "rgba(255,255,255,0.7)"}}/>
-									</a>
-								</Tooltip>
-							</IconButton>
-							<IconButton
-								style={{
-									height: 50, 
-									width: 50, 
-								}}
-								disabled={isAiLoading}
-								onClick={() => {
-									autoFormat(localcodedata) 
-								}}
-							>
-								<Tooltip
-									color="primary"
-									title={"Auto format data"}
-									placement="top"
-								>
-									{isAiLoading ? 
-										<CircularProgress style={{height: 20, width: 20, color: "rgba(255,255,255,0.7)"}}/>
-										:
-										<AutoFixHighIcon style={{color: "rgba(255,255,255,0.7)"}}/>
-									}
-								</Tooltip>
-							</IconButton>
-						</div>
-					</div>   
-					}
-
-		
+							*/}
 					{ isFileEditor ? null :
-					<div style={{display: "flex"}}>
+					<div style={{display: "flex", maxHeight: 40, }}>
 						<Button
 							id="basic-button"
 							aria-haspopup="true"
@@ -1035,7 +1011,7 @@ const CodeEditor = (props) => {
 							variant="outlined"
 							color="secondary"
 							style={{
-							  textTransform: "none",
+							  	textTransform: "none",
 								width: 100, 
 							}}
 							onClick={(event) => {
@@ -1143,9 +1119,9 @@ const CodeEditor = (props) => {
 							variant="outlined"
 							color="secondary"
 							style={{
-							  textTransform: "none",
+							  	textTransform: "none",
 								width: 130, 
-								marginLeft: 170, 
+								marginLeft: 20, 
 							}}
 							onClick={(event) => {
 								setMenuPosition({
@@ -1393,49 +1369,105 @@ const CodeEditor = (props) => {
 						</Menu>
 					</div> 
 					}
-					<span style={{
+							<IconButton
+								style={{
+									marginLeft: isMobile ? "80%" : 30, 
+									height: 50, 
+									width: 50, 
+								}}
+								onClick={() => {
+									
+								}}
+							>
+								<Tooltip
+									color="primary"
+									title={"Test Liquid in the playground"}
+									placement="top"
+								>
+									<a 
+										href="https://pwwang.github.io/liquidpy/playground/"
+										rel="norefferer"
+      		          target="_blank"
+									>
+										<ExtensionIcon style={{color: "rgba(255,255,255,0.7)"}}/>
+									</a>
+								</Tooltip>
+							</IconButton>
+							<IconButton
+								style={{
+									height: 50, 
+									width: 50, 
+								}}
+								disabled={isAiLoading}
+								onClick={() => {
+									autoFormat(localcodedata) 
+								}}
+							>
+								<Tooltip
+									color="primary"
+									title={"Auto format data"}
+									placement="top"
+								>
+									{isAiLoading ? 
+										<CircularProgress style={{height: 20, width: 20, color: "rgba(255,255,255,0.7)"}}/>
+										:
+										<AutoFixHighIcon style={{color: "rgba(255,255,255,0.7)"}}/>
+									}
+								</Tooltip>
+							</IconButton>
+						</div>
+					</div>   
+					}
+
+		
+					
+					<div style={{
 						borderRadius: theme.palette.borderRadius,
 						position: "relative",
+						paddingTop: 0, 
+						minHeight: 548,
+						overflow: "hidden",
 					}}>
 						<CodeMirror
+						    theme={vscodeDark}
 							value={localcodedata}
-							height={isFileEditor ? 450 : 525} 
+							height={isFileEditor ? 450 : 500} 
 							width={isFileEditor ? 650 : 600}
 							style={{
-								maxWidth: isFileEditor ? 450 : 500,
+								maxWidth: isFileEditor ? 450 : 600,
+								maxHeight: 548,
+								minHeight: 548, 
 								wordBreak: "break-word",
 								marginTop: 0,
-								paddingTop: 0,
-								backgroundColor: "rgba(40,40,40,1)",
-								minHeight: 470, 
+								paddingBottom: 10,
+								overflow: "hidden",
 							}}
 							onCursorActivity = {(value) => {
-								// console.log(value.getCursor())
+								console.log("CURSOR: ", value.getCursor())
 								setCurrentCharacter(value.getCursor().ch)
 								setCurrentLine(value.getCursor().line)
 								// console.log(value.getCursor().ch, value.getCursor().line)
 								findIndex(value.getCursor().line, value.getCursor().ch)
+
 								highlight_variables(value)
 							}}
 							onChange={(value, viewUpdate) => {
-								console.log("Value: ", value, viewUpdate)
 								setlocalcodedata(value)
 								expectedOutput(value)
+
+								highlight_variables(value)
 
 								//if(value.display.input.prevInput.startsWith('$') || value.display.input.prevInput.endsWith('$')){
 								//	setEditorPopupOpen(true)
 								//}
 							}}
-							extensions={[]}//indentWithTab]}
-							theme={shuffleTheme}
 							options={{
-								styleSelectedText: true,
-								keyMap: 'sublime',
 								mode: validation === true ? "json" : "python",
 								lineWrapping: linewrap,
+								theme: vscodeDark,
 							}}
 						/>
-					</span>
+					</div>
 
 					{/*editorPopupOpen ?
 						<Paper
@@ -1550,13 +1582,14 @@ const CodeEditor = (props) => {
 					</div>
 				</div>
 
-				<div style={{flex: 1, marginLeft: 25, }}>
+				<div style={{flex: 1, marginLeft: 5, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, }}>
 					{isFileEditor ? null : 
 						<div>
 							{isMobile ? null : 
 								<DialogTitle
 									style={{
 										paddingLeft: 10, 
+										paddingTop: 0, 
 										display: "flex", 
 									}}
 								>
@@ -1564,14 +1597,29 @@ const CodeEditor = (props) => {
 										Expected Output
 									</span>
 
-									<IconButton disabled={executing} color="primary" style={{border: `1px solid ${theme.palette.primary.main}`, marginLeft: 100, padding: 8}} variant="contained" onClick={() => {
-										executeSingleAction(expOutput)
-									}}>
-										<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
-											{executing ? <CircularProgress style={{height: 18, width: 18, }} /> : <PlayArrowIcon style={{height: 18, width: 18, }} /> }
-														 
-										</Tooltip>
-									</IconButton>
+									<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
+										<Button 
+											variant="outlined" 
+											disabled={executing} 
+											color="primary" 
+											style={{
+												border: `1px solid ${theme.palette.primary.main}`, 
+												marginLeft: 200, 
+												maxHeight: 35, 
+												minWidth: 70, 
+											}} 
+											variant="contained" 
+											onClick={() => {
+												executeSingleAction(expOutput)
+											}}
+										>
+											{executing ? 
+												<CircularProgress style={{height: 18, width: 18, }} /> 
+													: 						
+												<span>Try it <PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
+											}
+										</Button>
+									</Tooltip>
 
 								</DialogTitle>
 							}
@@ -1613,8 +1661,8 @@ const CodeEditor = (props) => {
 											borderRadius: theme.palette.borderRadius,
 											maxHeight: 500,
 											minHeight: 500, 
-											minWidth: 500,
-											maxWidth: 500,
+											minWidth: 580,
+											maxWidth: 580,
 											overflow: "auto", 
 											whiteSpace: "pre-wrap",
 										}}

@@ -106,6 +106,8 @@ const Header = (props) => {
 
   const clearNotifications = () => {
     // Don't really care about the logout
+    
+    toast("Clearing notifications")
     fetch(`${globalUrl}/api/v1/notifications/clear`, {
       credentials: "include",
       method: "GET",
@@ -294,49 +296,26 @@ const Header = (props) => {
           borderBottom: "1px solid rgba(255,255,255,0.4)",
         }}
       >
-        {/*<Typography variant="h6">
-					{new Date(data.updated_at).toISOString()}
-				</Typography >*/}
-        {data.reference_url !== undefined &&
-        data.reference_url !== null &&
-        data.reference_url.length > 0 ? (
-          <Link
-            to={data.reference_url}
-            style={{ color: "#f86a3e", textDecoration: "none" }}
-          >
-            <Typography variant="body1">{data.title}</Typography>
-          </Link>
-        ) : (
-          <Typography variant="body1" color="textSecondary">
-            {data.title}
-          </Typography>
-        )}
+		{data.reference_url !== undefined && data.reference_url !== null && data.reference_url.length > 0 ?
+			<Link to={data.reference_url} style={{color: "#f86a3e", textDecoration: "none",}}>
+				<Typography variant="body1">
+					{data.title} ({data.amount})
+				</Typography >
+			</Link>
+		: 
+			<Typography variant="body1" color="textSecondary">
+				{data.title}
+			</Typography >
+		}
 
-        {data.image !== undefined &&
-        data.image !== null &&
-        data.image.length > 0 ? (
-          <img
-            alt={data.title}
-            src={data.image}
-            style={{ height: 100, width: 100 }}
-          />
-        ) : null}
-        <Typography variant="body2">{data.description}</Typography>
-        {/*data.tags !== undefined && data.tags !== null && data.tags.length > 0 ? 
-					data.tags.map((tag, index) => {
-						return (
-							<Chip
-								key={index}
-								style={chipStyle}
-								label={tag}
-								onClick={() => {
-								}}
-								variant="outlined"
-								color="primary"
-							/>
-						)
-					})
-				: null */}
+		{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
+			<img alt={data.title} src={data.image} style={{height: 100, width: 100, }} />
+			: 
+			null
+		}
+		<Typography variant="body2" style={{marginTop: 10, maxHeight: 200, overflowX: "hidden", overflowY: "auto", }}>
+			{data.description}
+		</Typography >
         <div style={{ display: "flex" }}>
           {data.read === false ? (
             <Button
@@ -374,7 +353,7 @@ const Header = (props) => {
           setAnchorEl(event.currentTarget);
         }}
       >
-        <Badge badgeContent={notifications.length} color="primary">
+        <Badge badgeContent={notifications.filter((n) => n.read === false).length} color="primary">
           <NotificationsIcon
             color="secondary"
             style={{ height: 30, width: 30 }}
@@ -413,7 +392,7 @@ const Header = (props) => {
         >
           <div style={{ display: "flex", marginBottom: 5 }}>
             <Typography variant="body1">
-              Your Notifications ({notifications.length})
+              Your Notifications ({notifications.filter((data) => !data.read).length})
             </Typography>
             {notifications.length > 1 ? (
               <Button
@@ -429,12 +408,17 @@ const Header = (props) => {
             ) : null}
           </div>
           <Typography variant="body2">
-            Notifications are made by Shuffle to help you discover issues or
-            improvements.
+            Notifications generated made by Shuffle to help you discover issues or 
+            improvements. <a href="/docs/organizations#notifications" target="_blank" rel="noopener noreferrer" style={{color: "#f86a3e", textDecoration: "none", }}>
+	  		Learn more</a>
           </Typography>
         </Paper>
         {notifications.map((data, index) => {
-          return <NotificationItem data={data} key={index} />;
+			if (data.read) {
+				return null
+			}
+
+          	return <NotificationItem data={data} key={index} />;
         })}
       </Menu>
     </span>
@@ -626,6 +610,11 @@ const Header = (props) => {
         >
           <MeetingRoomIcon style={{ marginRight: 5 }} /> &nbsp;Logout
         </MenuItem>
+        <Divider style={{marginBottom: 10, }}/>
+
+	  	<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 5, marginBottom: 5,}}>
+	  		Version: 1.3.1
+	  	</Typography>
       </Menu>
     </span>
   );
@@ -1352,14 +1341,17 @@ const Header = (props) => {
   );
 
   // <Divider style={{height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-  return !isMobile ? 
-	  isLoggedIn ? 
+	//
+	/*
+	  !isLoggedIn ? 
 		<div style={{minHeight: 68, maxHeight: 68, backgroundColor: theme.palette.backgroundColor, }}>
 		  <BrowserView style={{position: "sticky", top: 0, }}>
 			{loginTextBrowser}
 		  </BrowserView>
 		</div>
 		:
+		*/
+  return !isMobile ? 
 	  <AppBar 
 	  	position="sticky"
 		color="transparent" 

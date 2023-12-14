@@ -42,6 +42,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
+      - SHUFFLE_APP_SDK_TIMEOUT=300
+      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=5 # The amount of concurrent executions Orborus can handle. 
       #- DOCKER_HOST=tcp://docker-socket-proxy:2375
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
@@ -86,9 +88,13 @@ services:
     restart: unless-stopped
 
   #memcached:
-  #  image: docker.io/bitnami/memcached:1
+  #  image: memcached:latest
   #  container_name: shuffle-cache
   #  hostname: shuffle-cache
+  #  mem_limit: 1024m
+  #  environment:
+  #    - MEMCACHED_MEMORY=1024
+  #    - MEMCACHED_MAX_CONNECTIONS=2500
   #  ports:
   #    - 11211:11211
   

@@ -269,35 +269,8 @@ const EditWorkflow = (props) => {
 				/>
 			</div>
 						<div style={{display: "flex", marginTop: 10, }}>
-							<MuiChipsInput
-								style={{ flex: 1, maxHeight: 40, }}
-								InputProps={{
-									style: {
-										color: "white",
-									},
-								}}
-								placeholder="Tags"
-								color="primary"
-								fullWidth
-								value={newWorkflowTags}
-								onChange={(chip) => {
-									console.log("Chip: ", chip)
-									//newWorkflowTags.push(chip);
-									setNewWorkflowTags(chip);
-								}}
-								onAdd={(chip) => {
-									newWorkflowTags.push(chip);
-									setNewWorkflowTags(newWorkflowTags);
-								}}
-								onDelete={(chip, index) => {
-									console.log("Deleting: ", chip, index)
-									newWorkflowTags.splice(index, 1);
-									setNewWorkflowTags(newWorkflowTags);
-									setUpdate(Math.random());
-								}}
-							/>
 							{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
-      					<FormControl style={{flex: 1, marginLeft: 5, }}>
+      					<FormControl style={{flex: 1, marginRight: 5,}}>
       					  <InputLabel htmlFor="grouped-select-usecase">Usecases</InputLabel>
       					  <Select 
 										defaultValue="" 
@@ -350,6 +323,33 @@ const EditWorkflow = (props) => {
       					  </Select>
       					</FormControl>
 							: null}
+							<MuiChipsInput
+								style={{ flex: 1, maxHeight: 120, overflow: "auto",}}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+								placeholder="Tags"
+								color="primary"
+								fullWidth
+								value={newWorkflowTags}
+								onChange={(chip) => {
+									console.log("Chip: ", chip)
+									//newWorkflowTags.push(chip);
+									setNewWorkflowTags(chip);
+								}}
+								onAdd={(chip) => {
+									newWorkflowTags.push(chip);
+									setNewWorkflowTags(newWorkflowTags);
+								}}
+								onDelete={(chip, index) => {
+									console.log("Deleting: ", chip, index)
+									newWorkflowTags.splice(index, 1);
+									setNewWorkflowTags(newWorkflowTags);
+									setUpdate(Math.random());
+								}}
+							/>
 						</div>
 
   					{showMoreClicked === true ? 
@@ -365,7 +365,8 @@ const EditWorkflow = (props) => {
 												onChange={(e) => {
 													console.log("Data: ", e.target.value)
 													
-													innerWorkflow.workflow_type = e.target.value
+													//innerWorkflow.workflow_type = e.target.value
+													innerWorkflow.status = e.target.value
 													setInnerWorkflow(innerWorkflow)
 												}}
 											>

@@ -1344,7 +1344,7 @@ const Workflows = (props) => {
 			}, i * 200);
     }
 
-    toast(`exporting and keeping original for all ${allWorkflows.length} workflows`);
+    toast(`Exporting and keeping original for all ${allWorkflows.length} workflows`);
   };
 
   const deduplicateIds = (data, skip_sanitize) => {
@@ -1982,16 +1982,16 @@ const Workflows = (props) => {
                 </div>
               </Tooltip>
               <Tooltip arrow title={
-								<span style={{}}>
-									{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
-										<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
-									: null}
-									<Typography>
-										Edit {data.name}
-									</Typography>
-								</span>
-							} placement="bottom">
-                <Typography
+				<div style={{width: "100%", minWidth: 250, maxWidth: 310, }}>
+					{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
+							<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxWidth: 300, minWidth: 250, borderRadius: theme.palette.borderRadius, }} />
+						: null}
+						<Typography>
+							Edit {data.name}
+						</Typography>
+				</div>
+				} placement="left">
+				<Typography
                   variant="body1"
                   style={{
                     marginBottom: 0,

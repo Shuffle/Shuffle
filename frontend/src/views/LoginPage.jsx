@@ -333,7 +333,7 @@ const LoginDialog = (props) => {
                 <b>1.</b> Make sure shuffle-database folder has correct access, and that you have a minimum of <b>2Gb of RAM available</b>:{" "}
                 <br />
                 <br />
-                sudo chown 1000:1000 -R shuffle-database
+                sudo chown -R 1000:1000 shuffle-database
               </Typography>
               <Typography
                 variant="body2"
