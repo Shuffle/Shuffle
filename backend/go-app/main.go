@@ -3839,7 +3839,9 @@ func runInitEs(ctx context.Context) {
 	}
 
 	// FIXME: Have this for all envs in all orgs (loop and find).
-	if len(parsedApikey) > 0 {
+	if len(parsedApikey) == 0 {
+		log.Printf("[WARNING] No apikey found for cleanup. Skipping cleanup schedule.")
+	} else {
 		cleanupSchedule := 300
 
 		if len(os.Getenv("SHUFFLE_RERUN_SCHEDULE")) > 0 {
@@ -3854,8 +3856,25 @@ func runInitEs(ctx context.Context) {
 			}
 		}
 
-		environments := []string{"Shuffle"}
-		log.Printf("[DEBUG] Starting schedule setup for execution cleanup every %d seconds. Running first immediately.", cleanupSchedule)
+		environments := []string{defaultEnv}
+
+		// Comma separated list of RERUN environments
+		if len(os.Getenv("SHUFFLE_RERUN_ENVIRONMENTS")) > 0 {
+			foundenv := strings.Split(os.Getenv("SHUFFLE_RERUN_ENVIRONMENTS"), ",")
+			for i, env := range foundenv {
+				if len(env) == 0 {
+					continue
+				}
+
+				environments[i] = strings.TrimSpace(env)
+				if !shuffle.ArrayContains(environments, env) {
+					environments = append(foundenv, env)
+				}
+			}
+		}
+
+		log.Printf("[DEBUG] Starting schedule setup for execution cleanup every %d seconds. Running first immediately. Environments: %#v", cleanupSchedule, environments)
+
 		cleanupJob := func() func() {
 			return func() {
 				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
@@ -3925,8 +3944,6 @@ func runInitEs(ctx context.Context) {
 		} else {
 			_ = jobret
 		}
-	} else {
-		log.Printf("[DEBUG] Couldn't find a valid API-key, hence couldn't run cleanup")
 	}
 
 	// Getting apps to see if we should initialize a test
