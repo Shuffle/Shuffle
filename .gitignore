@@ -5,7 +5,7 @@
 *.swp
 *.swn
 *__pycache__*
-
+.env
 Shuffle-*.json
 backend/go-app/generated*
 
