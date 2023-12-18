@@ -1039,6 +1039,11 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		Timestamp:    time.Now().Unix(),
 	}
 
+	// Disable orborus stats
+	if os.Getenv("SHUFFLE_STATS_DISABLED") == "true" {
+		return newStats
+	}
+
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		newStats.Swarm = true
 	}
