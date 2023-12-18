@@ -748,11 +748,20 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-            toast("Failed changing authentication");
+			  // Check if .reason exists
+			  if (responseJson.reason !== undefined) {
+				  toast("Failed changing authentication: " + responseJson.reason);
+			  } else {
+            	toast("Failed changing authentication");
+			  }
           } else {
             //toast("Successfully password!")
             setSelectedUserModalOpen(false);
             getAppAuthentication();
+
+
+		    setSelectedAuthentication({});
+		    setSelectedAuthenticationModalOpen(false);
           }
         })
       )
@@ -813,7 +822,8 @@ If you're interested, please let me know a time that works for you, or set up a 
     const data = {
       id: id,
       action: parentAction !== undefined && parentAction !== null ? parentAction : "assign_everywhere",
-    };
+    }
+
     const url = globalUrl + "/api/v1/apps/authentication/" + id + "/config";
 
     fetch(url, {
@@ -1798,17 +1808,53 @@ If you're interested, please let me know a time that works for you, or set up a 
     >
       <DialogTitle>
         <span style={{ color: "white" }}>
-          Edit authentication for {selectedAuthentication.app.name} (
+          Edit authentication for {selectedAuthentication.app.name.replaceAll("_", " ")} (
           {selectedAuthentication.label})
         </span>
+	  	<Typography variant="body1" color="textSecondary" style={{marginTop: 10}}>
+	  		You can not see the previous values for an authentication while editing. This is to keep your data secure. You can overwrite one- or multiple fields at a time.
+	  	</Typography>
       </DialogTitle>
       <DialogContent>
+		  <Typography style={{ marginBottom: 0, marginTop: 10 }}>
+	  		Authentication Label
+		  </Typography>
+		  <TextField
+			style={{
+			  backgroundColor: theme.palette.inputColor,
+			  marginTop: 0,
+			}}
+			InputProps={{
+			  style: {
+				height: 50,
+				color: "white",
+			  },
+			}}
+			color="primary"
+			required
+			fullWidth={true}
+			placeholder={selectedAuthentication.label}
+	  		defaultValue={selectedAuthentication.label}
+			type="text"
+			margin="normal"
+			variant="outlined"
+			onChange={(e) => {
+  			  selectedAuthentication.label = e.target.value
+			}}
+		  />
+
+		<Divider />
         {selectedAuthentication.fields.map((data, index) => {
+		  var fieldname = data.key.replaceAll("_", " ")
+		  if (fieldname.endsWith(" basic")) {
+			  fieldname = fieldname.substring(0, fieldname.length - 6)
+		  }
+
           //console.log("DATA: ", data, selectedAuthentication)
           return (
             <div key={index}>
               <Typography style={{ marginBottom: 0, marginTop: 10 }}>
-                {data.key}
+                {fieldname}
               </Typography>
               <TextField
                 style={{
@@ -1824,7 +1870,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                 color="primary"
                 required
                 fullWidth={true}
-                placeholder={data.key}
+                placeholder={fieldname}
                 type="text"
                 id={`authentication-${index}`}
                 margin="normal"
@@ -1851,9 +1897,11 @@ If you're interested, please let me know a time that works for you, or set up a 
           style={{ borderRadius: "0px" }}
           onClick={() => {
             var error = false;
+			var fails = 0
             for (var key in authenticationFields) {
               const item = authenticationFields[key];
               if (item.value.length === 0) {
+				fails += 1
                 console.log("ITEM: ", item);
                 //var currentnode = cy.getElementById(data.id)
                 var textfield = document.getElementById(
@@ -1866,14 +1914,13 @@ If you're interested, please let me know a time that works for you, or set up a 
               }
             }
 
-            if (error) {
-              toast("All fields must have a new value");
+            if (error && fails === authenticationFields.length) {
+			  toast("Updating auth with new name only")
+			  saveAuthentication(selectedAuthentication);
             } else {
               toast("Saving new version of this authentication");
               selectedAuthentication.fields = authenticationFields;
               saveAuthentication(selectedAuthentication);
-              setSelectedAuthentication({});
-              setSelectedAuthenticationModalOpen(false);
             }
           }}
           color="primary"
@@ -3732,7 +3779,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                       }}
                     />
                     <ListItemText
-                      primary={data.app.name}
+                      primary={data.app.name.replaceAll("_", " ")}
                       style={{ minWidth: 175, maxWidth: 175, marginLeft: 10 }}
                     />
                     {/*

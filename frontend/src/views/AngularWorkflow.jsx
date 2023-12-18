@@ -1824,6 +1824,7 @@ const AngularWorkflow = (defaultprops) => {
           setExecutionModalOpen(true);
           setExecutionModalView(1);
           start();
+		  navigate(`/workflows/${props.match.params.key}?execution_id=${responseJson.execution_id}`)
         })
         .catch((error) => {
           //toast(error.toString());
