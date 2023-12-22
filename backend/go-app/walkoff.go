@@ -106,7 +106,10 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 	}
 
 	log.Printf("[INFO] Starting frequency for execution: %d", newfrequency)
-	jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
+	
+
+	//jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
+	jobret, err := newscheduler.Every(newfrequency).Seconds().Run(job)
 	if err != nil {
 		log.Printf("Failed to schedule workflow: %s", err)
 		return err
