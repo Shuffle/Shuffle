@@ -7640,7 +7640,7 @@ const AngularWorkflow = (defaultprops) => {
         }
 
         var parsedEnvironments =
-          environments === null || environments === []
+          !environments || (Array.isArray(environment) && environments.length === 0)
             ? "cloud"
             : environments[defaultEnvironmentIndex] === undefined
               ? "cloud"
@@ -7831,7 +7831,7 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
                 const parsedEnvironments =
-                  environments === null || environments === []
+                  (!environments || Array.isArray(environments) && environments === 0)
                     ? "cloud"
                     : environments[defaultEnvironmentIndex] === undefined
                       ? "cloud"
@@ -9165,7 +9165,6 @@ const AngularWorkflow = (defaultprops) => {
       hideBackdrop={true}
       disableBackdropClick={true}
       style={{ pointerEvents: "none" }}
-      PaperComponent={PaperComponent}
       aria-labelledby="draggable-dialog-title"
       open={aiQueryModalOpen}
       PaperProps={{
@@ -9192,7 +9191,6 @@ const AngularWorkflow = (defaultprops) => {
       hideBackdrop={true}
       disableBackdropClick={true}
       style={{ pointerEvents: "none" }}
-      PaperComponent={PaperComponent}
       aria-labelledby="draggable-dialog-title"
       open={conditionsModalOpen}
       PaperProps={{

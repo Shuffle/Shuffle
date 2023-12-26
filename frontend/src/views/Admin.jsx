@@ -798,7 +798,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           if (responseJson["success"] === false) {
             toast("Failed updating org: ", responseJson.reason);
           } else {
-						if (lead_info === undefined || lead_info === null || lead_info === []) {
+						if (!lead_info || (Array.isArray(lead_info) && lead_info.length === 0)) {
             	toast("Successfully edited org!");
 						}
           }
@@ -2848,7 +2848,6 @@ If you're interested, please let me know a time that works for you, or set up a 
 								selectedOrganization={selectedOrganization}
 								adminTab={adminTab}
 								billingInfo={billingInfo}
-								selectedOrganization={selectedOrganization}
 								stripeKey={props.stripeKey}
 								handleGetOrg={handleGetOrg}
 							/>
