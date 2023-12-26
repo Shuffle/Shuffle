@@ -7640,7 +7640,7 @@ const AngularWorkflow = (defaultprops) => {
         }
 
         var parsedEnvironments =
-          !environments || (Array.isArray(environment) && environments.length === 0)
+          (!environments || (Array.isArray(environment) && environments.length === 0))
             ? "cloud"
             : environments[defaultEnvironmentIndex] === undefined
               ? "cloud"
@@ -7831,7 +7831,7 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
                 const parsedEnvironments =
-                  (!environments || Array.isArray(environments) && environments === 0)
+                  (!environments || (Array.isArray(environments) && environments === 0))
                     ? "cloud"
                     : environments[defaultEnvironmentIndex] === undefined
                       ? "cloud"
