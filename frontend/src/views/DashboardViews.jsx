@@ -739,7 +739,7 @@ const Dashboard = (props) => {
 				: null}
 			</div>
 
-			{widgetData === undefined || widgetData === null || widgetData === [] || widgetData.length === 0 ? null : 
+			{(!widgetData || (Array.isArray(widgetData) && widgetData.length === 0)) ? null : 
 				<Draggable>
 					<Paper style={{height: 350, width: 500, padding: "15px 15px 15px 15px", }}>
 						<LineChartWrapper keys={widgetData[0]} height={280} width={470}  />
