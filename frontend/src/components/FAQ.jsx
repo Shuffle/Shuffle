@@ -14,8 +14,8 @@ const classes = {
   },
 };
 
-const FAQItem = () => {
-  // const { question, answer } = props
+const FAQItem = (props) => {
+  const { question, answer } = props
 
   return (
     <div>
