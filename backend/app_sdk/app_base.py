@@ -2691,7 +2691,7 @@ class AppBase:
                         #self.logger.info(f"\n\nType of value: {type(value)}")
                         if isinstance(value, str):
                             # Could we take it here?
-                            self.logger.info(f"[DEBUG] Got value %s for parameter {paramname}" % value)
+                            #self.logger.info(f"[DEBUG] Got value %s for parameter {paramname}" % value)
                             # Should check if there is are quotes infront of and after the to_be_replaced
                             # If there are, then we need to sanitize the value
                             # 1. Look for the to_be_replaced in the data
@@ -2701,7 +2701,6 @@ class AppBase:
                             #    print(f"[DEBUG] Found quotes infront of and after {to_be_replaced}! This probably means it's JSON and should be sanitized.")
                             #    returnvalue = fix_json_string_value(value)
                             #    value = returnvalue
-
 
 
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)

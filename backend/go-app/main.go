@@ -3049,55 +3049,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	buildSwaggerApp(resp, body, user, false)
 }
 
-// Creates osfs from folderpath with a basepath as directory base
-func createFs(basepath, pathname string) (billy.Filesystem, error) {
-	log.Printf("[INFO] MemFS base: %s, pathname: %s", basepath, pathname)
 
-	fs := memfs.New()
-	err := filepath.Walk(pathname,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if strings.Contains(path, ".git") {
-				return nil
-			}
-
-			// Fix the inner path here
-			newpath := strings.ReplaceAll(path, pathname, "")
-			fullpath := fmt.Sprintf("%s%s", basepath, newpath)
-			switch mode := info.Mode(); {
-			case mode.IsDir():
-				err = fs.MkdirAll(fullpath, 0644)
-				if err != nil {
-					log.Printf("Failed making folder: %s", err)
-				}
-			case mode.IsRegular():
-				srcData, err := ioutil.ReadFile(path)
-				if err != nil {
-					log.Printf("Src error: %s", err)
-					return err
-				}
-
-				dst, err := fs.Create(fullpath)
-				if err != nil {
-					log.Printf("Dst error: %s", err)
-					return err
-				}
-
-				_, err = dst.Write(srcData)
-				if err != nil {
-					log.Printf("Dst write error: %s", err)
-					return err
-				}
-			}
-
-			return nil
-		})
-
-	return fs, err
-}
 
 // Hotloads new apps from a folder
 func handleAppHotload(ctx context.Context, location string, forceUpdate bool) error {
