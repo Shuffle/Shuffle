@@ -551,12 +551,12 @@ class AppBase:
 
                 # Proxyerrror
                 except requests.exceptions.ProxyError as e:
-                    self.logger.info(f"[ERROR] Proxy error: {e}")
+                    self.logger.info(f"[ERROR] Proxy error for url {url}: {e}")
                     self.proxy_config = {}
                     continue
 
                 except requests.exceptions.RequestException as e:
-                    self.logger.info(f"[DEBUG] Request problem: {e}")
+                    self.logger.info(f"[DEBUG] Request problem for url {url}: {e}"
                     time.sleep(sleeptime)
 
                     # Check if we have a read timeout. If we do, exit as we most likely sent the result without getting a good result
@@ -1576,9 +1576,10 @@ class AppBase:
                         "execution_id": self.current_execution_id
                     }
 
-                    self.logger.info("[ERROR] Before FULLEXEC stream result")
+                    resultsurl = "%s/api/v1/streams/results" % (self.base_url)
+                    self.logger.info("[ERROR] Before FULLEXEC stream result url '%s'" % (resultsurl))
                     ret = requests.post(
-                        "%s/api/v1/streams/results" % (self.base_url), 
+                        resultsurl,
                         headers=headers, 
                         json=tmpdata,
                         verify=False,
@@ -1600,7 +1601,7 @@ class AppBase:
                         continue
 
                     else:
-                        self.logger.info("[ERROR] Error in app with status code %d for results (2). Crashing because results can't be handled" % ret.status_code)
+                        self.logger.info("[ERROR] (fails: %d) Error in app with status code %d for results (2). Crashing because results can't be handled. Details: %s" % (i+1, ret.status_code, ret.text))
 
                         rettext = ret.text
                         failed = True 
@@ -1621,11 +1622,21 @@ class AppBase:
                 self.logger.info("[ERROR] FullExec Connectionerror: %s" %  e)
                 self.action_result["result"] = json.dumps({
                     "success": False,
-                    "reason": f"Connection error during startup: {e}"
+                    "reason": f"Connection error during startup (connection error): {e}"
                 })
 
                 self.send_result(self.action_result, headers, stream_path) 
                 return
+            except Exception as e:
+                self.logger.info("[ERROR] FullExec Exception outer: %s" %  e)
+                self.action_result["result"] = json.dumps({
+                    "success": False,
+                    "reason": f"Exception during startup of app (general error): {e}"
+                })
+
+                self.send_result(self.action_result, headers, stream_path) 
+                return
+
         else:
             self.logger.info(f"[DEBUG] Setting execution to default value with type {type(self.full_execution)}")
             try:
