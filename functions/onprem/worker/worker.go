@@ -1501,6 +1501,8 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 }
 
 func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.WorkflowExecution, streamResultUrl, subflowId string) error {
+	// FIXME: If MEMCACHE is enabled, check in this order:
+
 	extra := 0
 	for _, trigger := range workflowExecution.Workflow.Triggers {
 		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
@@ -2064,7 +2066,8 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		log.Printf("[DEBUG][%s] Running setexec with status %s and %d result(s)", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results))
+		log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		//result(s)", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results))
 		err = setWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
 			resp.WriteHeader(401)
@@ -2360,6 +2363,8 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 
 
 	port := listener.Addr().(*net.TCPAddr).Port
+	// Set the port environment variable
+	os.Setenv("WORKER_PORT", fmt.Sprintf("%d", port))
 
 	log.Printf("[DEBUG] Starting webserver (2) on port %d with hostname: %s", port, hostname)
 	appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, port)
@@ -2605,7 +2610,7 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 	client := shuffle.GetExternalClient(streamUrl)
 
 	// Set client timeout to 5 seconds
-	client.Timeout = time.Duration(10) * time.Second
+	//client.Timeout = time.Duration(10) * time.Second
 	newresp, err := client.Do(req)
 	if err != nil {
 		// Another timeout issue here somewhere
@@ -2807,6 +2812,7 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 		log.Printf("[DEBUG] Environments: %s. Source: %s. 1 env = webserver, 0 or >1 = default. Subflow exists: %#v", environments, workflowExecution.ExecutionSource, subflowFound)
 		if len(environments) == 1 && workflowExecution.ExecutionSource != "default" && !subflowFound {
 			log.Printf("[DEBUG] Running OPTIMIZED execution (not manual)")
+			os.Setenv("SHUFFLE_OPTIMIZED", "true")
 			listener := webserverSetup(workflowExecution)
 			err := executionInit(workflowExecution)
 			if err != nil {
@@ -2820,7 +2826,13 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 				handleExecutionResult(workflowExecution)
 			}()
 
+			log.Printf("[DEBUG] Running with port %#v", os.Getenv("WORKER_PORT"))
+
 			runWebserver(listener)
+
+			// Set environment variable
+
+
 			//log.Printf("Before wait")
 			//wg := sync.WaitGroup{}
 			//wg.Add(1)
@@ -3262,5 +3274,4 @@ func runWebserver(listener net.Listener) {
 	if err != nil {
 		log.Printf("[ERROR] Serve issue in worker: %#v", err)
 	}
-	log.Printf("[DEBUG] Do we see this?")
 }
