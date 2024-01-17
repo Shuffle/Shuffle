@@ -11,6 +11,7 @@ import { NestedMenuItem } from "mui-nested-menu";
 //import { useAlert 
 
 import {
+  Chip,
   ButtonGroup,
   Popper,
   TextField,
@@ -3298,14 +3299,12 @@ const ParsedAction = (props) => {
           <Typography style={{color: "rgba(255,255,255,0.7)"}}>Authentication</Typography>
           <div style={{ display: "flex" }}>
             <Select
-							MenuProps={{
-								disableScrollLock: true,
-							}}
+			  MenuProps={{
+			  	disableScrollLock: true,
+			  }}
               labelId="select-app-auth"
               value={
-                Object.getOwnPropertyNames(
-                  selectedAction.selectedAuthentication
-                ).length === 0
+                Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0
                   ? "No selection"
                   : selectedAction.selectedAuthentication
               }
@@ -3353,7 +3352,11 @@ const ParsedAction = (props) => {
                 <em>No selection</em>
               </MenuItem>
               {selectedAction.authentication.map((data) => {
-                //console.log("AUTH DATA: ", data)
+                console.log("AUTH DATA: ", data)
+				if (data.last_modified === true) {
+					console.log("LAST MODIFIED: ", data.label)
+				}
+
                 return (
                   <MenuItem
                     key={data.id}
@@ -3363,7 +3366,21 @@ const ParsedAction = (props) => {
                     }}
                     value={data}
                   >
-                    {data.label} - ({data.app.app_version})
+					{data.last_modified === true ? 
+						<Chip
+							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+							label={"Latest"}
+							variant="outlined"
+							color="secondary"
+						/>
+						: null}
+					<Chip
+						style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+						label={data.app.app_version}
+						variant="outlined"
+						color="secondary"
+					/>
+                    {data.label} 
                   </MenuItem>
                 );
               })}
@@ -3449,6 +3466,14 @@ const ParsedAction = (props) => {
                   }}
                   value={data.Name}
                 >
+				  {data.default === true ?
+					  <Chip
+						style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+						label={"Default"}
+						variant="outlined"
+						color="secondary"
+					  />
+					  : null}
                   {data.Name}
                 </MenuItem>
               );
@@ -3562,7 +3587,7 @@ const ParsedAction = (props) => {
             options={selectedApp.actions === undefined || selectedApp.actions === null ? [] : selectedApp.actions.filter((a) => a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))}
             ListboxProps={{
               style: {
-                backgroundColor: theme.palette.inputColor,
+                backgroundColor: theme.palette.surfaceColor,
                 color: "white",
               },
             }}

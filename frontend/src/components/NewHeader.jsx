@@ -454,12 +454,9 @@ const Header = (props) => {
         return response.json();
       })
       .then(function (responseJson) {
+	    console.log("In here?")
         if (responseJson.success === true) {
-          if (
-            responseJson.region_url !== undefined &&
-            responseJson.region_url !== null &&
-            responseJson.region_url.length > 0
-          ) {
+          if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) {
             console.log("Region Change: ", responseJson.region_url);
             localStorage.setItem("globalUrl", responseJson.region_url);
             //globalUrl = responseJson.region_url
@@ -468,9 +465,14 @@ const Header = (props) => {
           setTimeout(() => {
             window.location.reload();
           }, 2000);
+
           toast("Successfully changed active organization - refreshing!");
         } else {
-          toast("Failed changing org: ", responseJson.reason);
+		  if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+		    toast(responseJson.reason);
+		  } else {
+          	toast("Failed changing org. Try again or contact support@shuffler.io if this persists.");
+		  }
         }
       })
       .catch((error) => {

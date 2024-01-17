@@ -365,7 +365,6 @@ const WorkflowTemplatePopup = (props) => {
 										fontSize: 18,
 										color: "rgba(255, 132, 68, 1)",
 										marginTop: 32,
-										justifyContent: isMobile ? "center" : null,
 										fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
 										fontWeight: 550,
 									  }}
@@ -449,7 +448,7 @@ const WorkflowTemplatePopup = (props) => {
 
 
 	return (
-		<div style={{ display: "flex", maxWidth: isCloud ? 470 : isMobile? null: 450, minWidth: isCloud ? 470 : isMobile? null: 450, height: 78, borderRadius: 8, }}>
+		<div style={{ display: "flex", maxWidth: isCloud ? 470 : isMobile? 345: 450, minWidth: isCloud ? 470 : isMobile? null: 450, height: 78, borderRadius: 8, }}>
 			<ModalView />
 			<div
 				// variant={isActive === 1 ? "contained" : "outlined"} 
@@ -457,7 +456,7 @@ const WorkflowTemplatePopup = (props) => {
 				disabled={visualOnly === true}
 				style={{
 					margin: isHomePage ? isMobile ? null : 4 : 4 , 
-					width: "100%",
+					width: isHomePage? isMobile ? null : "100%" : "100%",
 					borderRadius: 8,
 					textTransform: "none",
 					backgroundColor: isHomePage ? null : theme.palette.inputColor,
@@ -503,31 +502,31 @@ const WorkflowTemplatePopup = (props) => {
 					<div style={{display: "flex", flex: 1, marginTop: 3, }}>
 						{img1 !== undefined && img1 !== "" && srcapp !== undefined && srcapp !== "" ?
 							<Tooltip title={srcapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
-								<span style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
+								<div style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
 									<img src={img1} style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleDefault : imagestyle} />
-								</span>
+								</div>
 							</Tooltip>
 						: 
-							<span style={{width: 50, }} />
+							<div style={{width: 50, }} />
 						}
 						{img2 !== undefined && img2 !== "" && dstapp !== undefined && dstapp !== "" ?
 							<Tooltip title={dstapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
-								<span style={{display: "flex", }}>
+								<div style={{display: "flex", }}>
 									<TrendingFlatIcon style={{ marginTop: 7, }} />
-									<span style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
+									<div style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
 										<img src={img2} style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleDefault : imagestyle} />
-									</span>
-								</span>
+									</div>
+								</div>
 							</Tooltip>
 						:
-							<span style={{width: 50, }} />
+							<div style={{width: 50, }} />
 						}	
 					</div>
 					<div style={{ flex: 3, marginLeft: 20, }}>
 						<Typography variant="body1" style={{ marginTop: parsedDescription.length === 0 ? 10 : 0, fontSize: isMobile ? 13 : 16,fontWeight: isHomePage? 600 : null,textTransform: 'capitalize', color: isHomePage ? "var(--White-text, #F1F1F1)" :"rgba(241, 241, 241, 1)"}} >
 							{parsedTitle}
 						</Typography>
-						<Typography variant="body2" color="textSecondary" style={{ fontSize: isMobile ? 10: 16, fontWeight: isHomePage ? 400 : null, textTransform: 'capitalize', marginTop: 0, overflow: "hidden", maxHeight: 21, overflow: "hidden",}} color="rgba(158, 158, 158, 1)">
+						<Typography variant="body2" color="textSecondary" style={{ fontSize: isMobile ? 10: 16, fontWeight: isHomePage ? 400 : null, textTransform: 'capitalize', marginTop: 0, overflow: "hidden", maxHeight: 31,}} color="rgba(158, 158, 158, 1)">
 							{parsedDescription}
 						</Typography>
 					</div>

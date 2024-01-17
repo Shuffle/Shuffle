@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
-import SearchBox from "./SearchData.jsx";
+import SearchBox from "../components/SearchData.jsx";
 
 import {
 	Chip,
@@ -91,8 +91,8 @@ const SearchField = props => {
 			}}
 		>
 			{isHeader ? <div style={{ display: "flex"}}>
-				<DialogTitle style={{ marginTop: 15, marginLeft: 5, color: "var(--Paragraph-text, #C8C8C8)" }} >Search for docs, apps, workflows and more</DialogTitle>
-				<Button fullWidth style={{ marginLeft: 470 }} onClick={() => {
+				<DialogTitle style={{ marginTop: 15, marginLeft: 5, color: "var(--Paragraph-text, #C8C8C8)" }} >Search for Docs, Apps, Workflows and more</DialogTitle>
+				<Button fullWidth style={{ marginLeft:180, }} onClick={() => {
 					setModalOpen(false);
 				}}><CloseIcon /></Button>
 			</div>

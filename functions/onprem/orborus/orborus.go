@@ -675,11 +675,13 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 		createdPod, err := clientset.CoreV1().Pods("shuffle").Create(context.Background(), pod, metav1.CreateOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating pod: %v\n", err)
+			log.Printf("[ERROR] Failed creating pod: %v", err)
+			return err
 		}
 
 		log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
-	} else {
+		return nil
+	} 
 
 		// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
@@ -837,9 +839,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		//}
 	} else {
 		log.Printf("[INFO][%s] New Worker created. Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
-	}
-
-	return nil
 	}
 
 	return nil
@@ -1039,10 +1038,15 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		Timestamp:    time.Now().Unix(),
 	}
 
+	// FIXME: Returning for now due to this causing network congestion
+	// and database fillup. The backend api also has it disabled.
+	return newStats
+
 	// Disable orborus stats
 	if os.Getenv("SHUFFLE_STATS_DISABLED") == "true" {
 		return newStats
 	}
+
 
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		newStats.Swarm = true

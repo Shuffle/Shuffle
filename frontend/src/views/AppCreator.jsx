@@ -1527,6 +1527,10 @@ const AppCreator = (defaultprops) => {
                 in: "query",
               };
 
+			  if (parameter.example !== undefined && parameter.example !== null) {
+				  tmpaction.example = parameter.example
+			  }
+
               if (parameter.required === undefined) {
                 tmpaction.required = false;
               }
@@ -2289,7 +2293,7 @@ const AppCreator = (defaultprops) => {
       }
 
 			const methodname = item.method.toLowerCase()
-			if (methodname === "post" || methodname === "put" || methodname === "patch") {
+			if (methodname === "post" || methodname === "put" || methodname === "patch" || methodname === "delete") {
       	if (
       	  item.body !== undefined &&
       	  item.body !== null &&
@@ -3432,11 +3436,11 @@ const AppCreator = (defaultprops) => {
   	};
 
   	const deletePathQuery = (index) => {
-			console.log("Should delete index: ", index)
-			var tmpqueries = JSON.parse(JSON.stringify(urlPathQueries))
-			tmpqueries.splice(index, 1)
+	  console.log("Should delete index: ", index)
+	  var tmpqueries = JSON.parse(JSON.stringify(urlPathQueries))
+	  tmpqueries.splice(index, 1)
 
-			console.log("Queries: ", tmpqueries)
+	  console.log("Queries: ", tmpqueries)
   	  setUrlPathQueries(tmpqueries);
 
   	  if (updater === "deleteupdater") {
@@ -4316,6 +4320,8 @@ const AppCreator = (defaultprops) => {
 
 							setCurrentAction(data);
 							setCurrentActionMethod(data.method);
+
+							console.log("QUERIES: ", data.queries)
 							setUrlPathQueries(data.queries);
 							setUrlPath(data.url);
 							setActionsModalOpen(true);

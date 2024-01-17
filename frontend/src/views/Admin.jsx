@@ -73,6 +73,7 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 
+  Flag as FlagIcon,
   FmdGood as FmdGoodIcon,
 } from "@mui/icons-material";
 
@@ -1812,7 +1813,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           {selectedAuthentication.label})
         </span>
 	  	<Typography variant="body1" color="textSecondary" style={{marginTop: 10}}>
-	  		You can not see the previous values for an authentication while editing. This is to keep your data secure. You can overwrite one- or multiple fields at a time.
+	  		You can <b>not</b> see the previous values for an authentication while editing. This is to keep your data secure. You can overwrite one- or multiple fields at a time.
 	  	</Typography>
       </DialogTitle>
       <DialogContent>
@@ -1844,7 +1845,14 @@ If you're interested, please let me know a time that works for you, or set up a 
 		  />
 
 		<Divider />
-        {selectedAuthentication.fields.map((data, index) => {
+	  	{selectedAuthentication.type === "oauth" || selectedAuthentication.type === "oauth2" || selectedAuthentication.type === "oauth2-app" ? 
+			<div>
+				<Typography variant="body1" color="textSecondary" style={{ marginBottom: 0, marginTop: 10 }}>
+					Only the name of the auth can be modified for Oauth2. Please remake the authentication to change the fields like Client ID, Secret, Scopes etc.
+				</Typography> 
+			</div>
+		:
+        selectedAuthentication.fields.map((data, index) => {
 		  var fieldname = data.key.replaceAll("_", " ")
 		  if (fieldname.endsWith(" basic")) {
 			  fieldname = fieldname.substring(0, fieldname.length - 6)
@@ -1913,6 +1921,10 @@ If you're interested, please let me know a time that works for you, or set up a 
                 error = true;
               }
             }
+
+	  		if (selectedAuthentication.type === "oauth" || selectedAuthentication.type === "oauth2" || selectedAuthentication.type === "oauth2-app") {
+				selectedAuthentication.fields = []
+			}
 
             if (error && fails === authenticationFields.length) {
 			  toast("Updating auth with new name only")
@@ -2427,16 +2439,23 @@ If you're interested, please let me know a time that works for you, or set up a 
     </Dialog>
   );
 
-
+  var regiontag = "eu";
+  if (userdata.region_url !== undefined && userdata.region_url !== null && userdata.region_url.length > 0) {
+    const regionsplit = userdata.region_url.split(".");
+    if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
+		const namesplit = regionsplit[0].split("/");
+	  
+		regiontag = namesplit[namesplit.length - 1];
+    }
+  }
   
   const organizationView =
     curTab === 0 && selectedOrganization.id !== undefined ? (
       <div style={{ position: "relative" }}>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Organization overview</h2>
-          <span style={{ marginLeft: 25 }}>
-            On this page you can configure individual parts of your
-            organization.{" "}
+          <Typography variant="body1" color="textSecondary" style={{ marginLeft: 0}}>
+            On this page organization admins can configure organisations, and sub-orgs (MSSP).{" "}
             <a
               target="_blank"
 							rel="noopener noreferrer"
@@ -2445,7 +2464,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             >
               Learn more
             </a>
-          </span>
+          </Typography>
         </div>
         {selectedOrganization.id === undefined ? (
           <div
@@ -2518,6 +2537,21 @@ If you're interested, please let me know a time that works for you, or set up a 
 								</FormControl>
 							</span>
 						: null}
+			{isCloud ? 
+				<Tooltip
+				  title={`Organization is in ${regiontag}. Click to change!`}
+				  style={{}}
+				>
+					<Avatar
+						style={{ top: -10, right: 50, position: "absolute", }}
+						onClick={() => {
+							toast("Region change is not implemented yet for users. Please contact support.")
+						}}
+					>
+						{regiontag}
+					</Avatar>
+				</Tooltip>
+			: null}
 
             <Tooltip
               title={"Copy Organization ID"}
@@ -2597,13 +2631,13 @@ If you're interested, please let me know a time that works for you, or set up a 
 							value={adminTab}
 							indicatorColor="primary"
 							textColor="secondary"
-							style={{marginTop: 20, }}
+							style={{marginTop: 50, }}
 							onChange={(event, inputValue) => {
-    						const newValue = parseInt(inputValue);
+    							const newValue = parseInt(inputValue);
 								setAdminTab(newValue);
 
-  							//const setConfig = (event, inputValue) => {
-    						navigate(`/admin?admin_tab=${admin_views[newValue]}`);
+								//const setConfig = (event, inputValue) => {
+								navigate(`/admin?admin_tab=${admin_views[newValue]}`);
 							}}
 							aria-label="disabled tabs example"
 						>
@@ -3846,7 +3880,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                       {data.defined ? (
                         <Tooltip
                           color="primary"
-                          title="Set in EVERY workflow in the organization"
+                          title="Set for EVERY instance of this App being used in this organization"
                           placement="top"
                         >
                           <IconButton
@@ -4289,7 +4323,7 @@ If you're interested, please let me know a time that works for you, or set up a 
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Organizations</h2>
           <span style={{ marginLeft: 25 }}>
-            Global admin: control organizations
+            Control sub organizations (tenants)! {isCloud ? "You can only make a sub organization if you are a customer of shuffle or running a POC of the platform. Please contact support@shuffler.io to try it out." : ""}. <a href="/docs/organizations" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: theme.palette.primary.main }}>Learn more</a>
           </span>
         </div>
         <Button
