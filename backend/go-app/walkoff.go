@@ -308,8 +308,13 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		environment = env.OrgId
 	}
 
-	if request.Method == "POST" {
-		if rand.Intn(1) == 0 {
+	// FIXME: Workflow stats disabled for now
+	// as it caused too many problems
+	// goal: track docker stuff once a minute and graph it
+	// For now: Disable this as it caused too many problems
+	if request.Method == "POST" && true == false {
+		//log.Printf("[DEBUG] POST to workflowqueue")
+		if rand.Intn(10) == 0 {
 			// Parse out body
 			body, err := ioutil.ReadAll(request.Body)
 			if err == nil {
