@@ -556,7 +556,7 @@ class AppBase:
                     continue
 
                 except requests.exceptions.RequestException as e:
-                    self.logger.info(f"[DEBUG] Request problem for url {url}: {e}"
+                    self.logger.info(f"[DEBUG] Request problem for url {url}: {e}")
                     time.sleep(sleeptime)
 
                     # Check if we have a read timeout. If we do, exit as we most likely sent the result without getting a good result
@@ -2036,6 +2036,10 @@ class AppBase:
                     # Goes here if loop 
                     if value == "#":
                         newvalue = []
+
+                        if basejson == None:
+                            return "", False
+
                         for innervalue in basejson:
                             # 1. Check the next item (message)
                             # 2. Call this function again
