@@ -448,7 +448,7 @@ const WorkflowTemplatePopup = (props) => {
 
 
 	return (
-		<div style={{ display: "flex", maxWidth: isCloud ? 470 : isMobile? 345: 450, minWidth: isCloud ? 470 : isMobile? null: 450, height: 78, borderRadius: 8, }}>
+		<div style={{ display: "flex", maxWidth: isCloud ? isMobile ? null : 470 : isMobile? 345: 450, minWidth: isCloud ? isMobile ? null : 470 : isMobile? null: 450, height: 78, borderRadius: 8, justifyContent: isMobile ? null : "center" }}>
 			<ModalView />
 			<div
 				// variant={isActive === 1 ? "contained" : "outlined"} 
@@ -522,7 +522,7 @@ const WorkflowTemplatePopup = (props) => {
 							<div style={{width: 50, }} />
 						}	
 					</div>
-					<div style={{ flex: 3, marginLeft: 20, }}>
+					<div style={{ flex: 3, marginLeft: 20, maxHeight: 50, overflow: "hidden", }}>
 						<Typography variant="body1" style={{ marginTop: parsedDescription.length === 0 ? 10 : 0, fontSize: isMobile ? 13 : 16,fontWeight: isHomePage? 600 : null,textTransform: 'capitalize', color: isHomePage ? "var(--White-text, #F1F1F1)" :"rgba(241, 241, 241, 1)"}} >
 							{parsedTitle}
 						</Typography>

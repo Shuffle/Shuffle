@@ -88,7 +88,6 @@ import Priorities from "../components/Priorities.jsx";
 import Branding from "../components/Branding.jsx";
 import Files from "../components/Files.jsx";
 import { display, style } from "@mui/system";
-//import EnvironmentStats from "../components/EnvironmentStats.jsx";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -181,10 +180,12 @@ const Admin = (props) => {
   const [secret2FA, setSecret2FA] = React.useState("");
   const [show2faSetup, setShow2faSetup] = useState(false);
 
-  const [adminTab, setAdminTab] = React.useState(2);
-	const [showApiKey, setShowApiKey] = useState(false);
+  const [adminTab, setAdminTab] = React.useState(3);
+  const [showApiKey, setShowApiKey] = useState(false);
   const [billingInfo, setBillingInfo] = React.useState({});
-	const [selectedStatus, setSelectedStatus] = React.useState([]);
+  const [selectedStatus, setSelectedStatus] = React.useState([]);
+
+  const [, forceUpdate] = React.useState();
 
   useEffect(() => {
 		getUsers()
@@ -2254,35 +2255,124 @@ If you're interested, please let me know a time that works for you, or set up a 
 
   const GridItem = (props) => {
     const [expanded, setExpanded] = React.useState(false);
+	const [showEdit, setShowEdit] = React.useState(false);
+	const [newValue, setNewValue] = React.useState(-100);
 
     const primary = props.data.primary;
     const secondary = props.data.secondary;
     const primaryIcon = props.data.icon;
-    const secondaryIcon = props.data.active ? (
+    const secondaryIcon = props.data.active ? 
       <CheckCircleIcon style={{ color: "green" }} />
-    ) : (
+   	  : 
       <CloseIcon style={{ color: "red" }} />
-    )
+
+	const submitFeatureEdit = (sync_features) => {
+		if (!userdata.support) {
+			console.log("User does not have support access and can't edit features");
+			return
+		}
+
+		sync_features.editing = true
+		const data = {
+			org_id: selectedOrganization.id,
+			sync_features: sync_features,
+    	};
+
+    	const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+    	fetch(url, {
+    	  mode: "cors",
+    	  method: "POST",
+    	  body: JSON.stringify(data),
+    	  credentials: "include",
+    	  crossDomain: true,
+    	  withCredentials: true,
+    	  headers: {
+    	    "Content-Type": "application/json; charset=utf-8",
+    	  },
+    	})
+    	  .then((response) =>
+    	    response.json().then((responseJson) => {
+    	      if (responseJson["success"] === false) {
+    	        toast("Failed updating org: ", responseJson.reason);
+    	      } else {
+				toast("Successfully edited org!");
+    	      }
+    	    })
+    	  )
+    	  .catch((error) => {
+    	    toast("Err: " + error.toString());
+    	  });
+	}
+
+	const enableFeature = () => {
+		console.log("Enabling "+primary)
+
+		console.log(selectedOrganization.sync_features)
+		// Check if primary is in sync_features
+		var tmpprimary = primary.replaceAll(" ", "_")
+		if (!(tmpprimary in selectedOrganization.sync_features)) {
+			console.log("Primary not in sync_features: "+tmpprimary)
+			return
+		}
+
+		if (props.data.active) {
+    		selectedOrganization.sync_features[tmpprimary].active = false 
+		} else {
+			selectedOrganization.sync_features[tmpprimary].active = true
+		}
+
+		setSelectedOrganization(selectedOrganization)
+		forceUpdate(Math.random())
+		submitFeatureEdit(selectedOrganization.sync_features)
+	}
+							
+	const submitEdit = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		// Check if primary is in sync_features
+		var tmpprimary = primary.replaceAll(" ", "_")
+		if (!(tmpprimary in selectedOrganization.sync_features)) {
+			console.log("Primary not in sync_features: "+tmpprimary)
+			return
+		}
+
+		// Make it into a number
+		var tmp = parseInt(newValue)
+		if (isNaN(tmp)) {
+			console.log("Not a number: "+newValue)
+			return
+		}
+
+		selectedOrganization.sync_features[tmpprimary].limit = tmp
+
+		setSelectedOrganization(selectedOrganization)
+		forceUpdate(Math.random())
+		submitFeatureEdit(selectedOrganization.sync_features)
+	}
 
     return (
       <Grid
         item
         xs={4}
-        style={{ cursor: "pointer" }}
-        onClick={() => {
-          setExpanded(!expanded);
-        }}
       >
         <Card
           style={{
             margin: 4,
-            backgroundColor: theme.palette.surfaceColor,
+            backgroundColor: theme.palette.platformColor,
+			borderRadius: theme.palette.borderRadius,
+			border: "1px solid rgba(255,255,255,0.3)",
             color: "white",
             minHeight: expanded ? 250 : "inherit",
-            maxHeight: expanded ? 250 : "inherit",
+            maxHeight: expanded ? 300 : "inherit",
           }}
         >
-          <ListItem>
+          <ListItem
+			style={{cursor: "pointer", }}
+			onClick={() => {
+			  setExpanded(!expanded);
+			}}
+		  >
             <ListItemAvatar>
               <Avatar>{primaryIcon}</Avatar>
             </ListItemAvatar>
@@ -2290,9 +2380,42 @@ If you're interested, please let me know a time that works for you, or set up a 
               style={{ textTransform: "capitalize" }}
               primary={primary}
             />
-            {secondaryIcon}
+		    {isCloud && userdata.support === true ?
+				<Tooltip title="Edit features (support users only)">
+		      		<EditIcon 
+						color="secondary" 
+						style={{marginRight: 10, cursor: "pointer", }} 
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+
+							if (showEdit) {
+								setShowEdit(false)
+								return
+							}
+
+							console.log("Edit")
+	
+							setShowEdit(true)
+						}}
+					/>
+				</Tooltip>
+		    : null}
+			<Tooltip title={props.data.active ? "Disable feature" : "Enable feature"}>
+				<span 
+					style={{cursor: "pointer", marginTop: 5, }}
+					onClick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+
+						enableFeature()
+					}}
+				>
+            		{secondaryIcon}
+				</span>
+			</Tooltip>
           </ListItem>
-          {expanded ? (
+          {expanded ? 
             <div style={{ padding: 15 }}>
               <Typography>
                 <b>Usage:&nbsp;</b>
@@ -2309,7 +2432,41 @@ If you're interested, please let me know a time that works for you, or set up a 
               </Typography>*/}
               <Typography style={{maxHeight: 150, overflowX: "hidden", overflowY: "auto"}}><b>Description:</b> {secondary}</Typography>
             </div>
-          ) : null}
+           : null}
+
+
+			{showEdit ?
+				<FormControl fullWidth onSubmit={(e) => {
+					console.log("Submit")
+					submitEdit(e)
+				}}>
+					<span style={{display: "flex", }}> 
+					
+						<TextField
+							style={{flex: 3, }}
+							color="primary"
+							label={"Edit value"}
+							defaultValue={props.data.limit}
+							style={{
+							}}
+							onChange={(event) => {
+								setNewValue(event.target.value)
+							}}
+						/>
+						<Button
+							style={{flex: 1, }}
+							variant="contained"
+							disabled={newValue < -1} 
+							onClick={(e) => {
+								console.log("Submit 2")
+								submitEdit(e)
+							}}
+						>
+							Submit
+						</Button>
+					</span>
+				</FormControl>
+			: null}
         </Card>
       </Grid>
     );
@@ -2658,7 +2815,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 							/>
 							<Tab
 								label=<span>
-									Licensing 
+									Billing & Stats
 								</span>
 							/>
 							<Tab
@@ -2858,12 +3015,12 @@ If you're interested, please let me know a time that works for you, or set up a 
             		  </div>
             		)}
             		<Typography variant="h6" style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}>
-            		  Cloud sync features 
+            		  Features 
             		</Typography>
             		<Typography variant="body2" color="textSecondary" style={{marginBottom: 10, marginLeft: 5, }}>
-									If not otherwise specified, Usage will reset monthly
+						Features and Limitations that are currently available to you in your Cloud or Hybrid Organization. App Executions (App Runs) reset monthly. If the organization is a customer or in a trial, these features limitations are not always enforced. 
             		</Typography>
-            		<Grid container style={{ width: "100%", marginBottom: 15 }}>
+            		<Grid container style={{ width: "100%", marginBottom: 15, paddingBottom: 150,  }}>
 
             		  {selectedOrganization.sync_features === undefined ||
             		  selectedOrganization.sync_features === null
@@ -2872,15 +3029,15 @@ If you're interested, please let me know a time that works for you, or set up a 
             		        key,
             		        index
             		      ) {
-												// unnecessary parts
-            		        if (key === "schedule" || key === "apps" || key === "updates") {
+
+            		        if (key === "schedule" || key === "apps" || key === "updates" || key === "editing") {
             		          return null;
             		        }
 
             		        const item = selectedOrganization.sync_features[key];
-												if (item === null) {
-													return null
-												}
+							if (item === null) {
+								return null
+							}
 
             		        const newkey = key.replaceAll("_", " ");
             		        const griditem = {

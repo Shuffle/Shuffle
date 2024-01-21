@@ -1022,7 +1022,7 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
 		  console.log("GOT A RESPONSE??")
-      getWorkflowExecutionCount(id);
+      // getWorkflowExecutionCount(id);
         if (responseJson !== undefined && responseJson !== null && responseJson.executions !== undefined && responseJson.executions !== null) {
 
           // - means it's opposite
@@ -13758,6 +13758,40 @@ const AngularWorkflow = (defaultprops) => {
   	</div>
   : null
 
+  const RightsideBar = () => {
+	  const [hovered, setHovered] = useState(false)
+
+	  return (
+		  <div 
+		  	style={{
+				position: "fixed", right: -5, top: "40%", width: 70, height: 235, border: "1px solid #f85a3e", cursor: "pointer", borderRadius: theme.palette.borderRadius, 
+				padding: 10, 
+				backgroundColor: hovered ? theme.palette.surfaceColor : theme.palette.platformColor, 
+			}}
+		    onMouseEnter={() => setHovered(true)}
+		    onMouseLeave={() => setHovered(false)}
+		  	onClick={() => {
+			  setExecutionModalOpen(true);
+			  getWorkflowExecution(props.match.params.key, "");
+			}}
+		  >
+  			<ArrowLeftIcon style={{marginTop: 10, marginLeft: 10, marginBottom: 10, }}/> 
+		  	<Typography 
+		  		variant="h6" 
+		  		style={{
+					writingMode: "vertical-rl", 
+					textOrientation: "mixed", 
+					marginLeft: 10, 
+					fontWeight: "bold",
+				}}
+		  	>
+		  		Explore runs 
+		  	</Typography>
+		  {/*<ArrowLeftIcon style={{marginTop: 10, marginLeft: 10, marginBottom: 10, }}/> */}
+		  </div>
+	  )
+  }
+
   const BottomCytoscapeBar = () => {
     if (workflow.id === undefined || workflow.id === null || (!workflow.public && apps.length === 0)) {
       return null;
@@ -15069,7 +15103,7 @@ const AngularWorkflow = (defaultprops) => {
 			  >
 				<h2 style={{ color: "rgba(255,255,255,0.5)" }}>
 				  <DirectionsRunIcon style={{ marginRight: 10 }} />
-				  All Workflow Runs: { workflowExecutionCount } 
+				  All Workflow Runs
 				</h2>
 			  </Breadcrumbs>
 			  <Tooltip
@@ -16514,6 +16548,7 @@ const AngularWorkflow = (defaultprops) => {
   			{showErrors} 
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
+			<RightsideBar />
 		</span>
 	  }
     </div>

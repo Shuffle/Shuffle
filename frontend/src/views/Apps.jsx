@@ -921,6 +921,7 @@ const Apps = (props) => {
 					</Link>
 			: null
 
+	console.log("Sharing config: ", sharingConfiguration);
     const activateButton = 
       selectedApp.generated && !selectedApp.activated ? (
         <div>
@@ -943,6 +944,7 @@ const Apps = (props) => {
               onClick={() => {
                 setDeleteModalOpen(true);
               }}
+		  	  disabled={sharingConfiguration === undefined || sharingConfiguration === null || sharingConfiguration == "public"}
             >
               <DeleteIcon />
             </Button>
@@ -957,7 +959,7 @@ const Apps = (props) => {
         (selectedApp.downloaded !== undefined && selectedApp.downloaded == true) ||
         !selectedApp.generated) &&
       activateButton === null ? (
-        <Tooltip title={"Delete app"}>
+        <Tooltip title={"Delete app (confirm box will show)"}>
           <Button
             variant="outlined"
             component="label"
@@ -966,6 +968,7 @@ const Apps = (props) => {
             onClick={() => {
               setDeleteModalOpen(true);
             }}
+		    disabled={sharingConfiguration === undefined || sharingConfiguration === null || sharingConfiguration == "public"}
           >
             <DeleteIcon />
           </Button>
@@ -1240,48 +1243,50 @@ const Apps = (props) => {
               </Select>
 
 		    {isCloud && (selectedApp.sharing === true || selectedApp.public === true || creatorProfile.github_avatar !== undefined) && !internalIds.includes(selectedApp.name.toLowerCase()) ? 
-            	<Button
-            	  variant="contained"
-            	  component="label"
-            	  color="primary"
-            	  onClick={() => {
-            	    const tmpurl = new URL(window.location.href);
-            	    const searchParams = tmpurl.searchParams;
-            	    const queryID = searchParams.get("queryID");
+				<Tooltip title="Deactivates this app for the current organisation. This means the app will not be usable again until you re-activate it." placement="top">
+            		<Button
+            		  variant="contained"
+            		  component="label"
+            		  color="primary"
+            		  onClick={() => {
+            		    const tmpurl = new URL(window.location.href);
+            		    const searchParams = tmpurl.searchParams;
+            		    const queryID = searchParams.get("queryID");
 
-            	    if (queryID !== undefined && queryID !== null) {
-            	      aa("init", {
-            	        appId: "JNSS5CFDZZ",
-            	        apiKey: "db08e40265e2941b9a7d8f644b6e5240",
-            	      });
+            		    if (queryID !== undefined && queryID !== null) {
+            		      aa("init", {
+            		        appId: "JNSS5CFDZZ",
+            		        apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+            		      });
 
-            	      const timestamp = new Date().getTime();
-            	      aa("sendEvents", [
-            	        {
-            	          eventType: "conversion",
-            	          eventName: "Public App Activated",
-            	          index: "appsearch",
-            	          objectIDs: [selectedApp.id],
-            	          timestamp: timestamp,
-            	          queryID: queryID,
-            	          userToken:
-            	            userdata === undefined ||
-            	            userdata === null ||
-            	            userdata.id === undefined
-            	              ? "unauthenticated"
-            	              : userdata.id,
-            	        },
-            	      ]);
-            	    } else {
-            	      console.log("No query to handle when activating");
-            	    }
+            		      const timestamp = new Date().getTime();
+            		      aa("sendEvents", [
+            		        {
+            		          eventType: "conversion",
+            		          eventName: "Public App Activated",
+            		          index: "appsearch",
+            		          objectIDs: [selectedApp.id],
+            		          timestamp: timestamp,
+            		          queryID: queryID,
+            		          userToken:
+            		            userdata === undefined ||
+            		            userdata === null ||
+            		            userdata.id === undefined
+            		              ? "unauthenticated"
+            		              : userdata.id,
+            		        },
+            		      ]);
+            		    } else {
+            		      console.log("No query to handle when activating");
+            		    }
 
-            	    activateApp(selectedApp.id, true)
-            	  }}
-            	  style={{ height: 35, marginTop: 0, marginLeft: 10, }}
-            	>
-				  Deactivate 
-            	</Button>
+            		    activateApp(selectedApp.id, true)
+            		  }}
+            		  style={{ height: 35, marginTop: 0, marginLeft: 10, }}
+            		>
+					  Deactivate 
+            		</Button>
+				</Tooltip>
 				: null}
             </div>
           ) : null}
