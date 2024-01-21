@@ -120,7 +120,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 	}
 
 	//log.Printf("[DEBUG][%s] Setting with %d results (pre)", workflowExecution.ExecutionId, len(workflowExecution.Results))
-	workflowExecution = shuffle.Fixexecution(ctx, workflowExecution)
+	workflowExecution, _ = shuffle.Fixexecution(ctx, workflowExecution)
 	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
 
 	execData, err := json.Marshal(workflowExecution)
@@ -2215,7 +2215,7 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 	}
 
 	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
-	workflowExecution = shuffle.Fixexecution(ctx, workflowExecution)
+	workflowExecution, _ = shuffle.Fixexecution(ctx, workflowExecution)
 	_, extra, _, _, _, _, _, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 
 	log.Printf("[INFO][%s] VALIDATION. Status: %s, shuffle.Actions: %d, Extra: %d, Results: %d. Parent: %#v", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results), workflowExecution.ExecutionParent)
