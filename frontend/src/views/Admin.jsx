@@ -4221,7 +4221,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             />
             <ListItemText
               primary="Type"
-              style={{ minWidth: 125, maxWidth: 125 }}
+              style={{ minWidth: 100, maxWidth: 100, }}
             />
             <ListItemText
               primary={"In Queue"}
@@ -4229,7 +4229,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             />
             <ListItemText
               primary="Default"
-              style={{ minWidth: 150, maxWidth: 150 }}
+              style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
               primary="Actions"
@@ -4359,22 +4359,22 @@ If you're interested, please let me know a time that works for you, or set up a 
 
                   	  <ListItemText
                   	    primary={environment.Type}
-                  	    style={{ minWidth: 125, maxWidth: 125 }}
+                  	    style={{ minWidth: 100, maxWidth: 100, }}
                   	  />
                   	  <ListItemText
                   	    style={{
                   	      minWidth: 100,
                   	      maxWidth: 100,
                   	      overflow: "hidden",
-                  	      marginLeft: 10,
+                  	      marginLeft: 0,
                   	    }}
 
                   	    primary={queueSize}
                   	  />
                   	  <ListItemText
                   	    style={{
-                  	      minWidth: 140,
-                  	      maxWidth: 140,
+                  	      minWidth: 80,
+                  	      maxWidth: 80,
                   	      overflow: "hidden",
                   	    }}
                   	    primary={environment.default ? "true" : null}
@@ -4382,7 +4382,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	    {environment.default ? null : (
                   	      <Button
                   	        variant="outlined"
-                  	        style={{ marginRight: 5 }}
+                  	        style={{ marginLeft: 0, marginRight: 0, }}
                   	        onClick={() => setDefaultEnvironment(environment)}
                   	        color="primary"
                   	      >

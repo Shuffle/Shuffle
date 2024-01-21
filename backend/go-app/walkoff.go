@@ -1067,7 +1067,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			// Special for user input callbacks
 			return workflowExecution, fmt.Sprintf("%s", err), nil
 		} else {
-			log.Printf("[ERROR] Failed in prepareExecution: %s", err)
+			log.Printf("[ERROR] Failed in prepareExecution: '%s'", err)
 			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed starting workflow: %s", err), err
 		}
 	}
@@ -1892,7 +1892,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("[AUDIT] Starting execution of workflow '%s' by user %s (%s)!", fileId, user.Username, user.Id)
+	log.Printf("[AUDIT] Starting execution of workflow '%s' by user '%s' (%s). If this is empty, it's most likely a subflow!", fileId, user.Username, user.Id)
 
 	user.ActiveOrg.Users = []shuffle.UserMini{}
 	workflow.ExecutingOrg = user.ActiveOrg

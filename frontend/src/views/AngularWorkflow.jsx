@@ -10634,7 +10634,6 @@ const AngularWorkflow = (defaultprops) => {
   };
 
 	const handleWorkflowSelectionUpdate = (e, isUserinput) => {
-		setUpdate(Math.random());
 
 		if (e.target.value === undefined || e.target.value === null || e.target.value.id === undefined) {
 			console.log("Returning as there's no id. Value: ", e.target.value);
@@ -10642,6 +10641,16 @@ const AngularWorkflow = (defaultprops) => {
 		}
 
 		const paramIndex = isUserinput === true ? 5 : 0
+
+		console.log("USERINPUT: ", paramIndex, workflow.triggers[selectedTriggerIndex])
+		if (workflow.triggers[selectedTriggerIndex].parameters[paramIndex] === undefined || workflow.triggers[selectedTriggerIndex].parameters[paramIndex] === null) { 
+			workflow.triggers[selectedTriggerIndex].parameters[paramIndex] = {
+				"name": "subflow",
+				"value": "",
+			}
+		}
+
+		setUpdate(Math.random());
 		workflow.triggers[selectedTriggerIndex].parameters[paramIndex].value = e.target.value.id;
 		setSubworkflow(e.target.value);
 

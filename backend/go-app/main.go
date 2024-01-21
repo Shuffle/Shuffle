@@ -22,7 +22,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"net/http/httptest"
 	"strings"
@@ -32,7 +31,7 @@ import (
 	"github.com/frikky/kin-openapi/openapi2conv"
 	"github.com/frikky/kin-openapi/openapi3"
 
-	"github.com/go-git/go-billy/v5"
+	//"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -3055,7 +3054,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 func handleAppHotload(ctx context.Context, location string, forceUpdate bool) error {
 
 	basepath := "base"
-	fs, err := createFs(basepath, location)
+	fs, err := shuffle.CreateFs(basepath, location)
 	if err != nil {
 		log.Printf("Failed memfs creation - probably bad path: %s", err)
 		return errors.New(fmt.Sprintf("Failed to find directory %s", location))
