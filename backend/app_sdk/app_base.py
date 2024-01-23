@@ -3289,7 +3289,8 @@ class AppBase:
                                 }))
 
                             if parameter["name"] == "body": 
-                                self.logger.info(f"[INFO] Should debug field with liquid and other checks as it's BODY: {value}")
+                                #self.logger.info(f"[INFO] Should debug field with liquid and other checks as it's BODY: {value}")
+                                pass
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"

@@ -1056,7 +1056,15 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		return shuffle.WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
 	}
 
-	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, 10)
+	maxExecutionDepth := 10
+	if os.Getenv("SHUFFLE_MAX_EXECUTION_DEPTH") != "" {
+		maxExecutionDepthNew, err  = strconv.Atoi(os.Getenv("SHUFFLE_MAX_EXECUTION_DEPTH"))
+		if err == nil && maxExecutionDepthNew > 1 && maxExecutionDepthNew < 1000 {
+			maxExecutionDepth = maxExecutionDepthNew
+		}
+	}
+
+	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, maxExecutionDepth)
 	if err != nil {
 		err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 		if err != nil {
