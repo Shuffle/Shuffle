@@ -421,7 +421,11 @@ const AppStats = (defaultprops) => {
 					}>
 						<Paper style={paperStyle}>
 							<Typography variant="h4">
-								${apprunCost}
+								{selectedOrganization.lead_info.customer === false && selectedOrganization.lead_info.pov === false ?
+									0 
+									: 
+									apprunCost
+								}
 							</Typography>
 							<Typography variant="h6">
 								Period Cost

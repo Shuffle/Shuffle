@@ -1011,62 +1011,62 @@ If you're interested, please let me know a time that works for you, or set up a 
             responseJson.sync_features = {};
           }
 
-					if (responseJson.lead_info !== undefined && responseJson.lead_info !== null) {
-						var leads = []
-						if (responseJson.lead_info.contacted) {
-							leads.push("contacted")
-						}
+			if (responseJson.lead_info !== undefined && responseJson.lead_info !== null) {
+				var leads = []
+				if (responseJson.lead_info.contacted) {
+					leads.push("contacted")
+				}
 
-						if (responseJson.lead_info.customer) {
-							leads.push("customer")
-						}
+				if (responseJson.lead_info.customer) {
+					leads.push("customer")
+				}
 
-						if (responseJson.lead_info.old_customer) {
-							leads.push("old customer")
-						}
+				if (responseJson.lead_info.old_customer) {
+					leads.push("old customer")
+				}
 
-						if (responseJson.lead_info.old_lead) {
-							leads.push("old lead")
-						}
+				if (responseJson.lead_info.old_lead) {
+					leads.push("old lead")
+				}
 
-						if (responseJson.lead_info.tech_partner) {
-							leads.push("tech partner")
-						}
+				if (responseJson.lead_info.tech_partner) {
+					leads.push("tech partner")
+				}
 
-						if (responseJson.lead_info.creator) {
-							leads.push("creator")
-						}
+				if (responseJson.lead_info.creator) {
+					leads.push("creator")
+				}
 
-						if (responseJson.lead_info.opensource) {
-							leads.push("open source")
-						}
+				if (responseJson.lead_info.opensource) {
+					leads.push("open source")
+				}
 
-						if (responseJson.lead_info.demo_done) {
-							leads.push("demo done")
-						}
+				if (responseJson.lead_info.demo_done) {
+					leads.push("demo done")
+				}
 
-						if (responseJson.lead_info.pov) {
-							leads.push("pov")
-						}
+				if (responseJson.lead_info.pov) {
+					leads.push("pov")
+				}
 
-						if (responseJson.lead_info.lead) {
-							leads.push("lead")
-						}
+				if (responseJson.lead_info.lead) {
+					leads.push("lead")
+				}
 
-						if (responseJson.lead_info.student) {
-							leads.push("student")
-						}
+				if (responseJson.lead_info.student) {
+					leads.push("student")
+				}
 
-						if (responseJson.lead_info.internal) {
-							leads.push("internal")
-						}
+				if (responseJson.lead_info.internal) {
+					leads.push("internal")
+				}
 
-						if (responseJson.lead_info.sub_org) {
-							leads.push("sub_org")
-						}
+				if (responseJson.lead_info.sub_org) {
+					leads.push("sub_org")
+				}
 
-						setSelectedStatus(leads)
-					}
+				setSelectedStatus(leads)
+			}
 
           setSelectedOrganization(responseJson)
           var lists = {
@@ -1503,6 +1503,19 @@ If you're interested, please let me know a time that works for you, or set up a 
       })
       .then((responseJson) => {
         setEnvironments(responseJson);
+
+		// Helper info for users in case they have a large queue and don't know about queue flushing
+		if (responseJson !== undefined && responseJson !== null && responseJson.length > 0) {
+			for (var i = 0; i < responseJson.length; i++) {
+				const env = responseJson[i];
+
+				// Check if queuesize is too large
+				if (env.queue !== undefined && env.queue !== null && env.queue > 100) {
+					toast("Queue size for " + env.name + " is very large. We recommend you to reduce it by flushing the queue before continuing.");
+					break
+				}
+			}
+		}
       })
       .catch((error) => {
         toast(error.toString());
@@ -2405,6 +2418,10 @@ If you're interested, please let me know a time that works for you, or set up a 
 				<span 
 					style={{cursor: "pointer", marginTop: 5, }}
 					onClick={(e) => {
+						if (!isCloud || userdata.support !== true) {
+							return
+						}
+
 						e.preventDefault();
 						e.stopPropagation();
 
@@ -4269,7 +4286,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 
 				//console.log("Show CPU alert: ", showCPUAlert)
 
-				const queueSize = environment.queue !== undefined && environment.queue !== null ? environment.queue < 0 ? 0 : environment.queue > 99 ? ">99" : environment.queue : 0
+				const queueSize = environment.queue !== undefined && environment.queue !== null ? environment.queue < 0 ? 0 : environment.queue > 1000 ? ">1000" : environment.queue : 0
 
                 return (
 									<span key={index}>

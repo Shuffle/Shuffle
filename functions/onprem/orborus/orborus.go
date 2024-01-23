@@ -396,14 +396,14 @@ func deployServiceWorkers(image string) {
 		}
 
 		innerContainerName := fmt.Sprintf("shuffle-workers")
-		cnt, _ := findActiveSwarmNodes()
+		cnt, err := findActiveSwarmNodes()
+		if err != nil {
+			log.Printf("[ERROR] Failed to find active swarm nodes: %s. Defaulting to 1", err)
+		}
+
 		nodeCount := uint64(1)
 		if cnt > 0 {
 			nodeCount = uint64(cnt)
-		}
-
-		if cnt == 0 {
-			cnt = 1
 		}
 
 		appReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
@@ -477,6 +477,7 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 						fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
 						fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")),
+						fmt.Sprintf("SHUFFLE_MAX_SWARM_NODES=%d", os.Getenv("SHUFFLE_MAX_SWARM_NODES")),
 					},
 					//Hosts: []string{
 					//	innerContainerName,
@@ -927,7 +928,7 @@ func findActiveSwarmNodes() (int64, error) {
 	ctx := context.Background()
 	nodes, err := dockercli.NodeList(ctx, types.NodeListOptions{})
 	if err != nil {
-		return 0, err
+		return 1, err
 	}
 
 	nodeCount := int64(0)
@@ -938,13 +939,21 @@ func findActiveSwarmNodes() (int64, error) {
 		}
 	}
 
-	return nodeCount, nil
+	// Check for SHUFFLE_MAX_NODES
+	// Make it into a number and check if it's lower than nodeCount
+	maxNodesString := os.Getenv("SHUFFLE_MAX_SWARM_NODES")
+	if len(maxNodesString) > 0 {
+		maxNodes, err := strconv.ParseInt(maxNodesString, 10, 64)
+		if err != nil {
+			return nodeCount, err
+		}
 
-	/*
-		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-			All: true,
-		})
-	*/
+		if nodeCount > maxNodes {
+			nodeCount = maxNodes
+		}
+	}
+
+	return nodeCount, nil
 }
 
 // Get IP
@@ -1632,6 +1641,10 @@ func main() {
 			if len(overrideHttpsProxy) > 0 {
 				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
 				env = append(env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
+			}
+
+			if len(os.Getenv("SHUFFLE_MAX_SWARM_NODES")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_MAX_SWARM_NODES=%s", os.Getenv("SHUFFLE_MAX_SWARM_NODES")))
 			}
 
 			err = deployWorker(workerImage, containerName, env, execution)
