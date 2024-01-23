@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v23.0.3+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.5.61
+	github.com/shuffle/shuffle-shared v0.5.63
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3

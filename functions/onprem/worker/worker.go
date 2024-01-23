@@ -2485,7 +2485,7 @@ func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 	ctx := context.Background()
 	nodes, err := dockercli.NodeList(ctx, types.NodeListOptions{})
 	if err != nil {
-		return 0, err
+		return 1, err
 	}
 
 	nodeCount := int64(0)
@@ -2493,6 +2493,20 @@ func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 		//log.Printf("ID: %s - %#v", node.ID, node.Status.State)
 		if node.Status.State == "ready" {
 			nodeCount += 1
+		}
+	}
+
+	// Check for SHUFFLE_MAX_NODES
+	maxNodesString := os.Getenv("SHUFFLE_MAX_SWARM_NODES")
+	// Make it into a number and check if it's lower than nodeCount
+	if len(maxNodesString) > 0 {
+		maxNodes, err := strconv.ParseInt(maxNodesString, 10, 64)
+		if err != nil {
+			return nodeCount, err
+		}
+
+		if nodeCount > maxNodes {
+			nodeCount = maxNodes
 		}
 	}
 
