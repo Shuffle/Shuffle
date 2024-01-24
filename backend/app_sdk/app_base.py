@@ -2073,9 +2073,9 @@ class AppBase:
                         # Means it's a single item -> continue
                         if seconditem == "":
                             print("[INFO] In first - handling %s. Len: %d" % (firstitem, len(basejson)))
-                            if firstitem.lower() == "max" or firstitem.lower() == "last" or firstitem.lower() == "end": 
+                            if str(firstitem).lower() == "max" or str(firstitem).lower() == "last" or str(firstitem).lower() == "end": 
                                 firstitem = len(basejson)-1
-                            elif firstitem.lower() == "min" or firstitem.lower() == "first": 
+                            elif str(firstitem).lower() == "min" or str(firstitem).lower() == "first": 
                                 firstitem = 0
                             else:
                                 firstitem = int(firstitem)
@@ -2099,9 +2099,9 @@ class AppBase:
                                 firstitem = int(firstitem)
 
                             if isinstance(seconditem, str): 
-                                if seconditem.lower() == "max" or seconditem.lower() == "last" or firstitem.lower() == "end": 
+                                if str(seconditem).lower() == "max" or str(seconditem).lower() == "last" or str(firstitem).lower() == "end": 
                                     seconditem = len(basejson)-1
-                                elif seconditem.lower() == "min" or seconditem.lower() == "first": 
+                                elif str(seconditem).lower() == "min" or str(seconditem).lower() == "first": 
                                     seconditem = 0
                                 else:
                                     seconditem = int(seconditem)
