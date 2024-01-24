@@ -2137,6 +2137,12 @@ class AppBase:
                             if isinstance(basejson, list): 
                                 print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
                                 return basejson, False
+                            elif isinstance(basejson, bool):
+                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (bool): %s" % value)
+                                return basejson, False
+                            elif isinstance(basejson, int):
+                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (int): %s" % value)
+                                return basejson, False
                             elif isinstance(basejson[value], str):
                                 try:
                                     if (basejson[value].endswith("}") and basejson[value].endswith("}")) or (basejson[value].startswith("[") and basejson[value].endswith("]")):
@@ -2158,6 +2164,12 @@ class AppBase:
 
                             if isinstance(basejson, list): 
                                 print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
+                                return basejson, False
+                            elif isinstance(basejson, bool):
+                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (bool): %s" % value)
+                                return basejson, False
+                            elif isinstance(basejson, int):
+                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (int): %s" % value)
                                 return basejson, False
                             elif isinstance(basejson[value], str):
                                 print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
