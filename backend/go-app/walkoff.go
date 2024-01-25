@@ -932,13 +932,15 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	log.Printf("[DEBUG] Attempting to delete the workflow %s from the database...", fileId)
 	err = shuffle.DeleteKey(ctx, "workflow", fileId)
 	if err != nil {
-		log.Printf("[DEBUG]] Failed deleting key %s", fileId)
-		resp.WriteHeader(401)
+		log.Printf("[DEBUG] Failed deleting workflow key %s", fileId)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false, "reason": "Failed deleting key"}`))
 		return
 	}
+
 	log.Printf("[INFO] Should have deleted workflow %s (%s)", workflow.Name, fileId)
 
 	cacheKey := fmt.Sprintf("%s_workflows", user.Id)

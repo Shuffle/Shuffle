@@ -562,7 +562,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 
 	currentOrg := user.ActiveOrg
 	if user.ActiveOrg.Id == "" {
-		log.Printf("[WARNING] There's no active org for the user %s. Checking if there's a single one to assing it to.", user.Username)
+		log.Printf("[WARNING] There's no active org for the user %s. Checking if there's a single one to assign it to.", user.Username)
 
 		orgs, err := shuffle.GetAllOrgs(ctx)
 		if err == nil && len(orgs) > 0 {
@@ -620,10 +620,42 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 
 	err = createNewUser(data.Username, data.Password, role, apikey, currentOrg)
 	if err != nil {
-		log.Printf("[WARNING] Failed registering user: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
+		if strings.Contains(err.Error(), "already exists") {
+			// Assign it to the org
+			log.Printf("[WARNING] User %s already exists. Assigning to org %s", data.Username, currentOrg.Name)
+
+			// Get the user
+			users, err := shuffle.FindUser(ctx, data.Username)
+			if err != nil || len(users) == 0 {
+				log.Printf("[WARNING] Failed finding user %s: %s", data.Username, err)
+				resp.WriteHeader(400)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+				return
+			}
+
+			newUser := users[0]
+
+			if !strings.Contains(newUser.Orgs[0], currentOrg.Id) {
+				newUser.Orgs = append(newUser.Orgs, currentOrg.Id)
+			}
+
+			if newUser.ActiveOrg.Id == "" || newUser.ActiveOrg.Name == "" {
+				newUser.ActiveOrg = currentOrg
+			}
+
+			err = shuffle.SetUser(ctx, &newUser, false)
+			if err != nil {
+				log.Printf("[WARNING] Failed updating the user %s: %s", data.Username, err)
+				resp.WriteHeader(400)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+				return
+			}
+		} else {
+			log.Printf("[WARNING] Failed registering user: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
 	}
 
 	resp.WriteHeader(200)
