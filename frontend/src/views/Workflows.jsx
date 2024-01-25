@@ -2859,55 +2859,55 @@ const Workflows = (props) => {
       				<FormControl style={{flex: 1, marginLeft: 5, }}>
       				  <InputLabel htmlFor="grouped-select-usecase">Usecases</InputLabel>
       				  <Select 
-									defaultValue="" 
-									id="grouped-select" 
-									label="Matching Usecase" 
-									multiple
-									value={selectedUsecases}
-									renderValue={(selected) => selected.join(', ')}
-									onChange={(event) => {
-										console.log("Changed: ", event)
-									}}
-								>
+							defaultValue="" 
+							id="grouped-select" 
+							label="Matching Usecase" 
+							multiple
+							value={selectedUsecases}
+							renderValue={(selected) => selected.join(', ')}
+							onChange={(event) => {
+								console.log("Changed: ", event)
+							}}
+						>
       				    <MenuItem value="">
       				      <em>None</em>
       				    </MenuItem>
-									{usecases.map((usecase, index) => {
-										//console.log(usecase)
-										return (
-											<span key={index}>
-												<ListSubheader
-													style={{
-														color: usecase.color
-													}}
-												>
-													{usecase.name}
-												</ListSubheader>
-												{usecase.list.map((subcase, subindex) => {
-													//console.log(subcase)
-													total_count += 1
-													return (
-														<MenuItem key={subindex} value={total_count} onClick={(event) => {
-															if (selectedUsecases.includes(subcase.name)) {
-																const itemIndex = selectedUsecases.indexOf(subcase.name)
-																if (itemIndex > -1) {
-																	selectedUsecases.splice(itemIndex, 1)
-																}
-															} else {
-																selectedUsecases.push(subcase.name)
-															}
+							{usecases.map((usecase, index) => {
+								//console.log(usecase)
+								return (
+									<span key={index}>
+										<ListSubheader
+											style={{
+												color: usecase.color
+											}}
+										>
+											{usecase.name}
+										</ListSubheader>
+										{usecase.list.map((subcase, subindex) => {
+											//console.log(subcase)
+											total_count += 1
+											return (
+												<MenuItem key={subindex} value={total_count} onClick={(event) => {
+													if (selectedUsecases.includes(subcase.name)) {
+														const itemIndex = selectedUsecases.indexOf(subcase.name)
+														if (itemIndex > -1) {
+															selectedUsecases.splice(itemIndex, 1)
+														}
+													} else {
+														selectedUsecases.push(subcase.name)
+													}
 
-    	  													setUpdate(Math.random());
-															setSelectedUsecases(selectedUsecases)
-														}}>
-            	  							<Checkbox style={{color: selectedUsecases.includes(subcase.name) ? usecase.color : theme.palette.inputColor}} checked={selectedUsecases.includes(subcase.name)} />
-								              <ListItemText primary={subcase.name} />
-														</MenuItem>
-													)
-												})}
-											</span>
-										)
-									})}
+													setUpdate(Math.random());
+													setSelectedUsecases(selectedUsecases)
+												}}>
+									<Checkbox style={{color: selectedUsecases.includes(subcase.name) ? usecase.color : theme.palette.inputColor}} checked={selectedUsecases.includes(subcase.name)} />
+									  <ListItemText primary={subcase.name} />
+												</MenuItem>
+											)
+										})}
+									</span>
+								)
+							})}
       				  </Select>
       				</FormControl>
 						: null}
