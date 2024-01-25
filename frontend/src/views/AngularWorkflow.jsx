@@ -1408,13 +1408,20 @@ const AngularWorkflow = (defaultprops) => {
 	const streamUrl = "https://stream.shuffler.io"
 	const url = `${streamUrl}/api/v1/workflows/${props.match.params.key}/stream`
 
+	var parsedbody = body
+	try {
+		parsedbody = JSON.stringify(body)
+	} catch (e) {
+		console.log("Error parsing body for stream: ", e)
+	}
+
     fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify(body),
+      body: parsedbody,
       credentials: "include",
     })
       .then((response) => {
@@ -2630,7 +2637,6 @@ const AngularWorkflow = (defaultprops) => {
 		
 		const appendChunks = (result) => {
 			var chunk = decoder.decode(result.value || new Uint8Array, {stream: !result.done});
-			console.log("Got chunk: ", chunk)
 
 			if (chunk === undefined || chunk === null) {
 				console.log("Chunk is undefined or null")
@@ -2777,8 +2783,11 @@ const AngularWorkflow = (defaultprops) => {
 			if (response.status >= 500) {
 				toast("Something went wrong while loading the workflow. Please reload.")
 			} else {
-				toast("You don't access to this workflow or loading failed.")
-				window.location.pathname = "/workflows";
+				toast("You don't access to this workflow or loading failed. Redirecting to workflows in a few seconds..")
+
+	  			setTimeout(() => {
+					window.location.pathname = "/workflows";
+				}, 2000);
 			}
         }
 

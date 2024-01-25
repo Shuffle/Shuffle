@@ -150,11 +150,22 @@ const CacheView = (props) => {
 
     const deleteCache = (orgId, key) => {
         toast("Attempting to delete Cache");
-        fetch(globalUrl + `/api/v1/orgs/${orgId}/cache/${key}`, {
-            method: "DELETE",
+
+        // method: "DELETE",
+		const method = "POST"
+        //const url = `${globalUrl}/api/v1/orgs/${orgId}/cache/${key}`
+        const url = `${globalUrl}/api/v1/orgs/${orgId}/delete_cache`
+		const parsed = {
+			"org_id": orgId,
+			"key": key,
+		}
+
+        fetch(url, {
+			method: method,
             headers: {
                 Accept: "application/json",
             },
+			body: JSON.stringify(parsed),
             credentials: "include",
         })
             .then((response) => {

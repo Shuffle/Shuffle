@@ -916,11 +916,12 @@ const AppCreator = (defaultprops) => {
             var categoryindex = -1;
             // Stupid way of finding a category/grouping
             for (let splitkey in pathsplit) {
-							if (pathsplit[splitkey].includes("_shuffle_replace_")) {
-								const regex = /_shuffle_replace_\d/i;
-								//console.log("NEW: ", 
-								pathsplit[splitkey] = pathsplit[splitkey].replaceAll(new RegExp(regex, 'g'), "")
-							}
+				if (pathsplit[splitkey].includes("_shuffle_replace_")) {
+					//const regex = /_shuffle_replace_\d/i;
+					const regex = /_shuffle_replace_\d+/i
+					//console.log("NEW: ", 
+					pathsplit[splitkey] = pathsplit[splitkey].replaceAll(new RegExp(regex, 'g'), "")
+				}
 
               if (
                 pathsplit[splitkey].length > 0 &&
@@ -2016,9 +2017,10 @@ const AppCreator = (defaultprops) => {
 			var pathjoin = item.url+"_"+item.method.toLowerCase()
 			if (handledPaths.includes(pathjoin)) {
 
-				// Max 100 of same lol
-				for (let i = 0; i < 100; i++) {
-					item.url = item.url+"_shuffle_replace_"+i
+				// Max 1000 of same. Will it be ok for graphql longterm?
+				const baseurl = item.url
+				for (let i = 0; i < 1000; i++) {
+					item.url = baseurl+"_shuffle_replace_"+i
 
 					pathjoin = item.url+"_"+item.method.toLowerCase()
 					if (handledPaths.includes(pathjoin)) {
@@ -2596,9 +2598,16 @@ const AppCreator = (defaultprops) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
+		  if (responseJson.extra !== undefined && responseJson.extra !== null) {
+			toast("Failed building: " + responseJson.extra);
+		  }
+
           if (responseJson.reason !== undefined) {
             setErrorCode(responseJson.reason);
-            toast("Failed to verify: " + responseJson.reason);
+
+			if (responseJson.extra === undefined && responseJson.extra === null) {
+            	toast("Failed to verify: " + responseJson.reason);
+			}
           }
         } else {
           toast("Successfully uploaded openapi");
@@ -3401,13 +3410,13 @@ const AppCreator = (defaultprops) => {
     		      }}
     		      label={parsedChip}
     		      onClick={() => {
-								if (chipRequired) {
-									currentAction["required_bodyfields"].splice(currentAction["required_bodyfields"].indexOf(chipData), 1)
-								} else {
-    							currentAction["required_bodyfields"].push(chipData) 
-								}
+						if (chipRequired) {
+							currentAction["required_bodyfields"].splice(currentAction["required_bodyfields"].indexOf(chipData), 1)
+						} else {
+						currentAction["required_bodyfields"].push(chipData) 
+						}
 
-    						setCurrentAction(currentAction);
+					setCurrentAction(currentAction);
     		        setChipRequired(!chipRequired);
     		      }}
     		    />
@@ -3729,27 +3738,6 @@ const AppCreator = (defaultprops) => {
     		  onClose={() => {
 			    console.log("Closing modal");
 
-				// Old: This had some issue with arrays
-    		    //setUrlPath("");
-    		    //setCurrentAction({
-    		    //  name: "",
-    		    //  description: "",
-    		    //  url: "",
-    		    //  file_field: "",
-    		    //  headers: "",
-    		    //  paths: [],
-    		    //  queries: [],
-    		    //  body: "",
-    		    //  errors: [],
-    		    //  method: actionNonBodyRequest[0],
-				//  action_label: "No Label",
-				//  required_bodyfields: [],
-    		    //});
-    		    //setCurrentActionMethod(apikeySelection[0]);
-    		    //setUrlPathQueries([]);
-    		    //setActionsModalOpen(false);
-    		    //setFileUploadEnabled(false);
-
 			    console.log(currentAction);
 			    const errors = getActionErrors();
 			    addActionToView(errors);
@@ -3789,7 +3777,8 @@ const AppCreator = (defaultprops) => {
     		        variant="outlined"
     		        defaultValue={currentAction["name"]}
     		        onChange={(e) => {
-    		          setActionField("name", e.target.value);
+					  var trimmed = e.target.value.trim();
+    		          setActionField("name", trimmed)
     		        }}
     		        onBlur={(e) => {
     		          // Fix basic issues in frontend. Python functions run a-zA-Z0-9_
@@ -3798,6 +3787,18 @@ const AppCreator = (defaultprops) => {
     		          if (found !== null) {
     		            setActionField("name", found.join(""));
     		          }
+
+					  // Look through all actions and see if there is one with the same name
+					  if (currentAction.url === "" && actions !== undefined && actions !== null && actions.length > 0) { 
+					    for (var i = 0; i < actions.length; i++) {
+						  if (actions[i].name.toLowerCase() === e.target.value.toLowerCase()) {
+						    toast("Action with name " + e.target.value + " already exists. If you keep this, it will be overwritten.") 
+						    break
+						  }
+					    }
+
+					  }
+
     		        }}
     		        key={currentAction}
     		        InputProps={{
@@ -4283,6 +4284,7 @@ const AppCreator = (defaultprops) => {
     		      >
     		        Submit
     		      </Button>
+				  {/*
     		      <Button
     		        style={{ marginLeft: 10,  }}
     		        onClick={() => {
@@ -4291,6 +4293,7 @@ const AppCreator = (defaultprops) => {
     		      >
     		        Cancel
     		      </Button>
+				  */}
     		    </div>
     		  </FormControl>
     		</Drawer>
@@ -4501,7 +4504,7 @@ const AppCreator = (defaultprops) => {
             style={{ borderRadius: 0, position: "absolute", top: 70, }}
             variant={actions.length === 0 ? "contained" : "outlined"}
             onClick={(e) => {
-							e.preventDefault();
+			  e.preventDefault();
 
               setCurrentActionMethod(actionNonBodyRequest[0]);
               setCurrentAction({
@@ -4515,8 +4518,8 @@ const AppCreator = (defaultprops) => {
                 body: "",
                 errors: [],
                 method: actionNonBodyRequest[0],
-								action_label: "No Label",
-								required_bodyfields: [],
+				action_label: "No Label",
+				required_bodyfields: [],
               });
               setActionsModalOpen(true);
             }}
@@ -4533,20 +4536,20 @@ const AppCreator = (defaultprops) => {
 
 	//console.log("Actions: ", filteredActions)
     if (filteredActions === null || filteredActions === undefined || filteredActions.length === 0) {
-			return null
-		}
+		return null
+	}
 		
-		return (
+	return (
       <div>
         {filteredActions.slice(0, actionAmount).map((data, index) => {
 					//console.log("Found action: ", data)
-          return (
-						<ActionPaper key={index} index={index} data={data} />
-					)
-			})}
-		</div>
-		)
-	}
+        	return (
+				<ActionPaper key={index} index={index} data={data} />
+		  	)
+		})}
+	  </div>
+	)
+  }
 
 
 

@@ -43,6 +43,8 @@ const WorkflowTemplatePopup = (props) => {
   	const [missingSource, setMissingSource] = React.useState(undefined)
   	const [missingDestination, setMissingDestination] = React.useState(undefined);
 
+  	const [configurationFinished, setConfigurationFinished] = React.useState(false);
+
 	useEffect(() => {
 	}, [missingSource, missingDestination])
 
@@ -175,6 +177,92 @@ const WorkflowTemplatePopup = (props) => {
 		  });
 	}
 
+  	// Can create and set workflows
+  	const reloadWorkflow = (workflow_id) => {
+
+  	  const new_url = `${globalUrl}/api/v1/workflows/${workflow_id}`
+  	  return fetch(new_url, {
+  	    method: "GET",
+  	    headers: {
+  	      "Content-Type": "application/json",
+  	      Accept: "application/json",
+  	    },
+  	    credentials: "include",
+  	  })
+  	    .then((response) => {
+  	      if (response.status !== 200) {
+  	        console.log("Status not 200 for workflows :O!");
+  	        return;
+  	      }
+  	      //setSubmitLoading(false);
+
+  	      return response.json();
+  	    })
+  	    .then((responseJson) => {
+		  if (responseJson.success === false) {
+		  	if (responseJson.reason !== undefined) {
+		  		toast("Error setting workflow: ", responseJson.reason)
+		  	} else {
+		  		toast("Error setting workflow.")
+		  	}
+
+		  	return
+		  } else if (responseJson.id !== undefined && responseJson.id !== null && responseJson.id !== "") {
+			  setWorkflow(responseJson)
+		  }
+
+  	      return responseJson;
+  	    })
+  	    .catch((error) => {
+  	      toast("Failed reloading configured workflow: ", error.toString());
+  	    });
+  	};
+
+  	// Can create and set workflows
+  	const saveWorkflow = (workflowdata) => {
+
+  	  const new_url = `${globalUrl}/api/v1/workflows?set_auth=true`
+  	  return fetch(new_url, {
+  	    method: "POST",
+  	    headers: {
+  	      "Content-Type": "application/json",
+  	      Accept: "application/json",
+  	    },
+  	    body: JSON.stringify(workflowdata),
+  	    credentials: "include",
+  	  })
+  	    .then((response) => {
+  	      if (response.status !== 200) {
+  	        console.log("Status not 200 for workflows :O!");
+  	        return;
+  	      }
+  	      //setSubmitLoading(false);
+
+  	      return response.json();
+  	    })
+  	    .then((responseJson) => {
+		  if (responseJson.success === false) {
+		  	if (responseJson.reason !== undefined) {
+		  		toast("Error setting workflow: ", responseJson.reason)
+		  	} else {
+		  		toast("Error setting workflow.")
+		  	}
+
+		  	return
+		  }
+
+		  // In case it got a new id, this is to make sure it loads with the correct config
+		  if (responseJson.id !== undefined && responseJson.id !== null && responseJson.id !== "") {
+			  reloadWorkflow(responseJson.id)
+		  }
+
+  	      return responseJson;
+  	    })
+  	    .catch((error) => {
+  	      toast("Failed generating workflow: ", error.toString());
+  	    });
+  	};
+
 
 	const getGeneratedWorkflow = () => {
 		// POST
@@ -221,8 +309,10 @@ const WorkflowTemplatePopup = (props) => {
 			},
 		}
 
-		//fetch(globalUrl + "/api/v1/workflows/merge", {
-		fetch("https://shuffler.io/api/v1/workflows/merge", {
+		const url = isCloud ? `${globalUrl}/api/v1/workflows/merge` : `https://shuffler.io/api/v1/workflows/merge`
+		//const url = `https://shuffler.io/api/v1/workflows/merge`
+
+		fetch(url, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -243,13 +333,21 @@ const WorkflowTemplatePopup = (props) => {
 			if (responseJson.id !== undefined && responseJson.id !== null && responseJson.id !== "" && responseJson.name !== undefined && responseJson.name !== null && responseJson.name !== "") {
 				console.log("Success in workflow template (prebuilt): ", responseJson);
 				setWorkflow(responseJson)
+
+				// Sets it in the database properly
+  				saveWorkflow(responseJson) 
 				return
 			}
 
 			if (responseJson.success === false) {
 				//console.log("Error in workflow template: ", responseJson.error);
 
-				setErrorMessage("Failed to generate workflow for these tools - the Shuffle team has been notified. Click out of this window to continue. Contact support@shuffler.io for further assistance.")
+				const defaultMessage = "Failed to generate workflow the workflow - the Shuffle team has been notified. Contact support@shuffler.io for further assistance."
+				if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason !== "") {
+					setErrorMessage(defaultMessage + "\n\n" + responseJson.reason)
+				} else {
+					setErrorMessage(defaultMessage)
+				}
 
 				setIsActive(true)
 				//setTimeout(() => {
@@ -419,8 +517,22 @@ const WorkflowTemplatePopup = (props) => {
   					  appAuthentication={appAuthentication}
 					  setAppAuthentication={setAppAuthentication}
 					  apps={apps}
+
+					  setConfigurationFinished={setConfigurationFinished}
 					/>
-					{errorMessage === "" ?
+
+					{errorMessage === "" && configurationFinished === true && workflow.id !== undefined && workflowLoading === false ?
+						<Tooltip title="Workflow generated!" placement="top">
+							<span style={{display: "flex", }}>
+								{/*<CheckIcon color="primary" sx={{ borderRadius: 4 }} /> */}
+								<Typography variant="h6" style={{ marginLeft: 20, }}>
+									Workflow generated!
+								</Typography>
+							</span>
+						</Tooltip>
+					: null}
+
+					{/*errorMessage === "" ?
 						<Button
 							style={{marginTop: 50, }}
 							variant={isFinished() ? "contained" : "outlined"}
@@ -430,7 +542,7 @@ const WorkflowTemplatePopup = (props) => {
 						>
 							Done
 						</Button>
-					: null}
+					: null*/}
 				</DialogContent>
         	</Drawer>
     	)
@@ -537,6 +649,8 @@ const WorkflowTemplatePopup = (props) => {
 					: ""}
 				</div>
 			</div>
+
+
 		</div>
 	)
 }

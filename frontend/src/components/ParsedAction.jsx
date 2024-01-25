@@ -3373,14 +3373,16 @@ const ParsedAction = (props) => {
 							variant="outlined"
 							color="secondary"
 						/>
-						: null}
-					<Chip
-						style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
-						label={data.app.app_version}
-						variant="outlined"
-						color="secondary"
-					/>
-                    {data.label} 
+					: null}
+					{data.app.app_version !== undefined && data.app.app_version !== null && data.app.app_version !== "" && data.app.app_version !== "undefined" ?
+						<Chip
+							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+							label={data.app.app_version}
+							variant="outlined"
+							color="secondary"
+						/>
+					: null}
+						{data.label} 
                   </MenuItem>
                 );
               })}

@@ -634,8 +634,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			newUser := users[0]
-
-			if !strings.Contains(newUser.Orgs[0], currentOrg.Id) {
+			if !shuffle.ArrayContains(newUser.Orgs, currentOrg.Id) {
 				newUser.Orgs = append(newUser.Orgs, currentOrg.Id)
 			}
 
@@ -643,13 +642,18 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 				newUser.ActiveOrg = currentOrg
 			}
 
-			err = shuffle.SetUser(ctx, &newUser, false)
+			err = shuffle.SetUser(ctx, &newUser, true)
 			if err != nil {
 				log.Printf("[WARNING] Failed updating the user %s: %s", data.Username, err)
 				resp.WriteHeader(400)
 				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 				return
 			}
+
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+			log.Printf("[INFO] %s Successfully re-added to org %s (%s)", data.Username, currentOrg.Name, currentOrg.Id)
+			return
 		} else {
 			log.Printf("[WARNING] Failed registering user: %s", err)
 			resp.WriteHeader(401)

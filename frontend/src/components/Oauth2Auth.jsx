@@ -97,6 +97,8 @@ const AuthenticationOauth2 = (props) => {
 	autoAuth, 
 	authButtonOnly, 
 	isLoggedIn,
+
+	setFinalized,
   } = props;
 
   let navigate = useNavigate();
@@ -489,20 +491,27 @@ const AuthenticationOauth2 = (props) => {
       var open = true;
       const timer = setInterval(() => {
         if (newwin.closed) {
-					console.log("Closing?")
-
+		  console.log("Closing?")
 
           setButtonClicked(false);
           clearInterval(timer);
           //alert('"Secure Payment" window closed!');
-					//
 
-			if (getAppAuthentication !== undefined) {
-          		getAppAuthentication(true, true, true);
-			}
+		  if (getAppAuthentication !== undefined) {
+		  	getAppAuthentication(true, true, true);
+		  }
+
+		  // This is more a guess than anything
+		  // Should be handled in getAppAuthentication()
+		  // in the parent component to make it accurate,
+		  // seeing as we don't know what the parent component
+		  // wants to happen
+		  if (setFinalized !== undefined) {
+			  setFinalized(true)
+		  }
         } else {
-					console.log("Not closed")
-				}
+			console.log("Not closed")
+		}
       }, 1000);
       //do {
       //	setTimeout(() => {

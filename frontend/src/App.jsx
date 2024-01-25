@@ -37,7 +37,6 @@ import UpdateAuthentication from "./views/UpdateAuthentication.jsx";
 import FrameworkWrapper from "./views/FrameworkWrapper.jsx";
 import ScrollToTop from "./components/ScrollToTop";
 import AlertTemplate from "./components/AlertTemplate";
-import { useAlert, positions, Provider } from "react-alert";
 import { isMobile } from "react-device-detect";
 import RuntimeDebugger from "./components/RuntimeDebugger.jsx"
 
@@ -160,10 +159,6 @@ const App = (message, props) => {
 
   // Dumb for content load (per now), but good for making the site not suddenly reload parts (ajax thingies)
 
-  const options = {
-    timeout: 9000,
-    position: positions.BOTTOM_LEFT,
-  };
 
 	const handleFirstInteraction = (event) => {
 		console.log("First interaction: ", event)
@@ -566,9 +561,7 @@ const App = (message, props) => {
 	  <CssBaseline />
       <CookiesProvider>
         <BrowserRouter>
-          <Provider template={AlertTemplate} {...options}>
-            {includedData}
-          </Provider>
+		  {includedData}
         </BrowserRouter>
 		<ToastContainer 
 			position="bottom-center"

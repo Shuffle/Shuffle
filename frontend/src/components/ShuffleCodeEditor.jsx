@@ -47,6 +47,7 @@ import ReactJson from "react-json-view";
 import PaperComponent from "../components/PaperComponent.jsx";
 
 import CodeMirror from '@uiw/react-codemirror';
+import { python } from '@codemirror/lang-python';
 //import 'codemirror/keymap/sublime';
 //import 'codemirror/addon/selection/mark-selection.js'
 //import 'codemirror/theme/gruvbox-dark.css';
@@ -211,6 +212,80 @@ const CodeEditor = (props) => {
 		console.log("Checking local codedata: ", localcodedata)
 		expectedOutput(localcodedata)
 	}, [])
+
+	useEffect(() => {
+		expectedOutput(localcodedata)
+	}, [availableVariables])
+
+    var to_be_copied = "";
+	const HandleJsonCopy = (base, copy, base_node_name) => {
+    	if (typeof copy.name === "string") {
+    	  copy.name = copy.name.replaceAll(" ", "_");
+    	}
+
+    	//lol
+    	if (typeof base === 'object' || typeof base === 'dict') {
+    	  base = JSON.stringify(base)
+    	}
+
+    	if (base_node_name === "execution_argument" || base_node_name === "Execution Argument") {
+    	  base_node_name = "exec"
+    	}
+
+    	console.log("COPY: ", base_node_name, copy);
+
+    	//var newitem = JSON.parse(base);
+    	var newitem = validateJson(base).result
+
+
+    	to_be_copied = "$" + base_node_name.toLowerCase().replaceAll(" ", "_");
+    	for (let copykey in copy.namespace) {
+    	  if (copy.namespace[copykey].includes("Results for")) {
+    	    continue;
+    	  }
+
+    	  if (newitem !== undefined && newitem !== null) {
+    	    newitem = newitem[copy.namespace[copykey]];
+    	    if (!isNaN(copy.namespace[copykey])) {
+    	      to_be_copied += ".#";
+    	    } else {
+    	      to_be_copied += "." + copy.namespace[copykey];
+    	    }
+    	  }
+    	}
+
+    	if (newitem !== undefined && newitem !== null) {
+    	  newitem = newitem[copy.name];
+    	  if (!isNaN(copy.name)) {
+    	    to_be_copied += ".#";
+    	  } else {
+    	    to_be_copied += "." + copy.name;
+    	  }
+    	}
+
+    	to_be_copied.replaceAll(" ", "_");
+    	const elementName = "copy_element_shuffle";
+    	var copyText = document.getElementById(elementName);
+    	if (copyText !== null && copyText !== undefined) {
+    	  console.log("NAVIGATOR: ", navigator);
+    	  const clipboard = navigator.clipboard;
+    	  if (clipboard === undefined) {
+    	    toast("Can only copy over HTTPS (port 3443)");
+    	    return;
+    	  }
+
+    	  navigator.clipboard.writeText(to_be_copied);
+    	  copyText.select();
+    	  copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+    	  /* Copy the text inside the text field */
+    	  document.execCommand("copy");
+    	  console.log("COPYING!");
+    	  toast("Copied JSON path to clipboard.")
+    	} else {
+    	  console.log("Couldn't find element ", elementName);
+    	}
+  	}
 
 	const aiSubmit = (value, inputAction) => {
 		if (value === undefined || value === "") {
@@ -938,10 +1013,10 @@ const CodeEditor = (props) => {
 				style: {
 					zIndex: 12501,
 					color: "white",
-					minWidth: isMobile ? "100%" : isFileEditor ? 650 : 1200,
-					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1200,
-					minHeight: isMobile ? "100%" : 720,
-					maxHeight: isMobile ? "100%" : 720,
+					minWidth: isMobile ? "100%" : isFileEditor ? 650 : 1100,
+					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1100,
+					minHeight: isMobile ? "100%" : 620,
+					maxHeight: isMobile ? "100%" : 620,
 					border: theme.palette.defaultBorder,
 					padding: isMobile ? "25px 10px 25px 10px" : 25,
 				},
@@ -951,8 +1026,8 @@ const CodeEditor = (props) => {
 			style={{
 			  zIndex: 5000,
 			  position: "absolute",
-			  top: 14,
-			  right: 18,
+			  top: 6,
+			  right: 6,
 			  color: "grey",
 			}}
 			onClick={() => {
@@ -1425,22 +1500,26 @@ const CodeEditor = (props) => {
 						borderRadius: theme.palette.borderRadius,
 						position: "relative",
 						paddingTop: 0, 
-						minHeight: 548,
-						overflow: "hidden",
+						// minHeight: 548,
+						// overflow: "hidden",
 					}}>
 						<CodeMirror
 						    theme={vscodeDark}
 							value={localcodedata}
-							height={isFileEditor ? 450 : 500} 
+							extensions={[python({ py: true })]}
+							height={isFileEditor ? 450 : 450} 
 							width={isFileEditor ? 650 : 600}
 							style={{
 								maxWidth: isFileEditor ? 450 : 600,
-								maxHeight: 548,
-								minHeight: 548, 
+								maxHeight: 450,
+								minHeight: 450, 
 								wordBreak: "break-word",
 								marginTop: 0,
 								paddingBottom: 10,
-								overflow: "hidden",
+								// overflow: "hidden",
+								overflowY: "auto",
+  								whiteSpace: "pre-wrap",
+  								wordWrap: "break-word",
 							}}
 							onCursorActivity = {(value) => {
 								console.log("CURSOR: ", value.getCursor())
@@ -1463,8 +1542,9 @@ const CodeEditor = (props) => {
 							}}
 							options={{
 								mode: validation === true ? "json" : "python",
-								lineWrapping: linewrap,
+								lineWrapping: true,
 								theme: vscodeDark,
+								lineNumbers: true,
 							}}
 						/>
 					</div>
@@ -1604,7 +1684,7 @@ const CodeEditor = (props) => {
 											color="primary" 
 											style={{
 												border: `1px solid ${theme.palette.primary.main}`, 
-												marginLeft: 200, 
+												marginLeft: 175, 
 												maxHeight: 35, 
 												minWidth: 70, 
 											}} 
@@ -1633,8 +1713,8 @@ const CodeEditor = (props) => {
 											borderRadius: 5,
 											border: `2px solid ${theme.palette.inputColor}`,
 											padding: 10, 
-											maxHeight: 500, 
-											minheight: 500, 
+											maxHeight: 450, 
+											minheight: 450, 
 											overflow: "auto",
 										}}
 										collapsed={false}
@@ -1643,7 +1723,12 @@ const CodeEditor = (props) => {
 										}}
 										displayDataTypes={false}
 										onSelect={(select) => {
-											//HandleJsonCopy(validate.result, select, "exec");
+											var basename = "exec"
+											if (selectedAction !== undefined && selectedAction !== null && Object.keys(selectedAction).length !== 0) {
+												basename = selectedAction.label.toLowerCase().replaceAll(" ", "_")
+											}
+
+											HandleJsonCopy(expOutput, select, basename)
 										}}
 										name={"JSON autocompletion"}
 									/>
@@ -1659,10 +1744,10 @@ const CodeEditor = (props) => {
 											marginTop: -2,
 											border: `2px solid ${theme.palette.inputColor}`,
 											borderRadius: theme.palette.borderRadius,
-											maxHeight: 500,
-											minHeight: 500, 
-											minWidth: 580,
-											maxWidth: 580,
+											maxHeight: 450,
+											minHeight: 450, 
+											minWidth: 480,
+											maxWidth: 480,
 											overflow: "auto", 
 											whiteSpace: "pre-wrap",
 										}}
@@ -1689,7 +1774,7 @@ const CodeEditor = (props) => {
 									}}
 									displayDataTypes={false}
 									onSelect={(select) => {
-										//HandleJsonCopy(validate.result, select, "exec");
+										//HandleJsonCopy(executionResult.result, select, "exec");
 									}}
 									name={"Test result"}
 								/>
@@ -1725,7 +1810,7 @@ const CodeEditor = (props) => {
 			</div>
 
 
-			<div style={{display: 'flex',}}>
+			<div style={{display: 'flex'}}>
 				<Button
 					style={{
 						height: 35,

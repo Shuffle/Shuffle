@@ -2199,15 +2199,15 @@ const Workflows = (props) => {
 
   // Can create and set workflows
   const setNewWorkflow = (
-    name,
-    description,
-    tags,
-    defaultReturnValue,
-    editingWorkflow,
-    redirect,
-		currentUsecases,
-		inputblogpost,
-		inputstatus,
+	  name,
+	  description,
+	  tags,
+	  defaultReturnValue,
+	  editingWorkflow,
+	  redirect,
+	  currentUsecases,
+	  inputblogpost,
+	  inputstatus,
   ) => {
     var method = "POST";
     var extraData = "";
@@ -2292,7 +2292,7 @@ const Workflows = (props) => {
       })
       .catch((error) => {
         toast(error.toString());
-				setSubmitLoading(false)
+		setSubmitLoading(false)
         setModalOpen(false);
         setSubmitLoading(false);
       });
