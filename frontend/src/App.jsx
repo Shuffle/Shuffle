@@ -8,8 +8,8 @@ import Workflows from "./views/Workflows";
 import GettingStarted from "./views/GettingStarted";
 import AngularWorkflow from "./views/AngularWorkflow.jsx";
 
-//import Header from "./components/NewHeader.jsx";
-import Header from "./components/Header.jsx";
+import Header from "./components/NewHeader.jsx";
+//import Header from "./components/Header.jsx";
 import theme from "./theme";
 import Apps from "./views/Apps";
 import AppCreator from "./views/AppCreator";
@@ -240,6 +240,7 @@ const App = (message, props) => {
         	      setCookie={setCookie}
         	      cookies={cookies}
         	      checkLogin={checkLogin}
+				  notifications={notifications}
         	      {...props}
         	    />
         	  }

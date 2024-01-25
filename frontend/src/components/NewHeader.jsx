@@ -235,7 +235,7 @@ const Header = (props) => {
     setLoginHoverColor(hoverOutColor);
   };
 
-	const notificationWidth = 300
+	const notificationWidth = 335
 	const imagesize = 22;
   	const boxColor = "#86c142";
 
@@ -398,7 +398,8 @@ const Header = (props) => {
               <Button
                 color="primary"
                 variant="contained"
-                style={{ marginLeft: 30 }}
+				disabled={notifications.filter((data) => !data.read).length === 0}
+                style={{ marginLeft: 30, }}
                 onClick={() => {
                   clearNotifications();
                 }}
@@ -629,7 +630,7 @@ const Header = (props) => {
   };
   
   // Handle top bar or something
-  const defaultTop = isCloud ? 0 : 7;
+  const defaultTop = -2
   const loginTextBrowser = !isLoggedIn ? (
     <div
       style={{
@@ -662,7 +663,7 @@ const Header = (props) => {
                 <img
                   src={"/images/logos/topleft_logo.svg"}
                   alt="shuffle logo"
-                  style={{ height: 25, marginTop: 5, }}
+                  style={{ height: 25, }}
                 />
               </Grid>
             </Link>
