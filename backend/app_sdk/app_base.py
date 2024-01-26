@@ -2163,28 +2163,67 @@ class AppBase:
                             elif " " in value:
                                 value = value.replace(" ", "_", -1)
 
-                            if isinstance(basejson, list): 
-                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
-                                return basejson, False
-                            elif isinstance(basejson, bool):
-                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (bool): %s" % value)
-                                return basejson, False
-                            elif isinstance(basejson, int):
-                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (int): %s" % value)
-                                return basejson, False
-                            elif isinstance(basejson[value], str):
-                                print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
-                                try:
-                                    print("[DEBUG] BASEJSON: %s" % basejson)
-                                    if (basejson[value].endswith("}") and basejson[value].endswith("}")) or (basejson[value].startswith("[") and basejson[value].endswith("]")):
-                                        basejson = json.loads(basejson[value])
-                                    else:
+                            try:
+                                if isinstance(basejson, list): 
+                                    print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
+                                    return basejson, False
+                                elif isinstance(basejson, bool):
+                                    print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (bool): %s" % value)
+                                    return basejson, False
+                                elif isinstance(basejson, int):
+                                    print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (int): %s" % value)
+                                    return basejson, False
+                                elif isinstance(basejson[value], str):
+                                    print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
+                                    try:
+                                        print("[DEBUG] BASEJSON: %s" % basejson)
+                                        if (basejson[value].endswith("}") and basejson[value].endswith("}")) or (basejson[value].startswith("[") and basejson[value].endswith("]")):
+                                            basejson = json.loads(basejson[value])
+                                        else:
+                                            return str(basejson[value]), False
+                                    except json.decoder.JSONDecodeError as e:
+                                        print("[DEBUG] RETURNING BECAUSE '%s' IS A NORMAL STRING (1)" % basejson[value])
                                         return str(basejson[value]), False
-                                except json.decoder.JSONDecodeError as e:
-                                    print("[DEBUG] RETURNING BECAUSE '%s' IS A NORMAL STRING (1)" % basejson[value])
-                                    return str(basejson[value]), False
-                            else:
-                                basejson = basejson[value]
+                                else:
+                                    basejson = basejson[value]
+
+                            except KeyError as e:
+                                print("\n\n[WARNING] Running third dot notation fix that always find the correct value %s: %s" % (value, e))
+
+                                try:
+                                    currentsplitcnt = splitcnt 
+                                    recursed_value = value
+                                    handled = False
+                                    while True:
+                                        newvalue = parsersplit[currentsplitcnt+1]
+                                        if newvalue == "#" or newvalue == "":
+                                            break 
+
+                                        recursed_value += "." + newvalue
+                                        found = False
+                                        for key, value in basejson.items():
+                                            if recursed_value.lower() in key.lower(): 
+                                                found = True
+
+                                        if found == False:
+                                            print("[INFO] DIDN'T FIND similar VALUE: ", recursed_value)
+                                            break
+
+                                        if recursed_value in basejson:
+                                            print("[INFO] FOUND RECURSED VALUE: ", recursed_value)
+                                            basejson = basejson[recursed_value]
+                                            handled = True 
+                                            break
+
+                                        currentsplitcnt += 1
+
+                                    if handled:
+                                        continue
+                                    
+                                    break
+                                except IndexError as e:
+                                    print("[DEBUG] INDEXERROR: ", parsersplit[outercnt])
+                                    break
                             
 
                     outercnt += 1
@@ -2192,6 +2231,9 @@ class AppBase:
             except KeyError as e:
                 print("[INFO] Lower keyerror: %s" % e)
                 return "", False
+            except Exception as e:
+                print("[WARNING] Exception: %s" % e)
+                return basejson, False
 
                 #return basejson
                 #return "KeyError: Couldn't find key: %s" % e
