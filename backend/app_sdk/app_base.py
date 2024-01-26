@@ -2029,7 +2029,9 @@ class AppBase:
                 outercnt = 0
 
                 # Loops over split values
+                splitcnt = -1 
                 for value in parsersplit:
+                    splitcnt += 1
                     #if " " in value:
                     #    value = value.replace(" ", "_", -1)
 
