@@ -1856,18 +1856,22 @@ const AngularWorkflow = (defaultprops) => {
         })
         .then((responseJson) => {
           if (!responseJson.success) {
-            //toast("Failed to start: " + responseJson.reason);
-            toast(responseJson.reason);
-		    //toast.error(responseJson.reason);
-            setExecutionRunning(false);
-            setExecutionRequestStarted(false);
-            stop();
+              //toast("Failed to start: " + responseJson.reason);
+              toast(responseJson.reason);
+		      //toast.error(responseJson.reason);
+              setExecutionRunning(false);
+              setExecutionRequestStarted(false);
+              stop();
 
     	      for (let i = 0; i < curelements.length; i++) {
     	        curelements[i].removeClass("not-executing-highlight");
     	      }
     	      return;
     	    } else {
+			  if (responseJson.execution_id !== undefined && responseJson.execution_id !== null && responseJson.execution_id.length > 0) {
+			  	navigate(`?execution_id=${responseJson.execution_id}`)
+			  }
+
     	      setExecutionRunning(true);
     	      setExecutionRequestStarted(false);
     	    }

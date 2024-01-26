@@ -534,6 +534,7 @@ class AppBase:
 
         try:
             finished = False
+            ret = {}
             for i in range (0, 10):
                 # Random sleeptime between 0 and 1 second, with 0.1 increments
                 sleeptime = float(random.randint(0, 10) / 10)
@@ -541,13 +542,14 @@ class AppBase:
                 try:
                     ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False, proxies=self.proxy_config)
 
-                    self.logger.info(f"[DEBUG] Result: {ret.status_code} (break on 200 or 201)")
+                    self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} (break on 200/201) & Response= {ret.text}. Action status: {action_result["status"]}""")
                     if ret.status_code == 200 or ret.status_code == 201:
                         finished = True
                         break
                     else:
                         self.logger.info(f"[ERROR] Bad resp {ret.status_code}: {ret.text}")
                         time.sleep(sleeptime)
+            
 
                 # Proxyerrror
                 except requests.exceptions.ProxyError as e:
@@ -608,7 +610,6 @@ class AppBase:
                 self.send_result(action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
                 return
         
-            self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:
             self.logger.info(f"[DEBUG] Unexpected ConnectionError happened: {e}")
         except TypeError as e:
