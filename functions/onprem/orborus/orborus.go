@@ -478,6 +478,7 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
 						fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")),
 						fmt.Sprintf("SHUFFLE_MAX_SWARM_NODES=%d", os.Getenv("SHUFFLE_MAX_SWARM_NODES")),
+						fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", baseImageName),
 					},
 					//Hosts: []string{
 					//	innerContainerName,
@@ -615,14 +616,14 @@ func deployServiceWorkers(image string) {
 	}
 }
 
-// Deploys the internal worker whenever something happens
+// Deploys the worker with the current available environments
 // https://docs.docker.com/engine/api/sdk/examples/
-
 func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 	for key, value := range envMap {
 		envVars = append(envVars, corev1.EnvVar{Name: key, Value: value})
 	}
+
 	return envVars
 }
 
@@ -673,6 +674,9 @@ func deployWorker(image string, identifier string, env []string, executionReques
 				},
 			},
 		}
+
+		// Add environment variables
+		// pod.Spec.Containers[0].Env = buildEnvVars(envMap)
 
 		createdPod, err := clientset.CoreV1().Pods("shuffle").Create(context.Background(), pod, metav1.CreateOptions{})
 		if err != nil {
@@ -726,26 +730,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
 		// a 401 from the worker, which returns an error here
 		go sendWorkerRequest(executionRequest)
-		//sendWorkerRequest(executionRequest)
-
-		//err := sendWorkerRequest(executionRequest)
-		//if err != nil {
-		//	log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
-
-		//	if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
-		//		workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-		//		deployServiceWorkers(workerImage)
-
-		//		time.Sleep(time.Duration(10) * time.Second)
-		//		err = sendWorkerRequest(executionRequest)
-		//	}
-		//}
-
-		//if err == nil {
-		//	// FIXME: Readd this? Removed for rerun reasons
-		//	// executionIds = append(executionIds, executionRequest.ExecutionId)
-		//}
-		//}()
 
 		return nil
 	}
@@ -1586,6 +1570,7 @@ func main() {
 				fmt.Sprintf("SHUFFLE_PASS_APP_PROXY=%s", os.Getenv("SHUFFLE_PASS_APP_PROXY")),
 				fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 				fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
+				fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", baseimagename),
 			}
 
 			//log.Printf("Running worker with proxy? %s", os.Getenv("SHUFFLE_PASS_WORKER_PROXY"))

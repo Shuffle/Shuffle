@@ -52,7 +52,8 @@ var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
 
-var baseimagename = "frikky/shuffle"
+//var baseimagename = "frikky/shuffle"
+var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 
 // var baseimagename = "registry.hub.docker.com/frikky/shuffle"
 var registryName = "registry.hub.docker.com"
@@ -2906,6 +2907,12 @@ func main() {
 
 	if timezone == "" {
 		timezone = "Europe/Amsterdam"
+	}
+
+	if baseimagename == "" {
+		log.Printf("[DEBUG] Setting baseimagename")
+		baseimagename = "frikky/shuffle" // Dockerhub
+		//baseimagename = "shuffle"        // Github 		(ghcr.io)
 	}
 
 	topClient = client
