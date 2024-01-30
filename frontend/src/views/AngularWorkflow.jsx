@@ -9267,14 +9267,20 @@ const AngularWorkflow = (defaultprops) => {
 			  break
 		  }
 
+
 		  const execution = workflowExecutions[executionKey]
 		  if (execution.execution_argument === undefined || execution.execution_argument === null || execution.execution_argument.length < 2) {
+			  continue
+		  }
+
+		  if (execution.execution_argument.includes("too large ")) {
 			  continue
 		  }
 
 		  if (availableArguments.includes(execution.execution_argument)) {
 			  continue
 		  }
+
 
 		  availableArguments.push(execution.execution_argument)
 	  }

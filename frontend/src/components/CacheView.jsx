@@ -398,7 +398,7 @@ const CacheView = (props) => {
                     />
                     <ListItemText
                         primary="Value"
-                    	style={{ minWidth: 400, maxWidth: 400, }}
+                    	style={{ minWidth: 400, maxWidth: 400, overflowX: "auto", overflowY: "hidden", }}
                     />
                     <ListItemText
                         primary="Actions"
@@ -433,6 +433,8 @@ const CacheView = (props) => {
                                     style={{
 										minWidth: 400,
 										maxWidth: 400,
+										overflowX: "auto", 
+										overflowY: "hidden", 
 									}}
                                     primary={validate.valid ? 
                       					<ReactJson

@@ -702,7 +702,7 @@ class AppBase:
                     except (KeyError, NameError) as e:
                         self.logger.info(f"""Key/NameError in param handler for {param["name"]}: {e}""")
 
-            self.logger.info(f"[DEBUG] OUTER VALUE: {param_value}")
+            #self.logger.info(f"[DEBUG] OUTER VALUE: {param_value}")
             if len(param_value) > 0:
                 md5 = hashlib.md5(param_value.encode('utf-8')).hexdigest()
                 values.append(md5)
@@ -1578,7 +1578,7 @@ class AppBase:
                     }
 
                     resultsurl = "%s/api/v1/streams/results" % (self.base_url)
-                    self.logger.info("[ERROR] Before FULLEXEC stream result url '%s'" % (resultsurl))
+                    #self.logger.info("[DEBUG] Before FULLEXEC stream result url '%s'" % (resultsurl))
                     ret = requests.post(
                         resultsurl,
                         headers=headers, 
@@ -3736,9 +3736,9 @@ class AppBase:
                                     timeout_env = os.getenv("SHUFFLE_APP_SDK_TIMEOUT", timeout)
                                     try:
                                         timeout = int(timeout_env)
-                                        self.logger.info(f"[DEBUG] Timeout set to {timeout} seconds")  
+                                        #self.logger.info(f"[DEBUG] Timeout set to {timeout} seconds")  
                                     except Exception as e:
-                                        self.logger.info(f"[WARNING] Failed parsing timeout to int: {e}")
+                                        self.logger.info(f"[ERROR] Failed parsing timeout to int: {e}")
 
                                     #timeout = 30 
 

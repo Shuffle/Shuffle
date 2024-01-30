@@ -1336,16 +1336,21 @@ const Workflows = (props) => {
   };
 
   const exportAllWorkflows = (allWorkflows) => {
-		for (var i = 0; i < allWorkflows.length; i++) {
-			console.log(allWorkflows[i])
-			setTimeout(() => {
-				console.log(allWorkflows[i])
-      	exportWorkflow(allWorkflows[i], false)
-			}, i * 200);
-    }
+	  for (var i = 0; i < allWorkflows.length; i++) {
+		  const wf = allWorkflows[i]
 
-    toast(`Exporting and keeping original for all ${allWorkflows.length} workflows`);
-  };
+		  if (wf === undefined || wf.id === undefined) {
+			  continue
+		  }
+
+		  console.log("Exporting workflow: ", wf)
+		  setTimeout(() => {
+		  	exportWorkflow(JSON.parse(JSON.stringify(wf)), false)
+		  }, i * 100);
+	  }
+
+	  toast(`Exporting and keeping original for all ${allWorkflows.length} workflows`);
+  }
 
   const deduplicateIds = (data, skip_sanitize) => {
     if (data.triggers !== null && data.triggers !== undefined) {
@@ -1498,7 +1503,12 @@ const Workflows = (props) => {
   };
 
   const exportWorkflow = (data, sanitize) => {
-    data = JSON.parse(JSON.stringify(data));
+	try {
+    	data = JSON.parse(JSON.stringify(data));
+	} catch (e) {
+		console.log("Failed to parse JSON: ", e);
+	}
+
     let exportFileDefaultName = data.name + ".json";
 
     if (sanitize === true) {
