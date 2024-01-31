@@ -15083,6 +15083,10 @@ const AngularWorkflow = (defaultprops) => {
       open={executionModalOpen}
       onClose={() => {
         setExecutionModalOpen(false)
+
+		const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+		const newitem = removeParam("execution_id", cursearch);
+		navigate(curpath + newitem)
       }}
       style={{ resize: "both", overflow: "auto", }}
       hideBackdrop={false}

@@ -3213,7 +3213,7 @@ class AppBase:
                 self.action_result["result"] = json.dumps({
                     "success": False,
                     "reason": f"Function {actionname} doesn't exist, or the App is out of date.",
-                    "details": "If this persists, please restart delete the Docker image locally, restart your Orborus instance and then try again to force-download the latest version. Contact support@shuffler.io with this data if the issue persists.",
+                    "details": "If this persists, please delete the Docker image locally, then restart your Orborus instance before trying again. This will force-download the latest version. Contact support@shuffler.io with this data if the issue persists.",
                 })
             elif callable(func):
                 try:

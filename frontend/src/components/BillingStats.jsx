@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import theme from '../theme.jsx';
 import classNames from "classnames";
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
+import { toast } from "react-toastify" 
 
 import { 
 	DatePicker, 
@@ -11,6 +13,12 @@ import {
 } from '@mui/x-date-pickers'
 
 import {
+	OpenInNew as OpenInNewIcon,
+} from '@mui/icons-material';
+
+import {
+	CircularProgress,
+	Link,
 	Tooltip,
 	TextField,
 	IconButton,
@@ -24,39 +32,8 @@ import {
 
 import { 
 	BarChart,
-	RadialBarChart, 
-	RadialAreaChart, 
-	RadialAxis,
-	StackedBarSeries,
-	TooltipArea,
-	ChartTooltip,
-	TooltipTemplate,
-	RadialAreaSeries,
-	RadialPointSeries,
-	RadialArea,
-	RadialLine,
-	TreeMap,
-	TreeMapSeries,
-	TreeMapLabel,
-	TreeMapRect,
-	Line,
-	LineChart,
-	LineSeries,
-	LinearYAxis,
-	LinearXAxis,
-	LinearYAxisTickSeries,
-	LinearXAxisTickSeries,
-	Area,
-	AreaChart,
-	AreaSeries,
-	AreaSparklineChart,
-	PointSeries,
 	GridlineSeries,
 	Gridline,
-	Stripes,
-	Gradient,
-	GradientStop,
-	LinearXAxisTickLabel,
 } from 'reaviz';
 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
@@ -84,7 +61,7 @@ const LineChartWrapper = ({keys, inputname, height, width}) => {
 
 
 const AppStats = (defaultprops) => {
-  const { globalUrl, selectedOrganization, userdata, isCloud, } = defaultprops;
+  const { globalUrl, selectedOrganization, userdata, isCloud, inputWorkflows, } = defaultprops;
 
   const [keys, setKeys] = useState([])
   const [searches, setSearches] = useState([]);
@@ -102,7 +79,153 @@ const AppStats = (defaultprops) => {
   const [monthToDateCost, setMonthToDateCost] = useState(0)
   const [monthTotalCost, setMonthTotalCost] = useState(0)
 
+  const [workflows, setWorkflows] = useState(inputWorkflows === undefined ? [] : inputWorkflows)
+  const [resultRows, setResultRows] = useState([])
+  const [resultLoading, setResultLoading] = useState(true)
+
   const includedExecutions = selectedOrganization.sync_features.app_executions !== undefined ? selectedOrganization.sync_features.app_executions.limit : 0 
+
+  useEffect(() => {
+	  if (workflows === undefined || workflows === null || workflows.length === 0) {
+		  getAvailableWorkflows()
+	  }
+  }, [])
+
+
+
+  const getWorkflowStats = async (workflow, startTime, endTime) => {
+	  if (!userdata.support) {
+		  return workflow
+	  }
+
+	  if (workflow.id === undefined || workflow.id === null || workflow.id === "") {
+		  return workflow
+	  }
+
+	  var starttime = ""
+	  var endtime = ""
+	  try {
+		  starttime = startTime === undefined || startTime === null || startTime === "" ? "" : new Date(startTime).toISOString()
+		  endtime = endTime === undefined || endTime === null || endTime == "" ? "" : new Date(endTime).toISOString()
+	  } catch(err) {
+		  console.log("Error converting start/end time", err)
+		  toast("Bad start/endtime. Please try again")
+		  return
+	  }
+
+	  console.log("START TIME", starttime, endtime)
+
+	  var url = `${globalUrl}/api/v1/workflows/${workflow.id}/executions/count`
+
+	  if (starttime !== "") {
+	  	url += `?start_time=${starttime}`
+	  }
+
+	  if (endtime !== "") {
+	  	if (starttime !== "") {
+	  		url += `&end_time=${endtime}`
+	  	} else {
+	  		url += `?end_time=${endtime}`
+	  	}
+	  }
+
+	  const response = await fetch(url, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+	  })
+
+	  if (response.status !== 200) {
+		  console.log("Status not 200 for workflow stats URL: " + url);
+		  return workflow
+	  }
+
+	  const data = await response.json();
+
+	  if (data === undefined || data === null) {
+		  console.log("No data for workflow stats URL: " + url);
+		  return workflow
+	  }
+
+	  if (data.success === false) {
+		  console.log("No success for workflow stats URL: " + url, data.reason);
+		  return workflow
+	  }
+
+	  workflow.runcount = data.count
+	  return workflow
+  }
+
+  const loadWorkflowStats = (foundWorkflows, startTime, endTime) => {
+	  if (!userdata.support) {
+		  console.log("Not support")
+
+		  return
+	  }
+
+	  if (foundWorkflows === undefined || foundWorkflows === null || foundWorkflows.length === 0) {
+		  console.log("Not workflows")
+		  return
+	  }
+
+	  // Only do latest 20
+	  setResultLoading(true)
+	  const promises = foundWorkflows.slice(0, 50).map(wf => getWorkflowStats(wf, startTime, endTime));
+
+	  const allData = Promise.all(promises);
+
+	  allData.then((data) => {
+	  	console.log("IN ALL DATA")
+
+	  	var total = 0
+	  	for (var i = 0; i < data.length; i++) {
+	  		if (data[i].runcount !== undefined) {
+	  			total += data[i].runcount
+	  		} else {
+	  			data[i].runcount = 0
+	  		}
+	  	}
+
+	  	data[0].runcount = total
+	  	// Sort data by runcount
+	  	data.sort((a, b) => (a.runcount < b.runcount) ? 1 : -1)	
+	  	setResultRows(data)
+	    setResultLoading(false)
+	  })
+  }
+
+  const getAvailableWorkflows = () => {
+	fetch(globalUrl + "/api/v1/workflows", {
+	  method: "GET",
+	  headers: {
+		"Content-Type": "application/json",
+		Accept: "application/json",
+	  },
+	  credentials: "include",
+	})
+	.then((response) => {
+	  if (response.status !== 200) {
+		console.log("Status not 200 for workflows :O!");
+		return;
+	  }
+	  return response.json();
+	})
+	.then((responseJson) => {
+	  if (responseJson !== undefined) {
+		  var foundWorkflows = [{"id": "", "name": "All Workflows",}]
+		  foundWorkflows.push(...responseJson)
+		  setWorkflows(foundWorkflows)
+
+		  loadWorkflowStats(foundWorkflows)
+	  }
+	})
+	.catch((error) => {
+	  console.log("Error getting workflows: " + error);
+	})
+  }
 
   // Cost in old contracts: 0.0009 
   // Old contracts also always included 150.000 executions
@@ -241,6 +364,15 @@ const AppStats = (defaultprops) => {
 
 		setFilteredStatistics(tmpstats)
 		handleDataSetting(tmpstats, "day") 
+
+
+		if (workflows !== undefined && workflows !== null && workflows.length > 0) {
+			var foundWorkflows = [{"id": "", "name": "All Workflows",}]
+			var tmpworkflows = workflows.filter((workflow) => workflow.id !== undefined && workflow.id !== null && workflow.id !== "")
+			foundWorkflows.push(...tmpworkflows)
+
+			loadWorkflowStats(foundWorkflows, startTime, endTime)
+		}
 
 	}, [statistics, startTime, endTime])
 
@@ -400,6 +532,112 @@ const AppStats = (defaultprops) => {
 		maxWidth: 300,
 	}
 
+	const columns: GridColDef[] = [
+	    {
+			field: 'workflow.name',
+			headerName: 'Workflow Name',
+			width: 350,
+			renderCell: (params) => {
+
+				return (
+					<span style={{cursor: "pointer", }} onClick={() => {
+					}}>
+						{params.row.name}
+					</span>
+				)
+			}
+		  },
+	      {
+			field: 'workflow.runcount',
+			headerName: 'Workflow Runs in selected period',
+			width: 250,
+			renderCell: (params) => {
+
+				return (
+					<span style={{cursor: "pointer", }} onClick={() => {
+					}}>
+						{params.row.runcount}
+					</span>
+				)
+			}
+		  },
+	      {
+			field: 'triggers',
+			headerName: 'Triggers',
+			width: 100,
+			renderCell: (params) => {
+				if (params.row.id === "") {
+					return null
+				}
+
+				const cnt = params.row.triggers === undefined || params.row.triggers === null ? 0 : params.row.triggers.length
+
+				return (
+					<span style={{cursor: "pointer", }} onClick={() => {
+					}}>
+						{cnt}
+					</span>
+				)
+			}
+		  },
+	      {
+			field: 'actions',
+			headerName: 'Actions',
+			width: 100,
+			renderCell: (params) => {
+				if (params.row.id === "") {
+					return null
+				}
+
+				const cnt = params.row.actions === undefined || params.row.actions === null ? 0 : params.row.actions.length
+
+				return (
+					<span style={{cursor: "pointer", }} onClick={() => {
+					}}>
+						{cnt}
+					</span>
+				)
+			}
+		  },
+	      /*{
+			field: 'last editor',
+			headerName: 'Last Editor',
+			width: 100,
+			renderCell: (params) => {
+				if (params.row.id === "") {
+					return null
+				}
+
+				const lastEditor = params.row.lasteditor === undefined || params.row.lasteditor === null ? "" : params.row.lasteditor
+
+				return (
+					<span style={{cursor: "pointer", }} onClick={() => {
+					}}>
+						{lastEditor}
+					</span>
+				)
+			}
+		  },*/
+	      {
+			field: 'explore',
+			headerName: 'Explore',
+			width: 100,
+			renderCell: (params) => {
+				if (params.row.id === "") {
+					return null
+				}
+
+				return (
+					<span style={{backgroundColor: "inherit", display: "flex", }}>
+					  <Link disabled={params.row.id === ""} href={`/workflows/${params.row.id}`} target="_blank" rel="noopener noreferrer">
+						<OpenInNewIcon fontSize="small" style={{marginTop: 7, }} />
+					  </Link>
+					</span>
+			)
+		}
+		},
+	]
+
   	const data = (
     <div className="content" style={{width: "100%", margin: "auto", }}>
 		<Typography variant="body1" style={{margin: "auto", marginLeft: 10, marginBottom: 20, }}>
@@ -421,7 +659,7 @@ const AppStats = (defaultprops) => {
 					}>
 						<Paper style={paperStyle}>
 							<Typography variant="h4">
-								{selectedOrganization.lead_info.customer === false && selectedOrganization.lead_info.pov === false ?
+								${selectedOrganization.lead_info.customer === false && selectedOrganization.lead_info.pov === false ?
 									0 
 									: 
 									apprunCost
@@ -543,6 +781,57 @@ const AppStats = (defaultprops) => {
 			: 
 			<LineChartWrapper keys={appRunCosts} height={300} width={"100%"} inputname={"Apprun cost - Cost per day"}/>
 		*/}
+
+
+		<div style={{height: 150+resultRows.length * 25, padding: "10px 0px 10px 0px", }}>
+			{resultLoading ? 
+				<div style={{margin: "auto", alignItems: "center", width: 350, height: "100%", }}>
+					<Typography variant="body2" color="textSecondary" component="p" style={{textAlign: "center", marginTop: 50, marginBottom: 15, }}>
+						Loading usage for selected period (may take a while) 
+					</Typography>
+					<CircularProgress style={{}} /> 
+				</div>
+				:
+				<DataGrid
+					rows={resultRows}
+					columns={columns}
+					pageSize={100}
+					rowsPerPageOptions={[10, 20, 50, 100]}
+					checkboxSelection
+					disableSelectionOnClick
+					onPageSizeChange={(newPageSize) => {
+						//setRowsPerPage(newPageSize)
+						//submitSearch(workflowId, status, startTime, endTime, rowCursor, newPageSize) 
+					}}
+					// event for when clicking next page
+					// Hide page changer
+					onPageChange={(params) => {
+						console.log("page params: ", params)
+					}}
+					onSelectionModelChange={(newSelection) => {
+						console.log("newSelection: ", newSelection)
+						//console.log("newSelection: ", newSelection)
+						//setSelectedWorkflowExecutionsIndexes(newSelection)
+						//var found = []	
+						//for (var i = 0; i < newSelection.length; i++) {
+						//	// Find the workflow in the resultRows
+						//	var selected = resultRows.find((workflow) => {
+						//		return workflow.id === newSelection[i]
+						//	})
+
+						//	if (selected === undefined || selected === null) {
+						//		continue
+						//	}
+
+						//	found.push(selected)
+						//}
+
+						//setSelectedWorkflowExecutions(found)
+					}}
+					// Track which items are selected
+				  />
+			}
+		  </div>
     </div>
   )
 
