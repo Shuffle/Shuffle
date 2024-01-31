@@ -175,8 +175,6 @@ const ParsedAction = (props) => {
   } = props;
 
   const classes = useStyles();
-  //const alert = useAlert()
-  
   const [hideBody, setHideBody] = React.useState(true);
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
 
@@ -185,31 +183,34 @@ const ParsedAction = (props) => {
 
   const [autoCompleting, setAutocompleting] = React.useState(false);
 
+  useEffect(() => {
+	if (setLastSaved !== undefined) {
+		setLastSaved(false)
+	}
+  }, [expansionModalOpen])
 
   useEffect(() => {
-		if (setLastSaved !== undefined) {
-			setLastSaved(false)
-		}
-	}, [expansionModalOpen])
+	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
+		return
+	}
 
-  useEffect(() => {
-		if (selectedAction.parameters !== null && selectedAction.parameters !== undefined) {
-			const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-			//console.log("LOADED! Change hideBody based on input? Action: ", selectedAction, paramcheck)
-			if (paramcheck !== undefined && paramcheck !== null) {
-				if (paramcheck.id === "TOGGLED"){ 
-  				setHideBody(false)
-  				setActivateHidingBodyButton(false)
-				} else {
-  				setHideBody(true)
+	const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+	if (paramcheck === undefined || paramcheck === null) {
+		return
+	}
 
-					if (paramcheck.id === "UNTOGGLED") {
-  					setActivateHidingBodyButton(false)
-					}
-				}
-			}
+	// This was just opposite..
+	if (paramcheck.id === "TOGGLED"){ 
+		setHideBody(true)
+	} else {
+		setHideBody(false)
+
+		if (paramcheck.id === "UNTOGGLED") {
+			setActivateHidingBodyButton(false)
 		}
-	}, [])
+	}
+
+  }, [])
 
   const keywords = [
     "len(",
@@ -1190,14 +1191,14 @@ const ParsedAction = (props) => {
 									}
 
           		    return (
-											<TextField
-												style={{
-													backgroundColor: theme.palette.inputColor,
-													borderRadius: theme.palette.borderRadius,
-												}}
-												{...params}
-												label="Find App to Translate"
-												variant="outlined"
+						<TextField
+							style={{
+								backgroundColor: theme.palette.inputColor,
+								borderRadius: theme.palette.borderRadius,
+							}}
+							{...params}
+							label="Find App to Translate"
+							variant="outlined"
           		      	/>
           		    );
           		  }}
@@ -1360,20 +1361,6 @@ const ParsedAction = (props) => {
             var disabled = false;
             var rows = "3";
             var openApiHelperText = "This is an OpenAPI specific field";
-						/*
-            if (
-              selectedApp.generated &&
-              data.name === "url" &&
-              data.required &&
-              data.configuration 
-            ) {
-							//&&
-              //hideExtraTypes
-							
-              //console.log("GENERATED WITH DATA: ", data);
-              return null;
-            }
-						*/
 
             if (selectedApp.generated && data.name === "headers") {
               //console.log("HEADER: ", data)
@@ -1386,8 +1373,9 @@ const ParsedAction = (props) => {
             const hideBodyButtonValue = (
               <div
 				key={data.name}
+				id="hide_body_button"
                 style={{
-                  marginTop: 25,
+                  marginTop: 50,
                   border: "1px solid rgba(255,255,255,0.7)",
                   borderTop: "1px solid rgba(255,255,255,0.7)",
                   borderRadius: theme.palette.borderRadius,
@@ -1397,7 +1385,7 @@ const ParsedAction = (props) => {
               >
                 <Tooltip
                   color="secondary"
-                  title={"Show all body fields"}
+                  title={hideBody ?  "Hide all body fields and only show the body itself" : "Show all body fields instead of the body itself"}
                   placement="top"
                 >
                   <FormControlLabel
@@ -1409,13 +1397,12 @@ const ParsedAction = (props) => {
                           color: theme.palette.primary.secondary,
                         }}
                         onChange={(event) => {
-													var tag = "TOGGLED"
-													if (hideBody) {
-														tag = "UNTOGGLED"
-													} 
+						  var tag = "TOGGLED"
+						  if (hideBody) {
+						  	tag = "UNTOGGLED"
+						  } 
 
-                          setHideBody(!hideBody);
-			
+                          setHideBody(!hideBody)
                           for (let paramkey in Object.entries(selectedActionParameters)) {
                             var currentItem = selectedActionParameters[paramkey];
 							if (currentItem.name === "ssl_verify") {
@@ -1423,21 +1410,33 @@ const ParsedAction = (props) => {
 							}
 
 							if (currentItem.name === "body") {
-								// FIXME: Workaround for toggling, as actions don't have IDs. 
-								// May screw up something in the future.
 								currentItem.id = tag
 							}
 
                             if (currentItem.description === openApiFieldDesc) {
-                              currentItem.field_active = !hideBody;
-                              //console.log("Changing", currentItem);
+                              currentItem.field_active = !hideBody
                             }
                           }
+				
+							
+						  // Scroll to hide_body_button
+						  setTimeout(() => {
+							var element = document.getElementById("hide_body_button")
+							if (element !== undefined && element !== null) {
+								// Keep the button a little below the top
+								element.scrollIntoView({
+									behavior: "smooth",
+									block: "center",
+								})
+							}
+						  }, 100)
+							
+
                         }}
                         name="requires_unique"
                       />
                     }
-                    label={"Automatically fix body"}
+                    label={hideBody ? "Show Body" : "Hide Body"}
                   />
                 </Tooltip>
               </div>
@@ -1447,6 +1446,8 @@ const ParsedAction = (props) => {
               const regex = /\${(\w+)}/g;
               const found = placeholder.match(regex);
 
+			  // setActivateHidingBodyButton(false)
+				//
               hideBodyButton = hideBodyButtonValue;
               if (found === null || !hideBody) {
                 if (found === null) {
@@ -1455,13 +1456,13 @@ const ParsedAction = (props) => {
 					//console.log("In found: ", found, hideBody)
 				}
               } else {
-                //console.log("SHOW BUTTON");
 
                 rows = "1";
                 disabled = true;
                 openApiHelperText = "OpenAPI spec: fill the following fields.";
-                //console.log("SHOULD ADD TO selectedActionParameters!: ", found, selectedActionParameters)
+
                 var changed = false;
+				var tempArray = []
                 for (let specKey in found) {
                   const tmpitem = found[specKey];
                   var skip = false;
@@ -1490,7 +1491,7 @@ const ParsedAction = (props) => {
 					  }
 				  }
 
-                  selectedActionParameters.push({
+				  tempArray.push({
                     action_field: "",
                     configuration: false,
                     description: openApiFieldDesc,
@@ -1506,11 +1507,39 @@ const ParsedAction = (props) => {
                     value: "",
                     variant: "STATIC_VALUE",
                     field_active: true,
+					  
+					autocompleted: true,
                   });
                 }
+                  
+				console.log("TEMP ARRAY: ", tempArray)
+				var required = selectedActionParameters.filter(item => item.required === true)
+				var notRequired = selectedActionParameters.filter(item => item.required === false)
+
+				if (tempArray.length > 0) {
+					// Sort tempArray based on tempArray.required
+					tempArray.sort((a, b) => (a.required < b.required) ? 1 : -1)
+					// Add all items to the selectedActionParameters array
+					for (let innerkey in tempArray) {
+						tempArray[innerkey].id = "ADDED"
+
+						if (tempArray[innerkey].required === true) {
+							required.push(tempArray[innerkey])
+						} else {
+							notRequired.push(tempArray[innerkey])	
+						}
+					}
+				}
+				//selectedActionParameters
 
                 if (changed) {
-                  setSelectedActionParameters(selectedActionParameters);
+				  // Sort selectedActionParameters based on selectedActionParameters.required
+				  //selectedActionParameters.sort((a, b) => (a.required < b.required) ? 1 : -1)
+				  // Find the "headers" and "queries" field names and put them on the first indexes anyway
+				  var newArray = required.concat(notRequired)
+				  
+
+                  setSelectedActionParameters(newArray)
                 }
 
                 return hideBodyButton;
@@ -1523,9 +1552,6 @@ const ParsedAction = (props) => {
 
             const clickedFieldId = "rightside_field_" + count;
 
-            //<TextareaAutosize
-            // <CodeMirror
-            //fullWidth
             var baseHelperText = ""
 						if (data !== undefined && data !== null && data.value !== undefined && data.value !== null && data.value.length > 0) {
 							baseHelperText = calculateHelpertext(data.value)
@@ -1619,33 +1645,15 @@ const ParsedAction = (props) => {
                 helperText={returnHelperText(data.name, data.value)}
                 onClick={() => {
                   console.log("Clicked field: ", clickedFieldId, data.name)
+				  	/*
+                  		setExpansionModalOpen(false);
+					*/
 
-									//if (data.name === "file_id") {
-									//	console.log("show file video?")
-									//	if (setShowVideo !== undefined) {
-									//		setShowVideo("https://www.youtube.com/embed/DPYowyTbsSk")
-									//	}
-									//}
-                  //(data.name.toLowerCase().includes("api") ||
-									/*
-                  setExpansionModalOpen(false);
-                  if (
-                    setScrollConfig !== undefined &&
-                    scrollConfig !== null &&
-                    scrollConfig !== undefined &&
-                    scrollConfig.selected !== clickedFieldId
-                  ) {
-                    scrollConfig.selected = clickedFieldId;
-                    setScrollConfig(scrollConfig);
-                    //console.log("Change field id!")
-                  }
-									*/
-
-									//console.log("Clicked field: ", clickedFieldId)
 					if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
+						console.log("IN SCROLL CONFIG!")
+
 						scrollConfig.selected = clickedFieldId
 						setScrollConfig(scrollConfig)
-						//console.log("Change field id!")
 					}
                 }}
                 id={clickedFieldId}
@@ -2476,19 +2484,19 @@ const ParsedAction = (props) => {
                     </Tooltip>
                   ) : null}
 
-									{hasAutocomplete === true ? 
-										<Tooltip
-											color="primary"
-											title={"Field was autocompleted by Shuffle based on previous actions (same fields or parent nodes)"}
-											placement="top"
-										>
-											<AutoFixHighIcon style={{ 
-												color: "rgba(255,255,255,0.7)" ,
-												marginRight: 10, 
-											}}/>
-										</Tooltip>
-										: 
-									null}
+				  {hasAutocomplete === true ? 
+				  	<Tooltip
+				  		color="primary"
+				  		title={"Field was autocompleted by Shuffle based on previous actions (same fields or parent nodes)"}
+				  		placement="top"
+				  	>
+				  		<AutoFixHighIcon style={{ 
+				  			color: "rgba(255,255,255,0.7)" ,
+				  			marginRight: 10, 
+				  		}}/>
+				  	</Tooltip>
+				  	: 
+				  null}
 
                   <div
                     style={{
@@ -3029,8 +3037,6 @@ const ParsedAction = (props) => {
 									const parsedBaseLabel = "$"+baselabel.toLowerCase().replaceAll(" ", "_")
 									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
 
-									console.log("NAME: ", name)
-
 									// Check if it's the same as the current name in use
 									//if (name === selectedAction.label) { 
 									//	console.log("Returning from name thing")
@@ -3352,9 +3358,8 @@ const ParsedAction = (props) => {
                 <em>No selection</em>
               </MenuItem>
               {selectedAction.authentication.map((data) => {
-                console.log("AUTH DATA: ", data)
 				if (data.last_modified === true) {
-					console.log("LAST MODIFIED: ", data.label)
+					//console.log("LAST MODIFIED: ", data.label)
 				}
 
                 return (
@@ -3736,9 +3741,12 @@ const ParsedAction = (props) => {
 
               return (
 					<TextField
+						{...params}
+
 						data-lpignore="true"
 						autocomplete="off"
 						dataLPIgnore="true"
+				  		autoComplete="off"
 
 						color="primary"
 						id="checkbox-search"
@@ -3747,9 +3755,10 @@ const ParsedAction = (props) => {
 							backgroundColor: theme.palette.inputColor,
 							borderRadius: theme.palette.borderRadius,
 						}}
-						{...params}
 						label="Find Actions"
 						variant="outlined"
+				        name={`disable_autocomplete_${Math.random()}`}
+
 					/>
               );
             }}

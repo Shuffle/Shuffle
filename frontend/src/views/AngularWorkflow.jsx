@@ -1393,7 +1393,7 @@ const AngularWorkflow = (defaultprops) => {
     }
 
 	if (streamDisabled) {
-		console.log("Stream disabled")
+		console.log("Stream disabled - send")
 		return
 	}
 
@@ -2739,7 +2739,7 @@ const AngularWorkflow = (defaultprops) => {
 	}
 
 	if (streamDisabled) {
-		console.log("Stream disabled")
+		console.log("Stream listener disabled")
 		return
 	}
 
@@ -2751,6 +2751,7 @@ const AngularWorkflow = (defaultprops) => {
 	const url = `${streamUrl}/api/v1/workflows/${workflowId}/stream`
   	while (true) {
 		if (streamDisabled === true || streamDisabled2 === true) {
+			console.log("Stream disabled, breaking")
 			break
 		}
 
@@ -3731,6 +3732,10 @@ const AngularWorkflow = (defaultprops) => {
 
           return
         } else if (data.buttonType === "set_startnode" && data.type !== "TRIGGER") {
+		  //console.log("STARTNODE")
+		  //event.preventDefault()
+		  //event.stopPropagation()
+
           const parentNode = cy.getElementById(data.attachedTo);
           if (parentNode !== null && parentNode !== undefined) {
             var oldstartnode = cy.getElementById(workflow.start);
@@ -3967,8 +3972,6 @@ const AngularWorkflow = (defaultprops) => {
           //}
           curaction.app_id = curapp.id
 
-		  console.log("CURAPP: ", curapp.authentication)
-
           setAuthenticationType(
             curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null ? {
               type: "oauth2",
@@ -4000,7 +4003,6 @@ const AngularWorkflow = (defaultprops) => {
             }
 
             const tmpAuth = JSON.parse(JSON.stringify(newAppAuth));
-						//console.log("FOUND AUTH OPTIONS: ", tmpAuth)
 
 			const curappName = curapp.name.toLowerCase()
 		    for (let tmpAuthKey in tmpAuth) {
@@ -4036,7 +4038,6 @@ const AngularWorkflow = (defaultprops) => {
 				}
 		  }
 
-		  console.log("OPTIONS: ", authenticationOptions)
 		  // Find with authenticationOption (authenticationOptions) has the highest .edited time. In this index, set the "last_modified" to true
 		  
 		    var latesttime = 0
@@ -4044,7 +4045,6 @@ const AngularWorkflow = (defaultprops) => {
 
 			for (var i = 0; i < authenticationOptions.length; i++) {
 				const authopt = authenticationOptions[i]
-				console.log("AUTHOPT: ", authopt)
 
 				if (authopt.edited > latesttime) {
 					latesttime = authopt.edited
@@ -4052,7 +4052,6 @@ const AngularWorkflow = (defaultprops) => {
 				}
 			}
 
-			console.log("LATEST INDEX: ", latestindex)
 			if (latestindex !== -1) {
 				authenticationOptions[latestindex].last_modified = true
 		    }
@@ -5933,7 +5932,7 @@ const AngularWorkflow = (defaultprops) => {
 			if (workflow.actions.length < 4) {
 				addSuggestionButtons(nodedata, event);
 			} else {
-				console.log("Too many actions to suggest (for now)")
+				//console.log("Too many actions to suggest (for now)")
 			}
 		}
     }
@@ -14666,6 +14665,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       }
 
+
       return (
         <div style={{ display: "flex" }}>
           <IconButton
@@ -15859,13 +15859,17 @@ const AngularWorkflow = (defaultprops) => {
                 }
               }
 
+          	  const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+			  const chosenNodeId = new URLSearchParams(cursearch).get("node");
+			  const highlightNode = chosenNodeId !== null && chosenNodeId !== undefined && chosenNodeId !== "" && chosenNodeId === data.action.id 
 
               return (
                 <div
                   key={index}
                   style={{
                     marginBottom: 20,
-                    border:
+                    border: highlightNode ? "2px solid red" 
+					:
                       data.action.sub_action === true
                         ? "1px solid rgba(255,255,255,0.3)"
                         : "1px solid rgba(255,255,255, 0.3)",
@@ -18349,28 +18353,15 @@ const AngularWorkflow = (defaultprops) => {
     );
 
   // Awful way of handling scroll
-  if (
-    scrollConfig !== undefined &&
-    setScrollConfig !== undefined &&
-    Object.getOwnPropertyNames(selectedAction).length !== 0
-  ) {
+  if (scrollConfig !== undefined && setScrollConfig !== undefined && Object.getOwnPropertyNames(selectedAction).length !== 0) {
     const rightSideActionView = document.getElementById("rightside_actions");
     if (rightSideActionView !== undefined && rightSideActionView !== null) {
-      if (
-        scrollConfig.top !== 0 &&
-        scrollConfig.top !== undefined &&
-        scrollConfig.top !== 0
-      ) {
+      if (scrollConfig.top !== null && scrollConfig.top !== undefined && scrollConfig.top !== 0) {
         setTimeout(() => {
-          if (
-            scrollConfig.selected !== undefined &&
-            scrollConfig.selected !== null
-          ) {
-            const selectedField = document.getElementById(
-              scrollConfig.selected
-            );
+          if (scrollConfig.selected !== undefined && scrollConfig.selected !== null) {
+            const selectedField = document.getElementById(scrollConfig.selected)
             if (selectedField !== undefined && selectedField !== null) {
-              selectedField.focus();
+              selectedField.focus()
             }
           }
         }, 5);

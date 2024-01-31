@@ -1178,7 +1178,7 @@ class AppBase:
                 #ret = ret[0]
                 self.logger.info("[DEBUG] DONT make list of 1 into 0!!")
 
-        self.logger.info("Return from execution: %s" % ret)
+        #self.logger.info("Return from execution: %s" % ret)
         if ret == None:
             results.append("")
             json_object = False
@@ -1202,11 +1202,12 @@ class AppBase:
             except:
                 results.append(ret)
 
-        if len(results) == 1: 
-            #results = results[0]
-            self.logger.info("DONT MAKE LIST FROM 1 TO 0!!")
+        #if len(results) == 1: 
+        #    #results = results[0]
+        #    #self.logger.info("DONT MAKE LIST FROM 1 TO 0!!")
+        #    pass
 
-        self.logger.info("\nLOOP: %s\nRESULTS: %s" % (loop_wrapper, results))
+        #self.logger.info("\nLOOP: %s\nRESULTS: %s" % (loop_wrapper, results))
         return results
 
     # Downloads all files from a namespace
@@ -3305,7 +3306,7 @@ class AppBase:
                                     pass
 
                                  
-                                self.logger.info(f"""HANDLING BODY: {action["parameters"][counter]["value"]}""")
+                                #self.logger.info(f"""HANDLING BODY: {action["parameters"][counter]["value"]}""")
                                 action["parameters"][counter]["value"] = recurse_cleanup_script(action["parameters"][counter]["value"])
 
                         #self.logger.info(action["parameters"])
@@ -3345,9 +3346,8 @@ class AppBase:
                                     "exception": f"Value Error: {check}",
                                 }))
 
-                            if parameter["name"] == "body": 
-                                #self.logger.info(f"[INFO] Should debug field with liquid and other checks as it's BODY: {value}")
-                                pass
+                            #if parameter["name"] == "body": 
+                            #    #self.logger.info(f"[INFO] Should debug field with liquid and other checks as it's BODY: {value}")
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
