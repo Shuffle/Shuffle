@@ -145,6 +145,7 @@ def escape(a):
     a = str(a)
     return json_escape(a)
 
+
 @shuffle_filters.register
 def neat_json(a):
     try:
