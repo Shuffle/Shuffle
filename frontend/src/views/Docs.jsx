@@ -523,6 +523,12 @@ const Docs = (defaultprops) => {
       );
     }
 
+	if (extraInfo !== "" && props.level === 1 && props.children !== undefined && props.children !== null && props.children.length > 0) {
+		if (props.children[0].toLowerCase().includes("privacy") || props.children[0].toLowerCase().includes("terms")) {
+			extraInfo = ""
+		}
+	}
+
     return (
       <Typography
         onMouseOver={() => {

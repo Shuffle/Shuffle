@@ -290,59 +290,6 @@ const Settings = (props) => {
     }
   };
 
-  // const registerProviders = (userdata) => {
-  //   // Register hooks here
-  //   detectEthereumProvider().then((provider) => {
-  //     if (provider) {
-  //       if (!provider.isMetaMask) {
-  //         toast("Only MetaMask is supported as of now.");
-  //         return;
-  //       }
-
-  //       // Find the ethereum network
-  //       // Get the users' account(s)
-  //       //toast("Connecting to MetaMask")
-  //       //console.log("Connected: ", provider.isConnected())
-
-  //       if (!provider.isConnected()) {
-  //         toast("Metamask is not connected.");
-  //         return;
-  //       }
-
-  //       provider.on("message", (event) => {
-  //         toast("Ethereum message: ", event);
-  //       });
-
-  //       provider.on("chainChanged", (chainId) => {
-  //         console.log("Changed chain to: ", chainId);
-
-  //         const method = "eth_getBalance";
-  //         const params = [userdata.eth_info.account, "latest"];
-  //         provider
-  //           .request({
-  //             method: method,
-  //             params,
-  //           })
-  //           .then((result) => {
-  //             console.log("Got result: ", result);
-  //             if (result !== undefined && result !== null) {
-  //               userdata.eth_info.balance = result;
-  //               userdata.eth_info.parsed_balance = result / 1000000000000000000;
-  //               console.log("INFO: ", userdata);
-  //               setUserData(userdata);
-  //             } else {
-  //               toast("Couldn't find balance: ", result);
-  //             }
-  //           })
-  //           .catch((error) => {
-  //             // If the request fails, the Promise will reject with an error.
-  //             toast("Failed getting info from ethereum API: " + error);
-  //           });
-  //       });
-  //     }
-  //   });
-  // };
-
   // This should "always" have data
   useEffect(() => {
     if (firstrequest) {

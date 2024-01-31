@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import theme from "../theme.jsx";
 import { toast } from 'react-toastify';
+import ReactJson from "react-json-view";
 
 import {
     Tooltip,
@@ -42,6 +43,7 @@ import {
     Visibility as VisibilityIcon,
     VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
+import { validateJson, } from "../views/Workflows.jsx";
 
 const scrollStyle1 = {
     height: 100,
@@ -58,6 +60,7 @@ const scrollStyle2 = {
     right: "-20px",
     overflow: "scroll",
 }
+
 
 const CacheView = (props) => {
     const { globalUrl, userdata, serverside, orgId } = props;
@@ -150,11 +153,22 @@ const CacheView = (props) => {
 
     const deleteCache = (orgId, key) => {
         toast("Attempting to delete Cache");
-        fetch(globalUrl + `/api/v1/orgs/${orgId}/cache/${key}`, {
-            method: "DELETE",
+
+        // method: "DELETE",
+		const method = "POST"
+        //const url = `${globalUrl}/api/v1/orgs/${orgId}/cache/${key}`
+        const url = `${globalUrl}/api/v1/orgs/${orgId}/delete_cache`
+		const parsed = {
+			"org_id": orgId,
+			"key": key,
+		}
+
+        fetch(url, {
+			method: method,
             headers: {
                 Accept: "application/json",
             },
+			body: JSON.stringify(parsed),
             credentials: "include",
         })
             .then((response) => {
@@ -334,7 +348,7 @@ const CacheView = (props) => {
 
     return (
 
-        <div>
+        <div style={{paddingBottom: 250, }}>
             {modalView}
             <div style={{ marginTop: 20, marginBottom: 20 }}>
                 <h2 style={{ display: "inline" }}>Shuffle Datastore</h2>
@@ -380,19 +394,18 @@ const CacheView = (props) => {
                 <ListItem>
                     <ListItemText
                         primary="Key"
-                    // style={{ minWidth: 150, maxWidth: 150 }}
+                    	style={{ minWidth: 250, maxWidth: 250, }}
                     />
                     <ListItemText
-                        primary="value"
-                    // style={{ minWidth: 150, maxWidth: 150 }}
-                    />
-                    <ListItemText
-                        primary="Updated"
-                    // style={{ minWidth: 150, maxWidth: 150 }}
+                        primary="Value"
+                    	style={{ minWidth: 400, maxWidth: 400, overflowX: "auto", overflowY: "hidden", }}
                     />
                     <ListItemText
                         primary="Actions"
-                    // style={{ minWidth: 150, maxWidth: 150 }}
+                    	style={{ minWidth: 150, maxWidth: 150, marginLeft: 50, }}
+                    />
+                    <ListItemText
+                        primary="Updated"
                     />
                 </ListItem>
                 {listCache === undefined || listCache === null
@@ -403,57 +416,55 @@ const CacheView = (props) => {
                             bgColor = "#1f2023";
                         }
 
+              			const validate = validateJson(data.value);
+						console.log("Past validate: ", validate);
+
                         return (
                             <ListItem key={index} style={{ backgroundColor: bgColor }}>
                                 <ListItemText
                                     style={{
-                                        maxWidth: 225,
-                                        minWidth: 225,
+                                        maxWidth: 250,
+                                        minWidth: 250,
                                         overflow: "hidden",
                                     }}
                                     primary={data.key}
                                 />
-                                <div style={scrollStyle1}>
-                                <ListItemText
-                                    // style={{
-                                    //     maxWidth: 225,
-                                    //     maxHeight: 150,
-                                    //     // overflow: "hidden", 
-                                    //     paddingLeft: "52px",
-                                    //     overflow: "scroll",
-                                       
-                                    // }}
-                                    style={scrollStyle2}
-                                    // style={{ maxWidth: 100, minWidth: 100 }}
-                                    // onMouseOver={() =>
-                                    //     setShow((prevState) => ({ ...prevState, [data.value]: true }))
-                                    // }
-                                    // onMouseLeave={() =>
-                                    //     setShow((prevState) => ({ ...prevState, [data.value]: false }))
-                                    // } 
-                                    //primary={show[data.value] ? data.value : `${data.value.substring(0, 5)}...`}
-                                    primary={data.value}
-                                    />
-                                    </div>
                                 <ListItemText
                                     style={{
-                                        maxWidth: 225,
-                                        minWidth: 225,
-                                        overflow: "hidden",
-                                        marginLeft: "42px",
-                                    }}
-                                    primary={new Date(data.edited * 1000).toISOString()}
-                                />
+										minWidth: 400,
+										maxWidth: 400,
+										overflowX: "auto", 
+										overflowY: "hidden", 
+									}}
+                                    primary={validate.valid ? 
+                      					<ReactJson
+                      					  src={validate.result}
+                      					  theme={theme.palette.jsonTheme}
+                      					  style={theme.palette.reactJsonStyle}
+                      					  collapsed={true}
+                      					  enableClipboard={(copy) => {
+                      					    //handleReactJsonClipboard(copy);
+                      					  }}
+                      					  displayDataTypes={false}
+                      					  onSelect={(select) => {
+                      					    //HandleJsonCopy(showResult, select, data.action.label);
+                      					    //console.log("SELECTED!: ", select);
+                      					  }}
+                      					  name={"value"}
+                      					/>
+										:
+										data.value
+									}
+								/>
                                 <ListItemText
                                     style={{
-                                        minWidth: 250,
-                                        maxWidth: 250,
-                                        overflow: "hidden",
-                                        paddingLeft: "155px",
+                                        maxWidth: 150,
+                                        minWidth: 150,
+										marginLeft: 50,
                                     }}
                                     primary=<span style={{ display: "inline" }}>
                                         <Tooltip
-                                            title="Edit"
+                                            title="Edit item"
                                             style={{}}
                                             aria-label={"Edit"}
                                         >
@@ -473,7 +484,7 @@ const CacheView = (props) => {
                                             </span>
                                         </Tooltip>
                                         <Tooltip
-                                            title={"Delete Cache"}
+                                            title={"Delete item"}
                                             style={{ marginLeft: 15, }}
                                             aria-label={"Delete"}
                                         >
@@ -493,6 +504,13 @@ const CacheView = (props) => {
                                         </Tooltip>
                                     </span>
                                 />
+								<ListItemText
+									style={{
+										maxWidth: 225,
+										minWidth: 225,
+									}}
+									primary={new Date(data.edited * 1000).toISOString()}
+								/>
                             </ListItem>
                         );
                     })}

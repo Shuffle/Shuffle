@@ -43,6 +43,8 @@ const WorkflowTemplatePopup = (props) => {
   	const [missingSource, setMissingSource] = React.useState(undefined)
   	const [missingDestination, setMissingDestination] = React.useState(undefined);
 
+  	const [configurationFinished, setConfigurationFinished] = React.useState(false);
+
 	useEffect(() => {
 	}, [missingSource, missingDestination])
 
@@ -175,6 +177,92 @@ const WorkflowTemplatePopup = (props) => {
 		  });
 	}
 
+  	// Can create and set workflows
+  	const reloadWorkflow = (workflow_id) => {
+
+  	  const new_url = `${globalUrl}/api/v1/workflows/${workflow_id}`
+  	  return fetch(new_url, {
+  	    method: "GET",
+  	    headers: {
+  	      "Content-Type": "application/json",
+  	      Accept: "application/json",
+  	    },
+  	    credentials: "include",
+  	  })
+  	    .then((response) => {
+  	      if (response.status !== 200) {
+  	        console.log("Status not 200 for workflows :O!");
+  	        return;
+  	      }
+  	      //setSubmitLoading(false);
+
+  	      return response.json();
+  	    })
+  	    .then((responseJson) => {
+		  if (responseJson.success === false) {
+		  	if (responseJson.reason !== undefined) {
+		  		toast("Error setting workflow: ", responseJson.reason)
+		  	} else {
+		  		toast("Error setting workflow.")
+		  	}
+
+		  	return
+		  } else if (responseJson.id !== undefined && responseJson.id !== null && responseJson.id !== "") {
+			  setWorkflow(responseJson)
+		  }
+
+  	      return responseJson;
+  	    })
+  	    .catch((error) => {
+  	      toast("Failed reloading configured workflow: ", error.toString());
+  	    });
+  	};
+
+  	// Can create and set workflows
+  	const saveWorkflow = (workflowdata) => {
+
+  	  const new_url = `${globalUrl}/api/v1/workflows?set_auth=true`
+  	  return fetch(new_url, {
+  	    method: "POST",
+  	    headers: {
+  	      "Content-Type": "application/json",
+  	      Accept: "application/json",
+  	    },
+  	    body: JSON.stringify(workflowdata),
+  	    credentials: "include",
+  	  })
+  	    .then((response) => {
+  	      if (response.status !== 200) {
+  	        console.log("Status not 200 for workflows :O!");
+  	        return;
+  	      }
+  	      //setSubmitLoading(false);
+
+  	      return response.json();
+  	    })
+  	    .then((responseJson) => {
+		  if (responseJson.success === false) {
+		  	if (responseJson.reason !== undefined) {
+		  		toast("Error setting workflow: ", responseJson.reason)
+		  	} else {
+		  		toast("Error setting workflow.")
+		  	}
+
+		  	return
+		  }
+
+		  // In case it got a new id, this is to make sure it loads with the correct config
+		  if (responseJson.id !== undefined && responseJson.id !== null && responseJson.id !== "") {
+			  reloadWorkflow(responseJson.id)
+		  }
+
+  	      return responseJson;
+  	    })
+  	    .catch((error) => {
+  	      toast("Failed generating workflow: ", error.toString());
+  	    });
+  	};
+
 
 	const getGeneratedWorkflow = () => {
 		// POST
@@ -221,8 +309,10 @@ const WorkflowTemplatePopup = (props) => {
 			},
 		}
 
-		//fetch(globalUrl + "/api/v1/workflows/merge", {
-		fetch("https://shuffler.io/api/v1/workflows/merge", {
+		const url = isCloud ? `${globalUrl}/api/v1/workflows/merge` : `https://shuffler.io/api/v1/workflows/merge`
+		//const url = `https://shuffler.io/api/v1/workflows/merge`
+
+		fetch(url, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -243,13 +333,21 @@ const WorkflowTemplatePopup = (props) => {
 			if (responseJson.id !== undefined && responseJson.id !== null && responseJson.id !== "" && responseJson.name !== undefined && responseJson.name !== null && responseJson.name !== "") {
 				console.log("Success in workflow template (prebuilt): ", responseJson);
 				setWorkflow(responseJson)
+
+				// Sets it in the database properly
+  				saveWorkflow(responseJson) 
 				return
 			}
 
 			if (responseJson.success === false) {
 				//console.log("Error in workflow template: ", responseJson.error);
 
-				setErrorMessage("Failed to generate workflow for these tools - the Shuffle team has been notified. Click out of this window to continue. Contact support@shuffler.io for further assistance.")
+				const defaultMessage = "Failed to generate workflow the workflow - the Shuffle team has been notified. Contact support@shuffler.io for further assistance."
+				if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason !== "") {
+					setErrorMessage(defaultMessage + "\n\n" + responseJson.reason)
+				} else {
+					setErrorMessage(defaultMessage)
+				}
 
 				setIsActive(true)
 				//setTimeout(() => {
@@ -365,7 +463,6 @@ const WorkflowTemplatePopup = (props) => {
 										fontSize: 18,
 										color: "rgba(255, 132, 68, 1)",
 										marginTop: 32,
-										justifyContent: isMobile ? "center" : null,
 										fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
 										fontWeight: 550,
 									  }}
@@ -420,8 +517,22 @@ const WorkflowTemplatePopup = (props) => {
   					  appAuthentication={appAuthentication}
 					  setAppAuthentication={setAppAuthentication}
 					  apps={apps}
+
+					  setConfigurationFinished={setConfigurationFinished}
 					/>
-					{errorMessage === "" ?
+
+					{errorMessage === "" && configurationFinished === true && workflow.id !== undefined && workflowLoading === false ?
+						<Tooltip title="Workflow generated!" placement="top">
+							<span style={{display: "flex", }}>
+								{/*<CheckIcon color="primary" sx={{ borderRadius: 4 }} /> */}
+								<Typography variant="h6" style={{ marginLeft: 20, }}>
+									Workflow generated!
+								</Typography>
+							</span>
+						</Tooltip>
+					: null}
+
+					{/*errorMessage === "" ?
 						<Button
 							style={{marginTop: 50, }}
 							variant={isFinished() ? "contained" : "outlined"}
@@ -431,7 +542,7 @@ const WorkflowTemplatePopup = (props) => {
 						>
 							Done
 						</Button>
-					: null}
+					: null*/}
 				</DialogContent>
         	</Drawer>
     	)
@@ -449,7 +560,7 @@ const WorkflowTemplatePopup = (props) => {
 
 
 	return (
-		<div style={{ display: "flex", maxWidth: isCloud ? 470 : isMobile? null: 450, minWidth: isCloud ? 470 : isMobile? null: 450, height: 78, borderRadius: 8, }}>
+		<div style={{ display: "flex", maxWidth: isCloud ? isMobile ? null : 470 : isMobile? 345: 450, minWidth: isCloud ? isMobile ? null : 470 : isMobile? null: 450, height: 78, borderRadius: 8, justifyContent: isMobile ? null : "center" }}>
 			<ModalView />
 			<div
 				// variant={isActive === 1 ? "contained" : "outlined"} 
@@ -457,7 +568,7 @@ const WorkflowTemplatePopup = (props) => {
 				disabled={visualOnly === true}
 				style={{
 					margin: isHomePage ? isMobile ? null : 4 : 4 , 
-					width: "100%",
+					width: isHomePage? isMobile ? null : "100%" : "100%",
 					borderRadius: 8,
 					textTransform: "none",
 					backgroundColor: isHomePage ? null : theme.palette.inputColor,
@@ -503,31 +614,31 @@ const WorkflowTemplatePopup = (props) => {
 					<div style={{display: "flex", flex: 1, marginTop: 3, }}>
 						{img1 !== undefined && img1 !== "" && srcapp !== undefined && srcapp !== "" ?
 							<Tooltip title={srcapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
-								<span style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
+								<div style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
 									<img src={img1} style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleDefault : imagestyle} />
-								</span>
+								</div>
 							</Tooltip>
 						: 
-							<span style={{width: 50, }} />
+							<div style={{width: 50, }} />
 						}
 						{img2 !== undefined && img2 !== "" && dstapp !== undefined && dstapp !== "" ?
 							<Tooltip title={dstapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
-								<span style={{display: "flex", }}>
+								<div style={{display: "flex", }}>
 									<TrendingFlatIcon style={{ marginTop: 7, }} />
-									<span style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
+									<div style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
 										<img src={img2} style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleDefault : imagestyle} />
-									</span>
-								</span>
+									</div>
+								</div>
 							</Tooltip>
 						:
-							<span style={{width: 50, }} />
+							<div style={{width: 50, }} />
 						}	
 					</div>
-					<div style={{ flex: 3, marginLeft: 20, }}>
+					<div style={{ flex: 3, marginLeft: 20, maxHeight: 50, overflow: "hidden", }}>
 						<Typography variant="body1" style={{ marginTop: parsedDescription.length === 0 ? 10 : 0, fontSize: isMobile ? 13 : 16,fontWeight: isHomePage? 600 : null,textTransform: 'capitalize', color: isHomePage ? "var(--White-text, #F1F1F1)" :"rgba(241, 241, 241, 1)"}} >
 							{parsedTitle}
 						</Typography>
-						<Typography variant="body2" color="textSecondary" style={{ fontSize: isMobile ? 10: 16, fontWeight: isHomePage ? 400 : null, textTransform: 'capitalize', marginTop: 0, overflow: "hidden", maxHeight: 21, overflow: "hidden",}} color="rgba(158, 158, 158, 1)">
+						<Typography variant="body2" color="textSecondary" style={{ fontSize: isMobile ? 10: 16, fontWeight: isHomePage ? 400 : null, textTransform: 'capitalize', marginTop: 0, overflow: "hidden", maxHeight: 31,}} color="rgba(158, 158, 158, 1)">
 							{parsedDescription}
 						</Typography>
 					</div>
@@ -538,6 +649,8 @@ const WorkflowTemplatePopup = (props) => {
 					: ""}
 				</div>
 			</div>
+
+
 		</div>
 	)
 }

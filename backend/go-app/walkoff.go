@@ -106,7 +106,10 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 	}
 
 	log.Printf("[INFO] Starting frequency for execution: %d", newfrequency)
-	jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
+	
+
+	//jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
+	jobret, err := newscheduler.Every(newfrequency).Seconds().Run(job)
 	if err != nil {
 		log.Printf("Failed to schedule workflow: %s", err)
 		return err
@@ -305,8 +308,13 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		environment = env.OrgId
 	}
 
-	if request.Method == "POST" {
-		if rand.Intn(1) == 0 {
+	// FIXME: Workflow stats disabled for now
+	// as it caused too many problems
+	// goal: track docker stuff once a minute and graph it
+	// For now: Disable this as it caused too many problems
+	if request.Method == "POST" && true == false {
+		//log.Printf("[DEBUG] POST to workflowqueue")
+		if rand.Intn(10) == 0 {
 			// Parse out body
 			body, err := ioutil.ReadAll(request.Body)
 			if err == nil {
@@ -924,13 +932,15 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	log.Printf("[DEBUG] Attempting to delete the workflow %s from the database...", fileId)
 	err = shuffle.DeleteKey(ctx, "workflow", fileId)
 	if err != nil {
-		log.Printf("[DEBUG]] Failed deleting key %s", fileId)
-		resp.WriteHeader(401)
+		log.Printf("[DEBUG] Failed deleting workflow key %s", fileId)
+		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false, "reason": "Failed deleting key"}`))
 		return
 	}
+
 	log.Printf("[INFO] Should have deleted workflow %s (%s)", workflow.Name, fileId)
 
 	cacheKey := fmt.Sprintf("%s_workflows", user.Id)
@@ -1048,7 +1058,15 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		return shuffle.WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
 	}
 
-	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, 10)
+	maxExecutionDepth := 10
+	if os.Getenv("SHUFFLE_MAX_EXECUTION_DEPTH") != "" {
+		maxExecutionDepthNew, err := strconv.Atoi(os.Getenv("SHUFFLE_MAX_EXECUTION_DEPTH"))
+		if err == nil && maxExecutionDepthNew > 1 && maxExecutionDepthNew < 1000 {
+			maxExecutionDepth = maxExecutionDepthNew
+		}
+	}
+
+	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
 	if err != nil {
 		err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 		if err != nil {
@@ -1059,7 +1077,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			// Special for user input callbacks
 			return workflowExecution, fmt.Sprintf("%s", err), nil
 		} else {
-			log.Printf("[ERROR] Failed in prepareExecution: %s", err)
+			log.Printf("[ERROR] Failed in prepareExecution: '%s'", err)
 			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed starting workflow: %s", err), err
 		}
 	}
@@ -1884,7 +1902,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("[AUDIT] Starting execution of workflow '%s' by user %s (%s)!", fileId, user.Username, user.Id)
+	log.Printf("[AUDIT] Starting execution of workflow '%s' by user '%s' (%s). If this is empty, it's most likely a subflow!", fileId, user.Username, user.Id)
 
 	user.ActiveOrg.Users = []shuffle.UserMini{}
 	workflow.ExecutingOrg = user.ActiveOrg

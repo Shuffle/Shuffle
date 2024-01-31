@@ -52,7 +52,8 @@ var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
 
-var baseimagename = "frikky/shuffle"
+//var baseimagename = "frikky/shuffle"
+var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 
 // var baseimagename = "registry.hub.docker.com/frikky/shuffle"
 var registryName = "registry.hub.docker.com"
@@ -120,7 +121,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 	}
 
 	//log.Printf("[DEBUG][%s] Setting with %d results (pre)", workflowExecution.ExecutionId, len(workflowExecution.Results))
-	workflowExecution = shuffle.Fixexecution(ctx, workflowExecution)
+	workflowExecution, _ = shuffle.Fixexecution(ctx, workflowExecution)
 	cacheKey := fmt.Sprintf("workflowexecution_%s", workflowExecution.ExecutionId)
 
 	execData, err := json.Marshal(workflowExecution)
@@ -354,7 +355,8 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		req.Header.Add("Content-Type", "application/json")
 
 		//log.Printf("[DEBUG][%s] All App Logs: %#v", workflowExecution.ExecutionId, allLogs)
-		newresp, err := topClient.Do(req)
+		client := shuffle.GetExternalClient(abortUrl)
+		newresp, err := client.Do(req)
 		if err != nil {
 			log.Printf("[WARNING][%s] Failed abort request: %s", workflowExecution.ExecutionId, err)
 		} else {
@@ -464,6 +466,9 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	// Check action if subflow
 	// Check if url is default (shuffle-backend)
 	// If it doesn't exist, add it
+
+	// FIXME: This does NOT replace it in all cases as the data
+	// is not saved in the database as the correct param.
 	if action.AppName == "shuffle-subflow" {
 		// Automatic replacement of URL
 		for paramIndex, param := range action.Parameters {
@@ -471,17 +476,19 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				continue
 			}
 
-			if strings.Contains(param.Value, "shuffle-backend") {
-				// Automatic replacement as this is default
-				if len(os.Getenv("BASE_URL")) > 0 {
-					action.Parameters[paramIndex].Value = os.Getenv("BASE_URL")
-					log.Printf("[DEBUG][%s] Replaced backend_url with base_url %s", workflowExecution.ExecutionId, os.Getenv("BASE_URL"))
-				}
+			if !strings.Contains(param.Value, "shuffle-backend") {
+				continue
+			} 
 
-				if len(os.Getenv("SHUFFLE_CLOUDRUN_URL")) > 0 {
-					action.Parameters[paramIndex].Value = os.Getenv("SHUFFLE_CLOUDRUN_URL")
-					log.Printf("[DEBUG][%s] Replaced backend_url with cloudrun %s", workflowExecution.ExecutionId, os.Getenv("SHUFFLE_CLOUDRUN_URL"))
-				}
+			// Automatic replacement as this is default
+			if len(os.Getenv("BASE_URL")) > 0 {
+				action.Parameters[paramIndex].Value = os.Getenv("BASE_URL")
+				log.Printf("[DEBUG][%s] Replaced backend_url with base_url %s", workflowExecution.ExecutionId, os.Getenv("BASE_URL"))
+			}
+
+			if len(os.Getenv("SHUFFLE_CLOUDRUN_URL")) > 0 {
+				action.Parameters[paramIndex].Value = os.Getenv("SHUFFLE_CLOUDRUN_URL")
+				log.Printf("[DEBUG][%s] Replaced backend_url with cloudrun %s", workflowExecution.ExecutionId, os.Getenv("SHUFFLE_CLOUDRUN_URL"))
 			}
 		}
 	}
@@ -745,6 +752,8 @@ func removeContainer(containername string) error {
 		return err
 	}
 
+	defer cli.Close()
+
 	// FIXME - ucnomment
 	//	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{
 	//		All: true,
@@ -800,6 +809,8 @@ func getWorkerURLs() ([]string, error) {
 		return workerUrls, err
 	}
 
+	defer cli.Close()
+
 	// Specify the name of the service for which you want to list tasks
 	serviceName := "shuffle-workers"
 
@@ -827,12 +838,19 @@ func askOtherWorkersToDownloadImage(image string) {
 		return
 	}
 
+	// Check environment SHUFFLE_AUTO_IMAGE_DOWNLOAD
+	if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
+		log.Printf("[DEBUG] SHUFFLE_AUTO_IMAGE_DOWNLOAD is false. NOT distributing images %s", image)
+		return 
+	}
+
 	urls, err := getWorkerURLs()
 	if err != nil {
 		log.Printf("[ERROR] Error in listing worker urls: %s", err)
 		return
 	}
 
+	httpClient := &http.Client{}
 	for _, url := range urls {
 		log.Printf("[DEBUG] Trying to speak to: %s", url)
 		imagesRequest := ImageRequest{
@@ -855,7 +873,6 @@ func askOtherWorkersToDownloadImage(image string) {
 			continue
 		}
 
-		httpClient := &http.Client{}
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			log.Printf("[ERROR] Error in making request to %s : %s", url, err)
@@ -891,6 +908,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		log.Printf("[ERROR] Unable to create docker client (3): %s", err)
 		return
 	}
+
+	defer dockercli.Close()
 
 	for _, action := range relevantActions {
 		appname := action.AppName
@@ -1116,6 +1135,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
 							return
 						} else {
+							defer reader.Close()
 							baseTag := strings.Split(image, ":")
 							if len(baseTag) > 1 {
 								tag := baseTag[1]
@@ -1226,6 +1246,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
 								return
 							} else {
+								defer reader.Close()
 								baseTag := strings.Split(image, ":")
 								if len(baseTag) > 1 {
 									tag := baseTag[1]
@@ -1481,6 +1502,8 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 }
 
 func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.WorkflowExecution, streamResultUrl, subflowId string) error {
+	// FIXME: If MEMCACHE is enabled, check in this order:
+
 	extra := 0
 	for _, trigger := range workflowExecution.Workflow.Triggers {
 		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
@@ -1494,7 +1517,8 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		bytes.NewBuffer([]byte(data)),
 	)
 
-	newresp, err := topClient.Do(req)
+	client := shuffle.GetExternalClient(streamResultUrl)
+	newresp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[ERROR] Failed making request (1): %s", err)
 		time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -2043,7 +2067,8 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		log.Printf("[DEBUG][%s] Running setexec with status %s and %d result(s)", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results))
+		log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		//result(s)", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results))
 		err = setWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
 			resp.WriteHeader(401)
@@ -2101,7 +2126,8 @@ func sendSelfRequest(actionResult shuffle.ActionResult) {
 		return
 	}
 
-	newresp, err := topClient.Do(req)
+	client := shuffle.GetExternalClient(streamUrl)
+	newresp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[ERROR][%s] Error running finishing request (2): %s", actionResult.ExecutionId, err)
 		return
@@ -2158,9 +2184,10 @@ func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
 		return
 	}
 
-	newresp, err := topClient.Do(req)
+	client := shuffle.GetExternalClient(streamUrl)
+	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[ERROR][%s] Error running finishing request: %s", workflowExecution.ExecutionId, err)
+		log.Printf("[ERROR][%s] Error running finishing request (1): %s", workflowExecution.ExecutionId, err)
 		log.Printf("[DEBUG][%s] Shutting down (23)", workflowExecution.ExecutionId)
 		shutdown(workflowExecution, "", "", false)
 		return
@@ -2189,7 +2216,7 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 	}
 
 	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
-	workflowExecution = shuffle.Fixexecution(ctx, workflowExecution)
+	workflowExecution, _ = shuffle.Fixexecution(ctx, workflowExecution)
 	_, extra, _, _, _, _, _, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 
 	log.Printf("[INFO][%s] VALIDATION. Status: %s, shuffle.Actions: %d, Extra: %d, Results: %d. Parent: %#v", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results), workflowExecution.ExecutionParent)
@@ -2337,6 +2364,8 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 
 
 	port := listener.Addr().(*net.TCPAddr).Port
+	// Set the port environment variable
+	os.Setenv("WORKER_PORT", fmt.Sprintf("%d", port))
 
 	log.Printf("[DEBUG] Starting webserver (2) on port %d with hostname: %s", port, hostname)
 	appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, port)
@@ -2347,6 +2376,12 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 
 func downloadDockerImageBackend(client *http.Client, imageName string) error {
 	log.Printf("[DEBUG] Trying to download image %s from backend %s as it doesn't exist. All images: %#v", imageName, baseUrl, downloadedImages)
+
+	// Check environment SHUFFLE_AUTO_IMAGE_DOWNLOAD
+	if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
+		log.Printf("[DEBUG] SHUFFLE_AUTO_IMAGE_DOWNLOAD is false. Not downloading image %s", imageName)
+		return nil
+	}
 
 	if arrayContains(downloadedImages, imageName) {
 		log.Printf("[DEBUG] Image %s already downloaded", imageName)
@@ -2407,12 +2442,15 @@ func downloadDockerImageBackend(client *http.Client, imageName string) error {
 		return err
 	}
 
+	defer dockercli.Close()
+
 	imageLoadResponse, err := dockercli.ImageLoad(context.Background(), tar, true)
 	if err != nil {
 		log.Printf("[ERROR] Error loading images: %s", err)
 		return err
 	}
 
+	defer imageLoadResponse.Body.Close()
 	body, err := ioutil.ReadAll(imageLoadResponse.Body)
 	if err != nil {
 		log.Printf("[ERROR] Error reading: %s", err)
@@ -2448,7 +2486,7 @@ func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 	ctx := context.Background()
 	nodes, err := dockercli.NodeList(ctx, types.NodeListOptions{})
 	if err != nil {
-		return 0, err
+		return 1, err
 	}
 
 	nodeCount := int64(0)
@@ -2456,6 +2494,20 @@ func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 		//log.Printf("ID: %s - %#v", node.ID, node.Status.State)
 		if node.Status.State == "ready" {
 			nodeCount += 1
+		}
+	}
+
+	// Check for SHUFFLE_MAX_NODES
+	maxNodesString := os.Getenv("SHUFFLE_MAX_SWARM_NODES")
+	// Make it into a number and check if it's lower than nodeCount
+	if len(maxNodesString) > 0 {
+		maxNodes, err := strconv.ParseInt(maxNodesString, 10, 64)
+		if err != nil {
+			return nodeCount, err
+		}
+
+		if nodeCount > maxNodes {
+			nodeCount = maxNodes
 		}
 	}
 
@@ -2570,9 +2622,11 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 		log.Printf("[DEBUG][%s] Adding %s to cache (%#v)", workflowExecution.ExecutionId, newExecId, action.Name)
 	}
 
-	// FIXME: Add 5 tries 
+	client := shuffle.GetExternalClient(streamUrl)
 
-	newresp, err := topClient.Do(req)
+	// Set client timeout to 5 seconds
+	//client.Timeout = time.Duration(10) * time.Second
+	newresp, err := client.Do(req)
 	if err != nil {
 		// Another timeout issue here somewhere
 		// context deadline
@@ -2629,6 +2683,8 @@ func baseDeploy() {
 		log.Printf("[ERROR] Unable to create docker client (3): %s", err)
 		return
 	}
+
+	defer cli.Close()
 
 	for key, value := range autoDeploy {
 		newNameSplit := strings.Split(key, ":")
@@ -2771,6 +2827,7 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 		log.Printf("[DEBUG] Environments: %s. Source: %s. 1 env = webserver, 0 or >1 = default. Subflow exists: %#v", environments, workflowExecution.ExecutionSource, subflowFound)
 		if len(environments) == 1 && workflowExecution.ExecutionSource != "default" && !subflowFound {
 			log.Printf("[DEBUG] Running OPTIMIZED execution (not manual)")
+			os.Setenv("SHUFFLE_OPTIMIZED", "true")
 			listener := webserverSetup(workflowExecution)
 			err := executionInit(workflowExecution)
 			if err != nil {
@@ -2784,7 +2841,13 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 				handleExecutionResult(workflowExecution)
 			}()
 
+			log.Printf("[DEBUG] Running with port %#v", os.Getenv("WORKER_PORT"))
+
 			runWebserver(listener)
+
+			// Set environment variable
+
+
 			//log.Printf("Before wait")
 			//wg := sync.WaitGroup{}
 			//wg.Add(1)
@@ -2846,6 +2909,12 @@ func main() {
 		timezone = "Europe/Amsterdam"
 	}
 
+	if baseimagename == "" {
+		log.Printf("[DEBUG] Setting baseimagename")
+		baseimagename = "frikky/shuffle" // Dockerhub
+		//baseimagename = "shuffle"        // Github 		(ghcr.io)
+	}
+
 	topClient = client
 	swarmConfig := os.Getenv("SHUFFLE_SWARM_CONFIG")
 	log.Printf("[INFO] Running with timezone %s and swarm config %#v", timezone, swarmConfig)
@@ -2897,7 +2966,6 @@ func main() {
 		shutdown(workflowExecution, "", "", true)
 	}
 
-	topClient = client
 	firstRequest := true
 	environments := []string{}
 	for {
@@ -3007,15 +3075,14 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	var workflowExecution shuffle.WorkflowExecution
 	data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, execRequest.ExecutionId, execRequest.Authorization)
 	streamResultUrl := fmt.Sprintf("%s/api/v1/streams/results", baseUrl)
-	topClient = shuffle.GetExternalClient(streamResultUrl)
-
 	req, err := http.NewRequest(
 		"POST",
 		streamResultUrl,
 		bytes.NewBuffer([]byte(data)),
 	)
 
-	newresp, err := topClient.Do(req)
+	client := shuffle.GetExternalClient(streamResultUrl)
+	newresp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[ERROR] Failed making request (2): %s", err)
 		resp.WriteHeader(401)
@@ -3145,6 +3212,8 @@ func handleDownloadImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	defer client.Close()
+
 	// check if images are already downloaded
 	// Retrieve a list of Docker images
 	images, err := client.ImageList(context.Background(), types.ImageListOptions{})
@@ -3154,6 +3223,7 @@ func handleDownloadImage(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
+
 
 	for _, img := range images {
 		for _, tag := range img.RepoTags {
@@ -3225,5 +3295,4 @@ func runWebserver(listener net.Listener) {
 	if err != nil {
 		log.Printf("[ERROR] Serve issue in worker: %#v", err)
 	}
-	log.Printf("[DEBUG] Do we see this?")
 }

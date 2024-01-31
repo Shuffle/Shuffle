@@ -235,7 +235,7 @@ const Header = (props) => {
     setLoginHoverColor(hoverOutColor);
   };
 
-	const notificationWidth = 300
+	const notificationWidth = 335
 	const imagesize = 22;
   	const boxColor = "#86c142";
 
@@ -398,7 +398,8 @@ const Header = (props) => {
               <Button
                 color="primary"
                 variant="contained"
-                style={{ marginLeft: 30 }}
+				disabled={notifications.filter((data) => !data.read).length === 0}
+                style={{ marginLeft: 30, }}
                 onClick={() => {
                   clearNotifications();
                 }}
@@ -454,12 +455,9 @@ const Header = (props) => {
         return response.json();
       })
       .then(function (responseJson) {
+	    console.log("In here?")
         if (responseJson.success === true) {
-          if (
-            responseJson.region_url !== undefined &&
-            responseJson.region_url !== null &&
-            responseJson.region_url.length > 0
-          ) {
+          if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) {
             console.log("Region Change: ", responseJson.region_url);
             localStorage.setItem("globalUrl", responseJson.region_url);
             //globalUrl = responseJson.region_url
@@ -468,9 +466,14 @@ const Header = (props) => {
           setTimeout(() => {
             window.location.reload();
           }, 2000);
+
           toast("Successfully changed active organization - refreshing!");
         } else {
-          toast("Failed changing org: ", responseJson.reason);
+		  if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+		    toast(responseJson.reason);
+		  } else {
+          	toast("Failed changing org. Try again or contact support@shuffler.io if this persists.");
+		  }
         }
       })
       .catch((error) => {
@@ -613,7 +616,7 @@ const Header = (props) => {
         <Divider style={{marginBottom: 10, }}/>
 
 	  	<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 5, marginBottom: 5,}}>
-	  		Version: 1.3.1
+	  		Version: 1.3.3
 	  	</Typography>
       </Menu>
     </span>
@@ -627,7 +630,7 @@ const Header = (props) => {
   };
   
   // Handle top bar or something
-  const defaultTop = isCloud ? 0 : 7;
+  const defaultTop = -2
   const loginTextBrowser = !isLoggedIn ? (
     <div
       style={{
@@ -660,7 +663,7 @@ const Header = (props) => {
                 <img
                   src={"/images/logos/topleft_logo.svg"}
                   alt="shuffle logo"
-                  style={{ height: 25, marginTop: 5, }}
+                  style={{ height: 25, }}
                 />
               </Grid>
             </Link>

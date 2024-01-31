@@ -88,6 +88,7 @@ export const FixName = (name) => {
   return newAppname;
 };
 
+
 // Takes input of e.g. $node.data.#.asd and a matching value from a json blob
 // Returns 
 export const FindJsonPath = (path, inputdata) => {
@@ -156,6 +157,8 @@ export const FindJsonPath = (path, inputdata) => {
 
 	return inputdata 
 }
+
+export const internalIds = ["shuffle tools", "http", "email"];
 
 // Parses JSON data into keys that can be used everywhere :)
 // Reverse of this is FindJsonPath 
@@ -270,7 +273,7 @@ export const GetParsedPaths = (inputdata, basekey) => {
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const Apps = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
+  const { globalUrl, isLoggedIn, isLoaded, userdata, serverside, } = props;
 
   //const [workflows, setWorkflows] = React.useState([]);
   const baseRepository = "https://github.com/frikky/shuffle-apps";
@@ -304,6 +307,8 @@ const Apps = (props) => {
   const [cursearch, setCursearch] = React.useState("");
   const [sharingConfiguration, setSharingConfiguration] = React.useState("you");
   const [downloadBranch, setDownloadBranch] = React.useState("master");
+  const [creatorProfile, setCreatorProfile] = React.useState({});
+  const [contact, setContact] = React.useState("");
 
   const [isDropzone, setIsDropzone] = React.useState(false);
   const upload = React.useRef(null);
@@ -323,6 +328,40 @@ const Apps = (props) => {
       getApps();
     },
   });
+
+  const getUserProfile = (username) => {
+    if (serverside === true || !isCloud) {
+	  setCreatorProfile({})
+      return;
+    }
+
+    fetch(`${globalUrl}/api/v1/users/creators/${username}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for WORKFLOW EXECUTION :O!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success !== false) {
+          setCreatorProfile(responseJson);
+        } else {
+		  setCreatorProfile({})
+		}
+      })
+      .catch((error) => {
+        console.log(error);
+	    setCreatorProfile({})
+      });
+  };
 
   useEffect(() => {
     if (apps.length <= 0 && firstrequest) {
@@ -441,6 +480,12 @@ const Apps = (props) => {
         setFilteredApps(privateapps);
         if (privateapps.length > 0) {
           if (selectedApp.id === undefined || selectedApp.id === null) {
+			if (privateapps[0].owner !== undefined && privateapps[0].owner !== null) {
+			  getUserProfile(privateapps[0].owner);
+			}
+
+    		setContact(privateapps[0].contact_info)
+
             setSelectedApp(privateapps[0]);
 			setSharingConfiguration(privateapps[0].sharing === true ? "public" : "you")
           }
@@ -646,6 +691,13 @@ const Apps = (props) => {
         style={paperAppStyle}
         onClick={() => {
           if (selectedApp.id !== data.id) {
+
+			if (data.owner !== undefined && data.owner !== null) {
+			  getUserProfile(data.owner);
+			}
+
+    		setContact(data.contact_info)
+
             data.name = newAppname;
             setSelectedApp(data);
 			setSharingConfiguration(data.sharing === true ? "public" : "you")
@@ -869,6 +921,7 @@ const Apps = (props) => {
 					</Link>
 			: null
 
+	console.log("Sharing config: ", sharingConfiguration);
     const activateButton = 
       selectedApp.generated && !selectedApp.activated ? (
         <div>
@@ -882,7 +935,7 @@ const Apps = (props) => {
               Activate App
             </Button>
           </Link>
-          <Tooltip title={"Delete app"}>
+          <Tooltip title={"Delete app (confirm box will show)"}>
             <Button
               variant="outlined"
               component="label"
@@ -891,6 +944,7 @@ const Apps = (props) => {
               onClick={() => {
                 setDeleteModalOpen(true);
               }}
+		  	  disabled={sharingConfiguration === undefined || sharingConfiguration === null || sharingConfiguration == "public"}
             >
               <DeleteIcon />
             </Button>
@@ -905,7 +959,7 @@ const Apps = (props) => {
         (selectedApp.downloaded !== undefined && selectedApp.downloaded == true) ||
         !selectedApp.generated) &&
       activateButton === null ? (
-        <Tooltip title={"Delete app"}>
+        <Tooltip title={"Delete app (confirm box will show)"}>
           <Button
             variant="outlined"
             component="label"
@@ -914,6 +968,7 @@ const Apps = (props) => {
             onClick={() => {
               setDeleteModalOpen(true);
             }}
+		    disabled={sharingConfiguration === undefined || sharingConfiguration === null || sharingConfiguration == "public"}
           >
             <DeleteIcon />
           </Button>
@@ -1114,7 +1169,7 @@ const Apps = (props) => {
 
           {activateButton}
 
-					{ /* editNewButton === null && */ }
+		  { /* editNewButton === null && */ }
 
           {canEditApp ? (
             <div>
@@ -1127,35 +1182,12 @@ const Apps = (props) => {
         			{editNewButton}
 						</div>
 					}
-          {selectedApp.tags !== undefined && selectedApp.tags !== null ? (
-            <div
-              style={{
-                display: "inline-block",
-                marginLeft: 15,
-                float: "right",
-              }}
-            >
-              {selectedApp.tags.map((tag, index) => {
-                if (index >= 3) {
-                  return null;
-                }
 
-                return (
-                  <Chip
-                    key={index}
-                    style={chipStyle}
-                    variant="outlined"
-                    label={tag}
-                    color="primary"
-                  />
-                );
-              })}
-            </div>
-          ) : null}
-					{canEditApp 
-						? (
-            <div style={{ marginTop: 15 }}>
+		{canEditApp 
+			? (
+            <div style={{ marginTop: 15, display: "flex", }}>
               {/*<p><b>ID:</b> {selectedApp.id}</p>*/}
+              
               <b style={{ marginRight: 15 }}>Sharing </b>
               <Select
                 value={sharingConfiguration}
@@ -1209,8 +1241,119 @@ const Apps = (props) => {
                   );
                 })}
               </Select>
+
+		    {isCloud && (selectedApp.sharing === true || selectedApp.public === true || creatorProfile.github_avatar !== undefined) && !internalIds.includes(selectedApp.name.toLowerCase()) ? 
+				<Tooltip title="Deactivates this app for the current organisation. This means the app will not be usable again until you re-activate it." placement="top">
+            		<Button
+            		  variant="contained"
+            		  component="label"
+            		  color="primary"
+            		  onClick={() => {
+            		    const tmpurl = new URL(window.location.href);
+            		    const searchParams = tmpurl.searchParams;
+            		    const queryID = searchParams.get("queryID");
+
+            		    if (queryID !== undefined && queryID !== null) {
+            		      aa("init", {
+            		        appId: "JNSS5CFDZZ",
+            		        apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+            		      });
+
+            		      const timestamp = new Date().getTime();
+            		      aa("sendEvents", [
+            		        {
+            		          eventType: "conversion",
+            		          eventName: "Public App Activated",
+            		          index: "appsearch",
+            		          objectIDs: [selectedApp.id],
+            		          timestamp: timestamp,
+            		          queryID: queryID,
+            		          userToken:
+            		            userdata === undefined ||
+            		            userdata === null ||
+            		            userdata.id === undefined
+            		              ? "unauthenticated"
+            		              : userdata.id,
+            		        },
+            		      ]);
+            		    } else {
+            		      console.log("No query to handle when activating");
+            		    }
+
+            		    activateApp(selectedApp.id, true)
+            		  }}
+            		  style={{ height: 35, marginTop: 0, marginLeft: 10, }}
+            		>
+					  Deactivate 
+            		</Button>
+				</Tooltip>
+				: null}
             </div>
           ) : null}
+
+		  <div style={{display: "flex", }}>
+		  	{isCloud && Object.getOwnPropertyNames(creatorProfile).length !== 0 && creatorProfile.github_avatar !== undefined && creatorProfile.github_avatar !== null ? 
+          	      <div style={{ display: "flex", marginTop: 15,  }}>
+          	        <IconButton
+          	          color="primary"
+          	          style={{ padding: 0, marginRight: 10 }}
+          	          aria-controls="simple-menu"
+          	          aria-haspopup="true"
+          	          onClick={(event) => {
+          	            //setAnchorElAvatar(event.currentTarget);
+          	          }}
+          	        >
+          	          <Link
+          	            to={`/creators/${creatorProfile.github_username}`}
+          	            style={{ textDecoration: "none", color: "#f86a3e" }}
+          	          >
+          	            <Avatar
+          	              style={{ height: 30, width: 30 }}
+          	              alt={contact.name}
+          	              src={creatorProfile.github_avatar}
+          	            />
+          	          </Link>
+          	        </IconButton>
+          	        <Typography
+          	          variant="body1"
+          	          color="textSecondary"
+          	          style={{ color: "" }}
+          	        >
+          	          Shared by{" "}
+          	          <Link
+          	            to={`/creators/${creatorProfile.github_username}`}
+          	            style={{ textDecoration: "none", color: "#f86a3e" }}
+          	          >
+          	            {creatorProfile.github_username}
+          	          </Link>
+		  	  	  </Typography>
+		  	      </div>
+		  	: null}
+          	{selectedApp.tags !== undefined && selectedApp.tags !== null ? (
+          	  <div
+          	    style={{
+          	      marginLeft: 20,
+				  marginTop: 15, 
+          	    }}
+          	  >
+          	    {selectedApp.tags.map((tag, index) => {
+          	      if (index >= 3) {
+          	        return null;
+          	      }
+
+          	      return (
+          	        <Chip
+          	          key={index}
+          	          style={chipStyle}
+          	          variant="outlined"
+          	          label={tag}
+          	          color="primary"
+          	        />
+          	      );
+          	    })}
+          	  </div>
+          	) : null}
+		  </div>
           {/*<p><b>Owner:</b> {selectedApp.owner}</p>*/}
           {selectedApp.privateId !== undefined &&
           selectedApp.privateId.length > 0 ? (
@@ -1666,37 +1809,45 @@ const Apps = (props) => {
       )
     }
 
-		const activateApp = (appid, refresh) => {
-			fetch(globalUrl + "/api/v1/apps/" + appid + "/activate", {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-				credentials: "include",
+	const activateApp = (appid, refresh) => {
+		const appExists = userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appid)
+		const url = appExists ? `${globalUrl}/api/v1/apps/${appid}/deactivate` : `${globalUrl}/api/v1/apps/${appid}/activate`
+
+		fetch(url, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Failed to deactivate")
+				}
+
+				return response.json()
 			})
-				.then((response) => {
-					if (response.status !== 200) {
-						console.log("Failed to activate")
-					}
+			.then((responseJson) => {
+				if (responseJson.success === false) {
+					toast("Failed to activate the app")
+				} else {
+					//toast("App activated for your organization! Refresh the page to use the app.")
+				    if (appExists) {
+				        toast("App deactivated for your organization! Existing workflows with the app will continue to work.")
+				    } else {
+				        toast("App activated for your organization!")
+				    }
 
-					return response.json()
-				})
-				.then((responseJson) => {
-					if (responseJson.success === false) {
-						toast("Failed to activate the app")
-					} else {
-						toast("App activated for your organization! Refresh the page to use the app.")
-
-						if (refresh === true) {
-							getApps()
-						}
+					if (refresh === true) {
+						getApps()
 					}
-				})
-				.catch(error => {
-					//toast(error.toString())
-					console.log("Activate app error: ", error.toString())
-				});
+				}
+			})
+			.catch(error => {
+				//toast(error.toString())
+				console.log("Deactivate app error: ", error.toString())
+			});
 		}
 
 

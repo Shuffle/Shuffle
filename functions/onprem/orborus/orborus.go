@@ -396,14 +396,14 @@ func deployServiceWorkers(image string) {
 		}
 
 		innerContainerName := fmt.Sprintf("shuffle-workers")
-		cnt, _ := findActiveSwarmNodes()
+		cnt, err := findActiveSwarmNodes()
+		if err != nil {
+			log.Printf("[ERROR] Failed to find active swarm nodes: %s. Defaulting to 1", err)
+		}
+
 		nodeCount := uint64(1)
 		if cnt > 0 {
 			nodeCount = uint64(cnt)
-		}
-
-		if cnt == 0 {
-			cnt = 1
 		}
 
 		appReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
@@ -477,6 +477,8 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 						fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
 						fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")),
+						fmt.Sprintf("SHUFFLE_MAX_SWARM_NODES=%d", os.Getenv("SHUFFLE_MAX_SWARM_NODES")),
+						fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", baseImageName),
 					},
 					//Hosts: []string{
 					//	innerContainerName,
@@ -533,6 +535,10 @@ func deployServiceWorkers(image string) {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_CLOUDRUN_URL=%s", os.Getenv("SHUFFLE_CLOUDRUN_URL")))
 		}
 
+		if len(os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD")) > 0 {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_AUTO_IMAGE_DOWNLOAD=%s", os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD")))
+		}
+
 		if len(os.Getenv("DOCKER_HOST")) > 0 {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_HOST=%s", os.Getenv("DOCKER_HOST")))
 		} else {
@@ -580,6 +586,8 @@ func deployServiceWorkers(image string) {
 			serviceOptions,
 		)
 
+		//dockercli.ServiceUpdate(
+
 		if err == nil {
 			log.Printf("[DEBUG] Successfully deployed workers with %d replica(s) on %d node(s)", replicas, cnt)
 			//time.Sleep(time.Duration(10) * time.Second)
@@ -608,14 +616,14 @@ func deployServiceWorkers(image string) {
 	}
 }
 
-// Deploys the internal worker whenever something happens
+// Deploys the worker with the current available environments
 // https://docs.docker.com/engine/api/sdk/examples/
-
 func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 	for key, value := range envMap {
 		envVars = append(envVars, corev1.EnvVar{Name: key, Value: value})
 	}
+
 	return envVars
 }
 
@@ -667,13 +675,18 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			},
 		}
 
+		// Add environment variables
+		// pod.Spec.Containers[0].Env = buildEnvVars(envMap)
+
 		createdPod, err := clientset.CoreV1().Pods("shuffle").Create(context.Background(), pod, metav1.CreateOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating pod: %v\n", err)
+			log.Printf("[ERROR] Failed creating pod: %v", err)
+			return err
 		}
 
 		log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
-	} else {
+		return nil
+	} 
 
 		// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
@@ -717,26 +730,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
 		// a 401 from the worker, which returns an error here
 		go sendWorkerRequest(executionRequest)
-		//sendWorkerRequest(executionRequest)
-
-		//err := sendWorkerRequest(executionRequest)
-		//if err != nil {
-		//	log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
-
-		//	if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
-		//		workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-		//		deployServiceWorkers(workerImage)
-
-		//		time.Sleep(time.Duration(10) * time.Second)
-		//		err = sendWorkerRequest(executionRequest)
-		//	}
-		//}
-
-		//if err == nil {
-		//	// FIXME: Readd this? Removed for rerun reasons
-		//	// executionIds = append(executionIds, executionRequest.ExecutionId)
-		//}
-		//}()
 
 		return nil
 	}
@@ -834,9 +827,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	}
 
 	return nil
-	}
-
-	return nil
 }
 
 func stopWorker(containername string) error {
@@ -922,7 +912,7 @@ func findActiveSwarmNodes() (int64, error) {
 	ctx := context.Background()
 	nodes, err := dockercli.NodeList(ctx, types.NodeListOptions{})
 	if err != nil {
-		return 0, err
+		return 1, err
 	}
 
 	nodeCount := int64(0)
@@ -933,13 +923,21 @@ func findActiveSwarmNodes() (int64, error) {
 		}
 	}
 
-	return nodeCount, nil
+	// Check for SHUFFLE_MAX_NODES
+	// Make it into a number and check if it's lower than nodeCount
+	maxNodesString := os.Getenv("SHUFFLE_MAX_SWARM_NODES")
+	if len(maxNodesString) > 0 {
+		maxNodes, err := strconv.ParseInt(maxNodesString, 10, 64)
+		if err != nil {
+			return nodeCount, err
+		}
 
-	/*
-		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-			All: true,
-		})
-	*/
+		if nodeCount > maxNodes {
+			nodeCount = maxNodes
+		}
+	}
+
+	return nodeCount, nil
 }
 
 // Get IP
@@ -1032,6 +1030,16 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		OrborusLabel: orborusLabel,
 		Timestamp:    time.Now().Unix(),
 	}
+
+	// FIXME: Returning for now due to this causing network congestion
+	// and database fillup. The backend api also has it disabled.
+	return newStats
+
+	// Disable orborus stats
+	if os.Getenv("SHUFFLE_STATS_DISABLED") == "true" {
+		return newStats
+	}
+
 
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		newStats.Swarm = true
@@ -1562,6 +1570,7 @@ func main() {
 				fmt.Sprintf("SHUFFLE_PASS_APP_PROXY=%s", os.Getenv("SHUFFLE_PASS_APP_PROXY")),
 				fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 				fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
+				fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", baseimagename),
 			}
 
 			//log.Printf("Running worker with proxy? %s", os.Getenv("SHUFFLE_PASS_WORKER_PROXY"))
@@ -1611,12 +1620,16 @@ func main() {
 			overrideHttpsProxy := os.Getenv("SHUFFLE_INTERNAL_HTTPS_PROXY")
 			if len(overrideHttpProxy) > 0 {
 				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
-				env = append(env, fmt.Sprintf("HTTP_PROXY=%s", overrideHttpProxy))
+				env = append(env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTP_PROXY=%s", overrideHttpProxy))
 			}
 
 			if len(overrideHttpsProxy) > 0 {
 				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
-				env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", overrideHttpsProxy))
+				env = append(env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
+			}
+
+			if len(os.Getenv("SHUFFLE_MAX_SWARM_NODES")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_MAX_SWARM_NODES=%s", os.Getenv("SHUFFLE_MAX_SWARM_NODES")))
 			}
 
 			err = deployWorker(workerImage, containerName, env, execution)

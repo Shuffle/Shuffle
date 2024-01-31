@@ -22,11 +22,8 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path/filepath"
 
-	// import httptest
 	"net/http/httptest"
-
 	"strings"
 	"time"
 
@@ -34,7 +31,7 @@ import (
 	"github.com/frikky/kin-openapi/openapi2conv"
 	"github.com/frikky/kin-openapi/openapi3"
 
-	"github.com/go-git/go-billy/v5"
+	//"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -45,10 +42,6 @@ import (
 	newscheduler "github.com/carlescere/scheduler"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
-
-	// PROXY overrides
-	//"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
-	// githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Web
 	"github.com/gorilla/mux"
@@ -569,7 +562,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 
 	currentOrg := user.ActiveOrg
 	if user.ActiveOrg.Id == "" {
-		log.Printf("[WARNING] There's no active org for the user %s. Checking if there's a single one to assing it to.", user.Username)
+		log.Printf("[WARNING] There's no active org for the user %s. Checking if there's a single one to assign it to.", user.Username)
 
 		orgs, err := shuffle.GetAllOrgs(ctx)
 		if err == nil && len(orgs) > 0 {
@@ -627,10 +620,46 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 
 	err = createNewUser(data.Username, data.Password, role, apikey, currentOrg)
 	if err != nil {
-		log.Printf("[WARNING] Failed registering user: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
+		if strings.Contains(err.Error(), "already exists") {
+			// Assign it to the org
+			log.Printf("[WARNING] User %s already exists. Assigning to org %s", data.Username, currentOrg.Name)
+
+			// Get the user
+			users, err := shuffle.FindUser(ctx, data.Username)
+			if err != nil || len(users) == 0 {
+				log.Printf("[WARNING] Failed finding user %s: %s", data.Username, err)
+				resp.WriteHeader(400)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+				return
+			}
+
+			newUser := users[0]
+			if !shuffle.ArrayContains(newUser.Orgs, currentOrg.Id) {
+				newUser.Orgs = append(newUser.Orgs, currentOrg.Id)
+			}
+
+			if newUser.ActiveOrg.Id == "" || newUser.ActiveOrg.Name == "" {
+				newUser.ActiveOrg = currentOrg
+			}
+
+			err = shuffle.SetUser(ctx, &newUser, true)
+			if err != nil {
+				log.Printf("[WARNING] Failed updating the user %s: %s", data.Username, err)
+				resp.WriteHeader(400)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+				return
+			}
+
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+			log.Printf("[INFO] %s Successfully re-added to org %s (%s)", data.Username, currentOrg.Name, currentOrg.Id)
+			return
+		} else {
+			log.Printf("[WARNING] Failed registering user: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
 	}
 
 	resp.WriteHeader(200)
@@ -3055,61 +3084,13 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	buildSwaggerApp(resp, body, user, false)
 }
 
-// Creates osfs from folderpath with a basepath as directory base
-func createFs(basepath, pathname string) (billy.Filesystem, error) {
-	log.Printf("[INFO] MemFS base: %s, pathname: %s", basepath, pathname)
 
-	fs := memfs.New()
-	err := filepath.Walk(pathname,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if strings.Contains(path, ".git") {
-				return nil
-			}
-
-			// Fix the inner path here
-			newpath := strings.ReplaceAll(path, pathname, "")
-			fullpath := fmt.Sprintf("%s%s", basepath, newpath)
-			switch mode := info.Mode(); {
-			case mode.IsDir():
-				err = fs.MkdirAll(fullpath, 0644)
-				if err != nil {
-					log.Printf("Failed making folder: %s", err)
-				}
-			case mode.IsRegular():
-				srcData, err := ioutil.ReadFile(path)
-				if err != nil {
-					log.Printf("Src error: %s", err)
-					return err
-				}
-
-				dst, err := fs.Create(fullpath)
-				if err != nil {
-					log.Printf("Dst error: %s", err)
-					return err
-				}
-
-				_, err = dst.Write(srcData)
-				if err != nil {
-					log.Printf("Dst write error: %s", err)
-					return err
-				}
-			}
-
-			return nil
-		})
-
-	return fs, err
-}
 
 // Hotloads new apps from a folder
 func handleAppHotload(ctx context.Context, location string, forceUpdate bool) error {
 
 	basepath := "base"
-	fs, err := createFs(basepath, location)
+	fs, err := shuffle.CreateFs(basepath, location)
 	if err != nil {
 		log.Printf("Failed memfs creation - probably bad path: %s", err)
 		return errors.New(fmt.Sprintf("Failed to find directory %s", location))
@@ -3845,7 +3826,9 @@ func runInitEs(ctx context.Context) {
 	}
 
 	// FIXME: Have this for all envs in all orgs (loop and find).
-	if len(parsedApikey) > 0 {
+	if len(parsedApikey) == 0 {
+		log.Printf("[WARNING] No apikey found for cleanup. Skipping cleanup schedule.")
+	} else {
 		cleanupSchedule := 300
 
 		if len(os.Getenv("SHUFFLE_RERUN_SCHEDULE")) > 0 {
@@ -3860,8 +3843,25 @@ func runInitEs(ctx context.Context) {
 			}
 		}
 
-		environments := []string{"Shuffle"}
-		log.Printf("[DEBUG] Starting schedule setup for execution cleanup every %d seconds. Running first immediately.", cleanupSchedule)
+		environments := []string{defaultEnv}
+
+		// Comma separated list of RERUN environments
+		if len(os.Getenv("SHUFFLE_RERUN_ENVIRONMENTS")) > 0 {
+			foundenv := strings.Split(os.Getenv("SHUFFLE_RERUN_ENVIRONMENTS"), ",")
+			for i, env := range foundenv {
+				if len(env) == 0 {
+					continue
+				}
+
+				environments[i] = strings.TrimSpace(env)
+				if !shuffle.ArrayContains(environments, env) {
+					environments = append(foundenv, env)
+				}
+			}
+		}
+
+		log.Printf("[DEBUG] Starting schedule setup for execution cleanup every %d seconds. Running first immediately. Environments: %#v", cleanupSchedule, environments)
+
 		cleanupJob := func() func() {
 			return func() {
 				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
@@ -3931,8 +3931,6 @@ func runInitEs(ctx context.Context) {
 		} else {
 			_ = jobret
 		}
-	} else {
-		log.Printf("[DEBUG] Couldn't find a valid API-key, hence couldn't run cleanup")
 	}
 
 	// Getting apps to see if we should initialize a test
@@ -4947,10 +4945,12 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files", shuffle.HandleGetFiles).Methods("GET", "OPTIONS")
 
 	// Introduced in 0.9.21 to handle notifications for e.g. failed Workflow
+	r.HandleFunc("/api/v1/notifications", shuffle.HandleCreateNotification).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/notifications", shuffle.HandleGetNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/notifications/clear", shuffle.HandleClearNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
-	//r.HandleFunc("/api/v1/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
+
+	r.HandleFunc("/api/v1/users/notifications", shuffle.HandleCreateNotification).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/notifications", shuffle.HandleGetNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/notifications/clear", shuffle.HandleClearNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")

@@ -54,6 +54,7 @@ const RuntimeDebugger = (props) => {
 	const [status, setStatus] = useState("")
 	const [endTime, setEndTime] = useState("")
 	const [startTime, setStartTime] = useState("")
+	const [totalCount, setTotalCount] = useState(0)
 
 	const [workflow, setWorkflow] = useState({})
 	const [ignoreOrg, setIgnoreOrg] = useState(false)
@@ -65,16 +66,80 @@ const RuntimeDebugger = (props) => {
 	const [workflows, setWorkflows] = useState([
 		{"id": "", "name": "All Workflows",}
 	])
-	/*
-	[
-		{id: "1", execution_id: "1", status: "FINISHED", startTimestamp: "2021-10-01 12:00:00", endTimestamp: "2021-10-01 12:00:00", workflow: {"id": "1234", "name": "what",}},
-		{id: "2", execution_id: "2", status: "WAITING", startTimestamp: "2021-10-01 12:00:00", endTimestamp: "2021-10-01 12:00:00", workflow: {"id": "1234", "name": "what",}},
-		{id: "3", execution_id: "3", status: "EXECUTING",startTimestamp: "2021-10-01 12:00:00", endTimestamp: "2021-10-01 12:00:00", workflow: {"id": "1234", "name": "what",}},
-		{id: "4", execution_id: "4", status: "ABORTED", startTimestamp: "2021-10-01 12:00:00", endTimestamp: "2021-10-01 12:00:00", workflow: {"id": "1234", "name": "what",}},
-	]);
-	*/
+
+	// Shitty workflow search on purpose :)
+	const handleWorkflowUsageCount = (workflows) => {
+		if (workflows === undefined || workflows === null || workflows.length === 0) {
+			return
+		}
+
+		setTotalCount(0)
+
+		var count = 0
+		var starttime = startTime === undefined || startTime === null || startTime === "" ? "" : new Date(startTime).toISOString()
+		var endtime = endTime === undefined || endTime === null || endTime == "" ? "" : new Date(endTime).toISOString()
+
+		var maxworkflows = 5
+
+		console.log("Looking for MAX this amount of workflows: ", maxworkflows)
+		for (let key in workflows) {
+			if (key > maxworkflows) {
+				break
+			}
+
+			const workflowId = workflows[key].id
+			// Fetch the data for the workflow
+			var url = `${globalUrl}/api/v1/workflows/${workflowId}/executions/count`
+			if (starttime !== "") {
+				url += `?start_time=${starttime}`
+			}
+
+			if (endtime !== "") {
+				if (starttime !== "") {
+					url += `&end_time=${endtime}`
+				} else {
+					url += `?end_time=${endtime}`
+				}
+			}
+
+			fetch(url, {
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json",
+				},
+				credentials: "include",
+			})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for workflows :O!");
+					return;
+				}
+
+				return response.json()
+			})
+			.then((data) => {
+				if (data.success) {
+					if (data.count !== undefined && data.count !== null) {
+						count += data.count
+					}
+				} else {
+					console.log("Failed to get workflow usage count: ", data)
+				}
+			})
+			.catch((error) => {
+				console.error("Error:", error);
+			})
+		}
+
+		setTimeout(() => {
+			console.log("Setting total count: ", count)
+			setTotalCount(count)
+		}, maxworkflows*300)
+	}
 
 	const submitSearch = (workflowId, status, startTime, endTime, cursor, limit) => {
+		handleWorkflowUsageCount(workflows)
 
 		//setResultRows([])
 		setSearchLoading(true)
@@ -134,6 +199,7 @@ const RuntimeDebugger = (props) => {
 			toast("Failed to search for runs. Please try again (2)")
 		})
 	}
+
 
 	  const getAvailableWorkflows = () => {
 		fetch(globalUrl + "/api/v1/workflows", {
@@ -624,7 +690,7 @@ const RuntimeDebugger = (props) => {
 		<div style={{minWidth: 1150, maxWidth: 1150, margin: "auto", }}>
 
 			<div style={{display: "flex", }}>
-				<h1 style={{flex: 3, }}>Workflow Run Debugger</h1>
+				<h1 style={{flex: 3, }}>Workflow Run Debugger {totalCount !== 0 ? ` (~${totalCount})` : ""}</h1>
 				{selectedWorkflowExecutions.length > 0 ?
 					<ButtonGroup>
 						<Tooltip title="Reruns ALL selected workflows. This will make a new execution for them, and not continue the existing.">
@@ -830,6 +896,7 @@ const RuntimeDebugger = (props) => {
 					);
 				  }}
 				/>
+
 				<LocalizationProvider dateAdapter={AdapterDayjs}>
 		        	<DateTimePicker
 					  sx={{
@@ -859,8 +926,8 @@ const RuntimeDebugger = (props) => {
 					  onChange={handleEndTimeChange}
 					  renderInput={(params) => <TextField {...params} />}
 					/>
-
 				</LocalizationProvider>
+
 				<Button
 					variant="outlined"
 					color="primary"
