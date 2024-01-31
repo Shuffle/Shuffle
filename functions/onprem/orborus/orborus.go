@@ -478,7 +478,7 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
 						fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")),
 						fmt.Sprintf("SHUFFLE_MAX_SWARM_NODES=%d", os.Getenv("SHUFFLE_MAX_SWARM_NODES")),
-						fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", baseImageName),
+						fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", baseimagename),
 					},
 					//Hosts: []string{
 					//	innerContainerName,
