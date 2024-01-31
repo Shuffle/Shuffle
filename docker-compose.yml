@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    image: ghcr.io/shuffle/shuffle-frontend:nightly
+    image: ghcr.io/shuffle/shuffle-frontend:latest
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -15,7 +15,7 @@ services:
     depends_on:
       - backend
   backend:
-    image: ghcr.io/shuffle/shuffle-backend:nightly
+    image: ghcr.io/shuffle/shuffle-backend:latest
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -34,7 +34,7 @@ services:
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
   orborus:
-    image: ghcr.io/shuffle/shuffle-orborus:nightly
+    image: ghcr.io/shuffle/shuffle-orborus:latest
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -43,7 +43,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - SHUFFLE_APP_SDK_TIMEOUT=300
-      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=5 # The amount of concurrent executions Orborus can handle. 
+      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=7 # The amount of concurrent executions Orborus can handle. 
       #- DOCKER_HOST=tcp://docker-socket-proxy:2375
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
@@ -55,6 +55,7 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
+      - SHUFFLE_STATS_DISABLED=true
     restart: unless-stopped
     security_opt:
       - seccomp:unconfined

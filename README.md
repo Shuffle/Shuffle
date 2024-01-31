@@ -91,6 +91,7 @@ Contributing guidelines are outlined [here](https://github.com/frikky/Shuffle/bl
   <img src="https://contrib.rocks/image?repo=frikky/shuffle-apps" />
 </a>
 
+
 ## License
 All modular information related to Shuffle will be under MIT (anyone can use it for whatever purpose), with Shuffle itself using AGPLv3. 
 
