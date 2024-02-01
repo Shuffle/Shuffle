@@ -822,6 +822,7 @@ func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user
 	}
 
 	defer newresp.Body.Close()
+
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed setting respbody for workflow download: %s", err)
