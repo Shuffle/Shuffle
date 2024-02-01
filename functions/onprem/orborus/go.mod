@@ -5,7 +5,7 @@ go 1.19
 //replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
 
 require (
-	github.com/docker/docker v23.0.3+incompatible
+	github.com/docker/docker v23.0.8+incompatible
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/shuffle-shared v0.5.68
 	k8s.io/api v0.28.1
