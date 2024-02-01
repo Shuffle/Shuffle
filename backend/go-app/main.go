@@ -1972,13 +1972,8 @@ func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 		return err
 	}
 
-	//transport := http.DefaultTransport.(*http.Transport).Clone()
-	//client := &http.Client{
-	//	Transport: transport,
-	//}
-	client := &http.Client{}
-
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync/handle_action", syncUrl)
+	client := shuffle.GetExternalClient(syncUrl)
 	req, err := http.NewRequest(
 		"POST",
 		syncUrl,
@@ -3483,8 +3478,8 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	}
 
 
-	client := &http.Client{}
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync", syncUrl)
+	client := shuffle.GetExternalClient(syncUrl)
 	req, err := http.NewRequest(
 		"POST",
 		syncUrl,
@@ -3867,6 +3862,9 @@ func runInitEs(ctx context.Context) {
 				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
 
 				for _, environment := range environments {
+					// Allowed without PROXY management as it's localhost
+					// client := shuffle.GetExternalClient(syncUrl)
+
 					httpClient := &http.Client{}
 					url := fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/stop", environment)
 					req, err := http.NewRequest(
@@ -4077,7 +4075,7 @@ func handleVerifyCloudsync(orgId string) (shuffle.SyncFeatures, error) {
 	//r.HandleFunc("/api/v1/getorgs", handleGetOrgs).Methods("GET", "OPTIONS")
 
 	syncURL := fmt.Sprintf("%s/api/v1/cloud/sync/get_access", syncUrl)
-	client := &http.Client{}
+	client := shuffle.GetExternalClient(syncURL)
 	req, err := http.NewRequest(
 		"GET",
 		syncURL,
@@ -4121,7 +4119,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 
 	log.Printf("[INFO] Should run cloud sync disable for org %s with URL %s and sync key %s", org.Id, syncUrl, org.SyncConfig.Apikey)
 
-	client := &http.Client{}
+	client := shuffle.GetExternalClient(syncUrl)
 	req, err := http.NewRequest(
 		"DELETE",
 		syncUrl,
@@ -4292,7 +4290,6 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("Apidata: %s", tmpData.Apikey)
 
 	// FIXME: Path
-	client := &http.Client{}
 	apiPath := "/api/v1/cloud/sync/setup"
 	if tmpData.Disable {
 		if !org.CloudSync {
@@ -4362,6 +4359,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		bytes.NewBuffer(b),
 	)
 
+	client := shuffle.GetExternalClient(syncPath)
 	newresp, err := client.Do(req)
 	if err != nil {
 		resp.WriteHeader(400)

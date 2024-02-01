@@ -798,7 +798,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 // Downloads and activates an app from shuffler.io if possible
 func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user shuffle.User, appId string) {
 	url := fmt.Sprintf("https://shuffler.io/api/v1/apps/%s/config", appId)
-	log.Printf("Downloading API from %s", url)
+	log.Printf("[DEBUG] Downloading API from URL %s", url)
 	req, err := http.NewRequest(
 		"GET",
 		url,
@@ -812,7 +812,7 @@ func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user
 		return
 	}
 
-	httpClient := &http.Client{}
+	httpClient := shuffle.GetExternalClient(url)
 	newresp, err := httpClient.Do(req)
 	if err != nil {
 		log.Printf("[ERROR] Failed running auto-download request for %s: %s", appId, err)

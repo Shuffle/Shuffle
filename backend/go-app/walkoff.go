@@ -952,42 +952,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
-// Identifies what a category defined really is
 
-func getWorkflowLocal(fileId string, request *http.Request) ([]byte, error) {
-	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s", localBase, fileId)
-	client := &http.Client{}
-	req, err := http.NewRequest(
-		"GET",
-		fullUrl,
-		nil,
-	)
-
-	if err != nil {
-		return []byte{}, err
-	}
-
-	for key, value := range request.Header {
-		req.Header.Add(key, strings.Join(value, ";"))
-	}
-
-	newresp, err := client.Do(req)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	body, err := ioutil.ReadAll(newresp.Body)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	// Temporary solution
-	if strings.Contains(string(body), "reason") && strings.Contains(string(body), "false") {
-		return []byte{}, errors.New(fmt.Sprintf("Failed getting workflow %s with message %s", fileId, string(body)))
-	}
-
-	return body, nil
-}
 
 func handleExecution(id string, workflow shuffle.Workflow, request *http.Request, orgId string) (shuffle.WorkflowExecution, string, error) {
 	//go func() {
@@ -1777,7 +1742,7 @@ func cloudExecuteAction(execution shuffle.WorkflowExecution) error {
 	}
 
 	syncURL := fmt.Sprintf("%s/api/v1/cloud/sync/execute_node", syncUrl)
-	client := &http.Client{}
+	client := shuffle.GetExternalClient(syncURL)
 	req, err := http.NewRequest(
 		"POST",
 		syncURL,
