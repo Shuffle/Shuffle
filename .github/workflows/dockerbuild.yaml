@@ -3,7 +3,7 @@ name: dockerbuild
 on:
   push:
     branches:
-      - main
+      - 1.4.0
     paths:
       - "**"
       - "!.github/**"
@@ -19,23 +19,23 @@ jobs:
         include:
           - app: frontend
             path: frontend
-            version: 1.3.2
+            version: nightly
             experimental: true
           - app: backend
             path: backend
-            version: 1.3.2
+            version: nightly
             experimental: true
           - app: app_sdk
             path: backend/app_sdk
-            version: 1.3.2
+            version: nightly
             experimental: true
           - app: orborus
             path: functions/onprem/orborus
-            version: 1.3.2
+            version: nightly
             experimental: true
           - app: worker
             path: functions/onprem/worker
-            version: 1.3.2
+            version: nightly
             experimental: true
     steps:
       - name: Checkout
@@ -77,11 +77,11 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
             ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            ghcr.io/shuffle/shuffle-${{ matrix.app }}:latest
+            ghcr.io/shuffle/shuffle-${{ matrix.app }}:nightly
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly
             frikky/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            frikky/shuffle-${{ matrix.app }}:latest
+            frikky/shuffle-${{ matrix.app }}:nightly
             frikky/shuffle:${{ matrix.app }}
 
       - name: Image digest
