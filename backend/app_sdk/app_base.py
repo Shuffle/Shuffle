@@ -2021,6 +2021,7 @@ class AppBase:
                 return " ".join(newlist)
 
         # Parses JSON loops and such down to the item you're looking for
+        # Check recurse_test.py for examples and tests of this function
         # $nodename.#.id 
         # $nodename.data.#min-max.info.id
         # $nodename.data.#1-max.info.id
@@ -2048,7 +2049,7 @@ class AppBase:
                         for innervalue in basejson:
                             # 1. Check the next item (message)
                             # 2. Call this function again
-        
+
                             try:
                                 ret, is_loop = recurse_json(innervalue, parsersplit[outercnt+1:])
                             except IndexError:
@@ -2077,7 +2078,7 @@ class AppBase:
 
                         # Means it's a single item -> continue
                         if seconditem == "":
-                            print("[INFO] In first - handling %s. Len: %d" % (firstitem, len(basejson)))
+                            #print("[INFO] In first - handling %s. Len: %d" % (firstitem, len(basejson)))
                             if str(firstitem).lower() == "max" or str(firstitem).lower() == "last" or str(firstitem).lower() == "end": 
                                 firstitem = len(basejson)-1
                             elif str(firstitem).lower() == "min" or str(firstitem).lower() == "first": 
@@ -2085,14 +2086,14 @@ class AppBase:
                             else:
                                 firstitem = int(firstitem)
 
-                            print(f"[DEBUG] Post lower checks with item {firstitem}")
+                            #print(f"[DEBUG] Post lower checks with item {firstitem}")
                             tmpitem = basejson[int(firstitem)]
                             try:
                                 newvalue, is_loop = recurse_json(tmpitem, parsersplit[outercnt+1:])
                             except IndexError:
                                 newvalue, is_loop = (tmpitem, parsersplit[outercnt+1:])
                         else:
-                            print("[INFO] In ELSE - handling %s and %s" % (firstitem, seconditem))
+                            #print("[INFO] In ELSE - handling %s and %s" % (firstitem, seconditem))
                             if isinstance(firstitem, str):
                                 if firstitem.lower() == "max" or firstitem.lower() == "last" or firstitem.lower() == "end": 
                                     firstitem = len(basejson)-1
@@ -2113,7 +2114,7 @@ class AppBase:
                             else:
                                 seconditem = int(seconditem)
 
-                            print(f"[DEBUG] Post lower checks 2: {firstitem} AND {seconditem}")
+                            #print(f"[DEBUG] Post lower checks 2: {firstitem} AND {seconditem}")
                             newvalue = []
                             if int(seconditem) > len(basejson):
                                 seconditem = len(basejson)
@@ -2121,12 +2122,11 @@ class AppBase:
                             for i in range(int(firstitem), int(seconditem)+1):
                                 # 1. Check the next item (message)
                                 # 2. Call this function again
-                                #self.logger.info("Base: %s" % basejson[i])
 
                                 try:
                                     ret, tmp_loop = recurse_json(basejson[i], parsersplit[outercnt+1:])
                                 except IndexError:
-                                    print("[DEBUG] INDEXERROR: ", parsersplit[outercnt])
+                                    #print("[DEBUG] INDEXERROR (1): ", parsersplit[outercnt])
                                     #ret = innervalue
                                     ret, tmp_loop = recurse_json(basejson[i], parsersplit[outercnt:])
                                     
@@ -2137,16 +2137,16 @@ class AppBase:
                     else:
                         if len(value) == 0:
                             return basejson, False
-        
+
                         try:
                             if isinstance(basejson, list): 
-                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
+                                #print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
                                 return basejson, False
                             elif isinstance(basejson, bool):
-                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (bool): %s" % value)
+                                #print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (bool): %s" % value)
                                 return basejson, False
                             elif isinstance(basejson, int):
-                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (int): %s" % value)
+                                #print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (int): %s" % value)
                                 return basejson, False
                             elif isinstance(basejson[value], str):
                                 try:
@@ -2154,8 +2154,16 @@ class AppBase:
                                         basejson = json.loads(basejson[value])
                                     else:
                                         # Should we sanitize here?
-                                        self.logger.info("[DEBUG] VALUE TO SANITIZE?: %s" % basejson[value])
-                                        return str(basejson[value]), False
+                                        #print("[DEBUG] VALUE TO SANITIZE FOR KEY '%s'?: %s" % (value, basejson[value]))
+
+                                        # Check if we are on the last item?
+                                        if outercnt == len(parsersplit)-1:
+                                            #print("[DEBUG] LAST KEY")
+                                            return str(basejson[value]), False
+                                        else:
+                                            #print("[DEBUG] NOT LAST KEY")
+                                            pass
+
                                 except json.decoder.JSONDecodeError as e:
                                     return str(basejson[value]), False
                             else:
@@ -2169,54 +2177,88 @@ class AppBase:
 
                             try:
                                 if isinstance(basejson, list): 
-                                    print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
+                                    #print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
                                     return basejson, False
                                 elif isinstance(basejson, bool):
-                                    print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (bool): %s" % value)
+                                    #print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (bool): %s" % value)
                                     return basejson, False
                                 elif isinstance(basejson, int):
-                                    print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (int): %s" % value)
+                                    #print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (int): %s" % value)
                                     return basejson, False
                                 elif isinstance(basejson[value], str):
-                                    print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
+                                    #print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
                                     try:
-                                        print("[DEBUG] BASEJSON: %s" % basejson)
+                                        #print("[DEBUG] BASEJSON: %s" % basejson)
                                         if (basejson[value].endswith("}") and basejson[value].endswith("}")) or (basejson[value].startswith("[") and basejson[value].endswith("]")):
                                             basejson = json.loads(basejson[value])
                                         else:
-                                            return str(basejson[value]), False
+
+                                            if outercnt == len(parsersplit)-1:
+                                                #print("LAST KEY (2)")
+                                                return str(basejson[value]), False
+                                            else:
+                                                #print("NOT LAST KEY (2)")
+                                                pass
+
                                     except json.decoder.JSONDecodeError as e:
-                                        print("[DEBUG] RETURNING BECAUSE '%s' IS A NORMAL STRING (1)" % basejson[value])
+                                        #print("[DEBUG] RETURNING BECAUSE '%s' IS A NORMAL STRING (1)" % basejson[value])
                                         return str(basejson[value]), False
                                 else:
                                     basejson = basejson[value]
-
                             except KeyError as e:
-                                print("\n\n[WARNING] Running third dot notation fix that always find the correct value %s: %s" % (value, e))
+                                # Check if previous key was handled or not
+                                previouskey = parsersplit[outercnt-1]
+                                #print("[DEBUG] PREVIOUS KEY: ", previouskey)
+
+                                tmpval = previouskey + "." + value
+                                #print("\n\n[WARNING] Running third dot notation fix '%s' on data %s: %s" % (value, basejson, e))
+                                if tmpval in basejson:
+                                    return basejson[tmpval], False
 
                                 try:
                                     currentsplitcnt = splitcnt 
+
                                     recursed_value = value
                                     handled = False
+
+                                    #tmpbase = basejson
+                                    previouskey = value
                                     while True:
+                                        #print("\n\n[DEBUG] CURRENTSPLITCNT: ", currentsplitcnt)
                                         newvalue = parsersplit[currentsplitcnt+1]
                                         if newvalue == "#" or newvalue == "":
                                             break 
 
                                         recursed_value += "." + newvalue
+                                        #print("\n\nRECURSED: ", recursed_value)
+
                                         found = False
                                         for key, value in basejson.items():
                                             if recursed_value.lower() in key.lower(): 
                                                 found = True
 
                                         if found == False:
-                                            print("[INFO] DIDN'T FIND similar VALUE: ", recursed_value)
-                                            break
+                                            #print("[INFO] DIDN'T FIND similar VALUE: ", recursed_value)
+
+                                            # Check if we are on the last key or not
+                                            return "", False
+                                            #if outercnt == len(parsersplit)-1:
+                                            #    print("[DEBUG] LAST KEY (3)")
+                                            #    break
+                                            #else:
+                                            #    print("[DEBUG] NOT LAST KEY (3)")
+                                            #    return "", False
 
                                         if recursed_value in basejson:
-                                            print("[INFO] FOUND RECURSED VALUE: ", recursed_value)
+                                            #print("[INFO] FOUND RECURSED VALUE: ", recursed_value)
                                             basejson = basejson[recursed_value]
-                                            handled = True 
+
+                                            # Whether to dig deeper or not
+                                            if isinstance(basejson, bool) or isinstance(basejson, int) or isinstance(basejson, str):
+                                                handled = False 
+                                            else:
+                                                handled = True 
+
                                             break
 
                                         currentsplitcnt += 1
@@ -2226,21 +2268,17 @@ class AppBase:
                                     
                                     break
                                 except IndexError as e:
-                                    print("[DEBUG] INDEXERROR: ", parsersplit[outercnt])
-                                    break
-                            
+                                    print("[DEBUG] INDEXERROR (2):", parsersplit[outercnt])
+                                    return "", False
 
                     outercnt += 1
-        
+
             except KeyError as e:
                 print("[INFO] Lower keyerror: %s" % e)
                 return "", False
             except Exception as e:
                 print("[WARNING] Exception: %s" % e)
-                return basejson, False
-
-                #return basejson
-                #return "KeyError: Couldn't find key: %s" % e
+                return "", False
 
             return basejson, False
 
