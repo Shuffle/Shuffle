@@ -466,8 +466,8 @@ class AppBase:
                 "success": True,
                 "status": request.status_code,
                 "url": request.url,
-                "headers": parsedheaders,
                 "body": jsondata,
+                "headers": parsedheaders,
                 "cookies":cookies,
             })
         except Exception as e:

@@ -140,6 +140,11 @@ const Admin = (props) => {
   const classes = useStyles();
   let navigate = useNavigate();
 
+  const [logsViewModal, setLogsViewModal] = React.useState(false);
+  const [userLogViewing, setUserLogViewing] = React.useState({});
+  const [ipSelected, setIpSelected] = React.useState("");
+  const [logsLoading, setLogsLoading] = React.useState(true);
+  const [logs, setLogs] = React.useState([]);
   const [firstRequest, setFirstRequest] = React.useState(true);
   const [orgRequest, setOrgRequest] = React.useState(true);
   const [modalUser, setModalUser] = React.useState({});
@@ -3343,6 +3348,111 @@ If you're interested, please let me know a time that works for you, or set up a 
             backgroundColor: theme.palette.inputColor,
           }}
         />
+
+        
+        {logsViewModal ? 
+            <Dialog
+              open={logsViewModal}
+              onClose={() => {
+                setLogsViewModal(false);
+              }}
+              PaperProps={{
+                style: {
+                  backgroundColor: theme.palette.surfaceColor,
+                  color: "white",
+                  minWidth: "1200px",
+                  minHeight: "320px",
+                },
+              }}
+            >
+              <DialogTitle>
+                <span style={{ color: "white" }}>User Logs</span>
+              </DialogTitle>
+              <DialogContent>
+                {/* ask user for which IP they want to see logs for by iterating of user.login_info */}
+                <FormControl fullWidth>
+                  <InputLabel style={{ size: 10 }} id="user-ip-simple-select-label">
+                    User IP
+                  </InputLabel>
+
+                  <Select
+                    labelId="user-ip-simple-select-label"
+                    id="user-ip-simple-select"
+                    onChange={async (event) => {
+                      setIpSelected(event.target.value);
+                      await getLogs(event.target.value, userLogViewing.id);
+                    }}
+                  >
+                    {(() => {
+                      const uniqueIPs = new Set();
+
+                      return userLogViewing.login_info.map((data, index) => {
+                        if (data.ip.includes("127.0.0.1") || uniqueIPs.has(data.ip)) {
+                          return null;
+                        }
+
+                        uniqueIPs.add(data.ip);
+
+                        return (
+                          <MenuItem key={index} value={data.ip}>
+                            {data.ip}
+                          </MenuItem>
+                        );
+                      });
+                    })()}                  
+                  </Select>
+                </FormControl>
+                {logsLoading && ipSelected.length !== 0 ?
+                  <div style={{ marginTop: 20, marginBottom: 20, display: 'flex', alignItems: 'center' }}>
+                    <CircularProgress style={{ marginRight: 10 }} />
+                    <Typography>Loading logs</Typography>
+                  </div>
+                : null}
+
+                <List>
+                  {logs.map((data, index) => (
+                    // redirect user to logs 
+                    // using request id or trace id
+                    <ListItem key={index} style={{ backgroundColor: index % 2 === 0 ? "#1f2023" : "#27292d" }}>
+                      <ListItemText
+                        primary={new Date(data.start_time.seconds * 1000).toISOString().slice(0, 10)}
+                        style={{
+                          minWidth: 150,
+                          maxWidth: 150,
+                        }}
+                      />
+                      <ListItemText
+                        primary={data.status}
+                        style={{
+                          minWidth: 70,
+                          maxWidth: 70,
+                        }}
+                      />
+                      <ListItemText
+                        primary={data.method}
+                        style={{
+                          minWidth: 150,
+                          maxWidth: 150,
+                        }}
+                      />
+                      <ListItemText
+                        primary={data.resource}
+                        style={{
+                          minWidth: 700,
+                          maxWidth: 700,
+                          overflow: "hidden",
+                        }}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+                
+              </DialogContent>
+
+            </Dialog>
+          : null}
+          
+
         <List>
           <ListItem>
             <ListItemText
@@ -3392,6 +3502,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               primary="Last Login"
               style={{ minWidth: 150, maxWidth: 150, }}
             />
+
           </ListItem>
           {users === undefined || users === null
             ? null
@@ -3418,223 +3529,232 @@ If you're interested, please let me know a time that works for you, or set up a 
 					}
 				}
 
-                return (
-                  <ListItem key={index} style={{ backgroundColor: bgColor }}>
-                    <ListItemText
-                      primary={data.username}
-                      style={{
-                        minWidth: 350,
-                        maxWidth: 350,
-                        overflow: "hidden",
-                      }}
-                    />
+        var userData = data.username
+        if (userdata.support === true) {
+          userData = <a style={{ cursor: "pointer", textDecoration: 'underline', textDecorationColor: '#F76742', color: '#F76742' }} onClick={() => {
+            setLogsViewModal(true)
+            setUserLogViewing(data)
+          }}
+          >{data.username}</a>
+        }
 
-                    <ListItemText
-                      style={{ marginLeft: 10, maxWidth: 100, minWidth: 100 }}
-                      primary={
-                        data.apikey === undefined ||
-                        data.apikey.length === 0 ? (
-                          ""
-                        ) : (
-                          <Tooltip
-                            title={"Copy Api Key"}
-                            style={{}}
-                            aria-label={"Copy APIkey"}
-                          >
-                            <IconButton
-                              style={{}}
-                              onClick={() => {
-                                const elementName = "copy_element_shuffle";
-                                var copyText =
-                                  document.getElementById(elementName);
-                                if (
-                                  copyText !== null &&
-                                  copyText !== undefined
-                                ) {
-                                  const clipboard = navigator.clipboard;
-                                  if (clipboard === undefined) {
-                                    toast(
-                                      "Can only copy over HTTPS (port 3443)"
-                                    );
-                                    return;
-                                  }
+        return (
+              <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                <ListItemText
+                  primary={userData}
+                  style={{
+                    minWidth: 350,
+                    maxWidth: 350,
+                    overflow: "hidden",
+                  }}
+                />
 
-                                  navigator.clipboard.writeText(data.apikey);
-                                  copyText.select();
-                                  copyText.setSelectionRange(
-                                    0,
-                                    99999
-                                  ); /* For mobile devices */
+                <ListItemText
+                  style={{ marginLeft: 10, maxWidth: 100, minWidth: 100 }}
+                  primary={
+                    data.apikey === undefined ||
+                    data.apikey.length === 0 ? (
+                      ""
+                    ) : (
+                      <Tooltip
+                        title={"Copy Api Key"}
+                        style={{}}
+                        aria-label={"Copy APIkey"}
+                      >
+                        <IconButton
+                          style={{}}
+                          onClick={() => {
+                            const elementName = "copy_element_shuffle";
+                            var copyText =
+                              document.getElementById(elementName);
+                            if (
+                              copyText !== null &&
+                              copyText !== undefined
+                            ) {
+                              const clipboard = navigator.clipboard;
+                              if (clipboard === undefined) {
+                                toast(
+                                  "Can only copy over HTTPS (port 3443)"
+                                );
+                                return;
+                              }
 
-                                  /* Copy the text inside the text field */
-                                  document.execCommand("copy");
+                              navigator.clipboard.writeText(data.apikey);
+                              copyText.select();
+                              copyText.setSelectionRange(
+                                0,
+                                99999
+                              ); /* For mobile devices */
 
-                                  toast("Apikey copied to clipboard");
-                                }
-                              }}
-                            >
-                              <FileCopyIcon
-                                style={{ color: "rgba(255,255,255,0.8)" }}
-                              />
-                            </IconButton>
-                          </Tooltip>
-                        )
-                      }
-                    />
+                              /* Copy the text inside the text field */
+                              document.execCommand("copy");
 
-                    <ListItemText
-                      primary={
-                        <Select
-                          SelectDisplayProps={{
-                            style: {
-                              marginLeft: 10,
-                            },
-                          }}
-                          value={data.role}
-                          fullWidth
-                          onChange={(e) => {
-                            console.log("VALUE: ", e.target.value);
-                            setUser(data.id, "role", e.target.value);
-                          }}
-                          style={{
-                            backgroundColor: theme.palette.surfaceColor,
-                            color: "white",
-                            height: "50px",
+                              toast("Apikey copied to clipboard");
+                            }
                           }}
                         >
-                          <MenuItem
-                            style={{
-                              backgroundColor: theme.palette.inputColor,
-                              color: "white",
-                            }}
-                            value={"admin"}
-                          >
-                            Org Admin
-                          </MenuItem>
-                          <MenuItem
-                            style={{
-                              backgroundColor: theme.palette.inputColor,
-                              color: "white",
-                            }}
-                            value={"user"}
-                          >
-                            Org User
-                          </MenuItem>
-                          <MenuItem
-                            style={{
-                              backgroundColor: theme.palette.inputColor,
-                              color: "white",
-                            }}
-                            value={"org-reader"}
-                          >
-                            Org Reader
-                          </MenuItem>
-                        </Select>
-                      }
-                      style={{ minWidth: 135, maxWidth: 135, marginRight: 15 }}
-                    />
-                    <ListItemText
-                      primary={data.active ? "True" : "False"}
-                      style={{ minWidth: 100, maxWidth: 100 }}
-                    />
-                    <ListItemText
-                      primary={
-                        data.login_type === undefined ||
-                        data.login_type === null ||
-                        data.login_type.length === 0
-                          ? "Normal"
-                          : data.login_type
-                      }
-                      style={{ minWidth: 100, maxWidth: 100 }}
-                    />
-                    <ListItemText
-                      primary={
-                        data.mfa_info !== undefined &&
-                        data.mfa_info !== null &&
-                        data.mfa_info.active === true
-                          ? "Active"
-                          : "Inactive"
-                      }
-                      style={{ minWidth: 100, maxWidth: 100 }}
-                    />
-                    {selectedOrganization.child_orgs !== undefined &&
-                    selectedOrganization.child_orgs !== null &&
-                    selectedOrganization.child_orgs.length > 0 ? (
-                      <ListItemText
-                        style={{ display: "flex" }}
-                        primary={
-                          data.orgs === undefined || data.orgs === null
-                            ? 0
-                            : data.orgs.length - 1
-                        }
-                      />
-                    ) : null}
-                    <ListItemText style={{ display: "flex", minWidth: 100, maxWidth: 100,  }}>
-                      <IconButton
-                        onClick={() => {
-                          setSelectedUserModalOpen(true);
-                          setSelectedUser(data);
+                          <FileCopyIcon
+                            style={{ color: "rgba(255,255,255,0.8)" }}
+                          />
+                        </IconButton>
+                      </Tooltip>
+                    )
+                  }
+                />
 
-                          // Find matching orgs between current org and current user's access to those orgs
-                          if (
-                            userdata.orgs !== undefined &&
-                            userdata.orgs !== null &&
-                            userdata.orgs.length > 0 &&
-                            selectedOrganization.child_orgs !== undefined &&
-                            selectedOrganization.child_orgs !== null &&
-                            selectedOrganization.child_orgs.length > 0
-                          ) {
-                            var active = [];
-                            for (var key in userdata.orgs) {
-                              const found =
-                                selectedOrganization.child_orgs.find(
-                                  (item) => item.id === userdata.orgs[key].id
-                                );
-                              if (found !== null && found !== undefined) {
-                                if (
-                                  data.orgs === undefined ||
-                                  data.orgs === null
-                                ) {
-                                  continue;
-                                }
+                <ListItemText
+                  primary={
+                    <Select
+                      SelectDisplayProps={{
+                        style: {
+                          marginLeft: 10,
+                        },
+                      }}
+                      value={data.role}
+                      fullWidth
+                      onChange={(e) => {
+                        console.log("VALUE: ", e.target.value);
+                        setUser(data.id, "role", e.target.value);
+                      }}
+                      style={{
+                        backgroundColor: theme.palette.surfaceColor,
+                        color: "white",
+                        height: "50px",
+                      }}
+                    >
+                      <MenuItem
+                        style={{
+                          backgroundColor: theme.palette.inputColor,
+                          color: "white",
+                        }}
+                        value={"admin"}
+                      >
+                        Org Admin
+                      </MenuItem>
+                      <MenuItem
+                        style={{
+                          backgroundColor: theme.palette.inputColor,
+                          color: "white",
+                        }}
+                        value={"user"}
+                      >
+                        Org User
+                      </MenuItem>
+                      <MenuItem
+                        style={{
+                          backgroundColor: theme.palette.inputColor,
+                          color: "white",
+                        }}
+                        value={"org-reader"}
+                      >
+                        Org Reader
+                      </MenuItem>
+                    </Select>
+                  }
+                  style={{ minWidth: 135, maxWidth: 135, marginRight: 15 }}
+                />
+                <ListItemText
+                  primary={data.active ? "True" : "False"}
+                  style={{ minWidth: 100, maxWidth: 100 }}
+                />
+                <ListItemText
+                  primary={
+                    data.login_type === undefined ||
+                    data.login_type === null ||
+                    data.login_type.length === 0
+                      ? "Normal"
+                      : data.login_type
+                  }
+                  style={{ minWidth: 100, maxWidth: 100 }}
+                />
+                <ListItemText
+                  primary={
+                    data.mfa_info !== undefined &&
+                    data.mfa_info !== null &&
+                    data.mfa_info.active === true
+                      ? "Active"
+                      : "Inactive"
+                  }
+                  style={{ minWidth: 100, maxWidth: 100 }}
+                />
+                {selectedOrganization.child_orgs !== undefined &&
+                selectedOrganization.child_orgs !== null &&
+                selectedOrganization.child_orgs.length > 0 ? (
+                  <ListItemText
+                    style={{ display: "flex" }}
+                    primary={
+                      data.orgs === undefined || data.orgs === null
+                        ? 0
+                        : data.orgs.length - 1
+                    }
+                  />
+                ) : null}
+                <ListItemText style={{ display: "flex", minWidth: 100, maxWidth: 100,  }}>
+                  <IconButton
+                    onClick={() => {
+                      setSelectedUserModalOpen(true);
+                      setSelectedUser(data);
 
-                                const subfound = data.orgs.find(
-                                  (item) => item === found.id
-                                );
-                                if (
-                                  subfound !== null &&
-                                  subfound !== undefined
-                                ) {
-                                  active.push(subfound);
-                                }
-                              }
+                      // Find matching orgs between current org and current user's access to those orgs
+                      if (
+                        userdata.orgs !== undefined &&
+                        userdata.orgs !== null &&
+                        userdata.orgs.length > 0 &&
+                        selectedOrganization.child_orgs !== undefined &&
+                        selectedOrganization.child_orgs !== null &&
+                        selectedOrganization.child_orgs.length > 0
+                      ) {
+                        var active = [];
+                        for (var key in userdata.orgs) {
+                          const found =
+                            selectedOrganization.child_orgs.find(
+                              (item) => item.id === userdata.orgs[key].id
+                            );
+                          if (found !== null && found !== undefined) {
+                            if (
+                              data.orgs === undefined ||
+                              data.orgs === null
+                            ) {
+                              continue;
                             }
 
-                            setMatchingOrganizations(active);
+                            const subfound = data.orgs.find(
+                              (item) => item === found.id
+                            );
+                            if (
+                              subfound !== null &&
+                              subfound !== undefined
+                            ) {
+                              active.push(subfound);
+                            }
                           }
-                        }}
-                      >
-                        <EditIcon color="primary" />
-                      </IconButton>
-                      {/*<Button
-						onClick={() => {
-							generateApikey(data)
-						}}
-						disabled={data.role === "admin" && data.username !== userdata.username}
-						variant="outlined"
-						color="primary"
-					>
-						New apikey 
-					</Button>*/}
-                    </ListItemText>
-				    <ListItemText 
-				      style={{ minWidth: 150, maxWidth: 150,  }}
-				      primary={lastLogin}
-				    ><span/>
-				    </ListItemText>
-                  </ListItem>
-                );
-              })}
+                        }
+
+                        setMatchingOrganizations(active);
+                      }
+                    }}
+                  >
+                    <EditIcon color="primary" />
+                  </IconButton>
+                  {/*<Button
+        onClick={() => {
+          generateApikey(data)
+        }}
+        disabled={data.role === "admin" && data.username !== userdata.username}
+        variant="outlined"
+        color="primary"
+      >
+        New apikey 
+      </Button>*/}
+                </ListItemText>
+        <ListItemText 
+          style={{ minWidth: 150, maxWidth: 150,  }}
+          primary={lastLogin}
+        ><span/>
+        </ListItemText>
+              </ListItem>
+            );
+          })}
         </List>
       </div>
     ) : null;
@@ -4130,6 +4250,46 @@ If you're interested, please let me know a time that works for you, or set up a 
         </List>
       </div>
     ) : null;
+
+  const getLogs = async (ip, userId) => {
+    setLogsLoading(true);
+    console.log("logs loading: ", logsLoading);
+    fetch(`${globalUrl}/api/v1/users/${userId}/audit?user_ip=${ip}`, {
+      mode: "cors",
+      method: "GET",
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    }) 
+      .then((response) => {
+        return response.json();
+      })
+      .then((responseJson) => {
+        console.log("ResponseJSON: ", responseJson);
+        if (responseJson.success === true) {
+          setLogs(responseJson.logs);
+        } else {
+          if (responseJson.success === false || responseJson.reason !== undefined) {
+            console.log("Reason given: ", responseJson.reason)
+            toast("Failed getting logs: " + responseJson.reason)
+            setLogs([])
+          } else {
+            toast("Failed getting logs");
+          }
+        }
+        console.log("logs loading now: ", logsLoading);
+        setLogsLoading(false);
+      })
+      .catch((error) => {
+        console.log("Error: ", error);
+        toast("Failed getting logs. Please contact: ", error);
+        console.log("logs loading now: ", logsLoading);
+        setLogsLoading(false);
+      });
+  };
 
 	const changeRecommendation = (recommendation, action) => {
     const data = {

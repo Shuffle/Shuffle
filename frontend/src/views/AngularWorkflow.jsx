@@ -17,7 +17,7 @@ import { ToastContainer, toast } from "react-toastify"
 import { isMobile } from "react-device-detect"
 import aa from 'search-insights'
 import Drift from "react-driftjs";
-import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
+import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
@@ -116,17 +116,12 @@ import {
   AutoAwesome as AutoAwesomeIcon,
 } from "@mui/icons-material";
 
-
 import * as cytoscape from "cytoscape";
 import * as edgehandles from "cytoscape-edgehandles";
-//import * as clipboard from "cytoscape-clipboard";
-//import undoRedo from "cytoscape-undo-redo";
-//import cxtmenu from "cytoscape-cxtmenu";
 import CytoscapeComponent from "react-cytoscapejs";
-
 import Draggable from "react-draggable";
-
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
+import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
 
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths, internalIds, } from "../views/Apps.jsx";
@@ -842,48 +837,6 @@ const AngularWorkflow = (defaultprops) => {
       });
   };
 
-  function OuterLink(props) {
-    if (props.href.includes("http") || props.href.includes("mailto")) {
-      return (
-        <a
-          href={props.href}
-          style={{ color: "#f85a3e", textDecoration: "none" }}
-        >
-          {props.children}
-        </a>
-      );
-    }
-    return (
-      <Link
-        to={props.href}
-        style={{ color: "#f85a3e", textDecoration: "none" }}
-      >
-        {props.children}
-      </Link>
-    );
-  }
-
-  function Img(props) {
-    return <img style={{ maxWidth: "100%" }} alt={props.alt} src={props.src} />;
-  }
-
-  function CodeHandler(props) {
-    return (
-      <pre
-        style={{
-          padding: 15,
-          minWidth: "50%",
-          maxWidth: "100%",
-          backgroundColor: theme.palette.inputColor,
-          overflowX: "auto",
-          overflowY: "hidden",
-        }}
-      >
-        <code>{props.value}</code>
-      </pre>
-    );
-  }
-
   function Heading(props) {
     const element = React.createElement(
       `h${props.level}`,
@@ -1021,8 +974,6 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
-		  console.log("GOT A RESPONSE??")
-      // getWorkflowExecutionCount(id);
         if (responseJson !== undefined && responseJson !== null && responseJson.executions !== undefined && responseJson.executions !== null) {
 
           // - means it's opposite
@@ -1034,8 +985,6 @@ const AngularWorkflow = (defaultprops) => {
           if (execution_id !== undefined && execution_id !== null && execution_id.length > 0 && (tmpView === undefined || tmpView === null || tmpView.length === 0)) {
             tmpView = execution_id;
           }
-
-		  console.log("EXECUTION ID: ", tmpView)
 
 		  // Compare with currently selected item
           if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
@@ -1820,7 +1769,6 @@ const AngularWorkflow = (defaultprops) => {
 			  }
 		  }
 
-		  console.log("FOUNDMISSING: ", foundmissing)
 		  if (foundmissing) {
 			  //toast("This workflow contains a node that requires an execution argument. Please provide one.")
           	  setExecutionRequestStarted(false)
@@ -2788,11 +2736,17 @@ const AngularWorkflow = (defaultprops) => {
 			if (response.status >= 500) {
 				toast("Something went wrong while loading the workflow. Please reload.")
 			} else {
-				toast("You don't access to this workflow or loading failed. Redirecting to workflows in a few seconds..")
 
-	  			setTimeout(() => {
-					window.location.pathname = "/workflows";
-				}, 2000);
+				// Check for execution_id in URL
+				// don't redirect if it exists
+				const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+			    var execFound = new URLSearchParams(cursearch).get("execution_id");
+			    if (execFound === null) {
+					toast(`You don't access to this workflow or loading failed. Redirecting to workflows in a few seconds..`)
+					setTimeout(() => {
+						window.location.pathname = "/workflows";
+					}, 2000);
+				}
 			}
         }
 
@@ -8518,8 +8472,6 @@ const AngularWorkflow = (defaultprops) => {
     	    }
 
     	    if (param.name === "headers") {
-    	      console.log("Swap header? For now, yes. File found: ", fileid_found)
-
     	      if (fileid_found) {
     	        newSelectedAction.parameters[paramkey].value = ""
     	        newSelectedAction.parameters[paramkey].autocompleted = true
@@ -8614,7 +8566,6 @@ const AngularWorkflow = (defaultprops) => {
 
     if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
       const foundActionIndex = workflow.actions.findIndex(actiondata => actiondata.id === newSelectedAction.id)
-      console.log("Found action on index ", foundActionIndex)
       if (foundActionIndex >= 0) {
         workflow.actions[foundActionIndex] = newSelectedAction
         setWorkflow(workflow)
@@ -9444,14 +9395,18 @@ const AngularWorkflow = (defaultprops) => {
           bottom: 10,
           left: 10,
           color: "rgba(255,255,255,0.6)",
+		  zIndex: 10000,
         }}
       >
         Conditions can't be used for loops [ .# ]{" "}
         <a
           rel="noopener noreferrer"
           target="_blank"
-          href="https://shuffler.io/docs/workflows#conditions"
-          style={{ textDecoration: "none", color: "#f85a3e" }}
+          href="/docs/workflows#conditions"
+          style={{ 
+			  	textDecoration: "none", 
+				color: "#f85a3e",
+		  }}
         >
           Learn more
         </a>
@@ -15935,7 +15890,10 @@ const AngularWorkflow = (defaultprops) => {
 							  setSelectedResult(data);
 							  setCodeModalOpen(true);
 						  } else {
-								toast("Please wait until the workflow is loaded and try again")
+							  toast("Please wait until the workflow is loaded and try again")
+							  setCodeModalOpen(true)
+							  setSelectedResult(data)
+
 							}
                         }}
                       >
@@ -16198,6 +16156,25 @@ const AngularWorkflow = (defaultprops) => {
       >
         <span id="top_bar">
           <Tooltip
+            title="Suggest solution"
+            placement="top"
+            style={{ zIndex: 50000 }}
+          >
+            <IconButton
+              style={{
+                zIndex: 5000,
+                position: "absolute",
+                top: 34,
+                right: 210,
+              }}
+              onClick={(e) => {
+                e.preventDefault()
+			  }}
+	  		>
+	  			<AutoFixHighIcon />
+	  		</IconButton>
+	  	  </Tooltip>
+          <Tooltip
             title="Find successful execution"
             placement="top"
             style={{ zIndex: 50000 }}
@@ -16210,32 +16187,32 @@ const AngularWorkflow = (defaultprops) => {
                 right: 170,
               }}
               onClick={(e) => {
-                e.preventDefault();
+                e.preventDefault()
 
-								if (workflowExecutions !== null) {
+				if (workflowExecutions !== null) {
                 	for (let execkey in workflowExecutions) {
                 	  const execution = workflowExecutions[execkey];
-										if (execution.execution_argument.includes("too large")) {
-											continue
-										}
+					  if (execution.execution_argument.includes("too large")) {
+					  	continue
+					  }
 
                 	  const result = execution.results.find((data) => data.status === "SUCCESS" && data.action.id === selectedResult.action.id)
 
-										if (result !== undefined) {
-											const oldstartnode = cy.getElementById(selectedResult.action.id);
-											if (oldstartnode !== undefined && oldstartnode !== null) {
-												const foundname = oldstartnode.data("label")
-												if (foundname !== undefined && foundname !== null) {
-													result.action.label = foundname
-												}
-											}
+					  if (result !== undefined) {
+					  	const oldstartnode = cy.getElementById(selectedResult.action.id);
+					  	if (oldstartnode !== undefined && oldstartnode !== null) {
+					  		const foundname = oldstartnode.data("label")
+					  		if (foundname !== undefined && foundname !== null) {
+					  			result.action.label = foundname
+					  		}
+					  	}
 
-											setSelectedResult(result);
-											setUpdate(Math.random());
-											break;
-										}
+					  	setSelectedResult(result);
+					  	setUpdate(Math.random());
+					  	break;
+					  }
                 	}
-								}
+				  }
               }}
             >
               <DoneIcon style={{ color: "white" }} />

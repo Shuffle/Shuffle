@@ -374,7 +374,7 @@ const AuthenticationOauth2 = (props) => {
 				},
 				"fields": parsedFields,
 				"type": "oauth2-app",
-				"reference_workflow": workflowId,
+				//"reference_workflow": workflowId,
 		}
 
 	    if (setNewAppAuth !== undefined) {

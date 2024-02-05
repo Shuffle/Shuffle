@@ -98,7 +98,7 @@ const SearchField = props => {
 			</div>
 				: null}
 			<DialogContent style={{}}>
-				<SearchBox setModalOpen={setModalOpen} modalOpen={modalOpen} serverside={serverside} userdata={userdata} />
+				<SearchBox globalUrl={globalUrl} setModalOpen={setModalOpen} modalOpen={modalOpen} serverside={serverside} userdata={userdata} />
 			</DialogContent>
 			<Divider style={{overflow: "hidden"}}/>
 			<span style={{display:"flex", width:"100%", height:30}}>

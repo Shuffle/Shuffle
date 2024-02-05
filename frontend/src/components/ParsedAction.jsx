@@ -1644,13 +1644,11 @@ const ParsedAction = (props) => {
                 multiline={data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline}
                 helperText={returnHelperText(data.name, data.value)}
                 onClick={() => {
-                  console.log("Clicked field: ", clickedFieldId, data.name)
 				  	/*
                   		setExpansionModalOpen(false);
 					*/
 
 					if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
-						console.log("IN SCROLL CONFIG!")
 
 						scrollConfig.selected = clickedFieldId
 						setScrollConfig(scrollConfig)
@@ -3736,6 +3734,11 @@ const ParsedAction = (props) => {
 							}
 							break
 						}
+					}
+
+					// Check if it starts with "Get List" and method is "Get"
+					if (params.inputProps.value.startsWith("Get List")) {
+						console.log("Get List")
 					}
 				}
 

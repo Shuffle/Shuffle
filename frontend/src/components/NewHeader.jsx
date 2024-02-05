@@ -741,7 +741,7 @@ const Header = (props) => {
         >
 	  	  <div style={{maxWidth: 70, minWidth: 70, }}/>
 	  	  <span style={{marginTop: 8, marginRight: 15, }}>
-		  	<SearchField isHeader={true} isLoggedIn={isLoggedIn} isLoaded={isLoaded} serverside={serverside} userdata={userdata} small={true} rounded={true} />
+		  	<SearchField globalUrl={globalUrl} isHeader={true} isLoggedIn={isLoggedIn} isLoaded={isLoaded} serverside={serverside} userdata={userdata} small={true} rounded={true} />
 	  	  </span>
 		    <Link to="/register" style={hrefStyle}>
 		      <Button
@@ -912,7 +912,7 @@ const Header = (props) => {
           </List>
         </div>
         <div style={{ flex: 1, marginTop: 10, }}>
-          <SearchField isHeader={true} isLoggedIn={isLoggedIn} isLoaded={isLoaded} serverside={serverside} userdata={userdata} hidemargins={true}/>
+          <SearchField globalUrl={globalUrl} isHeader={true} isLoggedIn={isLoggedIn} isLoaded={isLoaded} serverside={serverside} userdata={userdata} hidemargins={true}/>
         </div>
         <div style={{ flex:  isLoggedIn ? null : 1, display: "flex", flexDirection: "row-reverse" }}>
           <List

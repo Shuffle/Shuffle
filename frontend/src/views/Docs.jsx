@@ -3,10 +3,12 @@ import React, { useEffect, useState } from "react";
 import { toast } from 'react-toastify';
 import Markdown from 'react-markdown'
 
+import theme from '../theme.jsx';
+import ReactJson from "react-json-view";
+import { isMobile } from "react-device-detect";
 import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { isMobile } from "react-device-detect";
-import theme from '../theme.jsx';
+import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 
 import {
   Grid,
@@ -30,6 +32,7 @@ import {
   Edit as EditIcon,
   KeyboardArrowRight as KeyboardArrowRightIcon,
   ExpandMore as ExpandMoreIcon,
+  FileCopy as FileCopyIcon
 } from "@mui/icons-material";
 
 const Body = {
@@ -59,6 +62,120 @@ const innerHrefStyle = {
   color: "rgba(255, 255, 255, 0.75)",
   textDecoration: "none",
 };
+
+
+export const CopyToClipboard = (props) => {
+	const {text, style, onCopy} = props;
+	const parsedstyle = style !== undefined ? style : {
+		position: "absolute",
+		right: 0,
+		top: -10,
+	}
+
+	return (
+		<div
+			style={parsedstyle}
+		>
+			<IconButton
+				onClick={() => {
+					navigator.clipboard.writeText(text);
+					toast("Copied to clipboard")
+				}}
+			>
+				<FileCopyIcon />
+			</IconButton>
+		</div>
+	)
+}
+
+export const OuterLink = (props) => {
+    if (props.href.includes("http") || props.href.includes("mailto")) {
+      return (
+        <a
+          href={props.href}
+          style={{ color: "#f85a3e", textDecoration: "none" }}
+        >
+          {props.children}
+        </a>
+      );
+    }
+
+    return (
+      <Link
+        to={props.href}
+        style={{ color: "#f85a3e", textDecoration: "none" }}
+      >
+        {props.children}
+      </Link>
+    );
+  }
+
+
+export const Img = (props) => {
+    return <img style={{ borderRadius: theme.palette.borderRadius, width: 750, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} alt={props.alt} src={props.src} />;
+}
+
+export const CodeHandler = (props) => {
+    const propvalue = props.value !== undefined && props.value !== null ? props.value : props.children !== undefined && props.children !== null && props.children.length > 0 ? props.children[0] : ""
+
+
+
+    const validate = validateJson(propvalue)
+
+	var newprop = propvalue
+	if (validate.valid === false) {
+		// Check if https://shuffler.io in the url
+		// if so, then we change it for the current url	
+		if (propvalue.includes("https://shuffler.io")) {
+			newprop = propvalue.replace("https://shuffler.io", window.location.origin)
+		}
+
+		// Check if it contains Bearer APIKEY
+		// If so, replace apikey
+		//if (newprop.includes("Bearer APIKEY")) {
+		//	newprop = newprop.replace("Bearer APIKEY", "Bearer API
+		//}
+	}
+
+    return (
+      <div
+        style={{
+          padding: 15,
+          minWidth: "50%",
+          maxWidth: "100%",
+          backgroundColor: theme.palette.inputColor,
+          overflowY: "auto",
+        }}
+      >
+		{validate.valid === true ? 
+			<ReactJson
+				src={validate.result}
+				theme={theme.palette.jsonTheme}
+				style={theme.palette.reactJsonStyle}
+				collapsed={false}
+				displayDataTypes={false}
+				name={""}
+			/>
+			: 
+			<div style={{display: "flex", position: "relative", }}>
+				<code
+				  style={{
+					// Wrap if larger than X
+					whiteSpace: "pre-wrap",
+					overflow: "auto",
+					marginRight: 40, 
+				  }}
+				>
+					{newprop}
+				</code>
+				<CopyToClipboard 
+					text={newprop} 
+				/>
+			</div>
+		}
+	  </div>
+	)
+}
 
 const Docs = (defaultprops) => {
   const { globalUrl, selectedDoc, serverside, serverMobile } = defaultprops;
@@ -120,6 +237,123 @@ const Docs = (defaultprops) => {
     minHeight: "80vh",
     //height: "50vh",
   };
+
+  const Heading = (props) => {
+    const element = React.createElement(
+      `h${props.level}`,
+      { style: { marginTop: props.level === 1 ? 20 : 50 } },
+      props.children
+    );
+    const [hover, setHover] = useState(false);
+
+    var extraInfo = "";
+    if (props.level === 1) {
+      extraInfo = (
+        <div
+          style={{
+            backgroundColor: theme.palette.inputColor,
+            padding: 15,
+            borderRadius: theme.palette.borderRadius,
+            marginBottom: 30,
+            display: "flex",
+          }}
+        >
+          <div style={{ flex: 3, display: "flex", vAlign: "center", position: "sticky", top: 50, }}>
+            {isMobile ? null : (
+              <Typography style={{ display: "inline", marginTop: 6 }}>
+                <a
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  href={selectedMeta.link}
+                  style={{ textDecoration: "none", color: "#f85a3e" }}
+                >
+                  <Button style={{ color: "white", }} variant="outlined" color="secondary">
+                    <EditIcon /> &nbsp;&nbsp;Edit
+                  </Button>
+                </a>
+              </Typography>
+            )}
+            {isMobile ? null : (
+              <div
+                style={{
+                  height: "100%",
+                  width: 1,
+                  backgroundColor: "white",
+                  marginLeft: 50,
+                  marginRight: 50,
+                }}
+              />
+            )}
+            <Typography style={{ display: "inline", marginTop: 11 }}>
+              {selectedMeta.read_time} minute
+              {selectedMeta.read_time === 1 ? "" : "s"} to read
+            </Typography>
+          </div>
+          <div style={{ flex: 2 }}>
+            {isMobile ||
+              selectedMeta.contributors === undefined ||
+              selectedMeta.contributors === null ? (
+              ""
+            ) : (
+              <div style={{ margin: 10, height: "100%", display: "inline" }}>
+                {selectedMeta.contributors.slice(0, 7).map((data, index) => {
+                  return (
+                    <a
+                      key={index}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                      href={data.url}
+                      target="_blank"
+                      style={{ textDecoration: "none", color: "#f85a3e" }}
+                    >
+                      <Tooltip title={data.url} placement="bottom">
+                        <img
+                          alt={data.url}
+                          src={data.image}
+                          style={{
+                            marginTop: 5,
+                            marginRight: 10,
+                            height: 40,
+                            borderRadius: 40,
+                          }}
+                        />
+                      </Tooltip>
+                    </a>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+	if (extraInfo !== "" && props.level === 1 && props.children !== undefined && props.children !== null && props.children.length > 0) {
+		if (props.children[0].toLowerCase().includes("privacy") || props.children[0].toLowerCase().includes("terms")) {
+			extraInfo = ""
+		}
+	}
+
+    return (
+      <Typography
+        onMouseOver={() => {
+          setHover(true);
+        }}
+      >
+        {props.level !== 1 ? (
+          <Divider
+            style={{
+              width: "90%",
+              marginTop: 40,
+              backgroundColor: theme.palette.inputColor,
+            }}
+          />
+        ) : null}
+        {element}
+        {extraInfo}
+      </Typography>
+    )
+  }
 
   const SideBar = {
     minWidth: 300,
@@ -382,190 +616,7 @@ const Docs = (defaultprops) => {
     fontSize: isMobile ? "1.3rem" : "1.1rem",
   };
 
-  function OuterLink(props) {
-    if (props.href.includes("http") || props.href.includes("mailto")) {
-      return (
-        <a
-          href={props.href}
-          style={{ color: "#f85a3e", textDecoration: "none" }}
-        >
-          {props.children}
-        </a>
-      );
-    }
-    return (
-      <Link
-        to={props.href}
-        style={{ color: "#f85a3e", textDecoration: "none" }}
-      >
-        {props.children}
-      </Link>
-    );
-  }
-
-  function Img(props) {
-    return <img style={{ borderRadius: theme.palette.borderRadius, width: 750, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} alt={props.alt} src={props.src} />;
-  }
-
-  function CodeHandler(props) {
-    //console.log("Codehandler PROPS: ", props)
-
-    const propvalue = props.value !== undefined && props.value !== null ? props.value : props.children !== undefined && props.children !== null && props.children.length > 0 ? props.children[0] : ""
-
-    return (
-      <div
-        style={{
-          padding: 15,
-          minWidth: "50%",
-          maxWidth: "100%",
-          backgroundColor: theme.palette.inputColor,
-          overflowY: "auto",
-        }}
-      >
-        <code
-          style={{
-            // Wrap if larger than X
-            whiteSpace: "pre-wrap",
-            overflow: "auto",
-          }}
-        >{propvalue}</code>
-      </div>
-    );
-  }
-
-  const Heading = (props) => {
-    const element = React.createElement(
-      `h${props.level}`,
-      { style: { marginTop: props.level === 1 ? 20 : 50 } },
-      props.children
-    );
-    const [hover, setHover] = useState(false);
-
-    var extraInfo = "";
-    if (props.level === 1) {
-      extraInfo = (
-        <div
-          style={{
-            backgroundColor: theme.palette.inputColor,
-            padding: 15,
-            borderRadius: theme.palette.borderRadius,
-            marginBottom: 30,
-            display: "flex",
-          }}
-        >
-          <div style={{ flex: 3, display: "flex", vAlign: "center", position: "sticky", top: 50, }}>
-            {mobile ? null : (
-              <Typography style={{ display: "inline", marginTop: 6 }}>
-                <a
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  href={selectedMeta.link}
-                  style={{ textDecoration: "none", color: "#f85a3e" }}
-                >
-                  <Button style={{ color: "white", }} variant="outlined" color="secondary">
-                    <EditIcon /> &nbsp;&nbsp;Edit
-                  </Button>
-                </a>
-              </Typography>
-            )}
-            {mobile ? null : (
-              <div
-                style={{
-                  height: "100%",
-                  width: 1,
-                  backgroundColor: "white",
-                  marginLeft: 50,
-                  marginRight: 50,
-                }}
-              />
-            )}
-            <Typography style={{ display: "inline", marginTop: 11 }}>
-              {selectedMeta.read_time} minute
-              {selectedMeta.read_time === 1 ? "" : "s"} to read
-            </Typography>
-          </div>
-          <div style={{ flex: 2 }}>
-            {mobile ||
-              selectedMeta.contributors === undefined ||
-              selectedMeta.contributors === null ? (
-              ""
-            ) : (
-              <div style={{ margin: 10, height: "100%", display: "inline" }}>
-                {selectedMeta.contributors.slice(0, 7).map((data, index) => {
-                  return (
-                    <a
-                      key={index}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                      href={data.url}
-                      target="_blank"
-                      style={{ textDecoration: "none", color: "#f85a3e" }}
-                    >
-                      <Tooltip title={data.url} placement="bottom">
-                        <img
-                          alt={data.url}
-                          src={data.image}
-                          style={{
-                            marginTop: 5,
-                            marginRight: 10,
-                            height: 40,
-                            borderRadius: 40,
-                          }}
-                        />
-                      </Tooltip>
-                    </a>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-	if (extraInfo !== "" && props.level === 1 && props.children !== undefined && props.children !== null && props.children.length > 0) {
-		if (props.children[0].toLowerCase().includes("privacy") || props.children[0].toLowerCase().includes("terms")) {
-			extraInfo = ""
-		}
-	}
-
-    return (
-      <Typography
-        onMouseOver={() => {
-          setHover(true);
-        }}
-      >
-        {props.level !== 1 ? (
-          <Divider
-            style={{
-              width: "90%",
-              marginTop: 40,
-              backgroundColor: theme.palette.inputColor,
-            }}
-          />
-        ) : null}
-        {element}
-        {/*hover ? <LinkIcon onMouseOver={() => {setHover(true)}} style={{cursor: "pointer", display: "inline", }} onClick={() => {
-					window.location.href += "#hello"
-					console.log(window.location)
-					//window.history.pushState('page2', 'Title', '/page2.php');
-					//window.history.replaceState('page2', 'Title', '/page2.php');
-				}} /> 
-				: ""
-				*/}
-        {extraInfo}
-      </Typography>
-    );
-  };
-  //React.createElement("p", {style: {color: "red", backgroundColor: "blue"}}, this.props.paragraph)
-
-  //function unicodeToChar(text) {
-  //	return text.replace(/\\u[\dA-F]{4}/gi,
-  //   		function (match) {
-  //        	return String.fromCharCode(parseInt(match.replace(/\\u/g, ''), 16));
-  //        }
-  //	);
-  //}
+  
 
 
   const CustomButton = (props) => {

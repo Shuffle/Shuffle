@@ -484,7 +484,6 @@ export const validateJson = (showResult) => {
 	// This is where we start recursing
 	if (jsonvalid) {
 		// Check fields if they can be parsed too 
-   	//console.log("In this window for the data. Should look for list in result! Does recursion.") 
 		try {
 			for (const [key, value] of Object.entries(result)) {
 				if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
@@ -1649,6 +1648,7 @@ const Workflows = (props) => {
     addFilter(e.target.innerHTML);
   };
 
+  const hasWorkflows = workflows === undefined || workflows === null || workflows.length === 0
   const NewWorkflowPaper = () => {
     const [hover, setHover] = React.useState(false);
 
@@ -1659,17 +1659,17 @@ const Workflows = (props) => {
       minWidth: paperAppStyle.width,
       color: innerColor,
       padding: paperAppStyle.padding,
-      borderRadius: paperAppStyle.borderRadius,
       display: "flex",
       boxSizing: "border-box",
       position: "relative",
-      border: `2px solid ${innerColor}`,
+      border: hasWorkflows ? `2px solid #f85a3e` : `2px solid ${innerColor}`,
       cursor: "pointer",
       backgroundColor: hover ? "rgba(39,41,45,0.5)" : "rgba(39,41,45,1)",
+      borderRadius: paperAppStyle.borderRadius,
     };
 
     return (
-      <Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
+      <Grid item xs={isMobile ? 12 : hasWorkflows ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
         <Paper
           square
           style={setupPaperStyle}
@@ -1685,8 +1685,11 @@ const Workflows = (props) => {
           }}
         >
           <Tooltip title={`New Workflow`} placement="bottom">
-            <span style={{ textAlign: "center", minWidth: 300, margin: "auto" }}>
+            <span style={{ textAlign: "center", minWidth: 240, margin: "auto" }}>
               <AddCircleIcon style={{ height: 65, width: 65 }} />
+			  <Typography variant="h6" style={{ color: innerColor, margin: "auto" }}>
+				New Workflow
+			  </Typography>
             </span>
           </Tooltip>
         </Paper>
@@ -3328,8 +3331,8 @@ const Workflows = (props) => {
             </div>
           </div>
   		
-					<div style={{width: "100%", minHeight: isMobile ? 0 : 51, maxHeight: isMobile ? 0 : 51, marginTop: 10, }}>
-						{!isMobile && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
+					<div style={{width: "100%", minHeight: isMobile ? 0 : hasWorkflows ? 0 : 51, maxHeight: isMobile ? 0 : 51, marginTop: 10, }}>
+						{!isMobile && !hasWorkflows && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
 							<div style={{ display: "flex", }}>
 								{usecases.map((usecase, index) => {
 									//console.log(usecase)

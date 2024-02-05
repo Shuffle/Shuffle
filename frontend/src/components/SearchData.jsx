@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
+import { toast } from "react-toastify" 
 
 import {
     Chip,
@@ -41,7 +42,7 @@ const chipStyle = {
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const SearchData = props => {
-    const { serverside, userdata, setModalOpen, modalOpen } = props
+    const { serverside, globalUrl, userdata, setModalOpen, modalOpen } = props
     let navigate = useNavigate();
     const borderRadius = 3
     const node = useRef()
@@ -326,6 +327,57 @@ const SearchData = props => {
         )
     }
 
+	const activateApp = (name, appid, type) => {
+	  if (globalUrl === undefined || globalUrl === null) {
+		  console.log(`Global URL not set`)
+		  return
+	  }
+
+	  if (name === undefined || name === null) {
+		  name = ""
+	  }
+
+	  name = name.replaceAll("_", " ")
+
+	  if (userdata === undefined || userdata === null || userdata.id === undefined) {
+		  toast(`You need to be logged in to activate the ${name} app. Redirecting`)
+
+		  setTimeout(() => {
+		  	navigate(`/register?message=You need to be logged in to use the ${name} app.`)
+		  }, 500)
+		  return
+	  }
+
+	  const url = `${globalUrl}/api/v1/apps/${appid}/${type}` 
+
+      fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        credentials: "include",
+      })
+        .then((response) => {
+          if (response.status !== 200) {
+			toast(`Failed to ${type} the app for your organization. Please try again or contact support@shuffler.io`)
+          }
+
+          return response.json()
+        })
+        .then((responseJson) => {
+          if (responseJson.success === false) {
+            toast(`Failed to ${type} the app for your organization. Please try again or contact support@shuffler.io for more info`) 
+		  } else {
+			  toast(`App successfully ${type}d. Please refresh the page to use it.`)
+		  }
+        })
+        .catch(error => {
+          //toast(error.toString())
+          console.log("Activate app error: ", error.toString())
+        });
+    }  
+
     const AppHits = ({ hits }) => {
         const [mouseHoverIndex, setMouseHoverIndex] = useState(0)
 
@@ -431,7 +483,6 @@ const SearchData = props => {
                             return (
                                 <Link key={hit.objectID} to={parsedUrl} style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
                                     setSearchOpen(true)
-
                                     setModalOpen(false)
                                     aa('init', {
                                         appId: searchClient.appId,
@@ -474,6 +525,29 @@ const SearchData = props => {
 											</IconButton>
 										</ListItemSecondaryAction>
 										*/}
+										<Button
+											variant="outlined"
+											color="secondary"
+											onClick={(e) => {
+												e.preventDefault()
+												e.stopPropagation()
+
+												console.log("OBJECT CHANGE: ", hit.objectID)
+
+												// This does nothing rofl
+												if (userdata.active_apps === undefined || userdata.active_apps === null) {
+													activateApp(hit.name, hit.objectID, "activate")
+												} else {
+													if (userdata.active_apps.includes(hit.objectID)) {
+														activateApp(hit.name, hit.objectID, "deactivate")
+													} else {
+														activateApp(hit.name, hit.objectID, "activate")
+													}
+												}
+											}}
+										>
+											{userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(hit.objectID) ? "Deactivate" : "Activate"}
+										</Button>
                                     </ListItem>
                                 </Link>
                             )

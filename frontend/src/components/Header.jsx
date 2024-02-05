@@ -615,7 +615,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				</List>
 			</div>
 			<div style={{flex: 1, marginTop: 10,}}>
-				<SearchField serverside={serverside} userdata={userdata} />
+				<SearchField globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
 			</div>
 			<div style={{flex: 1, display: "flex", flexDirection: "row-reverse"}}>
 				<List style={{display: 'flex', flexDirection: 'row-reverse'}} component="nav">

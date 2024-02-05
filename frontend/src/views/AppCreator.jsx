@@ -264,7 +264,7 @@ export const appCategories = [
 		"name": "IAM",
 		"color": "#FFC107",
 		"icon": "iam",
-		"action_labels": ["Reset Password", "Enable user", "Disable user", "Get Identity", "Get Asset", "Search Identity", ],
+		"action_labels": ["Reset Password", "Enable user", "Disable user", "Get Identity", "Get Asset", "Search Identity", "Get KMS Key",],
 	}, {
 		"name": "Network",
 		"color": "#FFC107",
@@ -1240,7 +1240,7 @@ const AppCreator = (defaultprops) => {
 
                     if (methodvalue.responses.default.content["text/plain"]["schema"]["format"] === "binary" && methodvalue.responses.default.content["text/plain"]["schema"]["type"] === "string") {
                   		newaction.example_response = "shuffle_file_download"
-										}
+					}
                   }
                 }
               }
@@ -2174,6 +2174,10 @@ const AppCreator = (defaultprops) => {
             queryitem.name.toLowerCase() == "ssl_verify" ||
             queryitem.name.toLowerCase() == "queries" ||
             queryitem.name.toLowerCase() == "headers" ||
+            queryitem.name.toLowerCase() == "list" ||
+            queryitem.name.toLowerCase() == "dict" ||
+            queryitem.name.toLowerCase() == "str" ||
+            queryitem.name.toLowerCase() == "int" ||
             queryitem.name.toLowerCase() == "access_token") {
 						/*
 
@@ -3748,7 +3752,7 @@ const AppCreator = (defaultprops) => {
     		  }}
     		>
     		  <FormControl style={{ backgroundColor: surfaceColor, color: "white" }}>
-    		    <DialogTitle style={{marginTop: 30, }}>
+    		    <DialogTitle style={{marginTop: 45, }}>
     		      <div style={{ color: "white" }}>New action</div>
     		    </DialogTitle>
     		    <DialogContent style={{paddingBottom: 100, }}>
