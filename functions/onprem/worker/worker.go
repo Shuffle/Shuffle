@@ -2910,7 +2910,7 @@ func main() {
 		timezone = "Europe/Amsterdam"
 	}
 
-	if baseimagename == "" {
+	if baseimagename == "" || baseimagename == "/" {
 		log.Printf("[DEBUG] Setting baseimagename")
 		baseimagename = "frikky/shuffle" // Dockerhub
 		//baseimagename = "shuffle"        // Github 		(ghcr.io)
