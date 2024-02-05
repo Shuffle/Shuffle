@@ -53,7 +53,8 @@ var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
 
 //var baseimagename = "frikky/shuffle"
-var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
+var baseimagerepository = os.Getenv("SHUFFLE_BASE_IMAGE_REPOSITORY")
+var baseimagename = fmt.Sprintf("%s/%s", baseimagerepository, os.Getenv("SHUFFLE_BASE_IMAGE_NAME"))
 
 // var baseimagename = "registry.hub.docker.com/frikky/shuffle"
 var registryName = "registry.hub.docker.com"
