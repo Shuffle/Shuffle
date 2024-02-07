@@ -3039,6 +3039,26 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		return
 	}
 
+	if len(user.ActiveOrg.Id) > 0 {
+		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting org during image build (%s): %s", user.ActiveOrg.Id, err)
+		} else {
+			log.Printf("[INFO] Successfully uploaded app %s to org %s (2). Validating and distributing image to available environments in org.", api.ID, org.Id)
+
+			imagenames := []string{
+				fmt.Sprintf("%s_%s", api.Name, api.AppVersion),
+				fmt.Sprintf("%s_%s", api.Name, test.Id),
+			}
+
+			err = shuffle.DistributeAppToEnvironments(ctx, *org, imagenames)
+			if err != nil {
+				log.Printf("[ERROR] Failed distributing app to environments: %s", err)
+			}
+		}
+	}
+
+
 	log.Printf("[DEBUG] Successfully built app %s (%s)", api.Name, api.ID)
 	if len(user.Id) > 0 {
 		resp.WriteHeader(200)

@@ -627,6 +627,43 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	return envVars
 }
 
+
+func handleBackendImageDownload(ctx context.Context, images string) error {
+	// Should use docker to:
+	// 1. Pull the image & tag it 
+	// 2. Distribute the image by updating service if "run" 
+	if swarmConfig == "run" || swarmConfig == "swarm" {
+		log.Printf("[DEBUG] Should update service with new image after updating(s): %s. \n\nNOT IMPLEMENTED: Contact support@shuffler.io for support.\n\n", images)
+
+		// 1. Download the image
+		// 2. Find the existing service using the image
+		// 3. Update the service with the new image in a rolling restart
+	} else {
+		log.Printf("[DEBUG] Should remove existing image (s): %s", images)
+
+		// Remove the image
+		removeOptions := types.ImageRemoveOptions{
+		}
+
+		for _, image := range strings.Split(images, ",") {
+			image = strings.TrimSpace(image)
+			if !strings.Contains(image, "/") {
+				image = fmt.Sprintf("frikky/shuffle:%s", image)
+			}
+
+			resp, err := dockercli.ImageRemove(ctx, image, removeOptions)
+			if err != nil {
+				log.Printf("[ERROR] Failed removing image: %s", err)
+			} else {
+				log.Printf("[DEBUG] Removed image: %s", resp)
+			}
+		}
+	}
+
+	return nil
+}
+
+
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
 
 	if isKubernetes == "true" {
@@ -1222,6 +1259,65 @@ func getKubernetesClient() (*kubernetes.Clientset, error) {
 	}
 }
 
+
+func sendRemoveRequest(client *http.Client, toBeRemoved shuffle.ExecutionRequestWrapper, baseUrl, environment, auth, org string, sleepTime int) error {
+	confirmUrl := fmt.Sprintf("%s/api/v1/workflows/queue/confirm", baseUrl)
+
+	data, err := json.Marshal(toBeRemoved)
+	if err != nil {
+		log.Printf("[WARNING] Failed removal marshalling: %s", err)
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+		return err
+	}
+
+	result, err := http.NewRequest(
+		"POST",
+		confirmUrl,
+		bytes.NewBuffer([]byte(data)),
+	)
+
+	if err != nil {
+		log.Printf("[ERROR] Failed building confirm request: %s", err)
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+		return err
+	}
+
+	result.Header.Add("Content-Type", "application/json")
+	result.Header.Add("Org-Id", environment)
+
+	if len(auth) > 0 {
+		result.Header.Add("Authorization", auth)
+	}
+
+	if len(org) > 0 {
+		result.Header.Add("Org", org)
+	}
+
+	if len(orborusLabel) > 0 {
+		result.Header.Add("X-Orborus-Label", orborusLabel)
+	}
+
+	resultResp, err := client.Do(result)
+	if err != nil {
+		log.Printf("[ERROR] Failed making confirm request: %s", err)
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+		return err
+	}
+
+	defer resultResp.Body.Close()
+	body, err := ioutil.ReadAll(resultResp.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed reading confirm body: %s", err)
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+		return err
+	}
+
+	_ = body
+	//log.Printf("[DEBUG] Confirm response: %s", string(body))
+
+	return nil
+}
+
 func cleanup() {
 	log.Printf("[INFO] Cleaning up during shutdown")
 	ctx := context.Background()
@@ -1495,9 +1591,46 @@ func main() {
 			continue
 		}
 
+
 		if hasStarted && len(executionRequests.Data) > 0 {
 			//log.Printf("[INFO] Body: %s", string(body))
 			// Type string `json:"type"`
+		}
+
+		// FIXME: Add features here for orborus & worker to 
+		// do things on behalf of backend
+		var toBeRemoved shuffle.ExecutionRequestWrapper
+		if len(executionRequests.Data) > 0 {
+			newrequests := []shuffle.ExecutionRequest{}
+			for _, incRequest := range executionRequests.Data {
+				// Looking for specific jobs
+				if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
+					log.Printf("[INFO] Should delete -> download new image %#v", incRequest.ExecutionArgument)
+
+					if len(incRequest.ExecutionArgument) > 0 {
+						err = handleBackendImageDownload(ctx, incRequest.ExecutionArgument)
+						if err != nil {
+							log.Printf("[ERROR] Failed handling image delete -> download: %s", err)
+						}
+
+					}
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+				} else {
+					newrequests = append(newrequests, incRequest)
+				}
+			}
+
+			if len(toBeRemoved.Data) > 0 {
+				err = sendRemoveRequest(client, toBeRemoved, baseUrl, environment, auth, org, sleepTime)
+				if err != nil {
+					log.Printf("[ERROR] Failed sending remove request: %s", err)
+				} else {
+					toBeRemoved.Data = []shuffle.ExecutionRequest{}
+				}
+			}
+
+			// Remove the download image request
+			executionRequests.Data = newrequests
 		}
 
 		// Skipping throttling with swarm
@@ -1531,7 +1664,6 @@ func main() {
 		}
 
 		// New, abortable version. Should check executionid and remove everything else
-		var toBeRemoved shuffle.ExecutionRequestWrapper
 		for _, execution := range executionRequests.Data {
 			if len(execution.ExecutionArgument) > 0 {
 				log.Printf("[INFO] Argument: %s", execution.ExecutionArgument)
@@ -1646,68 +1778,12 @@ func main() {
 		// Removes handled workflows (worker is made)
 		//log.Printf("\n\n[INFO] Removing %d executions from queue\n\n", len(toBeRemoved.Data))
 		if len(toBeRemoved.Data) > 0 {
-			confirmUrl := fmt.Sprintf("%s/api/v1/workflows/queue/confirm", baseUrl)
 
-			data, err := json.Marshal(toBeRemoved)
+			err = sendRemoveRequest(client, toBeRemoved, baseUrl, environment, auth, org, sleepTime)
 			if err != nil {
-				log.Printf("[WARNING] Failed removal marshalling: %s", err)
-				time.Sleep(time.Duration(sleepTime) * time.Second)
-				continue
+				log.Printf("[ERROR] Failed to remove executions from queue: %s", err)
 			}
 
-			result, err := http.NewRequest(
-				"POST",
-				confirmUrl,
-				bytes.NewBuffer([]byte(data)),
-			)
-
-			if err != nil {
-				log.Printf("[ERROR] Failed building confirm request: %s", err)
-				time.Sleep(time.Duration(sleepTime) * time.Second)
-				continue
-			}
-
-			result.Header.Add("Content-Type", "application/json")
-			result.Header.Add("Org-Id", environment)
-
-			if len(auth) > 0 {
-				result.Header.Add("Authorization", auth)
-			}
-
-			if len(org) > 0 {
-				result.Header.Add("Org", org)
-			}
-
-			if len(orborusLabel) > 0 {
-				result.Header.Add("X-Orborus-Label", orborusLabel)
-			}
-
-			resultResp, err := client.Do(result)
-			if err != nil {
-				log.Printf("[ERROR] Failed making confirm request: %s", err)
-				time.Sleep(time.Duration(sleepTime) * time.Second)
-				continue
-			}
-
-			defer resultResp.Body.Close()
-			body, err := ioutil.ReadAll(resultResp.Body)
-			if err != nil {
-				log.Printf("[ERROR] Failed reading confirm body: %s", err)
-				time.Sleep(time.Duration(sleepTime) * time.Second)
-				continue
-			}
-
-			_ = body
-			//log.Println(string(body))
-
-			// FIXME - remove these
-			//log.Println(string(body))
-			//log.Println(resultResp)
-			if len(toBeRemoved.Data) == len(executionRequests.Data) {
-				//log.Println("Should remove ALL!")
-			} else {
-				//log.Printf("[INFO] NOT IMPLEMENTED: Should remove %d workflows from backend because they're executed!", len(toBeRemoved.Data))
-			}
 		}
 
 		time.Sleep(time.Duration(sleepTime) * time.Second)
