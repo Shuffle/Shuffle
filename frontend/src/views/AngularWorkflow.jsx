@@ -9444,6 +9444,7 @@ const AngularWorkflow = (defaultprops) => {
           bottom: 10,
           left: 10,
           color: "rgba(255,255,255,0.6)",
+          zIndex: 2,
         }}
       >
         Conditions can't be used for loops [ .# ]{" "}
