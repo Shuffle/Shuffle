@@ -13785,8 +13785,43 @@ const AngularWorkflow = (defaultprops) => {
   	</div>
   : null
 
+
+
   const RightsideBar = () => {
 	  const [hovered, setHovered] = useState(false)
+
+    useEffect(() => {
+      const handleKeyDown = (event) => {        
+        if ((event.metaKey || event.ctrlKey) && event.key === '/') {
+          event.preventDefault(); // Prevent default browser behavior (like opening search bar)
+          if (!workflow.public && !executionRequestStarted) {
+            executeWorkflow(executionText, workflow.start, lastSaved);
+          }
+        }
+        if ((event.ctrlKey || event.metaKey) && event.key === "'") {
+          // Check if Ctrl (Windows/Linux) or Command (Mac) key is pressed along with '/'
+          if (!workflow.public) {
+            setExecutionModalOpen(true);
+            getWorkflowExecution(props.match.params.key, "");
+          }
+        }
+
+        if ((event.ctrlKey || event.metaKey) && event.key === "]") {
+          console.log("Show workflow revisions key pressed")
+          if (!workflow.public) {
+            setShowWorkflowRevisions(true)
+            setSelectedRevision(workflow)
+            //setOriginalWorkflow(workflow)
+          }
+        }
+      };
+  
+      document.addEventListener('keydown', handleKeyDown);
+  
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [executeWorkflow, executionText, workflow, lastSaved, executionRequestStarted]);  
 
 	  return (
 		  <div 
@@ -13843,7 +13878,7 @@ const AngularWorkflow = (defaultprops) => {
         </span>
       </Tooltip>
     ) : (
-      <Tooltip color="primary" title="Test Execution" placement="top">
+      <Tooltip color="primary" title="Test Execution (Ctrl + /)" placement="top">
         <span>
           <Button
             disabled={
@@ -14041,7 +14076,7 @@ const AngularWorkflow = (defaultprops) => {
           </Tooltip>
           <Tooltip
             color="secondary"
-            title={`Show executions (${workflowExecutions.length})`}
+            title={`Show executions (${workflowExecutions.length}) (Ctrl + ')`}
             placement="top-start"
           >
             <span>
@@ -14110,7 +14145,7 @@ const AngularWorkflow = (defaultprops) => {
           </Tooltip>
           <Tooltip
             color="secondary"
-            title="Show Workflow Revision History (Beta)"
+            title="Show Workflow Revision History (Beta) (Ctrl + ])"
             placement="top"
           >
             <span>
@@ -14121,8 +14156,8 @@ const AngularWorkflow = (defaultprops) => {
                 variant={"outlined"}
                 onClick={() => {
                   setShowWorkflowRevisions(true)
-				  setSelectedRevision(workflow)
-				  //setOriginalWorkflow(workflow)
+                  setSelectedRevision(workflow)
+                  //setOriginalWorkflow(workflow)
                 }}
               >
 			  	<RestoreIcon />
