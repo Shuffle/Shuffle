@@ -1107,8 +1107,8 @@ class AppBase:
                             else:
                                 raise Exception(json.dumps({
                                     "success": False,
-                                    "reason": "You may be running an old version of this action. Please delete and remake the node.",
                                     "exception": f"TypeError: {e}",
+                                    "reason": "You may be running an old version of this action. Please delete and remake the node.",
                                 }))
                                 break
                                 
@@ -3381,8 +3381,8 @@ class AppBase:
                             if check:
                                 raise Exception(json.dumps({
                                     "success": False,
-                                    "reason": "Parameter {parameter} has an issue",
                                     "exception": f"Value Error: {check}",
+                                    "reason": "Parameter {parameter} has an issue",
                                 }))
 
                             #if parameter["name"] == "body": 
@@ -3791,8 +3791,8 @@ class AppBase:
                                             future.cancel()
                                             newres = json.dumps({
                                                 "success": False,
-                                                "reason": "Timeout error within %d seconds (1). This happens if we can't reach or use the API you're trying to use within the time limit. Configure SHUFFLE_APP_SDK_TIMEOUT=100 in Orborus to increase it to 100 seconds. Not changeable for cloud." % timeout,
                                                 "exception": str(e),
+                                                "reason": "Timeout error within %d seconds (1). This happens if we can't reach or use the API you're trying to use within the time limit. Configure SHUFFLE_APP_SDK_TIMEOUT=100 in Orborus to increase it to 100 seconds. Not changeable for cloud." % timeout,
                                             })
 
                                         else:
@@ -3824,8 +3824,8 @@ class AppBase:
 
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@shuffler.io)",
                                             "exception": f"{type(e).__name__} - {e}",
+                                            "reason": "An exception occurred while running this function (1). See exception for more details and contact support if this persists (support@shuffler.io)",
                                         })
                                         break
                                     elif "got an unexpected keyword argument" in errorstring:
@@ -3841,8 +3841,8 @@ class AppBase:
                                     else:
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "You may be running an old version of this action. Try remaking the node, then contact us at support@shuffler.io if it doesn't work with all these details.",
                                             "exception": f"TypeError: {e}",
+                                            "reason": "You may be running an old version of this action. Try remaking the node, then contact us at support@shuffler.io if it doesn't work with all these details.",
                                         })
                                         break
                                 except Exception as e:
@@ -3855,8 +3855,8 @@ class AppBase:
 
                                     newres = json.dumps({
                                         "success": False,
-                                        "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@shuffler.io)",
                                         "exception": f"{type(e).__name__} - {e}",
+                                        "reason": "An exception occurred while running this function (2). See exception for more details and contact support if this persists (support@shuffler.io)",
                                         
                                     })
                                     break
