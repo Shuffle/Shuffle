@@ -13786,8 +13786,63 @@ const AngularWorkflow = (defaultprops) => {
   	</div>
   : null
 
+
+
   const RightsideBar = () => {
 	  const [hovered, setHovered] = useState(false)
+
+    useEffect(() => {
+      const handleKeyDown = (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === '/') {
+          event.preventDefault(); // Prevent default browser behavior (like opening search bar)
+          if (!workflow.public && !executionRequestStarted) {
+            executeWorkflow(executionText, workflow.start, lastSaved);
+          }
+        }
+        if ((event.ctrlKey || event.metaKey) && event.key === "'") {
+          // Check if Ctrl (Windows/Linux) or Command (Mac) key is pressed along with '/'
+          if (!workflow.public && !executionModalOpen) {
+            setExecutionModalOpen(true);
+            getWorkflowExecution(props.match.params.key, "");
+          } else if (!workflow.public && executionModalOpen) {
+            setExecutionModalOpen(false);
+          }
+        }
+
+        if ((event.ctrlKey || event.metaKey) && event.key === "]") {
+          console.log("Show workflow revisions key pressed")
+          if (!workflow.public) {
+            setShowWorkflowRevisions(true)
+            setSelectedRevision(workflow)
+            //setOriginalWorkflow(workflow)
+          }
+        }
+
+        if (( event.ctrlKey || event.metaKey ) && event.key === ";") {
+          if (!workflow.public && executionModalOpen) {
+            getWorkflowExecution(props.match.params.key, "");
+          }
+        }
+
+        if (( event.ctrlKey || event.metaKey ) && event.shiftKey) {
+          console.log("Shift key pressed")
+          if (!workflow.public && executionModalOpen) {
+            setExecutionRunning(false);
+            stop()
+            const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+            const newitem = removeParam("execution_id", cursearch);
+            navigate(curpath + newitem)
+            setExecutionModalView(0);
+          }
+        }
+      };
+  
+      document.addEventListener('keydown', handleKeyDown);
+  
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [executeWorkflow, executionText, workflow, lastSaved, executionRequestStarted]);  
 
 	  return (
 		  <div 
@@ -13844,7 +13899,7 @@ const AngularWorkflow = (defaultprops) => {
         </span>
       </Tooltip>
     ) : (
-      <Tooltip color="primary" title="Test Execution" placement="top">
+      <Tooltip color="primary" title="Test Execution (Ctrl + /)" placement="top">
         <span>
           <Button
             disabled={
@@ -14042,7 +14097,7 @@ const AngularWorkflow = (defaultprops) => {
           </Tooltip>
           <Tooltip
             color="secondary"
-            title={`Show executions (${workflowExecutions.length})`}
+            title={`Show executions (${workflowExecutions.length}) (Ctrl + ')`}
             placement="top-start"
           >
             <span>
@@ -14111,7 +14166,7 @@ const AngularWorkflow = (defaultprops) => {
           </Tooltip>
           <Tooltip
             color="secondary"
-            title="Show Workflow Revision History (Beta)"
+            title="Show Workflow Revision History (Beta) (Ctrl + ])"
             placement="top"
           >
             <span>
@@ -14122,8 +14177,8 @@ const AngularWorkflow = (defaultprops) => {
                 variant={"outlined"}
                 onClick={() => {
                   setShowWorkflowRevisions(true)
-				  setSelectedRevision(workflow)
-				  //setOriginalWorkflow(workflow)
+                  setSelectedRevision(workflow)
+                  //setOriginalWorkflow(workflow)
                 }}
               >
 			  	<RestoreIcon />
@@ -15154,6 +15209,7 @@ const AngularWorkflow = (defaultprops) => {
 		  		</a>
 		  	</Tooltip>
 		  </div>
+        <Tooltip title="Refresh runs (Ctrl + ;)" arrow>
           <Button
             style={{ borderRadius: "0px" }}
             variant="outlined"
@@ -15166,6 +15222,7 @@ const AngularWorkflow = (defaultprops) => {
             <CachedIcon style={{ marginRight: 10 }} />
             Refresh Runs
           </Button>
+        </Tooltip>
           <Divider
             style={{
               backgroundColor: "rgba(255,255,255,0.5)",
@@ -15393,48 +15450,51 @@ const AngularWorkflow = (defaultprops) => {
         </div>
       ) : (
         <div style={{ padding: isMobile ? "0px 10px 25px 10px" : "25px 15px 25px 15px", maxWidth: isMobile ? "100%" : 400, overflowX: "hidden" }}>
-          <Breadcrumbs
-            aria-label="breadcrumb"
-            separator="›"
-            style={{ color: "white", fontSize: 16 }}
-          >
-            <span
-              style={{ color: "rgba(255,255,255,0.5)", display: "flex" }}
-              onClick={() => {
-                setExecutionRunning(false);
-                stop();
-                getWorkflowExecution(props.match.params.key, "");
-                setExecutionModalView(0);
-                setLastExecution(executionData.execution_id);
-              }}
+          
+            <Breadcrumbs
+              aria-label="breadcrumb"
+              separator="›"
+              style={{ color: "white", fontSize: 16 }}
             >
-              <IconButton
-                style={{
-                  paddingLeft: 0,
-                  marginTop: "auto",
-                  marginBottom: "auto",
-                }}
-                onClick={() => { 
-                	setExecutionRunning(false);
-					stop()
-				}}
-              >
-                <ArrowBackIcon style={{ color: "rgba(255,255,255,0.5)" }} />
-              </IconButton>
-              <h2
-                style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
-                onClick={() => { 
-          			const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
-					const newitem = removeParam("execution_id", cursearch);
-				  	navigate(curpath + newitem)
-                	setExecutionRunning(false);
-					stop()
-				}}
-              >
-                See more runs 
-              </h2>
-            </span>
-          </Breadcrumbs>
+                <span
+                  style={{ color: "rgba(255,255,255,0.5)", display: "flex" }}
+                  onClick={() => {
+                    setExecutionRunning(false);
+                    stop();
+                    getWorkflowExecution(props.match.params.key, "");
+                    setExecutionModalView(0);
+                    setLastExecution(executionData.execution_id);
+                  }}
+                >
+                  <IconButton
+                    style={{
+                      paddingLeft: 0,
+                      marginTop: "auto",
+                      marginBottom: "auto",
+                    }}
+                    onClick={() => { 
+                      setExecutionRunning(false);
+              stop()
+            }}
+                  >
+                    <ArrowBackIcon style={{ color: "rgba(255,255,255,0.5)" }} />
+                  </IconButton>
+                  <Tooltip title="See more runs (Ctrl + Shift)" arrow>
+                  <h2
+                    style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
+                    onClick={() => { 
+                    const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+                    const newitem = removeParam("execution_id", cursearch);
+                    navigate(curpath + newitem)
+                    setExecutionRunning(false);
+                    stop()
+                  }}
+                  >
+                    See more runs 
+                  </h2>
+                  </Tooltip>
+                </span>
+            </Breadcrumbs>
           <Divider
             style={{
               backgroundColor: "rgba(255,255,255,0.6)",
