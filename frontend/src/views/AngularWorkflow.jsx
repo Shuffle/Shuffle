@@ -16449,9 +16449,28 @@ if (
           </div>
         </div>
         <div style={{ marginBottom: 5 }}>
-          <b>Status </b> {selectedResult.status}
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <div>
+              <b>Status </b>{" "} {selectedResult.status}
+            </div>
+            
+            {selectedResult.started_at !== undefined &&
+              selectedResult.started_at !== null &&
+              selectedResult.started_at > 0 ? (
+            <div>
+              <b>Started </b>{" "} {new Date(selectedResult.started_at).toLocaleString("en-GB")}
+            </div>
+            ): null}
+            {selectedResult.completed_at !== undefined &&
+              selectedResult.completed_at !== null &&
+              selectedResult.completed_at > 0 ? (
+            <div>
+              <b>Finished </b>{" "} {selectedResult.completed_at === null ? "Not finished" : new Date(selectedResult.completed_at).toLocaleString("en-GB")}
+            </div>
+            ): null}
+          </div>
         </div>
-
+  
         {validate.valid ? (
           <ReactJson
             src={validate.result}
