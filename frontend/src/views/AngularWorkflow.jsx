@@ -114,6 +114,7 @@ import {
   Polyline as PolylineIcon, 
   QueryStats as QueryStatsIcon, 
   AutoAwesome as AutoAwesomeIcon,
+  FileCopy as FileCopyIcon,
 } from "@mui/icons-material";
 
 
@@ -15529,6 +15530,25 @@ const AngularWorkflow = (defaultprops) => {
                   }}
                 >
                   <CachedIcon style={{}} />
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip
+              color="primary"
+              title="Copy workflow id"
+              placement="top"
+              style={{ zIndex: 50000 }}
+            >
+              <span style={{}}>
+                <Button
+                  color="primary"
+                  style={{ float: "right", marginTop: 20, marginLeft: 10 }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(executionData.execution_id);
+                    toast("Copied execution id to clipboard.")
+                  }}
+                >
+                  <FileCopyIcon style={{}} />
                 </Button>
               </span>
             </Tooltip>
