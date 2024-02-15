@@ -9814,6 +9814,8 @@ if (
                   marginTop: "15px",
                   marginLeft: "10px",
                   overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",  
                   maxWidth: 72,
                 }}
               >
@@ -9833,7 +9835,7 @@ if (
                   flex: 1,
                   textAlign: "center",
                   marginTop: "15px",
-                  overflow: "hidden",
+                  overflow: "hidden",  
                   maxWidth: 72,
                 }}
                 onClick={() => { }}
@@ -9857,6 +9859,8 @@ if (
                   marginBottom: "auto",
                   marginLeft: "10px",
                   overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                   maxWidth: 72,
                 }}
               >
