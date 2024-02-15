@@ -8588,13 +8588,15 @@ const AngularWorkflow = (defaultprops) => {
     // Further checks if those fields are already set in a previously used action
     newSelectedAction = RunAutocompleter(newSelectedAction);
 
-    if (
-      newaction.returns.example !== undefined &&
-      newaction.returns.example !== null &&
-      newaction.returns.example.length > 0
-    ) {
-      newSelectedAction.example = newaction.returns.example;
-    }
+   // Ensured newaction.returns is defined before accessing newaction.returns.example.
+if (
+  newaction.returns &&
+  newaction.returns.example !== undefined &&
+  newaction.returns.example !== null &&
+  newaction.returns.example.length > 0
+) {
+  newSelectedAction.example = newaction.returns.example;
+}
 
     if (
       newaction.description !== undefined &&
