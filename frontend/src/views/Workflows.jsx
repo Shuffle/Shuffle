@@ -924,7 +924,7 @@ const Workflows = (props) => {
     >
       <DialogTitle>
         <div style={{ textAlign: "center", color: "rgba(255,255,255,0.9)" }}>
-          Are you sure you want to delete {selectedWorkflowId.length > 0 ? filteredWorkflows.find((w) => w.id === selectedWorkflowId).name : `${selectedWorkflowIndexes.length} workflow${selectedWorkflowIndexes.length === 1 ? '' : 's'}`}? <div />
+          Are you sure you want to delete {selectedWorkflowId.length > 0 ? filteredWorkflows.find((w) => w.id === selectedWorkflowId)?.name : `${selectedWorkflowIndexes.length} workflow${selectedWorkflowIndexes.length === 1 ? '' : 's'}`}? <div />
 
           Other workflows relying on {selectedWorkflowIndexes.length > 0 ? "them" : "it"} one will stop working
         </div>

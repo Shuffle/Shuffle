@@ -3415,24 +3415,26 @@ If you're interested, please let me know a time that works for you, or set up a 
                     // using request id or trace id
                     <ListItem key={index} style={{ backgroundColor: index % 2 === 0 ? "#1f2023" : "#27292d" }}>
                       <ListItemText
-                        primary={new Date(data.start_time.seconds * 1000).toISOString().slice(0, 10)}
+                          primary={new Date(data.start_time.seconds * 1000).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false,
+                        })}
                         style={{
-                          minWidth: 150,
-                          maxWidth: 150,
+                          minWidth: 200,
+                          maxWidth: 200,
                         }}
                       />
                       <ListItemText
-                        primary={data.status}
+                        primary={data.referrer}
                         style={{
-                          minWidth: 70,
-                          maxWidth: 70,
-                        }}
-                      />
-                      <ListItemText
-                        primary={data.method}
-                        style={{
-                          minWidth: 150,
-                          maxWidth: 150,
+                          minWidth: 300,
+                          maxWidth: 300,
+                          overflow: "hidden",
                         }}
                       />
                       <ListItemText
@@ -3441,6 +3443,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                           minWidth: 700,
                           maxWidth: 700,
                           overflow: "hidden",
+                          marginLeft: 10,
                         }}
                       />
                     </ListItem>
