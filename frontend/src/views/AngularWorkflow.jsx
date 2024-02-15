@@ -8589,13 +8589,15 @@ const AngularWorkflow = (defaultprops) => {
     // Further checks if those fields are already set in a previously used action
     newSelectedAction = RunAutocompleter(newSelectedAction);
 
-    if (
-      newaction.returns.example !== undefined &&
-      newaction.returns.example !== null &&
-      newaction.returns.example.length > 0
-    ) {
-      newSelectedAction.example = newaction.returns.example;
-    }
+   // Ensured newaction.returns is defined before accessing newaction.returns.example.
+if (
+  newaction.returns &&
+  newaction.returns.example !== undefined &&
+  newaction.returns.example !== null &&
+  newaction.returns.example.length > 0
+) {
+  newSelectedAction.example = newaction.returns.example;
+}
 
     if (
       newaction.description !== undefined &&
@@ -15533,6 +15535,9 @@ const AngularWorkflow = (defaultprops) => {
                 </Button>
               </span>
             </Tooltip>
+            {executionData.execution_id !== undefined &&
+              executionData.execution_id !== null &&
+              executionData.execution_id.length > 0 ? (
             <Tooltip
               color="primary"
               title="Copy workflow id"
@@ -15552,6 +15557,7 @@ const AngularWorkflow = (defaultprops) => {
                 </Button>
               </span>
             </Tooltip>
+            ) : null}
             {executionData.status === "EXECUTING" ? (
               <Tooltip
                 color="primary"
