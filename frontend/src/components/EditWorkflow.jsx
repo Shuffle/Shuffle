@@ -146,8 +146,6 @@ const EditWorkflow = (props) => {
 
   const newWorkflow = isEditing === true ? false : true
   const priority = userdata === undefined || userdata === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
-  console.log("PRIO: ", priority)
-
   var upload = "";
 	var total_count = 0
 
@@ -485,7 +483,7 @@ const EditWorkflow = (props) => {
 
         </DialogContent>
 
-        <DialogActions style={{paddingRight: 100,  }}>
+        <DialogActions style={{paddingRight: 100,  marginBottom: 100, }}>
           <Button
             style={{}}
             onClick={() => {

@@ -77,10 +77,8 @@ const ConfigureWorkflow = (props) => {
   const [checkStarted, setCheckStarted] = React.useState(false);
 
   useEffect(() => { 
-	  console.log("Required actions: ", requiredActions)
+	  //console.log("Configure Workflow: Required actions: ", requiredActions)
 	  if (requiredActions.length === 0) { 
-		  console.log("No more actions? Set parent to done?")
-
 		  if (setConfigurationFinished !== undefined) {
 			setConfigurationFinished(true)
 		  }
@@ -731,6 +729,7 @@ const ConfigureWorkflow = (props) => {
 
 	parsedName = (parsedName.charAt(0).toUpperCase() + parsedName.slice(1)).replaceAll("_", " ");
 
+	console.log("AUTH Action: ", action)
 	return (
 		<ListItem 
 			style={{padding: 0, display: "flex", flexDirection: "column", }}

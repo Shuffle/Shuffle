@@ -37,7 +37,7 @@ import {
 } from '@mui/material';
 
 const AppSearchButtons = (props) => {
-    const { userdata, globalUrl, appFramework, moreButton, finishedApps, appType, totalApps, index, onNodeSelect, setDiscoveryData, appName, AppImage, setDefaultSearch, discoveryData, checkLogin, setMissing, } = props
+    const { userdata, globalUrl, appFramework, moreButton, finishedApps, appType, totalApps, index, onNodeSelect, setDiscoveryData, appName, AppImage, setDefaultSearch, discoveryData, checkLogin, setMissing, getAppFramework, } = props
 
     const ref = useRef()
     let navigate = useNavigate();
@@ -48,8 +48,6 @@ const AppSearchButtons = (props) => {
 
     useEffect(() => {
         if (newSelectedApp !== undefined && setMissing != undefined) {
-            console.log("AppSearchButtons: setMissing is defined!")
-
             const submitAppFramework = {
                 "description": newSelectedApp.description,
                 "id": newSelectedApp.objectID,
@@ -60,11 +58,17 @@ const AppSearchButtons = (props) => {
 
             setFrameworkItem(submitAppFramework)
             setMissing(newSelectedApp)
+
+			if (getAppFramework !== undefined) {
+				setTimeout(() => {
+					getAppFramework()
+				}, 1000)
+			}
         }
     }, [newSelectedApp])
 
     if (appType === undefined) {
-        console.log("Apptype is required in AppSearchButtons")
+        //console.log("Apptype is required in AppSearchButtons")
         return null;
     }
 

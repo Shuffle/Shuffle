@@ -1914,7 +1914,6 @@ class AppBase:
                 c_parentheses = parse_nested_param(parse_string, 0)[0]
                 match_string = re.escape(c_parentheses)
                 custom_casting = re.findall(fr"({wrapper_group})\({match_string}", parse_string)
-                print("[DEBUG] In ELSE: %s" % custom_casting)
                 # check if a wrapper was found
                 if len(custom_casting) != 0:
                     inner_result = parse_type(c_parentheses, custom_casting[0])
@@ -2093,7 +2092,6 @@ class AppBase:
                             except IndexError:
                                 newvalue, is_loop = (tmpitem, parsersplit[outercnt+1:])
                         else:
-                            #print("[INFO] In ELSE - handling %s and %s" % (firstitem, seconditem))
                             if isinstance(firstitem, str):
                                 if firstitem.lower() == "max" or firstitem.lower() == "last" or firstitem.lower() == "end": 
                                     firstitem = len(basejson)-1

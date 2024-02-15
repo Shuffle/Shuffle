@@ -40,12 +40,12 @@ cytoscape.use(edgehandles);
 export const findSpecificApp = (framework, inputcategory) => {
   // Get the frameworkinfo for the org and fill in
   if (framework === undefined || framework === null) {
-	  console.log("findSpecificApp: framework is null")
+	  //console.log("findSpecificApp: framework is null")
 	  return null 
   }
 
   if (inputcategory === undefined || inputcategory === null) {
-	  console.log("findSpecificApp: category is null")
+	  //console.log("findSpecificApp: category is null")
 	  return null 
   }
 
@@ -118,8 +118,8 @@ export const findSpecificApp = (framework, inputcategory) => {
 	  }
 
 	  return {
-		  name: "EDR :default",
-		  large_image: parsedDatatypeImages["EDR & AV"],
+		  name: "IAM :default",
+		  large_image: parsedDatatypeImages["IAM"],
 		  count: 0,
 		  description: "",
 		  id: "",
@@ -654,7 +654,7 @@ const AppFramework = (props) => {
 
 
 	const handleLoadNextSuggestion = (frameworkData) => {
-		console.log("Should check for next apps to load from App suggestion model")
+		//console.log("Should check for next apps to load from App suggestion model")
 		//fetch(globalUrl + "/api/v1/workflows/usecases", {
       //credentials: "include",
 			//cors: "no-cors",
@@ -720,7 +720,7 @@ const AppFramework = (props) => {
 	}
 
 	const showRecommendations = (changed, frameworkData) => {
-		console.log("Inside recommendation loader")
+		//console.log("Inside recommendation loader")
 		setChangedApp(changed)
 		handleLoadNextSuggestion(frameworkData)
 
@@ -761,7 +761,7 @@ const AppFramework = (props) => {
 					//console.log("APptype, changed, framework: ", apptype.toLowerCase(), alternativeChanged.toLowerCase(), changed.toLowerCase(), frameworkData)
 					if (changed.toLowerCase() === apptype.toLowerCase() || changed.toLowerCase().includes(apptype.toLowerCase()) || alternativeChanged.toLowerCase() === apptype.toLowerCase() || alternativeChanged.toLowerCase().includes(apptype.toLowerCase())) {
 						potential = true 
-						console.log("Potential: !", apptype)
+						//console.log("Potential: !", apptype)
 
 						if (frameworkData[apptype] !== undefined && frameworkData[apptype].name !== undefined && frameworkData[apptype].name !== null && frameworkData[apptype].name.length > 0) {
 							usecase.items[itemtype].app = frameworkData[apptype]
@@ -819,10 +819,10 @@ const AppFramework = (props) => {
 							continue
 						}
 					} else {
-						console.log("No usecase to try to match it to (usecase.usecase_references in UsecaseSearch)")
+						//console.log("No usecase to try to match it to (usecase.usecase_references in UsecaseSearch)")
 					}
 
-					console.log("Usecase: ", usecase)
+					//console.log("Usecase: ", usecase)
 					if (matches.length === usecase.items.length) {
 						usecase.color = "#c51152"
 						usecase.type = usecaseTypes[key].name
@@ -833,8 +833,8 @@ const AppFramework = (props) => {
 		}
 
 		// FIXME: Check if a usecase has already been handled
-		console.log("")
-		console.log("GOT USECASES: ", showusecases)
+		//console.log("")
+		//console.log("GOT USECASES: ", showusecases)
 
 		// FIXME: Just showing one usecase at a time for now
 		if (showusecases.length > 0) {
@@ -894,38 +894,37 @@ const AppFramework = (props) => {
 			parsedUsecase.process.push(edge.data)
 		}
 
-    fetch(globalUrl + "/api/v1/workflows/usecases", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(parsedUsecase),
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for framework!");
-        }
+		fetch(globalUrl + "/api/v1/workflows/usecases", {
+		  method: "POST",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  body: JSON.stringify(parsedUsecase),
+		  credentials: "include",
+		})
+		  .then((response) => {
+			if (response.status !== 200) {
+			  console.log("Status not 200 for framework!");
+			}
 
-        return response.json();
-      })
-      .then((responseJson) => {
-				if (responseJson.success === false) {
-					if (responseJson.reason !== undefined) {
-						toast("Failed updating: " + responseJson.reason)
-					} else {
-						toast("Failed to update framework for your org.")
-					}
+			return response.json();
+		  })
+		  .then((responseJson) => {
+			if (responseJson.success === false) {
+				if (responseJson.reason !== undefined) {
+					toast("Failed updating: " + responseJson.reason)
 				} else {
-					toast("Updated usecase.")
+					toast("Failed to update framework for your org.")
 				}
-			})
-      .catch((error) => {
-        toast(error.toString());
-				//setFrameworkLoaded(true)
-      })
-		}
+			} else {
+				toast("Updated usecase.")
+			}
+		  })
+		  .catch((error) => {
+			toast(error.toString());
+		  })
+	}
 
 		const activateApp = (appid) => {
 			fetch(globalUrl+"/api/v1/apps/"+appid+"/activate", {
@@ -957,45 +956,54 @@ const AppFramework = (props) => {
 		}
 
 	const setFrameworkItem = (data) => {
-		console.log("Setting framework item: ", data, isCloud)
 		if (!isCloud) {
 			activateApp(data.id)
 		}
 
-    fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(data),
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for framework!");
-        }
+		fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
+		  method: "POST",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  body: JSON.stringify(data),
+		  credentials: "include",
+		})
+	    .then((response) => {
+	      if (response.status !== 200) {
+	        console.log("Status not 200 for framework!");
+	      }
 
-        return response.json();
-      })
-      .then((responseJson) => {
-				if (responseJson.success === false) {
-					if (responseJson.reason !== undefined) {
-						toast("Failed updating: " + responseJson.reason)
-					} else {
-						toast("Failed to update framework for your org.")
+	      return response.json();
+	    })
+	    .then((responseJson) => {
+	      if (responseJson.success === false) {
+	      	if (responseJson.reason !== undefined) {
+	      		toast("Failed getting appframework: " + responseJson.reason)
+	      	} else {
+	      		toast("Failed to update framework for your org.")
 
-					}
-				}
+	      	}
+	      } else {
+			if (data.id === "remove") {
+				frameworkData[data.type] = {}
+				frameworkData[data.type.toLowerCase()] = {}
+			} else {
+				frameworkData[data.type] = data
+				frameworkData[data.type.toLowerCase()] = data
+			}
 
-				//setFrameworkLoaded(true)
-				//setFrameworkData(responseJson)
-			})
-      .catch((error) => {
-        toast(error.toString());
-				//setFrameworkLoaded(true)
-      })
-		}
+			setDiscoveryData({})
+			if (setFrameworkData !== undefined) {
+				setFrameworkData(frameworkData)
+			}
+		  }
+		})
+	    .catch((error) => {
+	      toast(error.toString());
+			//setFrameworkLoaded(true)
+	    })
+	  }
 
 	useEffect(() => {
 		if (!window.location.pathname.includes("usecases")) {
@@ -1058,7 +1066,6 @@ const AppFramework = (props) => {
 					frameworkData[keys[key]] = submitValue
 				}
 
-				console.log("Frameworkdata: ", frameworkData)
 				setFrameworkData(frameworkData)
 
 				if (discoveryData.large_image !== undefined && discoveryData.large_image !== null && discoveryData.large_image.includes("storage.googleapis.com")) {
@@ -1076,8 +1083,6 @@ const AppFramework = (props) => {
 
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-    
-
   const imgSize = 50;
 	var parsedFrameworkData = frameworkData === undefined ? {} : frameworkData 
 
@@ -1263,7 +1268,7 @@ const AppFramework = (props) => {
 
 			var parsedStyle2 = {
 				"ghost": "yes",
-      	"border-width": "7px",
+      			"border-width": "7px",
 			}
 
 			/*
@@ -1399,7 +1404,6 @@ const AppFramework = (props) => {
 
 	const onNodeSelect = (event) => {
     var data = event.target.data();
-		console.log("Node: ", data)
 		if (data.id === "SHUFFLE") {
 			event.target.unselect()
 			return
@@ -1465,6 +1469,15 @@ const AppFramework = (props) => {
 	
 		const foundMiddleImage = userdata !== undefined && userdata !== null && userdata.active_org !== undefined && userdata.active_org.image !== undefined && userdata.active_org.image !== null && userdata.active_org.image !== "" ? userdata.active_org.image : '/images/Shuffle_logo.png'
 		
+		const siemcheck = parsedFrameworkData.SIEM.large_image === undefined || (parsedFrameworkData.SIEM.name !== undefined && parsedFrameworkData.SIEM.name !== null && parsedFrameworkData.SIEM.name.includes(":default"))
+		const iamcheck = parsedFrameworkData.IAM.large_image === undefined || (parsedFrameworkData.IAM.name !== undefined && parsedFrameworkData.IAM.name !== null && parsedFrameworkData.IAM.name.includes(":default")) 
+		const casescheck = parsedFrameworkData.Cases.large_image === undefined || (parsedFrameworkData.Cases.name !== undefined && parsedFrameworkData.Cases.name !== null && parsedFrameworkData.Cases.name.includes(":default"))
+		const assetscheck = parsedFrameworkData.Assets.large_image === undefined || (parsedFrameworkData.Assets.name !== undefined && parsedFrameworkData.Assets.name !== null && parsedFrameworkData.Assets.name.includes(":default"))
+		const intelcheck = parsedFrameworkData.Intel.large_image === undefined || (parsedFrameworkData.Intel.name !== undefined && parsedFrameworkData.Intel.name !== null && parsedFrameworkData.Intel.name.includes(":default"))
+		const commscheck = parsedFrameworkData.Comms.large_image === undefined || (parsedFrameworkData.Comms.name !== undefined && parsedFrameworkData.Comms.name !== null && parsedFrameworkData.Comms.name.includes(":default"))
+		const edrcheck = parsedFrameworkData["EDR & AV"].large_image === undefined || (parsedFrameworkData["EDR & AV"].name !== undefined && parsedFrameworkData["EDR & AV"].name !== null && parsedFrameworkData["EDR & AV"].name.includes(":default"))
+		const networkcheck = parsedFrameworkData.Network.large_image === undefined || (parsedFrameworkData.Network.name !== undefined && parsedFrameworkData.Network.name !== null && parsedFrameworkData.Network.name.includes(":default"))
+
 
 		const fontSize = `${12*scale}px`
 		const defaultSize = `${85*scale}px`
@@ -1484,11 +1497,11 @@ const AppFramework = (props) => {
 						name: parsedFrameworkData.Cases.name === undefined ? "" : parsedFrameworkData.Cases.name,
 						description: parsedFrameworkData.Cases.description === undefined ? "" : parsedFrameworkData.Cases.description,
 						app_id: parsedFrameworkData.Cases.id === undefined ? "" : parsedFrameworkData.Cases.id,
-						text_margin_y: parsedFrameworkData.Cases.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Cases.large_image === undefined ? `${32*scale}px` : "0px",
-						margin_y: parsedFrameworkData.Cases.large_image === undefined ? `${19*scale}px` : `0px`,
-						width: parsedFrameworkData.Cases.large_image === undefined ? iconSize : defaultSize,
-						height: parsedFrameworkData.Cases.large_image === undefined ? iconSize : defaultSize,
+						text_margin_y: casescheck ? textMarginDefault : textMarginImage,
+						margin_x: casescheck ? `${32*scale}px` : "0px",
+						margin_y: casescheck ? `${19*scale}px` : `0px`,
+						width: casescheck ? iconSize : defaultSize,
+						height: casescheck ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.Cases.large_image === undefined ? parsedDatatypeImages["CASES"] : parsedFrameworkData.Cases.large_image,
 							
 						label: securityFramework[0].text.toUpperCase(),
@@ -1501,6 +1514,7 @@ const AppFramework = (props) => {
 					}
 			},
 			{
+
 					group: "nodes",
 					data: {
 						font_size: fontSize,
@@ -1512,11 +1526,11 @@ const AppFramework = (props) => {
 						name: parsedFrameworkData.IAM.name === undefined ? "" : parsedFrameworkData.IAM.name,
 						description: parsedFrameworkData.IAM.description === undefined ? "" : parsedFrameworkData.IAM.description,
 						app_id: parsedFrameworkData.IAM.id === undefined ? "" : parsedFrameworkData.IAM.id,
-						text_margin_y: parsedFrameworkData.IAM.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.IAM.large_image === undefined ? `${32*scale}px` : "0px",
-						margin_y: parsedFrameworkData.IAM.large_image === undefined ? `${19*scale}px` : `0px`,
-						width: parsedFrameworkData.IAM.large_image === undefined ? iconSize : defaultSize,
-						height: parsedFrameworkData.IAM.large_image === undefined ? iconSize : defaultSize,
+						text_margin_y: iamcheck ? textMarginDefault : textMarginImage,
+						margin_x: iamcheck ? `${32*scale}px` : "0px",
+						margin_y: iamcheck ? `${19*scale}px` : `0px`,
+						width: iamcheck ? iconSize : defaultSize,
+						height: iamcheck ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.IAM.large_image === undefined ? parsedDatatypeImages["IAM"] : parsedFrameworkData.IAM.large_image,
 							
 						label: securityFramework[3].text.toUpperCase(),
@@ -1540,11 +1554,11 @@ const AppFramework = (props) => {
 						name: parsedFrameworkData.Assets.name === undefined ? "" : parsedFrameworkData.Assets.name,
 						description: parsedFrameworkData.Assets.description === undefined ? "" : parsedFrameworkData.Assets.description,
 						app_id: parsedFrameworkData.Assets.id === undefined ? "" : parsedFrameworkData.Assets.id,
-						text_margin_y: parsedFrameworkData.Assets.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Assets.large_image === undefined ? `${32*scale}px` : "0px",
-						margin_y: parsedFrameworkData.Assets.large_image === undefined ? `${19*scale}px` : `0px`,
-						width: parsedFrameworkData.Assets.large_image === undefined ? iconSize : defaultSize,
-						height: parsedFrameworkData.Assets.large_image === undefined ? iconSize : defaultSize,
+						text_margin_y: assetscheck ? textMarginDefault : textMarginImage,
+						margin_x: assetscheck ? `${32*scale}px` : "0px",
+						margin_y: assetscheck ? `${19*scale}px` : `0px`,
+						width: assetscheck ? iconSize : defaultSize,
+						height: assetscheck ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.Assets.large_image === undefined ? parsedDatatypeImages["ASSETS"] : parsedFrameworkData.Assets.large_image,
 							
 						label: securityFramework[2].text.toUpperCase(), 
@@ -1568,11 +1582,11 @@ const AppFramework = (props) => {
 						name: parsedFrameworkData.Intel.name === undefined ? "" : parsedFrameworkData.Intel.name,
 						description: parsedFrameworkData.Intel.description === undefined ? "" : parsedFrameworkData.Intel.description,
 						app_id: parsedFrameworkData.Intel.id === undefined ? "" : parsedFrameworkData.Intel.id,
-						text_margin_y: parsedFrameworkData.Intel.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Intel.large_image === undefined ? `${32*scale}px` : "0px",
-						margin_y: parsedFrameworkData.Intel.large_image === undefined ? `${19*scale}px` : `0px`,
-						width: parsedFrameworkData.Intel.large_image === undefined ? iconSize : defaultSize,
-						height: parsedFrameworkData.Intel.large_image === undefined ? iconSize : defaultSize,
+						text_margin_y: intelcheck ? textMarginDefault : textMarginImage,
+						margin_x: intelcheck ? `${32*scale}px` : "0px",
+						margin_y: intelcheck ? `${19*scale}px` : `0px`,
+						width: intelcheck ? iconSize : defaultSize,
+						height: intelcheck ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.Intel.large_image === undefined ? parsedDatatypeImages["INTEL"] : parsedFrameworkData.Intel.large_image,
 							
 						label: securityFramework[4].text.toUpperCase(),
@@ -1596,11 +1610,11 @@ const AppFramework = (props) => {
 						name: parsedFrameworkData.Comms.name === undefined ? "" : parsedFrameworkData.Comms.name,
 						description: parsedFrameworkData.Comms.description === undefined ? "" : parsedFrameworkData.Comms.description,
 						app_id: parsedFrameworkData.Comms.id === undefined ? "" : parsedFrameworkData.Comms.id,
-						text_margin_y: parsedFrameworkData.Comms.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Comms.large_image === undefined ? `${32*scale}px` : "0px",
-						margin_y: parsedFrameworkData.Comms.large_image === undefined ? `${19*scale}px` : `0px`,
-						width: parsedFrameworkData.Comms.large_image === undefined ? iconSize : defaultSize,
-						height: parsedFrameworkData.Comms.large_image === undefined ? iconSize : defaultSize,
+						text_margin_y: commscheck ? textMarginDefault : textMarginImage,
+						margin_x: commscheck ? `${32*scale}px` : "0px",
+						margin_y: commscheck ? `${19*scale}px` : `0px`,
+						width: commscheck ? iconSize : defaultSize,
+						height: commscheck ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.Comms.large_image === undefined ? parsedDatatypeImages["COMMS"] : parsedFrameworkData.Comms.large_image,
 							
 						label: securityFramework[5].text.toUpperCase(), 
@@ -1624,11 +1638,11 @@ const AppFramework = (props) => {
 						name: parsedFrameworkData["EDR & AV"].name === undefined ? "" : parsedFrameworkData["EDR & AV"].name,
 						description: parsedFrameworkData["EDR & AV"].description === undefined ? "" : parsedFrameworkData["EDR & AV"].description,
 						app_id: parsedFrameworkData["EDR & AV"].id === undefined ? "" : parsedFrameworkData["EDR & AV"].id,
-						text_margin_y: parsedFrameworkData["EDR & AV"].large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData["EDR & AV"].large_image === undefined ? `${32*scale}px` : "0px",
-						margin_y: parsedFrameworkData["EDR & AV"].large_image === undefined ? `${19*scale}px` : `0px`,
-						width: parsedFrameworkData["EDR & AV"].large_image === undefined ? iconSize : defaultSize,
-						height: parsedFrameworkData["EDR & AV"].large_image === undefined ? iconSize : defaultSize,
+						text_margin_y: edrcheck ? textMarginDefault : textMarginImage,
+						margin_x: edrcheck ? `${32*scale}px` : "0px",
+						margin_y: edrcheck ? `${19*scale}px` : `0px`,
+						width: edrcheck ? iconSize : defaultSize,
+						height: edrcheck ? iconSize : defaultSize,
 						large_image: parsedFrameworkData["EDR & AV"].large_image === undefined ? parsedDatatypeImages["EDR & AV"] : parsedFrameworkData["EDR & AV"].large_image,
 							
 						label: securityFramework[7].text.toUpperCase(), 
@@ -1652,11 +1666,11 @@ const AppFramework = (props) => {
 						name: parsedFrameworkData.Network.name === undefined ? "" : parsedFrameworkData.Network.name,
 						description: parsedFrameworkData.Network.description === undefined ? "" : parsedFrameworkData.Network.description,
 						app_id: parsedFrameworkData.Network.id === undefined ? "" : parsedFrameworkData.Network.id,
-						text_margin_y: parsedFrameworkData.Network.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: 		parsedFrameworkData.Network.large_image === undefined ? `${32*scale}px` : "0px",
-						margin_y: 		parsedFrameworkData.Network.large_image === undefined ? `${19*scale}px` : `0px`,
-						width: 				parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
-						height: 			parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
+						text_margin_y: networkcheck  ? textMarginDefault : textMarginImage,
+						margin_x: 	  networkcheck ? `${32*scale}px` : "0px",
+						margin_y: 	  networkcheck ? `${19*scale}px` : `0px`,
+						width: 		  networkcheck ? iconSize : defaultSize,
+						height: 	  networkcheck ? iconSize : defaultSize,
 						large_image:  parsedFrameworkData.Network.large_image === undefined ? parsedDatatypeImages["NETWORK"] :  parsedFrameworkData.Network.large_image,
 						label:  securityFramework[6].text.toUpperCase(),
 						id: securityFramework[6].text.toUpperCase(),
@@ -1679,11 +1693,11 @@ const AppFramework = (props) => {
 						name: parsedFrameworkData.SIEM.name === undefined ? "" : parsedFrameworkData.SIEM.name,
 						description: parsedFrameworkData.SIEM.description === undefined ? "" : parsedFrameworkData.SIEM.description,
 						app_id: parsedFrameworkData.SIEM.id === undefined ? "" : parsedFrameworkData.SIEM.id,
-						text_margin_y: parsedFrameworkData.SIEM.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.SIEM.large_image === undefined ? `${32*scale}px` : "0px",
-						margin_y: parsedFrameworkData.SIEM.large_image === undefined ? `${19*scale}px` : `0px`,
-						width: parsedFrameworkData.SIEM.large_image === undefined ? iconSize : defaultSize,
-						height: parsedFrameworkData.SIEM.large_image === undefined ? iconSize : defaultSize,
+						text_margin_y: siemcheck ? textMarginDefault : textMarginImage,
+						margin_x: siemcheck ? `${32*scale}px` : "0px",
+						margin_y: siemcheck ? `${19*scale}px` : `0px`,
+						width: siemcheck ? iconSize : defaultSize,
+						height: siemcheck ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.SIEM.large_image === undefined ? parsedDatatypeImages["SIEM"] : parsedFrameworkData.SIEM.large_image,
 						label: securityFramework[1].text.toUpperCase(),
 						id: securityFramework[1].text.toUpperCase(),
@@ -1988,6 +2002,7 @@ const AppFramework = (props) => {
 	const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
 	return (	
 		<div style={{margin: "auto", backgroundColor: bgColor, position: "relative", }}>
+			{/*
 			<div style={{position: "absolute"}}>
 
 				<SuggestedWorkflows 
@@ -1999,9 +2014,11 @@ const AppFramework = (props) => {
 					inputSearch={changedApp}
 					apps={apps}
 				/>
-			</div>
 
-			{injectedApps.map((apps, appindex) => {
+			</div>
+			*/}
+
+			{/*injectedApps.map((apps, appindex) => {
 				var categoryTop = 100
 				var categoryLeft = 100
 
@@ -2028,8 +2045,11 @@ const AppFramework = (props) => {
 					return null
 				}
 
+				const scale = 0.9
+				const offsetTop = -70
+				const offsetLeft = 0 
 				return (
-					<div key={appindex} style={{display: "flex", position: "absolute", top: categoryTop, left: categoryLeft,  zIndex: 10010, }}>
+					<div key={appindex} style={{display: "flex", position: "absolute", top: categoryTop+offsetTop, left: categoryLeft+offsetLeft,  zIndex: 10010, }}>
 						{apps.map((app, appIndex) => {
 							return (
 								<Chip
@@ -2059,7 +2079,6 @@ const AppFramework = (props) => {
 										}
 										
 										if (setFrameworkData !== undefined) {
-											console.log("Setting frameworkdata")
 											// Find discoveryData.id
 											var keys = []
 											for (const [key, value] of Object.entries(frameworkData)) {
@@ -2088,7 +2107,7 @@ const AppFramework = (props) => {
 						})}
 					</div>
 				)
-			})}
+			})*/}
 
 			{showOptions === false ? null : 
 				<div style={{textAlign: "center",}}>

@@ -29,7 +29,7 @@ import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 
 const WorkflowTemplatePopup = (props) => {
-	const { userdata, appFramework, globalUrl, img1, srcapp, img2, dstapp, title, description, visualOnly, apps, isLoggedIn, isHomePage } = props;
+	const { userdata, appFramework, globalUrl, img1, srcapp, img2, dstapp, title, description, visualOnly, apps, isLoggedIn, isHomePage, getAppFramework,  } = props;
 
 	const [isActive, setIsActive] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
@@ -39,17 +39,39 @@ const WorkflowTemplatePopup = (props) => {
 	const [workflow, setWorkflow] = useState({});
 	const [showLoginButton, setShowLoginButton] = useState(false);
   	const [appAuthentication, setAppAuthentication] = React.useState(undefined);
-
   	const [missingSource, setMissingSource] = React.useState(undefined)
   	const [missingDestination, setMissingDestination] = React.useState(undefined);
-
   	const [configurationFinished, setConfigurationFinished] = React.useState(false);
-
-	useEffect(() => {
-	}, [missingSource, missingDestination])
-
-  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+	const [appSetupDone, setAppSetupDone] = React.useState(false)
+  	
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	let navigate = useNavigate();
+	useEffect(() => {
+		if (modalOpen !== true) {
+			return
+		}
+
+		if (!srcapp.includes(":default") && !dstapp.includes(":default")) {
+			if (appSetupDone === false && setAppSetupDone !== undefined) {
+				setAppSetupDone(true)
+			}
+
+			getGeneratedWorkflow() 
+		}
+
+		if (missingSource !== undefined && missingDestination !== undefined) {
+			if (appSetupDone === false && setAppSetupDone !== undefined) {
+				setAppSetupDone(true)
+			}
+		}
+
+		if (getAppFramework !== undefined) {
+			setTimeout(() => {
+				getAppFramework()
+			}, 500)
+		}
+	}, [modalOpen, missingSource, missingDestination])
+
 
 	const imagestyleWrapper = {
         height: 40,
@@ -310,8 +332,6 @@ const WorkflowTemplatePopup = (props) => {
 		}
 
 		const url = isCloud ? `${globalUrl}/api/v1/workflows/merge` : `https://shuffler.io/api/v1/workflows/merge`
-		//const url = `https://shuffler.io/api/v1/workflows/merge`
-
 		fetch(url, {
 			method: "POST",
 			headers: {
@@ -370,6 +390,16 @@ const WorkflowTemplatePopup = (props) => {
 		})
 	}
 
+	if (modalOpen === true && !srcapp.includes(":default") && !dstapp.includes(":default")) {
+		if (appSetupDone === false && setAppSetupDone !== undefined) {
+			setAppSetupDone(true)
+		}
+
+		if (workflow.id === undefined && workflowLoading === false && errorMessage === "") {
+			getGeneratedWorkflow() 
+		}
+	}
+
 	const isFinished = () => {
 		// Look for configuration fields being done in the current modal
 		// 1. Start by finding the modal
@@ -388,6 +418,10 @@ const WorkflowTemplatePopup = (props) => {
 	}
 	
 	const ModalView = () => {
+		if (modalOpen === false) {
+			return null
+		}
+
 		return (
         	<Drawer
 				anchor={"left"}
@@ -475,9 +509,9 @@ const WorkflowTemplatePopup = (props) => {
 						</div>
 					}
 
-					{(missingSource !== undefined || missingDestination !== undefined) ? 
+					{(appSetupDone === false && missingSource !== undefined || missingDestination !== undefined) ? 
 						<Typography variant="body1" style={{marginTop: 75, marginBottom: 10, }}>
-							{"Find relevevant Apps for this Usecase"}
+							{"Find relevant Apps for this Usecase"}
 						</Typography>
 					: null}
 
@@ -491,6 +525,8 @@ const WorkflowTemplatePopup = (props) => {
 								AppImage={missingSource.image}
 
 								setMissing={setMissingSource}
+
+								getAppFramework={getAppFramework}
 							/>
 						</div>
 					: null}
@@ -505,6 +541,8 @@ const WorkflowTemplatePopup = (props) => {
 								AppImage={missingDestination.image}
 
 								setMissing={setMissingDestination}
+
+								getAppFramework={getAppFramework}
 							/>
 						</div>
 					: null}

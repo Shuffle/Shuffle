@@ -4406,7 +4406,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             />
             <ListItemText
               primary="Default"
-              style={{ minWidth: 100, maxWidth: 100 }}
+              style={{ minWidth: 110, maxWidth: 110, }}
             />
             <ListItemText
               primary="Actions"
@@ -4550,8 +4550,8 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	  />
                   	  <ListItemText
                   	    style={{
-                  	      minWidth: 80,
-                  	      maxWidth: 80,
+                  	      minWidth: 100,
+                  	      maxWidth: 100,
                   	      overflow: "hidden",
                   	    }}
                   	    primary={environment.default ? "true" : null}
@@ -4559,7 +4559,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	    {environment.default ? null : (
                   	      <Button
                   	        variant="outlined"
-                  	        style={{ marginLeft: 0, marginRight: 0, }}
+                  	        style={{ marginLeft: 0, marginRight: 0, maxWidth: 150, }}
                   	        onClick={() => setDefaultEnvironment(environment)}
                   	        color="primary"
                   	      >
