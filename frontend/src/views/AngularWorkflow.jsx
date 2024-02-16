@@ -15540,7 +15540,7 @@ if (
               executionData.execution_id.length > 0 ? (
             <Tooltip
               color="primary"
-              title="Copy workflow id"
+              title="Copy execution ID"
               placement="top"
               style={{ zIndex: 50000 }}
             >
