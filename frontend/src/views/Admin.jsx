@@ -1867,15 +1867,23 @@ If you're interested, please let me know a time that works for you, or set up a 
 	  	{selectedAuthentication.type === "oauth" || selectedAuthentication.type === "oauth2" || selectedAuthentication.type === "oauth2-app" ? 
 			<div>
 				<Typography variant="body1" color="textSecondary" style={{ marginBottom: 0, marginTop: 10 }}>
-					Only the name of the auth can be modified for Oauth2. Please remake the authentication to change the fields like Client ID, Secret, Scopes etc.
+					Only the name and url can be modified for Oauth2/OpenID connect. Please remake the authentication if you want to change the other fields like Client ID, Secret, Scopes etc.
 				</Typography> 
 			</div>
-		:
-        selectedAuthentication.fields.map((data, index) => {
+		: null }
+
+	  	{selectedAuthentication.fields.map((data, index) => {
 		  var fieldname = data.key.replaceAll("_", " ")
 		  if (fieldname.endsWith(" basic")) {
 			  fieldname = fieldname.substring(0, fieldname.length - 6)
 		  }
+
+		  if (selectedAuthentication.type === "oauth" || selectedAuthentication.type === "oauth2" || selectedAuthentication.type === "oauth2-app") {
+			  if (selectedAuthentication.fields[index].key !== "url") {
+				  return null
+			  }
+		  }
+
 
           //console.log("DATA: ", data, selectedAuthentication)
           return (

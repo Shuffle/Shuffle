@@ -32,7 +32,6 @@ const Priority = (props) => {
 	let newdescription = priority.description
 	const descsplit = priority.description.split("&")
 	if (appFramework !== undefined && descsplit.length === 5 && priority.description.includes(":default")) {
-		console.log("descsplit: ", descsplit)
 		if (descsplit[1] === "") {
 			const item = findSpecificApp(appFramework, descsplit[0])
 
