@@ -114,6 +114,7 @@ import {
   Polyline as PolylineIcon, 
   QueryStats as QueryStatsIcon, 
   AutoAwesome as AutoAwesomeIcon,
+  FileCopy as FileCopyIcon,
 } from "@mui/icons-material";
 
 
@@ -15538,6 +15539,29 @@ if (
                 </Button>
               </span>
             </Tooltip>
+            {executionData.execution_id !== undefined &&
+              executionData.execution_id !== null &&
+              executionData.execution_id.length > 0 ? (
+            <Tooltip
+              color="primary"
+              title="Copy execution ID"
+              placement="top"
+              style={{ zIndex: 50000 }}
+            >
+              <span style={{}}>
+                <Button
+                  color="primary"
+                  style={{ float: "right", marginTop: 20, marginLeft: 10 }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(executionData.execution_id);
+                    toast("Copied execution id to clipboard.")
+                  }}
+                >
+                  <FileCopyIcon style={{}} />
+                </Button>
+              </span>
+            </Tooltip>
+            ) : null}
             {executionData.status === "EXECUTING" ? (
               <Tooltip
                 color="primary"
@@ -16429,9 +16453,28 @@ if (
           </div>
         </div>
         <div style={{ marginBottom: 5 }}>
-          <b>Status </b> {selectedResult.status}
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <div>
+              <b>Status </b>{" "} {selectedResult.status}
+            </div>
+            
+            {selectedResult.started_at !== undefined &&
+              selectedResult.started_at !== null &&
+              selectedResult.started_at > 0 ? (
+            <div>
+              <b>Started </b>{" "} {new Date(selectedResult.started_at).toLocaleString("en-GB")}
+            </div>
+            ): null}
+            {selectedResult.completed_at !== undefined &&
+              selectedResult.completed_at !== null &&
+              selectedResult.completed_at > 0 ? (
+            <div>
+              <b>Finished </b>{" "} {selectedResult.completed_at === null ? "Not finished" : new Date(selectedResult.completed_at).toLocaleString("en-GB")}
+            </div>
+            ): null}
+          </div>
         </div>
-
+  
         {validate.valid ? (
           <ReactJson
             src={validate.result}
