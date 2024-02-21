@@ -121,7 +121,7 @@ import * as edgehandles from "cytoscape-edgehandles";
 import CytoscapeComponent from "react-cytoscapejs";
 import Draggable from "react-draggable";
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
-import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
+import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths, internalIds, } from "../views/Apps.jsx";

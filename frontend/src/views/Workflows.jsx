@@ -551,9 +551,7 @@ const Workflows = (props) => {
 
   const [field1, setField1] = React.useState("");
   const [field2, setField2] = React.useState("");
-  const [downloadUrl, setDownloadUrl] = React.useState(
-    "https://github.com/frikky/shuffle-workflows"
-  );
+  const [downloadUrl, setDownloadUrl] = React.useState("https://github.com/shuffle/workflows")
   const [downloadBranch, setDownloadBranch] = React.useState("master");
   const [loadWorkflowsModalOpen, setLoadWorkflowsModalOpen] =
     React.useState(false);
@@ -3630,7 +3628,7 @@ const Workflows = (props) => {
   const handleGithubValidation = () => {
     importWorkflowsFromUrl(downloadUrl);
     setLoadWorkflowsModalOpen(false);
-  };
+  }
 
   const workflowDownloadModalOpen = loadWorkflowsModalOpen ? (
     <Dialog
@@ -3677,11 +3675,11 @@ const Workflows = (props) => {
             },
           }}
           onChange={(e) => setDownloadUrl(e.target.value)}
-          placeholder="https://github.com/frikky/shuffle-apps"
+          placeholder="https://github.com/shuffle/workflows"
           fullWidth
         />
         <span style={{ marginTop: 10 }}>
-          Branch (default value is "master"):
+          Branch (default value is "main"):
         </span>
         <div style={{ display: "flex" }}>
           <TextField

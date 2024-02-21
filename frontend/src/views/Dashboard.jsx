@@ -1,16 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { useInterval } from "react-powerhooks";
-import AppFramework from "../components/AppFramework.jsx";
-import { makeStyles, } from "@mui/styles";
-// nodejs library that concatenates classes
-import classNames from "classnames";
-import theme from '../theme.jsx';
-import { useNavigate, Link, useParams } from "react-router-dom";
-import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx";
-
-// react plugin used to create charts
-//import { Line, Bar } from "react-chartjs-2";
-//import { useAlert
+import React, { useState, useEffect } from "react"
+import { useInterval } from "react-powerhooks"
+import AppFramework from "../components/AppFramework.jsx"
+import { makeStyles, } from "@mui/styles"
+import classNames from "classnames"
+import theme from '../theme.jsx'
+import { useNavigate, Link, useParams } from "react-router-dom"
+import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx"
 import { ToastContainer, toast } from "react-toastify" 
 import { parsedDatatypeImages } from "../components/AppFramework.jsx"
 import { findSpecificApp } from "../components/AppFramework.jsx"

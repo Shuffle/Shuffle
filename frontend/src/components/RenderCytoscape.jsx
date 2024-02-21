@@ -5,13 +5,13 @@ import cystyle from "../defaultCytoscapeStyle.jsx";
 
 const surfaceColor = "#27292D";
 const CytoscapeWrapper = (props) => {
-  const { globalUrl, inworkflow } = props;
+  const { globalUrl, inworkflow, height, width } = props;
 
   const [elements, setElements] = useState([]);
   const [workflow, setWorkflow] = useState(inworkflow);
   const [cy, setCy] = React.useState();
-  const bodyWidth = 200;
-  const bodyHeight = 150;
+  const bodyWidth = height === undefined ? 1000 : width
+  const bodyHeight = width === undefined ? 1000 : height 
 
   const setupGraph = () => {
     const actions = workflow.actions.map((action) => {
@@ -76,29 +76,6 @@ const CytoscapeWrapper = (props) => {
       };
 
       // This is an attempt at prettier edges. The numbers are weird to work with.
-      /*
-			//http://manual.graphspace.org/projects/graphspace-python/en/latest/demos/edge-types.html
-			const sourcenode = actions.find(node => node.data._id === branch.source_id)
-			const destinationnode = actions.find(node => node.data._id === branch.destination_id)
-			if (sourcenode !== undefined && destinationnode !== undefined && branch.source_id !== branch.destination_id) { 
-				//node.data._id = action["id"]
-				console.log("SOURCE: ", sourcenode.position)
-				console.log("DESTINATIONNODE: ", destinationnode.position)
-
-				var opposite = true 
-				if (sourcenode.position.x > destinationnode.position.x) {
-					opposite = false 
-				} else {
-					opposite = true 
-				}
-
-				edge.style = {
-					'control-point-distance': opposite ? ["25%", "-75%"] : ["-10%", "90%"],
-					'control-point-weight': ['0.3', '0.7'],
-				}
-			}
-			*/
-
       return edge;
     });
 
@@ -135,9 +112,10 @@ const CytoscapeWrapper = (props) => {
       elements={elements}
       minZoom={0.35}
       maxZoom={2.0}
+	  zoom={1.0}
       style={{
-        width: bodyWidth - 15,
-        height: bodyHeight - 5,
+        width: bodyWidth,
+        height: bodyHeight,
         backgroundColor: surfaceColor,
       }}
       stylesheet={cystyle}

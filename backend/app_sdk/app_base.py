@@ -1212,7 +1212,7 @@ class AppBase:
         return results
 
     # Downloads all files from a namespace
-    # Currently only working on local version of Shuffle
+    # Currently only working on local version of Shuffle (2023)
     def get_file_category_ids(self, category):
         org_id = self.full_execution["workflow"]["execution_org"]["id"]
 

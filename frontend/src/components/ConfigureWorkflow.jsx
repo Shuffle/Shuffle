@@ -77,7 +77,6 @@ const ConfigureWorkflow = (props) => {
   const [checkStarted, setCheckStarted] = React.useState(false);
 
   useEffect(() => { 
-	  //console.log("Configure Workflow: Required actions: ", requiredActions)
 	  if (requiredActions.length === 0) { 
 		  if (setConfigurationFinished !== undefined) {
 			setConfigurationFinished(true)
@@ -703,9 +702,9 @@ const ConfigureWorkflow = (props) => {
 		  })
 		  .then((responseJson) => {
 			if (!responseJson.success) {
-			  toast("Failed to set app auth: " + responseJson.reason);
+			  toast("Failed to set app authentication: " + responseJson.reason);
 			} else {
-			  toast("App auth set for app " + app.name.replace("_", " "));
+			  toast("App authentication set for app " + app.name.replace("_", " "));
 			  setFinalized(true)
 			  setOpened(false)
 			}
@@ -743,6 +742,25 @@ const ConfigureWorkflow = (props) => {
 				<div style={{display: "flex", }}
 					onClick={() => {
 						setOpened(!opened);
+
+						// Scroll to it
+						const element = document.getElementById("app-config");
+						if (element) {
+							// Scroll down 100px 
+							setTimeout(() => {
+								element.scrollIntoView({
+									behavior: "smooth",
+									top: 100,
+								})
+
+								//element.scrollIntoView({ 
+								//	behavior: "smooth", 
+								//	block: "center", 
+								//	inline: "center" 
+								//});
+							}, 250)
+						}
+
 					}}
 				>
 					<div style={{display: "flex", flex: 7, }}>
@@ -1317,7 +1335,7 @@ const ConfigureWorkflow = (props) => {
 				</Typography>
 			: null}
 
-      	    <List style={{paddingBottom: window.location.pathname.includes("/workflows/") ? 0 : 250, }}>
+      	    <List style={{paddingBottom: window.location.pathname.includes("/workflows/") ? 0 : 350, }}>
       	      {requiredActions.map((data, index) => {
 
 				// AppWrapper = Default in a workflow, only shows with steps

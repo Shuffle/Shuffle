@@ -5,8 +5,6 @@ import { makeStyles } from "@mui/styles";
 
 import { useNavigate, Link } from "react-router-dom";
 import countries from "../components/Countries.jsx";
-import CodeEditor from "../components/ShuffleCodeEditor.jsx";
-import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
 import CacheView from "../components/CacheView.jsx";
 
 import {

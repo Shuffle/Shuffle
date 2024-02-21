@@ -88,12 +88,6 @@ import {
 	SquareFoot as SquareFootIcon,
 } from '@mui/icons-material';
 
-
-//import CodeMirror from "@uiw/react-codemirror";
-//import "codemirror/keymap/sublime";
-//import "codemirror/theme/gruvbox-dark.css";
-//import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
-
 const useStyles = makeStyles({
   notchedOutline: {
     borderColor: "#f85a3e !important",
