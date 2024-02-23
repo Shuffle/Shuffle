@@ -88,12 +88,6 @@ import {
 	SquareFoot as SquareFootIcon,
 } from '@mui/icons-material';
 
-
-//import CodeMirror from "@uiw/react-codemirror";
-//import "codemirror/keymap/sublime";
-//import "codemirror/theme/gruvbox-dark.css";
-//import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
-
 const useStyles = makeStyles({
   notchedOutline: {
     borderColor: "#f85a3e !important",
@@ -1040,21 +1034,27 @@ const ParsedAction = (props) => {
     };
 
 
-		const returnHelperText = (name, value) => {
-			if (name === undefined || value === undefined) {
-				return ""
-			}
-
-			var helperText = ""
-			//console.log("DATA: ", name, value)
-			if (name.includes("url")) {
-				if (value.includes("localhost") || value.includes("127.0.0.1")) {
-					helperText = "Can't use localhost. Please change to an external IP or hostname." 
-				}
-			}
-
-			return helperText
+	const returnHelperText = (name, value) => {
+		if (name === undefined || value === undefined || name === null || value === null || name === "" || value === "") {
+			//console.log("RETURNING EMPTY")
+			return ""
 		}
+
+		var helperText = ""
+		//console.log("DATA: ", name, value)
+		if (name.includes("url")) {
+			if (value.includes("localhost") || value.includes("127.0.0.1")) {
+				helperText = "Can't use localhost. Please change to your external IP." 
+			}
+		}
+
+		// Helpertext for openapi fields
+		//if (helperText === "" && name === "body" && selectedApp.generated && selectedApp.activated) {
+		//	helperText = <span style={{color: "white", marginBottom: 5, marginleft: 5}}>
+		//}
+
+		return helperText
+	}
 
 		//console.log("AUTH: ", authenticationType)
     if (authenticationType !== undefined && authenticationType !== null && authenticationType.type === "oauth2") {
@@ -1297,17 +1297,13 @@ const ParsedAction = (props) => {
             }
 
             var placeholder = "Value";
-            if (
-              data.example !== undefined &&
-              data.example !== null &&
-              data.example.length > 0
-            ) {
+            if (data.example !== undefined && data.example !== null && data.example.length > 0) {
+            
               placeholder = data.example;
 
               if (data.name === "url" && data.value !== undefined && data.value !== null && data.value.length === 0) {
                 data.value = data.example;
               }
-
 					// In case of data.example
 					if (data.value === undefined || data.value === null) {
 						data.value = ""
@@ -1642,7 +1638,6 @@ const ParsedAction = (props) => {
                   ),
                 }}
                 multiline={data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline}
-                helperText={returnHelperText(data.name, data.value)}
                 onClick={() => {
 				  	/*
                   		setExpansionModalOpen(false);
@@ -1680,18 +1675,7 @@ const ParsedAction = (props) => {
                   //changeActionParameterCodemirror(event, count, data)
                   changeActionParameter(event, count, data);
                 }}
-                helperText={baseHelperText.length > 0 ? baseHelperText : 
-                  selectedApp.generated &&
-                  selectedApp.activated &&
-                  data.name === "body" ? (
-                    <span
-                      style={{ color: "white", marginBottom: 5, marginleft: 5 }}
-                    >
-                      {openApiHelperText}
-                    </span>
-                  ) : data.name.startsWith("${") && data.name.endsWith("}") ? 
-										null : null	
-                }
+                helperText={returnHelperText(data.name, data.value)}
                 onBlur={(event) => {
 					baseHelperText = calculateHelpertext(event.target.value)
 					if (setLastSaved !== undefined) {

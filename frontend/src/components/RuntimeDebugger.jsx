@@ -75,9 +75,15 @@ const RuntimeDebugger = (props) => {
 
 		setTotalCount(0)
 
+		var starttime = ""
+		var endtime = ""
 		var count = 0
-		var starttime = startTime === undefined || startTime === null || startTime === "" ? "" : new Date(startTime).toISOString()
-		var endtime = endTime === undefined || endTime === null || endTime == "" ? "" : new Date(endTime).toISOString()
+		try {
+			starttime = startTime === undefined || startTime === null || startTime === "" ? "" : new Date(startTime).toISOString()
+			endtime = endTime === undefined || endTime === null || endTime == "" ? "" : new Date(endTime).toISOString()
+		} catch (e) {
+			toast("Invalid date format", { type: "error" })
+		}
 
 		var maxworkflows = 5
 
@@ -88,6 +94,11 @@ const RuntimeDebugger = (props) => {
 			}
 
 			const workflowId = workflows[key].id
+
+			if (workflowId === undefined || workflowId === null || workflowId === "") {
+				continue
+			}
+
 			// Fetch the data for the workflow
 			var url = `${globalUrl}/api/v1/workflows/${workflowId}/executions/count`
 			if (starttime !== "") {
@@ -133,7 +144,6 @@ const RuntimeDebugger = (props) => {
 		}
 
 		setTimeout(() => {
-			console.log("Setting total count: ", count)
 			setTotalCount(count)
 		}, maxworkflows*300)
 	}
@@ -578,7 +588,7 @@ const RuntimeDebugger = (props) => {
 							onClick={() => {
 								window.open(`${globalUrl}/api/v1/workflows/search/${params.row.id}`, "_blank")
 							}}
-							disabled={!userdata.support}
+							disabled={userdata.region_url !== "https://shuffler.io"}
 						  >
 							<InsightsIcon fontSize="small" />
 						  </IconButton>

@@ -57,7 +57,6 @@ import { padding, textAlign } from '@mui/system';
 import data from '../frameworkStyle.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { tags as t } from '@lezer/highlight';
-import { createTheme } from '@uiw/codemirror-themes';
 
 
 
@@ -83,37 +82,6 @@ const pythonFilters = [
 	{"name": "Hello World", "value": `{% python %}\nprint("hello world")\n{% endpython %}`, "example": ``},
 	{"name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads(r"""$nodename""")\n{% endpython %}`, "example": ``},
 ]
-
-/*
-const shuffleTheme = createTheme({
-  theme: 'dark',
-  settings: {
-    background: "rgba(40,40,40, 1)",
-    foreground: '#75baff',
-    caret: '#5d00ff',
-    selection: '#036dd626',
-    selectionMatch: '#036dd626',
-    lineHighlight: '#8a91991a',
-    gutterForeground: '#8a919966',
-  },
-  styles: [
-    { tag: t.comment, color: '#787b8099' },
-    { tag: t.variableName, color: '#0080ff' },
-    { tag: [t.string, t.special(t.brace)], color: '#5c6166' },
-    { tag: t.number, color: '#5c6166' },
-    { tag: t.bool, color: '#5c6166' },
-    { tag: t.null, color: '#5c6166' },
-    { tag: t.keyword, color: '#5c6166' },
-    { tag: t.operator, color: '#5c6166' },
-    { tag: t.className, color: '#5c6166' },
-    { tag: t.definition(t.typeName), color: '#5c6166' },
-    { tag: t.typeName, color: '#5c6166' },
-    { tag: t.angleBracket, color: '#5c6166' },
-    { tag: t.tagName, color: '#5c6166' },
-    { tag: t.attributeName, color: '#5c6166' },
-  ],
-});
-*/
 
 const CodeEditor = (props) => {
 	const { 

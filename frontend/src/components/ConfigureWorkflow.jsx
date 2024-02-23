@@ -77,10 +77,7 @@ const ConfigureWorkflow = (props) => {
   const [checkStarted, setCheckStarted] = React.useState(false);
 
   useEffect(() => { 
-	  console.log("Required actions: ", requiredActions)
 	  if (requiredActions.length === 0) { 
-		  console.log("No more actions? Set parent to done?")
-
 		  if (setConfigurationFinished !== undefined) {
 			setConfigurationFinished(true)
 		  }
@@ -705,9 +702,9 @@ const ConfigureWorkflow = (props) => {
 		  })
 		  .then((responseJson) => {
 			if (!responseJson.success) {
-			  toast("Failed to set app auth: " + responseJson.reason);
+			  toast("Failed to set app authentication: " + responseJson.reason);
 			} else {
-			  toast("App auth set for app " + app.name.replace("_", " "));
+			  toast("App authentication set for app " + app.name.replace("_", " "));
 			  setFinalized(true)
 			  setOpened(false)
 			}
@@ -731,6 +728,7 @@ const ConfigureWorkflow = (props) => {
 
 	parsedName = (parsedName.charAt(0).toUpperCase() + parsedName.slice(1)).replaceAll("_", " ");
 
+	console.log("AUTH Action: ", action)
 	return (
 		<ListItem 
 			style={{padding: 0, display: "flex", flexDirection: "column", }}
@@ -744,6 +742,25 @@ const ConfigureWorkflow = (props) => {
 				<div style={{display: "flex", }}
 					onClick={() => {
 						setOpened(!opened);
+
+						// Scroll to it
+						const element = document.getElementById("app-config");
+						if (element) {
+							// Scroll down 100px 
+							setTimeout(() => {
+								element.scrollIntoView({
+									behavior: "smooth",
+									top: 100,
+								})
+
+								//element.scrollIntoView({ 
+								//	behavior: "smooth", 
+								//	block: "center", 
+								//	inline: "center" 
+								//});
+							}, 250)
+						}
+
 					}}
 				>
 					<div style={{display: "flex", flex: 7, }}>
@@ -1318,7 +1335,7 @@ const ConfigureWorkflow = (props) => {
 				</Typography>
 			: null}
 
-      	    <List style={{paddingBottom: window.location.pathname.includes("/workflows/") ? 0 : 250, }}>
+      	    <List style={{paddingBottom: window.location.pathname.includes("/workflows/") ? 0 : 350, }}>
       	      {requiredActions.map((data, index) => {
 
 				// AppWrapper = Default in a workflow, only shows with steps

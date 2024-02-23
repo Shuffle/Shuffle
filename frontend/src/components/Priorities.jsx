@@ -67,9 +67,15 @@ const Priorities = (props) => {
 		})
 	}
 
-	const dismissNotification = (alert_id) => {
-    	// Don't really care about the logout
-    	fetch(`${globalUrl}/api/v1/notifications/${alert_id}/markasread`, {
+	const dismissNotification = (alert_id, disabled) => {
+		var notificationurl = `${globalUrl}/api/v1/notifications/${alert_id}/markasread`
+		if (disabled === true) {
+			notificationurl += "?disabled=true"
+		} else if (disabled === false) {
+			notificationurl += "?disabled=false"
+		}
+
+    	fetch(notificationurl , {
     	  credentials: "include",
     	  method: "GET",
     	  headers: {
@@ -85,12 +91,50 @@ const Priorities = (props) => {
 	    })
 	    .then(function (responseJson) {
 	      if (responseJson.success === true) {
-	        const newNotifications = notifications.filter(
-	      		(data) => data.id !== alert_id
-	        );
-	        console.log("NEW NOTIFICATIONS: ", newNotifications);
+			// Mark current one as read
+			var newNotifications = notifications.map((notification) => {
+				if (notification.id === alert_id) {
+					notification.read = true
+				}
 
-			if (setNotifications !== undefined) {
+				return notification
+			})
+
+
+			if (disabled === true) {
+				toast("Notification disabled, and will not be shown again.")
+
+				newNotifications = newNotifications.map((notification) => {
+					if (notification.id === alert_id) {
+						notification.ignored = true
+					}
+
+					return notification
+				})
+
+				console.log("NEW NOTIFICATIONS: ", newNotifications);
+			} else if (disabled === false) {
+				toast("Notification re-enabled successfully")
+
+				newNotifications = newNotifications.map((notification) => {
+					if (notification.id === alert_id) {
+						notification.ignored = false
+					}
+
+					return notification
+				})
+
+			} else {
+				toast("Notification dismissed successfully")
+			}
+
+	        //const newNotifications = notifications.filter(
+	      	//	(data) => data.id !== alert_id
+	        //)
+
+	        //console.log("NEW NOTIFICATIONS: ", newNotifications);
+
+			if (setNotifications !== undefined && newNotifications !== undefined) {
 	        	setNotifications(newNotifications)
 			}
 	      } else {
@@ -174,6 +218,14 @@ const Priorities = (props) => {
 						style={{marginRight: 15, height: 25, }}
 					  />
 				: null}
+				{data.ignored === true ? 
+					<Chip
+						label={"Disabled"}
+						variant="outlined"
+						color="primary"
+						style={{marginRight: 15, height: 25, }}
+					  />
+				: null}
 				{data.read === false ?
 					<Chip
 						label={"Unread"}
@@ -227,6 +279,22 @@ const Priorities = (props) => {
     	      	    Dismiss
     	      	  </Button>
     	      	) : null}
+				<Tooltip title="Disabling a notification makes it so similar notifications to this one will NOT be re-opened. It will NOT forward notifications to your notification workflow, but WILL still keep counting." placement="top">
+					<Button
+					  color="secondary"
+					  variant={data.ignored === true ? "contained" : "outlined"}
+					  style={{ marginTop: 15, }}
+					  onClick={() => {
+						if (data.ignored === true) {
+							dismissNotification(data.id, false)
+						} else {
+							dismissNotification(data.id, true)
+						}
+					  }}
+					>
+						{data.ignored === true ? "Re-enable" : "Disable"}
+					</Button>
+				</Tooltip>
 			  </ButtonGroup>
 
 		      <Typography variant="body2" color="textSecondary" style={{marginLeft: 20, marginTop: 20, }}>

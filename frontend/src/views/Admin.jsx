@@ -5,8 +5,6 @@ import { makeStyles } from "@mui/styles";
 
 import { useNavigate, Link } from "react-router-dom";
 import countries from "../components/Countries.jsx";
-import CodeEditor from "../components/ShuffleCodeEditor.jsx";
-import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
 import CacheView from "../components/CacheView.jsx";
 
 import {
@@ -1867,15 +1865,23 @@ If you're interested, please let me know a time that works for you, or set up a 
 	  	{selectedAuthentication.type === "oauth" || selectedAuthentication.type === "oauth2" || selectedAuthentication.type === "oauth2-app" ? 
 			<div>
 				<Typography variant="body1" color="textSecondary" style={{ marginBottom: 0, marginTop: 10 }}>
-					Only the name of the auth can be modified for Oauth2. Please remake the authentication to change the fields like Client ID, Secret, Scopes etc.
+					Only the name and url can be modified for Oauth2/OpenID connect. Please remake the authentication if you want to change the other fields like Client ID, Secret, Scopes etc.
 				</Typography> 
 			</div>
-		:
-        selectedAuthentication.fields.map((data, index) => {
+		: null }
+
+	  	{selectedAuthentication.fields.map((data, index) => {
 		  var fieldname = data.key.replaceAll("_", " ")
 		  if (fieldname.endsWith(" basic")) {
 			  fieldname = fieldname.substring(0, fieldname.length - 6)
 		  }
+
+		  if (selectedAuthentication.type === "oauth" || selectedAuthentication.type === "oauth2" || selectedAuthentication.type === "oauth2-app") {
+			  if (selectedAuthentication.fields[index].key !== "url") {
+				  return null
+			  }
+		  }
+
 
           //console.log("DATA: ", data, selectedAuthentication)
           return (
@@ -3415,24 +3421,26 @@ If you're interested, please let me know a time that works for you, or set up a 
                     // using request id or trace id
                     <ListItem key={index} style={{ backgroundColor: index % 2 === 0 ? "#1f2023" : "#27292d" }}>
                       <ListItemText
-                        primary={new Date(data.start_time.seconds * 1000).toISOString().slice(0, 10)}
+                          primary={new Date(data.start_time.seconds * 1000).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false,
+                        })}
                         style={{
-                          minWidth: 150,
-                          maxWidth: 150,
+                          minWidth: 200,
+                          maxWidth: 200,
                         }}
                       />
                       <ListItemText
-                        primary={data.status}
+                        primary={data.referrer}
                         style={{
-                          minWidth: 70,
-                          maxWidth: 70,
-                        }}
-                      />
-                      <ListItemText
-                        primary={data.method}
-                        style={{
-                          minWidth: 150,
-                          maxWidth: 150,
+                          minWidth: 300,
+                          maxWidth: 300,
+                          overflow: "hidden",
                         }}
                       />
                       <ListItemText
@@ -3441,6 +3449,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                           minWidth: 700,
                           maxWidth: 700,
                           overflow: "hidden",
+                          marginLeft: 10,
                         }}
                       />
                     </ListItem>
@@ -4406,7 +4415,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             />
             <ListItemText
               primary="Default"
-              style={{ minWidth: 100, maxWidth: 100 }}
+              style={{ minWidth: 110, maxWidth: 110, }}
             />
             <ListItemText
               primary="Actions"
@@ -4550,8 +4559,8 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	  />
                   	  <ListItemText
                   	    style={{
-                  	      minWidth: 80,
-                  	      maxWidth: 80,
+                  	      minWidth: 100,
+                  	      maxWidth: 100,
                   	      overflow: "hidden",
                   	    }}
                   	    primary={environment.default ? "true" : null}
@@ -4559,7 +4568,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                   	    {environment.default ? null : (
                   	      <Button
                   	        variant="outlined"
-                  	        style={{ marginLeft: 0, marginRight: 0, }}
+                  	        style={{ marginLeft: 0, marginRight: 0, maxWidth: 150, }}
                   	        onClick={() => setDefaultEnvironment(environment)}
                   	        color="primary"
                   	      >

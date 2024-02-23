@@ -121,7 +121,7 @@ import * as edgehandles from "cytoscape-edgehandles";
 import CytoscapeComponent from "react-cytoscapejs";
 import Draggable from "react-draggable";
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
-import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
+import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths, internalIds, } from "../views/Apps.jsx";
@@ -13366,6 +13366,67 @@ const AngularWorkflow = (defaultprops) => {
             </Link>
             <h2 style={{ margin: 0 }}>{workflow.name}</h2>
           </Breadcrumbs>
+
+		  {workflow.public === true || userdata.active_org.id === undefined || userdata.active_org.id === null || workflow.org_id === null || workflow.org_id === undefined || workflow.org_id.length === 0 || userdata.active_org.id === workflow.org_id ? null :
+			<Typography variant="body1">
+				<b>Warning</b>: Change <span
+			  		style={{color: "#f85a3e", cursor: "pointer"}}
+			  		onClick={() => {
+						toast("Changing to correct organization. Please wait a few seconds.")
+
+    					localStorage.setItem("globalUrl", "");
+    					localStorage.setItem("getting_started_sidebar", "open");
+    					fetch(`${globalUrl}/api/v1/orgs/${workflow.org_id}/change`, {
+    					  mode: "cors",
+    					  credentials: "include",
+    					  crossDomain: true,
+    					  method: "POST",
+    					  body: JSON.stringify({"org_id": workflow.org_id}),
+    					  withCredentials: true,
+    					  headers: {
+    					    "Content-Type": "application/json; charset=utf-8",
+    					  },
+    					})
+	  					.then(function (response) {
+      					  if (response.status !== 200) {
+      					    console.log("Error in response");
+      					  }
+
+      					  return response.json();
+      					})
+      					.then(function (responseJson) {
+	  					  console.log("In here?")
+      					  if (responseJson.success === true) {
+      					    if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) {
+      					      console.log("Region Change: ", responseJson.region_url);
+      					      localStorage.setItem("globalUrl", responseJson.region_url);
+      					      //globalUrl = responseJson.region_url
+      					    }
+
+      					    setTimeout(() => {
+      					      window.location.reload();
+      					    }, 2000);
+
+      					    toast("Successfully changed active organization - refreshing!");
+      					  } else {
+	  					    if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+	  					      toast(responseJson.reason);
+	  					    } else {
+      					    	toast("Failed changing org. Try again or contact support@shuffler.io if this persists.");
+	  					    }
+      					  }
+      					})
+      					.catch((error) => {
+      					  console.log("error changing: ", error);
+      					  //removeCookie("session_token", {path: "/"})
+      					})
+
+
+
+					}}
+			  	>Active Organization</span> to edit this Workflow.
+			</Typography>
+		  }
         </div>
 				<div style={{display: "flex", marginLeft: 10, }}>
 					{parentWorkflows.slice(0,5).map((wf, index) => {
@@ -13744,8 +13805,63 @@ const AngularWorkflow = (defaultprops) => {
   	</div>
   : null
 
+
+
   const RightsideBar = () => {
 	  const [hovered, setHovered] = useState(false)
+
+    useEffect(() => {
+      const handleKeyDown = (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === '/') {
+          event.preventDefault(); // Prevent default browser behavior (like opening search bar)
+          if (!workflow.public && !executionRequestStarted) {
+            executeWorkflow(executionText, workflow.start, lastSaved);
+          }
+        }
+        if ((event.ctrlKey || event.metaKey) && event.key === "'") {
+          // Check if Ctrl (Windows/Linux) or Command (Mac) key is pressed along with '/'
+          if (!workflow.public && !executionModalOpen) {
+            setExecutionModalOpen(true);
+            getWorkflowExecution(props.match.params.key, "");
+          } else if (!workflow.public && executionModalOpen) {
+            setExecutionModalOpen(false);
+          }
+        }
+
+        if ((event.ctrlKey || event.metaKey) && event.key === "]") {
+          console.log("Show workflow revisions key pressed")
+          if (!workflow.public) {
+            setShowWorkflowRevisions(true)
+            setSelectedRevision(workflow)
+            //setOriginalWorkflow(workflow)
+          }
+        }
+
+        if (( event.ctrlKey || event.metaKey ) && event.key === ";") {
+          if (!workflow.public && executionModalOpen) {
+            getWorkflowExecution(props.match.params.key, "");
+          }
+        }
+
+        if (( event.ctrlKey || event.metaKey ) && event.shiftKey) {
+          console.log("Shift key pressed")
+          if (!workflow.public && executionModalOpen) {
+            setExecutionRunning(false);
+            stop()
+            const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+            const newitem = removeParam("execution_id", cursearch);
+            navigate(curpath + newitem)
+            setExecutionModalView(0);
+          }
+        }
+      };
+  
+      document.addEventListener('keydown', handleKeyDown);
+  
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [executeWorkflow, executionText, workflow, lastSaved, executionRequestStarted]);  
 
 	  return (
 		  <div 
@@ -13802,7 +13918,7 @@ const AngularWorkflow = (defaultprops) => {
         </span>
       </Tooltip>
     ) : (
-      <Tooltip color="primary" title="Test Execution" placement="top">
+      <Tooltip color="primary" title="Test Execution (Ctrl + /)" placement="top">
         <span>
           <Button
             disabled={
@@ -14000,7 +14116,7 @@ const AngularWorkflow = (defaultprops) => {
           </Tooltip>
           <Tooltip
             color="secondary"
-            title={`Show executions (${workflowExecutions.length})`}
+            title={`Show executions (${workflowExecutions.length}) (Ctrl + ')`}
             placement="top-start"
           >
             <span>
@@ -14069,7 +14185,7 @@ const AngularWorkflow = (defaultprops) => {
           </Tooltip>
           <Tooltip
             color="secondary"
-            title="Show Workflow Revision History (Beta)"
+            title="Show Workflow Revision History (Beta) (Ctrl + ])"
             placement="top"
           >
             <span>
@@ -14080,8 +14196,8 @@ const AngularWorkflow = (defaultprops) => {
                 variant={"outlined"}
                 onClick={() => {
                   setShowWorkflowRevisions(true)
-				  setSelectedRevision(workflow)
-				  //setOriginalWorkflow(workflow)
+                  setSelectedRevision(workflow)
+                  //setOriginalWorkflow(workflow)
                 }}
               >
 			  	<RestoreIcon />
@@ -14282,6 +14398,52 @@ const AngularWorkflow = (defaultprops) => {
 
     //return null;
   };
+
+  const unPublishWorkflow = (data) => {
+	if (!isCloud) {
+		toast("Function only supported on cloud")
+		return
+	}
+
+	if (data.public !== true) {
+		toast("Workflow is not public. Can't unpublish");
+		return
+	}
+
+    // This ALWAYS talks to Shuffle cloud
+    data = JSON.parse(JSON.stringify(data));
+	const url = `${globalUrl}/api/v1/workflows/${data.id}/unpublish`;
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    })
+	.then((response) => {
+		if (response.status !== 200) {
+			console.log("Status not 200 for workflow publish :O!");
+		}
+
+		return response.json();
+	})
+	.then((responseJson) => {
+		if (responseJson.reason !== undefined) {
+			toast("Unpublishing: "+responseJson.reason)
+		}
+
+		if (responseJson.success === true) {
+			workflow.public = false
+			setWorkflow(workflow)
+		}
+	})
+	.catch((error) => {
+		toast("Failed publishing: is the workflow valid? Remember to save the workflow first.")
+		console.log(error.toString())
+	})
+  }
 
   // This can execute a workflow with firestore. Used for test, as datastore is old and stuff
   // Too much work to move everything over alone, so won't touch it for now
@@ -14538,8 +14700,8 @@ const AngularWorkflow = (defaultprops) => {
           </Button>
           <Button
             color="secondary"
-            disabled
             variant="outlined"
+		    disabled={workflow.public !== true}
             fullWidth
             style={{ marginTop: 15, }}
             onClick={() => {
@@ -14547,6 +14709,8 @@ const AngularWorkflow = (defaultprops) => {
               // workflow.public = false
               // setWorkflow(workflow)
               // setUpdate(Math.random());
+			  toast("Unpublishing this workflow from the search engine. It will remain public until it is deleted, as it is a copy of the original workflow.")
+  			  unPublishWorkflow(workflow) 
             }}
           >
             Unpublish Workflow
@@ -15112,6 +15276,7 @@ const AngularWorkflow = (defaultprops) => {
 		  		</a>
 		  	</Tooltip>
 		  </div>
+        <Tooltip title="Refresh runs (Ctrl + ;)" arrow>
           <Button
             style={{ borderRadius: "0px" }}
             variant="outlined"
@@ -15124,6 +15289,7 @@ const AngularWorkflow = (defaultprops) => {
             <CachedIcon style={{ marginRight: 10 }} />
             Refresh Runs
           </Button>
+        </Tooltip>
           <Divider
             style={{
               backgroundColor: "rgba(255,255,255,0.5)",
@@ -15351,48 +15517,51 @@ const AngularWorkflow = (defaultprops) => {
         </div>
       ) : (
         <div style={{ padding: isMobile ? "0px 10px 25px 10px" : "25px 15px 25px 15px", maxWidth: isMobile ? "100%" : 400, overflowX: "hidden" }}>
-          <Breadcrumbs
-            aria-label="breadcrumb"
-            separator="›"
-            style={{ color: "white", fontSize: 16 }}
-          >
-            <span
-              style={{ color: "rgba(255,255,255,0.5)", display: "flex" }}
-              onClick={() => {
-                setExecutionRunning(false);
-                stop();
-                getWorkflowExecution(props.match.params.key, "");
-                setExecutionModalView(0);
-                setLastExecution(executionData.execution_id);
-              }}
+          
+            <Breadcrumbs
+              aria-label="breadcrumb"
+              separator="›"
+              style={{ color: "white", fontSize: 16 }}
             >
-              <IconButton
-                style={{
-                  paddingLeft: 0,
-                  marginTop: "auto",
-                  marginBottom: "auto",
-                }}
-                onClick={() => { 
-                	setExecutionRunning(false);
-					stop()
-				}}
-              >
-                <ArrowBackIcon style={{ color: "rgba(255,255,255,0.5)" }} />
-              </IconButton>
-              <h2
-                style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
-                onClick={() => { 
-          			const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
-					const newitem = removeParam("execution_id", cursearch);
-				  	navigate(curpath + newitem)
-                	setExecutionRunning(false);
-					stop()
-				}}
-              >
-                See more runs 
-              </h2>
-            </span>
-          </Breadcrumbs>
+                <span
+                  style={{ color: "rgba(255,255,255,0.5)", display: "flex" }}
+                  onClick={() => {
+                    setExecutionRunning(false);
+                    stop();
+                    getWorkflowExecution(props.match.params.key, "");
+                    setExecutionModalView(0);
+                    setLastExecution(executionData.execution_id);
+                  }}
+                >
+                  <IconButton
+                    style={{
+                      paddingLeft: 0,
+                      marginTop: "auto",
+                      marginBottom: "auto",
+                    }}
+                    onClick={() => { 
+                      setExecutionRunning(false);
+              stop()
+            }}
+                  >
+                    <ArrowBackIcon style={{ color: "rgba(255,255,255,0.5)" }} />
+                  </IconButton>
+                  <Tooltip title="See more runs (Ctrl + Shift)" arrow>
+                  <h2
+                    style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
+                    onClick={() => { 
+                    const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+                    const newitem = removeParam("execution_id", cursearch);
+                    navigate(curpath + newitem)
+                    setExecutionRunning(false);
+                    stop()
+                  }}
+                  >
+                    See more runs 
+                  </h2>
+                  </Tooltip>
+                </span>
+            </Breadcrumbs>
           <Divider
             style={{
               backgroundColor: "rgba(255,255,255,0.6)",
@@ -15456,15 +15625,19 @@ const AngularWorkflow = (defaultprops) => {
                 color="primary"
                 title="Explore logs for the workflow"
                 placement="top"
-                style={{ zIndex: 50000 }}
+                style={{ zIndex: 50000, }}
               >
                 <span style={{}}>
                   <Button
                     color="primary"
                     style={{ float: "right", marginTop: 20, marginLeft: 10 }}
-					disabled={!userdata.support}
+					disabled={userdata.region_url !== "https://shuffler.io"}
                     onClick={() => {
-						window.open(`/api/v1/workflows/search/${executionData.execution_id}`, "_blank")
+						toast("Opening logs in a new tab")
+
+						setTimeout(() => {
+							window.open(`/api/v1/workflows/search/${executionData.execution_id}`, "_blank")
+						}, 250)
                     }}
                   >
 					<InsightsIcon color="secondary" />
@@ -17855,42 +18028,45 @@ const AngularWorkflow = (defaultprops) => {
 			  return null
 		  }
 
+		  var newrevision = JSON.parse(JSON.stringify(revision))
+
 		  // Make unix timestamp into ISO timestamp in the format July 27th, 3:05 AM
 		  // Format: July 27th, 3:05 AM	
-		  console.log("Edited time: ", revision.edited)
+		  //console.log("Edited time: ", revision.edited)
 		  // Convert 1692128391 to valid timestamp
-		  const validTimestamp = revision.edited.toString().length === 10 ? revision.edited * 1000 : revision.edited
+		  const validTimestamp = newrevision.edited.toString().length === 10 ? newrevision.edited * 1000 : newrevision.edited
 		  const translatedDate = new Date(validTimestamp).toLocaleString('en-US', { month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })
 
-		  var workflowStatus = revision.status !== undefined  && revision.status !== null && revision.status !== "" ? revision.status : "test"
-		  if (revision.name !== undefined && revision.name !== null && revision.name !== "") {
-			  if (revision.name.toLowerCase().includes("test")) {
+		  var workflowStatus = newrevision.status !== undefined  && newrevision.status !== null && newrevision.status !== "" ? newrevision.status : "test"
+		  if (newrevision.name !== undefined && newrevision.name !== null && newrevision.name !== "") {
+			  if (newrevision.name.toLowerCase().includes("test")) {
 				  workflowStatus = "test"
 			  }
 
-			  if (revision.name.toLowerCase().includes("dev") || revision.name.toLowerCase().includes("staging") || revision.name.toLowerCase().includes("rollback")) {
+			  if (newrevision.name.toLowerCase().includes("dev") || newrevision.name.toLowerCase().includes("staging") || newrevision.name.toLowerCase().includes("rollback")) {
 				  workflowStatus = "dev"
 			  }
 
-			  if (revision.name.toLowerCase().includes("prod") || revision.name.toLowerCase().includes("main")) {
+			  if (newrevision.name.toLowerCase().includes("prod") || newrevision.name.toLowerCase().includes("main")) {
 				  workflowStatus = "prod"
 			  }
 		  }
 
 		  return (
 		  	<Paper 
-				style={{padding: "15px 15px 15px 25px", minHeight: 105, maxHeight: 105, cursor: "pointer", backgroundColor: revision.edited === selectedRevision.edited ? "rgba(255,255,255,0.3)" : theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", marginBottom: 10, 
+				style={{padding: "15px 15px 15px 25px", minHeight: 105, maxHeight: 105, cursor: "pointer", backgroundColor: newrevision.edited === selectedRevision.edited ? "rgba(255,255,255,0.3)" : theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", marginBottom: 10, 
 				}} onClick={(e) => {
-					if (revision.edited === selectedRevision.edited) {
+					if (newrevision.edited === selectedRevision.edited) {
 						console.log("Same revision! No setting.")
 						return
 					}
 
+
 					// Should render if it's not the same as workflow.edited
-					console.log("Clicked revision: ", revision)
+					console.log("Clicked revision: ", newrevision)
   					setLastSaved(false)
-					setSelectedRevision(revision)
-					setWorkflow(revision)
+					setSelectedRevision(newrevision)
+					setWorkflow(newrevision)
                 	setSelectedAction({});
   					setSelectedApp({})
 
@@ -17910,7 +18086,7 @@ const AngularWorkflow = (defaultprops) => {
 						cy.removeListener("cxttap");
 					}
 				
-  					setupGraph(revision) 
+  					setupGraph(newrevision) 
 
 					// Re-adding cytoscape triggers
 					if (cy !== undefined && cy !== null) {
@@ -17936,7 +18112,19 @@ const AngularWorkflow = (defaultprops) => {
     					cy.on("free", "node", (e) => onNodeDragStop(e, selectedAction));
 
     					cy.on("cxttap", "node", (e) => onCtxTap(e));
+					
+
+						if (selectedAction.id !== undefined && selectedAction.id !== null && selectedAction.id !== "") { 
+							setTimeout(() => {
+								const foundaction = cy.$id(selectedAction.id)
+								if (foundaction !== undefined && foundaction !== null) { 
+									foundaction.select()
+								}
+							}, 250)
+						}
 					}
+
+
 
 					// Need to run through graph setup with this one
 			}}>
