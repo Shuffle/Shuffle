@@ -96,6 +96,7 @@ def md5_base64(a):
 @shuffle_filters.register
 def base64_encode(a):
     a = str(a)
+
     try:
         return base64.b64encode(a.encode('utf-8')).decode()
     except:
@@ -104,6 +105,18 @@ def base64_encode(a):
 @shuffle_filters.register
 def base64_decode(a):
     a = str(a)
+
+    if "-" in a: 
+        a = a.replace("-", "+", -1)
+
+    if "_" in a:
+        a = a.replace("_", "/", -1)
+
+    # Fix padding
+    if len(a) % 4 != 0:
+        a += "=" * (4 - len(a) % 4)
+        print("Added padding")
+
     try:
         return base64.b64decode(a).decode("unicode_escape")
     except:
@@ -543,11 +556,13 @@ class AppBase:
                 try:
                     ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False, proxies=self.proxy_config)
 
-                    self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} (break on 200/201) & Response= {ret.text}. Action status: {action_result["status"]}""")
+                    self.logger.info(f"""[DEBUG] Successful result request: Status= {ret.status_code} (break on 200/201) & Action status: {action_result["status"]}. Response= {ret.text}""")
                     if ret.status_code == 200 or ret.status_code == 201:
                         finished = True
                         break
                     else:
+                        # FIXME: Add a checker for 403, and Proxy logs failing
+
                         self.logger.info(f"[ERROR] Bad resp {ret.status_code}: {ret.text}")
                         time.sleep(sleeptime)
             
