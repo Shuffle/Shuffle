@@ -15535,29 +15535,6 @@ if (
                 </Button>
               </span>
             </Tooltip>
-            {executionData.execution_id !== undefined &&
-              executionData.execution_id !== null &&
-              executionData.execution_id.length > 0 ? (
-            <Tooltip
-              color="primary"
-              title="Copy execution ID"
-              placement="top"
-              style={{ zIndex: 50000 }}
-            >
-              <span style={{}}>
-                <Button
-                  color="primary"
-                  style={{ float: "right", marginTop: 20, marginLeft: 10 }}
-                  onClick={() => {
-                    navigator.clipboard.writeText(executionData.execution_id);
-                    toast("Copied execution id to clipboard.")
-                  }}
-                >
-                  <FileCopyIcon style={{}} />
-                </Button>
-              </span>
-            </Tooltip>
-            ) : null}
             {executionData.status === "EXECUTING" ? (
               <Tooltip
                 color="primary"
