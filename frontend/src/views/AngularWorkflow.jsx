@@ -467,7 +467,6 @@ const AngularWorkflow = (defaultprops) => {
   const [sourceValue, setSourceValue] = React.useState({});
   const [destinationValue, setDestinationValue] = React.useState({});
   const [conditionValue, setConditionValue] = React.useState({});
-  const [tmpConditionValue, setTmpConditionValue] = React.useState({});
   const [dragging, setDragging] = React.useState(false);
   const [showWorkflowRevisions, setShowWorkflowRevisions] = React.useState(false);
   const [selectedRevision, setSelectedRevision] = useState({})
@@ -9646,7 +9645,6 @@ const AngularWorkflow = (defaultprops) => {
             style={{ borderRadius: "0px" }}
             variant="contained"
             onClick={() => {
-              setConditionValue(tmpConditionValue);
               setSelectedEdge({});
 
               var data = {
