@@ -162,6 +162,7 @@ const Admin = (props) => {
   const [loginInfo, setLoginInfo] = React.useState("");
   const [curTab, setCurTab] = React.useState(0);
   const [users, setUsers] = React.useState([]);
+  const [subOrgs, setSubOrgs] = useState([]);
   const [organizations, setOrganizations] = React.useState([]);
   const [orgSyncResponse, setOrgSyncResponse] = React.useState("");
   const [userSettings, setUserSettings] = React.useState({});
@@ -203,6 +204,10 @@ const Admin = (props) => {
       setIsDropzone(false);
     }
   }, [isDropzone]);
+
+  useEffect(() => {
+    handleGetSubOrgs(userdata.active_org.id);
+  }, []);
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
