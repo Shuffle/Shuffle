@@ -750,7 +750,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	}
 
 	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-
 	if strings.ToLower(cleanupEnv) != "false" {
 		hostConfig.AutoRemove = true
 	}
@@ -835,7 +834,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			log.Printf("[ERROR] Failed to start worker container in environment %s: %s", environment, err)
 			return err
 		} else {
-			log.Printf("[INFO][%s] Worker Container created. Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
+			log.Printf("[INFO][%s] Worker Container created (2). Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
 		}
 
 		//stats, err := cli.ContainerInspect(context.Background(), containerName)
@@ -1568,7 +1567,7 @@ func main() {
 
 		// FIXME - add check for StatusCode
 		if newresp.StatusCode != 200 {
-			log.Printf("[ERROR] Backend connection failed, or is missing (%d): %s", newresp.StatusCode, string(body))
+			log.Printf("[ERROR] Backend connection failed for url '%s', or is missing (%d): %s", fullUrl, newresp.StatusCode, string(body))
 		} else {
 			if !hasStarted {
 				log.Printf("[DEBUG] Starting iteration on environment %#v (default = Shuffle). Got statuscode %d from backend on first request", environment, newresp.StatusCode)
@@ -1604,7 +1603,15 @@ func main() {
 			newrequests := []shuffle.ExecutionRequest{}
 			for _, incRequest := range executionRequests.Data {
 				// Looking for specific jobs
-				if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
+				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_UPDATE" || incRequest.Type == "PIPELINE_DELETE" {
+
+					err := handlePipeline(incRequest)
+					if err != nil {
+						log.Printf("[ERROR] Failed handling pipeline: %s", err)
+					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+				} else if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
 					log.Printf("[INFO] Should delete -> download new image %#v", incRequest.ExecutionArgument)
 
 					if len(incRequest.ExecutionArgument) > 0 {
@@ -1788,7 +1795,154 @@ func main() {
 
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}
+}
 
+
+func deployPipeline(image, identifier, command string) error {
+	if isKubernetes == "true" {
+		return errors.New("Kubernetes not implemented")
+	}
+
+	ctx := context.Background()
+	hostConfig := &container.HostConfig{
+		LogConfig: container.LogConfig{
+			Type: "json-file",
+			Config: map[string]string{
+				"max-size": "10m",
+			},
+		},
+		Resources: container.Resources{},
+	}
+
+	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+	if strings.ToLower(cleanupEnv) != "false" {
+		hostConfig.AutoRemove = true
+	}
+
+	envVariables := []string{
+	}
+
+
+	config := &container.Config{
+		Image: image,
+		Env:   envVariables,
+		Cmd:   []string{command},
+	}
+
+	// Add label to container in case of zombies
+	config.Labels = map[string]string{
+		"shuffle": "shuffle",
+	}
+
+	cont, err := dockercli.ContainerCreate(
+		ctx,
+		config,
+		hostConfig,
+		nil,
+		nil,
+		identifier,
+	)
+
+	if err != nil {
+		if strings.Contains(fmt.Sprintf("%s", err), "Conflict. The container name ") {
+			log.Printf("[DEBUG] Pipeline Container %s already exists, removing it", identifier)
+		} else {
+			log.Printf("[ERROR] Failed to create pipeline container %s: %s", identifier, err)
+			return err
+		}
+	}
+
+	containerStartOptions := types.ContainerStartOptions{}
+	err = dockercli.ContainerStart(
+		ctx, 
+		cont.ID, 
+		containerStartOptions,
+	)
+	if err != nil {
+		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
+			hostConfig.NetworkMode = ""
+			cont, err = dockercli.ContainerCreate(
+				ctx,
+				config,
+				hostConfig,
+				nil,
+				nil,
+				identifier+"-2",
+			)
+			if err != nil {
+				log.Printf("[ERROR] Failed to CREATE pipeline container (2): %s", err)
+			}
+
+			err = dockercli.ContainerStart(
+				ctx, 
+				cont.ID, 
+				containerStartOptions,
+			)
+			if err != nil {
+				log.Printf("[ERROR] Failed to start pipeline container (2): %s", err)
+				return err
+			}
+		} else {
+			log.Printf("[ERROR] Failed initial pipeline container start. Quitting as this is NOT a simple network issue. Err: %s", err)
+		}
+
+		if err != nil {
+			log.Printf("[ERROR] Failed to start pipeline container in environment %s: %s", environment, err)
+			return err
+		} else {
+			log.Printf("[INFO] Pipeline Container created (1). Environment %s: docker logs %s", environment, cont.ID)
+		}
+
+		stats, err := dockercli.ContainerInspect(ctx, cont.ID)
+		if err != nil {
+			log.Printf("[ERROR] Failed checking pipeline with containername '%s'", cont.ID)
+			return nil
+		}
+
+		containerStatus := stats.ContainerJSONBase.State.Status
+		log.Printf("[DEBUG] Status of pipeline '%s' is %s. Should be running. Will reset", containerName, containerStatus)
+	}
+
+	return nil
+}
+
+// Tenzir command samples
+// docker pull ghcr.io/dominiklohmann/tenzir-arm64:latest
+// docker tag ghcr.io/dominiklohmann/tenzir-arm64:latest tenzir/tenzir:latest
+
+// Read from Cache and send it to a webhook
+// docker run tenzir/tenzir:latest 'from http://192.168.86.44:5002/api/v1/orgs/7e9b9007-5df2-4b47-bca5-c4d267ef2943/cache/CIDR%20ranges?type=text&authorization=cec9d01f-09b2-4419-8a0a-76c6046e3fef read lines | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines'
+func handlePipeline(incRequest shuffle.ExecutionRequest) error {
+	if len(incRequest.ExecutionArgument) == 0 {
+		log.Printf("[ERROR] No execution argument found for pipeline create. Skipping")
+
+		return errors.New("No execution argument found for pipeline create. Skipping")
+	}
+
+	image := "tenzir/tenzir:latest"
+	identifier := strings.ToLower(strings.ReplaceAll(incRequest.ExecutionSource, " ", "-"))
+	command := incRequest.ExecutionArgument
+
+	if incRequest.Type == "PIPELINE_CREATE" {
+		log.Printf("[INFO] Should delete -> recreate new pipeline %#v. Name: %#v", incRequest.ExecutionArgument, identifier)
+		err := deployPipeline(image, identifier, command)
+		if err != nil {
+			log.Printf("[ERROR] Failed to deploy pipeline: %s", err)
+			return err
+		} else {
+			log.Printf("[INFO] Pipeline deployed successfully")
+		}
+	} else if incRequest.Type == "PIPELINE_DELETE" {
+		log.Printf("[INFO] Should delete pipeline %#v", incRequest.ExecutionArgument)
+	} else if incRequest.Type == "PIPELINE_UPDATE" {
+		log.Printf("[INFO] Should update pipeline %#v", incRequest.ExecutionArgument)
+	} else {
+		log.Printf("[ERROR] Unknown type for pipeline: %s", incRequest.Type)
+		return errors.New("Unknown type for pipeline")
+	}
+
+
+	return nil
 }
 
 // Is this ok to do with Docker? idk :)
