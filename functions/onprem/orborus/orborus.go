@@ -1822,17 +1822,35 @@ func deployPipeline(image, identifier, command string) error {
 	envVariables := []string{
 	}
 
+
+	// Add volume binds for storage
+	// Want read/write with full access for the container
+	// Should mount 
+	sourceFolder := "/Users/frikky/git/shuffle/shuffle-database/tenzir"
+	destinationFolder := "/var/lib/tenzir"
+	hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+		Type:   mount.TypeBind,
+		Source: sourceFolder,
+		Target: destinationFolder,
+	})
+
 	config := &container.Config{
 		Image: image,
 		Env:   envVariables,
-		Cmd:   []string{command},
+		Cmd:   []string{
+			"mkdir", 
+			"-p", 
+			destinationFolder,
+			command,
+		},
 	}
 
 	// Add label to container in case of zombies
 	config.Labels = map[string]string{
 		"name":   identifier,
 		"shuffle": "shuffle",
-	}
+	}			
+
 
 	cont, err := dockercli.ContainerCreate(
 		ctx,
@@ -1902,6 +1920,18 @@ func deployPipeline(image, identifier, command string) error {
 		containerStatus := stats.ContainerJSONBase.State.Status
 		log.Printf("[DEBUG] Status of pipeline '%s' is %s. Should be running. Will reset", containerName, containerStatus)
 	}
+
+	// Wait for the container to finish
+	statusCh, errCh := dockercli.ContainerWait(ctx, cont.ID, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		if err != nil {
+			log.Printf("[ERROR] Failed to wait for container: %s", err)
+		}
+	case <-statusCh:
+		log.Printf("[INFO] Container finished")
+	}
+
 
 	return nil
 }
