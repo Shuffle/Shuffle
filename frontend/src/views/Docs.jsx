@@ -118,8 +118,6 @@ export const Img = (props) => {
 export const CodeHandler = (props) => {
     const propvalue = props.value !== undefined && props.value !== null ? props.value : props.children !== undefined && props.children !== null && props.children.length > 0 ? props.children[0] : ""
 
-
-
     const validate = validateJson(propvalue)
 
 	var newprop = propvalue
@@ -137,6 +135,17 @@ export const CodeHandler = (props) => {
 		//}
 	}
 
+	// Need to check if it's singletick or multi
+    console.log("PROP: ", propvalue, props)
+	if (props.inline === true) {
+		// Show it inline
+		return (
+			<span style={{backgroundColor: theme.palette.inputColor, display: "inline", whiteSpace: "pre-wrap", padding: "6px 3px 6px 3px", }}>
+				{newprop}
+			</span>
+		)
+	}
+
     return (
       <div
         style={{
@@ -145,6 +154,8 @@ export const CodeHandler = (props) => {
           maxWidth: "100%",
           backgroundColor: theme.palette.inputColor,
           overflowY: "auto",
+		  // Have it inline
+		  borderRadius: theme.palette.borderRadius,
         }}
       >
 		{validate.valid === true ? 

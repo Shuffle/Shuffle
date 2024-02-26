@@ -1261,7 +1261,7 @@ If you're interested, please let me know a time that works for you, or set up a 
   };
 
   const rerunCloudWorkflows = (environment) => {
-		toast("Starting execution reruns. This can run in the background.") 
+	toast("Starting execution reruns. This can run in the background.") 
     fetch(
       `${globalUrl}/api/v1/environments/${environment.id}/rerun`,
       {
@@ -1292,6 +1292,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 
   const abortEnvironmentWorkflows = (environment) => {
     //console.log("Aborting all workflows started >10 minutes ago, not finished");
+	toast("Clearing the queue - this may take some time. A new will show up when finished.")
 
     fetch(
       `${globalUrl}/api/v1/environments/${environment.id}/stop?deleteall=true`,
@@ -1306,7 +1307,9 @@ If you're interested, please let me know a time that works for you, or set up a 
           toast("Failed aborting dangling workflows");
           return;
         } else {
-          toast("Aborted all dangling workflows");
+          toast("Successfully cleared the queue")
+
+		  getEnvironments()
         }
 
         return response.json();
@@ -4597,7 +4600,6 @@ If you're interested, please let me know a time that works for you, or set up a 
 								<Button
 									variant={"outlined"}
 									style={{ }}
-									disabled={isCloud && environment.Name.toLowerCase() !== "cloud"}
 									onClick={() => {
 										console.log("Should clear executions for: ", environment);
 

@@ -162,7 +162,6 @@ export const triggers = [
       environment: "onprem",
       long_description: "Create a schedule based on cron",
     },
-    
     {
       name: "Office365",
       type: "TRIGGER",
@@ -191,7 +190,7 @@ export const triggers = [
         "data:image/jpg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4QAYRXhpZgAASUkqAAgAAAAAAAAAAAAAAP/hAzFodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMTQ1IDc5LjE2MzQ5OSwgMjAxOC8wOC8xMy0xNjo0MDoyMiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTkgKE1hY2ludG9zaCkiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6QTIyMjgyMEYwMDJDMTFFQkJBOEE5OUJBM0MzMTA2RDIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QTIyMjgyMTAwMDJDMTFFQkJBOEE5OUJBM0MzMTA2RDIiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDozQTMwMDQxRTAwMEUxMUVCQkE4QTk5QkEzQzMxMDZEMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpBMjIyODIwRTAwMkMxMUVCQkE4QTk5QkEzQzMxMDZEMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pv/bAEMAAwICAwICAwMCAwMDAwMEBwUEBAQECQYHBQcKCQsL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",
       long_description: "Execute a workflow when you get an email",
     },
-		{
+	{
       name: "Shuffle Workflow",
       type: "TRIGGER",
       status: "uninitialized",
@@ -217,6 +216,19 @@ export const triggers = [
       label: "User input",
       environment: "cloud",
       long_description: "Take user input to continue execution",
+    },
+    {
+      name: "Pipelines by Tenzir",
+      type: "TRIGGER",
+      status: "uninitialized",
+      description: "BETA: Support only",
+      trigger_type: "PIPELINE",
+      errors: null,
+      is_valid: true, 
+      label: "Pipeline",
+      environment: "onprem",
+      large_image: "/images/workflows/tenzir2.png",
+      long_description: "Controls a pipeline to run things",
     },
   ];
 	// is_valid: cloudSyncEnabled || isCloud ? true : false,
@@ -4104,23 +4116,11 @@ const AngularWorkflow = (defaultprops) => {
           (a) => a.id === data.id
         );
 
-        //console.log("Trigger: ", data, trigger_index)
         if (trigger_index === -1) {
           workflow.triggers.push(data)
           trigger_index = workflow.triggers.length - 1
           setWorkflow(workflow)
         }
-
-        //console.log("Trigger2: ", data, trigger_index)
-        //if (data.id !== undefined && data.app_name !== undefined) {
-        //	//newapps.push(data)
-        //	workflow.actions.push(data)
-        //	curaction = data
-        //} else {
-        //	toast("Action not found. Please remake it.");
-        //	event.target.remove();
-        //	return;
-        //}
 
         if (data.app_name === "Shuffle Workflow" || data.app_name === "User Input") {
 
@@ -4133,7 +4133,7 @@ const AngularWorkflow = (defaultprops) => {
 			}
         } else if (data.app_name === "Webhook") {
           if (workflow.triggers[trigger_index].parameters !== undefined && workflow.triggers[trigger_index].parameters !== null && workflow.triggers[trigger_index].parameters.length > 0) {
-						console.log("Can set params here!")
+			console.log("Can set params here!")
             workflow.triggers[trigger_index].parameters[0] = {
               name: "url",
               value: referenceUrl + "webhook_" + workflow.triggers[trigger_index].id,
@@ -4147,7 +4147,29 @@ const AngularWorkflow = (defaultprops) => {
 				})
 			}
           }
-        }
+        } else if (data.app_name === "Pipeline") {
+
+			// Check if environment is set
+			if (data.environment === undefined || data.environment === null || data.environment === "" || data.environment.toLowerCase() === "cloud") { 
+				for (var envKey in environments) {
+					if (environments[envKey].archived === true) {
+						continue
+					}
+
+					if (environments[envKey].Name.toLowerCase() === "cloud") {
+						continue
+					}
+
+					workflow.triggers[trigger_index].environment = environments[envKey].Name
+					data.environment = environments[envKey].Name
+					//setSelectedTrigger(data)
+					break
+				}
+			}
+		}
+
+
+	    console.log("TRIGGER: ", data)
 
         setSelectedTriggerIndex(trigger_index);
         setSelectedTrigger(data);
@@ -4175,6 +4197,7 @@ const AngularWorkflow = (defaultprops) => {
 	  	"open": false,
 	  	"attachedTo": "",
 	  });
+
       sendStreamRequest({
         "item": "node",
         "type": "select",
@@ -4684,7 +4707,7 @@ const AngularWorkflow = (defaultprops) => {
       newdst !== null
     ) {
       const dstdata = RunAutocompleter(newdst.data());
-      console.log("DST Autocompleter: ", dstdata);
+      //console.log("DST Autocompleter: ", dstdata);
     }
 
     var newbranch = {
@@ -6842,10 +6865,67 @@ const AngularWorkflow = (defaultprops) => {
         saveWorkflow(workflow);
       })
       .catch((error) => {
+        console.log("Stop schedule error: ", error.toString())
+      })
+  }
+
+  const submitPipeline = (trigger, triggerindex, usecase) => {
+    if (trigger.name.length <= 0) {
+      toast("Error: name can't be empty");
+      return;
+    }
+
+	var mappedStartnode = ""
+	const alledges = cy.edges().jsons()
+    if (alledges !== undefined && alledges !== null && alledges.length > 0) {
+		for (let edgekey in alledges) {
+			const tmp = alledges[edgekey]
+			console.log("TMP: ", tmp, tmp.data.source)
+			if (tmp.data.source === trigger.id) {
+				mappedStartnode = tmp.data.target
+				break
+			}
+		}
+    }
+
+    toast("Creating pipeline") 
+    const data = usecase
+	const url = `${globalUrl}/api/v1/triggers/pipeline`
+    fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(data),
+        credentials: "include",
+      }
+    )
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for stream results :O!");
+        } 
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (!responseJson.success) {
+          toast("Failed to set pipeline: " + responseJson.reason);
+        } else {
+          toast("Successfully created pipeline");
+          workflow.triggers[triggerindex].status = "running";
+          trigger.status = "running";
+          setSelectedTrigger(trigger);
+          setWorkflow(workflow);
+          console.log("Should set the status to running and save");
+          saveWorkflow(workflow);
+        }
+      })
+      .catch((error) => {
         //toast(error.toString());
-        console.log("Stop schedule error: ", error.toString());
+        console.log("Get schedule error: ", error.toString());
       });
-  };
+  }
 
   const submitSchedule = (trigger, triggerindex) => {
     if (trigger.name.length <= 0) {
@@ -6904,7 +6984,6 @@ const AngularWorkflow = (defaultprops) => {
           trigger.status = "running";
           setSelectedTrigger(trigger);
           setWorkflow(workflow);
-          console.log("Should set the status to running and save");
           saveWorkflow(workflow);
         }
       })
@@ -7317,6 +7396,13 @@ const AngularWorkflow = (defaultprops) => {
       <div style={triggersViewStyle}>
         <div style={appScrollStyle}>
           {triggers.map((trigger, index) => {
+
+			if (trigger.trigger_type === "PIPELINE") {
+				if (userdata.support !== true) {
+					return null
+				} 
+			}
+
 			const imagesize = isMobile ? 40 : trigger.large_image.includes("svg") ? 80 : 80
             var imageline = trigger.large_image.length === 0 ? <img alt="" style={{ borderRadius: theme.palette.borderRadius, width: isMobile ? 40 : 80, pointerEvents: "none" }} />
               : 
@@ -7589,10 +7675,11 @@ const AngularWorkflow = (defaultprops) => {
     parsedApp = {};
   };
 
+  const barHeight = bodyHeight - appBarSize - 50;
   const appScrollStyle = {
     overflow: "scroll",
-    maxHeight: isMobile ? bodyHeight - appBarSize * 4 : bodyHeight - appBarSize - 55 - 50,
-    minHeight: isMobile ? bodyHeight - appBarSize * 4 : bodyHeight - appBarSize - 55 - 50,
+    maxHeight: isMobile ? bodyHeight - appBarSize * 4 : barHeight,
+    minHeight: isMobile ? bodyHeight - appBarSize * 4 : barHeight,
     marginTop: 1,
     overflowY: "auto",
     overflowX: "hidden",
@@ -12843,7 +12930,7 @@ const AngularWorkflow = (defaultprops) => {
 				workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers[selectedTriggerIndex].parameters !== undefined && workflow.triggers[selectedTriggerIndex].parameters.length > 0  && workflow.triggers[selectedTriggerIndex].parameters[0] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[0].value !== undefined ? workflow.triggers[selectedTriggerIndex].parameters[0].value : ""
               }
               color="primary"
-              placeholder="defaultValue"
+              placeholder=""
               onBlur={(e) => {
                 setTriggerTextInformationWrapper(e.target.value);
               }}
@@ -13065,13 +13152,209 @@ const AngularWorkflow = (defaultprops) => {
             
           </div>
         </div>
-      );
+      )
     }
 
-    return null;
-  };
+    return null
+  }
 
+  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : !userdata.support === true ? null : 
+        <div style={appApiViewStyle}>
+		  <h3 style={{ marginBottom: "5px" }}>
+			{selectedTrigger.app_name}: {selectedTrigger.status}
+		  </h3>
+		  <a
+			rel="noopener noreferrer"
+			target="_blank"
+			href="https://shuffler.io/docs/triggers#pipelines"
+			style={{ textDecoration: "none", color: "#f85a3e" }}
+		  >
+			What are pipelines?
+		  </a>
+          <Divider
+            style={{
+              marginBottom: "10px",
+              marginTop: "10px",
+              height: "1px",
+              width: "100%",
+              backgroundColor: "rgb(91, 96, 100)",
+            }}
+          />
+          <div>Name</div>
+          <TextField
+            style={{
+              backgroundColor: theme.palette.inputColor,
+              borderRadius: theme.palette.borderRadius,
+            }}
+            InputProps={{
+              style: {
+              },
+            }}
+            fullWidth
+            color="primary"
+            placeholder={selectedTrigger.label}
+            onChange={selectedTriggerChange}
+          />
 
+          <div style={{ marginTop: "20px" }}>
+            <Typography>Environment</Typography>
+            <Select
+              MenuProps={{
+                disableScrollLock: true,
+              }}
+              value={selectedTrigger.environment}
+              disabled={selectedTrigger.status === "running"}
+              SelectDisplayProps={{}}
+              fullWidth
+              onChange={(e) => {
+                selectedTrigger.environment = e.target.value
+                setSelectedTrigger(selectedTrigger)
+
+                setWorkflow(workflow)
+                setUpdate(Math.random())
+              }}
+              style={{
+                backgroundColor: theme.palette.inputColor,
+                color: "white",
+                height: 50,
+              }}
+            >
+              {environments.map((data) => {
+                if (data.archived) {
+                    return null
+                }
+
+				if (data.Name.toLowerCase() === "cloud") {
+					return null
+				}
+
+                return (
+                  <MenuItem
+                    key={data.id}
+                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+                    value={data.Name}
+                  >
+                    {data.Name}
+                  </MenuItem>
+                );
+              })}
+            </Select>
+          </div>
+          <Divider
+            style={{
+              marginTop: "20px",
+              height: "1px",
+              width: "100%",
+              backgroundColor: "rgb(91, 96, 100)",
+            }}
+          />
+          <div style={{ flex: "6", marginTop: 20, }}>
+            <div>
+              <b>Parameters</b>
+
+			  {/*
+			  <div 
+				style={{
+					border: "1px solid rgba(255,255,255,0.3)",
+					borderRadius: theme.palette.borderRadius,
+					padding: 10,
+					cursor: "pointer",
+
+				}}
+				onClick={() => {
+					const pipelineConfig = {
+						"name": "HTTP Testing",
+						"type": "create",
+						"command": "from http://192.168.86.44:5002/api/v1/orgs/7e9b9007-5df2-4b47-bca5-c4d267ef2943/cache/CIDR%20ranges?type=text&authorization=cec9d01f-09b2-4419-8a0a-76c6046e3fef read lines | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines",
+						"environment": selectedTrigger.environment,
+					}
+
+                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
+				}}
+			  >
+				Run HTTP Request
+			  </div>
+			  */}
+
+			  <div 
+				style={{
+					border: "1px solid rgba(255,255,255,0.3)",
+					borderRadius: theme.palette.borderRadius,
+					padding: 10,
+					cursor: "pointer",
+					marginTop: 5, 
+
+				}}
+				onClick={() => {
+					const pipelineConfig = {
+						"name": selectedTrigger.label,
+						"type": "create",
+						"command": "load tcp://0.0.0.0:514 | read syslog | to http://api.com X-Token:Secret",
+						"environment": selectedTrigger.environment,
+					}
+
+                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
+				}}
+			  >
+				Start Syslog listener
+			  </div>
+
+			  <div 
+				style={{
+					border: "1px solid rgba(255,255,255,0.3)",
+					borderRadius: theme.palette.borderRadius,
+					padding: 10,
+					cursor: "pointer",
+					marginTop: 5, 
+
+				}}
+				onClick={() => {
+					const pipelineConfig = {
+						"name": selectedTrigger.label,
+						"type": "create",
+						"command": "from kafka://1.2.3.4 --topic foo | to http://api.com X-Token:Secret",
+						"environment": selectedTrigger.environment,
+					}
+
+                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
+				}}
+			  >
+				Follow Kafka Queue
+			  </div>
+
+              <div
+                style={{
+                  marginTop: "20px",
+                  marginBottom: "7px",
+                  display: "flex",
+                }}
+              >
+                <Button
+                  style={{ flex: "1" }}
+                  variant="contained"
+                  disabled={selectedTrigger.status === "running"}
+                  onClick={() => {
+					  toast("Should start. But it doesn't")
+                  }}
+                  color="primary"
+                >
+                  Start
+                </Button>
+                <Button
+                  style={{ flex: "1" }}
+                  variant="contained"
+                  disabled={selectedTrigger.status !== "running"}
+                  onClick={() => {
+					  toast("Should stop triggert")
+                  }}
+                  color="primary"
+                >
+                  Stop
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
 
   const ScheduleSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null :
         <div style={appApiViewStyle}>
@@ -13211,7 +13494,7 @@ const AngularWorkflow = (defaultprops) => {
 				  workflow.triggers[selectedTriggerIndex].parameters === undefined ? "" : workflow.triggers[selectedTriggerIndex].parameters[0].value
                 }
                 color="primary"
-                placeholder="defaultValue"
+                placeholder=""
                 onBlur={(e) => {
                   setTriggerCronWrapper(e.target.value);
                 }}
@@ -13801,10 +14084,8 @@ const AngularWorkflow = (defaultprops) => {
   	</div>
   : null
 
-
-
   const RightsideBar = () => {
-	  const [hovered, setHovered] = useState(false)
+	const [hovered, setHovered] = useState(false)
 
     useEffect(() => {
       const handleKeyDown = (event) => {
@@ -13856,9 +14137,8 @@ const AngularWorkflow = (defaultprops) => {
   
       return () => {
         document.removeEventListener('keydown', handleKeyDown);
-      };
-    }, [executeWorkflow, executionText, workflow, lastSaved, executionRequestStarted]);  
-
+      }
+    }, [executeWorkflow, executionText, workflow, lastSaved, executionRequestStarted])  
 	  return (
 		  <div 
 		  	style={{
@@ -13896,8 +14176,6 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const boxSize = isMobile ? 50 : 100;
-
-
     const executionButton = executionRunning ? (
       <Tooltip color="primary" title="Stop execution" placement="top">
         <span>
@@ -14333,6 +14611,8 @@ const AngularWorkflow = (defaultprops) => {
         defaultReturn = null
       } else if (selectedTrigger.trigger_type === "SUBFLOW") {
 		defaultReturn = <SubflowSidebar />
+	  //  } else if (selectedTrigger.trigger_type === "PIPELINE") {
+	  //	defaultReturn = <PipelineSidebar />
       } else if (selectedTrigger.trigger_type === "EMAIL") {
         defaultReturn = <EmailSidebar />
       } else if (selectedTrigger.trigger_type === "USERINPUT") {
@@ -16317,7 +16597,7 @@ const AngularWorkflow = (defaultprops) => {
           style: {
             pointerEvents: "auto",
             color: "white",
-            minWidth: isMobile ? "90%" : 650,
+            minWidth: isMobile ? "90%" : 750,
             padding: 30,
             maxHeight: 550,
             overflowY: "auto",
@@ -16327,17 +16607,19 @@ const AngularWorkflow = (defaultprops) => {
           },
         }}
       >
-        <span id="top_bar">
+	  	{/* Have a sticky top bar */}
+        <span id="top_bar" style={{ position: "sticky", top: -30, zIndex: 12000, }}>
           <Tooltip
             title="Suggest solution"
             placement="top"
             style={{ zIndex: 50000 }}
           >
             <IconButton
+	  		  disabled
               style={{
                 zIndex: 5000,
                 position: "absolute",
-                top: 34,
+                top: 4,
                 right: 210,
               }}
               onClick={(e) => {
@@ -16356,7 +16638,7 @@ const AngularWorkflow = (defaultprops) => {
               style={{
                 zIndex: 5000,
                 position: "absolute",
-                top: 34,
+                top: 4,
                 right: 170,
               }}
               onClick={(e) => {
@@ -16400,7 +16682,7 @@ const AngularWorkflow = (defaultprops) => {
               style={{
                 zIndex: 5000,
                 position: "absolute",
-                top: 34,
+                top: 4,
                 right: 136,
               }}
               onClick={(e) => {
@@ -16440,7 +16722,7 @@ const AngularWorkflow = (defaultprops) => {
           style={{ zIndex: 10011 }}
         >
           <IconButton
-            style={{ zIndex: 5000, position: "absolute", top: 34, right: 98 }}
+            style={{ zIndex: 5000, position: "absolute", top: 4, right: 98 }}
             onClick={(e) => {
               e.preventDefault();
               const executionIndex = workflowExecutions.findIndex((data) => data.execution_id === selectedResult.execution_id);
@@ -16470,7 +16752,7 @@ const AngularWorkflow = (defaultprops) => {
           style={{ zIndex: 10011 }}
         >
           <IconButton
-            style={{ zIndex: 5000, position: "absolute", top: 34, right: 34 }}
+            style={{ zIndex: 5000, position: "absolute", top: 4, right: 34 }}
             onClick={(e) => {
               e.preventDefault();
               setCodeModalOpen(false);
@@ -16481,8 +16763,8 @@ const AngularWorkflow = (defaultprops) => {
         </Tooltip>
       </span>
 
-      <div style={{ marginBottom: 40 }}>
-        <div style={{ display: "flex", marginBottom: 15 }}>
+      <div style={{ marginBottom: 40,  }}>
+        <div style={{ display: "flex", marginBottom: 15, position: "sticky", top: -31, zIndex: 10000, backgroundColor: "rgba(56,56,56, 1)", }}>
           {curapp === null ? null : (
             <img
               alt={selectedResult.action.app_name}
@@ -16681,11 +16963,13 @@ const AngularWorkflow = (defaultprops) => {
 	  {/* Looks for triggers" */}
 	  {/* Only fixed the ones that require scrolling on a small screen */}
 	  {/* Most important: Actions. But these are a lot more complex */}
-	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK") ?
+	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK" || selectedTrigger.trigger_type === "PIPELINE") ?
 		  <div id="rightside_actions" style={rightsidebarStyle}>
 			  {Object.getOwnPropertyNames(selectedTrigger).length > 0 ? 
 				selectedTrigger.trigger_type === "SCHEDULE" ? 
 					ScheduleSidebar 
+				: selectedTrigger.trigger_type === "PIPELINE" ? 
+					PipelineSidebar 
 				: selectedTrigger.trigger_type === "WEBHOOK" ? 
 					WebhookSidebar
 				: null 
@@ -18404,14 +18688,14 @@ const AngularWorkflow = (defaultprops) => {
         {newView}
         <VariablesModal variableInfo={variableInfo} setVariableInfo={setVariableInfo} />
         <ExecutionVariableModal variableInfo={variableInfo} setVariableInfo={setVariableInfo} />
-  		{executionArgumentModal}
-  		{aiQueryModal} 
+  		{aiQueryModal}
         {conditionsModal}
-        {authenticationModal}
         {codePopoutModal}
-        {configureWorkflowModal}
-        {/*editWorkflowModal*/}
 		{workflowRevisions}
+        {authenticationModal}
+        {/*editWorkflowModal*/}
+  		{executionArgumentModal}
+        {configureWorkflowModal}
 		<SuggestionBoxUi />
 
   		{codeEditorModalOpen ?

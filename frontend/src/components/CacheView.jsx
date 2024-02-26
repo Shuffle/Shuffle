@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import ReactJson from "react-json-view";
 
 import {
+	Typography,
     Tooltip,
     Divider,
     TextField,
@@ -21,6 +22,8 @@ import {
 } from "@mui/material";
 
 import {
+	Link as LinkIcon,
+    AutoFixHigh as AutoFixHighIcon,
     Edit as EditIcon,
     FileCopy as FileCopyIcon,
     SelectAll as SelectAllIcon,
@@ -79,7 +82,6 @@ const CacheView = (props) => {
 
     useEffect(() => {
         listOrgCache(orgId);
-        console.log("orgid", orgId);
     }, []);
 
     const listOrgCache = (orgId) => {
@@ -189,8 +191,6 @@ const CacheView = (props) => {
     const editOrgCache = (orgId) => {
         const cache = { key: dataValue.key , value: value };
         setCacheInput([cache]);
-        console.log("cache:", cache)
-        console.log("cache input: ", cacheInput)
 
         fetch(globalUrl + `/api/v1/orgs/${orgId}/set_cache`, {
 
@@ -255,6 +255,20 @@ const CacheView = (props) => {
             });
     };
 
+    const isValidJson = validateJson(value)
+	const autoFixJson = (inputvalue) => {
+		console.log("inputvalue: ", inputvalue)
+		try {
+			var parsedjson = JSON.parse(inputvalue)
+
+			// setValue() with the parsed json as string
+			setValue(JSON.stringify(parsedjson, null, 2))
+		} catch (e) {
+			console.log("Error parsing JSON: ", e)
+			//return JSON.stringify(inputvalue);
+		}
+	}
+
     const modalView = (
         // console.log("key:", dataValue.key),
         //console.log("value:",dataValue.value),
@@ -301,14 +315,27 @@ const CacheView = (props) => {
                     onChange={(e) => setKey(e.target.value)}
                 />
             </div>
-            <div style={{ paddingLeft: "30px", paddingRight: '30px' }}>
-                Value
+            <div style={{ paddingLeft: 30, paddingRight: 30 }}>
+				<div style={{display: "flex", }}>
+					<Typography style={{marginTop: 25, marginBottom: 0, flex: 20, }}>
+						Value - ({isValidJson.valid === true ? "Valid" : "Invalid"} JSON)
+					</Typography>
+					<Tooltip title="Auto Fix JSON" placement="right">
+						<IconButton
+							style={{flex: 1, }}
+							onClick={() => {
+								autoFixJson(value)
+							}}
+						>
+							<AutoFixHighIcon /> 
+						</IconButton>
+					</Tooltip>
+				</div>
                 <TextField
                     color="primary"
-                    style={{ backgroundColor: theme.palette.inputColor }}
+                    style={{ backgroundColor: theme.palette.inputColor, marginTop: 0, }}
                     InputProps={{
                         style: {
-                            height: "50px",
                             color: "white",
                             fontSize: "1em",
                         },
@@ -320,14 +347,22 @@ const CacheView = (props) => {
                     id="Valuefield"
                     margin="normal"
                     variant="outlined"
-                    defaultValue={editCache ? dataValue.value : ""}
+					multiline
+					minRows={4}
+					maxRows={12}
+                    //defaultValue={editCache ? dataValue.value : ""}
+					value={value}
                     onChange={(e) => setValue(e.target.value)}
                 />
             </div>
             <DialogActions style={{ paddingLeft: "30px", paddingRight: '30px' }}>
                 <Button
                     style={{ borderRadius: "0px" }}
-                    onClick={() => setModalOpen(false)}
+                    onClick={() => {
+						setModalOpen(false)
+						setValue("")
+						setDataValue({})
+					}}
                     color="primary"
                 >
                     Cancel
@@ -337,6 +372,9 @@ const CacheView = (props) => {
                     style={{ borderRadius: "0px" }}
                     onClick={() => {
                         {editCache ? editOrgCache(orgId) : addOrgCache(orgId)}
+						
+						setValue("")
+						setDataValue({})
                     }}
                     color="primary"
                 >
@@ -371,8 +409,9 @@ const CacheView = (props) => {
                 onClick={() =>{ 
                     setEditCache(false)
                     setModalOpen(true)
-                    }
-                }
+
+					setValue("")
+                }}
             >
                 Add Cache
             </Button>
@@ -417,10 +456,8 @@ const CacheView = (props) => {
                         }
 
               			const validate = validateJson(data.value);
-						console.log("Past validate: ", validate);
-
                         return (
-                            <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                            <ListItem key={index} style={{ backgroundColor: bgColor, maxHeight: 300, overflow: "hidden", }}>
                                 <ListItemText
                                     style={{
                                         maxWidth: 250,
@@ -458,8 +495,8 @@ const CacheView = (props) => {
 								/>
                                 <ListItemText
                                     style={{
-                                        maxWidth: 150,
-                                        minWidth: 150,
+                                        maxWidth: 200,
+                                        minWidth: 200,
 										marginLeft: 50,
                                     }}
                                     primary=<span style={{ display: "inline" }}>
@@ -473,7 +510,11 @@ const CacheView = (props) => {
                                                     style={{ padding: "6px" }}
                                                     onClick={() => {
                                                         setEditCache(true)
-                                                        setDataValue({"key":data.key,"value":data.value})
+                                                        setDataValue({
+															"key": data.key,
+															"value":data.value
+														})
+														setValue(data.value)
                                                         setModalOpen(true)
                                                     }}
                                                 >
@@ -484,8 +525,26 @@ const CacheView = (props) => {
                                             </span>
                                         </Tooltip>
                                         <Tooltip
+                                            title={"Public URL (types: text, raw, json)"}
+                                            style={{ marginLeft: 0, }}
+                                            aria-label={"Public URL"}
+                                        >
+                                            <span>
+                                                <IconButton
+                                                    style={{ padding: "6px" }}
+													disabled={data.public_authorization === undefined || data.public_authorization === null || data.public_authorization === "" ? true : false}
+                                                    onClick={() => {
+														window.open(`${globalUrl}/api/v1/orgs/${orgId}/cache/${data.key}?type=text&authorization=${data.public_authorization}`, "_blank");
+                                                    }}
+                                                >
+													<LinkIcon
+													/>
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                        <Tooltip
                                             title={"Delete item"}
-                                            style={{ marginLeft: 15, }}
+                                            style={{ marginLeft: 25, }}
                                             aria-label={"Delete"}
                                         >
                                             <span>

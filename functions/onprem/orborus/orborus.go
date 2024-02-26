@@ -1822,7 +1822,6 @@ func deployPipeline(image, identifier, command string) error {
 	envVariables := []string{
 	}
 
-
 	config := &container.Config{
 		Image: image,
 		Env:   envVariables,
@@ -1831,6 +1830,7 @@ func deployPipeline(image, identifier, command string) error {
 
 	// Add label to container in case of zombies
 	config.Labels = map[string]string{
+		"name":   identifier,
 		"shuffle": "shuffle",
 	}
 
@@ -1920,7 +1920,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 	}
 
 	image := "tenzir/tenzir:latest"
-	identifier := strings.ToLower(strings.ReplaceAll(incRequest.ExecutionSource, " ", "-"))
+	identifier := fmt.Sprintf("shuffle-%s", strings.ToLower(strings.ReplaceAll(incRequest.ExecutionSource, " ", "-")))
 	command := incRequest.ExecutionArgument
 
 	if incRequest.Type == "PIPELINE_CREATE" {
