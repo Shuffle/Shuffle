@@ -1242,7 +1242,9 @@ const Apps = (props) => {
                 })}
               </Select>
 
-		    {isCloud && (selectedApp.sharing === true || selectedApp.public === true || creatorProfile.github_avatar !== undefined) && !internalIds.includes(selectedApp.name.toLowerCase()) ? 
+		    {/*isCloud && (selectedApp.sharing === true || selectedApp.public === true || creatorProfile.github_avatar !== undefined) && !internalIds.includes(selectedApp.name.toLowerCase()) */} 
+
+		    {isCloud && !internalIds.includes(selectedApp.name.toLowerCase()) ? 
 				<Tooltip title="Deactivates this app for the current organisation. This means the app will not be usable again until you re-activate it." placement="top">
             		<Button
             		  variant="contained"

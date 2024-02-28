@@ -3183,8 +3183,8 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	workflowapp.Generated = false
 	workflowapp.Activated = true
 
-	if !shuffle.ArrayContains(api.Contributors, user.Id) {
-		api.Contributors = append(api.Contributors, user.Id)
+	if !shuffle.ArrayContains(workflowapp.Contributors, user.Id) {
+		workflowapp.Contributors = append(workflowapp.Contributors, user.Id)
 	}
 
 	shuffle.SetAppRevision(ctx, workflowapp)

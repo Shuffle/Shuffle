@@ -24,15 +24,16 @@ import {
 } from "@mui/material";
 
 import {
+  Link as LinkIcon,
   OpenInNew as OpenInNewIcon,
   Edit as EditIcon,
   CloudDownload as CloudDownloadIcon,
   Delete as DeleteIcon,
   FileCopy as FileCopyIcon,
-	Cached as CachedIcon,
+  Cached as CachedIcon,
   Publish as PublishIcon,
-	Clear as ClearIcon,
-	Add as AddIcon,
+  Clear as ClearIcon,
+  Add as AddIcon,
 } from "@mui/icons-material";
 
 import Dropzone from "../components/Dropzone.jsx";
@@ -439,10 +440,10 @@ const Files = (props) => {
   };
 
 	const downloadFile = (file) => {
-    fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
-      method: "GET",
-      credentials: "include",
-    })
+		fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
+		  method: "GET",
+		  credentials: "include",
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!");
@@ -972,6 +973,32 @@ const Files = (props) => {
 													</IconButton>
 												</span>
 											</Tooltip>
+											{/*
+											<Tooltip
+												title={"Public URL"}
+												style={{}}
+											>
+												<span>
+													<IconButton
+														style = {{padding: "6px"}}
+														disabled={file.status !== "active"}
+														onClick={() => {
+															// Open the file, without downloading it
+															window.open(`${globalUrl}/api/v1/files/${file.id}/content?type=text&authorization=${file.public_authorization}`, "_blank noreferrer noopener")
+														}}
+													>
+														<LinkIcon
+															style={{
+																color:
+																	file.status === "active"
+																		? "white"
+																		: "grey",
+															}}
+														/>
+													</IconButton>
+												</span>
+											</Tooltip>
+											*/}
 											<Tooltip
 												title={"Download file"}
 												style={{}}

@@ -3098,16 +3098,19 @@ const AngularWorkflow = (defaultprops) => {
     ReactDOM.unstable_batchedUpdates(() => {
       setSelectedAction({});
       setSelectedApp({});
-      setSelectedTrigger({});
       setSelectedComment({})
       setSelectedEdge({});
+
 
       setSelectedEdge({})
       setSelectedActionEnvironment({})
       setTriggerAuthentication({})
-      setSelectedTriggerIndex(-1)
       setTriggerFolders([])
       setLocalFirstrequest(true)
+
+      setSelectedTrigger({});
+      setSelectedTriggerIndex(-1)
+	  setUpdate(Math.random())
 
       // Can be used for right side view
       setRightSideBarOpen(false);
@@ -3551,7 +3554,9 @@ const AngularWorkflow = (defaultprops) => {
   const onNodeSelect = (event, newAppAuth) => {
     // Forces all states to update at the same time,
 	// Otherwise everything is SUPER slow
-    const data = event.target.data();
+    
+	//const data = JSON.parse(JSON.stringify(event.target.data()))
+    const data = event.target.data()
     if (data.isSuggestion === true) {
 	  console.log("Suggestion! Replace with a real action.")
   
@@ -4171,9 +4176,11 @@ const AngularWorkflow = (defaultprops) => {
 
 	    console.log("TRIGGER: ", data)
 
-        setSelectedTriggerIndex(trigger_index);
-        setSelectedTrigger(data);
-        setSelectedActionEnvironment(data.env);
+        setTimeout(() => {
+			setSelectedTriggerIndex(trigger_index);
+			setSelectedTrigger(data)
+			setSelectedActionEnvironment(data.env)
+		}, 25)
       } else if (data.type === "COMMENT") {
         setSelectedComment(data);
       } else {
@@ -6993,13 +7000,14 @@ const AngularWorkflow = (defaultprops) => {
       });
   };
 
+  const parsedHeight = isMobile ? bodyHeight - appBarSize * 4 : bodyHeight - appBarSize - 50 
   const appViewStyle = {
     marginLeft: 5,
     marginRight: 5,
     display: "flex",
     flexDirection: "column",
-    minHeight: isMobile ? bodyHeight - appBarSize * 4 : "100%",
-    maxHeight: isMobile ? bodyHeight - appBarSize * 4 : "100%",
+    minHeight: isMobile ? bodyHeight - appBarSize * 4 : parsedHeight,
+    maxHeight: isMobile ? bodyHeight - appBarSize * 4 : parsedHeight,
   };
 
   const paperAppStyle = {
@@ -7321,7 +7329,6 @@ const AngularWorkflow = (defaultprops) => {
       marginRight: 5,
     };
 
-    const parsedHeight = isMobile ? bodyHeight - appBarSize * 4 : bodyHeight - appBarSize - 50
     return (
       <div>
         <div
@@ -8972,7 +8979,7 @@ const AngularWorkflow = (defaultprops) => {
       workflow.triggers[selectedTriggerIndex].parameters[0] = {
         value: value,
         name: "cron",
-      };
+      }
     }
 
     workflow.triggers[selectedTriggerIndex].parameters[1] = {
@@ -13289,7 +13296,7 @@ const AngularWorkflow = (defaultprops) => {
 					const pipelineConfig = {
 						"name": selectedTrigger.label,
 						"type": "create",
-						"command": "load tcp://0.0.0.0:514 | read syslog | to http://api.com X-Token:Secret",
+						"command": "load tcp://0.0.0.0:514 | read syslog | export",
 						"environment": selectedTrigger.environment,
 					}
 
@@ -13297,6 +13304,29 @@ const AngularWorkflow = (defaultprops) => {
 				}}
 			  >
 				Start Syslog listener
+			  </div>
+
+			  <div 
+				style={{
+					border: "1px solid rgba(255,255,255,0.3)",
+					borderRadius: theme.palette.borderRadius,
+					padding: 10,
+					cursor: "pointer",
+					marginTop: 5, 
+
+				}}
+				onClick={() => {
+					const pipelineConfig = {
+						"name": selectedTrigger.label,
+						"type": "create",
+						"command": "export --live | sigma /path/to/rules | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines",
+						"environment": selectedTrigger.environment,
+					}
+
+                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
+				}}
+			  >
+				Run Sigma Rulesearch 
 			  </div>
 
 			  <div 
@@ -13488,10 +13518,10 @@ const AngularWorkflow = (defaultprops) => {
                 }}
                 fullWidth
                 disabled={
-                  workflow.triggers[selectedTriggerIndex].status === "running"
+				  selectedTrigger.status === "running"
                 }
                 defaultValue={
-				  workflow.triggers[selectedTriggerIndex].parameters === undefined ? "" : workflow.triggers[selectedTriggerIndex].parameters[0].value
+					selectedTrigger.parameters === undefined ? "" : selectedTrigger.parameters[0].value
                 }
                 color="primary"
                 placeholder=""
@@ -13544,7 +13574,7 @@ const AngularWorkflow = (defaultprops) => {
                 multiline
                 color="primary"
                 defaultValue={
-                  workflow.triggers[selectedTriggerIndex] !== undefined  && workflow.triggers[selectedTriggerIndex].parameters !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== null && workflow.triggers[selectedTriggerIndex].parameters.length > 1 ?
+                  workflow.triggers[selectedTriggerIndex] !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== null && workflow.triggers[selectedTriggerIndex].parameters.length > 1 ?
 				  	workflow.triggers[selectedTriggerIndex].parameters[1].value
 					: ""
                 }
@@ -14022,8 +14052,8 @@ const AngularWorkflow = (defaultprops) => {
   		}}
   	>
   		<Typography variant="body22">
-			<WarningIcon style={{marginRight: 5, height: 15, width: 15, }} />
-  			<b>{workflow.errors.length} Workflow Issue{workflow.errors.length > 1 ? "s" : ""}</b>
+			{/*<WarningIcon style={{marginRight: 5, height: 15, width: 15, }} />*/}
+  			<b>Workflow Issues:</b> {workflow.errors.length} 
   		</Typography>
   		<Typography
   			variant="body2"

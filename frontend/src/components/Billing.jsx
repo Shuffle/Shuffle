@@ -874,10 +874,11 @@ const Billing = (props) => {
       });
   };
 
+	const isChildOrg = userdata.active_org.creator_org !== "" && userdata.active_org.creator_org !== undefined && userdata.active_org.creator_org !== null
 	return (
 		<div>
       		{addDealModal}
-			<Typography variant="h6" style={{ marginTop: 20, marginBottom: 10 }}>
+			<Typography variant="h4" style={{ marginTop: 20, marginBottom: 10 }}>
 				Billing	
 			</Typography>
 			<Typography variant="body1" color="textSecondary" style={{ marginTop: 0, marginBottom: 10}}>
@@ -912,8 +913,16 @@ const Billing = (props) => {
 				:
 				null
 			}
+
+
+				{isChildOrg ?
+					<Typography variant="h6" style={{marginBottom: 50, }}>
+						Billing is handled by your parent organisation. Reach out to support@shuffler.io if you have questions about this.
+					</Typography>
+				: null}
+
 			<div style={{display: "flex", maxWidth: 768, minWidth: 768, }}>
-				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null  ?
+				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ? isChildOrg ?  null : 
 					<SubscriptionObject
 						index={0}
 						globalUrl={globalUrl}
@@ -967,11 +976,12 @@ const Billing = (props) => {
 						/>
 					</span>
 				: null}
+
 				{isCloud &&
 					selectedOrganization.subscriptions !== undefined &&
 					selectedOrganization.subscriptions !== null &&
-					selectedOrganization.subscriptions.length > 0 ? 
-
+					selectedOrganization.subscriptions.length > 0 &&
+					!isChildOrg ? 
 						selectedOrganization.subscriptions
 							.reverse()
 							.map((sub, index) => {
@@ -1224,9 +1234,9 @@ const Billing = (props) => {
 			<div style={{ marginTop: 30, }}>
 				<Typography
 				  style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
-				  variant="h6"
+				  variant="h4"
 				>
-					Shuffle Utilization 
+					Utilization & Stats 
 				</Typography>
 			  </div>
 			  <BillingStats
