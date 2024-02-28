@@ -1825,22 +1825,32 @@ func deployPipeline(image, identifier, command string) error {
 
 	// Add volume binds for storage
 	// Want read/write with full access for the container
-	// Should mount 
-	sourceFolder := "/Users/frikky/git/shuffle/shuffle-database/tenzir"
-	destinationFolder := "/var/lib/tenzir"
-	hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
-		Type:   mount.TypeBind,
-		Source: sourceFolder,
-		Target: destinationFolder,
-	})
+	//sourceFolder := "/Users/frikky/git/shuffle/shuffle-database"
+	//destinationFolder := "/tmp/storage"
+	//hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+	//	Type:   mount.TypeBind,
+	//	Source: sourceFolder,
+	//	Target: destinationFolder,
+	//})
+
+	// FIXME: Is using sigma "automatically" here good?
+	// Or is it better to run it as a separate workflow?
+	if strings.Contains(command, "sigma") {
+		log.Printf("[DEBUG] Should LOAD sigma from backend in realtime and dump it in a folder inside the container")
+
+		//sourceFolder := "/tmp/tenzir/sigma"
+		//sigmaFolder := "/tmp/tenzir/sigma"
+		//hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+		//	Type:   mount.TypeBind,
+		//	Source: sigmaFolder,
+		//	Target: sigmaFolder,
+		//}
+	}
 
 	config := &container.Config{
 		Image: image,
 		Env:   envVariables,
 		Cmd:   []string{
-			"mkdir", 
-			"-p", 
-			destinationFolder,
 			command,
 		},
 	}
@@ -1922,6 +1932,7 @@ func deployPipeline(image, identifier, command string) error {
 	}
 
 	// Wait for the container to finish
+	/*
 	statusCh, errCh := dockercli.ContainerWait(ctx, cont.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
@@ -1931,7 +1942,7 @@ func deployPipeline(image, identifier, command string) error {
 	case <-statusCh:
 		log.Printf("[INFO] Container finished")
 	}
-
+	*/
 
 	return nil
 }

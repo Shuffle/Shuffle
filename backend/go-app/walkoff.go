@@ -3183,6 +3183,12 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	workflowapp.Generated = false
 	workflowapp.Activated = true
 
+	if !shuffle.ArrayContains(api.Contributors, user.Id) {
+		api.Contributors = append(api.Contributors, user.Id)
+	}
+
+	shuffle.SetAppRevision(ctx, workflowapp)
+
 	err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 	if err != nil {
 		log.Printf("[WARNING] Failed setting workflowapp: %s", err)
