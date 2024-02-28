@@ -19,6 +19,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -26,9 +27,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 	"sync"
-	"math"
+	"time"
 
 	//"os/signal"
 	//"syscall"
@@ -62,8 +62,8 @@ import (
 var sleepTime = 2
 
 // Making it work on low-end machines even during busy times :)
-// May cause some things to run slowly 
-var maxConcurrency = 7 
+// May cause some things to run slowly
+var maxConcurrency = 7
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
@@ -74,7 +74,7 @@ var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 var dockerSwarmBridgeMTU = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_MTU")
 var dockerSwarmBridgeInterface = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_INTERFACE")
 var isKubernetes = os.Getenv("IS_KUBERNETES")
-var maxCPUPercent = 95 
+var maxCPUPercent = 95
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -687,9 +687,9 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 		log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
 		return nil
-	} 
+	}
 
-		// Binds is the actual "-v" volume.
+	// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
 
 	//CPUQuota:  25000,
@@ -1041,11 +1041,9 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		return newStats
 	}
 
-
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		newStats.Swarm = true
 	}
-
 
 	// Run this 1/10 times
 	//if rand.Intn(10) != 1 {
@@ -1056,7 +1054,7 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 	newStats.MaxQueue = maxConcurrency
 	newStats.Queue = executionCount
 
-	if isKubernetes == "true" || runningMode == "kubernetes" || runningMode == "k8s"  {
+	if isKubernetes == "true" || runningMode == "kubernetes" || runningMode == "k8s" {
 		newStats.Kubernetes = true
 		return newStats
 	}
@@ -1077,8 +1075,7 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		newStats.MaxMemory = int(pers.MemTotal)
 	}
 
-
-		// Get list of all running containers
+	// Get list of all running containers
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Failed getting container list: %s", err)
@@ -1138,33 +1135,33 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		// check if it's NaN or Inf
 		if !math.IsNaN(result.cpuUsage) {
 			totalCPU += float64(result.cpuUsage)
-		} 
+		}
 
 		if !math.IsNaN(result.memoryUsage) {
 			memUsage += float64(result.memoryUsage)
 		}
 	}
 
-	newStats.CPUPercent = totalCPU/float64(newStats.CPU)
+	newStats.CPUPercent = totalCPU / float64(newStats.CPU)
 	newStats.MemoryPercent = memUsage
 
 	//log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
 
 	/*
-	cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
-	if err == nil && len(cpuPercent) > 0 {
-		newStats.CPUPercent = cpuPercent[0]
-	}
-	//Percent(interval time.Duration, percpu bool) ([]float64, error)
+		cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
+		if err == nil && len(cpuPercent) > 0 {
+			newStats.CPUPercent = cpuPercent[0]
+		}
+		//Percent(interval time.Duration, percpu bool) ([]float64, error)
 
-	// Get memory usage
-	memory, err := memory.Get()
-	if err != nil {
-		log.Printf("[ERROR] Failed getting memory stats: %s", err)
-	} else {
-		newStats.Memory = int(memory.Used)
-		newStats.MaxMemory = int(memory.Total)
-	}
+		// Get memory usage
+		memory, err := memory.Get()
+		if err != nil {
+			log.Printf("[ERROR] Failed getting memory stats: %s", err)
+		} else {
+			newStats.Memory = int(memory.Used)
+			newStats.MaxMemory = int(memory.Total)
+		}
 	*/
 
 	// Get disk usage
@@ -1402,11 +1399,18 @@ func main() {
 	}
 
 	if os.Getenv("SHUFFLE_MAX_CPU") != "" {
-		// parse 
+		// parse
 		tmpInt, err := strconv.Atoi(os.Getenv("SHUFFLE_MAX_CPU"))
 		if err == nil {
 			maxCPUPercent = tmpInt
 		}
+	}
+
+	swarmPollingTime := time.Now()
+	swarmRequestsMade := 0
+	swarmControlMode := false
+	if os.Getenv("SHUFFLE_SWARM_CONTROL_MODE") == "true" {
+		swarmControlMode = true
 	}
 
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
@@ -1529,6 +1533,20 @@ func main() {
 				log.Printf("[WARNING] Throttle - Cutting down requests from %d to %d (MAX: %d, CUR: %d)", len(executionRequests.Data), allowed, maxConcurrency, executionCount)
 				executionRequests.Data = executionRequests.Data[0:allowed]
 			}
+		} else if (swarmControlMode && (swarmConfig == "run" || swarmConfig == "swarm")) {
+			if len(executionRequests.Data) > 50 {
+				executionRequests.Data = executionRequests.Data[0:50]
+			}
+
+			if swarmRequestsMade > 100 && time.Since(swarmPollingTime).Seconds() > 5 {
+				log.Printf("[DEBUG] Swarm requests made: %d", swarmRequestsMade)
+				time.Sleep(time.Duration(sleepTime) * time.Second)
+
+				swarmPollingTime = time.Now()
+				swarmRequestsMade = 0
+			}
+
+			swarmRequestsMade += len(executionRequests.Data)
 		}
 
 		// New, abortable version. Should check executionid and remove everything else
@@ -1553,9 +1571,9 @@ func main() {
 
 				// Should check when last this was ran, and if it's more than 10 minutes ago and it's not finished, we should run it again?
 				/*
-				if swarmConfig != "run" && swarmConfig != "swarm" {
-					continue
-				}
+					if swarmConfig != "run" && swarmConfig != "swarm" {
+						continue
+					}
 				*/
 			}
 
@@ -1610,7 +1628,6 @@ func main() {
 				log.Printf("[DEBUG] Added volume binds: %s", os.Getenv("SHUFFLE_VOLUME_BINDS"))
 				env = append(env, fmt.Sprintf("SHUFFLE_VOLUME_BINDS=%s", os.Getenv("SHUFFLE_VOLUME_BINDS")))
 			}
-
 
 			if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
 				env = append(env, fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")))
@@ -1720,7 +1737,7 @@ func main() {
 func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	//log.Printf("[DEBUG] Getting running workers with API version %s", dockerApiVersion)
 	counter := 0
-	if isKubernetes  == "true" {
+	if isKubernetes == "true" {
 		log.Printf("[INFO] getting running workers in kubernetes")
 
 		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
@@ -1750,20 +1767,20 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 			All: true,
 		})
-	
+
 		// Automatically updates the version
 		if err != nil {
 			log.Printf("[ERROR] Error getting containers: %s", err)
-	
+
 			newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
 			if len(newVersionSplit) > 1 {
 				//dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
 				log.Printf("[DEBUG] WANT to change the API version to default to %s?", strings.TrimSpace(newVersionSplit[1]))
 			}
-	
+
 			return maxConcurrency
 		}
-	
+
 		currenttime := time.Now().Unix()
 
 		for _, container := range containers {
@@ -1776,7 +1793,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 						break
 					}
 				}
-	
+
 				// Check image name
 				if !shuffleFound {
 					continue
@@ -1784,13 +1801,13 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 				//} else {
 				//	log.Printf("NAME: %s", container.Image)
 			}
-	
+
 			for _, name := range container.Names {
 				// FIXME - add name_version_uid_uid regex check as well
 				if !strings.HasPrefix(name, "/worker") {
 					continue
 				}
-	
+
 				//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
 				if container.State == "running" && currenttime-container.Created < int64(workerTimeout) {
 					counter += 1
@@ -1934,7 +1951,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
 	}
 
-	if len(workerServerUrl) > 0  {
+	if len(workerServerUrl) > 0 {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
 	}
 
