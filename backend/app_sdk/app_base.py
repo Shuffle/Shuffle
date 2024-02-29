@@ -875,7 +875,6 @@ class AppBase:
 
             #self.logger.info(f"MERGE: {should_merge}")
             if isinstance(value, list):
-                self.logger.info(f"[DEBUG] Item {value} is a list.")
                 if len(value) <= 1:
                     if len(value) == 1:
                         baseparams[key] = value[0]
@@ -986,7 +985,6 @@ class AppBase:
                         self.logger.info("[WARNING] Exception in loop wrapper: {e}")
                         loop_wrapper[key] = 1
 
-                    self.logger.info(f"[DEBUG] Key {key} is a list: {value}")
                     newparams[key] = value[0]
                     has_loop = True 
                 else:
@@ -1046,8 +1044,6 @@ class AppBase:
             #    self.send_result(action_result, headers, stream_path)
             #    return
 
-            self.logger.info("[INFO] Multiplier length: %d" % len(param_multiplier))
-            #tmp = ""
             for subparams in param_multiplier:
                 #self.logger.info(f"SUBPARAMS IN MULTI: {subparams}")
                 try:
@@ -3303,7 +3299,6 @@ class AppBase:
                                 # Has a loop without a variable used inside
                                 if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
 
-                                    self.logger.info("(1) Pre replacement: %s" % actualitem[0][2])
                                     tmpitem = value
 
                                     index = 0
@@ -3346,12 +3341,10 @@ class AppBase:
                                         try:
                                             newvalue = json.loads(newvalue)
                                         except json.decoder.JSONDecodeError as e:
-                                            self.logger.info("DECODER ERROR: %s" % e)
                                             pass
 
                                         new_replacement.append(newvalue)
 
-                                    self.logger.info("New replacement: %s" % new_replacement)
 
                                     # FIXME: Should this use new_replacement?
                                     tmpitem = tmpitem.replace(actualitem[index][0], replacement, 1)
@@ -3378,11 +3371,9 @@ class AppBase:
                                         self.logger.info("(1) JSON ERROR IN FILE HANDLING: %s" % e)
 
                                     if not isfile:
-                                        self.logger.info("Resultarray (NOT FILE): %s" % resultarray)
                                         params[parameter["name"]] = tmpitem
                                         multi_parameters[parameter["name"]] = new_replacement 
                                     else:
-                                        self.logger.info("Resultarray (FILE): %s" % resultarray)
                                         params[parameter["name"]] = resultarray 
                                         multi_parameters[parameter["name"]] = resultarray 
 
@@ -3396,7 +3387,6 @@ class AppBase:
                                     multi_execution_lists.append(new_replacement)
                                     #self.logger.info("MULTI finished: %s" % json_replacement)
                                 else:
-                                    self.logger.info(f"(2) Pre replacement (loop with variables). Variables: {actualitem}") #% actualitem)
                                     # This is here to handle for loops within variables.. kindof
                                     # 1. Find the length of the longest array
                                     # 2. Build an array with the base values based on parameter["value"] 
@@ -3531,7 +3521,6 @@ class AppBase:
                         # FIXME: This doesn't really do anything anymore
                         #self.logger.info("[DEBUG] CHECKING multi execution list: %d!" % len(multi_execution_lists))
                         if len(multi_execution_lists) > 0:
-                            self.logger.info("\n [DEBUG] Multi execution list has more data: %d" % len(multi_execution_lists))
                             filteredlist = []
                             for listitem in multi_execution_lists:
                                 if listitem in filteredlist:
@@ -3580,11 +3569,10 @@ class AppBase:
                         if not multiexecution:
                             # Runs a single iteration here
                             new_params = self.validate_unique_fields(params)
-                            self.logger.info(f"[DEBUG] Returned with newparams of length {len(new_params)}")
                             if isinstance(new_params, list) and len(new_params) == 1:
                                 params = new_params[0]
                             else:
-                                self.logger.info("[WARNING] SHOULD STOP EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
+                                #self.logger.info("[WARNING] SHOULD STOP EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
                                 self.action_result["status"] = "SKIPPED"
                                 self.action_result["result"] = f"A non-unique value was found"  
                                 self.action_result["completed_at"] = int(time.time_ns())
@@ -3755,7 +3743,7 @@ class AppBase:
                             #self.logger.info("\n\n\n[INFO] Returned from execution with type(s) %s" % type(newres))
                             #self.logger.info("\n[INFO] Returned from execution with %s of types %s" % (newres, type(newres)))#, newres)
                             if isinstance(newres, tuple):
-                                self.logger.info(f"[INFO] Handling return as tuple: {newres}")
+                                #self.logger.info(f"[INFO] Handling return as tuple: {newres}")
                                 # Handles files.
                                 filedata = ""
                                 file_ids = []
@@ -3780,7 +3768,7 @@ class AppBase:
                                 
                                 result = json.dumps(tmp_result)
                             elif isinstance(newres, str):
-                                self.logger.info("[INFO] Handling return as string of length %d" % len(newres))
+                                #self.logger.info("[INFO] Handling return as string of length %d" % len(newres))
                                 result += newres
                             elif isinstance(newres, dict) or isinstance(newres, list):
                                 try:
@@ -3791,7 +3779,7 @@ class AppBase:
                                         result += str(newres)
                                     except ValueError:
                                         result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
-                                        self.logger.info("Can't handle type %s value from function" % (type(newres)))
+                                        self.logger.info("[ERROR] Can't handle type %s value from function" % (type(newres)))
                                 except Exception as e:
                                     self.logger.info("[ERROR] Failed to json dump. Returning as string.")
                                     result += str(newres)
@@ -3817,7 +3805,6 @@ class AppBase:
                             # Dump the result as a string of a list
                             #self.logger.info("RESULTS: %s" % results)
                             if isinstance(results, list) or isinstance(results, dict):
-                                self.logger.info(f"JSON OBJECT? {json_object}")
 
                                 # This part is weird lol
                                 if json_object:
