@@ -356,10 +356,12 @@ class AppBase:
                 self.action = json.loads(self.action)
                 self.original_action = json.loads(self.action)
             except Exception as e:
-                self.logger.info(f"[DEBUG] Failed parsing action as JSON (init): {e}. NOT important if running apps with webserver. This is NOT critical.")
+                pass
 
         if len(self.base_url) == 0:
             self.base_url = self.url
+
+        self.local_storage = []
 
     # Checks output for whether it should be automatically parsed or not
     def run_magic_parser(self, input_data):
@@ -1034,7 +1036,6 @@ class AppBase:
                 #self.logger.info(f"NEW PARAMS: {new_params}")
                 param_multiplier = new_params
 
-            #self.logger.info("Returned with newparams of length %d", len(new_params))
             #if isinstance(new_params, list) and len(new_params) == 1:
             #    params = new_params[0]
             #else:
@@ -1322,6 +1323,19 @@ class AppBase:
             "key": key,
         }
 
+        try:
+            newstorage = []
+            for item in self.local_storage:
+                if item["execution_id"] == self.current_execution_id and item["key"] == key:
+                    continue
+
+                newstorage.append(item)
+
+            self.local_storage = newstorage
+
+        except Exception as e:
+            print("[ERROR] Failed DELETING current execution id local storage: %s" % e)
+
         response = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
         try:
             allvalues = response.json()
@@ -1342,6 +1356,19 @@ class AppBase:
             "key": key,
             "value": str(value),
         }
+
+        try:
+            newstorage = []
+            for item in self.local_storage:
+                if item["execution_id"] == self.current_execution_id and item["key"] == key:
+                    continue
+
+                newstorage.append(item)
+
+            self.local_storage = newstorage
+
+        except Exception as e:
+            print("[ERROR] Failed SETTING current execution id local storage: %s" % e)
 
         response = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
         try:
@@ -1365,18 +1392,37 @@ class AppBase:
             "key": key,
         }
 
+        # Makes it so that loops for the same action doesn't re-ask the db unless necessary
+        try:
+            for item in self.local_storage:
+                if item["execution_id"] == self.current_execution_id and item["key"] == key:
+                    # Max keeping the local cache properly for 5 seconds due to workflow continuations
+                    elapsed_time = time.time() - item["time_set"]
+                    if elapsed_time > 5:
+                        break
+
+                    return item["data"]
+        except Exception as e:
+            print("[ERROR] Failed getting current execution id local storage: %s" % e)
+
         value = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
         try:
             allvalues = value.json()
-            self.logger.info("VAL1: ", allvalues)
             allvalues["key"] = key 
-            self.logger.info("VAL2: ", allvalues)
 
             try:
                 parsedvalue = json.loads(allvalues["value"])
                 allvalues["value"] = parsedvalue
             except:
                 self.logger.info("Parsing of value as JSON failed. Continue anyway!")
+
+            try:
+                newdata = json.loads(json.dumps(data))
+                newdata["time_set"] = time.time()
+                newdata["data"] = allvalues
+                self.local_storage.append(newdata)
+            except Exception as e:
+                print("[ERROR] Failed in local storage append: %s" % e)
 
             return allvalues
         except:
@@ -1484,7 +1530,6 @@ class AppBase:
             pass
 
         self.action = copy.deepcopy(action)
-        self.logger.info(f"[DEBUG] Sending starting action result (EXECUTING). Param replace: {replace_params}")
 
         headers = {
             "Content-Type": "application/json",     
@@ -2721,7 +2766,8 @@ class AppBase:
 
                         #self.logger.info("VALUE: %s" % parameter["value"])
             else:
-                self.logger.info(f"[ERROR] Not running static variant regex parsing (slow) on value with length {len(parameter['value'])}. Max is 5Mb~.")
+                #self.logger.info(f"[ERROR] Not running static variant regex parsing (slow) on value with length {len(parameter['value'])}. Max is 5Mb~.")
+                pass
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
                 self.logger.info("[DEBUG] Handling workflow variable")
@@ -3204,7 +3250,6 @@ class AppBase:
                         try:
                             self.original_action = json.loads(json.dumps(action))
                         except Exception as e:
-                            #self.logger.info(f"[ERROR] Failed parsing action as JSON to original action. This COULD have bad effects on LOOPED executions: {e}")
                             pass
 
                         # calltimes is used to handle forloops in the app itself.

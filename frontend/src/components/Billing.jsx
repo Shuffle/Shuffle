@@ -21,6 +21,7 @@ import {
 	TextField,
   	InputAdornment,
 	IconButton,
+    Chip,
 	Checkbox,
 	Tooltip, 
 } from "@mui/material";
@@ -39,6 +40,7 @@ import {
 //import { useAlert 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
 import BillingStats from "../components/BillingStats.jsx";
+import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 
 const Billing = (props) => {
   const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, } = props;
@@ -404,10 +406,32 @@ const Billing = (props) => {
 					</DialogContent>
 				</Dialog>
 				<div style={{display: "flex"}}>
+					{top_text === "Base Cloud Access" && userdata.has_card_available === true ?
+						<Chip
+							style={{
+								  backgroundColor: "#f86a3e",
+								  paddingLeft: 5,
+								  paddingRight: 5,
+								  height: 28,
+								  cursor: "pointer",
+								  borderColor: "#3d3f43",
+								  color: "white",
+								  marginTop: 10, 
+								  marginRight: 30,
+								  border: "1px solid rgba(255,255,255,0.3)",
+							}}
+							label={"Unlimited"}
+							onClick={() => {
+								console.log("Clicked chip")
+							}}
+							variant="outlined"
+							color="primary"
+						  />
+						: null}
 					<Typography variant="h6" style={{ marginTop: 10, marginBottom: 10, flex: 5, }}>
 						{top_text}
 					</Typography>
-					{isCloud && highlight === true ?
+					{isCloud && highlight === true && top_text !== "Base Cloud Access" ?
 						<Tooltip
 						  title="Sign EULA"
 						  placement="top"
@@ -534,7 +558,11 @@ const Billing = (props) => {
 								{subscription.name.includes("Scale") ? 
 									"" 
 									: 
-									"You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit."
+
+									userdata.has_card_available === true ?
+										"While you have a card attached to your account, Shuffle will no longer prevent workflows from running. Billing will occur at the start of each month."
+										:
+										`You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit. Your organisations manager email is ${selectedOrganization.org}.`
 								}
 							</Typography>
 							{/*isCloud ? 
@@ -549,20 +577,75 @@ const Billing = (props) => {
 									Add Payment Method
 								</Button>
 							: null*/}
+
 							<Button 
-								variant="contained" 
+								fullWidth 
+								disabled={false} 
+								variant="outlined" 
 								color="primary" 
-								style={{ marginTop: 20, marginBottom: 10, }}
+								style={{
+									marginTop: 10, 
+									borderRadius: 25, 
+									height: 40, 
+									fontSize: 14, 
+									color: "white",
+								}}
 								onClick={() => {
 									if (isCloud) {
-										navigate("/pricing?tab=cloud&highlight=true")
+										handlePayasyougo(userdata)
+										//navigate("/pricing?tab=cloud&highlight=true")
 									} else {
-										window.open("https://shuffler.io/pricing?tab=onprem&highlight=true", "_blank")
+										//window.open("https://shuffler.io/pricing?tab=onprem&highlight=true", "_blank")
+										handlePayasyougo()
 									}
 								}}
 							>
-								Upgrade now	
+								{userdata.has_card_available === true ?
+									"Manage Card Details" 
+									:
+									"Add Card Details"
+								}
 							</Button>
+							{userdata.has_card_available === true ?
+								<Button 
+									fullWidth 
+									disabled={false} 
+									variant="outlined" 
+									color="primary" 
+									style={{
+										marginTop: 10, 
+										borderRadius: 25, 
+										height: 40, 
+										fontSize: 14, 
+										color: "white",
+										backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+									}}
+									onClick={() => {
+										if (isCloud) {
+											navigate("/pricing?tab=cloud&highlight=true")
+										} else {
+											window.open("https://shuffler.io/pricing?tab=onprem&highlight=true", "_blank")
+										}
+									}}
+								>
+									Upgrade plan
+								</Button>
+							: null}
+								
+							{userdata.has_card_available === false ?
+								<img 
+									src="/images/stripenew.png" 
+									style={{
+										margin: "auto",
+										marginTop: 20,
+										width: 100, 
+										marginLeft: "35%", 
+										backgroundColor: "white", 
+										borderRadius: theme.palette.borderRadius,
+										clip: "rect(30px, 30px, 30px, 30px)",
+									}}
+								/>
+							: null}
 						</span>
 					: null}
 				{showSupport ? 
@@ -1046,7 +1129,7 @@ const Billing = (props) => {
 					</div>
 
 
-					{isCloud &&
+					{/*isCloud &&
 						selectedOrganization.partner_info !== undefined &&
 						selectedOrganization.partner_info.reseller === true ? (
               <div style={{ marginTop: 30, marginBottom: 200 }}>
@@ -1230,7 +1313,7 @@ const Billing = (props) => {
                 />              
 
 			  </div>
-            ) : null}
+            ) : null*/}
 			<div style={{ marginTop: 30, }}>
 				<Typography
 				  style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
