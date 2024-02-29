@@ -25,6 +25,11 @@ import concurrent.futures
 
 from io import StringIO as StringBuffer, BytesIO 
 from liquid import Liquid, defaults
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+# Suppress the warning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
 
 runtime = os.getenv("SHUFFLE_SWARM_CONFIG", "")
 
@@ -584,8 +589,6 @@ class AppBase:
                 # Not sure why this would work tho :)
                 action_result["status"] = "FAILURE"
                 action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 10 retries to the backend" % url})
-                self.logger.info(f"[ERROR] Before typeerror stream result - NOT finished after 10 requests")
-
                 self.send_result(action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
                 return
         
@@ -596,7 +599,6 @@ class AppBase:
             action_result["status"] = "FAILURE"
             action_result["result"] = json.dumps({"success": False, "reason": "Typeerror when sending to backend URL %s" % url})
 
-            #self.logger.info(f"[DEBUG] Before typeerror stream result: {e}")
             ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False, proxies=self.proxy_config)
             #self.logger.info(f"[DEBUG] Result: {ret.status_code}")
             #if ret.status_code != 200:
@@ -635,13 +637,6 @@ class AppBase:
         if isinstance(params, list):
             #self.logger.info("ITS A LIST!")
             newlist = params
-
-        #self.full_execution = os.getenv("FULL_EXECUTION", "") 
-        #self.logger.info(len(params))
-        #self.logger.info(params.items())
-        #self.logger.info(list(params.items()))
-        #self.logger.info(f"PARAM: {params}")
-        #self.logger.info(f"NEWLIST: {newlist}")
 
         # FIXME: Also handle MULTI PARAM
         values = []
@@ -818,7 +813,6 @@ class AppBase:
             check_value = ""
             for param in self.original_action["parameters"]:
                 if param["name"] == key:
-                    #self.logger.info("PARAM: %s" % param)
                     check_value = param["value"]
                     # self.result_wrapper_count = 0
 
@@ -910,27 +904,21 @@ class AppBase:
             self.logger.info("[DEBUG] NO multiplier. Running a single iteration.")
             paramlist.append(baseparams)
         elif len(listlengths) == 1:
-            self.logger.info("[DEBUG] NO MULTIPLIER NECESSARY. Length is %d" % len(listitems))
-
             for item in listitems:
                 # This loops should always be length 1
                 for key, value in item.items():
                     if isinstance(value, int):
-                        self.logger.info("\n[DEBUG] Should run key %s %d times from %s" % (key, value, baseparams[key]))
                         if len(paramlist) == value:
-                            self.logger.info("[DEBUG] List ALREADY exists - just changing values")
                             for subloop in range(value):
                                 baseitem = copy.deepcopy(baseparams)
                                 paramlist[subloop][key] = baseparams[key][subloop]
                         else:
-                            self.logger.info("[DEBUG] List DOESNT exist - ADDING values")
                             for subloop in range(value):
                                 baseitem = copy.deepcopy(baseparams)
                                 baseitem[key] = baseparams[key][subloop]
                                 paramlist.append(baseitem)
                 
         else:
-            self.logger.info("[DEBUG] Multipliers to handle: %s" % listitems)
             newlength = 1
             for item in listitems:
                 for key, value in item.items():
@@ -984,11 +972,9 @@ class AppBase:
                     if key != "body":
                         value[0] = json.loads(value[0])
                 except json.decoder.JSONDecodeError as e:
-                    self.logger.info("[WARNING] JSON casting error (1): %s" % e)
+                    pass
                 except TypeError as e:
-                    self.logger.info("[WARNING] TypeError: %s" % e)
-
-                self.logger.info("[DEBUG] POST initial list check")
+                    pass
 
             try:
                 if isinstance(value, list) and len(value) == 1 and isinstance(value[0], list):
@@ -1527,7 +1513,6 @@ class AppBase:
 
         # Add async logger
         # self.console_logger.handlers[0].stream.set_execution_id()
-        #self.logger.info("Before initial stream result")
 
         # FIXME: Shouldn't skip this, but it's good for minimzing API calls
         #try:
@@ -1557,7 +1542,6 @@ class AppBase:
                     }
 
                     resultsurl = "%s/api/v1/streams/results" % (self.base_url)
-                    #self.logger.info("[DEBUG] Before FULLEXEC stream result url '%s'" % (resultsurl))
                     ret = requests.post(
                         resultsurl,
                         headers=headers, 
@@ -1663,8 +1647,6 @@ class AppBase:
 
         except Exception as e:
             self.logger.info(f"[WARNING] Failed in replace params action parsing: {e}")
-
-        #self.logger.info(f"[DEBUG] AFTER FULLEXEC stream result (init): {self.current_execution_id}")
 
         # Gets the value at the parenthesis level you want
         def parse_nested_param(string, level):
@@ -2679,7 +2661,6 @@ class AppBase:
             # Basic fix in case variant isn't set
             # Variant is ALWAYS STATIC_VALUE from mid 2021~ 
             try:
-                #self.logger.info(f"[DEBUG] Parameter '{paramname}' of length {len(parameter['value'])}")
                 parameter["variant"] = parameter["variant"]
             except:
                 parameter["variant"] = "STATIC_VALUE"
@@ -2839,7 +2820,7 @@ class AppBase:
             return "", parameter["value"], is_loop
 
         def run_validation(sourcevalue, check, destinationvalue):
-            self.logger.info("[DEBUG] Checking %s '%s' %s" % (sourcevalue, check, destinationvalue))
+            #self.logger.info("[DEBUG] Checking %s '%s' %s" % (sourcevalue, check, destinationvalue))
 
             if check == "=" or check.lower() == "equals":
                 if str(sourcevalue).lower() == str(destinationvalue).lower():
@@ -3061,7 +3042,7 @@ class AppBase:
             if matching_branches > 0 and correct_branches > 0:
                 return True, ""
 
-            self.logger.info("[DEBUG] Correct branches vs matching branches: %d vs %d" % (correct_branches, matching_branches))
+            #self.logger.info("[DEBUG] Correct branches vs matching branches: %d vs %d" % (correct_branches, matching_branches))
             return False, {"success": False, "reason": "Minimum of one branch's conditions must be correct to continue. Total: %d of %d" % (correct_branches, matching_branches)}
 
 
@@ -3096,11 +3077,11 @@ class AppBase:
                 #tmpresult = tmpresult.replace("'", "\"")
                 tmpresult = json.dumps(tmpresult) 
             except json.decoder.JSONDecodeError as e:
-                self.logger.info(f"[WARNING] Failed condition parsing {tmpresult} to string")
+                pass
+
 
         # IF branches fail: Exit!
         if not branchcheck:
-            self.logger.info("Failed one or more branch conditions.")
             self.action_result["result"] = tmpresult
             self.action_result["status"] = "SKIPPED"
             self.action_result["completed_at"] = int(time.time_ns())
@@ -3141,14 +3122,6 @@ class AppBase:
                         # What variables are necessary here tho hmm
 
                         params = {}
-                        # This replacement should happen in backend as part of params
-                        # error log is useless
-                        #try:
-                        #    for item in action["authentication"]:
-                        #        self.logger.info("AUTH PARAM: ", key, value)
-                        #        #params[item["key"]] = item["value"]
-                        #except KeyError as e:
-                        #    self.logger.info(f"[WARNING] No authentication specified! Is this correct? err: {e}")
 
                         # Fixes OpenAPI body parameters for later.
                         newparams = []
@@ -3177,9 +3150,7 @@ class AppBase:
                             # but this has changed to do lists within items and such
                             if parameter["name"] == "body": 
                                 bodyindex = counter
-                                #self.logger.info("PARAM: %s" % parameter)
 
-                                # FIXMe: This should also happen after liquid & param parsing..
                                 try:
                                     values = parameter["value_replace"]
                                     if values != None:
@@ -3219,7 +3190,6 @@ class AppBase:
                                     pass
 
                                  
-                                #self.logger.info(f"""HANDLING BODY: {action["parameters"][counter]["value"]}""")
                                 action["parameters"][counter]["value"] = recurse_cleanup_script(action["parameters"][counter]["value"])
 
                         #self.logger.info(action["parameters"])
@@ -3234,7 +3204,8 @@ class AppBase:
                         try:
                             self.original_action = json.loads(json.dumps(action))
                         except Exception as e:
-                            self.logger.info(f"[ERROR] Failed parsing action as JSON to original action. This COULD have bad effects on LOOPED executions: {e}")
+                            #self.logger.info(f"[ERROR] Failed parsing action as JSON to original action. This COULD have bad effects on LOOPED executions: {e}")
+                            pass
 
                         # calltimes is used to handle forloops in the app itself.
                         # 2 kinds of loop - one in gui with one app each, and one like this,
@@ -3276,16 +3247,12 @@ class AppBase:
                             except KeyError:
                                 pass
 
-                            #self.logger.info("Return value: %s" % value)
                             actionname = action["name"]
-                            #self.logger.info("Multicheck ", actualitem)
-                            #self.logger.info("ITEM LENGTH: %d, Actual item: %s" % (len(actualitem), actualitem))
                             if len(actualitem) > 0:
                                 multiexecution = True
 
                                 # Loop WITHOUT JSON variables go here. 
                                 # Loop WITH variables go in else.
-                                self.logger.info("Before first part in multiexec!")
                                 handled = False
 
                                 # Has a loop without a variable used inside
@@ -3302,10 +3269,7 @@ class AppBase:
                                     if replacement.startswith("\"") and replacement.endswith("\""):
                                         replacement = replacement[1:len(replacement)-1]
 
-                                    self.logger.info("POST replacement: %s" % replacement)
-
                                     #json_replacement = tmpitem.replace(actualitem[index][0], replacement, 1)
-                                    #self.logger.info("AFTER POST replacement: %s" % json_replacement)
                                     json_replacement = replacement
                                     try:
                                         json_replacement = json.loads(replacement)
@@ -3351,18 +3315,14 @@ class AppBase:
                                     resultarray = []
                                     isfile = False
                                     try:
-                                        self.logger.info("(1) ------------ PARAM: %s" % parameter["schema"]["type"])
                                         if parameter["schema"]["type"] == "file" and len(value) > 0:
                                             self.logger.info("(1) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % tmpitem) 
                                             # This is silly :)
                                             # Q: Is there something wrong with the download system?
                                             # It seems to return "FILE CONTENT: %s" with the ID as %s
                                             for tmp_file_split in json.loads(tmpitem):
-                                                self.logger.info("(1) PRE GET FILE %s" % tmp_file_split)
                                                 file_value = self.get_file(tmp_file_split)
-                                                self.logger.info("(1) POST AWAIT %s" % file_value)
                                                 resultarray.append(file_value)
-                                                self.logger.info("(1) FILE VALUE FOR VAL %s: %s" % (tmp_file_split, file_value))
 
                                             isfile = True
                                     except NameError as e:
@@ -3459,18 +3419,14 @@ class AppBase:
 
 
                                         # This code handles files.
-                                        self.logger.info("(2) ------------ PARAM: %s" % parameter["schema"]["type"])
                                         isfile = False
                                         try:
                                             if parameter["schema"]["type"] == "file" and len(value) > 0:
                                                 self.logger.info("(2) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % parameter["value"]) 
 
                                                 for tmp_file_split in json.loads(parameter["value"]):
-                                                    self.logger.info("(2) PRE GET FILE %s" % tmp_file_split)
                                                     file_value = self.get_file(tmp_file_split)
-                                                    self.logger.info("(2) POST AWAIT %s" % file_value)
                                                     resultarray.append(file_value)
-                                                    self.logger.info("(2) FILE VALUE FOR VAL %s: %s" % (tmp_file_split, file_value))
 
 
                                                 isfile = True
@@ -3484,7 +3440,6 @@ class AppBase:
                                             resultarray.append(tmpitem)
 
                                     # With this parameter ready, add it to... a greater list of parameters. Rofl
-                                    self.logger.info("LENGTH OF ARR: %d" % len(resultarray))
                                     if len(resultarray) == 0:
                                         self.logger.info("[WARNING] Returning empty array because the array length to be looped is 0 (0)")
                                         self.action_result["status"] = "SUCCESS" 
@@ -3802,7 +3757,6 @@ class AppBase:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     self.logger.info("Can't handle type %s value from function" % (type(newres)))
 
-                            #self.logger.info("[INFO] POST NEWRES RESULT!")#, result)
                         else:
                             #self.logger.info("[INFO] APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
                             # 1. Use number of executions based on the arrays being similar

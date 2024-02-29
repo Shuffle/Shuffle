@@ -876,6 +876,18 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	org, err := shuffle.GetOrg(ctx, userInfo.ActiveOrg.Id)
+	if err != nil {
+		log.Printf("[DEBUG] Failed to get org during getinfo: %s", err)
+	}
+
+
+	// Do it per user? 
+	if err == nil && len(org.SubscriptionUserId) == 0 {
+		manageOrgSubSignup(org)
+
+		func manageOrgSubSignup(org shuffle.Organization)
+	}
+
 	//if err == nil {
 	if len(org.Id) > 0 {
 		userInfo.ActiveOrg = shuffle.OrgMini{
@@ -963,6 +975,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	for _, tutorial := range org.Tutorials {
 		tutorialsFinished = append(tutorialsFinished, tutorial)
 	}
+
 
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
