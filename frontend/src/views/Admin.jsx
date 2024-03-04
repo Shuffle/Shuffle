@@ -1102,6 +1102,40 @@ If you're interested, please let me know a time that works for you, or set up a 
         toast("Error getting current organization");
       });
   };
+const handleGetSubOrgs = (orgId) => {
+
+  if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const params = Object.fromEntries(urlSearchParams.entries());
+    const foundorgid = params["org_id"];
+    if (foundorgid !== undefined && foundorgid !== null) {
+      orgId = foundorgid;
+    }
+  }
+
+  if (orgId.length === 0) {
+    toast("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
+    return;
+  }
+  
+  fetch(`${globalUrl}/api/v1/subOrgs/${orgId}`, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) => {
+      return response.json();
+    })
+    .then((responseJson) => {
+       setSubOrgs(responseJson);
+    })
+    .catch((error) => {
+      console.log("Error getting sub orgs: ", error);
+      toast("Error getting sub organizations");
+    });
+};
 
   const inviteUser = (data) => {
     //console.log("INPUT: ", data);
@@ -4672,6 +4706,84 @@ If you're interested, please let me know a time that works for you, or set up a 
           Add suborganization
         </Button>
         <Divider
+          style={{
+            marginTop: 20,
+            marginBottom: 20,
+            backgroundColor: theme.palette.inputColor,
+          }}
+        />
+
+{subOrgs.length > 0 ? (
+      <span>
+  <div style={{ backgroundColor: '#1f2023', textAlign: 'center', width: '100%', padding: '10px' }}>
+       <h3 style={{ margin: 0 }}>Your Sub Organizations of the Current Organization</h3>
+  </div>
+
+  <Divider
+      style={{
+            marginTop: 20,
+            marginBottom: 20,
+            backgroundColor: theme.palette.inputColor,
+          }}
+      />
+
+  <List>
+  <ListItem>
+    <ListItemText primary="Logo" style={{ minWidth: 100, maxWidth: 100 }} />
+    <ListItemText primary="Name" style={{ minWidth: 250, maxWidth: 250 }} />
+    <ListItemText primary="Your role" style={{ minWidth: 150, maxWidth: 150 }} />
+    <ListItemText primary="id" style={{ minWidth: 400, maxWidth: 400 }} />
+  </ListItem>
+      <span>
+        {subOrgs.map((data, index) => {
+          const imagesize = 40;
+          const imageStyle = {
+            width: imagesize,
+            height: imagesize,
+            pointerEvents: "none",
+          };
+          const image =
+            data.image === "" ? (
+              <img alt={data.name} src={theme.palette.defaultImage} style={imageStyle} />
+            ) : (
+              <img alt={data.name} src={data.image} style={imageStyle} />
+            );
+
+          var bgColor = "#27292d";
+          if (index % 2 === 0) {
+            bgColor = "#1f2023";
+          }
+
+          return (
+            <ListItem key={index} style={{ backgroundColor: bgColor }}>
+              <ListItemText primary={image} style={{ minWidth: 100, maxWidth: 100 }} />
+              <ListItemText primary={data.name} style={{ minWidth: 250, maxWidth: 250 }} />
+              <ListItemText primary={data.role} style={{ minWidth: 150, maxWidth: 150 }} />
+              <ListItemText primary={data.id} style={{ minWidth: 400, maxWidth: 400 }} />
+            </ListItem>
+          );
+        })}
+      </span>
+  </List>
+  <Divider
+      style={{
+            marginTop: 20,
+            marginBottom: 20,
+            backgroundColor: theme.palette.inputColor,
+          }}
+        />
+
+</span> 
+) : (
+  <ListItem>
+    No Sub-Organizations available.
+  </ListItem>
+)} 
+<div style={{ backgroundColor: '#1f2023', textAlign: 'center', width: '100%', padding: '10px' }}>
+  <h3 style={{ margin: 0 }}>All Tenants</h3>
+</div>
+
+      <Divider
           style={{
             marginTop: 20,
             marginBottom: 20,
