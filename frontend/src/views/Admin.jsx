@@ -1142,6 +1142,57 @@ const handleGetSubOrgs = (orgId) => {
     });
 };
 
+const handleClickChangeOrg = (orgId) => {
+  // Don't really care about the logout
+  //name: org.name,
+  //orgId = "asd"
+  const data = {
+    org_id: orgId,
+  }
+            
+  localStorage.setItem("globalUrl", "")
+  localStorage.setItem("getting_started_sidebar", "open");
+
+  fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
+    mode: 'cors',
+    credentials: 'include',
+    crossDomain: true,
+    method: 'POST',
+    body: JSON.stringify(data),
+    withCredentials: true,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+  })
+  .then(function(response) {
+    if (response.status !== 200) {
+      console.log("Error in response")
+    }
+
+    return response.json();
+  }).then(function(responseJson) {	
+    if (responseJson.success === true) {
+      if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) { 
+        console.log("Region Change: ", responseJson.region_url)
+        localStorage.setItem("globalUrl", responseJson.region_url)
+        //globalUrl = responseJson.region_url
+      }
+
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
+      toast("Successfully changed active organization - refreshing!")
+    } else {
+      toast("Failed changing org: ", responseJson.reason)
+    }
+  })
+  .catch(error => {
+    console.log("error changing: ", error)
+    //removeCookie("session_token", {path: "/"})
+  })
+}
+
+
   const inviteUser = (data) => {
     //console.log("INPUT: ", data);
     setLoginInfo("");
@@ -4761,10 +4812,19 @@ const handleGetSubOrgs = (orgId) => {
 
           return (
             <ListItem key={index} style={{ backgroundColor: bgColor }}>
-              <ListItemText primary={image} style={{ minWidth: 100, maxWidth: 100 }} />
-              <ListItemText primary={data.name} style={{ minWidth: 250, maxWidth: 250 }} />
-              <ListItemText primary={data.role} style={{ minWidth: 150, maxWidth: 150 }} />
-              <ListItemText primary={data.id} style={{ minWidth: 400, maxWidth: 400 }} />
+               <ListItemText primary={image} style={{ minWidth: 100, maxWidth: 100 }} />
+               <ListItemText primary={data.name} style={{ minWidth: 250, maxWidth: 250 }} />
+               <ListItemText primary={data.role} style={{ minWidth: 150, maxWidth: 150 }} />
+               <ListItemText primary={data.id} style={{ minWidth: 400, maxWidth: 400 }} />
+               <Button
+                  style={{}}
+                  variant="contained"
+                  color="primary"
+                  disabled={userdata.admin !== "true"}
+                  onClick={() => {handleClickChangeOrg(data.id);}}
+               >
+                  Switch Organization
+               </Button>
             </ListItem>
           );
         })}
