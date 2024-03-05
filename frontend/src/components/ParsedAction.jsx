@@ -454,12 +454,7 @@ const ParsedAction = (props) => {
           }
         }
 
-        // FIXME: Add values from previous executions if they exist
-        if (
-          workflow.execution_variables !== null &&
-          workflow.execution_variables !== undefined &&
-          workflow.execution_variables.length > 0
-        ) {
+        if (workflow.execution_variables !== null && workflow.execution_variables !== undefined && workflow.execution_variables.length > 0) {
           for (let [key,keyval] in Object.entries(workflow.execution_variables)) {
             const item = workflow.execution_variables[key];
             actionlist.push({
@@ -474,76 +469,85 @@ const ParsedAction = (props) => {
         }
 
         // Loops parent nodes' old results to fix autocomplete
-				if (getParents !== undefined) {
-        	var parents = getParents(selectedAction);
+		if (getParents !== undefined) {
+        	var parents = getParents(selectedAction)
 
         	if (parents.length > 1) {
-        	  for (let [key,keyval] in Object.entries(parents)) {
-        	    const item = parents[key];
-        	    if (item.label === "Execution Argument") {
-        	      continue;
+			  var labels = []
+        	  //for (let [parentkey, parentkeyval] in Object.entries(parents)) {
+        	  for (let parentkey in parents) {
+        	    const parentNode = parents[parentkey]
+        	    if (parentNode.label === "Execution Argument") {
+        	      continue
         	    }
 
-        	    var exampledata = item.example === undefined || item.example === null ? "" : item.example;
+				//if (labels.includes(item.label)) {
+				//	continue
+				//}
+
+				labels.push(parentNode.label)
+
+        	    var exampledata = parentNode.example === undefined || parentNode.example === null ? "" : parentNode.example
         	    // Find previous execution and their variables
         	    //exampledata === "" &&
         	    if (workflowExecutions.length > 0) {
         	      // Look for the ID
         	      const found = false;
-        	      for (let [key,keyval] in Object.entries(workflowExecutions)) {
-        	        if (
-        	          workflowExecutions[key].results === undefined ||
-        	          workflowExecutions[key].results === null
-        	        ) {
+        	      for (let wfkey in workflowExecutions) {
+        	        if (workflowExecutions[wfkey].results === undefined || workflowExecutions[wfkey].results === null) {
+        	        
         	          continue;
         	        }
 
-        	        var foundResult = workflowExecutions[key].results.find(
-        	          (result) => result.action.id === item.id
-        	        );
+        	        var foundResult = workflowExecutions[wfkey].results.find((result) => result.action.id === parentNode.id)
+
         	        if (foundResult === undefined || foundResult === null) {
-        	          continue;
+        	          continue
         	        }
 
-									if (foundResult.result !== undefined && foundResult.result !== null) {
-										foundResult = foundResult.result
-									}
+					if (foundResult.result !== undefined && foundResult.result !== null) {
+						foundResult = foundResult.result
+					}
 
-									const valid = validateJson(foundResult)
-									if (valid.valid) {
-										if (valid.result.success === false) {
-											//console.log("Skipping success false autocomplete")
-										} else {
-        	          	exampledata = valid.result;
-        	          	break;
-										}
+					const valid = validateJson(foundResult)
+					if (valid.valid) {
+						if (valid.result.success === false) {
+							//console.log("Skipping success false autocomplete")
+						} else {
+
+							// FIXME: Have a merge system to allow to use kind of any key from that node in the last 10-20 execs
+							//if (exampledata.length > 0) {
+							//	exampledata = valid.result
+							//} else {
+							//	exampledata = valid.result
+							//}
+
+							exampledata = valid.result
+							break
+						}
         	        } else {
-        	          exampledata = foundResult;
-									}
+        	          exampledata = foundResult
+					}
         	      }
         	    }
 
         	    // 1. Take
-        	    const itemlabelComplete =
-        	      item.label === null || item.label === undefined
-        	        ? ""
-        	        : item.label.split(" ").join("_");
+        	    const itemlabelComplete = parentNode.label === null || parentNode.label === undefined ? "" : parentNode.label.split(" ").join("_");
 
         	    const actionvalue = {
         	      type: "action",
-        	      id: item.id,
-        	      name: item.label,
+        	      id: parentNode.id,
+        	      name: parentNode.label,
         	      autocomplete: itemlabelComplete,
         	      example: exampledata,
-        	    };
+        	    }
 
-        	    actionlist.push(actionvalue);
+        	    actionlist.push(actionvalue)
         	  }
         	}
 
-					//console.log("ACTIONLIST: ", actionlist)
         	setActionlist(actionlist);
-				}
+		}
       }
     });
 
@@ -672,7 +676,6 @@ const ParsedAction = (props) => {
             selectedAction.parameters[count]["value_replace"] =
               paramcheck["value_replace"];
           }
-          console.log("RESULT: ", selectedAction);
           setSelectedAction(selectedAction);
           //setUpdate(Math.random())
           return;
@@ -2550,9 +2553,9 @@ const ParsedAction = (props) => {
                 {datafield}
 				{/*shufflecode*/}
                 {showDropdown &&
-                showDropdownNumber === count &&
-                data.variant === "STATIC_VALUE" &&
-                jsonList.length > 0 ? (
+				  showDropdownNumber === count &&
+				  data.variant === "STATIC_VALUE" &&
+				  jsonList.length > 0 ? (
                   <FormControl fullWidth style={{ marginTop: 0 }}>
                     <InputLabel
                       id="action-autocompleter"
@@ -2618,7 +2621,8 @@ const ParsedAction = (props) => {
                             <FormatListNumberedIcon style={iconStyle} />
                           ) : (
                             <ExpandMoreIcon style={iconStyle} />
-                          );
+                          )
+
                         return (
                           <MenuItem
                             key={data.name}

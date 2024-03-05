@@ -1096,7 +1096,6 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
-        //console.log("RESPONSE: ", responseJson)
         handleUpdateResults(responseJson, executionRequest);
       })
       .catch((error) => {
@@ -1349,12 +1348,10 @@ const AngularWorkflow = (defaultprops) => {
   const sendStreamRequest = (body) => {
     //console.log("Stream not activated yet.")
     if (!isCloud) {
-		console.log("Stream not activated yet for onprem")
 		return
     }
 
 	if (streamDisabled) {
-		console.log("Stream disabled - send")
 		return
 	}
 
@@ -1365,7 +1362,7 @@ const AngularWorkflow = (defaultprops) => {
 	//const url = ${globalUrl}/api/v1/workflows/${props.match.params.key}/stream
 	//const streamUrl = "http://localhost:5002"
 
-	console.log("Stream request: ", body)
+	//console.log("Stream request: ", body)
 	const streamUrl = "https://stream.shuffler.io"
 	const url = `${streamUrl}/api/v1/workflows/${props.match.params.key}/stream`
 
@@ -1397,7 +1394,7 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
-        console.log("Stream resp: ", responseJson)
+        //console.log("Stream resp: ", responseJson)
       })
       .catch((error) => {
         console.log("Stream send error: ", error.toString())
@@ -1410,10 +1407,20 @@ const AngularWorkflow = (defaultprops) => {
     var success = false;
 
     if (isCloud && !isLoggedIn) {
-      console.log("Should redirect to register with redirect.");
-      window.location.href = `/register?view=/workflows/${props.match.params.key}&message=You need sign up to use workflows with Shuffle`;
-      return;
+      console.log("Should redirect to register with redirect.")
+      window.location.href = `/register?view=/workflows/${props.match.params.key}&message=You need sign up to use workflows with Shuffle`
+      return
     }
+
+	if (curworkflow === undefined || curworkflow === null) {
+		console.log("No workflow during save")
+		return
+	}
+
+	if (curworkflow.actions === undefined || curworkflow.actions === null || curworkflow.actions.length === 0) {
+		console.log("Can't save without actions")
+		return
+	}
 
     setSavingState(2);
 
@@ -4467,7 +4474,6 @@ const AngularWorkflow = (defaultprops) => {
 
       const foundresult = GetParamMatch(paramname, exampledata, "");
       if (foundresult.length > 0) {
-				console.log("FOUND ReS for field: ", dstdata.parameters[dstdataParamKey].name, foundresult)
         if (dstdata.parameters[dstdataParamKey].value.length === 0) {
           dstdata.parameters[dstdataParamKey].value = `$${parentlabel}${foundresult}`;
           dstdata.parameters[dstdataParamKey].autocompleted = true
@@ -4550,7 +4556,6 @@ const AngularWorkflow = (defaultprops) => {
         if (sourcenode.data("app_name") !== "Shuffle Workflow" && sourcenode.data("app_name") !== "User Input") {
           setTimeout(() => {
             const alledges = cy.edges().jsons()
-            console.log("edges: ", alledges, edge)
             var targetedge = alledges.findIndex(
               (data) => data.data.source === edge.source && data.data.id !== edge.id
             )
@@ -4576,7 +4581,6 @@ const AngularWorkflow = (defaultprops) => {
       const edgeCurve = calculateEdgeCurve(sourcenode.position(), destinationnode.position())
       const currentedge = cy.getElementById(edge.id)
       if (currentedge !== undefined && currentedge !== null) {
-		console.log("Setting edge curve: ", edgeCurve)
 		currentedge.style('control-point-distance', edgeCurve.distance)
 		currentedge.style('control-point-weight', edgeCurve.weight)
       }
@@ -4587,7 +4591,6 @@ const AngularWorkflow = (defaultprops) => {
       (data) => data.id === edge.target
     );
     if (targetnode !== -1) {
-      console.log("TARGETNODE: ", targetnode);
       if (workflow.triggers[targetnode].app_name === "User Input" || workflow.triggers[targetnode].app_name === "Shuffle Workflow" || workflow.triggers[targetnode].app_name === "Shuffle Subflow") {
       } else {
         toast("Can't have triggers as target of branch");
@@ -4689,7 +4692,6 @@ const AngularWorkflow = (defaultprops) => {
         /*
         targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
         if (targetnode !== -1) {
-          console.log("TARGETNODE: ", targetnode)
           if (workflow.triggers[targetnode].app_name === "User Input" || workflow.triggers[targetnode].app_name === "Shuffle Workflow") {
           } else {
             toast("Can't have triggers as target of branch")
@@ -4883,7 +4885,6 @@ const AngularWorkflow = (defaultprops) => {
 	  //    toast("Recommendations to show??")
 	  //}
 
-	  console.log("Added to workflow!!")
       setWorkflow(workflow);
   	  fetchRecommendations(workflow)
     } else if (nodedata.type === "TRIGGER") {
@@ -6180,7 +6181,6 @@ const AngularWorkflow = (defaultprops) => {
 		if (inputworkflow.actions !== undefined && inputworkflow.actions !== null && inputworkflow.actions.length > 0) {
 			cy.remove('*')
 		}
-		console.log("INPUT: ", inputworkflow)
 	}
 
 	if (inputworkflow.actions === undefined || inputworkflow.actions === null) {
@@ -6482,6 +6482,7 @@ const AngularWorkflow = (defaultprops) => {
     // Get selected node
 
     if (selectedNode.data().type === "TRIGGER") {
+
       console.log("Should remove trigger!");
       console.log(selectedNode.data());
       const triggerindex = workflow.triggers.findIndex(
@@ -8780,7 +8781,7 @@ const AngularWorkflow = (defaultprops) => {
           results.push({ id: allkeys[parentkey], type: "TRIGGER" });
         } else {
           if (handled.includes(currentnode.data().id)) {
-            continue;
+            continue
           } else {
             handled.push(currentnode.data().id);
             results.push(currentnode.data());
@@ -8817,11 +8818,12 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     // Remove on the end as we don't want to remove everything
-    results = results.filter((data) => data.id !== action.id);
-    results = results.filter((data) => data.type === "ACTION" || data.app_name === "Shuffle Workflow" || data.app_name === "User Input");
-    results.push({ label: "Execution Argument", type: "INTERNAL" });
-    return results;
-  };
+    results = results.filter((data) => data.id !== action.id)
+    results = results.filter((data) => data.type === "ACTION" || data.app_name === "Shuffle Workflow" || data.app_name === "User Input")
+    results.push({ label: "Execution Argument", type: "INTERNAL" })
+
+    return results
+  }
 
   // BOLD name: type: required?
   // FORM
@@ -10290,7 +10292,6 @@ const AngularWorkflow = (defaultprops) => {
                   return response.json();
                 })
                 .then((responseJson) => {
-                  //console.log("RESPONSE: ");
                   setTriggerAuthentication(responseJson);
                   clearInterval(id);
                   newwin.close();
@@ -14290,7 +14291,7 @@ const AngularWorkflow = (defaultprops) => {
                   lastSaved && !workflow.public ? "outlined" : "contained"
                 }
                 onClick={() => {
-                  saveWorkflow()
+                  saveWorkflow(workflow)
 
                   if (workflow.public === true) {
                     console.log("Public!")
@@ -14773,7 +14774,7 @@ const AngularWorkflow = (defaultprops) => {
       </Typography>
       <Typography variant="body2" color="textSecondary">
         This workflow is public	and <span style={{ color: "#f86a3e", cursor: "pointer", }} onClick={() => {
-          saveWorkflow()
+          saveWorkflow(workflow)
         }}>must be saved</span> or exported before use.
       </Typography>
       {Object.getOwnPropertyNames(creatorProfile).length !== 0 && creatorProfile.github_avatar !== undefined && creatorProfile.github_avatar !== null ?
@@ -15563,7 +15564,7 @@ const AngularWorkflow = (defaultprops) => {
 				style={{ color: "white", fontSize: 16 }}
 			  >
 				<h2 style={{ color: "rgba(255,255,255,0.5)" }}>
-				  <DirectionsRunIcon style={{ marginRight: 10 }} />
+				  <DirectionsRunIcon style={{ marginRight: 0, }} />
 				  All Workflow Runs
 				</h2>
 			  </Breadcrumbs>
@@ -18394,9 +18395,16 @@ const AngularWorkflow = (defaultprops) => {
 						cy.removeListener("drag");
 						cy.removeListener("free");
 						cy.removeListener("cxttap");
+
+						//cy.remove('*')
+  						setElements([])
 					}
 				
-  					setupGraph(newrevision) 
+					// Remove all cy nodes
+					setTimeout(() => {
+  						setupGraph(newrevision) 
+					}, 100)
+
 
 					// Re-adding cytoscape triggers
 					if (cy !== undefined && cy !== null) {

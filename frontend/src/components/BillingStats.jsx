@@ -113,8 +113,6 @@ const AppStats = (defaultprops) => {
 		  return
 	  }
 
-	  console.log("START TIME", starttime, endtime)
-
 	  var url = `${globalUrl}/api/v1/workflows/${workflow.id}/executions/count`
 
 	  if (starttime !== "") {
@@ -178,8 +176,6 @@ const AppStats = (defaultprops) => {
 	  const allData = Promise.all(promises);
 
 	  allData.then((data) => {
-	  	console.log("IN ALL DATA")
-
 	  	var total = 0
 	  	for (var i = 0; i < data.length; i++) {
 	  		if (data[i].runcount !== undefined) {

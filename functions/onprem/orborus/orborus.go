@@ -570,12 +570,10 @@ func deployServiceWorkers(image string) {
 		overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
 		overrideHttpsProxy := os.Getenv("SHUFFLE_INTERNAL_HTTPS_PROXY")
 		if len(overrideHttpProxy) > 0 {
-			log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTP_PROXY=%s", overrideHttpProxy))
 		}
 
 		if len(overrideHttpsProxy) > 0 {
-			log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
 		}
 
@@ -1758,12 +1756,10 @@ func main() {
 			overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
 			overrideHttpsProxy := os.Getenv("SHUFFLE_INTERNAL_HTTPS_PROXY")
 			if len(overrideHttpProxy) > 0 {
-				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
 				env = append(env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTP_PROXY=%s", overrideHttpProxy))
 			}
 
 			if len(overrideHttpsProxy) > 0 {
-				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
 				env = append(env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
 			}
 

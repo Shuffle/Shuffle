@@ -518,7 +518,7 @@ export const validateJson = (showResult) => {
 				}
 			}
 		} catch (e) {
-			console.log("Failed parsing inside json subvalues: ", e)
+			//console.log("Failed parsing inside json subvalues: ", e)
 		}
 	}
 

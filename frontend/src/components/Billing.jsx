@@ -431,6 +431,18 @@ const Billing = (props) => {
 					<Typography variant="h6" style={{ marginTop: 10, marginBottom: 10, flex: 5, }}>
 						{top_text}
 					</Typography>
+
+					{top_text === "Base Cloud Access" && userdata.has_card_available === false ?
+						<img 
+							src="/images/stripenew.png" 
+							style={{
+								margin: "auto",
+								width: 100, 
+								backgroundColor: "white", 
+								borderRadius: theme.palette.borderRadius,
+							}}
+						/>
+					: null}
 					{isCloud && highlight === true && top_text !== "Base Cloud Access" ?
 						<Tooltip
 						  title="Sign EULA"
@@ -562,9 +574,10 @@ const Billing = (props) => {
 									userdata.has_card_available === true ?
 										"While you have a card attached to your account, Shuffle will no longer prevent workflows from running. Billing will occur at the start of each month."
 										:
-										`You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit. Your organisations manager email is ${selectedOrganization.org}.`
+										`You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit.`
 								}
 							</Typography>
+							Billing email: {selectedOrganization.org}
 							{/*isCloud ? 
 								<Button 
 									variant="contained" 
@@ -589,6 +602,8 @@ const Billing = (props) => {
 									height: 40, 
 									fontSize: 14, 
 									color: "white",
+									backgroundImage: userdata.has_card_available ? null : "linear-gradient(to right, #f86a3e, #f34079)",
+
 								}}
 								onClick={() => {
 									if (isCloud) {
@@ -632,20 +647,6 @@ const Billing = (props) => {
 								</Button>
 							: null}
 								
-							{userdata.has_card_available === false ?
-								<img 
-									src="/images/stripenew.png" 
-									style={{
-										margin: "auto",
-										marginTop: 20,
-										width: 100, 
-										marginLeft: "35%", 
-										backgroundColor: "white", 
-										borderRadius: theme.palette.borderRadius,
-										clip: "rect(30px, 30px, 30px, 30px)",
-									}}
-								/>
-							: null}
 						</span>
 					: null}
 				{showSupport ? 
