@@ -9873,6 +9873,8 @@ const AngularWorkflow = (defaultprops) => {
                   marginTop: "15px",
                   marginLeft: "10px",
                   overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",  
                   maxWidth: 72,
                 }}
               >
@@ -9892,7 +9894,7 @@ const AngularWorkflow = (defaultprops) => {
                   flex: 1,
                   textAlign: "center",
                   marginTop: "15px",
-                  overflow: "hidden",
+                  overflow: "hidden",  
                   maxWidth: 72,
                 }}
                 onClick={() => { }}
@@ -9916,6 +9918,8 @@ const AngularWorkflow = (defaultprops) => {
                   marginBottom: "auto",
                   marginLeft: "10px",
                   overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                   maxWidth: 72,
                 }}
               >
