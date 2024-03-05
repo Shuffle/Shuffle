@@ -23,4 +23,5 @@ docker run -it \
   -p 3001:80 \
   -p 3002:443 \
   -v $(pwd)/build:/usr/share/nginx/html:ro \
+  --rm \
   ghcr.io/frikky/shuffle-frontend:$TAG
