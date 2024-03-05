@@ -206,8 +206,12 @@ const Admin = (props) => {
   }, [isDropzone]);
 
   useEffect(() => {
-    handleGetSubOrgs(userdata.active_org.id);
-  }, []);
+    if (userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0) {
+      handleGetSubOrgs(userdata.active_org.id);
+    }
+    else console.log("error in user data")
+  }, [userdata]); 
+  
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
@@ -4770,10 +4774,10 @@ const handleClickChangeOrg = (orgId) => {
         />
 
 {subOrgs.length > 0 ? (
-      <span>
-  <div style={{ backgroundColor: '#1f2023', textAlign: 'center', width: '100%', padding: '10px' }}>
-       <h3 style={{ margin: 0 }}>Your Sub Organizations of the Current Organization</h3>
-  </div>
+  <span>
+     <div style={{textAlign: 'center', width: '100%', padding: '10px', marginTop: 20 }}>
+       <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold', letterSpacing: '1px' }}>Sub Organizations of the Current Organization</h3>
+     </div>
 
   <Divider
       style={{
@@ -4812,25 +4816,34 @@ const handleClickChangeOrg = (orgId) => {
 
           return (
             <ListItem key={index} style={{ backgroundColor: bgColor }}>
-               <ListItemText primary={image} style={{ minWidth: 100, maxWidth: 100 }} />
-               <ListItemText primary={data.name} style={{ minWidth: 250, maxWidth: 250 }} />
-               <ListItemText primary={data.role} style={{ minWidth: 150, maxWidth: 150 }} />
-               <ListItemText primary={data.id} style={{ minWidth: 400, maxWidth: 400 }} />
-               <Button
-                  style={{}}
-                  variant="contained"
-                  color="primary"
-                  disabled={userdata.admin !== "true"}
-                  onClick={() => {handleClickChangeOrg(data.id);}}
-               >
+              <ListItemText primary={image} style={{ minWidth: 100, maxWidth: 100 }} />
+              <ListItemText primary={data.name} style={{ minWidth: 250, maxWidth: 250 }} />
+              <ListItemText primary={data.role} style={{ minWidth: 150, maxWidth: 150 }} />
+              <ListItemText primary={data.id} style={{ minWidth: 400, maxWidth: 400 }} />
+            
+              <Button
+                    variant="contained"
+                    color="primary"
+                    disabled={userdata.admin !== "true"}
+                    onClick={() => {handleClickChangeOrg(data.id);}}
+              >
                   Switch Organization
-               </Button>
+              </Button>
+
             </ListItem>
           );
         })}
       </span>
   </List>
-  <Divider
+
+</span> 
+) : (
+   <div style={{ textAlign: 'center', marginTop: 20 }}>
+      <h3 style={{ margin: 0, color: '#b0bec5', fontSize: '1rem', fontStyle: 'italic' }}>No Sub-Organizations found for the Current Organization</h3>
+   </div>
+)}
+
+<Divider
       style={{
             marginTop: 20,
             marginBottom: 20,
@@ -4838,23 +4851,17 @@ const handleClickChangeOrg = (orgId) => {
           }}
         />
 
-</span> 
-) : (
-  <ListItem>
-    No Sub-Organizations available.
-  </ListItem>
-)} 
-<div style={{ backgroundColor: '#1f2023', textAlign: 'center', width: '100%', padding: '10px' }}>
-  <h3 style={{ margin: 0 }}>All Tenants</h3>
-</div>
+   <div style={{textAlign: 'center', width: '100%', padding: '10px', marginTop: 20 }}>
+      <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold', letterSpacing: '1px' }}>All Tenants</h3>
+  </div>
 
-      <Divider
-          style={{
-            marginTop: 20,
-            marginBottom: 20,
-            backgroundColor: theme.palette.inputColor,
-          }}
-        />
+<Divider
+  style={{
+    marginTop: 20,
+    marginBottom: 20,
+    backgroundColor: theme.palette.inputColor,
+  }}
+/>
         <List>
           <ListItem>
             <ListItemText
