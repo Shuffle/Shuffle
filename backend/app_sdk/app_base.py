@@ -476,6 +476,117 @@ class AppBase:
         except Exception as e:
             return request.text
 
+    # Fixes pattern issues in json/liquid based on input and supplied patterns
+    def patternfix_string(self, liquiddata, patterns, regex_patterns, inputtype="liquid"):
+        if not inputtype or inputtype == "liquid":
+            if "{{" not in liquiddata or "}}" not in liquiddata:
+                return liquiddata 
+        elif inputtype == "json":
+            liquiddata = liquiddata.strip()
+    
+            # Validating if it looks like json or not
+            if liquiddata[0] == "{" and liquiddata[len(liquiddata)-1] == "}":
+                pass
+            else:
+                if liquiddata[0] == "[" and liquiddata[len(liquiddata)-1] == "]":
+                    pass
+                else:
+                    return liquiddata
+    
+            # If it's already json, don't touch it
+            try:
+                json.loads(liquiddata)
+                return liquiddata
+            except Exception as e:
+                pass
+        else:
+            print("No replace handler for %s" % inputtype)
+            return liquiddata
+    
+        skipkeys = [" "]
+        newoutput = liquiddata[:]
+        for pattern in patterns:
+            keylocations = []
+            parsedvalue = ""
+            record = False
+            index = -1
+            for key in liquiddata:
+        
+                # Return instant if possible
+                if inputtype == "json":
+                    try:
+                        json.loads(newoutput)
+                        return newoutput
+                    except:
+                        pass
+    
+                index += 1
+                if not key:
+                    if record:
+                        keylocations.append(index)
+                        parsedvalue += key
+    
+                    continue
+    
+                if key in skipkeys:
+                    if record:
+                        keylocations.append(index)
+                        parsedvalue += key
+    
+                    continue
+    
+                if key == pattern[0] and not record:
+                    record = True
+    
+                if key not in pattern:
+                    keylocations = []
+                    parsedvalue = ""
+                    record = False
+    
+                if record:
+                    keylocations.append(index)
+                    parsedvalue += key
+    
+                if len(parsedvalue) == 0:
+                    continue
+    
+                evaluated_value = parsedvalue[:]
+                for skipkey in skipkeys:
+                    evaluated_value = "".join(evaluated_value.split(skipkey))
+    
+                if evaluated_value == pattern:
+                    #print("Found matching: %s (%s)" % (parsedvalue, keylocations))
+                    #print("Should replace with: %s" % patterns[pattern])
+    
+                    newoutput = newoutput.replace(parsedvalue, patterns[pattern], -1)
+    
+            # Return instant if possible
+            if inputtype == "json":
+                try:
+                    json.loads(newoutput)
+                    return newoutput
+                except:
+                    pass
+    
+    
+        for pattern in regex_patterns:
+            newlines = []
+            for line in newoutput.split("\n"):
+                replaced_line = re.sub(pattern, regex_patterns[pattern], line)
+                newlines.append(replaced_line)
+    
+            newoutput = "\n".join(newlines)
+    
+            # Return instant if possible
+            if inputtype == "json":
+                try:
+                    json.loads(newoutput)
+                    return newoutput
+                except:
+                    pass
+    
+        return newoutput
+
     # FIXME: Add more info like logs in here.
     # Docker logs: https://forums.docker.com/t/docker-logs-inside-the-docker-container/68190/2
     def send_result(self, action_result, headers, stream_path):
@@ -2383,6 +2494,8 @@ class AppBase:
             except json.decoder.JSONDecodeError as e:
                 return returndata, is_loop
 
+
+
         # Sending self as it's not a normal function
         def parse_liquid(template, self):
             
@@ -2397,18 +2510,23 @@ class AppBase:
                     self.logger.info("[DEBUG] Shuffle loop shouldn't run in liquid. Data length: %d" % len(template))
                     return template
 
-                #if not "{{" in template or not "}}" in template: 
-                #    if not "{%" in template or not "%}" in template: 
-                #        self.logger.info("Skipping liquid - missing {{ }} and {% %}")
-                #        return template
 
-                #if not "{{" in template or not "}}" in template: 
-                #    return template
+                # New pattern fixer to help with bad liquid formats
+                try:
+                    newoutput = self.patternfix_string(template, 
+                        {
+                            "{{|": '{{ "" |',
+                        },
+                        {
+                            r'\{\{\s*\$[^|}]+\s*\|': '{{ "" |',
+                        }
+                        , 
+                        inputtype="liquid"
+                    )
 
-                #self.logger.info(globals())
-                #if len(template) > 100:
-                #    self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
-                #self.logger.info(f"[DEBUG] Data: {template}")
+                    template = newoutput
+                except Exception as e:
+                    print("[ERROR] Failed liquid parsing fix: %s" % e)
 
                 all_globals = globals()
                 all_globals["self"] = self
