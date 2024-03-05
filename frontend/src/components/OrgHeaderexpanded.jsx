@@ -5,6 +5,7 @@ import theme from '../theme.jsx';
 import { toast } from "react-toastify"
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
+import AuthenticationData  from "./AuthenticationWindow";
 
 import {
   FormControl,
@@ -173,10 +174,32 @@ const OrgHeaderexpanded = (props) => {
 	const [webhookInputValue, setWebhookInputValue] = React.useState("");
 	const [authOptions, setAuthOptions] = React.useState([]);
 	const [selectedAuth, setSelectedAuth] = React.useState('');
+	// const [selectedAppAuth, setSelectedAppAuth] = React.useState({}); // for getting selected app auth parameters
+	const [authenticationModal, setAuthenticationModal] = React.useState(false);
 
-	// for jira modal
-	const [jiraIssueType, setJiraIssueType] = React.useState("");
-	const [jiraProjectKey, setJiraProjectKey] = React.useState("");
+	const [notificationAppDetails, setNotificationAppDetails] = React.useState([]);
+
+	// const [tempResult, setTempResult] = React.useState([])
+
+	// useEffect(() => {
+	// 	if (authOptions.length < 1) {
+	// 		{getAppConfig(selectedAppDetails.id)}
+	// 	}
+	//   }, [authOptions.length]); // not using this now
+
+	  useEffect(() => {
+		if (notificationAppList.length > 0) {
+		  (async () => {
+			const nameList = notificationAppList.map(item => item.name);
+			await prepareNotificationAppList(nameList);
+		  })();
+		}
+	  }, [notificationAppList]);
+	  
+
+	// for jira & email modal
+	const [textFieldValue, setTextFieldValue] = React.useState("");
+	const [textFieldOneValue, setTextFieldOneValue] = React.useState("");
 
   const getAvailableWorkflows = (trigger_index) => {
     fetch(globalUrl + "/api/v1/workflows", {
@@ -315,6 +338,146 @@ const OrgHeaderexpanded = (props) => {
     </Tooltip>
   );
 
+  const getAppIDs = async (appList) => {
+	fetch(globalUrl + "/api/v1/apps", {
+		method: "GET",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		credentials: "include",
+	}).then((response) => {
+			if (response.status !== 200) {
+				toast("Failed getting app ids: ", response.reason);
+				console.log("Status not 200 for app ids :O!");
+				return;
+			}
+			return response.json();
+		}).then((responseJson) => {
+			if (responseJson !== undefined) {
+				// console.log("App ids: ", responseJson)
+				// console.log("App list: ", appList)
+				const filteredApps = responseJson.filter(app => appList.includes(app.name));
+    			const appDetails = filteredApps.map(app => ({ name: app.name, id: app.id }));
+				return appDetails
+				// console.log("App IDs: ", appDetails)
+			}
+		}).catch((error) => {
+			console.log("Error getting app ids: " + error);
+		})
+}
+
+  // getting comms & cases app from app framework
+	var notificationAppList = [];
+	if (selectedOrganization.security_framework.cases && selectedOrganization.security_framework.cases.name.length > 0) {
+	notificationAppList = notificationAppList.concat(selectedOrganization.security_framework.cases);
+	}
+	if (selectedOrganization.security_framework.communication && selectedOrganization.security_framework.communication.name.length > 0) {
+	notificationAppList = notificationAppList.concat(selectedOrganization.security_framework.communication);
+	}
+
+	const mergeAuthData = (result, responseJson) => {
+		const updatedResult = result.map(item => {
+		  const matches = responseJson.filter(authItem => authItem.app.name === item.name);
+		  return {
+			...item,
+			authentication_data: matches.length > 0 ? matches : null
+		  };
+		});
+		return updatedResult;
+	  };	  
+
+	const prepareNotificationAppList = async (appList) => {
+		// getting App ID,Authentication fields and saved auths for each app
+		var result = []
+		if (appList.length > 0) {
+			fetch(globalUrl + "/api/v1/apps", {
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json",
+				},
+				credentials: "include",
+			}).then((response) => {
+				if (response.status !== 200) {
+					toast("Failed getting app ids: ", response.reason);
+					console.log("Status not 200 for app ids :O!");
+					return;
+				}
+				return response.json();
+			}).then((responseJson) => {
+				if (responseJson !== undefined) {
+					const filteredApps = responseJson.filter(app => appList.includes(app.name));
+					const appDetails = filteredApps.map(app => ({ name: app.name, id: app.id })); //mapped apps with IDs as sometime Ids were not correct in security framework
+					// console.log("appDetails: ", appDetails)
+					// result = appDetails
+
+					fetch(globalUrl + "/api/v1/apps/authentication", {
+						method: "GET",
+						headers: {
+							"Content-Type": "application/json",
+							Accept: "application/json",
+						},
+						credentials: "include",
+					})
+						.then((response) => {
+							if (response.status !== 200) {
+								toast(`Failed getting auth for : `, response.reason);
+								console.log("Status not 200 for app auth :O!");
+								return;
+							}
+							return response.json();
+						}).then(async (responseJson) => {
+							if (!responseJson.success) {
+								console.log("Could not get app auth")
+								return;
+							}
+							// console.log("responseJson of auth: ", responseJson.data)
+							result = await mergeAuthData(appDetails, responseJson.data)
+							console.log("merged auth data: ", result)
+							// console.log("result", result)
+							result.map(item => {
+								fetch(globalUrl + `/api/v1/apps/${item.id}/config`, {
+									method: "GET",
+									headers: {
+										"Content-Type": "application/json",
+										Accept: "application/json",
+									},
+									credentials: "include",
+								}).then((response) => {
+									if (response.status !== 200) {
+										toast(`Failed getting config for ${item.id}: `, response.reason);
+										console.log("Status not 200 for app config :O!");
+										return;
+									}
+									return response.json();
+								}).then((responseJson) => {
+									if (!responseJson.success) {
+										console.log("Could not get app config")
+										return;
+									}
+									var decodedString = JSON.parse(atob(responseJson.app));
+									// console.log("dcodedString: ",decodedString)
+									item.auth_config = decodedString.authentication
+									item.large_image = decodedString.large_image
+									setNotificationAppDetails(result)
+									console.log("notificationAppDetails: ", notificationAppDetails)
+									// setSelectedAppAuth(decodedString.authentication)
+								}).catch((error) => {
+									console.log("Error getting app config: " + error);
+									toast("Error getting app config: " + error);
+								})
+							})
+							// get auth config for each app as it is required to render the modal when auth is not available
+						})
+				}
+			}).catch((error) => {
+				console.log("Error getting app ids: " + error);
+			})
+		}
+	}
+
+
   const executeTestWorkflow = async (workflowid) => {
 	const data = { "execution_argument": '{"title":"THIS IS TEST ALERT","description":"TEST ALERT FROM SHUFFLE","reference_url": "shuffler.io"}' }
 	fetch(globalUrl + `/api/v1/workflows/${workflowid}/execute`, {
@@ -342,7 +505,7 @@ const OrgHeaderexpanded = (props) => {
 const generateNotificationWorkflow = async (appname,appImage,appAuthId,projectId,issuetype) => {
 	//currently only supports JIRA figure out a way to support more apps
 	var workflowName = `[GENARATED] ${appname} notification workflow`
-	var workflowDescription = "Generated by Shuffle for sending error notifications."
+	var workflowDescription = "Generated by Shuffle for sending info/error notifications."
 	var data = {
 		"name": workflowName,
 		"description": workflowDescription,
@@ -467,6 +630,121 @@ const generateNotificationWorkflow = async (appname,appImage,appAuthId,projectId
 		})
 }
 
+const generateEmailNotificationWorkflow = async (appname,appImage,shuffleAPIKey,recepients) => {
+	//currently only supports  figure out a way to support more apps
+	var workflowName = `[GENARATED] ${appname} notification workflow`
+	var workflowDescription = "Generated by Shuffle for sending info/error notifications."
+	var data = {
+		"name": workflowName,
+		"description": workflowDescription,
+	}
+
+	fetch(globalUrl + "/api/v1/workflows", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify(data),
+		credentials: "include",
+	})
+		.then((response) => {
+			if (response.status !== 200) {
+				toast("Failed setting notification workflow: ", response.reason);
+				console.log("Status not 200 for workflows :O!");
+				return;
+			}
+			return response.json();
+		}).then((responseJson)=>{
+			if (responseJson !== undefined) {
+				console.log("Notification workflow created successfully")
+				var workflow_id = responseJson.id
+				if (appname.toLowerCase() === "email"){
+					console.log("updating workflow for email")
+					var workflowBody = {
+						"name": workflowName,
+						"Description": workflowDescription,
+						"id": workflow_id,
+						"actions": [
+							{
+								"app_name": "email",
+								"name": "send_email_shuffle",
+								"large_image":appImage,
+								"isStartNode": true,
+								"label": "send_email_shuffle",
+								"app_version": "1.3.0",
+								"parameters": [
+									{
+										"name": "apikey",
+										"value": shuffleAPIKey
+									},
+									{
+										"name": "recipients",
+										"value": recepients
+									},
+									{
+										"name": "subject",
+										"value": "$exec.title"
+									},
+									{
+										"name":"body",
+										"value":"$exec.description"
+									}
+								]
+							}
+						]
+					}
+				} 
+				fetch(globalUrl + `/api/v1/workflows/${workflow_id}`, {
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						Accept: "application/json",
+					},
+					body: JSON.stringify(workflowBody),
+					credentials: "include",
+				})
+					.then((response) => {
+						if (response.status !== 200) {
+							toast("Failed setting notification workflow: ", response.reason);
+							console.log("Status not 200 for workflows :O!");
+							return;
+						}
+						return response.json();
+					}).then((responseJson)=>{
+						if (responseJson !== undefined) {
+							handleEditOrg(
+								orgName,
+								orgDescription,
+								selectedOrganization.id,
+								selectedOrganization.image,
+								{
+									app_download_repo: appDownloadUrl,
+									app_download_branch: appDownloadBranch,
+									workflow_download_repo: workflowDownloadUrl,
+									workflow_download_branch: workflowDownloadBranch,
+									notification_workflow: workflow_id,
+									documentation_reference: documentationReference,
+								},
+								{
+									sso_entrypoint: ssoEntrypoint,
+									sso_certificate: ssoCertificate,
+									client_id: openidClientId,
+									client_secret: openidClientSecret,
+									openid_authorization: openidAuthorization,
+									openid_token: openidToken,
+								}
+							)
+							console.log("Notification workflow updated successfully")
+							toast("Notification workflow updated successfully")
+						}
+					})
+			}
+		}).catch((error) => {
+			console.log("Error setting workflows: " + error);
+		})
+}
+
 const getAppAuth = async (appName) => {
 	fetch(globalUrl + "/api/v1/apps/authentication", {
 		method: "GET",
@@ -494,6 +772,35 @@ const getAppAuth = async (appName) => {
 
 		}).catch((error) => {
 			console.log("Error getting app auth: " + error);
+		})
+}
+
+const getAppConfig = async (appId) => {
+	fetch(globalUrl + `/api/v1/apps/${appId}/config`, {
+		method: "GET",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		credentials: "include",
+	}).then((response) => {
+			if (response.status !== 200) {
+				toast(`Failed getting config for ${appId}: `, response.reason);
+				console.log("Status not 200 for app config :O!");
+				return;
+			}
+			return response.json();
+		}).then((responseJson) => {
+			if (!responseJson.success) {
+				console.log("Could not get app config")
+				return;
+			}
+			var decodedString = JSON.parse(atob(responseJson.app));
+			console.log("dcodedString: ",decodedString)
+			return decodedString.authentication
+			// setSelectedAppAuth(decodedString.authentication)
+		}).catch((error) => {
+			console.log("Error getting app config: " + error);
 		})
 }
 
@@ -570,10 +877,12 @@ const modalView = notificationWorkflowModal ? (
 			</DialogTitle>
 			<DialogContent style={{ color: "rgba(255,255,255,0.65)", overflowY: 'auto', maxHeight: '450px' }}>
 				<Divider style={{ marginBottom: '1em', backgroundColor: 'rgba(255,255,255,0.12)' }} />
-
-				{authOptions.length > 0 ?
+				{console.log("len Selected app details: ", selectedAppDetails)}
+				{(selectedAppDetails.authentication_data || selectedAppDetails.auth_config.required == false) ?
 					<>
 						<Box mb={2}>
+							{selectedAppDetails.auth_config.required == false ? "No authentication required":
+							<>
 							<Typography variant="body1" style={{ marginBottom: '0.5rem' }}>
 								Pick an authentication method from the list
 							</Typography>
@@ -582,14 +891,15 @@ const modalView = notificationWorkflowModal ? (
 								<Select
 									labelId="demo-simple-select-label"
 									id="demo-simple-select"
-									value={selectedAuth} 
+									value={selectedAuth}
+									disabled = {selectedAppDetails.auth_config.required == false ? true : false} 
 									onChange={(event) => {setSelectedAuth(event.target.value)
 										console.log("Selected auth: ", selectedAuth)
 									}}
 									label="Available authentications"
 									required={true}
 								>
-									{authOptions.map((option) => (
+									{selectedAppDetails.auth_config.required == false  ?  "No authentication required" : selectedAppDetails.authentication_data.map((option) => (
 										<MenuItem key={option.id} value={option.id}>
 											<div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
 												<Chip label={option.app.app_version} variant="outlined" />
@@ -597,7 +907,7 @@ const modalView = notificationWorkflowModal ? (
 											</div>
 										</MenuItem>))}
 								</Select>
-							</FormControl>
+							</FormControl></>}
 						</Box>
 						<Box mt={2}>
 							<Typography variant="body1">
@@ -616,10 +926,10 @@ const modalView = notificationWorkflowModal ? (
 								id="outlined-with-placeholder"
 								margin="normal"
 								variant="outlined"
-								placeholder="Project key"
+								placeholder={ selectedAppDetails.name.toLowerCase() === "jira" ? "Project key" : "Shuffle API key"}
 								// value={webhookInputValue}
 								onChange={(e) => {
-									setJiraProjectKey(e.target.value)
+									setTextFieldOneValue(e.target.value)
 								}}
 								InputProps={{
 									classes: {
@@ -642,10 +952,10 @@ const modalView = notificationWorkflowModal ? (
 								id="outlined-with-placeholder"
 								margin="normal"
 								variant="outlined"
-								placeholder="Issue type"
+								placeholder={selectedAppDetails.name.toLowerCase() === "jira" ? "Issue type" : "Recepients (comma separated)"}
 								// value={webhookInputValue}
 								onChange={(e) => {
-									setJiraIssueType(e.target.value)
+									setTextFieldValue(e.target.value)
 								}}
 								InputProps={{
 									classes: {
@@ -654,28 +964,18 @@ const modalView = notificationWorkflowModal ? (
 									style: {
 										color: "white",
 									},
-								}} />
+								}} />			
 						</Box>
-					</> : <>
-						<Typography
-							variant="subtitle1"
-							style={{
-								whiteSpace: 'nowrap',
-								overflow: 'hidden',
-							}}
-						>
-							{`No ${selectedAppDetails.name} auth found. Click below to set one up.`}
-						</Typography>
-						<Button
-							style={{ borderRadius: "0px", marginTop: 10 }}
-							variant="outlined"
-							onClick={() => {
-								setNotificationWorkflowModal(false);
-							}}
-							color="primary"
-						>
-							Configure
-						</Button>
+					</> : 
+					<>
+					<AuthenticationData
+						app={selectedAppDetails}
+						// globalUrl={globalUrl}
+						authenticationModalOpen={(selectedAppDetails.authentication_data && selectedAppDetails.authentication_data.length > 0) ? false : true}
+						// // setAuthenticationModalOpen={false}
+						selectedApp={{...selectedAppDetails,authentication: selectedAppDetails.auth_config}}
+						// getAppAuthentication={selectedAppDetails.name}
+					/>
 					</>
 				}
 			</DialogContent>
@@ -692,11 +992,12 @@ const modalView = notificationWorkflowModal ? (
 				<Button
 					variant="contained"
 					style={{ borderRadius: "0px" }}
-					disabled={(authOptions.length > 0 ? false : true) || !notificationWorkflowModalValid}
+					// disabled={(authOptions.length > 0 ? false : true) || !notificationWorkflowModalValid}
 					onClick={async () => {
 						// var workflowUpdate = await setTeamsWorkflow(webhookInputValue)
 						console.log("Selectedappdetails: ", selectedAppDetails)
-						generateNotificationWorkflow(selectedAppDetails.name, selectedAppDetails.large_image,selectedAuth, jiraProjectKey, jiraIssueType)
+						selectedAppDetails.name == "email" ? generateEmailNotificationWorkflow(selectedAppDetails.name, selectedAppDetails.large_image,textFieldOneValue, textFieldValue) :
+						generateNotificationWorkflow(selectedAppDetails.name, selectedAppDetails.large_image,selectedAuth, textFieldOneValue, textFieldValue)
 						setNotificationWorkflowModal(false);
 					}}
 					color="primary"
@@ -708,14 +1009,6 @@ const modalView = notificationWorkflowModal ? (
 	</Dialog >
 ) : null
 
-// getting comms & cases app from app framework
-var notificationAppList = [];
-if (selectedOrganization.security_framework.cases && selectedOrganization.security_framework.cases.name.length > 0) {
-notificationAppList = notificationAppList.concat(selectedOrganization.security_framework.cases);
-}
-if (selectedOrganization.security_framework.communication && selectedOrganization.security_framework.communication.name.length > 0) {
-notificationAppList = notificationAppList.concat(selectedOrganization.security_framework.communication);
-}
 
 const renderChips = (apps) => {
 if (!apps || apps.length === 0) {
@@ -725,7 +1018,9 @@ if (!apps || apps.length === 0) {
 			variant="outlined"
 			onClick={() => {
 				console.log(`Clicked EMAIL`)
+				setSelectedAppDetails("email")
 				setNotificationWorkflowModal(true)
+				// setNotificationWorkflowModal(true)
 			}}
 			avatar={<img src={"https://storage.googleapis.com/shuffle_public/app_images/email_f33aa6a9c04e64cbf5d89d927ff0cd38.png"} alt={"email app logo"} style={{ width: 24, height: 24, borderRadius: '50%' }} />}
 		/>
@@ -743,8 +1038,8 @@ return (
 					console.log(`Clicked ${app.name}`)
 					setSelectedAppDetails(app)
 					setNotificationWorkflowModal(true)
-					getAppAuth(app.name)
-					console.log(selectedAppDetails)
+					// getAppAuth(app.name)
+					console.log("selectedAppDEtails",selectedAppDetails)
 				}}
 				avatar={<img src={app.large_image} alt={app.name} style={{ width: 24, height: 24, borderRadius: '50%' }} />}
 			/>
@@ -763,7 +1058,7 @@ return (
 						{modalView}
 					{/*{testWorkflowModal} */}
 					<div style={{ marginBottom: '10px' }}>
-						{renderChips(notificationAppList)}</div>
+						{renderChips(notificationAppDetails)}</div>
 						{/*
 						<Typography variant="body2" color="textSecondary">
 							Add a Workflow that receives notifications from Shuffle when an error occurs in one of your workflows
