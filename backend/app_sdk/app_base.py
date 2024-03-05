@@ -361,6 +361,7 @@ class AppBase:
         if len(self.base_url) == 0:
             self.base_url = self.url
 
+
         self.local_storage = []
 
     # Checks output for whether it should be automatically parsed or not
@@ -718,9 +719,6 @@ class AppBase:
             #self.logger.info(f"DATA: {data}")
             # 1594869a676630b397bc34f7dc0951a3
 
-            #self.logger.info(f"VALUE URL: {url}") 
-            #self.logger.info(f"RET: {ret.text}")
-            #self.logger.info(f"ID: {ret.status_code}")
             url = f"{self.url}/api/v1/orgs/{org_id}/validate_app_values"
             ret = requests.post(url, json=data, verify=False, proxies=self.proxy_config)
             if ret.status_code == 200:
@@ -1108,7 +1106,6 @@ class AppBase:
                 except Exception as e:
                     self.logger.warning("[ERROR] Failed to parse coroutine value for old app: {e}")
 
-                #self.logger.info("RET from execution: %s" % ret)
                 new_value = tmp
                 if tmp == None:
                     new_value = ""
@@ -1244,8 +1241,6 @@ class AppBase:
         full_execution = self.full_execution
         org_id = full_execution["workflow"]["execution_org"]["id"]
 
-        self.logger.info("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
-
         if isinstance(value, list):
             self.logger.info("IS LIST!")
             #if len(value) == 1:
@@ -1273,7 +1268,6 @@ class AppBase:
             }
 
             ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers, verify=False, proxies=self.proxy_config)
-            self.logger.info("RET1 (file get): %s" % ret1.text)
             if ret1.status_code != 200:
                 returns.append({
                     "filename": "",
@@ -1284,7 +1278,6 @@ class AppBase:
 
             content_path = "/api/v1/files/%s/content?execution_id=%s" % (item, full_execution["execution_id"])
             ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers, verify=False, proxies=self.proxy_config)
-            self.logger.info("RET2 (file get) done")
             if ret2.status_code == 200:
                 tmpdata = ret1.json()
                 returndata = {
@@ -1293,8 +1286,6 @@ class AppBase:
                     "data": ret2.content,
                 }
                 returns.append(returndata)
-
-            self.logger.info("RET3 (file get done)")
 
         if len(returns) == 0:
             return {
@@ -1465,7 +1456,6 @@ class AppBase:
             #self.logger.info(f"Ret CREATE: {ret.text}")
             cur_id = ""
             if ret.status_code == 200:
-                #self.logger.info("RET: %s" % ret.text)
                 ret_json = ret.json()
                 if not ret_json["success"]:
                     self.logger.info("Not success in file upload creation.")
@@ -1488,14 +1478,11 @@ class AppBase:
             }
 
             upload_path = "/api/v1/files/%s/upload?execution_id=%s" % (cur_id, full_execution["execution_id"])
-            self.logger.info("Create path: %s" % create_path)
 
             files={"shuffle_file": (filename, curfile["data"])}
             #open(filename,'rb')}
 
             ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers, verify=False, proxies=self.proxy_config)
-            self.logger.info("Ret UPLOAD: %s" % ret.text)
-            self.logger.info("Ret2 UPLOAD: %d" % ret.status_code)
 
         return file_ids
     
@@ -1657,12 +1644,28 @@ class AppBase:
 
         self.full_execution = fullexecution
 
-        #try:
-        #    if "backend_url" in self.full_execution:
-        #        self.url = self.full_execution["backend_url"]
-        #        self.base_url = self.full_execution["backend_url"]
-        #except KeyError:
-        #    pass
+        found_id = ""
+        try:
+            if "execution_id" in self.full_execution and len(self.full_execution["execution_id"]) > 0:
+                found_id = self.full_execution["execution_id"]
+            elif len(self.current_execution_id) > 0:
+                found_id = self.current_execution_id
+        except Exception as e:
+            print("[ERROR] Failed in get full exec")
+                
+        try:
+            contains_body = False
+            parameter_count = 0
+
+            if "parameters" in self.action:
+                parameter_count = len(self.action["parameters"])
+                for param in self.action["parameters"]:
+                    if param["name"] == "body":
+                        contains_body = True
+
+            print("[DEBUG][%s] Action name: %s, Params: %d, Has Body: %s" % (self.current_execution_id, self.action["name"], parameter_count, str(contains_body)))
+        except Exception as e:
+            print("[ERROR] Failed in init print handler: %s" % e)
 
         try:
             if replace_params == True:
@@ -1670,7 +1673,8 @@ class AppBase:
                     self.logger.info("[DEBUG] ID: %s vs %s" % (inner_action["id"], self.action["id"]))
 
                     # In case of some kind of magic, we're just doing params
-                    if inner_action["id"] == self.action["id"]:
+                    if inner_action["id"] != self.action["id"]:
+                        continue
                         self.logger.info("FOUND!")
 
                         if isinstance(self.action, str):
@@ -2366,7 +2370,6 @@ class AppBase:
             returndata = str(parseditem)+str(appendresult)
 
             # New in 0.8.97: Don't return items without lists
-            #self.logger.info("RETURNDATA: %s" % returndata)
             #return returndata, is_loop
 
             # 0.9.70:
@@ -3747,7 +3750,6 @@ class AppBase:
                                 # Handles files.
                                 filedata = ""
                                 file_ids = []
-                                self.logger.info("TUPLE: %s" % newres[1])
                                 if isinstance(newres[1], list):
                                     self.logger.info("[INFO] HANDLING LIST FROM RET")
                                     file_ids = self.set_files(newres[1])
