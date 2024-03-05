@@ -135,6 +135,15 @@ def patternfix_string(liquiddata, patterns, regex_patterns, inputtype="liquid"):
             except:
                 pass
 
+    # Dont return json properly unless actually json
+    if inputtype == "json":
+        try:
+            json.loads(newoutput)
+            return newoutput
+        except:
+            # Returns original if json fixing didn't work
+            return liquiddata
+
     return newoutput 
 
 print("Start:\n%s" % input_data)
