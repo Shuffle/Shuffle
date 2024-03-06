@@ -4923,7 +4923,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/change", shuffle.HandleChangeUserOrg).Methods("POST", "OPTIONS") // Swaps to the org
 
 	r.HandleFunc("/api/v1/orgs/{orgId}", shuffle.HandleDeleteOrg).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/api/v1/subOrgs/{orgId}", shuffle.HandleGetSubOrg).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/subOrgs/{orgId}", shuffle.HandleGetSubOrgs).Methods("GET", "OPTIONS")
 
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
