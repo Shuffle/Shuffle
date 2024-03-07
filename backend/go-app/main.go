@@ -881,13 +881,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	}
 
 
-	// Do it per user? 
-	if err == nil && len(org.SubscriptionUserId) == 0 {
-		manageOrgSubSignup(org)
-
-		func manageOrgSubSignup(org shuffle.Organization)
-	}
-
 	//if err == nil {
 	if len(org.Id) > 0 {
 		userInfo.ActiveOrg = shuffle.OrgMini{
