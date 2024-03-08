@@ -73,6 +73,7 @@
     "react-ga4": "^2.0.0",
     "react-hotkeys": "^2.0.0",
     "react-i18next": "^13.1.2",
+    "react-icons": "^5.0.1",
     "react-instantsearch-dom": "^6.28.0",
     "react-json-pretty": "^2.2.0",
     "react-json-view": "^1.21.3",
@@ -103,7 +104,7 @@
     "zone.js": "~0.8.26"
   },
   "scripts": {
-    "start": "HTTPS=false&&PORT=3000 GENERATE_SOURCEMAP=false react-scripts --openssl-legacy-provider start",
+    "start": "set HTTPS=false&& set PORT=3000&& set GENERATE_SOURCEMAP=false&& react-scripts --openssl-legacy-provider start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
