@@ -19,7 +19,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/shuffle-shared v0.5.72
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.17.0
 	google.golang.org/api v0.125.0
 	google.golang.org/grpc v1.55.0
 	gopkg.in/src-d/go-git.v4 v4.13.1
@@ -44,7 +44,7 @@ require (
 	github.com/bitly/go-simplejson v0.5.0 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874 // indirect
 	github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013 // indirect
-	github.com/cloudflare/circl v1.3.3 // indirect
+	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/containerd/containerd v1.6.18 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
