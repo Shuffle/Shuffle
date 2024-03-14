@@ -80,6 +80,7 @@ import {
   Visibility as VisibilityIcon,
   Done as DoneIcon,
   Close as CloseIcon,
+  DragIndicator as DragIndicatorIcon, 
   Error as ErrorIcon,
   Warning as WarningIcon, 
   ArrowLeft as ArrowLeftIcon,
@@ -250,6 +251,7 @@ function useWindowSize() {
     function updateSize() {
       setSize([window.innerWidth, window.innerHeight]);
     }
+
     window.addEventListener("resize", updateSize);
     updateSize();
     return () => window.removeEventListener("resize", updateSize);
@@ -598,9 +600,29 @@ const AngularWorkflow = (defaultprops) => {
   const unloadText = "Are you sure you want to leave without saving (CTRL+S)?";
   const classes = useStyles();
 
-  const [bodyWidth, bodyHeight] = useWindowSize()
-  //console.log("Mobile: ", isMobile, bodyWidth, bodyHeight)
+  var [bodyWidth, bodyHeight] = useWindowSize()
   const cytoscapeWidth = isMobile ? bodyWidth - leftBarSize : bodyWidth - leftBarSize - 25
+
+  /*
+  // Zoom testing to try autofixing for small screens
+  if (document !== undefined && document !== null && !isMobile) {
+	  const currentZoom = document.body.style.zoom;
+
+	  if (bodyWidth < 1367 || bodyHeight < 769) {
+		  console.log("LOWER ZOOM")
+		  document.body.style.zoom = "80%"
+		  bodyWidth = bodyWidth*0.8
+		  bodyHeight = bodyHeight*0.8
+	  } else {
+		  console.log("RESET ZOOM")
+		  document.body.style.zoom = "100%"
+	  }
+  }
+
+  console.log("Width, height: ", bodyWidth, bodyHeight)
+  */
+
+  //console.log("Mobile: ", isMobile, bodyWidth, bodyHeight)
 	
   const [elements, setElements] = useState([]);
   const [loopRunning, setLoopRunning] = useState(false)
@@ -7691,7 +7713,7 @@ const AngularWorkflow = (defaultprops) => {
     marginTop: 1,
     overflowY: "auto",
     overflowX: "hidden",
-  };
+  }
 
   const handleAppDrag = (e, app) => {
     const cycontainer = cy.container();
@@ -8426,6 +8448,7 @@ const AngularWorkflow = (defaultprops) => {
                     </div>
                 )
               })}
+
 			  {visibleApps.length <= 4 ? ( 
 				<div
 				  style={{ textAlign: "center", width: leftBarSize, marginTop: 40, maxWidth: 340, overflow: "hidden",  }}
@@ -8444,7 +8467,10 @@ const AngularWorkflow = (defaultprops) => {
 					</Index>
 				  </InstantSearch>
 				</div>
-			) : null}
+			) : 
+				<div 
+					style={{marginTop: 100, }}
+				/>}
             </div>
           ) : apps.length > 0 ? (
             <div
@@ -8993,7 +9019,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const AppConditionHandler = (props) => {
     const { tmpdata, type } = props;
-    const [data] = useState({...tmpdata});
+    const [data] = useState(tmpdata);
     const [multiline, setMultiline] = useState(false);
     const [showAutocomplete, setShowAutocomplete] = React.useState(false);
     const [actionlist, setActionlist] = React.useState([]);
@@ -9595,9 +9621,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
-                    const newConditionValue = { ...conditionValue };
-                    newConditionValue.value = "equals";
-                    setConditionValue(newConditionValue);
+                    conditionValue.value = "equals";
+                    setConditionValue(conditionValue);
                     setVariableAnchorEl(null);
                   }}
                   key={"equals"}
@@ -9607,9 +9632,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
-                    const newConditionValue = { ...conditionValue };
-                    newConditionValue.value = "does not equal";
-                    setConditionValue(newConditionValue);
+                    conditionValue.value = "does not equal";
+                    setConditionValue(conditionValue);
                     setVariableAnchorEl(null);
                   }}
                   key={"does not equal"}
@@ -9619,9 +9643,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
-                    const newConditionValue = { ...conditionValue };
-                    newConditionValue.value = "startswith";
-                    setConditionValue(newConditionValue);
+                    conditionValue.value = "startswith";
+                    setConditionValue(conditionValue);
                     setVariableAnchorEl(null);
                   }}
                   key={"starts with"}
@@ -9631,9 +9654,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
-                    const newConditionValue = { ...conditionValue };
-                    newConditionValue.value = "endswith";
-                    setConditionValue(newConditionValue);
+                    conditionValue.value = "endswith";
+                    setConditionValue(conditionValue);
                     setVariableAnchorEl(null);
                   }}
                   key={"ends with"}
@@ -9643,9 +9665,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
-                    const newConditionValue = { ...conditionValue };
-                    newConditionValue.value = "contains";
-                    setConditionValue(newConditionValue);
+                    conditionValue.value = "contains";
+                    setConditionValue(conditionValue);
                     setVariableAnchorEl(null);
                   }}
                   key={"contains"}
@@ -9655,9 +9676,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
-                    const newConditionValue = { ...conditionValue };
-                    newConditionValue.value = "contains_any_of";
-                    setConditionValue(newConditionValue);
+                    conditionValue.value = "contains_any_of";
+                    setConditionValue(conditionValue);
                     setVariableAnchorEl(null);
                   }}
                   key={"contains_any_of"}
@@ -9667,9 +9687,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
-                    const newConditionValue = { ...conditionValue };
-                    newConditionValue.value = "matches regex";
-                    setConditionValue(newConditionValue);
+                    conditionValue.value = "matches regex";
+                    setConditionValue(conditionValue);
                     setVariableAnchorEl(null);
                   }}
                   key={"matches regex"}
@@ -9679,9 +9698,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
-                    const newConditionValue = { ...conditionValue };
-                    newConditionValue.value = "larger than";
-                    setConditionValue(newConditionValue);
+                    conditionValue.value = "larger than";
+                    setConditionValue(conditionValue);
                     setVariableAnchorEl(null);
                   }}
                   key={"larger than"}
@@ -9691,9 +9709,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
-                    const newConditionValue = { ...conditionValue };
-                    newConditionValue.value = "less than";
-                    setConditionValue(newConditionValue);
+                    conditionValue.value = "less than";
+                    setConditionValue(conditionValue);
                     setVariableAnchorEl(null);
                   }}
                   key={"less than"}
@@ -9703,9 +9720,8 @@ const AngularWorkflow = (defaultprops) => {
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
-                    const newConditionValue = { ...conditionValue };
-                    newConditionValue.value = "is empty";
-                    setConditionValue(newConditionValue);
+                    conditionValue.value = "is empty";
+                    setConditionValue(conditionValue);
                     setVariableAnchorEl(null);
                   }}
                   key={"is empty"}
@@ -9873,8 +9889,6 @@ const AngularWorkflow = (defaultprops) => {
                   marginTop: "15px",
                   marginLeft: "10px",
                   overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",  
                   maxWidth: 72,
                 }}
               >
@@ -9894,7 +9908,7 @@ const AngularWorkflow = (defaultprops) => {
                   flex: 1,
                   textAlign: "center",
                   marginTop: "15px",
-                  overflow: "hidden",  
+                  overflow: "hidden",
                   maxWidth: 72,
                 }}
                 onClick={() => { }}
@@ -9918,8 +9932,6 @@ const AngularWorkflow = (defaultprops) => {
                   marginBottom: "auto",
                   marginLeft: "10px",
                   overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
                   maxWidth: 72,
                 }}
               >
@@ -13582,16 +13594,14 @@ const AngularWorkflow = (defaultprops) => {
                   },
                 }}
                 disabled={
-                  workflow.triggers[selectedTriggerIndex].status === "running"
+                  workflow.triggers[selectedTriggerIndex] === null || workflow.triggers[selectedTriggerIndex] === undefined ? false : workflow.triggers[selectedTriggerIndex].status === "running"
                 }
                 fullWidth
                 rows="6"
                 multiline
                 color="primary"
                 defaultValue={
-                  workflow.triggers[selectedTriggerIndex] !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== null && workflow.triggers[selectedTriggerIndex].parameters.length > 1 ?
-				  	workflow.triggers[selectedTriggerIndex].parameters[1].value
-					: ""
+                  workflow.triggers[selectedTriggerIndex] !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== null && workflow.triggers[selectedTriggerIndex].parameters.length > 1 ? workflow.triggers[selectedTriggerIndex].parameters[1].value : ""
                 }
                 placeholder='{"example": {"json": "is cool"}}'
                 onBlur={(e) => {
@@ -13661,10 +13671,15 @@ const AngularWorkflow = (defaultprops) => {
     top: isMobile ? 30 : appBarSize + 20,
   };
 
+
+
+
   const TopCytoscapeBar = (props) => {
     if (workflow.public === true) {
       return null
     }
+
+    const isCorrectOrg = workflow.public === true || userdata.active_org.id === undefined || userdata.active_org.id === null || workflow.org_id === null || workflow.org_id === undefined || workflow.org_id.length === 0 || userdata.active_org.id === workflow.org_id 
 
     return (
       <div style={topBarStyle}>
@@ -13691,7 +13706,7 @@ const AngularWorkflow = (defaultprops) => {
             <h2 style={{ margin: 0 }}>{workflow.name}</h2>
           </Breadcrumbs>
 
-		  {workflow.public === true || userdata.active_org.id === undefined || userdata.active_org.id === null || workflow.org_id === null || workflow.org_id === undefined || workflow.org_id.length === 0 || userdata.active_org.id === workflow.org_id ? null :
+		  {isCorrectOrg ? null :
 			<Typography variant="body1">
 				<b>Warning</b>: Change <span
 			  		style={{color: "#f85a3e", cursor: "pointer"}}
@@ -14053,7 +14068,6 @@ const AngularWorkflow = (defaultprops) => {
 	)
   }
 
-
   const showErrors = !isMobile && !workflow.public && workflow.errors !== undefined && workflow.errors !== null && workflow.errors.length > 0 ?
   	<div
   		style={{
@@ -14068,6 +14082,8 @@ const AngularWorkflow = (defaultprops) => {
   	>
   		<Typography variant="body22">
 			{/*<WarningIcon style={{marginRight: 5, height: 15, width: 15, }} />*/}
+
+
   			<b>Workflow Issues:</b> {workflow.errors.length} 
   		</Typography>
   		<Typography
@@ -16630,6 +16646,41 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   var draggingDisabled = false;
+
+  // Should probably put this on the backend instead when notifications are made :))
+  const getErrorSuggestion = (result) => {
+	  if (result === undefined || result === null) {
+		  return ""
+	  }
+
+	  if (result.success !== false) {
+		  return ""
+	  }
+
+	  var stringjson = result
+	  try {
+		  stringjson = JSON.stringify(result)
+	  } catch (e) {
+	  }
+
+	  console.log("JSON: ", stringjson)
+	  stringjson = stringjson.toLowerCase()
+	  if (stringjson.includes("localhost")) {
+		  return "You can't use localhost in apps. Use the external ip or url of the server instead"
+	  }
+
+	  if (stringjson.includes("connectionerror")) {
+		  return "Your URL is most likely incorrect."
+	  }
+
+	  if (stringjson.includes("result too large to handle")) {
+		  return "Execution loading failed. Reload the execution by closing it and clicking it again"
+	  }
+
+	  return ""
+  }
+
+  const currentSuggestion = getErrorSuggestion(validate.result)
   const codePopoutModal = !codeModalOpen ? null : (
       <Dialog
 		PaperComponent={PaperComponent}
@@ -16792,12 +16843,32 @@ const AngularWorkflow = (defaultprops) => {
           </IconButton>
         </Tooltip>
         <Tooltip
+          title="Move window"
+          placement="top"
+          style={{ zIndex: 10011 }}
+        >
+          <IconButton
+            id="draggable-dialog-title"
+            style={{ 
+				zIndex: 5000, 
+				position: "absolute", 
+				top: 4, 
+				right: 34, 
+				cursor: "move",
+			}}
+            onClick={(e) => {
+            }}
+          >
+            <DragIndicatorIcon style={{ color: "white" }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip
           title="Close window"
           placement="top"
           style={{ zIndex: 10011 }}
         >
           <IconButton
-            style={{ zIndex: 5000, position: "absolute", top: 4, right: 34 }}
+            style={{ zIndex: 5000, position: "absolute", top: 4, right: 4, }}
             onClick={(e) => {
               e.preventDefault();
               setCodeModalOpen(false);
@@ -16836,12 +16907,20 @@ const AngularWorkflow = (defaultprops) => {
             >
               <b>{selectedResult.action.label.replaceAll("_", " ")}</b>
             </div>
-            <div style={{ fontSize: 14 }}>{selectedResult.action.name}</div>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", }}>{selectedResult.action.name}</div>
           </div>
         </div>
-        <div style={{ marginBottom: 5 }}>
-          <b>Status </b> {selectedResult.status}
-        </div>
+
+
+	  	{currentSuggestion.length > 0 ?
+			<div style={{ marginBottom: 5 }}>
+			  <b style={{color: "rgba(214,110,117)", }}>Debug Info:</b> {currentSuggestion}
+			</div>
+		: 
+			<div style={{ marginBottom: 5 }}>
+			  <b>Status </b> {selectedResult.status}
+			</div>
+		}
 
         {validate.valid ? (
           <ReactJson

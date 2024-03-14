@@ -333,6 +333,19 @@ const RunWorkflow = (defaultprops) => {
 			"execution_argument": executionArgument
 		}
 
+		if (workflow.start !== undefined && workflow.start !== null && workflow.start.length > 0) {
+			data.start = workflow.start
+	 	} else {
+			if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
+				for (let actionkey in workflow.actions) {
+        			if (workflow.actions[actionkey].isStartNode) {
+						data.start = workflow.actions[actionkey].id
+						break
+					}
+				}
+			}
+		}
+
 		var url = `${globalUrl}/api/v1/workflows/${props.match.params.key}/execute`
 		var fetchBody = {
 			headers: {

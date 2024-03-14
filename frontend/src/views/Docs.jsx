@@ -715,7 +715,7 @@ const Docs = (defaultprops) => {
       margin: "auto",
       marginTop: 50,
     }}>
-      <Typography variant="h4" style={{ textAlign: "center", }}>
+      <Typography variant="h4" style={{ textAlign: "center", marginTop: 20 }}>
         Documentation
       </Typography>
       <div style={{ display: "flex", marginTop: 25, }}>
@@ -938,7 +938,7 @@ const Docs = (defaultprops) => {
         <Divider
           style={{
             marginTop: "10px",
-            marginBottom: "10px",
+            marginBottom: 30,
             backgroundColor: dividerColor,
           }}
         />
@@ -957,7 +957,7 @@ const Docs = (defaultprops) => {
 
   // Padding and zIndex etc set because of footer in cloud.
   const loadedCheck = (
-    <div style={{ minHeight: 1000, paddingBottom: 100, zIndex: 50000, maxWidth: 1920, minWidth: 1366, margin: "auto", }}>
+    <div style={{ minHeight: 1000, paddingBottom: 100, zIndex: 50000, maxWidth: 1920, minWidth: isMobile ? null : 1366, margin: "auto", }}>
       <BrowserView>{postDataBrowser}</BrowserView>
       <MobileView>{postDataMobile}</MobileView>
     </div>

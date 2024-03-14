@@ -49,12 +49,14 @@ import {
 } from '@mui/x-date-pickers'
 
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { useStyles } from '../views/AppCreator.jsx'
 
 import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   Publish as PublishIcon,
   OpenInNew as OpenInNewIcon,
+  Add as AddIcon,
 } from "@mui/icons-material";
 
 const EditWorkflow = (props) => {
@@ -73,6 +75,10 @@ const EditWorkflow = (props) => {
 	const [foundWorkflowId, setFoundWorkflowId] = React.useState("")
 	const [name, setName] = React.useState(workflow.name !== undefined ? workflow.name : "")
 	const [dueDate, setDueDate] = React.useState(workflow.due_date !== undefined && workflow.due_date !== null && workflow.due_date !== 0 ? dayjs(workflow.due_date*1000) : dayjs().subtract(1, 'day'))
+
+  const [inputFields, setInputFields] = React.useState([])
+
+  const classes = useStyles();
 
 	// Gets the generated workflow 
 	const getGeneratedWorkflow = (workflow_id) => {
@@ -352,6 +358,9 @@ const EditWorkflow = (props) => {
 
   					{showMoreClicked === true ? 
 							<span style={{marginTop: 25, }}>
+
+
+
 								<div style={{display: "flex"}}>
 									<FormControl style={{marginTop: 15, }}>
 										<FormLabel id="demo-row-radio-buttons-group-label">Status</FormLabel>
@@ -467,9 +476,94 @@ const EditWorkflow = (props) => {
 									margin="dense"
 									fullWidth
 								/>
+
+								{/*
+								<Typography variant="h6">
+									Input fields
+								</Typography>
+								<Typography variant="body1">
+									Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/workflows/${workflow.id}/run`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>workflow run page</a>.
+										
+														
+								</Typography>
+
+								{inputFields.length === 0 ? 
+									<Button
+									  color="primary"
+									  style={{ maxWidth: 50, marginLeft: 15 }}
+									  variant="outlined"
+									  onClick={() => {
+										inputFields.push({
+											"name": "",
+											"required": false
+										})
+										setInputFields(inputFields)
+										setUpdate(Math.random());
+									  }}
+									>
+									  <AddIcon style={{}} />
+									</Button>
+								: null}
+
+								{inputFields.map((data, index) => {
+									console.log("Inputfield: ", data)
+
+									return (
+										<div style={{display: "flex", }}>
+											<TextField
+											  required={data.required}
+											  style={{
+												height: 50,
+												flex: 2,
+												marginTop: 0,
+												marginBottom: 0,
+												backgroundColor: theme.palette.inputColor,
+												marginRight: 5,
+											  }}
+											  fullWidth={true}
+											  placeholder="Name"
+											  id="standard-required"
+											  margin="normal"
+											  variant="outlined"
+											  defaultValue={data.value}
+											  onChange={(e) => {
+												inputFields[index].name = e.target.value
+												setInputFields(inputFields)
+          									    setUpdate(Math.random());
+											  }}
+											  InputProps={{
+												classes: {
+												  notchedOutline: classes.notchedOutline,
+												},
+												style: {
+												  color: "white",
+												  minHeight: 50,
+												},
+											  }}
+											/>
+          									<Button
+          									  color="primary"
+          									  style={{ maxWidth: 50, marginLeft: 15 }}
+          									  variant="outlined"
+          									  onClick={() => {
+												inputFields.push({
+													"name": "",
+													"required": false
+												})
+											    setInputFields(inputFields)
+          									    setUpdate(Math.random());
+          									  }}
+          									>
+          									  <AddIcon style={{}} />
+          									</Button>
+										</div>
+									)
+								})}
+								*/}
 							</span>
 						: null}
-          	<Tooltip color="primary" title={"Add more details"} placement="top">
+
+			<Tooltip color="primary" title={"Add more details"} placement="top">
 				<IconButton
 					style={{ color: "white", margin: "auto", marginTop: 10, textAlign: "center", width: 50,}}
 					onClick={() => {

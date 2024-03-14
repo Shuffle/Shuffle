@@ -103,7 +103,7 @@ const appIconStyle = {
   marginLeft: "5px",
 };
 
-const useStyles = makeStyles({
+export const useStyles = makeStyles({
   notchedOutline: {
     borderColor: "#f85a3e !important",
   },

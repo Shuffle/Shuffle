@@ -2234,23 +2234,23 @@ const ParsedAction = (props) => {
                       parsedPaths = GetParsedPaths(innerdata.example, "");
                     }
 
-										const coverColor = "#82ccc3"
-										//menuPosition.left -= 50
-										//menuPosition.top -= 250 
-										//console.log("POS: ", menuPosition1)
-										var menuPosition1 = menuPosition
-										if (menuPosition1 === null) {
-											menuPosition1 = {
-												"left": 0,
-												"top": 0,
-											}
-										} else if (menuPosition1.top === null || menuPosition1.top === undefined) {
-											menuPosition1.top = 0
-										} else if (menuPosition1.left === null || menuPosition1.left === undefined) {
-											menuPosition1.left = 0
-										}
+					const coverColor = "#82ccc3"
+					//menuPosition.left -= 50
+					//menuPosition.top -= 250 
+					//console.log("POS: ", menuPosition1)
+					var menuPosition1 = menuPosition
+					if (menuPosition1 === null) {
+						menuPosition1 = {
+							"left": 0,
+							"top": 0,
+						}
+					} else if (menuPosition1.top === null || menuPosition1.top === undefined) {
+						menuPosition1.top = 0
+					} else if (menuPosition1.left === null || menuPosition1.left === undefined) {
+						menuPosition1.left = 0
+					}
 
-										//console.log("POS1: ", menuPosition1)
+					//console.log("POS1: ", menuPosition1)
 
                     return parsedPaths.length > 0 ? (
                       <NestedMenuItem
@@ -2274,11 +2274,10 @@ const ParsedAction = (props) => {
                           handleItemClick([innerdata]);
                         }}
                       >
-						<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition1.top-200, left: menuPosition1.left-455, padding: "10px 0px 10px 10px", overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+						<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition1.top-200, left: menuPosition1.left-450, padding: "10px 0px 10px 10px", overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
 							<MenuItem
 								key={innerdata.name}
 								style={{
-									backgroundColor: theme.palette.inputColor,
 									marginLeft: 15,
 									color: "white",
 									minWidth: 250,
@@ -2303,29 +2302,28 @@ const ParsedAction = (props) => {
                         	  //<VpnKeyIcon style={iconStyle} />
                         	  const icon =
                         	    pathdata.type === "value" ? (
-																<span style={{marginLeft: 9, }} />
+									<span style={{marginLeft: 9, }} />
                         	    ) : pathdata.type === "list" ? (
                         	      <FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
                         	    ) : (
-																<CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
+									<CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
                         	    );
                         	  //<ExpandMoreIcon style={iconStyle} />
 
-														const indentation_count = (pathdata.name.match(/\./g) || []).length+1
-														const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
-														//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
-														const boxPadding = 0 
-														const namesplit = pathdata.name.split(".")
-														const newname = namesplit[namesplit.length-1]
-                        	  return (
+								const indentation_count = (pathdata.name.match(/\./g) || []).length+1
+								const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
+								//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
+								const boxPadding = 0 
+								const namesplit = pathdata.name.split(".")
+								const newname = namesplit[namesplit.length-1]
+	  							return (
                         	    <MenuItem
                         	      key={pathdata.name}
                         	      style={{
-                        	        backgroundColor: theme.palette.inputColor,
                         	        color: "white",
                         	        minWidth: 250,
                         	        maxWidth: 250,
-																	padding: boxPadding, 
+									padding: boxPadding, 
                         	      }}
                         	      value={pathdata}
                         	      onMouseOver={() => {
@@ -2341,35 +2339,31 @@ const ParsedAction = (props) => {
                         	        placement="left"
                         	      >
                         	        <div style={{ display: "flex", height: 30, }}>
-																		{Array(indentation_count).fill().map((subdata, subindex) => {
-																			return (
-																				baseIndent
-																			)
-																		})}
-                        	          {icon} {newname} 
-																		{pathdata.type === "list" ? <SquareFootIcon style={{marginleft: 10, }} onClick={(e) => {
-																			e.preventDefault()
-																			e.stopPropagation()
+										{Array(indentation_count).fill().map((subdata, subindex) => {
+											return (
+												baseIndent
+											)
+										})}
+	  {icon} {newname} 
+										{pathdata.type === "list" ? <SquareFootIcon style={{marginleft: 10, }} onClick={(e) => {
+											e.preventDefault()
+											e.stopPropagation()
 
-																			console.log("INNER: ", innerdata, pathdata)
-                											
-																			// Removing .list from autocomplete
-																			var newname = pathdata.name
-																			if (newname.length > 5) {
-																				newname = newname.slice(0, newname.length-5)
-																			}
-																			selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
-                											selectedAction.parameters[count].value = selectedActionParameters[count].value;
-                											setSelectedAction(selectedAction);
-                											setUpdate(Math.random());
-                											setShowDropdown(false);
-                											setMenuPosition(null);
-
-																			// innerdata.name
-																			// pathdata.name
-              												//handleItemClick([innerdata, newpathdata])
-																			//console.log("CLICK LENGTH!")
-																		}} /> : null}
+											console.log("INNER: ", innerdata, pathdata)
+							
+											// Removing .list from autocomplete
+											var newname = pathdata.name
+											if (newname.length > 5) {
+												newname = newname.slice(0, newname.length-5)
+											}
+										
+											selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
+											selectedAction.parameters[count].value = selectedActionParameters[count].value;
+											setSelectedAction(selectedAction);
+											setUpdate(Math.random());
+											setShowDropdown(false);
+											setMenuPosition(null);
+										}} /> : null}
                         	        </div>
                         	      </Tooltip>
                         	    </MenuItem>
@@ -2747,7 +2741,6 @@ const ParsedAction = (props) => {
                     paddingRight: 0,
                   }}
                   onClick={() => {
-                    console.log("FIND EXAMPLE RESULTS FOR ", selectedAction);
                     if (workflowExecutions.length > 0) {
                       // Look for the ID
                       const found = false;
@@ -2755,11 +2748,6 @@ const ParsedAction = (props) => {
                         if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
                           continue;
                         }
-
-												// Enforces it to show at least one
-												//if (workflowExecutions[key].execution_argument.includes("too large") && key !== workflowExecutions.length - 1) {
-												//	continue
-												//}
 
                         var foundResult = workflowExecutions[key].results.find(
                           (result) => result.action.id === selectedAction.id
@@ -2769,14 +2757,14 @@ const ParsedAction = (props) => {
                           continue;
                         }
 
-    										const oldstartnode = cy.getElementById(selectedAction.id);
-												console.log("FOUND NODe: ", oldstartnode)
-    										if (oldstartnode !== undefined && oldstartnode !== null) {
-													const foundname = oldstartnode.data("label")
-													if (foundname !== undefined && foundname !== null) {
-														foundResult.action.label = foundname
-													}
-												}
+						const oldstartnode = cy.getElementById(selectedAction.id);
+						console.log("FOUND NODe: ", oldstartnode)
+						if (oldstartnode !== undefined && oldstartnode !== null) {
+							const foundname = oldstartnode.data("label")
+							if (foundname !== undefined && foundname !== null) {
+								foundResult.action.label = foundname
+							}
+						}
 
                         setSelectedResult(foundResult);
                         if (setCodeModalOpen !== undefined) {
@@ -3354,6 +3342,8 @@ const ParsedAction = (props) => {
                     style={{
                       backgroundColor: theme.palette.inputColor,
                       color: "white",
+					  maxWidth: 500, 
+					  overflowX: "auto",
                     }}
                     value={data}
                   >
