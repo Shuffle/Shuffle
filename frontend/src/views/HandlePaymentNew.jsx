@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import { useNavigate, Link } from "react-router-dom";
 import {isMobile} from "react-device-detect";
+import { toast } from "react-toastify" 
 
 import {
 	Done as DoneIcon, 
@@ -35,6 +36,24 @@ import Services from "./Services.jsx";
 
 export const typecost = 0.0018
 export const typecost_single = (typecost * 1.33).toFixed(4)
+
+export const handlePayasyougo = (userdata) => {
+	var billingurl = "https://billing.stripe.com/p/login/bIY5lo5bMbWs9Py5kk"
+
+	if (userdata !== undefined && userdata !== null) {
+		if (userdata.org_email !== undefined && userdata.org_email !== null && userdata.org_email !== "") {
+			billingurl += `?prefilled_email=${userdata.org_email}`
+
+		} else if (userdata.username !== undefined && userdata.username !== null && userdata.username !== "") {
+			billingurl += `?prefilled_email=${userdata.username}`
+		}
+	}
+
+	toast("Redirecting in 2 seconds. Use the organization owner email.") 
+	setTimeout(() => {
+		window.location = billingurl 
+	}, 2500)
+}
 
 // 1. Create 2-3 payment tiers (slider?)
 // 2. Create a way to show them anywhere
