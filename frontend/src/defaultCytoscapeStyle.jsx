@@ -35,6 +35,20 @@ const data = [
     },
   },
   {
+    selector: `node[buttonType="ACTIONSUGGESTION"]`,
+    css: {
+      label: "data(label)",
+      shape: "roundrectangle",
+	  "height": "16px",
+	  "width": "120px",
+      "background-color": "#212121",
+      "border-color": "#81c784",
+      "z-index": 10000,
+	  "border-radius": "10px",
+	  "text-margin-x": "0px",
+    },
+  },
+  {
     selector: `node[type="ACTION"]`,
     css: {
       shape: "roundrectangle",
@@ -120,7 +134,7 @@ const data = [
   {
     selector: `node[type="TRIGGER"]`,
     css: {
-      shape: "octagon",
+      shape: "round-octagon",
       "border-radius": "5px",
       "border-color": "orange",
       "background-color": "#213243",

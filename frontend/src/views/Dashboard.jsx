@@ -903,7 +903,6 @@ const UsecaseListComponent = (props) => {
 																		isLoggedIn={isLoggedIn}
 																		appFramework={frameworkData}
 																		userdata={userdata}
-
 																		globalUrl={globalUrl}
 																		img1={inputUsecase.srcimg}
 																		srcapp={inputUsecase.srcapp}
@@ -911,7 +910,6 @@ const UsecaseListComponent = (props) => {
 																		dstapp={inputUsecase.dstapp}
 																		title={inputUsecase.name}
 																		description={inputUsecase.description}
-
 																		apps={apps}
 																		getAppFramework={getFramework}
 																		//appSetupDone={appSetupDone}

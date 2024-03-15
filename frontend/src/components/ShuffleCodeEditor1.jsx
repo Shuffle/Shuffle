@@ -676,6 +676,8 @@ const CodeEditor = (props) => {
 				for (var i = 0; i < found.length; i++) {
 					try {
 						const fixedVariable = fixVariable(found[i])
+
+						// Finding if the value is in the list at all, and does initial replacement
 						var valuefound = false
 						for (var j = 0; j < actionlist.length; j++) {
 							if(fixedVariable.slice(1,).toLowerCase() !== actionlist[j].autocomplete.toLowerCase()){
@@ -697,12 +699,13 @@ const CodeEditor = (props) => {
 							} catch (e) { 
 								input = input.replace(found[i], actionlist[j].example, -1)
 							}
+
 						}
-
-
-						//if (!valuefound) {
-						//	console.log("Couldn't find value "+fixedVariable)
-						//}
+						
+						//console.log("INPUT: ", fixedVariable, valuefound, input)
+						if (!valuefound) {
+							//console.log("Couldn't find value "+fixedVariable)
+						}
 
 						if (!valuefound && availableVariables.includes(fixedVariable)) {
 							var shouldbreak = false
@@ -729,8 +732,6 @@ const CodeEditor = (props) => {
 										console.log("ERR IN INPUT: ", e)
 									}
 
-									//console.log("Got output for: ", fullpath, new_input, actionlist[k].example, typeof new_input)
-
 									if (typeof new_input === "object") {
 										new_input = JSON.stringify(new_input)
 									} else {
@@ -751,10 +752,6 @@ const CodeEditor = (props) => {
 
 									input = input.replace(fixedVariable, new_input, -1)
 									input = input.replace(found[i], new_input, -1)
-
-									//} catch (e) {
-									//	input = input.replace(found[i], actionlist[k].example)
-									//}
 
 									shouldbreak = true 
 									break
@@ -1498,7 +1495,6 @@ const CodeEditor = (props) => {
 								backgroundColor: "rgba(40,40,40,1)",
                             }}
 							onLoad={(editor) => {
-								console.log("LOAD: ", editor)
 								highlight_variables(localcodedata)
 							}}
                             onCursorChange={(cursorPosition, editor, value) => {
@@ -1591,7 +1587,7 @@ const CodeEditor = (props) => {
 												minheight: 450, 
 												overflow: "auto",
 												minWidth: 450, 
-												maxWidth: 450, 
+												maxWidth: "100%", 
 											}}
 											collapsed={false}
 											enableClipboard={(copy) => {

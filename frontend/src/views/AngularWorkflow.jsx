@@ -6,6 +6,7 @@ import theme from "../theme.jsx";
 import { useInterval } from "react-powerhooks";
 import { makeStyles, } from "@mui/styles";
 
+import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx"
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { useBeforeunload } from "react-beforeunload";
@@ -25,6 +26,7 @@ import algoliasearch from 'algoliasearch/lite';
 import {
   Zoom,
   Fade,
+  Slide,
 
   Avatar,
   Popover,
@@ -535,6 +537,8 @@ const AngularWorkflow = (defaultprops) => {
   const [workflowExecutionCount, setWorkflowExecutionCount] = React.useState(0);
   const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0);
   const [workflowRecommendations, setWorkflowRecommendations] = React.useState(undefined);
+  const [showErrors, setShowErrors] = React.useState(true);
+  const [highlightedApp, setHighlightedApp] = React.useState("")
 
   const [listCache, setListCache] = React.useState([]);
   const [suggestionBox, setSuggestionBox] = React.useState({
@@ -557,6 +561,59 @@ const AngularWorkflow = (defaultprops) => {
 	"field_id": "",
   })
 
+  // Event for making sure app is correct
+  useEffect(() => {
+	  if (selectedApp === undefined || selectedApp === null && selectedApp.app_name === undefined) {
+		  return
+	  }
+
+	  if (apps === undefined || apps === null || apps.length === 0) {
+		  return
+	  }
+
+	  // Handle the activation case, as they are NOT in the event management system yet 
+	  if (selectedApp.actions === undefined || selectedApp.actions === null || selectedApp.actions.length > 1) {
+		  return
+	  }
+
+	  console.log("Checking to update app with useeffect.")
+
+	  for (let appkey in apps) {
+		  const curapp = apps[appkey]
+		  if (curapp.name !== selectedApp.name) {
+			  continue
+		  }
+			  
+		  console.log("Found app: ", curapp)
+		  if (curapp.actions !== undefined && curapp.actions !== null && curapp.actions.length > selectedApp.actions.length) {
+			  var foundActionIndex = -1
+			  for (let actionkey in curapp.actions) {
+				  const curaction = curapp.actions[actionkey]
+
+				  // First action with a label, as they are most used (typically)
+				  if (curaction.category_label !== undefined && curaction.category_label !== null && curaction.category_label.length > 0) { 
+					  foundActionIndex = actionkey
+					  break
+				  }
+			  }
+
+			  if (foundActionIndex >= 0) {
+			    var newaction = curapp.actions[foundActionIndex]
+
+			  	setNewSelectedAction({
+					"target": {
+						"value": newaction.name
+					},
+				})
+			  } 
+
+			  setSelectedApp(curapp)
+		  }
+		  break
+	  }
+
+  }, [selectedApp])
+
   const [executionArgumentModalOpen, setExecutionArgumentModalOpen] = React.useState(false);
 
   // This should all be set once, not on every iteration
@@ -568,32 +625,6 @@ const AngularWorkflow = (defaultprops) => {
       ? props.userdata.active_org.cloud_sync === true
       : false;
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-
-  useEffect(() => {
-	  return () => {
-		  console.log("UNMOUNTING USER!")
-          sendStreamRequest({
-            "item": "workflow",
-            "type": "leave",
-            "id": workflow.id,
-          })
-	  }
-  }, [])
-  /*
-  useEffect(() => {
-	  console.log("In useeffect for workflow: ", workflow)
-      if (cy === undefined || cy === null) {
-		  return
-      }
-
-	  if (workflow === undefined || workflow === null || workflow.actions === undefined || workflow.actions === null) {
-		  return
-	  }
-
-	  // Check if actions of original vs new are changed
-	  fetchRecommendations(workflow)
-  }, [workflow])
-  */
 
   const appBarSize = isCloud ? 75 : 72;
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
@@ -2084,7 +2115,7 @@ const AngularWorkflow = (defaultprops) => {
             "large_image": "",
           }]
         	
-					setAppsLoaded(true)
+		  setAppsLoaded(true)
           setApps(pretend_apps)
           setFilteredApps(pretend_apps)
           setPrioritizedApps(pretend_apps);
@@ -2096,10 +2127,10 @@ const AngularWorkflow = (defaultprops) => {
         }
 
 				// Used for e.g. Liquid testing
-				const foundTools = responseJson.find((app) => app.name === "Shuffle Tools")
-				if (foundTools !== undefined && foundTools !== null) {
-					setToolsApp(foundTools)
-				}
+		const foundTools = responseJson.find((app) => app.name === "Shuffle Tools")
+		if (foundTools !== undefined && foundTools !== null) {
+			setToolsApp(foundTools)
+		}
 
         setApps(responseJson);
 
@@ -2108,23 +2139,24 @@ const AngularWorkflow = (defaultprops) => {
           setPrioritizedApps(responseJson.filter((app) => internalIds.includes(app.name.toLowerCase())));
           
         } else {
-          //setFilteredApps(
-          //  responseJson.filter(
-          //    (app) =>
-          //      !internalIds.includes(app.name) &&
-          //      !(!app.activated && app.generated)
-          //  )
-          //);
-
           var tmpFiltered = responseJson.filter((app) => !internalIds.includes(app.name.toLowerCase()))
-          //tmpFiltered = sortByKey(tmpFiltered, "activated")
           setFilteredApps(tmpFiltered)
-
-          //!(!app.activated && app.generated)
           setPrioritizedApps(responseJson.filter((app) => internalIds.includes(app.name.toLowerCase())));
         }
 
-				setAppsLoaded(true)
+		setAppsLoaded(true)
+
+		// Remove all cytoscape triggers first?
+		if (cy !== undefined && cy !== null) {
+			cy.removeListener("select");
+		}
+
+		// Re-adding cytoscape triggers
+		if (cy !== undefined && cy !== null) {
+			cy.on("select", "node", (e) => {
+			  onNodeSelect(e, appAuthentication);
+			});
+		}
       })
       .catch((error) => {
         console.log("App loading error: " + error.toString());
@@ -3257,28 +3289,28 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
 
-		const connected = event.target.connectedEdges().jsons()
+	const connected = event.target.connectedEdges().jsons()
     if (connected.length > 0 && connected !== undefined) {
-			for (let connectkey in connected) {
-				const edge = connected[connectkey]
-				//console.log("EDGE:", edge)
+		for (let connectkey in connected) {
+			const edge = connected[connectkey]
+			//console.log("EDGE:", edge)
 
-				//const edge = edgeBase.json()
+			//const edge = edgeBase.json()
 
-				const sourcenode = cy.getElementById(edge.data.source)
-				const destinationnode = cy.getElementById(edge.data.target)
-				if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
-					continue
-				}
+			const sourcenode = cy.getElementById(edge.data.source)
+			const destinationnode = cy.getElementById(edge.data.target)
+			if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
+				continue
+			}
 
-				const edgeCurve = calculateEdgeCurve(sourcenode.position(), destinationnode.position())
-				const currentedge = cy.getElementById(edge.data.id)
-				if (currentedge !== undefined && currentedge !== null) {
-					currentedge.style('control-point-distance', edgeCurve.distance)
-					currentedge.style('control-point-weight', edgeCurve.weight)
-				}
+			const edgeCurve = calculateEdgeCurve(sourcenode.position(), destinationnode.position())
+			const currentedge = cy.getElementById(edge.data.id)
+			if (currentedge !== undefined && currentedge !== null) {
+				currentedge.style('control-point-distance', edgeCurve.distance)
+				currentedge.style('control-point-weight', edgeCurve.weight)
 			}
 		}
+	}
 
     if (styledElements.length === 1) {
       console.log(
@@ -3366,7 +3398,7 @@ const AngularWorkflow = (defaultprops) => {
 			if (nodedata.app_name === "Webhook" || nodedata.app_name === "Schedule" || nodedata.app_name === "Gmail" || nodedata.app_name === "Office365") {
 				console.log("Found triggers. Add!")
 
-      	if (!found) {
+      			if (!found) {
 					console.log("Find amount of executions for the specific nodetype: ", nodedata.app_name, "Executions: ", workflowExecutions)
 					// Find how many executions it has 
 					var executions = 0
@@ -3586,7 +3618,70 @@ const AngularWorkflow = (defaultprops) => {
     
 	//const data = JSON.parse(JSON.stringify(event.target.data()))
     const data = event.target.data()
-    if (data.isSuggestion === true) {
+
+	if (data.buttonType == "ACTIONSUGGESTION") {
+  	  const attachedToId = data.attachedTo
+
+	  const parentitem = cy.getElementById(data.attachedTo).data()
+	  if (parentitem !== null && parentitem !== undefined) {
+
+		  const findaction = data.label
+		  console.log("CLICKED: ", findaction, apps.length)
+
+		  for (let appkey in apps) {
+			  const curapp = apps[appkey]
+			  if (curapp.name !== parentitem.app_name) {
+				  continue
+			  }
+
+			  if (curapp.actions === undefined || curapp.actions === null) {
+				  continue
+			  }
+
+			  for (let actionkey in curapp.actions) {
+				  const curaction = curapp.actions[actionkey]
+
+			  	  if (curaction.category_label !== undefined && curaction.category_label !== null && curaction.category_label.length > 0) { 
+					  if (curaction.category_label[0].toLowerCase() === findaction.toLowerCase()) {
+						  console.log("FOUND: ", curaction)
+
+						  // Update the action itself
+						  // Find the action index, and update:
+						  // - label 
+						  // - description
+						  // - parameters
+						  // - name
+					  
+						  var foundindex = -1
+						  for (let wfactionkey in workflow.actions) {
+							  const wfaction = workflow.actions[wfactionkey]
+							  if (wfaction.id === data.attachedTo) {
+								  foundindex = wfactionkey
+								  break
+							  }
+						  }
+
+						  console.log("Updating action: ", foundindex, findaction)
+						  if (foundindex >= 0) {
+							  workflow.actions[foundindex].label = findaction
+							  workflow.actions[foundindex].description = curaction.description
+							  workflow.actions[foundindex].parameters = curaction.parameters
+							  workflow.actions[foundindex].name = curaction.name
+
+							  setWorkflow(workflow)
+						  }
+						  break
+					  }
+				  }
+			  }
+
+			  break
+		  }
+
+		  return
+	  }
+
+	} else if (data.isSuggestion === true) {
 	  console.log("Suggestion! Replace with a real action.")
   
   	  const attachedToId = data.attachedTo
@@ -4115,7 +4210,6 @@ const AngularWorkflow = (defaultprops) => {
 					//}
 
 					//curaction.parameters = newparams
-          console.log("ACTION CLICK: ", curaction)
 
           setSelectedApp(curapp);
           setSelectedAction(curaction);
@@ -4268,8 +4362,10 @@ const AngularWorkflow = (defaultprops) => {
           toast("Failed to auto-activate the app. Go to /apps and activate it.")
         } else {
           if (refresh === true) {
+  			setHighlightedApp(appid)
           	//toast("App activated for your organization! Refresh the page to use the app.")
             getApps()
+
           }
         }
       })
@@ -5392,7 +5488,6 @@ const AngularWorkflow = (defaultprops) => {
     }
 
 	if (nodedata.finished === false) {
-      console.log("NODE UNFINISHED HOVEROUT: ", nodedata)
 
 	  // Should just be 1, so this should be fast enough :3
 	  const incomingEdges = event.target.incomers("edge").jsons()
@@ -5567,57 +5662,136 @@ const AngularWorkflow = (defaultprops) => {
     });
   };
 
+  const addActionSuggestions = (nodedata, event) => {
+	  console.log("App Action suggestions disabled for now")
+	  return
+
+	  if (nodedata.type !== "ACTION") {
+		  return
+	  }
+
+	  var parentNode = cy.$("#" + event.target.data("id"));
+	  if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
+
+	  const px = parentNode.position("x") + 0;
+	  const py = parentNode.position("y") + 100;
+
+	  const parentlabel = parentNode.data("label").toLowerCase().replace(" ", "_")
+	  const parentname = parentNode.data("app_name").toLowerCase().replace(" ", "_")
+	  if (!parentlabel.startsWith(parentname)) {
+		  console.log("Bad startname to start with: ", parentname, parentlabel)
+		  return
+	  }
+
+      const iconInfo = {
+        icon: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm-1 4l6 6v10c0 1.1-.9 2-2 2H7.99C6.89 23 6 22.1 6 21l.01-14c0-1.1.89-2 1.99-2h7zm-1 7h5.5L14 6.5V12z",
+        iconColor: buttonColor,
+        iconBackgroundColor: buttonBackgroundColor,
+      };
+
+      const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
+      const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
+
+	  // 1. Find the app
+	  // 2. Loop the apps' actions
+	  // 3. Find actions based on category label IF it exists
+	  var added = 0 
+	  for (let appKey in apps) {
+		  const curapp = apps[appKey]
+		  if (curapp.name.toLowerCase().replace(" ", "_") !== parentname) {
+			  continue
+		  }
+
+		  if (curapp.actions === undefined || curapp.actions === null || curapp.actions.length === 0) {
+			  continue
+		  }
+
+		  for (let actionKey in curapp.actions) {
+			  const curaction = curapp.actions[actionKey]
+			  
+			  // Check if this is the current action already
+			  if (parentNode.data("name") == curaction.name) {
+				  continue
+			  }
+
+			  if (curaction.category_label !== undefined && curaction.category_label !== null && curaction.category_label.length > 0) { 
+
+				  cy.add({
+					group: "nodes",
+					data: {
+						weight: 30,
+						id: uuidv4(),
+						label: curaction.category_label[0],
+						attachedTo: event.target.data("id"),
+						is_valid: true,
+						buttonType: "ACTIONSUGGESTION",
+					},
+					position: {
+						x: px,
+						y: py + (added * 50),
+					},
+				  })
+
+				  added += 1
+				  if (added >= 2) {
+					  break
+				  }
+			  }
+		  }
+
+		  break
+	  }
+  }
+
   const addSuggestionButtons = (nodedata, event) => {
 	  //console.log("Skipping Adding suggestion buttons")
 	  //return
-		// Skipping add for now. Should Re-enable
+	// Skipping add for now. Should Re-enable
 
-		// Add a button for autocompletion based on input
-		if (nodedata.type === "ACTION") {
-			/*
-			const color = "#34a853" 
+	// Add a button for autocompletion based on input
+	if (nodedata.type === "ACTION") {
+		/*
+		const color = "#34a853" 
 
-			// Fix icon
-			const iconInfo = {
-			  icon: "M7.5 5.6 10 7 8.6 4.5 10 2 7.5 3.4 5 2l1.4 2.5L5 7zm12 9.8L17 14l1.4 2.5L17 19l2.5-1.4L22 19l-1.4-2.5L22 14zM22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29a.9959.9959 0 0 0-1.41 0L1.29 18.96c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.7 11.05c.39-.39.39-1.02 0-1.41l-2.33-2.35zm-1.03 5.49-2.12-2.12 2.44-2.44 2.12 2.12-2.44 2.44z",
-			  iconColor: buttonColor,
-			  iconBackgroundColor: buttonBackgroundColor,
-			};
+		// Fix icon
+		const iconInfo = {
+		  icon: "M7.5 5.6 10 7 8.6 4.5 10 2 7.5 3.4 5 2l1.4 2.5L5 7zm12 9.8L17 14l1.4 2.5L17 19l2.5-1.4L22 19l-1.4-2.5L22 14zM22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29a.9959.9959 0 0 0-1.41 0L1.29 18.96c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.7 11.05c.39-.39.39-1.02 0-1.41l-2.33-2.35zm-1.03 5.49-2.12-2.12 2.44-2.44 2.12 2.12-2.44 2.44z",
+		  iconColor: buttonColor,
+		  iconBackgroundColor: buttonBackgroundColor,
+		};
 
-			const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
-			const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
+		const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
+		const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
 
-			const decoratorNode = {
-				position: {
-					x: event.target.position().x + 0,
-					y: event.target.position().y + 65,
-				},
-				locked: true,
-				data: {
-					isButton: true,
-					isValid: true,
-					is_valid: true,
-					//label: "+",
-					attachedTo: nodedata.id,
-					imageColor: color,
-        			buttonType: "suggestion", 
-					icon: svgpin_Url,
-					iconBackground: iconInfo.iconBackgroundColor,
-				},
-			};
+		const decoratorNode = {
+			position: {
+				x: event.target.position().x + 0,
+				y: event.target.position().y + 65,
+			},
+			locked: true,
+			data: {
+				isButton: true,
+				isValid: true,
+				is_valid: true,
+				//label: "+",
+				attachedTo: nodedata.id,
+				imageColor: color,
+				buttonType: "suggestion", 
+				icon: svgpin_Url,
+				iconBackground: iconInfo.iconBackgroundColor,
+			},
+		};
 
-			cy.add(decoratorNode);
-			*/
-		}
+		cy.add(decoratorNode);
+		*/
+	}
 
-		console.log("RECS: ", workflowRecommendations)
+	if (workflowRecommendations === undefined || workflowRecommendations === null || workflowRecommendations.length === 0) {
+		return
+	}
 
-		if (workflowRecommendations === undefined || workflowRecommendations === null || workflowRecommendations.length === 0) {
-			return
-		}
-
-    var parentNode = cy.$("#" + event.target.data("id"));
-    if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
+	var parentNode = cy.$("#" + event.target.data("id"));
+	if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
 
 		const px = parentNode.position("x") + 0;
 		const py = parentNode.position("y") + 200;
@@ -5816,6 +5990,7 @@ const AngularWorkflow = (defaultprops) => {
       cytoscapeElement.style.cursor = "pointer"
     }
 
+
     sendStreamRequest({
       "item": "node",
       "type": "hover",
@@ -5936,6 +6111,8 @@ const AngularWorkflow = (defaultprops) => {
 			// autocomplete
 			// right click
 			// suggestions
+			addActionSuggestions(nodedata, event);
+
 			if (workflow.actions.length < 4) {
 				addSuggestionButtons(nodedata, event);
 			} else {
@@ -5943,6 +6120,7 @@ const AngularWorkflow = (defaultprops) => {
 			}
 		}
     }
+
 
     var parsedStyle = {
       "border-width": "7px",
@@ -6007,7 +6185,7 @@ const AngularWorkflow = (defaultprops) => {
     if (incomingEdges.length > 0) {
       outgoingEdges.addClass("hover-highlight");
     }
-  };
+  }
 
   const onEdgeHoverOut = (event) => {
     if (event === null || event === undefined || event.target === null || event.target === undefined) {
@@ -6650,8 +6828,6 @@ const AngularWorkflow = (defaultprops) => {
   }
 
 	const getRevisionHistory  = (workflow_id) => {
-	  console.log("Loading revisions for workflow ID ", workflow_id)
-
 	  fetch(`${globalUrl}/api/v1/workflows/${workflow_id}/revisions`, {
 		method: "GET",
 		headers: {
@@ -6816,7 +6992,6 @@ const AngularWorkflow = (defaultprops) => {
 
     cy.on("boxstart", (e) => {
       console.log("START");
-      //cy.removeListener("select");
     });
 
     cy.on("boxend", (e) => {
@@ -7940,9 +8115,16 @@ const AngularWorkflow = (defaultprops) => {
         ? `${pixelSize} solid ${green}`
         : `${pixelSize} solid ${yellow}`;
 
+	  if (app.id == highlightedApp) {
+		  console.log("Found correct appid to highlight: ", app.id)
+
+		  newAppStyle.border = "3px solid " + green
+	  }
+
       if (!app.activated && app.generated) {
         newAppStyle.borderLeft = `${pixelSize} solid ${yellow}`;
       }
+
 
       return (
         <Draggable
@@ -8235,146 +8417,162 @@ const AngularWorkflow = (defaultprops) => {
         hits = hits.slice(0, 4)
       }
 
+
+	  const clickedApp = (hit) => {
+	  	toast(`Activating App. Please wait a moment.`)
+
+	  	const queryID = hit.__queryID
+
+
+	  	if (queryID !== undefined && queryID !== null) {
+	  	  aa('init', {
+	  		appId: "JNSS5CFDZZ",
+	  		apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+	  	  })
+
+	  	  const timestamp = new Date().getTime()
+	  	  aa('sendEvents', [
+	  		{
+	  		  eventType: 'conversion',
+	  		  eventName: 'Public App Activated',
+	  		  index: 'appsearch',
+	  		  objectIDs: [hit.objectID],
+	  		  timestamp: timestamp,
+	  		  queryID: queryID,
+	  		  userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
+	  		}
+	  	  ])
+	  	} else {
+	  	  console.log("No query to handle when activating")
+	  	}
+
+	  	activateApp(hit.objectID, true)
+	  }
+
       var type = "app"
       const baseImage = <LibraryBooksIcon />
-
       return (
-        <div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, minWidth: leftBarSize - 10, maxWidth: leftBarSize - 10, boxShadows: "none", overflowX: "hidden", }}>
-          <List style={{ backgroundColor: theme.palette.inputColor, }}>
-            {hits.length === 0 ?
-              <ListItem style={outerlistitemStyle}>
-                <ListItemAvatar onClick={() => console.log(hits)}>
-                  <Avatar>
-                    <FolderIcon />
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={"No public apps found."}
-                  secondary={"Try a broader search term"}
-                />
-              </ListItem>
-              :
-              hits.map((hit, index) => {
-                const innerlistitemStyle = {
-                  width: positionInfo.width + 35,
-                  overflowX: "hidden",
-                  overflowY: "hidden",
-                  borderBottom: "1px solid rgba(255,255,255,0.4)",
-                  backgroundColor: mouseHoverIndex === index ? "#1f2023" : "inherit",
-                  cursor: "pointer",
-                  marginLeft: 0,
-                  marginRight: 0,
-                  maxHeight: 75,
-                  minHeight: 75,
-                  maxWidth: 420,
-                  minWidth: "100%",
-                }
+        	<div style={{ position: "relative", marginTop: 15, marginLeft: 0, marginRight: 10, position: "absolute", color: "white", zIndex: 1001, backgroundColor: theme.palette.inputColor, minWidth: leftBarSize - 10, maxWidth: leftBarSize - 10, boxShadows: "none", overflowX: "hidden", }}>
+        	  <List style={{ backgroundColor: theme.palette.inputColor, }}>
+        	    {hits.length === 0 ?
+        	      <ListItem style={outerlistitemStyle}>
+        	        <ListItemAvatar onClick={() => console.log(hits)}>
+        	          <Avatar>
+        	            <FolderIcon />
+        	          </Avatar>
+        	        </ListItemAvatar>
+        	        <ListItemText
+        	          primary={"No public apps found."}
+        	          secondary={"Try a broader search term"}
+        	        />
+        	      </ListItem>
+        	      :
+        	      hits.map((hit, index) => {
+        	        const innerlistitemStyle = {
+        	          width: positionInfo.width + 35,
+        	          overflowX: "hidden",
+        	          overflowY: "hidden",
+        	          borderBottom: "1px solid rgba(255,255,255,0.4)",
+        	          backgroundColor: mouseHoverIndex === index ? "#1f2023" : "inherit",
+        	          cursor: "pointer",
+        	          marginLeft: 0,
+        	          marginRight: 0,
+        	          maxHeight: 75,
+        	          minHeight: 75,
+        	          maxWidth: 420,
+        	          minWidth: "100%",
+        	        }
 
-                const name = hit.name === undefined ?
-                  hit.filename.charAt(0).toUpperCase() + hit.filename.slice(1).replaceAll("_", " ") + " - " + hit.title :
-                  (hit.name.charAt(0).toUpperCase() + hit.name.slice(1)).replaceAll("_", " ")
+        	        const name = hit.name === undefined ?
+        	          hit.filename.charAt(0).toUpperCase() + hit.filename.slice(1).replaceAll("_", " ") + " - " + hit.title :
+        	          (hit.name.charAt(0).toUpperCase() + hit.name.slice(1)).replaceAll("_", " ")
 
-                var secondaryText = hit.data !== undefined ? hit.data.slice(0, 40) + "..." : ""
-                const avatar = hit.image_url === undefined ?
-                  baseImage
-                  :
-                  <Avatar
-                    src={hit.image_url}
-                    variant="rounded"
-                  />
+        	        var secondaryText = hit.data !== undefined ? hit.data.slice(0, 40) + "..." : ""
+        	        const avatar = hit.image_url === undefined ?
+        	          baseImage
+        	          :
+        	          <Avatar
+        	            src={hit.image_url}
+        	            variant="rounded"
+        	          />
 
-                //console.log(hit)
-                if (hit.categories !== undefined && hit.categories !== null && hit.categories.length > 0) {
-                  secondaryText = hit.categories.slice(0, 3).map((data, index) => {
-                    if (index === 0) {
-                      return data
-                    }
+        	        //console.log(hit)
+        	        if (hit.categories !== undefined && hit.categories !== null && hit.categories.length > 0) {
+        	          secondaryText = hit.categories.slice(0, 3).map((data, index) => {
+        	            if (index === 0) {
+        	              return data
+        	            }
 
-                    return ", " + data
+        	            return ", " + data
 
-                    /*
-                      <Chip
-                        key={index}
-                        style={chipStyle}
-                        label={data}
-                        onClick={() => {
-                          //handleChipClick
-                        }}
-                        variant="outlined"
-                        color="primary"
-                      />
-                    */
-                  })
-                }
+        	            /*
+        	              <Chip
+        	                key={index}
+        	                style={chipStyle}
+        	                label={data}
+        	                onClick={() => {
+        	                  //handleChipClick
+        	                }}
+        	                variant="outlined"
+        	                color="primary"
+        	              />
+        	            */
+        	          })
+        	        }
 
-                var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://shuffler.io/apps/${hit.objectID}`
-                parsedUrl += `?queryID=${hit.__queryID}`
+        	        var parsedUrl = isCloud ? `/apps/${hit.objectID}` : `https://shuffler.io/apps/${hit.objectID}`
+        	        parsedUrl += `?queryID=${hit.__queryID}`
 
-                return (
-                  <div style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
-                    //if (!isCloud) {
-                    //	toast("Since this is an on-prem instance. You will need to activate the app yourself. Opening link to download it in a new window.")
-                    //	setTimeout(() => {
-                    //		event.preventDefault()
-                    //		window.open(parsedUrl, '_blank')
-                    //	}, 2000)
-                    //} else {
-                    toast(`Activating ${name}`)
-                    //}
+					var appdragged = false
+        	        return (
+					  <Draggable
+					    onDrag={(e) => {
+						  e.preventDefault()
+						  e.stopPropagation()
 
-                    console.log("CLICK: ", hit)
+						  if (!appdragged) { 
+						  	clickedApp(hit)
+						  }
+						  
+						  appdragged = true 
+					    }}
+					    onStop={(e) => {
+					    }}
+					    dragging={false}
+					    position={{
+					  	x: 0,
+					  	y: 0,
+					    }}
+					  >
+        	          <div style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
+						  clickedApp(hit)
 
-                    const queryID = hit.__queryID
-                    console.log("QUERY: ", queryID)
-
-                    if (queryID !== undefined && queryID !== null) {
-                      aa('init', {
-                        appId: "JNSS5CFDZZ",
-                        apiKey: "db08e40265e2941b9a7d8f644b6e5240",
-                      })
-
-                      const timestamp = new Date().getTime()
-                      aa('sendEvents', [
-                        {
-                          eventType: 'conversion',
-                          eventName: 'Public App Activated',
-                          index: 'appsearch',
-                          objectIDs: [hit.objectID],
-                          timestamp: timestamp,
-                          queryID: queryID,
-                          userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
-                        }
-                      ])
-                    } else {
-                      console.log("No query to handle when activating")
-                    }
-
-                    activateApp(hit.objectID, true)
-                  }}>
-                    <ListItem key={hit.objectID} style={innerlistitemStyle} onMouseOver={() => {
-                      setMouseHoverIndex(index)
-                    }}>
-                      <ListItemAvatar>
-                        {avatar}
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={name}
-                        secondary={secondaryText}
-                      />
-                      {/*
-											<ListItemSecondaryAction>
-												<IconButton edge="end" aria-label="delete">
-													<DeleteIcon />
-												</IconButton>
-											</ListItemSecondaryAction>
-											*/}
-                    </ListItem>
-                  </div>
-                )
-              })
-            }
-          </List>
-        </div>
+        	          }}>
+        	            <ListItem key={hit.objectID} style={innerlistitemStyle} onMouseOver={() => {
+        	              setMouseHoverIndex(index)
+        	            }}>
+        	              <ListItemAvatar>
+        	                {avatar}
+        	              </ListItemAvatar>
+        	              <ListItemText
+        	                primary={name}
+        	                secondary={secondaryText}
+        	              />
+        	              {/*
+												<ListItemSecondaryAction>
+													<IconButton edge="end" aria-label="delete">
+														<DeleteIcon />
+													</IconButton>
+												</ListItemSecondaryAction>
+												*/}
+        	            </ListItem>
+        	          </div>
+		  			  </Draggable>
+        	        )
+        	      })
+        	    }
+        	  </List>
+        	</div>
       )
     }
 
@@ -8449,7 +8647,7 @@ const AngularWorkflow = (defaultprops) => {
                 )
               })}
 
-			  {visibleApps.length <= 4 ? ( 
+			  {visibleApps.length <= 2 ? 
 				<div
 				  style={{ textAlign: "center", width: leftBarSize, marginTop: 40, maxWidth: 340, overflow: "hidden",  }}
 				  onLoad={() => {
@@ -8467,7 +8665,7 @@ const AngularWorkflow = (defaultprops) => {
 					</Index>
 				  </InstantSearch>
 				</div>
-			) : 
+			    :
 				<div 
 					style={{marginTop: 100, }}
 				/>}
@@ -8542,6 +8740,8 @@ const AngularWorkflow = (defaultprops) => {
       return
     }
 
+    console.log("action input: ", e)
+
     const newaction = selectedApp.actions.find(
       (a) => a.name === e.target.value
     );
@@ -8569,8 +8769,6 @@ const AngularWorkflow = (defaultprops) => {
     newSelectedAction.isValid = true;
     newSelectedAction.is_valid = true;
 	newSelectedAction.required_body_fields = newaction.required_body_fields 
-
-	console.log("New selected action: ", newSelectedAction)
 
 	// Simple action swap autocompleter
 	if (oldaction.parameters !== undefined && oldaction.parameters !== null && newSelectedAction.parameters !== undefined && oldaction.id === newSelectedAction.id) {
@@ -8661,7 +8859,11 @@ const AngularWorkflow = (defaultprops) => {
     // Further checks if those fields are already set in a previously used action
     newSelectedAction = RunAutocompleter(newSelectedAction);
 
+    console.log("newaction: ", newaction)
+
     if (
+	  newaction.return !== undefined &&
+	  newaction.return !== null &&
       newaction.returns.example !== undefined &&
       newaction.returns.example !== null &&
       newaction.returns.example.length > 0
@@ -12161,12 +12363,6 @@ const AngularWorkflow = (defaultprops) => {
                     selectedTrigger.app_association = parsedvalue
                     setUpdate(Math.random());
                   }
-                  //  setNewSelectedAction({ 
-                  //		target: { 
-                  //			value: newValue.name 
-                  //		} 
-                  //	});
-                  //}
                 }}
             	renderOption={(props, app, state) => {
                   var appname = app.name.replaceAll("_", " ")
@@ -14068,7 +14264,7 @@ const AngularWorkflow = (defaultprops) => {
 	)
   }
 
-  const showErrors = !isMobile && !workflow.public && workflow.errors !== undefined && workflow.errors !== null && workflow.errors.length > 0 ?
+  const shownErrors = !isMobile && !workflow.public && workflow.errors !== undefined && workflow.errors !== null && workflow.errors.length > 0 && showErrors ?
   	<div
   		style={{
 			border: "1px solid rgba(255,255,255,0.1)",
@@ -14080,6 +14276,24 @@ const AngularWorkflow = (defaultprops) => {
 			borderRadius: theme.palette.borderRadius,
   		}}
   	>
+
+        <Tooltip
+          title="Hide error messages. They will show up the next refresh."
+          placement="top"
+        >
+          <IconButton
+            style={{ position: "absolute", top: 0, right: 0}}
+            onClick={(e) => {
+              e.preventDefault();
+
+			  // A temporary hider thing
+			  setShowErrors(false)
+            }}
+          >
+            <CloseIcon style={{ color: "white" }} />
+          </IconButton>
+        </Tooltip>
+
   		<Typography variant="body22">
 			{/*<WarningIcon style={{marginRight: 5, height: 15, width: 15, }} />*/}
 
@@ -16653,29 +16867,47 @@ const AngularWorkflow = (defaultprops) => {
 		  return ""
 	  }
 
+	  // Validate and check for newlines
 	  if (result.success !== false) {
+
+		  var stringjson = result
+		  const valid = validateJson(stringjson, true)
+		  if (valid.valid === false) {
+			  if (stringjson.startsWith("{") && stringjson.endsWith("}")) {
+				  // Look for newline
+				  if (stringjson.includes("\n") && !stringjson.includes("\\n")) {
+					return "Looks like you have a newline problem. Consider using the | replace: '\\n', '\\\\n' }} filter in Liquid."
+				  } else {
+					return "The result looks like it should be JSON, but is invalid. Look for potential"
+				  }
+			  }
+		  }
+
 		  return ""
 	  }
 
-	  var stringjson = result
 	  try {
 		  stringjson = JSON.stringify(result)
 	  } catch (e) {
 	  }
 
-	  console.log("JSON: ", stringjson)
 	  stringjson = stringjson.toLowerCase()
 	  if (stringjson.includes("localhost")) {
 		  return "You can't use localhost in apps. Use the external ip or url of the server instead"
 	  }
 
 	  if (stringjson.includes("connectionerror")) {
-		  return "Your URL is most likely incorrect."
+		  if (stringjson.includes("kms")) {
+			  return "KMS authentication failed. Check your notifications for more details."
+		  }
+
+		  return "Your URL is incorrect."
 	  }
 
 	  if (stringjson.includes("result too large to handle")) {
 		  return "Execution loading failed. Reload the execution by closing it and clicking it again"
 	  }
+
 
 	  return ""
   }
@@ -16940,21 +17172,21 @@ const AngularWorkflow = (defaultprops) => {
         ) : (
           <div>
             <b>Result</b>
-						<br/>
+			<br/>
             <span
-							style={{
-								wordBreak: "break-word",
-							}}
+			  style={{
+			  	wordBreak: "break-word",
+			    display: "inline-block",
+			    whiteSpace: "pre-wrap",
+			  }}
+
               onClick={() => {
-                console.log("IN HERE TO CLICK");
                 to_be_copied = selectedResult.result;
                 var copyText = document.getElementById(
                   "copy_element_shuffle"
                 );
-                console.log("PRECOPY: ", to_be_copied);
+
                 if (copyText !== null && copyText !== undefined) {
-                  console.log("COPY: ", copyText);
-                  console.log("NAVIGATOR: ", navigator);
                   const clipboard = navigator.clipboard;
                   if (clipboard === undefined) {
                     toast("Can only copy over HTTPS (port 3443)");
@@ -17139,7 +17371,7 @@ const AngularWorkflow = (defaultprops) => {
 	  {showWorkflowRevisions ? null :
 	  	<span>
 			{/*<BottomAvatars />*/}
-  			{showErrors} 
+  			{shownErrors} 
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
 			<RightsideBar />
@@ -18813,6 +19045,63 @@ const AngularWorkflow = (defaultprops) => {
 		//setUpdate(Math.random())
 	}
 
+  /*
+  var foundusecase = {}
+  if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0 && userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
+	  for (let priokey in userdata.priorities) {
+		  const prio = userdata.priorities[priokey]
+		  if (prio.type !== "usecase") {
+			  continue
+		  }
+
+		  const descsplit = prio.description.split("&")
+		  var srcapp = ""
+		  var dstapp = ""
+		  if (descsplit.length > 0) {
+			  srcapp = descsplit[0].toLowerCase().replaceAll(" ", "_")
+
+			  if (descsplit.length > 2) {
+				  dstapp = descsplit[2].toLowerCase().replaceAll(" ", "_")
+			  }
+		  }
+
+		  if (srcapp.length > 0 && dstapp.length > 0) {
+			  for (let actionkey in workflow.actions) {
+				  const curaction = workflow.actions[actionkey]
+				  const appname = curaction.app_name.toLowerCase().replaceAll(" ", "_")
+				  if (appname === srcapp || appname === dstapp) {
+					  foundusecase = prio
+					  break
+				  }
+			  }
+		  }
+
+		  if (foundusecase.name !== undefined && foundusecase.name !== null && foundusecase.name !== "") {
+			  break
+		  }
+	  }
+  }
+
+  const foundusecase.name === undefined || foundusecase.name === null || foundusecase.name === "" ? null :
+	<Slide direction="down" in={true} mountOnEnter unmountOnExit>
+		<div style={{position: "fixed", top: "10%", left: "37%", border: "1px solid rgba(255,255,255,0.3)", backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, display: "flex", }}>
+			<WorkflowTemplatePopup 
+				isLoggedIn={isLoggedIn}
+				userdata={userdata}
+				globalUrl={globalUrl}
+
+				title={foundusecase.name.split("Suggested Usecase: ")[1]}
+				description={"Suggested usecase based on usage"}
+
+				srcapp={foundusecase.description.split("&")[0]}
+				img1={foundusecase.description.split("&")[1]}
+				dstapp={foundusecase.description.split("&")[2]}
+				img2={foundusecase.description.split("&")[3]}
+			/>
+		</div>
+	</Slide>
+	*/ 
+
   const loadedCheck =
     isLoaded && workflowDone ? (
       <div>
@@ -18827,6 +19116,8 @@ const AngularWorkflow = (defaultprops) => {
         {/*editWorkflowModal*/}
   		{executionArgumentModal}
         {configureWorkflowModal}
+		{/*usecaseSlidein*/}
+
 		<SuggestionBoxUi />
 
   		{codeEditorModalOpen ?
