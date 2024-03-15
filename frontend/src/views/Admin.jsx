@@ -160,6 +160,8 @@ const Admin = (props) => {
   const [loginInfo, setLoginInfo] = React.useState("");
   const [curTab, setCurTab] = React.useState(0);
   const [users, setUsers] = React.useState([]);
+  const [subOrgs, setSubOrgs] = useState([]);
+  const [parentOrg, setParentOrg] = React.useState(null);
   const [organizations, setOrganizations] = React.useState([]);
   const [orgSyncResponse, setOrgSyncResponse] = React.useState("");
   const [userSettings, setUserSettings] = React.useState({});
@@ -201,6 +203,14 @@ const Admin = (props) => {
       setIsDropzone(false);
     }
   }, [isDropzone]);
+
+  useEffect(() => {
+    if (userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0) {
+      handleGetSubOrgs(userdata.active_org.id);
+    }
+    else console.log("error in user data")
+  }, [userdata]); 
+  
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
@@ -1100,6 +1110,92 @@ If you're interested, please let me know a time that works for you, or set up a 
         toast("Error getting current organization");
       });
   };
+
+  const handleGetSubOrgs = (orgId) => {
+  
+    if (orgId.length === 0) {
+      toast("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
+      return;
+    }
+    
+    fetch(`${globalUrl}/api/v1/orgs/${orgId}/suborgs`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error('Failed to fetch sub organizations');
+      }
+      return response.json();
+    })
+    .then((responseJson) => {
+      if (responseJson.success === false) {
+        toast("Failed getting your org. If this persists, please contact support.");
+      } else {
+        const { subOrgs, parentOrg } = responseJson;
+        setSubOrgs(subOrgs);
+        setParentOrg(parentOrg);
+      }
+    })
+      .catch((error) => {
+        console.log("Error getting sub orgs: ", error);
+        toast("Error getting sub organizations");
+      });
+  };
+
+const handleClickChangeOrg = (orgId) => {
+  // Don't really care about the logout
+  //name: org.name,
+  //orgId = "asd"
+  const data = {
+    org_id: orgId,
+  }
+            
+  localStorage.setItem("globalUrl", "")
+  localStorage.setItem("getting_started_sidebar", "open");
+
+  fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
+    mode: 'cors',
+    credentials: 'include',
+    crossDomain: true,
+    method: 'POST',
+    body: JSON.stringify(data),
+    withCredentials: true,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+  })
+  .then(function(response) {
+    if (response.status !== 200) {
+      console.log("Error in response")
+    }
+
+    return response.json();
+  }).then(function(responseJson) {	
+    if (responseJson.success === true) {
+      if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) { 
+        console.log("Region Change: ", responseJson.region_url)
+        localStorage.setItem("globalUrl", responseJson.region_url)
+        //globalUrl = responseJson.region_url
+      }
+
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
+      toast("Successfully changed active organization - refreshing!")
+    } else {
+      toast("Failed changing org: ", responseJson.reason)
+    }
+  })
+  .catch(error => {
+    console.log("error changing: ", error)
+    //removeCookie("session_token", {path: "/"})
+  })
+}
+
 
   const inviteUser = (data) => {
     //console.log("INPUT: ", data);
@@ -4662,6 +4758,13 @@ If you're interested, please let me know a time that works for you, or set up a 
       </div>
     ) : null;
 
+  const imagesize = 40;
+  const imageStyle = {
+      width: imagesize,
+      height: imagesize,
+      pointerEvents: "none",
+  };
+
   const organizationsTab =
     curTab === 7 ? (
       <div>
@@ -4682,13 +4785,253 @@ If you're interested, please let me know a time that works for you, or set up a 
         >
           Add suborganization
         </Button>
-        <Divider
+
+  {parentOrg ? (
+    <span>
+      <Divider
+        style={{
+          marginTop: 20,
+          marginBottom: 20,
+          backgroundColor: theme.palette.inputColor,
+        }}
+      />
+
+      <div
+        style={{
+          textAlign: "center",
+          width: "100%",
+          padding: "10px",
+          marginTop: 20,
+        }}
+      >
+        <h3
           style={{
-            marginTop: 20,
-            marginBottom: 20,
-            backgroundColor: theme.palette.inputColor,
+            margin: 0,
+            fontSize: "1.2rem",
+            fontWeight: "bold",
+            letterSpacing: "1px",
           }}
-        />
+        >
+          {" "}
+          Your Parent Organization
+        </h3>
+      </div>
+      <Divider
+        style={{
+          marginTop: 20,
+          marginBottom: 20,
+          backgroundColor: theme.palette.inputColor,
+        }}
+      />
+      {(() => {
+        const image =
+          parentOrg.image === "" ? (
+            <img
+              alt={parentOrg.name}
+              src={theme.palette.defaultImage}
+              style={imageStyle}
+            />
+          ) : (
+            <img
+              alt={parentOrg.name}
+              src={parentOrg.image}
+              style={imageStyle}
+            />
+          );
+        const bgColor = "#27292d";
+
+        return (
+          <List>
+            <ListItem>
+              <ListItemText
+                primary="Logo"
+                style={{ minWidth: 100, maxWidth: 100 }}
+              />
+              <ListItemText
+                primary="Name"
+                style={{ minWidth: 250, maxWidth: 250 }}
+              />
+              <ListItemText
+                primary="Your role"
+                style={{ minWidth: 150, maxWidth: 150 }}
+              />
+              <ListItemText
+                primary="id"
+                style={{ minWidth: 400, maxWidth: 400 }}
+              />
+            </ListItem>
+            <ListItem style={{ backgroundColor: bgColor }}>
+              <ListItemText
+                primary={image}
+                style={{ minWidth: 100, maxWidth: 100 }}
+              />
+              <ListItemText
+                primary={parentOrg.name}
+                style={{ minWidth: 250, maxWidth: 250 }}
+              />
+              <ListItemText
+                primary={parentOrg.role}
+                style={{ minWidth: 150, maxWidth: 150 }}
+              />
+              <ListItemText
+                primary={parentOrg.id}
+                style={{ minWidth: 400, maxWidth: 400 }}
+              />
+
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => {
+                  handleClickChangeOrg(parentOrg.id);
+                }}
+              >
+                Switch To Parent
+              </Button>
+            </ListItem>
+          </List>
+        );
+      })()}
+    </span>
+  ) : null
+  }
+        
+ {subOrgs.length > 0 ? (
+    <span>
+      <Divider
+        style={{
+          marginTop: 20,
+          marginBottom: 20,
+          backgroundColor: theme.palette.inputColor,
+        }}
+      />
+      <div
+        style={{
+          textAlign: "center",
+          width: "100%",
+          padding: "10px",
+          marginTop: 20,
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "1.2rem",
+            fontWeight: "bold",
+            letterSpacing: "1px",
+          }}
+        >
+          Sub Organizations of the Current Organization
+        </h3>
+      </div>
+
+      <Divider
+        style={{
+          marginTop: 20,
+          marginBottom: 20,
+          backgroundColor: theme.palette.inputColor,
+        }}
+      />
+
+      <List>
+        <ListItem>
+          <ListItemText
+            primary="Logo"
+            style={{ minWidth: 100, maxWidth: 100 }}
+          />
+          <ListItemText
+            primary="Name"
+            style={{ minWidth: 250, maxWidth: 250 }}
+          />
+          <ListItemText
+            primary="Your role"
+            style={{ minWidth: 150, maxWidth: 150 }}
+          />
+          <ListItemText primary="id" style={{ minWidth: 400, maxWidth: 400 }} />
+        </ListItem>
+        <span>
+          {subOrgs.map((data, index) => {
+            const image =
+              data.image === "" ? (
+                <img
+                  alt={data.name}
+                  src={theme.palette.defaultImage}
+                  style={imageStyle}
+                />
+              ) : (
+                <img alt={data.name} src={data.image} style={imageStyle} />
+              );
+
+            var bgColor = "#27292d";
+            if (index % 2 === 0) {
+              bgColor = "#1f2023";
+            }
+
+            return (
+              <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                <ListItemText
+                  primary={image}
+                  style={{ minWidth: 100, maxWidth: 100 }}
+                />
+                <ListItemText
+                  primary={data.name}
+                  style={{ minWidth: 250, maxWidth: 250 }}
+                />
+                <ListItemText
+                  primary={data.role}
+                  style={{ minWidth: 150, maxWidth: 150 }}
+                />
+                <ListItemText
+                  primary={data.id}
+                  style={{ minWidth: 400, maxWidth: 400 }}
+                />
+
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => {
+                    handleClickChangeOrg(data.id);
+                  }}
+                >
+                  Change Active Org
+                </Button>
+              </ListItem>
+            );
+          })}
+        </span>
+      </List>
+    </span>
+  ) : null
+ }
+
+
+<Divider
+  style={{
+    marginTop: 20,
+    marginBottom: 20,
+    backgroundColor: theme.palette.inputColor,
+  }}
+/>
+
+<div style={{ textAlign: "center", width: "100%", padding: "10px", marginTop: 20 }}>
+  <h3
+    style={{
+      margin: 0,
+      fontSize: "1.2rem",
+      fontWeight: "bold",
+      letterSpacing: "1px",
+    }}
+  >
+    All Tenants
+  </h3>
+</div>
+
+<Divider
+  style={{
+    marginTop: 20,
+    marginBottom: 20,
+    backgroundColor: theme.palette.inputColor,
+  }}
+/>
         <List>
           <ListItem>
             <ListItemText
@@ -4728,12 +5071,6 @@ If you're interested, please let me know a time that works for you, or set up a 
                     ? "True"
                     : "False";
 
-                const imagesize = 40;
-                const imageStyle = {
-                  width: imagesize,
-                  height: imagesize,
-                  pointerEvents: "none",
-                };
                 const image =
                   data.image === "" ? (
                     <img
