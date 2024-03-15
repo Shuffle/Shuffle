@@ -1120,7 +1120,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       return;
     }
     
-    fetch(`${globalUrl}/api/v1/sub_orgs/${orgId}`, {
+    fetch(`${globalUrl}/api/v1/orgs/${orgId}/suborgs`, {
       method: "GET",
       credentials: "include",
       headers: {
