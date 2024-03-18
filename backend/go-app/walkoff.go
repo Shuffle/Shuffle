@@ -319,7 +319,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			env.Checkin = timeNow
-			err = shuffle.SetEnvironment(ctx, &env)
+			err = shuffle.SetEnvironment(ctx, env)
 			if err != nil {
 				log.Printf("[ERROR] Failed updating environment: %s", err)
 			}

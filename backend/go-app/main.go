@@ -969,7 +969,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		tutorialsFinished = append(tutorialsFinished, tutorial)
 	}
 
-	licensed := shuffle.IsLicensed(ctx, *currentOrg)
+	licensed := shuffle.IsLicensed(ctx, *org)
 
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
