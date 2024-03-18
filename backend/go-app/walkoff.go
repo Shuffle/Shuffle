@@ -293,12 +293,35 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	env, err := shuffle.GetEnvironment(ctx, orgId, "")
 	timeNow := time.Now().Unix()
 	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 {
+		// Updates every 60 seconds~
 		if time.Now().Unix() > env.Edited+60 {
-			env.RunningIp = request.RemoteAddr
+			env.RunningIp = shuffle.GetRequestIp(request)
+			if len(orborusLabel) > 0 {
+				env.RunningIp = orborusLabel
+			}
+
+			if request.Method == "POST" {
+				body, err := ioutil.ReadAll(request.Body)
+				if err == nil {
+					var envData shuffle.OrborusStats
+					err = json.Unmarshal(body, &envData)
+					if err == nil {
+						if envData.Swarm {
+							env.Licensed = true
+							env.RunType = "docker"
+						} 
+
+						if envData.Kubernetes {
+							env.RunType = "k8s"
+						}
+					}
+				}
+			}
+
 			env.Checkin = timeNow
-			err = shuffle.SetEnvironment(ctx, env)
+			err = shuffle.SetEnvironment(ctx, &env)
 			if err != nil {
-				log.Printf("[WARNING] Failed updating environment: %s", err)
+				log.Printf("[ERROR] Failed updating environment: %s", err)
 			}
 		}
 	}

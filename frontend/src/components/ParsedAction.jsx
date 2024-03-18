@@ -3258,7 +3258,6 @@ const ParsedAction = (props) => {
 										}
 									}
 
-									console.log("DID NAME REPLACE ACTUALLY WORK? - may be missing it in certain triggers");
 									setWorkflow(workflow);
                   					setUpdate(Math.random());
 									baselabel = name

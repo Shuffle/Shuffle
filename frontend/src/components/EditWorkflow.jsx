@@ -57,6 +57,7 @@ import {
   Publish as PublishIcon,
   OpenInNew as OpenInNewIcon,
   Add as AddIcon,
+  Remove as RemoveIcon,
 } from "@mui/icons-material";
 
 const EditWorkflow = (props) => {
@@ -76,7 +77,8 @@ const EditWorkflow = (props) => {
 	const [name, setName] = React.useState(workflow.name !== undefined ? workflow.name : "")
 	const [dueDate, setDueDate] = React.useState(workflow.due_date !== undefined && workflow.due_date !== null && workflow.due_date !== 0 ? dayjs(workflow.due_date*1000) : dayjs().subtract(1, 'day'))
 
-  const [inputFields, setInputFields] = React.useState([])
+  console.log("WORKFLOW: ", workflow)
+  const [inputQuestions, setInputQuestions] = React.useState(workflow.input_questions !== undefined && workflow.input_questions !== null ? JSON.parse(JSON.stringify(workflow.input_questions)) : []) 
 
   const classes = useStyles();
 
@@ -232,7 +234,91 @@ const EditWorkflow = (props) => {
 				</div>
       </DialogTitle>
       <FormControl>
-        <DialogContent style={{paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, }}>
+		<div style={{width: 600, position: "fixed", left: 0, bottom: 0, zIndex: 1002, backgroundColor: "rgba(53,53,53,1)", height: 75, paddingTop: 20, paddingLeft: 75, }}>
+		  {/*
+          <Button
+            style={{}}
+            onClick={() => {
+				if (setNewWorkflow !== undefined) {
+					setWorkflow({})
+				}
+
+				setModalOpen(false)
+            }}
+            color="primary"
+          >
+            Cancel
+          </Button>
+		  */}
+          <Button
+            variant="contained"
+            style={{}}
+            disabled={name.length === 0 || submitLoading === true}
+            onClick={() => {
+				setSubmitLoading(true)
+
+				// Loop inputfields
+				var validfields = []
+				for (var i = 0; i < inputQuestions.length; i++) {
+					if (inputQuestions[i].deleted === true) {
+						continue
+					}
+
+					if (inputQuestions[i].value.length === 0) {
+						continue
+					}
+
+					validfields.push(inputQuestions[i])
+				}
+
+				innerWorkflow.input_questions = validfields
+
+				innerWorkflow.name = name 
+				innerWorkflow.description = description 
+				if (newWorkflowTags.length > 0) {
+					innerWorkflow.tags = newWorkflowTags
+				}
+
+				if (selectedUsecases.length > 0) {
+					innerWorkflow.usecase_ids = selectedUsecases
+				}
+
+				if (dueDate > 0) {
+					innerWorkflow.due_date = new Date(`${dueDate["$y"]}-${dueDate["$M"]+1}-${dueDate["$D"]}`).getTime()/1000
+				}
+
+				if (setNewWorkflow !== undefined) {
+					setNewWorkflow(
+						innerWorkflow.name,
+						innerWorkflow.description,
+						innerWorkflow.tags,
+						innerWorkflow.default_return_value,
+						innerWorkflow,
+						newWorkflow,
+						innerWorkflow.usecase_ids,
+						innerWorkflow.blogpost,
+						innerWorkflow.status,
+					)
+					setWorkflow({})
+				} else {
+					setWorkflow(innerWorkflow)
+					console.log("editing workflow: ", innerWorkflow)
+				}
+				
+				setSubmitLoading(true)
+
+				// If new workflow, don't close it
+				if (isEditing) {
+					setModalOpen(false)
+				}
+            }}
+            color="primary"
+          >
+            {submitLoading ? <CircularProgress color="secondary" /> : "Done"}
+          </Button>
+        </div>
+
+        <DialogContent style={{paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, paddingBottom: 200, }}>
 			<div style={{minWidth: newWorkflow ? 500 : 550, maxWidth: newWorkflow ? 450 : 500, }}>
           	<TextField
           	  onChange={(event) => {
@@ -477,41 +563,21 @@ const EditWorkflow = (props) => {
 									fullWidth
 								/>
 
-								{/*
-								<Typography variant="h6">
+								<Typography variant="h6" style={{marginTop: 50, }}>
 									Input fields
 								</Typography>
-								<Typography variant="body1">
+								<Typography variant="body1" color="textSecondary" style={{marginBottom: 20, }}>
 									Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/workflows/${workflow.id}/run`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>workflow run page</a>.
-										
-														
 								</Typography>
 
-								{inputFields.length === 0 ? 
-									<Button
-									  color="primary"
-									  style={{ maxWidth: 50, marginLeft: 15 }}
-									  variant="outlined"
-									  onClick={() => {
-										inputFields.push({
-											"name": "",
-											"required": false
-										})
-										setInputFields(inputFields)
-										setUpdate(Math.random());
-									  }}
-									>
-									  <AddIcon style={{}} />
-									</Button>
-								: null}
 
-								{inputFields.map((data, index) => {
+								{inputQuestions.map((data, index) => {
 									console.log("Inputfield: ", data)
 
 									return (
 										<div style={{display: "flex", }}>
 											<TextField
-											  required={data.required}
+											  disabled={data.deleted === true}
 											  style={{
 												height: 50,
 												flex: 2,
@@ -521,14 +587,45 @@ const EditWorkflow = (props) => {
 												marginRight: 5,
 											  }}
 											  fullWidth={true}
-											  placeholder="Name"
+											  placeholder="Question"
+											  id="standard-required"
+											  margin="normal"
+											  variant="outlined"
+											  defaultValue={data.name}
+											  onChange={(e) => {
+												inputQuestions[index].name = e.target.value
+												setInputQuestions(inputQuestions)
+          									    setUpdate(Math.random());
+											  }}
+											  InputProps={{
+												classes: {
+												  notchedOutline: classes.notchedOutline,
+												},
+												style: {
+												  color: "white",
+												  minHeight: 50,
+												},
+											  }}
+											/>
+											<TextField
+											  disabled={data.deleted === true}
+											  style={{
+												height: 50,
+												flex: 2,
+												marginTop: 0,
+												marginBottom: 0,
+												backgroundColor: theme.palette.inputColor,
+												marginRight: 5,
+											  }}
+											  fullWidth={true}
+											  placeholder="JSON key"
 											  id="standard-required"
 											  margin="normal"
 											  variant="outlined"
 											  defaultValue={data.value}
 											  onChange={(e) => {
-												inputFields[index].name = e.target.value
-												setInputFields(inputFields)
+												inputQuestions[index].value = e.target.value
+												setInputQuestions(inputQuestions)
           									    setUpdate(Math.random());
 											  }}
 											  InputProps={{
@@ -544,28 +641,44 @@ const EditWorkflow = (props) => {
           									<Button
           									  color="primary"
           									  style={{ maxWidth: 50, marginLeft: 15 }}
+											  disabled={data.deleted === true}
           									  variant="outlined"
           									  onClick={() => {
-												inputFields.push({
-													"name": "",
-													"required": false
-												})
-											    setInputFields(inputFields)
-          									    setUpdate(Math.random());
+												  // Remove current index
+												  console.log("Removing index: ", index)
+												  inputQuestions[index].deleted = true
+          									      setUpdate(Math.random());
           									  }}
           									>
-          									  <AddIcon style={{}} />
+          									  <RemoveIcon style={{}} />
           									</Button>
 										</div>
 									)
 								})}
-								*/}
+
+								<Button
+								  color="primary"
+								  style={{ maxWidth: 50, marginLeft: 15, marginTop: 20, }}
+								  variant="outlined"
+								  onClick={() => {
+									inputQuestions.push({
+										"name": "",
+										"value": "",
+										"deleted": false, 
+										"required": false
+									})
+									setInputQuestions(inputQuestions)
+									setUpdate(Math.random());
+								  }}
+								>
+								  <AddIcon style={{}} />
+								</Button>
 							</span>
 						: null}
 
 			<Tooltip color="primary" title={"Add more details"} placement="top">
 				<IconButton
-					style={{ color: "white", margin: "auto", marginTop: 10, textAlign: "center", width: 50,}}
+					style={{ color: "white", margin: "auto", textAlign: "center", width: 50, marginTop: 50, }}
 					onClick={() => {
 						setShowMoreClicked(!showMoreClicked);
 					}}
@@ -577,71 +690,7 @@ const EditWorkflow = (props) => {
 
         </DialogContent>
 
-        <DialogActions style={{paddingRight: 100,  marginBottom: 100, }}>
-          <Button
-            style={{}}
-            onClick={() => {
-				if (setNewWorkflow !== undefined) {
-					setWorkflow({})
-				}
-
-				setModalOpen(false)
-            }}
-            color="primary"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            style={{}}
-            disabled={name.length === 0 || submitLoading === true}
-            onClick={() => {
-				setSubmitLoading(true)
-
-				innerWorkflow.name = name 
-				innerWorkflow.description = description 
-				if (newWorkflowTags.length > 0) {
-					innerWorkflow.tags = newWorkflowTags
-				}
-
-				if (selectedUsecases.length > 0) {
-					innerWorkflow.usecase_ids = selectedUsecases
-				}
-
-				if (dueDate > 0) {
-					innerWorkflow.due_date = new Date(`${dueDate["$y"]}-${dueDate["$M"]+1}-${dueDate["$D"]}`).getTime()/1000
-				}
-
-				if (setNewWorkflow !== undefined) {
-					setNewWorkflow(
-						innerWorkflow.name,
-						innerWorkflow.description,
-						innerWorkflow.tags,
-						innerWorkflow.default_return_value,
-						innerWorkflow,
-						newWorkflow,
-						innerWorkflow.usecase_ids,
-						innerWorkflow.blogpost,
-						innerWorkflow.status,
-					)
-					setWorkflow({})
-				} else {
-					setWorkflow(innerWorkflow)
-					console.log("editing workflow: ", innerWorkflow)
-				}
-				
-				setSubmitLoading(true)
-
-				// If new workflow, don't close it
-				if (isEditing) {
-					setModalOpen(false)
-				}
-            }}
-            color="primary"
-          >
-            {submitLoading ? <CircularProgress color="secondary" /> : "Done"}
-          </Button>
-        </DialogActions>
+        
 		{newWorkflow === true ?
 			<span style={{marginTop: 30, }}>
 			  <Typography variant="h6" style={{marginLeft: 30, paddingBottom: 0, }}>

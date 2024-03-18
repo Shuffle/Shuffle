@@ -1065,25 +1065,9 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		Timestamp:    time.Now().Unix(),
 	}
 
-	// FIXME: Returning for now due to this causing network congestion
-	// and database fillup. The backend api also has it disabled.
-	return newStats
-
-	// Disable orborus stats
-	if os.Getenv("SHUFFLE_STATS_DISABLED") == "true" {
-		return newStats
-	}
-
-
-	if swarmConfig == "run" || swarmConfig == "swarm" {
+	if (swarmConfig == "run" || swarmConfig == "swarm") && strings.Contains(newWorkerImage, "scale") {
 		newStats.Swarm = true
 	}
-
-
-	// Run this 1/10 times
-	//if rand.Intn(10) != 1 {
-	//	return newStats
-	//}
 
 	newStats.PollTime = sleepTime
 	newStats.MaxQueue = maxConcurrency
@@ -1093,6 +1077,15 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		newStats.Kubernetes = true
 		return newStats
 	}
+
+	// Disable orborus stats
+	if os.Getenv("SHUFFLE_STATS_DISABLED") == "true" {
+		return newStats
+	}
+
+	// FIXME: Returning for now due to this causing network congestion
+	// and database fillup. The backend api also has it disabled.
+	return newStats
 
 	// Use the docker API to get the CPU usage of the docker engine machine
 	pers, err := dockercli.Info(ctx)

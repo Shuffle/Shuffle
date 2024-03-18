@@ -70,6 +70,7 @@ const Header = (props) => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
+  const [upgradeHovered, setUpgradeHovered] = React.useState(false);
   let navigate = useNavigate();
 
   const handleClick = (event) => {
@@ -1097,10 +1098,10 @@ const Header = (props) => {
             )}
 
             {/* Show on cloud, if not suborg and if not customer/pov/internal */}
-            {isCloud &&
-            (userdata.org_status === undefined ||
-              userdata.org_status === null ||
-              userdata.org_status.length === 0) ? (
+            {
+			  userdata.licensed !== undefined && 
+			  userdata.licensed !== null &&
+			  userdata.licensed === false ?
               <ListItem
                 style={{
                   textAlign: "center",
@@ -1109,11 +1110,13 @@ const Header = (props) => {
                   marginTop: 0,
                 }}
               >
-                <Link to="/pricing?tab=cloud&highlight=true" style={hrefStyle}>
+                <Link to="/admin?tab=billing" style={hrefStyle}>
                   <Button
                     variant="contained"
                     color="primary"
                     style={{ textTransform: "none" }}
+					onMouseOver={() => {setUpgradeHovered(true)}}
+					onMouseOut={() => {setUpgradeHovered(false)}}
                     onClick={() => {
 						if (isCloud) {
 						  ReactGA.event({
@@ -1122,13 +1125,30 @@ const Header = (props) => {
 							label: "",
 						  });
 						}
+
+						if (window.drift !== undefined) {
+						  if (isCloud) {
+							  window.drift.api.startInteraction({
+								interactionId: 386404,
+							  })
+						  } else {
+							  window.drift.api.startInteraction({
+								interactionId: 386403,
+							  })
+						  }
+						}
                     }}
                   >
-                    Upgrade
+					{upgradeHovered ? 
+						isCloud ? "Upgrade License" : "Upgrade License"
+						:
+						isCloud ? "Upgrade" : "Upgrade"
+					}
+
                   </Button>
                 </Link>
               </ListItem>
-            ) : null}
+             : null}
 
             {userdata === undefined ||
             userdata.app_execution_limit === undefined ||
@@ -1145,7 +1165,6 @@ const Header = (props) => {
                     textAlign: "center",
                     cursor: "pointer",
                     borderRadius: theme.palette.borderRadius,
-                    marginRight: 10,
                     marginTop: 5,
                     backgroundColor: theme.palette.surfaceColor,
                     minWidth: 60,
@@ -1154,7 +1173,7 @@ const Header = (props) => {
                       userdata.app_execution_usage /
                         userdata.app_execution_limit >=
                       0.9
-                        ? "#f86a3e"
+                        ? "2px solid #f86a3e"
                         : null,
                   }}
                   onClick={() => {

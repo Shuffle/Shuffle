@@ -16255,6 +16255,16 @@ const AngularWorkflow = (defaultprops) => {
                     </a>
                   )
                 ) : (
+				  executionData.execution_source === "questions" || executionData.execution_source === "web" ? 
+                    <a
+                      rel="noopener noreferrer"
+                      href={`/workflows/${executionData.workflow.id}/run`}
+                      target="_blank"
+                      style={{ textDecoration: "none", color: "#f85a3e" }}
+                    >
+						Questions
+                    </a>
+				  : 
                   executionData.execution_source
                 )}
               </Typography>

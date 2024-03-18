@@ -70,6 +70,9 @@ import {
   Business as BusinessIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
+  Cancel as CancelIcon,
+  Dns as DnsIcon,
+  Help as HelpIcon,
 
   Flag as FlagIcon,
   FmdGood as FmdGoodIcon,
@@ -193,9 +196,26 @@ const Admin = (props) => {
   const [, forceUpdate] = React.useState();
 
   useEffect(() => {
-		getUsers()
+	getUsers()
+
+	setTimeout(() => {
+		if (adminTab === 3) {
+			window.scroll({
+				top: 450,
+				left: 0,
+				behavior: 'smooth'
+			})
+		}
+	}, 1500)
   }, []);
 
+  useEffect(() => {
+	window.scroll({
+		top: 450,
+		left: 0,
+		behavior: 'smooth'
+	})
+  }, [adminTab]);
 
   useEffect(() => {
     if (isDropzone) {
@@ -970,6 +990,8 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((responseJson) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
           toast("Failed to deactivate user: " + responseJson.reason);
+		} else if (responseJson.success === false) {
+		  toast("Failed to deactivate user. Please contact support@shuffler.io if this persists.")
         } else {
           toast("Changed activation for user " + data.id);
         }
@@ -1146,55 +1168,54 @@ If you're interested, please let me know a time that works for you, or set up a 
       });
   };
 
-const handleClickChangeOrg = (orgId) => {
-  // Don't really care about the logout
-  //name: org.name,
-  //orgId = "asd"
-  const data = {
-    org_id: orgId,
-  }
-            
-  localStorage.setItem("globalUrl", "")
-  localStorage.setItem("getting_started_sidebar", "open");
-
-  fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
-    mode: 'cors',
-    credentials: 'include',
-    crossDomain: true,
-    method: 'POST',
-    body: JSON.stringify(data),
-    withCredentials: true,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-    },
-  })
-  .then(function(response) {
-    if (response.status !== 200) {
-      console.log("Error in response")
-    }
-
-    return response.json();
-  }).then(function(responseJson) {	
-    if (responseJson.success === true) {
-      if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) { 
-        console.log("Region Change: ", responseJson.region_url)
-        localStorage.setItem("globalUrl", responseJson.region_url)
-        //globalUrl = responseJson.region_url
-      }
-
-      setTimeout(() => {
-        window.location.reload()
-      }, 2000)
-      toast("Successfully changed active organization - refreshing!")
-    } else {
-      toast("Failed changing org: ", responseJson.reason)
-    }
-  })
-  .catch(error => {
-    console.log("error changing: ", error)
-    //removeCookie("session_token", {path: "/"})
-  })
-}
+	const handleClickChangeOrg = (orgId) => {
+	  // Don't really care about the logout
+	  //name: org.name,
+	  //orgId = "asd"
+	  const data = {
+	    org_id: orgId,
+	  }
+	            
+	  localStorage.setItem("globalUrl", "")
+	  localStorage.setItem("getting_started_sidebar", "open");
+	
+	  fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
+	    mode: 'cors',
+	    credentials: 'include',
+	    crossDomain: true,
+	    method: 'POST',
+	    body: JSON.stringify(data),
+	    withCredentials: true,
+	    headers: {
+	      'Content-Type': 'application/json; charset=utf-8',
+	    },
+	  })
+	  .then(function(response) {
+	    if (response.status !== 200) {
+	      console.log("Error in response")
+	    }
+	
+	    return response.json();
+	  }).then(function(responseJson) {	
+	    if (responseJson.success === true) {
+	      if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) { 
+	        localStorage.setItem("globalUrl", responseJson.region_url)
+	        //globalUrl = responseJson.region_url
+	      }
+	
+	      setTimeout(() => {
+	        window.location.reload()
+	      }, 2000)
+	      toast("Successfully changed active organization - refreshing!")
+	    } else {
+	      toast("Failed changing org: "+responseJson.reason)
+	    }
+	  })
+	  .catch(error => {
+	    console.log("error changing: ", error)
+	    //removeCookie("session_token", {path: "/"})
+	  })
+	}
 
 
   const inviteUser = (data) => {
@@ -1850,6 +1871,8 @@ const handleClickChangeOrg = (orgId) => {
       .then((responseJson) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
           toast("Failed setting user: " + responseJson.reason);
+		} else if (responseJson.success === false) {
+		  toast("Failed to update user")
         } else {
           //toast("Set the user field " + field + " to " + value);
           toast("Successfully updated user field " + field)
@@ -2912,6 +2935,7 @@ const handleClickChangeOrg = (orgId) => {
             )}
 
 						<Tabs
+							id="admin_tabs"
 							value={adminTab}
 							indicatorColor="primary"
 							textColor="secondary"
@@ -2961,18 +2985,18 @@ const handleClickChangeOrg = (orgId) => {
               }}
             />
 
-						{adminTab === 0 ? (
-							<OrgHeaderexpanded
-									isCloud={isCloud}
-									userdata={userdata}
-									setSelectedOrganization={setSelectedOrganization}
-									globalUrl={globalUrl}
-									selectedOrganization={selectedOrganization}
-									adminTab={adminTab}
-							/>
-						)
-						: adminTab === 1 ? (
-							<div>
+				{adminTab === 0 ? (
+					<OrgHeaderexpanded
+							isCloud={isCloud}
+							userdata={userdata}
+							setSelectedOrganization={setSelectedOrganization}
+							globalUrl={globalUrl}
+							selectedOrganization={selectedOrganization}
+							adminTab={adminTab}
+					/>
+				)
+				: adminTab === 1 ? (
+					<div>
             		<Typography
             		  variant="h6"
             		  style={{ marginBottom: "10px", color: "white" }}
@@ -4448,8 +4472,7 @@ const handleClickChangeOrg = (orgId) => {
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Environments</h2>
           <span style={{ marginLeft: 25 }}>
-            Decides what Orborus environment to execute an action in a workflow
-            in.{" "}
+            Decides what Orborus environment to run your workflow actions. If you have scale problems, talk to our team: support@shuffler.io.&nbsp;
             <a
               target="_blank"
 							rel="noopener noreferrer"
@@ -4491,25 +4514,33 @@ const handleClickChangeOrg = (orgId) => {
           }}
         />
         <List>
-          <ListItem>
+          <ListItem style={{paddingLeft: 10, }}>
+            <ListItemText
+              primary="Type"
+              style={{ minWidth: 50, maxWidth: 50, }}
+            />
+            <ListItemText
+              primary="License"
+              style={{ minWidth: 85, maxWidth: 85, }}
+            />
             <ListItemText
               primary="Name"
               style={{ minWidth: 150, maxWidth: 150 }}
             />
             <ListItemText
-              primary="Orborus running"
-              style={{ minWidth: 200, maxWidth: 200 }}
+              primary="Orborus label"
+              style={{ minWidth: 150, maxWidth: 150 }}
             />
             <ListItemText
               primary="Command"
               style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
-              primary="Type"
+              primary="Location"
               style={{ minWidth: 100, maxWidth: 100, }}
             />
             <ListItemText
-              primary={"In Queue"}
+              primary={"Queue"}
               style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
@@ -4557,8 +4588,54 @@ const handleClickChangeOrg = (orgId) => {
 				const queueSize = environment.queue !== undefined && environment.queue !== null ? environment.queue < 0 ? 0 : environment.queue > 1000 ? ">1000" : environment.queue : 0
 
                 return (
-									<span key={index}>
-                  	<ListItem key={index} style={{ backgroundColor: bgColor }}>
+				  <span key={index}>
+                  	<ListItem key={index} style={{ backgroundColor: bgColor, marginLeft: 0, }}>
+                  	  <ListItemText
+                  	    primary={environment.run_type === "cloud" ? 
+							<Tooltip title="Cloud" placement="top">
+								<CloudIcon style={{ color: "rgba(255,255,255,0.8)" }} />
+							</Tooltip>
+							: environment.run_type === "docker" ? 
+								<Tooltip title="Docker" placement="top">
+									<img src="/icons/docker.svg" style={{ width: 30, height: 30, }} />
+								</Tooltip>
+							: environment.run_type === "k8s" ? 
+								<Tooltip title="Kubernetes" placement="top">
+									<img src="/icons/k8s.svg" style={{ width: 30, height: 30, }} />
+								</Tooltip>
+							: 
+								<Tooltip title="Unknown" placement="top">
+									<HelpIcon style={{ color: "rgba(255,255,255,0.8)" }} />
+								</Tooltip>
+						}
+                  	    style={{
+                  	      minWidth: 50,
+                  	      maxWidth: 50,
+                  	      overflow: "hidden",
+                  	    }}
+                  	  />
+                  	  <ListItemText
+                  	    primary={environment.licensed ? 
+							<Tooltip title="Licensed" placement="top">
+								<CheckCircleIcon style={{ color: "#4caf50", }} />
+							</Tooltip>
+							:
+							<Tooltip title="Not licensed, and can't scale.. This may cause service disruption." placement="top">
+								<a 
+									href="/admin?tab=billing"
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									<CancelIcon style={{ color: "#f85a3e", }} />
+								</a>
+							</Tooltip>
+						}
+                  	    style={{
+                  	      minWidth: 85,
+                  	      maxWidth: 85,
+                  	      overflow: "hidden",
+                  	    }}
+                  	  />
                   	  <ListItemText
                   	    primary={environment.Name}
                   	    style={{
@@ -4574,15 +4651,15 @@ const handleClickChangeOrg = (orgId) => {
                   	          environment.running_ip === null ||
                   	          environment.running_ip.length === 0
                   	          ? 
-															<div>
-																Not running
-															</div>
+								<div>
+									Not running
+								</div>
                   	          : environment.running_ip.split(":")[0] 
                   	        : "N/A"
                   	    }
                   	    style={{
-                  	      minWidth: 200,
-                  	      maxWidth: 200,
+                  	      minWidth: 150,
+                  	      maxWidth: 150,
                   	      overflow: "hidden",
                   	    }}
                   	  />
@@ -4849,11 +4926,7 @@ const handleClickChangeOrg = (orgId) => {
               />
               <ListItemText
                 primary="Name"
-                style={{ minWidth: 250, maxWidth: 250 }}
-              />
-              <ListItemText
-                primary="Your role"
-                style={{ minWidth: 150, maxWidth: 150 }}
+                style={{ minWidth: 350, maxWidth: 350}}
               />
               <ListItemText
                 primary="id"
@@ -4867,11 +4940,7 @@ const handleClickChangeOrg = (orgId) => {
               />
               <ListItemText
                 primary={parentOrg.name}
-                style={{ minWidth: 250, maxWidth: 250 }}
-              />
-              <ListItemText
-                primary={parentOrg.role}
-                style={{ minWidth: 150, maxWidth: 150 }}
+                style={{ minWidth: 350, maxWidth: 350}}
               />
               <ListItemText
                 primary={parentOrg.id}
@@ -4881,11 +4950,12 @@ const handleClickChangeOrg = (orgId) => {
               <Button
                 variant="contained"
                 color="primary"
+				disabled={parentOrg.id === selectedOrganization.id} 
                 onClick={() => {
                   handleClickChangeOrg(parentOrg.id);
                 }}
               >
-                Switch To Parent
+                Switch to Parent
               </Button>
             </ListItem>
           </List>
@@ -4920,7 +4990,7 @@ const handleClickChangeOrg = (orgId) => {
             letterSpacing: "1px",
           }}
         >
-          Sub Organizations of the Current Organization
+          Sub Organizations of the Current Organization ({subOrgs.length})
         </h3>
       </div>
 
@@ -4940,11 +5010,7 @@ const handleClickChangeOrg = (orgId) => {
           />
           <ListItemText
             primary="Name"
-            style={{ minWidth: 250, maxWidth: 250 }}
-          />
-          <ListItemText
-            primary="Your role"
-            style={{ minWidth: 150, maxWidth: 150 }}
+            style={{ minWidth: 350, maxWidth: 350 }}
           />
           <ListItemText primary="id" style={{ minWidth: 400, maxWidth: 400 }} />
         </ListItem>
@@ -4974,11 +5040,7 @@ const handleClickChangeOrg = (orgId) => {
                 />
                 <ListItemText
                   primary={data.name}
-                  style={{ minWidth: 250, maxWidth: 250 }}
-                />
-                <ListItemText
-                  primary={data.role}
-                  style={{ minWidth: 150, maxWidth: 150 }}
+                  style={{ minWidth: 350, maxWidth: 350 }}
                 />
                 <ListItemText
                   primary={data.id}
@@ -4986,8 +5048,9 @@ const handleClickChangeOrg = (orgId) => {
                 />
 
                 <Button
-                  variant="contained"
+                  variant="outlined"
                   color="primary"
+				  disabled={data.id === selectedOrganization.id} 
                   onClick={() => {
                     handleClickChangeOrg(data.id);
                   }}
@@ -5247,7 +5310,7 @@ const handleClickChangeOrg = (orgId) => {
             disabled={userdata.admin !== "true"}
             label=<span>
               <ScheduleIcon style={iconStyle} />
-              Schedules
+              Triggers
             </span>
           />
           <Tab

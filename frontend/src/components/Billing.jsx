@@ -120,10 +120,11 @@ const Billing = (props) => {
 		minHeight: 280,
 		maxWidth: 400,
 		width: "100%",
-		backgroundColor: theme.palette.surfaceColor,
-		borderRadius: theme.palette.borderRadius,
+		backgroundColor: theme.palette.platformColor,
+		borderRadius: theme.palette.borderRadius*2,
 		border: "1px solid rgba(255,255,255,0.3)",
 		marginRight: 10, 
+		marginTop: 15,
 	}
 
   const isCloud =
@@ -273,6 +274,7 @@ const Billing = (props) => {
 
   		const [signatureOpen, setSignatureOpen] = React.useState(false);
   		const [tosChecked, setTosChecked] = React.useState(subscription.eula_signed)
+		const [hovered, setHovered] = React.useState(false)
 
 		var top_text = "Base Cloud Access"
 		if (subscription.limit === undefined && subscription.level === undefined || subscription.level === null || subscription.level === 0) {
@@ -321,8 +323,16 @@ const Billing = (props) => {
 			newPaperstyle.border = "1px solid #f85a3e"
 		}
 
+		if (hovered) {
+			newPaperstyle.backgroundColor = theme.palette.surfaceColor
+		}
+
 		return (
-			<Paper style={newPaperstyle}>
+			<Paper 
+				style={newPaperstyle}
+				onMouseEnter={() => setHovered(true)}
+				onMouseLeave={() => setHovered(false)}
+			>
 				<Dialog
 					open={signatureOpen}
 					PaperProps={{
@@ -960,16 +970,16 @@ const Billing = (props) => {
 
 	const isChildOrg = userdata.active_org.creator_org !== "" && userdata.active_org.creator_org !== undefined && userdata.active_org.creator_org !== null
 	return (
-		<div>
+		<div style={{}}>
       		{addDealModal}
 			<Typography variant="h4" style={{ marginTop: 20, marginBottom: 10 }}>
-				Billing	
+				Billing	& Licensing
 			</Typography>
 			<Typography variant="body1" color="textSecondary" style={{ marginTop: 0, marginBottom: 10}}>
 				{isCloud ? 
-					"We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
+					"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 					:
-					"Shuffle is an Open Source automation platform, and no license is required to use it. You may however activate Cloud Sync, get our Scale license, get help with Kubernetes, or talk to Shuffle's Support team to get automation help."
+					"Shuffle is an Open Source automation platform, and no license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update."
 				}
 			</Typography>
 
@@ -1315,7 +1325,7 @@ const Billing = (props) => {
 
 			  </div>
             ) : null*/}
-			<div style={{ marginTop: 30, }}>
+			<div style={{ marginTop: 100, }}>
 				<Typography
 				  style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
 				  variant="h4"

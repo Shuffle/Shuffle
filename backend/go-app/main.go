@@ -969,6 +969,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		tutorialsFinished = append(tutorialsFinished, tutorial)
 	}
 
+	licensed := shuffle.IsLicensed(ctx, *currentOrg)
 
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
@@ -989,6 +990,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		Tutorials:    tutorialsFinished,
 
 		Priorities: orgPriorities,
+		Licensed: 		  licensed,
 	}
 
 	returnData, err := json.Marshal(returnValue)
