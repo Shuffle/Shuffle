@@ -1164,6 +1164,7 @@ class AppBase:
 
             for subparams in param_multiplier:
                 #self.logger.info(f"SUBPARAMS IN MULTI: {subparams}")
+                tmp = ""
                 try:
 
                     while True:
