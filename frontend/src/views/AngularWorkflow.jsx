@@ -117,6 +117,7 @@ import {
   Polyline as PolylineIcon, 
   QueryStats as QueryStatsIcon, 
   AutoAwesome as AutoAwesomeIcon,
+  Add as AddIcon,
 } from "@mui/icons-material";
 
 import * as cytoscape from "cytoscape";
@@ -13026,6 +13027,35 @@ const AngularWorkflow = (defaultprops) => {
       });
   };
 
+  // POST to /api/v1/workflows
+  const createWorkflow = (workflow, trigger_index) => {
+	  fetch(globalUrl + "/api/v1/workflows", {
+		  method: "POST",
+		  headers: {
+			  "Content-Type": "application/json",
+		  },
+		  body: JSON.stringify(workflow),
+		  credentials: "include",
+	  })
+	  .then((response) => {
+		  if (response.status === 200) {
+			  getAvailableWorkflows(trigger_index) 
+		  }
+
+		  return response.json();
+	  })
+	  .then((responseJson) => {
+		  if (responseJson.id !== undefined && responseJson.id !== null && responseJson.id.length > 0) {
+			  toast("Successfully created workflow");
+
+              handleWorkflowSelectionUpdate({ target: { value: responseJson } }, true)
+		  }
+	  })
+	  .catch((error) => {
+		  console.log("Create workflow error: ", error.toString())
+	  })
+  }
+
   const UserinputSidebar = () => {
     if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers[selectedTriggerIndex] !== undefined) {
       if (
@@ -13229,7 +13259,7 @@ const AngularWorkflow = (defaultprops) => {
               />
             </FormGroup>
 			{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("subflow") ? (
-							<div style={{  }}>
+			<div style={{  }}>
               	{workflows === undefined ||
               	  workflows === null ||
               	  workflows.length === 0 ? null : (
@@ -13316,7 +13346,29 @@ const AngularWorkflow = (defaultprops) => {
               	    }}
               	  />
               	)}
-							</div>
+
+				{/* Button for making a new workflow to attach */}
+				<Button
+					variant="outlined"
+					style={{ marginTop: 10, }}
+				    disabled={!(subworkflow === null || subworkflow === undefined || Object.getOwnPropertyNames(subworkflow).length === 0)}
+					onClick={() => {
+						toast("Setting up new workflow")
+
+						const newworkflow = {
+							name: "User Input subflow",
+							description: "",
+						}
+
+						createWorkflow(newworkflow, selectedTriggerIndex)
+					}}
+					color="primary"
+				>
+
+  					<AddIcon /> New Subflow 
+				</Button>
+					
+				</div>
             ) : null}
             {workflow.triggers[selectedTriggerIndex].parameters[2] !==
               undefined &&
@@ -16202,11 +16254,13 @@ const AngularWorkflow = (defaultprops) => {
               <Typography variant="body1">
                 <b>Env &nbsp;&nbsp;&nbsp;&nbsp;</b>
               </Typography>
+
               <Typography variant="body1" color="textSecondary" style={{color: "#f85a3e", cursor: "pointer", }} onClick={() => {
 				  window.open("/admin?tab=environments", "_blank")
 			  }}>
                 {executionData.workflow.actions[0].environment}
               </Typography>
+
             </div>
           	: null}
           {executionData.status !== undefined &&
@@ -16877,6 +16931,30 @@ const AngularWorkflow = (defaultprops) => {
 		  return ""
 	  }
 
+	  // Check if array with json inside to handle one item at a time~
+	  if (typeof result === "object" && result.length !== undefined) {
+		  if (result.length > 0) {
+			  // Check type inside
+			  if (typeof result[0] === "object") {
+				  result = result[0]
+			  }
+		  }
+	  }
+
+	  if (result.success === true && result.status === 200) {
+		  if (result.body !== undefined && result.body !== null) {
+			  const stringbody = result.body.toString()
+			  if ((stringbody.startsWith("{") && stringbody.endsWith("}")) || (stringbody.startsWith("[") && stringbody.endsWith("]"))) {
+				  return ""
+			  }
+
+			  if (stringbody.length > 1000) {
+				  return "Body looks to be big in a standard format. Consider using the 'To File' parameter to automatically make it into a file."
+			  }
+		  } else {
+		  }
+	  }
+
 	  // Validate and check for newlines
 	  if (result.success !== false) {
 
@@ -16894,7 +16972,8 @@ const AngularWorkflow = (defaultprops) => {
 		  }
 
 		  return ""
-	  }
+	  } 
+
 
 	  try {
 		  stringjson = JSON.stringify(result)

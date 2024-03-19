@@ -829,7 +829,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 
 		if err != nil {
-			log.Printf("[ERROR] Failed to start worker container in environment %s: %s", environment, err)
+			log.Printf("[ERROR] Failed to start worker container in environment '%s': %s", environment, err)
 			return err
 		} else {
 			log.Printf("[INFO][%s] Worker Container created (2). Environment %s: docker logs %s", executionRequest.ExecutionId, environment, cont.ID)
@@ -1672,6 +1672,11 @@ func main() {
 				continue
 			}
 
+			if len(execution.ExecutionId) == 0 {
+				log.Printf("[WARNING] Execution ID is empty: %#v", execution)
+				continue
+			}
+
 			if execution.Status == "ABORT" || execution.Status == "FAILED" {
 				log.Printf("[INFO] Executionstatus issue: ", execution.Status)
 			}
@@ -1767,7 +1772,7 @@ func main() {
 				toBeRemoved.Data = append(toBeRemoved.Data, execution)
 				executionIds = append(executionIds, execution.ExecutionId)
 			} else {
-				log.Printf("[WARNING] Execution ID %s failed to deploy: %s", execution.ExecutionId, err)
+				log.Printf("[WARNING] Execution ID '%s' failed to deploy: %s", execution.ExecutionId, err)
 			}
 		}
 

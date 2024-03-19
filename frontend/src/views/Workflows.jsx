@@ -1018,9 +1018,9 @@ const Workflows = (props) => {
                 data.default_return_value,
                 data,
                 false,
-								[],
-								"",
-								data.status
+				[],
+				"",
+				data.status
               ).then((response) => {
                 if (response !== undefined) {
                   toast(`Successfully imported ${data.name}`);
@@ -1483,17 +1483,9 @@ const Workflows = (props) => {
 
   const sanitizeWorkflow = (data) => {
     data = JSON.parse(JSON.stringify(data));
-    data["owner"] = "";
     console.log("Sanitize start: ", data);
     data = deduplicateIds(data);
 
-    data["org"] = [];
-    data["org_id"] = "";
-    data["execution_org"] = {};
-
-    // These are backwards.. True = saved before. Very confuse.
-    data["previously_saved"] = false;
-    data["first_save"] = false;
     console.log("Sanitize end: ", data);
 
     return data;
@@ -1508,14 +1500,24 @@ const Workflows = (props) => {
 
     let exportFileDefaultName = data.name + ".json";
 
+    data["owner"] = "";
+    data["org"] = [];
+    data["org_id"] = "";
+    data["execution_org"] = {};
+
+    // These are backwards.. True = saved before. Very confuse.
+    data["previously_saved"] = false;
+    data["first_save"] = false;
+
     if (sanitize === true) {
       data = sanitizeWorkflow(data);
 
       if (data.subflows !== null && data.subflows !== undefined) {
         toast(
           "Not exporting with subflows when sanitizing. Please manually export them."
-        );
-        data.subflows = [];
+        )
+
+        data.subflows = []
       }
 
       //	for (var key in data.subflows) {
@@ -1527,7 +1529,7 @@ const Workflows = (props) => {
     // Add correct ID's for triggers
     // Add mag
 		
-		data.status = "test"
+	data.status = "test"
     let dataStr = JSON.stringify(data);
     let dataUri =
       "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
@@ -2220,6 +2222,7 @@ const Workflows = (props) => {
 	  inputblogpost,
 	  inputstatus,
   ) => {
+
     var method = "POST";
     var extraData = "";
     var workflowdata = {};
@@ -2232,6 +2235,10 @@ const Workflows = (props) => {
 
       console.log("REMOVING OWNER");
       workflowdata["owner"] = "";
+	  workflowdata["org"] = [];
+	  workflowdata["org_id"] = "";
+	  workflowdata["execution_org"] = {};
+	  workflowdata["previously_saved"] = false;
       // FIXME: Loop triggers and turn them off?
     }
 
@@ -2240,8 +2247,9 @@ const Workflows = (props) => {
     if (tags !== undefined) {
       workflowdata["tags"] = tags;
     }
-		workflowdata["blogpost"] = inputblogpost 
-		workflowdata["status"] = inputstatus 
+
+	workflowdata["blogpost"] = inputblogpost 
+	workflowdata["status"] = inputstatus 
 
     if (defaultReturnValue !== undefined) {
       workflowdata["default_return_value"] = defaultReturnValue;
@@ -2320,7 +2328,7 @@ const Workflows = (props) => {
         if (file.type !== "application/json") {
           if (file.type !== undefined) {
             toast("File has to contain valid json");
-						setSubmitLoading(false)
+			setSubmitLoading(false)
           }
 
           continue;
@@ -2338,7 +2346,7 @@ const Workflows = (props) => {
             return;
           }
     
-					console.log("File being loaded: ", data.name);
+		  console.log("File being loaded: ", data.name);
 
           // Initialize the workflow itself
           setNewWorkflow(
@@ -2359,6 +2367,10 @@ const Workflows = (props) => {
                 data.first_save = false;
                 data.previously_saved = false;
                 data.is_valid = false;
+			    data.org_id = userdata.active_org.id
+				data.org = []
+				data.execution_org = {}
+
 
                 // Actually create it
                 setNewWorkflow(

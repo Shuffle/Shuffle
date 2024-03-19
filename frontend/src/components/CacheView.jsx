@@ -457,7 +457,7 @@ const CacheView = (props) => {
 
               			const validate = validateJson(data.value);
                         return (
-                            <ListItem key={index} style={{ backgroundColor: bgColor, maxHeight: 300, overflow: "hidden", }}>
+                            <ListItem key={index} style={{ backgroundColor: bgColor, maxHeight: 300, overflow: "auto", }}>
                                 <ListItemText
                                     style={{
                                         maxWidth: 250,
@@ -470,8 +470,6 @@ const CacheView = (props) => {
                                     style={{
 										minWidth: 400,
 										maxWidth: 400,
-										overflowX: "auto", 
-										overflowY: "hidden", 
 									}}
                                     primary={validate.valid ? 
                       					<ReactJson

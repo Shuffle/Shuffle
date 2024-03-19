@@ -7,7 +7,7 @@ go 1.19
 require (
 	github.com/docker/docker v23.0.3+incompatible
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.5.93
+	github.com/shuffle/shuffle-shared v0.5.98
 	k8s.io/api v0.28.1
 	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.1

@@ -1155,7 +1155,7 @@ If you're interested, please let me know a time that works for you, or set up a 
     })
     .then((responseJson) => {
       if (responseJson.success === false) {
-        toast("Failed getting your org. If this persists, please contact support.");
+        //toast("Failed getting your org. If this persists, please contact support.");
       } else {
         const { subOrgs, parentOrg } = responseJson;
         setSubOrgs(subOrgs);
@@ -1164,7 +1164,7 @@ If you're interested, please let me know a time that works for you, or set up a 
     })
       .catch((error) => {
         console.log("Error getting sub orgs: ", error);
-        toast("Error getting sub organizations");
+        //toast("Error getting sub organizations");
       });
   };
 
@@ -2846,13 +2846,20 @@ If you're interested, please let me know a time that works for you, or set up a 
 						: null}
 			{isCloud ? 
 				<Tooltip
-				  title={`Organization is in ${regiontag}. Click to change!`}
-				  style={{}}
+				  title={`Your organization is in ${regiontag}. Click to change!`}
+				  style={{
+				  }}
 				>
 					<Avatar
-						style={{ top: -10, right: 50, position: "absolute", }}
+						style={{ cursor: "pointer", top: -10, right: 50, position: "absolute", }}
 						onClick={() => {
-							toast("Region change is not implemented yet for users. Please contact support.")
+							toast("Region change is not directly implemented yet, and requires support help.")
+
+							if (window.drift !== undefined) {
+							  window.drift.api.startInteraction({
+								interactionId: 386411,
+							  })
+							}
 						}}
 					>
 						{regiontag}
@@ -3924,7 +3931,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             Schedules used in Workflows. Makes locating and control easier.{" "}
             <a
               target="_blank"
-							rel="noopener noreferrer"
+			  rel="noopener noreferrer"
               href="/docs/organizations#schedules"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
@@ -4528,7 +4535,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               style={{ minWidth: 150, maxWidth: 150 }}
             />
             <ListItemText
-              primary="Orborus label"
+              primary="Status"
               style={{ minWidth: 150, maxWidth: 150 }}
             />
             <ListItemText

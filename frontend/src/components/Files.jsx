@@ -59,7 +59,7 @@ const Files = (props) => {
   const [downloadFolder, setDownloadFolder] = React.useState("translation_standards");
 
   //const alert = useAlert();
-  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log"]
+  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log", "eml", "msg", "md", "xml", "sh", "bat", "ps1", "psm1", "psd1", "ps1xml", "pssc", "psc1"]
   var upload = "";
 
   const handleKeyDown = (event) => {

@@ -1371,9 +1371,16 @@ class AppBase:
 
         returns = []
         for item in value:
-            self.logger.info("VALUE: %s" % item)
+            self.logger.info("FILE VALUE: %s" % item)
+            # Check if item is a dict, and if it is, check if it has the key "id"
+            if isinstance(item, dict):
+                if "file_id" in item: 
+                    item = item["file_id"]
+                elif "id" in item:
+                    item = item["id"]
+
             if len(item) != 36 and not item.startswith("file_"):
-                self.logger.info("Bad length for file value %s" % item)
+                self.logger.info("Bad length for file value: '%s'" % item)
                 continue
                 #return {
                 #    "filename": "",
