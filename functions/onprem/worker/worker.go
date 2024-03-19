@@ -1601,12 +1601,17 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		}
 	}
 
+	hasUserinput := false
 	for _, result := range workflowExecution.Results {
 		if result.Action.ID != subflowId {
 			continue
 		}
 
-		log.Printf("[DEBUG][%s] Found subflow to handle: %s (%s)", workflowExecution.ExecutionId, result.Action.Label, result.Status)
+		if result.Action.AppName == "User Input" {
+			hasUserinput = true
+		}
+
+		log.Printf("[DEBUG][%s] Found subflow to handle: %s (%s)", workflowExecution.ExecutionId, result.Action.AppName, result.Status)
 		if result.Status == "SUCCESS" || result.Status == "FINISHED" || result.Status == "FAILURE" || result.Status == "ABORTED" {
 			// Check for results
 
@@ -1615,7 +1620,14 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 		}
 	}
 
-	log.Printf("[INFO][%s] Status: %s, Results: %d, actions: %d", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
+
+	if workflowExecution.Status == "WAITING" && workflowExecution.ExecutionSource != "default" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
+		log.Printf("[INFO][%s] Workflow execution is waiting. Exiting worker, as backend will restart it.", workflowExecution.ExecutionId)
+		shutdown(workflowExecution, "", "", true)
+	}
+
+
+	log.Printf("[INFO][%s] (2) Status: %s, Results: %d, actions: %d. Userinput: %#v", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra, hasUserinput)
 	return errors.New("Subflow status not found yet") 
 }
 
@@ -1685,7 +1697,7 @@ func handleDefaultExecutionWrapper(ctx context.Context, workflowExecution shuffl
 		}
 	}
 
-	log.Printf("[INFO][%s] Status: %s, Results: %d, actions: %d", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
+	log.Printf("[INFO][%s] (3) Status: %s, Results: %d, actions: %d", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
 	if workflowExecution.Status != "EXECUTING" {
 		log.Printf("[WARNING][%s] Exiting as worker execution has status %s!", workflowExecution.ExecutionId, workflowExecution.Status)
 		log.Printf("[DEBUG] Shutting down (21)")
@@ -2687,12 +2699,23 @@ func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, 
 			newerr = strings.ReplaceAll(strings.ReplaceAll(newerr, "\"", "\\\""), "\n", "\\n")
 		}
 
+		if strings.Contains(fmt.Sprintf("%s", err), "no such host") {
+			log.Printf("[DEBUG] SHOULD be Removing references to location for app %s as to be rediscovered", action.AppName)
+
+			//for k, v := range portMappings {
+			//	if strings.Contains(strings.ToLower(strings.ReplaceAll(action.AppName, " ", "_"))) {
+			//	}
+			//}
+
+			//var portMappings map[string]int
+		}
+
 		log.Printf("[ERROR][%s] Error running app run request: %s", workflowExecution.ExecutionId, err)
 		actionResult := shuffle.ActionResult{
 			Action:        *action,
 			ExecutionId:   workflowExecution.ExecutionId,
 			Authorization: workflowExecution.Authorization,
-			Result:        fmt.Sprintf(`{"success": false, "reason": "Failed to connect to app %s in swarm. Restart Orborus if this is recurring, or contact support@shuffler.io.", "details": "%s"}`, streamUrl, newerr),
+			Result:        fmt.Sprintf(`{"success": false, "reason": "Failed to connect to app %s in swarm. Try the action again, restart Orborus if this is recurring, or contact support@shuffler.io.", "details": "%s"}`, streamUrl, newerr),
 			StartedAt:     int64(time.Now().Unix()),
 			CompletedAt:   int64(time.Now().Unix()),
 			Status:        "FAILURE",
@@ -3187,11 +3210,11 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("[INFO][%s] Status: %s, Results: %d, actions: %d", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
+	log.Printf("[INFO][%s] (1) Status: %s, Results: %d, actions: %d", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
 
 	if workflowExecution.Status != "EXECUTING" {
 		log.Printf("[WARNING] Exiting as worker execution has status %s!", workflowExecution.Status)
-		log.Printf("[DEBUG] Shutting down (21)")
+		log.Printf("[DEBUG] Shutting down (38)")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad status %s for the workflow execution %s"}`, workflowExecution.Status, workflowExecution.ExecutionId)))
 		return
