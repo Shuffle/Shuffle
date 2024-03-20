@@ -4049,7 +4049,6 @@ const AngularWorkflow = (defaultprops) => {
 
         if (!curapp || curapp === undefined) {
           console.log("APPS - couldn't find it: ", newapps)
-          //toast(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`);
 
           const tmpapp = {
             name: curaction.app_name,
@@ -4057,20 +4056,16 @@ const AngularWorkflow = (defaultprops) => {
             app_version: curaction.app_version,
             id: curaction.app_id,
             actions: [curaction],
-          };
+          }
 
-          setSelectedApp(tmpapp);
-          setSelectedAction(curaction);
+          setSelectedApp(tmpapp)
+          setSelectedAction(curaction)
         } else {
-          //if (curapp.id !== curaction.id) {
-          //	curaction.app_id = curapp.id
-          //	//.valueOf()
-          //}
           curaction.app_id = curapp.id
 
           setAuthenticationType(
-            curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null ? {
-              type: "oauth2",
+            curapp.authentication.type === "oauth2-app" || (curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null) ? {
+              type: curapp.authentication.type,
               redirect_uri: curapp.authentication.redirect_uri,
               refresh_uri: curapp.authentication.refresh_uri,
               token_uri: curapp.authentication.token_uri,
@@ -8117,7 +8112,7 @@ const AngularWorkflow = (defaultprops) => {
         : `${pixelSize} solid ${yellow}`;
 
 	  if (app.id == highlightedApp) {
-		  console.log("Found correct appid to highlight: ", app.id)
+		  //console.log("Found correct appid to highlight: ", app.id)
 
 		  newAppStyle.border = "3px solid " + green
 	  }
@@ -18258,13 +18253,13 @@ const AngularWorkflow = (defaultprops) => {
           style={{
             flex: 2,
             padding: 0,
-            minHeight: isMobile ? "90%" : 650,
-            maxHeight: isMobile ? "90%" : 650,
+            minHeight: isMobile ? "90%" : 700,
+            maxHeight: isMobile ? "90%" : 700,
             overflowY: "auto",
             overflowX: isMobile ? "auto" : "hidden",
           }}
         >
-          {authenticationType.type === "oauth2" ? (
+          {authenticationType.type === "oauth2" || authenticationType.type === "oauth2-app"  ? 
             <AuthenticationOauth2
               saveWorkflow={saveWorkflow}
               selectedApp={selectedApp}
@@ -18278,9 +18273,9 @@ const AngularWorkflow = (defaultprops) => {
               setAuthenticationModalOpen={setAuthenticationModalOpen}
               isCloud={isCloud}
             />
-          ) : (
+           : 
             <AuthenticationData app={selectedApp} />
-          )}
+          }
         </div>
         <div
           style={{

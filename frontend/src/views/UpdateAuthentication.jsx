@@ -141,7 +141,7 @@ const SetAuthentication = (props) => {
 					{app.authentication === undefined || app.authentication === null || app.authentication.length === 0 ?
 						null 
 						:
-						app.authentication.type === "oauth2" ? 
+						app.authentication.type === "oauth2" || app.authentication.type === "oauth2-app" ?
 							<AuthenticationOauth2
 								selectedApp={app}
 								selectedAction={{

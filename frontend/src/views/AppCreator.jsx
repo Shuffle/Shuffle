@@ -1749,9 +1749,9 @@ const AppCreator = (defaultprops) => {
 						optionset = true 
 
       	  } else if (value.scheme === "oauth2") {
-				setAuthenticationOption("Oauth2");
-				setAuthenticationRequired(true);
-				optionset = true 
+			setAuthenticationOption("Oauth2");
+			setAuthenticationRequired(true);
+			optionset = true 
 
       	  } else if (value.type === "oauth2" || key === "Oauth2" || key === "Oauth2c" || (key !== undefined && key !== null && key.toLowerCase().includes("oauth2"))) {
       	    //toast("Can't handle Oauth2 auth yet.")
@@ -6054,6 +6054,10 @@ const AppCreator = (defaultprops) => {
 
 										if (e.target.value === "application" && oauth2GrantType === "") {
 											setOauth2GrantType("client_credentials")
+										} 
+
+										if (e.target.value === "delegated") {
+											setOauth2GrantType("")
 										}
 									}}
 									value={oauth2Type}

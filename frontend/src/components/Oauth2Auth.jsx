@@ -767,7 +767,7 @@ const AuthenticationOauth2 = (props) => {
 								</Tooltip>
 							}
 						</span>
-						<Typography style={{textAlign: "center", marginTop: 0, marginBottom: 10, }}>
+						<Typography style={{textAlign: "center", marginTop: 0, marginBottom: 0, }}>
 							OR
 						</Typography>
 					</span>
@@ -805,18 +805,19 @@ const AuthenticationOauth2 = (props) => {
                 setOauthUrl(data.value);
               }
 
-			  const defaultValue = data.name === "url" && authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0 && (authenticationType.authorizationUrl === undefined || authenticationType.authorizationUrl === null || authenticationType.authorizationUrl.length === 0) ? authenticationType.token_uri : data.value === undefined || data.value === null ? "" : data.value
-			  const fieldname = data.name === "url" && authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0 ? "Token URL" : data.name
+			  const defaultValue = data.name === "url" && authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0 && (authenticationType.authorizationUrl === undefined || authenticationType.authorizationUrl === null || authenticationType.authorizationUrl.length === 0) && authenticationType.type === "oauth2-app" ? authenticationType.token_uri : data.value === undefined || data.value === null ? "" : data.value
+
+			  const fieldname = data.name === "url" && authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0 && authenticationType.type === "oauth2-app" ? "Token URL" : data.name
 
               return (
-                <div key={index} style={{ marginTop: 10 }}>
+                <div key={index} style={{ marginTop: 0, }}>
                   <LockOpenIcon style={{ marginRight: 10 }} />
 
 				  <b>{fieldname}</b>
 
                   {data.schema !== undefined &&
-                  data.schema !== null &&
-                  data.schema.type === "bool" ? (
+                    data.schema !== null &&
+                    data.schema.type === "bool" ? 
                     <Select
                       SelectDisplayProps={{
                         style: {
@@ -857,7 +858,7 @@ const AuthenticationOauth2 = (props) => {
                         true
                       </MenuItem>
                     </Select>
-                  ) : (
+                   : 
                     <TextField
                       style={{
                         backgroundColor: theme.palette.inputColor,
@@ -884,9 +885,9 @@ const AuthenticationOauth2 = (props) => {
                         //const [oauthUrl, setOauthUrl] = React.useState("")
                       }}
                     />
-                  )}
+                  }
                 </div>
-              );
+              )
             })}
             <TextField
               style={{
