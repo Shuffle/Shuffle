@@ -1678,6 +1678,10 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
+	if (useworkflow.id === undefined || useworkflow.id === null || useworkflow.id.length === 0) {
+		useworkflow.id = props.match.params.key
+	}
+
     setLastSaved(true);
     fetch(`${globalUrl}/api/v1/workflows/${useworkflow.id}`, {
       method: "PUT",

@@ -55,7 +55,9 @@ import { tags as t } from '@lezer/highlight';
 
 import AceEditor from "react-ace";
 import 'ace-builds/src-noconflict/mode-python';
-import 'ace-builds/src-noconflict/theme-twilight';
+//import 'ace-builds/src-noconflict/theme-twilight';
+//import 'ace-builds/src-noconflict/theme-solarized_dark';
+import 'ace-builds/src-noconflict/theme-gruvbox';
 import "ace-builds/src-noconflict/ext-language_tools";
 import ace from "ace-builds";
 
@@ -182,14 +184,13 @@ const CodeEditor = (props) => {
 				const fullpath = "$"+actionlist[i].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
 				if (!allVariables.includes(fullpath)) {
 					allVariables.push(fullpath)
+					allVariables.push(fullpath.toLowerCase())
 				}
 			}
 		}
 
 		setAvailableVariables(allVariables)
 		setMainVariables(tmpVariables)
-	
-		//console.log("Checking local codedata: ", localcodedata)
 		expectedOutput(localcodedata)
 	}, [])
 
@@ -570,10 +571,14 @@ const CodeEditor = (props) => {
 	}
 
 	const highlight_variables = (value) => {
+		if (value === undefined || value === null || value.length === 0) {
+			return
+		}
 		// var session = localcodedata.getSession();
-		var code_lines = localcodedata.split('\n');
+		//var code_lines = localcodedata.split('\n')
+		var code_lines = value.split('\n')
 
-        const newMarkers = [];
+        var newMarkers = []
 		for (var i = 0; i < code_lines.length; i++) {
 			var current_code_line = code_lines[i];
 			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g);
@@ -583,7 +588,8 @@ const CodeEditor = (props) => {
 			}
 	
 			var new_occurences = variable_occurence.filter((occurrence) => occurrence[0]);
-			variable_occurence = new_occurences;
+			variable_occurence = new_occurences
+
 	
 			var dollar_occurence = [];
 			for (let ch = 0; ch < current_code_line.length; ch++) {
@@ -597,16 +603,22 @@ const CodeEditor = (props) => {
 				for(let occ = 0; occ < variable_occurence.length; occ++){
 					dollar_occurence_len.push(variable_occurence[occ].length)
 				}
-			} catch (e) {}
+			} catch (e) {
+				console.log("Error in color highlighting list: ", e);
+			}
+
+			//console.log("Variable occurences: ", variable_occurence)
+			//console.log("Dollar occurences: ", dollar_occurence)
 	
 			try {
 				if (variable_occurence.length === 0) {
 					//value.markText({line:i, ch:0}, {line:i, ch:code_lines[i].length-1}, {"css": "background-color: #282828; border-radius: 0px; color: #b8bb26"})
 					//value.markText({line:i, ch:0}, {line:i, ch:code_lines[i].length-1}, {"css": "background-color: #; border-radius: 0px; color: inherit"})
 				}
+
                 for (let occ = 0; occ < variable_occurence.length; occ++) {
                     const fixedVariable = fixVariable(variable_occurence[occ])
-                    var correctVariable = availableVariables.includes(fixedVariable)
+                    var correctVariable = availableVariables.includes(fixedVariable.toLowerCase())
                     var startCh = dollar_occurence[occ]
                     var endCh = dollar_occurence[occ] + dollar_occurence_len[occ]
                     newMarkers.push({
@@ -675,12 +687,12 @@ const CodeEditor = (props) => {
 			try { 
 				for (var i = 0; i < found.length; i++) {
 					try {
+						// Finding if the value is in the list at all, and does initial replacement
 						const fixedVariable = fixVariable(found[i])
 
-						// Finding if the value is in the list at all, and does initial replacement
 						var valuefound = false
 						for (var j = 0; j < actionlist.length; j++) {
-							if(fixedVariable.slice(1,).toLowerCase() !== actionlist[j].autocomplete.toLowerCase()){
+							if(fixedVariable.slice(1,).toLowerCase() !== actionlist[j].autocomplete.toLowerCase()) {
 								continue
 							}
 
@@ -702,12 +714,10 @@ const CodeEditor = (props) => {
 
 						}
 						
-						//console.log("INPUT: ", fixedVariable, valuefound, input)
 						if (!valuefound) {
-							//console.log("Couldn't find value "+fixedVariable)
 						}
 
-						if (!valuefound && availableVariables.includes(fixedVariable)) {
+						if (!valuefound && availableVariables.includes(fixedVariable.toLowerCase())) {
 							var shouldbreak = false
 							for (var k=0; k < actionlist.length; k++){
 								var parsedPaths = []
@@ -716,8 +726,8 @@ const CodeEditor = (props) => {
 								}
 
 								for (var key in parsedPaths) {
-									const fullpath = "$"+actionlist[k].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
-									if (fullpath !== fixedVariable) {
+									const fullpath = "$"+actionlist[k].autocomplete.toLowerCase()+parsedPaths[key].autocomplete.toLowerCase()
+									if (fullpath !== fixedVariable.toLowerCase()) {
 										continue
 									}
 
@@ -1478,10 +1488,11 @@ const CodeEditor = (props) => {
 						// minHeight: 548,
 						// overflow: "hidden",
 					}}>
+						{availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0 &&
 						<AceEditor
                             value={localcodedata}
-                            mode="python"
-                            theme="twilight"
+                            mode={selectedAction.name === "execute_python" ? "python" : ""}
+                            theme="gruvbox"
                             height={isFileEditor ? 450 : 550} 
                             width={isFileEditor ? 650 : "100%"}
                             markers={markers}
@@ -1501,7 +1512,9 @@ const CodeEditor = (props) => {
                                 setCurrentCharacter(cursorPosition.column)
                                 setCurrentLine(cursorPosition.row)
                                 findIndex(cursorPosition.row, cursorPosition.column)
-								highlight_variables(value)
+
+								//highlight_variables(value)
+								//console.log("VALUE CURSOR: ", value)
                             }}
                             onChange={(value, editor) => {
                                 // setlocalcodedata(value)
@@ -1519,6 +1532,7 @@ const CodeEditor = (props) => {
                             }}
                             // options={options}
                         />
+						}
 					</div>
 				
 					<div
