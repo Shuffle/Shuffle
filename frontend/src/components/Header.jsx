@@ -155,9 +155,21 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 		.then(() => {
 			// Log out anyway
 			removeCookie("session_token", {path: "/"})
+			removeCookie("__session", {path: "/"})
+			removeCookie("_session", {path: "/"})
+
 			removeCookie("session_token", {path: "/"})
+			removeCookie("__session", {path: "/"})
+			removeCookie("_session", {path: "/"})
+			
 			removeCookie("session_token", {path: "/"})
+			removeCookie("__session", {path: "/"})
+			removeCookie("_session", {path: "/"})
+
 			removeCookie("session_token", {path: "/"})
+			removeCookie("__session", {path: "/"})
+			removeCookie("_session", {path: "/"})
+
 			window.location.pathname = "/"
 		})
 		.catch(error => {

@@ -572,8 +572,10 @@ const CodeEditor = (props) => {
 
 	const highlight_variables = (value) => {
 		if (value === undefined || value === null || value.length === 0) {
+            setMarkers([])
 			return
 		}
+
 		// var session = localcodedata.getSession();
 		//var code_lines = localcodedata.split('\n')
 		var code_lines = value.split('\n')
@@ -589,11 +591,11 @@ const CodeEditor = (props) => {
 	
 			var new_occurences = variable_occurence.filter((occurrence) => occurrence[0]);
 			variable_occurence = new_occurences
-
 	
 			var dollar_occurence = [];
 			for (let ch = 0; ch < current_code_line.length; ch++) {
-				if (current_code_line[ch] === '$' && (ch === 0)) {
+				//if (current_code_line[ch] === '$' && (ch === 0)) {
+				if (current_code_line[ch] === '$') {
 					dollar_occurence.push(ch);
 				}
 			}
@@ -607,9 +609,6 @@ const CodeEditor = (props) => {
 				console.log("Error in color highlighting list: ", e);
 			}
 
-			//console.log("Variable occurences: ", variable_occurence)
-			//console.log("Dollar occurences: ", dollar_occurence)
-	
 			try {
 				if (variable_occurence.length === 0) {
 					//value.markText({line:i, ch:0}, {line:i, ch:code_lines[i].length-1}, {"css": "background-color: #282828; border-radius: 0px; color: #b8bb26"})
@@ -619,8 +618,10 @@ const CodeEditor = (props) => {
                 for (let occ = 0; occ < variable_occurence.length; occ++) {
                     const fixedVariable = fixVariable(variable_occurence[occ])
                     var correctVariable = availableVariables.includes(fixedVariable.toLowerCase())
+
                     var startCh = dollar_occurence[occ]
                     var endCh = dollar_occurence[occ] + dollar_occurence_len[occ]
+
                     newMarkers.push({
                         startRow: i,
                         startCol: startCh,
@@ -629,13 +630,17 @@ const CodeEditor = (props) => {
                         className: correctVariable ? "good-marker" : "bad-marker",
                         type: "text",
 					})
+				
+					setMarkers(newMarkers)
                 }
 
-                setMarkers(newMarkers)
+
 			} catch (e) {
 				console.log("Error in color highlighting: ", e);
 			}
 		}
+        
+		setMarkers(newMarkers)
 	};
 
 	const replaceVariables = (swapVariable) => {
@@ -926,6 +931,18 @@ const CodeEditor = (props) => {
     };
 
 
+
+    // Define a custom completer for the Ace Editor
+	const customVariables = availableVariables
+    const customCompleter = {
+      getCompletions: function(editor, session, pos, prefix, callback) {
+        callback(null, customVariables.map((variable) => ({
+      	caption: variable,
+      	value: variable,
+      	meta: 'custom',
+        })));
+      }
+    }
 
 	return (
 		<Dialog
@@ -1495,7 +1512,13 @@ const CodeEditor = (props) => {
                             theme="gruvbox"
                             height={isFileEditor ? 450 : 550} 
                             width={isFileEditor ? 650 : "100%"}
+
                             markers={markers}
+							highlightActiveLine={false}
+							      
+							enableBasicAutocompletion={true}
+							completers={[customCompleter]}
+
                             style={{
                                 wordBreak: "break-word",
                                 marginTop: 0,
@@ -1513,7 +1536,7 @@ const CodeEditor = (props) => {
                                 setCurrentLine(cursorPosition.row)
                                 findIndex(cursorPosition.row, cursorPosition.column)
 
-								//highlight_variables(value)
+								highlight_variables(localcodedata)
 								//console.log("VALUE CURSOR: ", value)
                             }}
                             onChange={(value, editor) => {
@@ -1528,7 +1551,12 @@ const CodeEditor = (props) => {
                                 enableBasicAutocompletion: true,
                                 enableLiveAutocompletion: true,
                                 enableSnippets: true,
-                                useWorker: false
+								showLineNumbers: true,
+								tabSize: 2,
+								wrap: true,
+
+                                useWorker: false,
+								enableBasicAutocompletion: [customCompleter],
                             }}
                             // options={options}
                         />
@@ -1688,6 +1716,7 @@ const CodeEditor = (props) => {
 										</Typography>
 									</div>
 								}
+
 								{executionResult.errors !== undefined && executionResult.errors !== null && executionResult.errors.length > 0 ?
 									<Typography variant="body2" style={{maxHeight: 100, overflow: "auto", color: "#f85a3e",}}>
 										Errors ({executionResult.errors.length}): {executionResult.errors.join("\n")}

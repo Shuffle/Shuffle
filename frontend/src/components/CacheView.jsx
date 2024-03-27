@@ -93,26 +93,26 @@ const CacheView = (props) => {
             },
             credentials: "include",
         })
-            .then((response) => {
-                if (response.status !== 200) {
-                    console.log("Status not 200 for apps :O!");
-                    return;
-                }
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for list cache :O!");
+				return;
+			}
 
-                return response.json();
-            })
-            .then((responseJson) => {
-                if (responseJson.success === true) {
-                    setListCache(responseJson.keys);
-                }
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson.success === true) {
+				setListCache(responseJson.keys);
+			}
 
-                if (responseJson.cursor !== undefined && responseJson.cursor !== null && responseJson.cursor !== "") {
-                    setCacheCursor(responseJson.cursor);
-                }
-            })
-            .catch((error) => {
-                toast(error.toString());
-            });
+			if (responseJson.cursor !== undefined && responseJson.cursor !== null && responseJson.cursor !== "") {
+				setCacheCursor(responseJson.cursor);
+			}
+		})
+		.catch((error) => {
+			toast(error.toString());
+		});
     };
 
     // const getCacheList = (orgId) => {

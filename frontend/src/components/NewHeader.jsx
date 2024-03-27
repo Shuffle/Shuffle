@@ -1155,7 +1155,7 @@ const Header = (props) => {
             userdata.app_execution_usage === undefined ||
             userdata.app_execution_usage < 1000 ? null : (
               <Tooltip
-                title={`Amount of executions left: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Shuffle normally, but your Workflow triggers may stop working. Reach out to support@shuffler.io to extend this limit.`}
+                title={`Amount of App Runs used: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Shuffle normally, but your Workflow triggers will stop workflows from starting. Reach out to support@shuffler.io to extend this limit.`}
               >
                 <div
                   style={{

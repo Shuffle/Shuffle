@@ -4586,11 +4586,9 @@ If you're interested, please let me know a time that works for you, or set up a 
 					foundIndex = userdata.priorities.findIndex(prio => prio.name.includes("CPU") && prio.active === true)
 
 					if (foundIndex >= 0 && userdata.priorities[foundIndex].name.endsWith(environment.Name)) {
-							showCPUAlert = true
+						showCPUAlert = true
 					}
 				}
-
-				//console.log("Show CPU alert: ", showCPUAlert)
 
 				const queueSize = environment.queue !== undefined && environment.queue !== null ? environment.queue < 0 ? 0 : environment.queue > 1000 ? ">1000" : environment.queue : 0
 
@@ -4598,7 +4596,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 				  <span key={index}>
                   	<ListItem key={index} style={{ backgroundColor: bgColor, marginLeft: 0, }}>
                   	  <ListItemText
-                  	    primary={environment.run_type === "cloud" ? 
+                  	    primary={environment.run_type === "cloud" || environment.name === "Cloud" ? 
 							<Tooltip title="Cloud" placement="top">
 								<CloudIcon style={{ color: "rgba(255,255,255,0.8)" }} />
 							</Tooltip>

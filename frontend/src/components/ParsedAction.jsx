@@ -86,6 +86,7 @@ import {
 	AutoFixHigh as AutoFixHighIcon,
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
+	Storage as StorageIcon,
 } from '@mui/icons-material';
 
 const useStyles = makeStyles({
@@ -1063,7 +1064,6 @@ const ParsedAction = (props) => {
 		}
 
 		var helperText = ""
-		//console.log("DATA: ", name, value)
 		if (name.includes("url")) {
 			if (value.includes("localhost") || value.includes("127.0.0.1")) {
 				helperText = "Can't use localhost. Please change to your external IP." 
@@ -1364,6 +1364,13 @@ const ParsedAction = (props) => {
               }
             }
 
+
+			var showCacheConfig = false
+			if (data.name === "key" && selectedAction.name.includes("cache") && selectedAction.app_name === "Shuffle Tools") { 
+				// Show a key popout button
+				showCacheConfig = true
+			}
+
             var disabled = false;
             var rows = "3";
             var openApiHelperText = "This is an OpenAPI specific field";
@@ -1614,10 +1621,14 @@ const ParsedAction = (props) => {
 									setExpansionModalOpen(true)
 
 									//setcodedata(data.value)
+									var parsedvalue = data.value
+									if (parsedvalue === undefined || parsedvalue === null) {
+										parsedvalue = ""
+									}
 
 									setEditorData({
 										"name": data.name,
-										"value": data.value,
+										"value": parsedvalue,
 										"field_number": count,
 										"actionlist": actionlist,
 										"field_id": clickedFieldId,
@@ -2483,6 +2494,21 @@ const ParsedAction = (props) => {
 				  	</Tooltip>
 				  	: 
 				  null}
+
+				  {showCacheConfig === true ? 
+				  	<Tooltip
+				  		color="primary"
+				  		title={"Explore your keys in Datastore"}
+				  		placement="top"
+				  	>
+						<a href="/admin?tab=cache" target="_blank" style={{textDecoration: "none"}}>
+							<StorageIcon style={{ 
+								color: "#f85a3e",
+								marginRight: 10, 
+							}}/>
+					  </a>
+				  	</Tooltip>
+				  : null}
 
                   <div
                     style={{

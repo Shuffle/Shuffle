@@ -3212,9 +3212,7 @@ const AngularWorkflow = (defaultprops) => {
       ) {
         toast("This edge can't be edited.");
       } else {
-        //console.log("DATA: ", event.target.data())
         const destinationId = event.target.data("target");
-        //console.log("DATA: ", event.target.data())
         const curaction = workflow.actions.find((a) => a.id === destinationId);
         //console.log("ACTION: ", curaction)
         if (curaction !== undefined && curaction !== null) {
@@ -7608,6 +7606,11 @@ const AngularWorkflow = (defaultprops) => {
 				} 
 			}
 
+			// Hiding since March 2024
+			if (trigger.trigger_type === "EMAIL") {
+				return null
+			}
+
 			const imagesize = isMobile ? 40 : trigger.large_image.includes("svg") ? 80 : 80
             var imageline = trigger.large_image.length === 0 ? <img alt="" style={{ borderRadius: theme.palette.borderRadius, width: isMobile ? 40 : 80, pointerEvents: "none" }} />
               : 
@@ -7999,7 +8002,6 @@ const AngularWorkflow = (defaultprops) => {
 				for (let nodekey in foundnodes) {
 					const curnode = foundnodes[nodekey]
 					if (curnode.data.environment !== undefined && curnode.data.environment !== null && curnode.data.environment.length > 0) {
-						console.log("Found environment: ", curnode.data.environment)
 						parsedEnvironments = curnode.data.environment
 						break
 					}
@@ -8007,7 +8009,6 @@ const AngularWorkflow = (defaultprops) => {
 			}
 		}
 
-		console.log("Discovered environment: ", parsedEnvironments)
         const newAppData = {
           name: app.actions[actionIndex].name,
           label: actionLabel,
@@ -9537,7 +9538,7 @@ const AngularWorkflow = (defaultprops) => {
   var availableArguments = []
   if (executionArgumentModalOpen && workflowExecutions.length > 0) {
 	  for (let executionKey in workflowExecutions) {
-		  if (availableArguments.length > 5) {
+		  if (availableArguments.length > 2) {
 			  break
 		  }
 
@@ -16184,7 +16185,6 @@ const AngularWorkflow = (defaultprops) => {
                   color="primary"
                   style={{ float: "right", marginTop: 20, marginLeft: 10 }}
                   onClick={() => {
-                    //console.log("DATA: ", executionData);
                     executeWorkflow(
                       executionData.execution_argument,
                       executionData.start,
@@ -16443,19 +16443,33 @@ const AngularWorkflow = (defaultprops) => {
                     : yellow;
 
               var imgSrc = curapp === undefined ? "" : curapp.large_image;
-              if (
-                imgSrc.length === 0 &&
-                workflow.actions !== undefined &&
-                workflow.actions !== null
-              ) {
+              if (imgSrc.length === 0 && workflow.actions !== undefined && workflow.actions !== null) {
                 // Look for the node in the workflow
                 const action = workflow.actions.find(
                   (action) => action.id === data.action.id
-                );
+                )
                 if (action !== undefined && action !== null) {
                   imgSrc = action.large_image;
                 }
               }
+
+			  if (imgSrc.length === 0 && cy !== undefined && cy !== null) {
+				  const foundnode = cy.getElementById(data.action.id)
+				  if (foundnode !== undefined && foundnode !== null && foundnode.length > 0) {
+					  // FIXME: Find image from cytoscape action
+				  } else {
+					  for (let actionkey in workflow.actions) {
+						  if (workflow.actions[actionkey].app_name === data.action.app_name || workflow.actions[actionkey].id === data.action.id || workflow.actions[actionkey].label === data.action.label || workflow.actions[actionkey].name === data.action.name) {
+
+							  if (workflow.actions[actionkey].large_image !== undefined && workflow.actions[actionkey].large_image !== null && workflow.actions[actionkey].large_image.length > 0) {
+								  imgSrc = workflow.actions[actionkey].large_image
+								  break
+							  }
+						  }
+					  }
+				  }
+			  }
+
 
               var actionimg =
                 curapp === null ? null : (
@@ -16507,11 +16521,7 @@ const AngularWorkflow = (defaultprops) => {
                 }
               }
 
-              if (
-                data.action.app_name === "Shuffle Tools" &&
-                data.action.id !== undefined &&
-                cy !== undefined
-              ) {
+              if (data.action.app_name === "Shuffle Tools" && data.action.id !== undefined && cy !== undefined) {
                 const nodedata = cy.getElementById(data.action.id).data();
                 if (nodedata !== undefined && nodedata !== null && nodedata.fillstyle === "linear-gradient") {
                   var imgStyle = {
@@ -16954,6 +16964,18 @@ const AngularWorkflow = (defaultprops) => {
 		  }
 	  }
 
+	  if (result.status === 401) {
+		  return "Authentication failed (401). The URL or auth key is wrong. Check the body of the result for more information."
+	  }
+
+	  if (result.status === 403) {
+		  return "Authorization failed (403). The API user most likely doesn't have the correct permissions. Check the body of the result for more information."
+	  }
+
+	  if (result.status === 400) {
+		  return "The queries or data sent to the API is most likely wrong (400). Check the body of the result for more information."
+	  }
+
 	  // Validate and check for newlines
 	  if (result.success !== false) {
 
@@ -16984,6 +17006,11 @@ const AngularWorkflow = (defaultprops) => {
 		  return "You can't use localhost in apps. Use the external ip or url of the server instead"
 	  }
 
+	  if (result.status !== 200 && stringjson.includes("192.168") || stringjson.includes("172.16") || stringjson.includes("10.0")) {
+		  return "Consider whether your Orborus environment can connect to a local IP or not."
+	  }
+
+
 	  if (stringjson.includes("connectionerror")) {
 		  if (stringjson.includes("kms")) {
 			  return "KMS authentication failed. Check your notifications for more details."
@@ -16994,6 +17021,10 @@ const AngularWorkflow = (defaultprops) => {
 
 	  if (stringjson.includes("result too large to handle")) {
 		  return "Execution loading failed. Reload the execution by closing it and clicking it again"
+	  }
+
+	  if (isCloud && stringjson.toLowerCase().includes("timeout error")) {
+		  return "Run this workflow in a local environment to increase the timeout. Go to https://shuffler.io/admin?tab=environments to create an environment to connect to"
 	  }
 
 
