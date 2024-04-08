@@ -4777,6 +4777,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/apps", shuffle.HandleGetUserApps).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/users/generateapikey", shuffle.HandleApiGeneration).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/logout", shuffle.HandleLogout).Methods("POST", "OPTIONS")

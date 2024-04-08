@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 import theme from "../theme.jsx";
 import { isMobile } from "react-device-detect";
@@ -7,15 +7,20 @@ import WorkflowGrid from "../components/WorkflowGrid.jsx";
 import CreatorGrid from "../components/CreatorGrid.jsx";
 import DocsGrid from "../components/DocsGrid.jsx";
 import { useNavigate } from "react-router-dom";
-
+import Typography from "@material-ui/core/Typography";
 import { Tabs, Tab } from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { makeStyles } from '@mui/styles';
 
 import {
   Apps as AppsIcon,
   Code as CodeIcon,
   EmojiObjects as EmojiObjectsIcon,
   Description as DescriptionIcon,
+  BorderBottom,
 } from "@mui/icons-material";
+
+import PeopleIcon from '@mui/icons-material/People';
 
 // Should be different if logged in :|
 const Search = (props) => {
@@ -47,6 +52,54 @@ const Search = (props) => {
       }
     }
   }, []);
+
+  //Stop unnecessariry re-rendering of the component to improve performace
+
+  const MemoizedAppGrid = useMemo(() => <AppGrid
+  maxRows={4}
+  isHeader={true}
+  showSuggestion={true}
+  globalUrl={globalUrl}
+  isMobile={isMobile}
+  userdata={userdata}
+/>, [curTab]);
+
+const MemoizedWorkflowGrid = useMemo(() => <WorkflowGrid
+  maxRows={3}
+  showSuggestion={true}
+  globalUrl={globalUrl}
+  isMobile={isMobile}
+  userdata={userdata}
+/>, [curTab]);
+
+const MemoizedDocsGrid = useMemo(() => <DocsGrid
+  maxRows={6}
+  parsedXs={12}
+  showSuggestion={true}
+  globalUrl={globalUrl}
+  isMobile={isMobile}
+  userdata={userdata}
+/>, [curTab]);
+
+const MemoizedCreatorGrid = useMemo(() => <CreatorGrid
+  parsedXs={4}
+  isHeader={true}
+  showSuggestion={true}
+  globalUrl={globalUrl}
+  isMobile={isMobile}
+  userdata={userdata}
+/>, [curTab]);
+
+const useStyles = makeStyles({
+  hideIndicator: {
+    display: 'none',
+  },
+  customTab: {
+    justifyContent: 'center',
+    gap: '46px',
+  }
+});
+const classes = useStyles();
 
   if (serverside === true) {
     return null;
@@ -119,6 +172,35 @@ const Search = (props) => {
     return null;
   }
 
+  const StyledTab = styled(Tab)(({ theme }) => ({
+    width: 151,
+    height: 51,
+    padding: "10px 20px", 
+    borderRadius: 8,
+    fontWeight: 600,
+    textTransform: "none",
+    border: 'none',
+    "&.Mui-selected": {
+      backgroundColor: theme.palette.primary.main,
+      color: theme.palette.common.white,
+      "& .MuiSvgIcon-root": {
+        color: theme.palette.common.white,
+      },
+    },
+  }));
+
+  const tabSpanStyling = {
+    display: 'flex', 
+    flexDirection: 'row', 
+    alignItems: 'center' 
+  }
+
+  const tabTextStyling = { 
+    marginLeft: '5px', 
+    color: 'white' 
+  }
+  
+
   // Random names for type & autoComplete. Didn't research :^)
   const landingpageDataBrowser = (
     <div
@@ -131,9 +213,11 @@ const Search = (props) => {
       <div style={boxStyle}>
         <Tabs
           style={{
-            width: isHeader ? 765 : 610,
+            width: 741,
             margin: isHeader ? null : "auto",
             marginTop: hidemargins === true ? 0 : isHeader ? null : 25,
+            backgroundColor: "rgba(33, 33, 33, 1)",
+            borderRadius:8
           }}
           value={curTab}
           indicatorColor="primary"
@@ -141,75 +225,65 @@ const Search = (props) => {
           onChange={setConfig}
           aria-label="disabled tabs example"
           variant="scrollable"
-          scrollButtons="auto"
+          scrollButtons="off"
+          classes={{indicator: classes.hideIndicator, root: classes.customTab}}
         >
-          <Tab
-            label=<span>
-              <AppsIcon style={iconStyle} /> Apps
-            </span>
+          <StyledTab
+            style={{
+              backgroundColor: curTab === 0 ? theme.palette.primary.main : 'inherit',
+              color: curTab === 0? theme.palette.common.white : 'inherit',
+              marginRight: 46
+            }}
+            label={
+              <span style={tabSpanStyling}>
+                <AppsIcon style={iconStyle} />
+                <Typography variant="body1" style={tabTextStyling}>App</Typography>
+              </span>
+            }
           />
-          <Tab
-            label=<span>
-              <CodeIcon style={iconStyle} /> Workflows
-            </span>
+          <StyledTab
+            style={{
+              backgroundColor: curTab ===1 ? theme.palette.primary.main : 'inherit',
+              color: curTab === 1? theme.palette.common.white : 'inherit',
+              marginRight: 46
+            }}
+            label={
+              <span style={tabSpanStyling}>
+                <CodeIcon  style={iconStyle} />
+                <Typography variant="body1" style={tabTextStyling}>Workflow</Typography>
+              </span>
+            }
           />
-          <Tab
-            label=<span>
-              <DescriptionIcon style={iconStyle} /> Docs
-            </span>
+          <StyledTab
+            style={{
+              backgroundColor: curTab === 2 ? theme.palette.primary.main : 'inherit',
+              color: curTab === 2? theme.palette.common.white : 'inherit',
+              marginRight: 46
+            }}
+            label={
+              <span style={tabSpanStyling}>
+                <DescriptionIcon  style={iconStyle} />
+                <Typography variant="body1" style={tabTextStyling}>Docs</Typography>
+              </span>
+            }
           />
-          <Tab
-            label=<span>
-              <EmojiObjectsIcon style={iconStyle} /> Creators
-            </span>
+          <StyledTab
+            style={{
+              backgroundColor: curTab === 3 ? theme.palette.primary.main : 'inherit',
+              color: curTab === 3 ? theme.palette.common.white : 'inherit'
+            }}
+            label={
+              <span style={tabSpanStyling}>
+                <PeopleIcon style={iconStyle} />
+                <Typography variant="body1" style={tabTextStyling}>Creators</Typography>
+              </span>
+            }
           />
         </Tabs>
-        {curTab === 0 ? (
-          <AppGrid
-            maxRows={4}
-            isHeader={true}
-            showSuggestion={true}
-            globalUrl={globalUrl}
-            isMobile={isMobile}
-            userdata={userdata}
-          />
-        ) : curTab === 1 ? (
-          window.location.pathname === "/search" ? (
-            <WorkflowGrid
-              maxRows={3}
-              showSuggestion={true}
-              globalUrl={globalUrl}
-              isMobile={isMobile}
-              userdata={userdata}
-            />
-          ) : (
-            <WorkflowGrid
-              maxRows={3}
-              showSuggestion={true}
-              globalUrl={globalUrl}
-              isMobile={isMobile}
-              userdata={userdata}
-            />
-          )
-        ) : curTab === 2 ? (
-          <DocsGrid
-            maxRows={6}
-            parsedXs={12}
-            showSuggestion={true}
-            globalUrl={globalUrl}
-            isMobile={isMobile}
-            userdata={userdata}
-          />
-        ) : curTab === 3 ? (
-          <CreatorGrid
-            parsedXs={4}
-            isHeader={true}
-            showSuggestion={true}
-            globalUrl={globalUrl}
-            isMobile={isMobile}
-            userdata={userdata}
-          />
-        ) : null}
+      {curTab === 0 && MemoizedAppGrid}
+      {curTab === 1 && MemoizedWorkflowGrid}
+      {curTab === 2 && MemoizedDocsGrid}
+      {curTab === 3 && MemoizedCreatorGrid}
       </div>
     </div>
   );
