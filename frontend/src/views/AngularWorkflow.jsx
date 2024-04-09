@@ -121,7 +121,7 @@ import * as edgehandles from "cytoscape-edgehandles";
 import CytoscapeComponent from "react-cytoscapejs";
 import Draggable from "react-draggable";
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
-import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
+// import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths, internalIds, } from "../views/Apps.jsx";
@@ -18750,7 +18750,7 @@ const AngularWorkflow = (defaultprops) => {
         {configureWorkflowModal}
 		<SuggestionBoxUi />
 
-  		{codeEditorModalOpen ?
+  		{/* {codeEditorModalOpen ?
 	  		<ShuffleCodeEditor
 				expansionModalOpen={codeEditorModalOpen}
 				setExpansionModalOpen={setCodeEditorModalOpen}
@@ -18773,7 +18773,7 @@ const AngularWorkflow = (defaultprops) => {
 
 				changeActionParameterCodeMirror={changeActionParameterCodeMirror}
 	  		/>
-		: null}
+		: null} */}
 
         {editWorkflowModalOpen === true ?
           <EditWorkflow

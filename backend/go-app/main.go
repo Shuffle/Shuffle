@@ -256,7 +256,6 @@ type Hook struct {
 	Environment string       `json:"environment" datastore:"environment"`
 }
 
-
 func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
 		"id": "12345",
@@ -510,7 +509,6 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 			log.Printf("[INFO] Successfully updated org with user %s!", newUser.Username)
 		}
 	}
-
 
 	return nil
 }
@@ -880,7 +878,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[DEBUG] Failed to get org during getinfo: %s", err)
 	}
 
-
 	//if err == nil {
 	if len(org.Id) > 0 {
 		userInfo.ActiveOrg = shuffle.OrgMini{
@@ -969,7 +966,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		tutorialsFinished = append(tutorialsFinished, tutorial)
 	}
 
-
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1008,7 +1004,6 @@ type passwordReset struct {
 	Password2 string `json:"newpassword2"`
 	Reference string `json:"reference"`
 }
-
 
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
@@ -3064,7 +3059,6 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		}
 	}
 
-
 	log.Printf("[DEBUG] Successfully built app %s (%s)", api.Name, api.ID)
 	if len(user.Id) > 0 {
 		resp.WriteHeader(200)
@@ -3104,8 +3098,6 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	buildSwaggerApp(resp, body, user, false)
 }
-
-
 
 // Hotloads new apps from a folder
 func handleAppHotload(ctx context.Context, location string, forceUpdate bool) error {
@@ -3453,11 +3445,10 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	return nil
 }
 
-
 func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 
 	// Check if it's 1 in 10 (10% chance random)
-	backupJob := shuffle.BackupJob{} 
+	backupJob := shuffle.BackupJob{}
 
 	// Check if workflow backup is active
 	// Check if app backup is active
@@ -3502,7 +3493,6 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		log.Printf("[ERROR] Failed marshalling backup job: %s", err)
 		backupJobData = []byte{}
 	}
-
 
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync", syncUrl)
 	client := shuffle.GetExternalClient(syncUrl)
@@ -3709,7 +3699,7 @@ func runInitEs(ctx context.Context) {
 			}
 
 			// FIXME: Add a randomized timer to avoid all schedules running at the same time
-			// Many are at 5 minutes / 1 hour. The point is to spread these out 
+			// Many are at 5 minutes / 1 hour. The point is to spread these out
 			// a bit instead of all of them starting at the exact same time
 
 			//log.Printf("Schedule: %#v", schedule)
@@ -4061,17 +4051,16 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Skipping download of extra API samples as %d were found", len(workflowapps))
 	}
 
-	
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
-		healthcheckInterval := 30 
+		healthcheckInterval := 30
 		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
 		job := func() {
-			// Prepare a fake http.responsewriter 
+			// Prepare a fake http.responsewriter
 			resp := httptest.NewRecorder()
 
 			request := http.Request{}
 			// Add the "force=true" query to the fake request
-			request.URL, err  = url.Parse("/api/v1/health/stats?force=true")
+			request.URL, err = url.Parse("/api/v1/health/stats?force=true")
 			if err != nil {
 				log.Printf("[ERROR] Failed to parse test url for healthstats: %s", err)
 			}
@@ -4089,7 +4078,6 @@ func runInitEs(ctx context.Context) {
 
 	log.Printf("[INFO] Finished INIT (ES)")
 }
-
 
 func handleVerifyCloudsync(orgId string) (shuffle.SyncFeatures, error) {
 	ctx := context.Background()
@@ -4669,8 +4657,6 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
-
-
 func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -4729,8 +4715,6 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte("OK"))
 }
 
-
-
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -4762,7 +4746,7 @@ func initHandlers() {
 		go runInitEs(ctx)
 	} else {
 		//go shuffle.runInit(ctx)
-		log.Printf("[ERROR] Opensearch is the only viable option. Please set SHUFFLE_ELASTIC=true") 
+		log.Printf("[ERROR] Opensearch is the only viable option. Please set SHUFFLE_ELASTIC=true")
 		os.Exit(1)
 	}
 
@@ -4949,7 +4933,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/datastore/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
-
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")

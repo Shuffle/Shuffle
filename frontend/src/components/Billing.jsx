@@ -40,7 +40,7 @@ import {
 //import { useAlert 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
 import BillingStats from "../components/BillingStats.jsx";
-import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
+// import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 
 const Billing = (props) => {
   const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, } = props;
@@ -607,11 +607,11 @@ const Billing = (props) => {
 								}}
 								onClick={() => {
 									if (isCloud) {
-										handlePayasyougo(userdata)
+										// handlePayasyougo(userdata)
 										//navigate("/pricing?tab=cloud&highlight=true")
 									} else {
 										//window.open("https://shuffler.io/pricing?tab=onprem&highlight=true", "_blank")
-										handlePayasyougo()
+										// handlePayasyougo()
 									}
 								}}
 							>
