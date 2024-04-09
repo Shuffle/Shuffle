@@ -15,9 +15,6 @@ import {
   Code as CodeIcon,
 } from "@mui/icons-material";
 
-import { GrSplit } from "react-icons/gr";
-import { GrSplits } from "react-icons/gr";
-import { GrList } from "react-icons/gr";
 import noImage from "../assets/img/no_image.png"
 
 import algoliasearch from "algoliasearch/lite";
