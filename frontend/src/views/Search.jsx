@@ -16,11 +16,11 @@ import {
   Apps as AppsIcon,
   Code as CodeIcon,
   EmojiObjects as EmojiObjectsIcon,
-  Description as DescriptionIcon,
   BorderBottom,
 } from "@mui/icons-material";
 
-import PeopleIcon from '@mui/icons-material/People';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 
 // Should be different if logged in :|
 const Search = (props) => {
@@ -262,7 +262,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <DescriptionIcon  style={iconStyle} />
+                <DescriptionOutlinedIcon  style={iconStyle} />
                 <Typography variant="body1" style={tabTextStyling}>Docs</Typography>
               </span>
             }
@@ -274,7 +274,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <PeopleIcon style={iconStyle} />
+                <PeopleAltOutlinedIcon style={iconStyle} />
                 <Typography variant="body1" style={tabTextStyling}>Creators</Typography>
               </span>
             }

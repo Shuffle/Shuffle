@@ -165,21 +165,24 @@ const AppGrid = (props) => {
           fullWidth
           style={{
             backgroundColor: theme.palette.inputColor,
-            width: 693,
-            height: 51,
             marginTop: 20,
             marginLeft: 10,
-            borderRadius: 8
+            marginRight: 12,
+            width: 693,
+            borderRadius: 8,
+            fontSize: 16,
           }}
           InputProps={{
             style: {
               color: "white",
               fontSize: "1em",
               height: 50,
+              width: 693,
+              borderRadius: 8,
             },
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon style={{ marginLeft: 5 }} />
+                <SearchIcon style={{ marginLeft: 5}} />
               </InputAdornment>
             ),
             endAdornment: (
@@ -207,7 +210,7 @@ const AppGrid = (props) => {
           autoComplete="off"
           type="search"
           color="primary"
-          placeholder="Find Apps..."
+          placeholder="Find Apps"
           id="shuffle_search_field"
           onChange={(event) => {
             setSearchQuery(event.currentTarget.value);
@@ -396,7 +399,7 @@ const AppGrid = (props) => {
         const userdata = {};
         const paperStyle = {
           backgroundColor: "#1A1A1A",
-          color: "white",
+          color: "rgba(241, 241, 241, 1)",
           padding: isHeader ? null : 15,
           cursor: "pointer",
           position: "relative",
@@ -482,8 +485,8 @@ const AppGrid = (props) => {
                       alt={data.name}
                       src={data.image_url}
                       style={{
-                        maxWidth: 80,
-                        maxHeight:80,
+                        width: 80,
+                        height:80,
                         borderRadius: 8,
                         margin: 8
                       }}
@@ -495,6 +498,7 @@ const AppGrid = (props) => {
                         alignItems: "flex-start",
                         width: 339,
                         gap: 8,
+                        fontWeight: "400",
                         overflow: "hidden",
                         margin: "12px 0 12px 0",
                         alignItems: "flex-start",
@@ -505,6 +509,7 @@ const AppGrid = (props) => {
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
+                          marginLeft: 8,
                         }}
                       >
                         {data.name}
@@ -515,6 +520,8 @@ const AppGrid = (props) => {
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
+                            marginLeft: 8,
+                            color: "rgba(158, 158, 158, 1)"
                           }}
                         >
                           {data.categories !== null
@@ -529,6 +536,8 @@ const AppGrid = (props) => {
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                             maxWidth: 250,
+                            marginLeft: 8,
+                            color: "rgba(158, 158, 158, 1)"
                           }}
                         >
                           {data.tags &&
@@ -643,9 +652,9 @@ const AppGrid = (props) => {
       fontSize: 16,
       display: "flex",
       width: "100%",
-      height: 25,
+      height: 30,
       flexDirection: "row",
-      textTransform: 'none'
+      textTransform: 'none',
     }
 
     return (
@@ -698,8 +707,9 @@ const AppGrid = (props) => {
       display: "flex",
       flexDirection: "row",
       width: "100%",
-      height: 25,
-      textTransform:'none'
+      height: 30,
+      textTransform:'none',
+      fontWeight: 400
     }
     
 
@@ -717,7 +727,7 @@ const AppGrid = (props) => {
           style={actionLabelButtonStyling}
           onClick={toogleActionLabel}
         >
-          Action Labels
+          Labels
           {isActionLabelExpanded ? (
             <ExpandLessIcon style={{ marginLeft: "auto" }} />
           ) : (
@@ -759,8 +769,9 @@ const AppGrid = (props) => {
       flexDirection: "row",
       alignItems: "center",
       width: "100%",
-      height: 25,
-      textTransform: 'none'
+      height: 30,
+      textTransform: 'none',
+      fontWeight: 400
     }
 
     return (
@@ -810,7 +821,7 @@ const AppGrid = (props) => {
       alignItems: "center",
       whiteSpace: "nowrap",
       width: "100%",
-      height: 25,
+      height: 30,
       textTransform: 'none',
       opacity: '0.5'
     }
@@ -871,7 +882,7 @@ const AppGrid = (props) => {
           marginRight: 16
         }}
       >
-        <Typography variant="h5" style={{marginBottom: 30, marginTop: 30, fontWeight:"bold", fontSize: 24}}>
+        <Typography variant="h5" style={{marginBottom: 30, marginTop: 30, fontWeight:"400", fontSize: 24}}>
          Filter By
         </Typography>
         <FilterAllAppsByCategory />
@@ -1062,16 +1073,20 @@ const AppGrid = (props) => {
           fullWidth
           style={{
             backgroundColor: theme.palette.inputColor,
-            borderRadius: borderRadius,
-            width: 693,
             marginTop: 20,
             marginLeft: 10,
+            marginRight: 12,
+            width: 693,
+            borderRadius: 8,
+            fontSize: 16,
           }}
           InputProps={{
             style: {
               color: "white",
               fontSize: "1em",
               height: 50,
+              width: 693,
+              borderRadius: 8,
             },
             startAdornment: (
               <InputAdornment position="start">
@@ -1104,7 +1119,7 @@ const AppGrid = (props) => {
           autoComplete="off"
           type="search"
           color="primary"
-          placeholder="Find Apps..."
+          placeholder="Find Apps"
           id="shuffle_search_field"
           onChange={(event) => {
             setSearchQuery(event.currentTarget.value);
@@ -1218,7 +1233,7 @@ const AppGrid = (props) => {
       fontSize: 16,
       display: "flex",
       width: "100%",
-      height: 25,
+      height: 30,
       flexDirection: "row",
       textTransform: 'none',
     }
@@ -1248,13 +1263,9 @@ const AppGrid = (props) => {
                 {topCategories.map((data, index) => (
                     <label
                         htmlFor={`checkbox-${data.category}`}
-                        style={{
-                            display: "inline-flex",
-                            flexDirection: "row",
-                            cursor: "pointer",
-                            marginBottom: 5,
-                        }}
+                        className="ais-RefinementList-labelText"
                         key={data.category}
+                        style={{marginBottom: 5}}
                     >
                         <input
                             id={`checkbox-${data.category}`}
@@ -1263,7 +1274,7 @@ const AppGrid = (props) => {
                             checked={selectedCategoryForUsersAndOgsApps.includes(data.category)}
                             onChange={() => handleCheckboxChange(data.category)} 
                         />
-                        <span style={{ fontSize: 16, marginLeft: 5 }}>{data.category}</span>
+                        <span className="ais-RefinementList-labelText" style={{marginLeft: 5}}>{data.category}</span>
                     </label>
                 ))}
 
@@ -1274,9 +1285,9 @@ const AppGrid = (props) => {
                       textAlign:'left',
                       textDecoration: 'underline',
                       textTransform: 'none',
-                      height: 25,
+                      height: 30,
                       justifyContent:'left',
-                      backgroundColor: 'transparent'
+                      backgroundColor: 'transparent',
                     }}
                     onClick={handleClearFilter}
                 >
@@ -1349,9 +1360,10 @@ const AppGrid = (props) => {
         display: "flex",
         flexDirection: "row",
         width: "100%",
-        height: 25,
+        height: 30,
         textTransform:'none',
-        marginBottom: isActionLabelExpanded && 16
+        marginBottom: isActionLabelExpanded && 16,
+        fontWeight: 400
       }
 
     return (
@@ -1368,7 +1380,7 @@ const AppGrid = (props) => {
           style={actionLabelButtonStyling}
           onClick={toogleActionLabel}
         >
-          Action Labels
+          Labels
           {isActionLabelExpanded ? (
             <ExpandLessIcon style={{ marginLeft: "auto" }} />
           ) : (
@@ -1407,7 +1419,7 @@ const AppGrid = (props) => {
                         textAlign:'left',
                         textDecoration: 'underline',
                         textTransform: 'none',
-                        height: 25,
+                        height: 30,
                         justifyContent:'left',
                         backgroundColor: 'transparent'
                     }}
@@ -1458,9 +1470,10 @@ const AppGrid = (props) => {
       flexDirection: "row",
       alignItems: "center",
       width: "100%",
-      height: 25,
+      height: 30,
       textTransform:'none',
-      marginBottom: isCreatedWithExpanded && 16
+      marginBottom: isCreatedWithExpanded && 16,
+      fontWeight: 400
     }
 
     return (
@@ -1471,6 +1484,7 @@ const AppGrid = (props) => {
           alignItems: "flex-start",
           marginTop: 20,
           width: "100%",
+          fontWeight: 400
         }}
       >
         <Button
@@ -1512,7 +1526,7 @@ const AppGrid = (props) => {
                       textAlign:'left',
                       textDecoration: 'underline',
                       textTransform: 'none',
-                      height: 25,
+                      height: 30,
                       justifyContent:'left',
                       backgroundColor: 'transparent'
                     }}
@@ -1547,7 +1561,7 @@ const AppGrid = (props) => {
       alignItems: "center",
       whiteSpace: "nowrap",
       width: "100%",
-      height: 25,
+      height: 30,
       textTransform: 'none',
       opacity: '0.5'
     }
@@ -1584,7 +1598,7 @@ const AppGrid = (props) => {
                   textAlign:'left',
                   textDecoration: 'underline',
                   textTransform: 'none',
-                  height: 25,
+                  height: 30,
                   justifyContent:'left',
                   backgroundColor: 'transparent'
                 }}
@@ -1610,7 +1624,7 @@ const AppGrid = (props) => {
           marginRight: 16
         }}
       >
-        <Typography variant="h5" style={{marginBottom: 30, marginTop: 30, fontWeight:"bold", fontSize: 24}}>
+        <Typography variant="h5" style={{marginBottom: 30, marginTop: 30, fontWeight:"400", fontSize: 24}}>
          Filter By
         </Typography>
         <FilterUsersAndOrgsAppByCategory />
@@ -1770,7 +1784,7 @@ const AppGrid = (props) => {
 
 		  const paperStyle = {
 			backgroundColor: "#1A1A1A",
-			color: "white",
+			color: "rgba(241, 241, 241, 1)",
 			padding: isHeader ? null : 15,
 			cursor: "pointer",
 			position: "relative",
@@ -1857,8 +1871,8 @@ const AppGrid = (props) => {
 						alt={data.name}
 						src={data.small_image || data.large_image ? (data.small_image || data.large_image) : noImage}
 						style={{
-						  maxWidth: 80,
-              maxHeight:80,
+						  width: 80,
+              height:80,
               borderRadius: 8,
               margin: 8
 						}}
@@ -1870,6 +1884,7 @@ const AppGrid = (props) => {
               alignItems: "flex-start",
               width: 339,
               gap: 8,
+              fontWeight: '400',
               overflow: "hidden",
               margin: "12px 0 12px 0",
               alignItems: "flex-start",
@@ -1880,6 +1895,7 @@ const AppGrid = (props) => {
 							overflow: "hidden",
 							textOverflow: "ellipsis",
 							whiteSpace: "nowrap",
+              marginLeft: 8,
 						  }}
 						>
 						  {data.name}
@@ -1890,7 +1906,8 @@ const AppGrid = (props) => {
 							  overflow: "hidden",
 							  textOverflow: "ellipsis",
 							  whiteSpace: "nowrap",
-							  maxWidth: 200,
+                marginLeft: 8,
+                color: "rgba(158, 158, 158, 1)"
 							}}
 						  >
 							{data.categories !== null
@@ -1904,8 +1921,9 @@ const AppGrid = (props) => {
 							  overflow: "hidden",
 							  textOverflow: "ellipsis",
 							  whiteSpace: "nowrap",
-							  maxWidth:
-								currentView === "split" ? 250 :  140,
+							  maxWidth: currentView === "split" ? 250 :  140,
+                marginLeft: 8,
+                color: "rgba(158, 158, 158, 1)"
 							}}
 						  >
 							{data.tags &&
@@ -2015,46 +2033,48 @@ const AppGrid = (props) => {
       <div style={{ display: "flex", justifyContent: "center"}}>
         <div style={boxStyle}>
           <Tabs
-            style={{ marginTop: 15, display: "flex", width: "100%", borderBottom: '1px solid rgba(73, 73, 73, 1)' }}
+            style={{ marginTop: 15, display: "flex", width: "100%", borderBottom: '1px solid rgba(73, 73, 73, 1)', height: 44 }}
             value={currTab}
-            indicatorColor="primary"
-            textColor="secondary"
-            aria-label="disabled tabs example"
-            variant="scrollable"
-            scrollButtons="auto"
             onChange={handleTabChange}
             scrollButtons="off"
           >
             <Tab
               label="All Apps"
-              style={{
+              sx={{
                 color: currTab === 0 ? "#F86743" : "inherit",
-                flex: 1,
                 height: 44,
-                marginLeft: 20,
                 fontSize: 16,
                 textTransform: 'none',
+                flex: 1,
+                fontWeight: 400,
+                paddingBottom: 3,
+                marginLeft: 3
               }}
             ></Tab>
             <Tab
               label="Organization Apps"
-              style={{
+              sx={{
                 color: currTab === 1 ? "#F86743" : "inherit",
-                flex: 1,
+                border: 'none',
                 height: 44,
                 fontSize: 16,
+                flex: 1,
                 textTransform: 'none',
+                fontWeight: 400,
+                paddingBottom: 3,
               }}
             ></Tab>
             <Tab
-              label="My App"
-              style={{
+              label="My Apps"
+              sx={{
                 color: currTab === 2 ? "#F86743" : "inherit",
-                flex: 1, 
                 height: 44,
-                marginRight: 20,
                 fontSize: 16,
                 textTransform: 'none',
+                flex: 1,
+                fontWeight: 400,
+                paddingBottom: 3,
+                marginRight: 3
               }}
             ></Tab>
           </Tabs>

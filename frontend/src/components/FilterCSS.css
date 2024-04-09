@@ -18,7 +18,7 @@
 .ais-RefinementList-label {
   cursor: pointer;
   display: flex;
-  align-items: center;
+  gap: 5px;
 }
 
 /* Style for checkbox */
@@ -33,6 +33,7 @@
   background-color: #27292d;
   cursor: pointer;
   flex-shrink: 0;
+  margin-top: "10px";
 }
 
 .ais-RefinementList-checkbox:checked {
@@ -61,8 +62,11 @@
 
 /* Style for label text */
 .ais-RefinementList-labelText {
-  margin-left: 5px;
+  /* margin-left: 5px; */
   font-size: 16px;
+  display: inline-flex;
+  flex-direction: row;
+  cursor: pointer;
 }
 
 /* Style for count */
@@ -71,4 +75,11 @@
   font-weight: bold;
   color: gray; */
   display: none;
+}
+.ais-ClearRefinements-button {
+  cursor: pointer;
+  color: rgb(248, 103, 67);
+  border: none;
+  font-size: 16px;
+  background-color: transparent;
 }
