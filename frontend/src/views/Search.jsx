@@ -214,7 +214,7 @@ const classes = useStyles();
         <Tabs
           style={{
             width: 741,
-            margin: isHeader ? null : "auto",
+            margin: "auto",
             marginTop: hidemargins === true ? 0 : isHeader ? null : 25,
             backgroundColor: "rgba(33, 33, 33, 1)",
             borderRadius:8
