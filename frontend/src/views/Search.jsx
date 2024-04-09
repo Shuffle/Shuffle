@@ -217,7 +217,6 @@ const classes = useStyles();
             marginTop: hidemargins === true ? 0 : isHeader ? null : 25,
             backgroundColor: "rgba(33, 33, 33, 1)",
             borderRadius:8,
-            zIndex: "9999"
           }}
           value={curTab}
           indicatorColor="primary"

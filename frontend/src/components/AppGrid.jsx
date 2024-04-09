@@ -1820,12 +1820,14 @@ const AppGrid = (props) => {
 			parsedname.charAt(0).toUpperCase() + parsedname.substring(1)
 		  ).replaceAll("_", " ");
 
-		  // const appUrl =
-      //     isCloud === false
-      //       ? `/apps/${data.objectID}?queryID=${data.__queryID}`
-      //       : `https://shuffler.io/apps/${data.objectID}?queryID=${data.__queryID}`;
+      // console.assert.
 
-      const appUrl = "/apps";
+		  const appUrl =
+          isCloud === false
+            ? `/apps/${data.id}`
+            : `https://shuffler.io/apps/${data.name}`;
+
+      // const appUrl = `/apps/${data.name}`;
 		
 		  return (
 			<Zoom
