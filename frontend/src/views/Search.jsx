@@ -236,7 +236,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <AppsIcon style={iconStyle} />
+                <AppsIcon style={{iconStyle, color: "white"}} />
                 <Typography variant="body1" style={tabTextStyling}>App</Typography>
               </span>
             }
@@ -249,7 +249,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <CodeIcon  style={iconStyle} />
+                <CodeIcon  style={{iconStyle, color: "white"}} />
                 <Typography variant="body1" style={tabTextStyling}>Workflow</Typography>
               </span>
             }
@@ -262,7 +262,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <DescriptionOutlinedIcon  style={iconStyle} />
+                <DescriptionOutlinedIcon  style={{iconStyle, color: "white"}} />
                 <Typography variant="body1" style={tabTextStyling}>Docs</Typography>
               </span>
             }
@@ -274,7 +274,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <PeopleAltOutlinedIcon style={iconStyle} />
+                <PeopleAltOutlinedIcon style={{iconStyle, color: "white"}} />
                 <Typography variant="body1" style={tabTextStyling}>Creators</Typography>
               </span>
             }
