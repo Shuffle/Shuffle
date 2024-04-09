@@ -66,7 +66,7 @@ const App = (message, props) => {
   const [userdata, setUserData] = useState({});
   const [notifications, setNotifications] = useState([])
   const [cookies, setCookie, removeCookie] = useCookies([])
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(true)
   const [dataset, setDataset] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [curpath, setCurpath] = useState(typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname)
@@ -120,42 +120,41 @@ const App = (message, props) => {
   };
 
   const checkLogin = () => {
-    // var baseurl = globalUrl;
-    // fetch(`${globalUrl}/api/v1/getinfo`, {
-    //   credentials: "include",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    // })
-    //   .then((response) => response.json())
-    //   .then((responseJson) => {
-    //     var userInfo = {};
-    //     if (responseJson.success === true) {
-    //       //console.log("USER: ", responseJson);
+    var baseurl = globalUrl;
+    fetch(`${globalUrl}/api/v1/getinfo`, {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((responseJson) => {
+        var userInfo = {};
+        if (responseJson.success === true) {
+          //console.log("USER: ", responseJson);
 
-    //       userInfo = responseJson;
-    //       setIsLoggedIn(true);
-    //       //console.log("Cookies: ", cookies)
-    //       // Updating cookie every request
-    //       for (var key in responseJson["cookies"]) {
-    //         setCookie(
-    //           responseJson["cookies"][key].key,
-    //           responseJson["cookies"][key].value,
-    //           { path: "/" }
-    //         );
-    //       }
-    //     }
+          userInfo = responseJson;
+          setIsLoggedIn(true);
+          //console.log("Cookies: ", cookies)
+          // Updating cookie every request
+          for (var key in responseJson["cookies"]) {
+            setCookie(
+              responseJson["cookies"][key].key,
+              responseJson["cookies"][key].value,
+              { path: "/" }
+            );
+          }
+        }
 
-    //     // Handling Ethereum update
+        // Handling Ethereum update
 
-    //     //console.log("USER: ", userInfo)
-    //     setUserData(userInfo);
-    //     setIsLoaded(true);
-    //   })
-    //   .catch((error) => {
-    //     setIsLoaded(true);
-    //   });
-	console.log("hiie")
+        //console.log("USER: ", userInfo)
+        setUserData(userInfo);
+        setIsLoaded(true);
+      })
+      .catch((error) => {
+        setIsLoaded(true);
+      });
   };
 
   // Dumb for content load (per now), but good for making the site not suddenly reload parts (ajax thingies)
@@ -201,8 +200,8 @@ const App = (message, props) => {
           removeCookie={removeCookie}
           isLoaded={isLoaded}
           globalUrl={globalUrl}
-          setIsLoggedIn={setIsLoggedIn}
-          isLoggedIn={isLoggedIn}
+        //   setIsLoggedIn={setIsLoggedIn}
+        //   isLoggedIn={isLoggedIn}
           userdata={userdata}
           {...props}
         />
@@ -215,8 +214,8 @@ const App = (message, props) => {
         	  path="/login"
         	  element={
         	    <LoginPage
-        	      isLoggedIn={isLoggedIn}
-        	      setIsLoggedIn={setIsLoggedIn}
+        	    //   isLoggedIn={isLoggedIn}
+        	    //   setIsLoggedIn={setIsLoggedIn}
         	      register={true}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
@@ -233,8 +232,8 @@ const App = (message, props) => {
         	  element={
         	    <Admin
         	      userdata={userdata}
-        	      isLoggedIn={isLoggedIn}
-        	      setIsLoggedIn={setIsLoggedIn}
+        	    //   isLoggedIn={isLoggedIn}
+        	    //   setIsLoggedIn={setIsLoggedIn}
         	      register={true}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
@@ -252,8 +251,8 @@ const App = (message, props) => {
         	  path="/admin/:key"
         	  element={
         	    <Admin
-        	      isLoggedIn={isLoggedIn}
-        	      setIsLoggedIn={setIsLoggedIn}
+        	    //   isLoggedIn={isLoggedIn}
+        	    //   setIsLoggedIn={setIsLoggedIn}
         	      register={true}
         	      isLoaded={isLoaded}
         	      globalUrl={globalUrl}
@@ -299,7 +298,7 @@ const App = (message, props) => {
 								showOptions={false}
 
         	      isLoaded={isLoaded}
-        	      isLoggedIn={isLoggedIn}
+        	    //   isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
         	      {...props}
         	    />
@@ -314,7 +313,7 @@ const App = (message, props) => {
 								showOptions={false}
 
         	      isLoaded={isLoaded}
-        	      isLoggedIn={isLoggedIn}
+        	    //   isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
         	      {...props}
         	    />
@@ -327,7 +326,7 @@ const App = (message, props) => {
         	    <Dashboard
 				  userdata={userdata}
         	      isLoaded={isLoaded}
-        	      isLoggedIn={isLoggedIn}
+        	    //   isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
         	      {...props}
         	    />
@@ -339,20 +338,20 @@ const App = (message, props) => {
         	  element={
         	    <AppCreator
         	      isLoaded={isLoaded}
-        	      isLoggedIn={isLoggedIn}
+        	    //   isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
         	      {...props}
         	    />
         	  }
         	/>
-			<Route exact path="/apps/authentication" element={<UpdateAuthentication serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
+			<Route exact path="/apps/authentication" element={<UpdateAuthentication serverside={false} userdata={userdata} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
         	<Route
         	  exact
         	  path="/apps"
         	  element={
 				<Apps
 					isLoaded={isLoaded}
-					isLoggedIn={isLoggedIn}
+					// isLoggedIn={isLoggedIn}
 					globalUrl={globalUrl}
 					userdata={userdata}
 					{...props}
@@ -365,7 +364,7 @@ const App = (message, props) => {
         	  element={
         	    <AppCreator
         	      isLoaded={isLoaded}
-        	      isLoggedIn={isLoggedIn}
+        	    //   isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
         	      {...props}
         	    />
@@ -380,7 +379,7 @@ const App = (message, props) => {
         	      cookies={cookies}
         	      removeCookie={removeCookie}
         	      isLoaded={isLoaded}
-        	      isLoggedIn={isLoggedIn}
+        	    //   isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
         	      cookies={cookies}
         	      userdata={userdata}
@@ -396,7 +395,7 @@ const App = (message, props) => {
         	      cookies={cookies}
         	      removeCookie={removeCookie}
         	      isLoaded={isLoaded}
-        	      isLoggedIn={isLoggedIn}
+        	    //   isLoggedIn={isLoggedIn}
         	      globalUrl={globalUrl}
         	      cookies={cookies}
         	      userdata={userdata}
