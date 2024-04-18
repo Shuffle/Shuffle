@@ -1,33 +1,35 @@
 import React, { useState, useEffect } from "react";
 
 import theme from '../theme.jsx';
-import {isMobile} from "react-device-detect";
+import { isMobile } from "react-device-detect";
 import AppGrid from "../components/AppGrid.jsx"
 import WorkflowGrid from "../components/WorkflowGrid.jsx"
 import CreatorGrid from "../components/CreatorGrid.jsx"
 import DocsGrid from "../components/DocsGrid.jsx"
+import DiscordChat from "../components/DiscordChat.jsx";
 import { useNavigate } from "react-router-dom";
 
-import { 
-  Tabs,
-  Tab,
+import {
+	Tabs,
+	Tab,
 } from "@mui/material";
 
 import {
 	Apps as AppsIcon,
 	Code as CodeIcon,
+	Chat as ChatIcon,
 	EmojiObjects as EmojiObjectsIcon,
-  Description as DescriptionIcon,
+	Description as DescriptionIcon,
 } from "@mui/icons-material";
 
 
 // Should be different if logged in :|
 const Search = (props) => {
-  const { globalUrl, isLoaded, serverside, userdata, hidemargins, isHeader} = props;
+	const { globalUrl, isLoaded, serverside, userdata, hidemargins, isHeader } = props;
 	let navigate = useNavigate();
 
-  const [curTab, setCurTab] = useState(0);
-  const iconStyle = { marginRight: isHeader ? null : 10 };
+	const [curTab, setCurTab] = useState(0);
+	const iconStyle = { marginRight: isHeader ? null : 10 };
 
 	useEffect(() => {
 		if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
@@ -56,7 +58,7 @@ const Search = (props) => {
 		maxWidth: 1024,
 		scrollX: "hidden",
 		overflowX: "hidden",
-		justifyContent: isHeader ? "center" : null, 
+		justifyContent: isHeader ? "center" : null,
 	}
 
 	const boxStyle = {
@@ -68,49 +70,52 @@ const Search = (props) => {
 		paddingRight: isHeader ? null : 30,
 		paddingBottom: isHeader ? null : 30,
 		paddingTop: hidemargins === true ? 0 : isHeader ? null : 30,
-		display: "flex", 
+		display: "flex",
 		flexDirection: "column",
 		overflowX: "hidden",
 		minHeight: 400,
 	}
 
 	const views = {
-    0: "apps",
-    1: "workflows",
-    2: "docs",
-    3: "creators",
-  }
+		0: "apps",
+		1: "workflows",
+		2: "docs",
+		3: "creators",
+		4: "discord",
+	}
 
 	const setConfig = (event, inputValue) => {
 		const newValue = parseInt(inputValue)
 
-    setCurTab(newValue)
-    if (newValue === 0) {
-      document.title = "Shuffle - search - apps";
-    } else if (newValue === 1) {
-      document.title = "Shuffle - search - workflows";
-    } else if (newValue === 2) {
-      document.title = "Shuffle - search - documentation";
-    } else if (newValue === 3) {
-      document.title = "Shuffle - search - creators";
-    } else {
-      document.title = "Shuffle - search";
-    }
+		setCurTab(newValue)
+		if (newValue === 0) {
+			document.title = "Shuffle - search - apps";
+		} else if (newValue === 1) {
+			document.title = "Shuffle - search - workflows";
+		} else if (newValue === 2) {
+			document.title = "Shuffle - search - documentation";
+		} else if (newValue === 3) {
+			document.title = "Shuffle - search - creators";
+		}  else if (newValue === 4) {
+            document.title = "Shuffle - search - Discord Chat";
+        }else {
+			document.title = "Shuffle - search";
+		}
 
-		
+
 		const urlSearchParams = new URLSearchParams(window.location.search)
 		const params = Object.fromEntries(urlSearchParams.entries())
 		const foundQuery = params["q"]
 		var extraQ = ""
 		if (foundQuery !== null && foundQuery !== undefined) {
-			extraQ = "&q="+foundQuery
+			extraQ = "&q=" + foundQuery
 		}
 
-	
+
 		if ((serverside === false || serverside === undefined) && window.location.pathname.includes("/search")) {
-			navigate(`/search?tab=${views[newValue]}`+extraQ)
+			navigate(`/search?tab=${views[newValue]}` + extraQ)
 		}
-  }
+	}
 
 	if (isLoaded === false) {
 		return null
@@ -118,18 +123,18 @@ const Search = (props) => {
 
 
 	// Random names for type & autoComplete. Didn't research :^)
-	const landingpageDataBrowser = 
-		<div style={{paddingBottom: hidemargins === true ? 0 : 100, color: "white", }}>
+	const landingpageDataBrowser =
+		<div style={{ paddingBottom: hidemargins === true ? 0 : 100, color: "white", }}>
 			<div style={boxStyle}>
 				<Tabs
-					style={{width: isHeader ? 765 : 610, margin: isHeader? null :"auto", marginTop: hidemargins === true ? 0 : isHeader ? null : 25, }}
+					style={{ width: isHeader ? 765 : 610, margin: isHeader ? null : "auto", marginTop: hidemargins === true ? 0 : isHeader ? null : 25, }}
 					value={curTab}
 					indicatorColor="primary"
 					textColor="secondary"
 					onChange={setConfig}
 					aria-label="disabled tabs example"
 					variant="scrollable"
-          			scrollButtons="auto"
+					scrollButtons="auto"
 				>
 					<Tab
 						label=<span>
@@ -143,36 +148,46 @@ const Search = (props) => {
 					/>
 					<Tab
 						label=<span>
-  						<DescriptionIcon style={iconStyle} /> Docs 
+							<DescriptionIcon style={iconStyle} /> Docs
 						</span>
 					/>
 					<Tab
 						label=<span>
-							<EmojiObjectsIcon style={iconStyle} /> Creators 
+							<EmojiObjectsIcon style={iconStyle} /> Creators
 						</span>
 					/>
+					<Tab
+						label=<span>
+							<ChatIcon style={iconStyle} /> Discord Chat
+						</span>
+					/>
+
 				</Tabs>
-				{curTab === 0 ? 
+				{curTab === 0 ?
 					<AppGrid maxRows={3} isHeader={true} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} userdata={userdata} />
-				: 
-				curTab === 1 ?
-    			window.location.pathname === "/search" ? 
-						<WorkflowGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} /> 
+					:
+					curTab === 1 ?
+						window.location.pathname === "/search" ?
+							<WorkflowGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} userdata={userdata} />
+							:
+							<WorkflowGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} userdata={userdata} />
 						:
-						<WorkflowGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
-				:
-				curTab === 2 ?
-					<DocsGrid maxRows={6} parsedXs={12} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
-				: 
-				curTab === 3 ?
-					<CreatorGrid parsedXs={4} isHeader={true} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
-				: 
-				null}
+						curTab === 2 ?
+							<DocsGrid maxRows={6} parsedXs={12} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} userdata={userdata} />
+							:
+							curTab === 3 ?
+								<CreatorGrid parsedXs={4} isHeader={true} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} userdata={userdata} />
+								:
+								curTab === 4 ? 
+    <DiscordChat isMobile={isMobile} />
+:
+
+								null}
 			</div>
 		</div>
 	//{/*alternativeView={true} />*/}
 
-	const loadedCheck = isLoaded ? 
+	const loadedCheck = isLoaded ?
 		<div>
 			<div style={bodyDivStyle}>{landingpageDataBrowser}</div>
 		</div>
@@ -181,7 +196,7 @@ const Search = (props) => {
 		</div>
 
 	// #1f2023?
-	return(
+	return (
 		<div style={{}}>
 			{loadedCheck}
 		</div>

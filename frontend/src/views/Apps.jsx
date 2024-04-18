@@ -82,11 +82,16 @@ const chipStyle = {
 // Fixes names by making them uppercase and such
 // Used for labels. A lot of places don't use this yet
 export const FixName = (name) => {
+  if (name === undefined || name === null) {
+	return ""
+  }	
+
   const newAppname = (
     name.charAt(0).toUpperCase() + name.substring(1)
-  ).replaceAll("_", " ");
-  return newAppname;
-};
+  ).replaceAll("_", " ")
+
+  return newAppname
+}
 
 
 // Takes input of e.g. $node.data.#.asd and a matching value from a json blob
@@ -1832,7 +1837,11 @@ const Apps = (props) => {
 			})
 			.then((responseJson) => {
 				if (responseJson.success === false) {
-					toast("Failed to activate the app")
+        	if (responseJson.reason !== undefined) {
+            toast("Failed to activate the app: "+responseJson.reason);
+          } else {
+            toast("Failed to activate the app");
+          }
 				} else {
 					//toast("App activated for your organization! Refresh the page to use the app.")
 				    if (appExists) {
@@ -2052,7 +2061,7 @@ const Apps = (props) => {
                 to={`/apps/edit/${selectedApp.id}`}
                 style={{ textDecoration: "none", color: "inherit" }}
               >
-                <Typography variant="h6">{selectedApp.name}</Typography>
+                <Typography variant="h6">{FixName(selectedApp.name)}</Typography>
               </Link>
             ) : null}
           </Breadcrumbs>

@@ -59,7 +59,7 @@ const Files = (props) => {
   const [downloadFolder, setDownloadFolder] = React.useState("translation_standards");
 
   //const alert = useAlert();
-  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log", "eml", "msg", "md", "xml", "sh", "bat", "ps1", "psm1", "psd1", "ps1xml", "pssc", "psc1"]
+  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log", "eml", "msg", "md", "xml", "sh", "bat", "ps1", "psm1", "psd1", "ps1xml", "pssc", "psc1", "response"]
   var upload = "";
 
   const handleKeyDown = (event) => {
@@ -395,8 +395,6 @@ const Files = (props) => {
         setTimeout(() => {
           getFiles();
         }, 1500);
-
-        console.log(responseJson);
       })
       .catch((error) => {
         toast(error.toString());
@@ -759,21 +757,21 @@ const Files = (props) => {
 
 
 				{renderTextBox && <TextField
-							onKeyPress={(event)=>{
-								handleKeyDown(event);
-							}}
-							InputProps={{
-								style: {
-									color: "white",
-								},
-							}}
-							color="primary"
-							placeholder="File category name"
-							required
-							margin="dense"
-							defaultValue={""}
-							autoFocus
-						/>}</div>
+					onKeyPress={(event)=>{
+						handleKeyDown(event);
+					}}
+					InputProps={{
+						style: {
+							color: "white",
+						},
+					}}
+					color="primary"
+					placeholder="File category name"
+					required
+					margin="dense"
+					defaultValue={""}
+					autoFocus
+				/>}</div>
 
 				<ShuffleCodeEditor
 					isCloud={isCloud}

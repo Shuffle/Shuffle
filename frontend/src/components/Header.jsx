@@ -891,6 +891,11 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 												const namesplit = regionsplit[0].split("/")
 
 												regiontag = namesplit[namesplit.length - 1]
+												if (regiontag === "california") {
+													regiontag = "us"
+												} else if (regiontag === "frankfurt") {
+													regiontag = "fr"
+												}
 											}
 										}
 

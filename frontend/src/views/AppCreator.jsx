@@ -2073,7 +2073,7 @@ const AppCreator = (defaultprops) => {
       };
 
 			if (item.action_label !== undefined && item.action_label !== "" && item.action_label !== "No Label") {
-				console.log("Action label: ", item.action_label)
+				//console.log("Action label: ", item.action_label)
 				data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
 			}
 

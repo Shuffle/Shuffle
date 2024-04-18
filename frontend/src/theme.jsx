@@ -28,10 +28,11 @@ const theme = createTheme(adaptV4Theme({
     defaultBorder: "1px solid rgba(255,255,255,0.3)",
 	jsonTheme: "brewer",
 	reactJsonStyle: {
-		borderRadius: 5,
-		border: "1px solid rgba(255,255,255,0.7)",
 		padding: 5, 
 		width: "100%",
+		borderRadius: 5,
+		border: "1px solid rgba(255,255,255,0.7)",
+		overflowX: "auto",
 	},
     textFieldStyle: {
       backgroundColor: "#383B40",

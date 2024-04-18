@@ -1261,15 +1261,15 @@ const UsecaseSearch = (props) => {
 					credentials: "include",
 			})
 			.then((response) => {
-				if (response.status !== 200) {
-					console.log("Failed to activate")
-				}
-
 				return response.json()
 			})
 			.then((responseJson) => {
 				if (responseJson.success === false) {
-					toast("Failed to activate the app")
+					var msgString = "Failed to activate the app"
+					if (responseJson.reason !== undefined) {
+						msgString += ": " + responseJson.reason
+					}
+					toast(msgString)
 				} else {
 					//toast("App activated for your organization! Refresh the page to use the app.")
 				}

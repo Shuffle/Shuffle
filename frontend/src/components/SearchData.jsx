@@ -715,6 +715,64 @@ const SearchData = props => {
             </Card>
         )
     }
+
+    const DiscordHits = ({ hits }) => {
+        const [mouseHoverIndex, setMouseHoverIndex] = useState(0);
+        var tmp = searchOpen
+        if (!searchOpen) {
+            return null
+        }
+
+
+        const positionInfo = document.activeElement.getBoundingClientRect()
+        const outerlistitemStyle = {
+            width: "100%",
+            overflowX: "hidden",
+            overflowY: "hidden",
+            borderBottom: "1px solid rgba(255,255,255,0.4)",
+        }
+
+        if (hits.length > 4) {
+            hits = hits.slice(0, 4)
+        }
+        const type = "Discord Text"
+        const handleHitClick = (url) => {
+            const modifiedUrl = url.replace('https://ptb.discord.com/', 'https://discord.com/');
+            window.open(modifiedUrl, '_blank');
+        };
+        return (
+            <Card elevation={0} style={{ marginRight: 10, marginTop: 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 470, boxShadows: "none", }}>
+                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color: "#FF8444", borderBottom: "1px solid", width: 152 }}>
+                    Discord Chat
+                </Typography>
+                <List style={{ backgroundColor: theme.palette.inputColor, }}>
+                {hits.length === 0 ?
+                        <ListItem style={outerlistitemStyle}>
+                            <ListItemAvatar onClick={() => console.log(hits)}>
+                                <Avatar>
+                                    <FolderIcon />
+                                </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                                primary={"No results found?"}
+                                secondary={"Try refining your search."}
+                            />
+                        </ListItem>:
+                        hits.map((chat, index) => (
+                    <ListItem onClick={() => handleHitClick(chat.url)} key={index} style={{ cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.4)" }} onMouseOver={() => setMouseHoverIndex(index)}>
+                        <ListItemAvatar>
+                            <Avatar src="/discord-logo.png" />
+                        </ListItemAvatar>
+                        <ListItemText
+                            primary={chat.text}
+                            secondary={`User: ${(chat.user)}`}
+                        />
+                    </ListItem>
+                ))}
+            </List>
+            </Card>
+        );
+    };
     const gettingStartData = !searchOpen ? (
         <Grid
             container
@@ -812,6 +870,7 @@ const SearchData = props => {
     const CustomAppHits = connectHits(AppHits)
     const CustomWorkflowHits = connectHits(WorkflowHits)
     const CustomDocHits = connectHits(DocHits)
+    const CustomDiscordHits = connectHits(DiscordHits);
 
     const modalView = (
         <div>
@@ -829,6 +888,11 @@ const SearchData = props => {
                 <Grid item xs="auto" style={{}}>
                     <Index indexName="documentation">
                         <CustomDocHits />
+                    </Index>
+                </Grid>
+                <Grid item xs="auto" style={{}}>
+                    <Index indexName="discord_chat">
+                        <CustomDiscordHits />
                     </Index>
                 </Grid>
             </Grid>

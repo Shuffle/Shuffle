@@ -128,6 +128,7 @@ const useStyles = makeStyles((theme) => ({
 export const GetIconInfo = (action) => {
   // Finds the icon based on the action. Should be verbs.
   const iconList = [
+    { key: "cases", values: ["cases"] },
     { key: "cache_add", values: ["set_cache"] },
     { key: "cache_get", values: ["get_cache"] },
     { key: "filter", values: ["filter"] },
@@ -222,6 +223,13 @@ export const GetIconInfo = (action) => {
   const defaultColor = "#f76b1c";
   const defaultGradient = ["#fad961", "#f76b1c"];
   const parsedIcons = {
+	cases: {
+      icon: "M11 3C6.58 3 3 4.79 3 7C3 9.21 6.58 11 11 11C15.42 11 19 9.21 19 7C19 4.79 15.42 3 11 3ZM3 9V12C3 14.21 6.58 16 11 16C15.42 16 19 14.21 19 12V9C19 11.21 15.42 13 11 13C6.58 13 3 11.21 3 9ZM3 14V17C3 19.21 6.58 21 11 21C12.41 21 13.79 20.81 15 20.46V17.46C13.79 17.81 12.41 18 11 18C6.58 18 3 16.21 3 14ZM20 14V17H17V19H20V22H22V19H25V17H22V14",
+      iconColor: "white",
+      iconBackgroundColor: "#8acc3f",
+      originalIcon: "",
+      fillGradient: ["#8acc3f", "#459622"],
+	},
     cache_add: {
       icon: "M11 3C6.58 3 3 4.79 3 7C3 9.21 6.58 11 11 11C15.42 11 19 9.21 19 7C19 4.79 15.42 3 11 3ZM3 9V12C3 14.21 6.58 16 11 16C15.42 16 19 14.21 19 12V9C19 11.21 15.42 13 11 13C6.58 13 3 11.21 3 9ZM3 14V17C3 19.21 6.58 21 11 21C12.41 21 13.79 20.81 15 20.46V17.46C13.79 17.81 12.41 18 11 18C6.58 18 3 16.21 3 14ZM20 14V17H17V19H20V22H22V19H25V17H22V14",
       iconColor: "white",
