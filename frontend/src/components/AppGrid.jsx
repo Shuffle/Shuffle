@@ -501,7 +501,12 @@ const AppGrid = (props) => {
             return
           }
 
-          toast.success(`${data.name} app is activating please wait...`)
+          if(type === "activate"){
+            toast.success(`${data.name} app is activating please wait...`)
+          } 
+          if(type === "deactivate"){
+            toast.success(`${data.name} app is deactivating please wait...`)
+          }
 
           const baseURL = globalUrl;
           const url = `${baseURL}/api/v1/apps/${data.objectID}/${type}`;
