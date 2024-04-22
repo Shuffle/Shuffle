@@ -37,7 +37,7 @@ import {
 } from "@mui/icons-material";
 
 import Dropzone from "../components/Dropzone.jsx";
-// import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
+import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import theme from "../theme.jsx";
 
 const Files = (props) => {
@@ -775,7 +775,7 @@ const Files = (props) => {
 							autoFocus
 						/>}</div>
 
-				{/* <ShuffleCodeEditor
+				<ShuffleCodeEditor
 					isCloud={isCloud}
 					expansionModalOpen={openEditor}
 					setExpansionModalOpen={setOpenEditor}
@@ -784,7 +784,7 @@ const Files = (props) => {
 					isFileEditor = {true}
 					key = {fileContent} //https://reactjs.org/docs/reconciliation.html#recursing-on-children
 					runUpdateText = {runUpdateText}
-				/> */}
+				/>
 
 				<Divider
 					style={{
