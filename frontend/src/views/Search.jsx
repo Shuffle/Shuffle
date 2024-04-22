@@ -54,7 +54,6 @@ const Search = (props) => {
   }, []);
 
   //Stop unnecessariry re-rendering of the component to improve performace
-
   const MemoizedAppGrid = useMemo(() => <AppGrid
   maxRows={4}
   isHeader={true}
@@ -62,7 +61,7 @@ const Search = (props) => {
   globalUrl={globalUrl}
   isMobile={isMobile}
   userdata={userdata}
-/>, [curTab]);
+/>, [curTab, userdata]);
 
 const MemoizedWorkflowGrid = useMemo(() => <WorkflowGrid
   maxRows={3}
@@ -70,7 +69,7 @@ const MemoizedWorkflowGrid = useMemo(() => <WorkflowGrid
   globalUrl={globalUrl}
   isMobile={isMobile}
   userdata={userdata}
-/>, [curTab]);
+/>, [curTab, userdata]);
 
 const MemoizedDocsGrid = useMemo(() => <DocsGrid
   maxRows={6}
@@ -79,7 +78,7 @@ const MemoizedDocsGrid = useMemo(() => <DocsGrid
   globalUrl={globalUrl}
   isMobile={isMobile}
   userdata={userdata}
-/>, [curTab]);
+/>, [curTab, userdata]);
 
 const MemoizedCreatorGrid = useMemo(() => <CreatorGrid
   parsedXs={4}
@@ -88,7 +87,7 @@ const MemoizedCreatorGrid = useMemo(() => <CreatorGrid
   globalUrl={globalUrl}
   isMobile={isMobile}
   userdata={userdata}
-/>, [curTab]);
+/>, [curTab, userdata]);
 
 const useStyles = makeStyles({
   hideIndicator: {
@@ -205,6 +204,7 @@ const classes = useStyles();
   const landingpageDataBrowser = (
     <div
       style={{
+        paddingBottom: hidemargins === true ? 0 : 100,
         color: "white",
         width: "100%",
       }}
@@ -213,10 +213,10 @@ const classes = useStyles();
         <Tabs
           style={{
             width: 741,
-            margin: "auto",
+            margin: isHeader ? null : "auto",
             marginTop: hidemargins === true ? 0 : isHeader ? null : 25,
             backgroundColor: "rgba(33, 33, 33, 1)",
-            borderRadius:8,
+            borderRadius:8
           }}
           value={curTab}
           indicatorColor="primary"
@@ -235,7 +235,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <AppsIcon style={{iconStyle, color: "white"}} />
+                <AppsIcon style={iconStyle} />
                 <Typography variant="body1" style={tabTextStyling}>App</Typography>
               </span>
             }
@@ -248,7 +248,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <CodeIcon  style={{iconStyle, color: "white"}} />
+                <CodeIcon  style={iconStyle} />
                 <Typography variant="body1" style={tabTextStyling}>Workflow</Typography>
               </span>
             }
@@ -261,7 +261,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <DescriptionOutlinedIcon  style={{iconStyle, color: "white"}} />
+                <DescriptionOutlinedIcon  style={iconStyle} />
                 <Typography variant="body1" style={tabTextStyling}>Docs</Typography>
               </span>
             }
@@ -273,7 +273,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <PeopleAltOutlinedIcon style={{iconStyle, color: "white"}} />
+                <PeopleAltOutlinedIcon style={iconStyle} />
                 <Typography variant="body1" style={tabTextStyling}>Creators</Typography>
               </span>
             }
@@ -299,5 +299,4 @@ const classes = useStyles();
   // #1f2023?
   return <div style={{}}>{loadedCheck}</div>;
 };
-
 export default Search;

@@ -1,3 +1,5 @@
+Filtercss.css
+
 /* Style for the outer container */
 .ais-RefinementList {
   justify-content: center;
@@ -67,6 +69,7 @@
   display: inline-flex;
   flex-direction: row;
   cursor: pointer;
+ font-family: var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)
 }
 
 /* Style for count */

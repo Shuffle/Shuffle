@@ -14,6 +14,9 @@ import {
   CloudQueue as CloudQueueIcon,
   Code as CodeIcon,
 } from "@mui/icons-material";
+import { toast } from "react-toastify" 
+import ClearIcon from '@mui/icons-material/Clear';
+import Box from '@mui/material/Box';
 
 import noImage from "../assets/img/no_image.png"
 
@@ -88,6 +91,8 @@ const AppGrid = (props) => {
   const borderRadius = 3;
   window.title = "Shuffle | Apps | Find and integrate any app";
 
+  const isLoggedIn = userdata.success != undefined || userdata.success != null ? userdata.success: false;
+
   const submitContact = (email, message) => {
     const data = {
       firstname: "",
@@ -146,15 +151,16 @@ const AppGrid = (props) => {
         console.log("Got query: ", foundQuery);
         refine(foundQuery);
         defaultSearch = foundQuery;
-		searchQuery = foundQuery
+		    searchQuery = foundQuery
       }
     }
     //}, [])
+    
 
     const handleSearch = () => {
-      refine(searchQuery);
+      refine(searchQuery.trim());
     };
-
+    
     return (
       <form noValidate action="" role="search">
         <TextField
@@ -184,6 +190,20 @@ const AppGrid = (props) => {
             ),
             endAdornment: (
               <InputAdornment position="end">
+                {searchQuery.length > 0 && (
+                  <ClearIcon
+                    style={{
+                      color: "white",
+                      cursor: "pointer",
+                      marginRight: 10
+                    }}
+                    onClick={() => {
+                      setSearchQuery('')
+                      removeQuery("q");
+                      refine('')
+                    }} 
+                  />
+                )}
                 <button
                   type="button"
                   onClick={handleSearch}
@@ -203,9 +223,9 @@ const AppGrid = (props) => {
                 </button>
               </InputAdornment>
             ),
+            
           }}
           autoComplete="off"
-          type="search"
           color="primary"
           placeholder="Find Apps"
           id="shuffle_search_field"
@@ -372,6 +392,11 @@ const AppGrid = (props) => {
   //     </div>
   //   );
   // };
+  const [currTab, setCurrTab] = useState(0);
+
+  const handleTabChange = (event, newValue) => {
+    setCurrTab(newValue);
+  };
 
   //Component to fetch all app from the algolia
   const Hits = ({
@@ -383,6 +408,30 @@ const AppGrid = (props) => {
   }) => {
     const [mouseHoverIndex, setMouseHoverIndex] = useState(-1);
     var counted = 0;
+    const [hoverEffect, setHoverEffect] = useState(-1);
+
+    const [isClickOnActivateButton, setIsClickOnActivateButton] = useState(false)
+
+    const [usersActivatedApps, setUsersActivatedApps] = useState([]);
+
+    useEffect(() => {
+          const baseUrl = globalUrl;
+          const userAppsUrl = `${baseUrl}/api/v1/users/apps`;
+          fetch(userAppsUrl, {
+                  method: "GET",
+                  credentials: "include",
+                  headers: {
+                      "Content-Type": "application/json",
+                  },
+              })
+              .then((response) => response.json())
+              .then((data) => {
+                setUsersActivatedApps(data);
+              })
+              .catch((err) => {
+                  console.error("Error fetching user apps:", err);
+              });
+      }, []);
 
     const memoizedHits = useMemo(() => {
       return hits.map((data, index) => {
@@ -395,16 +444,15 @@ const AppGrid = (props) => {
         const searchClient = {};
         const userdata = {};
         const paperStyle = {
-          backgroundColor: "#1A1A1A",
           color: "rgba(241, 241, 241, 1)",
           padding: isHeader ? null : 15,
           cursor: "pointer",
-          position: "relative",
           maxWidth: 339, 
           maxHeight: 96,
           borderRadius: 8,
+          transition: 'background-color 0.3s ease',
+          backgroundColor: "rgba(26, 26, 26, 1)",
         };
-        
 
         const cloudIconStyling = {
           position: "absolute",
@@ -413,7 +461,6 @@ const AppGrid = (props) => {
           height: 24,
           width: 24,
           marginTop: 5,
-          color: isMouseOverOnCloudIcon ? "white" : "white",
         };
 
         var parsedname = "";
@@ -440,6 +487,57 @@ const AppGrid = (props) => {
             ? `/apps/${data.objectID}?queryID=${data.__queryID}`
             : `https://shuffler.io/apps/${data.objectID}?queryID=${data.__queryID}`;
 
+
+        // Since userdata.active_apps is always null. Therefore, utilizing the /users/apps endpoint to fetch the user's activated apps. So, comparing all apps and user app names to determine whether the app exists or not.
+
+        const normalizeName = (name) => name.replace(/[_\s0-9]/g, '').toLowerCase();
+
+        const appExists = Array.isArray(usersActivatedApps) && usersActivatedApps.some(item => normalizeName(item.name) === normalizeName(data.name));
+      
+        const handleActivateButton = (event, data, type)=>{
+          event.preventDefault();
+          if(!isLoggedIn){
+            toast.error("Please log in to your account to activate app !")
+            return
+          }
+
+          toast.success(`${data.name} app is activating please wait...`)
+
+          const baseURL = globalUrl;
+          const url = `${baseURL}/api/v1/apps/${data.objectID}/${type}`;
+
+          fetch(url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            credentials: "include",
+          })
+          .then((response) => {
+            return response.json()
+          })
+          .then((responseJson) => {
+
+            console.log(responseJson)
+            if (responseJson.success === false) {
+              toast.error(`Failed to ${type}d the app`)
+            } else {
+                    toast.success(`App ${type}d Successfuly!`)
+            }
+          })
+          .catch(error => {
+            console.log("app error: ", error.toString())
+          });
+        }
+
+        const normalizedString = (name) => {
+          if (typeof name === 'string') {
+            return name.replace(/_/g, ' ');
+          } else {
+            return name;
+          }
+        };
         return (
           <Zoom
             key={index}
@@ -448,9 +546,9 @@ const AppGrid = (props) => {
               transitionDelay: `${workflowDelay}ms`,
             }}
           >
-            <Grid rowSpacing={1}  item xs={xs} key={index}>
+            <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
               <a
-                href={appUrl}
+                href={isClickOnActivateButton ? "" : appUrl}
                 rel="noopener noreferrer"
                 target="_blank"
                 style={{
@@ -468,19 +566,24 @@ const AppGrid = (props) => {
                     setMouseHoverIndex(-1);
                   }}
                 >
-                  <ButtonBase
+                  <button
                     style={{
-                      borderRadius: 3,
+                      borderRadius: 8,
                       fontSize: 16,
-                      overflow: "hidden",
                       display: "flex",
                       alignItems: "flex-start",
-                      width:'100%'
+                      padding: 0,
+                      border: 'none',
+                      width: 339,
+                      height: 96,
+                      cursor: 'pointer',
+                      color: "rgba(241, 241, 241, 1)",
+                      backgroundColor: "rgba(26, 26, 26, 1)",
                     }}
                   >
                     <img
                       alt={data.name}
-                      src={data.image_url}
+                      src={data.image_url ? data.image_url : noImage}
                       style={{
                         width: 80,
                         height:80,
@@ -493,23 +596,25 @@ const AppGrid = (props) => {
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "flex-start",
-                        width: 339,
-                        gap: 8,
-                        fontWeight: "400",
+                        gap: 4,
                         overflow: "hidden",
                         margin: "12px 0 12px 0",
-                        alignItems: "flex-start",
+                        marginLeft: 8,
+                        fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
                       }}
                     >
                       <div
                         style={{
+                          display: 'flex',
+                          flexDirection: "row",
                           overflow: "hidden",
+                          gap: 8,
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
-                          marginLeft: 8,
                         }}
                       >
-                        {data.name}
+                        {appExists && <Box sx={{ width: 8,height: 8, backgroundColor: "#02CB70", borderRadius: '50%'}}/>}
+                        {normalizedString(data.name)}
                       </div>
                       {/* {!isHideCategoryTagChecked && ( */}
                         <div
@@ -517,68 +622,120 @@ const AppGrid = (props) => {
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
-                            marginLeft: 8,
-                            color: "rgba(158, 158, 158, 1)"
+                            color: "rgba(158, 158, 158, 1)",
+                            marginTop: 5
                           }}
                         >
                           {data.categories !== null
-                            ? data.categories.join(", ")
+                            ? normalizedString(data.categories).join(", ")
                             : "NA"}
                         </div>
                       {/* )} */}
                       {/* {!isHideTagChecked && ( */}
-                        <div
+                      <div
                           style={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            maxWidth: 250,
-                            marginLeft: 8,
-                            color: "rgba(158, 158, 158, 1)"
+                              display: "flex",
+                              justifyContent: 'space-between',
+                              width: 230,
+                              textAlign: 'start',
+                              color: "rgba(158, 158, 158, 1)",
                           }}
-                        >
-                          {data.tags &&
-                            data.tags.map((tag, tagIndex) => (
-                              <span key={tagIndex}>
-                                {tag}
-                                {tagIndex < data.tags.length - 1 ? ", " : ""}
-                              </span>
-                            ))}
-                        </div>
+                      >
+                          <div style={{marginBottom: 15, }}>
+                              {mouseHoverIndex === index ? (
+                                  <div>
+                                  {data.tags && (
+                                    <Tooltip
+                                      title={data.tags.join(", ")}
+                                      placement="bottom"
+                                      componentsProps={{
+                                        tooltip: {
+                                          sx:{
+                                            backgroundColor: "rgba(33, 33, 33, 1)",
+                                            color: "rgba(241, 241, 241, 1)",
+                                            width: "auto",
+                                            height: "auto",
+                                            fontSize: 16,
+                                            border: "1px solid rgba(73, 73, 73, 1)",
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      <span>
+                                        {data.tags.slice(0, 1).map((tag, tagIndex) => (
+                                          <span key={tagIndex}>
+                                            {normalizedString(tag)}
+                                            {tagIndex < 1 ? ", " : ""}
+                                          </span>
+                                        ))}
+                                      </span>
+                                    </Tooltip>
+                                  )}
+                                </div>
+                              ) : (
+                                      <div style={{width: 230, textOverflow: "ellipsis", overflow: 'hidden', whiteSpace: 'nowrap',}}>
+                                          {data.tags &&
+                                              data.tags.map((tag, tagIndex) => (
+                                                  <span key={tagIndex}>
+                                                      {normalizedString(tag)}
+                                                      {tagIndex < data.tags.length - 1 ? ", " : ""}
+                                                  </span>
+                                              ))}
+                                      </div>
+                                  )}
+                          </div>
+                          <div style={{position: 'relative', bottom: 5}}>
+                          {mouseHoverIndex === index && (
+                              <div>
+                                {appExists? (
+                                    <Button style={{
+                                      width: 102,
+                                      height: 35,
+                                      borderRadius: 200,
+                                      backgroundColor: "rgba(73, 73, 73, 1)",
+                                      color: "rgba(241, 241, 241, 1)",
+                                      textTransform: "none",
+                                    }}
+                                    onClick={(event) => {
+                                      handleActivateButton(event, data, "deactivate");
+                                    }}>
+                                      Deactivate
+                                    </Button>
+                                ):(
+                                    <Button 
+                                      style={{
+                                        width: 102,
+                                        height: 35,
+                                        borderRadius: 200,
+                                        backgroundColor: "rgba(242, 101, 59, 1)",
+                                        color: "rgba(255, 255, 255, 1)",
+                                        textTransform: "none",
+                                      }}
+                                      onClick={(event) => {
+                                        handleActivateButton(event, data, "activate");
+                                      }}
+                                    >
+                                      Try app
+                                    </Button>
+                                )}
+                              </div>
+                          )}
+                          </div>
+                      </div>
+                          {/* </div> */}
                       {/* )} */}
                     </div>
-                    {data.generated ? (
-                    <Tooltip
-                      title={"Created with App editor"}
-                      style={{ marginTop: 28, width: "100%" }}
-                      aria-label={data.name}
-                    >
-                      {data.invalid ? (
-                        <CloudQueueIcon style={cloudIconStyling} />
-                      ) : (
-                        <CloudQueueIcon style={cloudIconStyling} />
-                      )}
-                    </Tooltip>
-                  ) : (
-                    <Tooltip
-                      title={"Created with python (custom app)"}
-                      style={{ marginTop: 28, width: "100%" }}
-                      aria-label={data.name}
-                    >
-                      <CodeIcon style={cloudIconStyling} />
-                    </Tooltip>
-                  )}
-                  </ButtonBase>
+                  </button>
                 </Paper>
               </a>
             </Grid>
           </Zoom>
         );
       });
-    }, [hits, currentView, isHideTagChecked, isHideCategoryTagChecked]);
+    }, [hits, mouseHoverIndex, userdata, usersActivatedApps]);
 
     return (
-      <Grid>
+      <Grid item spacing={2} justifyContent="flex-start">
         {/* {(currentView === "split") | (currentView === "splits") ? (
           <div
             style={{
@@ -652,6 +809,7 @@ const AppGrid = (props) => {
       height: 30,
       flexDirection: "row",
       textTransform: 'none',
+      fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
     }
 
     return (
@@ -678,7 +836,7 @@ const AppGrid = (props) => {
 
         {isRefinementListExpanded && (
           <>
-            <RefinementList attribute="categories" />
+            <RefinementList attribute="categories"/>
             <CustomClearRefinements/>
           </>
         )}
@@ -876,10 +1034,10 @@ const AppGrid = (props) => {
           flexDirection: "column",
           width: 200,
           alignItems: "flex-start",
-          marginRight: 16
+          marginRight: 16,
         }}
       >
-        <Typography variant="h5" style={{marginBottom: 30, marginTop: 30, fontWeight:"400", fontSize: 24}}>
+        <Typography variant="h5" style={{marginBottom: 30, marginTop: 30, fontWeight:"400", fontSize: 24, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",}}>
          Filter By
         </Typography>
         <FilterAllAppsByCategory />
@@ -889,6 +1047,8 @@ const AppGrid = (props) => {
       </div>
     );
   };
+
+//Kepping Different view (List View, two and three column view), hide tags and hide category components commented so if in future we need it than we can used it from here.
 
 // Component for filtering options including hiding tags, categories, and changing the view of the apps.
 
@@ -998,11 +1158,6 @@ const AppGrid = (props) => {
     height: 741,
   };
 
-  const [currTab, setCurrTab] = useState(0);
-
-  const handleTabChange = (event, newValue) => {
-    setCurrTab(newValue);
-  };
 
 //Component to display all apps.
   const AllApps = () => {
@@ -1061,6 +1216,7 @@ const AppGrid = (props) => {
     );
   };
 
+  //Search box for the orgs and users apps
   const SearchBoxForOrgsAndUsersApp = ({searchQuery, setSearchQuery})=>{
 
     return(
@@ -1092,6 +1248,16 @@ const AppGrid = (props) => {
             ),
             endAdornment: (
               <InputAdornment position="end">
+                {searchQuery.length > 0 && (
+                  <ClearIcon
+                    style={{
+                      color: "white",
+                      cursor: "pointer",
+                      marginRight: 10
+                    }}
+                    onClick={() => setSearchQuery('')}
+                  />
+                )}
                 <button
                   type="button"
                   // onClick={handleSearch}
@@ -1101,7 +1267,6 @@ const AppGrid = (props) => {
                     color: "white",
                     border: "none",
                     padding: "10px 20px",
-                    borderRadius: 5,
                     width: 100,
                     height: 35,
                     borderRadius: 17.5,
@@ -1114,7 +1279,6 @@ const AppGrid = (props) => {
             ),
           }}
           autoComplete="off"
-          type="search"
           color="primary"
           placeholder="Find Apps"
           id="shuffle_search_field"
@@ -1133,10 +1297,6 @@ const AppGrid = (props) => {
   const [selectedCategoryForUsersAndOgsApps, setselectedCategoryForUsersAndOgsApps] = useState([]);
   const [selectedTagsForUsersAndOrgsApps, setSelectedTagsForUsersAndOrgsApps] = useState([]);
   const [isCategoreListExpanded, setIsCategoryListExpanded] = useState(true);
-  
-  const toogleCategoryList = () => {
-    setIsCategoryListExpanded((prevState) => !prevState);
-  };
 
   const [userAndOrgsApp, setUserAndOrgsApp] = useState([]);
 
@@ -1177,6 +1337,10 @@ const AppGrid = (props) => {
             });
     }
 }, [currTab]);
+  
+  const toogleCategoryList = () => {
+    setIsCategoryListExpanded((prevState) => !prevState);
+  };
 
   //Component to display category List for User and Orgs app
   const FilterUsersAndOrgsAppByCategory = () => {
@@ -1186,6 +1350,8 @@ const AppGrid = (props) => {
     const findTopCategories = () => {
         const categoryCountMap = {};
 
+        // Check if userAndOrgsApp is an array before iterating over it and Find top 10 Category from the apps
+      if (Array.isArray(userAndOrgsApp)) {
         userAndOrgsApp.forEach((app) => {
             const categories = app.categories;
 
@@ -1206,6 +1372,7 @@ const AppGrid = (props) => {
         const topCategories = categoryArray.slice(0, 9);
 
         return topCategories;
+      }
     };
 
     const topCategories = findTopCategories();
@@ -1233,6 +1400,7 @@ const AppGrid = (props) => {
       height: 30,
       flexDirection: "row",
       textTransform: 'none',
+      fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
     }
     return (
       <div
@@ -1255,24 +1423,33 @@ const AppGrid = (props) => {
             <ExpandMoreIcon style={{ marginLeft: "auto" }} />
           )}
         </Button>
-        {isCategoreListExpanded && topCategories.length > 0 && (
+        {isCategoreListExpanded && topCategories && topCategories.length > 0 && (
         <div style={{display: 'flex', flexDirection: 'column', marginTop: 18}}>
                 {topCategories.map((data, index) => (
-                    <label
-                        htmlFor={`checkbox-${data.category}`}
-                        className="ais-RefinementList-labelText"
-                        key={data.category}
-                        style={{marginBottom: 5}}
-                    >
-                        <input
-                            id={`checkbox-${data.category}`}
-                            type="checkbox"
-                            className="ais-RefinementList-checkbox"
-                            checked={selectedCategoryForUsersAndOgsApps.includes(data.category)}
-                            onChange={() => handleCheckboxChange(data.category)} 
-                        />
-                        <span className="ais-RefinementList-labelText" style={{marginLeft: 5}}>{data.category}</span>
-                    </label>
+                    <button
+                    className="ais-RefinementList-labelText"
+                    key={data.category}
+                    style={{
+                      marginBottom: 5,
+                      border: "none",
+                      background: "none",
+                      padding: 0,
+                      color: "#F1F1F1",
+                      textTransform: 'none'
+                    }}
+                    onClick={() => handleCheckboxChange(data.category)}
+                  >
+                    <input
+                      id={`checkbox-${data.category}`}
+                      type="checkbox"
+                      className="ais-RefinementList-checkbox"
+                      checked={selectedCategoryForUsersAndOgsApps.includes(data.category)}
+                      onChange={() => handleCheckboxChange(data.category)}
+                      style={{ marginRight: 5 }}
+                    />
+                    <span className="ais-RefinementList-labelText" style={{marginTop:3, marginLeft: 3, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}>{data.category}</span>
+                  </button>
+                  
                 ))}
 
                 <Button
@@ -1303,46 +1480,47 @@ const AppGrid = (props) => {
 
   const FilterUsersAndOrgsAppByActionLabel = () => {
 
-      const findTopTags = () => {
-
-          const tagCountMap = {};
-
+    const findTopTags = () => {
+      const tagCountMap = {};
+    
+      // Check if userAndOrgsApp is an array before iterating over it and Find top 10 tags from the apps
+      if (Array.isArray(userAndOrgsApp)) {
           userAndOrgsApp.forEach((app) => {
               const tags = app.tags;
-
+    
               if (tags && tags.length > 0) {
                   tags.forEach((tag) => {
                       tagCountMap[tag] = (tagCountMap[tag] || 0) + 1;
                   });
               }
           });
-
-          const tagArray = Object.keys(tagCountMap).map((tag) => ({
-              tag,
-              count: tagCountMap[tag],
-          }));
-
-          tagArray.sort((a, b) => b.count - a.count);
-
-          const topTags = tagArray.slice(0, 9);
-
-          return topTags;
-      };
-
-      const topTags = findTopTags();
-      const [selectedCategories, setSelectedCategories] = useState([]);
-
-      const handleCheckboxChange = (index) => {
-        const category = topTags[index].tag;
-        const updatedCheckboxStates = [...selectedTagsForUsersAndOrgsApps];
-        
-        if (updatedCheckboxStates.includes(category)) {
-            setSelectedTagsForUsersAndOrgsApps(updatedCheckboxStates.filter((item) => item !== category));
-        } else {
-            setSelectedTagsForUsersAndOrgsApps([...updatedCheckboxStates, category]);
-        }
-    };
+      }
+  
+      const tagArray = Object.keys(tagCountMap).map((tag) => ({
+          tag,
+          count: tagCountMap[tag],
+      }));
     
+      tagArray.sort((a, b) => b.count - a.count);
+    
+      const topTags = tagArray.slice(0, 9);
+    
+      return topTags;
+  };
+  
+  const topTags = findTopTags();
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  
+  const handleCheckboxChange = (index) => {
+      const category = topTags[index].tag;
+      const updatedCheckboxStates = [...selectedTagsForUsersAndOrgsApps];
+      
+      if (updatedCheckboxStates.includes(category)) {
+          setSelectedTagsForUsersAndOrgsApps(updatedCheckboxStates.filter((item) => item !== category));
+      } else {
+          setSelectedTagsForUsersAndOrgsApps([...updatedCheckboxStates, category]);
+      }
+  };
       
       const handleClearFilter = () => {
         setSelectedTagsForUsersAndOrgsApps([]);
@@ -1360,7 +1538,7 @@ const AppGrid = (props) => {
         height: 30,
         textTransform:'none',
         marginBottom: isActionLabelExpanded && 16,
-        fontWeight: 400
+        fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
       }
 
     return (
@@ -1385,28 +1563,36 @@ const AppGrid = (props) => {
           )}
         </Button>
 
-        {isActionLabelExpanded && topTags.length > 0 && (
+        {isActionLabelExpanded && topTags && topTags.length > 0 && (
             <>
                 {topTags.map((data, index) => (
-                      <label
-                          htmlFor={`checkbox-${index}`}
-                          style={{
-                              display: "inline-flex",
-                              flexDirection: "row",
-                              cursor: "pointer",
-                              marginBottom: 5,
-                          }}
-                          key={index}
-                      >
-                          <input
-                              id={`checkbox-${index}`}
-                              type="checkbox"
-                              className="ais-RefinementList-checkbox"
-                              checked={selectedTagsForUsersAndOrgsApps.includes(data.tag)}
-                              onChange={() => handleCheckboxChange(index)}
-                          />
-                          <span style={{ fontSize: 16, marginLeft: 5 }}>{data.tag}</span>
-                      </label>
+                      <Button
+                      style={{
+                        display: "inline-flex",
+                        flexDirection: "row",
+                        alignItems: "center",
+                        cursor: "pointer",
+                        marginBottom: 5,
+                        border: "none",
+                        background: "none",
+                        padding: 0,
+                        color: "#F1F1F1",
+                        textTransform: 'none'
+                      }}
+                      key={index}
+                      onClick={() => handleCheckboxChange(index)}
+                    >
+                      <input
+                        id={`checkbox-${index}`}
+                        type="checkbox"
+                        className="ais-RefinementList-checkbox"
+                        checked={selectedTagsForUsersAndOrgsApps.includes(data.tag)}
+                        onChange={() => handleCheckboxChange(index)}
+                        style={{ marginRight: 5 }}
+                      />
+                      <span style={{ fontSize: 16, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}>{data.tag}</span>
+                    </Button>
+                    
                   ))}
 
                   <Button
@@ -1441,10 +1627,8 @@ const AppGrid = (props) => {
     const AppCreatedWithOptions = ['App Editor', 'Python']
 
     const handleCheckboxChange = (index) => {
-
       const category = AppCreatedWithOptions[index];
       const updatedCheckboxStates = [...selectedOptionOfCreatedWith];
-      
       if (updatedCheckboxStates.includes(category)) {
           setSelectedOptionOfCreatedWith(updatedCheckboxStates.filter((item) => item !== category));
       } else {
@@ -1453,89 +1637,97 @@ const AppGrid = (props) => {
   };
   
     
-    const handleClearFilter = () => {
-      setSelectedOptionOfCreatedWith([]);
-    };
-
-    const createdWithButtonStyling = {
-      cursor: "pointer",
-      color: "white",
-      border: "none",
-      backgroundColor: "transparent",
-      fontSize: 16,
-      display: "flex",
-      flexDirection: "row",
-      alignItems: "center",
-      width: "100%",
-      height: 30,
-      textTransform:'none',
-      marginBottom: isCreatedWithExpanded && 16,
-      fontWeight: 400
-    }
-
-    return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          marginTop: 20,
-          width: "100%",
-          fontWeight: 400
-        }}
-      >
-        <Button
-          style={createdWithButtonStyling}
-          onClick={toogleCreatedWith}
-        >
-          Created With
-          {isCreatedWithExpanded ? <ExpandLessIcon style={{marginLeft: "auto"}} /> : <ExpandMoreIcon style={{marginLeft:'auto'}}/>}
-        </Button>
-
-        {isCreatedWithExpanded && (
-          <>
-                {AppCreatedWithOptions.map((data, index) => (
-                      <label
-                          htmlFor={`checkbox-${index}`}
-                          style={{
-                              display: "inline-flex",
-                              flexDirection: "row",
-                              cursor: "pointer",
-                              marginBottom: 5,
-                          }}
-                          key={index}
-                      >
-                          <input
-                              id={`checkbox-${index}`}
-                              type="checkbox"
-                              className="ais-RefinementList-checkbox"
-                              checked={selectedOptionOfCreatedWith.includes(data)}
-                              onChange={() => handleCheckboxChange(index)}
-                          />
-                          <span style={{ fontSize: 16, marginLeft: 5 }}>{data}</span>
-                      </label>
-                  ))}
-
-                  <Button
-                    style={{
-                      marginTop: 11,
-                      fontSize: 16,
-                      textAlign:'left',
-                      textDecoration: 'underline',
-                      textTransform: 'none',
-                      height: 30,
-                      justifyContent:'left',
-                      backgroundColor: 'transparent'
-                    }}
-                    onClick={handleClearFilter}
-                  >
-                    Clear All
-                </Button>
-            </>
-        )}
-      </div>
-    );
+  const handleClearFilter = () => {
+    setSelectedOptionOfCreatedWith([]);
   };
+
+  const createdWithButtonStyling = {
+    cursor: "pointer",
+    color: "white",
+    border: "none",
+    backgroundColor: "transparent",
+    fontSize: 16,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    height: 30,
+    textTransform:'none',
+    marginBottom: isCreatedWithExpanded && 16,
+    fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        marginTop: 20,
+        width: "100%",
+        fontWeight: 400
+      }}
+    >
+      <Button
+        style={createdWithButtonStyling}
+        onClick={toogleCreatedWith}
+      >
+        Created With
+        {isCreatedWithExpanded ? <ExpandLessIcon style={{marginLeft: "auto"}} /> : <ExpandMoreIcon style={{marginLeft:'auto'}}/>}
+      </Button>
+
+      {isCreatedWithExpanded && (
+        <>
+                {AppCreatedWithOptions.map((data, index) => (
+                     <Button
+                     style={{
+                       display: "inline-flex",
+                       flexDirection: "row",
+                       alignItems: "center",
+                       cursor: "pointer",
+                       marginBottom: 5,
+                       border: "none",
+                       background: "none",
+                       padding: 0,
+                       color: "#F1F1F1",
+                       textTransform: 'none'
+                     }}
+                     key={index}
+                     onClick={() => handleCheckboxChange(index)}
+                   >
+                     <input
+                       id={`checkbox-${index}`}
+                       type="checkbox"
+                       className="ais-RefinementList-checkbox"
+                       checked={selectedOptionOfCreatedWith.includes(data)}
+                       onChange={() => handleCheckboxChange(index)}
+                       style={{ marginRight: 5 }}
+                     />
+                     <span style={{ fontSize: 16, marginLeft: 5, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}>{data}</span>
+                   </Button>                   
+                  
+                ))}
+
+                <Button
+                  style={{
+                    marginTop: 11,
+                    fontSize: 16,
+                    textAlign:'left',
+                    textDecoration: 'underline',
+                    textTransform: 'none',
+                    height: 30,
+                    justifyContent:'left',
+                    backgroundColor: 'transparent'
+                  }}
+                  onClick={handleClearFilter}
+                >
+                  Clear All
+              </Button>
+          </>
+      )}
+    </div>
+  );
+};
 
   const FilterUsersAndOrgsAppCreatedBy = () => {
     
@@ -1612,23 +1804,29 @@ const AppGrid = (props) => {
   const FilterUsersAndOrgsApps = ()=>{
   
     return(
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          width: 200,
-          alignItems: "flex-start",
-          marginRight: 16
-        }}
-      >
-        <Typography variant="h5" style={{marginBottom: 30, marginTop: 30, fontWeight:"400", fontSize: 24}}>
-         Filter By
-        </Typography>
-        <FilterUsersAndOrgsAppByCategory />
-        <FilterUsersAndOrgsAppByActionLabel />
-        <FilterUsersAndOrgsAppByCreatedWith />
-        <FilterUsersAndOrgsAppCreatedBy  />
-      </div>
+          <div
+          style={{
+            width: 200,
+            marginRight: 16
+          }}
+          >
+          {isLoggedIn === true && (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            width: 200,
+            alignItems: "flex-start",
+            marginRight: 16,}}>
+            <Typography variant="h5" style={{marginBottom: 30, marginTop: 30, fontWeight:"400", fontSize: 24}}>
+           Filter By
+          </Typography>
+          <FilterUsersAndOrgsAppByCategory />
+          <FilterUsersAndOrgsAppByActionLabel />
+          <FilterUsersAndOrgsAppByCreatedWith />
+          <FilterUsersAndOrgsAppCreatedBy  />
+          </div>
+          )} 
+        </div>
     )
   }
 
@@ -1642,21 +1840,16 @@ const AppGrid = (props) => {
         setIsActionLabelExpanded(false);
         setIsCreatedWithExpanded(false);
       }
-    },[currTab])
+    },[currTab, userdata.success])
 
   //Component to fetch all apps created by user and Org
   const UsersAndOrgsApps = () => {
 
     const [searchQuery, setSearchQuery] = useState("");
     const [userAndOrgAppData, setUserAndOrgAppData] = useState([])
-    const [appData, setAppData] = useState({
-      objectID: "",
-      queryId: ""
-    })
 
       useEffect(()=>{
-
-        if(currTab===2){
+        if(currTab===2 && isLoggedIn != undefined && isLoggedIn != null && isLoggedIn === true){
           const baseUrl = globalUrl;
           const URL = `${baseUrl}/api/v1/users/apps`;
           fetch(URL, {
@@ -1676,7 +1869,7 @@ const AppGrid = (props) => {
             console.error("Error fetching user apps:", err);
           });
         }
-        else if(currTab === 1){
+        else if(currTab === 1 && isLoggedIn != undefined && isLoggedIn != null && isLoggedIn === true){
                 const baseUrl = globalUrl;
                   const URL = `${baseUrl}/api/v1/apps`;
                   fetch(URL, {
@@ -1696,18 +1889,19 @@ const AppGrid = (props) => {
                     console.error("Error fetching user apps:", err);
                   });
         }
-      }, [currTab])
-      
+      }, [currTab,])
 
       //Search app base on app name, category and tag
-
-      const filteredUserAppdata = userAndOrgAppData.filter((app) => {
+      const filteredUserAppdata = Array.isArray(userAndOrgAppData) ? userAndOrgAppData.filter((app) => {
         const matchesSearchQuery = (
             searchQuery === "" ||
             app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (app.tags && app.tags.some(tag =>
                 tag.toLowerCase().includes(searchQuery.toLowerCase())
-            ))
+            )) || 
+            (app.categories && app.categories.some((category)=>
+              category.toLowerCase().includes(searchQuery.toLowerCase())
+          ))
         );
     
         const matchesSelectedCategories = (
@@ -1722,15 +1916,16 @@ const AppGrid = (props) => {
                 app.tags.includes(tag)
             ))
         );
-
-        const matchesSelectedOption = (
-          selectedOptionOfCreatedWith.length === 0 ||
-          selectedOptionOfCreatedWith.includes('App Editor') && app.generated === true ||
-          selectedOptionOfCreatedWith.includes('Python') && app.generated === false
-      );
     
-      return matchesSearchQuery && matchesSelectedCategories && matchesSelectedTags && matchesSelectedOption;
-    });
+        const matchesSelectedOption = (
+            selectedOptionOfCreatedWith.length === 0 ||
+            selectedOptionOfCreatedWith.includes('App Editor') && app.generated === true ||
+            selectedOptionOfCreatedWith.includes('Python') && app.generated === false
+        );
+    
+        return matchesSearchQuery && matchesSelectedCategories && matchesSelectedTags && matchesSelectedOption;
+    }) : [];
+    
       
   
 	  // const [hoverStates, setHoverStates] = useState([false, false, false]);
@@ -1790,16 +1985,6 @@ const AppGrid = (props) => {
 			borderRadius: 8,
 		  };
   
-		  const cloudIconStyling = {
-        position: "absolute",
-        top: 1,
-        left: 300,
-        height: 24,
-        width: 24,
-        marginTop: 5,
-        color: isMouseOverOnCloudIcon ? "white" : "white",
-		  };
-  
 		  var parsedname = "";
 		  for (var key = 0; key < data.name.length; key++) {
 			var character = data.name.charAt(key);
@@ -1820,14 +2005,18 @@ const AppGrid = (props) => {
 			parsedname.charAt(0).toUpperCase() + parsedname.substring(1)
 		  ).replaceAll("_", " ");
 
-      // console.assert.
+    const normalizedString = (name) => {
+      if (typeof name === 'string') {
+        return name.replace(/_/g, ' ');
+      } else {
+        return name;
+      }
+    };
 
-		  const appUrl =
-          isCloud === false
-            ? `/apps/${data.id}`
-            : `https://shuffler.io/apps/${data.name}`;
-
-      // const appUrl = `/apps/${data.name}`;
+    const appUrl =
+    isCloud === false
+      ? `/apps/${data.name}`
+      : `https://shuffler.io/apps/${data.name}`;
 		
 		  return (
 			<Zoom
@@ -1886,7 +2075,7 @@ const AppGrid = (props) => {
               fontWeight: '400',
               overflow: "hidden",
               margin: "12px 0 12px 0",
-              alignItems: "flex-start",
+              fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
 						}}
 					  >
 						<div
@@ -1897,7 +2086,7 @@ const AppGrid = (props) => {
               marginLeft: 8,
 						  }}
 						>
-						  {data.name}
+						  {normalizedString(data.name)}
 						</div>
 						{/* {!isHideCategoryTagChecked && ( */}
 						  <div
@@ -1910,7 +2099,7 @@ const AppGrid = (props) => {
 							}}
 						  >
 							{data.categories !== null
-							  ? data.categories.join(", ")
+							  ? normalizedString(data.categories).join(", ")
 							  : "NA"}
 						  </div>
 						{/* )} */}
@@ -1920,7 +2109,8 @@ const AppGrid = (props) => {
 							  overflow: "hidden",
 							  textOverflow: "ellipsis",
 							  whiteSpace: "nowrap",
-							  maxWidth: currentView === "split" ? 250 :  140,
+							  width: 230,
+                textAlign: 'start',
                 marginLeft: 8,
                 color: "rgba(158, 158, 158, 1)"
 							}}
@@ -1928,7 +2118,7 @@ const AppGrid = (props) => {
 							{data.tags &&
 							  data.tags.map((tag, tagIndex) => (
 								<span key={tagIndex}>
-								  {tag}
+								  {normalizedString(tag)}
 								  {tagIndex < data.tags.length - 1 ? ", " : ""}
 								</span>
 							  ))}
@@ -1936,92 +2126,80 @@ const AppGrid = (props) => {
 						{/* )} */}
 					  </div>
 					</ButtonBase>
-					{data.generated ? (
-					  <Tooltip
-						title={"Created with App editor"}
-						style={{ marginTop: 28, width: "100%" }}
-						aria-label={data.name}
-					  >
-						{data.invalid ? (
-						  <CloudQueueIcon style={cloudIconStyling} />
-						) : (
-						  <CloudQueueIcon style={cloudIconStyling} />
-						)}
-					  </Tooltip>
-					) : (
-					  <Tooltip
-						title={"Created with python (custom app)"}
-						style={{ marginTop: 28, width: "100%" }}
-						aria-label={data.name}
-					  >
-						<CodeIcon style={cloudIconStyling} />
-					  </Tooltip>
-					)}
 				  </Paper>
 				</a>
 			  </Grid>
 			</Zoom>
 		  );
 		});
-	  }, [currTab, currentView, filteredUserAppdata]);
+	  }, [filteredUserAppdata]);
 
 	
     return (
-		<div
-        style={{
-          maxWidth: 741,
-          maxHeight: 570,
-        }}
-      >
-      {/* <AppsFilterAndViewBar hoverStates={hoverStates} setHoverStates={setHoverStates} isHideCategoryTagChecked={isHideCategoryTagChecked} setIsHideCategoryChecked={setIsHideCategoryChecked} handleCategoryChecked={handleCategoryChecked} handleChecked={handleChecked} handleCurrentView={handleCurrentView} handleMouseEnter={handleMouseEnter} handleMouseLeave={handleMouseLeave}/> */}
-      <SearchBoxForOrgsAndUsersApp searchQuery={searchQuery} setSearchQuery={setSearchQuery}/>
-		<Grid>
-        {/* {(currentView === "split") | (currentView === "splits") ? (
-          <div
+        <div>
+          {userdata.success ? (
+            <div
             style={{
-              gap: "10px",
-              marginTop: "16px",
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "flex-start",
-              marginLeft: '15px',
-              overflowY: "auto",
-              overflowX: "hidden",
-              scrollbarWidth: "thin",
-              scrollbarColor: "#494949 #2f2f2f",
-              maxHeight: '570px'
-            }}
-          >
-            {memoizedHits}
-          </div>
-        ) : (
-          <ListView
-            isHideCategoryTagChecked={isHideCategoryTagChecked}
-            isHideTagChecked={hideTagChecked}
-            hits={filteredUserAppdata}
-			      userAppdata = {filteredUserAppdata}
-          />
-        )} */}
-        <div
-            style={{
-              gap: 16,
-              marginTop: 16,
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "flex-start",
-              marginLeft: 24,
-              overflowY: "auto",
-              overflowX: "hidden",
-              maxHeight:  570,
-              scrollbarWidth: "thin",
-              scrollbarColor: "#494949 #2f2f2f",
+              maxWidth: 741,
               maxHeight: 570,
             }}
           >
-            {memoizedHits}
+          {/* <AppsFilterAndViewBar hoverStates={hoverStates} setHoverStates={setHoverStates} isHideCategoryTagChecked={isHideCategoryTagChecked} setIsHideCategoryChecked={setIsHideCategoryChecked} handleCategoryChecked={handleCategoryChecked} handleChecked={handleChecked} handleCurrentView={handleCurrentView} handleMouseEnter={handleMouseEnter} handleMouseLeave={handleMouseLeave}/> */}
+          <SearchBoxForOrgsAndUsersApp searchQuery={searchQuery} setSearchQuery={setSearchQuery}/>
+        <Grid>
+            {/* {(currentView === "split") | (currentView === "splits") ? (
+              <div
+                style={{
+                  gap: "10px",
+                  marginTop: "16px",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "flex-start",
+                  marginLeft: '15px',
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                  scrollbarWidth: "thin",
+                  scrollbarColor: "#494949 #2f2f2f",
+                  maxHeight: '570px'
+                }}
+              >
+                {memoizedHits}
+              </div>
+            ) : (
+              <ListView
+                isHideCategoryTagChecked={isHideCategoryTagChecked}
+                isHideTagChecked={hideTagChecked}
+                hits={filteredUserAppdata}
+                userAppdata = {filteredUserAppdata}
+              />
+            )} */}
+            <div
+                style={{
+                  gap: 16,
+                  marginTop: 16,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "flex-start",
+                  marginLeft: 24,
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                  maxHeight:  570,
+                  scrollbarWidth: "thin",
+                  scrollbarColor: "#494949 #2f2f2f",
+                  maxHeight: 570,
+                }}
+              >
+                {memoizedHits}
+              </div>
+          </Grid>
           </div>
-      </Grid>
-      </div>
+          ): (
+            <div>
+                <Typography variant="body" style={{position: "relative", top: 40}}>Please <a href="/login" rel="noopener noreferrer" style={{color: "rgba(255, 132, 68, 1)", textDecoration: "underline"}}>login</a> first to your account to view {`${currTab === 1 ? "Organizations": "Users"}`} Apps.<br/> 
+                  or <a href="/register" rel="noopener noreferrer" style={{color: "rgba(255, 132, 68, 1)", textDecoration: "underline"}}>signup</a> to create a new account.</Typography>
+            </div>
+          )}
+        </div>
     );
   };
 
@@ -2047,7 +2225,8 @@ const AppGrid = (props) => {
                 flex: 1,
                 fontWeight: 400,
                 paddingBottom: 3,
-                marginLeft: 3
+                marginLeft: 3,
+                fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
               }}
             ></Tab>
             <Tab
@@ -2061,6 +2240,7 @@ const AppGrid = (props) => {
                 textTransform: 'none',
                 fontWeight: 400,
                 paddingBottom: 3,
+                fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
               }}
             ></Tab>
             <Tab
@@ -2073,7 +2253,8 @@ const AppGrid = (props) => {
                 flex: 1,
                 fontWeight: 400,
                 paddingBottom: 3,
-                marginRight: 3
+                marginRight: 3,
+                fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
               }}
             ></Tab>
           </Tabs>
@@ -2092,8 +2273,7 @@ const AppGrid = (props) => {
 
   const CustomSearchBox = connectSearchBox(SearchBox);
   const CustomHits = connectHits(Hits);
-
-  return (
+    return (
     <div
       style={{
         width: "100%",
@@ -2128,7 +2308,7 @@ const AppGrid = (props) => {
         }}
       >
         <InstantSearch searchClient={searchClient} indexName="appsearch">
-          <div style={{display: 'flex', flexDirection: 'row', position:'relative', left: 143}}>
+          <div style={{display: 'flex', flexDirection: 'row', justifyContent: 'center', paddingRight: 215 }}>
           {currTab === 0 ? <FilterApps/> : <FilterUsersAndOrgsApps/>}
             <AppTab />
           </div>
@@ -2211,33 +2391,6 @@ const AppGrid = (props) => {
             </Typography>
           </div>
         ) : null}
-
-        <span
-          style={{
-            position: "absolute",
-            display: "flex",
-            textAlign: "right",
-            float: "right",
-            right: 0,
-            bottom: isMobile ? "" : 120,
-          }}
-        >
-          <Typography variant="body2" color="textSecondary" style={{}}>
-            Search by
-          </Typography>
-          <a
-            rel="noopener noreferrer"
-            href="https://www.algolia.com/"
-            target="_blank"
-            style={{ textDecoration: "none", color: "white" }}
-          >
-            <img
-              src={"/images/logo-algolia-nebula-blue-full.svg"}
-              alt="Algolia logo"
-              style={{ height: 17, marginLeft: 5, marginTop: 3 }}
-            />
-          </a>
-        </span>
       </div>
     </div>
   );
