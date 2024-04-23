@@ -192,6 +192,8 @@ const Admin = (props) => {
   const [showApiKey, setShowApiKey] = useState(false);
   const [billingInfo, setBillingInfo] = React.useState({});
   const [selectedStatus, setSelectedStatus] = React.useState([]);
+  const [webHooks, setWebHooks] = React.useState([]);
+  const [allSchedules, setAllSchedules] = React.useState([]);
 
   const [, forceUpdate] = React.useState();
 
@@ -231,6 +233,9 @@ const Admin = (props) => {
     else console.log("error in user data")
   }, [userdata]); 
   
+  useEffect(() => {
+    handleGetAllTriggers()
+ }, []); 
 
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
@@ -560,6 +565,31 @@ If you're interested, please let me know a time that works for you, or set up a 
       });
   };
 
+  const handleGetAllTriggers = () => {
+    fetch(globalUrl + "/api/v1/triggers/all", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for getting all triggers");
+        }
+  
+        return response.json();
+      })
+      .then((responseJson) => {
+        setWebHooks(responseJson.webhooks || []); // Handling the case where the result is null or undefined
+        setAllSchedules(responseJson.schedules || []);
+      })
+      .catch((error) => {
+        toast(error.toString());
+      });
+  };
+
   const deleteSchedule = (data) => {
     // FIXME - add some check here ROFL
     console.log("INPUT: ", data);
@@ -585,15 +615,147 @@ If you're interested, please let me know a time that works for you, or set up a 
           if (responseJson["success"] === false) {
             toast("Failed stopping schedule");
           } else {
-            setTimeout(() => {
-              getSchedules();
-            }, 1500);
-            //toast("Successfully stopped schedule!")
+            toast("Successfully stopped schedule!");
           }
-        })
+          setTimeout(handleGetAllTriggers, 1000);
+        }),
       )
       .catch((error) => {
         console.log("Error in userdata: ", error);
+      });
+  };
+
+  const startSchedule = (trigger) => {
+    if (trigger.name.length <= 0) {
+      toast("Error: name can't be empty");
+      return;
+    }
+
+    toast("Creating schedule");
+    const data = {
+      name: trigger.name,
+      frequency: trigger.frequency,
+      execution_argument: trigger.argument,
+      environment: trigger.environment,
+      id: trigger.id,
+      start: trigger.start_node,
+    };
+  
+    fetch(`${globalUrl}/api/v1/workflows/${trigger.workflow_id}/schedule`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for stream results :O!");
+        }
+  
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (!responseJson.success) {
+          toast("Failed to set schedule: " + responseJson.reason);
+        } else {
+          toast("Successfully created schedule");
+        }
+        setTimeout(handleGetAllTriggers, 1000);
+      })
+      .catch((error) => {
+        //toast(error.toString());
+        console.log("Get schedule error: ", error.toString());
+      });
+  };
+  
+  const deleteWebhook = (trigger) => {
+    if (trigger === undefined) {
+      return;
+    }
+  
+    fetch(globalUrl + "/api/v1/hooks/" + trigger.id + "/delete", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for stream results :O!");
+        }
+  
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success) {
+          toast("Successfully stopped webhook");
+        } else {
+          if (responseJson.reason !== undefined) {
+            toast("Failed stopping webhook: " + responseJson.reason);
+          }
+        }
+        setTimeout(handleGetAllTriggers, 1000);
+      })
+      .catch((error) => {
+        toast(
+          "Delete webhook error. Contact support or check logs if this persists.",
+        );
+      });
+  };
+  
+  const startWebHook = (trigger) => {
+    const hookname = trigger.info.name;
+    if (hookname.length === 0) {
+      toast("Missing name");
+      return;
+    }
+  
+    if (trigger.id.length !== 36) {
+      toast("Missing id");
+      return;
+    }
+  
+    toast("Starting webhook");
+  
+    const data = {
+      name: hookname,
+      type: "webhook",
+      id: trigger.id,
+      workflow: trigger.workflows[0],
+      start: trigger.start,
+      environment: trigger.environment,
+      auth: trigger.auth,
+      custom_response: trigger.custom_response,
+      version: trigger.version,
+      version_timeout: 15,
+    };
+  
+    console.log("Trigger data: ", data);
+  
+    fetch(globalUrl + "/api/v1/hooks/new", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(data),
+      credentials: "include",
+    })
+      .then((response) => response.json())
+      .then((responseJson) => {
+        if (responseJson.success) {
+          // Set the status
+          toast("Successfully started webhook");
+        } else {
+          toast("Failed starting webhook: " + responseJson.reason);
+        }
+        setTimeout(handleGetAllTriggers, 1000);
+      })
+      .catch((error) => {
+        //console.log(error.toString());
+        console.log("New webhook error: ", error.toString());
       });
   };
 
@@ -3923,110 +4085,272 @@ If you're interested, please let me know a time that works for you, or set up a 
 		/>
 
   const schedulesView =
-    curTab === 5 ? (
-      <div>
-        <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <h2 style={{ display: "inline" }}>Schedules</h2>
-          <span style={{ marginLeft: 25 }}>
-            Schedules used in Workflows. Makes locating and control easier.{" "}
-            <a
-              target="_blank"
-			  rel="noopener noreferrer"
-              href="/docs/organizations#schedules"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
-            >
-              Learn more
-            </a>
-          </span>
-        </div>
-        <Divider
-          style={{
-            marginTop: 20,
-            marginBottom: 20,
-            backgroundColor: theme.palette.inputColor,
-          }}
-        />
-        <List>
-          <ListItem>
-            <ListItemText
-              primary="Interval"
-              style={{ maxWidth: 200, minWidth: 200 }}
-            />
-            <ListItemText
-              primary="Environment"
-              style={{ maxWidth: 150, minWidth: 150 }}
-            />
-            <ListItemText
-              primary="Workflow"
-              style={{ maxWidth: 315, minWidth: 315 }}
-            />
-            <ListItemText
-              primary="Argument"
-              style={{ minWidth: 300, maxWidth: 300, overflow: "hidden" }}
-            />
-            <ListItemText primary="Actions" />
-            <ListItemText primary="Delegation" />
-          </ListItem>
-          {schedules === undefined || schedules === null
-            ? null
-            : schedules.map((schedule, index) => {
-                var bgColor = "#27292d";
-                if (index % 2 === 0) {
-                  bgColor = "#1f2023";
-                }
-
-                return (
-                  <ListItem key={index} style={{ backgroundColor: bgColor }}>
-                    <ListItemText
-                      style={{ maxWidth: 200, minWidth: 200 }}
-                      primary={
-                        schedule.environment === "cloud" || schedule.environment === "" || schedule.frequency.length > 0 ? 
-                          schedule.frequency
-                         : 
-                          <span>{schedule.seconds} seconds</span>
-                      }
-                    />
-                    <ListItemText
-                      style={{ maxWidth: 150, minWidth: 150 }}
-                      primary={schedule.environment}
-                    />
-                    <ListItemText
-                      style={{ maxWidth: 315, minWidth: 315 }}
-                      primary={
-                        <a
-                          style={{ textDecoration: "none", color: "#f85a3e" }}
-                          href={`/workflows/${schedule.workflow_id}`}
-                          target="_blank"
-						  rel="noopener noreferrer"
-                        >
-                          {schedule.workflow_id}
-                        </a>
-                      }
-                    />
-                    <ListItemText
-                      primary={schedule.argument.replaceAll('\\\"', '\"')}
-                      style={{
-                        minWidth: 300,
-                        maxWidth: 300,
-                        overflow: "hidden",
-                      }}
-                    />
-                    <ListItemText>
-                      <Button
-                        style={{}}
-                        variant="contained"
-                        color="primary"
-                        onClick={() => deleteSchedule(schedule)}
-                      >
-                        Stop schedule
-                      </Button>
-                    </ListItemText>
-                  </ListItem>
-                );
-              })}
-        </List>
+  curTab === 5 ? (
+    <div>
+      <div style={{ marginTop: 20, marginBottom: 20 }}>
+        <h2 style={{ display: "inline" }}>Schedules</h2>
+        <span style={{ marginLeft: 25 }}>
+          Schedules used in Workflows. Makes locating and control easier.{" "}
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="/docs/organizations#schedules"
+            style={{ textDecoration: "none", color: "#f85a3e" }}
+          >
+            Learn more
+          </a>
+        </span>
       </div>
-    ) : null;
+      <Divider
+        style={{
+          marginTop: 20,
+          marginBottom: 20,
+          backgroundColor: theme.palette.inputColor,
+        }}
+      />
+      <List>
+        <ListItem>
+          <ListItemText
+            primary="Interval"
+            style={{ maxWidth: 200, minWidth: 200 }}
+          />
+          <ListItemText
+            primary="Environment"
+            style={{ maxWidth: 150, minWidth: 150 }}
+          />
+          <ListItemText
+            primary="Workflow"
+            style={{ maxWidth: 315, minWidth: 315 }}
+          />
+          <ListItemText
+            primary="Argument"
+            style={{ minWidth: 300, maxWidth: 300, overflow: "hidden" }}
+          />
+          <ListItemText primary="Actions" />
+          <ListItemText primary="Delegation" />
+        </ListItem>
+        {allSchedules === undefined || allSchedules === null
+          ? null
+          : allSchedules.map((schedule, index) => {
+              var bgColor = "#27292d";
+              if (index % 2 === 0) {
+                bgColor = "#1f2023";
+              }
+
+              return (
+                <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                  <ListItemText
+                    style={{ maxWidth: 200, minWidth: 200 }}
+                    primary={
+                      schedule.environment === "cloud" ||
+                      schedule.environment === "" ||
+                      schedule.frequency.length > 0 ? (
+                        schedule.frequency
+                      ) : (
+                        <span>{schedule.seconds} seconds</span>
+                      )
+                    }
+                  />
+                  <ListItemText
+                    style={{ maxWidth: 150, minWidth: 150 }}
+                    primary={schedule.environment}
+                  />
+                  <ListItemText
+                    style={{ maxWidth: 315, minWidth: 315 }}
+                    primary={
+                      <a
+                        style={{ textDecoration: "none", color: "#f85a3e" }}
+                        href={`/workflows/${schedule.workflow_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {schedule.workflow_id}
+                      </a>
+                    }
+                  />
+                  <ListItemText
+                    primary={schedule.wrapped_argument.replaceAll('\\"', '"')}
+                    style={{
+                      minWidth: 300,
+                      maxWidth: 300,
+                      overflow: "hidden",
+                    }}
+                  />
+                  <ListItemText>
+                    <Button
+                      style={{}}
+                      variant = {schedule.status === "running" ? "contained" : "outlined"}
+                      disabled={schedule.status === "uninitialized"}
+                      onClick={() => {
+                        if (schedule.status === "running") {
+                          deleteSchedule(schedule);
+                        } else startSchedule(schedule);
+                      }}
+                    >
+                      {schedule.status === "running"
+                        ? "Stop Schedule"
+                          : "Start Schedule"}
+                    </Button>
+                  </ListItemText>
+                </ListItem>
+              );
+            })}
+      </List>
+
+      <div style={{ marginTop: 20, marginBottom: 20 }}>
+        <h2 style={{ display: "inline" }}>WebHooks</h2>
+      </div>
+
+      <Divider
+        style={{
+          marginTop: 20,
+          marginBottom: 20,
+          backgroundColor: theme.palette.inputColor,
+        }}
+      />
+
+      <List>
+        <ListItem>
+          <ListItemText primary="Name" style={{ maxWidth: 200, minWidth: 200 }} />
+          <ListItemText
+            primary="Environment"
+            style={{ maxWidth: 150, minWidth: 150 }}
+          />
+          <ListItemText
+            primary="Workflow"
+            style={{ maxWidth: 315, minWidth: 315 }}
+          />
+          <ListItemText
+            primary="Url"
+            style={{ minWidth: 300, maxWidth: 300, overflow: "hidden" }}
+          />
+          <ListItemText 
+            primary="Actions" 
+          />
+        </ListItem>
+        {webHooks === undefined || webHooks === null
+          ? null
+          : webHooks.map((webhook, index) => {
+              var bgColor = "#27292d";
+              if (index % 2 === 0) {
+                bgColor = "#1f2023";
+              }
+
+              return (
+                <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                  <ListItemText
+                    style={{ maxWidth: 200, minWidth: 200 }}
+                    primary={webhook.info.name}
+                  />
+                  <ListItemText
+                    style={{ maxWidth: 150, minWidth: 150 }}
+                    primary={webhook.environment}
+                  />
+                  <ListItemText
+                    style={{ maxWidth: 315, minWidth: 315 }}
+                    primary={
+                      <a
+                        style={{ textDecoration: "none", color: "#f85a3e" }}
+                        href={`/workflows/${webhook.workflows[0]}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {webhook.workflows[0]}
+                      </a>
+                    }
+                  />
+
+                  <ListItemText
+                    style={{ marginLeft: 10, maxWidth: 100, minWidth: 100 }}
+                    primary={
+                      webhook.info.url === undefined || webhook.info.url === 0 ? (
+                        ""
+                      ) : (
+                        <Tooltip
+                          title={"Copy URL"}
+                          style={{}}
+                          aria-label={"Copy URL"}
+                        >
+                          <IconButton
+                            style={{}}
+                            onClick={() => {
+                              const elementName = "copy_element_shuffle";
+                              var copyText = document.getElementById(elementName);
+                              if (copyText !== null && copyText !== undefined) {
+                                const clipboard = navigator.clipboard;
+                                if (clipboard === undefined) {
+                                  toast("Can only copy over HTTPS (port 3443)");
+                                  return;
+                                }
+
+                                navigator.clipboard.writeText(webhook.info.url);
+                                copyText.select();
+                                copyText.setSelectionRange(
+                                  0,
+                                  99999,
+                                ); /* For mobile devices */
+
+                                /* Copy the text inside the text field */
+                                document.execCommand("copy");
+
+                                toast("URL copied to clipboard");
+                              }
+                            }}
+                          >
+                            <FileCopyIcon
+                              style={{ color: "rgba(255,255,255,0.8)" }}
+                            />
+                          </IconButton>
+                        </Tooltip>
+                      )
+                    }
+                  />
+
+                  <ListItemText>
+                    <Button
+                      style={{ marginLeft: '18%' }} 
+                      variant={webhook.status === "running" ? "contained" : "outlined"}
+                      disabled={webhook.status === "uninitialized"}
+                      onClick={() => {
+                        if (webhook.status === "running") {
+                          deleteWebhook(webhook);
+                        } else startWebHook(webhook);
+                      }}
+                    >
+                      {webhook.status === "running"
+                        ? "Stop webhook"
+                        : "Start Webhook"}
+                    </Button>
+                  </ListItemText>
+                </ListItem>
+              );
+            })}
+      </List>
+
+      {/* <div style={{ marginTop: 20, marginBottom: 20 }}>
+        <h2 style={{ display: "inline" }}>Tenzir Pipelines</h2>
+        <span style={{ marginLeft: 25 }}>
+          Controls a pipeline to run things.{" "}
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="/docs/triggers#pipelines"
+            style={{ textDecoration: "none", color: "#f85a3e" }}
+          >
+            Learn more
+          </a>
+        </span>
+      </div>
+
+      <Divider
+        style={{
+          marginTop: 20,
+          marginBottom: 20,
+          backgroundColor: theme.palette.inputColor,
+        }}
+      /> */}
+    </div>
+) : null;
 
   const appCategoryView =
     curTab === 8 ? (
