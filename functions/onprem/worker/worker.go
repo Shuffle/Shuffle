@@ -53,6 +53,7 @@ var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
 
 var baseimagename = "frikky/shuffle"
+var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 
 // var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 
@@ -383,8 +384,11 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 // Deploys the internal worker whenever something happens
 func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution, action shuffle.Action) error {
 	if isKubernetes == "true" {
-		namespace := "shuffle"
-		localRegistry := os.Getenv("REGISTRY_URL")
+		if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 {
+			kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+		} else {
+			kubernetesNamespace = "default"
+		}
 
 		envMap := make(map[string]string)
 		for _, envStr := range env {
@@ -397,7 +401,6 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		clientset, err := getKubernetesClient()
 		if err != nil {
 			log.Printf("[ERROR] Failed getting kubernetes: %s [INFO] Setting kubernetes to false to enable running Shuffle with Docker for the next iterations.", err)
-			isKubernetes = "false"
 			return err
 		}
 
@@ -406,7 +409,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		value := strSplit[0]
 		value = strings.ReplaceAll(value, "_", "-")
 
-		// checking if app is generated or not
+		// Checking if app is generated or not
+		localRegistry := os.Getenv("REGISTRY_URL")
 		/*
 		appDetails := strings.Split(image, ":")[1]
 		appDetailsSplit := strings.Split(appDetails, "_")
@@ -440,7 +444,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			} 
 		}
 
-		log.Printf("[DEBUG] Got kubernetes client to run image '%s'", image)
+		log.Printf("[DEBUG] Got kubernetes with namespace %#v to run image '%s'", kubernetesNamespace, image)
 
 		//fix naming convention
 		podUuid := uuid.NewV4().String()
@@ -455,25 +459,30 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				},
 			},
 			Spec: corev1.PodSpec{
+				RestartPolicy: "Never", // As a crash is not useful in this context 
+				DNSPolicy:     "Default",
 				// NodeName:      "worker1"
-				RestartPolicy: "Never",
 				Containers: []corev1.Container{
 					{
 						Name:            value,
 						Image:           image,
 						Env:             buildEnvVars(envMap),
-						// ImagePullPolicy: corev1.PullAlways,
+
+						// Pull if not available
+						ImagePullPolicy: corev1.PullIfNotPresent,
 					},
 				},
 			},
 		}
 
-		createdPod, err := clientset.CoreV1().Pods(namespace).Create(context.Background(), pod, metav1.CreateOptions{})
+		createdPod, err := clientset.CoreV1().Pods(kubernetesNamespace).Create(context.Background(), pod, metav1.CreateOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating pod: %v", err)
+			log.Printf("[ERROR] Failed creating pod: %v", err)
 			// os.Exit(1)
+		} else {
+			log.Printf("[DEBUG] Created pod %#v in namespace %#v", createdPod.Name, kubernetesNamespace)
 		}
-		log.Printf("[DEBUG] Created pod %q in namespace %q", createdPod.Name, createdPod.Namespace)
+
 		return nil
 	}
 
@@ -612,7 +621,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	return nil
 }
 
-func cleanupExecution(clientset *kubernetes.Clientset, workflowExecution shuffle.WorkflowExecution, namespace string) error {
+func cleanupKubernetesExecution(clientset *kubernetes.Clientset, workflowExecution shuffle.WorkflowExecution, namespace string) error {
 
 	workerName := fmt.Sprintf("worker-%s", workflowExecution.ExecutionId)
 	labelSelector := fmt.Sprintf("app=shuffle-app,executionId=%s", workflowExecution.ExecutionId)
@@ -1385,7 +1394,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					log.Println("[ERROR] Error getting kubernetes client (1):", err)
 					os.Exit(1)
 				}
-				cleanupExecution(clientset, workflowExecution, "shuffle")
+				cleanupKubernetesExecution(clientset, workflowExecution, kubernetesNamespace)
 			} else {
 				shutdown(workflowExecution, "", "", true)
 			}
@@ -1595,7 +1604,7 @@ func handleSubflowPoller(ctx context.Context, workflowExecution shuffle.Workflow
 				os.Exit(1)
 			}
 
-			cleanupExecution(clientset, workflowExecution, "shuffle")
+			cleanupKubernetesExecution(clientset, workflowExecution, kubernetesNamespace)
 		} else {
 			shutdown(workflowExecution, "", "", true)
 		}
@@ -1691,7 +1700,7 @@ func handleDefaultExecutionWrapper(ctx context.Context, workflowExecution shuffl
 				log.Println("[ERROR] Error getting kubernetes client (2):", err)
 				os.Exit(1)
 			}
-			cleanupExecution(clientset, workflowExecution, "shuffle")
+			cleanupKubernetesExecution(clientset, workflowExecution, kubernetesNamespace)
 		} else {
 			shutdown(workflowExecution, "", "", true)
 		}
@@ -1708,7 +1717,8 @@ func handleDefaultExecutionWrapper(ctx context.Context, workflowExecution shuffl
 				log.Println("[ERROR] Error getting kubernetes client (3):", err)
 				os.Exit(1)
 			}
-			cleanupExecution(clientset, workflowExecution, "shuffle")
+
+			cleanupKubernetesExecution(clientset, workflowExecution, kubernetesNamespace)
 		} else {
 			shutdown(workflowExecution, "", "", true)
 		}

@@ -74,6 +74,7 @@ var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 var dockerSwarmBridgeMTU = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_MTU")
 var dockerSwarmBridgeInterface = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_INTERFACE")
 var isKubernetes = os.Getenv("IS_KUBERNETES")
+var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 var maxCPUPercent = 95 
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
@@ -103,6 +104,7 @@ var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
 var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 
 var executionIds = []string{}
+var namespacemade = false  // For K8s
 
 var dockercli *dockerclient.Client
 var containerId string
@@ -663,15 +665,52 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 
 
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
+	if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
+		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
+	}
 
 	if isKubernetes == "true" {
-		if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
-			env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
-			env = append(env, fmt.Sprintf("IS_KUBERNETES=%s", os.Getenv("IS_KUBERNETES")))
+		env = append(env, fmt.Sprintf("IS_KUBERNETES=%s", os.Getenv("IS_KUBERNETES")))
+		env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
+
+		clientset, err := getKubernetesClient()
+		if err != nil {
+			log.Printf("[ERROR] Error getting kubernetes client:", err)
+			return err
 		}
 
-		image = os.Getenv("SHUFFLE_KUBERNETES_WORKER")
-		log.Printf("[DEBUG] using worker image:", image)
+		// Check if namespace exist as variable. If so, make it
+		if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 && !namespacemade {
+			kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+
+			// Make the namespace
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: os.Getenv("KUBERNETES_NAMESPACE"),
+				},
+			}
+
+			_, err := clientset.CoreV1().Namespaces().Create(context.Background(), namespace, metav1.CreateOptions{})
+			if err != nil {
+				if !strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already exists") {
+					log.Printf("[ERROR] Failed creating Kubernetes namespace: %s", err)
+				} else {
+					namespacemade = true
+				}
+			} else {
+				namespacemade = true
+			}
+		}
+
+		if len(kubernetesNamespace) == 0 {
+			kubernetesNamespace = "default"
+		}
+
+		kubernetesImage := os.Getenv("SHUFFLE_KUBERNETES_WORKER")
+		if len(kubernetesImage) == 0 {
+			kubernetesImage = image
+		}
+		log.Printf("[DEBUG] Using Kubernetes worker image '%s'", kubernetesImage)
 		// image = "shuffle-worker:v1" //hard coded image name to test locally
 
 		envMap := make(map[string]string)
@@ -682,12 +721,8 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			}
 		}
 
-		clientset, err := getKubernetesClient()
-		if err != nil {
-			log.Printf("[ERROR] Error getting kubernetes client:", err)
-			return err
-		}
-
+		// While testing:
+		// kubectl delete pods --all --all-namespaces; kubectl delete services --all --all-namespaces
 		pod := &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   identifier,
@@ -695,27 +730,31 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			},
 			Spec: corev1.PodSpec{
 				RestartPolicy: "Never",
-				// once images is pushed, we can remove this
-				// keep this when running locally
+				DNSPolicy:     "Default",
 				// NodeSelector: map[string]string{
 				// 	"node": "master",
 				// },
 				Containers: []corev1.Container{
 					{
 						Name:  identifier,
-						Image: image,
+						Image: kubernetesImage,
 						Env:   buildEnvVars(envMap),
+						
+						//ImagePullPolicy: "Never",
+						ImagePullPolicy: corev1.PullIfNotPresent,
 					},
 				},
 			},
 		}
 
+		// Check if running on ARM or x86 to download the correct image
+
 		// Add environment variables
 		// pod.Spec.Containers[0].Env = buildEnvVars(envMap)
 
-		createdPod, err := clientset.CoreV1().Pods("shuffle").Create(context.Background(), pod, metav1.CreateOptions{})
+		createdPod, err := clientset.CoreV1().Pods(kubernetesNamespace).Create(context.Background(), pod, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf("[ERROR] Failed creating pod: %v", err)
+			//log.Printf("[ERROR] Failed creating pod: %v", err)
 			return err
 		}
 
@@ -1773,6 +1812,10 @@ func main() {
 				executionIds = append(executionIds, execution.ExecutionId)
 			} else {
 				log.Printf("[WARNING] Execution ID '%s' failed to deploy: %s", execution.ExecutionId, err)
+				if strings.Contains(err.Error(), "already exists") {
+					toBeRemoved.Data = append(toBeRemoved.Data, execution)
+					executionIds = append(executionIds, execution.ExecutionId)
+				}
 			}
 		}
 
@@ -1985,7 +2028,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	//log.Printf("[DEBUG] Getting running workers with API version %s", dockerApiVersion)
 	counter := 0
 	if isKubernetes  == "true" {
-		log.Printf("[INFO] getting running workers in kubernetes")
+		log.Printf("[INFO] Getting running workers in kubernetes")
 
 		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
 
@@ -1996,7 +2039,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 		}
 
 		labelSelector := "app=shuffle-worker"
-		pods, podErr := clientset.CoreV1().Pods("shuffle").List(ctx, metav1.ListOptions{
+		pods, podErr := clientset.CoreV1().Pods(kubernetesNamespace).List(ctx, metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
 		if podErr != nil {
@@ -2008,6 +2051,10 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 			if pod.Status.Phase == "Running" && pod.CreationTimestamp.Time.After(thresholdTime) {
 				counter++
 			}
+		}
+
+		if counter > 0 {
+			log.Printf("[INFO] Found %d running workers in Orborus", counter)
 		}
 	} else {
 
