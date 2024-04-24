@@ -357,8 +357,7 @@ func deployServiceWorkers(image string) {
 
 		if len(os.Getenv("DOCKER_HOST")) > 0 {
 			log.Printf("[DEBUG] Deploying docker socket proxy to the network %s as the DOCKER_HOST variable is set", networkName)
-			//if err == nil {
-			containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+			containers, err := dockercli.ContainerList(ctx, container.ListOptions{
 				All: true,
 			})
 
@@ -670,13 +669,49 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	}
 
 	if isKubernetes == "true" {
-		env = append(env, fmt.Sprintf("IS_KUBERNETES=%s", os.Getenv("IS_KUBERNETES")))
+		env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
 		env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
 
-		clientset, err := getKubernetesClient()
+		if len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
+			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", os.Getenv("KUBERNETES_SERVICE_HOST")))
+		} 
+
+		if len(os.Getenv("KUBERNETES_SERVICE_PORT")) > 0 {
+			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
+		}
+
+
+		clientset, config, err := getKubernetesClient()
 		if err != nil {
 			log.Printf("[ERROR] Error getting kubernetes client:", err)
 			return err
+		}
+
+		log.Printf("CONFIG: %s", config.String())
+		env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
+
+		// Look for if there is a default service account in use
+		if len(os.Getenv("KUBERNETES_SERVICE_ACCOUNT")) > 0 {
+			log.Printf("[DEBUG] Using Kubernetes service account %s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT"))
+			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_ACCOUNT=%s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT")))
+
+			// use k8s downward API to find it if we are in a pod
+		}
+
+		serviceAccounts, err := clientset.CoreV1().ServiceAccounts(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			log.Printf("[ERROR] Failed to list service accounts: %s", err)
+		} else {
+			log.Printf("[DEBUG] Found %d service accounts", len(serviceAccounts.Items))
+			for _, serviceAccount := range serviceAccounts.Items {
+				log.Printf("[DEBUG] Service account: %s", serviceAccount.Name)
+			}
+		}
+
+		for _, envVar := range os.Environ() {
+			if strings.Contains(strings.ToLower(envVar), "kubernetes") || strings.Contains(strings.ToLower(envVar), "k8s") {
+				log.Printf("[DEBUG] K8s var: %s", envVar)
+			}
 		}
 
 		// Check if namespace exist as variable. If so, make it
@@ -742,6 +777,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 						
 						//ImagePullPolicy: "Never",
 						ImagePullPolicy: corev1.PullIfNotPresent,
+						//ImagePullPolicy: "Always",
 					},
 				},
 			},
@@ -840,7 +876,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 	}
 
-	containerStartOptions := types.ContainerStartOptions{}
+	containerStartOptions := container.StartOptions{}
 	err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
 	if err != nil {
 		// Trying to recreate and start WITHOUT network if it's possible. No extended checks. Old execution system (<0.9.30)
@@ -915,7 +951,7 @@ func stopWorker(containername string) error {
 		log.Printf("[ERROR] Unable to stop container %s - running removal anyway, just in case: %s", containername, err)
 	}
 
-	removeOptions := types.ContainerRemoveOptions{
+	removeOptions := container.RemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}
@@ -973,6 +1009,7 @@ func initializeImages() {
 		reader, err := dockercli.ImagePull(ctx, image, pullOptions)
 		if err != nil {
 			log.Printf("[ERROR] Failed getting image %s: %s", image, err)
+
 			continue
 		}
 
@@ -1144,7 +1181,7 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 
 
 		// Get list of all running containers
-	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{})
+	containers, err := dockercli.ContainerList(ctx, container.ListOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Failed getting container list: %s", err)
 		return newStats
@@ -1262,30 +1299,39 @@ func isRunningInCluster() bool {
 	return existsHost && existsPort
 }
 
-func getKubernetesClient() (*kubernetes.Clientset, error) {
+func getKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
+
+	config := &rest.Config{}
+	var err error
+
 	if isRunningInCluster() {
 		config, err := rest.InClusterConfig()
 		if err != nil {
-			return nil, err
+			return nil, config, err
 		}
+
 		clientset, err := kubernetes.NewForConfig(config)
 		if err != nil {
-			return nil, err
+			return nil, config, err
 		}
-		return clientset, nil
-	} else {
-		home := homedir.HomeDir()
-		kubeconfigPath := filepath.Join(home, ".kube", "config")
-		config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-		if err != nil {
-			return nil, err
-		}
-		clientset, err := kubernetes.NewForConfig(config)
-		if err != nil {
-			return nil, err
-		}
-		return clientset, nil
+
+		return clientset, config, nil
+
+	} 
+
+	home := homedir.HomeDir()
+	kubeconfigPath := filepath.Join(home, ".kube", "config")
+	config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if err != nil {
+		return nil, config, err
 	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, config, err
+	}
+
+	return clientset, config, nil
 }
 
 
@@ -1917,7 +1963,7 @@ func deployPipeline(image, identifier, command string) error {
 		}
 	}
 
-	containerStartOptions := types.ContainerStartOptions{}
+	containerStartOptions := container.StartOptions{}
 	err = dockercli.ContainerStart(
 		ctx, 
 		cont.ID, 
@@ -2032,7 +2078,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 
 		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
 
-		clientset, err := getKubernetesClient()
+		clientset, _, err := getKubernetesClient()
 		if err != nil {
 			log.Printf("[ERROR] Failed getting kubernetes client: %s", err)
 			return 0
@@ -2058,7 +2104,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 		}
 	} else {
 
-		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+		containers, err := dockercli.ContainerList(ctx, container.ListOptions{
 			All: true,
 		})
 	
@@ -2125,7 +2171,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	}
 
 	log.Println("[INFO] Looking for old containers to remove")
-	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+	containers, err := dockercli.ContainerList(ctx, container.ListOptions{
 		All: true,
 	})
 
@@ -2199,7 +2245,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 		removeContainers = append(removeContainers, containername)
 	}
 
-	removeOptions := types.ContainerRemoveOptions{
+	removeOptions := container.RemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}

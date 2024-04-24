@@ -1,18 +1,23 @@
-FROM golang:1.19-buster as builder
+FROM golang:1.22 as builder
 
 RUN mkdir /app
 WORKDIR /app
 
 COPY orborus.go /app/orborus.go
+#COPY go.mod /app/go.mod
+#COPY go.sum /app/go.sum
 RUN go mod init orborus 
-RUN go get github.com/docker/docker/api/types && \
-    go get github.com/docker/docker/api/types/container && \
-    go get github.com/docker/docker/client && \
-    go get github.com/mackerelio/go-osstat/cpu && \
-    go get github.com/mackerelio/go-osstat/memory && \
-    go get github.com/satori/go.uuid && \
-    go get github.com/shuffle/shuffle-shared && \
-		go get github.com/shirou/gopsutil 
+
+RUN go get github.com/docker/docker/api/types 
+RUN go get github.com/docker/docker/api/types/container 
+#RUN go get github.com/docker/docker/client 
+RUN go get github.com/mackerelio/go-osstat/cpu 
+RUN go get github.com/mackerelio/go-osstat/memory 
+RUN go get github.com/satori/go.uuid 
+RUN go get github.com/shuffle/shuffle-shared 
+RUN	go get github.com/shirou/gopsutil 
+RUN go get k8s.io/client-go
+RUN go get k8s.io/apimachinery
 
 RUN go get
 RUN go mod tidy 
@@ -25,9 +30,7 @@ COPY --from=builder /app/ /
 
 ENV ENVIRONMENT_NAME=Shuffle
 ENV BASE_URL=http://shuffle-backend:5001
-ENV DOCKER_API_VERSION=1.39
+ENV DOCKER_API_VERSION=1.40
 ENV SHUFFLE_OPENSEARCH_URL=https://opensearch:9200
-
-
 
 CMD ["./orborus"]
