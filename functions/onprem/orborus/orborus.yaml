@@ -75,7 +75,7 @@ spec:
               value: "ghcr.io/shuffle/shuffle-worker:nightly"
 
           image: ghcr.io/shuffle/shuffle-orborus:nightly
-          #imagePullPolicy: Never
+          imagePullPolicy: Always
           name: shuffle-orborus
           resources: {}
       hostname: shuffle-orborus

@@ -1901,29 +1901,33 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 }
 
 func getKubernetesClient() (*kubernetes.Clientset, error) {
-	kubeconfigContent := os.Getenv("KUBECONFIG_CONTENT")
+
+	// Gets the config content from Orborus. 
+	kubeconfigContent := os.Getenv("KUBERNETES_CONFIG")
 	if len(kubeconfigContent) > 0 {
 		log.Printf("[INFO] Using KUBERNETES_CONFIG to set up Kubernetes client: %#v", os.Getenv("KUBERNETES_CONFIG"))
 		config, err := rest.InClusterConfig()
 		if err != nil {
-			return nil, err
+			log.Printf("[ERROR] Failed to create Kubernetes client from in-cluster config: %s", err)
+		} else {
+			// Replace client configuration with kubeconfig content
+			config, err = clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfigContent))
+			if err != nil {
+				log.Printf("[ERROR] Failed to create Kubernetes client from KUBERNETES_CONFIG: %s", err)
+			} else {
+				// Create Kubernetes client
+				clientset, err := kubernetes.NewForConfig(config)
+				if err != nil {
+					return nil, err
+				}
+
+				return clientset, nil
+			}
 		}
+	}
 
-		// Replace client configuration with kubeconfig content
-		config, err = clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfigContent))
-		if err != nil {
-			return nil, err
-		}
-
-		// Create Kubernetes client
-		clientset, err := kubernetes.NewForConfig(config)
-		if err != nil {
-			return nil, err
-		}
-
-		return clientset, nil
-
-	} else if isRunningInCluster() {
+	// Fallback 
+	if isRunningInCluster() {
 		config, err := rest.InClusterConfig()
 		if err != nil {
 			return nil, err

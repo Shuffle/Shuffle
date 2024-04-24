@@ -687,7 +687,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			return err
 		}
 
-		log.Printf("CONFIG: %s", config.String())
 		env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
 
 		// Look for if there is a default service account in use
@@ -696,22 +695,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_ACCOUNT=%s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT")))
 
 			// use k8s downward API to find it if we are in a pod
-		}
-
-		serviceAccounts, err := clientset.CoreV1().ServiceAccounts(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
-		if err != nil {
-			log.Printf("[ERROR] Failed to list service accounts: %s", err)
-		} else {
-			log.Printf("[DEBUG] Found %d service accounts", len(serviceAccounts.Items))
-			for _, serviceAccount := range serviceAccounts.Items {
-				log.Printf("[DEBUG] Service account: %s", serviceAccount.Name)
-			}
-		}
-
-		for _, envVar := range os.Environ() {
-			if strings.Contains(strings.ToLower(envVar), "kubernetes") || strings.Contains(strings.ToLower(envVar), "k8s") {
-				log.Printf("[DEBUG] K8s var: %s", envVar)
-			}
 		}
 
 		// Check if namespace exist as variable. If so, make it
@@ -968,24 +951,24 @@ func initializeImages() {
 
 	if appSdkVersion == "" {
 		appSdkVersion = "latest"
-		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
+		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %#v", appSdkVersion)
 	}
 
 	if workerVersion == "" {
 		workerVersion = "latest"
-		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
+		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %#v", workerVersion)
 	}
 
 	if baseimageregistry == "" {
 		baseimageregistry = "docker.io" // Dockerhub
 		baseimageregistry = "ghcr.io"   // Github
-		log.Printf("[DEBUG] Setting baseimageregistry")
+		log.Printf("[DEBUG] Setting baseimageregistry to %#v", baseimageregistry)
 	}
 
 	if baseimagename == "" {
 		baseimagename = "frikky/shuffle" // Dockerhub
 		baseimagename = "shuffle"        // Github 		(ghcr.io)
-		log.Printf("[DEBUG] Setting baseimagename")
+		log.Printf("[DEBUG] Setting baseimagename to %#v", baseimagename)
 	}
 
 	log.Printf("[DEBUG] Setting swarm config to %#v. Default is empty.", swarmConfig)
@@ -1005,16 +988,20 @@ func initializeImages() {
 
 	pullOptions := types.ImagePullOptions{}
 	for _, image := range images {
-		log.Printf("[DEBUG] Pulling image %s", image)
-		reader, err := dockercli.ImagePull(ctx, image, pullOptions)
-		if err != nil {
-			log.Printf("[ERROR] Failed getting image %s: %s", image, err)
+		if isKubernetes == "true" {
+			log.Printf("[DEBUG] Skipping image pull of '%s' because Kubernetes does it in realtime instead", image)
+		} else {
+			log.Printf("[DEBUG] Pulling image %s", image)
+			reader, err := dockercli.ImagePull(ctx, image, pullOptions)
+			if err != nil {
+				log.Printf("[ERROR] Failed getting image %s: %s", image, err)
 
-			continue
+				continue
+			}
+
+			io.Copy(os.Stdout, reader)
+			log.Printf("[DEBUG] Successfully downloaded and built %s", image)
 		}
-
-		io.Copy(os.Stdout, reader)
-		log.Printf("[DEBUG] Successfully downloaded and built %s", image)
 	}
 }
 
