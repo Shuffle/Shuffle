@@ -6,12 +6,12 @@ Shuffle Installation
 
 </h1>
 
-Installation of Shuffle is currently available for docker and kubernetes. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
+Installation of Shuffle is currently available for [docker](https://shuffler.io/docs/configuration#production-readiness) and [kubernetes](https://shuffler.io/docs/configuration#Kubernetes). Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
-This document outlines an introduction environment which is not scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness. This also includes system requirements and configurations for Swarm or Kubernetes. 
+This document outlines an introduction environment which is **not** scalable. [Read here](https://shuffler.io/docs/configuration#production_readiness) for information on production readiness and scalability. This also includes system requirements and configurations for **Docker Swarm** or **Kubernetes**. 
 
 # Docker - *nix
-The Docker setup is done with docker-compose 
+The Docker setup is the default setup, and is ran with docker compose. This is [NOT a scalable build](https://shuffler.io/docs/configuration#production-readiness) without changes.
 
 **PS: if you're setting up Shuffle on Windows, go to the next step (Windows Docker setup)**
 
@@ -40,7 +40,7 @@ docker compose up -d
 sudo sysctl -w vm.max_map_count=262144             # https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
 ```
 
-When you're done, skip to the [After installation](#after-installation) step below.
+When you're done, go to the [After installation](#after-installation) step below.
 
 ## Windows with WSL  
 This step is for setting up with Docker on windows from scratch.
