@@ -15,7 +15,7 @@ The Docker setup is done with docker-compose
 
 **PS: if you're setting up Shuffle on Windows, go to the next step (Windows Docker setup)**
 
-1. Make sure you have [Docker](https://docs.docker.com/get-docker/) and [docker-compose](https://docs.docker.com/compose/install/) installed, and that you have a minimum of **2Gb of RAM** available.
+1. Make sure you have [Docker](https://docs.docker.com/get-docker/) installed, and that you have a minimum of **2Gb of RAM** available.
 2. Download Shuffle
 ```bash
 git clone https://github.com/Shuffle/Shuffle
@@ -32,7 +32,7 @@ sudo swapoff -a                           # Disable swap
 
 4. Run docker-compose.
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 5. Recommended for Opensearch to work well
@@ -57,9 +57,9 @@ This step is for setting up with Docker on windows from scratch.
 OUTER_HOSTNAME=YOUR.IP.HERE
 ```
 
-6. Run docker-compose
+6. Run docker compose
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Configurations (high availability, scale, proxies, default users etc.)
@@ -124,8 +124,8 @@ Large portions of the backend is written in another repository - [shuffle-shared
 ## Database - Opensearch 
 Make sure this is running through the docker-compose, and that the backend points to it with SHUFFLE_OPENSEARCH_URL defined.
 
-So essentially, what that means is:
-1. Make sure you have docker-compose installed
+What it means:
+1. Make sure you have docker compose installed
 2. Make sure you have the docker-compose.yml file from this repository
 3. Run `docker-compose up opensearch -d`
 
