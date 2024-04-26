@@ -60,7 +60,7 @@ This step is for setting up with Docker on windows from scratch.
 OUTER_HOSTNAME=YOUR.IP.HERE
 ```
 
-6. Run docker compose
+5. Run docker compose
 ```bash
 docker compose up -d
 ```
