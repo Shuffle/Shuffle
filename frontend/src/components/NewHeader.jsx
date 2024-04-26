@@ -616,7 +616,7 @@ const Header = (props) => {
         <Divider style={{marginBottom: 10, }}/>
 
 	  	<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 5, marginBottom: 5,}}>
-	  		Version: 1.3.4
+	  		Version: 1.4.0
 	  	</Typography>
       </Menu>
     </span>

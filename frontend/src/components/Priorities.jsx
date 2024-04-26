@@ -20,7 +20,7 @@ import Priority from "../components/Priority.jsx";
 //import { useAlert 
 
 const Priorities = (props) => {
-  const { globalUrl, userdata, serverside, billingInfo, stripeKey, checkLogin, setAdminTab, setCurTab, notifications, setNotifications, } = props;
+  const { globalUrl, userdata,clickedFromOrgTab, serverside, billingInfo, stripeKey, checkLogin, setAdminTab, setCurTab, notifications, setNotifications, } = props;
   const [showDismissed, setShowDismissed] = React.useState(false);
   const [showRead, setShowRead] = React.useState(false);
   const [appFramework, setAppFramework] = React.useState({});
@@ -312,15 +312,15 @@ const Priorities = (props) => {
     }
 
 	return (
-		<div style={{maxWidth: 1000, }}>
-			<h2 style={{ display: "inline" }}>Suggestions</h2>
-			<span style={{ marginLeft: 25 }}>
-				Suggestions are tasks identified by Shuffle to help you discover ways to protect your and customers' company. These range from simple configurations in Shuffle to Usecases you may have missed.&nbsp;
+		<div style={{maxWidth: clickedFromOrgTab ? 1030:1000, padding: clickedFromOrgTab ? 27:null, height: clickedFromOrgTab ? "auto":null, backgroundColor: clickedFromOrgTab ? '#212121':null, borderRadius: clickedFromOrgTab ? '16px':null,  }}>
+			<h2 style={{ display: clickedFromOrgTab ?null:"inline", marginBottom: clickedFromOrgTab ? 8:null, marginTop: clickedFromOrgTab ?0:null, color: clickedFromOrgTab ?"#ffffff":null }}>Suggestions</h2>
+			<span style={{ color: clickedFromOrgTab ?"#9E9E9E":null,marginLeft: clickedFromOrgTab ?null:25 }}>
+				Suggestions are tasks identified by Shuffle to help you discover ways to protect your and customers' company. <br/>These range from simple configurations in Shuffle to Usecases you may have missed.&nbsp;
 				<a
 					target="_blank"
 					rel="noopener noreferrer"
 					href="/docs/organizations#priorities"
-					style={{ textDecoration: "none", color: "#f85a3e" }}
+					style={{ textDecoration: clickedFromOrgTab ?null:"none", color: clickedFromOrgTab ?"#FF8444":"#f85a3e" }}
 				>
 					Learn more
 				</a>
@@ -348,6 +348,7 @@ const Priorities = (props) => {
 							globalUrl={globalUrl}
 							priority={priority}
 							checkLogin={checkLogin}
+							clickedFromOrgTab={true}
 							setAdminTab={setAdminTab}
 							setCurTab={setCurTab}
   							appFramework={appFramework}
@@ -355,15 +356,15 @@ const Priorities = (props) => {
 					)
 				})
 			}
-			<Divider style={{marginTop: 50, marginBottom: 50, }} />
-			<h2 style={{ display: "inline" }}>Notifications</h2>
-			<span style={{ marginLeft: 25 }}>
+			{clickedFromOrgTab?null:<Divider style={{marginTop: 50, marginBottom: 50, }} />}
+			<h2 style={{ display: clickedFromOrgTab?null:"inline", marginBottom: clickedFromOrgTab? 8:null, marginTop: clickedFromOrgTab?40:null, color: clickedFromOrgTab?"#ffffff":null }}>Notifications</h2>
+			<span style={{ marginLeft: clickedFromOrgTab?null:25, color: clickedFromOrgTab?"#9E9E9E":null, }}>
 				Notifications help you find potential problems with your workflows and apps.&nbsp;
 				<a
 					target="_blank"
 					rel="noopener noreferrer"
 					href="/docs/organizations#notifications"
-					style={{ textDecoration: "none", color: "#f85a3e" }}
+					style={{ textDecoration: clickedFromOrgTab?null:"none", color: clickedFromOrgTab?"#FF8444":"#f85a3e" }}
 				>
 					Learn more
 				</a>

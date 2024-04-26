@@ -592,7 +592,27 @@ const AngularWorkflow = (defaultprops) => {
 				]
 			}*/
 			]
-		}]
+		},{
+			"name": "Communication",
+			"description": "Available actions for communication",
+			"label": "Communication",
+			"parameters": [{	
+				"name": "action",
+				"value": "list_messages",
+				"options": [
+					"list_messages", 
+					"send_message", 
+				],
+				"required": true,
+			},
+			{
+				"name": "fields",
+				"value": "",
+				"required": false,
+				"multiline": true,
+			}]
+		},
+		]
 	}] 
 
 	/*
@@ -17146,6 +17166,10 @@ const AngularWorkflow = (defaultprops) => {
 
 	  if (isCloud && stringjson.toLowerCase().includes("timeout error")) {
 		  return "Run this workflow in a local environment to increase the timeout. Go to https://shuffler.io/admin?tab=environments to create an environment to connect to"
+	  }
+
+	  if (stringjson.toLowerCase().includes("invalid header")) {
+		  return "A header or authentication token in the app is invalid. Check the app's configuration"
 	  }
 
 
