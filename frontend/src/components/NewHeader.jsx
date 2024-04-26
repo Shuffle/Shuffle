@@ -551,10 +551,19 @@ const Header = (props) => {
               handleClose();
             }}
           >
-            <BusinessIcon style={{ marginRight: 5 }} /> Admin
+            <BusinessIcon style={{ marginRight: 5 }} /> Organisation 
           </MenuItem>
         </Link>
-        <Divider />
+        <Link to="/settings" style={hrefStyle}>
+          <MenuItem
+            onClick={(event) => {
+              handleClose();
+            }}
+          >
+            <SettingsIcon style={{ marginRight: 5 }} /> Account 
+          </MenuItem>
+        </Link>
+        <Divider style={{marginTop: 10, marginBottom: 10, }} />
         <Link to="/docs" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
@@ -584,7 +593,6 @@ const Header = (props) => {
             <LightbulbIcon style={{ marginRight: 5 }} /> Use Cases
           </MenuItem>
         </Link>
-        <Divider />
         <Link to={`/creators/${userdata.public_username}`} style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
@@ -594,16 +602,7 @@ const Header = (props) => {
             <EmojiObjectsIcon style={{ marginRight: 5 }} /> Creator page
           </MenuItem>
         </Link>
-        <Link to="/settings" style={hrefStyle}>
-          <MenuItem
-            onClick={(event) => {
-              handleClose();
-            }}
-          >
-            <SettingsIcon style={{ marginRight: 5 }} /> Settings
-          </MenuItem>
-        </Link>
-        <Divider />
+        <Divider style={{marginTop: 10, marginBottom: 10, }}/>
         <MenuItem
           style={{ color: "white" }}
           onClick={(event) => {
@@ -617,7 +616,7 @@ const Header = (props) => {
         <Divider style={{marginBottom: 10, }}/>
 
 	  	<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 5, marginBottom: 5,}}>
-	  		Version: 1.3.3
+	  		Version: 1.4.0
 	  	</Typography>
       </Menu>
     </span>
@@ -1052,6 +1051,12 @@ const Header = (props) => {
                         const namesplit = regionsplit[0].split("/");
 
                         regiontag = namesplit[namesplit.length - 1];
+
+												if (regiontag === "california") {
+													regiontag = "us"
+												} else if (regiontag === "frankfurt") {
+													regiontag = "fr"
+												}
                       }
                     }
 

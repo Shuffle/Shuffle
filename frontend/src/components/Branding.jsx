@@ -15,7 +15,7 @@ import {
 //import { useAlert 
 
 const Branding = (props) => {
-    const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, } = props;
+    const { globalUrl, userdata, serverside, billingInfo,clickedFromOrgTab, stripeKey, selectedOrganization, handleGetOrg, } = props;
     //const alert = useAlert();
     const [publishingInfo, setPublishingInfo] = useState("");
 	const [publishRequirements, setPublishRequirements] = useState([])
@@ -103,7 +103,7 @@ const Branding = (props) => {
 	}
 
 	return (
-		<div>
+		<div style={{ width: "auto", padding: 27, height: "auto", backgroundColor: '#212121', borderRadius: '16px', }}>
 			<h2>
 				Branding
 			</h2>

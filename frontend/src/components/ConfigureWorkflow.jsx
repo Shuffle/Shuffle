@@ -603,10 +603,10 @@ const ConfigureWorkflow = (props) => {
       .then((responseJson) => {
         if (responseJson.success === false) {
         	if (responseJson.reason !== undefined) {
-          	toast("Failed to activate the app: "+responseJson.reason);
-					} else {
-          	toast("Failed to activate the app");
-					}
+				toast("Failed to activate the app: "+responseJson.reason);
+			} else {
+				toast("Failed to activate the app");
+			}
         } else {
           toast("App activated for your organization!");
         }

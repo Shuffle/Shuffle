@@ -66,7 +66,7 @@ const scrollStyle2 = {
 
 
 const CacheView = (props) => {
-    const { globalUrl, userdata, serverside, orgId } = props;
+    const { globalUrl, userdata, serverside, orgId, isSelectedDataStore } = props;
     const [orgCache, setOrgCache] = React.useState("");
     const [listCache, setListCache] = React.useState([]);
     const [addCache, setAddCache] = React.useState("");
@@ -386,24 +386,24 @@ const CacheView = (props) => {
 
     return (
 
-        <div style={{paddingBottom: 250, }}>
+        <div style={{paddingBottom: isSelectedDataStore?null:250, width: isSelectedDataStore?1030:null, padding:isSelectedDataStore?27:null, height: isSelectedDataStore?1200:null, color: isSelectedDataStore?'#ffffff':null, backgroundColor: isSelectedDataStore?'#212121':null, borderRadius: isSelectedDataStore?'16px':null, }}>
             {modalView}
-            <div style={{ marginTop: 20, marginBottom: 20 }}>
-                <h2 style={{ display: "inline" }}>Shuffle Datastore</h2>
-                <span style={{ marginLeft: 25 }}>
-                    Datastore is a permanent key-value database for storing data that can be used cross-workflow. You can store anything from lists of IPs to complex configurations.&nbsp;
+            <div style={{ marginTop: isSelectedDataStore?null:20, marginBottom: 20 }}>
+                <h2 style={{ display: isSelectedDataStore?null: "inline" }}>Shuffle Datastore</h2>
+                <span style={{ marginLeft: isSelectedDataStore?null:25, color:isSelectedDataStore?"#9E9E9E":null}}>
+                    Datastore is a permanent key-value database for storing data that can be used cross-workflow. <br/>You can store anything from lists of IPs to complex configurations.&nbsp;
                     <a
                         target="_blank"
                         rel="noopener noreferrer"
                         href="/docs/organizations#datastore"
-                        style={{ textDecoration: "none", color: "#f85a3e" }}
+                        style={{ textDecoration: isSelectedDataStore?null:"none", color: isSelectedDataStore?"#FF8444":"#f85a3e" }}
                     >
                         Learn more
                     </a>
                 </span>
             </div>
             <Button
-                style={{}}
+                style={{backgroundColor: isSelectedDataStore?'rgba(255, 132, 68, 0.2)':null, color:isSelectedDataStore?"#FF8444":null, borderRadius:isSelectedDataStore?200:null, width:isSelectedDataStore?162:null, height:isSelectedDataStore?40:null}}
                 variant="contained"
                 color="primary"
                 onClick={() =>{ 
@@ -416,21 +416,21 @@ const CacheView = (props) => {
                 Add Cache
             </Button>
             <Button
-                style={{ marginLeft: 5, marginRight: 15 }}
+                style={{ marginLeft: 5, marginRight: 15, backgroundColor: isSelectedDataStore?"#2F2F2F":null,borderRadius:isSelectedDataStore?200:null, width:isSelectedDataStore?81:null, height:isSelectedDataStore?40:null,  }}
                 variant="contained"
                 color="primary"
                 onClick={() => listOrgCache(orgId)}
             >
                 <CachedIcon />
             </Button>
-            <Divider
+            {isSelectedDataStore? null :<Divider
                 style={{
                     marginTop: 20,
                     marginBottom: 20,
                 }}
-            />
-            <List>
-                <ListItem>
+            />}
+            <List style={{borderRadius: isSelectedDataStore?8:null, border:isSelectedDataStore?"1px solid #494949":null, marginTop:isSelectedDataStore?24:null}}>
+                <ListItem style={{width: isSelectedDataStore?"100%":null, borderBottom:isSelectedDataStore?"1px solid #494949":null}}>
                     <ListItemText
                         primary="Key"
                     	style={{ minWidth: 250, maxWidth: 250, }}

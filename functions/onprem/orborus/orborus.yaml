@@ -1,0 +1,82 @@
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default 
+  name: pod-manager
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "create", "update", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "get", "list", "watch", "delete"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pod-manager-binding
+  namespace: default 
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: default 
+roleRef:
+  kind: Role
+  name: pod-manager
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orborus
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.26.0 (40646f47)
+  labels:
+    io.kompose.service: orborus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: orborus
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.version: 1.26.0 (40646f47)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/shuffle: "true"
+        io.kompose.service: orborus
+    spec:
+      dnsPolicy: "Default"
+      containers:
+        - env:
+            - name: BASE_URL
+              value: "https://shuffler.io"
+            - name: SHUFFLE_SCALE_REPLICAS
+              value: "7"
+            - name: IS_KUBERNETES
+              value: "true"
+            - name: ENVIRONMENT_NAME
+              value: "environment test"
+            - name: ORG
+              value: "9c938e5b-d812-40d9-92f0-93783f43ec0d"
+            - name: AUTH 
+              value: "3663a270-bb3a-4678-a365-d879601a1a0c"
+            - name: SHUFFLE_WORKER_IMAGE 
+              value: "ghcr.io/shuffle/shuffle-worker:nightly"
+
+          image: ghcr.io/shuffle/shuffle-orborus:nightly
+          imagePullPolicy: Always
+          name: shuffle-orborus
+          resources: {}
+      hostname: shuffle-orborus
+      restartPolicy: Always

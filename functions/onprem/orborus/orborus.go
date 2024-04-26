@@ -74,6 +74,7 @@ var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 var dockerSwarmBridgeMTU = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_MTU")
 var dockerSwarmBridgeInterface = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_INTERFACE")
 var isKubernetes = os.Getenv("IS_KUBERNETES")
+var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 var maxCPUPercent = 95 
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
@@ -103,6 +104,7 @@ var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
 var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 
 var executionIds = []string{}
+var namespacemade = false  // For K8s
 
 var dockercli *dockerclient.Client
 var containerId string
@@ -355,8 +357,7 @@ func deployServiceWorkers(image string) {
 
 		if len(os.Getenv("DOCKER_HOST")) > 0 {
 			log.Printf("[DEBUG] Deploying docker socket proxy to the network %s as the DOCKER_HOST variable is set", networkName)
-			//if err == nil {
-			containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+			containers, err := dockercli.ContainerList(ctx, container.ListOptions{
 				All: true,
 			})
 
@@ -663,15 +664,71 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 
 
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
+	if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
+		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
+	}
 
 	if isKubernetes == "true" {
-		if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
-			env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
-			env = append(env, fmt.Sprintf("IS_KUBERNETES=%s", os.Getenv("IS_KUBERNETES")))
+		env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
+		env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
+
+		if len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
+			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", os.Getenv("KUBERNETES_SERVICE_HOST")))
+		} 
+
+		if len(os.Getenv("KUBERNETES_SERVICE_PORT")) > 0 {
+			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
 		}
 
-		image = os.Getenv("SHUFFLE_KUBERNETES_WORKER")
-		log.Printf("[DEBUG] using worker image:", image)
+
+		clientset, config, err := getKubernetesClient()
+		if err != nil {
+			log.Printf("[ERROR] Error getting kubernetes client:", err)
+			return err
+		}
+
+		env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
+
+		// Look for if there is a default service account in use
+		if len(os.Getenv("KUBERNETES_SERVICE_ACCOUNT")) > 0 {
+			log.Printf("[DEBUG] Using Kubernetes service account %s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT"))
+			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_ACCOUNT=%s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT")))
+
+			// use k8s downward API to find it if we are in a pod
+		}
+
+		// Check if namespace exist as variable. If so, make it
+		if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 && !namespacemade {
+			kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+
+			// Make the namespace
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: os.Getenv("KUBERNETES_NAMESPACE"),
+				},
+			}
+
+			_, err := clientset.CoreV1().Namespaces().Create(context.Background(), namespace, metav1.CreateOptions{})
+			if err != nil {
+				if !strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already exists") {
+					log.Printf("[ERROR] Failed creating Kubernetes namespace: %s", err)
+				} else {
+					namespacemade = true
+				}
+			} else {
+				namespacemade = true
+			}
+		}
+
+		if len(kubernetesNamespace) == 0 {
+			kubernetesNamespace = "default"
+		}
+
+		kubernetesImage := os.Getenv("SHUFFLE_KUBERNETES_WORKER")
+		if len(kubernetesImage) == 0 {
+			kubernetesImage = image
+		}
+		log.Printf("[DEBUG] Using Kubernetes worker image '%s'", kubernetesImage)
 		// image = "shuffle-worker:v1" //hard coded image name to test locally
 
 		envMap := make(map[string]string)
@@ -682,12 +739,8 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			}
 		}
 
-		clientset, err := getKubernetesClient()
-		if err != nil {
-			log.Printf("[ERROR] Error getting kubernetes client:", err)
-			return err
-		}
-
+		// While testing:
+		// kubectl delete pods --all --all-namespaces; kubectl delete services --all --all-namespaces
 		pod := &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   identifier,
@@ -695,27 +748,32 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			},
 			Spec: corev1.PodSpec{
 				RestartPolicy: "Never",
-				// once images is pushed, we can remove this
-				// keep this when running locally
+				DNSPolicy:     "Default",
 				// NodeSelector: map[string]string{
 				// 	"node": "master",
 				// },
 				Containers: []corev1.Container{
 					{
 						Name:  identifier,
-						Image: image,
+						Image: kubernetesImage,
 						Env:   buildEnvVars(envMap),
+						
+						//ImagePullPolicy: "Never",
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						//ImagePullPolicy: "Always",
 					},
 				},
 			},
 		}
 
+		// Check if running on ARM or x86 to download the correct image
+
 		// Add environment variables
 		// pod.Spec.Containers[0].Env = buildEnvVars(envMap)
 
-		createdPod, err := clientset.CoreV1().Pods("shuffle").Create(context.Background(), pod, metav1.CreateOptions{})
+		createdPod, err := clientset.CoreV1().Pods(kubernetesNamespace).Create(context.Background(), pod, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf("[ERROR] Failed creating pod: %v", err)
+			//log.Printf("[ERROR] Failed creating pod: %v", err)
 			return err
 		}
 
@@ -801,7 +859,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 	}
 
-	containerStartOptions := types.ContainerStartOptions{}
+	containerStartOptions := container.StartOptions{}
 	err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
 	if err != nil {
 		// Trying to recreate and start WITHOUT network if it's possible. No extended checks. Old execution system (<0.9.30)
@@ -876,7 +934,7 @@ func stopWorker(containername string) error {
 		log.Printf("[ERROR] Unable to stop container %s - running removal anyway, just in case: %s", containername, err)
 	}
 
-	removeOptions := types.ContainerRemoveOptions{
+	removeOptions := container.RemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}
@@ -893,24 +951,24 @@ func initializeImages() {
 
 	if appSdkVersion == "" {
 		appSdkVersion = "latest"
-		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
+		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %#v", appSdkVersion)
 	}
 
 	if workerVersion == "" {
 		workerVersion = "latest"
-		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
+		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %#v", workerVersion)
 	}
 
 	if baseimageregistry == "" {
 		baseimageregistry = "docker.io" // Dockerhub
 		baseimageregistry = "ghcr.io"   // Github
-		log.Printf("[DEBUG] Setting baseimageregistry")
+		log.Printf("[DEBUG] Setting baseimageregistry to %#v", baseimageregistry)
 	}
 
 	if baseimagename == "" {
 		baseimagename = "frikky/shuffle" // Dockerhub
 		baseimagename = "shuffle"        // Github 		(ghcr.io)
-		log.Printf("[DEBUG] Setting baseimagename")
+		log.Printf("[DEBUG] Setting baseimagename to %#v", baseimagename)
 	}
 
 	log.Printf("[DEBUG] Setting swarm config to %#v. Default is empty.", swarmConfig)
@@ -930,15 +988,20 @@ func initializeImages() {
 
 	pullOptions := types.ImagePullOptions{}
 	for _, image := range images {
-		log.Printf("[DEBUG] Pulling image %s", image)
-		reader, err := dockercli.ImagePull(ctx, image, pullOptions)
-		if err != nil {
-			log.Printf("[ERROR] Failed getting image %s: %s", image, err)
-			continue
-		}
+		if isKubernetes == "true" {
+			log.Printf("[DEBUG] Skipping image pull of '%s' because Kubernetes does it in realtime instead", image)
+		} else {
+			log.Printf("[DEBUG] Pulling image %s", image)
+			reader, err := dockercli.ImagePull(ctx, image, pullOptions)
+			if err != nil {
+				log.Printf("[ERROR] Failed getting image %s: %s", image, err)
 
-		io.Copy(os.Stdout, reader)
-		log.Printf("[DEBUG] Successfully downloaded and built %s", image)
+				continue
+			}
+
+			io.Copy(os.Stdout, reader)
+			log.Printf("[DEBUG] Successfully downloaded and built %s", image)
+		}
 	}
 }
 
@@ -1105,7 +1168,7 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 
 
 		// Get list of all running containers
-	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{})
+	containers, err := dockercli.ContainerList(ctx, container.ListOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Failed getting container list: %s", err)
 		return newStats
@@ -1223,30 +1286,39 @@ func isRunningInCluster() bool {
 	return existsHost && existsPort
 }
 
-func getKubernetesClient() (*kubernetes.Clientset, error) {
+func getKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
+
+	config := &rest.Config{}
+	var err error
+
 	if isRunningInCluster() {
 		config, err := rest.InClusterConfig()
 		if err != nil {
-			return nil, err
+			return nil, config, err
 		}
+
 		clientset, err := kubernetes.NewForConfig(config)
 		if err != nil {
-			return nil, err
+			return nil, config, err
 		}
-		return clientset, nil
-	} else {
-		home := homedir.HomeDir()
-		kubeconfigPath := filepath.Join(home, ".kube", "config")
-		config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-		if err != nil {
-			return nil, err
-		}
-		clientset, err := kubernetes.NewForConfig(config)
-		if err != nil {
-			return nil, err
-		}
-		return clientset, nil
+
+		return clientset, config, nil
+
+	} 
+
+	home := homedir.HomeDir()
+	kubeconfigPath := filepath.Join(home, ".kube", "config")
+	config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if err != nil {
+		return nil, config, err
 	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, config, err
+	}
+
+	return clientset, config, nil
 }
 
 
@@ -1773,6 +1845,10 @@ func main() {
 				executionIds = append(executionIds, execution.ExecutionId)
 			} else {
 				log.Printf("[WARNING] Execution ID '%s' failed to deploy: %s", execution.ExecutionId, err)
+				if strings.Contains(err.Error(), "already exists") {
+					toBeRemoved.Data = append(toBeRemoved.Data, execution)
+					executionIds = append(executionIds, execution.ExecutionId)
+				}
 			}
 		}
 
@@ -1874,7 +1950,7 @@ func deployPipeline(image, identifier, command string) error {
 		}
 	}
 
-	containerStartOptions := types.ContainerStartOptions{}
+	containerStartOptions := container.StartOptions{}
 	err = dockercli.ContainerStart(
 		ctx, 
 		cont.ID, 
@@ -1985,18 +2061,18 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	//log.Printf("[DEBUG] Getting running workers with API version %s", dockerApiVersion)
 	counter := 0
 	if isKubernetes  == "true" {
-		log.Printf("[INFO] getting running workers in kubernetes")
+		log.Printf("[INFO] Getting running workers in kubernetes")
 
 		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
 
-		clientset, err := getKubernetesClient()
+		clientset, _, err := getKubernetesClient()
 		if err != nil {
 			log.Printf("[ERROR] Failed getting kubernetes client: %s", err)
 			return 0
 		}
 
 		labelSelector := "app=shuffle-worker"
-		pods, podErr := clientset.CoreV1().Pods("shuffle").List(ctx, metav1.ListOptions{
+		pods, podErr := clientset.CoreV1().Pods(kubernetesNamespace).List(ctx, metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
 		if podErr != nil {
@@ -2009,9 +2085,13 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 				counter++
 			}
 		}
+
+		if counter > 0 {
+			log.Printf("[INFO] Found %d running workers in Orborus", counter)
+		}
 	} else {
 
-		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+		containers, err := dockercli.ContainerList(ctx, container.ListOptions{
 			All: true,
 		})
 	
@@ -2078,7 +2158,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	}
 
 	log.Println("[INFO] Looking for old containers to remove")
-	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+	containers, err := dockercli.ContainerList(ctx, container.ListOptions{
 		All: true,
 	})
 
@@ -2152,7 +2232,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 		removeContainers = append(removeContainers, containername)
 	}
 
-	removeOptions := types.ContainerRemoveOptions{
+	removeOptions := container.RemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}

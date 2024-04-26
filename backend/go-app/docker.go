@@ -20,6 +20,7 @@ import (
 	//"github.com/docker/docker"
 	"github.com/docker/docker/api/types"
 	//"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	newdockerclient "github.com/fsouza/go-dockerclient"
 	"github.com/go-git/go-billy/v5"
@@ -565,7 +566,7 @@ func imageCheckBuilder(images []string) error {
 		return err
 	}
 
-	filteredImages := []types.ImageSummary{}
+	filteredImages := []image.Summary{}
 	for _, image := range allImages {
 		found := false
 		for _, repoTag := range image.RepoTags {
@@ -636,10 +637,10 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		All: true,
 	})
 
-	img := types.ImageSummary{}
+	img := image.Summary{}
 	tagFound := ""
 
-	img2 := types.ImageSummary{}
+	img2 := image.Summary{}
 	tagFound2 := ""
 
 	alternativeNameSplit := strings.Split(version.Name, "/")

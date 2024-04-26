@@ -43,7 +43,7 @@ import {
   CircularProgress,
   Box,
   InputAdornment,
-  Autocomplete 
+  Autocomplete,
 } from "@mui/material";
 
 import {
@@ -73,13 +73,12 @@ import {
   Cancel as CancelIcon,
   Dns as DnsIcon,
   Help as HelpIcon,
-
   Flag as FlagIcon,
   FmdGood as FmdGoodIcon,
 } from "@mui/icons-material";
 
 //import { useAlert
-import { ToastContainer, toast } from "react-toastify" 
+import { ToastContainer, toast } from "react-toastify";
 import Dropzone from "../components/Dropzone.jsx";
 import HandlePaymentNew from "../views/HandlePaymentNew.jsx";
 import OrgHeader from "../components/OrgHeader.jsx";
@@ -108,34 +107,40 @@ const MenuProps = {
   getContentAnchorEl: () => null,
 };
 
-
 const FileCategoryInput = (props) => {
   const isSet = props.isSet;
-  console.log("inside filecategoryinput");  
-  console.log("isset value" , isSet);
-  if (isSet){
+  console.log("inside filecategoryinput");
+  console.log("isset value", isSet);
+  if (isSet) {
     return (
-        <TextField
-              onBlur={""}
-              InputProps={{
-                style: {
-                  color: "white",
-                },
-              }}
-              color="primary"
-              placeholder="File category name"
-              required
-              margin="dense"
-              defaultValue={""}
-              autoFocus
-              fullWidth
-            />
-    )}
+      <TextField
+        onBlur={""}
+        InputProps={{
+          style: {
+            color: "white",
+          },
+        }}
+        color="primary"
+        placeholder="File category name"
+        required
+        margin="dense"
+        defaultValue={""}
+        autoFocus
+        fullWidth
+      />
+    );
   }
-
+};
 
 const Admin = (props) => {
-  const { globalUrl, userdata, serverside, checkLogin, notifications, setNotifications,  } = props;
+  const {
+    globalUrl,
+    userdata,
+    serverside,
+    checkLogin,
+    notifications,
+    setNotifications,
+  } = props;
 
   var to_be_copied = "";
   const classes = useStyles();
@@ -157,7 +162,7 @@ const Admin = (props) => {
   const [loading, setLoading] = React.useState(false);
 
   const [selectedOrganization, setSelectedOrganization] = React.useState({});
-    
+
   //console.log("Selected: ", selectedOrganization)
   const [organizationFeatures, setOrganizationFeatures] = React.useState({});
   const [loginInfo, setLoginInfo] = React.useState("");
@@ -176,9 +181,13 @@ const Admin = (props) => {
   const [selectedUser, setSelectedUser] = React.useState({});
   const [newUsername, setNewUsername] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
-  const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false);
-  const [selectedAuthentication, setSelectedAuthentication] = React.useState({});
-  const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false);
+  const [selectedUserModalOpen, setSelectedUserModalOpen] =
+    React.useState(false);
+  const [selectedAuthentication, setSelectedAuthentication] = React.useState(
+    {},
+  );
+  const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] =
+    React.useState(false);
   const [authenticationFields, setAuthenticationFields] = React.useState([]);
   const [showArchived, setShowArchived] = React.useState(false);
   const [isDropzone, setIsDropzone] = React.useState(false);
@@ -197,26 +206,32 @@ const Admin = (props) => {
 
   const [, forceUpdate] = React.useState();
 
-  useEffect(() => {
-	getUsers()
+  const [showDeleteAccountTextbox, setShowDeleteAccountTextbox] =
+    React.useState(false);
+  const [deleteAccountText, setDeleteAccountText] = React.useState("");
+  const [regionChangeModalOpen, setRegionChangeModalOpen] =
+    React.useState(false);
 
-	setTimeout(() => {
-		if (adminTab === 3) {
-			window.scroll({
-				top: 450,
-				left: 0,
-				behavior: 'smooth'
-			})
-		}
-	}, 1500)
+  useEffect(() => {
+    getUsers();
+
+    setTimeout(() => {
+      if (adminTab === 3) {
+        window.scroll({
+          top: 450,
+          left: 0,
+          behavior: "smooth",
+        });
+      }
+    }, 1500);
   }, []);
 
   useEffect(() => {
-	window.scroll({
-		top: 450,
-		left: 0,
-		behavior: 'smooth'
-	})
+    window.scroll({
+      top: 450,
+      left: 0,
+      behavior: "smooth",
+    });
   }, [adminTab]);
 
   useEffect(() => {
@@ -227,17 +242,116 @@ const Admin = (props) => {
   }, [isDropzone]);
 
   useEffect(() => {
-    if (userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0) {
-      handleGetSubOrgs(userdata.active_org.id);
+    if (userdata.orgs !== undefined &&
+      userdata.orgs !== null &&
+      userdata.orgs.length > 0) {
+        handleGetSubOrgs(userdata.active_org.id);
+    } else {
+      console.log("Bad Userdata with orgs not existing")
     }
-    else console.log("error in user data")
   }, [userdata]); 
   
   useEffect(() => {
     handleGetAllTriggers()
- }, []); 
+  }, []); 
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  const isCloud =
+    window.location.host === "localhost:3002" ||
+    window.location.host === "shuffler.io";
+
+  const setSelectedRegion = (region) => {
+    // send a POST request to /api/v1/orgs/{org_id}/region with the region as the body
+    var data = {
+      dst_region: region,
+    };
+
+    toast("Changing region to " + region + "...This may take a few minutes.");
+
+    fetch(`${globalUrl}/api/v1/orgs/${selectedOrganization.id}/change/region`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+      timeOut: 1000,
+    }).then((response) => {
+      if (response.status !== 200) {
+        toast("Failed to change region!");
+      } else {
+        toast("Region changed successfully! Reloading in 5 seconds..");
+        // Reload the page in 2 seconds
+        setTimeout(() => {
+          window.location.reload();
+        }, 5000);
+      }
+
+      return response.json();
+    });
+  };
+
+  const RegionChangeModal = () => {
+    // Show from options: "us-west2", "europe-west2", "europe-west3", "northamerica-northeast1"
+    var regions = [
+      "us-west2",
+      "europe-west2",
+      "europe-west3",
+      "northamerica-northeast1",
+    ];
+    return (
+      <Dialog
+        open={regionChangeModalOpen}
+        onClose={() => setRegionChangeModalOpen(false)}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">Change region</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth>
+            <InputLabel id="demo-simple-select-label">Region</InputLabel>
+            <Select
+              labelId="demo-simple-select-label"
+              id="demo-simple-select"
+              value={""}
+              onChange={(e) => {
+                setSelectedRegion(e.target.value);
+                setRegionChangeModalOpen(false);
+              }}
+            >
+              {regions.map((region) => {
+                // Set the default region if selectedOrganization.region is not set
+                if (selectedOrganization.region.length === 0) {
+                  selectedOrganization.region = "europe-west2";
+                }
+
+                // Check if the current region matches the selected region
+                if (region === selectedOrganization.region) {
+                  // If the region matches, set the MenuItem as selected
+                  return (
+                    <MenuItem value={region} disabled>
+                      {region}
+                    </MenuItem>
+                  );
+                } else {
+                  // Otherwise, render a regular MenuItem
+                  return <MenuItem value={region}>{region}</MenuItem>;
+                }
+              })}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setRegionChangeModalOpen(false)}
+            color="primary"
+          >
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
 
   const get2faCode = (userId) => {
     fetch(`${globalUrl}/api/v1/users/${userId}/get2fa`, {
@@ -329,190 +443,249 @@ const Admin = (props) => {
 	]
 	*/
 
-  	//const alert = useAlert();
-	const handleStatusChange = (event) => {
-		const { value } = event.target;
-		setSelectedStatus(value);
+  //const alert = useAlert();
+  const handleStatusChange = (event) => {
+    const { value } = event.target;
+    setSelectedStatus(value);
 
-		
-		handleEditOrg(
-			"",
-			"",
-			selectedOrganization.id,
-			"",
-			{},
-			{},
-			value.length === 0 ? ["none"] : value,
-		)	
-	}
+    handleEditOrg(
+      "",
+      "",
+      selectedOrganization.id,
+      "",
+      {},
+      {},
+      value.length === 0 ? ["none"] : value,
+    );
+  };
 
-	// Basically just a simple way to get a generated email
-	// This also may help understand how to communicate with users 
-	// both inside and outside Shuffle
-	// This could also be generated on the backend
-	const mailsendingButton = (org) => {
-		if (org === undefined || org === null) {
-			return ""
-		}
+  // Basically just a simple way to get a generated email
+  // This also may help understand how to communicate with users
+  // both inside and outside Shuffle
+  // This could also be generated on the backend
+  const mailsendingButton = (org) => {
+    if (org === undefined || org === null) {
+      return "";
+    }
 
-		if (users.length === 0) {
-			return ""
-		}
+    if (users.length === 0) {
+      return "";
+    }
 
-		// 1 mail based on users that have only apps
-		// Another based on those doing workflows
-		// Another based on those trying usecases(?) or templates
-		//
-		// Start based on edr, siem & ticketing
-		// Talk about enrichment?
-		// Check suggested usecases
-		// Check suggested workflows 
-		var your_apps = "- Connecting "
+    // 1 mail based on users that have only apps
+    // Another based on those doing workflows
+    // Another based on those trying usecases(?) or templates
+    //
+    // Start based on edr, siem & ticketing
+    // Talk about enrichment?
+    // Check suggested usecases
+    // Check suggested workflows
+    var your_apps = "- Connecting ";
 
-		var subject_add = 0
-		var subject = "POC to automate "
+    var subject_add = 0;
+    var subject = "POC to automate ";
 
-		if (org.security_framework !== undefined && org.security_framework !== null) {
-			if (org.security_framework.cases.name !== undefined && org.security_framework.cases.name !== null && org.security_framework.cases.name !== "") {
-				your_apps += org.security_framework.cases.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
+    if (
+      org.security_framework !== undefined &&
+      org.security_framework !== null
+    ) {
+      if (
+        org.security_framework.cases.name !== undefined &&
+        org.security_framework.cases.name !== null &&
+        org.security_framework.cases.name !== ""
+      ) {
+        your_apps +=
+          org.security_framework.cases.name
+            .replace("_", " ", -1)
+            .replace(" API", "", -1) + ", ";
 
-				if (subject_add < 2) {
-					if (subject_add === 1) {
-						subject += " and "
-					}
+        if (subject_add < 2) {
+          if (subject_add === 1) {
+            subject += " and ";
+          }
 
-					subject_add += 1 
-					subject += org.security_framework.cases.name.replace("_", " ", -1).replace(" API", "", -1) 
-				}
-			}
+          subject_add += 1;
+          subject += org.security_framework.cases.name
+            .replace("_", " ", -1)
+            .replace(" API", "", -1);
+        }
+      }
 
-			if (org.security_framework.siem.name !== undefined && org.security_framework.siem.name !== null && org.security_framework.siem.name !== "") {
-				your_apps += org.security_framework.siem.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
-				if (subject_add < 2) {
-					if (subject_add === 1) {
-						subject += " and "
-					}
+      if (
+        org.security_framework.siem.name !== undefined &&
+        org.security_framework.siem.name !== null &&
+        org.security_framework.siem.name !== ""
+      ) {
+        your_apps +=
+          org.security_framework.siem.name
+            .replace("_", " ", -1)
+            .replace(" API", "", -1) + ", ";
+        if (subject_add < 2) {
+          if (subject_add === 1) {
+            subject += " and ";
+          }
 
-					subject_add += 1 
-					subject += org.security_framework.siem.name.replace("_", " ", -1).replace(" API", "", -1)
-				}
-			}
+          subject_add += 1;
+          subject += org.security_framework.siem.name
+            .replace("_", " ", -1)
+            .replace(" API", "", -1);
+        }
+      }
 
-			if (org.security_framework.communication.name !== undefined && org.security_framework.communication.name !== null && org.security_framework.communication.name !== "") {
-				your_apps += org.security_framework.communication.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
+      if (
+        org.security_framework.communication.name !== undefined &&
+        org.security_framework.communication.name !== null &&
+        org.security_framework.communication.name !== ""
+      ) {
+        your_apps +=
+          org.security_framework.communication.name
+            .replace("_", " ", -1)
+            .replace(" API", "", -1) + ", ";
 
-				if (subject_add < 2) {
-					if (subject_add === 1) {
-						subject += " and "
-					}
+        if (subject_add < 2) {
+          if (subject_add === 1) {
+            subject += " and ";
+          }
 
-					subject_add += 1 
-					subject += org.security_framework.communication.name.replace("_", " ", -1).replace(" API", "", -1)
-				}
-			}
+          subject_add += 1;
+          subject += org.security_framework.communication.name
+            .replace("_", " ", -1)
+            .replace(" API", "", -1);
+        }
+      }
 
-			if (org.security_framework.edr.name !== undefined && org.security_framework.edr.name !== null && org.security_framework.edr.name !== "") {
-				your_apps += org.security_framework.edr.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
+      if (
+        org.security_framework.edr.name !== undefined &&
+        org.security_framework.edr.name !== null &&
+        org.security_framework.edr.name !== ""
+      ) {
+        your_apps +=
+          org.security_framework.edr.name
+            .replace("_", " ", -1)
+            .replace(" API", "", -1) + ", ";
 
-				if (subject_add < 2) {
-					if (subject_add === 1) {
-						subject += " and "
-					}
+        if (subject_add < 2) {
+          if (subject_add === 1) {
+            subject += " and ";
+          }
 
-					subject_add += 1 
-					subject += org.security_framework.edr.name.replace("_", " ", -1).replace(" API", "", -1)
-				}
-			}
+          subject_add += 1;
+          subject += org.security_framework.edr.name
+            .replace("_", " ", -1)
+            .replace(" API", "", -1);
+        }
+      }
 
-			if (org.security_framework.intel.name !== undefined && org.security_framework.intel.name !== null && org.security_framework.intel.name !== "") {
-				your_apps += org.security_framework.intel.name.replace("_", " ", -1).replace(" API", "", -1) + ", "
+      if (
+        org.security_framework.intel.name !== undefined &&
+        org.security_framework.intel.name !== null &&
+        org.security_framework.intel.name !== ""
+      ) {
+        your_apps +=
+          org.security_framework.intel.name
+            .replace("_", " ", -1)
+            .replace(" API", "", -1) + ", ";
 
-				if (subject_add < 2) {
-					if (subject_add === 1) {
-						subject += " and "
-					}
+        if (subject_add < 2) {
+          if (subject_add === 1) {
+            subject += " and ";
+          }
 
-					subject_add += 1 
-					subject += org.security_framework.intel.name.replace("_", " ", -1).replace(" API", "", -1)
-				}
-			}
+          subject_add += 1;
+          subject += org.security_framework.intel.name
+            .replace("_", " ", -1)
+            .replace(" API", "", -1);
+        }
+      }
 
+      // Remove comma
+      //subject += "?"
+      your_apps = your_apps.substring(0, your_apps.length - 2);
+    }
 
-			// Remove comma
-			//subject += "?"
-			your_apps = your_apps.substring(0, your_apps.length - 2)
-		}
+    // Add usecases they may not have tried (from recommendations): org.priorities where item type is usecase
+    var usecases = "- Building usecases like ";
+    const active_usecase = org.priorities.filter(
+      (item) => item.type === "usecase" && item.active === true,
+    );
+    if (active_usecase.length > 0) {
+      for (var i = 0; i < active_usecase.length; i++) {
+        if (active_usecase[i].name.includes("Suggested Usecase: ")) {
+          usecases +=
+            active_usecase[i].name.replace("Suggested Usecase: ", "", -1) +
+            ", ";
+        } else {
+          usecases += active_usecase[i].name + ", ";
+        }
+      }
 
+      usecases = usecases.substring(0, usecases.length - 2);
+    }
 
-		// Add usecases they may not have tried (from recommendations): org.priorities where item type is usecase
-		var usecases = "- Building usecases like "
-		const active_usecase = org.priorities.filter((item) => item.type === "usecase" && item.active === true)
-		if (active_usecase.length > 0) {
-			for (var i = 0; i < active_usecase.length; i++) {
-				if (active_usecase[i].name.includes("Suggested Usecase: ")) {
-					usecases += active_usecase[i].name.replace("Suggested Usecase: ", "", -1) + ", "
-				} else {
-					usecases += active_usecase[i].name + ", "
-				}
-			}
+    if (your_apps.length <= 15) {
+      your_apps = "";
+    }
 
-			usecases = usecases.substring(0, usecases.length - 2)
-		}
+    if (usecases.length <= 30) {
+      usecases = "";
+    }
 
-		if (your_apps.length <= 15) {
-			your_apps = ""
-		} 
+    var workflow_amount = "a few";
+    var admins = "";
 
-		if (usecases.length <= 30) {
-			usecases = ""
-		}
+    // Loop users
+    var lastLogin = 0;
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].username.includes("shuffler")) {
+        continue;
+      }
 
-		var workflow_amount = "a few"
-		var admins = "" 
+      if (users[i].role === "admin") {
+        admins += users[i].username + ",";
+      }
 
-		// Loop users
-		var lastLogin = 0
-		for (var i = 0; i < users.length; i++) {
-			if (users[i].username.includes("shuffler")) {
-				continue
-			}
+      const data = users[i];
+      for (var i = 0; i < data.login_info.length; i++) {
+        if (data.login_info[i].timestamp > lastLogin) {
+          lastLogin = data.login_info[i].timestamp;
+        }
+      }
+    }
 
-			if (users[i].role === "admin") {
-				admins += users[i].username + ","
-			}
+    // Remove last comma
+    admins = admins.substring(0, admins.length - 1);
 
-			const data = users[i]
-			for (var i = 0; i < data.login_info.length; i++) {
-				if (data.login_info[i].timestamp > lastLogin) {
-					lastLogin = data.login_info[i].timestamp
-				}
-			}
-		}
+    if (your_apps.length > 5) {
+      your_apps += "%0D%0A";
+    }
 
+    if (usecases.length > 5) {
+      usecases += "%0D%0A";
+    }
 
-		// Remove last comma
-		admins = admins.substring(0, admins.length - 1)
+    // Get drift username from userdata.username before @ in email
+    const username = userdata.username.substring(
+      0,
+      userdata.username.indexOf("@"),
+    );
 
-		if (your_apps.length > 5) {
-			your_apps += "%0D%0A"
-		}
+    // Check if timestamp is more than 2 weeks ago and add "a while back" to the message
+    const timeComparison = 1209600;
+    const extra_timestamp_text =
+      lastLogin === 0
+        ? 0
+        : Date.now() / 1000 - lastLogin > timeComparison
+          ? " a while back"
+          : "";
+    console.log("LAST LOGIN: " + lastLogin, extra_timestamp_text);
 
-		if (usecases.length > 5) {
-			usecases += "%0D%0A"
-		}
+    // Check if cloud sync is active, and if so, add a message about it
+    const cloudSyncInfo =
+      selectedOrganization.cloud_sync === true
+        ? "- Scale your onprem installation"
+        : "";
 
-		// Get drift username from userdata.username before @ in email
-		const username = userdata.username.substring(0, userdata.username.indexOf("@"))
-
-		// Check if timestamp is more than 2 weeks ago and add "a while back" to the message
-		const timeComparison = 1209600
-		const extra_timestamp_text = lastLogin === 0 ? 0 : (Date.now()/1000 - lastLogin) > timeComparison ? " a while back" : ""
-		console.log("LAST LOGIN: " + lastLogin, extra_timestamp_text)
-
-		// Check if cloud sync is active, and if so, add a message about it
-		const cloudSyncInfo = selectedOrganization.cloud_sync === true ? "- Scale your onprem installation" : ""
-
-		var body = `Hey,%0D%0A%0D%0AI noticed you tried to use Shuffle${extra_timestamp_text}, and thought you may be interested in a POC. It looks like you have ${workflow_amount} workflows made, but it still doesn't look like you are getting what you wanted out of  Shuffle. If you're interested, I'd love to set up a quick call to see if we can help you get more out of Shuffle. %0D%0A%0D%0A
+    var body = `Hey,%0D%0A%0D%0AI noticed you tried to use Shuffle${extra_timestamp_text}, and thought you may be interested in a POC. It looks like you have ${workflow_amount} workflows made, but it still doesn't look like you are getting what you wanted out of  Shuffle. If you're interested, I'd love to set up a quick call to see if we can help you get more out of Shuffle. %0D%0A%0D%0A
 
 Some of the things we can help with:%0D%0A
 ${your_apps}
@@ -521,18 +694,17 @@ ${usecases}
 - Multi-Tenancy and creating special usecases%0D%0A
 ${cloudSyncInfo}%0D%0A
 
-If you're interested, please let me know a time that works for you, or set up a call here: https://drift.me/${username}`
+If you're interested, please let me know a time that works for you, or set up a call here: https://drift.me/${username}`;
 
-		return `mailto:${admins}?bcc=frikky@shuffler.io,binu@shuffler.io&subject=${subject}&body=${body}`
-	}
-
+    return `mailto:${admins}?bcc=frikky@shuffler.io,binu@shuffler.io&subject=${subject}&body=${body}`;
+  };
 
   const changeDistribution = (data) => {
-	//changeDistributed(data, !isDistributed)
-	console.log("Should change distribution to be shared among suborgs")
-  
-    editAuthenticationConfig(data.id, "suborg_distribute") 
-  }
+    //changeDistributed(data, !isDistributed)
+    console.log("Should change distribution to be shared among suborgs");
+
+    editAuthenticationConfig(data.id, "suborg_distribute");
+  };
 
   const deleteAuthentication = (data) => {
     toast("Deleting auth " + data.label);
@@ -558,7 +730,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             }, 1000);
             //toast("Successfully deleted authentication!")
           }
-        })
+        }),
       )
       .catch((error) => {
         console.log("Error in userdata: ", error);
@@ -617,7 +789,9 @@ If you're interested, please let me know a time that works for you, or set up a 
           } else {
             toast("Successfully stopped schedule!");
           }
+      
           setTimeout(handleGetAllTriggers, 1000);
+
         }),
       )
       .catch((error) => {
@@ -766,6 +940,18 @@ If you're interested, please let me know a time that works for you, or set up a 
 		return null
 	}
 
+  if (
+    userdata.support === true &&
+    selectedOrganization.id !== "" &&
+    selectedOrganization.id !== undefined &&
+    selectedOrganization.id !== null &&
+    selectedOrganization.id !== userdata.active_org.id
+  ) {
+    toast("Refreshing window to fix org support access");
+    window.location.reload();
+    return null;
+  }
+
   const handleVerify2FA = (userId, code) => {
     const data = {
       code: code,
@@ -843,7 +1029,7 @@ If you're interested, please let me know a time that works for you, or set up a 
         } else {
           console.log("Cloud sync fail?");
           toast(
-            "Failed stopping sync. Try again, and contact support if this persists."
+            "Failed stopping sync. Try again, and contact support if this persists.",
           );
         }
 
@@ -910,7 +1096,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           } else {
             toast("Cloud Syncronization successfully set up!");
             setOrgSyncResponse(
-              "Successfully started syncronization. Cloud features you now have access to can be seen below."
+              "Successfully started syncronization. Cloud features you now have access to can be seen below.",
             );
           }
 
@@ -945,22 +1131,21 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((response) =>
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
-			  // Check if .reason exists
-			  if (responseJson.reason !== undefined) {
-				  toast("Failed changing authentication: " + responseJson.reason);
-			  } else {
-            	toast("Failed changing authentication");
-			  }
+            // Check if .reason exists
+            if (responseJson.reason !== undefined) {
+              toast("Failed changing authentication: " + responseJson.reason);
+            } else {
+              toast("Failed changing authentication");
+            }
           } else {
             //toast("Successfully password!")
             setSelectedUserModalOpen(false);
             getAppAuthentication();
 
-
-		    setSelectedAuthentication({});
-		    setSelectedAuthenticationModalOpen(false);
+            setSelectedAuthentication({});
+            setSelectedAuthenticationModalOpen(false);
           }
-        })
+        }),
       )
       .catch((error) => {
         toast("Err: " + error.toString());
@@ -974,9 +1159,8 @@ If you're interested, please let me know a time that works for you, or set up a 
     image,
     defaults,
     sso_config,
-		lead_info,
+    lead_info,
   ) => {
-
     const data = {
       name: name,
       description: description,
@@ -984,7 +1168,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       image: image,
       defaults: defaults,
       sso_config: sso_config,
-	  lead_info: lead_info,
+      lead_info: lead_info,
     };
 
     const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
@@ -1004,11 +1188,15 @@ If you're interested, please let me know a time that works for you, or set up a 
           if (responseJson["success"] === false) {
             toast("Failed updating org: ", responseJson.reason);
           } else {
-						if (lead_info === undefined || lead_info === null || lead_info === []) {
-            	toast("Successfully edited org!");
-						}
+            if (
+              lead_info === undefined ||
+              lead_info === null ||
+              lead_info === []
+            ) {
+              toast("Successfully edited org!");
+            }
           }
-        })
+        }),
       )
       .catch((error) => {
         toast("Err: " + error.toString());
@@ -1018,8 +1206,11 @@ If you're interested, please let me know a time that works for you, or set up a 
   const editAuthenticationConfig = (id, parentAction) => {
     const data = {
       id: id,
-      action: parentAction !== undefined && parentAction !== null ? parentAction : "assign_everywhere",
-    }
+      action:
+        parentAction !== undefined && parentAction !== null
+          ? parentAction
+          : "assign_everywhere",
+    };
 
     const url = globalUrl + "/api/v1/apps/authentication/" + id + "/config";
 
@@ -1045,7 +1236,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               getAppAuthentication();
             }, 1000);
           }
-        })
+        }),
       )
       .catch((error) => {
         toast("Err: " + error.toString());
@@ -1077,9 +1268,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               toast("Failed creating suborg. Please try again");
             }
           } else {
-            toast(
-              "Successfully created suborg. Reloading in 3 seconds!"
-            );
+            toast("Successfully created suborg. Reloading in 3 seconds!");
             setSelectedUserModalOpen(false);
 
             setTimeout(() => {
@@ -1089,7 +1278,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 
           setOrgName("");
           setModalOpen(false);
-        })
+        }),
       )
       .catch((error) => {
         toast("Err: " + error.toString());
@@ -1123,7 +1312,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             toast("Successfully updated password!");
             setSelectedUserModalOpen(false);
           }
-        })
+        }),
       )
       .catch((error) => {
         toast("Err: " + error.toString());
@@ -1152,8 +1341,10 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((responseJson) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
           toast("Failed to deactivate user: " + responseJson.reason);
-		} else if (responseJson.success === false) {
-		  toast("Failed to deactivate user. Please contact support@shuffler.io if this persists.")
+        } else if (responseJson.success === false) {
+          toast(
+            "Failed to deactivate user. Please contact support@shuffler.io if this persists.",
+          );
         } else {
           toast("Changed activation for user " + data.id);
         }
@@ -1164,26 +1355,29 @@ If you're interested, please let me know a time that works for you, or set up a 
       });
   };
 
-  
-
   const handleGetOrg = (orgId) => {
-
-    if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
-			const urlSearchParams = new URLSearchParams(window.location.search);
-			const params = Object.fromEntries(urlSearchParams.entries());
-			const foundorgid = params["org_id"];
-			if (foundorgid !== undefined && foundorgid !== null) {
-				orgId = foundorgid;
-			}
-		}
+    if (
+      serverside !== true &&
+      window.location.search !== undefined &&
+      window.location.search !== null
+    ) {
+      const urlSearchParams = new URLSearchParams(window.location.search);
+      const params = Object.fromEntries(urlSearchParams.entries());
+      const foundorgid = params["org_id"];
+      if (foundorgid !== undefined && foundorgid !== null) {
+        orgId = foundorgid;
+      }
+    }
 
     if (orgId.length === 0) {
-      toast("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
+      toast(
+        "Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.",
+      );
       return;
     }
 
     // Just use this one?
-    
+
     fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
       method: "GET",
       credentials: "include",
@@ -1199,7 +1393,9 @@ If you're interested, please let me know a time that works for you, or set up a 
       })
       .then((responseJson) => {
         if (responseJson["success"] === false) {
-          toast("Failed getting your org. If this persists, please contact support.");
+          toast(
+            "Failed getting your org. If this persists, please contact support.",
+          );
         } else {
           if (
             responseJson.sync_features === undefined ||
@@ -1208,64 +1404,67 @@ If you're interested, please let me know a time that works for you, or set up a 
             responseJson.sync_features = {};
           }
 
-			if (responseJson.lead_info !== undefined && responseJson.lead_info !== null) {
-				var leads = []
-				if (responseJson.lead_info.contacted) {
-					leads.push("contacted")
-				}
+          if (
+            responseJson.lead_info !== undefined &&
+            responseJson.lead_info !== null
+          ) {
+            var leads = [];
+            if (responseJson.lead_info.contacted) {
+              leads.push("contacted");
+            }
 
-				if (responseJson.lead_info.customer) {
-					leads.push("customer")
-				}
+            if (responseJson.lead_info.customer) {
+              leads.push("customer");
+            }
 
-				if (responseJson.lead_info.old_customer) {
-					leads.push("old customer")
-				}
+            if (responseJson.lead_info.old_customer) {
+              leads.push("old customer");
+            }
 
-				if (responseJson.lead_info.old_lead) {
-					leads.push("old lead")
-				}
+            if (responseJson.lead_info.old_lead) {
+              leads.push("old lead");
+            }
 
-				if (responseJson.lead_info.tech_partner) {
-					leads.push("tech partner")
-				}
+            if (responseJson.lead_info.tech_partner) {
+              leads.push("tech partner");
+            }
 
-				if (responseJson.lead_info.creator) {
-					leads.push("creator")
-				}
+            if (responseJson.lead_info.creator) {
+              leads.push("creator");
+            }
 
-				if (responseJson.lead_info.opensource) {
-					leads.push("open source")
-				}
+            if (responseJson.lead_info.opensource) {
+              leads.push("open source");
+            }
 
-				if (responseJson.lead_info.demo_done) {
-					leads.push("demo done")
-				}
+            if (responseJson.lead_info.demo_done) {
+              leads.push("demo done");
+            }
 
-				if (responseJson.lead_info.pov) {
-					leads.push("pov")
-				}
+            if (responseJson.lead_info.pov) {
+              leads.push("pov");
+            }
 
-				if (responseJson.lead_info.lead) {
-					leads.push("lead")
-				}
+            if (responseJson.lead_info.lead) {
+              leads.push("lead");
+            }
 
-				if (responseJson.lead_info.student) {
-					leads.push("student")
-				}
+            if (responseJson.lead_info.student) {
+              leads.push("student");
+            }
 
-				if (responseJson.lead_info.internal) {
-					leads.push("internal")
-				}
+            if (responseJson.lead_info.internal) {
+              leads.push("internal");
+            }
 
-				if (responseJson.lead_info.sub_org) {
-					leads.push("sub_org")
-				}
+            if (responseJson.lead_info.sub_org) {
+              leads.push("sub_org");
+            }
 
-				setSelectedStatus(leads)
-			}
+            setSelectedStatus(leads);
+          }
 
-          setSelectedOrganization(responseJson)
+          setSelectedOrganization(responseJson);
           var lists = {
             active: {
               triggers: [],
@@ -1296,12 +1495,13 @@ If you're interested, please let me know a time that works for you, or set up a 
   };
 
   const handleGetSubOrgs = (orgId) => {
-  
     if (orgId.length === 0) {
-      toast("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.");
+      toast(
+        "Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.",
+      );
       return;
     }
-    
+
     fetch(`${globalUrl}/api/v1/orgs/${orgId}/suborgs`, {
       method: "GET",
       credentials: "include",
@@ -1309,76 +1509,80 @@ If you're interested, please let me know a time that works for you, or set up a 
         "Content-Type": "application/json",
       },
     })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error('Failed to fetch sub organizations');
-      }
-      return response.json();
-    })
-    .then((responseJson) => {
-      if (responseJson.success === false) {
-        //toast("Failed getting your org. If this persists, please contact support.");
-      } else {
-        const { subOrgs, parentOrg } = responseJson;
-        setSubOrgs(subOrgs);
-        setParentOrg(parentOrg);
-      }
-    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch sub organizations");
+        }
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success === false) {
+          //toast("Failed getting your org. If this persists, please contact support.");
+        } else {
+          const { subOrgs, parentOrg } = responseJson;
+          setSubOrgs(subOrgs);
+          setParentOrg(parentOrg);
+        }
+      })
       .catch((error) => {
         console.log("Error getting sub orgs: ", error);
         //toast("Error getting sub organizations");
       });
   };
 
-	const handleClickChangeOrg = (orgId) => {
-	  // Don't really care about the logout
-	  //name: org.name,
-	  //orgId = "asd"
-	  const data = {
-	    org_id: orgId,
-	  }
-	            
-	  localStorage.setItem("globalUrl", "")
-	  localStorage.setItem("getting_started_sidebar", "open");
-	
-	  fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
-	    mode: 'cors',
-	    credentials: 'include',
-	    crossDomain: true,
-	    method: 'POST',
-	    body: JSON.stringify(data),
-	    withCredentials: true,
-	    headers: {
-	      'Content-Type': 'application/json; charset=utf-8',
-	    },
-	  })
-	  .then(function(response) {
-	    if (response.status !== 200) {
-	      console.log("Error in response")
-	    }
-	
-	    return response.json();
-	  }).then(function(responseJson) {	
-	    if (responseJson.success === true) {
-	      if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) { 
-	        localStorage.setItem("globalUrl", responseJson.region_url)
-	        //globalUrl = responseJson.region_url
-	      }
-	
-	      setTimeout(() => {
-	        window.location.reload()
-	      }, 2000)
-	      toast("Successfully changed active organization - refreshing!")
-	    } else {
-	      toast("Failed changing org: "+responseJson.reason)
-	    }
-	  })
-	  .catch(error => {
-	    console.log("error changing: ", error)
-	    //removeCookie("session_token", {path: "/"})
-	  })
-	}
+  const handleClickChangeOrg = (orgId) => {
+    // Don't really care about the logout
+    //name: org.name,
+    //orgId = "asd"
+    const data = {
+      org_id: orgId,
+    };
 
+    localStorage.setItem("globalUrl", "");
+    localStorage.setItem("getting_started_sidebar", "open");
+
+    fetch(`${globalUrl}/api/v1/orgs/${orgId}/change`, {
+      mode: "cors",
+      credentials: "include",
+      crossDomain: true,
+      method: "POST",
+      body: JSON.stringify(data),
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then(function (response) {
+        if (response.status !== 200) {
+          console.log("Error in response");
+        }
+
+        return response.json();
+      })
+      .then(function (responseJson) {
+        if (responseJson.success === true) {
+          if (
+            responseJson.region_url !== undefined &&
+            responseJson.region_url !== null &&
+            responseJson.region_url.length > 0
+          ) {
+            localStorage.setItem("globalUrl", responseJson.region_url);
+            //globalUrl = responseJson.region_url
+          }
+
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+          toast("Successfully changed active organization - refreshing!");
+        } else {
+          toast("Failed changing org: " + responseJson.reason);
+        }
+      })
+      .catch((error) => {
+        console.log("error changing: ", error);
+        //removeCookie("session_token", {path: "/"})
+      });
+  };
 
   const inviteUser = (data) => {
     //console.log("INPUT: ", data);
@@ -1405,21 +1609,27 @@ If you're interested, please let me know a time that works for you, or set up a 
         response.json().then((responseJson) => {
           if (responseJson["success"] === false) {
             setLoginInfo("Error: " + responseJson.reason);
-    				toast("Failed to send email (2). Please try again and contact support if this persists.")
+            toast(
+              "Failed to send email (2). Please try again and contact support if this persists.",
+            );
           } else {
             setLoginInfo("");
             setModalOpen(false);
             setTimeout(() => {
               getUsers();
             }, 1000);
-    				
-						toast("Invite sent! They will show up in the list when they have accepted the invite.")
+
+            toast(
+              "Invite sent! They will show up in the list when they have accepted the invite.",
+            );
           }
-        })
+        }),
       )
       .catch((error) => {
         console.log("Error in userdata: ", error);
-    		toast("Failed to send email. Please try again and contact support if this persists.")
+        toast(
+          "Failed to send email. Please try again and contact support if this persists.",
+        );
       });
   };
 
@@ -1451,7 +1661,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               getUsers();
             }, 1000);
           }
-        })
+        }),
       )
       .catch((error) => {
         console.log("Error in userdata: ", error);
@@ -1505,7 +1715,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               getEnvironments();
             }, 1500);
           }
-        })
+        }),
       )
       .catch((error) => {
         console.log("Error in backend data: ", error);
@@ -1532,7 +1742,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             setModalOpen(false);
             getEnvironments();
           }
-        })
+        }),
       )
       .catch((error) => {
         console.log("Error when deleting: ", error);
@@ -1540,14 +1750,11 @@ If you're interested, please let me know a time that works for you, or set up a 
   };
 
   const rerunCloudWorkflows = (environment) => {
-	toast("Starting execution reruns. This can run in the background.") 
-    fetch(
-      `${globalUrl}/api/v1/environments/${environment.id}/rerun`,
-      {
-        method: "GET",
-        credentials: "include",
-      }
-    )
+    toast("Starting execution reruns. This can run in the background.");
+    fetch(`${globalUrl}/api/v1/environments/${environment.id}/rerun`, {
+      method: "GET",
+      credentials: "include",
+    })
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for apps :O!");
@@ -1571,14 +1778,16 @@ If you're interested, please let me know a time that works for you, or set up a 
 
   const abortEnvironmentWorkflows = (environment) => {
     //console.log("Aborting all workflows started >10 minutes ago, not finished");
-	toast("Clearing the queue - this may take some time. A new will show up when finished.")
+    toast(
+      "Clearing the queue - this may take some time. A new will show up when finished.",
+    );
 
     fetch(
       `${globalUrl}/api/v1/environments/${environment.id}/stop?deleteall=true`,
       {
         method: "GET",
         credentials: "include",
-      }
+      },
     )
       .then((response) => {
         if (response.status !== 200) {
@@ -1586,9 +1795,9 @@ If you're interested, please let me know a time that works for you, or set up a 
           toast("Failed aborting dangling workflows");
           return;
         } else {
-          toast("Successfully cleared the queue")
+          toast("Successfully cleared the queue");
 
-		  getEnvironments()
+          getEnvironments();
         }
 
         return response.json();
@@ -1668,7 +1877,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             setModalOpen(false);
             getEnvironments();
           }
-        })
+        }),
       )
       .catch((error) => {
         console.log("Error when deleting: ", error);
@@ -1703,7 +1912,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             setModalOpen(false);
             getEnvironments();
           }
-        })
+        }),
       )
       .catch((error) => {
         console.log("Error in userdata: ", error);
@@ -1712,6 +1921,46 @@ If you're interested, please let me know a time that works for you, or set up a 
 
   var localData = "";
 
+  const handleDeleteAccount = (userID) => {
+    if (userID === undefined || userID === null || userID === "") {
+      return;
+    }
+
+    const url = `${globalUrl}/api/v1/users/${userID}/remove`;
+    fetch(url, {
+      mode: "cors",
+      method: "DELETE",
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          toast.success(
+            "Deleted their account. Would reload users in a few seconds.",
+          );
+
+          setTimeout(() => {
+            getUsers();
+          });
+        } else {
+          toast.error(`${data.reason}`);
+        }
+      })
+      .catch((error) => {
+        console.error(
+          "There was a problem with deleting the account. Please try again:",
+          error,
+        );
+        toast.error(
+          "There was a problem with the delete request. Please try again",
+        );
+      });
+  };
 
   const getSchedules = () => {
     fetch(globalUrl + "/api/v1/workflows/schedules", {
@@ -1789,18 +2038,30 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((responseJson) => {
         setEnvironments(responseJson);
 
-		// Helper info for users in case they have a large queue and don't know about queue flushing
-		if (responseJson !== undefined && responseJson !== null && responseJson.length > 0) {
-			for (var i = 0; i < responseJson.length; i++) {
-				const env = responseJson[i];
+        // Helper info for users in case they have a large queue and don't know about queue flushing
+        if (
+          responseJson !== undefined &&
+          responseJson !== null &&
+          responseJson.length > 0
+        ) {
+          for (var i = 0; i < responseJson.length; i++) {
+            const env = responseJson[i];
 
-				// Check if queuesize is too large
-				if (env.queue !== undefined && env.queue !== null && env.queue > 100) {
-					toast("Queue size for " + env.name + " is very large. We recommend you to reduce it by flushing the queue before continuing.");
-					break
-				}
-			}
-		}
+            // Check if queuesize is too large
+            if (
+              env.queue !== undefined &&
+              env.queue !== null &&
+              env.queue > 100
+            ) {
+              toast(
+                "Queue size for " +
+                  env.name +
+                  " is very large. We recommend you to reduce it by flushing the queue before continuing.",
+              );
+              break;
+            }
+          }
+        }
       })
       .catch((error) => {
         toast(error.toString());
@@ -1899,7 +2160,7 @@ If you're interested, please let me know a time that works for you, or set up a 
   const admin_views = {
     0: "organization",
     1: "cloud_sync",
-		2: "priorities",
+    2: "priorities",
     3: "billing",
     4: "branding",
   };
@@ -1939,7 +2200,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 
     navigate(`/admin?tab=${views[newValue]}`);
     setModalUser({});
-  }
+  };
 
   if (firstRequest) {
     setFirstRequest(false);
@@ -1962,26 +2223,26 @@ If you're interested, please let me know a time that works for you, or set up a 
 
       const adminTab = params["admin_tab"];
       if (adminTab !== null && adminTab !== undefined) {
-				for (var key in Object.keys(admin_views)) {
+        for (var key in Object.keys(admin_views)) {
           const value = admin_views[key];
           if (value === adminTab) {
-						setAdminTab(parseInt(key));
+            setAdminTab(parseInt(key));
             setConfig("", 0);
             break;
           }
         }
-			} else { 
-				const foundTab = params["tab"];
-				if (foundTab !== null && foundTab !== undefined) {
-					for (var key in Object.keys(views)) {
-						const value = views[key];
-						if (value === foundTab) {
-							setConfig("", key);
-							break;
-						}
-					}
-				}
-			}
+      } else {
+        const foundTab = params["tab"];
+        if (foundTab !== null && foundTab !== undefined) {
+          for (var key in Object.keys(views)) {
+            const value = views[key];
+            if (value === foundTab) {
+              setConfig("", key);
+              break;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -2033,11 +2294,11 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((responseJson) => {
         if (!responseJson.success && responseJson.reason !== undefined) {
           toast("Failed setting user: " + responseJson.reason);
-		} else if (responseJson.success === false) {
-		  toast("Failed to update user")
+        } else if (responseJson.success === false) {
+          toast("Failed to update user");
         } else {
           //toast("Set the user field " + field + " to " + value);
-          toast("Successfully updated user field " + field)
+          toast("Successfully updated user field " + field);
 
           if (field !== "suborgs") {
             setSelectedUserModalOpen(false);
@@ -2053,7 +2314,7 @@ If you're interested, please let me know a time that works for you, or set up a 
     const userId = user.id;
     const data = { user_id: userId };
 
-	toast("Generating new API key") 
+    toast("Generating new API key");
 
     var fetchdata = {
       method: "POST",
@@ -2062,13 +2323,13 @@ If you're interested, please let me know a time that works for you, or set up a 
         Accept: "application/json",
       },
       credentials: "include",
-    }
+    };
 
     if (userId === userdata.id) {
-		fetchdata.method = "GET"
-	} else {
-      	fetchdata.body = JSON.stringify(data)
-	}
+      fetchdata.method = "GET";
+    } else {
+      fetchdata.body = JSON.stringify(data);
+    }
 
     fetch(globalUrl + "/api/v1/generateapikey", fetchdata)
       .then((response) => {
@@ -2110,62 +2371,80 @@ If you're interested, please let me know a time that works for you, or set up a 
     >
       <DialogTitle>
         <span style={{ color: "white" }}>
-          Edit authentication for {selectedAuthentication.app.name.replaceAll("_", " ")} (
+          Edit authentication for{" "}
+          {selectedAuthentication.app.name.replaceAll("_", " ")} (
           {selectedAuthentication.label})
         </span>
-	  	<Typography variant="body1" color="textSecondary" style={{marginTop: 10}}>
-	  		You can <b>not</b> see the previous values for an authentication while editing. This is to keep your data secure. You can overwrite one- or multiple fields at a time.
-	  	</Typography>
+        <Typography
+          variant="body1"
+          color="textSecondary"
+          style={{ marginTop: 10 }}
+        >
+          You can <b>not</b> see the previous values for an authentication while
+          editing. This is to keep your data secure. You can overwrite one- or
+          multiple fields at a time.
+        </Typography>
       </DialogTitle>
       <DialogContent>
-		  <Typography style={{ marginBottom: 0, marginTop: 10 }}>
-	  		Authentication Label
-		  </Typography>
-		  <TextField
-			style={{
-			  backgroundColor: theme.palette.inputColor,
-			  marginTop: 0,
-			}}
-			InputProps={{
-			  style: {
-				height: 50,
-				color: "white",
-			  },
-			}}
-			color="primary"
-			required
-			fullWidth={true}
-			placeholder={selectedAuthentication.label}
-	  		defaultValue={selectedAuthentication.label}
-			type="text"
-			margin="normal"
-			variant="outlined"
-			onChange={(e) => {
-  			  selectedAuthentication.label = e.target.value
-			}}
-		  />
+        <Typography style={{ marginBottom: 0, marginTop: 10 }}>
+          Authentication Label
+        </Typography>
+        <TextField
+          style={{
+            backgroundColor: theme.palette.inputColor,
+            marginTop: 0,
+          }}
+          InputProps={{
+            style: {
+              height: 50,
+              color: "white",
+            },
+          }}
+          color="primary"
+          required
+          fullWidth={true}
+          placeholder={selectedAuthentication.label}
+          defaultValue={selectedAuthentication.label}
+          type="text"
+          margin="normal"
+          variant="outlined"
+          onChange={(e) => {
+            selectedAuthentication.label = e.target.value;
+          }}
+        />
 
-		<Divider />
-	  	{selectedAuthentication.type === "oauth" || selectedAuthentication.type === "oauth2" || selectedAuthentication.type === "oauth2-app" ? 
-			<div>
-				<Typography variant="body1" color="textSecondary" style={{ marginBottom: 0, marginTop: 10 }}>
-					Only the name and url can be modified for Oauth2/OpenID connect. Please remake the authentication if you want to change the other fields like Client ID, Secret, Scopes etc.
-				</Typography> 
-			</div>
-		: null }
+        <Divider />
+        {selectedAuthentication.type === "oauth" ||
+        selectedAuthentication.type === "oauth2" ||
+        selectedAuthentication.type === "oauth2-app" ? (
+          <div>
+            <Typography
+              variant="body1"
+              color="textSecondary"
+              style={{ marginBottom: 0, marginTop: 10 }}
+            >
+              Only the name and url can be modified for Oauth2/OpenID connect.
+              Please remake the authentication if you want to change the other
+              fields like Client ID, Secret, Scopes etc.
+            </Typography>
+          </div>
+        ) : null}
 
-	  	{selectedAuthentication.fields.map((data, index) => {
-		  var fieldname = data.key.replaceAll("_", " ")
-		  if (fieldname.endsWith(" basic")) {
-			  fieldname = fieldname.substring(0, fieldname.length - 6)
-		  }
+        {selectedAuthentication.fields.map((data, index) => {
+          var fieldname = data.key.replaceAll("_", " ");
+          if (fieldname.endsWith(" basic")) {
+            fieldname = fieldname.substring(0, fieldname.length - 6);
+          }
 
-		  if (selectedAuthentication.type === "oauth" || selectedAuthentication.type === "oauth2" || selectedAuthentication.type === "oauth2-app") {
-			  if (selectedAuthentication.fields[index].key !== "url") {
-				  return null
-			  }
-		  }
-
+          if (
+            selectedAuthentication.type === "oauth" ||
+            selectedAuthentication.type === "oauth2" ||
+            selectedAuthentication.type === "oauth2-app"
+          ) {
+            if (selectedAuthentication.fields[index].key !== "url") {
+              return null;
+            }
+          }
 
           //console.log("DATA: ", data, selectedAuthentication)
           return (
@@ -2214,15 +2493,15 @@ If you're interested, please let me know a time that works for you, or set up a 
           style={{ borderRadius: "0px" }}
           onClick={() => {
             var error = false;
-			var fails = 0
+            var fails = 0;
             for (var key in authenticationFields) {
               const item = authenticationFields[key];
               if (item.value.length === 0) {
-				fails += 1
+                fails += 1;
                 console.log("ITEM: ", item);
                 //var currentnode = cy.getElementById(data.id)
                 var textfield = document.getElementById(
-                  `authentication-${key}`
+                  `authentication-${key}`,
                 );
                 if (textfield !== null && textfield !== undefined) {
                   console.log("HANDLE ERROR FOR KEY ", key);
@@ -2231,13 +2510,17 @@ If you're interested, please let me know a time that works for you, or set up a 
               }
             }
 
-	  		if (selectedAuthentication.type === "oauth" || selectedAuthentication.type === "oauth2" || selectedAuthentication.type === "oauth2-app") {
-				selectedAuthentication.fields = []
-			}
+            if (
+              selectedAuthentication.type === "oauth" ||
+              selectedAuthentication.type === "oauth2" ||
+              selectedAuthentication.type === "oauth2-app"
+            ) {
+              selectedAuthentication.fields = [];
+            }
 
             if (error && fails === authenticationFields.length) {
-			  toast("Updating auth with new name only")
-			  saveAuthentication(selectedAuthentication);
+              toast("Updating auth with new name only");
+              saveAuthentication(selectedAuthentication);
             } else {
               toast("Saving new version of this authentication");
               selectedAuthentication.fields = authenticationFields;
@@ -2306,20 +2589,16 @@ If you're interested, please let me know a time that works for you, or set up a 
       </FormControl>
     ) : null;
 
-  
-
-  
-
   const editUserModal = (
     <Dialog
       open={selectedUserModalOpen}
       onClose={() => {
         setSelectedUserModalOpen(false);
 
-		setImage2FA("");
-		setValue2FA("");
-		setSecret2FA("");
-		setShow2faSetup(false);
+        setImage2FA("");
+        setValue2FA("");
+        setSecret2FA("");
+        setShow2faSetup(false);
       }}
       PaperProps={{
         style: {
@@ -2467,6 +2746,80 @@ If you're interested, please let me know a time that works for you, or set up a 
               ? "Disable 2FA"
               : "Enable 2FA"}
           </Button>
+
+          {isCloud && userdata.support && selectedUser.id != userdata.id ? (
+            <Button
+              style={{
+                width: "100%",
+                height: 60,
+                marginTop: 50,
+                border: "1px solid #d52b2b",
+                textTransform: "none",
+                color:
+                  showDeleteAccountTextbox === true &&
+                  deleteAccountText.length > 0 &&
+                  deleteAccountText === selectedUser.username
+                    ? "white"
+                    : "#d52b2b",
+                backgroundColor:
+                  showDeleteAccountTextbox === true &&
+                  deleteAccountText.length > 0 &&
+                  deleteAccountText === selectedUser.username
+                    ? "#d52b2b"
+                    : "transparent",
+              }}
+              disabled={
+                showDeleteAccountTextbox === false
+                  ? false
+                  : showDeleteAccountTextbox === true &&
+                      deleteAccountText.length > 0 &&
+                      deleteAccountText === selectedUser.username
+                    ? false
+                    : true
+              }
+              onClick={() => {
+                if (
+                  deleteAccountText.length > 0 &&
+                  deleteAccountText === selectedUser.username
+                ) {
+                  console.log("Should delete: ", selectedUser.username);
+                  handleDeleteAccount(selectedUser.id);
+
+                  setShowDeleteAccountTextbox(false);
+                  setDeleteAccountText("");
+                  setSelectedUserModalOpen(false);
+                } else {
+                  setShowDeleteAccountTextbox(true);
+                }
+              }}
+            >
+              Delete Account Permanently <br />
+              (support users - confirmation needed)
+            </Button>
+          ) : null}
+
+          {showDeleteAccountTextbox ? (
+            <TextField
+              style={{
+                marginTop: 10,
+              }}
+              InputProps={{
+                style: {
+                  height: 50,
+                  color: "white",
+                },
+              }}
+              color="primary"
+              required
+              fullWidth={true}
+              label="Type the users' username"
+              placeholder="username@example.com"
+              value={deleteAccountText}
+              onChange={(e) => {
+                setDeleteAccountText(e.target.value);
+              }}
+            />
+          ) : null}
         </div>
         {show2faSetup ? (
           <div
@@ -2563,171 +2916,173 @@ If you're interested, please let me know a time that works for you, or set up a 
 
   const GridItem = (props) => {
     const [expanded, setExpanded] = React.useState(false);
-	const [showEdit, setShowEdit] = React.useState(false);
-	const [newValue, setNewValue] = React.useState(-100);
+    const [showEdit, setShowEdit] = React.useState(false);
+    const [newValue, setNewValue] = React.useState(-100);
 
     const primary = props.data.primary;
     const secondary = props.data.secondary;
     const primaryIcon = props.data.icon;
-    const secondaryIcon = props.data.active ? 
+    const secondaryIcon = props.data.active ? (
       <CheckCircleIcon style={{ color: "green" }} />
-   	  : 
+    ) : (
       <CloseIcon style={{ color: "red" }} />
+    );
 
-	const submitFeatureEdit = (sync_features) => {
-		if (!userdata.support) {
-			console.log("User does not have support access and can't edit features");
-			return
-		}
+    const submitFeatureEdit = (sync_features) => {
+      if (!userdata.support) {
+        console.log(
+          "User does not have support access and can't edit features",
+        );
+        return;
+      }
 
-		sync_features.editing = true
-		const data = {
-			org_id: selectedOrganization.id,
-			sync_features: sync_features,
-    	};
+      sync_features.editing = true;
+      const data = {
+        org_id: selectedOrganization.id,
+        sync_features: sync_features,
+      };
 
-    	const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
-    	fetch(url, {
-    	  mode: "cors",
-    	  method: "POST",
-    	  body: JSON.stringify(data),
-    	  credentials: "include",
-    	  crossDomain: true,
-    	  withCredentials: true,
-    	  headers: {
-    	    "Content-Type": "application/json; charset=utf-8",
-    	  },
-    	})
-    	  .then((response) =>
-    	    response.json().then((responseJson) => {
-    	      if (responseJson["success"] === false) {
-    	        toast("Failed updating org: ", responseJson.reason);
-    	      } else {
-				toast("Successfully edited org!");
-    	      }
-    	    })
-    	  )
-    	  .catch((error) => {
-    	    toast("Err: " + error.toString());
-    	  });
-	}
+      const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+      fetch(url, {
+        mode: "cors",
+        method: "POST",
+        body: JSON.stringify(data),
+        credentials: "include",
+        crossDomain: true,
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+        },
+      })
+        .then((response) =>
+          response.json().then((responseJson) => {
+            if (responseJson["success"] === false) {
+              toast("Failed updating org: ", responseJson.reason);
+            } else {
+              toast("Successfully edited org!");
+            }
+          }),
+        )
+        .catch((error) => {
+          toast("Err: " + error.toString());
+        });
+    };
 
-	const enableFeature = () => {
-		console.log("Enabling "+primary)
+    const enableFeature = () => {
+      console.log("Enabling " + primary);
 
-		console.log(selectedOrganization.sync_features)
-		// Check if primary is in sync_features
-		var tmpprimary = primary.replaceAll(" ", "_")
-		if (!(tmpprimary in selectedOrganization.sync_features)) {
-			console.log("Primary not in sync_features: "+tmpprimary)
-			return
-		}
+      console.log(selectedOrganization.sync_features);
+      // Check if primary is in sync_features
+      var tmpprimary = primary.replaceAll(" ", "_");
+      if (!(tmpprimary in selectedOrganization.sync_features)) {
+        console.log("Primary not in sync_features: " + tmpprimary);
+        return;
+      }
 
-		if (props.data.active) {
-    		selectedOrganization.sync_features[tmpprimary].active = false 
-		} else {
-			selectedOrganization.sync_features[tmpprimary].active = true
-		}
+      if (props.data.active) {
+        selectedOrganization.sync_features[tmpprimary].active = false;
+      } else {
+        selectedOrganization.sync_features[tmpprimary].active = true;
+      }
 
-		setSelectedOrganization(selectedOrganization)
-		forceUpdate(Math.random())
-		submitFeatureEdit(selectedOrganization.sync_features)
-	}
-							
-	const submitEdit = (e) => {
-		e.preventDefault();
-		e.stopPropagation();
+      setSelectedOrganization(selectedOrganization);
+      forceUpdate(Math.random());
+      submitFeatureEdit(selectedOrganization.sync_features);
+    };
 
-		// Check if primary is in sync_features
-		var tmpprimary = primary.replaceAll(" ", "_")
-		if (!(tmpprimary in selectedOrganization.sync_features)) {
-			console.log("Primary not in sync_features: "+tmpprimary)
-			return
-		}
+    const submitEdit = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-		// Make it into a number
-		var tmp = parseInt(newValue)
-		if (isNaN(tmp)) {
-			console.log("Not a number: "+newValue)
-			return
-		}
+      // Check if primary is in sync_features
+      var tmpprimary = primary.replaceAll(" ", "_");
+      if (!(tmpprimary in selectedOrganization.sync_features)) {
+        console.log("Primary not in sync_features: " + tmpprimary);
+        return;
+      }
 
-		selectedOrganization.sync_features[tmpprimary].limit = tmp
+      // Make it into a number
+      var tmp = parseInt(newValue);
+      if (isNaN(tmp)) {
+        console.log("Not a number: " + newValue);
+        return;
+      }
 
-		setSelectedOrganization(selectedOrganization)
-		forceUpdate(Math.random())
-		submitFeatureEdit(selectedOrganization.sync_features)
-	}
+      selectedOrganization.sync_features[tmpprimary].limit = tmp;
+
+      setSelectedOrganization(selectedOrganization);
+      forceUpdate(Math.random());
+      submitFeatureEdit(selectedOrganization.sync_features);
+    };
 
     return (
-      <Grid
-        item
-        xs={4}
-      >
+      <Grid item xs={4}>
         <Card
           style={{
             margin: 4,
             backgroundColor: theme.palette.platformColor,
-			borderRadius: theme.palette.borderRadius,
-			border: "1px solid rgba(255,255,255,0.3)",
+            borderRadius: theme.palette.borderRadius,
+            border: "1px solid rgba(255,255,255,0.3)",
             color: "white",
             minHeight: expanded ? 250 : "inherit",
             maxHeight: expanded ? 300 : "inherit",
           }}
         >
           <ListItem
-			style={{cursor: "pointer", }}
-			onClick={() => {
-			  setExpanded(!expanded);
-			}}
-		  >
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              setExpanded(!expanded);
+            }}
+          >
             <ListItemAvatar>
               <Avatar>{primaryIcon}</Avatar>
             </ListItemAvatar>
             <ListItemText
               style={{ textTransform: "capitalize" }}
-              primary={primary}
+              primary={props.data.newname ? props.data.newname : primary}
             />
-		    {isCloud && userdata.support === true ?
-				<Tooltip title="Edit features (support users only)">
-		      		<EditIcon 
-						color="secondary" 
-						style={{marginRight: 10, cursor: "pointer", }} 
-						onClick={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
+            {isCloud && userdata.support === true ? (
+              <Tooltip title="Edit features (support users only)">
+                <EditIcon
+                  color="secondary"
+                  style={{ marginRight: 10, cursor: "pointer" }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
 
-							if (showEdit) {
-								setShowEdit(false)
-								return
-							}
+                    if (showEdit) {
+                      setShowEdit(false);
+                      return;
+                    }
 
-							console.log("Edit")
-	
-							setShowEdit(true)
-						}}
-					/>
-				</Tooltip>
-		    : null}
-			<Tooltip title={props.data.active ? "Disable feature" : "Enable feature"}>
-				<span 
-					style={{cursor: "pointer", marginTop: 5, }}
-					onClick={(e) => {
-						if (!isCloud || userdata.support !== true) {
-							return
-						}
+                    console.log("Edit");
 
-						e.preventDefault();
-						e.stopPropagation();
+                    setShowEdit(true);
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+            <Tooltip
+              title={props.data.active ? "Disable feature" : "Enable feature"}
+            >
+              <span
+                style={{ cursor: "pointer", marginTop: 5 }}
+                onClick={(e) => {
+                  if (!isCloud || userdata.support !== true) {
+                    return;
+                  }
 
-						enableFeature()
-					}}
-				>
-            		{secondaryIcon}
-				</span>
-			</Tooltip>
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  enableFeature();
+                }}
+              >
+                {secondaryIcon}
+              </span>
+            </Tooltip>
           </ListItem>
-          {expanded ? 
+          {expanded ? (
             <div style={{ padding: 15 }}>
               <Typography>
                 <b>Usage:&nbsp;</b>
@@ -2735,50 +3090,59 @@ If you're interested, please let me know a time that works for you, or set up a 
                   "Unlimited"
                 ) : (
                   <span>
-                    {props.data.usage} / {props.data.limit === "" ? "Unlimited" : props.data.limit}
+                    {props.data.usage} /{" "}
+                    {props.data.limit === "" ? "Unlimited" : props.data.limit}
                   </span>
                 )}
               </Typography>
               {/*<Typography>
                 Data sharing: {props.data.data_collection}
               </Typography>*/}
-              <Typography style={{maxHeight: 150, overflowX: "hidden", overflowY: "auto"}}><b>Description:</b> {secondary}</Typography>
+              <Typography
+                style={{
+                  maxHeight: 150,
+                  overflowX: "hidden",
+                  overflowY: "auto",
+                }}
+              >
+                <b>Description:</b> {secondary}
+              </Typography>
             </div>
-           : null}
+          ) : null}
 
-
-			{showEdit ?
-				<FormControl fullWidth onSubmit={(e) => {
-					console.log("Submit")
-					submitEdit(e)
-				}}>
-					<span style={{display: "flex", }}> 
-					
-						<TextField
-							style={{flex: 3, }}
-							color="primary"
-							label={"Edit value"}
-							defaultValue={props.data.limit}
-							style={{
-							}}
-							onChange={(event) => {
-								setNewValue(event.target.value)
-							}}
-						/>
-						<Button
-							style={{flex: 1, }}
-							variant="contained"
-							disabled={newValue < -1} 
-							onClick={(e) => {
-								console.log("Submit 2")
-								submitEdit(e)
-							}}
-						>
-							Submit
-						</Button>
-					</span>
-				</FormControl>
-			: null}
+          {showEdit ? (
+            <FormControl
+              fullWidth
+              onSubmit={(e) => {
+                console.log("Submit");
+                submitEdit(e);
+              }}
+            >
+              <span style={{ display: "flex" }}>
+                <TextField
+                  style={{ flex: 3 }}
+                  color="primary"
+                  label={"Edit value"}
+                  defaultValue={props.data.limit}
+                  style={{}}
+                  onChange={(event) => {
+                    setNewValue(event.target.value);
+                  }}
+                />
+                <Button
+                  style={{ flex: 1 }}
+                  variant="contained"
+                  disabled={newValue < -1}
+                  onClick={(e) => {
+                    console.log("Submit 2");
+                    submitEdit(e);
+                  }}
+                >
+                  Submit
+                </Button>
+              </span>
+            </FormControl>
+          ) : null}
         </Card>
       </Grid>
     );
@@ -2829,7 +3193,7 @@ If you're interested, please let me know a time that works for you, or set up a 
         <a
           href="/docs/organizations#cloud_sync"
           target="_blank"
-					rel="noopener noreferrer"
+          rel="noopener noreferrer"
           style={{ textDecoration: "none", color: "#f85a3e" }}
         >
           cloud sync
@@ -2873,7 +3237,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               enableCloudSync(
                 cloudSyncApikey,
                 selectedOrganization,
-                selectedOrganization.cloud_sync
+                selectedOrganization.cloud_sync,
               );
             }}
             color="primary"
@@ -2909,25 +3273,37 @@ If you're interested, please let me know a time that works for you, or set up a 
   );
 
   var regiontag = "eu";
-  if (userdata.region_url !== undefined && userdata.region_url !== null && userdata.region_url.length > 0) {
+  if (
+    userdata.region_url !== undefined &&
+    userdata.region_url !== null &&
+    userdata.region_url.length > 0
+  ) {
     const regionsplit = userdata.region_url.split(".");
     if (regionsplit.length > 2 && !regionsplit[0].includes("shuffler")) {
-		const namesplit = regionsplit[0].split("/");
-	  
-		regiontag = namesplit[namesplit.length - 1];
+      const namesplit = regionsplit[0].split("/");
+
+      regiontag = namesplit[namesplit.length - 1];
+      if (regiontag === "california") {
+        regiontag = "us";
+      }
     }
   }
-  
+
   const organizationView =
     curTab === 0 && selectedOrganization.id !== undefined ? (
       <div style={{ position: "relative" }}>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Organization overview</h2>
-          <Typography variant="body1" color="textSecondary" style={{ marginLeft: 0}}>
-            On this page organization admins can configure organisations, and sub-orgs (MSSP).{" "}
+          <Typography
+            variant="body1"
+            color="textSecondary"
+            style={{ marginLeft: 0 }}
+          >
+            On this page organization admins can configure organisations, and
+            sub-orgs (MSSP).{" "}
             <a
               target="_blank"
-							rel="noopener noreferrer"
+              rel="noopener noreferrer"
               href="/docs/organizations#organization"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
@@ -2949,7 +3325,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           </div>
         ) : (
           <div>
-						{/*
+            {/*
 						<Tooltip
               title={"Go to Organization document"}
               style={{}}
@@ -2966,68 +3342,107 @@ If you're interested, please let me know a time that works for you, or set up a 
             </Tooltip>
 						*/}
 
-						{userdata.support === true ? 
-							<span style={{display: "flex", top: -10, right: -50, position: "absolute"}}>
-								{/*<a href={mailsendingButton(selectedOrganization)} target="_blank" rel="noopener noreferrer" style={{textDecoration: "none"}} disabled={selectedStatus.length !== 0}>*/}
-								<Button
-									variant="outlined"
-									color="primary"
-									disabled={selectedStatus.length !== 0}
-									style={{ minWidth: 80, maxWidth: 80, height: "100%", }} 
-									onClick={() => {
-											console.log("Should send mail to admins of org with context")
-											handleStatusChange({target: {value: ["contacted"]}})
-											// Open a new tab
-											window.open(mailsendingButton(selectedOrganization), "_blank")
-									}}
-								>
-									Sales mail
-								</Button>
-								<FormControl sx={{ m: 1, width: 300, }} style={{}}>
-									<InputLabel id="">Status</InputLabel>
-									<Select
-										style={{minWidth: 150, maxWidth: 150, }}
-										labelId="multiselect-status"
-										id="multiselect-status"
-										multiple
-										value={selectedStatus}
-										onChange={handleStatusChange}
-										input={<OutlinedInput label="Status" />}
-										renderValue={(selected) => selected.join(', ')}
-										MenuProps={MenuProps}
-									>
-										{["contacted", "lead", "demo done", "pov", "customer", "open source", "student", "internal", "creator", "tech partner", "old customer", "old lead", ].map((name) => (
-											<MenuItem key={name} value={name}>
-												<Checkbox checked={selectedStatus.indexOf(name) > -1} />
-												<ListItemText primary={name} />
-											</MenuItem>
-										))}
-									</Select>
-								</FormControl>
-							</span>
-						: null}
-			{isCloud ? 
-				<Tooltip
-				  title={`Your organization is in ${regiontag}. Click to change!`}
-				  style={{
-				  }}
-				>
-					<Avatar
-						style={{ cursor: "pointer", top: -10, right: 50, position: "absolute", }}
-						onClick={() => {
-							toast("Region change is not directly implemented yet, and requires support help.")
+            {userdata.support === true ? (
+              <span
+                style={{
+                  display: "flex",
+                  top: -10,
+                  right: -50,
+                  position: "absolute",
+                }}
+              >
+                {/*<a href={mailsendingButton(selectedOrganization)} target="_blank" rel="noopener noreferrer" style={{textDecoration: "none"}} disabled={selectedStatus.length !== 0}>*/}
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  disabled={selectedStatus.length !== 0}
+                  style={{ minWidth: 80, maxWidth: 80, height: "100%" }}
+                  onClick={() => {
+                    console.log(
+                      "Should send mail to admins of org with context",
+                    );
+                    handleStatusChange({ target: { value: ["contacted"] } });
+                    // Open a new tab
+                    window.open(
+                      mailsendingButton(selectedOrganization),
+                      "_blank",
+                    );
+                  }}
+                >
+                  Sales mail
+                </Button>
+                <FormControl sx={{ m: 1, width: 300 }} style={{}}>
+                  <InputLabel id="">Status</InputLabel>
+                  <Select
+                    style={{ minWidth: 150, maxWidth: 150 }}
+                    labelId="multiselect-status"
+                    id="multiselect-status"
+                    multiple
+                    value={selectedStatus}
+                    onChange={handleStatusChange}
+                    input={<OutlinedInput label="Status" />}
+                    renderValue={(selected) => selected.join(", ")}
+                    MenuProps={MenuProps}
+                  >
+                    {[
+                      "contacted",
+                      "lead",
+                      "demo done",
+                      "pov",
+                      "customer",
+                      "open source",
+                      "student",
+                      "internal",
+                      "creator",
+                      "tech partner",
+                      "old customer",
+                      "old lead",
+                    ].map((name) => (
+                      <MenuItem key={name} value={name}>
+                        <Checkbox checked={selectedStatus.indexOf(name) > -1} />
+                        <ListItemText primary={name} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </span>
+            ) : null}
+            {isCloud ? (
+              <Tooltip
+                title={`Your organization is in ${regiontag}. Click to change!`}
+                style={{}}
+              >
+                <Avatar
+                  style={{
+                    cursor: "pointer",
+                    top: -10,
+                    right: 50,
+                    position: "absolute",
+                  }}
+                  onClick={() => {
+                    if (userdata.support === false) {
+                      toast(
+                        "Region change is not directly implemented yet, and requires support help.",
+                      );
 
-							if (window.drift !== undefined) {
-							  window.drift.api.startInteraction({
-								interactionId: 386411,
-							  })
-							}
-						}}
-					>
-						{regiontag}
-					</Avatar>
-				</Tooltip>
-			: null}
+                      if (window.drift !== undefined) {
+                        window.drift.api.startInteraction({
+                          interactionId: 386411,
+                        });
+                      }
+                    } else {
+                      // Show region change modal
+                      console.log("Should open region change modal");
+                      setRegionChangeModalOpen(true);
+                    }
+                  }}
+                >
+                  {regiontag}
+                </Avatar>
+              </Tooltip>
+            ) : null}
+
+            <RegionChangeModal />
 
             <Tooltip
               title={"Copy Organization ID"}
@@ -3051,7 +3466,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                     copyText.select();
                     copyText.setSelectionRange(
                       0,
-                      99999
+                      99999,
                     ); /* For mobile devices */
 
                     /* Copy the text inside the text field */
@@ -3064,21 +3479,34 @@ If you're interested, please let me know a time that works for you, or set up a 
                 <FileCopyIcon style={{ color: "rgba(255,255,255,0.8)" }} />
               </IconButton>
             </Tooltip>
-						{selectedOrganization.defaults !== undefined && selectedOrganization.defaults.documentation_reference !== undefined && selectedOrganization.defaults.documentation_reference !== null && selectedOrganization.defaults.documentation_reference.includes("http") ?
-							<Tooltip
-								title={"Open Organization Documentation"}
+            {selectedOrganization.defaults !== undefined &&
+            selectedOrganization.defaults.documentation_reference !==
+              undefined &&
+            selectedOrganization.defaults.documentation_reference !== null &&
+            selectedOrganization.defaults.documentation_reference.includes(
+              "http",
+            ) ? (
+              <Tooltip
+                title={"Open Organization Documentation"}
                 style={{ top: -10, right: 50, position: "absolute" }}
-								aria-label={"Open org docs"}
-							>
-								<a href={selectedOrganization.defaults.documentation_reference} target="_blank" style={{ textDecoration: "none", }} rel="noopener noreferrer">
-									<IconButton
-                		style={{ top: -10, right: 50, position: "absolute" }}
-									>
-										<DescriptionIcon style={{ color: "rgba(255,255,255,0.8)" }} />
-									</IconButton>
-								</a>
-							</Tooltip>
-						: null}
+                aria-label={"Open org docs"}
+              >
+                <a
+                  href={selectedOrganization.defaults.documentation_reference}
+                  target="_blank"
+                  style={{ textDecoration: "none" }}
+                  rel="noopener noreferrer"
+                >
+                  <IconButton
+                    style={{ top: -10, right: 50, position: "absolute" }}
+                  >
+                    <DescriptionIcon
+                      style={{ color: "rgba(255,255,255,0.8)" }}
+                    />
+                  </IconButton>
+                </a>
+              </Tooltip>
+            ) : null}
             {selectedOrganization.name.length > 0 ? (
               <OrgHeader
                 isCloud={isCloud}
@@ -3086,8 +3514,8 @@ If you're interested, please let me know a time that works for you, or set up a 
                 setSelectedOrganization={setSelectedOrganization}
                 globalUrl={globalUrl}
                 selectedOrganization={selectedOrganization}
-				adminTab={adminTab}
-				handleEditOrg={handleEditOrg}
+                adminTab={adminTab}
+                handleEditOrg={handleEditOrg}
               />
             ) : (
               <div
@@ -3103,48 +3531,27 @@ If you're interested, please let me know a time that works for you, or set up a 
               </div>
             )}
 
-						<Tabs
-							id="admin_tabs"
-							value={adminTab}
-							indicatorColor="primary"
-							textColor="secondary"
-							style={{marginTop: 50, }}
-							onChange={(event, inputValue) => {
-    							const newValue = parseInt(inputValue);
-								setAdminTab(newValue);
+            <Tabs
+              id="admin_tabs"
+              value={adminTab}
+              indicatorColor="primary"
+              textColor="secondary"
+              style={{ marginTop: 50 }}
+              onChange={(event, inputValue) => {
+                const newValue = parseInt(inputValue);
+                setAdminTab(newValue);
 
-								//const setConfig = (event, inputValue) => {
-								navigate(`/admin?admin_tab=${admin_views[newValue]}`);
-							}}
-							aria-label="disabled tabs example"
-						>
-							<Tab
-								label=<span>
-									Edit Details
-								</span>
-							/>
-							<Tab
-								label=<span>
-									Cloud Synchronization	
-								</span>
-							/>
-							<Tab
-								label=<span>
-									Priorities	
-								</span>
-							/>
-							<Tab
-								label=<span>
-									Billing & Stats
-								</span>
-							/>
-							<Tab
-								disabled={!isCloud}
-								label=<span>
-									Branding (Beta)
-								</span>
-							/>
-						</Tabs>
+                //const setConfig = (event, inputValue) => {
+                navigate(`/admin?admin_tab=${admin_views[newValue]}`);
+              }}
+              aria-label="disabled tabs example"
+            >
+              <Tab label=<span>Edit Details</span> />
+              <Tab label=<span>Cloud Synchronization</span> />
+              <Tab label=<span>Priorities</span> />
+              <Tab label=<span>Billing & Stats</span> />
+              <Tab disabled={!isCloud} label=<span>Branding (Beta)</span> />
+            </Tabs>
 
             <Divider
               style={{
@@ -3154,274 +3561,304 @@ If you're interested, please let me know a time that works for you, or set up a 
               }}
             />
 
-				{adminTab === 0 ? (
-					<OrgHeaderexpanded
-							isCloud={isCloud}
-							userdata={userdata}
-							setSelectedOrganization={setSelectedOrganization}
-							globalUrl={globalUrl}
-							selectedOrganization={selectedOrganization}
-							adminTab={adminTab}
-					/>
-				)
-				: adminTab === 1 ? (
-					<div>
-            		<Typography
-            		  variant="h6"
-            		  style={{ marginBottom: "10px", color: "white" }}
-            		>
-            		  Cloud syncronization
-            		</Typography>
-            		What does{" "}
-            		<a
-            		  href="/docs/organizations#cloud_sync"
-            		  target="_blank"
-									rel="noopener noreferrer"
-            		  style={{ textDecoration: "none", color: "#f85a3e" }}
-            		>
-            		  cloud sync
-            		</a>{" "}
-            		do? Cloud syncronization is a way of getting more out of Shuffle.
-            		Shuffle will <b>ALWAYS</b> make every option open source, but
-            		features relying on other users can't be done without a
-            		collaborative approach.
-            		{isCloud ? (
-            		  <div style={{ marginTop: 15, display: "flex" }}>
-            		    <div style={{ flex: 1 }}>
-            		      <Typography style={{}}>
-            		        Currently syncronizing:{" "}
-            		        {selectedOrganization.cloud_sync_active === true
-            		          ? "True"
-            		          : "False"}
-            		      </Typography>
-            		      {selectedOrganization.cloud_sync_active ? (
-            		        <Typography style={{}}>
-            		          Syncronization interval:{" "}
-            		          {selectedOrganization.sync_config.interval === 0
-            		            ? "60"
-            		            : selectedOrganization.sync_config.interval}
-            		        </Typography>
-            		      ) : null}
-            		      <Typography
-            		        style={{
-            		          whiteSpace: "nowrap",
-            		          marginTop: 25,
-            		          marginRight: 10,
-            		        }}
-            		      >
-            		        Your Apikey
-            		      </Typography>
-            		      <div style={{ display: "flex" }}>
-            		        <TextField
-            		          color="primary"
-            		          style={{ 
-														backgroundColor: theme.palette.inputColor,
-														maxWidth: 500,
-													}}
-            		          InputProps={{
-            		            style: {
-            		              height: "50px",
-            		              color: "white",
-            		              fontSize: "1em",
-            		            },
-														endAdornment: (
-															<InputAdornment position="end">
-																<IconButton
-																	aria-label="toggle password visibility"
-																	onClick={() => {
-																		setShowApiKey(!showApiKey)
-																	}}
-																>
-																	{showApiKey ? <VisibilityIcon /> : <VisibilityOffIcon />}
-																</IconButton>
-															</InputAdornment>
-														)
-            		          }}
-            		          required
-            		          fullWidth={true}
-            		          disabled={true}
-            		          autoComplete="cloud apikey"
-            		          id="apikey_field"
-            		          margin="normal"
-            		          placeholder="Cloud Apikey"
-            		          variant="outlined"
-            		          defaultValue={userSettings.apikey}
-													type={!isCloud || showApiKey ? "text" : "password"}
-            		        />
-            		        {selectedOrganization.cloud_sync_active ? (
-            		          <Button
-            		            style={{
-            		              width: 150,
-            		              height: 50,
-            		              marginLeft: 10,
-            		              marginTop: 17,
-            		            }}
-            		            variant={
-            		              selectedOrganization.cloud_sync_active === true
-            		                ? "outlined"
-            		                : "contained"
-            		            }
-            		            color="primary"
-            		            onClick={() => {
-            		              handleStopOrgSync(selectedOrganization.id);
-            		            }}
-            		          >
-            		            Stop Sync
-            		          </Button>
-            		        ) : null}
-            		      </div>
-            		    </div>
-            		  </div>
-            		) : (
-            		  <div>
-            		    <div style={{ display: "flex", marginBottom: 20 }}>
-            		      <TextField
-            		        color="primary"
-            		        style={{
-            		          backgroundColor: theme.palette.inputColor,
-            		          marginRight: 10,
-            		        }}
-            		        InputProps={{
-            		          style: {
-            		            height: "50px",
-            		            color: "white",
-            		            fontSize: "1em",
-            		          },
-            		        }}
-            		        required
-            		        fullWidth={true}
-            		        disabled={selectedOrganization.cloud_sync}
-            		        autoComplete="cloud apikey"
-            		        id="apikey_field"
-            		        margin="normal"
-            		        placeholder="Cloud Apikey"
-            		        variant="outlined"
-            		        onChange={(event) => {
-            		          setCloudSyncApikey(event.target.value);
-            		        }}
-            		      />
-            		      <Button
-            		        disabled={
-            		          (!selectedOrganization.cloud_sync &&
-            		            cloudSyncApikey.length === 0) ||
-            		          loading
-            		        }
-            		        style={{ marginTop: 15, height: 50, width: 150 }}
-            		        onClick={() => {
-            		          setLoading(true);
-            		          enableCloudSync(
-            		            cloudSyncApikey,
-            		            selectedOrganization,
-            		            selectedOrganization.cloud_sync
-            		          );
-            		        }}
-            		        color="primary"
-            		        variant={
-            		          selectedOrganization.cloud_sync === true
-            		            ? "outlined"
-            		            : "contained"
-            		        }
-            		      >
-            		        {selectedOrganization.cloud_sync
-            		          ? "Stop sync"
-            		          : "Start sync"}
-            		      </Button>
-            		    </div>
-            		    {orgSyncResponse.length > 0 ? (
-            		      <Typography style={{ marginTop: 5, marginBottom: 10 }}>
-            		        Message from Shuffle Cloud: <b>{orgSyncResponse}</b>
-            		      </Typography>
-            		    ) : null}
-            		  </div>
-            		)}
-            		<Typography variant="h6" style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}>
-            		  Features 
-            		</Typography>
-            		<Typography variant="body2" color="textSecondary" style={{marginBottom: 10, marginLeft: 5, }}>
-						Features and Limitations that are currently available to you in your Cloud or Hybrid Organization. App Executions (App Runs) reset monthly. If the organization is a customer or in a trial, these features limitations are not always enforced. 
-            		</Typography>
-            		<Grid container style={{ width: "100%", marginBottom: 15, paddingBottom: 150,  }}>
+            {adminTab === 0 ? (
+              <OrgHeaderexpanded
+                isCloud={isCloud}
+                userdata={userdata}
+                setSelectedOrganization={setSelectedOrganization}
+                globalUrl={globalUrl}
+                selectedOrganization={selectedOrganization}
+                adminTab={adminTab}
+              />
+            ) : adminTab === 1 ? (
+              <div>
+                <Typography
+                  variant="h6"
+                  style={{ marginBottom: "10px", color: "white" }}
+                >
+                  Cloud syncronization
+                </Typography>
+                What does{" "}
+                <a
+                  href="/docs/organizations#cloud_sync"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ textDecoration: "none", color: "#f85a3e" }}
+                >
+                  cloud sync
+                </a>{" "}
+                do? Cloud syncronization is a way of getting more out of
+                Shuffle. Shuffle will <b>ALWAYS</b> make every option open
+                source, but features relying on other users can't be done
+                without a collaborative approach.
+                {isCloud ? (
+                  <div style={{ marginTop: 15, display: "flex" }}>
+                    <div style={{ flex: 1 }}>
+                      <Typography style={{}}>
+                        Currently syncronizing:{" "}
+                        {selectedOrganization.cloud_sync_active === true
+                          ? "True"
+                          : "False"}
+                      </Typography>
+                      {selectedOrganization.cloud_sync_active ? (
+                        <Typography style={{}}>
+                          Syncronization interval:{" "}
+                          {selectedOrganization.sync_config.interval === 0
+                            ? "60"
+                            : selectedOrganization.sync_config.interval}
+                        </Typography>
+                      ) : null}
+                      <Typography
+                        style={{
+                          whiteSpace: "nowrap",
+                          marginTop: 25,
+                          marginRight: 10,
+                        }}
+                      >
+                        Your Apikey
+                      </Typography>
+                      <div style={{ display: "flex" }}>
+                        <TextField
+                          color="primary"
+                          style={{
+                            backgroundColor: theme.palette.inputColor,
+                            maxWidth: 500,
+                          }}
+                          InputProps={{
+                            style: {
+                              height: "50px",
+                              color: "white",
+                              fontSize: "1em",
+                            },
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <IconButton
+                                  aria-label="toggle password visibility"
+                                  onClick={() => {
+                                    setShowApiKey(!showApiKey);
+                                  }}
+                                >
+                                  {showApiKey ? (
+                                    <VisibilityIcon />
+                                  ) : (
+                                    <VisibilityOffIcon />
+                                  )}
+                                </IconButton>
+                              </InputAdornment>
+                            ),
+                          }}
+                          required
+                          fullWidth={true}
+                          disabled={true}
+                          autoComplete="cloud apikey"
+                          id="apikey_field"
+                          margin="normal"
+                          placeholder="Cloud Apikey"
+                          variant="outlined"
+                          defaultValue={userSettings.apikey}
+                          type={!isCloud || showApiKey ? "text" : "password"}
+                        />
+                        {selectedOrganization.cloud_sync_active ? (
+                          <Button
+                            style={{
+                              width: 150,
+                              height: 50,
+                              marginLeft: 10,
+                              marginTop: 17,
+                            }}
+                            variant={
+                              selectedOrganization.cloud_sync_active === true
+                                ? "outlined"
+                                : "contained"
+                            }
+                            color="primary"
+                            onClick={() => {
+                              handleStopOrgSync(selectedOrganization.id);
+                            }}
+                          >
+                            Stop Sync
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: "flex", marginBottom: 20 }}>
+                      <TextField
+                        color="primary"
+                        style={{
+                          backgroundColor: theme.palette.inputColor,
+                          marginRight: 10,
+                        }}
+                        InputProps={{
+                          style: {
+                            height: "50px",
+                            color: "white",
+                            fontSize: "1em",
+                          },
+                        }}
+                        required
+                        fullWidth={true}
+                        disabled={selectedOrganization.cloud_sync}
+                        autoComplete="cloud apikey"
+                        id="apikey_field"
+                        margin="normal"
+                        placeholder="Cloud Apikey"
+                        variant="outlined"
+                        onChange={(event) => {
+                          setCloudSyncApikey(event.target.value);
+                        }}
+                      />
+                      <Button
+                        disabled={
+                          (!selectedOrganization.cloud_sync &&
+                            cloudSyncApikey.length === 0) ||
+                          loading
+                        }
+                        style={{ marginTop: 15, height: 50, width: 150 }}
+                        onClick={() => {
+                          setLoading(true);
+                          enableCloudSync(
+                            cloudSyncApikey,
+                            selectedOrganization,
+                            selectedOrganization.cloud_sync,
+                          );
+                        }}
+                        color="primary"
+                        variant={
+                          selectedOrganization.cloud_sync === true
+                            ? "outlined"
+                            : "contained"
+                        }
+                      >
+                        {selectedOrganization.cloud_sync
+                          ? "Stop sync"
+                          : "Start sync"}
+                      </Button>
+                    </div>
+                    {orgSyncResponse.length > 0 ? (
+                      <Typography style={{ marginTop: 5, marginBottom: 10 }}>
+                        Message from Shuffle Cloud: <b>{orgSyncResponse}</b>
+                      </Typography>
+                    ) : null}
+                  </div>
+                )}
+                <Typography
+                  variant="h6"
+                  style={{ marginLeft: 5, marginTop: 40, marginBottom: 5 }}
+                >
+                  Features
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="textSecondary"
+                  style={{ marginBottom: 10, marginLeft: 5 }}
+                >
+                  Features and Limitations that are currently available to you
+                  in your Cloud or Hybrid Organization. App Executions (App
+                  Runs) reset monthly. If the organization is a customer or in a
+                  trial, these features limitations are not always enforced.
+                </Typography>
+                <Grid
+                  container
+                  style={{
+                    width: "100%",
+                    marginBottom: 15,
+                    paddingBottom: 150,
+                  }}
+                >
+                  {selectedOrganization.sync_features === undefined ||
+                  selectedOrganization.sync_features === null
+                    ? null
+                    : Object.keys(selectedOrganization.sync_features).map(
+                        function (key, index) {
+                          if (
+                            key === "schedule" ||
+                            key === "apps" ||
+                            key === "updates" ||
+                            key === "editing"
+                          ) {
+                            return null;
+                          }
 
-            		  {selectedOrganization.sync_features === undefined ||
-            		  selectedOrganization.sync_features === null
-            		    ? null
-            		    : Object.keys(selectedOrganization.sync_features).map(function (
-            		        key,
-            		        index
-            		      ) {
+                          const item = selectedOrganization.sync_features[key];
+                          if (item === null || item === undefined) {
+                            return null;
+                          }
 
-            		        if (key === "schedule" || key === "apps" || key === "updates" || key === "editing") {
-            		          return null;
-            		        }
+                          const newkey = key.replaceAll("_", " ");
+                          // Name rewrites as these are structs
+                          var newname = "";
+                          if (newkey.toLowerCase() === "shuffle gpt") {
+                            newname = "Shuffle AI";
+                          }
 
-            		        const item = selectedOrganization.sync_features[key];
-							if (item === null) {
-								return null
-							}
+                          const griditem = {
+                            primary: newkey,
+                            secondary:
+                              item.description === undefined ||
+                              item.description === null ||
+                              item.description.length === 0
+                                ? "Not defined yet"
+                                : item.description,
+                            limit: item.limit,
+                            usage:
+                              item.usage === undefined || item.usage === null
+                                ? 0
+                                : item.usage,
+                            data_collection: "None",
+                            active: item.active,
+                            icon: <PolylineIcon style={{ color: itemColor }} />,
 
-            		        const newkey = key.replaceAll("_", " ");
-            		        const griditem = {
-            		          primary: newkey,
-            		          secondary:
-            		            item.description === undefined ||
-            		            item.description === null ||
-            		            item.description.length === 0
-            		              ? "Not defined yet"
-            		              : item.description,
-            		          limit: item.limit,
-            		          usage: item.usage === undefined ||
-            		            item.usage === null ? 0 : item.usage,
-            		          data_collection: "None",
-            		          active: item.active,
-            		          icon: <PolylineIcon style={{ color: itemColor }} />,
-            		        };
+                            newname: newname,
+                          };
 
-            		        return (
-            		          <Zoom key={index}>
-            		            <GridItem data={griditem} />
-            		          </Zoom>
-            		        );
-            		      })}
-            		</Grid>
-							</div>
-							)
-						: adminTab === 2 ? 
-							<Priorities
-								isCloud={isCloud}
-								userdata={userdata}
-								adminTab={adminTab}
-								globalUrl={globalUrl}
-								checkLogin={checkLogin}
-								setAdminTab={setAdminTab}
-								setCurTab={setCurTab}
-								notifications={notifications}
-								setNotifications={setNotifications}
-							/>
-						: adminTab === 3 ? 
-							<Billing 
-								isCloud={isCloud}
-								userdata={userdata}
-								setSelectedOrganization={setSelectedOrganization}
-								globalUrl={globalUrl}
-								selectedOrganization={selectedOrganization}
-								adminTab={adminTab}
-								billingInfo={billingInfo}
-								selectedOrganization={selectedOrganization}
-								stripeKey={props.stripeKey}
-								handleGetOrg={handleGetOrg}
-							/>
-						: adminTab === 4 ? 
-							<Branding
-								isCloud={isCloud}
-								userdata={userdata}
-								adminTab={adminTab}
-								globalUrl={globalUrl}
-								handleGetOrg={handleGetOrg}
-								selectedOrganization={selectedOrganization}
-								setSelectedOrganization={setSelectedOrganization}
-							/>
-							: null
-						}
+                          return (
+                            <Zoom key={index}>
+                              <GridItem data={griditem} />
+                            </Zoom>
+                          );
+                        },
+                      )}
+                </Grid>
+              </div>
+            ) : adminTab === 2 ? (
+              <Priorities
+                isCloud={isCloud}
+                userdata={userdata}
+                adminTab={adminTab}
+                globalUrl={globalUrl}
+                checkLogin={checkLogin}
+                setAdminTab={setAdminTab}
+                setCurTab={setCurTab}
+                notifications={notifications}
+                setNotifications={setNotifications}
+              />
+            ) : adminTab === 3 ? (
+              <Billing
+                isCloud={isCloud}
+                userdata={userdata}
+                setSelectedOrganization={setSelectedOrganization}
+                globalUrl={globalUrl}
+                selectedOrganization={selectedOrganization}
+                adminTab={adminTab}
+                billingInfo={billingInfo}
+                selectedOrganization={selectedOrganization}
+                stripeKey={props.stripeKey}
+                handleGetOrg={handleGetOrg}
+              />
+            ) : adminTab === 4 ? (
+              <Branding
+                isCloud={isCloud}
+                userdata={userdata}
+                adminTab={adminTab}
+                globalUrl={globalUrl}
+                handleGetOrg={handleGetOrg}
+                selectedOrganization={selectedOrganization}
+                setSelectedOrganization={setSelectedOrganization}
+              />
+            ) : null}
             <Divider
               style={{
                 marginTop: 20,
@@ -3429,8 +3866,6 @@ If you're interested, please let me know a time that works for you, or set up a 
                 backgroundColor: theme.palette.inputColor,
               }}
             />
-            
-            
           </div>
         )}
       </div>
@@ -3453,7 +3888,11 @@ If you're interested, please let me know a time that works for you, or set up a 
     >
       <DialogTitle>
         <span style={{ color: "white" }}>
-          {curTab === 1 ? "Add user" : curTab === 7 ? "Add Sub-Organization" : "Add environment"}
+          {curTab === 1
+            ? "Add user"
+            : curTab === 7
+              ? "Add Sub-Organization"
+              : "Add environment"}
         </span>
       </DialogTitle>
       <DialogContent>
@@ -3614,7 +4053,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             Add, edit, block or change passwords.{" "}
             <a
               target="_blank"
-			  rel="noopener noreferrer"
+              rel="noopener noreferrer"
               href="/docs/organizations#user_management"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
@@ -3647,112 +4086,128 @@ If you're interested, please let me know a time that works for you, or set up a 
           }}
         />
 
-        
-        {logsViewModal ? 
-            <Dialog
-              open={logsViewModal}
-              onClose={() => {
-                setLogsViewModal(false);
-              }}
-              PaperProps={{
-                style: {
-                  backgroundColor: theme.palette.surfaceColor,
-                  color: "white",
-                  minWidth: "1200px",
-                  minHeight: "320px",
-                },
-              }}
-            >
-              <DialogTitle>
-                <span style={{ color: "white" }}>User Logs</span>
-              </DialogTitle>
-              <DialogContent>
-                {/* ask user for which IP they want to see logs for by iterating of user.login_info */}
-                <FormControl fullWidth>
-                  <InputLabel style={{ size: 10 }} id="user-ip-simple-select-label">
-                    User IP
-                  </InputLabel>
+        {logsViewModal ? (
+          <Dialog
+            open={logsViewModal}
+            onClose={() => {
+              setLogsViewModal(false);
+            }}
+            PaperProps={{
+              style: {
+                backgroundColor: theme.palette.surfaceColor,
+                color: "white",
+                minWidth: "1200px",
+                minHeight: "320px",
+              },
+            }}
+          >
+            <DialogTitle>
+              <span style={{ color: "white" }}>User Logs</span>
+            </DialogTitle>
+            <DialogContent>
+              {/* ask user for which IP they want to see logs for by iterating of user.login_info */}
+              <FormControl fullWidth>
+                <InputLabel
+                  style={{ size: 10 }}
+                  id="user-ip-simple-select-label"
+                >
+                  User IP
+                </InputLabel>
 
-                  <Select
-                    labelId="user-ip-simple-select-label"
-                    id="user-ip-simple-select"
-                    onChange={async (event) => {
-                      setIpSelected(event.target.value);
-                      await getLogs(event.target.value, userLogViewing.id);
+                <Select
+                  labelId="user-ip-simple-select-label"
+                  id="user-ip-simple-select"
+                  onChange={async (event) => {
+                    setIpSelected(event.target.value);
+                    await getLogs(event.target.value, userLogViewing.id);
+                  }}
+                >
+                  {(() => {
+                    const uniqueIPs = new Set();
+
+                    return userLogViewing.login_info.map((data, index) => {
+                      if (
+                        data.ip.includes("127.0.0.1") ||
+                        uniqueIPs.has(data.ip)
+                      ) {
+                        return null;
+                      }
+
+                      uniqueIPs.add(data.ip);
+
+                      return (
+                        <MenuItem key={index} value={data.ip}>
+                          {data.ip}
+                        </MenuItem>
+                      );
+                    });
+                  })()}
+                </Select>
+              </FormControl>
+              {logsLoading && ipSelected.length !== 0 ? (
+                <div
+                  style={{
+                    marginTop: 20,
+                    marginBottom: 20,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <CircularProgress style={{ marginRight: 10 }} />
+                  <Typography>Loading logs</Typography>
+                </div>
+              ) : null}
+
+              <List>
+                {logs.map((data, index) => (
+                  // redirect user to logs
+                  // using request id or trace id
+                  <ListItem
+                    key={index}
+                    style={{
+                      backgroundColor: index % 2 === 0 ? "#1f2023" : "#27292d",
                     }}
                   >
-                    {(() => {
-                      const uniqueIPs = new Set();
-
-                      return userLogViewing.login_info.map((data, index) => {
-                        if (data.ip.includes("127.0.0.1") || uniqueIPs.has(data.ip)) {
-                          return null;
-                        }
-
-                        uniqueIPs.add(data.ip);
-
-                        return (
-                          <MenuItem key={index} value={data.ip}>
-                            {data.ip}
-                          </MenuItem>
-                        );
-                      });
-                    })()}                  
-                  </Select>
-                </FormControl>
-                {logsLoading && ipSelected.length !== 0 ?
-                  <div style={{ marginTop: 20, marginBottom: 20, display: 'flex', alignItems: 'center' }}>
-                    <CircularProgress style={{ marginRight: 10 }} />
-                    <Typography>Loading logs</Typography>
-                  </div>
-                : null}
-
-                <List>
-                  {logs.map((data, index) => (
-                    // redirect user to logs 
-                    // using request id or trace id
-                    <ListItem key={index} style={{ backgroundColor: index % 2 === 0 ? "#1f2023" : "#27292d" }}>
-                      <ListItemText
-                          primary={new Date(data.start_time.seconds * 1000).toLocaleString('en-US', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                            hour12: false,
-                        })}
-                        style={{
-                          minWidth: 200,
-                          maxWidth: 200,
-                        }}
-                      />
-                      <ListItemText
-                        primary={data.referrer}
-                        style={{
-                          minWidth: 300,
-                          maxWidth: 300,
-                          overflow: "hidden",
-                        }}
-                      />
-                      <ListItemText
-                        primary={data.resource}
-                        style={{
-                          minWidth: 700,
-                          maxWidth: 700,
-                          overflow: "hidden",
-                          marginLeft: 10,
-                        }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-                
-              </DialogContent>
-
-            </Dialog>
-          : null}
-          
+                    <ListItemText
+                      primary={new Date(
+                        data.start_time.seconds * 1000,
+                      ).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: false,
+                      })}
+                      style={{
+                        minWidth: 200,
+                        maxWidth: 200,
+                      }}
+                    />
+                    <ListItemText
+                      primary={data.referrer}
+                      style={{
+                        minWidth: 300,
+                        maxWidth: 300,
+                        overflow: "hidden",
+                      }}
+                    />
+                    <ListItemText
+                      primary={data.resource}
+                      style={{
+                        minWidth: 700,
+                        maxWidth: 700,
+                        overflow: "hidden",
+                        marginLeft: 10,
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </DialogContent>
+          </Dialog>
+        ) : null}
 
         <List>
           <ListItem>
@@ -3797,13 +4252,12 @@ If you're interested, please let me know a time that works for you, or set up a 
             ) : null}
             <ListItemText
               primary="Actions"
-              style={{ minWidth: 100, maxWidth: 100, }}
+              style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
               primary="Last Login"
-              style={{ minWidth: 150, maxWidth: 150, }}
+              style={{ minWidth: 150, maxWidth: 150 }}
             />
-
           </ListItem>
           {users === undefined || users === null
             ? null
@@ -3813,231 +4267,248 @@ If you're interested, please let me know a time that works for you, or set up a 
                   bgColor = "#1f2023";
                 }
 
-				const timeNow = new Date().getTime();
-				
-				// Get the highest timestamp in data.login_info
-				var lastLogin = "N/A" 
-				if (data.login_info !== undefined && data.login_info !== null) {
-					var loginInfo = 0
-					for (var i = 0; i < data.login_info.length; i++) {
-						if (data.login_info[i].timestamp > loginInfo) {
-							loginInfo = data.login_info[i].timestamp
-						}
-					}
+                const timeNow = new Date().getTime();
 
-					if (loginInfo > 0) {
-						lastLogin = new Date(loginInfo * 1000).toISOString().slice(0, 10) + " (" + data.login_info.length + ")"
-					}
-				}
-
-        var userData = data.username
-        if (userdata.support === true) {
-          userData = <a style={{ cursor: "pointer", textDecoration: 'underline', textDecorationColor: '#F76742', color: '#F76742' }} onClick={() => {
-            setLogsViewModal(true)
-            setUserLogViewing(data)
-          }}
-          >{data.username}</a>
-        }
-
-        return (
-              <ListItem key={index} style={{ backgroundColor: bgColor }}>
-                <ListItemText
-                  primary={userData}
-                  style={{
-                    minWidth: 350,
-                    maxWidth: 350,
-                    overflow: "hidden",
-                  }}
-                />
-
-                <ListItemText
-                  style={{ marginLeft: 10, maxWidth: 100, minWidth: 100 }}
-                  primary={
-                    data.apikey === undefined ||
-                    data.apikey.length === 0 ? (
-                      ""
-                    ) : (
-                      <Tooltip
-                        title={"Copy Api Key"}
-                        style={{}}
-                        aria-label={"Copy APIkey"}
-                      >
-                        <IconButton
-                          style={{}}
-                          onClick={() => {
-                            const elementName = "copy_element_shuffle";
-                            var copyText =
-                              document.getElementById(elementName);
-                            if (
-                              copyText !== null &&
-                              copyText !== undefined
-                            ) {
-                              const clipboard = navigator.clipboard;
-                              if (clipboard === undefined) {
-                                toast(
-                                  "Can only copy over HTTPS (port 3443)"
-                                );
-                                return;
-                              }
-
-                              navigator.clipboard.writeText(data.apikey);
-                              copyText.select();
-                              copyText.setSelectionRange(
-                                0,
-                                99999
-                              ); /* For mobile devices */
-
-                              /* Copy the text inside the text field */
-                              document.execCommand("copy");
-
-                              toast("Apikey copied to clipboard");
-                            }
-                          }}
-                        >
-                          <FileCopyIcon
-                            style={{ color: "rgba(255,255,255,0.8)" }}
-                          />
-                        </IconButton>
-                      </Tooltip>
-                    )
+                // Get the highest timestamp in data.login_info
+                var lastLogin = "N/A";
+                if (data.login_info !== undefined && data.login_info !== null) {
+                  var loginInfo = 0;
+                  for (var i = 0; i < data.login_info.length; i++) {
+                    if (data.login_info[i].timestamp > loginInfo) {
+                      loginInfo = data.login_info[i].timestamp;
+                    }
                   }
-                />
 
-                <ListItemText
-                  primary={
-                    <Select
-                      SelectDisplayProps={{
-                        style: {
-                          marginLeft: 10,
-                        },
-                      }}
-                      value={data.role}
-                      fullWidth
-                      onChange={(e) => {
-                        console.log("VALUE: ", e.target.value);
-                        setUser(data.id, "role", e.target.value);
-                      }}
+                  if (loginInfo > 0) {
+                    lastLogin =
+                      new Date(loginInfo * 1000).toISOString().slice(0, 10) +
+                      " (" +
+                      data.login_info.length +
+                      ")";
+                  }
+                }
+
+                var userData = data.username;
+                if (userdata.support === true) {
+                  userData = (
+                    <a
                       style={{
-                        backgroundColor: theme.palette.surfaceColor,
-                        color: "white",
-                        height: "50px",
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                        textDecorationColor: "#F76742",
+                        color: "#F76742",
+                      }}
+                      onClick={() => {
+                        setLogsViewModal(true);
+                        setUserLogViewing(data);
                       }}
                     >
-                      <MenuItem
-                        style={{
-                          backgroundColor: theme.palette.inputColor,
-                          color: "white",
-                        }}
-                        value={"admin"}
-                      >
-                        Org Admin
-                      </MenuItem>
-                      <MenuItem
-                        style={{
-                          backgroundColor: theme.palette.inputColor,
-                          color: "white",
-                        }}
-                        value={"user"}
-                      >
-                        Org User
-                      </MenuItem>
-                      <MenuItem
-                        style={{
-                          backgroundColor: theme.palette.inputColor,
-                          color: "white",
-                        }}
-                        value={"org-reader"}
-                      >
-                        Org Reader
-                      </MenuItem>
-                    </Select>
-                  }
-                  style={{ minWidth: 135, maxWidth: 135, marginRight: 15 }}
-                />
-                <ListItemText
-                  primary={data.active ? "True" : "False"}
-                  style={{ minWidth: 100, maxWidth: 100 }}
-                />
-                <ListItemText
-                  primary={
-                    data.login_type === undefined ||
-                    data.login_type === null ||
-                    data.login_type.length === 0
-                      ? "Normal"
-                      : data.login_type
-                  }
-                  style={{ minWidth: 100, maxWidth: 100 }}
-                />
-                <ListItemText
-                  primary={
-                    data.mfa_info !== undefined &&
-                    data.mfa_info !== null &&
-                    data.mfa_info.active === true
-                      ? "Active"
-                      : "Inactive"
-                  }
-                  style={{ minWidth: 100, maxWidth: 100 }}
-                />
-                {selectedOrganization.child_orgs !== undefined &&
-                selectedOrganization.child_orgs !== null &&
-                selectedOrganization.child_orgs.length > 0 ? (
-                  <ListItemText
-                    style={{ display: "flex" }}
-                    primary={
-                      data.orgs === undefined || data.orgs === null
-                        ? 0
-                        : data.orgs.length - 1
-                    }
-                  />
-                ) : null}
-                <ListItemText style={{ display: "flex", minWidth: 100, maxWidth: 100,  }}>
-                  <IconButton
-                    onClick={() => {
-                      setSelectedUserModalOpen(true);
-                      setSelectedUser(data);
+                      {data.username}
+                    </a>
+                  );
+                }
 
-                      // Find matching orgs between current org and current user's access to those orgs
-                      if (
-                        userdata.orgs !== undefined &&
-                        userdata.orgs !== null &&
-                        userdata.orgs.length > 0 &&
-                        selectedOrganization.child_orgs !== undefined &&
-                        selectedOrganization.child_orgs !== null &&
-                        selectedOrganization.child_orgs.length > 0
-                      ) {
-                        var active = [];
-                        for (var key in userdata.orgs) {
-                          const found =
-                            selectedOrganization.child_orgs.find(
-                              (item) => item.id === userdata.orgs[key].id
-                            );
-                          if (found !== null && found !== undefined) {
-                            if (
-                              data.orgs === undefined ||
-                              data.orgs === null
-                            ) {
-                              continue;
-                            }
+                return (
+                  <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                    <ListItemText
+                      primary={userData}
+                      style={{
+                        minWidth: 350,
+                        maxWidth: 350,
+                        overflow: "hidden",
+                      }}
+                    />
 
-                            const subfound = data.orgs.find(
-                              (item) => item === found.id
-                            );
-                            if (
-                              subfound !== null &&
-                              subfound !== undefined
-                            ) {
-                              active.push(subfound);
-                            }
-                          }
-                        }
+                    <ListItemText
+                      style={{ marginLeft: 10, maxWidth: 100, minWidth: 100 }}
+                      primary={
+                        data.apikey === undefined ||
+                        data.apikey.length === 0 ? (
+                          ""
+                        ) : (
+                          <Tooltip
+                            title={"Copy Api Key"}
+                            style={{}}
+                            aria-label={"Copy APIkey"}
+                          >
+                            <IconButton
+                              style={{}}
+                              onClick={() => {
+                                const elementName = "copy_element_shuffle";
+                                var copyText =
+                                  document.getElementById(elementName);
+                                if (
+                                  copyText !== null &&
+                                  copyText !== undefined
+                                ) {
+                                  const clipboard = navigator.clipboard;
+                                  if (clipboard === undefined) {
+                                    toast(
+                                      "Can only copy over HTTPS (port 3443)",
+                                    );
+                                    return;
+                                  }
 
-                        setMatchingOrganizations(active);
+                                  navigator.clipboard.writeText(data.apikey);
+                                  copyText.select();
+                                  copyText.setSelectionRange(
+                                    0,
+                                    99999,
+                                  ); /* For mobile devices */
+
+                                  /* Copy the text inside the text field */
+                                  document.execCommand("copy");
+
+                                  toast("Apikey copied to clipboard");
+                                }
+                              }}
+                            >
+                              <FileCopyIcon
+                                style={{ color: "rgba(255,255,255,0.8)" }}
+                              />
+                            </IconButton>
+                          </Tooltip>
+                        )
                       }
-                    }}
-                  >
-                    <EditIcon color="primary" />
-                  </IconButton>
-                  {/*<Button
+                    />
+
+                    <ListItemText
+                      primary={
+                        <Select
+                          SelectDisplayProps={{
+                            style: {
+                              marginLeft: 10,
+                            },
+                          }}
+                          value={data.role}
+                          fullWidth
+                          onChange={(e) => {
+                            console.log("VALUE: ", e.target.value);
+                            setUser(data.id, "role", e.target.value);
+                          }}
+                          style={{
+                            backgroundColor: theme.palette.surfaceColor,
+                            color: "white",
+                            height: "50px",
+                          }}
+                        >
+                          <MenuItem
+                            style={{
+                              backgroundColor: theme.palette.inputColor,
+                              color: "white",
+                            }}
+                            value={"admin"}
+                          >
+                            Org Admin
+                          </MenuItem>
+                          <MenuItem
+                            style={{
+                              backgroundColor: theme.palette.inputColor,
+                              color: "white",
+                            }}
+                            value={"user"}
+                          >
+                            Org User
+                          </MenuItem>
+                          <MenuItem
+                            style={{
+                              backgroundColor: theme.palette.inputColor,
+                              color: "white",
+                            }}
+                            value={"org-reader"}
+                          >
+                            Org Reader
+                          </MenuItem>
+                        </Select>
+                      }
+                      style={{ minWidth: 135, maxWidth: 135, marginRight: 15 }}
+                    />
+                    <ListItemText
+                      primary={data.active ? "True" : "False"}
+                      style={{ minWidth: 100, maxWidth: 100 }}
+                    />
+                    <ListItemText
+                      primary={
+                        data.login_type === undefined ||
+                        data.login_type === null ||
+                        data.login_type.length === 0
+                          ? "Normal"
+                          : data.login_type
+                      }
+                      style={{ minWidth: 100, maxWidth: 100 }}
+                    />
+                    <ListItemText
+                      primary={
+                        data.mfa_info !== undefined &&
+                        data.mfa_info !== null &&
+                        data.mfa_info.active === true
+                          ? "Active"
+                          : "Inactive"
+                      }
+                      style={{ minWidth: 100, maxWidth: 100 }}
+                    />
+                    {selectedOrganization.child_orgs !== undefined &&
+                    selectedOrganization.child_orgs !== null &&
+                    selectedOrganization.child_orgs.length > 0 ? (
+                      <ListItemText
+                        style={{ display: "flex" }}
+                        primary={
+                          data.orgs === undefined || data.orgs === null
+                            ? 0
+                            : data.orgs.length - 1
+                        }
+                      />
+                    ) : null}
+                    <ListItemText
+                      style={{ display: "flex", minWidth: 100, maxWidth: 100 }}
+                    >
+                      <IconButton
+                        onClick={() => {
+                          setSelectedUserModalOpen(true);
+                          setSelectedUser(data);
+
+                          // Find matching orgs between current org and current user's access to those orgs
+                          if (
+                            userdata.orgs !== undefined &&
+                            userdata.orgs !== null &&
+                            userdata.orgs.length > 0 &&
+                            selectedOrganization.child_orgs !== undefined &&
+                            selectedOrganization.child_orgs !== null &&
+                            selectedOrganization.child_orgs.length > 0
+                          ) {
+                            var active = [];
+                            for (var key in userdata.orgs) {
+                              const found =
+                                selectedOrganization.child_orgs.find(
+                                  (item) => item.id === userdata.orgs[key].id,
+                                );
+                              if (found !== null && found !== undefined) {
+                                if (
+                                  data.orgs === undefined ||
+                                  data.orgs === null
+                                ) {
+                                  continue;
+                                }
+
+                                const subfound = data.orgs.find(
+                                  (item) => item === found.id,
+                                );
+                                if (
+                                  subfound !== null &&
+                                  subfound !== undefined
+                                ) {
+                                  active.push(subfound);
+                                }
+                              }
+                            }
+
+                            setMatchingOrganizations(active);
+                          }
+                        }}
+                      >
+                        <EditIcon color="primary" />
+                      </IconButton>
+                      {/*<Button
         onClick={() => {
           generateApikey(data)
         }}
@@ -4047,15 +4518,16 @@ If you're interested, please let me know a time that works for you, or set up a 
       >
         New apikey 
       </Button>*/}
-                </ListItemText>
-        <ListItemText 
-          style={{ minWidth: 150, maxWidth: 150,  }}
-          primary={lastLogin}
-        ><span/>
-        </ListItemText>
-              </ListItem>
-            );
-          })}
+                    </ListItemText>
+                    <ListItemText
+                      style={{ minWidth: 150, maxWidth: 150 }}
+                      primary={lastLogin}
+                    >
+                      <span />
+                    </ListItemText>
+                  </ListItem>
+                );
+              })}
         </List>
       </div>
     ) : null;
@@ -4073,16 +4545,16 @@ If you're interested, please let me know a time that works for you, or set up a 
     //setShow2faSetup(true);
   };
 
-
-
-  const filesView = curTab !== 3 ? null : 
-		<Files 
-			isCloud={isCloud}
-			globalUrl={globalUrl}
-			userdata={userdata}
-			serverside={serverside} 
-			selectedOrganization={selectedOrganization}
-		/>
+  const filesView =
+    curTab !== 3 ? null : (
+      <Files
+        isCloud={isCloud}
+        globalUrl={globalUrl}
+        userdata={userdata}
+        serverside={serverside}
+        selectedOrganization={selectedOrganization}
+      />
+    );
 
   const schedulesView =
   curTab === 5 ? (
@@ -4185,6 +4657,95 @@ If you're interested, please let me know a time that works for you, or set up a 
                         if (schedule.status === "running") {
                           deleteSchedule(schedule);
                         } else startSchedule(schedule);
+    curTab === 5 ? (
+      <div>
+        <div style={{ marginTop: 20, marginBottom: 20 }}>
+          <h2 style={{ display: "inline" }}>Schedules</h2>
+          <span style={{ marginLeft: 25 }}>
+            Schedules used in Workflows. Makes locating and control easier.{" "}
+            <a
+              target="_blank"
+              rel="noopener noreferrer"
+              href="/docs/organizations#schedules"
+              style={{ textDecoration: "none", color: "#f85a3e" }}
+            >
+              Learn more
+            </a>
+          </span>
+        </div>
+        <Divider
+          style={{
+            marginTop: 20,
+            marginBottom: 20,
+            backgroundColor: theme.palette.inputColor,
+          }}
+        />
+        <List>
+          <ListItem>
+            <ListItemText
+              primary="Interval"
+              style={{ maxWidth: 200, minWidth: 200 }}
+            />
+            <ListItemText
+              primary="Environment"
+              style={{ maxWidth: 150, minWidth: 150 }}
+            />
+            <ListItemText
+              primary="Workflow"
+              style={{ maxWidth: 315, minWidth: 315 }}
+            />
+            <ListItemText
+              primary="Argument"
+              style={{ minWidth: 300, maxWidth: 300, overflow: "hidden" }}
+            />
+            <ListItemText primary="Actions" />
+            <ListItemText primary="Delegation" />
+          </ListItem>
+          {schedules === undefined || schedules === null
+            ? null
+            : schedules.map((schedule, index) => {
+                var bgColor = "#27292d";
+                if (index % 2 === 0) {
+                  bgColor = "#1f2023";
+                }
+
+                return (
+                  <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                    <ListItemText
+                      style={{ maxWidth: 200, minWidth: 200 }}
+                      primary={
+                        schedule.environment === "cloud" ||
+                        schedule.environment === "" ||
+                        schedule.frequency.length > 0 ? (
+                          schedule.frequency
+                        ) : (
+                          <span>{schedule.seconds} seconds</span>
+                        )
+                      }
+                    />
+                    <ListItemText
+                      style={{ maxWidth: 150, minWidth: 150 }}
+                      primary={schedule.environment}
+                    />
+                    <ListItemText
+                      style={{ maxWidth: 315, minWidth: 315 }}
+                      primary={
+                        <a
+                          style={{ textDecoration: "none", color: "#f85a3e" }}
+                          href={`/workflows/${schedule.workflow_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {schedule.workflow_id}
+                        </a>
+                      }
+                    />
+                    <ListItemText
+                      primary={schedule.argument.replaceAll('\\"', '"')}
+                      style={{
+                        minWidth: 300,
+                        maxWidth: 300,
+                        overflow: "hidden",
                       }}
                     >
                       {schedule.status === "running"
@@ -4456,12 +5017,12 @@ If you're interested, please let me know a time that works for you, or set up a 
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>App Authentication</h2>
           <span style={{ marginLeft: 25 }}>
-            Control the authentication options for individual apps. 
+            Control the authentication options for individual apps.
           </span>
           &nbsp;
           <a
             target="_blank"
-						rel="noopener noreferrer"
+            rel="noopener noreferrer"
             href="/docs/organizations#app_authentication"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
@@ -4505,15 +5066,16 @@ If you're interested, please let me know a time that works for you, or set up a 
 						*/}
             <ListItemText
               primary="Fields"
-              style={{ minWidth: 125, maxWidth: 125, overflow: "hidden" }}
+              style={{ minWidth: 135, maxWidth: 135, overflow: "hidden" }}
             />
             <ListItemText
               primary="Edited"
               style={{ minWidth: 230, maxWidth: 230, overflow: "hidden" }}
             />
-            <ListItemText primary="Actions" 
-              style={{ minWidth: 150, maxWidth: 150, }}
-			/>
+            <ListItemText
+              primary="Actions"
+              style={{ minWidth: 150, maxWidth: 150 }}
+            />
             <ListItemText primary="Distribution" />
           </ListItem>
           {authentication === undefined || authentication === null
@@ -4546,7 +5108,8 @@ If you're interested, please let me know a time that works for you, or set up a 
                   ];
                 }
 
-				const isDistributed = data.suborg_distributed === true ? true : false;
+                const isDistributed =
+                  data.suborg_distributed === true ? true : false;
 
                 return (
                   <ListItem key={index} style={{ backgroundColor: bgColor }}>
@@ -4614,7 +5177,8 @@ If you're interested, please let me know a time that works for you, or set up a 
                       style={{
                         minWidth: 125,
                         maxWidth: 125,
-                        overflow: "hidden",
+                        overflow: "auto",
+                        marginRight: 10,
                       }}
                     />
                     <ListItemText
@@ -4630,7 +5194,9 @@ If you're interested, please let me know a time that works for you, or set up a 
                         onClick={() => {
                           updateAppAuthentication(data);
                         }}
-						disabled={data.org_id !== selectedOrganization.id ? true : false}
+                        disabled={
+                          data.org_id !== selectedOrganization.id ? true : false
+                        }
                       >
                         <EditIcon color="secondary" />
                       </IconButton>
@@ -4642,14 +5208,17 @@ If you're interested, please let me know a time that works for you, or set up a 
                         >
                           <IconButton
                             style={{ marginRight: 10 }}
-							disabled={data.defined === false || data.org_id !== selectedOrganization.id ? true : false}
+                            disabled={
+                              data.defined === false ||
+                              data.org_id !== selectedOrganization.id
+                                ? true
+                                : false
+                            }
                             onClick={() => {
                               editAuthenticationConfig(data.id);
                             }}
                           >
-                            <SelectAllIcon
-                              color={"secondary"}
-                            />
+                            <SelectAllIcon color={"secondary"} />
                           </IconButton>
                         </Tooltip>
                       ) : (
@@ -4661,17 +5230,21 @@ If you're interested, please let me know a time that works for you, or set up a 
                           <IconButton
                             style={{}}
                             onClick={() => {}}
-							disabled={data.org_id !== selectedOrganization.id ? true : false}
+                            disabled={
+                              data.org_id !== selectedOrganization.id
+                                ? true
+                                : false
+                            }
                           >
-                            <SelectAllIcon
-                              color="secondary"
-                            />
+                            <SelectAllIcon color="secondary" />
                           </IconButton>
                         </Tooltip>
                       )}
                       <IconButton
-						style={{marginLeft: 0, }}
-						disabled={data.org_id !== selectedOrganization.id ? true : false}
+                        style={{ marginLeft: 0 }}
+                        disabled={
+                          data.org_id !== selectedOrganization.id ? true : false
+                        }
                         onClick={() => {
                           deleteAuthentication(data);
                         }}
@@ -4680,32 +5253,39 @@ If you're interested, please let me know a time that works for you, or set up a 
                       </IconButton>
                     </ListItemText>
                     <ListItemText>
-					  {selectedOrganization.id !== undefined && data.org_id !== selectedOrganization.id ? 
-						  <Tooltip
-							title="Parent organization controlled auth. You can use, but not modify this auth. Contact an admin of your parent organization if you need changes to this."
-							placement="top"
-						  >
-							<Chip
-								label={"Parent"}
-								variant="contained"
-								color="secondary"
-							  />
-						  </Tooltip>
-						  :
-						  <Tooltip
-							title="Distributed to sub-organizations. This means the sub organizations can use this authentication, but not modify it."
-							placement="top"
-						  >
-							  <Checkbox 
-								disabled={selectedOrganization.creator_org !== undefined && selectedOrganization.creator_org !== null && selectedOrganization.creator_org !== "" ? true : false}
-								checked={isDistributed}
-						  		color="secondary"
-								onClick={() => {
-									changeDistribution(data, !isDistributed)
-								}}
-							  />
-						  </Tooltip>
-					  }
+                      {selectedOrganization.id !== undefined &&
+                      data.org_id !== selectedOrganization.id ? (
+                        <Tooltip
+                          title="Parent organization controlled auth. You can use, but not modify this auth. Contact an admin of your parent organization if you need changes to this."
+                          placement="top"
+                        >
+                          <Chip
+                            label={"Parent"}
+                            variant="contained"
+                            color="secondary"
+                          />
+                        </Tooltip>
+                      ) : (
+                        <Tooltip
+                          title="Distributed to sub-organizations. This means the sub organizations can use this authentication, but not modify it."
+                          placement="top"
+                        >
+                          <Checkbox
+                            disabled={
+                              selectedOrganization.creator_org !== undefined &&
+                              selectedOrganization.creator_org !== null &&
+                              selectedOrganization.creator_org !== ""
+                                ? true
+                                : false
+                            }
+                            checked={isDistributed}
+                            color="secondary"
+                            onClick={() => {
+                              changeDistribution(data, !isDistributed);
+                            }}
+                          />
+                        </Tooltip>
+                      )}
                     </ListItemText>
                   </ListItem>
                 );
@@ -4726,7 +5306,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       headers: {
         "Content-Type": "application/json; charset=utf-8",
       },
-    }) 
+    })
       .then((response) => {
         return response.json();
       })
@@ -4735,10 +5315,13 @@ If you're interested, please let me know a time that works for you, or set up a 
         if (responseJson.success === true) {
           setLogs(responseJson.logs);
         } else {
-          if (responseJson.success === false || responseJson.reason !== undefined) {
-            console.log("Reason given: ", responseJson.reason)
-            toast("Failed getting logs: " + responseJson.reason)
-            setLogs([])
+          if (
+            responseJson.success === false ||
+            responseJson.reason !== undefined
+          ) {
+            console.log("Reason given: ", responseJson.reason);
+            toast("Failed getting logs: " + responseJson.reason);
+            setLogs([]);
           } else {
             toast("Failed getting logs");
           }
@@ -4754,7 +5337,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       });
   };
 
-	const changeRecommendation = (recommendation, action) => {
+  const changeRecommendation = (recommendation, action) => {
     const data = {
       action: action,
       name: recommendation.name,
@@ -4780,22 +5363,27 @@ If you're interested, please let me know a time that works for you, or set up a 
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-					if (checkLogin !== undefined) {
-						checkLogin()
-  					getEnvironments()
-					}
+          if (checkLogin !== undefined) {
+            checkLogin();
+            getEnvironments();
+          }
         } else {
-        	if (responseJson.success === false && responseJson.reason !== undefined) {
-          	toast("Failed change recommendation: ", responseJson.reason)
-        	} else {
-          	toast("Failed change recommendation");
-					}
+          if (
+            responseJson.success === false &&
+            responseJson.reason !== undefined
+          ) {
+            toast("Failed change recommendation: ", responseJson.reason);
+          } else {
+            toast("Failed change recommendation");
+          }
         }
       })
       .catch((error) => {
-        toast("Failed dismissing alert. Please contact support@shuffler.io if this persists.");
+        toast(
+          "Failed dismissing alert. Please contact support@shuffler.io if this persists.",
+        );
       });
-	}
+  };
 
   const environmentView =
     curTab === 6 ? (
@@ -4803,10 +5391,12 @@ If you're interested, please let me know a time that works for you, or set up a 
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Environments</h2>
           <span style={{ marginLeft: 25 }}>
-            Decides what Orborus environment to run your workflow actions. If you have scale problems, talk to our team: support@shuffler.io.&nbsp;
+            Decides what Orborus environment to run your workflow actions. If
+            you have scale problems, talk to our team:
+            support@shuffler.io.&nbsp;
             <a
               target="_blank"
-							rel="noopener noreferrer"
+              rel="noopener noreferrer"
               href="/docs/organizations#environments"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
@@ -4845,14 +5435,14 @@ If you're interested, please let me know a time that works for you, or set up a 
           }}
         />
         <List>
-          <ListItem style={{paddingLeft: 10, }}>
+          <ListItem style={{ paddingLeft: 10 }}>
             <ListItemText
               primary="Type"
-              style={{ minWidth: 50, maxWidth: 50, }}
+              style={{ minWidth: 50, maxWidth: 50 }}
             />
             <ListItemText
               primary="License"
-              style={{ minWidth: 85, maxWidth: 85, }}
+              style={{ minWidth: 85, maxWidth: 85 }}
             />
             <ListItemText
               primary="Name"
@@ -4868,7 +5458,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             />
             <ListItemText
               primary="Location"
-              style={{ minWidth: 100, maxWidth: 100, }}
+              style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
               primary={"Queue"}
@@ -4876,11 +5466,11 @@ If you're interested, please let me know a time that works for you, or set up a 
             />
             <ListItemText
               primary="Default"
-              style={{ minWidth: 110, maxWidth: 110, }}
+              style={{ minWidth: 110, maxWidth: 110 }}
             />
             <ListItemText
               primary="Actions"
-              style={{ minWidth: 200, maxWidth: 200}}
+              style={{ minWidth: 200, maxWidth: 200 }}
             />
             <ListItemText
               primary="Last Edited"
@@ -4903,272 +5493,412 @@ If you're interested, please let me know a time that works for you, or set up a 
                   bgColor = "#1f2023";
                 }
 
-				// Check if there's a notification for it in userdata.priorities
-				var showCPUAlert = false	
-				var foundIndex = -1
-				if (userdata !== undefined && userdata !== null && userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0) {
-					foundIndex = userdata.priorities.findIndex(prio => prio.name.includes("CPU") && prio.active === true)
+                // Check if there's a notification for it in userdata.priorities
+                var showCPUAlert = false;
+                var foundIndex = -1;
+                if (
+                  userdata !== undefined &&
+                  userdata !== null &&
+                  userdata.priorities !== undefined &&
+                  userdata.priorities !== null &&
+                  userdata.priorities.length > 0
+                ) {
+                  foundIndex = userdata.priorities.findIndex(
+                    (prio) => prio.name.includes("CPU") && prio.active === true,
+                  );
 
-					if (foundIndex >= 0 && userdata.priorities[foundIndex].name.endsWith(environment.Name)) {
-						showCPUAlert = true
-					}
-				}
+                  if (
+                    foundIndex >= 0 &&
+                    userdata.priorities[foundIndex].name.endsWith(
+                      environment.Name,
+                    )
+                  ) {
+                    showCPUAlert = true;
+                  }
+                }
 
-				const queueSize = environment.queue !== undefined && environment.queue !== null ? environment.queue < 0 ? 0 : environment.queue > 1000 ? ">1000" : environment.queue : 0
+                const queueSize =
+                  environment.queue !== undefined && environment.queue !== null
+                    ? environment.queue < 0
+                      ? 0
+                      : environment.queue > 1000
+                        ? ">1000"
+                        : environment.queue
+                    : 0;
 
                 return (
-				  <span key={index}>
-                  	<ListItem key={index} style={{ backgroundColor: bgColor, marginLeft: 0, }}>
-                  	  <ListItemText
-                  	    primary={environment.run_type === "cloud" || environment.name === "Cloud" ? 
-							<Tooltip title="Cloud" placement="top">
-								<CloudIcon style={{ color: "rgba(255,255,255,0.8)" }} />
-							</Tooltip>
-							: environment.run_type === "docker" ? 
-								<Tooltip title="Docker" placement="top">
-									<img src="/icons/docker.svg" style={{ width: 30, height: 30, }} />
-								</Tooltip>
-							: environment.run_type === "k8s" ? 
-								<Tooltip title="Kubernetes" placement="top">
-									<img src="/icons/k8s.svg" style={{ width: 30, height: 30, }} />
-								</Tooltip>
-							: 
-								<Tooltip title="Unknown" placement="top">
-									<HelpIcon style={{ color: "rgba(255,255,255,0.8)" }} />
-								</Tooltip>
-						}
-                  	    style={{
-                  	      minWidth: 50,
-                  	      maxWidth: 50,
-                  	      overflow: "hidden",
-                  	    }}
-                  	  />
-                  	  <ListItemText
-                  	    primary={environment.licensed ? 
-							<Tooltip title="Licensed" placement="top">
-								<CheckCircleIcon style={{ color: "#4caf50", }} />
-							</Tooltip>
-							:
-							<Tooltip title="Not licensed, and can't scale.. This may cause service disruption." placement="top">
-								<a 
-									href="/admin?tab=billing"
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									<CancelIcon style={{ color: "#f85a3e", }} />
-								</a>
-							</Tooltip>
-						}
-                  	    style={{
-                  	      minWidth: 85,
-                  	      maxWidth: 85,
-                  	      overflow: "hidden",
-                  	    }}
-                  	  />
-                  	  <ListItemText
-                  	    primary={environment.Name}
-                  	    style={{
-                  	      minWidth: 150,
-                  	      maxWidth: 150,
-                  	      overflow: "hidden",
-                  	    }}
-                  	  />
-                  	  <ListItemText
-                  	    primary={
-                  	      environment.Type !== "cloud"
-                  	        ? environment.running_ip === undefined ||
-                  	          environment.running_ip === null ||
-                  	          environment.running_ip.length === 0
-                  	          ? 
-								<div>
-									Not running
-								</div>
-                  	          : environment.running_ip.split(":")[0] 
-                  	        : "N/A"
-                  	    }
-                  	    style={{
-                  	      minWidth: 150,
-                  	      maxWidth: 150,
-                  	      overflow: "hidden",
-                  	    }}
-                  	  />
+                  <span key={index}>
+                    <ListItem
+                      key={index}
+                      style={{ backgroundColor: bgColor, marginLeft: 0 }}
+                    >
+                      <ListItemText
+                        primary={
+                          environment.run_type === "cloud" ||
+                          environment.name === "Cloud" ? (
+                            <Tooltip title="Cloud" placement="top">
+                              <CloudIcon
+                                style={{ color: "rgba(255,255,255,0.8)" }}
+                              />
+                            </Tooltip>
+                          ) : environment.run_type === "docker" ? (
+                            <Tooltip title="Docker" placement="top">
+                              <img
+                                src="/icons/docker.svg"
+                                style={{ width: 30, height: 30 }}
+                              />
+                            </Tooltip>
+                          ) : environment.run_type === "k8s" ? (
+                            <Tooltip title="Kubernetes" placement="top">
+                              <img
+                                src="/icons/k8s.svg"
+                                style={{ width: 30, height: 30 }}
+                              />
+                            </Tooltip>
+                          ) : (
+                            <Tooltip title="Unknown" placement="top">
+                              <HelpIcon
+                                style={{ color: "rgba(255,255,255,0.8)" }}
+                              />
+                            </Tooltip>
+                          )
+                        }
+                        style={{
+                          minWidth: 50,
+                          maxWidth: 50,
+                          overflow: "hidden",
+                        }}
+                      />
+                      <ListItemText
+                        primary={
+                          environment.licensed ? (
+                            <Tooltip title="Licensed" placement="top">
+                              <CheckCircleIcon style={{ color: "#4caf50" }} />
+                            </Tooltip>
+                          ) : (
+                            <Tooltip
+                              title="Not licensed, and can't scale.. This may cause service disruption."
+                              placement="top"
+                            >
+                              <a
+                                href="/admin?tab=billing"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <CancelIcon style={{ color: "#f85a3e" }} />
+                              </a>
+                            </Tooltip>
+                          )
+                        }
+                        style={{
+                          minWidth: 85,
+                          maxWidth: 85,
+                          overflow: "hidden",
+                        }}
+                      />
+                      <ListItemText
+                        primary={environment.Name}
+                        style={{
+                          minWidth: 150,
+                          maxWidth: 150,
+                          overflow: "hidden",
+                        }}
+                      />
+                      <ListItemText
+                        primary={
+                          environment.Type !== "cloud" ? (
+                            environment.running_ip === undefined ||
+                            environment.running_ip === null ||
+                            environment.running_ip.length === 0 ? (
+                              <div>Not running</div>
+                            ) : (
+                              environment.running_ip.split(":")[0]
+                            )
+                          ) : (
+                            "N/A"
+                          )
+                        }
+                        style={{
+                          minWidth: 150,
+                          maxWidth: 150,
+                          overflow: "hidden",
+                        }}
+                      />
 
-                  	  <ListItemText
-                  	    style={{ minWidth: 100, maxWidth: 100 }}
-                  	    primary={
-							<Tooltip
-								title={"Copy Orborus command"}
-								style={{}}
-								aria-label={"Copy orborus command"}
-							>
-								<IconButton
-									style={{}}
-									disabled={environment.Type === "cloud"}
-									onClick={() => {
-										if (environment.Type === "cloud") {
-											toast("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.")
-											return
-										}
+                      <ListItemText
+                        style={{ minWidth: 100, maxWidth: 100 }}
+                        primary={
+                          <Tooltip
+                            title={"Copy Orborus command"}
+                            style={{}}
+                            aria-label={"Copy orborus command"}
+                          >
+                            <IconButton
+                              style={{}}
+                              disabled={environment.Type === "cloud"}
+                              onClick={() => {
+                                if (environment.Type === "cloud") {
+                                  toast(
+                                    "No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.",
+                                  );
+                                  return;
+                                }
 
-										if (props.userdata.active_org === undefined || props.userdata.active_org === null) {
-											toast("No active organization yet. Are you logged in?")
-											return
-										}
+                                if (
+                                  props.userdata.active_org === undefined ||
+                                  props.userdata.active_org === null
+                                ) {
+                                  toast(
+                                    "No active organization yet. Are you logged in?",
+                                  );
+                                  return;
+                                }
 
-										const elementName = "copy_element_shuffle";
-										const auth = environment.auth === "" ? 'cb5st3d3Z!3X3zaJ*Pc' : environment.auth
-										const newUrl = globalUrl === "https://shuffler.io" ? "https://shuffle-backend-stbuwivzoq-nw.a.run.app" : globalUrl
+                                const elementName = "copy_element_shuffle";
+                                const auth =
+                                  environment.auth === ""
+                                    ? "cb5st3d3Z!3X3zaJ*Pc"
+                                    : environment.auth;
+                                const newUrl =
+                                  globalUrl === "https://shuffler.io"
+                                    ? "https://shuffle-backend-stbuwivzoq-nw.a.run.app"
+                                    : globalUrl;
 
-										const commandData = `docker run --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${newUrl}" --name="shuffle-orborus" -d ghcr.io/shuffle/shuffle-orborus:latest`
-										var copyText = document.getElementById(elementName);
-										if (copyText !== null && copyText !== undefined) {
-											const clipboard = navigator.clipboard;
-											if (clipboard === undefined) {
-												toast("Can only copy over HTTPS (port 3443)");
-												return;
-											}
+                                const commandData = `docker run --restart=always --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${newUrl}" --name="shuffle-orborus" -d ghcr.io/shuffle/shuffle-orborus:latest`;
+                                var copyText =
+                                  document.getElementById(elementName);
+                                if (
+                                  copyText !== null &&
+                                  copyText !== undefined
+                                ) {
+                                  const clipboard = navigator.clipboard;
+                                  if (clipboard === undefined) {
+                                    toast(
+                                      "Can only copy over HTTPS (port 3443)",
+                                    );
+                                    return;
+                                  }
 
-											navigator.clipboard.writeText(commandData);
-											copyText.select();
-											copyText.setSelectionRange(
-												0,
-												99999
-											); /* For mobile devices */
+                                  navigator.clipboard.writeText(commandData);
+                                  copyText.select();
+                                  copyText.setSelectionRange(
+                                    0,
+                                    99999,
+                                  ); /* For mobile devices */
 
-											/* Copy the text inside the text field */
-											document.execCommand("copy");
+                                  /* Copy the text inside the text field */
+                                  document.execCommand("copy");
 
-											toast("Orborus command copied to clipboard");
-										}
-									}}
-								>
-									<FileCopyIcon disabled={environment.Type === "cloud"} style={{ color: environment.Type === "cloud" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)" }} />
-								</IconButton>
-							</Tooltip>
-						}
-                  	  />
+                                  toast("Orborus command copied to clipboard");
+                                }
+                              }}
+                            >
+                              <FileCopyIcon
+                                disabled={environment.Type === "cloud"}
+                                style={{
+                                  color:
+                                    environment.Type === "cloud"
+                                      ? "rgba(255,255,255,0.2)"
+                                      : "rgba(255,255,255,0.8)",
+                                }}
+                              />
+                            </IconButton>
+                          </Tooltip>
+                        }
+                      />
 
-                  	  <ListItemText
-                  	    primary={environment.Type}
-                  	    style={{ minWidth: 100, maxWidth: 100, }}
-                  	  />
-                  	  <ListItemText
-                  	    style={{
-                  	      minWidth: 100,
-                  	      maxWidth: 100,
-                  	      overflow: "hidden",
-                  	      marginLeft: 0,
-                  	    }}
+                      <ListItemText
+                        primary={environment.Type}
+                        style={{ minWidth: 100, maxWidth: 100 }}
+                      />
+                      <ListItemText
+                        style={{
+                          minWidth: 100,
+                          maxWidth: 100,
+                          overflow: "hidden",
+                          marginLeft: 0,
+                        }}
+                        primary={queueSize}
+                      />
+                      <ListItemText
+                        style={{
+                          minWidth: 100,
+                          maxWidth: 100,
+                          overflow: "hidden",
+                        }}
+                        primary={environment.default ? "true" : null}
+                      >
+                        {environment.default ? null : (
+                          <Button
+                            variant="outlined"
+                            style={{
+                              marginLeft: 0,
+                              marginRight: 0,
+                              maxWidth: 150,
+                            }}
+                            onClick={() => setDefaultEnvironment(environment)}
+                            color="primary"
+                          >
+                            Set Default
+                          </Button>
+                        )}
+                      </ListItemText>
+                      <ListItemText
+                        style={{
+                          minWidth: 200,
+                          maxWidth: 200,
+                          overflow: "hidden",
+                          marginLeft: 10,
+                        }}
+                      >
+                        <div style={{ display: "flex" }}>
+                          <ButtonGroup
+                            style={{ borderRadius: "5px 5px 5px 5px" }}
+                          >
+                            <Button
+                              variant={
+                                environment.archived ? "contained" : "outlined"
+                              }
+                              style={{}}
+                              onClick={() => deleteEnvironment(environment)}
+                              color="primary"
+                            >
+                              {environment.archived ? "Activate" : "Disable"}
+                            </Button>
+                            <Button
+                              variant={"outlined"}
+                              style={{}}
+                              onClick={() => {
+                                console.log(
+                                  "Should clear executions for: ",
+                                  environment,
+                                );
 
-                  	    primary={queueSize}
-                  	  />
-                  	  <ListItemText
-                  	    style={{
-                  	      minWidth: 100,
-                  	      maxWidth: 100,
-                  	      overflow: "hidden",
-                  	    }}
-                  	    primary={environment.default ? "true" : null}
-                  	  >
-                  	    {environment.default ? null : (
-                  	      <Button
-                  	        variant="outlined"
-                  	        style={{ marginLeft: 0, marginRight: 0, maxWidth: 150, }}
-                  	        onClick={() => setDefaultEnvironment(environment)}
-                  	        color="primary"
-                  	      >
-                  	        Set Default
-                  	      </Button>
-                  	    )}
-                  	  </ListItemText>
-                  	  <ListItemText
-                  	    style={{
-                  	      minWidth: 200,
-                  	      maxWidth: 200,
-                  	      overflow: "hidden",
-                  	      marginLeft: 10,
-                  	    }}
-                  	  >
-                  	    <div style={{ display: "flex" }}>
-							<ButtonGroup style={{borderRadius: "5px 5px 5px 5px",}}>
-								<Button
-									variant={environment.archived ? "contained" : "outlined"}
-									style={{ }}
-									onClick={() => deleteEnvironment(environment)}
-									color="primary"
-								>
-									{environment.archived ? "Activate" : "Disable"}
-								</Button>
-								<Button
-									variant={"outlined"}
-									style={{ }}
-									onClick={() => {
-										console.log("Should clear executions for: ", environment);
-
-										if (isCloud && environment.Name.toLowerCase() === "cloud") {
-											rerunCloudWorkflows(environment);
-										} else { 
-											abortEnvironmentWorkflows(environment);
-										}
-									}}
-									color="primary"
-								>
-									{isCloud && environment.Name.toLowerCase() === "cloud" ? "Rerun" : "Clear"}
-								</Button>
-
-							</ButtonGroup>
-                  	    </div>
-                  	  </ListItemText>
-                  	  <ListItemText
-                  	    style={{
-                  	      minWidth: 150,
-                  	      maxWidth: 150,
-                  	      overflow: "hidden",
-                  	    }}
-                  	    primary={
-                  	      environment.edited !== undefined &&
-                  	      environment.edited !== null &&
-                  	      environment.edited !== 0
-                  	        ? new Date(environment.edited * 1000).toISOString()
-                  	        : 0
-                  	    }
-                  	  />
-                  	</ListItem>
-					{showCPUAlert === false ? null : 
-                  		<ListItem key={index+"_cpu"} style={{ backgroundColor: bgColor }}>
-							<div style={{border: "1px solid #f85a3e", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor: theme.palette.surfaceColor, display: "flex", }}>
-								<div style={{flex: 2, overflow: "hidden",}}>
-									<Typography variant="body1" >
-										90% CPU the server(s) hosting the Shuffle App Runner (Orborus) was found.  
-									</Typography>
-									<Typography variant="body2" color="textSecondary">
-										Need help with High Availability and Scale? <a href="/docs/configuration#scale" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Read documentation</a> and <a href="https://shuffler.io/contact" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>Get in touch</a>.  
-									</Typography>
-								</div>
-								<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
-									<Button style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="outlined" color="secondary" onClick={() => {
-										// dismiss -> get envs
-										changeRecommendation(userdata.priorities[foundIndex], "dismiss")
-									}}>
-										Dismiss	
-									</Button>
-								</div> 
-							</div>
-						</ListItem>
-					}
-				</span>
+                                if (
+                                  isCloud &&
+                                  environment.Name.toLowerCase() === "cloud"
+                                ) {
+                                  rerunCloudWorkflows(environment);
+                                } else {
+                                  abortEnvironmentWorkflows(environment);
+                                }
+                              }}
+                              color="primary"
+                            >
+                              {isCloud &&
+                              environment.Name.toLowerCase() === "cloud"
+                                ? "Rerun"
+                                : "Clear"}
+                            </Button>
+                          </ButtonGroup>
+                        </div>
+                      </ListItemText>
+                      <ListItemText
+                        style={{
+                          minWidth: 150,
+                          maxWidth: 150,
+                          overflow: "hidden",
+                        }}
+                        primary={
+                          environment.edited !== undefined &&
+                          environment.edited !== null &&
+                          environment.edited !== 0
+                            ? new Date(environment.edited * 1000).toISOString()
+                            : 0
+                        }
+                      />
+                    </ListItem>
+                    {showCPUAlert === false ? null : (
+                      <ListItem
+                        key={index + "_cpu"}
+                        style={{ backgroundColor: bgColor }}
+                      >
+                        <div
+                          style={{
+                            border: "1px solid #f85a3e",
+                            borderRadius: theme.palette.borderRadius,
+                            marginTop: 10,
+                            marginBottom: 10,
+                            padding: 15,
+                            textAlign: "center",
+                            height: 70,
+                            textAlign: "left",
+                            backgroundColor: theme.palette.surfaceColor,
+                            display: "flex",
+                          }}
+                        >
+                          <div style={{ flex: 2, overflow: "hidden" }}>
+                            <Typography variant="body1">
+                              90% CPU the server(s) hosting the Shuffle App
+                              Runner (Orborus) was found.
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              Need help with High Availability and Scale?{" "}
+                              <a
+                                href="/docs/configuration#scale"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  textDecoration: "none",
+                                  color: "#f85a3e",
+                                }}
+                              >
+                                Read documentation
+                              </a>{" "}
+                              and{" "}
+                              <a
+                                href="https://shuffler.io/contact"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  textDecoration: "none",
+                                  color: "#f85a3e",
+                                }}
+                              >
+                                Get in touch
+                              </a>
+                              .
+                            </Typography>
+                          </div>
+                          <div
+                            style={{ flex: 1, display: "flex", marginLeft: 30 }}
+                          >
+                            <Button
+                              style={{
+                                borderRadius: 25,
+                                width: 200,
+                                height: 50,
+                                marginTop: 8,
+                              }}
+                              variant="outlined"
+                              color="secondary"
+                              onClick={() => {
+                                // dismiss -> get envs
+                                changeRecommendation(
+                                  userdata.priorities[foundIndex],
+                                  "dismiss",
+                                );
+                              }}
+                            >
+                              Dismiss
+                            </Button>
+                          </div>
+                        </div>
+                      </ListItem>
+                    )}
+                  </span>
                 );
               })}
         </List>
-				{/*<EnvironmentStats />*/}
+        {/*<EnvironmentStats />*/}
       </div>
     ) : null;
 
   const imagesize = 40;
   const imageStyle = {
-      width: imagesize,
-      height: imagesize,
-      pointerEvents: "none",
+    width: imagesize,
+    height: imagesize,
+    pointerEvents: "none",
   };
 
   const organizationsTab =
@@ -5177,7 +5907,22 @@ If you're interested, please let me know a time that works for you, or set up a 
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Organizations</h2>
           <span style={{ marginLeft: 25 }}>
-            Control sub organizations (tenants)! {isCloud ? "You can only make a sub organization if you are a customer of shuffle or running a POC of the platform. Please contact support@shuffler.io to try it out." : ""}. <a href="/docs/organizations" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: theme.palette.primary.main }}>Learn more</a>
+            Control sub organizations (tenants)!{" "}
+            {isCloud
+              ? "You can only make a sub organization if you are a customer of shuffle or running a POC of the platform. Please contact support@shuffler.io to try it out."
+              : ""}
+            .{" "}
+            <a
+              href="/docs/organizations"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                textDecoration: "none",
+                color: theme.palette.primary.main,
+              }}
+            >
+              Learn more
+            </a>
           </span>
         </div>
         <Button
@@ -5192,238 +5937,249 @@ If you're interested, please let me know a time that works for you, or set up a 
           Add suborganization
         </Button>
 
-  {parentOrg ? (
-    <span>
-      <Divider
-        style={{
-          marginTop: 20,
-          marginBottom: 20,
-          backgroundColor: theme.palette.inputColor,
-        }}
-      />
-
-      <div
-        style={{
-          textAlign: "center",
-          width: "100%",
-          padding: "10px",
-          marginTop: 20,
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: "1.2rem",
-            fontWeight: "bold",
-            letterSpacing: "1px",
-          }}
-        >
-          {" "}
-          Your Parent Organization
-        </h3>
-      </div>
-      <Divider
-        style={{
-          marginTop: 20,
-          marginBottom: 20,
-          backgroundColor: theme.palette.inputColor,
-        }}
-      />
-      {(() => {
-        const image =
-          parentOrg.image === "" ? (
-            <img
-              alt={parentOrg.name}
-              src={theme.palette.defaultImage}
-              style={imageStyle}
+        {parentOrg ? (
+          <span>
+            <Divider
+              style={{
+                marginTop: 20,
+                marginBottom: 20,
+                backgroundColor: theme.palette.inputColor,
+              }}
             />
-          ) : (
-            <img
-              alt={parentOrg.name}
-              src={parentOrg.image}
-              style={imageStyle}
-            />
-          );
-        const bgColor = "#27292d";
 
-        return (
-          <List>
-            <ListItem>
-              <ListItemText
-                primary="Logo"
-                style={{ minWidth: 100, maxWidth: 100 }}
-              />
-              <ListItemText
-                primary="Name"
-                style={{ minWidth: 350, maxWidth: 350}}
-              />
-              <ListItemText
-                primary="id"
-                style={{ minWidth: 400, maxWidth: 400 }}
-              />
-            </ListItem>
-            <ListItem style={{ backgroundColor: bgColor }}>
-              <ListItemText
-                primary={image}
-                style={{ minWidth: 100, maxWidth: 100 }}
-              />
-              <ListItemText
-                primary={parentOrg.name}
-                style={{ minWidth: 350, maxWidth: 350}}
-              />
-              <ListItemText
-                primary={parentOrg.id}
-                style={{ minWidth: 400, maxWidth: 400 }}
-              />
-
-              <Button
-                variant="contained"
-                color="primary"
-				disabled={parentOrg.id === selectedOrganization.id} 
-                onClick={() => {
-                  handleClickChangeOrg(parentOrg.id);
+            <div
+              style={{
+                textAlign: "center",
+                width: "100%",
+                padding: "10px",
+                marginTop: 20,
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  letterSpacing: "1px",
                 }}
               >
-                Switch to Parent
-              </Button>
-            </ListItem>
-          </List>
-        );
-      })()}
-    </span>
-  ) : null
-  }
-        
- {subOrgs.length > 0 ? (
-    <span>
-      <Divider
-        style={{
-          marginTop: 20,
-          marginBottom: 20,
-          backgroundColor: theme.palette.inputColor,
-        }}
-      />
-      <div
-        style={{
-          textAlign: "center",
-          width: "100%",
-          padding: "10px",
-          marginTop: 20,
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: "1.2rem",
-            fontWeight: "bold",
-            letterSpacing: "1px",
-          }}
-        >
-          Sub Organizations of the Current Organization ({subOrgs.length})
-        </h3>
-      </div>
+                {" "}
+                Your Parent Organization
+              </h3>
+            </div>
+            <Divider
+              style={{
+                marginTop: 20,
+                marginBottom: 20,
+                backgroundColor: theme.palette.inputColor,
+              }}
+            />
+            {(() => {
+              const image =
+                parentOrg.image === "" ? (
+                  <img
+                    alt={parentOrg.name}
+                    src={theme.palette.defaultImage}
+                    style={imageStyle}
+                  />
+                ) : (
+                  <img
+                    alt={parentOrg.name}
+                    src={parentOrg.image}
+                    style={imageStyle}
+                  />
+                );
+              const bgColor = "#27292d";
 
-      <Divider
-        style={{
-          marginTop: 20,
-          marginBottom: 20,
-          backgroundColor: theme.palette.inputColor,
-        }}
-      />
+              return (
+                <List>
+                  <ListItem>
+                    <ListItemText
+                      primary="Logo"
+                      style={{ minWidth: 100, maxWidth: 100 }}
+                    />
+                    <ListItemText
+                      primary="Name"
+                      style={{ minWidth: 350, maxWidth: 350 }}
+                    />
+                    <ListItemText
+                      primary="id"
+                      style={{ minWidth: 400, maxWidth: 400 }}
+                    />
+                  </ListItem>
+                  <ListItem style={{ backgroundColor: bgColor }}>
+                    <ListItemText
+                      primary={image}
+                      style={{ minWidth: 100, maxWidth: 100 }}
+                    />
+                    <ListItemText
+                      primary={parentOrg.name}
+                      style={{ minWidth: 350, maxWidth: 350 }}
+                    />
+                    <ListItemText
+                      primary={parentOrg.id}
+                      style={{ minWidth: 400, maxWidth: 400 }}
+                    />
 
-      <List>
-        <ListItem>
-          <ListItemText
-            primary="Logo"
-            style={{ minWidth: 100, maxWidth: 100 }}
-          />
-          <ListItemText
-            primary="Name"
-            style={{ minWidth: 350, maxWidth: 350 }}
-          />
-          <ListItemText primary="id" style={{ minWidth: 400, maxWidth: 400 }} />
-        </ListItem>
-        <span>
-          {subOrgs.map((data, index) => {
-            const image =
-              data.image === "" ? (
-                <img
-                  alt={data.name}
-                  src={theme.palette.defaultImage}
-                  style={imageStyle}
-                />
-              ) : (
-                <img alt={data.name} src={data.image} style={imageStyle} />
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      disabled={parentOrg.id === selectedOrganization.id}
+                      onClick={() => {
+                        handleClickChangeOrg(parentOrg.id);
+                      }}
+                    >
+                      Switch to Parent
+                    </Button>
+                  </ListItem>
+                </List>
               );
+            })()}
+          </span>
+        ) : null}
 
-            var bgColor = "#27292d";
-            if (index % 2 === 0) {
-              bgColor = "#1f2023";
-            }
+        {subOrgs.length > 0 ? (
+          <span>
+            <Divider
+              style={{
+                marginTop: 20,
+                marginBottom: 20,
+                backgroundColor: theme.palette.inputColor,
+              }}
+            />
+            <div
+              style={{
+                textAlign: "center",
+                width: "100%",
+                padding: "10px",
+                marginTop: 20,
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  letterSpacing: "1px",
+                }}
+              >
+                Sub Organizations of the Current Organization ({subOrgs.length})
+              </h3>
+            </div>
 
-            return (
-              <ListItem key={index} style={{ backgroundColor: bgColor }}>
+            <Divider
+              style={{
+                marginTop: 20,
+                marginBottom: 20,
+                backgroundColor: theme.palette.inputColor,
+              }}
+            />
+
+            <List>
+              <ListItem>
                 <ListItemText
-                  primary={image}
+                  primary="Logo"
                   style={{ minWidth: 100, maxWidth: 100 }}
                 />
                 <ListItemText
-                  primary={data.name}
+                  primary="Name"
                   style={{ minWidth: 350, maxWidth: 350 }}
                 />
                 <ListItemText
-                  primary={data.id}
+                  primary="id"
                   style={{ minWidth: 400, maxWidth: 400 }}
                 />
-
-                <Button
-                  variant="outlined"
-                  color="primary"
-				  disabled={data.id === selectedOrganization.id} 
-                  onClick={() => {
-                    handleClickChangeOrg(data.id);
-                  }}
-                >
-                  Change Active Org
-                </Button>
               </ListItem>
-            );
-          })}
-        </span>
-      </List>
-    </span>
-  ) : null
- }
+              <span>
+                {subOrgs.map((data, index) => {
+                  const image =
+                    data.image === "" ? (
+                      <img
+                        alt={data.name}
+                        src={theme.palette.defaultImage}
+                        style={imageStyle}
+                      />
+                    ) : (
+                      <img
+                        alt={data.name}
+                        src={data.image}
+                        style={imageStyle}
+                      />
+                    );
 
+                  var bgColor = "#27292d";
+                  if (index % 2 === 0) {
+                    bgColor = "#1f2023";
+                  }
 
-<Divider
-  style={{
-    marginTop: 20,
-    marginBottom: 20,
-    backgroundColor: theme.palette.inputColor,
-  }}
-/>
+                  return (
+                    <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                      <ListItemText
+                        primary={image}
+                        style={{ minWidth: 100, maxWidth: 100 }}
+                      />
+                      <ListItemText
+                        primary={data.name}
+                        style={{ minWidth: 350, maxWidth: 350 }}
+                      />
+                      <ListItemText
+                        primary={data.id}
+                        style={{ minWidth: 400, maxWidth: 400 }}
+                      />
 
-<div style={{ textAlign: "center", width: "100%", padding: "10px", marginTop: 20 }}>
-  <h3
-    style={{
-      margin: 0,
-      fontSize: "1.2rem",
-      fontWeight: "bold",
-      letterSpacing: "1px",
-    }}
-  >
-    All Tenants
-  </h3>
-</div>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        disabled={data.id === selectedOrganization.id}
+                        onClick={() => {
+                          handleClickChangeOrg(data.id);
+                        }}
+                      >
+                        Change Active Org
+                      </Button>
+                    </ListItem>
+                  );
+                })}
+              </span>
+            </List>
+          </span>
+        ) : null}
 
-<Divider
-  style={{
-    marginTop: 20,
-    marginBottom: 20,
-    backgroundColor: theme.palette.inputColor,
-  }}
-/>
+        <Divider
+          style={{
+            marginTop: 20,
+            marginBottom: 20,
+            backgroundColor: theme.palette.inputColor,
+          }}
+        />
+
+        <div
+          style={{
+            textAlign: "center",
+            width: "100%",
+            padding: "10px",
+            marginTop: 20,
+          }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+              letterSpacing: "1px",
+            }}
+          >
+            All Tenants
+          </h3>
+        </div>
+
+        <Divider
+          style={{
+            marginTop: 20,
+            marginBottom: 20,
+            backgroundColor: theme.palette.inputColor,
+          }}
+        />
         <List>
           <ListItem>
             <ListItemText
@@ -5460,8 +6216,8 @@ If you're interested, please let me know a time that works for you, or set up a 
                   props.userdata.active_org.id === undefined
                     ? "False"
                     : props.userdata.active_org.id === data.id
-                    ? "True"
-                    : "False";
+                      ? "True"
+                      : "False";
 
                 const image =
                   data.image === "" ? (
@@ -5573,13 +6329,10 @@ If you're interested, please let me know a time that works for you, or set up a 
       </div>
     ) : null;
 
-    const cacheOrgView =
+  const cacheOrgView =
     curTab === 4 ? (
       <div>
-        <CacheView
-					globalUrl={globalUrl}
-					orgId = {selectedOrganization.id}
-        />
+        <CacheView globalUrl={globalUrl} orgId={selectedOrganization.id} />
       </div>
     ) : null;
 
@@ -5620,7 +6373,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           <Tab
             label=<span>
               <LockIcon style={iconStyle} />
-              App Auth 
+              App Auth
             </span>
           />
           <Tab
@@ -5632,7 +6385,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           />
           <Tab
             label=<span>
-              <StorageIcon style={iconStyle} /> Datastore 
+              <StorageIcon style={iconStyle} /> Datastore
             </span>
           />
           <Tab

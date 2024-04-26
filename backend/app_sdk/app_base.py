@@ -138,7 +138,7 @@ def as_object(a):
     return json.loads(str(a))
 
 @shuffle_filters.register
-def ast(a):
+def ast_eval(a):
     return ast.literal_eval(str(a))
 
 @shuffle_filters.register

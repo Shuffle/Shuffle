@@ -936,7 +936,7 @@ const AppFramework = (props) => {
 					credentials: "include",
 			})
 			.then((response) => {
-				if (response.status !== 200) {
+				if (response.status !== 200 || response.status !== 202) {
 					console.log("Failed to activate")
 				}
 
@@ -944,7 +944,11 @@ const AppFramework = (props) => {
 			})
 			.then((responseJson) => {
 				if (responseJson.success === false) {
-					toast("Failed to activate the app")
+					var msgString = "Failed to activate the app"
+					if (responseJson.reason !== undefined) {
+						msgString += ": " + responseJson.reason
+					}
+					toast(msgString)
 				} else {
 					//toast("App activated for your organization! Refresh the page to use the app.")
 				}

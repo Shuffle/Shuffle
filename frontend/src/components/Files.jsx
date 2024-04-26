@@ -41,7 +41,7 @@ import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import theme from "../theme.jsx";
 
 const Files = (props) => {
-  const { globalUrl, userdata, serverside, selectedOrganization, isCloud, } = props;
+  const { globalUrl, userdata, serverside, selectedOrganization, isCloud,isSelectedFiles } = props;
 
   const [files, setFiles] = React.useState([]);
   const [selectedNamespace, setSelectedNamespace] = React.useState("default");
@@ -59,7 +59,7 @@ const Files = (props) => {
   const [downloadFolder, setDownloadFolder] = React.useState("translation_standards");
 
   //const alert = useAlert();
-  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log", "eml", "msg", "md", "xml", "sh", "bat", "ps1", "psm1", "psd1", "ps1xml", "pssc", "psc1"]
+  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log", "eml", "msg", "md", "xml", "sh", "bat", "ps1", "psm1", "psd1", "ps1xml", "pssc", "psc1", "response"]
   var upload = "";
 
   const handleKeyDown = (event) => {
@@ -395,8 +395,6 @@ const Files = (props) => {
         setTimeout(() => {
           getFiles();
         }, 1500);
-
-        console.log(responseJson);
       })
       .catch((error) => {
         toast(error.toString());
@@ -619,16 +617,16 @@ const Files = (props) => {
 			style={{
 				maxWidth: window.innerWidth > 1366 ? 1366 : 1200,
 				margin: "auto",
-				padding: 20,
+				padding: isSelectedFiles ? null : 20,
 			}}
 			onDrop={uploadFile}
 		>
-			<div style={{position: "relative"}}>
+			<div style={{position: "relative", width: isSelectedFiles? 1030: null, padding:isSelectedFiles?27:null, height: isSelectedFiles?1200:null, color: isSelectedFiles?'#ffffff':null, backgroundColor: isSelectedFiles?'#212121':null, borderRadius: isSelectedFiles?'16px':null,}}>
 
         		<Tooltip color="primary" title={"Import files to Shuffle from Git"} placement="top">
 				  <IconButton
         		    color="secondary"
-        		    style={{position: "absolute", right: 0, top: 0, }}
+        		    style={{position: "absolute", right: 0, top: isSelectedFiles?null:0, left: isSelectedFiles? 990:null }}
         		    variant="text"
         		    onClick={() => setLoadFileModalOpen(true)}
         		  >
@@ -638,15 +636,15 @@ const Files = (props) => {
 
 				{fileDownloadModal} 
 
-				<div style={{ marginTop: 20, marginBottom: 20 }}>
-					<h2 style={{ display: "inline" }}>Files</h2>
-					<span style={{ marginLeft: 25 }}>
+				<div style={{ marginTop: isSelectedFiles ? 2: 20, marginBottom:20 }}>
+					<h2 style={{ display: isSelectedFiles ? null : "inline", marginTop: isSelectedFiles?0:null, marginBottom: isSelectedFiles?8:null }}>Files</h2>
+					<span style={{ marginLeft: isSelectedFiles ? null : 25, color:isSelectedFiles?"#9E9E9E":null}}>
 						Files from Workflows are a way to store as well as edit files.{" "}
 						<a
 							target="_blank"
 							rel="noopener noreferrer"
 							href="https://shuffler.io/docs/organizations#files"
-							style={{ textDecoration: "none", color: "#f85a3e" }}
+							style={{ textDecoration: isSelectedFiles ? null:"none", color: isSelectedFiles? "#FF8444": "#f85a3e" }}
 						>
 							Learn more
 						</a>
@@ -661,6 +659,7 @@ const Files = (props) => {
 					onClick={() => {
 						upload.click();
 					}}
+					style={{backgroundColor: isSelectedFiles?'rgba(255, 132, 68, 0.2)':null, color:isSelectedFiles?"#FF8444":null, borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?162:null, height:isSelectedFiles?40:null}}
 				>
 					<PublishIcon /> Upload files
 				</Button>
@@ -680,7 +679,7 @@ const Files = (props) => {
 					}}
 				/>
 				<Button
-					style={{ marginLeft: 5, marginRight: 15 }}
+					style={{ marginLeft: 5, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?81:null, height:isSelectedFiles?40:null,  }}
 					variant="contained"
 					color="primary"
 					onClick={() => getFiles()}
@@ -759,21 +758,21 @@ const Files = (props) => {
 
 
 				{renderTextBox && <TextField
-							onKeyPress={(event)=>{
-								handleKeyDown(event);
-							}}
-							InputProps={{
-								style: {
-									color: "white",
-								},
-							}}
-							color="primary"
-							placeholder="File category name"
-							required
-							margin="dense"
-							defaultValue={""}
-							autoFocus
-						/>}</div>
+					onKeyPress={(event)=>{
+						handleKeyDown(event);
+					}}
+					InputProps={{
+						style: {
+							color: "white",
+						},
+					}}
+					color="primary"
+					placeholder="File category name"
+					required
+					margin="dense"
+					defaultValue={""}
+					autoFocus
+				/>}</div>
 
 				<ShuffleCodeEditor
 					isCloud={isCloud}
@@ -785,20 +784,20 @@ const Files = (props) => {
 					key = {fileContent} //https://reactjs.org/docs/reconciliation.html#recursing-on-children
 					runUpdateText = {runUpdateText}
 				/>
-
+				{isSelectedFiles?null:
 				<Divider
 					style={{
 						marginTop: 20,
 						marginBottom: 20,
 						backgroundColor: theme.palette.inputColor,
 					}}
-				/>
+				/>}
 
-				<List>
-					<ListItem>
+				<List style={{borderRadius: isSelectedFiles?8:null, border:isSelectedFiles?"1px solid #494949":null, marginTop:isSelectedFiles?24:null}}>
+					<ListItem style={{width:isSelectedFiles?"100%":null, borderBottom:isSelectedFiles?"1px solid #494949":null}}>
 						<ListItemText
 							primary="Updated"
-							style={{ maxWidth: 225, minWidth: 225 }}
+							style={{ maxWidth: 185, minWidth: 185 }}
 						/>
 						<ListItemText
 							primary="Name"
@@ -815,7 +814,7 @@ const Files = (props) => {
 						/>
 						<ListItemText
 							primary="Md5"
-							style={{ minWidth: 300, maxWidth: 300, overflow: "hidden" }}
+							style={{ minWidth: 250, maxWidth: 250, overflow: "hidden" }}
 						/>
 						<ListItemText
 							primary="Status"

@@ -1037,55 +1037,41 @@ const AppCreator = (defaultprops) => {
                     "schema"
                   ] !== null
                 ) {
-									try {
-										if (
-											methodvalue["requestBody"]["content"]["application/xml"][
-												"schema"
-											]["properties"] !== undefined
-										) {
-											var tmpobject = {};
-											for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
-											
-												tmpobject[prop] = `\$\{${prop}\}`;
-											}
+					try {
+						if (
+							methodvalue["requestBody"]["content"]["application/xml"][
+								"schema"
+							]["properties"] !== undefined
+						) {
+							var tmpobject = {};
+							for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
+							
+								tmpobject[prop] = `\$\{${prop}\}`;
+							}
 
-											for (let [subkey,subkeyval] in Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"])) {
-												const tmpitem =
-													methodvalue["requestBody"]["content"][
-														"application/xml"
-													]["schema"]["required"][subkey];
-												tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
-											}
+							for (let [subkey,subkeyval] in Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"])) {
+								const tmpitem =
+									methodvalue["requestBody"]["content"][
+										"application/xml"
+									]["schema"]["required"][subkey];
+								tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
+							}
 
-											//console.log("OBJ XML: ", tmpobject)
-											//newaction["body"] = XML.stringify(tmpobject, null, 2)
-										}
-									} catch (e) {
-										console.log("RequestBody xml error: ", e, path)
-									}
+							//console.log("OBJ XML: ", tmpobject)
+							//newaction["body"] = XML.stringify(tmpobject, null, 2)
+						}
+					} catch (e) {
+						console.log("RequestBody xml error: ", e, path)
+					}
                 }
               } else {
-                if (
-                  methodvalue["requestBody"]["content"]["example"] !== undefined
-                ) {
-                  if (
-                    methodvalue["requestBody"]["content"]["example"][
-                      "example"
-                    ] !== undefined
-                  ) {
-                    newaction["body"] =
-                      methodvalue["requestBody"]["content"]["example"][
-                        "example"
-                      ];
-                    //JSON.stringify(tmpobject, null, 2)
+                if (methodvalue["requestBody"]["content"]["example"] !== undefined) {
+                  if (methodvalue["requestBody"]["content"]["example"]["example"] !== undefined) {
+                      newaction["body"] = methodvalue["requestBody"]["content"]["example"]["example"]
                   }
                 } 
-							
-								if (
-                  methodvalue["requestBody"]["content"][
-                    "multipart/form-data"
-                  ] !== undefined
-                ) {
+		  
+				if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
                   if (
                     methodvalue["requestBody"]["content"][
                       "multipart/form-data"
@@ -1553,8 +1539,10 @@ const AppCreator = (defaultprops) => {
             } else if (parameter.in === "body") {
               // FIXME: Add tracking for components
               // E.G: https://raw.githubusercontent.com/owentl/Shuffle/master/gosecure.yaml
-              if (parameter.example !== undefined) {
-                newaction.body = parameter.example;
+              if (parameter.example !== undefined && parameter.example !== null) {
+				  if (newaction.body === undefined || newaction.body === null || newaction.body.length < 5) {
+                	newaction.body = parameter.example
+				  }
               }
             } else if (parameter.in === "header") {
               newaction.headers += `${parameter.name}=${parameter.example}\n`;
@@ -1565,6 +1553,13 @@ const AppCreator = (defaultprops) => {
               );
             }
           }
+
+		  // Check if body is valid JSON. 
+		  if (newaction.body !== undefined && newaction.body !== null && newaction.body.length > 0) {
+			  // Trim starting / ending newlines, spaces and tabs
+			  newaction.body = newaction.body.trim()
+		  }
+
 
           if (newaction.name === "" || newaction.name === undefined) {
             // Find a unique part of the string
@@ -1920,11 +1915,11 @@ const AppCreator = (defaultprops) => {
 
     setProjectCategories(all_categories);
 
-		// Rearrange them by which has action_label
-		const firstActions = newActions.filter(data => data.action_label !== undefined && data.action_label !== null && data.action_label !== "No Label")
-		console.log("First actions: ", firstActions)
-		const secondActions = newActions.filter(data => data.action_label === undefined || data.action_label === null || data.action_label === "No Label")
-		newActions = firstActions.concat(secondActions)
+	// Rearrange them by which has action_label
+	const firstActions = newActions.filter(data => data.action_label !== undefined && data.action_label !== null && data.action_label !== "No Label")
+	console.log("First actions: ", firstActions)
+	const secondActions = newActions.filter(data => data.action_label === undefined || data.action_label === null || data.action_label === "No Label")
+	newActions = firstActions.concat(secondActions)
     setActions(newActions);
 		//data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
 
@@ -2073,7 +2068,7 @@ const AppCreator = (defaultprops) => {
       };
 
 			if (item.action_label !== undefined && item.action_label !== "" && item.action_label !== "No Label") {
-				console.log("Action label: ", item.action_label)
+				//console.log("Action label: ", item.action_label)
 				data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
 			}
 
@@ -3078,7 +3073,10 @@ const AppCreator = (defaultprops) => {
         		  Refresh-token URL for Oauth2 (Optional)
         		</Typography>
         		<TextField
-        		  style={{ margin: 0, flex: "1", backgroundColor: inputColor }}
+        		  style={{ 
+					margin: 0, flex: "1", backgroundColor: inputColor,
+				  	border: !refreshUrl.startsWith("http") || refreshUrl.includes("//shuffler.") ? "2px solid red" : "inherit",
+				  }}
         		  fullWidth={true}
         		  placeholder="The URL to retrieve refresh-tokens at"
         		  type="name"
@@ -3086,8 +3084,9 @@ const AppCreator = (defaultprops) => {
         		  margin="normal"
         		  variant="outlined"
         		  value={refreshUrl}
+				  helperText={!refreshUrl.startsWith("http") || refreshUrl.includes("//shuffler.")? "Must start with http(s):// and can not contain shuffler.io" : ""}
         		  onChange={(e) => setRefreshUrl(e.target.value)}
-							onBlur={(event) => {
+				  onBlur={(event) => {
         		    var tmpstring = event.target.value.trim();
 
         		    if (
@@ -3153,7 +3152,7 @@ const AppCreator = (defaultprops) => {
         </Typography>
 				<div style={{display: "flex", marginTop: 10, }}>
 					<div style={{flex: 4,}}>
-        		Key	
+        				Key	
 						<TextField
 							required
 							style={{ marginTop: 0, backgroundColor: inputColor }}
@@ -3166,11 +3165,16 @@ const AppCreator = (defaultprops) => {
 							value={parameterName}
 							helperText={
 								<span style={{ color: "white", marginBottom: "2px" }}>
-									Can't be empty or contain any of the following: !#$%&'^"+-._~|]+$
+									Can't be empty or contain any of the following: !#$%&'^"+-._~|]+$:=
 								</span>
 							}
 							onChange={(e) => {
 								setParameterName(e.target.value);
+							}}
+							onBlur={(event) => {
+								var tmpstring = event.target.value.trim()
+
+								// Check if tmpstring has any of the illegal characters in it
 							}}
 							InputProps={{
 								classes: {

@@ -54,12 +54,14 @@ import { tags as t } from '@lezer/highlight';
 
 
 import AceEditor from "react-ace";
+import ace from "ace-builds";
 import 'ace-builds/src-noconflict/mode-python';
 //import 'ace-builds/src-noconflict/theme-twilight';
 //import 'ace-builds/src-noconflict/theme-solarized_dark';
 import 'ace-builds/src-noconflict/theme-gruvbox';
 import "ace-builds/src-noconflict/ext-language_tools";
-import ace from "ace-builds";
+
+import "ace-builds/src-noconflict/ext-searchbox";
 
 const liquidFilters = [
 	{"name": "Default", "value": `default: []`, "example": `{{ "" | default: "no input" }}`},
@@ -1033,7 +1035,7 @@ const CodeEditor = (props) => {
 									paddingLeft: 10, 
 								}}
 							>
-								File Editor
+								File Editor ({localcodedata.length})
 							</DialogTitle> 
 						</div>
 					</div>	
@@ -1174,6 +1176,7 @@ const CodeEditor = (props) => {
 							</Menu> 
 						</div>
 						}
+
 						<Button
 							id="basic-button"
 							aria-haspopup="true"
@@ -1444,131 +1447,128 @@ const CodeEditor = (props) => {
 						</Menu>
 					</div> 
 					}
-							<IconButton
-								style={{
-									marginLeft: isMobile ? "80%" : 30, 
-									height: 50, 
-									width: 50, 
-								}}
-								onClick={() => {
-									
-								}}
-							>
-								<Tooltip
-									color="primary"
-									title={"Test Liquid in the playground"}
-									placement="top"
-								>
-									<a 
-										href="https://pwwang.github.io/liquidpy/playground/"
-										rel="norefferer"
-      		          target="_blank"
-									>
-										<ExtensionIcon style={{color: "rgba(255,255,255,0.7)"}}/>
-									</a>
-								</Tooltip>
-							</IconButton>
-							<IconButton
-								style={{
-									height: 50, 
-									width: 50, 
-								}}
-								disabled={isAiLoading}
-								onClick={() => {
-									autoFormat(localcodedata) 
-								}}
-							>
-								<Tooltip
-									color="primary"
-									title={"Auto format data"}
-									placement="top"
-								>
-									{isAiLoading ? 
-										<CircularProgress style={{height: 20, width: 20, color: "rgba(255,255,255,0.7)"}}/>
-										:
-										<AutoFixHighIcon style={{color: "rgba(255,255,255,0.7)"}}/>
-									}
-								</Tooltip>
-							</IconButton>
-						</div>
-					</div>   
-					}
 
-					{/*
-		      		<div ref={editorRef}></div>
-					*/}
-					
-					<div style={{
-						borderRadius: theme.palette.borderRadius,
-						position: "relative",
-						paddingTop: 0, 
-						// minHeight: 548,
-						// overflow: "hidden",
-					}}>
-						{availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0 &&
-						<AceEditor
-                            value={localcodedata}
-                            mode={selectedAction.name === "execute_python" ? "python" : ""}
-                            theme="gruvbox"
-                            height={isFileEditor ? 450 : 550} 
-                            width={isFileEditor ? 650 : "100%"}
-
-                            markers={markers}
-							highlightActiveLine={false}
-							      
-							enableBasicAutocompletion={true}
-							completers={[customCompleter]}
-
-                            style={{
-                                wordBreak: "break-word",
-                                marginTop: 0,
-                                paddingBottom: 10,
-                                overflowY: "auto",
-                                whiteSpace: "pre-wrap",
-                                wordWrap: "break-word",
-								backgroundColor: "rgba(40,40,40,1)",
-                            }}
-							onLoad={(editor) => {
-								highlight_variables(localcodedata)
-							}}
-                            onCursorChange={(cursorPosition, editor, value) => {
-                                setCurrentCharacter(cursorPosition.column)
-                                setCurrentLine(cursorPosition.row)
-                                findIndex(cursorPosition.row, cursorPosition.column)
-
-								highlight_variables(localcodedata)
-								//console.log("VALUE CURSOR: ", value)
-                            }}
-                            onChange={(value, editor) => {
-                                // setlocalcodedata(value)
-                                // expectedOutput(value)
-                                // highlight_variables(value,editor)
-								setlocalcodedata(value)
-								expectedOutput(value)
-								highlight_variables(value)
-                            }}
-                            setOptions={{
-                                enableBasicAutocompletion: true,
-                                enableLiveAutocompletion: true,
-                                enableSnippets: true,
-								showLineNumbers: true,
-								tabSize: 2,
-								wrap: true,
-
-                                useWorker: false,
-								enableBasicAutocompletion: [customCompleter],
-                            }}
-                            // options={options}
-                        />
-						}
-					</div>
-				
-					<div
+					<IconButton
 						style={{
+							marginLeft: isMobile ? "80%" : 30, 
+							height: 50, 
+							width: 50, 
+						}}
+						onClick={() => {
+							
 						}}
 					>
-					</div>
+						<Tooltip
+							color="primary"
+							title={"Test Liquid in the playground"}
+							placement="top"
+						>
+							<a 
+								href="https://pwwang.github.io/liquidpy/playground/"
+								rel="norefferer"
+			  target="_blank"
+							>
+								<ExtensionIcon style={{color: "rgba(255,255,255,0.7)"}}/>
+							</a>
+						</Tooltip>
+					</IconButton>
+					<IconButton
+						style={{
+							height: 50, 
+							width: 50, 
+						}}
+						disabled={isAiLoading}
+						onClick={() => {
+							autoFormat(localcodedata) 
+						}}
+					>
+						<Tooltip
+							color="primary"
+							title={"Auto format data"}
+							placement="top"
+						>
+							{isAiLoading ? 
+								<CircularProgress style={{height: 20, width: 20, color: "rgba(255,255,255,0.7)"}}/>
+								:
+								<AutoFixHighIcon style={{color: "rgba(255,255,255,0.7)"}}/>
+							}
+						</Tooltip>
+					</IconButton>
 				</div>
+			</div>   
+			}
+					
+			<div style={{
+				borderRadius: theme.palette.borderRadius,
+				position: "relative",
+				paddingTop: 0, 
+				// minHeight: 548,
+				// overflow: "hidden",
+			}}>
+				{(availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0) || isFileEditor ? (
+					<AceEditor
+						value={localcodedata}
+						mode={selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "python" : ""}
+						theme="gruvbox"
+						height={isFileEditor ? 450 : 550} 
+						width={isFileEditor ? 650 : "100%"}
+
+						markers={markers}
+						highlightActiveLine={false}
+							  
+						enableBasicAutocompletion={true}
+						completers={[customCompleter]}
+
+						style={{
+							wordBreak: "break-word",
+							marginTop: 0,
+							paddingBottom: 10,
+							overflowY: "auto",
+							whiteSpace: "pre-wrap",
+							wordWrap: "break-word",
+							backgroundColor: "rgba(40,40,40,1)",
+						}}
+						onLoad={(editor) => {
+							highlight_variables(localcodedata)
+						}}
+						onCursorChange={(cursorPosition, editor, value) => {
+							setCurrentCharacter(cursorPosition.column)
+							setCurrentLine(cursorPosition.row)
+							findIndex(cursorPosition.row, cursorPosition.column)
+
+							highlight_variables(localcodedata)
+							//console.log("VALUE CURSOR: ", value)
+						}}
+						onChange={(value, editor) => {
+							// setlocalcodedata(value)
+							// expectedOutput(value)
+							// highlight_variables(value,editor)
+							setlocalcodedata(value)
+							expectedOutput(value)
+							highlight_variables(value)
+						}}
+						setOptions={{
+							enableBasicAutocompletion: true,
+							enableLiveAutocompletion: true,
+							enableSnippets: true,
+							showLineNumbers: true,
+							tabSize: 2,
+							wrap: true,
+
+							useWorker: false,
+							enableBasicAutocompletion: [customCompleter],
+						}}
+						// options={options}
+					/>
+					): null}
+				</div>
+				
+				<div
+					style={{
+					}}
+				>
+				</div>
+			</div>
 
 				{isFileEditor ? null : 
 					<div style={{flex: 1, marginLeft: 5, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, }}>

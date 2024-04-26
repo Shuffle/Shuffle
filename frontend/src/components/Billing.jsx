@@ -970,7 +970,7 @@ const Billing = (props) => {
 
 	const isChildOrg = userdata.active_org.creator_org !== "" && userdata.active_org.creator_org !== undefined && userdata.active_org.creator_org !== null
 	return (
-		<div style={{}}>
+		<div style={{ width: "auto", padding: 27, height: "auto", backgroundColor: '#212121', borderRadius: '16px', }}>
       		{addDealModal}
 			<Typography variant="h4" style={{ marginTop: 20, marginBottom: 10 }}>
 				Billing	& Licensing

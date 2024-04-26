@@ -164,6 +164,7 @@ const ParsedAction = (props) => {
 	expansionModalOpen,
 	setExpansionModalOpen,
 	
+	apps,
 	setEditorData,
 	setcodedata,
 	setAiQueryModalOpen,
@@ -177,6 +178,8 @@ const ParsedAction = (props) => {
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
   const [autoCompleting, setAutocompleting] = React.useState(false);
+
+  const isIntegration = selectedAction.app_id === "integration"
 
   useEffect(() => {
 	if (setLastSaved !== undefined) {
@@ -1087,29 +1090,113 @@ const ParsedAction = (props) => {
       var authWritten = false;
       return (
         <div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
-					<Tooltip
-						color="secondary"
-						title={"Click to learn more about this action"}
-						placement="top"
+		  	{isIntegration ? 
+				apps !== undefined && apps !== null && apps.length > 0 ?
+					<div style={{display: "flex", }}>
+						{apps.map((app, appIndex) => {
+							if (app.categories === undefined || app.categories === null || app.categories.length === 0) {
+								return null
+							}
+
+							var found = false
+							var actionname = selectedAction.name.toLowerCase()
+							if (actionname === "email") {
+								actionname = "communication"
+							}
+
+
+							for (var key in app.categories) {
+								if (app.categories[key].toLowerCase() !== actionname) {
+									continue
+								}
+
+								found = true
+								break
+							}
+
+							if (!found) {
+								return null
+							}
+
+							var isAppSelected = false 
+							const paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
+							if (paramIndex > -1) {
+								// Check the actual value and if it's the same
+								if (selectedAction.parameters[paramIndex].value === app.name) {
+									isAppSelected = true
+								}
+							}
+
+							return (
+								<div onClick={() => {
+									selectedAction.large_image = app.large_image
+
+									/*
+									if (cy !== undefined) {
+										const foundnode = cy.getElementById(selectedAction.id)
+										if (foundnode !== undefined && foundnode !== null) {
+											foundnode.data("large_image", app.large_image)
+										}
+									}
+									*/
+
+									if (paramIndex === -1) {
+										console.log("Couldn't find app_name parameter")
+										selectedAction.parameters.push({
+											name: "app_name",
+											value: app.name,
+											autocompleted: false,
+										})
+									} else {
+										selectedAction.parameters[paramIndex].value = app.name
+									}
+										
+									setSelectedAction(selectedAction)
+									setUpdate(Math.random())
+
+								}}>
+									<Tooltip title={app.name.replace("_", " ", -1)} placement="top">
+										<img 
+											src={app.large_image} 
+											style={{
+												width: 35, 
+												height: 35, 
+												marginRight: 5, 
+												borderRadius: 5,
+												cursor: "pointer",
+												border: isAppSelected ? "3px solid #86c142" : "2px solid rgba(255,255,255,0.6)",
+											}} />
+									</Tooltip>
+								</div>
+							)
+						})}
+					</div>
+					: null
+				:
+				<Tooltip
+					color="secondary"
+					title={"Click to learn more about this action"}
+					placement="top"
+				>
+					<Button 
+						variant="text" 
+						color="secondary" 
+						style={{justifyContent: "flex-start", textAlign: "left", textTransform: "none", width: "100%",}}
+						fullWidth
+						disabled={selectedAction.description === undefined || selectedAction.description === null || selectedAction.description.length === 0}
+						onClick={() => {
+							setHiddenDescription(!hiddenDescription)
+						}}
 					>
-						<Button 
-							variant="text" 
-							color="secondary" 
-							style={{justifyContent: "flex-start", textAlign: "left", textTransform: "none", width: "100%",}}
-							fullWidth
-							disabled={selectedAction.description === undefined || selectedAction.description === null || selectedAction.description.length === 0}
-							onClick={() => {
-								setHiddenDescription(!hiddenDescription)
-							}}
-						>
-							<b>Parameters</b>
-						</Button>
-					</Tooltip>
-					{selectedAction.template === true && selectedAction.matching_actions !== undefined && selectedAction.matching_actions !== null && selectedAction.matching_actions.length > 0 ?
-						<div>
-							<Typography variant="body1">
-								Select an app you want to use 
-							</Typography>
+						<b>Parameters</b>
+					</Button>
+				</Tooltip>
+			}
+			{selectedAction.template === true && selectedAction.matching_actions !== undefined && selectedAction.matching_actions !== null && selectedAction.matching_actions.length > 0 ?
+			<div>
+			<Typography variant="body1">
+				Select an app you want to use 
+			</Typography>
           		<Autocomplete
           		  id="template_action_search"
           		  autoHighlight
@@ -1235,10 +1322,15 @@ const ParsedAction = (props) => {
 							</Typography>
 						</div>
 					) : null}
+
           {selectedActionParameters.map((data, count) => {
             if (data.variant === "") {
               data.variant = "STATIC_VALUE";
             }
+
+			if (isIntegration && data.name === "app_name") {
+			  return null
+			}
 
             // selectedAction.selectedAuthentication = e.target.value
             // selectedAction.authentication_id = e.target.value.id
@@ -1288,7 +1380,7 @@ const ParsedAction = (props) => {
             var staticcolor = "inherit";
             var actioncolor = "inherit";
             var varcolor = "inherit";
-            var multiline;
+            var multiline
             if (
               data.multiline !== undefined &&
               data.multiline !== null &&
@@ -1296,6 +1388,11 @@ const ParsedAction = (props) => {
             ) {
               multiline = true;
             }
+
+			// make data.value from array to comma separated string if it is an array
+			if (data.value !== undefined && data.value !== null && Array.isArray(data.value)) {
+				data.value = data.value.join(",")
+			}
 
             if (
               data.value !== undefined &&
@@ -2003,6 +2100,13 @@ const ParsedAction = (props) => {
                 changeActionParameter(e, count, data);
               }
 
+			  var multi = false
+			  if (selectedActionParameters[count].multiselect !== undefined && selectedActionParameters[count].multiselect !== null && selectedActionParameters[count].multiselect === true) {
+				  multi = true
+
+				  selectedActionParameters[count].value = selectedActionParameters[count].value.split(",")
+			  }
+
               datafield = (
                 <Select
 					MenuProps={{
@@ -2012,10 +2116,13 @@ const ParsedAction = (props) => {
                     style: {
                     },
                   }}
+				  multiple={multi}
                   value={selectedActionParameters[count].value}
                   fullWidth
                   id={"rightside_field_" + count}
                   onChange={(e) => {
+					console.log("MULTI SELECT: ", multi, e.target.value)
+
                     changeActionParameter(e, count, data);
                     setUpdate(Math.random());
                   }}
@@ -2029,10 +2136,12 @@ const ParsedAction = (props) => {
                   {parsedoptions.map(
                     (data, index) => {
                       const split_data = data.split("||");
-                      var viewed_data = data;
+                      var viewed_data = data
                       if (split_data.length > 1) {
-                        viewed_data = split_data[0];
+                        viewed_data = split_data[0]
                       }
+
+					  viewed_data = (viewed_data.charAt(0).toUpperCase() + viewed_data.slice(1)).replaceAll("_", " ")
 
                       return (
                         <MenuItem
@@ -2774,9 +2883,11 @@ const ParsedAction = (props) => {
 	}
 
   // Gets the most important actions first
-  const renderedActionOptions = deduplicateByName((selectedApp.actions === undefined || selectedApp.actions === null ? [] : selectedApp.actions.filter((a) => a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))).sort(sortByCategoryLabel))
-
-
+  const renderedActionOptions = deduplicateByName((
+	  selectedApp.actions === undefined || selectedApp.actions === null ? [] : 
+	  selectedApp.actions.filter((a) => 
+		  a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))
+      ).sort(sortByCategoryLabel))
 	
   var baselabel = selectedAction.label;
   return (
@@ -3000,16 +3111,16 @@ const ParsedAction = (props) => {
 							</Tooltip>
 						*/}
               {selectedApp.versions !== null &&
-              selectedApp.versions !== undefined &&
-              selectedApp.versions.length > 1 ? (
+				  selectedApp.versions !== undefined &&
+				  selectedApp.versions.length > 1 ? (
                 <Select
-									MenuProps={{
-										disableScrollLock: true,
-									}}
+				  MenuProps={{
+				  	disableScrollLock: true,
+				  }}
                   defaultValue={selectedAction.app_version}
                   onChange={(event) => {
-										console.log("VAL: ", event.target.value)
-										console.log("App: ", selectedApp)
+					console.log("VAL: ", event.target.value)
+					console.log("App: ", selectedApp)
                     const newversion = selectedApp.versions.find(
                       (tmpApp) => tmpApp.version == event.target.value
                     );
@@ -3051,15 +3162,6 @@ const ParsedAction = (props) => {
               ) : null}
             </div>
           </div>
-          <Divider
-            style={{
-              marginBottom: "10px",
-              marginTop: "10px",
-              height: "1px",
-              width: "100%",
-              backgroundColor: "rgb(91, 96, 100)",
-            }}
-          />
 					<div style={{display: "flex"}}>
 						<div style={{flex: 5}}>
 							<Typography style={{color: "rgba(255,255,255,0.7)"}}>Name</Typography>
@@ -3308,10 +3410,10 @@ const ParsedAction = (props) => {
         </span>
       )}
       {selectedApp.name !== undefined &&
-				selectedAction.authentication !== null &&
-				selectedAction.authentication !== undefined &&
-				selectedAction.authentication.length === 0 &&
-				requiresAuthentication ? (
+			selectedAction.authentication !== null &&
+			selectedAction.authentication !== undefined &&
+			selectedAction.authentication.length === 0 &&
+			requiresAuthentication ? (
         <div style={{ marginTop: 15 }}>
           <Tooltip
             color="primary"
@@ -3466,13 +3568,13 @@ const ParsedAction = (props) => {
         </div>
       ) : null}
 
-      {showEnvironment !== undefined && showEnvironment && environments.length > 1 ? (
+      {showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
         <div style={{ marginTop: "20px" }}>
           <Typography style={{color: "rgba(255,255,255,0.7)"}}>Environment</Typography>
           <Select
-						MenuProps={{
-							disableScrollLock: true,
-						}}
+			MenuProps={{
+				disableScrollLock: true,
+			}}
             value={
               selectedActionEnvironment === undefined || selectedActionEnvironment === null ||
               selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null 
@@ -3629,7 +3731,6 @@ const ParsedAction = (props) => {
 				return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
 			}}
 			renderGroup={(params) => {
-				//return null
 
 				return (
 					<li key={params.key}>
@@ -3807,7 +3908,7 @@ const ParsedAction = (props) => {
 							backgroundColor: theme.palette.inputColor,
 							borderRadius: theme.palette.borderRadius,
 						}}
-						label="Find Actions"
+						label={isIntegration ? "Choose a category" : "Find Actions"}
 						variant="outlined"
 				        name={`disable_autocomplete_${Math.random()}`}
 

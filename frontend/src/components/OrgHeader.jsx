@@ -172,6 +172,7 @@ const OrgHeader = (props) => {
                   : theme.palette.inputColor,
               maxWidth: 174,
               maxHeight: 174,
+			  borderRadius: theme.shape.borderRadius,
             }}
             onClick={() => {
               upload.click();
