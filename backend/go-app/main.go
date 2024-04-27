@@ -4907,6 +4907,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/triggers/outlook/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers/pipeline", shuffle.HandleNewPipelineRegister).Methods("POST", "OPTIONS")
+    r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
 
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 
