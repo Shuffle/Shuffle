@@ -1500,7 +1500,7 @@ func main() {
 	initializeImages()
 
 	if isTenzir == "true" {
-		func() {
+		go func() {
 			if err := deployTenzirNode(); err != nil {
 				log.Printf("[ERROR] Failed to deploy the tenzir node, reason: %v", err)
 			} else {
@@ -1681,15 +1681,15 @@ func main() {
 			newrequests := []shuffle.ExecutionRequest{}
 			for _, incRequest := range executionRequests.Data {
 				// Looking for specific jobs
-				if isTenzir == "true" && incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" {
-					if isTenzirReady {
+				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" {
+					if isTenzir == "true" && isTenzirReady {
 						err := handlePipeline(incRequest)
 						if err != nil {
 							log.Printf("[ERROR] Failed handling pipeline: %s", err)
 							//update it to db ??
 						}
 					} else {
-						log.Printf("[WARNING] Couldnt Handle pipeline request as tenzir node is not ready")
+						log.Printf("[WARNING] Unable to Handle pipeline request as tenzir node is not ready")
 					}
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 			
@@ -2120,7 +2120,7 @@ func deployTenzirNode() error {
 
 	ctx := context.Background()
 
-    imageName := "tenzir/tenzir"
+	imageName := "tenzir/tenzir"
 	containerName := "tenzir-node"
 
 	healthconfig := &container.HealthConfig{
@@ -2131,7 +2131,7 @@ func deployTenzirNode() error {
 
 	config := &container.Config{
 		Cmd:          []string{"--commands=web server --mode=dev --bind=0.0.0.0"},
-		Image:       imageName,
+		Image:        imageName,
 		Healthcheck:  healthconfig,
 		ExposedPorts: nat.PortSet{"5160/tcp": struct{}{}},
 		Entrypoint:   []string{containerName},
@@ -2155,7 +2155,7 @@ func deployTenzirNode() error {
 	pullOptions := types.ImagePullOptions{}
 	out, err := dockercli.ImagePull(ctx, imageName, pullOptions)
 	if err != nil {
-		log.Printf("[ERROR] Failed to pull the tenzir image %s",err)
+		log.Printf("[ERROR] Failed to pull the tenzir image %s", err)
 	}
 	defer out.Close()
 
@@ -2164,32 +2164,22 @@ func deployTenzirNode() error {
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%s", err), "Conflict. The container name ") {
 			log.Printf("[DEBUG] Tenzir Node Container already exists, starting it")
-
-			err = dockercli.ContainerStart(ctx, containerName, containerStartOptions)
-			if err != nil {
-				log.Printf("[ERROR] Failed to start existing Tenzir Node container: %v", err)
-				return err
-			}
-
-			log.Printf("[INFO] Existing Tenzir Node container started successfully")
-			return nil
+		} else {
+			log.Printf("[ERROR] Failed to create Tenzir container: %s", err)
+			return err
 		}
-		return err
 	}
-
-	log.Printf("[INFO] New Tenzir Node container created successfully")
 
 	err = dockercli.ContainerStart(ctx, containerName, containerStartOptions)
 	if err != nil {
-		log.Printf("[ERROR] Failed to start new Tenzir Node container: %v", err)
+		log.Printf("[ERROR] Failed to start Tenzir Node container: %v", err)
 		return err
 	}
-
-	log.Printf("[INFO] New Tenzir Node container started successfully")
+	log.Printf("[INFO] Tenzir Node container started successfully")
 
 	log.Printf("[INFO] Waiting for tenzir to become available ...")
 	err = checkTenzirNode()
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
@@ -2199,7 +2189,7 @@ func deployTenzirNode() error {
 func checkTenzirNode() error {
     retries := 20
     retryInterval := 3 * time.Second
-	url := fmt.Sprintf("%s/ping",tenzirUrl)
+	url := fmt.Sprintf("%s/api/v0/ping",tenzirUrl)
 	forwardMethod := "POST"
 
     client := http.Client{}
