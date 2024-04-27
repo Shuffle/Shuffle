@@ -7178,47 +7178,73 @@ const AngularWorkflow = (defaultprops) => {
       toast("Error: name can't be empty");
       return;
     }
-
-	var mappedStartnode = ""
-	const alledges = cy.edges().jsons()
+  
+    var mappedStartnode = "";
+    const alledges = cy.edges().jsons();
     if (alledges !== undefined && alledges !== null && alledges.length > 0) {
-		for (let edgekey in alledges) {
-			const tmp = alledges[edgekey]
-			console.log("TMP: ", tmp, tmp.data.source)
-			if (tmp.data.source === trigger.id) {
-				mappedStartnode = tmp.data.target
-				break
-			}
-		}
-    }
-
-    toast("Creating pipeline") 
-    const data = usecase
-	const url = `${globalUrl}/api/v1/triggers/pipeline`
-    fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(data),
-        credentials: "include",
+      for (let edgekey in alledges) {
+        const tmp = alledges[edgekey];
+        console.log("TMP: ", tmp, tmp.data.source);
+        if (tmp.data.source === trigger.id) {
+          mappedStartnode = tmp.data.target;
+          break;
+        }
       }
-    )
+    }
+    const data = usecase;
+    if (data.type === "create") toast("Creating pipeline");
+    else toast("stopping pipeline");
+    const url = `${globalUrl}/api/v1/triggers/pipeline`;
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    })
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for stream results :O!");
-        } 
-
+        }
+  
         return response.json();
       })
       .then((responseJson) => {
         if (!responseJson.success) {
           toast("Failed to set pipeline: " + responseJson.reason);
         } else {
-          toast("Successfully created pipeline");
-          workflow.triggers[triggerindex].status = "running";
-          trigger.status = "running";
+          if (data.type === "create") toast("Pipeline will be created!");
+          else toast("Pipeline will be stopped!");
+          if (!workflow.triggers[triggerindex].parameters) {
+            workflow.triggers[triggerindex].parameters = [];
+          }
+  
+          if (workflow.triggers[triggerindex].parameters.length > 0) {
+            workflow.triggers[triggerindex].parameters[0].name = data.name;
+            workflow.triggers[triggerindex].parameters[0].value = data.command;
+  
+            trigger.parameters[0].name = data.name;
+            trigger.parameters[0].value = data.command;
+            if (data.type === "stop") {
+              trigger.status = "stopped";
+              workflow.triggers[triggerindex].status = "stopped";
+            } else {
+              trigger.status = "running";
+              workflow.triggers[triggerindex].status = "running";
+            }
+          } else {
+            const newParameter = {
+              name: data.name,
+              value: data.command,
+            };
+            trigger.parameters.push(newParameter);
+            if (data.type === "stop") trigger.status = "stopped";
+            else trigger.status = "running";
+            workflow.triggers[triggerindex] = trigger;
+          }
+  
           setSelectedTrigger(trigger);
           setWorkflow(workflow);
           console.log("Should set the status to running and save");
@@ -7227,9 +7253,9 @@ const AngularWorkflow = (defaultprops) => {
       })
       .catch((error) => {
         //toast(error.toString());
-        console.log("Get schedule error: ", error.toString());
+        console.log("Get pipeline error: ", error.toString());
       });
-  }
+  };
 
   const submitSchedule = (trigger, triggerindex) => {
     if (trigger.name.length <= 0) {
@@ -13626,7 +13652,6 @@ const AngularWorkflow = (defaultprops) => {
 				if (data.Name.toLowerCase() === "cloud") {
 					return null
 				}
-
                 return (
                   <MenuItem
                     key={data.id}
@@ -13674,75 +13699,115 @@ const AngularWorkflow = (defaultprops) => {
 				Run HTTP Request
 			  </div>
 			  */}
+              <div
+                style={{
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  borderRadius: theme.palette.borderRadius,
+                  padding: 10,
+                  cursor: selectedTrigger.status == "running" ? "not-allowed" : "pointer",
+                  background:
+                    selectedTrigger.status == "running"
+                      ? "rgba(255, 255, 255, 0.1)"
+                      : "transparent",
+                  opacity: selectedTrigger.status == "running" ? 0.5 : 1,
+                  color:
+                    selectedTrigger.status == "running"
+                      ? "rgba(255, 255, 255, 0.5)"
+                      : "inherit",
+                  marginTop: 5,
+                }}
+                onClick={() => {
+                  if (selectedTrigger.status == "running") {
+                    return; // Do nothing if cursor is "not-allowed"
+                  }
+                  const pipelineConfig = {
+                    name: selectedTrigger.label,
+                    type: "create",
+                    command: "load tcp://0.0.0.0:514 | read syslog | export",
+                    environment: selectedTrigger.environment,
+                    workflow_id: workflow.id,
+                    trigger_id: selectedTrigger.id,
+                  };
 
-			  <div 
-				style={{
-					border: "1px solid rgba(255,255,255,0.3)",
-					borderRadius: theme.palette.borderRadius,
-					padding: 10,
-					cursor: "pointer",
-					marginTop: 5, 
+                  submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
+                }}
+              >
+                Start Syslog listener
+              </div>
 
-				}}
-				onClick={() => {
-					const pipelineConfig = {
-						"name": selectedTrigger.label,
-						"type": "create",
-						"command": "load tcp://0.0.0.0:514 | read syslog | export",
-						"environment": selectedTrigger.environment,
-					}
+              <div
+                style={{
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  borderRadius: theme.palette.borderRadius,
+                  padding: 10,
+                  cursor: selectedTrigger.status == "running" ? "not-allowed" : "pointer",
+                  background:
+                    selectedTrigger.status == "running"
+                      ? "rgba(255, 255, 255, 0.1)"
+                      : "transparent",
+                  opacity: selectedTrigger.status == "running" ? 0.5 : 1,
+                  color:
+                    selectedTrigger.status == "running"
+                      ? "rgba(255, 255, 255, 0.5)"
+                      : "inherit",
+                  marginTop: 5,
+                }}
+                onClick={() => {
+                  if (selectedTrigger.status == "running") {
+                    return; 
+                  }
+                  const pipelineConfig = {
+                    name: selectedTrigger.label,
+                    type: "create",
+                    command:
+                      "export --live | sigma /path/to/rules | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines",
+                    environment: selectedTrigger.environment,
+                    workflow_id: workflow.id,
+                    trigger_id: selectedTrigger.id,
+                  };
 
-                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
-				}}
-			  >
-				Start Syslog listener
-			  </div>
+                  submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
+                }}
+              >
+                Run Sigma Rulesearch
+              </div>
 
-			  <div 
-				style={{
-					border: "1px solid rgba(255,255,255,0.3)",
-					borderRadius: theme.palette.borderRadius,
-					padding: 10,
-					cursor: "pointer",
-					marginTop: 5, 
+              <div
+                style={{
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  borderRadius: theme.palette.borderRadius,
+                  padding: 10,
+                  cursor: selectedTrigger.status == "running" ? "not-allowed" : "pointer",
+                  background:
+                    selectedTrigger.status == "running"
+                      ? "rgba(255, 255, 255, 0.1)"
+                      : "transparent",
+                  opacity: selectedTrigger.status == "running" ? 0.5 : 1,
+                  color:
+                    selectedTrigger.status == "running"
+                      ? "rgba(255, 255, 255, 0.5)"
+                      : "inherit",
+                  marginTop: 5,
+                }}
+                onClick={() => {
+                  if (selectedTrigger.status == "running") {
+                    return;
+                  }
+                  const pipelineConfig = {
+                    name: selectedTrigger.label,
+                    type: "create",
+                    command:
+                      "from kafka://1.2.3.4 --topic foo | to http://api.com X-Token:Secret",
+                    environment: selectedTrigger.environment,
+                    workflow_id: workflow.id,
+                    trigger_id: selectedTrigger.id,
+                  };
 
-				}}
-				onClick={() => {
-					const pipelineConfig = {
-						"name": selectedTrigger.label,
-						"type": "create",
-						"command": "export --live | sigma /path/to/rules | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines",
-						"environment": selectedTrigger.environment,
-					}
-
-                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
-				}}
-			  >
-				Run Sigma Rulesearch 
-			  </div>
-
-			  <div 
-				style={{
-					border: "1px solid rgba(255,255,255,0.3)",
-					borderRadius: theme.palette.borderRadius,
-					padding: 10,
-					cursor: "pointer",
-					marginTop: 5, 
-
-				}}
-				onClick={() => {
-					const pipelineConfig = {
-						"name": selectedTrigger.label,
-						"type": "create",
-						"command": "from kafka://1.2.3.4 --topic foo | to http://api.com X-Token:Secret",
-						"environment": selectedTrigger.environment,
-					}
-
-                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
-				}}
-			  >
-				Follow Kafka Queue
-			  </div>
+                  submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
+                }}
+              >
+                Follow Kafka Queue
+              </div>
 
               <div
                 style={{
@@ -13756,18 +13821,26 @@ const AngularWorkflow = (defaultprops) => {
                   variant="contained"
                   disabled={selectedTrigger.status === "running"}
                   onClick={() => {
-					  toast("Should start. But it doesn't")
+					           toast("Select anyone of the parameters to start")
                   }}
                   color="primary"
                 >
                   Start
                 </Button>
+                
                 <Button
                   style={{ flex: "1" }}
                   variant="contained"
                   disabled={selectedTrigger.status !== "running"}
                   onClick={() => {
-					  toast("Should stop triggert")
+                    const pipelineConfig = {
+                      name: selectedTrigger.label,
+                      type: "stop",
+                      environment: selectedTrigger.environment,
+                      workflow_id: workflow.id,
+                      trigger_id: selectedTrigger.id,
+                    };
+                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
                   }}
                   color="primary"
                 >
