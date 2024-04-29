@@ -2864,8 +2864,12 @@ class AppBase:
                         # Handles for loops etc. 
                         # FIXME: Should it dump to string here? Doesn't that defeat the purpose?
                         # Trying without string dumping.
-
+                        #self.logger.info("TO BE REPLACED: %s" % to_be_replaced)
                         value, is_loop = get_json_value(fullexecution, to_be_replaced) 
+                        self.logger.info("OUTPUT (%s): %s" % (to_be_replaced, value))
+                        self.logger.info("PRE VALUE:\n%s" % parameter["value"])
+
+
                         #self.logger.info(f"\n\nType of value: {type(value)}")
                         if isinstance(value, str):
                             # Could we take it here?
@@ -2879,26 +2883,25 @@ class AppBase:
                             #    returnvalue = fix_json_string_value(value)
                             #    value = returnvalue
 
-
-                            parameter["value"] = parameter["value"].replace(to_be_replaced, value)
+                            parameter["value"] = parameter["value"].replace(to_be_replaced, value, 1)
                         elif isinstance(value, dict) or isinstance(value, list):
                             # Changed from JSON dump to str() 28.05.2021
                             # This makes it so the parameters gets lists and dicts straight up
-                            parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                            parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value), 1)
 
                             #try:
-                            #    parameter["value"] = parameter["value"].replace(to_be_replaced, str(value))
-                            #except:
                             #    parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                            #except:
+                            #    parameter["value"] = parameter["value"].replace(to_be_replaced, str(value))
                             #    self.logger.info("Failed parsing value as string?")
                         else:
                             self.logger.error("[ERROR] Unknown type %s" % type(value))
                             try:
-                                parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                                parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value), 1)
                             except json.decoder.JSONDecodeError as e:
-                                parameter["value"] = parameter["value"].replace(to_be_replaced, value)
+                                parameter["value"] = parameter["value"].replace(to_be_replaced, value, 1)
 
-                        #self.logger.info("VALUE: %s" % parameter["value"])
+                        self.logger.info("POST VALUE: \n%s" % parameter["value"])
             else:
                 #self.logger.info(f"[ERROR] Not running static variant regex parsing (slow) on value with length {len(parameter['value'])}. Max is 5Mb~.")
                 pass
@@ -3433,8 +3436,6 @@ class AppBase:
                                 # Loop WITHOUT JSON variables go here. 
                                 # Loop WITH variables go in else.
                                 handled = False
-
-                                self.logger.info("ACTUALITEM: %s" % actualitem)
 
                                 # Has a loop without a variable used inside
                                 if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
