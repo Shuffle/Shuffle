@@ -1127,6 +1127,8 @@ class AppBase:
             #param_multiplier = await self.get_param_multipliers(newparams)
             param_multiplier = self.get_param_multipliers(newparams)
 
+            #self.logger.info("PARAM MULTIPLIER: %s" % param_multiplier)
+
             # FIXME: This does a deduplication of the data
             new_params = self.validate_unique_fields(param_multiplier)
             #self.logger.info(f"NEW PARAMS: {new_params}")
@@ -2866,9 +2868,6 @@ class AppBase:
                         # Trying without string dumping.
                         #self.logger.info("TO BE REPLACED: %s" % to_be_replaced)
                         value, is_loop = get_json_value(fullexecution, to_be_replaced) 
-                        self.logger.info("OUTPUT (%s): %s" % (to_be_replaced, value))
-                        self.logger.info("PRE VALUE:\n%s" % parameter["value"])
-
 
                         #self.logger.info(f"\n\nType of value: {type(value)}")
                         if isinstance(value, str):
@@ -2901,7 +2900,6 @@ class AppBase:
                             except json.decoder.JSONDecodeError as e:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, value, 1)
 
-                        self.logger.info("POST VALUE: \n%s" % parameter["value"])
             else:
                 #self.logger.info(f"[ERROR] Not running static variant regex parsing (slow) on value with length {len(parameter['value'])}. Max is 5Mb~.")
                 pass
@@ -3469,8 +3467,6 @@ class AppBase:
                                         if len(json_replacement) > minlength:
                                             minlength = len(json_replacement)
 
-                                        self.logger.info("PRE new_replacement")
-                                        
                                         new_replacement = []
                                         for i in range(len(json_replacement)):
                                             if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], list):
@@ -3484,11 +3480,14 @@ class AppBase:
                                             except Exception as e:
                                                 self.logger.info(f"[WARNING] Failed liquid parsing in loop (2): {e}")
 
+                                            tmpitem = str(newvalue)
+
                                             try:
                                                 newvalue = json.loads(newvalue)
                                             except json.decoder.JSONDecodeError as e:
                                                 pass
 
+                                            # The list to use for the multi execution IF not a file list
                                             new_replacement.append(newvalue)
 
 
@@ -3517,6 +3516,7 @@ class AppBase:
                                             self.logger.info("(1) JSON ERROR IN FILE HANDLING: %s" % e)
 
                                         if not isfile:
+                                            # Should be here in normal circumstances
                                             params[parameter["name"]] = tmpitem
                                             multi_parameters[parameter["name"]] = new_replacement 
                                         else:
@@ -3661,7 +3661,7 @@ class AppBase:
                                 except KeyError as e:
                                     self.logger.info("SCHEMA ERROR IN FILE HANDLING: %s" % e)
 
-
+                            
                         #remove_params.append(parameter["name"])
                         # Fix lists here
                         # FIXME: This doesn't really do anything anymore
@@ -3940,7 +3940,8 @@ class AppBase:
                             # 1. Use number of executions based on the arrays being similar
                             # 2. Find the right value from the parsed multi_params
 
-                            self.logger.info("[INFO] Running WITHOUT outer loop (looping)")
+                            #self.logger.info("[INFO] Running WITH loop. MULTI: %s", multi_parameters)
+                            self.logger.info("[INFO] Running WITH loop") 
                             json_object = False
                             #results = await self.run_recursed_items(func, multi_parameters, {})
                             results = self.run_recursed_items(func, multi_parameters, {})
