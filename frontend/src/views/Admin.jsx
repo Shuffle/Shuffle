@@ -4630,7 +4630,6 @@ If you're interested, please let me know a time that works for you, or set up a 
             style={{
               textAlign: "center",
               padding: "20px",
-              backgroundColor: "#f0f0f0",
               color: "#666",
               borderRadius: "5px",
             }}
@@ -4741,14 +4740,13 @@ If you're interested, please let me know a time that works for you, or set up a 
         />
         {webHooks === undefined || webHooks === null || webHooks.length === 0 ? (
           <div
-            style={{
-              textAlign: "center",
-              padding: "20px",
-              backgroundColor: "#f0f0f0",
-              color: "#666",
-              borderRadius: "5px",
-            }}
-          >
+          style={{
+            textAlign: "center",
+            padding: "20px",
+            color: "#666",
+            borderRadius: "5px",
+          }}
+        >
             No webhooks found.
           </div>
         ) : (
@@ -4901,7 +4899,6 @@ If you're interested, please let me know a time that works for you, or set up a 
             style={{
               textAlign: "center",
               padding: "20px",
-              backgroundColor: "#f0f0f0",
               color: "#666",
               borderRadius: "5px",
             }}
