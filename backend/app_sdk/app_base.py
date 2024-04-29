@@ -3434,95 +3434,102 @@ class AppBase:
                                 # Loop WITH variables go in else.
                                 handled = False
 
+                                self.logger.info("ACTUALITEM: %s" % actualitem)
+
                                 # Has a loop without a variable used inside
                                 if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
 
                                     tmpitem = value
 
-                                    index = 0
-                                    replacement = actualitem[index][2]
-                                    if replacement.endswith("}$"):
-                                        replacement = replacement[:-2]
+                                    #index = 0
+                                    for index in range(len(actualitem)):
+                                        # Check if it's SHUFFLE_NO_SPLITTER
+                                        if actualitem[index][1] != "SHUFFLE_NO_SPLITTER":
+                                            continue
 
-                                    if replacement.startswith("\"") and replacement.endswith("\""):
-                                        replacement = replacement[1:len(replacement)-1]
+                                        replacement = actualitem[index][2]
+                                        if replacement.endswith("}$"):
+                                            replacement = replacement[:-2]
 
-                                    #json_replacement = tmpitem.replace(actualitem[index][0], replacement, 1)
-                                    json_replacement = replacement
-                                    try:
-                                        json_replacement = json.loads(replacement)
-                                    except json.decoder.JSONDecodeError as e:
+                                        if replacement.startswith("\"") and replacement.endswith("\""):
+                                            replacement = replacement[1:len(replacement)-1]
+
+                                        #json_replacement = tmpitem.replace(actualitem[index][0], replacement, 1)
+                                        json_replacement = replacement
                                         try:
-                                            replacement = replacement.replace("\'", "\"", -1)
                                             json_replacement = json.loads(replacement)
-                                        except:
-                                            self.logger.info("JSON error singular: %s" % e)
-
-                                    if len(json_replacement) > minlength:
-                                        minlength = len(json_replacement)
-
-                                    self.logger.info("PRE new_replacement")
-                                    
-                                    new_replacement = []
-                                    for i in range(len(json_replacement)):
-                                        if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], list):
-                                            tmp_replacer = json.dumps(json_replacement[i])
-                                            newvalue = tmpitem.replace(str(actualitem[index][0]), str(tmp_replacer), 1)
-                                        else:
-                                            newvalue = tmpitem.replace(str(actualitem[index][0]), str(json_replacement[i]), 1)
-
-                                        try:
-                                            newvalue = parse_liquid(newvalue, self)
-                                        except Exception as e:
-                                            self.logger.info(f"[WARNING] Failed liquid parsing in loop (2): {e}")
-
-                                        try:
-                                            newvalue = json.loads(newvalue)
                                         except json.decoder.JSONDecodeError as e:
-                                            pass
+                                            try:
+                                                replacement = replacement.replace("\'", "\"", -1)
+                                                json_replacement = json.loads(replacement)
+                                            except:
+                                                self.logger.info("JSON error singular: %s" % e)
 
-                                        new_replacement.append(newvalue)
+                                        if len(json_replacement) > minlength:
+                                            minlength = len(json_replacement)
+
+                                        self.logger.info("PRE new_replacement")
+                                        
+                                        new_replacement = []
+                                        for i in range(len(json_replacement)):
+                                            if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], list):
+                                                tmp_replacer = json.dumps(json_replacement[i])
+                                                newvalue = tmpitem.replace(str(actualitem[index][0]), str(tmp_replacer), 1)
+                                            else:
+                                                newvalue = tmpitem.replace(str(actualitem[index][0]), str(json_replacement[i]), 1)
+
+                                            try:
+                                                newvalue = parse_liquid(newvalue, self)
+                                            except Exception as e:
+                                                self.logger.info(f"[WARNING] Failed liquid parsing in loop (2): {e}")
+
+                                            try:
+                                                newvalue = json.loads(newvalue)
+                                            except json.decoder.JSONDecodeError as e:
+                                                pass
+
+                                            new_replacement.append(newvalue)
 
 
-                                    # FIXME: Should this use new_replacement?
-                                    tmpitem = tmpitem.replace(actualitem[index][0], replacement, 1)
+                                        # FIXME: Should this use new_replacement?
+                                        tmpitem = tmpitem.replace(actualitem[index][0], replacement, 1)
 
-                                    # This code handles files.
-                                    resultarray = []
-                                    isfile = False
-                                    try:
-                                        if parameter["schema"]["type"] == "file" and len(value) > 0:
-                                            self.logger.info("(1) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % tmpitem) 
-                                            # This is silly :)
-                                            # Q: Is there something wrong with the download system?
-                                            # It seems to return "FILE CONTENT: %s" with the ID as %s
-                                            for tmp_file_split in json.loads(tmpitem):
-                                                file_value = self.get_file(tmp_file_split)
-                                                resultarray.append(file_value)
+                                        # This code handles files.
+                                        resultarray = []
+                                        isfile = False
+                                        try:
+                                            if parameter["schema"]["type"] == "file" and len(value) > 0:
+                                                self.logger.info("(1) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % tmpitem) 
+                                                # This is silly :)
+                                                # Q: Is there something wrong with the download system?
+                                                # It seems to return "FILE CONTENT: %s" with the ID as %s
+                                                for tmp_file_split in json.loads(tmpitem):
+                                                    file_value = self.get_file(tmp_file_split)
+                                                    resultarray.append(file_value)
 
-                                            isfile = True
-                                    except NameError as e:
-                                        self.logger.info("(1) SCHEMA NAMEERROR IN FILE HANDLING: %s" % e)
-                                    except KeyError as e:
-                                        self.logger.info("(1) SCHEMA KEYERROR IN FILE HANDLING: %s" % e)
-                                    except json.decoder.JSONDecodeError as e:
-                                        self.logger.info("(1) JSON ERROR IN FILE HANDLING: %s" % e)
+                                                isfile = True
+                                        except NameError as e:
+                                            self.logger.info("(1) SCHEMA NAMEERROR IN FILE HANDLING: %s" % e)
+                                        except KeyError as e:
+                                            self.logger.info("(1) SCHEMA KEYERROR IN FILE HANDLING: %s" % e)
+                                        except json.decoder.JSONDecodeError as e:
+                                            self.logger.info("(1) JSON ERROR IN FILE HANDLING: %s" % e)
 
-                                    if not isfile:
-                                        params[parameter["name"]] = tmpitem
-                                        multi_parameters[parameter["name"]] = new_replacement 
-                                    else:
-                                        params[parameter["name"]] = resultarray 
-                                        multi_parameters[parameter["name"]] = resultarray 
+                                        if not isfile:
+                                            params[parameter["name"]] = tmpitem
+                                            multi_parameters[parameter["name"]] = new_replacement 
+                                        else:
+                                            params[parameter["name"]] = resultarray 
+                                            multi_parameters[parameter["name"]] = resultarray 
 
-                                    #if len(resultarray) == 0:
-                                    #    self.logger.info("[WARNING] Returning empty array because the array length to be looped is 0 (1)")
-                                    #    action_result["status"] = "SUCCESS" 
-                                    #    action_result["result"] = "[]"
-                                    #    self.send_result(action_result, headers, stream_path)
-                                    #    return
+                                        #if len(resultarray) == 0:
+                                        #    self.logger.info("[WARNING] Returning empty array because the array length to be looped is 0 (1)")
+                                        #    action_result["status"] = "SUCCESS" 
+                                        #    action_result["result"] = "[]"
+                                        #    self.send_result(action_result, headers, stream_path)
+                                        #    return
 
-                                    multi_execution_lists.append(new_replacement)
+                                        multi_execution_lists.append(new_replacement)
                                     #self.logger.info("MULTI finished: %s" % json_replacement)
                                 else:
                                     # This is here to handle for loops within variables.. kindof
