@@ -659,7 +659,7 @@ const Files = (props) => {
 					onClick={() => {
 						upload.click();
 					}}
-					style={{backgroundColor: isSelectedFiles?'rgba(255, 132, 68, 0.2)':null, color:isSelectedFiles?"#FF8444":null, borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?162:null, height:isSelectedFiles?40:null}}
+					style={{backgroundColor: isSelectedFiles?'rgba(255, 132, 68, 0.2)':null, color:isSelectedFiles?"#FF8444":null, borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?162:null, height:isSelectedFiles?40:null, boxShadow: isSelectedFiles?'none':null,}}
 				>
 					<PublishIcon /> Upload files
 				</Button>
@@ -679,7 +679,7 @@ const Files = (props) => {
 					}}
 				/>
 				<Button
-					style={{ marginLeft: 5, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?81:null, height:isSelectedFiles?40:null,  }}
+					style={{ marginLeft: 5, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?81:null, height:isSelectedFiles?40:null, boxShadow: isSelectedFiles?'none':null, }}
 					variant="contained"
 					color="primary"
 					onClick={() => getFiles()}
@@ -814,7 +814,7 @@ const Files = (props) => {
 						/>
 						<ListItemText
 							primary="Md5"
-							style={{ minWidth: 250, maxWidth: 250, overflow: "hidden" }}
+							style={{ minWidth: isSelectedFiles?210:250, maxWidth: isSelectedFiles?210:250, overflow: "hidden" }}
 						/>
 						<ListItemText
 							primary="Status"
@@ -836,9 +836,9 @@ const Files = (props) => {
 								return null;
 							}
 
-							var bgColor = "#27292d";
+							var bgColor = isSelectedFiles ? "#212121":"#27292d";
 							if (index % 2 === 0) {
-								bgColor = "#1f2023";
+								bgColor = isSelectedFiles ? "#1A1A1A":"#1f2023";
 							}
 
 							const filenamesplit = file.filename.split(".")
@@ -855,8 +855,8 @@ const Files = (props) => {
 								>
 									<ListItemText
 										style={{
-											maxWidth: 225,
-											minWidth: 225,
+											maxWidth: isSelectedFiles ? 170:225,
+											minWidth: isSelectedFiles ? 170:225,
 											overflow: "hidden",
 										}}
 										primary={new Date(file.updated_at * 1000).toISOString()}
@@ -922,14 +922,16 @@ const Files = (props) => {
 											minWidth: 100,
 											maxWidth: 100,
 											overflow: "hidden",
+											textAlign: isSelectedFiles?"center":null
 										}}
 									/>
 									<ListItemText
 										primary={file.md5_sum}
 										style={{
-											minWidth: 300,
-											maxWidth: 300,
-											overflow: "hidden",
+											minWidth: isSelectedFiles?200:300,
+											maxWidth: isSelectedFiles?200:300,
+											marginLeft:isSelectedFiles? 15:null,
+											overflow: isSelectedFiles?"auto":"hidden",
 										}}
 									/>
 									<ListItemText
@@ -938,14 +940,16 @@ const Files = (props) => {
 											minWidth: 75,
 											maxWidth: 75,
 											overflow: "hidden",
+											textAlign:isSelectedFiles?"center":null,
 											marginLeft: 10,
 										}}
 									/>
 									<ListItemText
 										primary={file.filesize}
 										style={{
-											minWidth: 125,
-											maxWidth: 125,
+											minWidth: isSelectedFiles?80:125,
+											maxWidth: isSelectedFiles?80:125,
+											marginLeft: isSelectedFiles?15:null,
 											overflow: "hidden",
 										}}
 									/>
@@ -1064,7 +1068,7 @@ const Files = (props) => {
 											</Tooltip>
 											<Tooltip
 												title={"Delete file"}
-												style={{marginLeft: 15, }}
+												style={{marginLeft: isSelectedFiles?5:15, }}
 												aria-label={"Delete"}
 											>
 												<span>

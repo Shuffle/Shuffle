@@ -43,7 +43,7 @@ import BillingStats from "../components/BillingStats.jsx";
 import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 
 const Billing = (props) => {
-  const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, } = props;
+  const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, clickedFromOrgTab } = props;
   //const alert = useAlert();
   let navigate = useNavigate();
 
@@ -970,21 +970,29 @@ const Billing = (props) => {
 
 	const isChildOrg = userdata.active_org.creator_org !== "" && userdata.active_org.creator_org !== undefined && userdata.active_org.creator_org !== null
 	return (
-		<div style={{ width: "auto", padding: 27, height: "auto", backgroundColor: '#212121', borderRadius: '16px', }}>
+		<div style={{ width: clickedFromOrgTab? 1030 : "auto", padding: 27, backgroundColor: '#212121', borderRadius: '16px', }}>
       		{addDealModal}
+			{clickedFromOrgTab?
+			  <h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Billing & Licensing</h2>:
 			<Typography variant="h4" style={{ marginTop: 20, marginBottom: 10 }}>
 				Billing	& Licensing
-			</Typography>
+			</Typography>}
+			{clickedFromOrgTab?
+			<span style={{ color: "#9E9E9E" }}>{isCloud ? 
+				"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
+				:
+				"Shuffle is an Open Source automation platform, and no license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update."
+			}</span>:
 			<Typography variant="body1" color="textSecondary" style={{ marginTop: 0, marginBottom: 10}}>
 				{isCloud ? 
 					"Get more out of Shuffle by adding your credit card, such as no App Run limitations, and priority support from our team. We use Stripe to manage subscriptions and do not store any of your billing information. You can manage your subscription and billing information below."
 					:
 					"Shuffle is an Open Source automation platform, and no license is required. We do however offer a Scale license with HA guarantees, along with support hours. By buying a license on https://shuffler.io, you can get access to the license immediately, and if Cloud Syncronisation is enabled, the UI in your local instance will also update."
 				}
-			</Typography>
+			</Typography>}
 
 			{userdata.support === true ? 
-				<div style={{marginBottom: 10, }}>
+				<div style={{marginBottom: 10, marginTop:clickedFromOrgTab?16:null, color:clickedFromOrgTab?"#F1F1F1":null }}>
 					For sales: Create&nbsp;
 					<a href={"https://docs.google.com/document/d/1OeJSi42812EMg7fUAw1HAj1ymOG8rfp8Ma_DGJKvwgI/copy?usp=sharing&organization=" + selectedOrganization.id} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
 						New Cloud Contract

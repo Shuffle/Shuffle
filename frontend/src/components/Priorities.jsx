@@ -203,7 +203,7 @@ const Priorities = (props) => {
     	  <Paper
     	    style={{
     	      backgroundColor: theme.palette.platformColor,
-    	      width: notificationWidth,
+    	      width: clickedFromOrgTab ? null :notificationWidth,
     	      padding: 30,
     	      borderBottom: "1px solid rgba(255,255,255,0.4)",
 			  marginBottom: 20, 
@@ -312,7 +312,7 @@ const Priorities = (props) => {
     }
 
 	return (
-		<div style={{maxWidth: clickedFromOrgTab ? 1030:1000, padding: clickedFromOrgTab ? 27:null, height: clickedFromOrgTab ? "auto":null, backgroundColor: clickedFromOrgTab ? '#212121':null, borderRadius: clickedFromOrgTab ? '16px':null,  }}>
+		<div style={{width: clickedFromOrgTab ? 1030:1000, padding: clickedFromOrgTab ? 27:null, height: clickedFromOrgTab ? "auto":null, backgroundColor: clickedFromOrgTab ? '#212121':null, borderRadius: clickedFromOrgTab ? '16px':null,  }}>
 			<h2 style={{ display: clickedFromOrgTab ?null:"inline", marginBottom: clickedFromOrgTab ? 8:null, marginTop: clickedFromOrgTab ?0:null, color: clickedFromOrgTab ?"#ffffff":null }}>Suggestions</h2>
 			<span style={{ color: clickedFromOrgTab ?"#9E9E9E":null,marginLeft: clickedFromOrgTab ?null:25 }}>
 				Suggestions are tasks identified by Shuffle to help you discover ways to protect your and customers' company. <br/>These range from simple configurations in Shuffle to Usecases you may have missed.&nbsp;

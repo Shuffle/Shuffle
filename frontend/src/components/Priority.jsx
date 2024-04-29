@@ -147,7 +147,7 @@ const Priority = (props) => {
 				}
 			</div>
 			<div style={{flex: 1, display: "flex", marginLeft: 30, }}>
-				<Button style={{height: 50, borderRadius: 25,  marginTop: 8, width: 175, marginRight: 10, color: priority.active === false ? "white" :clickedFromOrgTab ?"#FF8444": "black", backgroundColor: priority.active === false ? theme.palette.inputColor :clickedFromOrgTab?"rgba(255, 132, 68, 0.2)":"rgba(255,255,255,0.8)", }} variant="contained" color="secondary" onClick={() => {
+				<Button style={{height: 50, borderRadius: 25, fontSize:16, boxShadow: clickedFromOrgTab ? "none":null,textTransform: clickedFromOrgTab ? 'capitalize':null, marginTop: 8, width: 175, marginRight: 10, color: priority.active === false ? "white" :clickedFromOrgTab ?"#FF8444": "black", backgroundColor: priority.active === false ? theme.palette.inputColor :clickedFromOrgTab?"rgba(255, 132, 68, 0.2)":"rgba(255,255,255,0.8)", }} variant="contained" color="secondary" onClick={() => {
 
 					if (isCloud) {
 						ReactGA.event({
@@ -173,7 +173,7 @@ const Priority = (props) => {
 					Explore		
 				</Button>
 				{priority.active === true ?
-					<Button style={{borderRadius: 25, width: 100, height: 50, marginTop: 8, }} variant="text" color="secondary" onClick={() => {
+					<Button style={{borderRadius: 25, fontSize:16, boxShadow: clickedFromOrgTab ? "none":null,textTransform: clickedFromOrgTab ? 'capitalize':null, width: 100, height: 50, marginTop: 8, }} variant="text" color="secondary" onClick={() => {
 						// dismiss -> get envs
 						changeRecommendation(priority, "dismiss")
 					}}>
