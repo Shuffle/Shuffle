@@ -2526,7 +2526,7 @@ class AppBase:
                     return template
 
                 if "${" in template and "}$" in template:
-                    self.logger.info("[DEBUG] Shuffle loop shouldn't run in liquid. Data length: %d" % len(template))
+                    #self.logger.info("[DEBUG] Shuffle loop shouldn't run in liquid. Data length: %d" % len(template))
                     return template
 
 
@@ -3436,203 +3436,101 @@ class AppBase:
                                 handled = False
 
                                 # Has a loop without a variable used inside
-                                if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
+                                
+                                # This is here to handle for loops within variables.. kindof
+                                # 1. Find the length of the longest array
+                                # 2. Build an array with the base values based on parameter["value"] 
+                                # 3. Get the n'th value of the generated list from values
+                                # 4. Execute all n answers 
+                                replacements = {}
+                                curminlength = 0
+                                for replace in actualitem:
+                                    try:
+                                        to_be_replaced = replace[0]
+                                        actualitem = replace[2]
+                                        if actualitem.endswith("}$"):
+                                            actualitem = actualitem[:-2]
 
-                                    tmpitem = value
+                                    except IndexError:
+                                        self.logger.info("[WARNING] Indexerror")
+                                        continue
 
-                                    #index = 0
-                                    for index in range(len(actualitem)):
-                                        # Check if it's SHUFFLE_NO_SPLITTER
-                                        if actualitem[index][1] != "SHUFFLE_NO_SPLITTER":
-                                            continue
+                                    try:
+                                        itemlist = json.loads(actualitem)
+                                        if len(itemlist) > minlength:
+                                            minlength = len(itemlist)
 
-                                        replacement = actualitem[index][2]
-                                        if replacement.endswith("}$"):
-                                            replacement = replacement[:-2]
+                                        if len(itemlist) > curminlength:
+                                            curminlength = len(itemlist)
+                                        
+                                    except json.decoder.JSONDecodeError as e:
+                                        self.logger.info("JSON Error (replace): %s in %s" % (e, actualitem))
+
+                                    replacements[to_be_replaced] = actualitem
+
+
+                                # Parses the data as string with length, split etc. before moving on. 
+                                #self.logger.info("In second part of else: %s" % (len(itemlist)))
+                                # This is a result array for JUST this value.. 
+                                # What if there are more?
+                                resultarray = []
+                                for i in range(0, curminlength): 
+                                    tmpitem = json.loads(json.dumps(parameter["value"]))
+                                    for key, value in replacements.items():
+                                        replacement = value
+                                        try:
+                                            replacement = json.dumps(json.loads(value)[i])
+                                        except IndexError as e:
+                                            self.logger.info(f"[ERROR] Failed handling value parsing with index: {e}")
+                                            pass
 
                                         if replacement.startswith("\"") and replacement.endswith("\""):
                                             replacement = replacement[1:len(replacement)-1]
+                                        #except json.decoder.JSONDecodeError as e:
 
-                                        #json_replacement = tmpitem.replace(actualitem[index][0], replacement, 1)
-                                        json_replacement = replacement
+                                        #self.logger.info("REPLACING %s with %s" % (key, replacement))
+                                        #replacement = parse_wrapper_start(replacement)
+                                        tmpitem = tmpitem.replace(key, replacement, -1)
                                         try:
-                                            json_replacement = json.loads(replacement)
-                                        except json.decoder.JSONDecodeError as e:
-                                            try:
-                                                replacement = replacement.replace("\'", "\"", -1)
-                                                json_replacement = json.loads(replacement)
-                                            except:
-                                                self.logger.info("JSON error singular: %s" % e)
-
-                                        if len(json_replacement) > minlength:
-                                            minlength = len(json_replacement)
-
-                                        new_replacement = []
-                                        for i in range(len(json_replacement)):
-                                            if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], list):
-                                                tmp_replacer = json.dumps(json_replacement[i])
-                                                newvalue = tmpitem.replace(str(actualitem[index][0]), str(tmp_replacer), 1)
-                                            else:
-                                                newvalue = tmpitem.replace(str(actualitem[index][0]), str(json_replacement[i]), 1)
-
-                                            try:
-                                                newvalue = parse_liquid(newvalue, self)
-                                            except Exception as e:
-                                                self.logger.info(f"[WARNING] Failed liquid parsing in loop (2): {e}")
-
-                                            tmpitem = str(newvalue)
-
-                                            try:
-                                                newvalue = json.loads(newvalue)
-                                            except json.decoder.JSONDecodeError as e:
-                                                pass
-
-                                            # The list to use for the multi execution IF not a file list
-                                            new_replacement.append(newvalue)
+                                            tmpitem = parse_liquid(tmpitem, self)
+                                        except Exception as e:
+                                            self.logger.info(f"[WARNING] Failed liquid parsing in loop (2): {e}")
 
 
-                                        # FIXME: Should this use new_replacement?
-                                        tmpitem = tmpitem.replace(actualitem[index][0], replacement, 1)
+                                    # This code handles files.
+                                    isfile = False
+                                    try:
+                                        if parameter["schema"]["type"] == "file" and len(value) > 0:
+                                            self.logger.info("(2) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % parameter["value"]) 
 
-                                        # This code handles files.
-                                        resultarray = []
-                                        isfile = False
-                                        try:
-                                            if parameter["schema"]["type"] == "file" and len(value) > 0:
-                                                self.logger.info("(1) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % tmpitem) 
-                                                # This is silly :)
-                                                # Q: Is there something wrong with the download system?
-                                                # It seems to return "FILE CONTENT: %s" with the ID as %s
-                                                for tmp_file_split in json.loads(tmpitem):
-                                                    file_value = self.get_file(tmp_file_split)
-                                                    resultarray.append(file_value)
-
-                                                isfile = True
-                                        except NameError as e:
-                                            self.logger.info("(1) SCHEMA NAMEERROR IN FILE HANDLING: %s" % e)
-                                        except KeyError as e:
-                                            self.logger.info("(1) SCHEMA KEYERROR IN FILE HANDLING: %s" % e)
-                                        except json.decoder.JSONDecodeError as e:
-                                            self.logger.info("(1) JSON ERROR IN FILE HANDLING: %s" % e)
-
-                                        if not isfile:
-                                            # Should be here in normal circumstances
-                                            params[parameter["name"]] = tmpitem
-                                            multi_parameters[parameter["name"]] = new_replacement 
-                                        else:
-                                            params[parameter["name"]] = resultarray 
-                                            multi_parameters[parameter["name"]] = resultarray 
-
-                                        #if len(resultarray) == 0:
-                                        #    self.logger.info("[WARNING] Returning empty array because the array length to be looped is 0 (1)")
-                                        #    action_result["status"] = "SUCCESS" 
-                                        #    action_result["result"] = "[]"
-                                        #    self.send_result(action_result, headers, stream_path)
-                                        #    return
-
-                                        multi_execution_lists.append(new_replacement)
-                                    #self.logger.info("MULTI finished: %s" % json_replacement)
-                                else:
-                                    # This is here to handle for loops within variables.. kindof
-                                    # 1. Find the length of the longest array
-                                    # 2. Build an array with the base values based on parameter["value"] 
-                                    # 3. Get the n'th value of the generated list from values
-                                    # 4. Execute all n answers 
-                                    replacements = {}
-                                    curminlength = 0
-                                    for replace in actualitem:
-                                        try:
-                                            to_be_replaced = replace[0]
-                                            actualitem = replace[2]
-                                            if actualitem.endswith("}$"):
-                                                actualitem = actualitem[:-2]
-
-                                        except IndexError:
-                                            self.logger.info("[WARNING] Indexerror")
-                                            continue
-
-                                        #self.logger.info(f"\n\nTMPITEM: {actualitem}\n\n")
-                                        #actualitem = parse_wrapper_start(actualitem)
-                                        #self.logger.info(f"\n\nTMPITEM2: {actualitem}\n\n")
-
-                                        try:
-                                            itemlist = json.loads(actualitem)
-                                            if len(itemlist) > minlength:
-                                                minlength = len(itemlist)
-
-                                            if len(itemlist) > curminlength:
-                                                curminlength = len(itemlist)
-                                            
-                                        except json.decoder.JSONDecodeError as e:
-                                            self.logger.info("JSON Error (replace): %s in %s" % (e, actualitem))
-
-                                        replacements[to_be_replaced] = actualitem
+                                            for tmp_file_split in json.loads(parameter["value"]):
+                                                file_value = self.get_file(tmp_file_split)
+                                                resultarray.append(file_value)
 
 
-                                    # Parses the data as string with length, split etc. before moving on. 
+                                            isfile = True
+                                    except KeyError as e:
+                                        self.logger.info("(2) SCHEMA ERROR IN FILE HANDLING: %s" % e)
+                                    except json.decoder.JSONDecodeError as e:
+                                        self.logger.info("(2) JSON ERROR IN FILE HANDLING: %s" % e)
 
+                                    if not isfile:
+                                        tmpitem = tmpitem.replace("\\\\", "\\", -1)
+                                        resultarray.append(tmpitem)
 
-                                    #self.logger.info("In second part of else: %s" % (len(itemlist)))
-                                    # This is a result array for JUST this value.. 
-                                    # What if there are more?
-                                    resultarray = []
-                                    for i in range(0, curminlength): 
-                                        tmpitem = json.loads(json.dumps(parameter["value"]))
-                                        for key, value in replacements.items():
-                                            replacement = value
-                                            try:
-                                                replacement = json.dumps(json.loads(value)[i])
-                                            except IndexError as e:
-                                                self.logger.info(f"[ERROR] Failed handling value parsing with index: {e}")
-                                                pass
+                                # With this parameter ready, add it to... a greater list of parameters. Rofl
+                                if len(resultarray) == 0:
+                                    self.logger.info("[WARNING] Returning empty array because the array length to be looped is 0 (0)")
+                                    self.action_result["status"] = "SUCCESS" 
+                                    self.action_result["result"] = "[]"
+                                    self.send_result(self.action_result, headers, stream_path)
+                                    return
 
-                                            if replacement.startswith("\"") and replacement.endswith("\""):
-                                                replacement = replacement[1:len(replacement)-1]
-                                            #except json.decoder.JSONDecodeError as e:
+                                #self.logger.info("RESULTARRAY: %s" % resultarray)
+                                if resultarray not in multi_execution_lists:
+                                    multi_execution_lists.append(resultarray)
 
-                                            #self.logger.info("REPLACING %s with %s" % (key, replacement))
-                                            #replacement = parse_wrapper_start(replacement)
-                                            tmpitem = tmpitem.replace(key, replacement, -1)
-                                            try:
-                                                tmpitem = parse_liquid(tmpitem, self)
-                                            except Exception as e:
-                                                self.logger.info(f"[WARNING] Failed liquid parsing in loop (2): {e}")
-
-
-                                        # This code handles files.
-                                        isfile = False
-                                        try:
-                                            if parameter["schema"]["type"] == "file" and len(value) > 0:
-                                                self.logger.info("(2) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % parameter["value"]) 
-
-                                                for tmp_file_split in json.loads(parameter["value"]):
-                                                    file_value = self.get_file(tmp_file_split)
-                                                    resultarray.append(file_value)
-
-
-                                                isfile = True
-                                        except KeyError as e:
-                                            self.logger.info("(2) SCHEMA ERROR IN FILE HANDLING: %s" % e)
-                                        except json.decoder.JSONDecodeError as e:
-                                            self.logger.info("(2) JSON ERROR IN FILE HANDLING: %s" % e)
-
-                                        if not isfile:
-                                            tmpitem = tmpitem.replace("\\\\", "\\", -1)
-                                            resultarray.append(tmpitem)
-
-                                    # With this parameter ready, add it to... a greater list of parameters. Rofl
-                                    if len(resultarray) == 0:
-                                        self.logger.info("[WARNING] Returning empty array because the array length to be looped is 0 (0)")
-                                        self.action_result["status"] = "SUCCESS" 
-                                        self.action_result["result"] = "[]"
-                                        self.send_result(self.action_result, headers, stream_path)
-                                        return
-
-                                    #self.logger.info("RESULTARRAY: %s" % resultarray)
-                                    if resultarray not in multi_execution_lists:
-                                        multi_execution_lists.append(resultarray)
-
-                                    multi_parameters[parameter["name"]] = resultarray
+                                multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
                                 #self.logger.info("[DEBUG] Normal parsing (not looping)")#with data %s" % value)
@@ -3662,7 +3560,6 @@ class AppBase:
                                     self.logger.info("SCHEMA ERROR IN FILE HANDLING: %s" % e)
 
                             
-                        #remove_params.append(parameter["name"])
                         # Fix lists here
                         # FIXME: This doesn't really do anything anymore
                         #self.logger.info("[DEBUG] CHECKING multi execution list: %d!" % len(multi_execution_lists))
@@ -3941,7 +3838,7 @@ class AppBase:
                             # 2. Find the right value from the parsed multi_params
 
                             #self.logger.info("[INFO] Running WITH loop. MULTI: %s", multi_parameters)
-                            self.logger.info("[INFO] Running WITH loop") 
+                            self.logger.info("[INFO] Running WITH loop")
                             json_object = False
                             #results = await self.run_recursed_items(func, multi_parameters, {})
                             results = self.run_recursed_items(func, multi_parameters, {})
