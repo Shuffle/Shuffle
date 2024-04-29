@@ -13124,7 +13124,7 @@ const AngularWorkflow = (defaultprops) => {
     if (trigger.id === undefined) {
       return;
     }
-
+  
     fetch(globalUrl + "/api/v1/hooks/" + trigger.id + "/delete", {
       method: "DELETE",
       headers: {
@@ -13137,32 +13137,34 @@ const AngularWorkflow = (defaultprops) => {
         if (response.status !== 200) {
           console.log("Status not 200 for stream results :O!");
         }
-
+  
         return response.json();
       })
       .then((responseJson) => {
+        if (!responseJson.success) {
+          if (responseJson.reason !== undefined) {
+            toast("Failed to stop webhook: " + responseJson.reason);
+          }
+        } else {
+          toast("Successfully stopped webhook");
+        }
         if (workflow.triggers[triggerindex] !== undefined) {
           workflow.triggers[triggerindex].status = "stopped";
         }
-
-        if (responseJson.success) {
-          // Set the status
-          saveWorkflow(workflow);
-        } else {
-          if (responseJson.reason !== undefined) {
-            toast("Failed stopping webhook: " + responseJson.reason);
-          }
-        }
-
         trigger.status = "stopped";
-        setWorkflow(workflow);
         setSelectedTrigger(trigger);
+        setWorkflow(workflow);
+        saveWorkflow(workflow);
+   
       })
       .catch((error) => {
         //toast(error.toString());
-        toast("Delete webhook error. Contact support or check logs if this persists.")
+        toast(
+          "Delete webhook error. Contact support or check logs if this persists.",
+        );
       });
   };
+  
 
   // POST to /api/v1/workflows
   const createWorkflow = (workflow, trigger_index) => {

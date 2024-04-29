@@ -756,7 +756,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((responseJson) => {
         setWebHooks(responseJson.webhooks || []); // Handling the case where the result is null or undefined
         setAllSchedules(responseJson.schedules || []);
-        setPipelines(responseJson.pipelines || []);
+        // setPipelines(responseJson.pipelines || []);
       })
       .catch((error) => {
         toast(error.toString());
@@ -935,13 +935,54 @@ If you're interested, please let me know a time that works for you, or set up a 
   };
 
   const changePipelineState = (pipeline, state) => {
-    if (state.trim() === ''){
-      toast("state is not defined")
-      return
+    if (state.trim() === "") {
+      toast("state is not defined");
+      return;
     }
-    
-  }
-
+  
+    const data = {
+      name: pipeline.name,
+      type: state,
+      environment: pipeline.environment,
+      workflow_id: pipeline.workflow_id,
+      trigger_id: pipeline.trigger_id,
+    };
+  
+    if (state === "start") toast("starting the pipeline");
+    else toast("stopping the pipeline");
+  
+    const url = `${globalUrl}/api/v1/triggers/pipeline`;
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for stream results :O!");
+          toast("Failed to update the pipeline state");
+        }
+  
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (!responseJson.success) {
+          toast("Failed to update the pipeline: " + responseJson.reason);
+        } else {
+          if (state === "start") toast("Successfully created pipeline");
+          else toast("Sucessfully stopped the pipeline");
+        }
+      })
+      .catch((error) => {
+        //toast(error.toString());
+        console.log("Get schedule error: ", error.toString());
+      });
+  };  
+  
   if (
     userdata.support === true &&
     selectedOrganization.id !== "" &&
@@ -4618,74 +4659,72 @@ If you're interested, please let me know a time that works for you, or set up a 
               <ListItemText primary="Actions" />
               <ListItemText primary="Delegation" />
             </ListItem>
-            { allSchedules.map((schedule, index) => {
-                  var bgColor = "#27292d";
-                  if (index % 2 === 0) {
-                    bgColor = "#1f2023";
-                  }
+            {allSchedules.map((schedule, index) => {
+              var bgColor = "#27292d";
+              if (index % 2 === 0) {
+                bgColor = "#1f2023";
+              }
   
-                  return (
-                    <ListItem key={index} style={{ backgroundColor: bgColor }}>
-                      <ListItemText
-                        style={{ maxWidth: 200, minWidth: 200 }}
-                        primary={
-                          schedule.environment === "cloud" ||
-                          schedule.environment === "" ||
-                          schedule.frequency.length > 0 ? (
-                            schedule.frequency
-                          ) : (
-                            <span>{schedule.seconds} seconds</span>
-                          )
-                        }
-                      />
-                      <ListItemText
-                        style={{ maxWidth: 150, minWidth: 150 }}
-                        primary={schedule.environment}
-                      />
-                      <ListItemText
-                        style={{ maxWidth: 315, minWidth: 315 }}
-                        primary={
-                          <a
-                            style={{ textDecoration: "none", color: "#f85a3e" }}
-                            href={`/workflows/${schedule.workflow_id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {schedule.workflow_id}
-                          </a>
-                        }
-                      />
-                      <ListItemText
-                        primary={schedule.wrapped_argument.replaceAll('\\"', '"')}
-                        style={{
-                          minWidth: 300,
-                          maxWidth: 300,
-                          overflow: "hidden",
-                        }}
-                      />
-                      <ListItemText>
-                        <Button
-                          style={{}}
-                          variant={
-                            schedule.status === "running"
-                              ? "contained"
-                              : "outlined"
-                          }
-                          disabled={schedule.status === "uninitialized"}
-                          onClick={() => {
-                            if (schedule.status === "running") {
-                              deleteSchedule(schedule);
-                            } else startSchedule(schedule);
-                          }}
-                        >
-                          {schedule.status === "running"
-                            ? "Stop Schedule"
-                            : "Start Schedule"}
-                        </Button>
-                      </ListItemText>
-                    </ListItem>
-                  );
-                })}
+              return (
+                <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                  <ListItemText
+                    style={{ maxWidth: 200, minWidth: 200 }}
+                    primary={
+                      schedule.environment === "cloud" ||
+                      schedule.environment === "" ||
+                      schedule.frequency.length > 0 ? (
+                        schedule.frequency
+                      ) : (
+                        <span>{schedule.seconds} seconds</span>
+                      )
+                    }
+                  />
+                  <ListItemText
+                    style={{ maxWidth: 150, minWidth: 150 }}
+                    primary={schedule.environment}
+                  />
+                  <ListItemText
+                    style={{ maxWidth: 315, minWidth: 315 }}
+                    primary={
+                      <a
+                        style={{ textDecoration: "none", color: "#f85a3e" }}
+                        href={`/workflows/${schedule.workflow_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {schedule.workflow_id}
+                      </a>
+                    }
+                  />
+                  <ListItemText
+                    primary={schedule.wrapped_argument.replaceAll('\\"', '"')}
+                    style={{
+                      minWidth: 300,
+                      maxWidth: 300,
+                      overflow: "hidden",
+                    }}
+                  />
+                  <ListItemText>
+                    <Button
+                      style={{}}
+                      variant={
+                        schedule.status === "running" ? "contained" : "outlined"
+                      }
+                      disabled={schedule.status === "uninitialized"}
+                      onClick={() => {
+                        if (schedule.status === "running") {
+                          deleteSchedule(schedule);
+                        } else startSchedule(schedule);
+                      }}
+                    >
+                      {schedule.status === "running"
+                        ? "Stop Schedule"
+                        : "Start Schedule"}
+                    </Button>
+                  </ListItemText>
+                </ListItem>
+              );
+            })}
           </List>
         )}
   
@@ -4833,7 +4872,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           </List>
         )}
   
-        <div style={{ marginTop: 20, marginBottom: 20 }}>
+        {/* <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Tenzir Pipelines</h2>
           <span style={{ marginLeft: 25 }}>
             Controls a pipeline to run things.{" "}
@@ -4855,7 +4894,9 @@ If you're interested, please let me know a time that works for you, or set up a 
             backgroundColor: theme.palette.inputColor,
           }}
         />
-                {pipelines === undefined || pipelines === null || pipelines.length === 0 ? (
+        {pipelines === undefined ||
+        pipelines === null ||
+        pipelines.length === 0 ? (
           <div
             style={{
               textAlign: "center",
@@ -4927,15 +4968,15 @@ If you're interested, please let me know a time that works for you, or set up a 
                       }}
                     >
                       {pipeline.status === "running"
-                        ? "Stop webhook"
-                        : "Start Webhook"}
+                        ? "Stop pipeline"
+                        : "Start pipeline"}
                     </Button>
                   </ListItemText>
                 </ListItem>
               );
             })}
           </List>
-        )}
+        )}*/}
       </div>
     ) : null;
 
