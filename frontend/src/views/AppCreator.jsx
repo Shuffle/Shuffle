@@ -3075,7 +3075,7 @@ const AppCreator = (defaultprops) => {
         		<TextField
         		  style={{ 
 					margin: 0, flex: "1", backgroundColor: inputColor,
-				  	border: !refreshUrl.startsWith("http") || refreshUrl.includes("//shuffler.") ? "2px solid red" : "inherit",
+				  	border: refreshUrl.length > 0 && (!refreshUrl.startsWith("http") || refreshUrl.includes("//shuffler.")) ? "2px solid red" : "inherit",
 				  }}
         		  fullWidth={true}
         		  placeholder="The URL to retrieve refresh-tokens at"

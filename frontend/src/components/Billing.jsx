@@ -1343,6 +1343,7 @@ const Billing = (props) => {
 			  </div>
 			  <BillingStats
 				isCloud={isCloud}
+				clickedFromOrgTab={clickedFromOrgTab}
 				globalUrl={globalUrl}
 				selectedOrganization={selectedOrganization}	
 				userdata={userdata}

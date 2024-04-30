@@ -61,7 +61,7 @@ const LineChartWrapper = ({keys, inputname, height, width}) => {
 
 
 const AppStats = (defaultprops) => {
-  const { globalUrl, selectedOrganization, userdata, isCloud, inputWorkflows, } = defaultprops;
+  const { globalUrl, selectedOrganization, userdata, isCloud, inputWorkflows,clickedFromOrgTab } = defaultprops;
 
   const [keys, setKeys] = useState([])
   const [searches, setSearches] = useState([]);
@@ -703,7 +703,7 @@ const AppStats = (defaultprops) => {
 							textAlign: "center", 
 							padding: 40, 
 							margin: 5, 
-							marginLeft: 90, 
+							marginLeft: clickedFromOrgTab? null:90, 
 							backgroundColor: theme.palette.platformColor,
 							border: "1px solid rgba(255,255,255,0.3)",
 							maxWidth: 300,

@@ -621,7 +621,7 @@ const Files = (props) => {
 			}}
 			onDrop={uploadFile}
 		>
-			<div style={{position: "relative", width: isSelectedFiles? 1030: null, padding:isSelectedFiles?27:null, height: isSelectedFiles?1200:null, color: isSelectedFiles?'#ffffff':null, backgroundColor: isSelectedFiles?'#212121':null, borderRadius: isSelectedFiles?'16px':null,}}>
+			<div style={{position: "relative", width: isSelectedFiles? 1030: null, padding:isSelectedFiles?27:null, height: isSelectedFiles?"auto":null, color: isSelectedFiles?'#ffffff':null, backgroundColor: isSelectedFiles?'#212121':null, borderRadius: isSelectedFiles?'16px':null,}}>
 
         		<Tooltip color="primary" title={"Import files to Shuffle from Git"} placement="top">
 				  <IconButton

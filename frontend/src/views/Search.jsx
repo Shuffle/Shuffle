@@ -57,52 +57,52 @@ const Search = (props) => {
 
   //Stop unnecessariry re-rendering of the component to improve performace
   const MemoizedAppGrid = useMemo(() => <AppGrid
-  maxRows={4}
-  isHeader={true}
-  showSuggestion={true}
-  globalUrl={globalUrl}
-  isMobile={isMobile}
+    maxRows={4}
+    isHeader={true}
+    showSuggestion={true}
+    globalUrl={globalUrl}
+    isMobile={isMobile}
     userdata={userdata}
-/>, [curTab]);
+  />, [curTab]);
 
-const MemoizedWorkflowGrid = useMemo(() => <WorkflowGrid
-  maxRows={3}
-  showSuggestion={true}
-  globalUrl={globalUrl}
-  isMobile={isMobile}
-  userdata={userdata}
-/>, [curTab]);
+  const MemoizedWorkflowGrid = useMemo(() => <WorkflowGrid
+    maxRows={3}
+    showSuggestion={true}
+    globalUrl={globalUrl}
+    isMobile={isMobile}
+    userdata={userdata}
+  />, [curTab]);
 
-const MemoizedDocsGrid = useMemo(() => <DocsGrid
-  maxRows={6}
-  parsedXs={12}
-  showSuggestion={true}
-  globalUrl={globalUrl}
-  isMobile={isMobile}
-  userdata={userdata}
-/>, [curTab]);
+  const MemoizedDocsGrid = useMemo(() => <DocsGrid
+    maxRows={6}
+    parsedXs={12}
+    showSuggestion={true}
+    globalUrl={globalUrl}
+    isMobile={isMobile}
+    userdata={userdata}
+  />, [curTab]);
 
-const MemoizedCreatorGrid = useMemo(() => <CreatorGrid
-  parsedXs={4}
-  isHeader={true}
-  showSuggestion={true}
-  globalUrl={globalUrl}
-  isMobile={isMobile}
-  userdata={userdata}
-/>, [curTab]);
+  const MemoizedCreatorGrid = useMemo(() => <CreatorGrid
+    parsedXs={4}
+    isHeader={true}
+    showSuggestion={true}
+    globalUrl={globalUrl}
+    isMobile={isMobile}
+    userdata={userdata}
+  />, [curTab]);
 
   const MemoizedDiscordChat = useMemo(() => <DiscordChat isMobile={isMobile} />)
 
-const useStyles = makeStyles({
-  hideIndicator: {
-    display: 'none',
-  },
-  customTab: {
-    justifyContent: 'center',
-    gap: '46px',
-  }
-});
-const classes = useStyles();
+  const useStyles = makeStyles({
+    hideIndicator: {
+      display: 'none',
+    },
+    customTab: {
+      justifyContent: 'center',
+      gap: '46px',
+    }
+  });
+  const classes = useStyles();
 
   if (serverside === true) {
     return null;
@@ -177,7 +177,7 @@ const classes = useStyles();
   const StyledTab = styled(Tab)(({ theme }) => ({
     width: 151,
     height: 51,
-    padding: "10px 20px", 
+    padding: "10px 20px",
     borderRadius: 8,
     fontWeight: 600,
     textTransform: "none",
@@ -192,16 +192,16 @@ const classes = useStyles();
   }));
 
   const tabSpanStyling = {
-    display: 'flex', 
-    flexDirection: 'row', 
-    alignItems: 'center' 
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center'
   }
 
-  const tabTextStyling = { 
-    marginLeft: '5px', 
-    color: 'white' 
+  const tabTextStyling = {
+    marginLeft: '5px',
+    color: 'white'
   }
-  
+
 
   // Random names for type & autoComplete. Didn't research :^)
   const landingpageDataBrowser = (
@@ -219,7 +219,7 @@ const classes = useStyles();
             margin: isHeader ? null : "auto",
             marginTop: hidemargins === true ? 0 : isHeader ? null : 25,
             backgroundColor: "rgba(33, 33, 33, 1)",
-            borderRadius:8
+            borderRadius: 8
           }}
           value={curTab}
           indicatorColor="primary"
@@ -228,28 +228,28 @@ const classes = useStyles();
           aria-label="disabled tabs example"
           variant="scrollable"
           scrollButtons="auto"
-          classes={{indicator: classes.hideIndicator, root: classes.customTab}}
+          classes={{ indicator: classes.hideIndicator, root: classes.customTab }}
         >
           <StyledTab
             style={{
               backgroundColor: curTab === 0 ? theme.palette.primary.main : 'inherit',
-              color: curTab === 0? theme.palette.common.white : 'inherit',
+              color: curTab === 0 ? theme.palette.common.white : 'inherit',
             }}
             label={
               <span style={tabSpanStyling}>
-                <AppsIcon style={iconStyle} />
+                <AppsIcon style={{ iconStyle, color: "#F1F1F1" }} />
                 <Typography variant="body1" style={tabTextStyling}>App</Typography>
               </span>
             }
           />
           <StyledTab
             style={{
-              backgroundColor: curTab ===1 ? theme.palette.primary.main : 'inherit',
-              color: curTab === 1? theme.palette.common.white : 'inherit',
+              backgroundColor: curTab === 1 ? theme.palette.primary.main : 'inherit',
+              color: curTab === 1 ? theme.palette.common.white : 'inherit',
             }}
             label={
               <span style={tabSpanStyling}>
-                <CodeIcon  style={iconStyle} />
+                <CodeIcon style={{ iconStyle, color: "#F1F1F1" }} />
                 <Typography variant="body1" style={tabTextStyling}>Workflow</Typography>
               </span>
             }
@@ -257,11 +257,11 @@ const classes = useStyles();
           <StyledTab
             style={{
               backgroundColor: curTab === 2 ? theme.palette.primary.main : 'inherit',
-              color: curTab === 2? theme.palette.common.white : 'inherit',
+              color: curTab === 2 ? theme.palette.common.white : 'inherit',
             }}
             label={
               <span style={tabSpanStyling}>
-                <DescriptionOutlinedIcon  style={iconStyle} />
+                <DescriptionOutlinedIcon style={{ iconStyle, color: "#F1F1F1" }} />
                 <Typography variant="body1" style={tabTextStyling}>Docs</Typography>
               </span>
             }
@@ -273,7 +273,7 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <PeopleAltOutlinedIcon style={iconStyle} />
+                <PeopleAltOutlinedIcon style={{ iconStyle, color: "#F1F1F1" }} />
                 <Typography variant="body1" style={tabTextStyling}>Creators</Typography>
               </span>
             }
@@ -285,17 +285,17 @@ const classes = useStyles();
             }}
             label={
               <span style={tabSpanStyling}>
-                <ChatIcon  style={iconStyle} />
-                <Typography variant="body1" style={{tabTextStyling, whiteSpace: "nowrap", color: "white"}}>Discord Chat</Typography>
+                <ChatIcon style={{ iconStyle, color: "#F1F1F1" }} />
+                <Typography variant="body1" style={{ tabTextStyling, whiteSpace: "nowrap", color: "#F1F1F1" }}>Discord Chat</Typography>
               </span>
             }
           />
         </Tabs>
-      {curTab === 0 && MemoizedAppGrid}
-      {curTab === 1 && MemoizedWorkflowGrid}
-      {curTab === 2 && MemoizedDocsGrid}
-      {curTab === 3 && MemoizedCreatorGrid}
-      {curTab === 4 && MemoizedDiscordChat}
+        {curTab === 0 && MemoizedAppGrid}
+        {curTab === 1 && MemoizedWorkflowGrid}
+        {curTab === 2 && MemoizedDocsGrid}
+        {curTab === 3 && MemoizedCreatorGrid}
+        {curTab === 4 && MemoizedDiscordChat}
       </div>
     </div>
   );

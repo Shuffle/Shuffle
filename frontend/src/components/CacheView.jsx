@@ -304,7 +304,7 @@ const CacheView = (props) => {
                         },
                     }}
                     required
-                    fullWidth={true}
+                    fullWidth
                     autoComplete="Value"
                     placeholder="123"
                     id="Valuefield"
@@ -349,7 +349,7 @@ const CacheView = (props) => {
 
     return (
 
-        <div style={{paddingBottom: isSelectedDataStore?null:250, width: isSelectedDataStore?1030:null, padding:isSelectedDataStore?27:null, height: isSelectedDataStore?1200:null, color: isSelectedDataStore?'#ffffff':null, backgroundColor: isSelectedDataStore?'#212121':null, borderRadius: isSelectedDataStore?'16px':null, }}>
+        <div style={{paddingBottom: isSelectedDataStore?null:250, width: isSelectedDataStore?1030:null, padding:isSelectedDataStore?27:null, height: isSelectedDataStore?"auto":null, color: isSelectedDataStore?'#ffffff':null, backgroundColor: isSelectedDataStore?'#212121':null, borderRadius: isSelectedDataStore?'16px':null, }}>
             {modalView}
             <div style={{ marginTop: isSelectedDataStore?null:20, marginBottom: 20 }}>
                 <h2 style={{ display: isSelectedDataStore?null: "inline" }}>Shuffle Datastore</h2>
@@ -434,6 +434,8 @@ const CacheView = (props) => {
                                     style={{
 										minWidth: 300,
 										maxWidth: 300,
+                                        height:200,
+                                        overflowX: "hidden",
 									}}
                                     primary={validate.valid ? 
                       					<ReactJson

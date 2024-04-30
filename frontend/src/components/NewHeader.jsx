@@ -835,7 +835,7 @@ const Header = (props) => {
                       <img
                         src={"/images/logos/orange_logo.svg"}
                         alt="logo"
-                        style={{ height: 20, width: 20, marginTop: 10 }}
+                        style={{ height: 20, width: 20, marginTop:4}}
                       />
                     </Grid>
                   </Grid>
