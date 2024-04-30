@@ -7,7 +7,7 @@ toolchain go1.22.2
 require (
 	github.com/docker/docker v26.1.0+incompatible
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.6.16
+	github.com/shuffle/shuffle-shared v0.6.18
 	k8s.io/api v0.30.0
 	k8s.io/apimachinery v0.30.0
 	k8s.io/client-go v0.30.0
