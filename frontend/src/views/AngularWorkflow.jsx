@@ -120,9 +120,12 @@ import {
   Add as AddIcon,
 } from "@mui/icons-material";
 
-import * as cytoscape from "cytoscape";
-import * as edgehandles from "cytoscape-edgehandles";
+//import * as cytoscape from "cytoscape";
+import cytoscape from "cytoscape";
+
+import edgehandles from "cytoscape-edgehandles";
 import CytoscapeComponent from "react-cytoscapejs";
+
 import Draggable from "react-draggable";
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
@@ -136,6 +139,8 @@ import PaperComponent from "../components/PaperComponent.jsx"
 import ExtraApps from "../components/ExtraApps.jsx"
 import EditWorkflow from "../components/EditWorkflow.jsx"
 // import AppStats from "../components/AppStats.jsx";
+
+cytoscape.use(edgehandles);
 
 export const triggers = [
     {
@@ -236,15 +241,7 @@ export const triggers = [
     },
   ];
 	
-// http://apps.cytoscape.org/apps/yfileslayoutalgorithms
-cytoscape.use(edgehandles);
-//cytoscape.use(clipboard);
-//cytoscape.use(undoRedo);
-//cytoscape.use(cxtmenu);
-
 // Adds specific text to items
-//import popper from 'cytoscape-popper';
-//cytoscape.use(popper);
 
 // https://stackoverflow.com/questions/19014250/rerender-view-on-browser-resize-with-react
 function useWindowSize() {
@@ -705,7 +702,7 @@ const AngularWorkflow = (defaultprops) => {
       props.userdata.active_org !== undefined
       ? props.userdata.active_org.cloud_sync === true
       : false;
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "migration.shuffler.io";
 
   const appBarSize = isCloud ? 75 : 72;
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
@@ -4016,42 +4013,50 @@ const AngularWorkflow = (defaultprops) => {
 
             workflow.actions.push(newNodeData);
 
-            const sourcebranches = workflow.branches.filter(
-              (foundbranch) => foundbranch.source_id === parentNode.data("id")
-            );
-            const destinationbranches = workflow.branches.filter(
-              (foundbranch) =>
-                foundbranch.destination_id === parentNode.data("id")
-            );
+            const sourcebranches = workflow.branches.filter((foundbranch) => foundbranch.source_id === parentNode.data("id"))
+
+
+            const destinationbranches = workflow.branches.filter((foundbranch) => foundbranch.destination_id === parentNode.data("id"))
+            
 
     	      for (var sourceBranchesKey in sourcebranches) {
     	        var newbranch = JSON.parse(JSON.stringify(sourcebranches[sourceBranchesKey]));
-    	        newbranch.id = uuidv4();
-    	        newbranch.source_id = newNodeData.id;
 
-              newbranch._id = newbranch.id;
-              newbranch.source = newbranch.source_id;
-              newbranch.target = newbranch.destination_id;
-              cy.add({
-                group: "edges",
-                data: newbranch,
-              });
+    	        newbranch.id = uuidv4()
+    	        newbranch.source_id = newNodeData.id
+
+                newbranch._id = newbranch.id
+                newbranch.source = newbranch.source_id
+                newbranch.target = newbranch.destination_id
+                cy.add({
+                  group: "edges",
+                  data: newbranch,
+                })
             }
 
     	      for (var destinationBranchesKey in destinationbranches) {
-    	        var newbranch = JSON.parse(
-    	          JSON.stringify(destinationbranches[destinationBranchesKey])
-    	        );
-    	        newbranch.id = uuidv4();
-    	        newbranch.destination_id = newNodeData.id;
+    	        var newbranch = JSON.parse(JSON.stringify(destinationbranches[destinationBranchesKey]))
 
-              newbranch._id = newbranch.id;
-              newbranch.source = newbranch.source_id;
-              newbranch.target = newbranch.destination_id;
-              cy.add({
-                group: "edges",
-                data: newbranch,
-              });
+				const sourcenode = cy.getElementById(newbranch.source_id)
+				if (sourcenode !== null && sourcenode !== undefined) {
+					const sourcedata = sourcenode.data()
+
+				  	if (sourcedata.trigger_type !== "SUBFLOW" && sourcedata.trigger_type !== "USERINPUT") {
+						continue
+					}
+
+				}
+
+    	        newbranch.id = uuidv4()
+    	        newbranch.destination_id = newNodeData.id
+
+                newbranch._id = newbranch.id
+                newbranch.source = newbranch.source_id
+                newbranch.target = newbranch.destination_id
+                cy.add({
+                  group: "edges",
+                  data: newbranch,
+                })
             }
 
             //event.target.unselect();
@@ -4803,7 +4808,7 @@ const AngularWorkflow = (defaultprops) => {
               event.target.remove()
 
               //console.log("Found branch already!")
-              toast("Triggers can have exactly one target node")
+              toast.error("Triggers can have exactly one target node")
               return
 
 
@@ -5214,7 +5219,7 @@ const AngularWorkflow = (defaultprops) => {
 						data: newdata,
 					  })
 
-					  toast("You must STOP the trigger before deleting its branches")
+					  toast.error("You must STOP the trigger before deleting its branches")
 					} catch (e) {
 					  console.log("Failed re-adding edge: ", e)
 					}

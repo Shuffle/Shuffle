@@ -18,7 +18,7 @@ import { toast } from "react-toastify"
 import ClearIcon from '@mui/icons-material/Clear';
 import Box from '@mui/material/Box';
 
-import noImage from "../no_image.png"
+// import noImage from "../no_image.png"
 
 import CircularProgress from '@mui/material/CircularProgress';
 
@@ -89,6 +89,7 @@ const AppGrid = (props) => {
   const innerColor = "rgba(255,255,255,0.65)";
   const borderRadius = 3;
   window.title = "Shuffle | Apps | Find and integrate any app";
+  const noImage = "/public/no_image.png";
 
 
   const submitContact = (email, message) => {

@@ -103,7 +103,8 @@ const Header = (props) => {
     serverside === true || typeof window === "undefined"
       ? true
       : window.location.host === "localhost:3002" ||
-        window.location.host === "shuffler.io";
+        window.location.host === "shuffler.io"    ||
+        window.location.host === "localhost:5002";
 
   const clearNotifications = () => {
     // Don't really care about the logout

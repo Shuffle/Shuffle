@@ -216,22 +216,32 @@ const Admin = (props) => {
     getUsers();
 
     setTimeout(() => {
-      if (adminTab === 3) {
-        window.scroll({
-          top: 450,
-          left: 0,
-          behavior: "smooth",
-        });
-      }
+      const urlSearchParams = new URLSearchParams(window.location.search);
+      const params = Object.fromEntries(urlSearchParams.entries());
+	  const foundTab = params["admin_tab"]
+	  if (foundTab !== null && foundTab !== undefined) {
+		  if (adminTab === 3) {
+			window.scroll({
+			  top: 450,
+			  left: 0,
+			  behavior: "smooth",
+			});
+		  }
+	  }
     }, 1500);
   }, []);
 
   useEffect(() => {
-    window.scroll({
-      top: 450,
-      left: 0,
-      behavior: "smooth",
-    });
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const params = Object.fromEntries(urlSearchParams.entries());
+	const foundTab = params["admin_tab"]
+	if (foundTab !== null && foundTab !== undefined) {
+		window.scroll({
+		  top: 450,
+		  left: 0,
+		  behavior: "smooth",
+		})
+	}
   }, [adminTab]);
 
   useEffect(() => {
@@ -759,7 +769,7 @@ If you're interested, please let me know a time that works for you, or set up a 
         // setPipelines(responseJson.pipelines || []);
       })
       .catch((error) => {
-        toast(error.toString());
+        // toast(error.toString());
       });
   };
 
@@ -3342,7 +3352,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             color="textSecondary"
             style={{ marginLeft: 0 }}
           >
-            On this page organization admins can configure organisations, and
+            On this page organization admins can configure organizations, and
             sub-orgs (MSSP).{" "}
             <a
               target="_blank"
