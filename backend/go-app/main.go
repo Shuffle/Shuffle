@@ -3583,8 +3583,8 @@ func runInitEs(ctx context.Context) {
 	setUsers := false
 	_ = setUsers
 	if err != nil {
-		if fmt.Sprintf("%s", err) == "EOF" {
-			time.Sleep(7 * time.Second)
+		if fmt.Sprintf("%s", err) == "EOF" || strings.Contains(fmt.Sprintf("%s", err), "bad status") {
+			time.Sleep(10 * time.Second)
 			runInitEs(ctx)
 			return
 		}
@@ -3668,7 +3668,7 @@ func runInitEs(ctx context.Context) {
 
 	if strings.Contains(os.Getenv("SHUFFLE_OPENSEARCH_URL"), "https") {
 		log.Printf("[INFO] Waiting during init to make sure the opensearch instance is up and running with security features properly")
-		time.Sleep(15 * time.Second)
+		time.Sleep(30 * time.Second)
 	}
 
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
