@@ -471,8 +471,6 @@ const AuthenticationOauth2 = (props) => {
     	url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=admin_consent&scope=${resources}&state=${state}&access_type=offline`;
 		}
 
-		console.log("URL: ", url)
-
 		// Force new consent
     //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`;
 
@@ -525,9 +523,8 @@ const AuthenticationOauth2 = (props) => {
       //}
       //while(open === true)
     } catch (e) {
-      toast(
-        "Failed authentication - probably bad credentials. Try again"
-      );
+      toast("Failed authentication - probably bad credentials. Try again")
+      
       setButtonClicked(false);
     }
 
@@ -807,6 +804,7 @@ const AuthenticationOauth2 = (props) => {
 
 			  const defaultValue = data.name === "url" && authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0 && (authenticationType.authorizationUrl === undefined || authenticationType.authorizationUrl === null || authenticationType.authorizationUrl.length === 0) && authenticationType.type === "oauth2-app" ? authenticationType.token_uri : data.value === undefined || data.value === null ? "" : data.value
 
+
 			  const fieldname = data.name === "url" && authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0 && authenticationType.type === "oauth2-app" ? "Token URL" : data.name
 
               return (
@@ -1034,6 +1032,10 @@ const AuthenticationOauth2 = (props) => {
           variant="contained"
           fullWidth
           onClick={() => {
+			toast.info("Starting authentication process", {
+				"autoClose": 1500,
+			})
+
             handleOauth2Request(clientId, clientSecret, oauthUrl, selectedScopes);
           }}
           color="primary"
