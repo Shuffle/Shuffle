@@ -41,7 +41,7 @@ import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import theme from "../theme.jsx";
 
 const Files = (props) => {
-  const { globalUrl, userdata, serverside, selectedOrganization, isCloud, } = props;
+  const { globalUrl, userdata, serverside, selectedOrganization, isCloud,isSelectedFiles } = props;
 
   const [files, setFiles] = React.useState([]);
   const [selectedNamespace, setSelectedNamespace] = React.useState("default");
@@ -617,16 +617,16 @@ const Files = (props) => {
 			style={{
 				maxWidth: window.innerWidth > 1366 ? 1366 : 1200,
 				margin: "auto",
-				padding: 20,
+				padding: isSelectedFiles ? null : 20,
 			}}
 			onDrop={uploadFile}
 		>
-			<div style={{position: "relative"}}>
+			<div style={{position: "relative", width: isSelectedFiles? 1030: null, padding:isSelectedFiles?27:null, height: isSelectedFiles?1200:null, color: isSelectedFiles?'#ffffff':null, backgroundColor: isSelectedFiles?'#212121':null, borderRadius: isSelectedFiles?'16px':null,}}>
 
         		<Tooltip color="primary" title={"Import files to Shuffle from Git"} placement="top">
 				  <IconButton
         		    color="secondary"
-        		    style={{position: "absolute", right: 0, top: 0, }}
+        		    style={{position: "absolute", right: 0, top: isSelectedFiles?null:0, left: isSelectedFiles? 990:null }}
         		    variant="text"
         		    onClick={() => setLoadFileModalOpen(true)}
         		  >
@@ -636,15 +636,15 @@ const Files = (props) => {
 
 				{fileDownloadModal} 
 
-				<div style={{ marginTop: 20, marginBottom: 20 }}>
-					<h2 style={{ display: "inline" }}>Files</h2>
-					<span style={{ marginLeft: 25 }}>
+				<div style={{ marginTop: isSelectedFiles ? 2: 20, marginBottom:20 }}>
+					<h2 style={{ display: isSelectedFiles ? null : "inline", marginTop: isSelectedFiles?0:null, marginBottom: isSelectedFiles?8:null }}>Files</h2>
+					<span style={{ marginLeft: isSelectedFiles ? null : 25, color:isSelectedFiles?"#9E9E9E":null}}>
 						Files from Workflows are a way to store as well as edit files.{" "}
 						<a
 							target="_blank"
 							rel="noopener noreferrer"
 							href="https://shuffler.io/docs/organizations#files"
-							style={{ textDecoration: "none", color: "#f85a3e" }}
+							style={{ textDecoration: isSelectedFiles ? null:"none", color: isSelectedFiles? "#FF8444": "#f85a3e" }}
 						>
 							Learn more
 						</a>
@@ -659,6 +659,7 @@ const Files = (props) => {
 					onClick={() => {
 						upload.click();
 					}}
+					style={{backgroundColor: isSelectedFiles?'rgba(255, 132, 68, 0.2)':null, color:isSelectedFiles?"#FF8444":null, borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?162:null, height:isSelectedFiles?40:null, boxShadow: isSelectedFiles?'none':null,}}
 				>
 					<PublishIcon /> Upload files
 				</Button>
@@ -678,7 +679,7 @@ const Files = (props) => {
 					}}
 				/>
 				<Button
-					style={{ marginLeft: 5, marginRight: 15 }}
+					style={{ marginLeft: 5, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?81:null, height:isSelectedFiles?40:null, boxShadow: isSelectedFiles?'none':null, }}
 					variant="contained"
 					color="primary"
 					onClick={() => getFiles()}
@@ -783,20 +784,20 @@ const Files = (props) => {
 					key = {fileContent} //https://reactjs.org/docs/reconciliation.html#recursing-on-children
 					runUpdateText = {runUpdateText}
 				/>
-
+				{isSelectedFiles?null:
 				<Divider
 					style={{
 						marginTop: 20,
 						marginBottom: 20,
 						backgroundColor: theme.palette.inputColor,
 					}}
-				/>
+				/>}
 
-				<List>
-					<ListItem>
+				<List style={{borderRadius: isSelectedFiles?8:null, border:isSelectedFiles?"1px solid #494949":null, marginTop:isSelectedFiles?24:null}}>
+					<ListItem style={{width:isSelectedFiles?"100%":null, borderBottom:isSelectedFiles?"1px solid #494949":null}}>
 						<ListItemText
 							primary="Updated"
-							style={{ maxWidth: 225, minWidth: 225 }}
+							style={{ maxWidth: 185, minWidth: 185 }}
 						/>
 						<ListItemText
 							primary="Name"
@@ -813,7 +814,7 @@ const Files = (props) => {
 						/>
 						<ListItemText
 							primary="Md5"
-							style={{ minWidth: 300, maxWidth: 300, overflow: "hidden" }}
+							style={{ minWidth: isSelectedFiles?210:250, maxWidth: isSelectedFiles?210:250, overflow: "hidden" }}
 						/>
 						<ListItemText
 							primary="Status"
@@ -835,9 +836,9 @@ const Files = (props) => {
 								return null;
 							}
 
-							var bgColor = "#27292d";
+							var bgColor = isSelectedFiles ? "#212121":"#27292d";
 							if (index % 2 === 0) {
-								bgColor = "#1f2023";
+								bgColor = isSelectedFiles ? "#1A1A1A":"#1f2023";
 							}
 
 							const filenamesplit = file.filename.split(".")
@@ -854,8 +855,8 @@ const Files = (props) => {
 								>
 									<ListItemText
 										style={{
-											maxWidth: 225,
-											minWidth: 225,
+											maxWidth: isSelectedFiles ? 170:225,
+											minWidth: isSelectedFiles ? 170:225,
 											overflow: "hidden",
 										}}
 										primary={new Date(file.updated_at * 1000).toISOString()}
@@ -921,14 +922,16 @@ const Files = (props) => {
 											minWidth: 100,
 											maxWidth: 100,
 											overflow: "hidden",
+											textAlign: isSelectedFiles?"center":null
 										}}
 									/>
 									<ListItemText
 										primary={file.md5_sum}
 										style={{
-											minWidth: 300,
-											maxWidth: 300,
-											overflow: "hidden",
+											minWidth: isSelectedFiles?200:300,
+											maxWidth: isSelectedFiles?200:300,
+											marginLeft:isSelectedFiles? 15:null,
+											overflow: isSelectedFiles?"auto":"hidden",
 										}}
 									/>
 									<ListItemText
@@ -937,14 +940,16 @@ const Files = (props) => {
 											minWidth: 75,
 											maxWidth: 75,
 											overflow: "hidden",
+											textAlign:isSelectedFiles?"center":null,
 											marginLeft: 10,
 										}}
 									/>
 									<ListItemText
 										primary={file.filesize}
 										style={{
-											minWidth: 125,
-											maxWidth: 125,
+											minWidth: isSelectedFiles?80:125,
+											maxWidth: isSelectedFiles?80:125,
+											marginLeft: isSelectedFiles?15:null,
 											overflow: "hidden",
 										}}
 									/>
@@ -1063,7 +1068,7 @@ const Files = (props) => {
 											</Tooltip>
 											<Tooltip
 												title={"Delete file"}
-												style={{marginLeft: 15, }}
+												style={{marginLeft: isSelectedFiles?5:15, }}
 												aria-label={"Delete"}
 											>
 												<span>

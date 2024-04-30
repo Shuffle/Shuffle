@@ -1,18 +1,17 @@
 # Build environment
-FROM node:18 as builder
+FROM node:21 as builder
 
 RUN mkdir /usr/src/app
-
 WORKDIR /usr/src/app
 ENV PATH /usr/src/app/node_modules/.bin:$PATH
 
 COPY package.json /usr/src/app/package.json
 
 # Nocache yarn install
-RUN yarn config set "strict-ssl" false -g
-RUN yarn install --network-timeout 1000000
+#RUN yarn config set "strict-ssl" false -g
+#RUN yarn install --network-timeout 1000000
 
-#RUN npm install 
+RUN npm install --legacy-peer-deps
 
 # copy only required files to not trigger rebuilding every time
 COPY ./certs /usr/src/app/certs/
@@ -22,7 +21,8 @@ COPY ./*.sh /usr/src/app/
 COPY ./*.json /usr/src/app/
 
 #RUN rm -rf /usr/src/app/node_modules/webpack
-RUN yarn build
+#RUN yarn build --verbose
+RUN npm run build --loglevel verbose 2>&1
 
 # Production environment
 FROM nginx:1.21.5

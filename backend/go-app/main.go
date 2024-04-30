@@ -3583,8 +3583,8 @@ func runInitEs(ctx context.Context) {
 	setUsers := false
 	_ = setUsers
 	if err != nil {
-		if fmt.Sprintf("%s", err) == "EOF" {
-			time.Sleep(7 * time.Second)
+		if fmt.Sprintf("%s", err) == "EOF" || strings.Contains(fmt.Sprintf("%s", err), "bad status") {
+			time.Sleep(10 * time.Second)
 			runInitEs(ctx)
 			return
 		}
@@ -3668,7 +3668,7 @@ func runInitEs(ctx context.Context) {
 
 	if strings.Contains(os.Getenv("SHUFFLE_OPENSEARCH_URL"), "https") {
 		log.Printf("[INFO] Waiting during init to make sure the opensearch instance is up and running with security features properly")
-		time.Sleep(15 * time.Second)
+		time.Sleep(30 * time.Second)
 	}
 
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
@@ -4780,6 +4780,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
 
+	r.HandleFunc("/api/v1/users/apps", shuffle.HandleGetUserApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/generateapikey", shuffle.HandleApiGeneration).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/logout", shuffle.HandleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getsettings", shuffle.HandleSettings).Methods("GET", "OPTIONS")
@@ -4908,8 +4909,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/pipeline", shuffle.HandleNewPipelineRegister).Methods("POST", "OPTIONS")
-    r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
-
+  r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers", shuffle.HandleGetTriggers).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/triggers/gmail/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")

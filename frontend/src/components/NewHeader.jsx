@@ -103,7 +103,8 @@ const Header = (props) => {
     serverside === true || typeof window === "undefined"
       ? true
       : window.location.host === "localhost:3002" ||
-        window.location.host === "shuffler.io";
+        window.location.host === "shuffler.io"    ||
+        window.location.host === "localhost:5002";
 
   const clearNotifications = () => {
     // Don't really care about the logout
@@ -616,7 +617,7 @@ const Header = (props) => {
         <Divider style={{marginBottom: 10, }}/>
 
 	  	<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 5, marginBottom: 5,}}>
-	  		Version: 1.3.4
+	  		Version: 1.4.0
 	  	</Typography>
       </Menu>
     </span>

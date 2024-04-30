@@ -31,8 +31,8 @@ import {
   Delete as DeleteIcon,
 } from "@mui/icons-material";
 
-import * as edgehandles from "cytoscape-edgehandles";
-import * as cytoscape from "cytoscape";
+import edgehandles from "cytoscape-edgehandles";
+import cytoscape from "cytoscape";
 import { toast } from 'react-toastify';
 
 cytoscape.use(edgehandles);

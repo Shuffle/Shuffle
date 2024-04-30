@@ -66,7 +66,7 @@ const scrollStyle2 = {
 
 
 const CacheView = (props) => {
-    const { globalUrl, userdata, serverside, orgId } = props;
+    const { globalUrl, userdata, serverside, orgId, isSelectedDataStore } = props;
     const [orgCache, setOrgCache] = React.useState("");
     const [listCache, setListCache] = React.useState([]);
     const [addCache, setAddCache] = React.useState("");
@@ -114,43 +114,6 @@ const CacheView = (props) => {
 			toast(error.toString());
 		});
     };
-
-    // const getCacheList = (orgId) => {
-    //     fetch(`${globalUrl}/api/v1/orgs/${orgId}/get_cache`, {
-    //       method: "GET",
-    //       headers: {
-    //         "Content-Type": "application/json",
-    //         Accept: "application/json",
-    //       },
-    //       credentials: "include",
-    //     })
-    //       .then((response) => {
-    //         if (response.status !== 200) {
-    //           console.log("Status not 200 for WORKFLOW EXECUTION :O!");
-    //         }
-
-
-    //         return response.json();
-    //       })
-    //       .then((responseJson) => {
-    //         if (responseJson.success !== false) {
-    //           console.log("Found cache: ", responseJson)
-    //           setListCache(responseJson)
-    //         } else {
-    //           console.log("Couldn't find the creator profile (rerun?): ", responseJson)
-    //           // If the current user is any of the Shuffle Creators 
-    //           // AND the workflow doesn't have an owner: allow editing.
-    //           // else: Allow suggestions?
-    //           //console.log("User: ", userdata)
-    //           //if (rerun !== true) {
-    //           //	getUserProfile(userdata.id, true)
-    //           //}
-    //         }
-    //       })
-    //       .catch((error) => {
-    //         console.log("Get userprofile error: ", error);
-    //       })
-    //   }
 
 
     const deleteCache = (orgId, key) => {
@@ -386,24 +349,24 @@ const CacheView = (props) => {
 
     return (
 
-        <div style={{paddingBottom: 250, }}>
+        <div style={{paddingBottom: isSelectedDataStore?null:250, width: isSelectedDataStore?1030:null, padding:isSelectedDataStore?27:null, height: isSelectedDataStore?1200:null, color: isSelectedDataStore?'#ffffff':null, backgroundColor: isSelectedDataStore?'#212121':null, borderRadius: isSelectedDataStore?'16px':null, }}>
             {modalView}
-            <div style={{ marginTop: 20, marginBottom: 20 }}>
-                <h2 style={{ display: "inline" }}>Shuffle Datastore</h2>
-                <span style={{ marginLeft: 25 }}>
-                    Datastore is a permanent key-value database for storing data that can be used cross-workflow. You can store anything from lists of IPs to complex configurations.&nbsp;
+            <div style={{ marginTop: isSelectedDataStore?null:20, marginBottom: 20 }}>
+                <h2 style={{ display: isSelectedDataStore?null: "inline" }}>Shuffle Datastore</h2>
+                <span style={{ marginLeft: isSelectedDataStore?null:25, color:isSelectedDataStore?"#9E9E9E":null}}>
+                    Datastore is a permanent key-value database for storing data that can be used cross-workflow. <br/>You can store anything from lists of IPs to complex configurations.&nbsp;
                     <a
                         target="_blank"
                         rel="noopener noreferrer"
                         href="/docs/organizations#datastore"
-                        style={{ textDecoration: "none", color: "#f85a3e" }}
+                        style={{ textDecoration: isSelectedDataStore?null:"none", color: isSelectedDataStore?"#FF8444":"#f85a3e" }}
                     >
                         Learn more
                     </a>
                 </span>
             </div>
             <Button
-                style={{}}
+                style={{backgroundColor: isSelectedDataStore?'rgba(255, 132, 68, 0.2)':null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null, color:isSelectedDataStore?"#FF8444":null, borderRadius:isSelectedDataStore?200:null, width:isSelectedDataStore?162:null, height:isSelectedDataStore?40:null}}
                 variant="contained"
                 color="primary"
                 onClick={() =>{ 
@@ -416,43 +379,44 @@ const CacheView = (props) => {
                 Add Cache
             </Button>
             <Button
-                style={{ marginLeft: 5, marginRight: 15 }}
+                style={{ marginLeft: 5, marginRight: 15, backgroundColor: isSelectedDataStore?"#2F2F2F":null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null,borderRadius:isSelectedDataStore?200:null, width:isSelectedDataStore?81:null, height:isSelectedDataStore?40:null,  }}
                 variant="contained"
                 color="primary"
                 onClick={() => listOrgCache(orgId)}
             >
                 <CachedIcon />
             </Button>
-            <Divider
+            {isSelectedDataStore? null :<Divider
                 style={{
                     marginTop: 20,
                     marginBottom: 20,
                 }}
-            />
-            <List>
-                <ListItem>
+            />}
+            <List style={{borderRadius: isSelectedDataStore?8:null, border:isSelectedDataStore?"1px solid #494949":null, marginTop:isSelectedDataStore?24:null}}>
+                <ListItem style={{width: isSelectedDataStore?"100%":null, borderBottom:isSelectedDataStore?"1px solid #494949":null}}>
                     <ListItemText
                         primary="Key"
-                    	style={{ minWidth: 250, maxWidth: 250, }}
+                    	style={{ minWidth: isSelectedDataStore?200:250, maxWidth: isSelectedDataStore?200:250, }}
                     />
                     <ListItemText
                         primary="Value"
-                    	style={{ minWidth: 400, maxWidth: 400, overflowX: "auto", overflowY: "hidden", }}
+                    	style={{ minWidth: isSelectedDataStore?300:400, maxWidth: isSelectedDataStore?300:400, overflowX: "auto", overflowY: "hidden", }}
                     />
                     <ListItemText
                         primary="Actions"
-                    	style={{ minWidth: 150, maxWidth: 150, marginLeft: 50, }}
+                    	style={{ minWidth: 150, maxWidth: 150, marginLeft: isSelectedDataStore?80:null,}}
                     />
                     <ListItemText
+                        style={{textAlign:isSelectedDataStore?"center":null}}
                         primary="Updated"
                     />
                 </ListItem>
                 {listCache === undefined || listCache === null
                     ? null
                     : listCache.map((data, index) => {
-                        var bgColor = "#27292d";
+                        var bgColor = isSelectedDataStore? "#212121":"#27292d";
                         if (index % 2 === 0) {
-                            bgColor = "#1f2023";
+                            bgColor = isSelectedDataStore? "#1A1A1A":"#1f2023";
                         }
 
               			const validate = validateJson(data.value);
@@ -460,16 +424,16 @@ const CacheView = (props) => {
                             <ListItem key={index} style={{ backgroundColor: bgColor, maxHeight: 300, overflow: "auto", }}>
                                 <ListItemText
                                     style={{
-                                        maxWidth: 250,
-                                        minWidth: 250,
+                                        maxWidth: 200,
+                                        minWidth: 200,
                                         overflow: "hidden",
                                     }}
                                     primary={data.key}
                                 />
                                 <ListItemText
                                     style={{
-										minWidth: 400,
-										maxWidth: 400,
+										minWidth: 300,
+										maxWidth: 300,
 									}}
                                     primary={validate.valid ? 
                       					<ReactJson
