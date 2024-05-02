@@ -13,6 +13,11 @@ import {
 //import { useAlert
 import { ToastContainer, toast } from "react-toastify" 
 
+import { FileCopy, Visibility, VisibilityOff } from "@mui/icons-material";
+import IconButton from "@mui/material/IconButton";
+import { Tooltip } from "@mui/material";
+
+
 const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, setUserData } = props;
   //const alert = useAlert();
@@ -43,6 +48,17 @@ const Settings = (props) => {
   const [firstrequest, setFirstRequest] = useState(true);
 
   const [userSettings, setUserSettings] = useState({});
+
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyCopied, setApiKeyCopied] = useState(false);
+
+  const handleCopyApiKey = () => {
+    navigator.clipboard.writeText(userSettings.apikey);
+    setApiKeyCopied(true);
+    setTimeout(() => {
+      setApiKeyCopied(false);
+    }, 2000);
+  }
 
   /*
 	const [userdata.eth_info, setEthInfo] = useState(userdata.eth_info !== undefined && userdata.eth_info.account !== undefined && userdata.eth_info.account.length > 0 ? userdata.eth_info : {
@@ -290,59 +306,6 @@ const Settings = (props) => {
     }
   };
 
-  // const registerProviders = (userdata) => {
-  //   // Register hooks here
-  //   detectEthereumProvider().then((provider) => {
-  //     if (provider) {
-  //       if (!provider.isMetaMask) {
-  //         toast("Only MetaMask is supported as of now.");
-  //         return;
-  //       }
-
-  //       // Find the ethereum network
-  //       // Get the users' account(s)
-  //       //toast("Connecting to MetaMask")
-  //       //console.log("Connected: ", provider.isConnected())
-
-  //       if (!provider.isConnected()) {
-  //         toast("Metamask is not connected.");
-  //         return;
-  //       }
-
-  //       provider.on("message", (event) => {
-  //         toast("Ethereum message: ", event);
-  //       });
-
-  //       provider.on("chainChanged", (chainId) => {
-  //         console.log("Changed chain to: ", chainId);
-
-  //         const method = "eth_getBalance";
-  //         const params = [userdata.eth_info.account, "latest"];
-  //         provider
-  //           .request({
-  //             method: method,
-  //             params,
-  //           })
-  //           .then((result) => {
-  //             console.log("Got result: ", result);
-  //             if (result !== undefined && result !== null) {
-  //               userdata.eth_info.balance = result;
-  //               userdata.eth_info.parsed_balance = result / 1000000000000000000;
-  //               console.log("INFO: ", userdata);
-  //               setUserData(userdata);
-  //             } else {
-  //               toast("Couldn't find balance: ", result);
-  //             }
-  //           })
-  //           .catch((error) => {
-  //             // If the request fails, the Promise will reject with an error.
-  //             toast("Failed getting info from ethereum API: " + error);
-  //           });
-  //       });
-  //     }
-  //   });
-  // };
-
   // This should "always" have data
   useEffect(() => {
     if (firstrequest) {
@@ -520,7 +483,7 @@ const Settings = (props) => {
         >
           What is the API key used for?
         </a>
-        <TextField
+        {/* <TextField
           style={{ backgroundColor: theme.palette.inputColor, flex: "1" }}
           InputProps={{
             style: {
@@ -537,7 +500,43 @@ const Settings = (props) => {
           id="standard-required"
           margin="normal"
           variant="outlined"
-        />
+        /> */}
+        <TextField
+        style={{ backgroundColor: theme.palette.inputColor, flex: "1" }}
+        InputProps={{
+          style: {
+            height: "50px",
+            color: "white",
+          },
+          endAdornment: (
+            <>
+            <Tooltip title={showApiKey ? "Hide API Key" : "Show API Key"}>
+              <IconButton
+                onClick={() => setShowApiKey(!showApiKey)}
+              >
+                {showApiKey ? <VisibilityOff /> : <Visibility />}
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={apiKeyCopied ? "API Key copied!" : "Copy API Key"}>
+              <IconButton
+                onClick={handleCopyApiKey}
+              >
+                <FileCopy />
+              </IconButton>
+            </Tooltip>
+          </>
+          ),
+        }}
+        color="primary"
+        value={showApiKey ? userSettings.apikey : '*'.repeat(36)} // Show API key if showApiKey is true, else show asterisks
+        required
+        disabled
+        fullWidth
+        placeholder="APIKEY"
+        id="standard-required"
+        margin="normal"
+        variant="outlined"
+      />
         <Button
           style={{ width: "100%", height: "40px", marginTop: "10px" }}
           variant="outlined"
@@ -729,8 +728,13 @@ const Settings = (props) => {
           Submit password change
         </Button>
         <h3>{passwordFormMessage}</h3>
-        <Divider style={{ marginTop: "40px" }} />
-        <h2>Creator Incentive Program</h2>
+        {isCloud && (
+          <>
+            <Divider style={{ marginTop: "40px" }} />
+            <h2>Creator Incentive Program</h2>
+          </>
+        )}
+
         <div style={{ display: runFlex ? "flex" : "", width: "100%" }}>
 			<div>
 			{isCloud ?

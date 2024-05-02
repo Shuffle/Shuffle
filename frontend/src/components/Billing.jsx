@@ -1230,6 +1230,7 @@ const Billing = (props) => {
 				</Typography>
 			  </div>
 			  <BillingStats
+				isCloud={isCloud}
 				globalUrl={globalUrl}
 				selectedOrganization={selectedOrganization}	
 				userdata={userdata}

@@ -47,6 +47,7 @@ import ReactJson from "react-json-view";
 import PaperComponent from "../components/PaperComponent.jsx";
 
 import CodeMirror from '@uiw/react-codemirror';
+import { python } from '@codemirror/lang-python';
 //import 'codemirror/keymap/sublime';
 //import 'codemirror/addon/selection/mark-selection.js'
 //import 'codemirror/theme/gruvbox-dark.css';
@@ -211,6 +212,80 @@ const CodeEditor = (props) => {
 		console.log("Checking local codedata: ", localcodedata)
 		expectedOutput(localcodedata)
 	}, [])
+
+	useEffect(() => {
+		expectedOutput(localcodedata)
+	}, [availableVariables])
+
+    var to_be_copied = "";
+	const HandleJsonCopy = (base, copy, base_node_name) => {
+    	if (typeof copy.name === "string") {
+    	  copy.name = copy.name.replaceAll(" ", "_");
+    	}
+
+    	//lol
+    	if (typeof base === 'object' || typeof base === 'dict') {
+    	  base = JSON.stringify(base)
+    	}
+
+    	if (base_node_name === "execution_argument" || base_node_name === "Execution Argument") {
+    	  base_node_name = "exec"
+    	}
+
+    	console.log("COPY: ", base_node_name, copy);
+
+    	//var newitem = JSON.parse(base);
+    	var newitem = validateJson(base).result
+
+
+    	to_be_copied = "$" + base_node_name.toLowerCase().replaceAll(" ", "_");
+    	for (let copykey in copy.namespace) {
+    	  if (copy.namespace[copykey].includes("Results for")) {
+    	    continue;
+    	  }
+
+    	  if (newitem !== undefined && newitem !== null) {
+    	    newitem = newitem[copy.namespace[copykey]];
+    	    if (!isNaN(copy.namespace[copykey])) {
+    	      to_be_copied += ".#";
+    	    } else {
+    	      to_be_copied += "." + copy.namespace[copykey];
+    	    }
+    	  }
+    	}
+
+    	if (newitem !== undefined && newitem !== null) {
+    	  newitem = newitem[copy.name];
+    	  if (!isNaN(copy.name)) {
+    	    to_be_copied += ".#";
+    	  } else {
+    	    to_be_copied += "." + copy.name;
+    	  }
+    	}
+
+    	to_be_copied.replaceAll(" ", "_");
+    	const elementName = "copy_element_shuffle";
+    	var copyText = document.getElementById(elementName);
+    	if (copyText !== null && copyText !== undefined) {
+    	  console.log("NAVIGATOR: ", navigator);
+    	  const clipboard = navigator.clipboard;
+    	  if (clipboard === undefined) {
+    	    toast("Can only copy over HTTPS (port 3443)");
+    	    return;
+    	  }
+
+    	  navigator.clipboard.writeText(to_be_copied);
+    	  copyText.select();
+    	  copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+    	  /* Copy the text inside the text field */
+    	  document.execCommand("copy");
+    	  console.log("COPYING!");
+    	  toast("Copied JSON path to clipboard.")
+    	} else {
+    	  console.log("Couldn't find element ", elementName);
+    	}
+  	}
 
 	const aiSubmit = (value, inputAction) => {
 		if (value === undefined || value === "") {
@@ -938,10 +1013,10 @@ const CodeEditor = (props) => {
 				style: {
 					zIndex: 12501,
 					color: "white",
-					minWidth: isMobile ? "100%" : isFileEditor ? 650 : 1200,
-					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1200,
-					minHeight: isMobile ? "100%" : 720,
-					maxHeight: isMobile ? "100%" : 720,
+					minWidth: isMobile ? "100%" : isFileEditor ? 650 : 1165,
+					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1100,
+					minHeight: isMobile ? "100%" : 700,
+					maxHeight: isMobile ? "100%" : 700,
 					border: theme.palette.defaultBorder,
 					padding: isMobile ? "25px 10px 25px 10px" : 25,
 				},
@@ -951,8 +1026,8 @@ const CodeEditor = (props) => {
 			style={{
 			  zIndex: 5000,
 			  position: "absolute",
-			  top: 14,
-			  right: 18,
+			  top: 6,
+			  right: 6,
 			  color: "grey",
 			}}
 			onClick={() => {
@@ -1233,7 +1308,7 @@ const CodeEditor = (props) => {
 											handleItemClick([innerdata]);
 										}}
 									>
-										<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition1.top-200, left: menuPosition1.left-270, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+										<Paper style={{minHeight: 550, maxHeight: 550, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition1.top-200, left: menuPosition1.left-270, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
 											<MenuItem
 												key={innerdata.name}
 												style={{
@@ -1425,22 +1500,26 @@ const CodeEditor = (props) => {
 						borderRadius: theme.palette.borderRadius,
 						position: "relative",
 						paddingTop: 0, 
-						minHeight: 548,
-						overflow: "hidden",
+						// minHeight: 548,
+						// overflow: "hidden",
 					}}>
 						<CodeMirror
 						    theme={vscodeDark}
 							value={localcodedata}
-							height={isFileEditor ? 450 : 500} 
-							width={isFileEditor ? 650 : 600}
+							extensions={[python({ py: true })]}
+							height={isFileEditor ? 450 : 450} 
+							width={isFileEditor ? 650 : 550}
 							style={{
 								maxWidth: isFileEditor ? 450 : 600,
-								maxHeight: 548,
-								minHeight: 548, 
+								maxHeight: 450,
+								minHeight: 450, 
 								wordBreak: "break-word",
 								marginTop: 0,
 								paddingBottom: 10,
-								overflow: "hidden",
+								// overflow: "hidden",
+								overflowY: "auto",
+  								whiteSpace: "pre-wrap",
+  								wordWrap: "break-word",
 							}}
 							onCursorActivity = {(value) => {
 								console.log("CURSOR: ", value.getCursor())
@@ -1463,122 +1542,17 @@ const CodeEditor = (props) => {
 							}}
 							options={{
 								mode: validation === true ? "json" : "python",
-								lineWrapping: linewrap,
+								lineWrapping: true,
 								theme: vscodeDark,
+								lineNumbers: true,
 							}}
 						/>
 					</div>
-
-					{/*editorPopupOpen ?
-						<Paper
-							style={{
-								margin: 10,
-								padding: 10,
-								width: isMobile ? "100%" : 250,
-								height: 95,
-								overflowY: 'auto',
-								// textOverflow: 'ellipsis'
-							}}
-						>
-							{mainVariables.map((data, index) => {
-								// console.log(data)
-								return (
-									<div
-										style={{
-											// textOverflow: 'ellipsis'
-										}}
-									>
-										<button
-											onClick={() => {
-												replaceVariables(data.substring(1,))
-												// console.log(currentCharacter, currentLine)
-											}}
-											style={{
-												backgroundColor: 'transparent',
-												color: 'white',
-												border: 'none',
-												padding: 7.5,
-												cursor: 'pointer',
-												width: '100%',
-												textAlign: 'left'
-											}}
-										>
-											{data.substring(0, 25)}
-										</button>
-									</div>
-								)
-							})}
-						</Paper>
-					: null*/}
 				
 					<div
 						style={{
 						}}
 					>
-						{/*
-						<Typography
-							variant = 'body2'
-							color = 'textSecondary'
-							style={{
-								color: "white",
-								paddingLeft: 340,
-								width: 50,
-								display: 'inline',
-							}}
-						>
-							Line Wrap
-							<Checkbox
-								onClick={() => {
-									if (linewrap) {
-										setlinewrap(false)
-									}
-									if (!linewrap){
-										setlinewrap(true)
-									}
-								}}
-								defaultChecked
-								size="small"
-								sx={{
-									color: orange[600],
-									'&.Mui-checked': {
-									  color: orange[800],
-									},
-								}}
-							/>
-						</Typography>
-
-						<Typography
-							variant = 'body2'
-							color = 'textSecondary'
-							style={{
-								color: "white",
-								paddingLeft: 10,
-								width: 100,
-								display: 'inline',
-							}}
-						>
-							Dark Theme
-							<Checkbox
-								onClick={() => {
-									if (codeTheme === "gruvbox-dark") {
-										setcodeTheme("duotone-light")
-									}
-									if (codeTheme === "duotone-light"){
-										setcodeTheme("gruvbox-dark")
-									}
-								}}
-								defaultChecked
-								size="small"
-								sx={{
-									color: orange[600],
-									'&.Mui-checked': {
-									  color: orange[800],
-									},
-								}}
-							/>
-						</Typography>
-						*/}
-
 					</div>
 				</div>
 
@@ -1593,83 +1567,93 @@ const CodeEditor = (props) => {
 										display: "flex", 
 									}}
 								>
-									<span style={{color: "white"}}>
-										Expected Output
-									</span>
-
-									<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
-										<Button 
-											variant="outlined" 
-											disabled={executing} 
-											color="primary" 
-											style={{
-												border: `1px solid ${theme.palette.primary.main}`, 
-												marginLeft: 200, 
-												maxHeight: 35, 
-												minWidth: 70, 
-											}} 
-											variant="contained" 
-											onClick={() => {
-												executeSingleAction(expOutput)
-											}}
-										>
-											{executing ? 
-												<CircularProgress style={{height: 18, width: 18, }} /> 
-													: 						
-												<span>Try it <PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
-											}
-										</Button>
-									</Tooltip>
+									<div>
+										<span style={{color: "white"}}>
+											Expected Output
+										</span>
+									</div>
 
 								</DialogTitle>
 							}
-
-							{isMobile ? null : 
-								validation === true ? 
-									<ReactJson
-										src={expOutput}
-										theme={theme.palette.jsonTheme}
+							<div style={{position: "relative", }}>
+								<Tooltip title="Try it! This runs the Shuffle Tools 'repeat back to me' or 'execute python' action with what you see in the expected output window. Commonly used to test your Python scripts or Liquid filters, not requiring the full workflow to run again." placement="top">
+									<Button 
+										variant="outlined" 
+										disabled={executing} 
+										color="primary" 
 										style={{
-											borderRadius: 5,
-											border: `2px solid ${theme.palette.inputColor}`,
-											padding: 10, 
-											maxHeight: 500, 
-											minheight: 500, 
-											overflow: "auto",
-										}}
-										collapsed={false}
-										enableClipboard={(copy) => {
-											//handleReactJsonClipboard(copy);
-										}}
-										displayDataTypes={false}
-										onSelect={(select) => {
-											//HandleJsonCopy(validate.result, select, "exec");
-										}}
-										name={"JSON autocompletion"}
-									/>
-								:
-									<p
-										id='expOutput'
-										style={{
-											whiteSpace: "pre-wrap",
-											color: "#ebdbb2",
-											fontFamily: "monospace",
-											backgroundColor: "#282828",
-											padding: 10,
-											marginTop: -2,
-											border: `2px solid ${theme.palette.inputColor}`,
-											borderRadius: theme.palette.borderRadius,
-											maxHeight: 500,
-											minHeight: 500, 
-											minWidth: 580,
-											maxWidth: 580,
-											overflow: "auto", 
-											whiteSpace: "pre-wrap",
+											border: `1px solid ${theme.palette.primary.main}`, 
+											position: "absolute",
+											top: 10,
+											right: 10, 
+											maxHeight: 35, 
+											minWidth: 70, 
+										}} 
+										variant="contained" 
+										onClick={() => {
+											executeSingleAction(expOutput)
 										}}
 									>
-										{expOutput}
-									</p>
-							}
+										{executing ? 
+											<CircularProgress style={{height: 18, width: 18, }} /> 
+												: 						
+											<span>Try it <PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
+										}
+									</Button>
+								</Tooltip>
+
+								{isMobile ? null : 
+									validation === true ? 
+										<ReactJson
+											src={expOutput}
+											theme={theme.palette.jsonTheme}
+											style={{
+												borderRadius: 5,
+												border: `2px solid ${theme.palette.inputColor}`,
+												padding: 10, 
+												maxHeight: 450, 
+												minheight: 450, 
+												overflow: "auto",
+											}}
+											collapsed={false}
+											enableClipboard={(copy) => {
+												//handleReactJsonClipboard(copy);
+											}}
+											displayDataTypes={false}
+											onSelect={(select) => {
+												var basename = "exec"
+												if (selectedAction !== undefined && selectedAction !== null && Object.keys(selectedAction).length !== 0) {
+													basename = selectedAction.label.toLowerCase().replaceAll(" ", "_")
+												}
+
+												HandleJsonCopy(expOutput, select, basename)
+											}}
+											name={"JSON autocompletion"}
+										/>
+									:
+										<p
+											id='expOutput'
+											style={{
+												whiteSpace: "pre-wrap",
+												color: "#ebdbb2",
+												fontFamily: "monospace",
+												backgroundColor: "#282828",
+												padding: 10,
+												marginTop: -2,
+												border: `2px solid ${theme.palette.inputColor}`,
+												borderRadius: theme.palette.borderRadius,
+												maxHeight: 450,
+												minHeight: 450, 
+												minWidth: 480,
+												maxWidth: "100%",
+												overflow: "auto", 
+												whiteSpace: "pre-wrap",
+											}}
+										>
+											{expOutput}
+										</p>
+								}
+							</div>
 
 							{executionResult.valid === true ? 
 								<ReactJson
@@ -1689,7 +1673,7 @@ const CodeEditor = (props) => {
 									}}
 									displayDataTypes={false}
 									onSelect={(select) => {
-										//HandleJsonCopy(validate.result, select, "exec");
+										//HandleJsonCopy(executionResult.result, select, "exec");
 									}}
 									name={"Test result"}
 								/>
@@ -1705,9 +1689,18 @@ const CodeEditor = (props) => {
 										</Typography> 
 									</span>
 								: 
-									<Typography variant="body2" style={{maxHeight: 150, overflow: "auto", marginTop: 20,}}>
-										No test output yet.
-									</Typography>
+
+									<div>
+										<Typography
+											variant = 'body2'
+											color = 'textSecondary'
+										>
+											Output is based on the last VALID run of the node(s) you are referencing. Only updates when you refresh the Workflow Window.
+										</Typography>
+										<Typography variant="body2" style={{maxHeight: 150, overflow: "auto", marginTop: 20,}}>
+											No test output yet.
+										</Typography>
+									</div>
 								}
 								{executionResult.errors !== undefined && executionResult.errors !== null && executionResult.errors.length > 0 ?
 									<Typography variant="body2" style={{maxHeight: 100, overflow: "auto", color: "#f85a3e",}}>
@@ -1725,7 +1718,7 @@ const CodeEditor = (props) => {
 			</div>
 
 
-			<div style={{display: 'flex',}}>
+			<div style={{display: 'flex'}}>
 				<Button
 					style={{
 						height: 35,

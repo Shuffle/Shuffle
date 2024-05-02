@@ -42,14 +42,20 @@ const chipStyle = {
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const SearchData = props => {
     const { serverside, userdata, setModalOpen, modalOpen } = props
-
     let navigate = useNavigate();
     const borderRadius = 3
     const node = useRef()
-    const [searchOpen, setSearchOpen] = useState(true)
+    const [searchOpen, setSearchOpen] = useState(false)
+    const [oldPath, setOldPath] = useState("")
     const [value, setValue] = useState("");
-	const [userTyped, setUserTyped] = useState(false)
 
+    const handleLinkClick = () => {
+        if (modalOpen) {
+            setModalOpen(false); // Assuming setModalOpen is defined correctly
+        } else {
+            console.log("Condition not met, staying on the same page");
+        }
+    };
 
     if (serverside === true) {
         return null
@@ -72,37 +78,36 @@ const SearchData = props => {
     // }, searchOpen)
 
     const SearchBox = ({ currentRefinement, refine, isSearchStalled, }) => {
+        const [inputValue, setInputValue] = useState(currentRefinement);
+
+        const textFieldRef = useRef(null);
         const keyPressHandler = (e) => {
-            // e.preventDefault();
             if (e.which === 13) {
-                // alert("You pressed enter!");
-                navigate("/search?q=" + currentRefinement, { state: value, replace: true });
-
-				        setSearchOpen(false)
-				        setModalOpen(false)
-				        return
-
+                // navigate(`/search?q=${currentRefinement}`, { state: value, replace: true });
+                // setModalOpen(false);
+                const trimmedValue = inputValue.trim();
+                if (trimmedValue !== '') {
+                    e.preventDefault();
+                    navigate(`/search?q=${trimmedValue}`, { state: trimmedValue, replace: true });
+                    setModalOpen(false);
+                }
             }
         };
-        /*
-            endAdornment: (
-                <InputAdornment position="end" style={{textAlign: "right", zIndex: 5001, cursor: "pointer", width: 100, }} onMouseOver={(event) => {
-                    event.preventDefault()
-                }}>
-                    <CloseIcon style={{marginRight: 5,}} onClick={() => {
-                        setSearchOpen(false)	
-                    }} />
-                </InputAdornment>
-            ),
-        */
+
+        useEffect(() => {
+            if (searchOpen && textFieldRef.current) {
+                textFieldRef.current.focus();
+            }
+        }, [searchOpen]);
 
         return (
+
             <form id="search_form" noValidate type="searchbox" action="" role="search" onClick={() => {
             }}
             >
                 <TextField
                     fullWidth
-                    style={{ zIndex: 1100, marginTop:-20,marginBottom: 200, position:"fixed", backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, width: 685, }}
+                    style={{ zIndex: 1100, marginTop: -20, marginBottom: 200, position: "fixed", backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, width: 685, }}
                     InputProps={{
                         style: {
                             color: "white",
@@ -130,28 +135,30 @@ const SearchData = props => {
                     type="search"
                     color="primary"
                     placeholder="Find Public Apps, Workflows, Documentation..."
-                    value={currentRefinement}
-                    onKeyDown={keyPressHandler}
+                    value={inputValue}
                     id="shuffle_search_field"
                     onClick={(event) => {
-                        if (!searchOpen) {
-                            setSearchOpen(true)
-                            setTimeout(() => {
-                                var tarfield = document.getElementById("shuffle_search_field")
-                                //console.log("TARFIELD: ", tarfield)
-                                tarfield.focus()
-                            }, 250)
+                        if (inputValue.trim() !== '') {
+                            setSearchOpen(true);
                         }
                     }}
                     onBlur={(event) => {
-                        //setTimeout(() => {
-                        //    setSearchOpen(false)
-                        //}, 500)
+                        setSearchOpen(inputValue.trim() !== '')
                     }}
                     onChange={(event) => {
-                        refine(event.currentTarget.value)
+                        const newValue = event.target.value;
+                        setInputValue(newValue);
+                        refine(newValue);
+                        if (newValue.trim() !== '') {
+                            setSearchOpen(true);
+                        } else {
+                            setSearchOpen(false);
+                        }
                     }}
+                    onKeyDown={keyPressHandler}
+                    inputRef={textFieldRef}
                     limit={5}
+                    autoFocus
                 />
                 {/*isSearchStalled ? 'My search is stalled' : ''*/}
             </form>
@@ -183,8 +190,8 @@ const SearchData = props => {
         const baseImage = <CodeIcon />
 
         return (
-            <Card elevation={0} style={{ marginRight: 10,marginTop:50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 75, boxShadows: "none", }}>
-                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color:"#FF8444", borderBottom: "1px solid", width: 105 }}>
+            <Card elevation={0} style={{ marginRight: 10, marginTop: 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 75, boxShadows: "none", }}>
+                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color: "#FF8444", borderBottom: "1px solid", width: 105 }}>
                     Workflows
                 </Typography>
 
@@ -234,7 +241,7 @@ const SearchData = props => {
                                 <Link key={hit.objectID} to={parsedUrl} rel="noopener noreferrer" style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
                                     //console.log("CLICK")
                                     setSearchOpen(true)
-
+                                    setModalOpen(false)
                                     aa('init', {
                                         appId: searchClient.appId,
                                         apiKey: searchClient.transporter.queryParameters["x-algolia-api-key"]
@@ -258,7 +265,6 @@ const SearchData = props => {
                                         event.preventDefault()
                                         window.open(parsedUrl, '_blank');
                                     }
-    								setModalOpen(false)
                                 }}>
                                     <ListItem key={hit.objectID} style={innerlistitemStyle} onMouseOver={() => {
                                         setMouseHoverIndex(index)
@@ -350,7 +356,7 @@ const SearchData = props => {
                 }}>
                     <CloseIcon />
                 </IconButton> */}
-                <Typography variant="h6" style={{ margin: "40px 10px 0px 20px", color:"#FF8444", borderBottom: "1px solid", width: 50 }}>
+                <Typography variant="h6" style={{ margin: "40px 10px 0px 20px", color: "#FF8444", borderBottom: "1px solid", width: 50 }}>
                     Apps
                 </Typography>
 
@@ -424,10 +430,9 @@ const SearchData = props => {
 
                             return (
                                 <Link key={hit.objectID} to={parsedUrl} style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
-                                    console.log("CLICK")
                                     setSearchOpen(true)
-    								setModalOpen(false)
 
+                                    setModalOpen(false)
                                     aa('init', {
                                         appId: searchClient.appId,
                                         apiKey: searchClient.transporter.queryParameters["x-algolia-api-key"]
@@ -513,13 +518,13 @@ const SearchData = props => {
         //console.log(type, hits.length, hits)
 
         return (
-            <Card elevation={0} style={{ marginRight: 10,marginTop:50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 470, boxShadows: "none", }}>
+            <Card elevation={0} style={{ marginRight: 10, marginTop: 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 470, boxShadows: "none", }}>
                 {/* <IconButton style={{ zIndex: 5000, position: "absolute", right: 14, color: "grey" }} onClick={() => {
                     setSearchOpen(false)
                 }}>
                     <CloseIcon />
                 </IconButton> */}
-                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color:"#FF8444", borderBottom: "1px solid", width: 152}}>
+                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color: "#FF8444", borderBottom: "1px solid", width: 152 }}>
                     Documentation
                 </Typography>
                 {/*
@@ -608,7 +613,7 @@ const SearchData = props => {
 
                                     console.log("CLICK")
                                     setSearchOpen(true)
-    								setModalOpen(false)
+                                    setModalOpen(false)
                                 }}>
                                     <ListItem key={hit.objectID} style={innerlistitemStyle} onMouseOver={() => {
                                         setMouseHoverIndex(index)
@@ -636,14 +641,14 @@ const SearchData = props => {
             </Card>
         )
     }
-    const gettingStartData = !searchOpen ? ( 
+    const gettingStartData = !searchOpen ? (
         <Grid
             container
             direction="row"
             alignItems="center"
         // justify="space-evenly"
         >
-            <Grid item xs={6} style={{ alignItems: "center", flexDirection: "row", marginTop: 70,  }}>
+            <Grid item xs={6} style={{ alignItems: "center", flexDirection: "row", marginTop: 70, }}>
                 <List style={{ width: "100%", marginLeft: 10, color: "var(--Paragraph-text, #C8C8C8)" }}>
                     <ListItem>
                         <ArticleIcon style={{ marginRight: 10, display: "flex", width: 22 }} />
@@ -651,28 +656,34 @@ const SearchData = props => {
                     </ListItem>
                     <div style={{ marginLeft: 25, }}>
                         <ListItem>
-                            <Link onClick={() => { window.location = "/docs"; }} style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
+                            <Link to="/docs" onClick={handleLinkClick} style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
                                 <Typography variant="body1" style={{ fontSize: 16, }}>Documentation</Typography>
                                 <KeyboardArrowRightIcon />
                             </Link>
                         </ListItem>
-
                         <ListItem>
-                            <Link to="https://github.com/Shuffle/Shuffle/blob/main/.github/install-guide.md" style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
-                                <Typography variant="body1" style={{ fontSize: 16, }}>Onprem Installation</Typography>
+                            <a
+                                href="https://github.com/Shuffle/Shuffle/blob/main/.github/install-guide.md"
+                                style={{
+                                    textDecoration: "none",
+                                    color: "var(--Paragraph-text, #C8C8C8)",
+                                    display: "flex"
+                                }}
+                            >
+                                <Typography variant="body1" style={{ fontSize: 16 }}>
+                                    Onprem Installation
+                                </Typography>
                                 <KeyboardArrowRightIcon />
-                            </Link>
+                            </a>
                         </ListItem>
-
-
                         <ListItem>
-                            <Link to="/usecases" style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
+                            <Link to="/usecases" onClick={handleLinkClick} style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
                                 <Typography variant="body1" style={{ fontSize: 16, }}>Explore Usecases</Typography>
                                 <KeyboardArrowRightIcon />
                             </Link>
                         </ListItem>
                         <ListItem>
-                            <Link to="/search?tab=workflows" style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
+                            <Link to="/search?tab=workflows" onClick={handleLinkClick} style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
                                 <Typography variant="body1" style={{ fontSize: 16, }}>Find public workflows</Typography>
                                 <KeyboardArrowRightIcon />
                             </Link>
@@ -688,25 +699,25 @@ const SearchData = props => {
                     </ListItem>
                     <div style={{ marginLeft: 35 }}>
                         <ListItem>
-                            <Link to="/docs/app_creation" style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
+                            <Link to="/docs/app_creation" onClick={handleLinkClick} style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
                                 <Typography variant="body1" style={{ fontSize: 16, }}>Create Apps</Typography>
                                 <KeyboardArrowRightIcon />
                             </Link>
                         </ListItem>
                         <ListItem>
-                            <Link to="/apps" style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
+                            <Link to="/apps" onClick={handleLinkClick} style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
                                 <Typography variant="body1" style={{ fontSize: 16, }}>Find Apps</Typography>
                                 <KeyboardArrowRightIcon />
                             </Link>
                         </ListItem>
                         <ListItem>
-                            <Link to="/workflows" style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
+                            <Link to="/workflows" onClick={handleLinkClick} style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
                                 <Typography variant="body1" style={{ fontSize: 16, }}>Workflows</Typography>
                                 <KeyboardArrowRightIcon />
                             </Link>
                         </ListItem>
                         <ListItem>
-                            <Link to="/creators" style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
+                            <Link to="/creators" onClick={handleLinkClick} style={{ textDecoration: "none", color: "var(--Paragraph-text, #C8C8C8)", display: "flex" }}>
                                 <Typography variant="body1" style={{ fontSize: 16, }}>Creator</Typography>
                                 <KeyboardArrowRightIcon />
                             </Link>
@@ -721,7 +732,7 @@ const SearchData = props => {
                 </Button>
             </Grid>
         </Grid>
-    ): null
+    ) : null
 
     const CustomSearchBox = connectSearchBox(SearchBox)
     const CustomAppHits = connectHits(AppHits)
@@ -731,17 +742,17 @@ const SearchData = props => {
     const modalView = (
         <div>
             <Grid container style={{ display: "contents", }}>
-                <Grid item xs="auto" style={{ }}>
+                <Grid item xs="auto" style={{}}>
                     <Index indexName="appsearch">
                         <CustomAppHits />
                     </Index>
                 </Grid>
-                <Grid item xs="auto" style={{ }}>
+                <Grid item xs="auto" style={{}}>
                     <Index indexName="workflows">
                         <CustomWorkflowHits />
                     </Index>
                 </Grid>
-                <Grid item xs="auto" style={{ }}>
+                <Grid item xs="auto" style={{}}>
                     <Index indexName="documentation">
                         <CustomDocHits />
                     </Index>
@@ -753,14 +764,14 @@ const SearchData = props => {
     return (
         <div ref={node} style={{ width: "100%", maxWidth: "100%", margin: "auto", }}>
             <InstantSearch searchClient={searchClient} indexName="appsearch" onClick={() => {
+
+                console.log("CLICKED")
             }}>
                 <Configure clickAnalytics />
-                <CustomSearchBox onClick={() => {
-					console.log("Click 2")
-				}}/>
-				{modalView}
+                <CustomSearchBox />
+                {modalView}
             </InstantSearch>
-			{gettingStartData}
+            {gettingStartData}
         </div>
     )
 }

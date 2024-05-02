@@ -31,6 +31,7 @@ const theme = createTheme(adaptV4Theme({
 		borderRadius: 5,
 		border: "1px solid rgba(255,255,255,0.7)",
 		padding: 5, 
+		width: "100%",
 	},
     textFieldStyle: {
       backgroundColor: "#383B40",

@@ -20,6 +20,7 @@ import {
   TextField,
   Tooltip,
   Breadcrumbs,
+  Drawer,
   CircularProgress,
   Chip,
   IconButton,
@@ -43,6 +44,7 @@ import {
 	Loop as LoopIcon,
 	AddPhotoAlternate as AddPhotoAlternateIcon,
 	CallMerge as CallMergeIcon,
+  CloudDownload as CloudDownloadIcon,
 } from "@mui/icons-material";
 
 import { v4 as uuidv4 } from "uuid";
@@ -447,6 +449,8 @@ const AppCreator = (defaultprops) => {
   const [openApi, setOpenApi] = React.useState("");
   const [openApiData, setOpenApiData] = React.useState("");
   const [openApiModal, setOpenApiModal] = React.useState(false);
+
+  const [appDownloadData, setAppDownloadData] = React.useState("");
 
   useEffect(() => {
 	  console.log("In useEffect for openApiData: ", openApiData)
@@ -900,8 +904,9 @@ const AppCreator = (defaultprops) => {
 			}
 
 			if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
-				const regex = /_shuffle_replace_\d/i;
-				//console.log("NEW: ", 
+				//const regex = /_shuffle_replace_\d/i;
+				const regex = /_shuffle_replace_\d+/i
+				
 				newaction.url = newaction.url.replaceAll(new RegExp(regex, 'g'), "")
 			}
 
@@ -911,11 +916,12 @@ const AppCreator = (defaultprops) => {
             var categoryindex = -1;
             // Stupid way of finding a category/grouping
             for (let splitkey in pathsplit) {
-							if (pathsplit[splitkey].includes("_shuffle_replace_")) {
-								const regex = /_shuffle_replace_\d/i;
-								//console.log("NEW: ", 
-								pathsplit[splitkey] = pathsplit[splitkey].replaceAll(new RegExp(regex, 'g'), "")
-							}
+				if (pathsplit[splitkey].includes("_shuffle_replace_")) {
+					//const regex = /_shuffle_replace_\d/i;
+					const regex = /_shuffle_replace_\d+/i
+					//console.log("NEW: ", 
+					pathsplit[splitkey] = pathsplit[splitkey].replaceAll(new RegExp(regex, 'g'), "")
+				}
 
               if (
                 pathsplit[splitkey].length > 0 &&
@@ -1205,9 +1211,9 @@ const AppCreator = (defaultprops) => {
                   	    );
                   	  }
                   	}
-									} catch (e) {
-										console.log("Param Error: ", e, path)
-									}
+				  } catch (e) {
+				  	console.log("Param Error: ", e, path)
+				  }
                 }
               }
             }
@@ -1526,6 +1532,10 @@ const AppCreator = (defaultprops) => {
                 required: parameter.required,
                 in: "query",
               };
+
+			  if (parameter.example !== undefined && parameter.example !== null) {
+				  tmpaction.example = parameter.example
+			  }
 
               if (parameter.required === undefined) {
                 tmpaction.required = false;
@@ -2007,9 +2017,10 @@ const AppCreator = (defaultprops) => {
 			var pathjoin = item.url+"_"+item.method.toLowerCase()
 			if (handledPaths.includes(pathjoin)) {
 
-				// Max 100 of same lol
-				for (let i = 0; i < 100; i++) {
-					item.url = item.url+"_shuffle_replace_"+i
+				// Max 1000 of same. Will it be ok for graphql longterm?
+				const baseurl = item.url
+				for (let i = 0; i < 1000; i++) {
+					item.url = baseurl+"_shuffle_replace_"+i
 
 					pathjoin = item.url+"_"+item.method.toLowerCase()
 					if (handledPaths.includes(pathjoin)) {
@@ -2289,7 +2300,7 @@ const AppCreator = (defaultprops) => {
       }
 
 			const methodname = item.method.toLowerCase()
-			if (methodname === "post" || methodname === "put" || methodname === "patch") {
+			if (methodname === "post" || methodname === "put" || methodname === "patch" || methodname === "delete") {
       	if (
       	  item.body !== undefined &&
       	  item.body !== null &&
@@ -2565,6 +2576,8 @@ const AppCreator = (defaultprops) => {
       }
     }
 
+	setAppDownloadData(JSON.stringify(data, null, 4))
+
     fetch(globalUrl + "/api/v1/verify_openapi", {
       method: "POST",
       headers: {
@@ -2585,9 +2598,16 @@ const AppCreator = (defaultprops) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
+		  if (responseJson.extra !== undefined && responseJson.extra !== null) {
+			toast("Failed building: " + responseJson.extra);
+		  }
+
           if (responseJson.reason !== undefined) {
             setErrorCode(responseJson.reason);
-            toast("Failed to verify: " + responseJson.reason);
+
+			if (responseJson.extra === undefined && responseJson.extra === null) {
+            	toast("Failed to verify: " + responseJson.reason);
+			}
           }
         } else {
           toast("Successfully uploaded openapi");
@@ -3390,13 +3410,13 @@ const AppCreator = (defaultprops) => {
     		      }}
     		      label={parsedChip}
     		      onClick={() => {
-								if (chipRequired) {
-									currentAction["required_bodyfields"].splice(currentAction["required_bodyfields"].indexOf(chipData), 1)
-								} else {
-    							currentAction["required_bodyfields"].push(chipData) 
-								}
+						if (chipRequired) {
+							currentAction["required_bodyfields"].splice(currentAction["required_bodyfields"].indexOf(chipData), 1)
+						} else {
+						currentAction["required_bodyfields"].push(chipData) 
+						}
 
-    						setCurrentAction(currentAction);
+					setCurrentAction(currentAction);
     		        setChipRequired(!chipRequired);
     		      }}
     		    />
@@ -3432,11 +3452,11 @@ const AppCreator = (defaultprops) => {
   	};
 
   	const deletePathQuery = (index) => {
-			console.log("Should delete index: ", index)
-			var tmpqueries = JSON.parse(JSON.stringify(urlPathQueries))
-			tmpqueries.splice(index, 1)
+	  console.log("Should delete index: ", index)
+	  var tmpqueries = JSON.parse(JSON.stringify(urlPathQueries))
+	  tmpqueries.splice(index, 1)
 
-			console.log("Queries: ", tmpqueries)
+	  console.log("Queries: ", tmpqueries)
   	  setUrlPathQueries(tmpqueries);
 
   	  if (updater === "deleteupdater") {
@@ -3683,48 +3703,55 @@ const AppCreator = (defaultprops) => {
   	  return errormessage;
   	};
 
-  	
+
+	  const getBackgroundColor = (data) => {
+		var bgColor = "#61afee";
+		if (data === "POST") {
+			bgColor = "#49cc90";
+		} else if (data === "PUT") {
+			bgColor = "#fca130";
+		} else if (data === "PATCH") {
+			bgColor = "#50e3c2";
+		} else if (data === "DELETE") {
+			bgColor = "#f93e3e";
+		} else if (data === "HEAD") {
+			bgColor = "#9012fe";
+		}
+
+		return bgColor;
+	  }
+
 
 		const newActionModal = (
-    		<Dialog
+			<Drawer
+			  anchor={"right"}
     		  open={actionsModalOpen}
     		  fullWidth
 			  PaperProps={{
     		    style: {
     		      backgroundColor: surfaceColor,
     		      color: "white",
-    		      minWidth: 550,
-    		      maxWidth: 550,
-				  maxHeight: 750,
+    		      minWidth: 700,
+    		      maxWidth: 700,
     		    },
     		  }}
     		  onClose={() => {
-    		    setUrlPath("");
-    		    setCurrentAction({
-    		      name: "",
-    		      description: "",
-    		      url: "",
-    		      file_field: "",
-    		      headers: "",
-    		      paths: [],
-    		      queries: [],
-    		      body: "",
-    		      errors: [],
-    		      method: actionNonBodyRequest[0],
-							action_label: "No Label",
-							required_bodyfields: [],
-    		    });
-    		    setCurrentActionMethod(apikeySelection[0]);
-    		    setUrlPathQueries([]);
-    		    setActionsModalOpen(false);
-    		    setFileUploadEnabled(false);
+			    console.log("Closing modal");
+
+			    console.log(currentAction);
+			    const errors = getActionErrors();
+			    addActionToView(errors);
+			    setActionsModalOpen(false);
+			    setUrlPathQueries([]);
+			    setUrlPath("");
+			    setFileUploadEnabled(false);
     		  }}
     		>
     		  <FormControl style={{ backgroundColor: surfaceColor, color: "white" }}>
-    		    <DialogTitle>
+    		    <DialogTitle style={{marginTop: 30, }}>
     		      <div style={{ color: "white" }}>New action</div>
     		    </DialogTitle>
-    		    <DialogContent>
+    		    <DialogContent style={{paddingBottom: 100, }}>
     		      <a
     		        target="_blank"
     		        href="https://shuffler.io/docs/app_creation#actions"
@@ -3750,7 +3777,8 @@ const AppCreator = (defaultprops) => {
     		        variant="outlined"
     		        defaultValue={currentAction["name"]}
     		        onChange={(e) => {
-    		          setActionField("name", e.target.value);
+					  var trimmed = e.target.value.trim();
+    		          setActionField("name", trimmed)
     		        }}
     		        onBlur={(e) => {
     		          // Fix basic issues in frontend. Python functions run a-zA-Z0-9_
@@ -3759,6 +3787,18 @@ const AppCreator = (defaultprops) => {
     		          if (found !== null) {
     		            setActionField("name", found.join(""));
     		          }
+
+					  // Look through all actions and see if there is one with the same name
+					  if (currentAction.url === "" && actions !== undefined && actions !== null && actions.length > 0) { 
+					    for (var i = 0; i < actions.length; i++) {
+						  if (actions[i].name.toLowerCase() === e.target.value.toLowerCase()) {
+						    toast("Action with name " + e.target.value + " already exists. If you keep this, it will be overwritten.") 
+						    break
+						  }
+					    }
+
+					  }
+
     		        }}
     		        key={currentAction}
     		        InputProps={{
@@ -3822,26 +3862,33 @@ const AppCreator = (defaultprops) => {
     		          id: "method-option",
     		        }}
     		      >
-    		        {actionNonBodyRequest.map((data, index) => {
+
+					// Add actionBodyRequest to actionNonBodyRequest
+					{actionNonBodyRequest.concat(actionBodyRequest).map((data, index) => {
+					  const backgroundColor = getBackgroundColor(data);
     		          return (
     		            <MenuItem
     		              key={index}
-    		              style={{ backgroundColor: inputColor, color: "white" }}
+    		              style={{}}
     		              value={data}
     		            >
-    		              {data}
+						  <Chip
+						  	style={{
+						  		color: "white",
+						  		borderRadius: 5,
+						  		minWidth: 80,
+						  		marginRight: 10,
+						  		marginTop: 2,
+						  		cursor: "pointer",
+						  		fontSize: 14,
+								fontWeight: "bold",
+								backgroundColor: backgroundColor,
+						  	}}
+						  	label={data}
+						  />
     		            </MenuItem>
     		          );
     		        })}
-    		        {actionBodyRequest.map((data, index) => (
-    		          <MenuItem
-    		            key={index}
-    		            style={{ backgroundColor: inputColor, color: "white" }}
-    		            value={data}
-    		          >
-    		            {data}
-    		          </MenuItem>
-    		        ))}
     		      </Select>
     		      <div style={{ marginTop: "15px" }} />
     		      URL path / Curl statement
@@ -4218,19 +4265,11 @@ const AppCreator = (defaultprops) => {
     		      />
     		      {exampleResponse}
     		    </DialogContent>
-    		    <DialogActions>
-    		      <Button
-    		        style={{ borderRadius: "0px" }}
-    		        onClick={() => {
-    		          setActionsModalOpen(false);
-    		        }}
-    		      >
-    		        Cancel
-    		      </Button>
+    		    <div style={{position: "fixed", backgroundColor: theme.palette.surfaceColor, bottom: 0, width: "100%", padding: 25, borderTop: "1px solid rgba(255,255,255,0.3)", }}>
     		      <Button
     		        color="primary"
     		        variant={urlPath.length > 0 ? "contained" : "outlined"}
-    		        style={{ borderRadius: "0px" }}
+    		        style={{ }}
     		        onClick={() => {
     		          //console.log(urlPathQueries)
     		          //console.log(urlPath)
@@ -4245,9 +4284,19 @@ const AppCreator = (defaultprops) => {
     		      >
     		        Submit
     		      </Button>
-    		    </DialogActions>
+				  {/*
+    		      <Button
+    		        style={{ marginLeft: 10,  }}
+    		        onClick={() => {
+    		          setActionsModalOpen(false);
+    		        }}
+    		      >
+    		        Cancel
+    		      </Button>
+				  */}
+    		    </div>
     		  </FormControl>
-    		</Dialog>
+    		</Drawer>
   		);
 
 
@@ -4316,6 +4365,8 @@ const AppCreator = (defaultprops) => {
 
 							setCurrentAction(data);
 							setCurrentActionMethod(data.method);
+
+							console.log("QUERIES: ", data.queries)
 							setUrlPathQueries(data.queries);
 							setUrlPath(data.url);
 							setActionsModalOpen(true);
@@ -4453,7 +4504,7 @@ const AppCreator = (defaultprops) => {
             style={{ borderRadius: 0, position: "absolute", top: 70, }}
             variant={actions.length === 0 ? "contained" : "outlined"}
             onClick={(e) => {
-							e.preventDefault();
+			  e.preventDefault();
 
               setCurrentActionMethod(actionNonBodyRequest[0]);
               setCurrentAction({
@@ -4467,8 +4518,8 @@ const AppCreator = (defaultprops) => {
                 body: "",
                 errors: [],
                 method: actionNonBodyRequest[0],
-								action_label: "No Label",
-								required_bodyfields: [],
+				action_label: "No Label",
+				required_bodyfields: [],
               });
               setActionsModalOpen(true);
             }}
@@ -4485,20 +4536,20 @@ const AppCreator = (defaultprops) => {
 
 	//console.log("Actions: ", filteredActions)
     if (filteredActions === null || filteredActions === undefined || filteredActions.length === 0) {
-			return null
-		}
+		return null
+	}
 		
-		return (
+	return (
       <div>
         {filteredActions.slice(0, actionAmount).map((data, index) => {
 					//console.log("Found action: ", data)
-          return (
-						<ActionPaper key={index} index={index} data={data} />
-					)
-			})}
-		</div>
-		)
-	}
+        	return (
+				<ActionPaper key={index} index={index} data={data} />
+		  	)
+		})}
+	  </div>
+	)
+  }
 
 
 
@@ -6097,20 +6148,68 @@ const AppCreator = (defaultprops) => {
 						{testView}
 					*/}
 
-        <Button
-          disabled={appBuilding}
-          color="primary"
-          variant="contained"
-          style={{ borderRadius: "0px", marginTop: "30px", height: "50px" }}
-          onClick={() => {
-            submitApp();
-          }}
-        >
-          {appBuilding ? <CircularProgress /> : "Save"}
-        </Button>
-        <Typography style={{ marginTop: 5 }}>
-          {errorCode.length > 0 ? `Error: ${errorCode}` : null}
-        </Typography>
+	  	<div style={{display: "flex", marginTop: 35, }}>
+			{appDownloadData.length > 0 ?
+				<Tooltip title="Download the OpenAPI specification for the App" placement="bottom">
+					<IconButton
+						style={{marginRight: 25, }} 
+						onClick={() => {
+							toast(`Downloading OpenAPI JSON data for for ${name}`)
+							// Download as file
+          					var blob = new Blob([appDownloadData], {
+          					  type: "application/octet-stream",
+          					});
+
+          					var url = URL.createObjectURL(blob);
+							var link = document.createElement("a");
+						    link.setAttribute("href", url);
+						    link.setAttribute("download", `${name}.json`);
+						    var event = document.createEvent("MouseEvents");
+						    event.initMouseEvent(
+						      "click",
+						      true,
+						      true,
+						      window,
+						      1,
+						      0,
+						      0,
+						      0,
+						      0,
+						      false,
+						      false,
+						      false,
+						      false,
+						      0,
+						      null
+						    );
+						    link.dispatchEvent(event);
+						}}
+					>
+						<CloudDownloadIcon />
+					</IconButton>
+				</Tooltip>
+			: null}
+			<Button
+			  disabled={appBuilding}
+			  color="primary"
+			  variant="contained"
+	  		  fullWidth
+			  style={{ height: "50px", flex: 1,  }}
+			  onClick={() => {
+				submitApp();
+			  }}
+			>
+			  {appBuilding ? <CircularProgress /> : "Save"}
+			</Button>
+	  		{appDownloadData.length > 0 ?
+				<div style={{width: 50, }}/>
+			: null}
+	  	</div>
+
+		<Typography style={{ marginTop: 25, textAlign: "center", }}>
+		  {errorCode.length > 0 ? `Upload Error: ${errorCode}` : null}
+		</Typography>
+
       </Paper>
     </div>
   );

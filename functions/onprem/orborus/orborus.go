@@ -19,6 +19,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -26,9 +27,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 	"sync"
-	"math"
+	"time"
 
 	//"os/signal"
 	//"syscall"
@@ -62,8 +62,8 @@ import (
 var sleepTime = 2
 
 // Making it work on low-end machines even during busy times :)
-// May cause some things to run slowly 
-var maxConcurrency = 7 
+// May cause some things to run slowly
+var maxConcurrency = 7
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
@@ -74,7 +74,7 @@ var newWorkerImage = os.Getenv("SHUFFLE_WORKER_IMAGE")
 var dockerSwarmBridgeMTU = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_MTU")
 var dockerSwarmBridgeInterface = os.Getenv("SHUFFLE_SWARM_BRIDGE_DEFAULT_INTERFACE")
 var isKubernetes = os.Getenv("IS_KUBERNETES")
-var maxCPUPercent = 95 
+var maxCPUPercent = 95
 
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
@@ -396,14 +396,14 @@ func deployServiceWorkers(image string) {
 		}
 
 		innerContainerName := fmt.Sprintf("shuffle-workers")
-		cnt, _ := findActiveSwarmNodes()
+		cnt, err := findActiveSwarmNodes()
+		if err != nil {
+			log.Printf("[ERROR] Failed to find active swarm nodes: %s. Defaulting to 1", err)
+		}
+
 		nodeCount := uint64(1)
 		if cnt > 0 {
 			nodeCount = uint64(cnt)
-		}
-
-		if cnt == 0 {
-			cnt = 1
 		}
 
 		appReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
@@ -477,6 +477,9 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 						fmt.Sprintf("DEBUG_MEMORY=%s", os.Getenv("DEBUG_MEMORY")),
 						fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")),
+						fmt.Sprintf("SHUFFLE_MAX_SWARM_NODES=%d", os.Getenv("SHUFFLE_MAX_SWARM_NODES")),
+						fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", os.Getenv("SHUFFLE_BASE_IMAGE_NAME")),
+						fmt.Sprintf("SHUFFLE_APP_REQUEST_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_REQUEST_TIMEOUT")),
 					},
 					//Hosts: []string{
 					//	innerContainerName,
@@ -533,6 +536,10 @@ func deployServiceWorkers(image string) {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_CLOUDRUN_URL=%s", os.Getenv("SHUFFLE_CLOUDRUN_URL")))
 		}
 
+		if len(os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD")) > 0 {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_AUTO_IMAGE_DOWNLOAD=%s", os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD")))
+		}
+
 		if len(os.Getenv("DOCKER_HOST")) > 0 {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_HOST=%s", os.Getenv("DOCKER_HOST")))
 		} else {
@@ -580,6 +587,8 @@ func deployServiceWorkers(image string) {
 			serviceOptions,
 		)
 
+		//dockercli.ServiceUpdate(
+
 		if err == nil {
 			log.Printf("[DEBUG] Successfully deployed workers with %d replica(s) on %d node(s)", replicas, cnt)
 			//time.Sleep(time.Duration(10) * time.Second)
@@ -608,14 +617,14 @@ func deployServiceWorkers(image string) {
 	}
 }
 
-// Deploys the internal worker whenever something happens
+// Deploys the worker with the current available environments
 // https://docs.docker.com/engine/api/sdk/examples/
-
 func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 	for key, value := range envMap {
 		envVars = append(envVars, corev1.EnvVar{Name: key, Value: value})
 	}
+
 	return envVars
 }
 
@@ -667,15 +676,20 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			},
 		}
 
+		// Add environment variables
+		// pod.Spec.Containers[0].Env = buildEnvVars(envMap)
+
 		createdPod, err := clientset.CoreV1().Pods("shuffle").Create(context.Background(), pod, metav1.CreateOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating pod: %v\n", err)
+			log.Printf("[ERROR] Failed creating pod: %v", err)
+			return err
 		}
 
 		log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
-	} else {
+		return nil
+	}
 
-		// Binds is the actual "-v" volume.
+	// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
 
 	//CPUQuota:  25000,
@@ -717,26 +731,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
 		// a 401 from the worker, which returns an error here
 		go sendWorkerRequest(executionRequest)
-		//sendWorkerRequest(executionRequest)
-
-		//err := sendWorkerRequest(executionRequest)
-		//if err != nil {
-		//	log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
-
-		//	if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
-		//		workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-		//		deployServiceWorkers(workerImage)
-
-		//		time.Sleep(time.Duration(10) * time.Second)
-		//		err = sendWorkerRequest(executionRequest)
-		//	}
-		//}
-
-		//if err == nil {
-		//	// FIXME: Readd this? Removed for rerun reasons
-		//	// executionIds = append(executionIds, executionRequest.ExecutionId)
-		//}
-		//}()
 
 		return nil
 	}
@@ -834,9 +828,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	}
 
 	return nil
-	}
-
-	return nil
 }
 
 func stopWorker(containername string) error {
@@ -922,7 +913,7 @@ func findActiveSwarmNodes() (int64, error) {
 	ctx := context.Background()
 	nodes, err := dockercli.NodeList(ctx, types.NodeListOptions{})
 	if err != nil {
-		return 0, err
+		return 1, err
 	}
 
 	nodeCount := int64(0)
@@ -933,13 +924,21 @@ func findActiveSwarmNodes() (int64, error) {
 		}
 	}
 
-	return nodeCount, nil
+	// Check for SHUFFLE_MAX_NODES
+	// Make it into a number and check if it's lower than nodeCount
+	maxNodesString := os.Getenv("SHUFFLE_MAX_SWARM_NODES")
+	if len(maxNodesString) > 0 {
+		maxNodes, err := strconv.ParseInt(maxNodesString, 10, 64)
+		if err != nil {
+			return nodeCount, err
+		}
 
-	/*
-		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-			All: true,
-		})
-	*/
+		if nodeCount > maxNodes {
+			nodeCount = maxNodes
+		}
+	}
+
+	return nodeCount, nil
 }
 
 // Get IP
@@ -1033,10 +1032,18 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		Timestamp:    time.Now().Unix(),
 	}
 
+	// FIXME: Returning for now due to this causing network congestion
+	// and database fillup. The backend api also has it disabled.
+	return newStats
+
+	// Disable orborus stats
+	if os.Getenv("SHUFFLE_STATS_DISABLED") == "true" {
+		return newStats
+	}
+
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		newStats.Swarm = true
 	}
-
 
 	// Run this 1/10 times
 	//if rand.Intn(10) != 1 {
@@ -1047,7 +1054,7 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 	newStats.MaxQueue = maxConcurrency
 	newStats.Queue = executionCount
 
-	if isKubernetes == "true" || runningMode == "kubernetes" || runningMode == "k8s"  {
+	if isKubernetes == "true" || runningMode == "kubernetes" || runningMode == "k8s" {
 		newStats.Kubernetes = true
 		return newStats
 	}
@@ -1068,8 +1075,7 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		newStats.MaxMemory = int(pers.MemTotal)
 	}
 
-
-		// Get list of all running containers
+	// Get list of all running containers
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Failed getting container list: %s", err)
@@ -1129,33 +1135,33 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		// check if it's NaN or Inf
 		if !math.IsNaN(result.cpuUsage) {
 			totalCPU += float64(result.cpuUsage)
-		} 
+		}
 
 		if !math.IsNaN(result.memoryUsage) {
 			memUsage += float64(result.memoryUsage)
 		}
 	}
 
-	newStats.CPUPercent = totalCPU/float64(newStats.CPU)
+	newStats.CPUPercent = totalCPU / float64(newStats.CPU)
 	newStats.MemoryPercent = memUsage
 
 	//log.Printf("[DEBUG] CPU: %.2f, Memory: %.2f", newStats.CPUPercent, newStats.MemoryPercent)
 
 	/*
-	cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
-	if err == nil && len(cpuPercent) > 0 {
-		newStats.CPUPercent = cpuPercent[0]
-	}
-	//Percent(interval time.Duration, percpu bool) ([]float64, error)
+		cpuPercent, err := cpu.Percent(250*time.Millisecond, false)
+		if err == nil && len(cpuPercent) > 0 {
+			newStats.CPUPercent = cpuPercent[0]
+		}
+		//Percent(interval time.Duration, percpu bool) ([]float64, error)
 
-	// Get memory usage
-	memory, err := memory.Get()
-	if err != nil {
-		log.Printf("[ERROR] Failed getting memory stats: %s", err)
-	} else {
-		newStats.Memory = int(memory.Used)
-		newStats.MaxMemory = int(memory.Total)
-	}
+		// Get memory usage
+		memory, err := memory.Get()
+		if err != nil {
+			log.Printf("[ERROR] Failed getting memory stats: %s", err)
+		} else {
+			newStats.Memory = int(memory.Used)
+			newStats.MaxMemory = int(memory.Total)
+		}
 	*/
 
 	// Get disk usage
@@ -1393,11 +1399,18 @@ func main() {
 	}
 
 	if os.Getenv("SHUFFLE_MAX_CPU") != "" {
-		// parse 
+		// parse
 		tmpInt, err := strconv.Atoi(os.Getenv("SHUFFLE_MAX_CPU"))
 		if err == nil {
 			maxCPUPercent = tmpInt
 		}
+	}
+
+	swarmPollingTime := time.Now()
+	swarmRequestsMade := 0
+	swarmControlMode := false
+	if os.Getenv("SHUFFLE_SWARM_CONTROL_MODE") == "true" {
+		swarmControlMode = true
 	}
 
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
@@ -1520,6 +1533,20 @@ func main() {
 				log.Printf("[WARNING] Throttle - Cutting down requests from %d to %d (MAX: %d, CUR: %d)", len(executionRequests.Data), allowed, maxConcurrency, executionCount)
 				executionRequests.Data = executionRequests.Data[0:allowed]
 			}
+		} else if (swarmControlMode && (swarmConfig == "run" || swarmConfig == "swarm")) {
+			if len(executionRequests.Data) > 50 {
+				executionRequests.Data = executionRequests.Data[0:50]
+			}
+
+			if swarmRequestsMade > 100 && time.Since(swarmPollingTime).Seconds() > 5 {
+				log.Printf("[DEBUG] Swarm requests made: %d", swarmRequestsMade)
+				time.Sleep(time.Duration(sleepTime) * time.Second)
+
+				swarmPollingTime = time.Now()
+				swarmRequestsMade = 0
+			}
+
+			swarmRequestsMade += len(executionRequests.Data)
 		}
 
 		// New, abortable version. Should check executionid and remove everything else
@@ -1544,9 +1571,9 @@ func main() {
 
 				// Should check when last this was ran, and if it's more than 10 minutes ago and it's not finished, we should run it again?
 				/*
-				if swarmConfig != "run" && swarmConfig != "swarm" {
-					continue
-				}
+					if swarmConfig != "run" && swarmConfig != "swarm" {
+						continue
+					}
 				*/
 			}
 
@@ -1562,6 +1589,7 @@ func main() {
 				fmt.Sprintf("SHUFFLE_PASS_APP_PROXY=%s", os.Getenv("SHUFFLE_PASS_APP_PROXY")),
 				fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 				fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
+				fmt.Sprintf("SHUFFLE_BASE_IMAGE_NAME=%s", os.Getenv("SHUFFLE_BASE_IMAGE_NAME")),
 			}
 
 			//log.Printf("Running worker with proxy? %s", os.Getenv("SHUFFLE_PASS_WORKER_PROXY"))
@@ -1601,7 +1629,6 @@ func main() {
 				env = append(env, fmt.Sprintf("SHUFFLE_VOLUME_BINDS=%s", os.Getenv("SHUFFLE_VOLUME_BINDS")))
 			}
 
-
 			if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
 				env = append(env, fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")))
 			}
@@ -1611,12 +1638,16 @@ func main() {
 			overrideHttpsProxy := os.Getenv("SHUFFLE_INTERNAL_HTTPS_PROXY")
 			if len(overrideHttpProxy) > 0 {
 				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpProxy)
-				env = append(env, fmt.Sprintf("HTTP_PROXY=%s", overrideHttpProxy))
+				env = append(env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTP_PROXY=%s", overrideHttpProxy))
 			}
 
 			if len(overrideHttpsProxy) > 0 {
 				log.Printf("[DEBUG] Added internal proxy: %s", overrideHttpsProxy)
-				env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", overrideHttpsProxy))
+				env = append(env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
+			}
+
+			if len(os.Getenv("SHUFFLE_MAX_SWARM_NODES")) > 0 {
+				env = append(env, fmt.Sprintf("SHUFFLE_MAX_SWARM_NODES=%s", os.Getenv("SHUFFLE_MAX_SWARM_NODES")))
 			}
 
 			err = deployWorker(workerImage, containerName, env, execution)
@@ -1706,7 +1737,7 @@ func main() {
 func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	//log.Printf("[DEBUG] Getting running workers with API version %s", dockerApiVersion)
 	counter := 0
-	if isKubernetes  == "true" {
+	if isKubernetes == "true" {
 		log.Printf("[INFO] getting running workers in kubernetes")
 
 		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
@@ -1736,20 +1767,20 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 			All: true,
 		})
-	
+
 		// Automatically updates the version
 		if err != nil {
 			log.Printf("[ERROR] Error getting containers: %s", err)
-	
+
 			newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
 			if len(newVersionSplit) > 1 {
 				//dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
 				log.Printf("[DEBUG] WANT to change the API version to default to %s?", strings.TrimSpace(newVersionSplit[1]))
 			}
-	
+
 			return maxConcurrency
 		}
-	
+
 		currenttime := time.Now().Unix()
 
 		for _, container := range containers {
@@ -1762,7 +1793,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 						break
 					}
 				}
-	
+
 				// Check image name
 				if !shuffleFound {
 					continue
@@ -1770,13 +1801,13 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 				//} else {
 				//	log.Printf("NAME: %s", container.Image)
 			}
-	
+
 			for _, name := range container.Names {
 				// FIXME - add name_version_uid_uid regex check as well
 				if !strings.HasPrefix(name, "/worker") {
 					continue
 				}
-	
+
 				//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
 				if container.State == "running" && currenttime-container.Created < int64(workerTimeout) {
 					counter += 1
@@ -1920,7 +1951,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
 	}
 
-	if len(workerServerUrl) > 0  {
+	if len(workerServerUrl) > 0 {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
 	}
 

@@ -15,16 +15,16 @@ Shuffle Automation
 [_Community & Support_](https://discord.gg/B2CBzUm) —
 [_Documentation_](https://shuffler.io/docs) —
 [_Getting Started_](https://shuffler.io/docs/getting_started) —
-[_Development_](https://github.com/frikky/Shuffle/blob/master/.github/CONTRIBUTING.md) 
+[_Development_](https://github.com/shuffle/Shuffle/blob/master/.github/CONTRIBUTING.md) 
 
 Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 
 </h4>
 
-![Example Shuffle webhook integration](https://github.com/frikky/Shuffle/blob/main/frontend/src/assets/img/github_shuffle_img.png)
+![Example Shuffle webhook integration](https://github.com/shuffle/Shuffle/blob/main/frontend/src/assets/img/github_shuffle_img.png)
 
 ## Try it
-* Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/.github/install-guide.md)
+* Self-hosted: Check out the [installation guide](https://github.com/shuffle/shuffle/blob/master/.github/install-guide.md)
 * Cloud: Register at https://shuffler.io/register and get cooking (missing a lot of features)
 
 Please consider [sponsoring](https://github.com/sponsors/frikky) the project if you want to see more rapid development.
@@ -33,7 +33,7 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 * [Discord](https://discord.gg/B2CBzUm)
 * [Twitter](https://twitter.com/shuffleio)
 * [Email](mailto:frikky@shuffler.io)
-* [Open issue](https://github.com/frikky/Shuffle/issues/new)
+* [Open issue](https://github.com/shuffle/Shuffle/issues/new)
 * [Shuffler.io](https://shuffler.io/contact)
 
 ## Blogposts
@@ -43,21 +43,21 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 * [4. Real-time executions with TheHive, Cortex and MISP](https://medium.com/@Frikkylikeme/indicators-and-webhooks-with-thehive-cortex-and-misp-open-source-soar-part-4-f70cde942e59)
 
 ## Documentation
-[Documentation](https://shuffler.io/docs) can be found on [https://shuffler.io/docs](https://shuffler.io/docs) and is written here: [https://github.com/frikky/shuffle-docs](https://github.com/frikky/shuffle-docs).
+[Documentation](https://shuffler.io/docs) can be found on [https://shuffler.io/docs](https://shuffler.io/docs) and is written here: [https://github.com/shuffle/shuffle-docs](https://github.com/shuffle/shuffle-docs).
 
 ### Setting up a local development environment
 
 Please follow the steps mentioned [here](https://github.com/Shuffle/Shuffle/blob/main/.github/install-guide.md#local-development-installation)!
 
 ## Related repositories
-* OpenAPI apps: [https://github.com/frikky/security-openapis](https://github.com/frikky/security-openapis)
-* Documentation: [https://github.com/frikky/shuffle-docs](https://github.com/frikky/shuffle-docs)
-* Workflows: [https://github.com/frikky/shuffle-workflows](https://github.com/frikky/shuffle-workflows)
-* Python apps: [https://github.com/frikky/shuffle-apps](https://github.com/frikky/shuffle-apps)
+* OpenAPI apps: [https://github.com/shuffle/security-openapis](https://github.com/shuffle/security-openapis)
+* Documentation: [https://github.com/shuffle/shuffle-docs](https://github.com/shuffle/shuffle-docs)
+* Workflows: [https://github.com/shuffle/shuffle-workflows](https://github.com/shuffle/shuffle-workflows)
+* Python apps: [https://github.com/shuffle/shuffle-apps](https://github.com/shuffle/python-apps)
 
 ## Features
 * Simple, feature rich [workflow editor](https://shuffler.io/docs/workflows)
-* App creator using [OpenAPI](https://github.com/frikky/OpenAPI-security-definitions)
+* App creator using [OpenAPI](https://github.com/shuffle/OpenAPI-security-definitions)
 * Premade apps for your security tools
 * Organization and sub-organization control
 * Hybrid resource sharing with shuffler.io (optional)
@@ -66,7 +66,7 @@ Please follow the steps mentioned [here](https://github.com/Shuffle/Shuffle/blob
 [https://shuffler.io](https://shuffler.io)
 
 ## Contributing
-We want to make the world of cybersecurity more accessible and need all the help we can get. Send an email to [frikky@shuffler](mailto:frikky@shuffler.io) and we'll make sure to give you any training you may need.
+We want to make the world of cybersecurity more accessible and need all the help we can get. Send an email to [support@shuffler](mailto:support@shuffler.io) and we'll make sure to give you any training you may need.
 
 These are the main areas to contribute in:
 * Frontend (ReactJS)
@@ -76,19 +76,19 @@ These are the main areas to contribute in:
 * Workflow creation (GUI & Conceptualizing) 
 * Content Creation (Blogs, videos etc) 
 
-Contributing guidelines are outlined [here](https://github.com/frikky/Shuffle/blob/master/.github/CONTRIBUTING.md).
+Contributing guidelines are outlined [here](https://github.com/shuffle/Shuffle/blob/master/.github/CONTRIBUTING.md).
 
 ## Contributors 
 ![ICPL logo](https://github.com/Shuffle/Shuffle/blob/main/frontend/src/assets/img/icpl_logo.png)
 
 **Shuffle**
-<a href="https://github.com/frikky/shuffle/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=frikky/shuffle" />
+<a href="https://github.com/shuffle/shuffle/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=shuffle/shuffle" />
 </a>
 
-[**App magicians**](https://github.com/frikky/shuffle-apps)
-<a href="https://github.com/frikky/shuffle-apps/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=frikky/shuffle-apps" />
+[**App magicians**](https://github.com/shuffle/shuffle-apps)
+<a href="https://github.com/shuffle/shuffle-apps/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=shuffle/shuffle-apps" />
 </a>
 
 
@@ -101,7 +101,7 @@ Shuffle backend: AGPLv3
 Apps, specification and App SDK: MIT
 
 ## Architecture
-![Shuffle Architecture](https://github.com/frikky/Shuffle/blob/main/frontend/src/assets/img/shuffle_architecture.png)
+![Shuffle Architecture](https://github.com/shuffle/Shuffle/blob/main/frontend/src/assets/img/shuffle_architecture.png)
 
 ### Repository overview 
 Below is the folder structure with a short explanation
