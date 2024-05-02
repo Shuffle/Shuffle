@@ -4945,6 +4945,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/list_cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/delete_cache", shuffle.HandleDeleteCacheKeyPost).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/statistics", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 
