@@ -11890,6 +11890,7 @@ const AngularWorkflow = (defaultprops) => {
                     borderRadius: theme.palette.borderRadius,
                   }}
                   onChange={(event, newValue) => {
+      				setLastSaved(false)
 					console.log("Found value: ", newValue)
 
 					var parsedinput = { target: { value: newValue } }
@@ -11923,10 +11924,10 @@ const AngularWorkflow = (defaultprops) => {
                             <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
                             : null}
                           <Typography>
-                            Choose {data.name}
+                            Choose Subflow '{data.name}'
                           </Typography>
                         </span>
-                      } placement="bottom">
+                      }>
                         <MenuItem
                           style={{
                             backgroundColor: theme.palette.inputColor,
@@ -12015,6 +12016,7 @@ const AngularWorkflow = (defaultprops) => {
                       borderRadius: theme.palette.borderRadius,
                     }}
                     onChange={(event, newValue) => {
+      				  setLastSaved(false)
                       handleSubflowStartnodeSelection({ target: { value: newValue } })
                     }}
             		renderOption={(props, action, state) => {
@@ -12114,9 +12116,10 @@ const AngularWorkflow = (defaultprops) => {
                   workflow.triggers[selectedTriggerIndex].parameters[1].value
                 }
                 onBlur={(e) => {
-                  workflow.triggers[selectedTriggerIndex].parameters[1].value =
-                    e.target.value;
-                  setWorkflow(workflow);
+      			  setLastSaved(false)
+
+                  workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
+                  setWorkflow(workflow)
                 }}
               />
               {!showDropdown ? null :
@@ -13455,10 +13458,10 @@ const AngularWorkflow = (defaultprops) => {
               	              <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
               	              : null}
               	            <Typography>
-              	              Choose {data.name}
+              	              Choose Trigger '{data.name}'
               	            </Typography>
               	          </span>
-              	        } placement="bottom">
+              	        }>
               	          <MenuItem
               	            style={{
               	              color: data.id === workflow.id ? "red" : "white",

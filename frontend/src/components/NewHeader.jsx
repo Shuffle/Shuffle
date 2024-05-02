@@ -37,9 +37,7 @@ import {
   EmojiObjects as EmojiObjectsIcon,
   Business as BusinessIcon,
   Polyline as PolylineIcon,
-} from "@mui/icons-material";
-
-import {
+  Add as AddIcon,
   Analytics as AnalyticsIcon,
   Lightbulb as LightbulbIcon,
 } from "@mui/icons-material";
@@ -247,6 +245,7 @@ const Header = (props) => {
     var image = "";
     var orgName = "";
     var orgId = "";
+
     if (userdata.orgs !== undefined) {
       const foundOrg = userdata.orgs.find((org) => org.id === data["org_id"]);
       if (foundOrg !== undefined && foundOrg !== null) {
@@ -942,7 +941,7 @@ const Header = (props) => {
             {userdata === undefined ||
             userdata.orgs === undefined ||
             userdata.orgs === null ||
-            userdata.orgs.length <= 1 ? null : (
+            userdata.orgs.length <= 0 ? null : (
               <span style={{ paddingTop: 5 }}>
                 <Select
                   disableUnderline
@@ -969,6 +968,10 @@ const Header = (props) => {
                   value={userdata.active_org.id}
                   fullWidth
                   onChange={(e) => {
+					if (e.target.value === undefined || e.target.value === "create_new_suborgs") {
+						return
+					}
+
                     handleClickChangeOrg(e.target.value);
                   }}
                 >
@@ -1099,6 +1102,32 @@ const Header = (props) => {
                       </MenuItem>
                     );
                   })}
+				  <Divider />
+				  <Link to="/admin?tab=suborgs" style={hrefStyle}>
+					  <MenuItem
+						key={"add suborgs"}
+						style={{
+						  backgroundColor: theme.palette.inputColor,
+						  color: "white",
+						  height: 40,
+						  zIndex: 10003,
+						}}
+						value={"create_new_suborgs"}
+					  >
+						<Tooltip
+						  color="primary"
+						  title={""}
+						  placement="left"
+						>
+						  <div style={{ display: "flex", marginLeft: 85, }}>
+							<AddIcon />
+							<span style={{ marginLeft: 8 }}>
+								Add suborgs
+							</span>
+						  </div>
+						</Tooltip>
+					  </MenuItem>
+					</Link>
                 </Select>
               </span>
             )}

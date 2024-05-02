@@ -6243,7 +6243,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               letterSpacing: "1px",
             }}
           >
-            All Tenants
+            All Your Organizations 
           </h3>
         </div>
 
