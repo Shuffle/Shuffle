@@ -60,7 +60,7 @@ services:
     security_opt:
       - seccomp:unconfined
   opensearch:
-    image: opensearchproject/opensearch:2.12.0
+    image: opensearchproject/opensearch:2.11.1
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     env_file: .env
