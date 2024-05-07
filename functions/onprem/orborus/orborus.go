@@ -2048,10 +2048,10 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 		//err := deployPipeline(image, identifier, command)
 		pipelineId, err := createPipeline(command, identifier)
 		if err != nil {
-			log.Printf("[ERROR] Failed to deploy pipeline: %s", err)
+			log.Printf("[ERROR] Failed to create pipeline: %s", err)
 			return err
 		} else {
-			log.Printf("[INFO] Pipeline deployed successfully with Id: %s", pipelineId)
+			log.Printf("[INFO] Pipeline created successfully with Id: %s", pipelineId)
 			newErr := savePipelineData(pipelineId, identifier, "running")
 			if newErr != nil {
 				log.Printf("[DEBUG] failed to save the pipeline data: %s", newErr)
@@ -2106,10 +2106,16 @@ func deployTenzirNode() error {
     }
 
     ctx := context.Background()
+	cacheKey := "tenzir-key"
 
     imageName := "tenzir/tenzir:latest"
     containerName := "tenzir-node"
     containerStartOptions := container.StartOptions{}
+
+	_, err := shuffle.GetCache(ctx, cacheKey)
+    if err == nil {
+		return nil
+	}
 
     containerInfo, err := dockercli.ContainerInspect(ctx, containerName)
     if err != nil {
@@ -2138,16 +2144,30 @@ func deployTenzirNode() error {
                 return err
             }
             log.Printf("[INFO] Tenzir Node container started successfully")
+
             log.Printf("[INFO] Waiting for Tenzir to become available ...")
             err = checkTenzirNode()
             if err != nil {
                 return err
             }
             log.Printf("[INFO] Successfully deployed Tenzir Node!")
-        } else {
-            log.Printf("[DEBUG] Tenzir Node Container already running")
         }
     }
+
+	tenzirStatus := struct {
+		ContainerStatus   string `json:"container_status"`
+	}{
+		ContainerStatus: "running",
+	}
+
+	cacheData, err := json.Marshal(tenzirStatus)
+	if err != nil {
+		log.Printf("[WARNING] Failed marshalling execution: %s", err)
+	}
+	err = shuffle.SetCache(ctx, cacheKey, cacheData, 1)
+	if err != nil {
+        log.Printf("[WARNING] Failed updating cache for tenzir: %s", err)
+	}
 
     return nil
 }
