@@ -2112,7 +2112,7 @@ func deployTenzirNode() error {
     containerName := "tenzir-node"
     containerStartOptions := container.StartOptions{}
 
-	_, err := shuffle.GetCache(ctx, cacheKey)
+    _, err := shuffle.GetCache(ctx, cacheKey)
     if err == nil {
 		return nil
 	}
