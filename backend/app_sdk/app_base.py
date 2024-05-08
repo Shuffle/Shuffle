@@ -3428,11 +3428,11 @@ class AppBase:
                                 pass
 
                             actionname = action["name"]
+                                
+                            # Loops in general goes in here to be parsed out as one->multi
                             if len(actualitem) > 0:
                                 multiexecution = True
 
-                                # Loop WITHOUT JSON variables go here. 
-                                # Loop WITH variables go in else.
                                 handled = False
 
                                 # Has a loop without a variable used inside
@@ -3486,6 +3486,7 @@ class AppBase:
 
                                         if replacement.startswith("\"") and replacement.endswith("\""):
                                             replacement = replacement[1:len(replacement)-1]
+
                                         #except json.decoder.JSONDecodeError as e:
 
                                         #self.logger.info("REPLACING %s with %s" % (key, replacement))
@@ -3515,7 +3516,7 @@ class AppBase:
                                         self.logger.info("(2) JSON ERROR IN FILE HANDLING: %s" % e)
 
                                     if not isfile:
-                                        tmpitem = tmpitem.replace("\\\\", "\\", -1)
+                                        #tmpitem = tmpitem.replace("\\\\", "\\", -1)
                                         resultarray.append(tmpitem)
 
                                 # With this parameter ready, add it to... a greater list of parameters. Rofl
