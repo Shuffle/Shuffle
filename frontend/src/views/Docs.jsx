@@ -54,6 +54,28 @@ const hrefStyle = {
     textDecoration: "none",
 };
 
+const hrefStyleToc = {
+    color: "rgba(255, 255, 255, 0.6)",
+    textDecoration: "none",
+    fontSize: "14px",
+    fontWeight: 400,
+    padding: "4px 0",
+    paddingLeft: "8px",
+    paddingRight: "8px",
+    lineHeight: "20px",
+};
+
+
+const hrefStyleToc2 = {
+    color: "rgba(255, 255, 255, 0.6)",
+    textDecoration: "none",
+    fontSize: "14px",
+    fontWeight: 400,
+    padding: "4px 0",
+    paddingLeft: "12px",
+    paddingRight: "12px",
+    lineHeight: "20px",
+};
 
 const hrefStyle2 = {
     color: "#f86a3e",
@@ -64,6 +86,9 @@ const innerHrefStyle = {
     color: "rgba(255, 255, 255, 0.75)",
     textDecoration: "none",
 };
+
+
+
 
 
 export const CopyToClipboard = (props) => {
@@ -232,12 +257,52 @@ const Docs = (defaultprops) => {
         setAnchorEl(event.currentTarget);
     }
 
+    function handleCollapse(index) {
+        setOpen(isopen === index ? -1 : index)
+    }
+
     function handleMouseOver() {
         setHover(!hover);
     }
 
     function handleClose() {
         setAnchorEl(null);
+    }
+
+    function tocvalue(markdown) {
+        const items = [];
+        let currentMainItem = null;
+
+        const lines = markdown.split('\n');
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (line.startsWith('* [')) {
+                const matches = line.match(/^\* \[([^)]+)\]\(#([^)]+)\)/);
+                if (matches) {
+                    currentMainItem = {
+                        id: matches[2],
+                        title: matches[1],
+                        items: [],
+                    };
+                    items.push(currentMainItem);
+                }
+            } else if (line.startsWith('  * [')) {
+                if (currentMainItem) {
+                    const matches = line.match(/^  \* \[([^)]+)\]\(#([^)]+)\)/);
+                    if (matches) {
+                        currentMainItem.items.push({
+                            id: matches[2],
+                            title: matches[1],
+                        });
+                    }
+                }
+            } else if (line.startsWith('##')) {
+                continue
+            }
+        }
+
+        return items
     }
 
 
@@ -293,8 +358,8 @@ const Docs = (defaultprops) => {
         width: "17%",
         position: "sticky",
         top: 50,
-        minHeight: "90vh",
-        maxHeight: "90vh",
+        minHeight: "100vh",
+        maxHeight: "100vh",
         overflowX: "hidden",
         overflowY: "auto",
         zIndex: 1000,
@@ -350,7 +415,6 @@ const Docs = (defaultprops) => {
                     const tocRegex = /^## Table of contents[\s\S]*?(?=^##\s|\Z)|^\* \[[^\]]+\]\([^)]+\)\n?(?![^\n]+\]\([^)]+\))/gm;
                     const newdata = responseJson.reason.replace(imgRegex, '![]($1)')
                         .replace(tocRegex, "");
-                    console.log(newdata)
                     setData(newdata);
                     if (docId === undefined) {
                         document.title = "Shuffle documentation introduction";
@@ -372,50 +436,10 @@ const Docs = (defaultprops) => {
                         responseJson.reason !== undefined &&
                         responseJson.reason !== null
                     ) {
-                        const splitkey = responseJson.reason.split("\n");
-                        var innerTocLines = [];
-                        var record = false;
-                        for (var key in splitkey) {
-                            const line = splitkey[key];
-                            //console.log("Line: ", line)
-                            if (line.toLowerCase().includes("table of contents")) {
-                                record = true;
-                                continue;
-                            }
-
-                            if (record && line.length < 3) {
-                                record = false;
-                            }
-
-                            if (record) {
-                                const parsedline = line.split("](");
-                                if (parsedline.length > 1) {
-                                    parsedline[0] = parsedline[0].replaceAll("*", "");
-                                    parsedline[0] = parsedline[0].replaceAll("[", "");
-                                    parsedline[0] = parsedline[0].replaceAll("]", "");
-                                    parsedline[0] = parsedline[0].replaceAll("(", "");
-                                    parsedline[0] = parsedline[0].replaceAll(")", "");
-                                    parsedline[0] = parsedline[0].trim();
-
-                                    parsedline[1] = parsedline[1].replaceAll("*", "");
-                                    parsedline[1] = parsedline[1].replaceAll("[", "");
-                                    parsedline[1] = parsedline[1].replaceAll("]", "");
-                                    parsedline[1] = parsedline[1].replaceAll(")", "");
-                                    parsedline[1] = parsedline[1].replaceAll("(", "");
-                                    parsedline[1] = parsedline[1].trim();
-                                    //console.log(parsedline[0], parsedline[1])
-
-                                    innerTocLines.push({
-                                        text: parsedline[0],
-                                        link: parsedline[1],
-                                    });
-                                } else {
-                                    console.log("Bad line for parsing: ", line);
-                                }
-                            }
-                        }
-
-                        setTocLines(innerTocLines);
+                        const values = tocvalue(responseJson.reason.match(tocRegex)
+                            .join()
+                            .toString());
+                        setTocLines(values);
                     }
                 } else {
                     setData("# Error\nThis page doesn't exist.");
@@ -758,19 +782,52 @@ const Docs = (defaultprops) => {
                         </div>
                     }
                 </div>
-                <nav style={IndexBar}>
-                    {tocLines.map(data => (
-                        <ListItemButton
-                            component={Link}
-                            key={data.text}
-                            style={hrefStyle}
-                            to={data.link}
-                        >
-                            {data.text}
-                        </ListItemButton>
-                    ))}
-                </nav>
-            </div>
+                <div style={IndexBar}>
+                    <h2 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px" }}>Table Of Content</h2>
+                    <nav>
+                        {tocLines.map((data, index) => {
+                            return (
+                                <div>
+                                    <ListItemButton
+                                        component={Link}
+                                        key={data.text}
+                                        style={hrefStyleToc}
+                                        to={`#${data.id}`}
+                                        onClick={() => (
+                                            handleCollapse(index)
+                                        )}
+                                    >
+                                        {data.title}
+                                        {data.items.length > 0 ? (
+                                            <>{isopen == index ? <ExpandMoreIcon /> : <KeyboardArrowRightIcon />}</>
+                                        ) : null}
+                                    </ListItemButton>
+                                    {data.items.length > 0 &&
+                                        data.items !== null &&
+                                        data.items !== undefined ? (
+                                        <Collapse in={isopen === index} timeout="auto" unmountOnExit>
+                                            {data.items.map((d, i) => {
+                                                return (
+                                                    <ListItemButton
+                                                        component={Link}
+                                                        key={i}
+                                                        style={hrefStyleToc2}
+                                                        to={`#${d.id}`}
+                                                    >
+                                                        {d.title}
+                                                    </ListItemButton>
+                                                )
+                                            })}
+                                        </Collapse>
+                                    ) : null}
+                                </div>
+
+                            )
+                        })}
+                    </nav>
+                </div>
+
+            </div >
         );
 
     const mobileStyle = {
