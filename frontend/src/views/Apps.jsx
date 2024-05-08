@@ -418,7 +418,7 @@ const Apps = (props) => {
     minWidth: "100%",
     maxWidth: 612.5,
     marginBottom: 5,
-    borderRadius: 5,
+    borderRadius: theme.palette.borderRadius,
     color: "white",
     backgroundColor: surfaceColor,
     cursor: "pointer",
@@ -600,8 +600,8 @@ const Apps = (props) => {
 
   // dropdown with copy etc I guess
   const AppPaper = (props) => {
-		const { app } = props
-		const data = app
+	const { app } = props
+	const data = app
 
     if (data.name === "" && data.id === "") {
       return null;
@@ -631,6 +631,7 @@ const Apps = (props) => {
       data.large_image === undefined || data.large_image.length === 0 ? (
         <img
           alt={data.title}
+		  src={theme.palette.defaultImage}
           style={{
             borderRadius: borderRadius,
             width: 100,
@@ -841,7 +842,7 @@ const Apps = (props) => {
     minWidth: viewWidth,
     maxWidth: viewWidth,
     color: "white",
-    borderRadius: 5,
+    borderRadius: theme.palette.borderRadius,
     backgroundColor: surfaceColor,
     //display: "flex",
     marginBottom: 10,
@@ -2132,7 +2133,7 @@ const Apps = (props) => {
           </div>
           <div style={{ height: 50 }}>
             <TextField
-              style={{ backgroundColor: inputColor, borderRadius: 5 }}
+              style={{ backgroundColor: inputColor, borderRadius: theme.palette.borderRadius, }}
               InputProps={{
                 style: {
                 },
@@ -2183,7 +2184,7 @@ const Apps = (props) => {
     							minWidth: viewWidth,
     							maxWidth: viewWidth,
     							color: "white",
-    							borderRadius: 5,
+    							borderRadius: theme.palette.borderRadius,
     							//display: "flex",
     							marginBottom: 10,
     							overflow: "hidden",

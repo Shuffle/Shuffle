@@ -2,7 +2,16 @@ const data = [
   {
     selector: "node",
     css: {
-      label: "data(label)",
+      label: function(element) {
+		  var elementname = element.data("label")
+		  if (elementname === null || elementname === undefined) {
+			  return ""
+		  } 
+
+		  elementname = elementname.replace("_", " ", -1)
+		  elementname = elementname.charAt(0).toUpperCase() + elementname.slice(1)
+		  return elementname
+	  },
       "text-valign": "center",
       "font-family": "Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif",
       "font-weight": "lighter",
@@ -77,6 +86,36 @@ const data = [
       "border-radius": "5px",
       "background-opacity": "0.5",
 	  "text-wrap": "wrap",
+    },
+  },
+  {
+    selector: `node[app_name="Integration Framework"]`,
+    css: {
+      width: "60px",
+      height: "60px",
+      "z-index": 5000,
+
+	  //'border-width': 3,
+  	  //'border-color': 'transparent',
+	  //'border-style': 'solid',
+	  //'border-gradient': 'linear-gradient(to right, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #8A2BE2)' 
+    },
+  },
+  {
+    selector: `node[example="noapp"]`,
+    css: {
+	  // Make background image padding on the left side 20px
+      "background-width": "75%",
+      "background-height": "75%",
+	  "background-position-x": "17px",
+	  "background-position-y": "17px",
+
+      "background-color": "data(iconBackground)",
+      "background-fill": "data(fillstyle)",
+      "background-gradient-direction": "to-bottom-right",
+      "background-gradient-stop-colors": "data(fillGradient)",
+	  // Change transparency of background
+	  "background-opacity": "0.3",
     },
   },
   {

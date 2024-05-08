@@ -98,9 +98,11 @@ const Search = (props) => {
       display: 'none',
     },
     customTab: {
-      justifyContent: 'center',
-      gap: '46px',
-    }
+      justifyContent: "center",
+      "& .MuiButtonBase-root": {
+        color: "white",
+      },
+    },
   });
   const classes = useStyles();
 
@@ -128,7 +130,6 @@ const Search = (props) => {
     display: "flex",
     flexDirection: "column",
     overflowX: "hidden",
-    width: "100%",
     minHeight: 400,
   };
 
@@ -150,6 +151,8 @@ const Search = (props) => {
       document.title = "Shuffle - search - documentation";
     } else if (newValue === 3) {
       document.title = "Shuffle - search - creators";
+    } else if (newValue === 4) {
+      document.title = "Shuffle - search - Discord Chat";
     } else {
       document.title = "Shuffle - search";
     }
@@ -202,14 +205,12 @@ const Search = (props) => {
     color: 'white'
   }
 
-
   // Random names for type & autoComplete. Didn't research :^)
   const landingpageDataBrowser = (
     <div
       style={{
         paddingBottom: hidemargins === true ? 0 : 100,
         color: "white",
-        width: "100%",
       }}
     >
       <div style={boxStyle}>
@@ -286,7 +287,7 @@ const Search = (props) => {
             label={
               <span style={tabSpanStyling}>
                 <ChatIcon style={{ iconStyle, color: "#F1F1F1" }} />
-                <Typography variant="body1" style={{ tabTextStyling, whiteSpace: "nowrap", color: "#F1F1F1" }}>Discord Chat</Typography>
+                <Typography variant="body1" style={{ marginLeft: 5, whiteSpace: "nowrap", color: "#F1F1F1" }}>Discord Chat</Typography>
               </span>
             }
           />

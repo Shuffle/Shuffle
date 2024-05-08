@@ -219,6 +219,11 @@ const ConfigureWorkflow = (props) => {
 		  action.app_name = action.app_name.slice(0, -4)
 	  }
 
+	  if (action.app_name === "Integration Framework") {
+		  console.log("Skipping integration framework: ", action)
+		  continue
+	  }
+
 	  // ID match OR name match + version match 
       //const app = apps.find((app) => app.id === action.app_id || (app.name === action.app_name && (app.app_version === action.app_version || (app.loop_versions !== null && app.loop_versions.includes(action.app_version)))))
 		//
@@ -226,8 +231,6 @@ const ConfigureWorkflow = (props) => {
 	  // without version match
 	  const newappname = action.app_name.toLowerCase().replaceAll(" ", "_")
       const app = apps.find((app) => app.id === action.app_id || app.name.toLowerCase().replaceAll(" ", "_") === newappname)
-
-
 
       if (app === undefined || app === null) {
 
@@ -532,7 +535,7 @@ const ConfigureWorkflow = (props) => {
             <TextField
               style={{
                 backgroundColor: theme.palette.inputColor,
-                borderRadius: 5,
+                borderRadius: theme.palette.borderRadius,
               }}
               InputProps={{
                 endAdornment: <InputAdornment position="end"></InputAdornment>,
@@ -917,6 +920,7 @@ const ConfigureWorkflow = (props) => {
 		parsedName = parsedName.substring(0, parsedName.length - 4);
 	}
 
+
     return (
       <ListItem>
         {action.must_authenticate ? 
@@ -1061,7 +1065,7 @@ const ConfigureWorkflow = (props) => {
 							src={action.large_image}
 						/>
 						<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
-							Activate
+							Activate {action.app_name.replaceAll("_", " ")}
 						</Typography>
 					</Button>
 				: 

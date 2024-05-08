@@ -8,6 +8,7 @@ import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { NestedMenuItem } from "mui-nested-menu";
+import { parsedDatatypeImages } from "../components/AppFramework.jsx";
 //import { useAlert 
 
 import {
@@ -163,6 +164,8 @@ const ParsedAction = (props) => {
 
 	expansionModalOpen,
 	setExpansionModalOpen,
+
+	listCache,
 	
 	apps,
 	setEditorData,
@@ -431,20 +434,59 @@ const ParsedAction = (props) => {
 				})
 			}
 
+		/*
         actionlist.push({
           type: "Shuffle DB",
           name: "Shuffle DB",
           value: "$shuffle_cache",
           highlight: "shuffle_cache",
           autocomplete: "shuffle_cache",
-          example: "",
+          example: {
+			  "what": "",
+			  "unique gmail ids new": "",
+		  },
         })
+		*/
 
-        if (
-          workflow.workflow_variables !== null &&
-          workflow.workflow_variables !== undefined &&
-          workflow.workflow_variables.length > 0
-        ) {
+		var cachekey = {
+          type: "Shuffle DB",
+          name: "Shuffle DB",
+          value: "$shuffle_cache",
+          highlight: "shuffle_cache",
+          autocomplete: "shuffle_cache",
+          example: "",
+        }
+
+		if (listCache !== undefined && listCache !== null && listCache.keys !== undefined && listCache.keys !== null && listCache.keys.length > 0) {
+			cachekey.example = {}
+
+			for (var i in listCache.keys) {
+				const item = listCache.keys[i]
+				if (item.key === undefined || item.key === null || item.key.length === 0) {
+					continue
+				}
+
+				var itemvalue = item.value === undefined || item.value === null ? "" : item.value
+				try{ 
+					if (itemvalue.length > 10000) {
+						itemvalue = ""
+					}
+
+				} catch (e) {
+					itemvalue = ""
+				}
+
+				var itemkey = item.key.split(" ").join("_")
+				cachekey.example[itemkey] = {
+					"value": itemvalue,
+				}
+			}
+		} else {
+		}
+
+        actionlist.push(cachekey)
+
+        if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
           for (let [key,keyval] in Object.entries(workflow.workflow_variables)) {
             const item = workflow.workflow_variables[key];
             actionlist.push({
@@ -1083,26 +1125,104 @@ const ParsedAction = (props) => {
 
 
     // FIXME: Issue #40 - selectedActionParameters not reset
-    if (
-      Object.getOwnPropertyNames(selectedAction).length > 0 &&
-      selectedActionParameters.length > 0
-    ) {
+    if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
+
+	  var wrapperapp = {
+	  	"id": "",
+	  	"name": "noapp",
+	  	"large_image": "",
+	  }
+
+	  var actionname = selectedAction.name.toLowerCase()
+	  if (actionname === "email" || actionname === "communication") {
+	  	actionname = "comms"
+	  }
+
+	  if (isIntegration) {
+
+		// Check if actionname uppercase is in the parsedDatatypeImages() dictionary
+		if (parsedDatatypeImages()[actionname.toUpperCase()] !== undefined) {
+			var newimage = parsedDatatypeImages()[actionname.toUpperCase()]
+			//newimage = <img src={newimage} style={{width: 35, height: 35, marginRight: 5, borderRadius: 5, cursor: "pointer", border: noAppSelected ? "3px solid #86c142" : "2px solid rgba(255,255,255,0.6)"}} />
+			wrapperapp.large_image = newimage
+		} else {
+			console.log("Couldn't find actionname: ", actionname)
+		}
+	  }
+
       var authWritten = false;
+	  var noAppSelected = false 
+	  const paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
+	  if (paramIndex === -1 || selectedAction.parameters[paramIndex].value === "" || selectedAction.parameters[paramIndex].value === "noapp") {
+	  	// Check the actual value and if it's the same
+	  	noAppSelected = true
+	  }
       return (
         <div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
 		  	{isIntegration ? 
 				apps !== undefined && apps !== null && apps.length > 0 ?
-					<div style={{display: "flex", }}>
+					<div style={{display: "flex", maxWidth: 335, overflowX: "auto", overflowY: "hidden",}}>
+						<div onClick={() => {
+
+							selectedAction.example = "noapp"
+							selectedAction.large_image = newimage
+							if (cy !== undefined && cy !== null) {
+								const foundnode = cy.getElementById(selectedAction.id)
+								if (foundnode !== undefined && foundnode !== null) {
+								  foundnode.data("large_image", newimage)
+								}
+							}
+
+    	  					const iconInfo = GetIconInfo(selectedAction)
+							if (iconInfo !== undefined && iconInfo !== null) {
+    	  						selectedAction.fillGradient = iconInfo.fillGradient
+    	    
+								selectedAction.iconBackground = iconInfo.iconBackgroundColor
+    	    					selectedAction.fillstyle = "linear-gradient"
+							}
+
+							if (paramIndex === -1) {
+								console.log("Couldn't find app_name parameter")
+								selectedAction.parameters.push({
+									name: "app_name",
+									value: wrapperapp.name,
+									autocompleted: false,
+								})
+							} else {
+								selectedAction.parameters[paramIndex].value = wrapperapp.name
+							}
+								
+							setSelectedAction(selectedAction)
+							setUpdate(Math.random())
+
+						}}>
+							<Tooltip title={"Unselect which App to use"} placement="top">
+								<div style={{textAlign: "center", }}>
+									<img 
+										src={wrapperapp.large_image}
+										style={{
+											minWidth: 30, 
+											maxWidth: 30, 
+											minHeight: 30, 
+											maxHeight: 30, 
+
+											marginRight: 5, 
+											borderRadius: 5,
+											cursor: "pointer",
+											border: noAppSelected ? "3px solid #86c142" : "2px solid rgba(255,255,255,0.6)",
+
+											paddingLeft: 5, 
+											paddingTop:  5, 
+										}} />
+								</div>
+							</Tooltip>
+						</div>
 						{apps.map((app, appIndex) => {
 							if (app.categories === undefined || app.categories === null || app.categories.length === 0) {
 								return null
 							}
 
 							var found = false
-							var actionname = selectedAction.name.toLowerCase()
-							if (actionname === "email") {
-								actionname = "communication"
-							}
 
 
 							for (var key in app.categories) {
@@ -1129,16 +1249,14 @@ const ParsedAction = (props) => {
 
 							return (
 								<div onClick={() => {
+									selectedAction.example = ""
 									selectedAction.large_image = app.large_image
-
-									/*
-									if (cy !== undefined) {
-										const foundnode = cy.getElementById(selectedAction.id)
-										if (foundnode !== undefined && foundnode !== null) {
-											foundnode.data("large_image", app.large_image)
-										}
-									}
-									*/
+								    if (cy !== undefined && cy !== null) {
+								        const foundnode = cy.getElementById(selectedAction.id)
+								        if (foundnode !== undefined && foundnode !== null) {
+								      	  foundnode.data("large_image", app.large_image)
+								        }
+								    }
 
 									if (paramIndex === -1) {
 										console.log("Couldn't find app_name parameter")
@@ -1155,7 +1273,7 @@ const ParsedAction = (props) => {
 									setUpdate(Math.random())
 
 								}}>
-									<Tooltip title={app.name.replace("_", " ", -1)} placement="top">
+									<Tooltip title={`Select ${app.name.replaceAll("_", " ")}`} placement="top">
 										<img 
 											src={app.large_image} 
 											style={{

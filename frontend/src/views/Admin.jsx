@@ -6262,23 +6262,15 @@ If you're interested, please let me know a time that works for you, or set up a 
             />
             <ListItemText
               primary="Name"
-              style={{ minWidth: 250, maxWidth: 250 }}
-            />
-            <ListItemText
-              primary="Your role"
-              style={{ minWidth: 150, maxWidth: 150 }}
+              style={{ minWidth: 350, maxWidth: 350 }}
             />
             <ListItemText
               primary="id"
               style={{ minWidth: 400, maxWidth: 400 }}
             />
             <ListItemText
-              primary="Selected"
-              style={{ minWidth: 150, maxWidth: 150 }}
-            />
-            <ListItemText
-              primary="Cloud Sync"
-              style={{ minWidth: 150, maxWidth: 150 }}
+              primary="action"
+              style={{ minWidth: 200, maxWidth: 200 }}
             />
           </ListItem>
           {userdata.orgs !== undefined &&
@@ -6317,33 +6309,29 @@ If you're interested, please let me know a time that works for you, or set up a 
                     />
                     <ListItemText
                       primary={data.name}
-                      style={{ minWidth: 250, maxWidth: 250 }}
-                    />
-                    <ListItemText
-                      primary={data.role}
-                      style={{ minWidth: 150, maxWidth: 150 }}
+                      style={{ minWidth: 350, maxWidth: 350}}
                     />
                     <ListItemText
                       primary={data.id}
-                      style={{ minWidth: 400, maxWidth: 400 }}
+                      style={{ minWidth: 400, maxWidth: 400}}
                     />
                     <ListItemText
-                      primary={isSelected}
-                      style={{ minWidth: 150, maxWidth: 150 }}
-                    />
-                    <ListItemText
-                      primary=<Switch
-                        checked={data.cloud_sync}
-                        onChange={() => {
-                          setCloudSyncModalOpen(true);
-                          setSelectedOrganization(data);
-                          console.log("INVERT CLOUD SYNC");
-                        }}
-                      />
-                      style={{ minWidth: 150, maxWidth: 150 }}
-                    />
-                  </ListItem>
-                );
+                      style={{ minWidth: 200, maxWidth: 200 }}
+                      primary={
+						  <Button
+							variant="outlined"
+							color="primary"
+							disabled={data.id === selectedOrganization.id}
+							onClick={() => {
+							  handleClickChangeOrg(data.id)
+							}}
+						  >
+							Change Active Org
+						  </Button>
+					  }
+					/>
+				  </ListItem>
+                )
               })}
             </span>
           ) : null}

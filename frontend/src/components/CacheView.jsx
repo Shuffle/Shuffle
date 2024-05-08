@@ -434,7 +434,7 @@ const CacheView = (props) => {
                                     style={{
 										minWidth: 300,
 										maxWidth: 300,
-                                        height:200,
+                                        // height:200,
                                         overflowX: "hidden",
 									}}
                                     primary={validate.valid ? 

@@ -35,6 +35,7 @@ import {
 } from "react-instantsearch-dom";
 
 import aa from "search-insights";
+import { useLocation } from 'react-router-dom';
 
 import "./FilterCSS.css";
 
@@ -91,7 +92,6 @@ const AppGrid = (props) => {
   window.title = "Shuffle | Apps | Find and integrate any app";
   const noImage = "/public/no_image.png";
 
-
   const submitContact = (email, message) => {
     const data = {
       firstname: "",
@@ -131,10 +131,9 @@ const AppGrid = (props) => {
       });
   };
 
-  const SearchBox = ({ currentRefinement, refine, isSearchStalled }) => {
+  const SearchBox = ({ currentRefinement, refine, isSearchStalled, searchQuery, setSearchQuery }) => {
     var defaultSearch = "";
 
-    var [searchQuery, setSearchQuery] = useState("");
 
     //useEffect(() => {
     if (
@@ -241,10 +240,30 @@ const AppGrid = (props) => {
   };
 
   const [currTab, setCurrTab] = useState(0);
+  const location = useLocation();
 
-  const handleTabChange = (event, newValue) => {
-    setCurrTab(newValue);
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const tabParam = queryParams.get('tab');
+    if (tabParam === 'org_apps') {
+      setCurrTab(1);
+    } else if (tabParam === 'my_apps') {
+      setCurrTab(2);
+    } else {
+      setCurrTab(0);
+    }
+  }, [location.search]);
+
+  const handleTabChange = (event, newTab) => {
+    setCurrTab(newTab);
+    const newQueryParam = newTab === 0 ? 'all_apps' : newTab === 1 ? 'org_apps' : 'my_apps';
+    const queryParams = new URLSearchParams(location.search);
+    queryParams.set('tab', newQueryParam);
+    queryParams.delete('q');
+    window.history.replaceState({}, '', `${location.pathname}?${queryParams.toString()}`);
   };
+
+
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true)
@@ -253,7 +272,8 @@ const AppGrid = (props) => {
   const Hits = ({
     hits,
     insights,
-    setIsAnyAppActivated
+    setIsAnyAppActivated,
+    searchQuery
   }) => {
     const [mouseHoverIndex, setMouseHoverIndex] = useState(-1);
     var counted = 0;
@@ -282,9 +302,9 @@ const AppGrid = (props) => {
         .then(response => response.json())
         .then(responseJson => {
           if (responseJson.success) {
-            setIsLoggedIn(true);
             setUserdata(responseJson);
             setAllActivatedAppIds(responseJson.active_apps)
+            setIsLoggedIn(true);
           } else {
             setIsLoggedIn(false);
           }
@@ -355,225 +375,241 @@ const AppGrid = (props) => {
       transition: 'background-color 0.3s ease',
     };
 
+    const [showNoAppFound, setShowNoAppFound] = useState(false);
+
+    //show some delay to show the "App Not Found." so it doesn't not show while changing tab.
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setShowNoAppFound(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }, []);
+
     return (
       <div>
         {!isLoading ? (
-          <Grid item spacing={2} justifyContent="flex-start">
-            <div
-              style={{
-                gap: 16,
-                marginTop: 16,
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "flex-start",
-                marginLeft: 24,
-                overflowY: "auto",
-                overflowX: "hidden",
-                maxHeight: 570,
-                scrollbarWidth: "thin",
-                scrollbarColor: "#494949 #2f2f2f",
-              }}
-            >
-              {hits.map((data, index) => {
-                const appUrl =
-                  isCloud
-                    ? `/apps/${data.objectID}?queryID=${data.__queryID}`
-                    : `https://shuffler.io/apps/${data.objectID}?queryID=${data.__queryID}`;
+          <div>
+            {hits.length === 0 && searchQuery.length >= 0 && showNoAppFound ? (
+              <Typography variant="body1" style={{ marginTop: '30%' }}>No App Found</Typography>
+            ) : (
+              <Grid item spacing={2} justifyContent="flex-start">
+                <div
+                  style={{
+                    gap: 16,
+                    marginTop: 16,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "flex-start",
+                    marginLeft: 24,
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    maxHeight: 570,
+                    scrollbarWidth: "thin",
+                    scrollbarColor: "#494949 #2f2f2f",
+                  }}
+                >
+                  {hits.map((data, index) => {
+                    const appUrl =
+                      isCloud
+                        ? `/apps/${data.objectID}?queryID=${data.__queryID}`
+                        : `https://shuffler.io/apps/${data.objectID}?queryID=${data.__queryID}`;
 
-                return (
-                  <Zoom
-                    key={index}
-                    in={true}
-                    style={{
-                      transitionDelay: `${workflowDelay}ms`,
-                    }}
-                  >
-                    <Grid>
-                      <a
-                        href={appUrl}
-                        rel="noopener noreferrer"
-                        target="_blank"
+                    return (
+                      <Zoom
+                        key={index}
+                        in={true}
                         style={{
-                          textDecoration: "none",
-                          color: "#f85a3e",
+                          transitionDelay: `${workflowDelay}ms`,
                         }}
                       >
-                        <Paper
-                          elevation={0}
-                          style={{ paperStyle, backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "rgba(26, 26, 26, 1)" }}
-                          onMouseEnter={() => {
-                            setMouseHoverIndex(index);
-                          }}
-                          onMouseLeave={() => {
-                            setMouseHoverIndex(-1);
-                          }}
-                        >
-                          <button
+                        <Grid>
+                          <a
+                            href={appUrl}
+                            rel="noopener noreferrer"
+                            target="_blank"
                             style={{
-                              borderRadius: 8,
-                              fontSize: 16,
-                              display: "flex",
-                              alignItems: "flex-start",
-                              padding: 0,
-                              border: 'none',
-                              width: 339,
-                              height: 96,
-                              cursor: 'pointer',
-                              color: "rgba(26, 26, 26, 1)",
-                              backgroundColor: 'transparent',
+                              textDecoration: "none",
+                              color: "#f85a3e",
                             }}
                           >
-                            <img
-                              alt={data.name}
-                              src={data.image_url ? data.image_url : "/images/no_image.png"}
-                              style={{
-                                width: 80,
-                                height: 80,
-                                borderRadius: 8,
-                                margin: 8
+                            <Paper
+                              elevation={0}
+                              style={{ paperStyle, backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "rgba(26, 26, 26, 1)" }}
+                              onMouseEnter={() => {
+                                setMouseHoverIndex(index);
                               }}
-                            />
-                            <div
-                              style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "flex-start",
-                                gap: 4,
-                                overflow: "hidden",
-                                margin: "12px 0 12px 0",
-                                marginLeft: 8,
-                                fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
+                              onMouseLeave={() => {
+                                setMouseHoverIndex(-1);
                               }}
                             >
-                              <div
+                              <button
                                 style={{
-                                  display: 'flex',
-                                  flexDirection: "row",
-                                  overflow: "hidden",
-                                  gap: 8,
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                  color: '#F1F1F1'
-                                }}
-                              >
-                                {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
-                                {normalizedString(data.name)}
-                              </div>
-
-                              <div
-                                style={{
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                  color: "rgba(158, 158, 158, 1)",
-                                  marginTop: 5
-                                }}
-                              >
-                                {data.categories !== null
-                                  ? normalizedString(data.categories).join(", ")
-                                  : "NA"}
-                              </div>
-                              <div
-                                style={{
+                                  borderRadius: 8,
+                                  fontSize: 16,
                                   display: "flex",
-                                  justifyContent: 'space-between',
-                                  width: 230,
-                                  textAlign: 'start',
-                                  color: "rgba(158, 158, 158, 1)",
+                                  alignItems: "flex-start",
+                                  padding: 0,
+                                  border: 'none',
+                                  width: 339,
+                                  height: 96,
+                                  cursor: 'pointer',
+                                  color: "rgba(26, 26, 26, 1)",
+                                  backgroundColor: 'transparent',
                                 }}
                               >
-                                <div style={{ marginBottom: 15, }}>
-                                  {mouseHoverIndex === index && isCloud ? (
-                                    <div>
-                                      {data.tags && (
-                                        <Tooltip
-                                          title={data.tags.join(", ")}
-                                          placement="bottom"
-                                          componentsProps={{
-                                            tooltip: {
-                                              sx: {
-                                                backgroundColor: "rgba(33, 33, 33, 1)",
-                                                color: "rgba(241, 241, 241, 1)",
-                                                width: "auto",
-                                                height: "auto",
-                                                fontSize: 16,
-                                                border: "1px solid rgba(73, 73, 73, 1)",
-                                              }
-                                            }
-                                          }}
-                                        >
-                                          <span>
-                                            {data.tags.slice(0, 1).map((tag, tagIndex) => (
+                                <img
+                                  alt={data.name}
+                                  src={data.image_url ? data.image_url : "/images/no_image.png"}
+                                  style={{
+                                    width: 80,
+                                    height: 80,
+                                    borderRadius: 8,
+                                    margin: 8
+                                  }}
+                                />
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "flex-start",
+                                    gap: 4,
+                                    overflow: "hidden",
+                                    margin: "12px 0 12px 0",
+                                    marginLeft: 8,
+                                    fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      flexDirection: "row",
+                                      overflow: "hidden",
+                                      gap: 8,
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      color: '#F1F1F1'
+                                    }}
+                                  >
+                                    {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
+                                    {normalizedString(data.name)}
+                                  </div>
+
+                                  <div
+                                    style={{
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      color: "rgba(158, 158, 158, 1)",
+                                      marginTop: 5
+                                    }}
+                                  >
+                                    {data.categories !== null
+                                      ? normalizedString(data.categories).join(", ")
+                                      : "NA"}
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: 'space-between',
+                                      width: 230,
+                                      textAlign: 'start',
+                                      color: "rgba(158, 158, 158, 1)",
+                                    }}
+                                  >
+                                    <div style={{ marginBottom: 15, }}>
+                                      {mouseHoverIndex === index && isCloud ? (
+                                        <div>
+                                          {data.tags && (
+                                            <Tooltip
+                                              title={data.tags.join(", ")}
+                                              placement="bottom"
+                                              componentsProps={{
+                                                tooltip: {
+                                                  sx: {
+                                                    backgroundColor: "rgba(33, 33, 33, 1)",
+                                                    color: "rgba(241, 241, 241, 1)",
+                                                    width: "auto",
+                                                    height: "auto",
+                                                    fontSize: 16,
+                                                    border: "1px solid rgba(73, 73, 73, 1)",
+                                                  }
+                                                }
+                                              }}
+                                            >
+                                              <span>
+                                                {data.tags.slice(0, 1).map((tag, tagIndex) => (
+                                                  <span key={tagIndex}>
+                                                    {normalizedString(tag)}
+                                                    {tagIndex < 1 ? ", " : ""}
+                                                  </span>
+                                                ))}
+                                              </span>
+                                            </Tooltip>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div style={{ width: 230, textOverflow: "ellipsis", overflow: 'hidden', whiteSpace: 'nowrap', }}>
+                                          {data.tags &&
+                                            data.tags.map((tag, tagIndex) => (
                                               <span key={tagIndex}>
                                                 {normalizedString(tag)}
-                                                {tagIndex < 1 ? ", " : ""}
+                                                {tagIndex < data.tags.length - 1 ? ", " : ""}
                                               </span>
                                             ))}
-                                          </span>
-                                        </Tooltip>
+                                        </div>
                                       )}
                                     </div>
-                                  ) : (
-                                    <div style={{ width: 230, textOverflow: "ellipsis", overflow: 'hidden', whiteSpace: 'nowrap', }}>
-                                      {data.tags &&
-                                        data.tags.map((tag, tagIndex) => (
-                                          <span key={tagIndex}>
-                                            {normalizedString(tag)}
-                                            {tagIndex < data.tags.length - 1 ? ", " : ""}
-                                          </span>
-                                        ))}
-                                    </div>
-                                  )}
-                                </div>
-                                <div style={{ position: 'relative', bottom: 5 }}>
-                                  {mouseHoverIndex === index && isCloud && (
-                                    <div>
-                                      {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
-                                        <Button style={{
-                                          width: 102,
-                                          height: 35,
-                                          borderRadius: 200,
-                                          backgroundColor: "rgba(73, 73, 73, 1)",
-                                          color: "rgba(241, 241, 241, 1)",
-                                          textTransform: "none",
-                                        }}
-                                          onClick={(event) => {
-                                            handleActivateButton(event, data, "deactivate");
-                                          }}>
-                                          Deactivate
-                                        </Button>
-                                      ) : (
-                                        <Button
-                                          style={{
-                                            width: 102,
-                                            height: 35,
-                                            borderRadius: 200,
-                                            backgroundColor: "rgba(242, 101, 59, 1)",
-                                            color: "rgba(255, 255, 255, 1)",
-                                            textTransform: "none",
-                                          }}
-                                          onClick={(event) => {
-                                            handleActivateButton(event, data, "activate");
-                                          }}
-                                        >
-                                          Activate
-                                        </Button>
+                                    <div style={{ position: 'relative', bottom: 5 }}>
+                                      {mouseHoverIndex === index && isCloud && (
+                                        <div>
+                                          {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
+                                            <Button style={{
+                                              width: 102,
+                                              height: 35,
+                                              borderRadius: 200,
+                                              backgroundColor: "rgba(73, 73, 73, 1)",
+                                              color: "rgba(241, 241, 241, 1)",
+                                              textTransform: "none",
+                                            }}
+                                              onClick={(event) => {
+                                                handleActivateButton(event, data, "deactivate");
+                                              }}>
+                                              Deactivate
+                                            </Button>
+                                          ) : (
+                                            <Button
+                                              style={{
+                                                width: 102,
+                                                height: 35,
+                                                borderRadius: 200,
+                                                backgroundColor: "rgba(242, 101, 59, 1)",
+                                                color: "rgba(255, 255, 255, 1)",
+                                                textTransform: "none",
+                                              }}
+                                              onClick={(event) => {
+                                                handleActivateButton(event, data, "activate");
+                                              }}
+                                            >
+                                              Activate
+                                            </Button>
+                                          )}
+                                        </div>
                                       )}
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          </button>
-                        </Paper>
-                      </a>
-                    </Grid>
-                  </Zoom>
-                );
-              })
-              }
-            </div>
-          </Grid >
+                              </button>
+                            </Paper>
+                          </a>
+                        </Grid>
+                      </Zoom>
+                    );
+                  })
+                  }
+                </div>
+              </Grid >
+            )}
+          </div>
         ) : (
           <div><Box sx={{ position: 'absolute', top: '30%', left: '50%', }}> <CircularProgress /></Box></div>
         )}
@@ -631,7 +667,6 @@ const AppGrid = (props) => {
             <ExpandMoreIcon style={{ marginLeft: "auto" }} />
           )}
         </Button>
-
         <Collapse in={isCategoreListExpanded}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <RefinementList attribute="categories" />
@@ -868,6 +903,7 @@ const AppGrid = (props) => {
 
   //Component to display all apps.
   const AllApps = ({ setIsAnyAppActivated }) => {
+    var [searchQuery, setSearchQuery] = useState("");
 
     return (
       <div
@@ -877,10 +913,11 @@ const AppGrid = (props) => {
           height: "100%",
         }}
       >
-        <CustomSearchBox />
+        <CustomSearchBox searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         <CustomHits
           setIsAnyAppActivated={setIsAnyAppActivated}
           hitsPerPage={5}
+          searchQuery={searchQuery}
         />
       </div>
     );
@@ -888,13 +925,6 @@ const AppGrid = (props) => {
 
   //Search box for the orgs and users apps
   const SearchBoxForOrgAndUserApp = ({ searchQuery, setSearchQuery }) => {
-
-    const updateUrl = (query) => {
-      const urlSearchParams = new URLSearchParams(window.location.search);
-      urlSearchParams.set("q", query);
-      const newUrl = `${window.location.pathname}?${urlSearchParams.toString()}`;
-      window.history.pushState({ path: newUrl }, "", newUrl);
-    };
 
     return (
       <form noValidate action="" role="search">
@@ -934,7 +964,6 @@ const AppGrid = (props) => {
                     }}
                     onClick={() => {
                       setSearchQuery('');
-                      updateUrl('');
                     }}
                   />
                 )}
@@ -964,7 +993,6 @@ const AppGrid = (props) => {
           id="shuffle_search_field"
           onChange={(event) => {
             setSearchQuery(event.currentTarget.value);
-            updateUrl(event.currentTarget.value);
           }}
           limit={5}
         />
@@ -974,7 +1002,8 @@ const AppGrid = (props) => {
   }
 
 
-  const [userAndOrgsApp, setUserAndOrgsApp] = useState([]);
+  const [userApps, setUserApps] = useState([]);
+  const [orgApps, setOrgApps] = useState([]);
 
   useEffect(() => {
     if (currTab === 2) {
@@ -989,8 +1018,8 @@ const AppGrid = (props) => {
       })
         .then((response) => response.json())
         .then((data) => {
-          setUserAndOrgsApp(data);
-          setIsLoading(false)
+          setUserApps(data);
+          setIsLoading(false);
         })
         .catch((err) => {
           console.error("Error fetching user apps:", err);
@@ -1007,7 +1036,7 @@ const AppGrid = (props) => {
       })
         .then((response) => response.json())
         .then((data) => {
-          setUserAndOrgsApp(data);
+          setOrgApps(data);
           setIsLoading(false)
         })
         .catch((err) => {
@@ -1015,7 +1044,6 @@ const AppGrid = (props) => {
         });
     }
   }, [currTab]);
-
   //Component to display category List for User and Orgs app
   const FilterUsersAndOrgsAppByCategory = ({ selectedCategoryForUsersAndOgsApps, setselectedCategoryForUsersAndOgsApps }) => {
 
@@ -1025,14 +1053,23 @@ const AppGrid = (props) => {
       setIsCategoryListExpanded((prevState) => !prevState);
     };
 
-    //Display top 9 category from the database
+    const [appsToFilter, setAppsToFilter] = useState([]);
+    useEffect(() => {
+      if (currTab === 1) {
+        setAppsToFilter(orgApps)
+      }
+      if (currTab === 2) {
+        setAppsToFilter(userApps)
+      }
+    })
 
+    //Display top 9 category from the database
     const findTopCategories = () => {
       const categoryCountMap = {};
 
       // Check if userAndOrgsApp is an array before iterating over it and Find top 10 Category from the apps
-      if (Array.isArray(userAndOrgsApp)) {
-        userAndOrgsApp.forEach((app) => {
+      if (Array.isArray(appsToFilter)) {
+        appsToFilter.forEach((app) => {
           const categories = app.categories;
 
           if (categories && categories.length > 0) {
@@ -1104,49 +1141,53 @@ const AppGrid = (props) => {
             <ExpandMoreIcon style={{ marginLeft: "auto" }} />
           )}
         </Button>
-        <Collapse in={isCategoreListExpanded}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
-            {topCategories.map((data, index) => (
-              <Button
-                key={data.category}
-                style={{
-                  border: "none",
-                  background: "none",
-                  padding: 0,
-                  color: "#F1F1F1",
-                  textTransform: 'none'
-                }}
-                onClick={() => handleCheckboxChange(data.category)}
-              >
-                <input
-                  id={`checkbox-${data.category}`}
-                  type="checkbox"
-                  className="ais-RefinementList-checkbox"
-                  checked={selectedCategoryForUsersAndOgsApps.includes(data.category)}
-                  onChange={() => handleCheckboxChange(data.category)}
-                  style={{ marginRight: 5 }}
-                />
-                <span className="ais-RefinementList-labelText" style={{ marginTop: 3, marginLeft: 3, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}>{data.category}</span>
-              </Button>
-            ))}
+        <div>
+          {!isLoading && (
+            <Collapse in={isCategoreListExpanded}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+                {topCategories.map((data, index) => (
+                  <Button
+                    key={data.category}
+                    style={{
+                      border: "none",
+                      background: "none",
+                      padding: 0,
+                      color: "#F1F1F1",
+                      textTransform: 'none'
+                    }}
+                    onClick={() => handleCheckboxChange(data.category)}
+                  >
+                    <input
+                      id={`checkbox-${data.category}`}
+                      type="checkbox"
+                      className="ais-RefinementList-checkbox"
+                      checked={selectedCategoryForUsersAndOgsApps.includes(data.category)}
+                      onChange={() => handleCheckboxChange(data.category)}
+                      style={{ marginRight: 5 }}
+                    />
+                    <span className="ais-RefinementList-labelText" style={{ marginTop: 3, marginLeft: 3, fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}>{data.category}</span>
+                  </Button>
+                ))}
 
-            <Button
-              style={{
-                marginTop: 11,
-                textDecoration: 'underline',
-                textTransform: 'none',
-                backgroundColor: 'transparent',
-                fontSize: 16,
-                justifyContent: 'flex-start',
-              }}
-              onClick={handleClearFilter}
-              disableElevation
-              disableRipple
-            >
-              Clear All
-            </Button>
-          </div>
-        </Collapse>
+                <Button
+                  style={{
+                    marginTop: 11,
+                    textDecoration: 'underline',
+                    textTransform: 'none',
+                    backgroundColor: 'transparent',
+                    fontSize: 16,
+                    justifyContent: 'flex-start',
+                  }}
+                  onClick={handleClearFilter}
+                  disableElevation
+                  disableRipple
+                >
+                  Clear All
+                </Button>
+              </div>
+            </Collapse>
+          )}
+        </div>
       </div>
     );
   };
@@ -1157,13 +1198,22 @@ const AppGrid = (props) => {
     const toggleActionLabel = () => {
       setIsActionLabelExpanded((prevState) => !prevState);
     };
+    const [appsToFilter, setAppsToFilter] = useState([]);
+    useEffect(() => {
+      if (currTab === 1) {
+        setAppsToFilter(orgApps)
+      }
+      if (currTab === 2) {
+        setAppsToFilter(userApps)
+      }
+    })
 
     //Find top 9 tags from the database
     const findTopTags = () => {
       const tagCountMap = {};
 
-      if (Array.isArray(userAndOrgsApp)) {
-        userAndOrgsApp.forEach((app) => {
+      if (Array.isArray(appsToFilter)) {
+        appsToFilter.forEach((app) => {
           const tags = app.tags;
           if (tags && tags.length > 0) {
             tags.forEach((tag) => {
@@ -1505,17 +1555,30 @@ const AppGrid = (props) => {
     if (currTab === 1 || currTab === 2) {
       setIsLoading(true);
     }
-    if (currTab) {
-      setUserAndOrgsApp([])
-    }
   }, [currTab])
 
   //Component to fetch all apps created by user and Org
-  const UserAndOrgApps = ({ selectedCategoryForUsersAndOgsApps, selectedTagsForUserAndOrgApps, selectedOptionOfCreatedWith }) => {
+  const UserAndOrgApps = ({ selectedCategoryForUsersAndOgsApps, selectedTagsForUserAndOrgApps, selectedOptionOfCreatedWith, setselectedCategoryForUsersAndOgsApps, setSelectedTagsForUserAndOrgApps, setSelectedOptionOfCreatedWith }) => {
     const [searchQuery, setSearchQuery] = useState("");
 
+    const [appsToShow, setAppsToShow] = useState([]);
+    useEffect(() => {
+      if (currTab === 1) {
+        setAppsToShow(orgApps)
+      }
+      if (currTab === 2) {
+        setAppsToShow(userApps)
+      }
+    }, [currTab])
+
+    useEffect(() => {
+      setselectedCategoryForUsersAndOgsApps([]);
+      setSelectedTagsForUserAndOrgApps([]);
+      setSelectedOptionOfCreatedWith([]);
+    }, [currTab])
+
     //Search app base on app name, category and tag
-    const filteredUserAppdata = Array.isArray(userAndOrgsApp) ? userAndOrgsApp.filter((app) => {
+    const filteredUserAppdata = Array.isArray(appsToShow) ? appsToShow.filter((app) => {
       const matchesSearchQuery = (
         searchQuery === "" ||
         app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1552,6 +1615,15 @@ const AppGrid = (props) => {
 
     const [mouseHoverIndex, setMouseHoverIndex] = useState(-1);
     var counted = 0;
+    const [showNoAppFound, setShowNoAppFound] = useState(false);
+
+    //show some delay to show the "App Not Found." so it doesn't not show while changing tab.
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setShowNoAppFound(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }, []);
 
     return (
       <div>
@@ -1560,201 +1632,208 @@ const AppGrid = (props) => {
         ) : (
           <div>
             {isLoggedIn ? (
-              <div
-                style={{
-                  maxWidth: 741,
-                  maxHeight: 570,
-                }}
-              >
-                <div>
-                  <SearchBoxForOrgAndUserApp searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-                  <Grid>
-                    <div
-                      style={{
-                        gap: 16,
-                        marginTop: 16,
-                        display: "flex",
-                        flexWrap: "wrap",
-                        justifyContent: "flex-start",
-                        marginLeft: 24,
-                        overflowY: "auto",
-                        overflowX: "hidden",
-                        maxHeight: 570,
-                        scrollbarWidth: "thin",
-                        scrollbarColor: "#494949 #2f2f2f",
-                        maxHeight: 570,
-                      }}
-                    >
-                      {filteredUserAppdata.map((data, index) => {
-                        const isMouseOverOnCloudIcon = false;
-                        const xs = 12;
-                        const rowHandler = 12;
-                        const searchClient = {};
-                        const userdata = {};
+              <div>
+                <SearchBoxForOrgAndUserApp searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+                {((filteredUserAppdata.length === 0 && showNoAppFound) && isLoggedIn && !isLoading) ? (
+                  <Typography wait={1000} variant="body1" style={{ marginTop: '30%' }}>No App Found</Typography>
+                ) : (
+                  <div
+                    style={{
+                      maxWidth: 741,
+                      maxHeight: 570,
+                    }}
+                  >
+                    <div>
+                      <Grid>
+                        <div
+                          style={{
+                            gap: 16,
+                            marginTop: 16,
+                            display: "flex",
+                            flexWrap: "wrap",
+                            justifyContent: "flex-start",
+                            marginLeft: 24,
+                            overflowY: "auto",
+                            overflowX: "hidden",
+                            maxHeight: 570,
+                            scrollbarWidth: "thin",
+                            scrollbarColor: "#494949 #2f2f2f",
+                            maxHeight: 570,
+                          }}
+                        >
+                          {filteredUserAppdata.map((data, index) => {
+                            const isMouseOverOnCloudIcon = false;
+                            const xs = 12;
+                            const rowHandler = 12;
+                            const searchClient = {};
+                            const userdata = {};
 
-                        const paperStyle = {
-                          backgroundColor: mouseHoverIndex === index ? "rgba(26, 26, 26, 1)" : "#1A1A1A",
-                          color: "rgba(241, 241, 241, 1)",
-                          padding: isHeader ? null : 15,
-                          cursor: "pointer",
-                          position: "relative",
-                          width: 339,
-                          height: 96,
-                          borderRadius: 8,
-                        };
+                            const paperStyle = {
+                              backgroundColor: mouseHoverIndex === index ? "rgba(26, 26, 26, 1)" : "#1A1A1A",
+                              color: "rgba(241, 241, 241, 1)",
+                              padding: isHeader ? null : 15,
+                              cursor: "pointer",
+                              position: "relative",
+                              width: 339,
+                              height: 96,
+                              borderRadius: 8,
+                            };
 
-                        var parsedname = "";
-                        for (var key = 0; key < data.name.length; key++) {
-                          var character = data.name.charAt(key);
-                          if (character === character.toUpperCase()) {
-                            if (
-                              data.name.charAt(key + 1) !== undefined &&
-                              data.name.charAt(key + 1) ===
-                              data.name.charAt(key + 1).toUpperCase()
-                            ) {
-                            } else {
-                              parsedname += " ";
+                            var parsedname = "";
+                            for (var key = 0; key < data.name.length; key++) {
+                              var character = data.name.charAt(key);
+                              if (character === character.toUpperCase()) {
+                                if (
+                                  data.name.charAt(key + 1) !== undefined &&
+                                  data.name.charAt(key + 1) ===
+                                  data.name.charAt(key + 1).toUpperCase()
+                                ) {
+                                } else {
+                                  parsedname += " ";
+                                }
+                              }
+                              parsedname += character;
                             }
-                          }
-                          parsedname += character;
-                        }
 
-                        parsedname = (
-                          parsedname.charAt(0).toUpperCase() + parsedname.substring(1)
-                        ).replaceAll("_", " ");
+                            parsedname = (
+                              parsedname.charAt(0).toUpperCase() + parsedname.substring(1)
+                            ).replaceAll("_", " ");
 
-                        const normalizedString = (name) => {
-                          if (typeof name === 'string') {
-                            return name.replace(/_/g, ' ');
-                          } else {
-                            return name;
-                          }
-                        };
+                            const normalizedString = (name) => {
+                              if (typeof name === 'string') {
+                                return name.replace(/_/g, ' ');
+                              } else {
+                                return name;
+                              }
+                            };
 
-                        const appUrl =
-                          isCloud === true
-                            ? `/apps/${data.id}`
-                            : `https://shuffler.io/apps/${data.id}`;
+                            const appUrl =
+                              isCloud === true
+                                ? `/apps/${data.id}`
+                                : `https://shuffler.io/apps/${data.id}`;
 
-                        return (
-                          <Zoom
-                            key={index}
-                            in={true}
-                            style={{
-                              transitionDelay: `${workflowDelay}ms`,
-                            }}
-                          >
-                            <Grid rowSpacing={1} item xs={xs} key={index}>
-                              <a
-                                href={appUrl}
-                                rel="noopener noreferrer"
+                            return (
+                              <Zoom
+                                key={index}
+                                in={true}
                                 style={{
-                                  textDecoration: "none",
-                                  color: "#f85a3e",
+                                  transitionDelay: `${workflowDelay}ms`,
                                 }}
                               >
-                                <Paper
-                                  elevation={0}
-                                  style={paperStyle}
-                                  onMouseOver={() => {
-                                    setMouseHoverIndex(index);
-                                  }}
-                                  onMouseOut={() => {
-                                    setMouseHoverIndex(-1);
-                                  }}
-                                >
-                                  <ButtonBase
+                                <Grid rowSpacing={1} item xs={xs} key={index}>
+                                  <a
+                                    href={appUrl}
+                                    rel="noopener noreferrer"
                                     style={{
-                                      borderRadius: 8,
-                                      fontSize: 16,
-                                      overflow: "hidden",
-                                      display: "flex",
-                                      alignItems: "flex-start",
-                                      width: '100%',
-                                      backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "#1A1A1A",
+                                      textDecoration: "none",
+                                      color: "#f85a3e",
                                     }}
                                   >
-                                    <img
-                                      alt={data.name}
-                                      src={data.small_image || data.large_image ? (data.small_image || data.large_image) : "/images/no_image.png"}
-                                      style={{
-                                        width: 80,
-                                        height: 80,
-                                        borderRadius: 8,
-                                        margin: 8,
+                                    <Paper
+                                      elevation={0}
+                                      style={paperStyle}
+                                      onMouseOver={() => {
+                                        setMouseHoverIndex(index);
                                       }}
-                                    />
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        alignItems: "flex-start",
-                                        width: 339,
-                                        gap: 8,
-                                        fontWeight: '400',
-                                        overflow: "hidden",
-                                        margin: "12px 0 12px 0",
-                                        fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
+                                      onMouseOut={() => {
+                                        setMouseHoverIndex(-1);
                                       }}
                                     >
-                                      <div
+                                      <ButtonBase
                                         style={{
-                                          display: 'flex',
-                                          flexDirection: 'row',
+                                          borderRadius: 8,
+                                          fontSize: 16,
                                           overflow: "hidden",
-                                          textOverflow: "ellipsis",
-                                          whiteSpace: "nowrap",
-                                          marginLeft: 8,
-                                          gap: 8
+                                          display: "flex",
+                                          alignItems: "flex-start",
+                                          width: '100%',
+                                          backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "#1A1A1A",
                                         }}
                                       >
-                                        {normalizedString(data.name)}
-                                      </div>
-                                      <div
-                                        style={{
-                                          overflow: "hidden",
-                                          textOverflow: "ellipsis",
-                                          whiteSpace: "nowrap",
-                                          marginLeft: 8,
-                                          color: "rgba(158, 158, 158, 1)"
-                                        }}
-                                      >
-                                        {data.categories !== null
-                                          ? normalizedString(data.categories).join(", ")
-                                          : "NA"}
-                                      </div>
-                                      <div
-                                        style={{
-                                          overflow: "hidden",
-                                          textOverflow: "ellipsis",
-                                          whiteSpace: "nowrap",
-                                          width: 230,
-                                          textAlign: 'start',
-                                          marginLeft: 8,
-                                          color: "rgba(158, 158, 158, 1)"
-                                        }}
-                                      >
-                                        {data.tags &&
-                                          data.tags.map((tag, tagIndex) => (
-                                            <span key={tagIndex}>
-                                              {normalizedString(tag)}
-                                              {tagIndex < data.tags.length - 1 ? ", " : ""}
-                                            </span>
-                                          ))}
-                                      </div>
-                                      {/* )} */}
-                                    </div>
-                                  </ButtonBase>
-                                </Paper>
-                              </a>
-                            </Grid>
-                          </Zoom>
-                        );
-                      })
-                      }
+                                        <img
+                                          alt={data.name}
+                                          src={data.small_image || data.large_image ? (data.small_image || data.large_image) : "/images/no_image.png"}
+                                          style={{
+                                            width: 80,
+                                            height: 80,
+                                            borderRadius: 12,
+                                            margin: 8,
+                                          }}
+                                        />
+
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            alignItems: "flex-start",
+                                            width: 339,
+                                            gap: 8,
+                                            fontWeight: '400',
+                                            overflow: "hidden",
+                                            margin: "12px 0 12px 0",
+                                            fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              display: 'flex',
+                                              flexDirection: 'row',
+                                              overflow: "hidden",
+                                              textOverflow: "ellipsis",
+                                              whiteSpace: "nowrap",
+                                              marginLeft: 8,
+                                              gap: 8
+                                            }}
+                                          >
+                                            {normalizedString(data.name)}
+                                          </div>
+                                          <div
+                                            style={{
+                                              overflow: "hidden",
+                                              textOverflow: "ellipsis",
+                                              whiteSpace: "nowrap",
+                                              marginLeft: 8,
+                                              color: "rgba(158, 158, 158, 1)"
+                                            }}
+                                          >
+                                            {data.categories !== null
+                                              ? normalizedString(data.categories).join(", ")
+                                              : "NA"}
+                                          </div>
+                                          <div
+                                            style={{
+                                              overflow: "hidden",
+                                              textOverflow: "ellipsis",
+                                              whiteSpace: "nowrap",
+                                              width: 230,
+                                              textAlign: 'start',
+                                              marginLeft: 8,
+                                              color: "rgba(158, 158, 158, 1)"
+                                            }}
+                                          >
+                                            {data.tags &&
+                                              data.tags.map((tag, tagIndex) => (
+                                                <span key={tagIndex}>
+                                                  {normalizedString(tag)}
+                                                  {tagIndex < data.tags.length - 1 ? ", " : ""}
+                                                </span>
+                                              ))}
+                                          </div>
+                                          {/* )} */}
+                                        </div>
+                                      </ButtonBase>
+                                    </Paper>
+                                  </a>
+                                </Grid>
+                              </Zoom>
+                            );
+                          })
+                          }
+                        </div>
+                      </Grid>
                     </div>
-                  </Grid>
-                </div>
+                  </div>
+                )}
               </div>
             ) : (
               <Typography variant="body" style={{ position: "relative", top: 40 }}>Please <a href="/login" rel="noopener noreferrer" style={{ color: "rgba(255, 132, 68, 1)", textDecoration: "underline" }}>login</a> to your account first to view {`${currTab === 1 ? "Organization" : "My"}`} Apps.<br />
@@ -1767,8 +1846,7 @@ const AppGrid = (props) => {
   };
 
 
-  const AppTab = ({ selectedCategoryForUsersAndOgsApps, selectedTagsForUserAndOrgApps, selectedOptionOfCreatedWith }) => {
-
+  const AppTab = ({ selectedCategoryForUsersAndOgsApps, selectedTagsForUserAndOrgApps, selectedOptionOfCreatedWith, setselectedCategoryForUsersAndOgsApps, setSelectedTagsForUserAndOrgApps, setSelectedOptionOfCreatedWith }) => {
     const [isAnyAppActivated, setIsAnyAppActivated] = useState(false);
 
     return (
@@ -1827,7 +1905,7 @@ const AppGrid = (props) => {
           {currTab === 0 ? (
             <AllApps setIsAnyAppActivated={setIsAnyAppActivated} />
           ) : currTab === 1 || currTab === 2 ? (
-            <UserAndOrgApps selectedCategoryForUsersAndOgsApps={selectedCategoryForUsersAndOgsApps} selectedTagsForUserAndOrgApps={selectedTagsForUserAndOrgApps} selectedOptionOfCreatedWith={selectedOptionOfCreatedWith} />
+            <UserAndOrgApps selectedCategoryForUsersAndOgsApps={selectedCategoryForUsersAndOgsApps} selectedTagsForUserAndOrgApps={selectedTagsForUserAndOrgApps} selectedOptionOfCreatedWith={selectedOptionOfCreatedWith} setselectedCategoryForUsersAndOgsApps={setselectedCategoryForUsersAndOgsApps} setSelectedTagsForUserAndOrgApps={setSelectedTagsForUserAndOrgApps} setSelectedOptionOfCreatedWith={setSelectedOptionOfCreatedWith} />
           ) : null}
         </div>
       </div>
@@ -1862,6 +1940,9 @@ const AppGrid = (props) => {
               selectedCategoryForUsersAndOgsApps={selectedCategoryForUsersAndOgsApps}
               selectedTagsForUserAndOrgApps={selectedTagsForUserAndOrgApps}
               selectedOptionOfCreatedWith={selectedOptionOfCreatedWith}
+              setselectedCategoryForUsersAndOgsApps={setselectedCategoryForUsersAndOgsApps}
+              setSelectedTagsForUserAndOrgApps={setSelectedTagsForUserAndOrgApps}
+              setSelectedOptionOfCreatedWith={setSelectedOptionOfCreatedWith}
             />
           </div>
           <Configure clickAnalytics />

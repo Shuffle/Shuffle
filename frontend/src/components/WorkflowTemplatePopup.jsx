@@ -42,7 +42,7 @@ const WorkflowTemplatePopup = (props) => {
   	const [appAuthentication, setAppAuthentication] = React.useState(undefined);
   	const [missingSource, setMissingSource] = React.useState(undefined)
   	const [missingDestination, setMissingDestination] = React.useState(undefined);
-  	const [configurationFinished, setConfigurationFinished] = React.useState(false);
+  	const [configurationFinished, setConfigurationFinished] = React.useState(false)
 	const [appSetupDone, setAppSetupDone] = React.useState(false)
 
 	const [requestSent, setRequestSent] = React.useState(false)
@@ -74,6 +74,16 @@ const WorkflowTemplatePopup = (props) => {
 			}, 500)
 		}
 	}, [modalOpen, missingSource, missingDestination])
+
+	useEffect(() => {
+		//console.log("IN USEEFFECT FOR CONFIG: ", configurationFinished)
+		if (configurationFinished === true && workflow.id !== undefined && workflow.id !== null && workflow.id !== "") {
+			toast.success("Generation Successful. Redirecting to the workflow..")
+			setTimeout(() => {
+				navigate("/workflows/" + workflow.id)
+			}, 2000)
+		}
+	}, [configurationFinished, workflow])
 
 
 	const imagestyleWrapper = {
@@ -305,13 +315,13 @@ const WorkflowTemplatePopup = (props) => {
 		if (srcapp.includes(":default") || dstapp.includes(":default")) {
 			toast("You need to select both a source and destination app before generating this workflow.")
 
-			if (srcapp.includes(":default")) {
+			if (srcapp !== undefined && srcapp !== null && srcapp.includes(":default")) {
 				setMissingSource({
 					"type": srcapp.split(":")[0],
 				})
 			}
 
-			if (dstapp.includes(":default")) {
+			if (dstapp !== undefined && dstapp !== null && dstapp.includes(":default")) {
 				setMissingDestination({
 					"type": dstapp.split(":")[0],
 				})
@@ -490,7 +500,7 @@ const WorkflowTemplatePopup = (props) => {
 						<div style={{marginTop: 75, textAlign: "center", }}>
 							<Typography variant="h4"> Generating the Workflow...
 							</Typography> 
-							<CircularProgress style={{marginLeft: 125, marginTop: 10, }}/> 
+							<CircularProgress style={{marginLeft: 0, marginTop: 25, }}/> 
 						</div>
 						:
 						<div>
@@ -572,18 +582,7 @@ const WorkflowTemplatePopup = (props) => {
 					  setConfigurationFinished={setConfigurationFinished}
 					/>
 
-
-					{/*workflow !== undefined && workflow !== null && workflow.id !== undefined && workflow.id !== null && workflow.id !== "" ? 
-						<div style={{position: "fixed", right: "5%", top: "20%", border: "1px solid rgba(255,255,255,0.3)", height: divHeight, width: divWidth, borderRadius: theme.palette.borderRadius, }}>
-							<RenderCytoscape
-								inworkflow={workflow}
-								height={divHeight}
-								width={divWidth}
-							/>
-						</div>
-					: null*/}
-
-					{errorMessage === "" && configurationFinished === true && workflow.id !== undefined && workflowLoading === false ?
+					{/*errorMessage === "" && configurationFinished === true && workflow.id !== undefined && workflowLoading === false ?
 						<Tooltip title="Click to explore the workflow" placement="top">
 							<span 
 								style={{position: "fixed", display: "flex", right: "10%", top: "20%", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, padding: "15px 30px 15px 30px", backgroundColor: theme.palette.platformColor, cursor: "pointer", }}
@@ -592,25 +591,13 @@ const WorkflowTemplatePopup = (props) => {
 									window.open("/workflows/" + workflow.id, "_blank")
 								}}
 							>
-								{/*<CheckIcon color="primary" sx={{ borderRadius: 4 }} /> */}
 								<Typography variant="h5" style={{ }}>
 									Workflow Successfully Generated!
 								</Typography>
 							</span>
 						</Tooltip>
-					: null}
-
-					{/*errorMessage === "" ?
-						<Button
-							style={{marginTop: 50, }}
-							variant={isFinished() ? "contained" : "outlined"}
-							onClick={() => {
-								setModalOpen(false);
-							}}
-						>
-							Done
-						</Button>
 					: null*/}
+
 				</DialogContent>
         	</Drawer>
     	)

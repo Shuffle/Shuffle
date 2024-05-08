@@ -24,10 +24,29 @@ const Priorities = (props) => {
   const [showDismissed, setShowDismissed] = React.useState(false);
   const [showRead, setShowRead] = React.useState(false);
   const [appFramework, setAppFramework] = React.useState({});
+  const [selectedWorkflow, setSelectedWorkflow] = React.useState("");
+  const [selectedExecutionId, setSelectedExecutionId] = React.useState("");
   let navigate = useNavigate();
 
 	useEffect(() => {
 		getFramework()
+
+		// Check "workflow" and "execution_id" in URL
+		const urlParams = new URLSearchParams(window.location.search)
+		const workflow = urlParams.get("workflow")
+		const execution_id = urlParams.get("execution_id")
+
+		if (execution_id !== null) {
+			setSelectedExecutionId(execution_id)
+
+			//toast.info("Execution-related notifications are highlighted.")
+		} 
+
+		if (workflow !== null) {
+			setSelectedWorkflow(workflow)
+
+			toast.info("Workflow-related notifications are highlighted.")
+		}
 	}, [])
 
 	if (userdata === undefined || userdata === null) {
@@ -157,6 +176,10 @@ const Priorities = (props) => {
     	var image = "";
     	var orgName = "";
     	var orgId = "";
+
+
+		const highlighted = data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0 ? false : data.reference_url.includes(selectedExecutionId) || data.reference_url.includes(selectedWorkflow) 
+
     	if (userdata.orgs !== undefined) {
     	  const foundOrg = userdata.orgs.find((org) => org.id === data["org_id"]);
     	  if (foundOrg !== undefined && foundOrg !== null) {
@@ -207,6 +230,8 @@ const Priorities = (props) => {
     	      padding: 30,
     	      borderBottom: "1px solid rgba(255,255,255,0.4)",
 			  marginBottom: 20, 
+			  border: highlighted ? "2px solid #f85a3e" : null,
+			  borderRadius: theme.palette.borderRadius,
     	    }}
     	  >
 			<div style={{display: "flex", }}>
@@ -313,7 +338,42 @@ const Priorities = (props) => {
 
 	return (
 		<div style={{width: clickedFromOrgTab ? 1030:1000, padding: clickedFromOrgTab ? 27:null, height: clickedFromOrgTab ? "auto":null, backgroundColor: clickedFromOrgTab ? '#212121':null, borderRadius: clickedFromOrgTab ? '16px':null,  }}>
-			<h2 style={{ display: clickedFromOrgTab ?null:"inline", marginBottom: clickedFromOrgTab ? 8:null, marginTop: clickedFromOrgTab ?0:null, color: clickedFromOrgTab ?"#ffffff":null }}>Suggestions</h2>
+			<h2 style={{ display: clickedFromOrgTab?null:"inline", marginBottom: clickedFromOrgTab? 8:null, marginTop: clickedFromOrgTab?40:null, color: clickedFromOrgTab?"#ffffff":null }}>Notifications</h2>
+			<span style={{ marginLeft: clickedFromOrgTab?null:25, color: clickedFromOrgTab?"#9E9E9E":null, }}>
+				Notifications help you find potential problems with your workflows and apps.&nbsp;
+				<a
+					target="_blank"
+					rel="noopener noreferrer"
+					href="/docs/organizations#notifications"
+					style={{ textDecoration: clickedFromOrgTab?null:"none", color: clickedFromOrgTab?"#FF8444":"#f85a3e" }}
+				>
+					Learn more
+				</a>
+			</span>
+			<div/>
+			<Switch
+				checked={showRead}
+				onChange={() => {
+					setShowRead(!showRead);
+				}}
+			/>&nbsp; Show read 
+			{notifications === null || notifications === undefined || notifications.length === 0 ? null : 
+				<div>
+					{notifications.map((notification, index) => {
+						if (showRead === false && notification.read === true) {
+							return null
+						}
+
+						return (
+							<NotificationItem data={notification} key={index} />
+						)
+					})}
+				</div>
+			}
+
+			{clickedFromOrgTab? null : <Divider style={{marginTop: 50, marginBottom: 50, }} />}
+
+			<h2 style={{ display: clickedFromOrgTab ? null:"inline", marginBottom: clickedFromOrgTab ? 8:null, marginTop: clickedFromOrgTab ?0:null, color: clickedFromOrgTab ? "#ffffff" : null }}>Suggestions</h2>
 			<span style={{ color: clickedFromOrgTab ?"#9E9E9E":null,marginLeft: clickedFromOrgTab ?null:25 }}>
 				Suggestions are tasks identified by Shuffle to help you discover ways to protect your and customers' company. <br/>These range from simple configurations in Shuffle to Usecases you may have missed.&nbsp;
 				<a
@@ -355,39 +415,6 @@ const Priorities = (props) => {
 						/>
 					)
 				})
-			}
-			{clickedFromOrgTab?null:<Divider style={{marginTop: 50, marginBottom: 50, }} />}
-			<h2 style={{ display: clickedFromOrgTab?null:"inline", marginBottom: clickedFromOrgTab? 8:null, marginTop: clickedFromOrgTab?40:null, color: clickedFromOrgTab?"#ffffff":null }}>Notifications</h2>
-			<span style={{ marginLeft: clickedFromOrgTab?null:25, color: clickedFromOrgTab?"#9E9E9E":null, }}>
-				Notifications help you find potential problems with your workflows and apps.&nbsp;
-				<a
-					target="_blank"
-					rel="noopener noreferrer"
-					href="/docs/organizations#notifications"
-					style={{ textDecoration: clickedFromOrgTab?null:"none", color: clickedFromOrgTab?"#FF8444":"#f85a3e" }}
-				>
-					Learn more
-				</a>
-			</span>
-			<div/>
-			<Switch
-				checked={showRead}
-				onChange={() => {
-					setShowRead(!showRead);
-				}}
-			/>&nbsp; Show read 
-			{notifications === null || notifications === undefined || notifications.length === 0 ? null : 
-				<div>
-					{notifications.map((notification, index) => {
-						if (showRead === false && notification.read === true) {
-							return null
-						}
-
-						return (
-							<NotificationItem data={notification} key={index} />
-						)
-					})}
-				</div>
 			}
 
 		</div>

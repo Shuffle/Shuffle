@@ -2813,7 +2813,7 @@ const AppCreator = (defaultprops) => {
                 paddingLeft: "10px",
                 color: "white",
                 height: 50,
-                borderRadius: 5,
+                borderRadius: theme.shape.borderRadius,
               }}
               inputProps={{
                 name: "age",
@@ -3195,7 +3195,7 @@ const AppCreator = (defaultprops) => {
         		  }}
         		  value={parameterLocation}
         		  style={{
-        		    borderRadius: 5,
+        		    borderRadius: theme.shape.borderRadius,
         		    backgroundColor: inputColor,
         		    paddingLeft: 10,
         		    color: "white",
@@ -3883,7 +3883,7 @@ const AppCreator = (defaultprops) => {
 						  <Chip
 						  	style={{
 						  		color: "white",
-						  		borderRadius: 5,
+						  		borderRadius: theme.shape.borderRadius,
 						  		minWidth: 80,
 						  		marginRight: 10,
 						  		marginTop: 2,
@@ -4392,7 +4392,7 @@ const AppCreator = (defaultprops) => {
 								style={{
 									backgroundColor: bgColor,
 									color: "white",
-									borderRadius: 5,
+									borderRadius: theme.shape.borderRadius,
 									minWidth: 80,
 									marginRight: 10,
 									marginTop: 2,
