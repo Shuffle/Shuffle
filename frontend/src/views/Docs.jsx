@@ -301,10 +301,8 @@ const Docs = (defaultprops) => {
                 continue
             }
         }
-
         return items
     }
-
 
     const SidebarPaperStyle = {
         backgroundColor: "rgb(26,26,26)",
@@ -316,8 +314,12 @@ const Docs = (defaultprops) => {
         minHeight: "80vh",
     };
 
-
     const Heading = (props) => {
+        var id = props.children[0].toLowerCase().toString()
+        if (props.level <= 3) {
+            id = props.children[0].toLowerCase().toString().replaceAll(" ", "-");
+        }
+
         const element = React.createElement(
             `h${props.level}`,
             { style: { marginTop: props.level === 1 ? 20 : 50 } },
@@ -337,6 +339,7 @@ const Docs = (defaultprops) => {
                 onMouseOver={() => {
                     setHover(true);
                 }}
+                id={id}
             >
                 {props.level !== 1 ? (
                     <Divider
@@ -486,91 +489,91 @@ const Docs = (defaultprops) => {
         fetchDocs(props.match.params.key);
     }
 
-    const parseElementScroll = () => {
-        const offset = 45;
-        var parent = document.getElementById("markdown_wrapper_outer");
-        if (parent !== null) {
-            //console.log("IN PARENT")
-            var elements = parent.getElementsByTagName("h2");
+    //    const parseElementScroll = () => {
+    //        const offset = 45;
+    //        var parent = document.getElementById("markdown_wrapper_outer");
+    //        if (parent !== null) {
+    //            //console.log("IN PARENT")
+    //            var elements = parent.getElementsByTagName("h2");
+    //
+    //            const name = window.location.hash
+    //                .slice(1, window.location.hash.length)
+    //                .toLowerCase()
+    //                .split("%20")
+    //                .join(" ")
+    //                .split("_")
+    //                .join(" ")
+    //                .split("-")
+    //                .join(" ")
+    //                .split("?")[0]
+    //
+    //            //console.log(name)
+    //            var found = false;
+    //            for (var key in elements) {
+    //                const element = elements[key];
+    //                if (element.innerHTML === undefined) {
+    //                    continue;
+    //                }
+    //
+    //                // Fix location..
+    //                if (element.innerHTML.toLowerCase() === name) {
+    //                    //console.log(element.offsetTop)
+    //                    element.scrollIntoView({ behavior: "smooth" });
+    //                    //element.scrollTo({
+    //                    //	top: element.offsetTop+offset,
+    //                    //	behavior: "smooth"
+    //                    //})
+    //                    found = true;
+    //                    //element.scrollTo({
+    //                    //	top: element.offsetTop-100,
+    //                    //	behavior: "smooth"
+    //                    //})
+    //                }
+    //            }
+    //
+    //            // H#
+    //            if (!found) {
+    //                elements = parent.getElementsByTagName("h3");
+    //                //console.log("NAMe: ", name)
+    //                found = false;
+    //                for (key in elements) {
+    //                    const element = elements[key];
+    //                    if (element.innerHTML === undefined) {
+    //                        continue;
+    //                    }
+    //
+    //                    // Fix location..
+    //                    if (element.innerHTML.toLowerCase() === name) {
+    //                        element.scrollIntoView({ behavior: "smooth" });
+    //                        //element.scrollTo({
+    //                        //	top: element.offsetTop-offset,
+    //                        //	behavior: "smooth"
+    //                        //})
+    //                        found = true;
+    //                        //element.scrollTo({
+    //                        //	top: element.offsetTop-100,
+    //                        //	behavior: "smooth"
+    //                        //})
+    //                    }
+    //                }
+    //            }
+    //        }
+    //        //console.log(element)
+    //
+    //        //console.log("NAME: ", name)
+    //        //console.log(document.body.innerHTML)
+    //        //   parent = document.getElementById(parent);
+    //
+    //        //var descendants = parent.getElementsByTagName(tagname);
+    //
+    //        // this.scrollDiv.current.scrollIntoView({ behavior: 'smooth' });
+    //
+    //        //$(".parent").find("h2:contains('Statistics')").parent();
+    //    };
 
-            const name = window.location.hash
-                .slice(1, window.location.hash.length)
-                .toLowerCase()
-                .split("%20")
-                .join(" ")
-                .split("_")
-                .join(" ")
-                .split("-")
-                .join(" ")
-                .split("?")[0]
-
-            //console.log(name)
-            var found = false;
-            for (var key in elements) {
-                const element = elements[key];
-                if (element.innerHTML === undefined) {
-                    continue;
-                }
-
-                // Fix location..
-                if (element.innerHTML.toLowerCase() === name) {
-                    //console.log(element.offsetTop)
-                    element.scrollIntoView({ behavior: "smooth" });
-                    //element.scrollTo({
-                    //	top: element.offsetTop+offset,
-                    //	behavior: "smooth"
-                    //})
-                    found = true;
-                    //element.scrollTo({
-                    //	top: element.offsetTop-100,
-                    //	behavior: "smooth"
-                    //})
-                }
-            }
-
-            // H#
-            if (!found) {
-                elements = parent.getElementsByTagName("h3");
-                //console.log("NAMe: ", name)
-                found = false;
-                for (key in elements) {
-                    const element = elements[key];
-                    if (element.innerHTML === undefined) {
-                        continue;
-                    }
-
-                    // Fix location..
-                    if (element.innerHTML.toLowerCase() === name) {
-                        element.scrollIntoView({ behavior: "smooth" });
-                        //element.scrollTo({
-                        //	top: element.offsetTop-offset,
-                        //	behavior: "smooth"
-                        //})
-                        found = true;
-                        //element.scrollTo({
-                        //	top: element.offsetTop-100,
-                        //	behavior: "smooth"
-                        //})
-                    }
-                }
-            }
-        }
-        //console.log(element)
-
-        //console.log("NAME: ", name)
-        //console.log(document.body.innerHTML)
-        //   parent = document.getElementById(parent);
-
-        //var descendants = parent.getElementsByTagName(tagname);
-
-        // this.scrollDiv.current.scrollIntoView({ behavior: 'smooth' });
-
-        //$(".parent").find("h2:contains('Statistics')").parent();
-    };
-
-    if (serverside !== true && window.location.hash.length > 0) {
-        parseElementScroll();
-    }
+    //    if (serverside !== true && window.location.hash.length > 0) {
+    //        parseElementScroll();
+    //    }
 
     const markdownStyle = {
         color: "rgba(255, 255, 255, 0.90)",
@@ -789,13 +792,12 @@ const Docs = (defaultprops) => {
                             return (
                                 <div>
                                     <ListItemButton
-                                        component={Link}
                                         key={data.text}
                                         style={hrefStyleToc}
-                                        to={`#${data.id}`}
                                         onClick={() => (
                                             handleCollapse(index)
                                         )}
+                                        href={`#${data.id}`}
                                     >
                                         {data.title}
                                         {data.items.length > 0 ? (
@@ -809,10 +811,9 @@ const Docs = (defaultprops) => {
                                             {data.items.map((d, i) => {
                                                 return (
                                                     <ListItemButton
-                                                        component={Link}
                                                         key={i}
                                                         style={hrefStyleToc2}
-                                                        to={`#${d.id}`}
+                                                        href={`#${d.id}`}
                                                     >
                                                         {d.title}
                                                     </ListItemButton>
