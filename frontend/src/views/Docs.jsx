@@ -77,39 +77,6 @@ const innerHrefStyle = {
     textDecoration: "none",
 };
 
-// Emma Goto
-const useIntersectionObserver = (setActiveId) => {
-    const headingElementsRef = useRef({})
-    const callback = (headings) => {
-        headingElementsRef.current = headings.reduce((map, headingElemet) => {
-            if (headingElemet.target.id != undefined || headingElemet.target.id != "") {
-                map[headingElemet.target.id] = headingElemet
-                return map
-            }
-        }, headingElementsRef.current)
-
-        const visibleHeadings = [];
-        Object.keys(headingElementsRef.current).forEach((key) => {
-            const headingElemet = headingElementsRef.current[key];
-            if (headingElemet.isIntersecting) visibleHeadings.push(headingElemet)
-        })
-
-        if (visibleHeadings.length > 0) {
-            console.log(visibleHeadings)
-            setActiveId(visibleHeadings[0].target.id)
-        }
-    }
-
-    const observer = new IntersectionObserver(callback, {
-    });
-
-    const headingElements = Array.from(document.querySelectorAll("h2"))
-    if (headingElements.length != 0) {
-        headingElements.forEach((element) => observer.observe(element));
-        return () => observer.disconnect()
-    }
-}
-
 
 export const CopyToClipboard = (props) => {
     const { text, style, onCopy } = props;
@@ -183,7 +150,6 @@ export const CodeHandler = (props) => {
     }
 
     // Need to check if it's singletick or multi
-    console.log("PROP: ", propvalue, props)
     if (props.inline === true) {
         // Show it inline
         return (
@@ -253,7 +219,7 @@ const Docs = (defaultprops) => {
     const [data, setData] = useState("");
     const [firstrequest, setFirstrequest] = useState(true);
     const [list, setList] = useState([]);
-    const [activeId, setActiveId] = useState();
+    const [activeId, setActiveId] = useState()
     const [isopen, setOpen] = useState(-1);
     const [hover, setHover] = useState(false);
     const [, setListLoaded] = useState(false);
@@ -268,6 +234,9 @@ const Docs = (defaultprops) => {
     const [baseUrl, setBaseUrl] = React.useState(
         serverside === true ? "" : window.location.href
     );
+    const [hashRendered, setHashRendered] = React.useState(false)
+
+    const headingElementsRef = useRef({})
 
     useEffect(() => {
         //if (params["key"] === undefined) {
@@ -275,9 +244,6 @@ const Docs = (defaultprops) => {
         //	return
         //}
     }, [])
-
-    useIntersectionObserver(setActiveId);
-    console.log(activeId)
 
     function handleClick(event) {
         setAnchorEl(event.currentTarget);
@@ -296,25 +262,83 @@ const Docs = (defaultprops) => {
     }
 
     function handleClose() {
-        setAnchorEl(null);
+        setAnchorEl(null)
     }
 
     function handleCloseToc() {
-        setAnchorElToc(null);
+        setAnchorElToc(null)
     }
 
-    function scrollToHash() {
+
+    // Emma Goto
+	const activeIdsetter = (id) => {
+		setActiveId(id)
+	}
+
+    const intersectionObserver = () => {
+        const callback = (headings) => {
+			console.log("Headings: ", headings)
+
+            headingElementsRef.current = headings.reduce((map, headingElement) => {
+				if (map === undefined) {
+					return {}
+				}
+
+				if (headingElement === undefined || headingElement.target === undefined || headingElement.target.id === undefined || headingElement.target.id === null || headingElement.target.id === "") {
+					return map
+				}
+
+                if (headingElement.target.id != undefined || headingElement.target.id != "") {
+                    map[headingElement.target.id] = headingElement
+                    return map
+                }
+            }, headingElementsRef.current)
+
+            const visibleHeadings = []
+            Object.keys(headingElementsRef.current).forEach((key) => {
+                const headingElemet = headingElementsRef.current[key]
+                if (headingElemet.isIntersecting) {
+					visibleHeadings.push(headingElemet)
+				}
+            })
+    
+            if (visibleHeadings.length > 0) {
+                //setActiveId(visibleHeadings[0].target.id)
+				activeIdsetter(visibleHeadings[0].target.id)
+            }
+        }
+    
+        const observer = new IntersectionObserver(callback, {
+        })
+    
+        const headingElements = Array.from(document.querySelectorAll("h2"))
+        if (headingElements.length != 0) {
+            headingElements.forEach((element) => observer.observe(element))
+            return () => observer.disconnect()
+        }
+    }
+
+	console.log("ACTIVEID: ", activeId)
+
+	if (hashRendered) {
+	  setTimeout(() => {
+      	intersectionObserver() 
+	  }, 2000)
+	}
+
+    const scrollToHash = () => {
         const hash = window.location.hash.replace("#", "")
         if (hash) {
             const element = document.getElementById(hash)
             if (element) {
-                element.scrollIntoView({ behavior: "instant" })
+                element.scrollIntoView({ 
+					behavior: "instant",
+				})
             }
         }
-
     }
 
-    function tocvalue(markdown) {
+    const tocvalue = (markdown) => {
         const items = [];
         let currentMainItem = null;
 
@@ -360,6 +384,7 @@ const Docs = (defaultprops) => {
     };
 
     const Heading = (props) => {
+        const [hover, setHover] = useState(false);
         var id = props.children[0].toLowerCase().toString()
         if (props.level <= 3) {
             id = props.children[0].toLowerCase().toString().replaceAll(" ", "-");
@@ -369,9 +394,14 @@ const Docs = (defaultprops) => {
             `h${props.level}`,
             { id: `${id}` },
             props.children,
-        );
+        )
 
-        const [hover, setHover] = useState(false);
+		if (serverside !== true && window.location.hash.length > 0 && props.level === 1 && !hashRendered) {
+			setTimeout(() => {
+				setHashRendered(true)
+				scrollToHash()
+			}, 500)
+		}
 
         var extraInfo = "";
         if (props.level === 1) {
@@ -383,6 +413,7 @@ const Docs = (defaultprops) => {
                         borderRadius: theme.palette.borderRadius,
                         marginBottom: 30,
                         display: "flex",
+						scrollPaddingTop: 20,
                     }}
                 >
                     <div style={{ flex: 3, display: "flex", vAlign: "center", position: "sticky", top: 50, }}>
@@ -465,6 +496,9 @@ const Docs = (defaultprops) => {
                     setHover(true);
                 }}
                 id={id}
+				style={{
+					scrollPaddingTop: 20,
+				}}
             >
                 {props.level !== 1 ? (
                     <Divider
@@ -480,11 +514,13 @@ const Docs = (defaultprops) => {
                     marginBlock: "0.85em", alignItems: "center"
                 }}>
                     {element}
-                    <a href={`#${id}`} style={{
+                    <Link to={`#${id}`} style={{
                         textDecoration: "none", color: "white",
                         paddingLeft: "0.3em", rotate: "-30deg",
                         paddingTop: "0.9em", display: props.level === 1 ? "none" : "block",
-                    }}><LinkIcon></LinkIcon></a>
+                    }}>
+						<LinkIcon />
+					</Link>
                 </div>
 
                 {extraInfo}
@@ -706,10 +742,6 @@ const Docs = (defaultprops) => {
     //
     //        //$(".parent").find("h2:contains('Statistics')").parent();
     //    };
-
-    if (serverside !== true && window.location.hash.length > 0) {
-        scrollToHash()
-    }
 
     const markdownStyle = {
         color: "rgba(255, 255, 255, 0.90)",
