@@ -8,7 +8,7 @@ const data = [
 			  return ""
 		  } 
 
-		  elementname = elementname.replace("_", " ", -1)
+		  elementname = elementname.replaceAll("_", " ", -1)
 		  elementname = elementname.charAt(0).toUpperCase() + elementname.slice(1)
 		  return elementname
 	  },

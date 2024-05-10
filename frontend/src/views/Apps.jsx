@@ -675,12 +675,17 @@ const Apps = (props) => {
       valid = "false";
     }
 
-		if (data.actions === undefined || data.actions === null) {
-			data.actions = []
+	if (data.actions === undefined || data.actions === null) {
+		// Check if data type undefined/bool
+		if (typeof data === "boolean") {
+			data = {}
 		}
+		
+		data.actions = []
+	}
 
     if (data === undefined || data.actions === undefined || data.actions === null || data.actions.length === 0) {
-      valid = "false";
+      valid = "false"
     }
 
     var description = data.description;

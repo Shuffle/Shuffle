@@ -407,7 +407,7 @@ const AuthenticationOauth2 = (props) => {
 			if (offlineAccess === true && !scopes.includes("offline_access")) {
 
 				console.log("IN scope 2")
-				if (!authenticationType.redirect_uri.includes("google")) {
+				if (!authenticationType.redirect_uri.includes("google") && !authenticationType.redirect_uri.includes("slack")) {
 					console.log("Appending offline access")
 					scopes.push("offline_access")
 				}

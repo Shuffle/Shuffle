@@ -3237,16 +3237,23 @@ const ParsedAction = (props) => {
 				  }}
                   defaultValue={selectedAction.app_version}
                   onChange={(event) => {
-					console.log("VAL: ", event.target.value)
-					console.log("App: ", selectedApp)
                     const newversion = selectedApp.versions.find(
                       (tmpApp) => tmpApp.version == event.target.value
-                    );
+                    )
 
-                    console.log("NEWVERSION: ", newversion);
                     if (newversion !== undefined && newversion !== null) {
-                      getApp(newversion.id, true);
+                      getApp(newversion.id, true)
                     }
+
+					// Change in all actions in the workflow at the same time and add a toast.success() about it
+					for (var actionkey in workflow.actions) {
+						const action = workflow.actions[actionkey]
+						if (action.app_name === selectedAction.app_name) {
+							workflow.actions[actionkey].app_version = event.target.value
+						}
+					}
+
+					toast.success("Changed version of all nodes to "+event.target.value)
                   }}
                   style={{
                     marginTop: 10,

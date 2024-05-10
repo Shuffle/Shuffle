@@ -92,7 +92,7 @@ const SearchField = props => {
 		>
 			{isHeader ? <div style={{ display: "flex"}}>
 				<DialogTitle style={{ marginTop: 15, marginLeft: 5, color: "var(--Paragraph-text, #C8C8C8)" }} >Search for Docs, Apps, Workflows and more</DialogTitle>
-				<Button fullWidth style={{ marginLeft:180, }} onClick={() => {
+				<Button color="secondary" fullWidth style={{ marginLeft:180, }} onClick={() => {
 					setModalOpen(false);
 				}}><CloseIcon /></Button>
 			</div>

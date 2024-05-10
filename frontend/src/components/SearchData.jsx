@@ -24,6 +24,11 @@ import {
 import ArticleIcon from '@mui/icons-material/Article';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
+
+import {
+  VerifiedUser as VerifiedUserIcon,
+} from '@mui/icons-material'
+
 import {
     AvatarGroup,
 } from "@mui/material"
@@ -233,9 +238,11 @@ const SearchData = props => {
                             const appGroup = hit.action_references === undefined || hit.action_references === null ? [] : hit.action_references
                             const avatar = baseImage
 
+
                             var parsedUrl = isCloud ? `/workflows/${hit.objectID}` : `https://shuffler.io/workflows/${hit.objectID}`
 
                             parsedUrl += `?queryID=${hit.__queryID}`
+							const validated = hit.validated !== undefined && hit.validate !== null ? hit.validated : false
 
                             // <a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{textDecoration: "none", color: "white"}}>
                             return (
@@ -271,7 +278,15 @@ const SearchData = props => {
                                         setMouseHoverIndex(index)
                                     }}>
                                         <ListItemAvatar>
-                                            {avatar}
+											{validated === true ? 
+												<Tooltip title="The functionality of this workflow manually verified by the Shuffle automation team" placement="top">
+													<VerifiedUserIcon style={{marginLeft: 0, marginRight: 20, }} />
+												</Tooltip>
+										  		: 
+												<Tooltip title="Community-built workflow" placement="top">
+													{avatar}
+												</Tooltip>
+											}
                                         </ListItemAvatar>
                                         <div style={{}}>
                                             <ListItemText

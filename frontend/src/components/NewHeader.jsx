@@ -27,6 +27,7 @@ import {
 } from "@mui/material";
 
 import {
+  Close as CloseIcon,
   MeetingRoom as MeetingRoomIcon,
   HelpOutline as HelpOutlineIcon,
   Settings as SettingsIcon,
@@ -40,6 +41,7 @@ import {
   Add as AddIcon,
   Analytics as AnalyticsIcon,
   Lightbulb as LightbulbIcon,
+  ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
 
 const hoverColor = "#f85a3e";
@@ -58,7 +60,10 @@ const Header = (props) => {
     isMobile,
     serverside,
     setModalOpen,
+
+    curpath,
   } = props;
+
 
   const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
   const [SoarHoverColor, setSoarHoverColor] = useState(hoverOutColor);
@@ -70,6 +75,7 @@ const Header = (props) => {
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
   const [upgradeHovered, setUpgradeHovered] = React.useState(false);
+  const [showTopbar, setShowTopbar] = useState(false)
   let navigate = useNavigate();
 
   const handleClick = (event) => {
@@ -188,7 +194,15 @@ const Header = (props) => {
         removeCookie("session_token", { path: "/" });
         removeCookie("session_token", { path: "/" });
         removeCookie("session_token", { path: "/" });
+
+        removeCookie("__session", { path: "/" });
+        removeCookie("__session", { path: "/" });
+        removeCookie("__session", { path: "/" });
+
+        removeCookie("__session", { path: "/" });
         window.location.pathname = "/";
+
+		localStorage.setItem("globalUrl", "")
       })
       .catch((error) => {
         console.log(error);
@@ -266,7 +280,7 @@ const Header = (props) => {
               : null,
           cursor: "pointer",
           marginRight: 10,
-        };
+        }
 
         image =
           foundOrg.image === "" ? (
@@ -355,14 +369,13 @@ const Header = (props) => {
           setAnchorEl(event.currentTarget);
         }}
       >
-        <Badge badgeContent={notifications.filter((n) => n.read === false).length} color="primary">
+	    {/*<Badge badgeContent={notifications.filter((n) => n.read === false).length} color="primary">*/}
           <NotificationsIcon
             color="secondary"
             style={{ height: 30, width: 30 }}
             alt="Your username here"
             src=""
           />
-        </Badge>
       </IconButton>
       <Menu
         id="simple-menu"
@@ -393,10 +406,10 @@ const Header = (props) => {
           }}
         >
           <div style={{ display: "flex", marginBottom: 5 }}>
-            <Typography variant="body1">
+            <Typography variant="body1" style={{flex: 1, }}>
               Notifications ({notifications.filter((data) => !data.read).length})
             </Typography>
-	   		<ButtonGroup style={{height: 40, marginLeft: 50, }}>
+	   		<ButtonGroup style={{height: 40, flex: 1, }}>
 				{notifications.length > 1 ? (
 				  <Button
 					color="primary"
@@ -420,7 +433,7 @@ const Header = (props) => {
 			  </Button>
 	  		</ButtonGroup>
           </div>
-          <Typography variant="body2">
+          <Typography variant="body2" color="textSecondary" style={{ marginTop: 5, }}>
             Notifications generated made by Shuffle to help you discover issues or
             improvements. <a href="/docs/organizations#notifications" target="_blank" rel="noopener noreferrer" style={{ color: "#f86a3e", textDecoration: "none", }}>
               Learn more</a>
@@ -462,7 +475,9 @@ const Header = (props) => {
       .then(function (response) {
         if (response.status !== 200) {
           console.log("Error in response");
-        }
+        } else {
+		  localStorage.setItem("apps", [])
+		}
 
         return response.json();
       })
@@ -502,7 +517,7 @@ const Header = (props) => {
         rel="noopener noreferrer"
         target="_blank"
       >
-        <Tooltip color="primary" title={"Join the community"} placement="left">
+        <Tooltip color="primary" title={"Join the Shuffle Automation Community"} placement="left">
           <IconButton
             color="primary"
             style={{}}
@@ -527,7 +542,7 @@ const Header = (props) => {
       userdata.avatar !== null &&
       userdata.avatar.length > 0
       ? userdata.avatar
-      : "";
+      : ""
 
   const avatarMenu = (
     <span>
@@ -545,6 +560,7 @@ const Header = (props) => {
           alt="Your username here"
           src={parsedAvatar}
         />
+  		<ExpandMoreIcon style={{color: "rgba(255,255,255,0.4)", }}/>
       </IconButton>
       <Menu
         id="simple-menu"
@@ -562,7 +578,7 @@ const Header = (props) => {
               handleClose();
             }}
           >
-            <BusinessIcon style={{ marginRight: 5 }} /> Organisation
+            <BusinessIcon style={{ marginRight: 5 }} /> Organization
           </MenuItem>
         </Link>
         <Link to="/settings" style={hrefStyle}>
@@ -574,6 +590,18 @@ const Header = (props) => {
             <SettingsIcon style={{ marginRight: 5 }} /> Account
           </MenuItem>
         </Link>
+
+        <Link to="/admin?admin_tab=priorities" style={hrefStyle}>
+          <MenuItem
+            onClick={(event) => {
+              handleClose();
+            }}
+          >
+            <NotificationsIcon style={{ marginRight: 5 }} /> Notifications 
+          </MenuItem>
+        </Link>
+
+              {/*notificationMenu*/}
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
         <Link to="/docs" style={hrefStyle}>
           <MenuItem
@@ -944,8 +972,8 @@ const Header = (props) => {
               }}
             >
               {avatarMenu}
-              {notificationMenu}
-              {/*supportMenu*/}
+              {/*notificationMenu*/}
+              {supportMenu}
               {logoCheck}
             </span>
 
@@ -1050,7 +1078,7 @@ const Header = (props) => {
                           src={data.image}
                           style={imageStyle}
                         />
-                      );
+                      )
 
                     var regiontag = "eu";
                     if (
@@ -1164,32 +1192,20 @@ const Header = (props) => {
                       onMouseOver={() => { setUpgradeHovered(true) }}
                       onMouseOut={() => { setUpgradeHovered(false) }}
                       onClick={() => {
-                        // if (isCloud) {
-                        //   ReactGA.event({
-                        //     category: "header",
-                        //     action: "pricing_upgrade_click",
-                        //     label: "",
-                        //   });
-                        // }
-                        setModalOpen(true);
+                        if (isCloud) {
+                          ReactGA.event({
+                            category: "header",
+                            action: "upgrade_popup_click",
+                          })
+                        }
 
-                        // if (window.drift !== undefined) {
-                        //   if (isCloud) {
-                        // 	  window.drift.api.startInteraction({
-                        // 		interactionId: 386404,
-                        // 	  })
-                        //   } else {
-                        // 	  window.drift.api.startInteraction({
-                        // 		interactionId: 386403,
-                        // 	  })
-                        //   }
-                        // }
+                        setModalOpen(true)
                       }}
                     >
                       {upgradeHovered ?
-                        isCloud ? "Upgrade License" : "Upgrade License"
+                        "Upgrade License"
                         :
-                        isCloud ? "Upgrade" : "Upgrade"
+                        "Upgrade"
                       }
 
                     </Button>
@@ -1420,8 +1436,82 @@ const Header = (props) => {
     </div>
     :
     */
+
+    const topbarHeight = showTopbar ? 40 : 0
+	const topbar = !showTopbar ? null : 
+		curpath === "/" || curpath.includes("/docs/") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" ?
+			<span style={{ zIndex: 50001, }}>
+				<div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
+					<Typography variant="body1" style={{ paddingTop: 7, margin: "auto", textAlign: "center", color: "white", }}>
+						Shuffle 1.4 is out! Read more about&nbsp;
+						<u>
+							<a href="https://github.com/Shuffle/Shuffle" style={{ color: "inherit", }} onClick={() => {
+								ReactGA.event({
+									category: "landingpage",
+									action: "click_header_features",
+									label: "",
+								})
+
+								//if (window.drift !== undefined) {
+								//	window.drift.api.startInteraction({ interactionId: 341911 })
+								//} else {
+								//	console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+								//}
+							}} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
+								Features
+							</a>
+						</u>
+						,&nbsp;
+						<u>
+							<span onClick={() => {
+								ReactGA.event({
+									category: "landingpage",
+									action: "click_header_pricing",
+									label: "",
+								})
+
+								navigate("/pricing")
+
+								//if (window.drift !== undefined) {
+								//	window.drift.api.startInteraction({ interactionId: 341911 })
+								//} else {
+								//	console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+								//}
+							}} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
+								Pricing
+							</span>
+						</u>
+						&nbsp;and&nbsp;
+						<u>
+							<span onClick={() => {
+								ReactGA.event({
+									category: "landingpage",
+									action: "click_header_creators",
+									label: "",
+								})
+
+								navigate("/creators")
+
+								//if (window.drift !== undefined) {
+								//	window.drift.api.startInteraction({ interactionId: 341911 })
+								//} else {
+								//	console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+								//}
+							}} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
+								Earning as a Creator
+							</span>
+						</u>
+					</Typography>
+					<IconButton color="secondary" style={{ position: "absolute", top: -3, right: 20, }} onClick={(event) => { setShowTopbar(false) }}>
+						<CloseIcon />
+					</IconButton>
+				</div>
+			</span>
+			:
+			null
+ 
   return !isMobile ?
-	<div style={{}}>
+	<div style={{marginTop: 0, }}>
 		<AppBar
 		  color="transparent"
 		  elevation={0}
@@ -1433,6 +1523,9 @@ const Header = (props) => {
 			  backgroundColor: theme.palette.backgroundColor, 
 		  }}
 		>
+
+			{topbar} 
+
 			<div style={{position: "sticky", top: 0, }}>
 				{loginTextBrowser}
 			</div>

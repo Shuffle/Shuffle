@@ -646,7 +646,7 @@ const Workflows = (props) => {
 			if (sidebar === null || sidebar === undefined) {
 				console.log("No sidebar defined")
               
-				localStorage.setItem(sidebarKey, "open");
+			localStorage.setItem(sidebarKey, "open");
   			setDrawerOpen(true)
       } else {
 				if (sidebar === "open") {
@@ -2009,11 +2009,11 @@ const Workflows = (props) => {
             style={{ display: "flex", flexDirection: "column", width: "100%" }}
           >
             <Grid item style={{ display: "flex", maxHeight: 34 }}>
-              <Tooltip title={`Org "${orgName}"`} placement="bottom">
+              <Tooltip title={`Org "${orgName}". Click to edit image.`} placement="bottom">
                 <div
                   styl={{ cursor: "pointer" }}
                   onClick={() => {
-                    addFilter(orgId);
+					navigate("/admin")
                   }}
                 >
                   {image}
@@ -2022,13 +2022,13 @@ const Workflows = (props) => {
               <Tooltip arrow title={
 				<div style={{width: "100%", minWidth: 250, maxWidth: 310, }}>
 					{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
-							<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxWidth: 300, minWidth: 250, borderRadius: theme.palette.borderRadius, }} />
-						: null}
-						<Typography>
-							Edit {data.name}
-						</Typography>
+						<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxWidth: 300, minWidth: 250, borderRadius: theme.palette.borderRadius, }} />
+					: null}
+					<Typography>
+						Edit '{data.name}'
+					</Typography>
 				</div>
-				} placement="left">
+				} placement="right">
 				<Typography
                   variant="body1"
                   style={{

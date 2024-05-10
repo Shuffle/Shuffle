@@ -225,7 +225,7 @@ const AppGrid = (props) => {
           }}
           autoComplete="off"
           color="primary"
-          placeholder="Find Apps"
+          placeholder="Search more than 2500 Apps"
           id="shuffle_search_field"
           onChange={(event) => {
             setSearchQuery(event.currentTarget.value);
@@ -989,7 +989,7 @@ const AppGrid = (props) => {
           }}
           autoComplete="off"
           color="primary"
-          placeholder="Find Apps"
+          placeholder="Search more than 2500 Apps"
           id="shuffle_search_field"
           onChange={(event) => {
             setSearchQuery(event.currentTarget.value);

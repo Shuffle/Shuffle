@@ -1698,7 +1698,7 @@ const CodeEditor = (props) => {
 										<Typography variant="body2">
 											<b>Test output</b>
 										</Typography>
-										<Typography variant="body2">
+										<Typography variant="body2" style={{whiteSpace: 'pre-line', }}>
 											{executionResult.result}
 										</Typography> 
 									</span>

@@ -1608,7 +1608,9 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then(function (response) {
         if (response.status !== 200) {
           console.log("Error in response");
-        }
+        } else {
+			localStorage.setItem("apps", [])
+		}
 
         return response.json();
       })

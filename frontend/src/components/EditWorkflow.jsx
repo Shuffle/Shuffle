@@ -11,9 +11,9 @@ import {
   Badge,
   Avatar,
   Grid,
-	InputLabel,
-	Select,
-	ListSubheader,
+  InputLabel,
+  Select,
+  ListSubheader,
   Paper,
   Tooltip,
   Divider,
@@ -22,6 +22,7 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Link,
   FormControlLabel,
   Chip,
   Switch,
@@ -543,6 +544,7 @@ const EditWorkflow = (props) => {
 									margin="dense"
 									fullWidth
 								/>
+
 								<TextField
 									onBlur={(event) => {
 										innerWorkflow.default_return_value = event.target.value
@@ -562,6 +564,106 @@ const EditWorkflow = (props) => {
 									margin="dense"
 									fullWidth
 								/>
+
+								<Typography variant="body2" style={{marginTop: 50, }}>
+									MSSP Suborg Distribution (beta - contact support@shuffler.io)
+								</Typography>
+								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
+									userdata.orgs.filter(org => org.creator_org === userdata.active_org.id).length === 0 ?
+										<Typography variant="body2" style={{marginTop: 10, color: "rgba(255,255,255,0.7)"}}>
+											You can only distribute to suborgs from a parent org.
+										</Typography>
+									:
+									<Select
+										multiple
+										style={{marginTop: 10, }}
+										value={innerWorkflow.suborg_distribution === undefined || innerWorkflow.suborg_distribution === null ? ["none"] : innerWorkflow.suborg_distribution}
+										onChange={(e) => {
+											var newvalue = e.target.value
+											if (newvalue.length > 1 && newvalue[0] === "none") {
+												newvalue = newvalue.filter(value => value !== "none")
+											}
+
+											console.log("NEWVALUE: ", newvalue)
+
+											if (newvalue.includes("none")) {
+												newvalue  = ["none"]
+											} else if (newvalue.includes("all")) {
+												newvalue  = userdata.orgs.filter(org => org.creator_org === userdata.active_org.id).map(org => org.id)
+											}
+
+											innerWorkflow.suborg_distribution = newvalue
+											setInnerWorkflow(innerWorkflow)
+											setUpdate(Math.random())
+										}}
+										label="Suborg Distribution"
+										fullWidth
+									>
+										<MenuItem value="none">
+											None
+										</MenuItem>
+										<MenuItem value="all">
+											All	
+										</MenuItem>
+										{userdata.orgs.map((data, index) => {
+                                           	var skipOrg = false;
+                                           	if (data.creator_org !== undefined && data.creator_org !== null && data.creator_org === userdata.active_org.id) {
+                                           	  // Finds the parent org
+                                           	} else {
+												return null
+											}
+
+                    						const imagesize = 22
+											const imageStyle = {
+											  width: imagesize,
+											  height: imagesize,
+											  pointerEvents: "none",
+											  marginRight: 10,
+											  marginLeft:
+												data.creator_org !== undefined &&
+												  data.creator_org !== null &&
+												  data.creator_org.length > 0
+												  ? data.id === userdata.active_org.id
+													? 0
+													: 20
+												  : 0,
+											}
+
+											const image =
+											  data.image === "" ? (
+												<img
+												  alt={data.name}
+												  src={theme.palette.defaultImage}
+												  style={imageStyle}
+												/>
+											  ) : (
+												<img
+												  alt={data.name}
+												  src={data.image}
+												  style={imageStyle}
+												/>
+											  )
+
+
+											return (
+												<MenuItem key={index} value={data.id}>
+												  <Checkbox checked={innerWorkflow.suborg_distribution !== undefined && innerWorkflow.suborg_distribution !== null && innerWorkflow.suborg_distribution.includes(data.id)} />
+													  {image}{" "}
+													  <span style={{ marginLeft: 8 }}>
+														{data.name}
+													  </span>
+												</MenuItem>
+											)
+										})}
+									</Select>
+								: 
+									<Link to={"/admin?tab=suborgs"} style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">
+										<Typography variant="body2" style={{marginTop: 10, }}>
+											Create a sub-org to distribute workflows to suborgs.
+										</Typography>
+									</Link>
+								}
+									
 
 								<Typography variant="h6" style={{marginTop: 50, }}>
 									Input fields
