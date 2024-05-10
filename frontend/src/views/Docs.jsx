@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { toast } from 'react-toastify';
 import Markdown from 'react-markdown'
@@ -35,6 +35,7 @@ import {
     FileCopy as FileCopyIcon
 } from "@mui/icons-material";
 import { fontGrid } from "@mui/material/styles/cssUtils.js";
+import { active } from "d3";
 
 const Body = {
     //maxWidth: 1000,
@@ -52,17 +53,6 @@ const dividerColor = "rgb(225, 228, 232)";
 const hrefStyle = {
     color: "rgba(255, 255, 255, 0.40)",
     textDecoration: "none",
-};
-
-const hrefStyleToc = {
-    color: "rgba(255, 255, 255, 0.6)",
-    textDecoration: "none",
-    fontSize: "14px",
-    fontWeight: 400,
-    padding: "4px 0",
-    paddingLeft: "8px",
-    paddingRight: "8px",
-    lineHeight: "20px",
 };
 
 
@@ -87,8 +77,38 @@ const innerHrefStyle = {
     textDecoration: "none",
 };
 
+// Emma Goto
+const useIntersectionObserver = (setActiveId) => {
+    const headingElementsRef = useRef({})
+    const callback = (headings) => {
+        headingElementsRef.current = headings.reduce((map, headingElemet) => {
+            if (headingElemet.target.id != undefined || headingElemet.target.id != "") {
+                map[headingElemet.target.id] = headingElemet
+                return map
+            }
+        }, headingElementsRef.current)
 
+        const visibleHeadings = [];
+        Object.keys(headingElementsRef.current).forEach((key) => {
+            const headingElemet = headingElementsRef.current[key];
+            if (headingElemet.isIntersecting) visibleHeadings.push(headingElemet)
+        })
 
+        if (visibleHeadings.length > 0) {
+            setActiveId(visibleHeadings[0].target.id)
+        }
+    }
+
+    const observer = new IntersectionObserver(callback, {
+        rootMargin: "10%",
+    });
+
+    const headingElements = Array.from(document.querySelectorAll("h2"))
+    if (headingElements.length != 0) {
+        headingElements.forEach((element) => observer.observe(element));
+        return () => observer.disconnect()
+    }
+}
 
 
 export const CopyToClipboard = (props) => {
@@ -227,22 +247,18 @@ const Docs = (defaultprops) => {
     props.match = {}
     props.match.params = params
 
-    useEffect(() => {
-        //if (params["key"] === undefined) {
-        //	navigate("/docs/about")
-        //	return
-        //}
-    }, [])
     //console.log("PARAMS: ", params)
 
     const [mobile, setMobile] = useState(serverMobile === true || isMobile === true ? true : false);
     const [data, setData] = useState("");
     const [firstrequest, setFirstrequest] = useState(true);
     const [list, setList] = useState([]);
+    const [activeId, setActiveId] = useState();
     const [isopen, setOpen] = useState(-1);
     const [hover, setHover] = useState(false);
     const [, setListLoaded] = useState(false);
     const [anchorEl, setAnchorEl] = React.useState(null);
+    const [anchorElToc, setAnchorElToc] = React.useState(null);
     const [headingSet, setHeadingSet] = React.useState(false);
     const [selectedMeta, setSelectedMeta] = React.useState({
         link: "hello",
@@ -253,8 +269,21 @@ const Docs = (defaultprops) => {
         serverside === true ? "" : window.location.href
     );
 
+    useEffect(() => {
+        //if (params["key"] === undefined) {
+        //	navigate("/docs/about")
+        //	return
+        //}
+    }, [])
+
+    useIntersectionObserver(setActiveId);
+
     function handleClick(event) {
         setAnchorEl(event.currentTarget);
+    }
+
+    function handleClickToc(event) {
+        setAnchorElToc(event.currentTarget);
     }
 
     function handleCollapse(index) {
@@ -267,6 +296,21 @@ const Docs = (defaultprops) => {
 
     function handleClose() {
         setAnchorEl(null);
+    }
+
+    function handleCloseToc() {
+        setAnchorElToc(null);
+    }
+
+    function scrollToHash() {
+        const hash = window.location.hash.replace("#", "")
+        if (hash) {
+            const element = document.getElementById(hash)
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' })
+            }
+        }
+
     }
 
     function tocvalue(markdown) {
@@ -322,7 +366,7 @@ const Docs = (defaultprops) => {
 
         const element = React.createElement(
             `h${props.level}`,
-            { style: { marginTop: props.level === 1 ? 20 : 50 } },
+            { style: { marginTop: props.level === 1 ? 20 : 50, scrollPaddingTop: "50px" }, id: `${id}` },
             props.children
         );
 
@@ -361,8 +405,8 @@ const Docs = (defaultprops) => {
         width: "17%",
         position: "sticky",
         top: 50,
-        minHeight: "100vh",
-        maxHeight: "100vh",
+        minHeight: "93vh",
+        maxHeight: "93vh",
         overflowX: "hidden",
         overflowY: "auto",
         zIndex: 1000,
@@ -399,6 +443,8 @@ const Docs = (defaultprops) => {
     };
 
     const fetchDocs = (docId) => {
+        setActiveId("")
+        setTocLines([])
         fetch(`${globalUrl}/api/v1/docs/${docId}`, {
             method: "GET",
             headers: {
@@ -571,9 +617,9 @@ const Docs = (defaultprops) => {
     //        //$(".parent").find("h2:contains('Statistics')").parent();
     //    };
 
-    //    if (serverside !== true && window.location.hash.length > 0) {
-    //        parseElementScroll();
-    //    }
+    if (serverside !== true && window.location.hash.length > 0) {
+        scrollToHash()
+    }
 
     const markdownStyle = {
         color: "rgba(255, 255, 255, 0.90)",
@@ -786,14 +832,27 @@ const Docs = (defaultprops) => {
                     }
                 </div>
                 <div style={IndexBar}>
-                    <h2 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px" }}>Table Of Content</h2>
+                    {tocLines.length > 0 ?
+                        (
+                            <h4 style={{ fontWeight: 600, margin: 0, fontSize: "16px", marginBottom: "8px" }}>Table Of Content</h4>
+
+                        ) : null}
                     <nav>
                         {tocLines.map((data, index) => {
                             return (
-                                <div>
+                                <div className="toc">
                                     <ListItemButton
                                         key={data.text}
-                                        style={hrefStyleToc}
+                                        style={{
+                                            color: activeId === data.id ? "#f86a3e" : "inherit",
+                                            textDecoration: "none",
+                                            fontSize: "14px",
+                                            fontWeight: 400,
+                                            padding: "4px 0",
+                                            paddingLeft: "8px",
+                                            paddingRight: "8px",
+                                            lineHeight: "20px",
+                                        }}
                                         onClick={() => (
                                             handleCollapse(index)
                                         )}
@@ -804,29 +863,31 @@ const Docs = (defaultprops) => {
                                             <>{isopen == index ? <ExpandMoreIcon /> : <KeyboardArrowRightIcon />}</>
                                         ) : null}
                                     </ListItemButton>
-                                    {data.items.length > 0 &&
-                                        data.items !== null &&
-                                        data.items !== undefined ? (
-                                        <Collapse in={isopen === index} timeout="auto" unmountOnExit>
-                                            {data.items.map((d, i) => {
-                                                return (
-                                                    <ListItemButton
-                                                        key={i}
-                                                        style={hrefStyleToc2}
-                                                        href={`#${d.id}`}
-                                                    >
-                                                        {d.title}
-                                                    </ListItemButton>
-                                                )
-                                            })}
-                                        </Collapse>
-                                    ) : null}
+                                    {
+                                        data.items.length > 0 &&
+                                            data.items !== null &&
+                                            data.items !== undefined ? (
+                                            <Collapse in={isopen === index} timeout="auto" unmountOnExit>
+                                                {data.items.map((d, i) => {
+                                                    return (
+                                                        <ListItemButton
+                                                            key={i}
+                                                            style={hrefStyleToc2}
+                                                            href={`#${d.id}`}
+                                                        >
+                                                            {d.title}
+                                                        </ListItemButton>
+                                                    )
+                                                })}
+                                            </Collapse>
+                                        ) : null
+                                    }
                                 </div>
 
                             )
                         })}
                     </nav>
-                </div>
+                </div >
 
             </div >
         );
@@ -840,7 +901,6 @@ const Docs = (defaultprops) => {
         display: "flex",
         flexDirection: "column",
     };
-
 
     const postDataMobile =
         list === undefined || list === null ? null : (
@@ -856,28 +916,67 @@ const Docs = (defaultprops) => {
                     >
                         <div style={{ color: "white" }}>More docs</div>
                     </Button>
-                    {list.map((data, index) => {
-                        const item = data.name;
-                        if (item === undefined) {
-                            return null;
-                        }
+                    <Menu
+                        id="simple-menu"
+                        anchorEl={anchorEl}
+                        style={{}}
+                        keepMounted
+                        open={Boolean(anchorEl)}
+                        onClose={handleClose}
+                    >
+                        {list.map((data, index) => {
+                            const item = data.name;
+                            if (item === undefined) {
+                                return null;
+                            }
 
-                        const path = "/docs/" + item;
-                        const newname =
-                            item.charAt(0).toUpperCase() +
-                            item.substring(1).split("_").join(" ").split("-").join(" ");
-                        return (
-                            <MenuItem
-                                key={index}
-                                style={{ color: "white" }}
-                                onClick={() => {
-                                    window.location.pathname = path;
-                                }}
-                            >
-                                {newname}
-                            </MenuItem>
-                        );
-                    })}
+                            const path = "/docs/" + item;
+                            const newname =
+                                item.charAt(0).toUpperCase() +
+                                item.substring(1).split("_").join(" ").split("-").join(" ");
+                            return (
+                                <MenuItem
+                                    key={index}
+                                    style={{ color: "white" }}
+                                    onClick={() => {
+                                        window.location.pathname = path;
+                                    }}
+                                >
+                                    {newname}
+                                </MenuItem>
+                            );
+                        })}
+                    </Menu>
+                    <Button
+                        fullWidth
+                        style={{ marginTop: "2px" }}
+                        aria-controls="simple-menu"
+                        aria-haspopup="ture"
+                        variant="outlined"
+                        color="primary"
+                        onClick={handleClickToc}
+                    >
+                        <div style={{ color: "white" }}>Table Of Contents</div>
+                    </Button>
+                    <Menu
+                        id="simple-menu"
+                        anchorEl={anchorElToc}
+                        style={{}}
+                        keepMounted
+                        open={Boolean(anchorElToc)}
+                        onClose={handleCloseToc}
+                    >
+                        {tocLines.map((data, index) => {
+                            return (
+                                <MenuItem
+                                    key={index}
+                                    style={{ color: "white" }}
+                                >
+                                    <a href={`#${data.id}`} style={hrefStyle}>{data.title}</a>
+                                </MenuItem>
+                            )
+                        })}
+                    </Menu>
                 </div>
                 {props.match.params.key === undefined ?
                     mainpageInfo
