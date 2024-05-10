@@ -367,8 +367,8 @@ const Docs = (defaultprops) => {
 
         const element = React.createElement(
             `h${props.level}`,
-            { style: { marginTop: props.level === 1 ? 20 : 50 }, id: `${id}` },
-            props.children
+            { id: `${id}` },
+            props.children,
         );
 
         const [hover, setHover] = useState(false);
@@ -475,7 +475,18 @@ const Docs = (defaultprops) => {
                         }}
                     />
                 ) : null}
-                {element}
+                <div style={{
+                    display: "flex", marginTop: props.level === 1 ? 20 : 50,
+                    marginBlock: "0.85em", alignItems: "center"
+                }}>
+                    {element}
+                    <a href={`#${id}`} style={{
+                        textDecoration: "none", color: "white",
+                        paddingLeft: "0.3em", rotate: "-30deg",
+                        paddingTop: "0.9em", display: props.level === 1 ? "none" : "block",
+                    }}><LinkIcon></LinkIcon></a>
+                </div>
+
                 {extraInfo}
             </Typography>
         )
