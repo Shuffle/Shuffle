@@ -95,12 +95,12 @@ const useIntersectionObserver = (setActiveId) => {
         })
 
         if (visibleHeadings.length > 0) {
+            console.log(visibleHeadings)
             setActiveId(visibleHeadings[0].target.id)
         }
     }
 
     const observer = new IntersectionObserver(callback, {
-        rootMargin: "10%",
     });
 
     const headingElements = Array.from(document.querySelectorAll("h2"))
@@ -277,6 +277,7 @@ const Docs = (defaultprops) => {
     }, [])
 
     useIntersectionObserver(setActiveId);
+    console.log(activeId)
 
     function handleClick(event) {
         setAnchorEl(event.currentTarget);
@@ -307,7 +308,7 @@ const Docs = (defaultprops) => {
         if (hash) {
             const element = document.getElementById(hash)
             if (element) {
-                element.scrollIntoView({ behavior: 'smooth' })
+                element.scrollIntoView({ behavior: "instant" })
             }
         }
 
@@ -366,18 +367,98 @@ const Docs = (defaultprops) => {
 
         const element = React.createElement(
             `h${props.level}`,
-            { style: { marginTop: props.level === 1 ? 20 : 50, scrollPaddingTop: "50px" }, id: `${id}` },
+            { style: { marginTop: props.level === 1 ? 20 : 50 }, id: `${id}` },
             props.children
         );
 
+        const [hover, setHover] = useState(false);
+
         var extraInfo = "";
+        if (props.level === 1) {
+            extraInfo = (
+                <div
+                    style={{
+                        backgroundColor: theme.palette.inputColor,
+                        padding: 15,
+                        borderRadius: theme.palette.borderRadius,
+                        marginBottom: 30,
+                        display: "flex",
+                    }}
+                >
+                    <div style={{ flex: 3, display: "flex", vAlign: "center", position: "sticky", top: 50, }}>
+                        {mobile ? null : (
+                            <Typography style={{ display: "inline", marginTop: 6 }}>
+                                <a
+                                    rel="noopener noreferrer"
+                                    target="_blank"
+                                    href={selectedMeta.link}
+                                    style={{ textDecoration: "none", color: "#f85a3e" }}
+                                >
+                                    <Button style={{ color: "white", }} variant="outlined" color="secondary">
+                                        <EditIcon /> &nbsp;&nbsp;Edit
+                                    </Button>
+                                </a>
+                            </Typography>
+                        )}
+                        {mobile ? null : (
+                            <div
+                                style={{
+                                    height: "100%",
+                                    width: 1,
+                                    backgroundColor: "white",
+                                    marginLeft: 50,
+                                    marginRight: 50,
+                                }}
+                            />
+                        )}
+                        <Typography style={{ display: "inline", marginTop: 11 }}>
+                            {selectedMeta.read_time} minute
+                            {selectedMeta.read_time === 1 ? "" : "s"} to read
+                        </Typography>
+                    </div>
+                    <div style={{ flex: 2 }}>
+                        {mobile ||
+                            selectedMeta.contributors === undefined ||
+                            selectedMeta.contributors === null ? (
+                            ""
+                        ) : (
+                            <div style={{ margin: 10, height: "100%", display: "inline" }}>
+                                {selectedMeta.contributors.slice(0, 7).map((data, index) => {
+                                    return (
+                                        <a
+                                            key={index}
+                                            rel="noopener noreferrer"
+                                            target="_blank"
+                                            href={data.url}
+                                            style={{ textDecoration: "none", color: "#f85a3e" }}
+                                        >
+                                            <Tooltip title={data.url} placement="bottom">
+                                                <img
+                                                    alt={data.url}
+                                                    src={data.image}
+                                                    style={{
+                                                        marginTop: 5,
+                                                        marginRight: 10,
+                                                        height: 40,
+                                                        borderRadius: 40,
+                                                    }}
+                                                />
+                                            </Tooltip>
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
 
         if (extraInfo !== "" && props.level === 1 && props.children !== undefined && props.children !== null && props.children.length > 0) {
             if (props.children[0].toLowerCase().includes("privacy") || props.children[0].toLowerCase().includes("terms")) {
                 extraInfo = ""
             }
         }
-
         return (
             <Typography
                 onMouseOver={() => {
@@ -443,8 +524,6 @@ const Docs = (defaultprops) => {
     };
 
     const fetchDocs = (docId) => {
-        setActiveId("")
-        setTocLines([])
         fetch(`${globalUrl}/api/v1/docs/${docId}`, {
             method: "GET",
             headers: {
@@ -632,9 +711,6 @@ const Docs = (defaultprops) => {
         fontSize: isMobile ? "1.3rem" : "1.1rem",
     };
 
-
-
-
     const CustomButton = (props) => {
         const { title, icon, link } = props
 
@@ -783,7 +859,6 @@ const Docs = (defaultprops) => {
                                 if (item === undefined) {
                                     return null;
                                 }
-
                                 const path = "/docs/" + item;
                                 const newname =
                                     item.charAt(0).toUpperCase() +
@@ -843,6 +918,7 @@ const Docs = (defaultprops) => {
                                 <div className="toc">
                                     <ListItemButton
                                         key={data.text}
+                                        href={`#${data.id}`}
                                         style={{
                                             color: activeId === data.id ? "#f86a3e" : "inherit",
                                             textDecoration: "none",
@@ -853,10 +929,9 @@ const Docs = (defaultprops) => {
                                             paddingRight: "8px",
                                             lineHeight: "20px",
                                         }}
-                                        onClick={() => (
+                                        onClick={(e) => {
                                             handleCollapse(index)
-                                        )}
-                                        href={`#${data.id}`}
+                                        }}
                                     >
                                         {data.title}
                                         {data.items.length > 0 ? (
