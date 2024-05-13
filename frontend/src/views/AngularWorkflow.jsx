@@ -17371,7 +17371,7 @@ const AngularWorkflow = (defaultprops) => {
 		  return "The app's Docker Image is not available in the environment yet. Re-run the app to force a re-download of the app. If the problem persists, contact support" 
 	  }
 
-	  if (result.status !== 200 && stringjson.includes("192.168") || stringjson.includes("172.16") || stringjson.includes("10.0")) {
+	  if (result.status !== 200 && (result.url.includes("192.168") || result.url.includes("172.16") || result.url.includes("10.0"))) {
 		  return "Consider whether your Orborus environment can connect to a local IP or not."
 	  }
 

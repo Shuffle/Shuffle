@@ -989,7 +989,7 @@ const AppGrid = (props) => {
           }}
           autoComplete="off"
           color="primary"
-          placeholder="Search more than 2500 Apps"
+          placeholder="Search your Activated or Self-built apps"
           id="shuffle_search_field"
           onChange={(event) => {
             setSearchQuery(event.currentTarget.value);
@@ -1008,7 +1008,7 @@ const AppGrid = (props) => {
   useEffect(() => {
     if (currTab === 2) {
       const baseUrl = globalUrl;
-      const userAppsUrl = `${baseUrl}/api/v1/users/apps`;
+      const userAppsUrl = `${baseUrl}/api/v1/users/me/apps`;
       fetch(userAppsUrl, {
         method: "GET",
         credentials: "include",
@@ -1559,8 +1559,8 @@ const AppGrid = (props) => {
 
   //Component to fetch all apps created by user and Org
   const UserAndOrgApps = ({ selectedCategoryForUsersAndOgsApps, selectedTagsForUserAndOrgApps, selectedOptionOfCreatedWith, setselectedCategoryForUsersAndOgsApps, setSelectedTagsForUserAndOrgApps, setSelectedOptionOfCreatedWith }) => {
-    const [searchQuery, setSearchQuery] = useState("");
 
+    const [searchQuery, setSearchQuery] = useState("");
     const [appsToShow, setAppsToShow] = useState([]);
     useEffect(() => {
       if (currTab === 1) {

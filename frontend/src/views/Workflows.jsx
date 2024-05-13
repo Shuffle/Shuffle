@@ -1678,6 +1678,7 @@ const Workflows = (props) => {
     const [hover, setHover] = React.useState(false);
 
     const innerColor = "rgba(255,255,255,0.3)"
+
     const setupPaperStyle = {
       minHeight: paperAppStyle.minHeight,
 	  maxWidth: "100%",
@@ -1691,7 +1692,7 @@ const Workflows = (props) => {
       cursor: "pointer",
       backgroundColor: hover ? "rgba(39,41,45,0.5)" : "rgba(39,41,45,1)",
       borderRadius: paperAppStyle.borderRadius,
-    };
+    }
 
     return (
       <Grid item xs={isMobile ? 12 : hasWorkflows ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
@@ -1763,7 +1764,8 @@ const Workflows = (props) => {
     const menuClick = (event) => {
       setOpen(!open);
       setAnchorEl(event.currentTarget);
-    };
+    }
+
 
     var parsedName = data.name;
     if (
@@ -1776,8 +1778,9 @@ const Workflows = (props) => {
 
     const actions = data.actions !== null ? data.actions.length : 0;
 	const appGroup = getWorkflowAppgroup(data)
-    const [triggers, subflows] = getWorkflowMeta(data);
+    const [triggers, subflows] = getWorkflowMeta(data)
 
+	const isDistributed = data.suborg_distribution !== undefined && data.suborg_distribution !== null && data.suborg_distribution.includes(userdata.active_org.id)
     const workflowMenuButtons = (
       <Menu
         id="long-menu"
@@ -1983,27 +1986,27 @@ const Workflows = (props) => {
 		}
 
     return (
-	  <div style={{width: "100%", position: "relative",}}>
+	  <div style={{width: "100%", position: "relative", border: isDistributed ? "2px solid #40E0D0" : "inherit", borderRadius: theme.palette.borderRadius, }}>
         <Paper square style={paperAppStyle}>
-					{selectedCategory !== "" ?
-						<Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
-							<div
-								style={{
-									cursor: "pointer",
-									position: "absolute",
-									top: 0,
-									left: 0,
-									height: paperAppStyle.minHeight,
-									width: 2,
-									backgroundColor: boxColor,
-									borderRadius: "0 100px 0 0",
-								}}
-								onClick={() => {
-                  addFilter(selectedCategory)
-								}}
-							/>
-						</Tooltip>
-					: null}
+			{selectedCategory !== "" ?
+				<Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
+					<div
+						style={{
+							cursor: "pointer",
+							position: "absolute",
+							top: 0,
+							left: 0,
+							height: paperAppStyle.minHeight,
+							width: 2,
+							backgroundColor: boxColor,
+							borderRadius: "0 100px 0 0",
+						}}
+						onClick={() => {
+		  addFilter(selectedCategory)
+						}}
+					/>
+				</Tooltip>
+			: null}
           <Grid
             item
             style={{ display: "flex", flexDirection: "column", width: "100%" }}
