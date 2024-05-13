@@ -51,7 +51,7 @@ const Body = {
 
 const dividerColor = "rgb(225, 228, 232)";
 const hrefStyle = {
-    color: "rgba(255, 255, 255, 0.40)",
+    color: "rgba(255, 255, 255, 0.8)",
     textDecoration: "none",
 };
 
@@ -219,6 +219,7 @@ const Docs = (defaultprops) => {
     const [data, setData] = useState("");
     const [firstrequest, setFirstrequest] = useState(true);
     const [list, setList] = useState([]);
+    const [lastHeading, setLastHeading] = useState(false);
     const [activeId, setActiveId] = useState()
     const [isopen, setOpen] = useState(-1);
     const [hover, setHover] = useState(false);
@@ -245,48 +246,40 @@ const Docs = (defaultprops) => {
         //}
     }, [])
 
-    function handleClick(event) {
+    const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     }
 
-    function handleClickToc(event) {
+    const handleClickToc = (event) => {
         setAnchorElToc(event.currentTarget);
     }
 
-    function handleCollapse(index) {
+    const handleCollapse = (index) => {
         setOpen(isopen === index ? -1 : index)
     }
 
-    function handleMouseOver() {
+    const handleMouseOver = () => {
         setHover(!hover);
     }
 
-    function handleClose() {
+    const handleClose = () => {
         setAnchorEl(null)
     }
 
-    function handleCloseToc() {
+    const handleCloseToc = () => {
         setAnchorElToc(null)
     }
 
-
-    // Emma Goto
-	const activeIdsetter = (id) => {
-		setActiveId(id)
-	}
-
     const intersectionObserver = () => {
         const callback = (headings) => {
-			console.log("Headings: ", headings)
-
             headingElementsRef.current = headings.reduce((map, headingElement) => {
-				if (map === undefined) {
-					return {}
-				}
+                if (map === undefined) {
+                    return {}
+                }
 
-				if (headingElement === undefined || headingElement.target === undefined || headingElement.target.id === undefined || headingElement.target.id === null || headingElement.target.id === "") {
-					return map
-				}
+                if (headingElement === undefined || headingElement.target === undefined || headingElement.target.id === undefined || headingElement.target.id === null || headingElement.target.id === "") {
+                    return map
+                }
 
                 if (headingElement.target.id != undefined || headingElement.target.id != "") {
                     map[headingElement.target.id] = headingElement
@@ -295,49 +288,92 @@ const Docs = (defaultprops) => {
             }, headingElementsRef.current)
 
             const visibleHeadings = []
-            Object.keys(headingElementsRef.current).forEach((key) => {
-                const headingElemet = headingElementsRef.current[key]
-                if (headingElemet.isIntersecting) {
-					visibleHeadings.push(headingElemet)
-				}
-            })
-    
+            const keys = Object.keys(headingElementsRef.current)
+
+            for (var i = 0; i < keys.length; i++) {
+                const headingElement = headingElementsRef.current[keys[i]]
+                if (headingElement.isIntersecting) {
+                    visibleHeadings.push(headingElement)
+                }
+            }
+
             if (visibleHeadings.length > 0) {
-                //setActiveId(visibleHeadings[0].target.id)
-				activeIdsetter(visibleHeadings[0].target.id)
+                const tocs = document.getElementsByClassName('toc')
+                for (const t of tocs) {
+                    const currentPoint = t.getElementsByTagName('a')[0]
+                    currentPoint.style.color = "white";
+                    if (`#${visibleHeadings[0].target.id}`
+                        === currentPoint.hash) {
+                        currentPoint.style.color = "#f86a3e";
+                    }
+                }
             }
         }
-    
+
         const observer = new IntersectionObserver(callback, {
+            threshold: [1]
         })
-    
+
         const headingElements = Array.from(document.querySelectorAll("h2"))
         if (headingElements.length != 0) {
-            headingElements.forEach((element) => observer.observe(element))
+            for (var i = 0; i < headingElements.length; i++) {
+                var element = headingElements[i]
+                observer.observe(element)
+            }
             return () => observer.disconnect()
         }
     }
 
-	console.log("ACTIVEID: ", activeId)
+    if (lastHeading) {
+        setTimeout(() => {
+            intersectionObserver()
+        }, 100)
+    }
 
-	if (hashRendered) {
-	  setTimeout(() => {
-      	intersectionObserver() 
-	  }, 2000)
-	}
 
     const scrollToHash = () => {
         const hash = window.location.hash.replace("#", "")
         if (hash) {
             const element = document.getElementById(hash)
             if (element) {
-                element.scrollIntoView({ 
-					behavior: "instant",
-				})
+                element.scrollIntoView({
+                    behavior: "instant",
+                })
             }
         }
     }
 
+
+    // extract toc from all headings and subheadings
+    const extractHeadings = (content) => {
+        const headings = [];
+
+        const headingRegex = /^(#{2,3})\s+(.+)$/gm;
+        let match;
+
+        while ((match = headingRegex.exec(content)) !== null) {
+            const level = match[1].length;
+            const title = match[2].trim();
+
+            if (level === 2) {
+                headings.push({
+                    id: title.toLowerCase().replace(/\s+/g, '-'),
+                    title: title,
+                    items: []
+                });
+            } else if (level === 3 && headings.length > 0) {
+                const lastHeading = headings[headings.length - 1];
+                lastHeading.items.push({
+                    id: title.toLowerCase().replace(/\s+/g, '-'),
+                    title: title
+                });
+            }
+        }
+        return headings
+    }
+
+
+    // extract TOC from actual markdown
     const tocvalue = (markdown) => {
         const items = [];
         let currentMainItem = null;
@@ -346,7 +382,7 @@ const Docs = (defaultprops) => {
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            if (line.startsWith('* [')) {
+            if (line.startsWith('* [') && !line.startsWith(" ", 5)) {
                 const matches = line.match(/^\* \[([^)]+)\]\(#([^)]+)\)/);
                 if (matches) {
                     currentMainItem = {
@@ -396,12 +432,18 @@ const Docs = (defaultprops) => {
             props.children,
         )
 
-		if (serverside !== true && window.location.hash.length > 0 && props.level === 1 && !hashRendered) {
-			setTimeout(() => {
-				setHashRendered(true)
-				scrollToHash()
-			}, 500)
-		}
+        if (serverside !== true && window.location.hash.length > 0 && props.level === 1 && !hashRendered) {
+            setTimeout(() => {
+                setHashRendered(true)
+                scrollToHash()
+            }, 500)
+        }
+
+        if (serverside !== true && !lastHeading) {
+            setTimeout(() => {
+                setLastHeading(true)
+            }, 500)
+        }
 
         var extraInfo = "";
         if (props.level === 1) {
@@ -413,7 +455,6 @@ const Docs = (defaultprops) => {
                         borderRadius: theme.palette.borderRadius,
                         marginBottom: 30,
                         display: "flex",
-						scrollPaddingTop: 20,
                     }}
                 >
                     <div style={{ flex: 3, display: "flex", vAlign: "center", position: "sticky", top: 50, }}>
@@ -496,9 +537,9 @@ const Docs = (defaultprops) => {
                     setHover(true);
                 }}
                 id={id}
-				style={{
-					scrollPaddingTop: 20,
-				}}
+                style={{
+                    scrollPaddingTop: 20,
+                }}
             >
                 {props.level !== 1 ? (
                     <Divider
@@ -519,8 +560,8 @@ const Docs = (defaultprops) => {
                         paddingLeft: "0.3em", rotate: "-30deg",
                         paddingTop: "0.9em", display: props.level === 1 ? "none" : "block",
                     }}>
-						<LinkIcon />
-					</Link>
+                        <LinkIcon />
+                    </Link>
                 </div>
 
                 {extraInfo}
@@ -533,6 +574,7 @@ const Docs = (defaultprops) => {
         width: "17%",
         position: "sticky",
         top: 50,
+        paddingTop: "0.25em",
         minHeight: "93vh",
         maxHeight: "93vh",
         overflowX: "hidden",
@@ -587,7 +629,7 @@ const Docs = (defaultprops) => {
                 if (responseJson.success && responseJson.reason !== undefined) {
                     // Find <img> tags and translate them into ![]() format
                     const imgRegex = /<img.*?src="(.*?)"/g;
-                    const tocRegex = /^## Table of contents[\s\S]*?(?=^##\s|\Z)|^\* \[[^\]]+\]\([^)]+\)\n?(?![^\n]+\]\([^)]+\))/gm;
+                    const tocRegex = /^## Table of contents[\s\S]*?(?=^## )|^## Table of contents[\s\S]*$/gm;
                     const newdata = responseJson.reason.replace(imgRegex, '![]($1)')
                         .replace(tocRegex, "");
                     setData(newdata);
@@ -611,10 +653,14 @@ const Docs = (defaultprops) => {
                         responseJson.reason !== undefined &&
                         responseJson.reason !== null
                     ) {
+                        /*
                         const values = tocvalue(responseJson.reason.match(tocRegex)
                             .join()
                             .toString());
                         setTocLines(values);
+                        */
+                        const values = extractHeadings(newdata)
+                        setTocLines(values)
                     }
                 } else {
                     setData("# Error\nThis page doesn't exist.");
@@ -1134,7 +1180,7 @@ const Docs = (defaultprops) => {
 
     // Padding and zIndex etc set because of footer in cloud.
     const loadedCheck = (
-        <div style={{ minHeight: 1000, paddingBottom: 100, zIndex: 50000, maxWidth: 1920, minWidth: isMobile ? null : 1366, margin: "auto", }}>
+        <div style={{ minHeight: 1000, paddingTop: "60px", zIndex: 50000, maxWidth: 1920, minWidth: isMobile ? null : 1366, margin: "auto", }}>
             <BrowserView>{postDataBrowser}</BrowserView>
             <MobileView>{postDataMobile}</MobileView>
         </div>
