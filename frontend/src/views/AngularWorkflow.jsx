@@ -118,7 +118,7 @@ import {
 } from "@mui/icons-material";
 
 
-import * as cytoscape from "cytoscape";
+import cytoscape from "cytoscape";
 import * as edgehandles from "cytoscape-edgehandles";
 //import * as clipboard from "cytoscape-clipboard";
 //import undoRedo from "cytoscape-undo-redo";

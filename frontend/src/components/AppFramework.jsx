@@ -32,7 +32,7 @@ import {
 } from "@mui/icons-material";
 
 import * as edgehandles from "cytoscape-edgehandles";
-import * as cytoscape from "cytoscape";
+import cytoscape from "cytoscape";
 import { toast } from 'react-toastify';
 
 cytoscape.use(edgehandles);
