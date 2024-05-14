@@ -9,7 +9,7 @@ require (
 	cloud.google.com/go/storage v1.30.1
 	github.com/basgys/goxml2json v1.1.0
 	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82
-	github.com/docker/docker v24.0.2+incompatible
+	github.com/docker/docker v24.0.9+incompatible
 	github.com/frikky/kin-openapi v0.42.0
 	github.com/fsouza/go-dockerclient v1.9.7
 	github.com/ghodss/yaml v1.0.0
