@@ -332,8 +332,12 @@ const Docs = (defaultprops) => {
 
 
     const scrollToHash = () => {
-        const hash = window.location.hash.replace("#", "")
+        var hash = window.location.hash.replace("#", "").replaceAll("_", "-");
+        if (hash.includes('?')) {
+            hash = hash.split('?')[0]
+        }
         if (hash) {
+            console.log("HASH: ", hash)
             const element = document.getElementById(hash)
             if (element) {
                 element.scrollIntoView({
