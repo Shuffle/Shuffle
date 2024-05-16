@@ -332,8 +332,12 @@ const Docs = (defaultprops) => {
 
 
     const scrollToHash = () => {
-        const hash = window.location.hash.replace("#", "")
+        var hash = window.location.hash.replace("#", "").replaceAll("_", "-");
+        if (hash.includes('?')) {
+            hash = hash.split('?')[0]
+        }
         if (hash) {
+            console.log("HASH: ", hash)
             const element = document.getElementById(hash)
             if (element) {
                 element.scrollIntoView({
@@ -343,34 +347,33 @@ const Docs = (defaultprops) => {
         }
     }
 
-
-    // extract toc from all headings and subheadings
-    const extractHeadings = (content) => {
+    const extractHeadings = content => {
         const headings = [];
+        const lines = content.split('\n');
+        let inCodeBlock = false;
 
-        const headingRegex = /^(#{2,3})\s+(.+)$/gm;
-        let match;
+        for (const line of lines) {
+            if (line.startsWith('```')) {
+                inCodeBlock = !inCodeBlock;
+            }
 
-        while ((match = headingRegex.exec(content)) !== null) {
-            const level = match[1].length;
-            const title = match[2].trim();
+            if (!inCodeBlock) {
+                const headingMatch = line.match(/^(#{2,3})\s+(.+)$/);
+                if (headingMatch) {
+                    const level = headingMatch[1].length;
+                    const title = headingMatch[2].trim();
+                    const id = title.toLowerCase().replace(/\s+/g, '-');
 
-            if (level === 2) {
-                headings.push({
-                    id: title.toLowerCase().replace(/\s+/g, '-'),
-                    title: title,
-                    items: []
-                });
-            } else if (level === 3 && headings.length > 0) {
-                const lastHeading = headings[headings.length - 1];
-                lastHeading.items.push({
-                    id: title.toLowerCase().replace(/\s+/g, '-'),
-                    title: title
-                });
+                    if (level === 2) {
+                        headings.push({ id, title, items: [] });
+                    } else if (level === 3 && headings.length) {
+                        headings[headings.length - 1].items.push({ id, title });
+                    }
+                }
             }
         }
-        return headings
-    }
+        return headings;
+    };
 
 
     // extract TOC from actual markdown
@@ -587,7 +590,9 @@ const Docs = (defaultprops) => {
         alignSelf: "flex-start",
         position: "sticky",
         top: 80,
-        overflow: "auto",
+        overflowY: "auto",
+        minHeight: "93vh",
+        maxHeight: "93vh",
         marginTop: 70,
     }
 
