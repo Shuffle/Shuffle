@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import { toast } from 'react-toastify';
 import Markdown from 'react-markdown'
@@ -178,7 +178,10 @@ export const CodeHandler = (props) => {
                     style={theme.palette.reactJsonStyle}
                     collapsed={false}
                     displayDataTypes={false}
-                    name={""}
+		  			displayArrayKey={false}
+					iconStyle={theme.palette.jsonIconStyle}
+					collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
+                    name={false}
                 />
                 :
                 <div style={{ display: "flex", position: "relative", }}>

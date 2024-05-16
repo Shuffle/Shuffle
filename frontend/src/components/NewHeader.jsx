@@ -203,6 +203,11 @@ const Header = (props) => {
         window.location.pathname = "/";
 
 		localStorage.setItem("globalUrl", "")
+
+		// Delete userinfo from localstorage
+		localStorage.removeItem("apps")
+		localStorage.removeItem("workflows")
+	    localStorage.removeItem("userinfo")
       })
       .catch((error) => {
         console.log(error);
@@ -476,7 +481,9 @@ const Header = (props) => {
         if (response.status !== 200) {
           console.log("Error in response");
         } else {
-		  localStorage.setItem("apps", [])
+		  localStorage.removeItem("apps")
+		  localStorage.removeItem("workflows")
+	      localStorage.removeItem("userinfo")
 		}
 
         return response.json();

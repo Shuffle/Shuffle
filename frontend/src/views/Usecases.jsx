@@ -1156,8 +1156,8 @@ const Dashboard = (props) => {
 
   const [selectedUsecaseCategory, setSelectedUsecaseCategory] = useState("");
   const [selectedUsecases, setSelectedUsecases] = useState([]);
-  const [usecases, setUsecases] = useState([]);
-  const [workflows, setWorkflows] = useState([]);
+  const [usecases, setUsecases] = useState([])
+  const [workflows, setWorkflows] = useState([])
   const [frameworkData, setFrameworkData] = useState(undefined);
 
 	let navigate = useNavigate();
@@ -1359,6 +1359,8 @@ const Dashboard = (props) => {
 			return
 		} 
 
+		console.log("LOADED: ", responseJson)
+
 		if (workflows !== undefined && workflows !== null && workflows.length > 0) {
 			var categorydata = responseJson
 			var newcategories = []
@@ -1408,6 +1410,10 @@ const Dashboard = (props) => {
 				setUsecases(responseJson)
 				setSelectedUsecases(responseJson)
 			}
+		} else {
+			handleKeysetting(responseJson)
+			setUsecases(responseJson)
+			setSelectedUsecases(responseJson)
 		}
       })
       .catch((error) => {

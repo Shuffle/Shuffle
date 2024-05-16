@@ -26,7 +26,16 @@ const theme = createTheme(adaptV4Theme({
     green: "#5cc879",
     borderRadius: 10,
     defaultBorder: "1px solid rgba(255,255,255,0.3)",
-	jsonTheme: "brewer",
+
+	//jsonTheme: "brewer",
+	//jsonTheme: "chalk",
+	//jsonTheme: "monokai",
+	//jsonTheme: "google",
+	//jsonTheme: "tomorrow",
+	jsonIconStyle: "round",
+	jsonTheme: "summerfruit",
+	jsonCollapseStringsAfterLength: 75,
+
 	reactJsonStyle: {
 		padding: 5, 
 		width: "98%",

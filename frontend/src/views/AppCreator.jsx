@@ -2994,15 +2994,15 @@ const AppCreator = (defaultprops) => {
         		      toast("Auth URL must start with http(s)://");
         		    }
 
-								if (tmpstring.includes("?")) {
-									var newtmp = tmpstring.split("?")
-									if (tmpstring.length > 1) {
-										tmpstring = newtmp[0]
-									}
-								}
+					if (tmpstring.includes("?")) {
+						var newtmp = tmpstring.split("?")
+						if (tmpstring.length > 1) {
+							tmpstring = newtmp[0]
+						}
+					}
 
-								setParameterName(tmpstring)
-							}}
+					setParameterName(tmpstring)
+						}}
         		  InputProps={{
         		    classes: {
         		      notchedOutline: classes.notchedOutline,
@@ -6054,10 +6054,11 @@ const AppCreator = (defaultprops) => {
 								<Select
 									fullWidth
 									onChange={(e) => {
-										setOauth2Type(e.target.value);
+										setOauth2Type(e.target.value)
 
 										if (e.target.value === "application" && oauth2GrantType === "") {
 											setOauth2GrantType("client_credentials")
+        		  							setParameterName("")
 										} 
 
 										if (e.target.value === "delegated") {
