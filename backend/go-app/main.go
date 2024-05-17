@@ -580,7 +580,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 				Name:      orgSetupName,
 				Id:        orgId,
 				Org:       orgSetupName,
-				Users:     []shuffle.User{},
+				Users:     []shuffle.User{user},
 				Roles:     []string{"admin", "user"},
 				CloudSync: false,
 			}
@@ -614,6 +614,8 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 					Id:   newOrg.Id,
 					Name: newOrg.Name,
 				}
+
+                user.ActiveOrg = currentOrg
 			}
 		}
 	}
