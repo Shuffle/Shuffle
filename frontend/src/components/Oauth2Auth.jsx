@@ -70,8 +70,6 @@ const registeredApps = [
 	"microsoft_teams",
 	"microsoft_teams_user_access",
 	"todoist",
-	"microsoft_sentinel",
-	"microsoft_365_defender",
 	"google_chat",
 	"google_sheets",
 	"google_drive",
@@ -711,7 +709,7 @@ const AuthenticationOauth2 = (props) => {
       </DialogTitle>
       <DialogContent>
         <span style={{}}>
-            Oauth2 requires a client ID and secret to authenticate, defined in the remote system. Your redirect URL is <b>{window.location.origin}/set_authentication</b>&nbsp;-&nbsp;
+            Oauth2 requires a client ID and secret to authenticate, defined in the remote system. {authenticationType.type === "oauth2-app" ? null : <span>Your redirect URL is <b>{window.location.origin}/set_authentication</b>&nbsp;-&nbsp;</span>}
           <a
             target="_blank"
             rel="norefferer"
@@ -808,7 +806,7 @@ const AuthenticationOauth2 = (props) => {
 			  const fieldname = data.name === "url" && authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0 && authenticationType.type === "oauth2-app" ? "Token URL" : data.name
 
               return (
-                <div key={index} style={{ marginTop: 0, }}>
+                <div key={index} style={{ marginTop: authenticationType.type === "oauth2-app" ? 10 : 0, }}>
                   <LockOpenIcon style={{ marginRight: 10 }} />
 
 				  <b>{fieldname}</b>

@@ -655,6 +655,48 @@ const AngularWorkflow = (defaultprops) => {
 	  // Handle the activation case, as they are NOT in the event management system yet 
 	  if (selectedApp.actions === undefined || selectedApp.actions === null || selectedApp.actions.length > 1) {
 		  return
+	  } else {
+		if (selectedApp.id !== undefined && selectedApp.id !== null && selectedApp.id.length > 0) {
+			const appUrl = `${globalUrl}/api/v1/apps/${selectedApp.id}/config?openapi=false`
+			fetch(appUrl, {
+			  headers: {
+				Accept: "application/json",
+			  },
+			  credentials: "include",
+			})
+			.then((response) => {
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson.success === true && responseJson.app !== undefined && responseJson.app !== null && responseJson.app.length > 0) {
+					// Base64 decode into json
+					const foundapp = JSON.parse(atob(responseJson.app))	
+					if (foundapp.actions !== undefined && foundapp.actions !== null && foundapp.actions.length > selectedApp.actions.length) {
+						setSelectedApp(foundapp)
+
+						for (var i = 0; i < apps.length; i++) {
+							if (apps[i].id !== foundapp.id) {
+								continue
+							}
+
+							apps[i] = foundapp
+							setApps(apps)
+							setFilteredApps(apps)
+
+							// Update the local storage
+							localStorage.setItem("apps", JSON.stringify(apps))
+							break
+						}
+					}
+
+					// FIXME: Add it to the existing list AND update the selected app
+				}
+			})
+			.catch((error) => {
+				console.log(`Failed side-loading app ${selectedApp.name}`)
+			})
+
+		}
 	  }
 
 	  for (let appkey in apps) {
@@ -2198,7 +2240,9 @@ const AngularWorkflow = (defaultprops) => {
           return
         }
 
-        return response.json();
+		console.log("Apps loaded. JSON decoding next")
+
+        return response.json()
       })
       .then((responseJson) => {
         if (responseJson === null) {
@@ -4178,20 +4222,30 @@ const AngularWorkflow = (defaultprops) => {
 			// Check local storage has it 
 			const foundapps = localStorage.getItem("apps")
 			if (foundapps !== null && foundapps !== undefined) {
-				const parsedapps = JSON.parse(foundapps)
-				if (parsedapps !== null && parsedapps !== undefined && parsedapps.length > 0) {
-					for (let appkey in parsedapps) {
-						if (parsedapps[appkey].name === curaction.app_name) {
-							curapp = parsedapps[appkey]
-							break
+				try {
+					const parsedapps = JSON.parse(foundapps)
+					if (parsedapps !== null && parsedapps !== undefined && parsedapps.length > 0) {
+						for (let appkey in parsedapps) {
+							if (parsedapps[appkey].name === curaction.app_name) {
+								curapp = parsedapps[appkey]
+								break
+							}
 						}
 					}
+				} catch (e) {
+					console.log("Problem with parsing apps from local storage", e)
 				}
 
 			} else {
 				console.log("No apps found in local storage")
 			}
 		}
+
+		/*
+		if (curapp && curapp.app_id !== undefined && curapp.app_id !== null && curapp.app_id.length > 0 &&curapp.actions.length <= 1) {
+			toast(`Side-loading app ${curapp.name} to get actions.`)
+		}
+		*/
 
         if (!curapp || curapp === undefined) {
           const tmpapp = {
@@ -4205,6 +4259,7 @@ const AngularWorkflow = (defaultprops) => {
           setSelectedApp(tmpapp)
           setSelectedAction(curaction)
         } else {
+
           curaction.app_id = curapp.id
 
           setAuthenticationType(
@@ -6810,7 +6865,7 @@ const AngularWorkflow = (defaultprops) => {
 	}
 
     console.log("Setupgraph done 2!")
-  };
+  }
 
   const removeNode = (nodeId) => {
     const selectedNode = cy.getElementById(nodeId);
@@ -8082,10 +8137,17 @@ const AngularWorkflow = (defaultprops) => {
           return;
         }
 
+		if (app.actions === undefined || app.actions === null) {
+			app.actions = []
+		}
+
+		/*
         if (app.actions === undefined || app.actions === null || app.actions.length === 0) {
           toast("App " + app.name + " currently has no actions to perform. Please go to https://shuffler.io/apps to edit it.")
+
           return
         }
+		*/
 
         newNodeId = uuidv4();
         const actionType = "ACTION";
@@ -8610,8 +8672,6 @@ const AngularWorkflow = (defaultprops) => {
         	      </ListItem>
         	      :
         	      hits.map((hit, index) => {
-				    console.log("HIT: ", hit)
-
         	        const innerlistitemStyle = {
         	          width: positionInfo.width + 35,
         	          overflowX: "hidden",
@@ -15728,6 +15788,9 @@ const AngularWorkflow = (defaultprops) => {
             theme={theme.palette.jsonTheme}
             style={theme.palette.reactJsonStyle}
             collapsed={true}
+		  	iconStyle={theme.palette.jsonIconStyle}
+		  	collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
+		    displayArrayKey={false}
             enableClipboard={(copy) => {
               handleReactJsonClipboard(copy);
             }}
@@ -15735,7 +15798,7 @@ const AngularWorkflow = (defaultprops) => {
             onSelect={(select) => {
               HandleJsonCopy(validate.result, select, "exec");
             }}
-            name={"Execution Argument"}
+            name={false}
           />
         </div>
       )
@@ -16034,6 +16097,9 @@ const AngularWorkflow = (defaultprops) => {
           theme={theme.palette.jsonTheme}
           style={theme.palette.reactJsonStyle}
           collapsed={parsedCollapse}
+		  iconStyle={theme.palette.jsonIconStyle}
+		  collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
+		  displayArrayKey={false}
           shouldCollapse={(field) => {
             console.log("FIELD: ", field)
           }}
@@ -17134,6 +17200,9 @@ const AngularWorkflow = (defaultprops) => {
                         theme={theme.palette.jsonTheme}
                         style={theme.palette.reactJsonStyle}
                         collapsed={true}
+		  				iconStyle={theme.palette.jsonIconStyle}
+		  				collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
+		  				displayArrayKey={false}
                         enableClipboard={(copy) => {
                           handleReactJsonClipboard(copy);
                         }}
@@ -17263,6 +17332,9 @@ const AngularWorkflow = (defaultprops) => {
 					theme={theme.palette.jsonTheme}
 					style={theme.palette.reactJsonStyle}
 					collapsed={data.value.length < 10000 ? false : true}
+		  			iconStyle={theme.palette.jsonIconStyle}
+		  			collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
+		  			displayArrayKey={false}
 					displayDataTypes={false}
 					name={"Parsed data for variable " + data.name}
 				/>
@@ -17371,7 +17443,7 @@ const AngularWorkflow = (defaultprops) => {
 		  return "The app's Docker Image is not available in the environment yet. Re-run the app to force a re-download of the app. If the problem persists, contact support" 
 	  }
 
-	  if (result.status !== 200 && (result.url.includes("192.168") || result.url.includes("172.16") || result.url.includes("10.0"))) {
+	  if (result.status !== 200 && result.url !== undefined && result.url !== null && (result.url.includes("192.168") || result.url.includes("172.16") || result.url.includes("10.0"))) {
 		  return "Consider whether your Orborus environment can connect to a local IP or not."
 	  }
 
@@ -17648,6 +17720,9 @@ const AngularWorkflow = (defaultprops) => {
             theme={theme.palette.jsonTheme}
             style={theme.palette.reactJsonStyle}
             collapsed={selectedResult.result.length < 10000 ? false : true}
+		  	iconStyle={theme.palette.jsonIconStyle}
+		  	collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
+		  	displayArrayKey={false}
             enableClipboard={(copy) => {
               handleReactJsonClipboard(copy);
             }}

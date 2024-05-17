@@ -660,7 +660,7 @@ class AppBase:
                         break
                     else:
                         # FIXME: Add a checker for 403, and Proxy logs failing
-                        self.logger.info(f"[ERROR] Bad resp {ret.status_code} for url {url}")
+                        self.logger.info(f"[ERROR] Bad resp ({ret.status_code}) in send_result for url '{url}'")
                         time.sleep(sleeptime)
             
 

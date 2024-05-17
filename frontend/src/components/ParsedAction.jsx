@@ -3552,7 +3552,6 @@ const ParsedAction = (props) => {
                 fullWidth
                 variant="contained"
                 onClick={() => {
-                  console.log(authenticationType);
                   //if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
                   //	return null
                   //}

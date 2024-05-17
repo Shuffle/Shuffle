@@ -426,6 +426,22 @@ const Apps = (props) => {
   };
 
   const getApps = () => {
+	// Get apps from localstorage
+	var storageApps = []
+	try {
+		const appstorage = localStorage.getItem("apps")
+		storageApps = JSON.parse(appstorage)
+		if (storageApps === null || storageApps === undefined || storageApps.length === 0) {
+			storageApps = []
+		} else {
+			setApps(storageApps)
+			setFilteredApps(storageApps)
+			setAppSearchLoading(false)
+		}
+	} catch (e) {
+		//console.log("Failed to get apps from localstorage: ", e)
+	}
+
     fetch(globalUrl + "/api/v1/apps", {
       method: "GET",
       headers: {
@@ -447,7 +463,6 @@ const Apps = (props) => {
         return response.json();
       })
       .then((responseJson) => {
-        console.log("Apps: ", responseJson)
         //responseJson = sortByKey(responseJson, "large_image")
         //responseJson = sortByKey(responseJson, "is_valid")
         //setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
@@ -504,6 +519,14 @@ const Apps = (props) => {
             setSelectedAction({});
           }
         }
+
+		if (privateapps.length > 0 && storageApps.length === 0) {
+			try {
+				localStorage.setItem("apps", JSON.stringify(privateapps))
+			} catch (e) {
+				console.log("Failed to set apps in localstorage: ", e)
+			}
+		}
 
 				//setTimeout(() => {
 				//	setFirstLoad(false)
@@ -2420,8 +2443,9 @@ const Apps = (props) => {
           ) {
             setSelectedAction(responseJson.actions[0]);
           } else {
-            setSelectedAction({});
+            setSelectedAction({})
           }
+
           setSelectedApp(responseJson);
 		  setSharingConfiguration(responseJson.sharing === true ? "public" : "you")
         }

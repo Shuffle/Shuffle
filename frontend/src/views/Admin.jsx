@@ -1609,7 +1609,9 @@ If you're interested, please let me know a time that works for you, or set up a 
         if (response.status !== 200) {
           console.log("Error in response");
         } else {
-			localStorage.setItem("apps", [])
+		  localStorage.removeItem("apps")
+		  localStorage.removeItem("workflows")
+	      localStorage.removeItem("userinfo")
 		}
 
         return response.json();

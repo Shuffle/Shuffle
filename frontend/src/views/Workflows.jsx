@@ -601,7 +601,7 @@ const Workflows = (props) => {
   const [view, setView] = React.useState("grid");
   const [filters, setFilters] = React.useState([]);
   const [submitLoading, setSubmitLoading] = React.useState(false);
-  const [actionImageList, setActionImageList] = React.useState([]);
+  const [actionImageList, setActionImageList] = React.useState([{"large_image": ""}])
 
   const [firstLoad, setFirstLoad] = React.useState(true);
   const [showMoreClicked, setShowMoreClicked] = React.useState(false);
@@ -752,6 +752,14 @@ const Workflows = (props) => {
   };
 
 	const getApps = () => {
+		try {
+			const appstorage = localStorage.getItem("apps")
+			const privateapps = JSON.parse(appstorage)
+			setApps(privateapps)
+		} catch (e) {
+			//console.log("Failed to get apps from localstorage: ", e)
+		}
+
 		fetch(`${globalUrl}/api/v1/apps`, {
 			method: "GET",
 			headers: {
@@ -1106,6 +1114,22 @@ const Workflows = (props) => {
 	}
 
   const getAvailableWorkflows = () => {
+	var storageWorkflows = []
+	try {
+		const storagewf = localStorage.getItem("workflows")
+		storageWorkflows = JSON.parse(storagewf)
+		if (storageWorkflows === null || storageWorkflows === undefined || storageWorkflows.length === 0) {
+			storageWorkflows = []
+		} else {
+			setWorkflows(storageWorkflows)
+			setFilteredWorkflows(storageWorkflows)
+			fetchUsecases(storageWorkflows)
+    		setWorkflowDone(true)
+		}
+	} catch (e) {
+		//console.log("Failed to get workflows from localstorage: ", e)
+	}
+
     fetch(globalUrl + "/api/v1/workflows", {
       method: "GET",
       headers: {
@@ -1123,65 +1147,71 @@ const Workflows = (props) => {
           //}
 
           toast("Failed getting workflows. Are you logged in?");
-
-          return;
+          return
         }
+
         return response.json();
       })
       .then((responseJson) => {
         if (responseJson !== undefined) {
-					var newarray = []
-					for (var key in responseJson) {
-						const wf = responseJson[key]
-						if (wf.public === true) {
-							continue
-						}
+			var newarray = []
+			for (var key in responseJson) {
+				const wf = responseJson[key]
+				if (wf.public === true) {
+					continue
+				}
 
-						newarray.push(wf)
-					}
-								
-					var setProdFilter = false 
+				newarray.push(wf)
+			}
+						
+			var setProdFilter = false 
 
-					var actionnamelist = [];
-					var parsedactionlist = [];
-					for (var key in newarray) {
-						const workflow = newarray[key]
-						if (workflow.status === "production") {
-							setProdFilter = true 
-						}
+			var actionnamelist = [];
+			var parsedactionlist = [];
+			for (var key in newarray) {
+				const workflow = newarray[key]
+				if (workflow.status === "production") {
+					setProdFilter = true 
+				}
 
-						for (var actionkey in newarray[key].actions) {
-							const action = newarray[key].actions[actionkey];
-							//console.log("Action: ", action)
-							if (actionnamelist.includes(action.app_name)) {
-								continue;
-							}
-
-							actionnamelist.push(action.app_name);
-							parsedactionlist.push(action);
-						}
+				for (var actionkey in newarray[key].actions) {
+					const action = newarray[key].actions[actionkey];
+					//console.log("Action: ", action)
+					if (actionnamelist.includes(action.app_name)) {
+						continue;
 					}
 
-					//console.log(parsedactionlist)
-					setActionImageList(parsedactionlist);
+					actionnamelist.push(action.app_name);
+					parsedactionlist.push(action);
+				}
+			}
 
-								
-					if (setProdFilter === true) {
-						const newWorkflows = newarray.filter(workflow => workflow.status === "production")
-						if (newWorkflows !== undefined && newWorkflows !== null) {
-          		setFilteredWorkflows(newWorkflows);
-						} else {
-          		setFilteredWorkflows(newarray);
-						}
-            setFilters(["status:production"]);
-					} else { 
-          	setFilteredWorkflows(newarray);
-					}
+			if (newarray.length > 0 && storageWorkflows.length <= newarray.length) {
+				try {
+					localStorage.setItem("workflows", JSON.stringify(newarray))
+				} catch (e) {
+					console.log("Failed to set workflows in localstorage: ", e)
+				}
+			}
 
-
-					// Ensures the zooming happens only once per load
+			// Ensures the zooming happens only once per load
         	setTimeout(() => {
 				fetchUsecases(newarray)
+
+				setActionImageList(parsedactionlist);
+				if (setProdFilter === true) {
+					const newWorkflows = newarray.filter(workflow => workflow.status === "production")
+					if (newWorkflows !== undefined && newWorkflows !== null) {
+						setFilteredWorkflows(newWorkflows);
+					} else {
+						setFilteredWorkflows(newarray);
+					}
+
+					setFilters(["status:production"]);
+				} else { 
+					setFilteredWorkflows(newarray)
+				}
+
 				setFirstLoad(false)
 			}, 100)
 
@@ -1265,13 +1295,13 @@ const Workflows = (props) => {
         return response.json();
       })
       .then((responseJson) => {
-				setWorkflows(workflows);
-				setWorkflowDone(true);
+			setWorkflows(workflows);
+			setWorkflowDone(true);
 
-				if (responseJson.success !== false) {
-					setAllUsecases(responseJson);
-					handleKeysetting(responseJson, workflows)
-				} 
+			if (responseJson.success !== false) {
+				setAllUsecases(responseJson);
+				handleKeysetting(responseJson, workflows)
+			} 
       })
       .catch((error) => {
         //toast("ERROR: " + error.toString());
@@ -1637,8 +1667,76 @@ const Workflows = (props) => {
       })
       .catch((error) => {
         toast(error.toString());
-      });
-  };
+      })
+  }
+
+	const setEditing = (data) => {
+		ReactDOM.unstable_batchedUpdates(() => {
+			setIsEditing(true)
+			setModalOpen(true);
+			setNewWorkflowName(data.name);
+			setNewWorkflowDescription(data.description);
+			setDefaultReturnValue(data.default_return_value);
+			if (data.tags !== undefined && data.tags !== null) {
+			  setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
+			}
+
+			if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
+				setSelectedUsecases(data.usecase_ids)
+			}
+
+			setEditingWorkflow(JSON.parse(JSON.stringify(data)))
+		})
+	}
+
+  const sideloadWorkflow = (id, openEdit) => {
+	const storagewf = localStorage.getItem("workflows")
+	const storageWorkflows = JSON.parse(storagewf)
+	if (storageWorkflows === null || storageWorkflows === undefined || storageWorkflows.length === 0) {
+	} else {
+		for (var i = 0; i < storageWorkflows.length; i++) {
+			if (storageWorkflows[i].id === id) {
+				if (storageWorkflows[i].image !== "") {
+					return
+				}
+			}
+		}
+	}
+
+    fetch(globalUrl + "/api/v1/workflows/" + id, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+        }
+
+        return response.json()
+      })
+      .then((responseJson) => {
+		if (openEdit) { 
+			setEditing(responseJson) 
+		}
+
+		for (var i = 0; i < storageWorkflows.length; i++) {
+			if (storageWorkflows[i].id === id) {
+				storageWorkflows[i] = responseJson
+				localStorage.setItem("workflows", JSON.stringify(storageWorkflows))
+				break
+			}
+		}
+
+		setWorkflows(storageWorkflows)
+		//setFilteredWorkflows(storageWorkflows)
+      })
+      .catch((error) => {
+        console.log(error.toString())
+      })
+  }
 
   const deleteWorkflow = (id) => {
     fetch(globalUrl + "/api/v1/workflows/" + id, {
@@ -1666,8 +1764,8 @@ const Workflows = (props) => {
       })
       .catch((error) => {
         toast(error.toString());
-      });
-  };
+      })
+  }
 
   const handleChipClick = (e) => {
     addFilter(e.target.innerHTML);
@@ -1796,21 +1894,13 @@ const Workflows = (props) => {
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
           onClick={(event) => {
 			event.stopPropagation()
-			ReactDOM.unstable_batchedUpdates(() => {
-				setIsEditing(true)
-				setModalOpen(true);
-				setEditingWorkflow(JSON.parse(JSON.stringify(data)));
-				setNewWorkflowName(data.name);
-				setNewWorkflowDescription(data.description);
-				setDefaultReturnValue(data.default_return_value);
-				if (data.tags !== undefined && data.tags !== null) {
-				  setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
-				}
+			if (data.actions !== undefined && data.actions !== null && data.actions.length > 0 && data.image !== "") {
+				setEditing(data)
 
-				if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
-					setSelectedUsecases(data.usecase_ids)
-				}
-			})
+			} else {
+				//toast("Need to side-load workflow to be edited properly")
+				sideloadWorkflow(data.id, true)
+			}
   		  }}
           key={"change"}
         >
@@ -1986,7 +2076,7 @@ const Workflows = (props) => {
 		}
 
     return (
-	  <div style={{width: "100%", position: "relative", border: isDistributed ? "2px solid #40E0D0" : "inherit", borderRadius: theme.palette.borderRadius, }}>
+	  <div style={{width: "100%", minWidth: 321, position: "relative", border: isDistributed ? "2px solid #40E0D0" : "inherit", borderRadius: theme.palette.borderRadius, }}>
         <Paper square style={paperAppStyle}>
 			{selectedCategory !== "" ?
 				<Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -1997,7 +2087,7 @@ const Workflows = (props) => {
 							top: 0,
 							left: 0,
 							height: paperAppStyle.minHeight,
-							width: 2,
+							width: 3,
 							backgroundColor: boxColor,
 							borderRadius: "0 100px 0 0",
 						}}
@@ -2022,7 +2112,16 @@ const Workflows = (props) => {
                   {image}
                 </div>
               </Tooltip>
-              <Tooltip arrow title={
+              <Tooltip arrow 
+				onMouseEnter={() => {
+					/*
+					if (data.image === undefined || data.image === null || data.image === "" && !loadingWorkflows.includes(data.id)) {
+  						sideloadWorkflow(data.id, false) 
+  						loadingWorkflows.push(data.id) 
+					}
+					*/
+				}}
+				title={
 				<div style={{width: "100%", minWidth: 250, maxWidth: 310, }}>
 					{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
 						<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxWidth: 300, minWidth: 250, borderRadius: theme.palette.borderRadius, }} />
@@ -3180,6 +3279,7 @@ const Workflows = (props) => {
           <Button
             color="secondary"
             style={{}}
+		  	disabled={true} 
             variant="text"
             onClick={() => {
               exportAllWorkflows(workflows);
@@ -3418,9 +3518,9 @@ const Workflows = (props) => {
 
           <div style={{ marginTop: 10, marginBottom: 10, }} />
           {!isMobile &&
-					actionImageList !== undefined &&
-          actionImageList !== null &&
-          actionImageList.length > 0 ? (
+			actionImageList !== undefined &&
+            actionImageList !== null &&
+            actionImageList.length > 0 ? (
             <div
               style={{
                 display: "flex",
