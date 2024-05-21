@@ -56,8 +56,8 @@ if (window.location.port === "3000") {
 
 // Development on Github Codespaces
 if (globalUrl.includes("app.github.dev")) {
-	//globalUrl = globalUrl.replace("3000", "5001")
-	globalUrl = "https://frikky-shuffle-5gvr4xx62w64-5001.preview.app.github.dev"
+	globalUrl = globalUrl.replace("-3001", "-5001")
+	//globalUrl = "https://frikky-shuffle-5gvr4xx62w64-5001.preview.app.github.dev"
 }
 //console.log("global: ", globalUrl)
 
