@@ -2286,8 +2286,9 @@ func createPipeline(command, identifier string) (string, error) {
 		log.Printf("[INFO] an existing pipeline found with ID: %s. it will be deleted", pipelineId)
 		toBeDeleted = true
 	}
+    if strings.Contains(command, "shuffler.io") {
 
-	if strings.Contains(command, "kafka") {
+	} else {
 		var scheme string
 		if strings.Contains(command, "http://") {
 			scheme = "http://"
