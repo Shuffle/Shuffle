@@ -164,6 +164,11 @@ const Admin = (props) => {
   const [selectedOrganization, setSelectedOrganization] = React.useState({});
 
   //console.log("Selected: ", selectedOrganization)
+  const [appAuthenticationGroupModalOpen , setAppAuthenticationGroupModalOpen] = React.useState(false);
+  const [appsForAppAuthGroup, setAppsForAppAuthGroup] = React.useState([]);
+  const [appAuthenticationGroupName, setAppAuthenticationGroupName] = React.useState("");
+  const [appAuthenticationGroupDescription, setAppAuthenticationGroupDescription] = React.useState("");
+  const [appAuthenticationGroups, setAppAuthenticationGroups] = React.useState([]);
   const [organizationFeatures, setOrganizationFeatures] = React.useState({});
   const [loginInfo, setLoginInfo] = React.useState("");
   const [curTab, setCurTab] = React.useState(0);
@@ -420,6 +425,40 @@ const Admin = (props) => {
         //		setSelectedAction({})
         //	}
         //}
+      })
+      .catch((error) => {
+        toast(error.toString());
+      });
+  };
+
+  const createAppAuthenticationGroup = (name, description, appAuthIds) => {
+    let app_auths = appAuthIds.map((appAuthId) => {
+      return { id: appAuthId };
+    });
+
+    fetch(globalUrl + "/api/v1/apps/authentication/group", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        label: name,
+        description: description,
+        app_auths: app_auths
+      }),
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          throw new Error("Failed to create app authentication group");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        // getAppAuthenticationGroups();
+        toast("App authentication group created");
       })
       .catch((error) => {
         toast(error.toString());
@@ -2050,6 +2089,33 @@ If you're interested, please let me know a time that works for you, or set up a 
       });
   };
 
+  const getAppAuthenticationGroups = () => {
+    fetch(globalUrl + "/api/v1/apps/authentication/group", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for apps :O!");
+          return;
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success === true) {
+          setAppAuthenticationGroups(responseJson.data);
+        }
+      })
+      .catch((error) => {
+        toast(error.toString());
+      });
+  };
+
   const getAppAuthentication = () => {
     fetch(globalUrl + "/api/v1/apps/authentication", {
       method: "GET",
@@ -2238,6 +2304,7 @@ If you're interested, please let me know a time that works for you, or set up a 
     } else if (newValue === 2) {
       document.title = "Shuffle - admin - app authentication";
       getAppAuthentication();
+      getAppAuthenticationGroups();
     } else if (newValue === 3) {
       document.title = "Shuffle - admin - Files";
     } else if (newValue === 4) {
@@ -5095,8 +5162,145 @@ If you're interested, please let me know a time that works for you, or set up a 
     setAuthenticationFields(newfields);
   };
 
+
+  const handleAppAuthGroupCheckbox = (data) => {
+    let appOrginal = data.app
+    if (appsForAppAuthGroup.includes(appOrginal.id)) {
+      return;
+    }
+
+    setAppsForAppAuthGroup([...appsForAppAuthGroup, data.id]);
+    console.log("Apps for app auth group: ", appsForAppAuthGroup);
+  };
+
   const authenticationView =
     curTab === 2 ? (
+    <>
+      {/* (appAuthenticationGroupModalOpen : { */}
+      {appAuthenticationGroupModalOpen && (
+        <Dialog
+          open={appAuthenticationGroupModalOpen}
+          onClose={() => {
+            setAppAuthenticationGroupModalOpen(false);
+          }}
+          PaperProps={{
+            style: {
+              backgroundColor: theme.palette.surfaceColor,
+              color: "white",
+              minWidth: "1200px",
+              minHeight: "320px",
+            },
+          }}
+        >
+          <DialogTitle>
+            <span style={{ color: "white" }}>App Authentication Groups</span>
+          </DialogTitle>
+
+          <DialogContent>
+            <div>
+              <TextField
+                color="primary"
+                style={{ backgroundColor: theme.palette.inputColor }}
+                autoFocus
+                InputProps={{
+                  style: {
+                    height: "50px",
+                    color: "white",
+                    fontSize: "1em",
+                  },
+                }}
+                required
+                fullWidth={true}
+                placeholder="Name"
+                id="namefield"
+                margin="normal"
+                variant="outlined"
+                onChange={(event) => {
+                  setAppAuthenticationGroupName(event.target.value);
+                }}
+              />
+            </div>
+            <div>
+              <TextField
+                color="primary"
+                style={{ backgroundColor: theme.palette.inputColor }}
+                autoFocus
+                InputProps={{
+                  style: {
+                    height: "50px",
+                    color: "white",
+                    fontSize: "1em",
+                  },
+                }}
+                required
+                fullWidth={true}
+                placeholder="Description"
+                id="descriptionfield"
+                margin="normal"
+                variant="outlined"
+                onChange={(event) => {
+                  setAppAuthenticationGroupDescription(event.target.value);
+                }}
+              />
+            </div>
+
+            <div>
+              {/* Show a check box list of all app authentications to add to the auth group */}
+              <div>
+              {authentication.map((data, index) => (
+                <div key={index}>
+                  <FormControlLabel
+                    control={
+                    <Tooltip
+                      title={data.app.name}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', marginLeft: '5px' }}>
+                          <img 
+                            src={data.app.large_image ? data.app.large_image : '/images/no_image.png'}
+                            alt=""
+                            style={{ width: '50px', height: '50px', marginRight: '10px' }} 
+                          />
+                          <Checkbox
+                            checked={data.checked}
+                            onChange={(event) => {
+                              handleAppAuthGroupCheckbox(data)
+                            }}
+                            name={data.label}
+                            disabled={data.app.id in appsForAppAuthGroup}
+                          />
+                      </div>
+                    </Tooltip>
+                    }
+                  label={data.label}
+                  />
+                </div>
+              ))}
+            </div>
+
+            </div>
+
+
+            <div>
+              <Button
+                style={{}}
+                variant="contained"
+                color="primary"
+                onClick={() => {
+                  createAppAuthenticationGroup(
+                    appAuthenticationGroupName,
+                    appAuthenticationGroupDescription,
+                    appsForAppAuthGroup
+                  );
+                }}
+              >
+                Create
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+
       <div>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>App Authentication</h2>
@@ -5376,6 +5580,134 @@ If you're interested, please let me know a time that works for you, or set up a 
               })}
         </List>
       </div>
+
+      {/* <div>
+        <div style={{ marginTop: 20, marginBottom: 20 }}>
+          <h2 style={{ display: "inline" }}>App Authentication Groups</h2>
+          <span style={{ marginLeft: 25 }}>
+            Groups of authentication options for subflows.{" "}
+            <a
+              target="_blank"
+              rel="noopener noreferrer"
+              href="/docs/organizations#app_authentication_groups"
+              style={{ textDecoration: "none", color: "#f85a3e" }}
+            >
+                Learn more about App Authentication Groups  
+            </a>
+          </span>
+
+          <Divider
+            style={{
+              marginTop: 20,
+              marginBottom: 20,
+              backgroundColor: theme.palette.inputColor,
+            }}
+          />
+          <List>
+            <ListItem>
+              <ListItemText
+                primary="Label"
+                style={{ minWidth: 150, maxWidth: 150 }}
+              />
+              <ListItemText
+                primary="Description"
+                style={{ minWidth: 250, maxWidth: 250 }}
+              />
+              <ListItemText
+                primary="Apps"
+                style={{ minWidth: 250, maxWidth: 250 }}
+              />
+              <ListItemText
+                primary="CreatedAt"
+                style={{ minWidth: 150, maxWidth: 150 }}
+              />
+              <ListItemText 
+                primary="Actions"
+                style={{ minWidth: 150, maxWidth: 150 }}
+              />
+            </ListItem>
+
+            {appAuthenticationGroups.map((data, index) => {
+              var bgColor = "#27292d";
+              if (index % 2 === 0) {
+                bgColor = "#1f2023";
+              }
+              return (
+                <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                  <ListItemText
+                    primary={data.label}
+                    style={{ minWidth: 150, maxWidth: 150 }}
+                  />
+                  <ListItemText
+                    primary={data.description}
+                    style={{ minWidth: 250, maxWidth: 250 }}
+                  />
+                  <ListItemText
+                    primary={
+                      <div style={{ display: 'flex' }}>
+                        {data.app_auths.map((appAuth, index) => (
+                          <Tooltip
+                            title={appAuth.app.name}
+                          >
+                            <img
+                              key={index}
+                              src={appAuth.app.large_image}
+                              alt={appAuth.app.name}
+                              style={{ width: '24px', height: '24px', marginRight: '5px' }}
+                            />
+                          </Tooltip>
+                        ))}
+                      </div>
+                    }
+                    style={{ minWidth: 250, maxWidth: 250 }}
+                  />
+                  <ListItemText
+                    primary={new Date(data.created * 1000).toLocaleDateString('en-GB')}
+                    style={{ minWidth: 150, maxWidth: 150 }}
+                  />
+                  <ListItemText
+                    primary={
+                      <div style={{ display: 'flex' }}>
+                        <IconButton
+                          onClick={() => {
+                          }}
+                          disabled={true}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => {
+                            // deleteAppAuthenticationGroup(data);
+                          }}
+                          disabled={true}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </div>
+                    }
+                    style={{ minWidth: 150, maxWidth: 150 }}
+                  />
+
+                </ListItem>
+              );
+            }
+          )}
+          </List>
+
+          <Button
+            style={{ marginLeft: 10 }}
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              setAppAuthenticationGroupModalOpen(true);
+            }}
+          >
+            Add Group
+          </Button>
+        
+        </div>
+      </div> */}
+    </>
     ) : null;
 
   const getLogs = async (ip, userId) => {

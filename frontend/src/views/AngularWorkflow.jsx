@@ -141,6 +141,7 @@ import ParsedAction from "../components/ParsedAction.jsx";
 import PaperComponent from "../components/PaperComponent.jsx"
 import ExtraApps from "../components/ExtraApps.jsx"
 import EditWorkflow from "../components/EditWorkflow.jsx"
+import { act } from "react";
 // import AppStats from "../components/AppStats.jsx";
 const noImage = "/public/no_image.png";
 
@@ -3034,6 +3035,48 @@ const AngularWorkflow = (defaultprops) => {
   	}
   }
 
+  const [usedSubflowApps, setUsedSubflowApps] = React.useState([]);
+
+  const getWorkflowApps = (workflow_id) => {
+    let apps = []
+
+    if (workflow_id === "") {
+      console.log("workflow_id is empty");
+      return {};
+    }
+
+    fetch(`${globalUrl}/api/v1/workflows/${workflow_id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for workflows :O!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        for (let index in responseJson.actions) {
+          apps.push(responseJson.actions[index]);
+        }
+        
+        console.log("Setting used subflow apps: ", apps)
+        setUsedSubflowApps(apps);
+
+        return apps
+      })
+      .catch((error) => {
+        console.log("Get workflow apps error: ", error);
+      });
+
+    return apps
+  };
+
   const getWorkflow = (workflow_id, sourcenode) => {
     fetch(`${globalUrl}/api/v1/workflows/${workflow_id}`, {
       method: "GET",
@@ -3863,6 +3906,16 @@ const AngularWorkflow = (defaultprops) => {
     
 	//const data = JSON.parse(JSON.stringify(event.target.data()))
     const data = event.target.data()
+  
+  console.log("NODE SELECT: ", data)
+
+  if (data.app_name === "Shuffle Workflow") {
+    console.log("Shuffle Workflow selected")
+    if (data.parameters[0].value !== undefined && data.parameters[0].value !== null && data.parameters[0].value.length > 0) {
+      console.log("Get workflow apps calling")
+      getWorkflowApps(data.parameters[0].value)
+    }
+  }
 
 	if (data.buttonType == "ACTIONSUGGESTION") {
   	  const attachedToId = data.attachedTo
@@ -11374,6 +11427,193 @@ const AngularWorkflow = (defaultprops) => {
 
 		setWorkflow(workflow);
 	}
+  // Function to transform the data
+  const transformAuthData = (authData) => {
+    const transformedData = {};
+
+    let subflowId = workflow.triggers[selectedTriggerIndex].parameters[0].value;
+
+    // get the apps used in "find your workflow"
+    if (subflowId === "" && subflowId === undefined && subflowId === null) {
+      console.log("subflow is empty")
+      return {};
+    }
+
+    let workflowApps = usedSubflowApps;
+
+    if (workflowApps === undefined || workflowApps === null) {
+      console.log("workflow apps is empty");
+      return {};
+    }
+
+    // get the app ids
+    // let appIdsInWorkflow = [...new Set(workflowApps.map(app => app.app_id))];
+    let appIdsInWorkflow = [];
+
+    Object.entries(workflowApps).forEach(([key, value]) => {
+      console.log("VALUE: ", value)
+      appIdsInWorkflow.push(value.app_id);
+    })
+
+    appIdsInWorkflow = [...new Set(appIdsInWorkflow)];
+
+    console.log("appIdsInWorkflow: ", appIdsInWorkflow)
+
+    console.log("authData: ", authData, "workflowApps: ", workflowApps)
+    
+    // loop through the authData and create transformedData which looks like:
+    // appId: [auth1, auth2, ...]
+    authData.forEach((auth) => {
+      const { app } = auth;
+      const appId = app.id;
+
+      // check if the app is used in the workflow
+      if (appIdsInWorkflow.includes(appId)) {
+        if (transformedData[appId] === undefined) {
+          transformedData[appId] = [];
+        }
+
+        transformedData[appId].push(auth);
+      }
+
+    });
+
+    console.log("transformedData: ", transformedData)
+
+    return transformedData;
+    
+  };
+
+  const AppAuthSelector = ({ appAuthData }) => {
+    const [selectedAuth, setSelectedAuth] = useState("");
+    const [transformedAuthData, setTransformedAuthData] = useState({});
+
+    useEffect(() => {
+      setTransformedAuthData(transformAuthData(appAuthData));
+    }, [appAuthData, selectedAuth]);
+
+    const handleShowingValue = (appName) => {
+      let mappingWithName = {}
+      let listWithValues = workflow.triggers[selectedTriggerIndex].parameters[5]?.value.split(";").filter(e => e).map(e => e.split("="))
+      console.log("LIST WITH VALUES: ", listWithValues)
+      for (let i = 0; i < listWithValues.length; i++) {
+        mappingWithName[listWithValues[i][0]] = listWithValues[i][1]
+      }
+
+      if (mappingWithName[appName] !== undefined) {
+        return mappingWithName[appName];
+      }
+      
+      return "no-overrides";
+    }
+
+    const handleSelectChange = (appName, appId, event) => {
+      const authId = event.target.value || "no-override";
+
+      if (authId === "no-override") {
+        // remove the override parameter
+        let oldValue = workflow.triggers[selectedTriggerIndex].parameters[5].value;      
+        // replace from appName= to the next ;
+        let newValue = oldValue.replace(new RegExp(appName + "=[^;]*;"), "");
+   
+        workflow.triggers[selectedTriggerIndex].parameters[5].value = newValue
+        setSelectedAuth("");
+        return
+      }
+
+      const auth = transformedAuthData[appId].find((auth) => auth.id === authId);
+
+      if (auth === undefined) {
+        setSelectedAuth("");
+        return;
+      }
+
+      // // check if the trigger already has an override parameter
+      // for (let i = 0; i < workflow.triggers[selectedTriggerIndex].parameters.length; i++) {
+      //   // if name includes the app id
+      //   if (workflow.triggers[selectedTriggerIndex].parameters[i].name.includes(appId + "_override")) {
+      //     // update the value
+      //     workflow.triggers[selectedTriggerIndex].parameters[i].value = auth.id;
+      //     setSelectedAuth(auth.id);
+      //     return;
+      //   }
+      // }
+    
+    if (workflow.triggers[selectedTriggerIndex].parameters[5] === undefined || workflow.triggers[selectedTriggerIndex].parameters[5] === null) {
+      workflow.triggers[selectedTriggerIndex].parameters[5] = {
+        name: "auth_override",
+        value: "",
+      };
+    }
+      
+     let authGroupValue = workflow.triggers[selectedTriggerIndex].parameters[5].value;
+
+     if (authGroupValue === undefined || authGroupValue === null || authGroupValue === "") {
+        workflow.triggers[selectedTriggerIndex].parameters[5].value = appName + "=" + auth.id + ";";
+     } else {
+        // check if the app is already in the list
+        if (authGroupValue.includes(appName)) {
+          let oldValue = workflow.triggers[selectedTriggerIndex].parameters[5].value;
+          let newValue = oldValue.replace(new RegExp(appName + "=[^;]*;"), appName + "=" + auth.id + ";");
+          workflow.triggers[selectedTriggerIndex].parameters[5].value = newValue;
+        } else {
+          workflow.triggers[selectedTriggerIndex].parameters[5].value += appName + "=" + auth.id + ";";
+        }
+     }
+
+      // workflow.triggers[selectedTriggerIndex].parameters.push({
+      //   name: auth.label + "_" + auth.app.id + "_override",
+      //   value: auth.id,
+      // });
+      setSelectedAuth(auth.id);
+    };
+
+    console.log("TRANSFORMED AUTH DATA: ", transformedAuthData);
+
+    return (
+    <div className="auth-container" style={{ padding: '20px', backgroundColor: '#26292D', borderRadius: '8px' }}>
+      {Object.entries(transformedAuthData).map(([appId, authList]) => (
+        <div key={appId} className="auth-item" style={{ marginBottom: '20px' }}>
+          <label className="auth-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#E8E8E8' }}>
+            Select Authentication for {authList[0].app.name}:
+          </label>
+          <select 
+            value={handleShowingValue(authList[0].app.name)}
+            onChange={(e) => handleSelectChange(authList[0].app.name, authList[0].app.id, e)}
+            className="auth-select"
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '16px',
+              borderRadius: '4px',
+              border: '1px solid #555',
+              backgroundColor: theme.palette.inputColor,
+              color: '#E8E8E8',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+              transition: 'border-color 0.2s, box-shadow 0.2s',
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#007BFF'}
+            onBlur={(e) => e.target.style.borderColor = '#555'}
+          >
+            <option value="no-override">No override</option>
+            {authList.flatMap((auth) => 
+              <option 
+                key={auth.id}
+                value={auth.id}
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  fontSize: "1.2em",
+                }}
+              >
+                {auth.label}
+              </option> 
+            )}
+          </select>
+        </div>
+      ))}
+    </div>
+    );
+  };
 
   const SubflowSidebar = () => {
     const [menuPosition, setMenuPosition] = useState(null);
@@ -11860,6 +12100,10 @@ const AngularWorkflow = (defaultprops) => {
           name: "check_result",
           value: "false",
         };
+        workflow.triggers[selectedTriggerIndex].parameters[5] = {
+          name: "auth_override",
+          value: "",
+        };
 
         /*
         // API-key has been replaced by auth key for the execution. 
@@ -11879,8 +12123,6 @@ const AngularWorkflow = (defaultprops) => {
         }
         */
       }
-
-
 
       const handleSubflowStartnodeSelection = (e) => {
         setSubworkflowStartnode(e.target.value);
@@ -12203,8 +12445,8 @@ const AngularWorkflow = (defaultprops) => {
                     borderRadius: theme.palette.borderRadius,
                   }}
                   onChange={(event, newValue) => {
-      				setLastSaved(false)
-					console.log("Found value: ", newValue)
+                    setLastSaved(false)
+                    console.log("Found value: ", newValue)
 
 					var parsedinput = { target: { value: newValue } }
 
@@ -12248,6 +12490,7 @@ const AngularWorkflow = (defaultprops) => {
                           }}
                           value={data}
 						  onClick={() => {	
+              getWorkflowApps(data.id);
 							handleWorkflowSelectionUpdate({
 								target: {
 									value: data
@@ -12329,7 +12572,7 @@ const AngularWorkflow = (defaultprops) => {
                       borderRadius: theme.palette.borderRadius,
                     }}
                     onChange={(event, newValue) => {
-      				  setLastSaved(false)
+      				        setLastSaved(false)
                       handleSubflowStartnodeSelection({ target: { value: newValue } })
                     }}
             		renderOption={(props, action, state) => {
@@ -12475,6 +12718,24 @@ const AngularWorkflow = (defaultprops) => {
 									}}
 								/>
 							*/}
+            </div>
+          </div>
+
+          <div>
+            <div>
+            <div className="app">
+              <div style={{ display: "flex", marginTop: 10 }}>
+                <div style={{ flex: "10" }}>
+                  <b>Auth Override</b>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", marginTop: 10 }}>
+                <div style={{ flex: "10", marginLeft: 10 }}>
+                  <AppAuthSelector appAuthData={appAuthentication} />
+                </div>
+              </div>
+            </div>
             </div>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { BrowserView, MobileView } from "react-device-detect";
 
 import { useNavigate, Link } from "react-router-dom";
 import ReactGA from "react-ga4";
+import LicencePopup from "../components/LicencePopup.jsx";
 import SearchField from "../components/Searchfield.jsx";
 import {
   Paper,
@@ -24,6 +25,8 @@ import {
   Divider,
   LinearProgress,
   AppBar,
+	Dialog,
+	DialogTitle,
 } from "@mui/material";
 
 import {
@@ -59,9 +62,8 @@ const Header = (props) => {
     userdata,
     isMobile,
     serverside,
-    setModalOpen,
-
     curpath,
+    billingInfo
   } = props;
 
 
@@ -71,11 +73,13 @@ const Header = (props) => {
   const [DocsHoverColor, setDocsHoverColor] = useState(hoverOutColor);
   const [HelpHoverColor, setHelpHoverColor] = useState(hoverOutColor);
   const [isHeader, setIsHeader] = React.useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
   const [upgradeHovered, setUpgradeHovered] = React.useState(false);
   const [showTopbar, setShowTopbar] = useState(false)
+  const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_XAxwE2Fp9DEbEcNYw4UKmyby00vIlIPPRp" : "pk_test_EdxgKfqmQGXY5JLjdBqtuhCw00BHbiKJDB"
   let navigate = useNavigate();
 
   const handleClick = (event) => {
@@ -678,6 +682,80 @@ const Header = (props) => {
     marginBottom: "auto",
     marginRight: 10,
   };
+
+  const modalView = (
+    <>
+      {modalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 1299,
+            backdropFilter: "blur(5px)",
+          }}
+        ></div>
+      )}
+      <Dialog
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+        }}
+        PaperProps={{
+          style: {
+            color: "white",
+            minWidth: 850,
+            minHeight: 370,
+            padding: 10,
+            backgroundColor: "rgba(0, 0, 0, 1)",
+            borderRadius: theme.palette.borderRadius,
+          },
+        }}
+      >
+        <DialogTitle style={{ display: "flex" }}>
+          <span style={{ color: "white", fontSize: 24 }}>
+            Upgrade your plan
+          </span>
+          <IconButton
+            onClick={() => {
+              if (isCloud) {
+              ReactGA.event({
+                category: "header",
+                action: "close_Upgread_popup",
+                label: "",
+              })};
+              setModalOpen(false);
+            }}
+            style={{
+              marginLeft: "auto",
+              position: "absolute",
+              top: 20,
+              right: 20,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <div style={{ paddingLeft: "30px", paddingRight: "30px" }}>
+          <LicencePopup
+            serverside={serverside}
+            removeCookie={removeCookie}
+            isLoaded={isLoaded}
+            isLoggedIn={isLoggedIn}
+            globalUrl={globalUrl}
+            billingInfo={billingInfo}
+            userdata={userdata}
+            stripeKey={stripeKey}
+            setModalOpen={setModalOpen}
+            {...props}
+          />
+        </div>
+      </Dialog>
+    </>
+  );
 
   // Handle top bar or something
   const defaultTop = -2
@@ -1537,11 +1615,12 @@ const Header = (props) => {
 
         {topbar}
 
-        <div style={{ position: "sticky", top: 0, }}>
-          {loginTextBrowser}
-        </div>
-      </AppBar>
-    </div>
+			<div style={{ position: "sticky", top: 0, }}>
+				{loginTextBrowser}
+			</div>
+      {modalView}
+		</AppBar>
+	</div>
     :
     <MobileView>{loginTextMobile}</MobileView>
 };
