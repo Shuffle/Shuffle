@@ -56,10 +56,9 @@ if (window.location.port === "3000") {
 
 // Development on Github Codespaces
 if (globalUrl.includes("app.github.dev")) {
-	globalUrl = globalUrl.replace("-3001", "-5001")
-	//globalUrl = "https://frikky-shuffle-5gvr4xx62w64-5001.preview.app.github.dev"
+	globalUrl = globalUrl.replace("-3000.", "-5001.")
+	globalUrl = globalUrl.replace("-3001.", "-5001.")
 }
-//console.log("global: ", globalUrl)
 
 const App = (message, props) => {
 
@@ -69,6 +68,7 @@ const App = (message, props) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [dataset, setDataset] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
   const [curpath, setCurpath] = useState(typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname)
 
 
@@ -177,34 +177,45 @@ const App = (message, props) => {
 					curpath={curpath}
           setCurpath={setCurpath}
         />
-				{!isLoaded ? null : 
-					userdata.chat_disabled === true ? null : 
-						<Drift 
-							appId="zfk9i7w3yizf" 
-							attributes={{
-								name: userdata.username === undefined || userdata.username === null ? "OSS user" : `OSS ${userdata.username}`,
-							}}
-							eventHandlers={[
-								{ 
-									event: "conversation:firstInteraction", 
-									function: handleFirstInteraction 
-								},
-							]}
-						/>
-				}
-        <Header
-          notifications={notifications}
-          setNotifications={setNotifications}
-          checkLogin={checkLogin}
-          cookies={cookies}
-          removeCookie={removeCookie}
-          isLoaded={isLoaded}
-          globalUrl={globalUrl}
-          setIsLoggedIn={setIsLoggedIn}
-          isLoggedIn={isLoggedIn}
-          userdata={userdata}
-          {...props}
-        />
+		{!isLoaded ? null : 
+			userdata.chat_disabled === true ? null : 
+				<Drift 
+					appId="zfk9i7w3yizf" 
+					attributes={{
+						name: userdata.username === undefined || userdata.username === null ? "OSS user" : `OSS ${userdata.username}`,
+					}}
+					eventHandlers={[
+						{ 
+							event: "conversation:firstInteraction", 
+							function: handleFirstInteraction 
+						},
+					]}
+				/>
+		}
+
+		<div style={{ minHeight: 68, maxHeight: 68, }}>
+			<Header
+			notifications={notifications}
+			setNotifications={setNotifications}
+			checkLogin={checkLogin}
+			cookies={cookies}
+			removeCookie={removeCookie}
+			isLoaded={isLoaded}
+			globalUrl={globalUrl}
+			setIsLoggedIn={setIsLoggedIn}
+			isLoggedIn={isLoggedIn}
+			userdata={userdata}
+
+			setModalOpen={setModalOpen} 
+			modalOpen={modalOpen}
+			curpath={curpath}
+			serverside={false}
+			isMobile={false}
+
+			{...props}
+			/>
+		</div>
+		
 				{/*
         <div style={{ height: 60 }} />
 				*/}
