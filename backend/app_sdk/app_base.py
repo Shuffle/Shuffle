@@ -3687,6 +3687,7 @@ class AppBase:
                                         self.logger.info(f"[ERROR] Failed parsing timeout to int: {e}")
 
                                     #timeout = 30 
+                                    self.logger.info("[DEBUG] Running function '%s' with timeout %d" % (action["name"], timeout))
 
                                     try:
                                         executor = concurrent.futures.ThreadPoolExecutor()
@@ -3710,7 +3711,7 @@ class AppBase:
                                     except concurrent.futures.TimeoutError as e:
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "Timeout error within %d seconds (2). This happens if we can't reach or use the API you're trying to use within the time limit. Configure SHUFFLE_APP_SDK_TIMEOUT=100 in Orborus to increase it to 100 seconds. Not changeable for cloud." % timeout,
+                                            "reason": "Timeout error (2) within %d seconds (2). This happens if we can't reach or use the API you're trying to use within the time limit. Configure SHUFFLE_APP_SDK_TIMEOUT=100 in Orborus to increase it to 100 seconds. Not changeable for cloud." % timeout,
                                         })
 
                                     break
