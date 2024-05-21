@@ -7848,7 +7848,7 @@ const AngularWorkflow = (defaultprops) => {
 
 			if (trigger.trigger_type === "PIPELINE") {
 				if (userdata.support !== true) {
-				//	return null
+					return null
 				} 
 			}
 
@@ -7913,31 +7913,26 @@ const AngularWorkflow = (defaultprops) => {
               	    ></div>
               	    <Grid
               	      container
-              	      style={{ margin: isMobile ? "10px 0px 0px 0px" : "10px 10px 10px 10px", flex: "10", alignItems: 'center' }}
-                      wrap="nowrap"
+              	      style={{ margin: isMobile ? "10px 0px 0px 0px" : "10px 10px 10px 10px", flex: "10" }}
               	    >
               	      <Grid item>
               	        <ButtonBase>{imageline}</ButtonBase>
               	      </Grid>
               	      {isMobile ? null :
-                        <Grid
-                        item
-                        container
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          marginLeft: 20,
-                          flexGrow: 1,
-                          overflow: "hidden",
-                        }}
-                      >
-                      
+              	        <Grid
+              	          style={{
+              	            display: "flex",
+              	            flexDirection: "column",
+              	            marginLeft: 20,
+              	            overflow: "hidden",
+              	          }}
+              	        >
               	          <Grid item style={{ flex: "1", overflow: "hidden", }}>
-              	            <h3 style={{ marginTop: 0, marginBottom: 0, wordBreak: "break-word", overflowWrap: "break-word", flexBasis: 'auto' }}>
+              	            <h3 style={{ marginTop: 0, marginBottom: 0, overflow: "hidden" }}>
               	              {trigger.name}
               	            </h3>
               	          </Grid>
-              	          <Grid item style={{ flex: "1", wordBreak: "break-word", overflowWrap: "break-word", whiteSpace: "normal", flexBasis: 'auto' }}>
+              	          <Grid item style={{ flex: "1" }}>
               	            {trigger.description}
               	          </Grid>
               	        </Grid>
@@ -8876,11 +8871,11 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
 				if (app.trigger_type === "PIPELINE" && userdata.support !== true) {
-					//return null
+					return null
 				}
 
 				if (app.id === "integration" && userdata.support !== true) {
-					//return null
+					return null
 				}
 
                 var extraMessage = ""
@@ -13784,7 +13779,7 @@ const AngularWorkflow = (defaultprops) => {
     return null
   }
 
-  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null :
+  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : !userdata.support === true ? null : 
           <div style={appApiViewStyle}>
             <h3 style={{ marginBottom: "5px" }}>
               {selectedTrigger.app_name}: {selectedTrigger.status}
