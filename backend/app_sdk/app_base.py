@@ -3687,7 +3687,7 @@ class AppBase:
                                         self.logger.info(f"[ERROR] Failed parsing timeout to int: {e}")
 
                                     #timeout = 30 
-                                    self.logger.info("[DEBUG] Running function '%s' with timeout %d" % (action["name"], timeout))
+                                    self.logger.info("[DEBUG][%s] Running function '%s' with timeout %d" % (self.current_execution_id, action["name"], timeout))
 
                                     try:
                                         executor = concurrent.futures.ThreadPoolExecutor()
