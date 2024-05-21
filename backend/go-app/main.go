@@ -1973,6 +1973,144 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 }
 
+func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
+
+	if request.Method != "POST" {
+		request.Method = "POST"
+	}
+
+	if request.Body == nil {
+		stringReader := strings.NewReader("")
+		request.Body = ioutil.NopCloser(stringReader)
+	}
+
+	path := strings.Split(request.URL.String(), "/")
+	if len(path) < 4 {
+		resp.WriteHeader(403)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	ctx := context.Background()
+	location := strings.Split(request.URL.String(), "/")
+
+	var pipelineId string
+	
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			log.Printf("[INFO] Couldn't handle location. Too short in pipeline: %d", len(location))
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		pipelineId = location[4]
+	}
+
+	userAgent := request.Header.Get("User-Agent")
+	if strings.Contains(strings.ToLower(userAgent), "microsoftpreview") || strings.Contains(strings.ToLower(userAgent), "googlebot") {
+		log.Printf("[AUDIT] Blocking googlebot and microsoftbot for pielines. UA: '%s'", userAgent)
+		resp.WriteHeader(400)
+		resp.Write([]byte(`{"success": false, "reason": "Google/Microsoft preview bots not allowed. Please change the useragent."}`))
+		return
+	}
+
+	if len(pipelineId) != 45 {
+		log.Printf("[INFO] Couldn't handle pipeline. Too short in pipeline: %d", len(pipelineId))
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "pipeline ID not valid"}`))
+		return
+	}
+
+	pipelineId = pipelineId[9:]
+
+	pipeline, err := shuffle.GetPipeline(ctx, pipelineId)
+	if err != nil {
+		log.Printf("[WARNING] Failed getting pipeline %s (callback): %s", pipelineId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if pipeline.Status != "running" {
+		log.Printf("[WARNING] Not running %s because pipeline status is %s", pipeline.TriggerId, pipeline.Status)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "The pipeline isn't running"}`)))
+		return
+	}
+
+	if pipeline.WorkflowId == "" {
+		log.Printf("[DEBUG] Not running because pipeline isn't connected to any workflows")
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No workflows are defined"}`)))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[DEBUG] Body data error: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	parsedBody := shuffle.GetExecutionbody(body)
+	newBody := shuffle.ExecutionStruct{
+		Start:             pipeline.StartNode,
+		ExecutionSource:   "pipeline",
+		ExecutionArgument: parsedBody,
+	}
+
+	workflow, err := shuffle.GetWorkflow(ctx, pipeline.WorkflowId)
+	if err == nil {
+		for _, branch := range workflow.Branches {
+			if branch.SourceID == pipeline.TriggerId {
+				log.Printf("[DEBUG] Found ID %s for pipeline", pipeline.TriggerId)
+				if branch.DestinationID != pipeline.StartNode {
+					newBody.Start = branch.DestinationID
+					break
+				}
+			}
+		}
+	}
+
+	b, err := json.Marshal(newBody)
+	if err != nil {
+		log.Printf("[ERROR] Failed newBody marshaling for pipeline: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Printf("[INFO] Running pipeline for workflow %s with startnode %s", pipeline.WorkflowId, pipeline.StartNode)
+
+	newWorkflow := shuffle.Workflow{
+		ID: "",
+	}
+
+	if len(pipeline.StartNode) == 0 {
+		log.Printf("[WARNING] No start node for pipeline %s - running with workflow default.", pipeline.TriggerId)
+
+	}
+
+	newRequest := &http.Request{
+		URL:    &url.URL{},
+		Method: "POST",
+		Body:   ioutil.NopCloser(bytes.NewReader(b)),
+	}
+
+	workflowExecution, executionResp, err := handleExecution(pipeline.WorkflowId, newWorkflow, newRequest, pipeline.OrgId)
+
+	if err == nil {
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s"}`, workflowExecution.ExecutionId)))
+		return
+	}
+
+	resp.WriteHeader(500)
+	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
+}
+
 func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 	data, err := json.Marshal(action)
 	if err != nil {
@@ -4909,7 +5047,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/pipeline", shuffle.HandleNewPipelineRegister).Methods("POST", "OPTIONS")
-  r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
+    //r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/pipelines/{key}", handlePipelineCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers", shuffle.HandleGetTriggers).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 
