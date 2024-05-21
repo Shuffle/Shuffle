@@ -1298,6 +1298,9 @@ const AngularWorkflow = (defaultprops) => {
         name: "topic",
         value: topic
       });
+    } else {
+      toast("please enter the topic name");
+      return;
     }
   
     if (bootstrapServers) {
@@ -1305,6 +1308,9 @@ const AngularWorkflow = (defaultprops) => {
         name: "bootstrap_servers",
         value: bootstrapServers
       });
+    } else {
+      toast("please enter bootstrap server details");
+      return;
     }
   
     if (groupId) {
@@ -6895,6 +6901,20 @@ const AngularWorkflow = (defaultprops) => {
       } else if (selectedNode.data().trigger_type === "EMAIL") {
         setSelectedTrigger(selectedNode.data());
         stopMailSub(selectedTrigger, triggerindex);
+      } else if (selectedNode.data().trigger_type === "PIPELINE") {
+        setSelectedTrigger(selectedNode.data());
+
+        const pipelineConfig = {
+          command: "",
+          name: selectedNode.data().label,
+          type: "delete",
+          environment: selectedNode.data().environment,
+          workflow_id: workflow.id,
+          trigger_id: selectedNode.data().id,
+          start_node: "",
+        };
+
+        submitPipeline(selectedNode.data(), triggerindex, pipelineConfig);
       }
     }
 
@@ -7293,8 +7313,14 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
     const data = usecase;
-    if (data.type === "create") toast("Creating pipeline");
-    else toast("stopping pipeline");
+    data.start_node = mappedStartnode
+
+    if (data.type === "create") {
+      toast("Creating pipeline");
+    } else if (data.type === "stop") {
+      toast("stopping pipeline");
+    }
+
     const url = `${globalUrl}/api/v1/triggers/pipeline`;
     fetch(url, {
       method: "POST",
@@ -7316,8 +7342,14 @@ const AngularWorkflow = (defaultprops) => {
         if (!responseJson.success) {
           toast("Failed to set pipeline: " + responseJson.reason);
         } else {
-          if (data.type === "create") toast("Pipeline will be created!");
-          else toast("Pipeline will be stopped!");
+          if (data.type === "create") {
+            toast("Pipeline will be created!");
+          } else if (data.type === "stop") {
+             toast("Pipeline will be stopped!");
+          } else {
+            toast("Pipeline deleted!")
+            return
+          }
 
           trigger.parameters.push({
             name: data.name,
@@ -13947,24 +13979,46 @@ const AngularWorkflow = (defaultprops) => {
                     disabled={selectedTrigger.status === "running"}
                     onClick={() => {
 
-                      const topic = document.getElementById('topic')?.value;
-                      const bootstrapServers = document.getElementById('bootstrap_servers')?.value;
-                      const groupId = document.getElementById('group_id')?.value;
-                      const autoOffsetReset = document.getElementById('auto_offset_reset')?.value;
+                      const topic = (selectedTrigger?.parameters?.find(param => param.name === "topic")?.value) || ''
+                      const bootstrapServers = (selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''
+                      const groupId = (selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''
+                      const autoOffsetReset = (selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''
                       let command = "from kafka"
                       
-                      if(topic) command = `${command} --topic ${topic}`
-                      if(bootstrapServers) command = `${command} --set bootstrap.servers=${bootstrapServers}`
-                      if(groupId) command = `${command},group.id=${groupId}`
-                      if(autoOffsetReset) command = `${command},auto.offset.reset=${autoOffsetReset}`
+                      if(topic) {
+                        command = `${command} -t ${topic}`
+                      } else {
+                        toast("please enter the topic name")
+                        return;
+                      }
+                      if(bootstrapServers) {
+                        command = `${command} -e -o stored -X bootstrap.servers=${bootstrapServers}`
+                      } else {
+                        toast("please enter the bootstrap servers details")
+                        return;
+                      }
+
+                      if(groupId) {
+                         command = `${command},group.id=${groupId}`
+                      } else {
+                        command = `${command},group.id=${selectedTrigger.id}`
+                      }
+                      if(autoOffsetReset) {
+                        command = `${command},auto.offset.reset=${autoOffsetReset}`
+                      } else {
+                        command = `${command},auto.offset.reset=earliest`
+                      }
+                      command = `${command},client.id=${selectedTrigger.id},enable.auto.commit=true,auto.commit.interval.ms=1`
+                      command = `${command} read json | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
 
                       const pipelineConfig = {
                         command: command,
                         name: selectedTrigger.label,
-                        type: "start",
+                        type: "create",
                         environment: selectedTrigger.environment,
                         workflow_id: workflow.id,
                         trigger_id: selectedTrigger.id,
+                        start_node: "",
                       };
                       submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
                     }}
@@ -13977,7 +14031,15 @@ const AngularWorkflow = (defaultprops) => {
                     variant="contained"
                     disabled={selectedTrigger.status !== "running"}
                     onClick={() => {
-                      toast("Should stop trigger");
+                      const pipelineConfig = {
+                        name: selectedTrigger.label,
+                        type: "stop",
+                        environment: selectedTrigger.environment,
+                        workflow_id: workflow.id,
+                        trigger_id: selectedTrigger.id,
+                        start_node: "",
+                      };
+                      submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
                     }}
                     color="primary"
                   >
@@ -15902,7 +15964,18 @@ const AngularWorkflow = (defaultprops) => {
 		  style={{paddingTop: 8, paddingLeft: 4, height: 25, width: 25, }}
 		/>
       );
-    }
+    } else if (execution.execution_source === "pipeline") {
+      return (
+        <img
+          alt={"pipeline"}
+          src={
+            triggers.find((trigger) => trigger.trigger_type === "PIPELINE")
+              .large_image
+          }
+          style={{ width: size, height: size }}
+        />
+      );
+    } 
 
     if (
       execution.execution_parent !== null &&
