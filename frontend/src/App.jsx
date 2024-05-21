@@ -68,7 +68,6 @@ const App = (message, props) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [dataset, setDataset] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
-  const [modalOpen, setModalOpen] = useState(false)
   const [curpath, setCurpath] = useState(typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname)
 
 
@@ -195,24 +194,22 @@ const App = (message, props) => {
 
 		<div style={{ minHeight: 68, maxHeight: 68, }}>
 			<Header
-			notifications={notifications}
-			setNotifications={setNotifications}
-			checkLogin={checkLogin}
-			cookies={cookies}
-			removeCookie={removeCookie}
-			isLoaded={isLoaded}
-			globalUrl={globalUrl}
-			setIsLoggedIn={setIsLoggedIn}
-			isLoggedIn={isLoggedIn}
-			userdata={userdata}
+				notifications={notifications}
+				setNotifications={setNotifications}
+				checkLogin={checkLogin}
+				cookies={cookies}
+				removeCookie={removeCookie}
+				isLoaded={isLoaded}
+				globalUrl={globalUrl}
+				setIsLoggedIn={setIsLoggedIn}
+				isLoggedIn={isLoggedIn}
+				userdata={userdata}
 
-			setModalOpen={setModalOpen} 
-			modalOpen={modalOpen}
-			curpath={curpath}
-			serverside={false}
-			isMobile={false}
+				curpath={curpath}
+				serverside={false}
+				isMobile={false}
 
-			{...props}
+				{...props}
 			/>
 		</div>
 		
