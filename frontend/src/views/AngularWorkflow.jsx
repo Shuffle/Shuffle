@@ -2963,7 +2963,7 @@ const AngularWorkflow = (defaultprops) => {
 
 			//console.log('got chunk of', chunk.length, 'bytes. Value: ', chunk)
 			text += chunk;
-			//console.log('text so far is', text.length, 'bytes\n');
+			//console.log('text so far is', text.length, 'bytes
 			if (result.done) {
 				console.log('returning')
 				return text;
@@ -9345,7 +9345,7 @@ const AngularWorkflow = (defaultprops) => {
     event.target.value = event.target.value.replaceAll("^", "_");
     event.target.value = event.target.value.replaceAll("'", "_");
     event.target.value = event.target.value.replaceAll("\"", "_");
-    event.target.value = event.target.value.replaceAll("\\", "_");
+    event.target.value = event.target.value.replaceAll("\"", "_");
     event.target.value = event.target.value.replaceAll(":", "_");
     event.target.value = event.target.value.replaceAll(";", "_");
     event.target.value = event.target.value.replaceAll("=", "_");
@@ -17661,8 +17661,8 @@ const AngularWorkflow = (defaultprops) => {
 		  if (valid.valid === false) {
 			  if (stringjson.startsWith("{") && stringjson.endsWith("}")) {
 				  // Look for newline
-				  if (stringjson.includes("\n") && !stringjson.includes("\\n")) {
-					return "Looks like you have a newline problem. Consider using the | replace: '\\n', '\\\\n' }} filter in Liquid."
+				  if (stringjson.includes("\n") && !stringjson.includes("\n")) {
+					return "Looks like you have a newline problem. Consider using the | replace: '\n', '\\n' }} filter in Liquid."
 				  } else {
 					return "The result looks like it should be JSON, but is invalid. Look for potential"
 				  }
