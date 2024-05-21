@@ -68,7 +68,8 @@ import {
   ListItemAvatar,
   Badge,
   AvatarGroup,
-  Autocomplete, 
+  Autocomplete,
+  Radio,
 } from "@mui/material";
 
 import {
@@ -220,7 +221,6 @@ export const triggers = [
 	  id: "",
     },
   ];
-	
 // Adds specific text to items
 
 // https://stackoverflow.com/questions/19014250/rerender-view-on-browser-resize-with-react
@@ -521,6 +521,10 @@ const AngularWorkflow = (defaultprops) => {
   const [highlightedApp, setHighlightedApp] = React.useState("")
 
   const [listCache, setListCache] = React.useState([]);
+
+  const [selectedOption, setSelectedOption] = React.useState("");
+  const [tenzirConfigModalOpen, setTenzirConfigModalOpen] = React.useState(false);
+
   const [suggestionBox, setSuggestionBox] = React.useState({
   	"position": {
   		"top": 500,
@@ -1342,6 +1346,56 @@ const AngularWorkflow = (defaultprops) => {
       });
   };
 
+  const handleKafkaSubmit = (trigger) => {
+    if (trigger.trigger_type !== "PIPELINE") {
+      toast("Unable to save the configuration");
+      return;
+    }
+  
+    trigger.parameters = [];
+
+    const topic = document.getElementById('topic')?.value;
+    const bootstrapServers = document.getElementById('bootstrap_servers')?.value;
+    const groupId = document.getElementById('group_id')?.value;
+    const autoOffsetReset = document.getElementById('auto_offset_reset')?.value;
+
+    if(topic) {
+      trigger.parameters.push({
+        name: "topic",
+        value: topic
+      });
+    } else {
+      toast("please enter the topic name");
+      return;
+    }
+  
+    if (bootstrapServers) {
+      trigger.parameters.push({
+        name: "bootstrap_servers",
+        value: bootstrapServers
+      });
+    } else {
+      toast("please enter bootstrap server details");
+      return;
+    }
+  
+    if (groupId) {
+      trigger.parameters.push({
+        name: "group_id",
+        value: groupId
+      });
+    }
+  
+    if (autoOffsetReset) {
+      trigger.parameters.push({
+        name: "auto_offset_reset",
+        value: autoOffsetReset
+      });
+    }
+  
+    setTenzirConfigModalOpen(false);
+  };
+  
 	const handleColoring = (actionId, status, label) => {
 		if (cy === undefined) {
 			return
@@ -6963,6 +7017,20 @@ const AngularWorkflow = (defaultprops) => {
       } else if (selectedNode.data().trigger_type === "EMAIL") {
         setSelectedTrigger(selectedNode.data());
         stopMailSub(selectedTrigger, triggerindex);
+      } else if (selectedNode.data().trigger_type === "PIPELINE") {
+        setSelectedTrigger(selectedNode.data());
+
+        const pipelineConfig = {
+          command: "",
+          name: selectedNode.data().label,
+          type: "delete",
+          environment: selectedNode.data().environment,
+          workflow_id: workflow.id,
+          trigger_id: selectedNode.data().id,
+          start_node: "",
+        };
+
+        submitPipeline(selectedNode.data(), triggerindex, pipelineConfig);
       }
     }
 
@@ -7348,47 +7416,67 @@ const AngularWorkflow = (defaultprops) => {
       toast("Error: name can't be empty");
       return;
     }
-
-	var mappedStartnode = ""
-	const alledges = cy.edges().jsons()
+  
+    var mappedStartnode = "";
+    const alledges = cy.edges().jsons();
     if (alledges !== undefined && alledges !== null && alledges.length > 0) {
-		for (let edgekey in alledges) {
-			const tmp = alledges[edgekey]
-			console.log("TMP: ", tmp, tmp.data.source)
-			if (tmp.data.source === trigger.id) {
-				mappedStartnode = tmp.data.target
-				break
-			}
-		}
+      for (let edgekey in alledges) {
+        const tmp = alledges[edgekey];
+        console.log("TMP: ", tmp, tmp.data.source);
+        if (tmp.data.source === trigger.id) {
+          mappedStartnode = tmp.data.target;
+          break;
+        }
+      }
+    }
+    const data = usecase;
+    data.start_node = mappedStartnode
+
+    if (data.type === "create") {
+      toast("Creating pipeline");
+    } else if (data.type === "stop") {
+      toast("stopping pipeline");
     }
 
-    toast("Creating pipeline") 
-    const data = usecase
-	const url = `${globalUrl}/api/v1/triggers/pipeline`
+    const url = `${globalUrl}/api/v1/triggers/pipeline`;
     fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(data),
-        credentials: "include",
-      }
-    )
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    })
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for stream results :O!");
-        } 
-
+        }
+  
         return response.json();
       })
       .then((responseJson) => {
         if (!responseJson.success) {
           toast("Failed to set pipeline: " + responseJson.reason);
         } else {
-          toast("Successfully created pipeline");
-          workflow.triggers[triggerindex].status = "running";
-          trigger.status = "running";
+          if (data.type === "create") {
+            toast("Pipeline will be created!");
+          } else if (data.type === "stop") {
+             toast("Pipeline will be stopped!");
+          } else {
+            toast("Pipeline deleted!")
+            return
+          }
+
+          trigger.parameters.push({
+            name: data.name,
+            value: data.command,
+          });
+          
+          if (data.type === "stop") trigger.status = "stopped";
+          else trigger.status = "running";
+          workflow.triggers[triggerindex] = trigger;
+  
           setSelectedTrigger(trigger);
           setWorkflow(workflow);
           console.log("Should set the status to running and save");
@@ -7396,11 +7484,10 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        //toast(error.toString());
-        console.log("Get schedule error: ", error.toString());
+        console.log("Get pipeline error: ", error.toString());
       });
-  }
-
+  };
+  
   const submitSchedule = (trigger, triggerindex) => {
     if (trigger.name.length <= 0) {
       toast("Error: name can't be empty");
@@ -13825,225 +13912,270 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : !userdata.support === true ? null : 
-        <div style={appApiViewStyle}>
-		  <h3 style={{ marginBottom: "5px" }}>
-			{selectedTrigger.app_name}: {selectedTrigger.status}
-		  </h3>
-		  <a
-			rel="noopener noreferrer"
-			target="_blank"
-			href="https://shuffler.io/docs/triggers#pipelines"
-			style={{ textDecoration: "none", color: "#f85a3e" }}
-		  >
-			What are pipelines?
-		  </a>
-          <Divider
-            style={{
-              marginBottom: "10px",
-              marginTop: "10px",
-              height: "1px",
-              width: "100%",
-              backgroundColor: "rgb(91, 96, 100)",
-            }}
-          />
-          <div>Name</div>
-          <TextField
-            style={{
-              backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette.borderRadius,
-            }}
-            InputProps={{
-              style: {
-              },
-            }}
-            fullWidth
-            color="primary"
-            placeholder={selectedTrigger.label}
-            onChange={selectedTriggerChange}
-          />
-
-          <div style={{ marginTop: "20px" }}>
-            <Typography>Environment</Typography>
-            <Select
-              MenuProps={{
-                disableScrollLock: true,
+          <div style={appApiViewStyle}>
+            <h3 style={{ marginBottom: "5px" }}>
+              {selectedTrigger.app_name}: {selectedTrigger.status}
+            </h3>
+            <a
+              rel="noopener noreferrer"
+              target="_blank"
+              href="https://shuffler.io/docs/triggers#pipelines"
+              style={{ textDecoration: "none", color: "#f85a3e" }}
+            >
+              What are pipelines?
+            </a>
+            <Divider
+              style={{
+                marginBottom: "10px",
+                marginTop: "10px",
+                height: "1px",
+                width: "100%",
+                backgroundColor: "rgb(91, 96, 100)",
               }}
-              value={selectedTrigger.environment}
-              disabled={selectedTrigger.status === "running"}
-              SelectDisplayProps={{}}
-              fullWidth
-              onChange={(e) => {
-                selectedTrigger.environment = e.target.value
-                setSelectedTrigger(selectedTrigger)
-
-                setWorkflow(workflow)
-                setUpdate(Math.random())
-              }}
+            />
+            <div>Name</div>
+            <TextField
               style={{
                 backgroundColor: theme.palette.inputColor,
-                color: "white",
-                height: 50,
+                borderRadius: theme.palette.borderRadius,
               }}
-            >
-              {environments.map((data) => {
-                if (data.archived) {
-                    return null
-                }
+              InputProps={{
+                style: {},
+              }}
+              fullWidth
+              color="primary"
+              placeholder={selectedTrigger.label}
+              onChange={selectedTriggerChange}
+            />
 
-				if (data.Name.toLowerCase() === "cloud") {
-					return null
-				}
+            <div style={{ marginTop: "20px" }}>
+              <Typography>Environment</Typography>
+              <Select
+                MenuProps={{
+                  disableScrollLock: true,
+                }}
+                value={selectedTrigger.environment}
+                disabled={selectedTrigger.status === "running"}
+                SelectDisplayProps={{}}
+                fullWidth
+                onChange={(e) => {
+                  selectedTrigger.environment = e.target.value;
+                  setSelectedTrigger(selectedTrigger);
 
-                return (
-                  <MenuItem
-                    key={data.id}
-                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
-                    value={data.Name}
-                  >
-                    {data.Name}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </div>
-          <Divider
-            style={{
-              marginTop: "20px",
-              height: "1px",
-              width: "100%",
-              backgroundColor: "rgb(91, 96, 100)",
-            }}
-          />
-          <div style={{ flex: "6", marginTop: 20, }}>
-            <div>
-              <b>Parameters</b>
-
-			  {/*
-			  <div 
-				style={{
-					border: "1px solid rgba(255,255,255,0.3)",
-					borderRadius: theme.palette.borderRadius,
-					padding: 10,
-					cursor: "pointer",
-
-				}}
-				onClick={() => {
-					const pipelineConfig = {
-						"name": "HTTP Testing",
-						"type": "create",
-						"command": "from http://192.168.86.44:5002/api/v1/orgs/7e9b9007-5df2-4b47-bca5-c4d267ef2943/cache/CIDR%20ranges?type=text&authorization=cec9d01f-09b2-4419-8a0a-76c6046e3fef read lines | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines",
-						"environment": selectedTrigger.environment,
-					}
-
-                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
-				}}
-			  >
-				Run HTTP Request
-			  </div>
-			  */}
-
-			  <div 
-				style={{
-					border: "1px solid rgba(255,255,255,0.3)",
-					borderRadius: theme.palette.borderRadius,
-					padding: 10,
-					cursor: "pointer",
-					marginTop: 5, 
-
-				}}
-				onClick={() => {
-					const pipelineConfig = {
-						"name": selectedTrigger.label,
-						"type": "create",
-						"command": "load tcp://0.0.0.0:514 | read syslog | export",
-						"environment": selectedTrigger.environment,
-					}
-
-                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
-				}}
-			  >
-				Start Syslog listener
-			  </div>
-
-			  <div 
-				style={{
-					border: "1px solid rgba(255,255,255,0.3)",
-					borderRadius: theme.palette.borderRadius,
-					padding: 10,
-					cursor: "pointer",
-					marginTop: 5, 
-
-				}}
-				onClick={() => {
-					const pipelineConfig = {
-						"name": selectedTrigger.label,
-						"type": "create",
-						"command": "export --live | sigma /path/to/rules | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines",
-						"environment": selectedTrigger.environment,
-					}
-
-                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
-				}}
-			  >
-				Run Sigma Rulesearch 
-			  </div>
-
-			  <div 
-				style={{
-					border: "1px solid rgba(255,255,255,0.3)",
-					borderRadius: theme.palette.borderRadius,
-					padding: 10,
-					cursor: "pointer",
-					marginTop: 5, 
-
-				}}
-				onClick={() => {
-					const pipelineConfig = {
-						"name": selectedTrigger.label,
-						"type": "create",
-						"command": "from kafka://1.2.3.4 --topic foo | to http://api.com X-Token:Secret",
-						"environment": selectedTrigger.environment,
-					}
-
-                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig)
-				}}
-			  >
-				Follow Kafka Queue
-			  </div>
-
-              <div
+                  setWorkflow(workflow);
+                  setUpdate(Math.random());
+                }}
                 style={{
-                  marginTop: "20px",
-                  marginBottom: "7px",
-                  display: "flex",
+                  backgroundColor: theme.palette.inputColor,
+                  color: "white",
+                  height: 50,
                 }}
               >
-                <Button
-                  style={{ flex: "1" }}
-                  variant="contained"
-                  disabled={selectedTrigger.status === "running"}
+                {environments.map((data) => {
+                  if (data.archived) {
+                    return null;
+                  }
+
+                  if (data.Name.toLowerCase() === "cloud") {
+                    return null;
+                  }
+
+                  return (
+                    <MenuItem
+                      key={data.id}
+                      style={{
+                        backgroundColor: theme.palette.inputColor,
+                        color: "white",
+                      }}
+                      value={data.Name}
+                    >
+                      {data.Name}
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </div>
+            <Divider
+              style={{
+                marginTop: "20px",
+                height: "1px",
+                width: "100%",
+                backgroundColor: "rgb(91, 96, 100)",
+              }}
+            />
+            <div style={{ flex: 6, marginTop: 20 }}>
+              <div>
+                <b>Parameters</b>
+                <div
+                  key="syslogListener"
                   onClick={() => {
-					  toast("Should start. But it doesn't")
+                    // setSelectedOption("Syslog listener")
+                    // setTenzirConfigModalOpen(true);
                   }}
-                  color="primary"
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: theme.palette.borderRadius,
+                    padding: 10,
+                    cursor: "not-allowed",
+                    marginTop: 5,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
                 >
-                  Start
-                </Button>
-                <Button
-                  style={{ flex: "1" }}
-                  variant="contained"
-                  disabled={selectedTrigger.status !== "running"}
+                  <FormControlLabel
+                    control={
+                      <Radio
+                        checked={selectedOption === "Syslog listener"}
+                        onChange={() => setSelectedOption("Syslog listener")}
+                        value={"Syslog listener"}
+                        name="option"
+                        disabled={true}
+                      />
+                    }
+                    label="Start Syslog listener"
+                  />
+                </div>
+
+                <div
+                  key="sigmaRulesearch"
                   onClick={() => {
-					  toast("Should stop triggert")
+                    // setSelectedOption("Sigma Rulesearch")
+                    // setTenzirConfigModalOpen(true);
                   }}
-                  color="primary"
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: theme.palette.borderRadius,
+                    padding: 10,
+                    cursor: "not-allowed",
+                    marginTop: 5,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
                 >
-                  Stop
-                </Button>
+                  <FormControlLabel
+                    control={
+                      <Radio
+                        checked={selectedOption === "Sigma Rulesearch"}
+                        onChange={() => setSelectedOption("Sigma Rulesearch")}
+                        value={"Sigma Rulesearch"}
+                        name="option"
+                        disabled={true}
+                      />
+                    }
+                    label="Run Sigma Rulesearch"
+                  />
+                </div>
+
+                <div
+                  key="kafkaQueue"
+                  onClick={() => {
+                    if(selectedTrigger.status === "running"){
+                      toast("please stop the trigger to edit the configuration");
+                      return;
+                    } else {
+                    setSelectedOption("Kafka Queue");
+                    setTenzirConfigModalOpen(true);
+                  }}}
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: theme.palette.borderRadius,
+                    padding: 10,
+                    cursor: "pointer",
+                    marginTop: 5,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <FormControlLabel
+                    control={
+                      <Radio
+                        checked={selectedOption === "Kafka Queue"}
+                        onChange={() => setSelectedOption("Kafka Queue")}
+                        value={"Kafka Queue"}
+                        name="option"
+                      />
+                    }
+                    label="Follow Kafka Queue"
+                  />
+                </div>
+
+                <div style={{ marginTop: 20, marginBottom: 7, display: "flex" }}>
+                  <Button
+                    style={{ flex: 1, marginRight: 7 }}
+                    variant="contained"
+                    disabled={selectedTrigger.status === "running"}
+                    onClick={() => {
+
+                      const topic = (selectedTrigger?.parameters?.find(param => param.name === "topic")?.value) || ''
+                      const bootstrapServers = (selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''
+                      const groupId = (selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''
+                      const autoOffsetReset = (selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''
+                      let command = "from kafka"
+                      
+                      if(topic) {
+                        command = `${command} -t ${topic}`
+                      } else {
+                        toast("please enter the topic name")
+                        return;
+                      }
+                      if(bootstrapServers) {
+                        command = `${command} -e -o stored -X bootstrap.servers=${bootstrapServers}`
+                      } else {
+                        toast("please enter the bootstrap servers details")
+                        return;
+                      }
+
+                      if(groupId) {
+                         command = `${command},group.id=${groupId}`
+                      } else {
+                        command = `${command},group.id=${selectedTrigger.id}`
+                      }
+                      if(autoOffsetReset) {
+                        command = `${command},auto.offset.reset=${autoOffsetReset}`
+                      } else {
+                        command = `${command},auto.offset.reset=earliest`
+                      }
+                      command = `${command},client.id=${selectedTrigger.id},enable.auto.commit=true,auto.commit.interval.ms=1`
+                      command = `${command} read json | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
+
+                      const pipelineConfig = {
+                        command: command,
+                        name: selectedTrigger.label,
+                        type: "create",
+                        environment: selectedTrigger.environment,
+                        workflow_id: workflow.id,
+                        trigger_id: selectedTrigger.id,
+                        start_node: "",
+                      };
+                      submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
+                    }}
+                    color="primary"
+                  >
+                    Start
+                  </Button>
+                  <Button
+                    style={{ flex: 1 }}
+                    variant="contained"
+                    disabled={selectedTrigger.status !== "running"}
+                    onClick={() => {
+                      const pipelineConfig = {
+                        name: selectedTrigger.label,
+                        type: "stop",
+                        environment: selectedTrigger.environment,
+                        workflow_id: workflow.id,
+                        trigger_id: selectedTrigger.id,
+                        start_node: "",
+                      };
+                      submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
+                    }}
+                    color="primary"
+                  >
+                    Stop
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
   const ScheduleSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null :
         <div style={appApiViewStyle}>
@@ -14180,7 +14312,7 @@ const AngularWorkflow = (defaultprops) => {
 				  selectedTrigger.status === "running"
                 }
                 defaultValue={
-					selectedTrigger.parameters === undefined ? "" : selectedTrigger.parameters[0].value
+					selectedTrigger.parameters === undefined ? "" : selectedTrigger.parameters[0]?.value
                 }
                 color="primary"
                 placeholder=""
@@ -15997,7 +16129,18 @@ const AngularWorkflow = (defaultprops) => {
 		  style={{paddingTop: 8, paddingLeft: 4, height: 25, width: 25, }}
 		/>
       );
-    }
+    } else if (execution.execution_source === "pipeline") {
+      return (
+        <img
+          alt={"pipeline"}
+          src={
+            triggers.find((trigger) => trigger.trigger_type === "PIPELINE")
+              .large_image
+          }
+          style={{ width: size, height: size }}
+        />
+      );
+    } 
 
     if (
       execution.execution_parent !== null &&
@@ -18978,6 +19121,146 @@ const AngularWorkflow = (defaultprops) => {
     </Dialog>
   ) : null;
 
+  const tenzirConfigModal = tenzirConfigModalOpen ? (
+        <Dialog
+          PaperComponent={PaperComponent}
+          hideBackdrop={true}
+          disableEnforceFocus={true}
+          disableBackdropClick={true}
+          style={{ pointerEvents: "none" }}
+          open={tenzirConfigModalOpen}
+          PaperProps={{
+            style: {
+              pointerEvents: "auto",
+              color: "white",
+              minWidth: 600,
+              minHeight: 500,
+              maxHeight: 500,
+              padding: 15,
+              overflow: "hidden",
+              zIndex: 10012,
+              border: theme.palette.defaultBorder,
+            },
+          }}
+        >
+          <div
+            style={{
+              flex: 2,
+              padding: 0,
+              minHeight: isMobile ? "90%" : 700,
+              maxHeight: isMobile ? "90%" : 700,
+              overflowY: "auto",
+              overflowX: isMobile ? "auto" : "hidden",
+            }}
+          >
+            <DialogTitle id="tenzir-config-modal" style={{ cursor: "move" }}>
+              <div style={{ color: "white" }}>Configuration options for {selectedOption}</div>
+            </DialogTitle>
+            <DialogContent>
+              {selectedOption === "Kafka Queue" && (
+                <>
+                  <b>Topic</b>
+                  <TextField
+                    id="topic"
+                    style={{
+                      backgroundColor: theme.palette.inputColor,
+                      borderRadius: theme.palette.borderRadius,
+                    }}
+                    InputProps={{
+                      style: {},
+                    }}
+                    fullWidth
+                    color="primary"
+                    placeholder={"topic name"}
+                    defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "topic")?.value) || ''}
+                  />
+                  <b>bootstrap.servers</b>
+                  <TextField
+                    id="bootstrap_servers"
+                    style={{
+                      backgroundColor: theme.palette.inputColor,
+                      borderRadius: theme.palette.borderRadius,
+                    }}
+                    InputProps={{
+                      style: {},
+                    }}
+                    fullWidth
+                    color="primary"
+                    placeholder={"broker1.example.com:9092,192.168.1.100:9092"}
+                    defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''}
+                  />
+                  <b>group.id</b>
+                  <TextField
+                    id="group_id"
+                    style={{
+                      backgroundColor: theme.palette.inputColor,
+                      borderRadius: theme.palette.borderRadius,
+                    }}
+                    InputProps={{
+                      style: {},
+                    }}
+                    fullWidth
+                    color="primary"
+                    placeholder={"tenzir"}
+                    defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''}    
+                  />
+                  <b>auto.offest.reset</b>
+                  <TextField
+                    id="auto_offset_reset"
+                    style={{
+                      backgroundColor: theme.palette.inputColor,
+                      borderRadius: theme.palette.borderRadius,
+                    }}
+                    InputProps={{
+                      style: {},
+                    }}
+                    fullWidth
+                    color="primary"
+                    placeholder={"earliest"}
+                    defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''}
+                  />
+                </>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button
+                style={{ borderRadius: "0px" }}
+                onClick={() => {
+                  setTenzirConfigModalOpen(false);
+                }}
+                color="primary"
+              >
+                Cancel
+              </Button>
+              <Button
+                style={{ borderRadius: "0px" }}
+                onClick={() => {
+                  handleKafkaSubmit(selectedTrigger);
+                }}
+                color="primary"
+              >
+                Submit
+              </Button>
+            </DialogActions>
+          </div>
+
+          <IconButton
+            style={{
+              zIndex: 5000,
+              position: "absolute",
+              top: 14,
+              right: 18,
+              color: "grey",
+            }}
+            onClick={() => {
+              setTenzirConfigModalOpen(false);
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Dialog>
+      ) : null;
+
 	// Should get AI autocompletes
 	const aiSubmit = (value, setResponseMsg, setSuggestionLoading, inputAction) => {
 		if (setResponseMsg !== undefined) {
@@ -19794,6 +20077,7 @@ const AngularWorkflow = (defaultprops) => {
         {codePopoutModal}
 		{workflowRevisions}
         {authenticationModal}
+        {tenzirConfigModal}
         {/*editWorkflowModal*/}
   		{executionArgumentModal}
         {configureWorkflowModal}
