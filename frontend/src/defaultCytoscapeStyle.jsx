@@ -48,8 +48,8 @@ const data = [
     css: {
       label: "data(label)",
       shape: "roundrectangle",
-	  "height": "16px",
-	  "width": "120px",
+	  "height": "18px",
+	  "width": "145px",
       "background-color": "#212121",
       "border-color": "#81c784",
       "z-index": 10000,

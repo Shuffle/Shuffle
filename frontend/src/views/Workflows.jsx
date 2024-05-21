@@ -1186,7 +1186,7 @@ const Workflows = (props) => {
 				}
 			}
 
-			if (newarray.length > 0 && storageWorkflows.length <= newarray.length) {
+			if (newarray.length > 0) {
 				try {
 					localStorage.setItem("workflows", JSON.stringify(newarray))
 				} catch (e) {

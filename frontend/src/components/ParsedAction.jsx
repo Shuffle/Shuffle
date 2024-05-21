@@ -1485,15 +1485,15 @@ const ParsedAction = (props) => {
               );
             }
 
-						// Added autofill to make this ALOT simpler
-						if (isCloud && (selectedAction.app_name === "Shuffle Tools" || selectedAction.app_name === "email") && (selectedAction.name === "send_email_shuffle" || selectedAction.name === "send_sms_shuffle") && data.name === "apikey") {
-							if (selectedActionParameters[count].length === 0) {
-								selectedAction.parameters[count].value = "TMP: Will be replaced during execution if cloud"
-								setSelectedAction(selectedAction)
-							}
+			// Added autofill to make this ALOT simpler
+			if (isCloud && (selectedAction.app_name === "Shuffle Tools" || selectedAction.app_name === "email") && (selectedAction.name === "send_email_shuffle" || selectedAction.name === "send_sms_shuffle") && data.name === "apikey") {
+				if (selectedActionParameters[count].length === 0) {
+					selectedAction.parameters[count].value = "TMP: Will be replaced during execution if cloud"
+					setSelectedAction(selectedAction)
+				}
 
-							return null
-						}
+				return null
+			}
 
             var staticcolor = "inherit";
             var actioncolor = "inherit";
@@ -1557,6 +1557,17 @@ const ParsedAction = (props) => {
 							}
 							*/
             }
+
+            if (selectedAction.name === "custom_action" && data.name === "body") {
+				for (var key in selectedActionParameters) {
+					const param = selectedActionParameters[key]
+					if (param.name === "method") {
+						if (param.value === "GET") {
+							return null
+						}
+					}
+				}
+			}
 
             if (data.name.startsWith("${") && data.name.endsWith("}")) {
               const paramcheck = selectedAction.parameters.find((param) => param.name === "body");
@@ -2678,8 +2689,6 @@ const ParsedAction = (props) => {
               /*<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>*/
             }
 
-						//console.log(data.configuration)
-
 			const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
 			const hasAutocomplete = data.autocompleted === true
             return (
@@ -2840,8 +2849,8 @@ const ParsedAction = (props) => {
                         setUpdate(Math.random());
                       }}
                       onClick={() => {
-												setShowAutocomplete(true)
-											}}
+						setShowAutocomplete(true)
+					  }}
                       fullWidth
                       open={showAutocomplete}
                       style={{
@@ -3007,7 +3016,9 @@ const ParsedAction = (props) => {
 		  a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))
       ).sort(sortByCategoryLabel))
 	
-  var baselabel = selectedAction.label;
+
+  const selectedAppIcon = selectedAction.large_image
+  var baselabel = selectedAction.label
   return (
     <div style={appApiViewStyle} id="parsed_action_view">
 
@@ -3015,13 +3026,29 @@ const ParsedAction = (props) => {
         <span>
           <div style={{ display: "flex", minHeight: 40, marginBottom: 30 }}>
             <div style={{ flex: 1 }}>
-              <h3 style={{ marginBottom: 5 }}>
-                {(
-                  selectedAction.app_name.charAt(0).toUpperCase() +
-                  selectedAction.app_name.substring(1)
-                ).replaceAll("_", " ")}
-              </h3>
-              <div style={{display: "flex", marginTop: 10, }}>
+		  	  <div style={{ display: "flex", }}
+		  		onClick={() => {
+					//window.open("/apps/${selectedAction.app_id}", "_blank")
+				}}
+		  	  >
+		  		  <Tooltip title={"App: "+selectedAction.app_name} placement="top">
+					  <img src={selectedAppIcon} style={{ 
+						width: 30, 
+						height: 30, 
+						marginRight: 10, 
+						borderRadius: 5,
+						marginTop: 13, 
+					    border: "2px solid rgba(255,255,255,0.3)",
+					  }} />
+		  		  </Tooltip>
+				  <h3 style={{ }}>
+					{(
+					  selectedAction.app_name.charAt(0).toUpperCase() +
+					  selectedAction.app_name.substring(1)
+					).replaceAll("_", " ")}
+				  </h3>
+		  	  </div>
+              <div style={{display: "flex", marginTop: 0, }}>
                 <IconButton
                   style={{
                     marginTop: "auto",

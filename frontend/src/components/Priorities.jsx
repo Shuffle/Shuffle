@@ -24,8 +24,9 @@ const Priorities = (props) => {
   const [showDismissed, setShowDismissed] = React.useState(false);
   const [showRead, setShowRead] = React.useState(false);
   const [appFramework, setAppFramework] = React.useState({});
-  const [selectedWorkflow, setSelectedWorkflow] = React.useState("");
-  const [selectedExecutionId, setSelectedExecutionId] = React.useState("");
+
+  const [selectedWorkflow, setSelectedWorkflow] = React.useState("NO HIGHLIGHT");
+  const [selectedExecutionId, setSelectedExecutionId] = React.useState("NO HIGHLIGHT");
   let navigate = useNavigate();
 
 	useEffect(() => {
@@ -85,6 +86,44 @@ const Priorities = (props) => {
 			console.log("err in framework: ", error.toString());
 		})
 	}
+
+    const clearNotifications = () => {
+      // Don't really care about the logout
+
+      toast("Clearing notifications")
+      fetch(`${globalUrl}/api/v1/notifications/clear`, {
+        credentials: "include",
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then(function (response) {
+          if (response.status !== 200) {
+            console.log("Error in response");
+          }
+
+          return response.json();
+        })
+        .then(function (responseJson) {
+          if (responseJson.success === true) {
+			  // Reload the UI
+			  const newNotifications = notifications.map((notification) => {
+				  notification.read = true
+				  return notification
+			  })
+
+			  setNotifications(newNotifications)
+			  setShowRead(true)
+          } else {
+            toast("Failed dismissing notifications. Please try again later.");
+          }
+        })
+        .catch((error) => {
+          console.log("error in notification dismissal: ", error);
+          //removeCookie("session_token", {path: "/"})
+        });
+    };
 
 	const dismissNotification = (alert_id, disabled) => {
 		var notificationurl = `${globalUrl}/api/v1/notifications/${alert_id}/markasread`
@@ -178,7 +217,7 @@ const Priorities = (props) => {
     	var orgId = "";
 
 
-		const highlighted = data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0 ? false : data.reference_url.includes(selectedExecutionId) || data.reference_url.includes(selectedWorkflow) 
+		const highlighted = selectedExecutionId === "" && selectedWorkflow === "" ? false : data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0 ? false : data.reference_url.includes(selectedExecutionId) || data.reference_url.includes(selectedWorkflow) 
 
     	if (userdata.orgs !== undefined) {
     	  const foundOrg = userdata.orgs.find((org) => org.id === data["org_id"]);
@@ -351,12 +390,27 @@ const Priorities = (props) => {
 				</a>
 			</span>
 			<div/>
-			<Switch
-				checked={showRead}
-				onChange={() => {
-					setShowRead(!showRead);
-				}}
-			/>&nbsp; Show read 
+			<div style={{display: "flex", marginTop: 10, marginBottom: 10, }}>
+				<Switch
+					checked={showRead}
+					onChange={() => {
+						setShowRead(!showRead);
+					}}
+				/><span style={{marginTop: 5, }}>&nbsp; Show read </span>
+				  {notifications !== undefined && notifications !== null && notifications.length > 1 ? (
+					<Button
+					  color="primary"
+					  variant="outlined"
+					  disabled={notifications.filter((data) => !data.read).length === 0}
+					  onClick={() => {
+						clearNotifications()
+					  }}
+					  style={{marginLeft: 50, }}
+					>
+					  Mark all as read 
+					</Button>
+				  ) : null}
+			</div>
 			{notifications === null || notifications === undefined || notifications.length === 0 ? null : 
 				<div>
 					{notifications.map((notification, index) => {

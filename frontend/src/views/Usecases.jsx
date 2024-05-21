@@ -427,7 +427,7 @@ const UsecaseListComponent = (props) => {
 
 								return (
       								<Grid id={fixedName} item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
-										if (fixedName === "increase authentication") {
+										if (fixedName === "reporting") {
 											getUsecase(subcase, index, subindex) 
 											return
 										}
@@ -1192,8 +1192,7 @@ const Dashboard = (props) => {
 			navigate(curpath + newitem)
 		}
 
-		/*
-		const baseItem = document.getElementById("increase authentication")
+		const baseItem = document.getElementById("reporting")
 		if (baseItem !== undefined && baseItem !== null) {
 			baseItem.click()
 
@@ -1206,7 +1205,6 @@ const Dashboard = (props) => {
 			// Scroll back to top
 			window.scrollTo(0, 0)
 		}
-		*/
 
 		const foundQuery2 = params["selected_object"]
 		if (foundQuery2 !== null && foundQuery2 !== undefined) {
@@ -1231,7 +1229,7 @@ const Dashboard = (props) => {
 				} else { 
 					//console.log("Couldn't find item with name ", queryName)
 				}
-			}, 1000);
+			}, 1000)
 		}
 
 	}

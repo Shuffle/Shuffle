@@ -8,27 +8,27 @@ import Stack from '@mui/material/Stack';
 import SubflowSuggestions from "../components/SubflowSuggestions.jsx";
 
 import {
-  FormControl,
-  InputLabel,
-  Paper,
-  OutlinedInput,
-  Checkbox,
-  Card,
-  Tooltip,
-  FormControlLabel,
-  Typography,
-  Switch,
-  Select,
-  MenuItem,
-  Divider,
-  TextField,
-  Button,
-  Tabs,
-  Tab,
-  Grid,
-  IconButton,
-  Autocomplete,
-  Dialog,
+	FormControl,
+	InputLabel,
+	Paper,
+	OutlinedInput,
+	Checkbox,
+	Card,
+	Tooltip,
+	FormControlLabel,
+	Typography,
+	Switch,
+	Select,
+	MenuItem,
+	Divider,
+	TextField,
+	Button,
+	Tabs,
+	Tab,
+	Grid,
+	IconButton,
+	Autocomplete,
+	Dialog,
 	DialogTitle,
 	DialogActions,
 	DialogContent,
@@ -36,218 +36,223 @@ import {
 } from "@mui/material";
 
 import {
-	ExpandLess as ExpandLessIcon, 
-	ExpandMore as ExpandMoreIcon, 
+	ExpandLess as ExpandLessIcon,
+	ExpandMore as ExpandMoreIcon,
 	Save as SaveIcon,
 } from "@mui/icons-material";
 
 const useStyles = makeStyles({
-  notchedOutline: {
-    borderColor: "#f85a3e !important",
-  },
+	notchedOutline: {
+		borderColor: "#f85a3e !important",
+	},
 })
 
 const OrgHeaderexpanded = (props) => {
-  const {
-    userdata,
-    selectedOrganization,
-    setSelectedOrganization,
-    globalUrl,
-    isCloud,
+	const {
+		userdata,
+		selectedOrganization,
+		setSelectedOrganization,
+		globalUrl,
+		isCloud,
 		adminTab,
-  } = props;
+	} = props;
 
-  const classes = useStyles();
-  const defaultBranch = "master";
+	const classes = useStyles();
+	const defaultBranch = "master";
 
-  const [orgName, setOrgName] = React.useState(selectedOrganization.name);
-  const [orgDescription, setOrgDescription] = React.useState(
-    selectedOrganization.description
-  );
+	const [orgName, setOrgName] = React.useState(selectedOrganization.name);
+	const [orgDescription, setOrgDescription] = React.useState(
+		selectedOrganization.description
+	);
 
-  const [appDownloadUrl, setAppDownloadUrl] = React.useState(
-    selectedOrganization.defaults === undefined
-      ? "https://github.com/frikky/shuffle-apps"
-      : selectedOrganization.defaults.app_download_repo === undefined ||
-        selectedOrganization.defaults.app_download_repo.length === 0
-      ? "https://github.com/frikky/shuffle-apps"
-      : selectedOrganization.defaults.app_download_repo
-  );
-  const [appDownloadBranch, setAppDownloadBranch] = React.useState(
-    selectedOrganization.defaults === undefined
-      ? defaultBranch
-      : selectedOrganization.defaults.app_download_branch === undefined ||
-        selectedOrganization.defaults.app_download_branch.length === 0
-      ? defaultBranch
-      : selectedOrganization.defaults.app_download_branch
-  );
-  const [workflowDownloadUrl, setWorkflowDownloadUrl] = React.useState(
-    selectedOrganization.defaults === undefined
-      ? "https://github.com/frikky/shuffle-apps"
-      : selectedOrganization.defaults.workflow_download_repo === undefined ||
-        selectedOrganization.defaults.workflow_download_repo.length === 0
-      ? "https://github.com/frikky/shuffle-workflows"
-      : selectedOrganization.defaults.workflow_download_repo
-  );
-  const [workflowDownloadBranch, setWorkflowDownloadBranch] = React.useState(
-    selectedOrganization.defaults === undefined
-      ? defaultBranch
-      : selectedOrganization.defaults.workflow_download_branch === undefined ||
-        selectedOrganization.defaults.workflow_download_branch.length === 0
-      ? defaultBranch
-      : selectedOrganization.defaults.workflow_download_branch
-  );
-  const [ssoEntrypoint, setSsoEntrypoint] = React.useState(
-    selectedOrganization.sso_config === undefined
-      ? ""
-      : selectedOrganization.sso_config.sso_entrypoint === undefined ||
-        selectedOrganization.sso_config.sso_entrypoint.length === 0
-      ? ""
-      : selectedOrganization.sso_config.sso_entrypoint
-  );
-  const [ssoCertificate, setSsoCertificate] = React.useState(
-    selectedOrganization.sso_config === undefined
-      ? ""
-      : selectedOrganization.sso_config.sso_certificate === undefined ||
-        selectedOrganization.sso_config.sso_certificate.length === 0
-      ? ""
-      : selectedOrganization.sso_config.sso_certificate
-  );
+	const [appDownloadUrl, setAppDownloadUrl] = React.useState(
+		selectedOrganization.defaults === undefined
+			? "https://github.com/frikky/shuffle-apps"
+			: selectedOrganization.defaults.app_download_repo === undefined ||
+				selectedOrganization.defaults.app_download_repo.length === 0
+				? "https://github.com/frikky/shuffle-apps"
+				: selectedOrganization.defaults.app_download_repo
+	);
+	const [appDownloadBranch, setAppDownloadBranch] = React.useState(
+		selectedOrganization.defaults === undefined
+			? defaultBranch
+			: selectedOrganization.defaults.app_download_branch === undefined ||
+				selectedOrganization.defaults.app_download_branch.length === 0
+				? defaultBranch
+				: selectedOrganization.defaults.app_download_branch
+	);
+	const [workflowDownloadUrl, setWorkflowDownloadUrl] = React.useState(
+		selectedOrganization.defaults === undefined
+			? "https://github.com/frikky/shuffle-apps"
+			: selectedOrganization.defaults.workflow_download_repo === undefined ||
+				selectedOrganization.defaults.workflow_download_repo.length === 0
+				? "https://github.com/frikky/shuffle-workflows"
+				: selectedOrganization.defaults.workflow_download_repo
+	);
+	const [workflowDownloadBranch, setWorkflowDownloadBranch] = React.useState(
+		selectedOrganization.defaults === undefined
+			? defaultBranch
+			: selectedOrganization.defaults.workflow_download_branch === undefined ||
+				selectedOrganization.defaults.workflow_download_branch.length === 0
+				? defaultBranch
+				: selectedOrganization.defaults.workflow_download_branch
+	);
+	const [ssoEntrypoint, setSsoEntrypoint] = React.useState(
+		selectedOrganization.sso_config === undefined
+			? ""
+			: selectedOrganization.sso_config.sso_entrypoint === undefined ||
+				selectedOrganization.sso_config.sso_entrypoint.length === 0
+				? ""
+				: selectedOrganization.sso_config.sso_entrypoint
+	);
+	const [ssoCertificate, setSsoCertificate] = React.useState(
+		selectedOrganization.sso_config === undefined
+			? ""
+			: selectedOrganization.sso_config.sso_certificate === undefined ||
+				selectedOrganization.sso_config.sso_certificate.length === 0
+				? ""
+				: selectedOrganization.sso_config.sso_certificate
+	);
+	const [SSORequired, setSSORequired] = React.useState(selectedOrganization.sso_config === undefined
+		? false
+		: selectedOrganization.sso_config.SSORequired === undefined
+			? false
+			: selectedOrganization.sso_config.SSORequired);
 
-  const [notificationWorkflow, setNotificationWorkflow] = React.useState(
-    selectedOrganization.defaults === undefined
-      ? ""
-      : selectedOrganization.defaults.notification_workflow === undefined ||
-        selectedOrganization.defaults.notification_workflow.length === 0
-      ? ""
-      : selectedOrganization.defaults.notification_workflow
-  )
+	const [notificationWorkflow, setNotificationWorkflow] = React.useState(
+		selectedOrganization.defaults === undefined
+			? ""
+			: selectedOrganization.defaults.notification_workflow === undefined ||
+				selectedOrganization.defaults.notification_workflow.length === 0
+				? ""
+				: selectedOrganization.defaults.notification_workflow
+	);
 
-  const [documentationReference, setDocumentationReference] = React.useState(
-    selectedOrganization.defaults === undefined
-      ? ""
-      : selectedOrganization.defaults.documentation_reference === undefined ||
-        selectedOrganization.defaults.documentation_reference.length === 0
-      ? ""
-      : selectedOrganization.defaults.documentation_reference
-  );
-  const [openidClientId, setOpenidClientId] = React.useState(
-    selectedOrganization.sso_config === undefined
-      ? ""
-      : selectedOrganization.sso_config.client_id === undefined ||
-        selectedOrganization.sso_config.client_id.length === 0
-      ? ""
-      : selectedOrganization.sso_config.client_id
-  );
-  const [openidClientSecret, setOpenidClientSecret] = React.useState(
-    selectedOrganization.sso_config === undefined
-      ? ""
-      : selectedOrganization.sso_config.client_secret === undefined ||
-        selectedOrganization.sso_config.client_secret.length === 0
-      ? ""
-      : selectedOrganization.sso_config.client_secret
-  );
-  const [openidAuthorization, setOpenidAuthorization] = React.useState(
-    selectedOrganization.sso_config === undefined
-      ? ""
-      : selectedOrganization.sso_config.openid_authorization === undefined ||
-        selectedOrganization.sso_config.openid_authorization.length === 0
-      ? ""
-      : selectedOrganization.sso_config.openid_authorization
-  );
-  const [openidToken, setOpenidToken] = React.useState(
-    selectedOrganization.sso_config === undefined
-      ? ""
-      : selectedOrganization.sso_config.openid_token === undefined ||
-        selectedOrganization.sso_config.openid_token.length === 0
-      ? ""
-      : selectedOrganization.sso_config.openid_token
+	const [documentationReference, setDocumentationReference] = React.useState(
+		selectedOrganization.defaults === undefined
+			? ""
+			: selectedOrganization.defaults.documentation_reference === undefined ||
+				selectedOrganization.defaults.documentation_reference.length === 0
+				? ""
+				: selectedOrganization.defaults.documentation_reference
+	);
+	const [openidClientId, setOpenidClientId] = React.useState(
+		selectedOrganization.sso_config === undefined
+			? ""
+			: selectedOrganization.sso_config.client_id === undefined ||
+				selectedOrganization.sso_config.client_id.length === 0
+				? ""
+				: selectedOrganization.sso_config.client_id
+	);
+	const [openidClientSecret, setOpenidClientSecret] = React.useState(
+		selectedOrganization.sso_config === undefined
+			? ""
+			: selectedOrganization.sso_config.client_secret === undefined ||
+				selectedOrganization.sso_config.client_secret.length === 0
+				? ""
+				: selectedOrganization.sso_config.client_secret
+	);
+	const [openidAuthorization, setOpenidAuthorization] = React.useState(
+		selectedOrganization.sso_config === undefined
+			? ""
+			: selectedOrganization.sso_config.openid_authorization === undefined ||
+				selectedOrganization.sso_config.openid_authorization.length === 0
+				? ""
+				: selectedOrganization.sso_config.openid_authorization
+	);
+	const [openidToken, setOpenidToken] = React.useState(
+		selectedOrganization.sso_config === undefined
+			? ""
+			: selectedOrganization.sso_config.openid_token === undefined ||
+				selectedOrganization.sso_config.openid_token.length === 0
+				? ""
+				: selectedOrganization.sso_config.openid_token
 	)
 
-  const [workflows, setWorkflows] = React.useState([])
-  const [workflow, setWorkflow] = React.useState({})
+	const [workflows, setWorkflows] = React.useState([])
+	const [workflow, setWorkflow] = React.useState({})
 
-  const  getAvailableWorkflows =  (trigger_index) => {
-    fetch(globalUrl + "/api/v1/workflows", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    })
-    .then((response) => {
-      if (response.status !== 200) {
-        console.log("Status not 200 for workflows :O!");
-        return;
-      }
-      return response.json();
-    })
-    .then((responseJson) => {
-      if (responseJson !== undefined) {
-      	setWorkflows(responseJson)
+	const getAvailableWorkflows = (trigger_index) => {
+		fetch(globalUrl + "/api/v1/workflows", {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for workflows :O!");
+					return;
+				}
+				return response.json();
+			})
+			.then((responseJson) => {
+				if (responseJson !== undefined) {
+					setWorkflows(responseJson)
 
-		if (selectedOrganization.defaults !== undefined && selectedOrganization.defaults.notification_workflow !== undefined) {
+					if (selectedOrganization.defaults !== undefined && selectedOrganization.defaults.notification_workflow !== undefined) {
 
-			const workflow = responseJson.find((workflow) => workflow.id === selectedOrganization.defaults.notification_workflow)
-			if (workflow !== undefined && workflow !== null) {
-				setWorkflow(workflow)
-			}	
-		}
-      }
-    })
-    .catch((error) => {
-      console.log("Error getting workflows: " + error);
-    })
-  }
+						const workflow = responseJson.find((workflow) => workflow.id === selectedOrganization.defaults.notification_workflow)
+						if (workflow !== undefined && workflow !== null) {
+							setWorkflow(workflow)
+						}
+					}
+				}
+			})
+			.catch((error) => {
+				console.log("Error getting workflows: " + error);
+			})
+	}
 
-  useEffect(() => {
-	  getAvailableWorkflows()
-  }, [])
+	useEffect(() => {
+		getAvailableWorkflows()
+	}, [])
 
-  const handleEditOrg = (
-    name,
-    description,
-    orgId,
-    image,
-    defaults,
-    sso_config
-  ) => {
+	const handleEditOrg = (
+		name,
+		description,
+		orgId,
+		image,
+		defaults,
+		sso_config
+	) => {
 
-    const data = {
-      name: name,
-      description: description,
-      org_id: orgId,
-      image: image,
-      defaults: defaults,
-      sso_config: sso_config,
-    };
+		const data = {
+			name: name,
+			description: description,
+			org_id: orgId,
+			image: image,
+			defaults: defaults,
+			sso_config: sso_config,
+		};
 
-    const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
-    fetch(url, {
-      mode: "cors",
-      method: "POST",
-      body: JSON.stringify(data),
-      credentials: "include",
-      crossDomain: true,
-      withCredentials: true,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    })
-      .then((response) =>
-        response.json().then((responseJson) => {
-          if (responseJson["success"] === false) {
-            toast("Failed updating org: ", responseJson.reason);
-          } else {
-            toast("Successfully edited org!");
-          }
-        })
-      )
-      .catch((error) => {
-        toast("Err: " + error.toString());
-      });
-  };
+		const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+		fetch(url, {
+			mode: "cors",
+			method: "POST",
+			body: JSON.stringify(data),
+			credentials: "include",
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				"Content-Type": "application/json; charset=utf-8",
+			},
+		})
+			.then((response) =>
+				response.json().then((responseJson) => {
+					if (responseJson["success"] === false) {
+						toast("Failed updating org: ", responseJson.reason);
+					} else {
+						toast("Successfully edited org!");
+					}
+				})
+			)
+			.catch((error) => {
+				toast("Err: " + error.toString());
+			});
+	};
 
 
 	const handleWorkflowSelectionUpdate = (e, isUserinput) => {
@@ -258,217 +263,55 @@ const OrgHeaderexpanded = (props) => {
 
 		setWorkflow(e.target.value)
 		setNotificationWorkflow(e.target.value.id)
-		toast("Updated notification workflow. Don't forget to save!") 
+		toast("Updated notification workflow. Don't forget to save!")
 	}
 
-  const orgSaveButton = (
-    <Tooltip title="Save any unsaved data" placement="bottom">
-	  <div>
-      <Button
-        style={{ width: 150, height: 55, flex: 1 }}
-        variant="contained"
-        color="primary"
-        disabled={
-          userdata === undefined ||
-          userdata === null ||
-          userdata.admin !== "true"
-        }
-        onClick={() =>
-          handleEditOrg(
-            orgName,
-            orgDescription,
-            selectedOrganization.id,
-            selectedOrganization.image,
-            {
-              app_download_repo: appDownloadUrl,
-              app_download_branch: appDownloadBranch,
-              workflow_download_repo: workflowDownloadUrl,
-              workflow_download_branch: workflowDownloadBranch,
-              notification_workflow: notificationWorkflow,
-              documentation_reference: documentationReference,
-            },
-            {
-              sso_entrypoint: ssoEntrypoint,
-              sso_certificate: ssoCertificate,
-              client_id: openidClientId,
-              client_secret: openidClientSecret,
-              openid_authorization: openidAuthorization,
-              openid_token: openidToken,
-            }
-          )
-        }
-      >
-        <SaveIcon />
-      </Button>
-	  </div>
-    </Tooltip>
-  );
-
-  const getAppIDs = async (appList) => {
-	fetch(globalUrl + "/api/v1/apps", {
-		method: "GET",
-		headers: {
-			"Content-Type": "application/json",
-			Accept: "application/json",
-		},
-		credentials: "include",
-	}).then((response) => {
-			if (response.status !== 200) {
-				toast("Failed getting app ids: ", response.reason);
-				console.log("Status not 200 for app ids :O!");
-				return;
-			}
-			return response.json();
-		}).then((responseJson) => {
-			if (responseJson !== undefined) {
-				// console.log("App ids: ", responseJson)
-				// console.log("App list: ", appList)
-				const filteredApps = responseJson.filter(app => appList.includes(app.name));
-    			const appDetails = filteredApps.map(app => ({ name: app.name, id: app.id }));
-				return appDetails
-				// console.log("App IDs: ", appDetails)
-			}
-		}).catch((error) => {
-			console.log("Error getting app ids: " + error);
-		})
-}
-
-
-		  
-
-	
-
-
-  
-const generateNotificationWorkflow = async (appname,appImage,appAuthId,projectId,issuetype) => {
-	//currently only supports JIRA figure out a way to support more apps
-	var workflowName = `[GENERATED] ${appname} notification workflow`
-	var workflowDescription = "Generated by Shuffle for sending info/error notifications."
-	var data = {
-		"name": workflowName,
-		"description": workflowDescription,
-	}
-
-	fetch(globalUrl + "/api/v1/workflows", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Accept: "application/json",
-		},
-		body: JSON.stringify(data),
-		credentials: "include",
-	})
-		.then((response) => {
-			if (response.status !== 200) {
-				toast("Failed setting notification workflow: ", response.reason);
-				console.log("Status not 200 for workflows :O!");
-				return;
-			}
-			return response.json();
-		}).then((responseJson)=>{
-			if (responseJson !== undefined) {
-				console.log("Notification workflow created successfully")
-				var workflow_id = responseJson.id
-				if (appname.toLowerCase() === "jira"){
-					console.log("updating workflow for JIRA")
-					var workflowBody = {
-						"name": workflowName,
-						"Description": workflowDescription,
-						"id": workflow_id,
-						"actions": [
-							{
-								"app_name": "Jira",
-								"name": "post_create_issue",
-								"authentication_id":appAuthId,
-								"large_image":appImage,
-								"isStartNode": true,
-								"label": "create_issue",
-								"app_version": "1.1.0",
-								"parameters": [
-									{
-										"name": "body",
-										"value": `{"fields": { "project": {"key": "${projectId}"},"summary": "$exec.title","issuetype": {"name": "${issuetype}"},"description": {"content": [{"content":[{"type":"text","text":"$exec.description"}],"type": "paragraph"}],"type": "doc","version": 1}}}`
-									},
-									{
-										"name": "username_basic",
-										"value": ""
-									},
-									{
-										"name": "password_basic",
-										"value": ""
-									},
-									{
-										"name": "url",
-										"value": ""
-									},
-									{
-										"name": "headers",
-										"value": "Content-type=application/json \nAccept=application/json"
-									},
-									{
-										"name": "queries",
-										"value": ""
-									},
-									{
-										"name": "ssl_verify",
-										"value": "False"
-									}
-								]
-							}
-						]
+	const orgSaveButton = (
+		<Tooltip title="Save any unsaved data" placement="bottom">
+			<div>
+				<Button
+					style={{ width: 150, height: 55, flex: 1 }}
+					variant="contained"
+					color="primary"
+					disabled={
+						userdata === undefined ||
+						userdata === null ||
+						userdata.admin !== "true"
 					}
-				} 
-				fetch(globalUrl + `/api/v1/workflows/${workflow_id}`, {
-					method: "PUT",
-					headers: {
-						"Content-Type": "application/json",
-						Accept: "application/json",
-					},
-					body: JSON.stringify(workflowBody),
-					credentials: "include",
-				})
-					.then((response) => {
-						if (response.status !== 200) {
-							toast("Failed setting notification workflow: ", response.reason);
-							console.log("Status not 200 for workflows :O!");
-							return;
-						}
-						return response.json();
-					}).then((responseJson)=>{
-						if (responseJson !== undefined) {
-							handleEditOrg(
-								orgName,
-								orgDescription,
-								selectedOrganization.id,
-								selectedOrganization.image,
-								{
-									app_download_repo: appDownloadUrl,
-									app_download_branch: appDownloadBranch,
-									workflow_download_repo: workflowDownloadUrl,
-									workflow_download_branch: workflowDownloadBranch,
-									notification_workflow: workflow_id,
-									documentation_reference: documentationReference,
-								},
-								{
-									sso_entrypoint: ssoEntrypoint,
-									sso_certificate: ssoCertificate,
-									client_id: openidClientId,
-									client_secret: openidClientSecret,
-									openid_authorization: openidAuthorization,
-									openid_token: openidToken,
-								}
-							)
-							console.log("Notification workflow updated successfully")
-							toast("Notification workflow updated successfully")
-						}
-					})
-			}
-		}).catch((error) => {
-			console.log("Error setting workflows: " + error);
-		})
-}
+					onClick={() =>
+						handleEditOrg(
+							orgName,
+							orgDescription,
+							selectedOrganization.id,
+							selectedOrganization.image,
+							{
+								app_download_repo: appDownloadUrl,
+								app_download_branch: appDownloadBranch,
+								workflow_download_repo: workflowDownloadUrl,
+								workflow_download_branch: workflowDownloadBranch,
+								notification_workflow: notificationWorkflow,
+								documentation_reference: documentationReference,
+							},
+							{
+								sso_entrypoint: ssoEntrypoint,
+								sso_certificate: ssoCertificate,
+								client_id: openidClientId,
+								client_secret: openidClientSecret,
+								openid_authorization: openidAuthorization,
+								openid_token: openidToken,
+							}
+						)
+					}
+				>
+					<SaveIcon />
+				</Button>
+			</div>
+		</Tooltip>
+	);
 
-	
+	const toggleBetweenRequiredOrOptional = (event) => {
+		setSSORequired(event.target.checked);
+	};
 
 	return (
 		<div style={{ textAlign: "center" }}>
@@ -488,145 +331,145 @@ const generateNotificationWorkflow = async (appname,appImage,appAuthId,projectId
 						*/}
 
 
-						<div style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
+						<div style={{ display: "flex", flexDirection: "row", alignItems: "center" }}>
 							{workflows !== undefined && workflows !== null && workflows.length > 0 ?
 								<Autocomplete
-                				  id="notification_workflow_search"
-                				  autoHighlight
-								  freeSolo
-								  //autoSelect
-                				  value={workflow}
-                				  classes={{ inputRoot: classes.inputRoot }}
-                				  ListboxProps={{
-                				    style: {
-                				      backgroundColor: theme.palette.inputColor,
-                				      color: "white",
-                				    },
-                				  }}
-                				  getOptionLabel={(option) => {
-                				    if (
-                				      option === undefined ||
-                				      option === null ||
-                				      option.name === undefined ||
-                				      option.name === null
-                				    ) {
-                				      return "No Workflow Selected";
-                				    }
-
-                				    const newname = (
-                				      option.name.charAt(0).toUpperCase() + option.name.substring(1)
-                				    ).replaceAll("_", " ");
-                				    return newname;
-                				  }}
-                				  options={workflows}
-                				  fullWidth
-                				  style={{
-                				    backgroundColor: theme.palette.inputColor,
-                				    height: 50,
-                				    borderRadius: theme.palette.borderRadius,
-                				  }}
-                				  onChange={(event, newValue) => {
-									console.log("Found value: ", newValue)
-
-									var parsedinput = { target: { value: newValue } }
-
-									// For variables
-									if (typeof newValue === 'string' && newValue.startsWith("$")) {
-										parsedinput = { 
-											target: { 
-												value: {
-													"name": newValue, 
-													"id": newValue,
-													"actions": [],
-													"triggers": [],
-												} 
-											} 
+									id="notification_workflow_search"
+									autoHighlight
+									freeSolo
+									//autoSelect
+									value={workflow}
+									classes={{ inputRoot: classes.inputRoot }}
+									ListboxProps={{
+										style: {
+											backgroundColor: theme.palette.inputColor,
+											color: "white",
+										},
+									}}
+									getOptionLabel={(option) => {
+										if (
+											option === undefined ||
+											option === null ||
+											option.name === undefined ||
+											option.name === null
+										) {
+											return "No Workflow Selected";
 										}
-									}
 
-									handleWorkflowSelectionUpdate(parsedinput)
-                				  }}
-            	  				  renderOption={(props, data, state) => {
-									if (data.id === workflow.id) {
-									  data = workflow;
-									}
+										const newname = (
+											option.name.charAt(0).toUpperCase() + option.name.substring(1)
+										).replaceAll("_", " ");
+										return newname;
+									}}
+									options={workflows}
+									fullWidth
+									style={{
+										backgroundColor: theme.palette.inputColor,
+										height: 50,
+										borderRadius: theme.palette.borderRadius,
+									}}
+									onChange={(event, newValue) => {
+										console.log("Found value: ", newValue)
 
-                				    return (
-                				      <Tooltip arrow placement="left" title={
-                				        <span style={{}}>
-                				          {data.image !== undefined && data.image !== null && data.image.length > 0 ?
-                				            <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
-                				            : null}
-                				          <Typography>
-                				            Choose {data.name}
-                				          </Typography>
-                				        </span>
-                				      } placement="bottom">
-                				        <MenuItem
-                				          style={{
-                				            backgroundColor: theme.palette.inputColor,
-                				            color: data.id === workflow.id ? "red" : "white",
-                				          }}
-                				          value={data}
-										  onClick={(e) => {
-										    var parsedinput = { target: { value: data } }
-										    handleWorkflowSelectionUpdate(parsedinput)
-										  }}
-                				        >
-                				          {data.name}
-                				        </MenuItem>
-                				      </Tooltip>
-                				    )
-                				  }}
-                				  renderInput={(params) => {
-                				    return (
-                				      <TextField
-                				        style={{
-                				          backgroundColor: theme.palette.inputColor,
-                				          borderRadius: theme.palette.borderRadius,
-                				        }}
-                				        {...params}
-                				        label="Find a notification workflow"
-                				        variant="outlined"
-                				      />
-                				    );
-                				  }}
-                				/>
-							:
-							<TextField
-								required
-								style={{
-									flex: "1",
-									marginTop: "5px",
-									marginRight: "15px",
-									backgroundColor: theme.palette.inputColor,
-								}}
-								fullWidth={true}
-								type="name"
-								id="outlined-with-placeholder"
-								margin="normal"
-								variant="outlined"
-								placeholder="ID of the workflow to receive notifications"
-								value={notificationWorkflow}
-								onChange={(e) => {
-									setNotificationWorkflow(e.target.value);
-								}}
-								InputProps={{
-									classes: {
-										notchedOutline: classes.notchedOutline,
-									},
-									style: {
-										color: "white",
-									},
-								}}
-							/>
-						}
-						<div style={{minWidth: 150, maxWidth: 150, marginTop: 5, marginLeft: 10,  }}>
-							{orgSaveButton}
-						</div>
+										var parsedinput = { target: { value: newValue } }
+
+										// For variables
+										if (typeof newValue === 'string' && newValue.startsWith("$")) {
+											parsedinput = {
+												target: {
+													value: {
+														"name": newValue,
+														"id": newValue,
+														"actions": [],
+														"triggers": [],
+													}
+												}
+											}
+										}
+
+										handleWorkflowSelectionUpdate(parsedinput)
+									}}
+									renderOption={(props, data, state) => {
+										if (data.id === workflow.id) {
+											data = workflow;
+										}
+
+										return (
+											<Tooltip arrow placement="left" title={
+												<span style={{}}>
+													{data.image !== undefined && data.image !== null && data.image.length > 0 ?
+														<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+														: null}
+													<Typography>
+														Choose {data.name}
+													</Typography>
+												</span>
+											} placement="bottom">
+												<MenuItem
+													style={{
+														backgroundColor: theme.palette.inputColor,
+														color: data.id === workflow.id ? "red" : "white",
+													}}
+													value={data}
+													onClick={(e) => {
+														var parsedinput = { target: { value: data } }
+														handleWorkflowSelectionUpdate(parsedinput)
+													}}
+												>
+													{data.name}
+												</MenuItem>
+											</Tooltip>
+										)
+									}}
+									renderInput={(params) => {
+										return (
+											<TextField
+												style={{
+													backgroundColor: theme.palette.inputColor,
+													borderRadius: theme.palette.borderRadius,
+												}}
+												{...params}
+												label="Find a notification workflow"
+												variant="outlined"
+											/>
+										);
+									}}
+								/>
+								:
+								<TextField
+									required
+									style={{
+										flex: "1",
+										marginTop: "5px",
+										marginRight: "15px",
+										backgroundColor: theme.palette.inputColor,
+									}}
+									fullWidth={true}
+									type="name"
+									id="outlined-with-placeholder"
+									margin="normal"
+									variant="outlined"
+									placeholder="ID of the workflow to receive notifications"
+									value={notificationWorkflow}
+									onChange={(e) => {
+										setNotificationWorkflow(e.target.value);
+									}}
+									InputProps={{
+										classes: {
+											notchedOutline: classes.notchedOutline,
+										},
+										style: {
+											color: "white",
+										},
+									}}
+								/>
+							}
+							<div style={{ minWidth: 150, maxWidth: 150, marginTop: 5, marginLeft: 10, }}>
+								{orgSaveButton}
+							</div>
 						</div>
 					</span>
-				</Grid> 
+				</Grid>
 				<Grid item xs={12} style={{}}>
 					<span>
 						<Typography>Org Documentation reference</Typography>
@@ -659,10 +502,25 @@ const generateNotificationWorkflow = async (appname,appImage,appAuthId,projectId
 						/>
 					</span>
 				</Grid>
-				{isCloud ? null : 
-				<Grid item xs={12} style={{marginTop: 50 }}>
-					<Typography variant="h4" style={{textAlign: "center",}}>OpenID connect</Typography>
-					<Grid container style={{marginTop: 10, }}>
+				{/* {isCloud ? null : */}
+				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 20, marginLeft: 10, width: '100%', borderBottom: '1px solid #414347' }}>
+					<div>
+						<Switch
+							checked={SSORequired}
+							onChange={toggleBetweenRequiredOrOptional}
+							name="onOffSwitch"
+							color="primary"
+							title="Make SAML SSO or OpenID Authentication Required or Optional for Your Organization"
+						/>
+						{SSORequired ? 'Required' : 'Optional'}
+					</div>
+					<Typography variant="body2" style={{ margin: '5px 0px 5px 10px' }}>Make SAML SSO or OpenID Authentication Required or Optional for Your Organization.</Typography>
+				</div>
+				<div>
+				</div>
+				<Grid item xs={12} style={{}}>
+					<Typography variant="h4" style={{ textAlign: "center", }}>OpenID connect</Typography>
+					<Grid container style={{ marginTop: 10, }}>
 						<Grid item xs={6} style={{}}>
 							<span>
 								<Typography>Client ID</Typography>
@@ -742,7 +600,7 @@ const generateNotificationWorkflow = async (appname,appImage,appAuthId,projectId
 							</span>
 						</Grid>
 					</Grid>
-					<Grid container style={{marginTop: 10, }}>
+					<Grid container style={{ marginTop: 10, }}>
 						<Grid item xs={6} style={{}}>
 							<span>
 								<Typography>Authorization URL</Typography>
@@ -813,11 +671,11 @@ const generateNotificationWorkflow = async (appname,appImage,appAuthId,projectId
 						</Grid>
 					</Grid>
 				</Grid>
-				}
+				{/* } */}
 				{/*isCloud ? null : */}
-				<Grid item xs={12} style={{marginTop: 50,}}>
-					<Typography variant="h4" style={{textAlign: "center",}}>SAML SSO (v1.1)</Typography>
-					<Grid container style={{marginTop: 20, }}>
+				<Grid item xs={12} style={{ marginTop: 50, }}>
+					<Typography variant="h4" style={{ textAlign: "center", }}>SAML SSO (v1.1)</Typography>
+					<Grid container style={{ marginTop: 20, }}>
 						<Grid item xs={6} style={{}}>
 							<span>
 								<Typography>SSO Entrypoint (IdP)</Typography>
@@ -892,11 +750,11 @@ const generateNotificationWorkflow = async (appname,appImage,appAuthId,projectId
 							</span>
 						</Grid>
 					</Grid>
-					{isCloud ? 
-						<Typography variant="body2" style={{textAlign: "left",}} color="textSecondary">
+					{isCloud ?
+						<Typography variant="body2" style={{ textAlign: "left", }} color="textSecondary">
 							IdP URL for Shuffle: https://shuffler.io/api/v1/login_sso
 						</Typography>
-					: null}
+						: null}
 				</Grid>
 				{isCloud ? null : (
 					<Grid item xs={6} style={{}}>

@@ -187,7 +187,7 @@ const ConfigureWorkflow = (props) => {
       console.log("No apps loaded: ", apps);
 
 	  if (setConfigureWorkflowModalOpen !== undefined) {
-      	setConfigureWorkflowModalOpen(false);
+      	setConfigureWorkflowModalOpen(false)
 	  }
 
       return null;
@@ -198,7 +198,7 @@ const ConfigureWorkflow = (props) => {
     const newactions = [];
     for (let [key, keyval] in Object.entries(workflow.actions)) {
 
-      const action = workflow.actions[key];
+      var action = JSON.parse(JSON.stringify(workflow.actions[key]))
       var newaction = {
         large_image: action.large_image,
         app_name: action.app_name,
@@ -220,17 +220,67 @@ const ConfigureWorkflow = (props) => {
 	  }
 
 	  if (action.app_name === "Integration Framework") {
-		  console.log("Skipping integration framework: ", action)
-		  continue
+		  var selected_app = ""
+		  for (var paramkey in action.parameters) {
+			  const param = action.parameters[paramkey]
+
+			  if (param.name === "app_name") {
+				  selected_app = param.value
+				  break
+			  }
+		  }
+
+		  for (var appauth in appAuthentication) {
+			  if (appAuthentication[appauth].app.name.toLowerCase() === selected_app.toLowerCase()) {
+				  newaction.auth_done = true
+				  break
+			  }
+		  }
+
+		  if (newaction.auth_done) {
+			  continue
+		  }
+
+		  for (var appkey in apps) {
+			  if (apps[appkey].name.toLowerCase() === selected_app.toLowerCase()) {
+				  newaction.app_name = apps[appkey].name
+				  newaction.app_version = apps[appkey].app_version
+				  newaction.app = apps[appkey]
+				  newaction.app_id = apps[appkey].id
+
+				  newaction.must_activate = false 
+				  newaction.must_authenticate = true
+
+				  newaction.steps.push({
+					"title": "Authenticate app",
+					"type": "authenticate",
+					"required": true,
+				  })
+
+		  		  action.app_id = apps[appkey].id
+				  action.authentication_id = ""
+				  action.authentication = {
+					  "required": true,
+				  }
+
+				  break
+			  }
+		  }
+
+		  if (newaction.app.id === undefined) {
+			  console.log("Failed to find app: ", selected_app)
+			  continue
+		  }
+
+		  newaction.update_version = "1.1.0"
 	  }
 
 	  // ID match OR name match + version match 
       //const app = apps.find((app) => app.id === action.app_id || (app.name === action.app_name && (app.app_version === action.app_version || (app.loop_versions !== null && app.loop_versions.includes(action.app_version)))))
-		//
 
 	  // without version match
 	  const newappname = action.app_name.toLowerCase().replaceAll(" ", "_")
-      const app = apps.find((app) => app.id === action.app_id || app.name.toLowerCase().replaceAll(" ", "_") === newappname)
+      var app = apps.find((app) => app.id === action.app_id || app.name.toLowerCase().replaceAll(" ", "_") === newappname)
 
       if (app === undefined || app === null) {
 
@@ -246,6 +296,19 @@ const ConfigureWorkflow = (props) => {
 			"required": true,
 		})
       } else {
+        if (action.authentication_id !== "" && app.authentication.required === true) {
+			var authFound = false
+			for (var authkey in appAuthentication) {
+				if (appAuthentication[authkey].id === action.authentication_id) {
+					authFound = true
+					break
+				}
+			}
+
+			if (!authFound) {
+				action.authentication_id = ""
+			}
+		}
 
         if (action.authentication_id === "" && app.authentication.required === true && action.parameters !== undefined && action.parameters !== null) {
 		  // Check if configuration is filled or not
@@ -292,9 +355,11 @@ const ConfigureWorkflow = (props) => {
 	  //console.log(newaction.app_name,"AUTH: ", newaction.must_authenticate, " ACTIVATE: ", newaction.must_activate)
 		  
       if (newaction.must_authenticate) {
-        var authenticationOptions = [];
+
+        var authenticationOptions = []
         for (let [key,keyval] in Object.entries(appAuthentication)) {
-          const auth = appAuthentication[key];
+          const auth = appAuthentication[key]
+
           if (auth.app.name === app.name && auth.active) {
             //console.log("Found auth: ", auth)
             authenticationOptions.push(auth);
@@ -403,17 +468,18 @@ const ConfigureWorkflow = (props) => {
 				continue;
 			  }
 
-			  requiredTriggers.push(trigger);
+			  requiredTriggers.push(trigger)
 			}
 		}
 
-		if (requiredTriggers.length === 0 && requiredVariables.length === 0 && newactions.length === 0 && setConfigureWorkflowModalOpen !== undefined) {
-		  setConfigureWorkflowModalOpen(false);
+		if (setConfigureWorkflowModalOpen !== undefined && requiredTriggers.length === 0 && requiredVariables.length === 0 && newactions.length === 0 ) {
+		  console.log("No required triggers, variables or actions. Closing modal.")
+		  setConfigureWorkflowModalOpen(false)
 		}
 
-		setRequiredTriggers(requiredTriggers);
-		setRequiredVariables(requiredVariables);
-		setRequiredActions(newactions);
+		setRequiredTriggers(requiredTriggers)
+		setRequiredVariables(requiredVariables)
+		setRequiredActions(newactions)
 	}
 
     if (appAuthentication !== undefined && previousAuth !== undefined && appAuthentication.length !== previousAuth.length) {

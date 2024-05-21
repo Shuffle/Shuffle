@@ -9,7 +9,7 @@ import { makeStyles, } from "@mui/styles";
 import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx"
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { useBeforeunload } from "react-beforeunload";
+import { useBeforeunload } from "react-beforeunload"
 import ReactJson from "react-json-view";
 import { NestedMenuItem } from 'mui-nested-menu';
 import Markdown from "react-markdown";
@@ -642,6 +642,72 @@ const AngularWorkflow = (defaultprops) => {
 	"field_id": "",
   })
 
+  const [loadedApps, setLoadedApps] = React.useState([])
+
+	const loadAppConfig = (appId, select) => {
+		if (appId === undefined || appId === null || appId.length === 0) {
+			return
+		}
+
+		if (loadedApps.includes(appId)) {
+			return
+		}
+
+		loadedApps.push(appId)
+		setLoadedApps(loadedApps)
+
+		const appUrl = `${globalUrl}/api/v1/apps/${appId}/config?openapi=false`
+		fetch(appUrl, {
+		  headers: {
+			Accept: "application/json",
+		  },
+		  credentials: "include",
+		})
+		.then((response) => {
+			return response.json()
+		})
+		.then((responseJson) => {
+			console.log("Loaded app config: ", responseJson)
+
+			if (responseJson.success === true && responseJson.app !== undefined && responseJson.app !== null && responseJson.app.length > 0) {
+				// Base64 decode into json
+				const foundapp = JSON.parse(atob(responseJson.app))	
+				console.log("Checked app: ", foundapp)
+
+				const selectedAppActions = selectedApp.actions === undefined  || selectedApp.actions === null ? [] : selectedApp.actions
+				if (foundapp.actions !== undefined && foundapp.actions !== null && foundapp.actions.length > selectedAppActions.length) {
+
+					if (select) {
+						setSelectedApp(foundapp)
+					}
+
+					if (apps === undefined || apps === null || apps.length === 0) {
+						console.log("LOAD APPS!")
+					}
+
+					for (var i = 0; i < apps.length; i++) {
+						if (apps[i].id !== foundapp.id) {
+							continue
+						}
+
+						apps[i] = foundapp
+						setApps(apps)
+						setFilteredApps(apps)
+
+						// Update the local storage
+						localStorage.setItem("apps", JSON.stringify(apps))
+						break
+					}
+				}
+
+				// FIXME: Add it to the existing list AND update the selected app
+			}
+		})
+		.catch((error) => {
+			console.log(`Failed side-loading app ${appId}: ${error}`)
+		})
+	}
+
   // Event for making sure app is correct
   useEffect(() => {
 	  if (selectedApp === undefined || selectedApp === null && selectedApp.app_name === undefined) {
@@ -657,45 +723,7 @@ const AngularWorkflow = (defaultprops) => {
 		  return
 	  } else {
 		if (selectedApp.id !== undefined && selectedApp.id !== null && selectedApp.id.length > 0) {
-			const appUrl = `${globalUrl}/api/v1/apps/${selectedApp.id}/config?openapi=false`
-			fetch(appUrl, {
-			  headers: {
-				Accept: "application/json",
-			  },
-			  credentials: "include",
-			})
-			.then((response) => {
-				return response.json()
-			})
-			.then((responseJson) => {
-				if (responseJson.success === true && responseJson.app !== undefined && responseJson.app !== null && responseJson.app.length > 0) {
-					// Base64 decode into json
-					const foundapp = JSON.parse(atob(responseJson.app))	
-					if (foundapp.actions !== undefined && foundapp.actions !== null && foundapp.actions.length > selectedApp.actions.length) {
-						setSelectedApp(foundapp)
-
-						for (var i = 0; i < apps.length; i++) {
-							if (apps[i].id !== foundapp.id) {
-								continue
-							}
-
-							apps[i] = foundapp
-							setApps(apps)
-							setFilteredApps(apps)
-
-							// Update the local storage
-							localStorage.setItem("apps", JSON.stringify(apps))
-							break
-						}
-					}
-
-					// FIXME: Add it to the existing list AND update the selected app
-				}
-			})
-			.catch((error) => {
-				console.log(`Failed side-loading app ${selectedApp.name}`)
-			})
-
+			loadAppConfig(selectedApp.id, true)
 		}
 	  }
 
@@ -705,7 +733,6 @@ const AngularWorkflow = (defaultprops) => {
 			  continue
 		  }
 			  
-		  console.log("Found app: ", curapp)
 		  if (curapp.actions !== undefined && curapp.actions !== null && curapp.actions.length > selectedApp.actions.length) {
 			  var foundActionIndex = -1
 			  for (let actionkey in curapp.actions) {
@@ -1128,6 +1155,8 @@ const AngularWorkflow = (defaultprops) => {
 			"autoClose": false,
 		  })
 
+
+
         } else {
 		  if (refresh === true) {
 			getAppAuthentication(true, true, true)
@@ -1138,6 +1167,13 @@ const AngularWorkflow = (defaultprops) => {
           setAuthenticationModalOpen(false)
           // Needs a refresh with the new authentication..
           //toast("Successfully saved new app auth")
+		  if (configureWorkflowModalOpen === true) {
+		  	setConfigureWorkflowModalOpen(false)
+
+			setTimeout(() => {
+				setConfigureWorkflowModalOpen(true)
+			}, 1000)
+		  }
         }
       })
       .catch((error) => {
@@ -1179,7 +1215,6 @@ const AngularWorkflow = (defaultprops) => {
           if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
 			// Don't clean up if it's already open
 		    if (executionModalOpen === true) {
-				console.log("Execution modal already open, not cleaning up")
 		        return
 		    }
 
@@ -3221,8 +3256,9 @@ const AngularWorkflow = (defaultprops) => {
               responseJson.errors.length > 0
             ) {
 			  console.log("Setting configure Modal to open")
-              setConfigureWorkflowModalOpen(true);
             }
+              
+			setConfigureWorkflowModalOpen(true)
           }
         }
       })
@@ -3777,8 +3813,21 @@ const AngularWorkflow = (defaultprops) => {
 	if (data.buttonType == "ACTIONSUGGESTION") {
   	  const attachedToId = data.attachedTo
 
-	  const parentitem = cy.getElementById(data.attachedTo).data()
+	  const parentitemRaw = cy.getElementById(data.attachedTo)
+	  const parentitem = parentitemRaw.data()
 	  if (parentitem !== null && parentitem !== undefined) {
+		  setTimeout(() => {
+		  	parentitemRaw.select()
+
+			const allNodes = cy.nodes().jsons()
+		    for (var _key in allNodes) {
+		  		const currentNode = allNodes[_key]
+
+        		if (currentNode.data.buttonType === "ACTIONSUGGESTION") {
+          			cy.getElementById(currentNode.data.id).remove()
+				}
+			}
+		  }, 100)
 
 		  const findaction = data.label
 		  console.log("CLICKED: ", findaction, apps.length)
@@ -4262,20 +4311,31 @@ const AngularWorkflow = (defaultprops) => {
 
           curaction.app_id = curapp.id
 
-          setAuthenticationType(
-            curapp.authentication.type === "oauth2-app" || (curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null) ? {
-              type: curapp.authentication.type,
-              redirect_uri: curapp.authentication.redirect_uri,
-              refresh_uri: curapp.authentication.refresh_uri,
-              token_uri: curapp.authentication.token_uri,
-              scope: curapp.authentication.scope,
-              client_id: curapp.authentication.client_id,
-              client_secret: curapp.authentication.client_secret,
-			  grant_type: curapp.authentication.grant_type,
-            } : {
-              type: "",
-            }
-          )
+		  if (curapp.authentication === undefined || curapp.authentication === null) {
+			  setAuthenticationType({
+				type: "",
+			  })
+
+			  curapp.authentication = {
+				  type: "",
+				  required: false,
+			  }
+		  } else {
+			  setAuthenticationType(
+				curapp.authentication.type === "oauth2-app" || (curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null) ? {
+				  type: curapp.authentication.type,
+				  redirect_uri: curapp.authentication.redirect_uri,
+				  refresh_uri: curapp.authentication.refresh_uri,
+				  token_uri: curapp.authentication.token_uri,
+				  scope: curapp.authentication.scope,
+				  client_id: curapp.authentication.client_id,
+				  client_secret: curapp.authentication.client_secret,
+				  grant_type: curapp.authentication.grant_type,
+				} : {
+				  type: "",
+				}
+			  )
+		  }
 
           const requiresAuth = curapp.authentication.required; //&& ((curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null) || (curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null))
           setRequiresAuthentication(requiresAuth);
@@ -5855,15 +5915,15 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const addActionSuggestions = (nodedata, event) => {
-	  console.log("App Action suggestions disabled for now")
-	  return
-
+	  console.log("App Action suggestions being added")
 	  if (nodedata.type !== "ACTION") {
 		  return
 	  }
 
-	  var parentNode = cy.$("#" + event.target.data("id"));
-	  if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
+	  var parentNode = cy.$("#" + event.target.data("id"))
+	  if (parentNode.data("isButton") || parentNode.data("buttonId")) {
+		  return
+	  }
 
 	  const px = parentNode.position("x") + 0;
 	  const py = parentNode.position("y") + 100;
@@ -5887,6 +5947,8 @@ const AngularWorkflow = (defaultprops) => {
 	  // 1. Find the app
 	  // 2. Loop the apps' actions
 	  // 3. Find actions based on category label IF it exists
+		  
+	  console.log("Fidning app match for: ", parentname)
 	  var added = 0 
 	  for (let appKey in apps) {
 		  const curapp = apps[appKey]
@@ -5898,6 +5960,7 @@ const AngularWorkflow = (defaultprops) => {
 			  continue
 		  }
 
+		  console.log("Found matching: ", curapp.name, parentname, curapp.actions.length)
 		  for (let actionKey in curapp.actions) {
 			  const curaction = curapp.actions[actionKey]
 			  
@@ -5907,6 +5970,7 @@ const AngularWorkflow = (defaultprops) => {
 			  }
 
 			  if (curaction.category_label !== undefined && curaction.category_label !== null && curaction.category_label.length > 0) { 
+				  console.log("IN NODE ADD")
 
 				  cy.add({
 					group: "nodes",
@@ -5925,7 +5989,7 @@ const AngularWorkflow = (defaultprops) => {
 				  })
 
 				  added += 1
-				  if (added >= 2) {
+				  if (added >= 3) {
 					  break
 				  }
 			  }
@@ -6182,7 +6246,6 @@ const AngularWorkflow = (defaultprops) => {
       cytoscapeElement.style.cursor = "pointer"
     }
 
-
     sendStreamRequest({
       "item": "node",
       "type": "hover",
@@ -6268,7 +6331,8 @@ const AngularWorkflow = (defaultprops) => {
       for (var _key in allNodes) {
         const currentNode = allNodes[_key];
         // console.log("CURRENT NODE: ", currentNode)
-        if ((currentNode.data.isButton || currentNode.data.isSuggestion) && currentNode.data.attachedTo !== nodedata.id) {
+		
+        if ((currentNode.data.buttonType === "ACTIONSUGGESTION" || currentNode.data.isButton || currentNode.data.isSuggestion) && currentNode.data.attachedTo !== nodedata.id) {
           cy.getElementById(currentNode.data.id).remove();
         }
 
@@ -6319,6 +6383,10 @@ const AngularWorkflow = (defaultprops) => {
       "font-size": "25px",
       //"cursor": "pointer",
     }
+
+	if (nodedata.buttonType === "ACTIONSUGGESTION") {
+		parsedStyle["font-size"] = "18px"
+	}
 
     const typeIds = cy.elements('node:selected').jsons();
     for (var idkey in typeIds) {
@@ -7149,6 +7217,7 @@ const AngularWorkflow = (defaultprops) => {
       cy.edgehandles({
         handleNodes: (el) => {
           if (el.isNode() &&
+            el.data("buttonType") != "ACTIONSUGGESTION" &&
             !el.data("isButton") &&
             !el.data("isDescriptor") &&
             !el.data("isSuggestion") &&
@@ -8342,7 +8411,6 @@ const AngularWorkflow = (defaultprops) => {
         newAppStyle.borderLeft = `${pixelSize} solid ${yellow}`;
       }
 
-
       return (
         <Draggable
           onDrag={(e) => {
@@ -8361,8 +8429,17 @@ const AngularWorkflow = (defaultprops) => {
           <Paper
             square
             style={newAppStyle}
-            onMouseOver={() => {
-              setHover(true);
+            onMouseOver={(e) => {
+			  e.preventDefault()
+			  e.stopPropagation()
+
+              setHover(true)
+
+			  if (app.actions !== undefined && app.actions !== null && app.actions.length === 1) {
+			  	console.log("HOVERING: ", app.id)
+			  	loadAppConfig(app.id, false) 
+			  }
+
             }}
             onMouseOut={() => {
               setHover(false);
@@ -8784,6 +8861,7 @@ const AngularWorkflow = (defaultprops) => {
     const CustomSearchBox = connectSearchBox(SearchBox)
     const CustomAppHits = connectHits(AppHits)
 
+	var viewedApps = []
     return (
       <div style={appViewStyle}>
         <div style={{ flex: "1" }}>
@@ -8838,6 +8916,12 @@ const AngularWorkflow = (defaultprops) => {
 				if (app.id === "integration" && userdata.support !== true) {
 					return null
 				}
+
+				if (viewedApps.includes(app.id)) {
+					return null
+				}
+
+				viewedApps.push(app.id)
 
                 var extraMessage = ""
                 if (index == 2) {
@@ -14217,7 +14301,8 @@ const AngularWorkflow = (defaultprops) => {
     right: 0,
     left: isMobile ? 20 : leftBarSize + 20,
     top: isMobile ? 30 : appBarSize + 20,
-  };
+	pointerEvents: "none",
+  }
 
 
 
@@ -14235,11 +14320,16 @@ const AngularWorkflow = (defaultprops) => {
 
     return (
       <div style={topBarStyle}>
-        <div style={{ margin: "0px 10px 0px 10px" }}>
+        <div style={{ 
+			margin: "0px 10px 0px 10px",
+			pointerEvents: "none",
+		}}>
           <Breadcrumbs
             aria-label="breadcrumb"
             separator="›"
-            style={{ color: "white" }}
+            style={{ 
+			 color: "white" 
+			}}
           >
             <Link
               to="/workflows"
@@ -14255,7 +14345,10 @@ const AngularWorkflow = (defaultprops) => {
                 Workflows
               </h2>
             </Link>
-            <h2 style={{ margin: 0 }}>{workflow.name}</h2>
+            <h2 style={{ 
+				margin: 0,
+				pointerEvents: "none",
+			}}>{workflow.name}</h2>
           </Breadcrumbs>
 
 		  {isCorrectOrg ? null :
@@ -14282,7 +14375,9 @@ const AngularWorkflow = (defaultprops) => {
       					  if (response.status !== 200) {
       					    console.log("Error in response");
       					  } else {
-							localStorage.setItem("apps", [])
+		  					localStorage.removeItem("apps")
+		  					localStorage.removeItem("workflows")
+	      					localStorage.removeItem("userinfo")
 						  }
 
       					  return response.json();
@@ -15939,7 +16034,6 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const handleReactJsonClipboard = (copy) => {
-    console.log("COPY: ", copy);
 
     const elementName = "copy_element_shuffle";
     var copyText = document.getElementById(elementName);
@@ -17270,10 +17364,9 @@ const AngularWorkflow = (defaultprops) => {
         ? "red"
         : yellow;
 
-  const validate = ! codeModalOpen? "" : validateJson(selectedResult.result.trim());
-
+  const validate = !codeModalOpen ? "" : validateJson(selectedResult.result.trim())
   if (validate.valid && typeof validate.result === "string") {
-    validate.result = JSON.parse(validate.result);
+    validate.result = JSON.parse(validate.result)
   }
 
   const AppResultVariable = ({ data }) => {
@@ -17381,7 +17474,6 @@ const AngularWorkflow = (defaultprops) => {
 			  if (stringbody.length > 1000) {
 				  return "Body looks to be big in a standard format. Consider using the 'To File' parameter to automatically make it into a file."
 			  }
-		  } else {
 		  }
 	  }
 
@@ -17405,9 +17497,18 @@ const AngularWorkflow = (defaultprops) => {
 		  return "Authorization failed (403). The API user most likely doesn't have the correct permissions. Check the body of the result for more information."
 	  }
 
+	  if (result.status === 404) {
+		  return "The URL, or content of the URL is incorrect. Check it and try again."
+	  }
+
 	  if (result.status === 400) {
 		  return "The queries or data sent to the API is most likely wrong (400). Check the body of the result for more information."
 	  }
+
+	  if (result.status === 200 || result.status === 201 || result.status === 204) {
+		  return "It looks like the result was successful! If it didn't work, make sure to check if the body you are sending was correct."
+	  }
+
 
 	  // Validate and check for newlines
 	  if (result.success !== false) {
@@ -17425,7 +17526,7 @@ const AngularWorkflow = (defaultprops) => {
 			  }
 		  }
 
-		  return ""
+		  //return ""
 	  } 
 
 
@@ -17447,13 +17548,14 @@ const AngularWorkflow = (defaultprops) => {
 		  return "Consider whether your Orborus environment can connect to a local IP or not."
 	  }
 
+	  if (stringjson.includes("invalidurl")) {
+		// IF count of "http" is more than one, 1, it's prolly invalid
+		var additionalinfo = ""
+		if (stringjson.includes("http") && stringjson.match(/http/g).length > 1) {
+			additionalinfo = "You may be using multiple 'http' in the URL. "
+		}
 
-	  if (stringjson.includes("connectionerror")) {
-		  if (stringjson.includes("kms")) {
-			  return "KMS authentication failed. Check your notifications for more details."
-		  }
-
-		  return "Your URL is incorrect."
+		return "The URL is invalid. Change the URL to a valid one, and try again. "+additionalinfo
 	  }
 
 	  if (stringjson.includes("result too large to handle")) {
@@ -17466,6 +17568,15 @@ const AngularWorkflow = (defaultprops) => {
 
 	  if (stringjson.toLowerCase().includes("invalid header")) {
 		  return "A header or authentication token in the app is invalid. Check the app's configuration"
+	  }
+
+
+	  if (stringjson.includes("connectionerror")) {
+		  if (stringjson.includes("kms")) {
+			  return "KMS authentication failed. Check your notifications for more details."
+		  }
+
+		  return "The URL is incorrect, or Shuffle can't reach it. Set up a Shuffle Environment in the same VLAN, or whitelist Shuffle's IPs."
 	  }
 
 
@@ -17706,7 +17817,7 @@ const AngularWorkflow = (defaultprops) => {
 
 	  	{currentSuggestion.length > 0 ?
 			<div style={{ marginBottom: 5 }}>
-			  <b style={{color: "rgba(214,110,117)", }}>Debug Info:</b> {currentSuggestion}
+			  <b style={{color: "rgba(214,110,117)", }}>Debug:</b> {currentSuggestion}
 			</div>
 		: 
 			<div style={{ marginBottom: 5 }}>
@@ -18381,9 +18492,14 @@ const AngularWorkflow = (defaultprops) => {
         selectedAction.authentication === undefined ||
         selectedAction.authentication === null
       ) {
-        selectedAction.authentication = [authenticationOption];
+        selectedAction.authentication = [authenticationOption]
       } else {
-        selectedAction.authentication.push(authenticationOption);
+
+		try {
+        	selectedAction.authentication.push(authenticationOption)
+		} catch (e) {
+			//console.log("Error: ", e)
+		}
       }
 
       setSelectedAction(selectedAction);
@@ -19647,7 +19763,7 @@ const AngularWorkflow = (defaultprops) => {
 	  }
   }
 
-  const foundusecase.name === undefined || foundusecase.name === null || foundusecase.name === "" ? null :
+  const templatePopup = foundusecase.name === undefined || foundusecase.name === null || foundusecase.name === "" ? null :
 	<Slide direction="down" in={true} mountOnEnter unmountOnExit>
 		<div style={{position: "fixed", top: "10%", left: "37%", border: "1px solid rgba(255,255,255,0.3)", backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, display: "flex", }}>
 			<WorkflowTemplatePopup 
@@ -19665,7 +19781,7 @@ const AngularWorkflow = (defaultprops) => {
 			/>
 		</div>
 	</Slide>
-	*/ 
+	*/
 
   const loadedCheck =
     isLoaded && workflowDone ? (

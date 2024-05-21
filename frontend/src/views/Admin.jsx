@@ -1430,6 +1430,8 @@ If you're interested, please let me know a time that works for you, or set up a 
     }
 
     // Just use this one?
+	localStorage.setItem("globalUrl", "");
+	localStorage.setItem("getting_started_sidebar", "open");
 
     fetch(`${globalUrl}/api/v1/orgs/${orgId}`, {
       method: "GET",
@@ -1440,7 +1442,11 @@ If you're interested, please let me know a time that works for you, or set up a 
     })
       .then((response) => {
         if (response.status === 401) {
-        }
+        } else {
+		  localStorage.removeItem("apps")
+		  localStorage.removeItem("workflows")
+	      localStorage.removeItem("userinfo")
+		}
 
         return response.json();
       })
@@ -1728,7 +1734,7 @@ If you're interested, please let me know a time that works for you, or set up a 
   // Horrible frontend fix for environments
   const setDefaultEnvironment = (environment) => {
     // FIXME - add more checks to this
-    toast("Setting default env to " + environment.name);
+    toast("Changing default env") 
     var newEnv = [];
     for (var key in environments) {
       if (environments[key].id == environment.id) {

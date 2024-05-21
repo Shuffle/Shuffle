@@ -23,6 +23,7 @@ import {
 	DialogTitle,
 	DialogContent,
 } from '@mui/material';
+
 import Mousetrap from 'mousetrap';
 
 import {
@@ -31,7 +32,6 @@ import {
 
 import { Search as SearchIcon, Close as CloseIcon, Folder as FolderIcon, Code as CodeIcon, LibraryBooks as LibraryBooksIcon } from '@mui/icons-material'
 import KeyboardCommandKeyIcon from '@mui/icons-material/KeyboardCommandKey';
-import algoliasearch from 'algoliasearch/lite';
 import aa from 'search-insights'
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 //import { InstantSearch, SearchBox, Hits, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
@@ -42,7 +42,6 @@ const chipStyle = {
 	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
 }
 
-const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const SearchField = props => {
 	const { serverside, userdata, isMobile, isLoaded, globalUrl, isHeader, isLoggedIn, small, rounded } = props
 

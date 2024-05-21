@@ -34,7 +34,7 @@ const theme = createTheme(adaptV4Theme({
 	//jsonTheme: "tomorrow",
 	jsonIconStyle: "round",
 	jsonTheme: "summerfruit",
-	jsonCollapseStringsAfterLength: 75,
+	jsonCollapseStringsAfterLength: 100,
 
 	reactJsonStyle: {
 		padding: 5, 
@@ -65,7 +65,7 @@ const theme = createTheme(adaptV4Theme({
     defaultImage: "/images/no_image.png",
   },
   typography: {
-    fontFamily: `"Roboto", "Helvetica", "Arial", sans-serif`,
+    fontFamily: `"Roboto", "Helvetica", "Arial", "inter", sans-serif`,
     useNextVariants: true,
     h1: {
       fontSize: 40,
