@@ -66,7 +66,6 @@ const Header = (props) => {
     billingInfo
   } = props;
 
-
   const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
   const [SoarHoverColor, setSoarHoverColor] = useState(hoverOutColor);
   const [LoginHoverColor, setLoginHoverColor] = useState(hoverOutColor);
@@ -683,22 +682,7 @@ const Header = (props) => {
     marginRight: 10,
   };
 
-  const modalView = (
-    <>
-      {modalOpen && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            zIndex: 1299,
-            backdropFilter: "blur(5px)",
-          }}
-        ></div>
-      )}
+  const modalView = 
       <Dialog
         open={modalOpen}
         onClose={() => {
@@ -709,7 +693,7 @@ const Header = (props) => {
             color: "white",
             minWidth: 850,
             minHeight: 370,
-            padding: 10,
+            padding: 20,
             backgroundColor: "rgba(0, 0, 0, 1)",
             borderRadius: theme.palette.borderRadius,
           },
@@ -746,7 +730,9 @@ const Header = (props) => {
             isLoaded={isLoaded}
             isLoggedIn={isLoggedIn}
             globalUrl={globalUrl}
+
             billingInfo={billingInfo}
+
             userdata={userdata}
             stripeKey={stripeKey}
             setModalOpen={setModalOpen}
@@ -754,8 +740,6 @@ const Header = (props) => {
           />
         </div>
       </Dialog>
-    </>
-  );
 
   // Handle top bar or something
   const defaultTop = -2
@@ -1247,7 +1231,7 @@ const Header = (props) => {
                         title={""}
                         placement="left"
                       >
-                        <div style={{ display: "flex", marginLeft: 85, }}>
+                        <div style={{ display: "flex", marginLeft:  50, marginRight: 50, }}>
                           <AddIcon />
                           <span style={{ marginLeft: 8 }}>
                             Add suborgs

@@ -444,7 +444,9 @@ const LicencePopup = (props) => {
                                     })
                                     : null}
                             </ul>
-                            Billing email: {selectedOrganization.org}
+							{isCloud ? 
+                            	<span>Billing email: {selectedOrganization.org}</span>
+							: null}
                         </div>
 
                         <Button
@@ -467,7 +469,7 @@ const LicencePopup = (props) => {
                                     action: "bookcall_upgread_popup",
                                     label: "",
                                 })};
-                                window.open("https://drift.me/frikky", "_blank");
+                                window.open("https://drift.me/frikky/meeting", "_blank");
                                 // if (isLoggedIn) {
                                 // isLoggedInHandler()
                                 // } else {
@@ -475,7 +477,9 @@ const LicencePopup = (props) => {
                                 // }
                             }}
                         >
-                            Book a call
+							<span style={{color: "#f85a3e",}}>
+                            	Book a call
+							</span>
                             <span
                                 style={{
                                     position: "absolute",
@@ -706,6 +710,10 @@ const LicencePopup = (props) => {
             clientReferenceId: props.userdata.active_org.id,
         }
 
+		if (stripe === undefined || stripe === null || stripe.redirectToCheckout === undefined) {
+			window.open("https://shuffler.io/admin?admin_tab=billing&payment=stripe_error", "_self")
+		}
+
         stripe.redirectToCheckout(checkoutObject)
             .then(function (result) {
                 console.log("SUCCESS STRIPE?: ", result)
@@ -764,6 +772,7 @@ const LicencePopup = (props) => {
                                     }}
                                     highlight={true}
                                 />
+								{/*
                                 <SubscriptionObject
                                     index={1}
                                     globalUrl={globalUrl}
@@ -783,6 +792,7 @@ const LicencePopup = (props) => {
                                     }}
                                     highlight={false}
                                 />
+								*/}
                             </span>
                             : null}
 
@@ -869,7 +879,7 @@ const LicencePopup = (props) => {
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
                                     <span>{defaultTaskIcon}</span>
                                     <Typography style={{ fontSize: 14, marginLeft: 8 }}>
-                                        {shuffleVariant === 0 ? "Multi-Tenant" : "Scalable Orborus"}
+                                        {shuffleVariant === 0 ? "Multi-Tenant" : "Lightning-Fast Workflows"}
                                     </Typography>
                                 </div>
                                 <Divider />
@@ -895,12 +905,16 @@ const LicencePopup = (props) => {
                     style={{ borderRadius: "0px", textTransform: "capitalize" }}
                     onClick={() => {
                         if (isCloud) {
-                        ReactGA.event({
-                            category: "header",
-                            action: "viewplan_upgread_popup",
-                            label: "",
-                        })};
-                        navigate("/pricing")
+							ReactGA.event({
+								category: "header",
+								action: "viewplan_upgread_popup",
+								label: "",
+							})
+                        
+							navigate("/pricing")
+						} else {
+							window.open("https://shuffler.io/pricing?tab=onprem", "_blank")
+						}
                         setModalOpen(false)
                     }}
                     color="primary"
@@ -912,16 +926,24 @@ const LicencePopup = (props) => {
                     style={{ borderRadius: 20, width: 120, textTransform: "capitalize" }}
                     onClick={() => {
                         if (isCloud) {
-                        ReactGA.event({
-                            category: "header",
-                            action: "upgread_clicks_popup",
-                            label: "",
-                        })};
-                        if (isLoggedIn) {
-                            isLoggedInHandler()
-                        } else {
-                            navigate(`/register?view=pricing&message=You need to create a user to continue`)
-                        }
+							ReactGA.event({
+								category: "header",
+								action: "upgread_clicks_popup",
+								label: "",
+							})
+
+							if (isLoggedIn) {
+								isLoggedInHandler()
+							} else {
+								navigate(`/register?view=pricing&message=You need to create a user to continue`)
+							}
+						} else {
+							if (window.drift !== undefined) {
+								window.drift.api.startInteraction({ 
+									interactionId: 386403, 
+								})
+							}
+						}
                     }}
                     color="primary"
                 >

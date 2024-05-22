@@ -574,7 +574,7 @@ const Billing = (props) => {
 							: null}
 						</ul>
 					</div>
-					{(highlight === true && (subscription.name === "Pay as you go" && subscription.limit <= 10000) || subscription.name === "Open Source") ?
+					{isCloud && (highlight === true && (subscription.name === "Pay as you go" && subscription.limit <= 10000) || subscription.name === "Open Source") ?
 						<span>
 							<Typography variant="body2" color="textSecondary" style={{ marginTop: 20, marginBottom: 10 }}>
 								{subscription.name.includes("Scale") ? 

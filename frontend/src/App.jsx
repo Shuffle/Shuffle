@@ -194,6 +194,8 @@ const App = (message, props) => {
 
 		<div style={{ minHeight: 68, maxHeight: 68, }}>
 			<Header
+				billingInfo={{}}
+
 				notifications={notifications}
 				setNotifications={setNotifications}
 				checkLogin={checkLogin}

@@ -3279,7 +3279,7 @@ const Workflows = (props) => {
           <Button
             color="secondary"
             style={{}}
-		  	disabled={true} 
+		  	disabled={isCloud} 
             variant="text"
             onClick={() => {
               exportAllWorkflows(workflows);
