@@ -38,6 +38,15 @@ import {
 } from '@mui/icons-material';
 
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
+import {
+	Search as SearchIcon,
+  } from "@mui/icons-material";
+
+  import {
+	InputAdornment,
+  } from "@mui/material"
+
+import ClearIcon from '@mui/icons-material/Clear';
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -75,9 +84,15 @@ const RuntimeDebugger = (props) => {
 
 		setTotalCount(0)
 
+		var starttime = ""
+		var endtime = ""
 		var count = 0
-		var starttime = startTime === undefined || startTime === null || startTime === "" ? "" : new Date(startTime).toISOString()
-		var endtime = endTime === undefined || endTime === null || endTime == "" ? "" : new Date(endTime).toISOString()
+		try {
+			starttime = startTime === undefined || startTime === null || startTime === "" ? "" : new Date(startTime).toISOString()
+			endtime = endTime === undefined || endTime === null || endTime == "" ? "" : new Date(endTime).toISOString()
+		} catch (e) {
+			toast("Invalid date format", { type: "error" })
+		}
 
 		var maxworkflows = 5
 
@@ -88,6 +103,11 @@ const RuntimeDebugger = (props) => {
 			}
 
 			const workflowId = workflows[key].id
+
+			if (workflowId === undefined || workflowId === null || workflowId === "") {
+				continue
+			}
+
 			// Fetch the data for the workflow
 			var url = `${globalUrl}/api/v1/workflows/${workflowId}/executions/count`
 			if (starttime !== "") {
@@ -133,14 +153,12 @@ const RuntimeDebugger = (props) => {
 		}
 
 		setTimeout(() => {
-			console.log("Setting total count: ", count)
 			setTotalCount(count)
 		}, maxworkflows*300)
 	}
 
 	const submitSearch = (workflowId, status, startTime, endTime, cursor, limit) => {
 		handleWorkflowUsageCount(workflows)
-
 		//setResultRows([])
 		setSearchLoading(true)
 		const fetchData = {
@@ -284,7 +302,6 @@ const RuntimeDebugger = (props) => {
 			toast(`Failed to force continue: ${error}`)
 		})
 	}
-
 	const imageSize = 30
 	const timenowUnix = Math.floor(Date.now() / 1000)
 	const columns: GridColDef[] = [
@@ -578,7 +595,7 @@ const RuntimeDebugger = (props) => {
 							onClick={() => {
 								window.open(`${globalUrl}/api/v1/workflows/search/${params.row.id}`, "_blank")
 							}}
-							disabled={!userdata.support}
+							disabled={userdata.region_url !== "https://shuffler.io"}
 						  >
 							<InsightsIcon fontSize="small" />
 						  </IconButton>
@@ -686,11 +703,130 @@ const RuntimeDebugger = (props) => {
     	    });
   	}
 
+	const [searchQuery, setSearchQuery] = useState("");
+	const [filteredRows, setFilteredRows] = useState([]);
+	const [defaultRows, setDefaultRows] = useState([]);
+
+		const handleQueryChange = (e) => {
+			const query = e.target.value.toLowerCase();
+			setSearchQuery(query);
+		}
+
+		useEffect(() => {
+			setDefaultRows(resultRows);
+		}, [resultRows]);
+
+		useEffect(() => {
+			if (searchQuery.trim() === "") {
+				setFilteredRows(defaultRows);
+			} else {
+				const filterRow = defaultRows.filter((data) => {
+
+					//Filter workflow base on the workflow status
+					if (data.status.toLowerCase().includes(searchQuery)) {
+						return true;
+					}
+
+					//Filter workflow base on workflow name
+					if (data.workflow.name.toLowerCase().includes(searchQuery)) {
+						return true;
+					}
+
+					//Filter the workflow base on execution argument
+					if (data.execution_argument && data.execution_argument.length > 0) {
+							if (data.execution_argument.toLowerCase().includes(searchQuery)) {
+								return true;
+							}
+					}
+
+					//Filter the workflow base on the result
+					if (data.results && data.results.length > 0) {
+						for (let result of data.results) {
+							if (result && result.result && result.result.toLowerCase().includes(searchQuery)) {
+								return true;
+							}
+						}
+					}
+
+					return false;
+				});
+				setFilteredRows(filterRow);
+			}
+		}, [searchQuery, defaultRows]);
+
 	return (
 		<div style={{minWidth: 1150, maxWidth: 1150, margin: "auto", }}>
-
 			<div style={{display: "flex", }}>
+				<div style={{display: 'flex', flexDirection: 'column'}}>
 				<h1 style={{flex: 3, }}>Workflow Run Debugger {totalCount !== 0 ? ` (~${totalCount})` : ""}</h1>
+					<div style={{position: 'relative', right: 10, marginBottom: 10}}>
+						<TextField
+						fullWidth
+						value={searchQuery}
+						style={{
+							backgroundColor: theme.palette.inputColor,
+							marginTop: 20,
+							marginLeft: 10,
+							marginRight: 12,
+							width: 693,
+							height: 55,
+							borderRadius: 8,
+							fontSize: 16,
+							marginBottom: 15,
+						}}
+						InputProps={{
+							style: {
+							color: "white",
+							fontSize: "1em",
+							height: 55,
+							width: 693,
+							borderRadius: 8,
+							},
+							startAdornment: (
+							<InputAdornment position="start">
+								<SearchIcon style={{ marginLeft: 5}} />
+							</InputAdornment>
+							),
+							endAdornment: (
+							<InputAdornment position="end">
+								{searchQuery.length > 0 && (
+								<ClearIcon
+									style={{
+									color: "white",
+									cursor: "pointer",
+									marginRight: 10
+									}}
+									onClick={() => setSearchQuery('')} 
+								/>
+								 )} 
+								<button
+								type="button"
+								style={{
+									backgroundImage:
+									"linear-gradient(to right, rgb(248, 106, 62), rgb(243, 64, 121))",
+									color: "white",
+									border: "none",
+									padding: "10px 20px",
+									width: 100,
+									height: 35,
+									borderRadius: 17.5,
+									cursor: "pointer",
+								}}
+								>
+								Search
+								</button>
+							</InputAdornment>
+							),
+							
+						}}
+						onChange={(e)=>{handleQueryChange(e)}}
+						color="primary"
+						placeholder="Search Workflow Name, Status, Execution Argument, Results.."
+						id="shuffle_search_field"
+        				/>
+					</div>
+
+				</div>
 				{selectedWorkflowExecutions.length > 0 ?
 					<ButtonGroup>
 						<Tooltip title="Reruns ALL selected workflows. This will make a new execution for them, and not continue the existing.">
@@ -942,7 +1078,7 @@ const RuntimeDebugger = (props) => {
 			</form>
 			<div style={{height: 700, padding: "10px 0px 10px 0px", }}>
 				<DataGrid
-					rows={resultRows}
+					rows={filteredRows}
 					columns={columns}
 					pageSize={rowsPerPage}
 					rowsPerPageOptions={[10, 20, 50, 100]}

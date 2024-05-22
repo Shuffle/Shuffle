@@ -16,27 +16,32 @@ import {
 	Divider,
 	Select,
 	MenuItem,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	Typography,
 } from "@mui/material";
 
 import {
+  Link as LinkIcon,
   OpenInNew as OpenInNewIcon,
   Edit as EditIcon,
   CloudDownload as CloudDownloadIcon,
   Delete as DeleteIcon,
   FileCopy as FileCopyIcon,
-	Cached as CachedIcon,
+  Cached as CachedIcon,
   Publish as PublishIcon,
-	Clear as ClearIcon,
-	Add as AddIcon,
+  Clear as ClearIcon,
+  Add as AddIcon,
 } from "@mui/icons-material";
 
-//import { useAlert 
 import Dropzone from "../components/Dropzone.jsx";
-import CodeEditor from "../components/ShuffleCodeEditor.jsx";
+import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import theme from "../theme.jsx";
 
 const Files = (props) => {
-  const { globalUrl, userdata, serverside, selectedOrganization, isCloud, } = props;
+  const { globalUrl, userdata, serverside, selectedOrganization, isCloud,isSelectedFiles } = props;
 
   const [files, setFiles] = React.useState([]);
   const [selectedNamespace, setSelectedNamespace] = React.useState("default");
@@ -45,9 +50,16 @@ const Files = (props) => {
   const [fileContent, setFileContent] = React.useState("");
   const [openEditor, setOpenEditor] = React.useState(false);
   const [renderTextBox, setRenderTextBox] = React.useState(false);
+  const [loadFileModalOpen, setLoadFileModalOpen] = React.useState(false);
+
+  const [field1, setField1] = React.useState("");
+  const [field2, setField2] = React.useState("");
+  const [downloadUrl, setDownloadUrl] = React.useState("https://github.com/shuffle/standards")
+  const [downloadBranch, setDownloadBranch] = React.useState("main");
+  const [downloadFolder, setDownloadFolder] = React.useState("translation_standards");
 
   //const alert = useAlert();
-  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log"]
+  const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log", "eml", "msg", "md", "xml", "sh", "bat", "ps1", "psm1", "psd1", "ps1xml", "pssc", "psc1", "response"]
   var upload = "";
 
   const handleKeyDown = (event) => {
@@ -67,7 +79,7 @@ const Files = (props) => {
 
   }
 
-	const runUpdateText = (text) =>{
+  const runUpdateText = (text) =>{
     fetch(`${globalUrl}/api/v1/files/${openFileId}/edit`, {
       method: "PUT",
       headers: {
@@ -76,17 +88,34 @@ const Files = (props) => {
       },
       body:text,
       credentials: "include",
-    }).then((response) => {
+    })
+	.then((response) => {
         if (response.status !== 200) {
           console.log("Can't update file");
         }
         return response.json();
-      })
-    //console.log(text);
+    })
+	.then((responseJson) => {
+		if (responseJson.success === true) {
+			toast("Successfully updated file");
+		}
+	})
+    .catch((error) => {
+		toast("Error updating file: " + error.toString());
+	})
   }
 
-	const getFiles = () => {
-    fetch(globalUrl + "/api/v1/files", {
+  const getFiles = (namespace) => {
+    var parsedurl = `${globalUrl}/api/v1/files`
+	if (namespace === undefined || namespace === "default") {
+
+	} else if (namespace !== undefined && namespace !== null && namespace !== "") {
+	  	parsedurl = `${globalUrl}/api/v1/files/namespaces/${namespace}?ids=true`
+	} else if (selectedNamespace !== undefined && selectedNamespace !== null && selectedNamespace !== "default" && selectedNamespace !== "") {
+		parsedurl = `${globalUrl}/api/v1/files/namespaces/${selectedNamespace}?ids=true`
+	}
+
+    fetch(parsedurl, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -104,12 +133,23 @@ const Files = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.files !== undefined && responseJson.files !== null) {
-          setFiles(responseJson.files);
-        } else {
+          	setFiles(responseJson.files);
+        } else if (responseJson.list !== undefined && responseJson.list !== null) {
+			// Set the "namespace" field in all items
+			if (namespace !== undefined && namespace !== null) {
+				responseJson.list.forEach((item) => {
+					item.namespace = namespace
+					item.filename = item.name
+					item.workflow_id = "global" 
+				})
+			}
+
+			setFiles(responseJson.list);
+		} else {
           setFiles([]);
         }
 
-        if (responseJson.namespaces !== undefined && responseJson.namespaces !== null) {
+        if (responseJson.namespaces !== undefined && responseJson.namespaces !== null && (fileNamespaces.length === 0 || responseJson.namespaces.length > fileNamespaces.length)) {
           setFileNamespaces(responseJson.namespaces);
         }
       })
@@ -119,8 +159,213 @@ const Files = (props) => {
   };
 
 	useEffect(() => {
-		getFiles();
+		getFiles(selectedNamespace)
 	}, []);
+
+  const importStandardsFromUrl = (url, folder) => {
+	if (url === undefined || url === null || url.length < 5) {
+		toast("Please enter a valid URL");
+		return; 
+	}
+
+	if (folder === undefined || folder === null || folder.length < 2) {
+		toast("Please enter a valid folder name")
+		return
+	}
+
+    const parsedData = {
+      url: url,
+	  path: folder,
+      field_3: downloadBranch || "master",
+    };
+
+    if (field1.length > 0) {
+      parsedData["field_1"] = field1;
+    }
+
+    if (field2.length > 0) {
+      parsedData["field_2"] = field2;
+    }
+
+    toast(`Getting files from url ${url}. This may take a while if the repository is large. Please wait...`);
+    fetch(globalUrl + "/api/v1/files/download_remote", {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        Accept: "application/json",
+      },
+      body: JSON.stringify(parsedData),
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status === 200) {
+          toast("Successfully loaded files from " + downloadUrl);
+    	  setLoadFileModalOpen(false);
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (!responseJson.success) {
+          if (responseJson.reason !== undefined) {
+            toast("Failed loading: " + responseJson.reason);
+          } else {
+            toast("Failed loading");
+          }
+        }
+      })
+      .catch((error) => {
+        toast(error.toString());
+      });
+  }
+
+  const handleGithubValidation = () => {
+    importStandardsFromUrl(downloadUrl, downloadFolder);
+  }
+
+  const fileDownloadModal = loadFileModalOpen ? 
+    <Dialog
+      open={loadFileModalOpen}
+      onClose={() => {}}
+      PaperProps={{
+        style: {
+          backgroundColor: theme.palette.surfaceColor,
+          color: "white",
+          minWidth: "800px",
+          minHeight: "320px",
+        },
+      }}
+    >
+      <DialogTitle>
+        <div style={{ color: "rgba(255,255,255,0.9)" }}>
+          Load Files from Github
+        </div>
+		<Typography variant="body2" color="textSecondary">
+			Files will be loaded from the repository and branch you specify, with the focus on files in one folder at a time. This is NOT recursive.
+		</Typography>
+      </DialogTitle>
+      <DialogContent style={{ color: "rgba(255,255,255,0.65)" }}>
+        Repository URL (supported: github, gitlab, bitbucket)
+        <TextField
+          style={{ backgroundColor: theme.palette.inputColor }}
+          variant="outlined"
+          margin="normal"
+          defaultValue={downloadUrl}
+          InputProps={{
+            style: {
+              color: "white",
+              height: "50px",
+              fontSize: "1em",
+            },
+          }}
+          onChange={(e) => setDownloadUrl(e.target.value)}
+          placeholder="https://github.com/shuffle/standards"
+          fullWidth
+        />
+        <div style={{ display: "flex" }}>
+		  <span>
+			<span style={{ marginTop: 10 }}>
+			  Branch (default value is "main"):
+			</span>
+            <TextField
+              style={{ backgroundColor: theme.palette.inputColor }}
+              variant="outlined"
+              margin="normal"
+              defaultValue={downloadBranch}
+              InputProps={{
+                style: {
+                  color: "white",
+                  height: "50px",
+                  fontSize: "1em",
+                },
+              }}
+              onChange={(e) => setDownloadBranch(e.target.value)}
+              placeholder="master"
+              fullWidth
+            />
+		  </span>
+		  <span>
+			<span style={{ marginTop: 10 }}>
+			  Folder (can use / for subfolders):
+			</span>
+		    <TextField
+                style={{ backgroundColor: theme.palette.inputColor }}
+                variant="outlined"
+                margin="normal"
+                defaultValue={downloadFolder}
+                InputProps={{
+                  style: {
+                    color: "white",
+                    height: "50px",
+                    fontSize: "1em",
+                  },
+                }}
+                onChange={(e) => setDownloadFolder(e.target.value)}
+                placeholder="translation_standards"
+                fullWidth
+              />
+		  </span>
+		</div>
+        <span style={{ marginTop: 10 }}>
+          Authentication (optional - private repos etc):
+        </span>
+        <div style={{ display: "flex" }}>
+          <TextField
+            style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              style: {
+                color: "white",
+                height: "50px",
+                fontSize: "1em",
+              },
+            }}
+            onChange={(e) => setField1(e.target.value)}
+            type="username"
+            placeholder="Username / APIkey (optional)"
+            fullWidth
+          />
+          <TextField
+            style={{ flex: 1, backgroundColor: theme.palette.inputColor }}
+            variant="outlined"
+            margin="normal"
+            InputProps={{
+              style: {
+                color: "white",
+                height: "50px",
+                fontSize: "1em",
+              },
+            }}
+            onChange={(e) => setField2(e.target.value)}
+            type="password"
+            placeholder="Password (optional)"
+            fullWidth
+          />
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button
+          style={{ borderRadius: "0px" }}
+          onClick={() => setLoadFileModalOpen(false)}
+          color="primary"
+        >
+          Cancel
+        </Button>
+        <Button
+		  variant="contained"
+          style={{ borderRadius: "0px" }}
+          disabled={downloadUrl.length === 0 || !downloadUrl.includes("http")}
+          onClick={() => {
+            handleGithubValidation();
+          }}
+          color="primary"
+        >
+          Submit
+        </Button>
+      </DialogActions>
+    </Dialog>
+   : null
 
   const deleteFile = (file) => {
     fetch(globalUrl + "/api/v1/files/" + file.id, {
@@ -140,7 +385,7 @@ const Files = (props) => {
       })
       .then((responseJson) => {
         if (responseJson.success) {
-          toast("Successfully deleted file " + file.name);
+          toast("Successfully deleted file") 
         } else if (
           responseJson.reason !== undefined &&
           responseJson.reason !== null
@@ -150,8 +395,6 @@ const Files = (props) => {
         setTimeout(() => {
           getFiles();
         }, 1500);
-
-        console.log(responseJson);
       })
       .catch((error) => {
         toast(error.toString());
@@ -195,10 +438,10 @@ const Files = (props) => {
   };
 
 	const downloadFile = (file) => {
-    fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
-      method: "GET",
-      credentials: "include",
-    })
+		fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
+		  method: "GET",
+		  credentials: "include",
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!");
@@ -254,7 +497,7 @@ const Files = (props) => {
       });
   };
 
-	const handleCreateFile = (filename, file) => {
+  const handleCreateFile = (filename, file) => {
     var data = {
       filename: filename,
       org_id: selectedOrganization.id,
@@ -355,7 +598,7 @@ const Files = (props) => {
     }
 
     setTimeout(() => {
-      getFiles();
+      getFiles()
     }, 2500);
   };
 
@@ -374,31 +617,49 @@ const Files = (props) => {
 			style={{
 				maxWidth: window.innerWidth > 1366 ? 1366 : 1200,
 				margin: "auto",
-				padding: 20,
+				padding: isSelectedFiles ? null : 20,
 			}}
 			onDrop={uploadFile}
 		>
-			<div>
-				<div style={{ marginTop: 20, marginBottom: 20 }}>
-					<h2 style={{ display: "inline" }}>Files</h2>
-					<span style={{ marginLeft: 25 }}>
+			<div style={{position: "relative", width: isSelectedFiles? 1030: null, padding:isSelectedFiles?27:null, height: isSelectedFiles?"auto":null, color: isSelectedFiles?'#ffffff':null, backgroundColor: isSelectedFiles?'#212121':null, borderRadius: isSelectedFiles?'16px':null,}}>
+
+        		<Tooltip color="primary" title={"Import files to Shuffle from Git"} placement="top">
+				  <IconButton
+        		    color="secondary"
+        		    style={{position: "absolute", right: 0, top: isSelectedFiles?null:0, left: isSelectedFiles? 990:null }}
+        		    variant="text"
+        		    onClick={() => setLoadFileModalOpen(true)}
+        		  >
+        		    <CloudDownloadIcon />
+        		  </IconButton>
+        		</Tooltip>
+
+				{fileDownloadModal} 
+
+				<div style={{ marginTop: isSelectedFiles ? 2: 20, marginBottom:20 }}>
+					<h2 style={{ display: isSelectedFiles ? null : "inline", marginTop: isSelectedFiles?0:null, marginBottom: isSelectedFiles?8:null }}>Files</h2>
+					<span style={{ marginLeft: isSelectedFiles ? null : 25, color:isSelectedFiles?"#9E9E9E":null}}>
 						Files from Workflows are a way to store as well as edit files.{" "}
 						<a
 							target="_blank"
 							rel="noopener noreferrer"
 							href="https://shuffler.io/docs/organizations#files"
-							style={{ textDecoration: "none", color: "#f85a3e" }}
+							style={{ textDecoration: isSelectedFiles ? null:"none", color: isSelectedFiles? "#FF8444": "#f85a3e" }}
 						>
 							Learn more
 						</a>
 					</span>
 				</div>
+
+
+
 				<Button
 					color="primary"
 					variant="contained"
 					onClick={() => {
 						upload.click();
 					}}
+					style={{backgroundColor: isSelectedFiles?'rgba(255, 132, 68, 0.2)':null, color:isSelectedFiles?"#FF8444":null, borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?162:null, height:isSelectedFiles?40:null, boxShadow: isSelectedFiles?'none':null,}}
 				>
 					<PublishIcon /> Upload files
 				</Button>
@@ -418,13 +679,15 @@ const Files = (props) => {
 					}}
 				/>
 				<Button
-					style={{ marginLeft: 5, marginRight: 15 }}
+					style={{ marginLeft: 5, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?81:null, height:isSelectedFiles?40:null, boxShadow: isSelectedFiles?'none':null, }}
 					variant="contained"
 					color="primary"
 					onClick={() => getFiles()}
 				>
 					<CachedIcon />
 				</Button>
+
+
 
 				{fileNamespaces !== undefined &&
 				fileNamespaces !== null &&
@@ -442,8 +705,13 @@ const Files = (props) => {
 							}}
 							value={selectedNamespace}
 							onChange={(event) => {
-								console.log("CHANGE NAMESPACE: ", event.target);
 								setSelectedNamespace(event.target.value);
+
+								if (event.target.value === "all" || event.target.value === "default") {
+  									getFiles() 
+								} else {
+									getFiles(event.target.value)
+								}
 							}}
 						>
 							{fileNamespaces.map((data, index) => {
@@ -453,7 +721,7 @@ const Files = (props) => {
 										value={data}
 										style={{ color: "white" }}
 									>
-										{data}
+										{data.replaceAll("_", " ")}
 									</MenuItem>
 								);
 							})}
@@ -487,24 +755,26 @@ const Files = (props) => {
 						<AddIcon/>
 					</Button>
 				</Tooltip> }
-				{renderTextBox && <TextField
-							onKeyPress={(event)=>{
-								handleKeyDown(event);
-							}}
-							InputProps={{
-								style: {
-									color: "white",
-								},
-							}}
-							color="primary"
-							placeholder="File category name"
-							required
-							margin="dense"
-							defaultValue={""}
-							autoFocus
-						/>}</div>
 
-				<CodeEditor
+
+				{renderTextBox && <TextField
+					onKeyPress={(event)=>{
+						handleKeyDown(event);
+					}}
+					InputProps={{
+						style: {
+							color: "white",
+						},
+					}}
+					color="primary"
+					placeholder="File category name"
+					required
+					margin="dense"
+					defaultValue={""}
+					autoFocus
+				/>}</div>
+
+				<ShuffleCodeEditor
 					isCloud={isCloud}
 					expansionModalOpen={openEditor}
 					setExpansionModalOpen={setOpenEditor}
@@ -514,20 +784,20 @@ const Files = (props) => {
 					key = {fileContent} //https://reactjs.org/docs/reconciliation.html#recursing-on-children
 					runUpdateText = {runUpdateText}
 				/>
-
+				{isSelectedFiles?null:
 				<Divider
 					style={{
 						marginTop: 20,
 						marginBottom: 20,
 						backgroundColor: theme.palette.inputColor,
 					}}
-				/>
+				/>}
 
-				<List>
-					<ListItem>
+				<List style={{borderRadius: isSelectedFiles?8:null, border:isSelectedFiles?"1px solid #494949":null, marginTop:isSelectedFiles?24:null}}>
+					<ListItem style={{width:isSelectedFiles?"100%":null, borderBottom:isSelectedFiles?"1px solid #494949":null}}>
 						<ListItemText
 							primary="Updated"
-							style={{ maxWidth: 225, minWidth: 225 }}
+							style={{ maxWidth: 185, minWidth: 185 }}
 						/>
 						<ListItemText
 							primary="Name"
@@ -544,7 +814,7 @@ const Files = (props) => {
 						/>
 						<ListItemText
 							primary="Md5"
-							style={{ minWidth: 300, maxWidth: 300, overflow: "hidden" }}
+							style={{ minWidth: isSelectedFiles?210:250, maxWidth: isSelectedFiles?210:250, overflow: "hidden" }}
 						/>
 						<ListItemText
 							primary="Status"
@@ -566,9 +836,9 @@ const Files = (props) => {
 								return null;
 							}
 
-							var bgColor = "#27292d";
+							var bgColor = isSelectedFiles ? "#212121":"#27292d";
 							if (index % 2 === 0) {
-								bgColor = "#1f2023";
+								bgColor = isSelectedFiles ? "#1A1A1A":"#1f2023";
 							}
 
 							const filenamesplit = file.filename.split(".")
@@ -585,8 +855,8 @@ const Files = (props) => {
 								>
 									<ListItemText
 										style={{
-											maxWidth: 225,
-											minWidth: 225,
+											maxWidth: isSelectedFiles ? 170:225,
+											minWidth: isSelectedFiles ? 170:225,
 											overflow: "hidden",
 										}}
 										primary={new Date(file.updated_at * 1000).toISOString()}
@@ -602,7 +872,7 @@ const Files = (props) => {
 									/>
 									<ListItemText
 										primary={
-											file.workflow_id === "global" ? (
+											file.workflow_id === "global" || file.workflow_id === "" || file.workflow_id === null || file.workflow_id === undefined ?
 												<IconButton
 													disabled={file.workflow_id === "global"}
 												>
@@ -615,7 +885,7 @@ const Files = (props) => {
 														}}
 													/>
 												</IconButton>
-											) : (
+											 : (
 												<Tooltip
 													title={"Go to workflow"}
 													style={{}}
@@ -652,14 +922,16 @@ const Files = (props) => {
 											minWidth: 100,
 											maxWidth: 100,
 											overflow: "hidden",
+											textAlign: isSelectedFiles?"center":null
 										}}
 									/>
 									<ListItemText
 										primary={file.md5_sum}
 										style={{
-											minWidth: 300,
-											maxWidth: 300,
-											overflow: "hidden",
+											minWidth: isSelectedFiles?200:300,
+											maxWidth: isSelectedFiles?200:300,
+											marginLeft:isSelectedFiles? 15:null,
+											overflow: isSelectedFiles?"auto":"hidden",
 										}}
 									/>
 									<ListItemText
@@ -668,14 +940,16 @@ const Files = (props) => {
 											minWidth: 75,
 											maxWidth: 75,
 											overflow: "hidden",
+											textAlign:isSelectedFiles?"center":null,
 											marginLeft: 10,
 										}}
 									/>
 									<ListItemText
 										primary={file.filesize}
 										style={{
-											minWidth: 125,
-											maxWidth: 125,
+											minWidth: isSelectedFiles?80:125,
+											maxWidth: isSelectedFiles?80:125,
+											marginLeft: isSelectedFiles?15:null,
 											overflow: "hidden",
 										}}
 									/>
@@ -702,6 +976,32 @@ const Files = (props) => {
 													</IconButton>
 												</span>
 											</Tooltip>
+											{/*
+											<Tooltip
+												title={"Public URL"}
+												style={{}}
+											>
+												<span>
+													<IconButton
+														style = {{padding: "6px"}}
+														disabled={file.status !== "active"}
+														onClick={() => {
+															// Open the file, without downloading it
+															window.open(`${globalUrl}/api/v1/files/${file.id}/content?type=text&authorization=${file.public_authorization}`, "_blank noreferrer noopener")
+														}}
+													>
+														<LinkIcon
+															style={{
+																color:
+																	file.status === "active"
+																		? "white"
+																		: "grey",
+															}}
+														/>
+													</IconButton>
+												</span>
+											</Tooltip>
+											*/}
 											<Tooltip
 												title={"Download file"}
 												style={{}}
@@ -768,7 +1068,7 @@ const Files = (props) => {
 											</Tooltip>
 											<Tooltip
 												title={"Delete file"}
-												style={{marginLeft: 15, }}
+												style={{marginLeft: isSelectedFiles?5:15, }}
 												aria-label={"Delete"}
 											>
 												<span>

@@ -1,16 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { useInterval } from "react-powerhooks";
-import AppFramework from "../components/AppFramework.jsx";
-import { makeStyles, } from "@mui/styles";
-// nodejs library that concatenates classes
-import classNames from "classnames";
-import theme from '../theme.jsx';
-import { useNavigate, Link, useParams } from "react-router-dom";
-import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx";
-
-// react plugin used to create charts
-//import { Line, Bar } from "react-chartjs-2";
-//import { useAlert
+import React, { useState, useEffect } from "react"
+import { useInterval } from "react-powerhooks"
+import AppFramework from "../components/AppFramework.jsx"
+import { makeStyles, } from "@mui/styles"
+import classNames from "classnames"
+import theme from '../theme.jsx'
+import { useNavigate, Link, useParams } from "react-router-dom"
+import WorkflowTemplatePopup from "../components/WorkflowTemplatePopup.jsx"
 import { ToastContainer, toast } from "react-toastify" 
 import { parsedDatatypeImages } from "../components/AppFramework.jsx"
 import { findSpecificApp } from "../components/AppFramework.jsx"
@@ -96,7 +91,8 @@ const useStyles = makeStyles({
 
 
 const UsecaseListComponent = (props) => {
-	const { keys, userdata, isCloud, globalUrl, frameworkData, isLoggedIn, workflows, setWorkflows, } = props
+	const { keys, userdata, isCloud, globalUrl, frameworkData, isLoggedIn, workflows, setWorkflows, getFramework, setFrameworkData, } = props
+
 
 	const [expandedIndex, setExpandedIndex] = useState(-1);
 	const [expandedItem, setExpandedItem] = useState(-1);
@@ -114,10 +110,12 @@ const UsecaseListComponent = (props) => {
 	const [firstLoad, setFirstLoad] = useState(true)
 	const [apps, setApps] = useState([])
 
+
     const classes = useStyles();
 	let navigate = useNavigate();
 
 	const [mitreTags, setMitreTags] = useState([]);
+
 
 	const parseUsecase = (subcase) => {
 	  const srcdata = findSpecificApp(frameworkData, subcase.type)
@@ -137,12 +135,10 @@ const UsecaseListComponent = (props) => {
   }
 
 	useEffect(() => {
-		console.log("In frameworkData useEffect: frameworkData: ", frameworkData)
+		//console.log("Frameworkdata changed. Use to set inputUsecase: ", frameworkData, prevSubcase)
 		if (frameworkData === undefined || prevSubcase === undefined) {
 			return
 		}
-
-		console.log("PAST!")
 
 		var parsedUsecase = inputUsecase
 		const subcase = parseUsecase(prevSubcase)
@@ -907,7 +903,6 @@ const UsecaseListComponent = (props) => {
 																		isLoggedIn={isLoggedIn}
 																		appFramework={frameworkData}
 																		userdata={userdata}
-
 																		globalUrl={globalUrl}
 																		img1={inputUsecase.srcimg}
 																		srcapp={inputUsecase.srcapp}
@@ -915,8 +910,10 @@ const UsecaseListComponent = (props) => {
 																		dstapp={inputUsecase.dstapp}
 																		title={inputUsecase.name}
 																		description={inputUsecase.description}
-
 																		apps={apps}
+																		getAppFramework={getFramework}
+																		//appSetupDone={appSetupDone}
+																		//setAppSetupDone={setAppSetupDone}
 																	/>
 																: null}
 															</span>
@@ -990,13 +987,15 @@ const UsecaseListComponent = (props) => {
 																}}>
 																<AppFramework
 																	inputUsecase={inputUsecase}
-																	frameworkData={frameworkData}
 																	selectedOption={"Draw"}
 																	showOptions={false}
 																	isLoaded={true}
 																	isLoggedIn={true}
 																	globalUrl={globalUrl}
 																	size={0.6}
+
+																	frameworkData={frameworkData}
+																	setFrameworkData={setFrameworkData}
 																/>
 															</div>
 														</div>
@@ -1713,12 +1712,15 @@ const Dashboard = (props) => {
 			<UsecaseListComponent 
 	  			userdata={userdata}
 				isLoggedIn={isLoggedIn}
-				frameworkData={frameworkData}
 				keys={selectedUsecases} 
 				isCloud={isCloud} 
 				globalUrl={globalUrl} 
 				workflows={workflows}
 				setWorkflows={setWorkflows}
+
+				frameworkData={frameworkData}
+	  			setFrameworkData={setFrameworkData}
+	  			getFramework={getFramework}
 			/>
 
 			{treeKeys.length > 0 ? 

@@ -5,6 +5,7 @@ import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import AppSearchButtons from "../components/AppSearchButtons.jsx";
 import { isMobile } from "react-device-detect";
+import RenderCytoscape from "../components/RenderCytoscape.jsx";
 import {
 	Button,
 	Typography,
@@ -29,7 +30,7 @@ import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 
 const WorkflowTemplatePopup = (props) => {
-	const { userdata, appFramework, globalUrl, img1, srcapp, img2, dstapp, title, description, visualOnly, apps, isLoggedIn, isHomePage } = props;
+	const { userdata, appFramework, globalUrl, img1, srcapp, img2, dstapp, title, description, visualOnly, apps, isLoggedIn, isHomePage, getAppFramework,  } = props;
 
 	const [isActive, setIsActive] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
@@ -39,17 +40,51 @@ const WorkflowTemplatePopup = (props) => {
 	const [workflow, setWorkflow] = useState({});
 	const [showLoginButton, setShowLoginButton] = useState(false);
   	const [appAuthentication, setAppAuthentication] = React.useState(undefined);
-
   	const [missingSource, setMissingSource] = React.useState(undefined)
   	const [missingDestination, setMissingDestination] = React.useState(undefined);
+  	const [configurationFinished, setConfigurationFinished] = React.useState(false)
+	const [appSetupDone, setAppSetupDone] = React.useState(false)
 
-  	const [configurationFinished, setConfigurationFinished] = React.useState(false);
+	const [requestSent, setRequestSent] = React.useState(false)
+  	
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+	let navigate = useNavigate();
+	useEffect(() => {
+		if (modalOpen !== true) {
+			return
+		}
+
+		if (!srcapp.includes(":default") && !dstapp.includes(":default")) {
+			if (appSetupDone === false && setAppSetupDone !== undefined) {
+				setAppSetupDone(true)
+			}
+
+			getGeneratedWorkflow() 
+		}
+
+		if (missingSource !== undefined && missingDestination !== undefined) {
+			if (appSetupDone === false && setAppSetupDone !== undefined) {
+				setAppSetupDone(true)
+			}
+		}
+
+		if (getAppFramework !== undefined) {
+			setTimeout(() => {
+				getAppFramework()
+			}, 500)
+		}
+	}, [modalOpen, missingSource, missingDestination])
 
 	useEffect(() => {
-	}, [missingSource, missingDestination])
+		//console.log("IN USEEFFECT FOR CONFIG: ", configurationFinished)
+		if (configurationFinished === true && workflow.id !== undefined && workflow.id !== null && workflow.id !== "") {
+			toast.success("Generation Successful. Redirecting to the workflow..")
+			setTimeout(() => {
+				navigate("/workflows/" + workflow.id)
+			}, 2000)
+		}
+	}, [configurationFinished, workflow])
 
-  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-	let navigate = useNavigate();
 
 	const imagestyleWrapper = {
         height: 40,
@@ -272,18 +307,21 @@ const WorkflowTemplatePopup = (props) => {
 		// middle:[]
 		// name: "Email analysis"
 		// source:{app_id: "accdaaf2eeba6a6ed43b2efc0112032d", app_name
+		if (requestSent === true) {
+			return
+		}
 		
 
 		if (srcapp.includes(":default") || dstapp.includes(":default")) {
 			toast("You need to select both a source and destination app before generating this workflow.")
 
-			if (srcapp.includes(":default")) {
+			if (srcapp !== undefined && srcapp !== null && srcapp.includes(":default")) {
 				setMissingSource({
 					"type": srcapp.split(":")[0],
 				})
 			}
 
-			if (dstapp.includes(":default")) {
+			if (dstapp !== undefined && dstapp !== null && dstapp.includes(":default")) {
 				setMissingDestination({
 					"type": dstapp.split(":")[0],
 				})
@@ -309,9 +347,8 @@ const WorkflowTemplatePopup = (props) => {
 			},
 		}
 
+		setRequestSent(true)
 		const url = isCloud ? `${globalUrl}/api/v1/workflows/merge` : `https://shuffler.io/api/v1/workflows/merge`
-		//const url = `https://shuffler.io/api/v1/workflows/merge`
-
 		fetch(url, {
 			method: "POST",
 			headers: {
@@ -324,6 +361,7 @@ const WorkflowTemplatePopup = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				//console.log("Status not 200 for framework!");
+				setRequestSent(false)
 			}
 
 			setWorkflowLoading(false)
@@ -341,6 +379,7 @@ const WorkflowTemplatePopup = (props) => {
 
 			if (responseJson.success === false) {
 				//console.log("Error in workflow template: ", responseJson.error);
+				setRequestSent(false)
 
 				const defaultMessage = "Failed to generate workflow the workflow - the Shuffle team has been notified. Contact support@shuffler.io for further assistance."
 				if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason !== "") {
@@ -366,8 +405,19 @@ const WorkflowTemplatePopup = (props) => {
 		})
 		.catch((error) => {
 			console.log("err in framework: ", error.toString());
+			setRequestSent(false)
 			setWorkflowLoading(false)
 		})
+	}
+
+	if (modalOpen === true && !srcapp.includes(":default") && !dstapp.includes(":default")) {
+		if (appSetupDone === false && setAppSetupDone !== undefined) {
+			setAppSetupDone(true)
+		}
+
+		if (workflow.id === undefined && workflowLoading === false && errorMessage === "") {
+			getGeneratedWorkflow() 
+		}
 	}
 
 	const isFinished = () => {
@@ -388,6 +438,13 @@ const WorkflowTemplatePopup = (props) => {
 	}
 	
 	const ModalView = () => {
+		if (modalOpen === false) {
+			return null
+		}
+
+		const divHeight = 500 
+		const divWidth = 500 
+
 		return (
         	<Drawer
 				anchor={"left"}
@@ -443,7 +500,7 @@ const WorkflowTemplatePopup = (props) => {
 						<div style={{marginTop: 75, textAlign: "center", }}>
 							<Typography variant="h4"> Generating the Workflow...
 							</Typography> 
-							<CircularProgress style={{marginLeft: 125, marginTop: 10, }}/> 
+							<CircularProgress style={{marginLeft: 0, marginTop: 25, }}/> 
 						</div>
 						:
 						<div>
@@ -475,9 +532,9 @@ const WorkflowTemplatePopup = (props) => {
 						</div>
 					}
 
-					{(missingSource !== undefined || missingDestination !== undefined) ? 
+					{(appSetupDone === false && missingSource !== undefined || missingDestination !== undefined) ? 
 						<Typography variant="body1" style={{marginTop: 75, marginBottom: 10, }}>
-							{"Find relevevant Apps for this Usecase"}
+							{"Find relevant Apps for this Usecase"}
 						</Typography>
 					: null}
 
@@ -491,6 +548,8 @@ const WorkflowTemplatePopup = (props) => {
 								AppImage={missingSource.image}
 
 								setMissing={setMissingSource}
+
+								getAppFramework={getAppFramework}
 							/>
 						</div>
 					: null}
@@ -505,6 +564,8 @@ const WorkflowTemplatePopup = (props) => {
 								AppImage={missingDestination.image}
 
 								setMissing={setMissingDestination}
+
+								getAppFramework={getAppFramework}
 							/>
 						</div>
 					: null}
@@ -521,28 +582,22 @@ const WorkflowTemplatePopup = (props) => {
 					  setConfigurationFinished={setConfigurationFinished}
 					/>
 
-					{errorMessage === "" && configurationFinished === true && workflow.id !== undefined && workflowLoading === false ?
-						<Tooltip title="Workflow generated!" placement="top">
-							<span style={{display: "flex", }}>
-								{/*<CheckIcon color="primary" sx={{ borderRadius: 4 }} /> */}
-								<Typography variant="h6" style={{ marginLeft: 20, }}>
-									Workflow generated!
+					{/*errorMessage === "" && configurationFinished === true && workflow.id !== undefined && workflowLoading === false ?
+						<Tooltip title="Click to explore the workflow" placement="top">
+							<span 
+								style={{position: "fixed", display: "flex", right: "10%", top: "20%", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, padding: "15px 30px 15px 30px", backgroundColor: theme.palette.platformColor, cursor: "pointer", }}
+								onClick={() => {
+									// Open in new tab
+									window.open("/workflows/" + workflow.id, "_blank")
+								}}
+							>
+								<Typography variant="h5" style={{ }}>
+									Workflow Successfully Generated!
 								</Typography>
 							</span>
 						</Tooltip>
-					: null}
-
-					{/*errorMessage === "" ?
-						<Button
-							style={{marginTop: 50, }}
-							variant={isFinished() ? "contained" : "outlined"}
-							onClick={() => {
-								setModalOpen(false);
-							}}
-						>
-							Done
-						</Button>
 					: null*/}
+
 				</DialogContent>
         	</Drawer>
     	)
@@ -648,6 +703,7 @@ const WorkflowTemplatePopup = (props) => {
 						<CheckIcon color="primary" sx={{ borderRadius: 4 }} style={{ position: "absolute", color: theme.palette.green, top: 10, right: 10, }} /> 
 					: ""}
 				</div>
+
 			</div>
 
 

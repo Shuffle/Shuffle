@@ -141,11 +141,30 @@ const RunWorkflow = (defaultprops) => {
 
 		return (
 			<div style={{marginTop: executionMargin, }}>
-				<Typography variant="h6" style={{color: theme.palette.primaryColor}}>
-					Results
-				</Typography>
+				{/*executionData !== undefined && executionData !== null && executionData !== {} && executionData.status !== undefined && (answer === undefined || answer === null) ? 
+					<div style={{ marginBottom: 5, display: "flex" }}>
+						<Typography variant="body1">
+							<b>Status&nbsp;</b>
+						</Typography>
+						<Typography variant="body1" color="textSecondary" style={{ marginRight: 15, }}>
+							{executionData.status}
+						</Typography>
+					</div>
+				: null*/}
 
-				{executionData.results.map((data, index) => {
+				{/*
+				<Typography variant="h6" style={{color: theme.palette.primaryColor}}>
+					Results: {executionData.results.length}/{executionData.workflow.actions.length}
+				</Typography>
+				*/}
+
+				{executionData.result !== undefined && executionData.result !== null && executionData.result.length > 0 ?
+					<Typography variant="h6">
+						{executionData.result}
+					</Typography> 
+				: null}
+
+				{/*executionData.results.map((data, index) => {
 					if (executionData.results.length !== 1 && (data.status === "SKIPPED")) {
 						return null;
 					}
@@ -311,7 +330,7 @@ const RunWorkflow = (defaultprops) => {
 							</div>
 						</div>
 					)
-				})}
+				})*/}
 			</div>
 		)
 	}
@@ -321,8 +340,6 @@ const RunWorkflow = (defaultprops) => {
 			event.preventDefault()
 		}
 
-		console.log("In submit!")
-
 		stop()
   	    setMessage("")
   	    setExecutionLoading(true)
@@ -330,7 +347,31 @@ const RunWorkflow = (defaultprops) => {
 		setExecutionInfo("")
 
 		var data = {
-			"execution_argument": executionArgument
+			"execution_argument": executionArgument,
+			"execution_source": "questions",
+		}
+
+		if (workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0) {
+			try {
+				data["execution_argument"] = JSON.stringify(executionArgument)
+			} catch (e) {
+				console.log("Error parsing execution argument: ", e)
+			}
+		}
+
+		if (workflow.start !== undefined && workflow.start !== null && workflow.start.length > 0) {
+			//data.start = workflow.start
+	 	} else {
+			/*
+			if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
+				for (let actionkey in workflow.actions) {
+        			if (workflow.actions[actionkey].isStartNode) {
+						data.start = workflow.actions[actionkey].id
+						break
+					}
+				}
+			}
+			*/
 		}
 
 		var url = `${globalUrl}/api/v1/workflows/${props.match.params.key}/execute`
@@ -356,7 +397,6 @@ const RunWorkflow = (defaultprops) => {
 		console.log("Pre request: ", url, fetchBody)
 		fetch(url, fetchBody)
 		.then((response) => {
-			console.log("Got answer 1")
 			if (response.status !== 200 && response.status !== 201) {
 
 				if (answer !== undefined && execution_id !== undefined && authorization !== undefined) {
@@ -372,11 +412,9 @@ const RunWorkflow = (defaultprops) => {
 				}
 			}
 
-			console.log("Got answer 2")
 			return response.json();
 		})
 		.then(responseJson => {
-			console.log("Got answer 3")
 			setExecutionLoading(false)
 			if (responseJson["success"] === false) {
 				console.log("Failed sending execution request")
@@ -391,7 +429,6 @@ const RunWorkflow = (defaultprops) => {
 					start();
 				}
 			}
-			console.log("Got answer 4")
 		})
 		.catch(error => {
 			//setExecutionInfo("Error in workflow startup: " + error)
@@ -433,8 +470,18 @@ const RunWorkflow = (defaultprops) => {
           responseJson.triggers = [];
         }
 
-				handleGetOrg(responseJson.org_id)
-				setWorkflow(responseJson);
+		if (responseJson.input_questions !== undefined && responseJson.input_questions !== null && responseJson.input_questions.length > 0) {
+			var newexec = {}
+			for (let questionkey in responseJson.input_questions) {
+				const question = responseJson.input_questions[questionkey]
+				newexec[question.value] = ""
+			}
+
+			setExecutionArgument(newexec)
+		}
+
+		handleGetOrg(responseJson.org_id)
+		setWorkflow(responseJson);
       })
       .catch((error) => {
         console.log("Get workflow error: ", error.toString());
@@ -462,6 +509,18 @@ const RunWorkflow = (defaultprops) => {
 			// Doesn't work because this is some async garbage
 			if (executionData.execution_id === undefined || (responseJson.execution_id === executionData.execution_id && responseJson.results !== undefined && responseJson.results !== null)) {
 			  if (executionData.status !== responseJson.status || executionData.result !== responseJson.result || (executionData.results !== undefined && responseJson.results !== null && executionData.results.length !== responseJson.results.length)) {
+
+				if (responseJson.result !== undefined && responseJson.result !== null && responseJson.result.length > 0) {
+					if (responseJson.result.startsWith("[") && responseJson.result.endsWith("]")) { 
+						try {
+							responseJson.result = JSON.parse(responseJson.result).length
+							console.log("Set length to: ", responseJson.result)
+						} catch (e) {
+							console.log("Error parsing length: ", e)
+						}
+					}
+				}
+
 				//console.log("Updating data!")
 				setExecutionData(responseJson)
 
@@ -672,19 +731,8 @@ const RunWorkflow = (defaultprops) => {
   				<Typography color="textSecondary">{message}</Typography>
 
 					{answer !== undefined && answer !== null ? null :
-						<Typography variant="h6" style={{marginBottom: 15, }}><b>Workflow:	</b>{workflow.name}</Typography>
+						<Typography variant="h6" style={{marginBottom: 15, }}><b>{workflow.name}</b></Typography>
 					}
-
-					{executionData !== undefined && executionData !== null && executionData !== {} && executionData.status !== undefined && (answer === undefined || answer === null) ? 
-						<div style={{ marginBottom: 5, display: "flex" }}>
-							<Typography variant="body1">
-								<b>Status&nbsp;</b>
-							</Typography>
-							<Typography variant="body1" color="textSecondary" style={{ marginRight: 15, }}>
-								{executionData.status}
-							</Typography>
-						</div>
-					: null}
 
 					{workflowQuestion.length > 0 ?
 						<Typography variant="body1"  style={{ marginBottom: 35, marginTop: 30, marginRight: 15, textAlign: "center", whiteSpace: "pre-line", }}>
@@ -692,7 +740,41 @@ const RunWorkflow = (defaultprops) => {
 						</Typography>
 					: null}
 					
-					{answer !== undefined && answer !== null ? null :
+					{workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
+						<div style={{marginBottom: 5, }}>
+							{workflow.input_questions.map((question, index) => {
+
+								return (
+									<div style={{marginBottom: 5}}>
+										{question.name}
+										<TextField
+											color="primary"
+											style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
+											multiLine
+											maxRows={2}
+											InputProps={{
+												style:{
+													height: "50px", 
+													color: "white",
+													fontSize: "1em",
+												},
+											}}
+											fullWidth={true}
+											placeholder=""
+											id="emailfield"
+											margin="normal"
+											variant="outlined"
+											onChange={(e) => {
+												//setExecutionArgument(e.target.value)	
+												executionArgument[question.value] = e.target.value
+											}}
+										/>
+									</div>
+								)
+							})}
+						</div>
+					: 
+					answer !== undefined && answer !== null ? null :
 						<span>
 							Runtime Argument
 							<div style={{marginBottom: 5}}>
@@ -720,6 +802,7 @@ const RunWorkflow = (defaultprops) => {
 							</div>
 						</span>
 					}
+
 					{executionRunning ?
 						<span style={{width: 50, height: 50, margin: "auto", alignItems: "center", justifyContent: "center", textAlign: "center", }}>
 							<CircularProgress style={{marginTop: 20, marginBottom: 20, marginLeft: 185, }}/>

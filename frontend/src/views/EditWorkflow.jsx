@@ -207,7 +207,7 @@ const EditWorkflow = (props) => {
 
     const cyDummy = cytoscape();
     if (!cyDummy.edgehandles) {
-      cytoscape.use(edgehandles);
+      //cytoscape.use(edgehandles);
     }
   });
 

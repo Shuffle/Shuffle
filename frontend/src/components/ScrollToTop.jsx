@@ -24,7 +24,8 @@ function ScrollToTop({ getUserNotifications, curpath, setCurpath, history }) {
 		// Custom handler for certain scroll mechanics
 		//
 		//console.log("OLD: ", curpath, "NeW: ", window.location.pathname)
-		if (curpath === window.location.pathname && curpath === "/usecases") {
+		if (curpath === window.location.pathname && (curpath === "/usecases" || 
+			(curpath === "/docs" && location.hash.length > 0))) {
 		} else { 
 
 			window.scroll({

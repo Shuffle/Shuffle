@@ -20,6 +20,7 @@ import (
 	//"github.com/docker/docker"
 	"github.com/docker/docker/api/types"
 	//"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	newdockerclient "github.com/fsouza/go-dockerclient"
 	"github.com/go-git/go-billy/v5"
@@ -565,7 +566,7 @@ func imageCheckBuilder(images []string) error {
 		return err
 	}
 
-	filteredImages := []types.ImageSummary{}
+	filteredImages := []image.Summary{}
 	for _, image := range allImages {
 		found := false
 		for _, repoTag := range image.RepoTags {
@@ -636,10 +637,10 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		All: true,
 	})
 
-	img := types.ImageSummary{}
+	img := image.Summary{}
 	tagFound := ""
 
-	img2 := types.ImageSummary{}
+	img2 := image.Summary{}
 	tagFound2 := ""
 
 	alternativeNameSplit := strings.Split(version.Name, "/")
@@ -798,7 +799,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 // Downloads and activates an app from shuffler.io if possible
 func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user shuffle.User, appId string) {
 	url := fmt.Sprintf("https://shuffler.io/api/v1/apps/%s/config", appId)
-	log.Printf("Downloading API from %s", url)
+	log.Printf("[DEBUG] Downloading API from URL %s", url)
 	req, err := http.NewRequest(
 		"GET",
 		url,
@@ -812,7 +813,7 @@ func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user
 		return
 	}
 
-	httpClient := &http.Client{}
+	httpClient := shuffle.GetExternalClient(url)
 	newresp, err := httpClient.Do(req)
 	if err != nil {
 		log.Printf("[ERROR] Failed running auto-download request for %s: %s", appId, err)
@@ -822,6 +823,7 @@ func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user
 	}
 
 	defer newresp.Body.Close()
+
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed setting respbody for workflow download: %s", err)

@@ -18,6 +18,11 @@ code {
   margin-right: -13px;
 }
 
+.toc:hover {
+    background-color: gray;
+    color: white;
+}
+
 /* .cm-string{
   z-index: -1;
 }
@@ -30,4 +35,17 @@ code {
 .CodeMirror-selectedtext{
   background-color: rgba(28, 47, 69, 0.6) !important;
   color: rgb(255, 255, 255) !important;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #494949;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: rgb(26,26,26);
 }

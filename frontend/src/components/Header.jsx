@@ -155,9 +155,21 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 		.then(() => {
 			// Log out anyway
 			removeCookie("session_token", {path: "/"})
+			removeCookie("__session", {path: "/"})
+			removeCookie("_session", {path: "/"})
+
 			removeCookie("session_token", {path: "/"})
+			removeCookie("__session", {path: "/"})
+			removeCookie("_session", {path: "/"})
+			
 			removeCookie("session_token", {path: "/"})
+			removeCookie("__session", {path: "/"})
+			removeCookie("_session", {path: "/"})
+
 			removeCookie("session_token", {path: "/"})
+			removeCookie("__session", {path: "/"})
+			removeCookie("_session", {path: "/"})
+
 			window.location.pathname = "/"
 		})
 		.catch(error => {
@@ -615,7 +627,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 				</List>
 			</div>
 			<div style={{flex: 1, marginTop: 10,}}>
-				<SearchField serverside={serverside} userdata={userdata} />
+				<SearchField globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
 			</div>
 			<div style={{flex: 1, display: "flex", flexDirection: "row-reverse"}}>
 				<List style={{display: 'flex', flexDirection: 'row-reverse'}} component="nav">
@@ -879,6 +891,11 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 												const namesplit = regionsplit[0].split("/")
 
 												regiontag = namesplit[namesplit.length - 1]
+												if (regiontag === "california") {
+													regiontag = "us"
+												} else if (regiontag === "frankfurt") {
+													regiontag = "fr"
+												}
 											}
 										}
 

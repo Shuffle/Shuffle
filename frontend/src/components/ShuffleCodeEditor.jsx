@@ -57,15 +57,15 @@ import { padding, textAlign } from '@mui/system';
 import data from '../frameworkStyle.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { tags as t } from '@lezer/highlight';
-import { createTheme } from '@uiw/codemirror-themes';
 
 
 
 const liquidFilters = [
-	{"name": "Size", "value": "size", "example": ""},
-	{"name": "Date", "value": `date: "%Y%m%d"`, "example": `{{ "now" | date: "%s" }}`},
+	{"name": "Default", "value": `default: []`, "example": `{{ "" | default: "no input" }}`},
 	{"name": "Split", "value": `split: ","`, "example": `{{ "this,can,become,a,list" | split: "," }}`},
 	{"name": "Join", "value": `join: ","`, "example": `{{ ["this","can","become","a","string"] | join: "," }}`},
+	{"name": "Size", "value": "size", "example": ""},
+	{"name": "Date", "value": `date: "%Y%m%d"`, "example": `{{ "now" | date: "%s" }}`},
 	{"name": "Escape String", "value": `{{ \"\"\"'string with weird'" quotes\"\"\" | escape_string }}`, "example": ``},
 	{"name": "Flatten", "value": `flatten`, "example": `{{ [1, [1, 2], [2, 3, 4]] | flatten }}`},
 	{"name": "URL encode", "value": `url_encode`, "example": `{{ "https://www.google.com/search?q=hello world" | url_encode }}`},
@@ -83,37 +83,6 @@ const pythonFilters = [
 	{"name": "Hello World", "value": `{% python %}\nprint("hello world")\n{% endpython %}`, "example": ``},
 	{"name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads(r"""$nodename""")\n{% endpython %}`, "example": ``},
 ]
-
-/*
-const shuffleTheme = createTheme({
-  theme: 'dark',
-  settings: {
-    background: "rgba(40,40,40, 1)",
-    foreground: '#75baff',
-    caret: '#5d00ff',
-    selection: '#036dd626',
-    selectionMatch: '#036dd626',
-    lineHighlight: '#8a91991a',
-    gutterForeground: '#8a919966',
-  },
-  styles: [
-    { tag: t.comment, color: '#787b8099' },
-    { tag: t.variableName, color: '#0080ff' },
-    { tag: [t.string, t.special(t.brace)], color: '#5c6166' },
-    { tag: t.number, color: '#5c6166' },
-    { tag: t.bool, color: '#5c6166' },
-    { tag: t.null, color: '#5c6166' },
-    { tag: t.keyword, color: '#5c6166' },
-    { tag: t.operator, color: '#5c6166' },
-    { tag: t.className, color: '#5c6166' },
-    { tag: t.definition(t.typeName), color: '#5c6166' },
-    { tag: t.typeName, color: '#5c6166' },
-    { tag: t.angleBracket, color: '#5c6166' },
-    { tag: t.tagName, color: '#5c6166' },
-    { tag: t.attributeName, color: '#5c6166' },
-  ],
-});
-*/
 
 const CodeEditor = (props) => {
 	const { 
@@ -236,8 +205,6 @@ const CodeEditor = (props) => {
 
     	//var newitem = JSON.parse(base);
     	var newitem = validateJson(base).result
-
-
     	to_be_copied = "$" + base_node_name.toLowerCase().replaceAll(" ", "_");
     	for (let copykey in copy.namespace) {
     	  if (copy.namespace[copykey].includes("Results for")) {
@@ -825,7 +792,7 @@ const CodeEditor = (props) => {
 										console.log("ERR IN INPUT: ", e)
 									}
 
-									console.log("Got output for: ", fullpath, new_input, actionlist[k].example, typeof new_input)
+									//console.log("Got output for: ", fullpath, new_input, actionlist[k].example, typeof new_input)
 
 									if (typeof new_input === "object") {
 										new_input = JSON.stringify(new_input)
@@ -1078,114 +1045,122 @@ const CodeEditor = (props) => {
 							*/}
 					{ isFileEditor ? null :
 					<div style={{display: "flex", maxHeight: 40, }}>
-						<Button
-							id="basic-button"
-							aria-haspopup="true"
-							aria-controls={liquidOpen ? 'basic-menu' : undefined}
-							aria-expanded={liquidOpen ? 'true' : undefined}
-							variant="outlined"
-							color="secondary"
-							style={{
-							  	textTransform: "none",
-								width: 100, 
-							}}
-							onClick={(event) => {
-								setAnchorEl(event.currentTarget);
-							}}
-						>
-							Filters 
-						</Button>
-						<Menu
-							id="basic-menu"
-							anchorEl={anchorEl}
-							open={liquidOpen}
-							onClose={() => {
-								setAnchorEl(null);
-							}}
-							MenuListProps={{
-								'aria-labelledby': 'basic-button',
-							}}
-						>
-							{liquidFilters.map((item, index) => {
-								return (
-									<MenuItem key={index} onClick={() => {
-										handleClick(item)
-									}}>{item.name}</MenuItem>
-								)
-							})}
-						</Menu>
-						<Button
-							id="basic-button"
-							aria-haspopup="true"
-							aria-controls={mathOpen ? 'basic-menu' : undefined}
-							aria-expanded={mathOpen ? 'true' : undefined}
-							variant="outlined"
-							color="secondary"
-							style={{
-							  textTransform: "none",
-								width: 100, 
-							}}
-							onClick={(event) => {
-								setAnchorEl2(event.currentTarget);
-							}}
-						>
-							Math 
-						</Button>
-						<Menu
-							id="basic-menu"
-							anchorEl={anchorEl2}
-							open={mathOpen}
-							onClose={() => {
-								setAnchorEl2(null);
-							}}
-							MenuListProps={{
-								'aria-labelledby': 'basic-button',
-							}}
-						>
-							{mathFilters.map((item, index) => {
-								return (
-									<MenuItem key={index} onClick={() => {
-										handleClick(item)
-									}}>{item.name}</MenuItem>
-								)
-							})}
-						</Menu>
-						<Button
-							id="basic-button"
-							aria-haspopup="true"
-							aria-controls={pythonOpen ? 'basic-menu' : undefined}
-							aria-expanded={pythonOpen ? 'true' : undefined}
-							variant="outlined"
-							color="secondary"
-							style={{
-							  textTransform: "none",
-								width: 100, 
-							}}
-							onClick={(event) => {
-								setAnchorEl3(event.currentTarget);
-							}}
-						>
-							Python	
-						</Button>
-						<Menu
-							id="basic-menu"
-							anchorEl={anchorEl3}
-							open={pythonOpen}
-							onClose={() => {
-								setAnchorEl3(null);
-							}}
-							MenuListProps={{
-								'aria-labelledby': 'basic-button',
-							}}
-						>
-							{pythonFilters.map((item, index) => {
-								return (
-									<MenuItem key={index} onClick={() => {
-										handleClick(item)
-									}}>{item.name}</MenuItem>
-								)
-							})}
-						</Menu> 
+						{selectedAction.name === "execute_python" ? 
+							<Typography variant="body1" style={{marginTop: 5, }}>
+								Run Python Code
+							</Typography>
+						: 
+						<div style={{display: "flex", }}>
+							<Button
+								id="basic-button"
+								aria-haspopup="true"
+								aria-controls={liquidOpen ? 'basic-menu' : undefined}
+								aria-expanded={liquidOpen ? 'true' : undefined}
+								variant="outlined"
+								color="secondary"
+								style={{
+								  	textTransform: "none",
+									width: 100, 
+								}}
+								onClick={(event) => {
+									setAnchorEl(event.currentTarget);
+								}}
+							>
+								Filters 
+							</Button>
+							<Menu
+								id="basic-menu"
+								anchorEl={anchorEl}
+								open={liquidOpen}
+								onClose={() => {
+									setAnchorEl(null);
+								}}
+								MenuListProps={{
+									'aria-labelledby': 'basic-button',
+								}}
+							>
+								{liquidFilters.map((item, index) => {
+									return (
+										<MenuItem key={index} onClick={() => {
+											handleClick(item)
+										}}>{item.name}</MenuItem>
+									)
+								})}
+							</Menu>
+							<Button
+								id="basic-button"
+								aria-haspopup="true"
+								aria-controls={mathOpen ? 'basic-menu' : undefined}
+								aria-expanded={mathOpen ? 'true' : undefined}
+								variant="outlined"
+								color="secondary"
+								style={{
+								  textTransform: "none",
+									width: 100, 
+								}}
+								onClick={(event) => {
+									setAnchorEl2(event.currentTarget);
+								}}
+							>
+								Math 
+							</Button>
+							<Menu
+								id="basic-menu"
+								anchorEl={anchorEl2}
+								open={mathOpen}
+								onClose={() => {
+									setAnchorEl2(null);
+								}}
+								MenuListProps={{
+									'aria-labelledby': 'basic-button',
+								}}
+							>
+								{mathFilters.map((item, index) => {
+									return (
+										<MenuItem key={index} onClick={() => {
+											handleClick(item)
+										}}>{item.name}</MenuItem>
+									)
+								})}
+							</Menu>
+							<Button
+								id="basic-button"
+								aria-haspopup="true"
+								aria-controls={pythonOpen ? 'basic-menu' : undefined}
+								aria-expanded={pythonOpen ? 'true' : undefined}
+								variant="outlined"
+								color="secondary"
+								style={{
+								  textTransform: "none",
+									width: 100, 
+								}}
+								onClick={(event) => {
+									setAnchorEl3(event.currentTarget);
+								}}
+							>
+								Python	
+							</Button>
+							<Menu
+								id="basic-menu"
+								anchorEl={anchorEl3}
+								open={pythonOpen}
+								onClose={() => {
+									setAnchorEl3(null);
+								}}
+								MenuListProps={{
+									'aria-labelledby': 'basic-button',
+								}}
+							>
+								{pythonFilters.map((item, index) => {
+									return (
+										<MenuItem key={index} onClick={() => {
+											handleClick(item)
+										}}>{item.name}</MenuItem>
+									)
+								})}
+							</Menu> 
+						</div>
+						}
 						<Button
 							id="basic-button"
 							aria-haspopup="true"
@@ -1589,7 +1564,6 @@ const CodeEditor = (props) => {
 											maxHeight: 35, 
 											minWidth: 70, 
 										}} 
-										variant="contained" 
 										onClick={() => {
 											executeSingleAction(expOutput)
 										}}

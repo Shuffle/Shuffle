@@ -305,15 +305,15 @@ const SetAuthentication = (props) => {
         variant="h4"
         style={{ marginLeft: "auto", marginRight: "auto", marginTop: 50}}
       >
-				Oauth2 setup
+		Oauth2 setup
       </Typography>
       <Typography
         variant="h6"
         style={{ marginLeft: "auto", marginRight: "auto", marginTop: 50}}
       >
         {!finished ? (
-					failed ? 
-						null :
+			failed ? 
+				null :
           	<CircularProgress />
         ) : (
           "Done - this window should close within 3 seconds."

@@ -5,6 +5,7 @@ import { BrowserView, MobileView } from "react-device-detect";
 
 import { useNavigate, Link } from "react-router-dom";
 import ReactGA from "react-ga4";
+import LicencePopup from "../components/LicencePopup.jsx";
 import SearchField from "../components/Searchfield.jsx";
 import {
   Paper,
@@ -18,15 +19,18 @@ import {
   MenuItem,
   Select,
   Button,
+  ButtonGroup,
   Grid,
   IconButton,
   Divider,
   LinearProgress,
-
   AppBar,
+	Dialog,
+	DialogTitle,
 } from "@mui/material";
 
 import {
+  Close as CloseIcon,
   MeetingRoom as MeetingRoomIcon,
   HelpOutline as HelpOutlineIcon,
   Settings as SettingsIcon,
@@ -37,11 +41,10 @@ import {
   EmojiObjects as EmojiObjectsIcon,
   Business as BusinessIcon,
   Polyline as PolylineIcon,
-} from "@mui/icons-material";
-
-import {
+  Add as AddIcon,
   Analytics as AnalyticsIcon,
   Lightbulb as LightbulbIcon,
+  ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
 
 const hoverColor = "#f85a3e";
@@ -52,13 +55,15 @@ const Header = (props) => {
     globalUrl,
     setNotifications,
     notifications,
-	isLoaded,
+    isLoaded,
     isLoggedIn,
     removeCookie,
     homePage,
     userdata,
-	isMobile,
+    isMobile,
     serverside,
+    curpath,
+    billingInfo
   } = props;
 
   const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
@@ -67,9 +72,13 @@ const Header = (props) => {
   const [DocsHoverColor, setDocsHoverColor] = useState(hoverOutColor);
   const [HelpHoverColor, setHelpHoverColor] = useState(hoverOutColor);
   const [isHeader, setIsHeader] = React.useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
+  const [upgradeHovered, setUpgradeHovered] = React.useState(false);
+  const [showTopbar, setShowTopbar] = useState(false)
+  const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_XAxwE2Fp9DEbEcNYw4UKmyby00vIlIPPRp" : "pk_test_EdxgKfqmQGXY5JLjdBqtuhCw00BHbiKJDB"
   let navigate = useNavigate();
 
   const handleClick = (event) => {
@@ -81,7 +90,7 @@ const Header = (props) => {
     setAnchorElAvatar(null);
   };
   // Should be based on some path
-	const logoCheck = !homePage ?  null : null
+  const logoCheck = !homePage ? null : null
 
   const hrefStyle = {
     color: hoverOutColor,
@@ -89,24 +98,25 @@ const Header = (props) => {
   };
 
   const menuText = {
-	textTransform: "none",
-	color: "#FFF",
-	textAlign: "center",
-	fontSize: 16,
-	fontStyle: "normal",
-	fontWeight: 400,
-	lineHeight: "normal",
+    textTransform: "none",
+    color: "#FFF",
+    textAlign: "center",
+    fontSize: 16,
+    fontStyle: "normal",
+    fontWeight: 400,
+    lineHeight: "normal",
   }
 
   const isCloud =
     serverside === true || typeof window === "undefined"
       ? true
       : window.location.host === "localhost:3002" ||
-        window.location.host === "shuffler.io";
+      window.location.host === "shuffler.io" ||
+      window.location.host === "localhost:5002";
 
   const clearNotifications = () => {
     // Don't really care about the logout
-    
+
     toast("Clearing notifications")
     fetch(`${globalUrl}/api/v1/notifications/clear`, {
       credentials: "include",
@@ -187,7 +197,20 @@ const Header = (props) => {
         removeCookie("session_token", { path: "/" });
         removeCookie("session_token", { path: "/" });
         removeCookie("session_token", { path: "/" });
+
+        removeCookie("__session", { path: "/" });
+        removeCookie("__session", { path: "/" });
+        removeCookie("__session", { path: "/" });
+
+        removeCookie("__session", { path: "/" });
         window.location.pathname = "/";
+
+        localStorage.setItem("globalUrl", "")
+
+        // Delete userinfo from localstorage
+        localStorage.removeItem("apps")
+        localStorage.removeItem("workflows")
+        localStorage.removeItem("userinfo")
       })
       .catch((error) => {
         console.log(error);
@@ -235,16 +258,17 @@ const Header = (props) => {
     setLoginHoverColor(hoverOutColor);
   };
 
-	const notificationWidth = 335
-	const imagesize = 22;
-  	const boxColor = "#86c142";
+  const notificationWidth = 335
+  const imagesize = 22;
+  const boxColor = "#86c142";
 
-	const NotificationItem = (props) => {
-		const {data} = props
+  const NotificationItem = (props) => {
+    const { data } = props
 
     var image = "";
     var orgName = "";
     var orgId = "";
+
     if (userdata.orgs !== undefined) {
       const foundOrg = userdata.orgs.find((org) => org.id === data["org_id"]);
       if (foundOrg !== undefined && foundOrg !== null) {
@@ -264,7 +288,7 @@ const Header = (props) => {
               : null,
           cursor: "pointer",
           marginRight: 10,
-        };
+        }
 
         image =
           foundOrg.image === "" ? (
@@ -278,7 +302,7 @@ const Header = (props) => {
               alt={foundOrg.name}
               src={foundOrg.image}
               style={imageStyle}
-              onClick={() => {}}
+              onClick={() => { }}
             />
           );
 
@@ -296,31 +320,31 @@ const Header = (props) => {
           borderBottom: "1px solid rgba(255,255,255,0.4)",
         }}
       >
-		{data.reference_url !== undefined && data.reference_url !== null && data.reference_url.length > 0 ?
-			<Link to={data.reference_url} style={{color: "#f86a3e", textDecoration: "none",}}>
-				<Typography variant="body1">
-					{data.title} ({data.amount})
-				</Typography >
-			</Link>
-		: 
-			<Typography variant="body1" color="textSecondary">
-				{data.title}
-			</Typography >
-		}
+        {data.reference_url !== undefined && data.reference_url !== null && data.reference_url.length > 0 ?
+          <Link to={data.reference_url} style={{ color: "#f86a3e", textDecoration: "none", }}>
+            <Typography variant="body1">
+              {data.title} ({data.amount})
+            </Typography >
+          </Link>
+          :
+          <Typography variant="body1" color="textSecondary">
+            {data.title}
+          </Typography >
+        }
 
-		{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
-			<img alt={data.title} src={data.image} style={{height: 100, width: 100, }} />
-			: 
-			null
-		}
-		<Typography variant="body2" style={{marginTop: 10, maxHeight: 200, overflowX: "hidden", overflowY: "auto", }}>
-			{data.description}
-		</Typography >
+        {data.image !== undefined && data.image !== null && data.image.length > 0 ?
+          <img alt={data.title} src={data.image} style={{ height: 100, width: 100, }} />
+          :
+          null
+        }
+        <Typography variant="body2" style={{ marginTop: 10, maxHeight: 200, overflowX: "hidden", overflowY: "auto", }}>
+          {data.description}
+        </Typography >
         <div style={{ display: "flex" }}>
           {data.read === false ? (
             <Button
               color="primary"
-              variant="contained"
+              variant="outlined"
               style={{ marginTop: 15 }}
               onClick={() => {
                 dismissNotification(data.id);
@@ -332,7 +356,7 @@ const Header = (props) => {
           <Tooltip title={`Org "${orgName}"`} placement="bottom">
             <div
               style={{ cursor: "pointer", marginLeft: 10, marginTop: 20 }}
-              onClick={() => {}}
+              onClick={() => { }}
             >
               {image}
             </div>
@@ -353,14 +377,13 @@ const Header = (props) => {
           setAnchorEl(event.currentTarget);
         }}
       >
-        <Badge badgeContent={notifications.filter((n) => n.read === false).length} color="primary">
-          <NotificationsIcon
-            color="secondary"
-            style={{ height: 30, width: 30 }}
-            alt="Your username here"
-            src=""
-          />
-        </Badge>
+        {/*<Badge badgeContent={notifications.filter((n) => n.read === false).length} color="primary">*/}
+        <NotificationsIcon
+          color="secondary"
+          style={{ height: 30, width: 30 }}
+          alt="Your username here"
+          src=""
+        />
       </IconButton>
       <Menu
         id="simple-menu"
@@ -391,35 +414,45 @@ const Header = (props) => {
           }}
         >
           <div style={{ display: "flex", marginBottom: 5 }}>
-            <Typography variant="body1">
-              Your Notifications ({notifications.filter((data) => !data.read).length})
+            <Typography variant="body1" style={{ flex: 1, }}>
+              Notifications ({notifications.filter((data) => !data.read).length})
             </Typography>
-            {notifications.length > 1 ? (
+            <ButtonGroup style={{ height: 40, flex: 1, }}>
+              {notifications.length > 1 ? (
+                <Button
+                  color="primary"
+                  variant="outlined"
+                  disabled={notifications.filter((data) => !data.read).length === 0}
+                  onClick={() => {
+                    clearNotifications();
+                  }}
+                >
+                  Flush
+                </Button>
+              ) : null}
               <Button
                 color="primary"
                 variant="contained"
-				disabled={notifications.filter((data) => !data.read).length === 0}
-                style={{ marginLeft: 30, }}
                 onClick={() => {
-                  clearNotifications();
+                  navigate("/admin?tab=organization&admin_tab=priorities")
                 }}
               >
-                Flush
+                Explore
               </Button>
-            ) : null}
+            </ButtonGroup>
           </div>
-          <Typography variant="body2">
-            Notifications generated made by Shuffle to help you discover issues or 
-            improvements. <a href="/docs/organizations#notifications" target="_blank" rel="noopener noreferrer" style={{color: "#f86a3e", textDecoration: "none", }}>
-	  		Learn more</a>
+          <Typography variant="body2" color="textSecondary" style={{ marginTop: 5, }}>
+            Notifications generated made by Shuffle to help you discover issues or
+            improvements. <a href="/docs/organizations#notifications" target="_blank" rel="noopener noreferrer" style={{ color: "#f86a3e", textDecoration: "none", }}>
+              Learn more</a>
           </Typography>
         </Paper>
         {notifications.map((data, index) => {
-			if (data.read) {
-				return null
-			}
+          if (data.read) {
+            return null
+          }
 
-          	return <NotificationItem data={data} key={index} />;
+          return <NotificationItem data={data} key={index} />;
         })}
       </Menu>
     </span>
@@ -450,17 +483,25 @@ const Header = (props) => {
       .then(function (response) {
         if (response.status !== 200) {
           console.log("Error in response");
+        } else {
+          localStorage.removeItem("apps")
+          localStorage.removeItem("workflows")
+          localStorage.removeItem("userinfo")
         }
 
         return response.json();
       })
       .then(function (responseJson) {
-	    console.log("In here?")
+        console.log("In here?")
         if (responseJson.success === true) {
           if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) {
             console.log("Region Change: ", responseJson.region_url);
             localStorage.setItem("globalUrl", responseJson.region_url);
             //globalUrl = responseJson.region_url
+          }
+          if (responseJson["reason"] === "SSO_REDIRECT") {
+            window.location.href = responseJson["url"]
+            return
           }
 
           setTimeout(() => {
@@ -469,11 +510,11 @@ const Header = (props) => {
 
           toast("Successfully changed active organization - refreshing!");
         } else {
-		  if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
-		    toast(responseJson.reason);
-		  } else {
-          	toast("Failed changing org. Try again or contact support@shuffler.io if this persists.");
-		  }
+          if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+            toast(responseJson.reason);
+          } else {
+            toast("Failed changing org. Try again or contact support@shuffler.io if this persists.");
+          }
         }
       })
       .catch((error) => {
@@ -490,13 +531,13 @@ const Header = (props) => {
         rel="noopener noreferrer"
         target="_blank"
       >
-        <Tooltip color="primary" title={"Join the community"} placement="left">
+        <Tooltip color="primary" title={"Join the Shuffle Automation Community"} placement="left">
           <IconButton
             color="primary"
             style={{}}
             aria-controls="simple-menu"
             aria-haspopup="true"
-            onClick={(event) => {}}
+            onClick={(event) => { }}
           >
             <img
               alt="Discord Community Join"
@@ -512,10 +553,10 @@ const Header = (props) => {
   // Should be based on some path
   const parsedAvatar =
     userdata.avatar !== undefined &&
-    userdata.avatar !== null &&
-    userdata.avatar.length > 0
+      userdata.avatar !== null &&
+      userdata.avatar.length > 0
       ? userdata.avatar
-      : "";
+      : ""
 
   const avatarMenu = (
     <span>
@@ -533,6 +574,7 @@ const Header = (props) => {
           alt="Your username here"
           src={parsedAvatar}
         />
+        <ExpandMoreIcon style={{ color: "rgba(255,255,255,0.4)", }} />
       </IconButton>
       <Menu
         id="simple-menu"
@@ -550,10 +592,31 @@ const Header = (props) => {
               handleClose();
             }}
           >
-            <BusinessIcon style={{ marginRight: 5 }} /> Admin
+            <BusinessIcon style={{ marginRight: 5 }} /> Organization
           </MenuItem>
         </Link>
-        <Divider />
+        <Link to="/settings" style={hrefStyle}>
+          <MenuItem
+            onClick={(event) => {
+              handleClose();
+            }}
+          >
+            <SettingsIcon style={{ marginRight: 5 }} /> Account
+          </MenuItem>
+        </Link>
+
+        <Link to="/admin?admin_tab=priorities" style={hrefStyle}>
+          <MenuItem
+            onClick={(event) => {
+              handleClose();
+            }}
+          >
+            <NotificationsIcon style={{ marginRight: 5 }} /> Notifications
+          </MenuItem>
+        </Link>
+
+        {/*notificationMenu*/}
+        <Divider style={{ marginTop: 10, marginBottom: 10, }} />
         <Link to="/docs" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
@@ -583,7 +646,6 @@ const Header = (props) => {
             <LightbulbIcon style={{ marginRight: 5 }} /> Use Cases
           </MenuItem>
         </Link>
-        <Divider />
         <Link to={`/creators/${userdata.public_username}`} style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
@@ -593,16 +655,7 @@ const Header = (props) => {
             <EmojiObjectsIcon style={{ marginRight: 5 }} /> Creator page
           </MenuItem>
         </Link>
-        <Link to="/settings" style={hrefStyle}>
-          <MenuItem
-            onClick={(event) => {
-              handleClose();
-            }}
-          >
-            <SettingsIcon style={{ marginRight: 5 }} /> Settings
-          </MenuItem>
-        </Link>
-        <Divider />
+        <Divider style={{ marginTop: 10, marginBottom: 10, }} />
         <MenuItem
           style={{ color: "white" }}
           onClick={(event) => {
@@ -613,11 +666,11 @@ const Header = (props) => {
         >
           <MeetingRoomIcon style={{ marginRight: 5 }} /> &nbsp;Logout
         </MenuItem>
-        <Divider style={{marginBottom: 10, }}/>
+        <Divider style={{ marginBottom: 10, }} />
 
-	  	<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 5, marginBottom: 5,}}>
-	  		Version: 1.3.3
-	  	</Typography>
+        <Typography variant="body2" color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, }}>
+          Version: 1.4.0
+        </Typography>
       </Menu>
     </span>
   );
@@ -628,7 +681,66 @@ const Header = (props) => {
     marginBottom: "auto",
     marginRight: 10,
   };
-  
+
+  const modalView = 
+      <Dialog
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+        }}
+        PaperProps={{
+          style: {
+            color: "white",
+            minWidth: 850,
+            minHeight: 370,
+            padding: 20,
+            backgroundColor: "rgba(0, 0, 0, 1)",
+            borderRadius: theme.palette.borderRadius,
+          },
+        }}
+      >
+        <DialogTitle style={{ display: "flex" }}>
+          <span style={{ color: "white", fontSize: 24 }}>
+            Upgrade your plan
+          </span>
+          <IconButton
+            onClick={() => {
+              if (isCloud) {
+              ReactGA.event({
+                category: "header",
+                action: "close_Upgread_popup",
+                label: "",
+              })};
+              setModalOpen(false);
+            }}
+            style={{
+              marginLeft: "auto",
+              position: "absolute",
+              top: 20,
+              right: 20,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <div style={{ paddingLeft: "30px", paddingRight: "30px" }}>
+          <LicencePopup
+            serverside={serverside}
+            removeCookie={removeCookie}
+            isLoaded={isLoaded}
+            isLoggedIn={isLoggedIn}
+            globalUrl={globalUrl}
+
+            billingInfo={billingInfo}
+
+            userdata={userdata}
+            stripeKey={stripeKey}
+            setModalOpen={setModalOpen}
+            {...props}
+          />
+        </div>
+      </Dialog>
+
   // Handle top bar or something
   const defaultTop = -2
   const loginTextBrowser = !isLoggedIn ? (
@@ -641,163 +753,163 @@ const Header = (props) => {
         textAlign: "center",
       }}
     >
-        <List style={{ flex: 2, display: "flex", flexDirection: "row", }} component="nav">
+      <List style={{ flex: 2, display: "flex", flexDirection: "row", }} component="nav">
+        <ListItem
+          style={{ textAlign: "center", marginLeft: "0px", paddingRight: 0 }}
+        >
+          <Link to="/" style={hrefStyle}>
+            <Grid
+              variant="text"
+              color="secondary"
+              style={{ textTransform: "none", display: "flex" }}
+              onClick={() => {
+                if (isCloud) {
+                  ReactGA.event({
+                    category: "header",
+                    action: "home_click",
+                    label: "",
+                  });
+                }
+              }}
+            >
+              <img
+                src={"/images/logos/topleft_logo.svg"}
+                alt="shuffle logo"
+                style={{ height: 25, }}
+              />
+            </Grid>
+          </Link>
+        </ListItem>
+      </List>
+      <List style={{ flex: 1.5, display: "flex", flexDirect: "row", marginTop: 10, itemAlign: "center", }} component="nav">
+        <ListItem style={{ textAlign: "center", marginLeft: "0px" }}>
+          <Link to="/usecases" style={hrefStyle}>
+            <Button
+              variant="text"
+              color="secondary"
+              style={menuText}
+              onClick={() => {
+                if (isCloud) {
+                  ReactGA.event({
+                    category: "header",
+                    action: "usecases_click",
+                    label: "",
+                  });
+                }
+              }}
+            >
+              Usecases
+            </Button>
+          </Link>
+        </ListItem>
+        {isCloud ? (
           <ListItem
-            style={{ textAlign: "center", marginLeft: "0px", paddingRight: 0 }}
+            style={{
+              textAlign: "center",
+              marginLeft: "0px",
+              paddingRight: 0,
+            }}
           >
-            <Link to="/" style={hrefStyle}>
-              <Grid
-                variant="text"
-                color="secondary"
-                style={{ textTransform: "none", display: "flex" }}
-                onClick={() => {
-                  if (isCloud) {
-                    ReactGA.event({
-                      category: "header",
-                      action: "home_click",
-                      label: "",
-                    });
-                  }
-                }}
-              >
-                <img
-                  src={"/images/logos/topleft_logo.svg"}
-                  alt="shuffle logo"
-                  style={{ height: 25, }}
-                />
-              </Grid>
-            </Link>
-          </ListItem>
-        </List>
-        <List style={{ flex: 1.5, display: "flex", flexDirect: "row", marginTop: 10, itemAlign: "center", }} component="nav">
-          <ListItem style={{ textAlign: "center", marginLeft: "0px" }}>
-            <Link to="/usecases" style={hrefStyle}>
+            <Link to="/pricing" style={hrefStyle}>
               <Button
                 variant="text"
                 color="secondary"
                 style={menuText}
                 onClick={() => {
-                  if (isCloud) {
-                    ReactGA.event({
-                      category: "header",
-                      action: "usecases_click",
-                      label: "",
-                    });
-                  }
+                  ReactGA.event({
+                    category: "header",
+                    action: "pricing_click",
+                    label: "",
+                  });
                 }}
               >
-                Usecases
+                Pricing
               </Button>
             </Link>
           </ListItem>
-          {isCloud ? (
-            <ListItem
-              style={{
-                textAlign: "center",
-                marginLeft: "0px",
-                paddingRight: 0,
-              }}
-            >
-              <Link to="/pricing" style={hrefStyle}>
-                <Button
-                  variant="text"
-                  color="secondary"
-                  style={menuText}
-                  onClick={() => {
-                    ReactGA.event({
-                      category: "header",
-                      action: "pricing_click",
-                      label: "",
-                    });
-                  }}
-                >
-                  Pricing
-                </Button>
-              </Link>
-            </ListItem>
-          ) : null}
-            <ListItem
-              style={{
-                textAlign: "center",
-                marginLeft: 0, 
-                paddingRight: 0,
-              }}
-            >
-              <Link rel="noopener noreferrer" to="/docs" style={hrefStyle}>
-                <Button
-                  variant="text"
-                  color="secondary"
-                  style={menuText}
-                  onClick={() => {}}
-                >
-                 	Docs 
-                </Button>
-              </Link>
-            </ListItem>
-        </List>
-        <List
-          style={{ flex: 2, display: "flex", alignItems: "flex-start",  }}
-          component="nav"
+        ) : null}
+        <ListItem
+          style={{
+            textAlign: "center",
+            marginLeft: 0,
+            paddingRight: 0,
+          }}
         >
-	  	  <div style={{maxWidth: 70, minWidth: 70, }}/>
-	  	  <span style={{marginTop: 8, marginRight: 15, }}>
-		  	<SearchField isHeader={true} isLoggedIn={isLoggedIn} isLoaded={isLoaded} serverside={serverside} userdata={userdata} small={true} rounded={true} />
-	  	  </span>
-		    <Link to="/register" style={hrefStyle}>
-		      <Button
-		        variant="contained"
-		        color="primary"
-		        style={{
-					marginTop: 13, 
-					minWidth: 100,
-					maxWidth: 100,
-					padding: "7px 14px 7px 14px",
-					borderRadius: 25,
-					textTransform: "none",
-					backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
-					color: "white",
-		        }}
-		        onClick={() => {
-					if (isCloud) {
-						ReactGA.event({
-						  category: "header",
-						  action: "register_click",
-						  label: "",
-						});
-					}
-		        }}
-		      >
-		        Sign Up
-		      </Button>
-		    </Link>
-            <Link to="/login" style={hrefStyle}>
-              <Button
-                style={{
-				  marginTop: 12, 
-                  textTransform: "none",
-                  borderRadius: 25,
-				  color:"white",
-				  fontWeight: 400,
-				  fontSize: 16,
-                  padding: "7px 14px 7px 14px",
-                  maxWidth: 100,
-                  minWidth: 100,
-                }}
-                onClick={() => {
-                  if (isCloud) {
-                    ReactGA.event({
-                      category: "header",
-                      action: "signin_click",
-                      label: "",
-                    });
-                  }
-                }}
-              >
-                Login
-              </Button>
-            </Link>
+          <Link rel="noopener noreferrer" to="/docs" style={hrefStyle}>
+            <Button
+              variant="text"
+              color="secondary"
+              style={menuText}
+              onClick={() => { }}
+            >
+              Docs
+            </Button>
+          </Link>
+        </ListItem>
+      </List>
+      <List
+        style={{ flex: 2, display: "flex", alignItems: "flex-start", }}
+        component="nav"
+      >
+        <div style={{ maxWidth: 70, minWidth: 70, }} />
+        <span style={{ marginTop: 8, marginRight: 15, }}>
+          <SearchField globalUrl={globalUrl} isHeader={true} isLoggedIn={isLoggedIn} isLoaded={isLoaded} serverside={serverside} userdata={userdata} small={true} rounded={true} />
+        </span>
+        <Link to="/register" style={hrefStyle}>
+          <Button
+            variant="contained"
+            color="primary"
+            style={{
+              marginTop: 13,
+              minWidth: 100,
+              maxWidth: 100,
+              padding: "7px 14px 7px 14px",
+              borderRadius: 25,
+              textTransform: "none",
+              backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+              color: "white",
+            }}
+            onClick={() => {
+              if (isCloud) {
+                ReactGA.event({
+                  category: "header",
+                  action: "register_click",
+                  label: "",
+                });
+              }
+            }}
+          >
+            Sign Up
+          </Button>
+        </Link>
+        <Link to="/login" style={hrefStyle}>
+          <Button
+            style={{
+              marginTop: 12,
+              textTransform: "none",
+              borderRadius: 25,
+              color: "white",
+              fontWeight: 400,
+              fontSize: 16,
+              padding: "7px 14px 7px 14px",
+              maxWidth: 100,
+              minWidth: 100,
+            }}
+            onClick={() => {
+              if (isCloud) {
+                ReactGA.event({
+                  category: "header",
+                  action: "signin_click",
+                  label: "",
+                });
+              }
+            }}
+          >
+            Login
+          </Button>
+        </Link>
 
-        </List>
+      </List>
     </div>
   ) : (
     <div style={{ display: "flex" }}>
@@ -830,91 +942,91 @@ const Header = (props) => {
                   style={{ color: HomeHoverColor, cursor: "pointer" }}
                 >
                   <Grid container direction="row" alignItems="center">
-                    <Grid item style={{  }}>
+                    <Grid item style={{}}>
                       <img
                         src={"/images/logos/orange_logo.svg"}
                         alt="logo"
-                        style={{ height: 20, width: 20, marginTop: 10 }}
+                        style={{ height: 20, width: 20, marginTop: 4 }}
                       />
                     </Grid>
                   </Grid>
                 </div>
               </Link>
               <ListItem style={listItemStyle}>
-              <Link to="/workflows" style={hrefStyle}>
-                <div
-                  onMouseOver={handleSoarHover}
-                  onMouseOut={handleSoarHoverOut}
-                  style={{
-                    color: SoarHoverColor,
-                    cursor: "pointer",
-                    display: "flex",
-                    marginLeft: 25,
-                  }}
-                >
-                  {/*
+                <Link to="/workflows" style={hrefStyle}>
+                  <div
+                    onMouseOver={handleSoarHover}
+                    onMouseOut={handleSoarHoverOut}
+                    style={{
+                      color: SoarHoverColor,
+                      cursor: "pointer",
+                      display: "flex",
+                      marginLeft: 25,
+                    }}
+                  >
+                    {/*
 										<PolylineIcon style={{marginRight: "5px"}} />
 										*/}
-                  <Typography style={{ marginTop: defaultTop, marginRight: 8 }}>
-                    Workflows
-                  </Typography>
-                </div>
-              </Link>
-            </ListItem>
-            <ListItem style={listItemStyle}>
-              <Link to="/apps" style={hrefStyle}>
-                <div
-                  onMouseOver={handleHelpHover}
-                  onMouseOut={handleHelpHoverOut}
-                  style={{
-                    color: HelpHoverColor,
-                    cursor: "pointer",
-                    display: "flex",
-                  }}
-                >
-                  {/*
+                    <Typography style={{ marginTop: defaultTop, marginRight: 8 }}>
+                      Workflows
+                    </Typography>
+                  </div>
+                </Link>
+              </ListItem>
+              <ListItem style={listItemStyle}>
+                <Link to="/apps" style={hrefStyle}>
+                  <div
+                    onMouseOver={handleHelpHover}
+                    onMouseOut={handleHelpHoverOut}
+                    style={{
+                      color: HelpHoverColor,
+                      cursor: "pointer",
+                      display: "flex",
+                    }}
+                  >
+                    {/*
 											<AppsIcon style={{marginRight: "5px"}} />
 											*/}
-                  <Typography style={{ marginTop: defaultTop, marginRight: 5 }}>
-                    Apps
-                  </Typography>
-                </div>
-              </Link>
-            </ListItem>
-            {/*
+                    <Typography style={{ marginTop: defaultTop, marginRight: 5 }}>
+                      Apps
+                    </Typography>
+                  </div>
+                </Link>
+              </ListItem>
+              {/*
 							<ListItem style={{textAlign: "center"}}>
 								<Link to="/dashboard" style={hrefStyle}>
 										<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer"}}>Dashboard</div> 
 								</Link>
       	 			</ListItem>
 							*/}
-            <ListItem style={listItemStyle}>
-              <Link to="/docs" style={hrefStyle}>
-                <div
-                  onMouseOver={handleDocsHover}
-                  onMouseOut={handleDocsHoverOut}
-                  style={{
-                    color: DocsHoverColor,
-                    cursor: "pointer",
-                    display: "flex",
-                  }}
-                >
-                  {/*
+              <ListItem style={listItemStyle}>
+                <Link to="/docs" style={hrefStyle}>
+                  <div
+                    onMouseOver={handleDocsHover}
+                    onMouseOut={handleDocsHoverOut}
+                    style={{
+                      color: DocsHoverColor,
+                      cursor: "pointer",
+                      display: "flex",
+                    }}
+                  >
+                    {/*
 											<DescriptionIcon style={{marginRight: "5px"}} />
 											*/}
-                  <Typography style={{ marginTop: defaultTop }}>
-                    Docs
-                  </Typography>
-                </div>
-              </Link>
-            </ListItem>
+                    <Typography style={{ marginTop: defaultTop }}>
+                      Docs
+                    </Typography>
+                  </div>
+                </Link>
+              </ListItem>
             </ListItem>
           </List>
         </div>
         <div style={{ flex: 1, marginTop: 10, }}>
-          <SearchField isHeader={true} isLoggedIn={isLoggedIn} isLoaded={isLoaded} serverside={serverside} userdata={userdata} hidemargins={true}/>
+          <SearchField globalUrl={globalUrl} isHeader={true} isLoggedIn={isLoggedIn} isLoaded={isLoaded} serverside={serverside} userdata={userdata} hidemargins={true} />
         </div>
-        <div style={{ flex:  isLoggedIn ? null : 1, display: "flex", flexDirection: "row-reverse" }}>
+        <div style={{ flex: isLoggedIn ? null : 1, display: "flex", flexDirection: "row-reverse" }}>
           <List
             style={{
               display: "flex",
@@ -933,15 +1045,15 @@ const Header = (props) => {
               }}
             >
               {avatarMenu}
-              {notificationMenu}
-              {/*supportMenu*/}
+              {/*notificationMenu*/}
+              {supportMenu}
               {logoCheck}
             </span>
 
             {userdata === undefined ||
-            userdata.orgs === undefined ||
-            userdata.orgs === null ||
-            userdata.orgs.length <= 1 ? null : (
+              userdata.orgs === undefined ||
+              userdata.orgs === null ||
+              userdata.orgs.length <= 0 ? null : (
               <span style={{ paddingTop: 5 }}>
                 <Select
                   disableUnderline
@@ -968,6 +1080,10 @@ const Header = (props) => {
                   value={userdata.active_org.id}
                   fullWidth
                   onChange={(e) => {
+                    if (e.target.value === undefined || e.target.value === "create_new_suborgs") {
+                      return
+                    }
+
                     handleClickChangeOrg(e.target.value);
                   }}
                 >
@@ -1007,8 +1123,8 @@ const Header = (props) => {
                       marginRight: 10,
                       marginLeft:
                         data.creator_org !== undefined &&
-                        data.creator_org !== null &&
-                        data.creator_org.length > 0
+                          data.creator_org !== null &&
+                          data.creator_org.length > 0
                           ? data.id === userdata.active_org.id
                             ? 0
                             : 20
@@ -1017,8 +1133,8 @@ const Header = (props) => {
 
                     const parsedTitle =
                       data.creator_org !== undefined &&
-                      data.creator_org !== null &&
-                      data.creator_org.length > 0
+                        data.creator_org !== null &&
+                        data.creator_org.length > 0
                         ? `Suborg of ${data.creator_org}`
                         : "";
 
@@ -1035,7 +1151,7 @@ const Header = (props) => {
                           src={data.image}
                           style={imageStyle}
                         />
-                      );
+                      )
 
                     var regiontag = "eu";
                     if (
@@ -1051,6 +1167,12 @@ const Header = (props) => {
                         const namesplit = regionsplit[0].split("/");
 
                         regiontag = namesplit[namesplit.length - 1];
+
+                        if (regiontag === "california") {
+                          regiontag = "us"
+                        } else if (regiontag === "frankfurt") {
+                          regiontag = "fr"
+                        }
                       }
                     }
 
@@ -1092,50 +1214,84 @@ const Header = (props) => {
                       </MenuItem>
                     );
                   })}
+                  <Divider />
+                  <Link to="/admin?tab=suborgs" style={hrefStyle}>
+                    <MenuItem
+                      key={"add suborgs"}
+                      style={{
+                        backgroundColor: theme.palette.inputColor,
+                        color: "white",
+                        height: 40,
+                        zIndex: 10003,
+                      }}
+                      value={"create_new_suborgs"}
+                    >
+                      <Tooltip
+                        color="primary"
+                        title={""}
+                        placement="left"
+                      >
+                        <div style={{ display: "flex", marginLeft:  50, marginRight: 50, }}>
+                          <AddIcon />
+                          <span style={{ marginLeft: 8 }}>
+                            Add suborgs
+                          </span>
+                        </div>
+                      </Tooltip>
+                    </MenuItem>
+                  </Link>
                 </Select>
               </span>
             )}
 
             {/* Show on cloud, if not suborg and if not customer/pov/internal */}
-            {isCloud &&
-            (userdata.org_status === undefined ||
-              userdata.org_status === null ||
-              userdata.org_status.length === 0) ? (
-              <ListItem
-                style={{
-                  textAlign: "center",
-                  marginLeft: 0,
-                  marginRight: 7,
-                  marginTop: 0,
-                }}
-              >
-                <Link to="/pricing?tab=cloud&highlight=true" style={hrefStyle}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    style={{ textTransform: "none" }}
-                    onClick={() => {
-						if (isCloud) {
-						  ReactGA.event({
-							category: "header",
-							action: "pricing_upgrade_click",
-							label: "",
-						  });
-						}
-                    }}
-                  >
-                    Upgrade
-                  </Button>
-                </Link>
-              </ListItem>
-            ) : null}
+            {
+              userdata.licensed !== undefined &&
+                userdata.licensed !== null &&
+                userdata.licensed === false ?
+                <ListItem
+                  style={{
+                    textAlign: "center",
+                    marginLeft: 0,
+                    marginRight: 7,
+                    marginTop: 0,
+                  }}
+                >
+                  <Link style={hrefStyle}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      style={{ textTransform: "none" }}
+                      onMouseOver={() => { setUpgradeHovered(true) }}
+                      onMouseOut={() => { setUpgradeHovered(false) }}
+                      onClick={() => {
+                        if (isCloud) {
+                          ReactGA.event({
+                            category: "header",
+                            action: "upgrade_popup_click",
+                          })
+                        }
+
+                        setModalOpen(true)
+                      }}
+                    >
+                      {upgradeHovered ?
+                        "Upgrade License"
+                        :
+                        "Upgrade"
+                      }
+
+                    </Button>
+                  </Link>
+                </ListItem>
+                : null}
 
             {userdata === undefined ||
-            userdata.app_execution_limit === undefined ||
-            userdata.app_execution_usage === undefined ||
-            userdata.app_execution_usage < 1000 ? null : (
+              userdata.app_execution_limit === undefined ||
+              userdata.app_execution_usage === undefined ||
+              userdata.app_execution_usage < 1000 ? null : (
               <Tooltip
-                title={`Amount of executions left: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Shuffle normally, but your Workflow triggers may stop working. Reach out to support@shuffler.io to extend this limit.`}
+                title={`Amount of App Runs used: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Shuffle normally, but your Workflow triggers will stop workflows from starting. Reach out to support@shuffler.io to extend this limit.`}
               >
                 <div
                   style={{
@@ -1145,7 +1301,6 @@ const Header = (props) => {
                     textAlign: "center",
                     cursor: "pointer",
                     borderRadius: theme.palette.borderRadius,
-                    marginRight: 10,
                     marginTop: 5,
                     backgroundColor: theme.palette.surfaceColor,
                     minWidth: 60,
@@ -1153,14 +1308,14 @@ const Header = (props) => {
                     border:
                       userdata.app_execution_usage /
                         userdata.app_execution_limit >=
-                      0.9
-                        ? "#f86a3e"
+                        0.9
+                        ? "2px solid #f86a3e"
                         : null,
                   }}
                   onClick={() => {
                     console.log(
                       userdata.appe_execution_usage /
-                        userdata.app_execution_limit
+                      userdata.app_execution_limit
                     );
                     if (window.drift !== undefined) {
                       window.drift.api.startInteraction({
@@ -1344,29 +1499,114 @@ const Header = (props) => {
   );
 
   // <Divider style={{height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-	//
-	/*
-	  !isLoggedIn ? 
-		<div style={{minHeight: 68, maxHeight: 68, backgroundColor: theme.palette.backgroundColor, }}>
-		  <BrowserView style={{position: "sticky", top: 0, }}>
-			{loginTextBrowser}
-		  </BrowserView>
-		</div>
-		:
-		*/
-  return !isMobile ? 
-	  <AppBar 
-	  	position="sticky"
-		color="transparent" 
-		elevation={0}
-	  	style={{backgroundColor: "transparent", boxShadow: "none", minHeight: 68, maxHeight: 68, backgroundColor: theme.palette.backgroundColor, }}
-	  >
-		  <BrowserView style={{position: "sticky", top: 0, }}>
-			{loginTextBrowser}
-		  </BrowserView>
-	  </AppBar>
-	  :
-      <MobileView>{loginTextMobile}</MobileView>
+  //
+  /*
+    !isLoggedIn ? 
+    <div style={{minHeight: 68, maxHeight: 68, backgroundColor: theme.palette.backgroundColor, }}>
+      <BrowserView style={{position: "sticky", top: 0, }}>
+      {loginTextBrowser}
+      </BrowserView>
+    </div>
+    :
+    */
+
+  const topbarHeight = showTopbar ? 40 : 0
+  const topbar = !showTopbar ? null :
+    curpath === "/" || curpath.includes("/docs/") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" ?
+      <span style={{ zIndex: 50001, }}>
+        <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
+          <Typography variant="body1" style={{ paddingTop: 7, margin: "auto", textAlign: "center", color: "white", }}>
+            Shuffle 1.4 is out! Read more about&nbsp;
+            <u>
+              <a href="https://github.com/Shuffle/Shuffle" style={{ color: "inherit", }} onClick={() => {
+                ReactGA.event({
+                  category: "landingpage",
+                  action: "click_header_features",
+                  label: "",
+                })
+
+                //if (window.drift !== undefined) {
+                //	window.drift.api.startInteraction({ interactionId: 341911 })
+                //} else {
+                //	console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+                //}
+              }} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
+                Features
+              </a>
+            </u>
+            ,&nbsp;
+            <u>
+              <span onClick={() => {
+                ReactGA.event({
+                  category: "landingpage",
+                  action: "click_header_pricing",
+                  label: "",
+                })
+
+                navigate("/pricing")
+
+                //if (window.drift !== undefined) {
+                //	window.drift.api.startInteraction({ interactionId: 341911 })
+                //} else {
+                //	console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+                //}
+              }} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
+                Pricing
+              </span>
+            </u>
+            &nbsp;and&nbsp;
+            <u>
+              <span onClick={() => {
+                ReactGA.event({
+                  category: "landingpage",
+                  action: "click_header_creators",
+                  label: "",
+                })
+
+                navigate("/creators")
+
+                //if (window.drift !== undefined) {
+                //	window.drift.api.startInteraction({ interactionId: 341911 })
+                //} else {
+                //	console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
+                //}
+              }} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
+                Earning as a Creator
+              </span>
+            </u>
+          </Typography>
+          <IconButton color="secondary" style={{ position: "absolute", top: -3, right: 20, }} onClick={(event) => { setShowTopbar(false) }}>
+            <CloseIcon />
+          </IconButton>
+        </div>
+      </span>
+      :
+      null
+
+  return !isMobile ?
+    <div style={{ marginTop: 0, }}>
+      <AppBar
+        color="transparent"
+        elevation={0}
+        style={{
+          backgroundColor: "transparent",
+          boxShadow: "none",
+          minHeight: 68,
+          maxHeight: 68,
+          backgroundColor: theme.palette.backgroundColor,
+        }}
+      >
+
+        {topbar}
+
+			<div style={{ position: "sticky", top: 0, }}>
+				{loginTextBrowser}
+			</div>
+      {modalView}
+		</AppBar>
+	</div>
+    :
+    <MobileView>{loginTextMobile}</MobileView>
 };
 
 export default Header;

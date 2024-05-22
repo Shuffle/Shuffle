@@ -61,7 +61,7 @@ const LineChartWrapper = ({keys, inputname, height, width}) => {
 
 
 const AppStats = (defaultprops) => {
-  const { globalUrl, selectedOrganization, userdata, isCloud, inputWorkflows, } = defaultprops;
+  const { globalUrl, selectedOrganization, userdata, isCloud, inputWorkflows,clickedFromOrgTab } = defaultprops;
 
   const [keys, setKeys] = useState([])
   const [searches, setSearches] = useState([]);
@@ -112,8 +112,6 @@ const AppStats = (defaultprops) => {
 		  toast("Bad start/endtime. Please try again")
 		  return
 	  }
-
-	  console.log("START TIME", starttime, endtime)
 
 	  var url = `${globalUrl}/api/v1/workflows/${workflow.id}/executions/count`
 
@@ -178,8 +176,6 @@ const AppStats = (defaultprops) => {
 	  const allData = Promise.all(promises);
 
 	  allData.then((data) => {
-	  	console.log("IN ALL DATA")
-
 	  	var total = 0
 	  	for (var i = 0; i < data.length; i++) {
 	  		if (data[i].runcount !== undefined) {
@@ -640,13 +636,13 @@ const AppStats = (defaultprops) => {
 
   	const data = (
     <div className="content" style={{width: "100%", margin: "auto", }}>
-		<Typography variant="body1" style={{margin: "auto", marginLeft: 10, marginBottom: 20, }}>
+		<Typography variant="body1" style={{margin: "auto", marginLeft: 10, marginBottom: 20, }} color="textSecondary">
 			All shown statistics are gathered from <a 
 				href={`${globalUrl}/api/v1/orgs/${selectedOrganization.id}/stats`} 
 				target="_blank"
 				style={{ textDecoration: "none", color: "#f85a3e",}}
-			>Your Organization Statistics </a>
-			This is a feature to help give you more insight into Shuffle, and to understand your utilization of the Shuffle platform. <b>The billing tracker is in Beta, and is always calculated manually before being invoiced.</b>
+			>Your Organisation Statistics. </a>
+			It exists to give you more insight into your workflows, and to understand your utilization of the Shuffle platform. <b>The billing tracker is in Beta, and is always calculated manually before being invoiced.</b>
 		</Typography>
 
 		<div style={{display: "flex", textAlign: "center",}}>
@@ -707,7 +703,7 @@ const AppStats = (defaultprops) => {
 							textAlign: "center", 
 							padding: 40, 
 							margin: 5, 
-							marginLeft: 90, 
+							marginLeft: clickedFromOrgTab? null:90, 
 							backgroundColor: theme.palette.platformColor,
 							border: "1px solid rgba(255,255,255,0.3)",
 							maxWidth: 300,

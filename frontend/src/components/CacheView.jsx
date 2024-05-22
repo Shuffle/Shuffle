@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import ReactJson from "react-json-view";
 
 import {
+	Typography,
     Tooltip,
     Divider,
     TextField,
@@ -21,6 +22,8 @@ import {
 } from "@mui/material";
 
 import {
+	Link as LinkIcon,
+    AutoFixHigh as AutoFixHighIcon,
     Edit as EditIcon,
     FileCopy as FileCopyIcon,
     SelectAll as SelectAllIcon,
@@ -63,7 +66,7 @@ const scrollStyle2 = {
 
 
 const CacheView = (props) => {
-    const { globalUrl, userdata, serverside, orgId } = props;
+    const { globalUrl, userdata, serverside, orgId, isSelectedDataStore } = props;
     const [orgCache, setOrgCache] = React.useState("");
     const [listCache, setListCache] = React.useState([]);
     const [addCache, setAddCache] = React.useState("");
@@ -79,7 +82,6 @@ const CacheView = (props) => {
 
     useEffect(() => {
         listOrgCache(orgId);
-        console.log("orgid", orgId);
     }, []);
 
     const listOrgCache = (orgId) => {
@@ -91,64 +93,27 @@ const CacheView = (props) => {
             },
             credentials: "include",
         })
-            .then((response) => {
-                if (response.status !== 200) {
-                    console.log("Status not 200 for apps :O!");
-                    return;
-                }
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for list cache :O!");
+				return;
+			}
 
-                return response.json();
-            })
-            .then((responseJson) => {
-                if (responseJson.success === true) {
-                    setListCache(responseJson.keys);
-                }
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson.success === true) {
+				setListCache(responseJson.keys);
+			}
 
-                if (responseJson.cursor !== undefined && responseJson.cursor !== null && responseJson.cursor !== "") {
-                    setCacheCursor(responseJson.cursor);
-                }
-            })
-            .catch((error) => {
-                toast(error.toString());
-            });
+			if (responseJson.cursor !== undefined && responseJson.cursor !== null && responseJson.cursor !== "") {
+				setCacheCursor(responseJson.cursor);
+			}
+		})
+		.catch((error) => {
+			toast(error.toString());
+		});
     };
-
-    // const getCacheList = (orgId) => {
-    //     fetch(`${globalUrl}/api/v1/orgs/${orgId}/get_cache`, {
-    //       method: "GET",
-    //       headers: {
-    //         "Content-Type": "application/json",
-    //         Accept: "application/json",
-    //       },
-    //       credentials: "include",
-    //     })
-    //       .then((response) => {
-    //         if (response.status !== 200) {
-    //           console.log("Status not 200 for WORKFLOW EXECUTION :O!");
-    //         }
-
-
-    //         return response.json();
-    //       })
-    //       .then((responseJson) => {
-    //         if (responseJson.success !== false) {
-    //           console.log("Found cache: ", responseJson)
-    //           setListCache(responseJson)
-    //         } else {
-    //           console.log("Couldn't find the creator profile (rerun?): ", responseJson)
-    //           // If the current user is any of the Shuffle Creators 
-    //           // AND the workflow doesn't have an owner: allow editing.
-    //           // else: Allow suggestions?
-    //           //console.log("User: ", userdata)
-    //           //if (rerun !== true) {
-    //           //	getUserProfile(userdata.id, true)
-    //           //}
-    //         }
-    //       })
-    //       .catch((error) => {
-    //         console.log("Get userprofile error: ", error);
-    //       })
-    //   }
 
 
     const deleteCache = (orgId, key) => {
@@ -189,8 +154,6 @@ const CacheView = (props) => {
     const editOrgCache = (orgId) => {
         const cache = { key: dataValue.key , value: value };
         setCacheInput([cache]);
-        console.log("cache:", cache)
-        console.log("cache input: ", cacheInput)
 
         fetch(globalUrl + `/api/v1/orgs/${orgId}/set_cache`, {
 
@@ -255,6 +218,20 @@ const CacheView = (props) => {
             });
     };
 
+    const isValidJson = validateJson(value)
+	const autoFixJson = (inputvalue) => {
+		console.log("inputvalue: ", inputvalue)
+		try {
+			var parsedjson = JSON.parse(inputvalue)
+
+			// setValue() with the parsed json as string
+			setValue(JSON.stringify(parsedjson, null, 2))
+		} catch (e) {
+			console.log("Error parsing JSON: ", e)
+			//return JSON.stringify(inputvalue);
+		}
+	}
+
     const modalView = (
         // console.log("key:", dataValue.key),
         //console.log("value:",dataValue.value),
@@ -301,33 +278,54 @@ const CacheView = (props) => {
                     onChange={(e) => setKey(e.target.value)}
                 />
             </div>
-            <div style={{ paddingLeft: "30px", paddingRight: '30px' }}>
-                Value
+            <div style={{ paddingLeft: 30, paddingRight: 30 }}>
+				<div style={{display: "flex", }}>
+					<Typography style={{marginTop: 25, marginBottom: 0, flex: 20, }}>
+						Value - ({isValidJson.valid === true ? "Valid" : "Invalid"} JSON)
+					</Typography>
+					<Tooltip title="Auto Fix JSON" placement="right">
+						<IconButton
+							style={{flex: 1, }}
+							onClick={() => {
+								autoFixJson(value)
+							}}
+						>
+							<AutoFixHighIcon /> 
+						</IconButton>
+					</Tooltip>
+				</div>
                 <TextField
                     color="primary"
-                    style={{ backgroundColor: theme.palette.inputColor }}
+                    style={{ backgroundColor: theme.palette.inputColor, marginTop: 0, }}
                     InputProps={{
                         style: {
-                            height: "50px",
                             color: "white",
                             fontSize: "1em",
                         },
                     }}
                     required
-                    fullWidth={true}
+                    fullWidth
                     autoComplete="Value"
                     placeholder="123"
                     id="Valuefield"
                     margin="normal"
                     variant="outlined"
-                    defaultValue={editCache ? dataValue.value : ""}
+					multiline
+					minRows={4}
+					maxRows={12}
+                    //defaultValue={editCache ? dataValue.value : ""}
+					value={value}
                     onChange={(e) => setValue(e.target.value)}
                 />
             </div>
             <DialogActions style={{ paddingLeft: "30px", paddingRight: '30px' }}>
                 <Button
                     style={{ borderRadius: "0px" }}
-                    onClick={() => setModalOpen(false)}
+                    onClick={() => {
+						setModalOpen(false)
+						setValue("")
+						setDataValue({})
+					}}
                     color="primary"
                 >
                     Cancel
@@ -337,6 +335,9 @@ const CacheView = (props) => {
                     style={{ borderRadius: "0px" }}
                     onClick={() => {
                         {editCache ? editOrgCache(orgId) : addOrgCache(orgId)}
+						
+						setValue("")
+						setDataValue({})
                     }}
                     color="primary"
                 >
@@ -348,93 +349,93 @@ const CacheView = (props) => {
 
     return (
 
-        <div style={{paddingBottom: 250, }}>
+        <div style={{paddingBottom: isSelectedDataStore?null:250, width: isSelectedDataStore?1030:null, padding:isSelectedDataStore?27:null, height: isSelectedDataStore?"auto":null, color: isSelectedDataStore?'#ffffff':null, backgroundColor: isSelectedDataStore?'#212121':null, borderRadius: isSelectedDataStore?'16px':null, }}>
             {modalView}
-            <div style={{ marginTop: 20, marginBottom: 20 }}>
-                <h2 style={{ display: "inline" }}>Shuffle Datastore</h2>
-                <span style={{ marginLeft: 25 }}>
-                    Datastore is a permanent key-value database for storing data that can be used cross-workflow. You can store anything from lists of IPs to complex configurations.&nbsp;
+            <div style={{ marginTop: isSelectedDataStore?null:20, marginBottom: 20 }}>
+                <h2 style={{ display: isSelectedDataStore?null: "inline" }}>Shuffle Datastore</h2>
+                <span style={{ marginLeft: isSelectedDataStore?null:25, color:isSelectedDataStore?"#9E9E9E":null}}>
+                    Datastore is a permanent key-value database for storing data that can be used cross-workflow. <br/>You can store anything from lists of IPs to complex configurations.&nbsp;
                     <a
                         target="_blank"
                         rel="noopener noreferrer"
                         href="/docs/organizations#datastore"
-                        style={{ textDecoration: "none", color: "#f85a3e" }}
+                        style={{ textDecoration: isSelectedDataStore?null:"none", color: isSelectedDataStore?"#FF8444":"#f85a3e" }}
                     >
                         Learn more
                     </a>
                 </span>
             </div>
             <Button
-                style={{}}
+                style={{backgroundColor: isSelectedDataStore?'rgba(255, 132, 68, 0.2)':null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null, color:isSelectedDataStore?"#FF8444":null, borderRadius:isSelectedDataStore?200:null, width:isSelectedDataStore?162:null, height:isSelectedDataStore?40:null}}
                 variant="contained"
                 color="primary"
                 onClick={() =>{ 
                     setEditCache(false)
                     setModalOpen(true)
-                    }
-                }
+
+					setValue("")
+                }}
             >
                 Add Cache
             </Button>
             <Button
-                style={{ marginLeft: 5, marginRight: 15 }}
+                style={{ marginLeft: 5, marginRight: 15, backgroundColor: isSelectedDataStore?"#2F2F2F":null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null,borderRadius:isSelectedDataStore?200:null, width:isSelectedDataStore?81:null, height:isSelectedDataStore?40:null,  }}
                 variant="contained"
                 color="primary"
                 onClick={() => listOrgCache(orgId)}
             >
                 <CachedIcon />
             </Button>
-            <Divider
+            {isSelectedDataStore? null :<Divider
                 style={{
                     marginTop: 20,
                     marginBottom: 20,
                 }}
-            />
-            <List>
-                <ListItem>
+            />}
+            <List style={{borderRadius: isSelectedDataStore?8:null, border:isSelectedDataStore?"1px solid #494949":null, marginTop:isSelectedDataStore?24:null}}>
+                <ListItem style={{width: isSelectedDataStore?"100%":null, borderBottom:isSelectedDataStore?"1px solid #494949":null}}>
                     <ListItemText
                         primary="Key"
-                    	style={{ minWidth: 250, maxWidth: 250, }}
+                    	style={{ minWidth: isSelectedDataStore?200:250, maxWidth: isSelectedDataStore?200:250, }}
                     />
                     <ListItemText
                         primary="Value"
-                    	style={{ minWidth: 400, maxWidth: 400, overflowX: "auto", overflowY: "hidden", }}
+                    	style={{ minWidth: isSelectedDataStore?300:400, maxWidth: isSelectedDataStore?300:400, overflowX: "auto", overflowY: "hidden", }}
                     />
                     <ListItemText
                         primary="Actions"
-                    	style={{ minWidth: 150, maxWidth: 150, marginLeft: 50, }}
+                    	style={{ minWidth: 150, maxWidth: 150, marginLeft: isSelectedDataStore?80:null,}}
                     />
                     <ListItemText
+                        style={{textAlign:isSelectedDataStore?"center":null}}
                         primary="Updated"
                     />
                 </ListItem>
                 {listCache === undefined || listCache === null
                     ? null
                     : listCache.map((data, index) => {
-                        var bgColor = "#27292d";
+                        var bgColor = isSelectedDataStore? "#212121":"#27292d";
                         if (index % 2 === 0) {
-                            bgColor = "#1f2023";
+                            bgColor = isSelectedDataStore? "#1A1A1A":"#1f2023";
                         }
 
               			const validate = validateJson(data.value);
-						console.log("Past validate: ", validate);
-
                         return (
-                            <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                            <ListItem key={index} style={{ backgroundColor: bgColor, maxHeight: 300, overflow: "auto", }}>
                                 <ListItemText
                                     style={{
-                                        maxWidth: 250,
-                                        minWidth: 250,
+                                        maxWidth: 200,
+                                        minWidth: 200,
                                         overflow: "hidden",
                                     }}
                                     primary={data.key}
                                 />
                                 <ListItemText
                                     style={{
-										minWidth: 400,
-										maxWidth: 400,
-										overflowX: "auto", 
-										overflowY: "hidden", 
+										minWidth: 300,
+										maxWidth: 300,
+                                        // height:200,
+                                        overflowX: "hidden",
 									}}
                                     primary={validate.valid ? 
                       					<ReactJson
@@ -458,8 +459,8 @@ const CacheView = (props) => {
 								/>
                                 <ListItemText
                                     style={{
-                                        maxWidth: 150,
-                                        minWidth: 150,
+                                        maxWidth: 200,
+                                        minWidth: 200,
 										marginLeft: 50,
                                     }}
                                     primary=<span style={{ display: "inline" }}>
@@ -473,7 +474,11 @@ const CacheView = (props) => {
                                                     style={{ padding: "6px" }}
                                                     onClick={() => {
                                                         setEditCache(true)
-                                                        setDataValue({"key":data.key,"value":data.value})
+                                                        setDataValue({
+															"key": data.key,
+															"value":data.value
+														})
+														setValue(data.value)
                                                         setModalOpen(true)
                                                     }}
                                                 >
@@ -484,8 +489,26 @@ const CacheView = (props) => {
                                             </span>
                                         </Tooltip>
                                         <Tooltip
+                                            title={"Public URL (types: text, raw, json)"}
+                                            style={{ marginLeft: 0, }}
+                                            aria-label={"Public URL"}
+                                        >
+                                            <span>
+                                                <IconButton
+                                                    style={{ padding: "6px" }}
+													disabled={data.public_authorization === undefined || data.public_authorization === null || data.public_authorization === "" ? true : false}
+                                                    onClick={() => {
+														window.open(`${globalUrl}/api/v1/orgs/${orgId}/cache/${data.key}?type=text&authorization=${data.public_authorization}`, "_blank");
+                                                    }}
+                                                >
+													<LinkIcon
+													/>
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                        <Tooltip
                                             title={"Delete item"}
-                                            style={{ marginLeft: 15, }}
+                                            style={{ marginLeft: 25, }}
                                             aria-label={"Delete"}
                                         >
                                             <span>

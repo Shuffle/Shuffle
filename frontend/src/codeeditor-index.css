@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css?family=Nunito+Sans');
+
+body {
+  margin: 0;
+  padding: 0;
+	font-family: "Nunito Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+.partner_container {
+  height: 200px;
+  position: relative;
+}
+
+.imggrow {     
+  padding: 60px auto 50px auto;         
+  height: 100px;     
+  width: auto !important;
+  margin-right: 1rem;
+  width: 100%;
+  transition: transform .2s;      
+  border-radius: 10px; 
+  float: center !important;         
+  text-align: center !important;    
+  justify-content: "center" !important;
+  background-color: #ffffff;
+  color: black;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.imggrow:hover{
+  height: 230px;
+  transform: transform(1.5);
+  cursor: pointer;
+  border-color: #3585f9;
+  display: block;
+  box-shadow: 0 4px 8px #FC7305;
+}
+
+.bad-marker {
+  position: absolute;
+  background-color: #7b322e;
+  color: white !important;
+  opacity: 1; 
+}
+
+.good-marker {
+  position: absolute;
+  background-color: #5ea36a;
+  color: white !important;
+  opacity: 0.6;
+}
+
+/* Style for checkbox */
+.ais-RefinementList-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #595b5e;
+  border-radius: 4px;
+  background-color: #27292d;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ais-RefinementList-checkbox:checked {
+  background-color: rgb(248, 103, 67) !important;
+  border-color: rgb(248, 103, 67) !important;
+  width: 16px;
+  height: 16px;
+}
+
+.ais-RefinementList-checkbox:checked::before {
+  content: "\2714";
+  display: block;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  line-height: 18px;
+  color: #fff;
+  font-size: 14px;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #494949;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: rgb(26,26,26);
+}
+

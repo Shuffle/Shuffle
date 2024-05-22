@@ -293,12 +293,35 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	env, err := shuffle.GetEnvironment(ctx, orgId, "")
 	timeNow := time.Now().Unix()
 	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 {
+		// Updates every 60 seconds~
 		if time.Now().Unix() > env.Edited+60 {
-			env.RunningIp = request.RemoteAddr
+			env.RunningIp = shuffle.GetRequestIp(request)
+			if len(orborusLabel) > 0 {
+				env.RunningIp = orborusLabel
+			}
+
+			if request.Method == "POST" {
+				body, err := ioutil.ReadAll(request.Body)
+				if err == nil {
+					var envData shuffle.OrborusStats
+					err = json.Unmarshal(body, &envData)
+					if err == nil {
+						if envData.Swarm {
+							env.Licensed = true
+							env.RunType = "docker"
+						} 
+
+						if envData.Kubernetes {
+							env.RunType = "k8s"
+						}
+					}
+				}
+			}
+
 			env.Checkin = timeNow
 			err = shuffle.SetEnvironment(ctx, env)
 			if err != nil {
-				log.Printf("[WARNING] Failed updating environment: %s", err)
+				log.Printf("[ERROR] Failed updating environment: %s", err)
 			}
 		}
 	}
@@ -552,7 +575,9 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
-		log.Printf("[WARNING][%s] Failed getting execution (streamresult): %s", actionResult.ExecutionId, err)
+		if len(actionResult.ExecutionId) > 0 {
+			log.Printf("[WARNING][%s] Failed getting execution (streamresult): %s", actionResult.ExecutionId, err)
+		}
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
@@ -952,42 +977,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
-// Identifies what a category defined really is
 
-func getWorkflowLocal(fileId string, request *http.Request) ([]byte, error) {
-	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s", localBase, fileId)
-	client := &http.Client{}
-	req, err := http.NewRequest(
-		"GET",
-		fullUrl,
-		nil,
-	)
-
-	if err != nil {
-		return []byte{}, err
-	}
-
-	for key, value := range request.Header {
-		req.Header.Add(key, strings.Join(value, ";"))
-	}
-
-	newresp, err := client.Do(req)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	body, err := ioutil.ReadAll(newresp.Body)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	// Temporary solution
-	if strings.Contains(string(body), "reason") && strings.Contains(string(body), "false") {
-		return []byte{}, errors.New(fmt.Sprintf("Failed getting workflow %s with message %s", fileId, string(body)))
-	}
-
-	return body, nil
-}
 
 func handleExecution(id string, workflow shuffle.Workflow, request *http.Request, orgId string) (shuffle.WorkflowExecution, string, error) {
 	//go func() {
@@ -1777,7 +1767,7 @@ func cloudExecuteAction(execution shuffle.WorkflowExecution) error {
 	}
 
 	syncURL := fmt.Sprintf("%s/api/v1/cloud/sync/execute_node", syncUrl)
-	client := &http.Client{}
+	client := shuffle.GetExternalClient(syncURL)
 	req, err := http.NewRequest(
 		"POST",
 		syncURL,
@@ -3215,6 +3205,12 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	workflowapp.IsValid = true
 	workflowapp.Generated = false
 	workflowapp.Activated = true
+
+	if !shuffle.ArrayContains(workflowapp.Contributors, user.Id) {
+		workflowapp.Contributors = append(workflowapp.Contributors, user.Id)
+	}
+
+	shuffle.SetAppRevision(ctx, workflowapp)
 
 	err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 	if err != nil {

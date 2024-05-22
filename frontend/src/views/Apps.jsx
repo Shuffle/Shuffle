@@ -82,11 +82,16 @@ const chipStyle = {
 // Fixes names by making them uppercase and such
 // Used for labels. A lot of places don't use this yet
 export const FixName = (name) => {
+  if (name === undefined || name === null) {
+	return ""
+  }	
+
   const newAppname = (
     name.charAt(0).toUpperCase() + name.substring(1)
-  ).replaceAll("_", " ");
-  return newAppname;
-};
+  ).replaceAll("_", " ")
+
+  return newAppname
+}
 
 
 // Takes input of e.g. $node.data.#.asd and a matching value from a json blob
@@ -413,7 +418,7 @@ const Apps = (props) => {
     minWidth: "100%",
     maxWidth: 612.5,
     marginBottom: 5,
-    borderRadius: 5,
+    borderRadius: theme.palette.borderRadius,
     color: "white",
     backgroundColor: surfaceColor,
     cursor: "pointer",
@@ -421,6 +426,22 @@ const Apps = (props) => {
   };
 
   const getApps = () => {
+	// Get apps from localstorage
+	var storageApps = []
+	try {
+		const appstorage = localStorage.getItem("apps")
+		storageApps = JSON.parse(appstorage)
+		if (storageApps === null || storageApps === undefined || storageApps.length === 0) {
+			storageApps = []
+		} else {
+			setApps(storageApps)
+			setFilteredApps(storageApps)
+			setAppSearchLoading(false)
+		}
+	} catch (e) {
+		//console.log("Failed to get apps from localstorage: ", e)
+	}
+
     fetch(globalUrl + "/api/v1/apps", {
       method: "GET",
       headers: {
@@ -442,7 +463,6 @@ const Apps = (props) => {
         return response.json();
       })
       .then((responseJson) => {
-        console.log("Apps: ", responseJson)
         //responseJson = sortByKey(responseJson, "large_image")
         //responseJson = sortByKey(responseJson, "is_valid")
         //setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
@@ -499,6 +519,14 @@ const Apps = (props) => {
             setSelectedAction({});
           }
         }
+
+		if (privateapps.length > 0 && storageApps.length === 0) {
+			try {
+				localStorage.setItem("apps", JSON.stringify(privateapps))
+			} catch (e) {
+				console.log("Failed to set apps in localstorage: ", e)
+			}
+		}
 
 				//setTimeout(() => {
 				//	setFirstLoad(false)
@@ -595,8 +623,8 @@ const Apps = (props) => {
 
   // dropdown with copy etc I guess
   const AppPaper = (props) => {
-		const { app } = props
-		const data = app
+	const { app } = props
+	const data = app
 
     if (data.name === "" && data.id === "") {
       return null;
@@ -626,6 +654,7 @@ const Apps = (props) => {
       data.large_image === undefined || data.large_image.length === 0 ? (
         <img
           alt={data.title}
+		  src={theme.palette.defaultImage}
           style={{
             borderRadius: borderRadius,
             width: 100,
@@ -669,12 +698,17 @@ const Apps = (props) => {
       valid = "false";
     }
 
-		if (data.actions === undefined || data.actions === null) {
-			data.actions = []
+	if (data.actions === undefined || data.actions === null) {
+		// Check if data type undefined/bool
+		if (typeof data === "boolean") {
+			data = {}
 		}
+		
+		data.actions = []
+	}
 
     if (data === undefined || data.actions === undefined || data.actions === null || data.actions.length === 0) {
-      valid = "false";
+      valid = "false"
     }
 
     var description = data.description;
@@ -836,7 +870,7 @@ const Apps = (props) => {
     minWidth: viewWidth,
     maxWidth: viewWidth,
     color: "white",
-    borderRadius: 5,
+    borderRadius: theme.palette.borderRadius,
     backgroundColor: surfaceColor,
     //display: "flex",
     marginBottom: 10,
@@ -1242,7 +1276,9 @@ const Apps = (props) => {
                 })}
               </Select>
 
-		    {isCloud && (selectedApp.sharing === true || selectedApp.public === true || creatorProfile.github_avatar !== undefined) && !internalIds.includes(selectedApp.name.toLowerCase()) ? 
+		    {/*isCloud && (selectedApp.sharing === true || selectedApp.public === true || creatorProfile.github_avatar !== undefined) && !internalIds.includes(selectedApp.name.toLowerCase()) */} 
+
+		    {isCloud && !internalIds.includes(selectedApp.name.toLowerCase()) ? 
 				<Tooltip title="Deactivates this app for the current organisation. This means the app will not be usable again until you re-activate it." placement="top">
             		<Button
             		  variant="contained"
@@ -1830,7 +1866,11 @@ const Apps = (props) => {
 			})
 			.then((responseJson) => {
 				if (responseJson.success === false) {
-					toast("Failed to activate the app")
+        	if (responseJson.reason !== undefined) {
+            toast("Failed to activate the app: "+responseJson.reason);
+          } else {
+            toast("Failed to activate the app");
+          }
 				} else {
 					//toast("App activated for your organization! Refresh the page to use the app.")
 				    if (appExists) {
@@ -2050,7 +2090,7 @@ const Apps = (props) => {
                 to={`/apps/edit/${selectedApp.id}`}
                 style={{ textDecoration: "none", color: "inherit" }}
               >
-                <Typography variant="h6">{selectedApp.name}</Typography>
+                <Typography variant="h6">{FixName(selectedApp.name)}</Typography>
               </Link>
             ) : null}
           </Breadcrumbs>
@@ -2121,7 +2161,7 @@ const Apps = (props) => {
           </div>
           <div style={{ height: 50 }}>
             <TextField
-              style={{ backgroundColor: inputColor, borderRadius: 5 }}
+              style={{ backgroundColor: inputColor, borderRadius: theme.palette.borderRadius, }}
               InputProps={{
                 style: {
                 },
@@ -2172,7 +2212,7 @@ const Apps = (props) => {
     							minWidth: viewWidth,
     							maxWidth: viewWidth,
     							color: "white",
-    							borderRadius: 5,
+    							borderRadius: theme.palette.borderRadius,
     							//display: "flex",
     							marginBottom: 10,
     							overflow: "hidden",
@@ -2403,8 +2443,9 @@ const Apps = (props) => {
           ) {
             setSelectedAction(responseJson.actions[0]);
           } else {
-            setSelectedAction({});
+            setSelectedAction({})
           }
+
           setSelectedApp(responseJson);
 		  setSharingConfiguration(responseJson.sharing === true ? "public" : "you")
         }

@@ -70,8 +70,6 @@ const registeredApps = [
 	"microsoft_teams",
 	"microsoft_teams_user_access",
 	"todoist",
-	"microsoft_sentinel",
-	"microsoft_365_defender",
 	"google_chat",
 	"google_sheets",
 	"google_drive",
@@ -379,7 +377,7 @@ const AuthenticationOauth2 = (props) => {
 				},
 				"fields": parsedFields,
 				"type": "oauth2-app",
-				"reference_workflow": workflowIdNew, 
+				//"reference_workflow": workflowId,
 		}
 
 	    if (setNewAppAuth !== undefined) {
@@ -412,7 +410,7 @@ const AuthenticationOauth2 = (props) => {
 			if (offlineAccess === true && !scopes.includes("offline_access")) {
 
 				console.log("IN scope 2")
-				if (!authenticationType.redirect_uri.includes("google")) {
+				if (!authenticationType.redirect_uri.includes("google") && !authenticationType.redirect_uri.includes("slack")) {
 					console.log("Appending offline access")
 					scopes.push("offline_access")
 				}
@@ -476,8 +474,6 @@ const AuthenticationOauth2 = (props) => {
     	url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=admin_consent&scope=${resources}&state=${state}&access_type=offline`;
 		}
 
-		console.log("URL: ", url)
-
 		// Force new consent
     //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`;
 
@@ -530,9 +526,8 @@ const AuthenticationOauth2 = (props) => {
       //}
       //while(open === true)
     } catch (e) {
-      toast(
-        "Failed authentication - probably bad credentials. Try again"
-      );
+      toast("Failed authentication - probably bad credentials. Try again")
+      
       setButtonClicked(false);
     }
 
@@ -719,7 +714,7 @@ const AuthenticationOauth2 = (props) => {
       </DialogTitle>
       <DialogContent>
         <span style={{}}>
-            Oauth2 requires a client ID and secret to authenticate, defined in the remote system. Your redirect URL is <b>{window.location.origin}/set_authentication</b>&nbsp;-&nbsp;
+            Oauth2 requires a client ID and secret to authenticate, defined in the remote system. {authenticationType.type === "oauth2-app" ? null : <span>Your redirect URL is <b>{window.location.origin}/set_authentication</b>&nbsp;-&nbsp;</span>}
           <a
             target="_blank"
             rel="norefferer"
@@ -772,7 +767,7 @@ const AuthenticationOauth2 = (props) => {
 								</Tooltip>
 							}
 						</span>
-						<Typography style={{textAlign: "center", marginTop: 0, marginBottom: 10, }}>
+						<Typography style={{textAlign: "center", marginTop: 0, marginBottom: 0, }}>
 							OR
 						</Typography>
 					</span>
@@ -810,18 +805,20 @@ const AuthenticationOauth2 = (props) => {
                 setOauthUrl(data.value);
               }
 
-			  const defaultValue = data.name === "url" && authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0 && (authenticationType.authorizationUrl === undefined || authenticationType.authorizationUrl === null || authenticationType.authorizationUrl.length === 0) ? authenticationType.token_uri : data.value === undefined || data.value === null ? "" : data.value
-			  const fieldname = data.name === "url" && authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0 ? "Token URL" : data.name
+			  const defaultValue = data.name === "url" && authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0 && (authenticationType.authorizationUrl === undefined || authenticationType.authorizationUrl === null || authenticationType.authorizationUrl.length === 0) && authenticationType.type === "oauth2-app" ? authenticationType.token_uri : data.value === undefined || data.value === null ? "" : data.value
+
+
+			  const fieldname = data.name === "url" && authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0 && authenticationType.type === "oauth2-app" ? "Token URL" : data.name
 
               return (
-                <div key={index} style={{ marginTop: 10 }}>
+                <div key={index} style={{ marginTop: authenticationType.type === "oauth2-app" ? 10 : 0, }}>
                   <LockOpenIcon style={{ marginRight: 10 }} />
 
 				  <b>{fieldname}</b>
 
                   {data.schema !== undefined &&
-                  data.schema !== null &&
-                  data.schema.type === "bool" ? (
+                    data.schema !== null &&
+                    data.schema.type === "bool" ? 
                     <Select
                       SelectDisplayProps={{
                         style: {
@@ -862,7 +859,7 @@ const AuthenticationOauth2 = (props) => {
                         true
                       </MenuItem>
                     </Select>
-                  ) : (
+                   : 
                     <TextField
                       style={{
                         backgroundColor: theme.palette.inputColor,
@@ -889,9 +886,9 @@ const AuthenticationOauth2 = (props) => {
                         //const [oauthUrl, setOauthUrl] = React.useState("")
                       }}
                     />
-                  )}
+                  }
                 </div>
-              );
+              )
             })}
             <TextField
               style={{
@@ -1038,6 +1035,10 @@ const AuthenticationOauth2 = (props) => {
           variant="contained"
           fullWidth
           onClick={() => {
+			toast.info("Starting authentication process", {
+				"autoClose": 1500,
+			})
+
             handleOauth2Request(clientId, clientSecret, oauthUrl, selectedScopes);
           }}
           color="primary"

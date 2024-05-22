@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
+import { toast } from "react-toastify" 
 
 import {
     Chip,
@@ -23,6 +24,11 @@ import {
 import ArticleIcon from '@mui/icons-material/Article';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
+
+import {
+  VerifiedUser as VerifiedUserIcon,
+} from '@mui/icons-material'
+
 import {
     AvatarGroup,
 } from "@mui/material"
@@ -41,7 +47,7 @@ const chipStyle = {
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const SearchData = props => {
-    const { serverside, userdata, setModalOpen, modalOpen } = props
+    const { serverside, globalUrl, userdata, setModalOpen, modalOpen } = props
     let navigate = useNavigate();
     const borderRadius = 3
     const node = useRef()
@@ -232,9 +238,11 @@ const SearchData = props => {
                             const appGroup = hit.action_references === undefined || hit.action_references === null ? [] : hit.action_references
                             const avatar = baseImage
 
+
                             var parsedUrl = isCloud ? `/workflows/${hit.objectID}` : `https://shuffler.io/workflows/${hit.objectID}`
 
                             parsedUrl += `?queryID=${hit.__queryID}`
+							const validated = hit.validated !== undefined && hit.validate !== null ? hit.validated : false
 
                             // <a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{textDecoration: "none", color: "white"}}>
                             return (
@@ -270,7 +278,15 @@ const SearchData = props => {
                                         setMouseHoverIndex(index)
                                     }}>
                                         <ListItemAvatar>
-                                            {avatar}
+											{validated === true ? 
+												<Tooltip title="The functionality of this workflow manually verified by the Shuffle automation team" placement="top">
+													<VerifiedUserIcon style={{marginLeft: 0, marginRight: 20, }} />
+												</Tooltip>
+										  		: 
+												<Tooltip title="Community-built workflow" placement="top">
+													{avatar}
+												</Tooltip>
+											}
                                         </ListItemAvatar>
                                         <div style={{}}>
                                             <ListItemText
@@ -325,6 +341,57 @@ const SearchData = props => {
             </Card>
         )
     }
+
+	const activateApp = (name, appid, type) => {
+	  if (globalUrl === undefined || globalUrl === null) {
+		  console.log(`Global URL not set`)
+		  return
+	  }
+
+	  if (name === undefined || name === null) {
+		  name = ""
+	  }
+
+	  name = name.replaceAll("_", " ")
+
+	  if (userdata === undefined || userdata === null || userdata.id === undefined) {
+		  toast(`You need to be logged in to activate the ${name} app. Redirecting`)
+
+		  setTimeout(() => {
+		  	navigate(`/register?message=You need to be logged in to use the ${name} app.`)
+		  }, 500)
+		  return
+	  }
+
+	  const url = `${globalUrl}/api/v1/apps/${appid}/${type}` 
+
+      fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        credentials: "include",
+      })
+        .then((response) => {
+          if (response.status !== 200) {
+			toast(`Failed to ${type} the app for your organization. Please try again or contact support@shuffler.io`)
+          }
+
+          return response.json()
+        })
+        .then((responseJson) => {
+          if (responseJson.success === false) {
+            toast(`Failed to ${type} the app for your organization. Please try again or contact support@shuffler.io for more info`) 
+		  } else {
+			  toast(`App successfully ${type}d. Please refresh the page to use it.`)
+		  }
+        })
+        .catch(error => {
+          //toast(error.toString())
+          console.log("Activate app error: ", error.toString())
+        });
+    }  
 
     const AppHits = ({ hits }) => {
         const [mouseHoverIndex, setMouseHoverIndex] = useState(0)
@@ -431,7 +498,6 @@ const SearchData = props => {
                             return (
                                 <Link key={hit.objectID} to={parsedUrl} style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
                                     setSearchOpen(true)
-
                                     setModalOpen(false)
                                     aa('init', {
                                         appId: searchClient.appId,
@@ -474,6 +540,29 @@ const SearchData = props => {
 											</IconButton>
 										</ListItemSecondaryAction>
 										*/}
+										<Button
+											variant="outlined"
+											color="secondary"
+											onClick={(e) => {
+												e.preventDefault()
+												e.stopPropagation()
+
+												console.log("OBJECT CHANGE: ", hit.objectID)
+
+												// This does nothing rofl
+												if (userdata.active_apps === undefined || userdata.active_apps === null) {
+													activateApp(hit.name, hit.objectID, "activate")
+												} else {
+													if (userdata.active_apps.includes(hit.objectID)) {
+														activateApp(hit.name, hit.objectID, "deactivate")
+													} else {
+														activateApp(hit.name, hit.objectID, "activate")
+													}
+												}
+											}}
+										>
+											{userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(hit.objectID) ? "Deactivate" : "Activate"}
+										</Button>
                                     </ListItem>
                                 </Link>
                             )
@@ -641,6 +730,64 @@ const SearchData = props => {
             </Card>
         )
     }
+
+    const DiscordHits = ({ hits }) => {
+        const [mouseHoverIndex, setMouseHoverIndex] = useState(0);
+        var tmp = searchOpen
+        if (!searchOpen) {
+            return null
+        }
+
+
+        const positionInfo = document.activeElement.getBoundingClientRect()
+        const outerlistitemStyle = {
+            width: "100%",
+            overflowX: "hidden",
+            overflowY: "hidden",
+            borderBottom: "1px solid rgba(255,255,255,0.4)",
+        }
+
+        if (hits.length > 4) {
+            hits = hits.slice(0, 4)
+        }
+        const type = "Discord Text"
+        const handleHitClick = (url) => {
+            const modifiedUrl = url.replace('https://ptb.discord.com/', 'https://discord.com/');
+            window.open(modifiedUrl, '_blank');
+        };
+        return (
+            <Card elevation={0} style={{ marginRight: 10, marginTop: 50, color: "white", zIndex: 1002, backgroundColor: theme.palette.inputColor, width: "100%", left: 470, boxShadows: "none", }}>
+                <Typography variant="h6" style={{ margin: "10px 10px 0px 20px", color: "#FF8444", borderBottom: "1px solid", width: 152 }}>
+                    Discord Chat
+                </Typography>
+                <List style={{ backgroundColor: theme.palette.inputColor, }}>
+                {hits.length === 0 ?
+                        <ListItem style={outerlistitemStyle}>
+                            <ListItemAvatar onClick={() => console.log(hits)}>
+                                <Avatar>
+                                    <FolderIcon />
+                                </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                                primary={"No results found?"}
+                                secondary={"Try refining your search."}
+                            />
+                        </ListItem>:
+                        hits.map((chat, index) => (
+                    <ListItem onClick={() => handleHitClick(chat.url)} key={index} style={{ cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.4)" }} onMouseOver={() => setMouseHoverIndex(index)}>
+                        <ListItemAvatar>
+                            <Avatar src="/discord-logo.png" />
+                        </ListItemAvatar>
+                        <ListItemText
+                            primary={chat.text}
+                            secondary={`User: ${(chat.user)}`}
+                        />
+                    </ListItem>
+                ))}
+            </List>
+            </Card>
+        );
+    };
     const gettingStartData = !searchOpen ? (
         <Grid
             container
@@ -738,6 +885,7 @@ const SearchData = props => {
     const CustomAppHits = connectHits(AppHits)
     const CustomWorkflowHits = connectHits(WorkflowHits)
     const CustomDocHits = connectHits(DocHits)
+    const CustomDiscordHits = connectHits(DiscordHits);
 
     const modalView = (
         <div>
@@ -755,6 +903,11 @@ const SearchData = props => {
                 <Grid item xs="auto" style={{}}>
                     <Index indexName="documentation">
                         <CustomDocHits />
+                    </Index>
+                </Grid>
+                <Grid item xs="auto" style={{}}>
+                    <Index indexName="discord_chat">
+                        <CustomDiscordHits />
                     </Index>
                 </Grid>
             </Grid>

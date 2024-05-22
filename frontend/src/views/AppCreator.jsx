@@ -103,7 +103,7 @@ const appIconStyle = {
   marginLeft: "5px",
 };
 
-const useStyles = makeStyles({
+export const useStyles = makeStyles({
   notchedOutline: {
     borderColor: "#f85a3e !important",
   },
@@ -264,7 +264,7 @@ export const appCategories = [
 		"name": "IAM",
 		"color": "#FFC107",
 		"icon": "iam",
-		"action_labels": ["Reset Password", "Enable user", "Disable user", "Get Identity", "Get Asset", "Search Identity", ],
+		"action_labels": ["Reset Password", "Enable user", "Disable user", "Get Identity", "Get Asset", "Search Identity", "Get KMS Key",],
 	}, {
 		"name": "Network",
 		"color": "#FFC107",
@@ -1037,55 +1037,41 @@ const AppCreator = (defaultprops) => {
                     "schema"
                   ] !== null
                 ) {
-									try {
-										if (
-											methodvalue["requestBody"]["content"]["application/xml"][
-												"schema"
-											]["properties"] !== undefined
-										) {
-											var tmpobject = {};
-											for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
-											
-												tmpobject[prop] = `\$\{${prop}\}`;
-											}
+					try {
+						if (
+							methodvalue["requestBody"]["content"]["application/xml"][
+								"schema"
+							]["properties"] !== undefined
+						) {
+							var tmpobject = {};
+							for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
+							
+								tmpobject[prop] = `\$\{${prop}\}`;
+							}
 
-											for (let [subkey,subkeyval] in Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"])) {
-												const tmpitem =
-													methodvalue["requestBody"]["content"][
-														"application/xml"
-													]["schema"]["required"][subkey];
-												tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
-											}
+							for (let [subkey,subkeyval] in Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"])) {
+								const tmpitem =
+									methodvalue["requestBody"]["content"][
+										"application/xml"
+									]["schema"]["required"][subkey];
+								tmpobject[tmpitem] = `\$\{${tmpitem}\}`;
+							}
 
-											//console.log("OBJ XML: ", tmpobject)
-											//newaction["body"] = XML.stringify(tmpobject, null, 2)
-										}
-									} catch (e) {
-										console.log("RequestBody xml error: ", e, path)
-									}
+							//console.log("OBJ XML: ", tmpobject)
+							//newaction["body"] = XML.stringify(tmpobject, null, 2)
+						}
+					} catch (e) {
+						console.log("RequestBody xml error: ", e, path)
+					}
                 }
               } else {
-                if (
-                  methodvalue["requestBody"]["content"]["example"] !== undefined
-                ) {
-                  if (
-                    methodvalue["requestBody"]["content"]["example"][
-                      "example"
-                    ] !== undefined
-                  ) {
-                    newaction["body"] =
-                      methodvalue["requestBody"]["content"]["example"][
-                        "example"
-                      ];
-                    //JSON.stringify(tmpobject, null, 2)
+                if (methodvalue["requestBody"]["content"]["example"] !== undefined) {
+                  if (methodvalue["requestBody"]["content"]["example"]["example"] !== undefined) {
+                      newaction["body"] = methodvalue["requestBody"]["content"]["example"]["example"]
                   }
                 } 
-							
-								if (
-                  methodvalue["requestBody"]["content"][
-                    "multipart/form-data"
-                  ] !== undefined
-                ) {
+		  
+				if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
                   if (
                     methodvalue["requestBody"]["content"][
                       "multipart/form-data"
@@ -1240,7 +1226,7 @@ const AppCreator = (defaultprops) => {
 
                     if (methodvalue.responses.default.content["text/plain"]["schema"]["format"] === "binary" && methodvalue.responses.default.content["text/plain"]["schema"]["type"] === "string") {
                   		newaction.example_response = "shuffle_file_download"
-										}
+					}
                   }
                 }
               }
@@ -1553,8 +1539,10 @@ const AppCreator = (defaultprops) => {
             } else if (parameter.in === "body") {
               // FIXME: Add tracking for components
               // E.G: https://raw.githubusercontent.com/owentl/Shuffle/master/gosecure.yaml
-              if (parameter.example !== undefined) {
-                newaction.body = parameter.example;
+              if (parameter.example !== undefined && parameter.example !== null) {
+				  if (newaction.body === undefined || newaction.body === null || newaction.body.length < 5) {
+                	newaction.body = parameter.example
+				  }
               }
             } else if (parameter.in === "header") {
               newaction.headers += `${parameter.name}=${parameter.example}\n`;
@@ -1565,6 +1553,13 @@ const AppCreator = (defaultprops) => {
               );
             }
           }
+
+		  // Check if body is valid JSON. 
+		  if (newaction.body !== undefined && newaction.body !== null && newaction.body.length > 0) {
+			  // Trim starting / ending newlines, spaces and tabs
+			  newaction.body = newaction.body.trim()
+		  }
+
 
           if (newaction.name === "" || newaction.name === undefined) {
             // Find a unique part of the string
@@ -1749,9 +1744,9 @@ const AppCreator = (defaultprops) => {
 						optionset = true 
 
       	  } else if (value.scheme === "oauth2") {
-				setAuthenticationOption("Oauth2");
-				setAuthenticationRequired(true);
-				optionset = true 
+			setAuthenticationOption("Oauth2");
+			setAuthenticationRequired(true);
+			optionset = true 
 
       	  } else if (value.type === "oauth2" || key === "Oauth2" || key === "Oauth2c" || (key !== undefined && key !== null && key.toLowerCase().includes("oauth2"))) {
       	    //toast("Can't handle Oauth2 auth yet.")
@@ -1920,11 +1915,11 @@ const AppCreator = (defaultprops) => {
 
     setProjectCategories(all_categories);
 
-		// Rearrange them by which has action_label
-		const firstActions = newActions.filter(data => data.action_label !== undefined && data.action_label !== null && data.action_label !== "No Label")
-		console.log("First actions: ", firstActions)
-		const secondActions = newActions.filter(data => data.action_label === undefined || data.action_label === null || data.action_label === "No Label")
-		newActions = firstActions.concat(secondActions)
+	// Rearrange them by which has action_label
+	const firstActions = newActions.filter(data => data.action_label !== undefined && data.action_label !== null && data.action_label !== "No Label")
+	console.log("First actions: ", firstActions)
+	const secondActions = newActions.filter(data => data.action_label === undefined || data.action_label === null || data.action_label === "No Label")
+	newActions = firstActions.concat(secondActions)
     setActions(newActions);
 		//data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
 
@@ -2073,7 +2068,7 @@ const AppCreator = (defaultprops) => {
       };
 
 			if (item.action_label !== undefined && item.action_label !== "" && item.action_label !== "No Label") {
-				console.log("Action label: ", item.action_label)
+				//console.log("Action label: ", item.action_label)
 				data.paths[item.url][item.method.toLowerCase()]["x-label"] = item.action_label
 			}
 
@@ -2174,6 +2169,10 @@ const AppCreator = (defaultprops) => {
             queryitem.name.toLowerCase() == "ssl_verify" ||
             queryitem.name.toLowerCase() == "queries" ||
             queryitem.name.toLowerCase() == "headers" ||
+            queryitem.name.toLowerCase() == "list" ||
+            queryitem.name.toLowerCase() == "dict" ||
+            queryitem.name.toLowerCase() == "str" ||
+            queryitem.name.toLowerCase() == "int" ||
             queryitem.name.toLowerCase() == "access_token") {
 						/*
 
@@ -2814,7 +2813,7 @@ const AppCreator = (defaultprops) => {
                 paddingLeft: "10px",
                 color: "white",
                 height: 50,
-                borderRadius: 5,
+                borderRadius: theme.shape.borderRadius,
               }}
               inputProps={{
                 name: "age",
@@ -2995,15 +2994,15 @@ const AppCreator = (defaultprops) => {
         		      toast("Auth URL must start with http(s)://");
         		    }
 
-								if (tmpstring.includes("?")) {
-									var newtmp = tmpstring.split("?")
-									if (tmpstring.length > 1) {
-										tmpstring = newtmp[0]
-									}
-								}
+					if (tmpstring.includes("?")) {
+						var newtmp = tmpstring.split("?")
+						if (tmpstring.length > 1) {
+							tmpstring = newtmp[0]
+						}
+					}
 
-								setParameterName(tmpstring)
-							}}
+					setParameterName(tmpstring)
+						}}
         		  InputProps={{
         		    classes: {
         		      notchedOutline: classes.notchedOutline,
@@ -3074,7 +3073,10 @@ const AppCreator = (defaultprops) => {
         		  Refresh-token URL for Oauth2 (Optional)
         		</Typography>
         		<TextField
-        		  style={{ margin: 0, flex: "1", backgroundColor: inputColor }}
+        		  style={{ 
+					margin: 0, flex: "1", backgroundColor: inputColor,
+				  	border: refreshUrl.length > 0 && (!refreshUrl.startsWith("http") || refreshUrl.includes("//shuffler.")) ? "2px solid red" : "inherit",
+				  }}
         		  fullWidth={true}
         		  placeholder="The URL to retrieve refresh-tokens at"
         		  type="name"
@@ -3082,8 +3084,9 @@ const AppCreator = (defaultprops) => {
         		  margin="normal"
         		  variant="outlined"
         		  value={refreshUrl}
+				  helperText={!refreshUrl.startsWith("http") || refreshUrl.includes("//shuffler.")? "Must start with http(s):// and can not contain shuffler.io" : ""}
         		  onChange={(e) => setRefreshUrl(e.target.value)}
-							onBlur={(event) => {
+				  onBlur={(event) => {
         		    var tmpstring = event.target.value.trim();
 
         		    if (
@@ -3149,7 +3152,7 @@ const AppCreator = (defaultprops) => {
         </Typography>
 				<div style={{display: "flex", marginTop: 10, }}>
 					<div style={{flex: 4,}}>
-        		Key	
+        				Key	
 						<TextField
 							required
 							style={{ marginTop: 0, backgroundColor: inputColor }}
@@ -3162,11 +3165,16 @@ const AppCreator = (defaultprops) => {
 							value={parameterName}
 							helperText={
 								<span style={{ color: "white", marginBottom: "2px" }}>
-									Can't be empty or contain any of the following: !#$%&'^"+-._~|]+$
+									Can't be empty or contain any of the following: !#$%&'^"+-._~|]+$:=
 								</span>
 							}
 							onChange={(e) => {
 								setParameterName(e.target.value);
+							}}
+							onBlur={(event) => {
+								var tmpstring = event.target.value.trim()
+
+								// Check if tmpstring has any of the illegal characters in it
 							}}
 							InputProps={{
 								classes: {
@@ -3187,7 +3195,7 @@ const AppCreator = (defaultprops) => {
         		  }}
         		  value={parameterLocation}
         		  style={{
-        		    borderRadius: 5,
+        		    borderRadius: theme.shape.borderRadius,
         		    backgroundColor: inputColor,
         		    paddingLeft: 10,
         		    color: "white",
@@ -3748,7 +3756,7 @@ const AppCreator = (defaultprops) => {
     		  }}
     		>
     		  <FormControl style={{ backgroundColor: surfaceColor, color: "white" }}>
-    		    <DialogTitle style={{marginTop: 30, }}>
+    		    <DialogTitle style={{marginTop: 45, }}>
     		      <div style={{ color: "white" }}>New action</div>
     		    </DialogTitle>
     		    <DialogContent style={{paddingBottom: 100, }}>
@@ -3875,7 +3883,7 @@ const AppCreator = (defaultprops) => {
 						  <Chip
 						  	style={{
 						  		color: "white",
-						  		borderRadius: 5,
+						  		borderRadius: theme.shape.borderRadius,
 						  		minWidth: 80,
 						  		marginRight: 10,
 						  		marginTop: 2,
@@ -4384,7 +4392,7 @@ const AppCreator = (defaultprops) => {
 								style={{
 									backgroundColor: bgColor,
 									color: "white",
-									borderRadius: 5,
+									borderRadius: theme.shape.borderRadius,
 									minWidth: 80,
 									marginRight: 10,
 									marginTop: 2,
@@ -6046,10 +6054,15 @@ const AppCreator = (defaultprops) => {
 								<Select
 									fullWidth
 									onChange={(e) => {
-										setOauth2Type(e.target.value);
+										setOauth2Type(e.target.value)
 
 										if (e.target.value === "application" && oauth2GrantType === "") {
 											setOauth2GrantType("client_credentials")
+        		  							setParameterName("")
+										} 
+
+										if (e.target.value === "delegated") {
+											setOauth2GrantType("")
 										}
 									}}
 									value={oauth2Type}
