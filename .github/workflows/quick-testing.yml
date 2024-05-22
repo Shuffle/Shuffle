@@ -21,8 +21,8 @@ jobs:
 
     - name: Check for restarting containers in a loop and fixing perms again 
       run: |
-        echo "Changing permissions on shuffle-database directory again"
-        chmod -R 777 shuffle-database
+        # echo "Changing permissions on shuffle-database directory again"
+        # chmod -R 777 shuffle-database
 
         ATTEMPTS=30  # Total time = ATTEMPTS * 5 seconds = 30 seconds
         for i in $(seq 1 $ATTEMPTS); do
