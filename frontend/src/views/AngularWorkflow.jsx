@@ -1362,7 +1362,7 @@ const AngularWorkflow = (defaultprops) => {
     const topic = document.getElementById('topic')?.value;
     const bootstrapServers = document.getElementById('bootstrap_servers')?.value;
     const groupId = document.getElementById('group_id')?.value;
-    const autoOffsetReset = document.getElementById('auto_offset_reset')?.value;
+    //const autoOffsetReset = document.getElementById('auto_offset_reset')?.value;
 
     if(topic) {
       trigger.parameters.push({
@@ -1391,12 +1391,12 @@ const AngularWorkflow = (defaultprops) => {
       });
     }
   
-    if (autoOffsetReset) {
-      trigger.parameters.push({
-        name: "auto_offset_reset",
-        value: autoOffsetReset
-      });
-    }
+    // if (autoOffsetReset) {
+    //   trigger.parameters.push({
+    //     name: "auto_offset_reset",
+    //     value: autoOffsetReset
+    //   });
+    // }
   
     setTenzirConfigModalOpen(false);
   };
@@ -7488,12 +7488,6 @@ const AngularWorkflow = (defaultprops) => {
     const data = usecase;
     data.start_node = mappedStartnode
 
-    if (data.type === "create") {
-      toast("Creating pipeline");
-    } else if (data.type === "stop") {
-      toast("stopping pipeline");
-    }
-
     const url = `${globalUrl}/api/v1/triggers/pipeline`;
     fetch(url, {
       method: "POST",
@@ -7512,12 +7506,8 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
-        if (!responseJson.success) {
-			if (responseJson.reason !== undefined) {
-          		toast("Failed to set pipeline: " + responseJson.reason);
-			} else {
-				toast.error("Failed to stop pipeline")
-			}
+        if (!responseJson.success && data.type !== "delete") {
+          toast("Failed to set pipeline: " + responseJson.reason);
         } else {
           if (data.type === "create") {
             toast("Pipeline will be created!");
@@ -8026,7 +8016,7 @@ const AngularWorkflow = (defaultprops) => {
 			/*
 			if (trigger.trigger_type === "PIPELINE") {
 				if (userdata.support !== true) {
-					return null
+					  return null
 				} 
 			}
 			*/
@@ -14381,7 +14371,7 @@ const AngularWorkflow = (defaultprops) => {
                       const topic = (selectedTrigger?.parameters?.find(param => param.name === "topic")?.value) || ''
                       const bootstrapServers = (selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''
                       const groupId = (selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''
-                      const autoOffsetReset = (selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''
+                      // const autoOffsetReset = (selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''
                       let command = "from kafka"
                       
                       if(topic) {
@@ -14402,11 +14392,13 @@ const AngularWorkflow = (defaultprops) => {
                       } else {
                         command = `${command},group.id=${selectedTrigger.id}`
                       }
-                      if(autoOffsetReset) {
-                        command = `${command},auto.offset.reset=${autoOffsetReset}`
-                      } else {
-                        command = `${command},auto.offset.reset=earliest`
-                      }
+                      // if(autoOffsetReset) {
+                      //   command = `${command},auto.offset.reset=${autoOffsetReset}`
+                      // } else {
+                      //   command = `${command},auto.offset.reset=earliest`
+
+                      // }
+                      command = `${command},auto.offset.reset=earliest`
                       command = `${command},client.id=${selectedTrigger.id},enable.auto.commit=true,auto.commit.interval.ms=1`
                       command = `${command} read json | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
 
@@ -19462,8 +19454,8 @@ const AngularWorkflow = (defaultprops) => {
               pointerEvents: "auto",
               color: "white",
               minWidth: 600,
-              minHeight: 500,
-              maxHeight: 500,
+              minHeight: 450,
+              maxHeight: 450,
               padding: 15,
               overflow: "hidden",
               zIndex: 10012,
@@ -19532,7 +19524,7 @@ const AngularWorkflow = (defaultprops) => {
                     placeholder={"tenzir"}
                     defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''}    
                   />
-                  <b>auto.offest.reset</b>
+                  {/* <b>auto.offest.reset</b>
                   <TextField
                     id="auto_offset_reset"
                     style={{
@@ -19546,7 +19538,7 @@ const AngularWorkflow = (defaultprops) => {
                     color="primary"
                     placeholder={"earliest"}
                     defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''}
-                  />
+                  /> */}
                 </>
               )}
             </DialogContent>
