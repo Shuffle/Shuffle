@@ -11,7 +11,7 @@ jobs:
       uses: actions/checkout@v2
     
     - name: Set up opensearch directory
-      run: mkdir shuffle-database && chmod -R 755 shuffle-database
+      run: mkdir shuffle-database && chmod -R 777 shuffle-database
 
     - name: Build the stack
       run: docker-compose up -d
@@ -22,7 +22,7 @@ jobs:
     - name: Check for restarting containers in a loop and fixing perms again 
       run: |
         echo "Changing permissions on shuffle-database directory again"
-        chmod -R 755 shuffle-database
+        chmod -R 777 shuffle-database
 
         ATTEMPTS=30  # Total time = ATTEMPTS * 5 seconds = 30 seconds
         for i in $(seq 1 $ATTEMPTS); do
