@@ -208,10 +208,10 @@ export const triggers = [
 	  id: "",
     },
     {
-      name: "Pipelines by Tenzir",
+      name: "Pipelines",
       type: "TRIGGER",
       status: "uninitialized",
-      description: "BETA: Support only for Tenzir pipelines - trigger",
+      description: "Run a pipeline trigger",
       trigger_type: "PIPELINE",
       errors: null,
       is_valid: true, 
@@ -7510,7 +7510,11 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          toast("Failed to set pipeline: " + responseJson.reason);
+			if (responseJson.reason !== undefined) {
+          		toast("Failed to set pipeline: " + responseJson.reason);
+			} else {
+				toast.error("Failed to stop pipeline")
+			}
         } else {
           if (data.type === "create") {
             toast("Pipeline will be created!");
@@ -8016,11 +8020,13 @@ const AngularWorkflow = (defaultprops) => {
         <div style={appScrollStyle}>
           {triggers.map((trigger, index) => {
 
+			/*
 			if (trigger.trigger_type === "PIPELINE") {
 				if (userdata.support !== true) {
 					return null
 				} 
 			}
+			*/
 
 			// Hiding since March 2024
 			if (trigger.trigger_type === "EMAIL") {
@@ -8051,7 +8057,7 @@ const AngularWorkflow = (defaultprops) => {
             return (
 			<span>
 				{title.length > 0 ? 
-					<Typography variant="h6" style={{ marginTop: 10, marginBottom: 10, marginLeft: 10, marginRight: 10 }}>
+					<Typography variant="h6" style={{ marginTop: 10, marginBottom: 10, marginLeft: 10, }}>
 						{title}
 					</Typography>
 				: null}
@@ -8083,7 +8089,7 @@ const AngularWorkflow = (defaultprops) => {
               	    ></div>
               	    <Grid
               	      container
-              	      style={{ margin: isMobile ? "10px 0px 0px 0px" : "10px 10px 10px 10px", flex: "10" }}
+              	      style={{ margin: isMobile ? "10px 0px 0px 0px" : "10px 10px 10px 10px", flex: "10", overflow: "hidden", }}
               	    >
               	      <Grid item>
               	        <ButtonBase>{imageline}</ButtonBase>
@@ -8094,16 +8100,17 @@ const AngularWorkflow = (defaultprops) => {
               	            display: "flex",
               	            flexDirection: "column",
               	            marginLeft: 20,
-              	            overflow: "hidden",
               	          }}
               	        >
               	          <Grid item style={{ flex: "1", overflow: "hidden", }}>
-              	            <h3 style={{ marginTop: 0, marginBottom: 0, overflow: "hidden" }}>
+              	            <Typography variant="body1" style={{ marginTop: 0, marginBottom: 0, overflow: "hidden" }}>
               	              {trigger.name}
-              	            </h3>
+              	            </Typography>
               	          </Grid>
               	          <Grid item style={{ flex: "1" }}>
-              	            {trigger.description}
+						  	<Typography variant="body2" color="textSecondary" style={{ marginTop: 0, marginBottom: 0, overflow: "hidden", }}>
+              	            	{trigger.description}
+						  	</Typography>
               	          </Grid>
               	        </Grid>
               	      }

@@ -434,7 +434,7 @@ const Admin = (props) => {
   const createAppAuthenticationGroup = (name, description, appAuthIds) => {
     let app_auths = appAuthIds.map((appAuthId) => {
       return { id: appAuthId };
-    });
+    })
 
     fetch(globalUrl + "/api/v1/apps/authentication/group", {
       method: "POST",
@@ -2090,6 +2090,9 @@ If you're interested, please let me know a time that works for you, or set up a 
   };
 
   const getAppAuthenticationGroups = () => {
+	console.log("DEBUG: Skipping app auth group loading")
+    return
+
     fetch(globalUrl + "/api/v1/apps/authentication/group", {
       method: "GET",
       headers: {
