@@ -9049,7 +9049,7 @@ const AngularWorkflow = (defaultprops) => {
                   	return null
                 }
 
-				if (globalUrl.includes("shuffler.io") && app.trigger_type === "PIPELINE" && userdata.support !== true) {
+				if (app.trigger_type === "PIPELINE" && userdata.support !== true) {
 					return null
 				}
 
@@ -14173,7 +14173,7 @@ const AngularWorkflow = (defaultprops) => {
     return null
   }
 
-  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : !userdata.support === true && globalUrl.includes("shuffler.io") ? null : 
+  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : !userdata.support === true ? null : 
           <div style={appApiViewStyle}>
             <h3 style={{ marginBottom: "5px" }}>
               {selectedTrigger.app_name}: {selectedTrigger.status}
