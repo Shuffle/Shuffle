@@ -44,7 +44,8 @@ jobs:
     - name: Register a user and check the status code
       run: |
         MAX_RETRIES=30
-        RETRY_INTERVAL=2
+        RETRY_INTERVAL=5
+        CONTAINER_NAME="shuffle-backend"
 
         for (( i=1; i<=$MAX_RETRIES; i++ ))
         do
@@ -60,6 +61,8 @@ jobs:
             exit 0
           elif [ "$STATUS_CODE" -ne 502 ]; then
             echo "User registration failed with status code $STATUS_CODE."
+            echo "Fetching last 30 lines of logs from container $CONTAINER_NAME..."
+            docker logs --tail 30 "$CONTAINER_NAME"
             exit 1
           fi
 
