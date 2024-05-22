@@ -541,7 +541,7 @@ const Header = (props) => {
           >
             <img
               alt="Discord Community Join"
-              src={"/images/social/resized/discord.png"}
+              src={"/images/social/discord.png"}
               style={{ height: 30, width: 30 }}
             />
           </IconButton>
