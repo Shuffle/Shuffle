@@ -6,7 +6,7 @@ require (
 	github.com/docker/docker v26.1.0+incompatible
 	github.com/gorilla/mux v1.8.1
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.6.24
+	github.com/shuffle/shuffle-shared v0.6.27
 	k8s.io/api v0.30.0
 	k8s.io/apimachinery v0.30.0
 	k8s.io/client-go v0.30.0
@@ -38,7 +38,7 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/frikky/kin-openapi v0.41.0 // indirect
-	github.com/frikky/schemaless v0.0.9 // indirect
+	github.com/frikky/schemaless v0.0.11 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect

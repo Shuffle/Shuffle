@@ -137,6 +137,8 @@ github.com/frikky/kin-openapi v0.41.0 h1:oMmjo+ekGS971lb3KLeZZOqRDZOwWi3+g/OiSWP
 github.com/frikky/kin-openapi v0.41.0/go.mod h1:ev9OZAw7Bv5p0w93j91++6a1ElPzGcCofst+kmrWsj4=
 github.com/frikky/schemaless v0.0.9 h1:RzNLPkJq5c4nlm5iLiTndFcbeQxdMGJIj266wSGt2+8=
 github.com/frikky/schemaless v0.0.9/go.mod h1:mooDxY+D6weHjhKvjy3+IE9S7P4g4cpNnidkdRv/cHQ=
+github.com/frikky/schemaless v0.0.11 h1:c4r6CJX30XI+SoJdT9RlUd9qYSQlx6hvwGRtsypu+uM=
+github.com/frikky/schemaless v0.0.11/go.mod h1:mooDxY+D6weHjhKvjy3+IE9S7P4g4cpNnidkdRv/cHQ=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
@@ -389,6 +391,8 @@ github.com/sergi/go-diff v1.1.0 h1:we8PVUC3FE2uYfodKH/nBHMSetSfHDR6scGdBi+erh0=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
 github.com/shuffle/shuffle-shared v0.6.16 h1:dQBDRmb2Wgl3pEuewqjDvN6v6nUKr+1EvGSEja9zG6s=
 github.com/shuffle/shuffle-shared v0.6.16/go.mod h1:HhQTn7xZZ69ZTc4EptO9OeNmgbKDyGlWAhFkUFUAHSA=
+github.com/shuffle/shuffle-shared v0.6.27 h1:q4qZD6bGZFIvZ5Y10unGr3N3rZ7OryWyvvaGgANZJZU=
+github.com/shuffle/shuffle-shared v0.6.27/go.mod h1:rWkh1eWdIx7OqQzJ1+JzF3Hck1X/Ty1WkUtjLrp+CU4=
 github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
