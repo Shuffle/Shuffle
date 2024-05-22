@@ -15273,10 +15273,6 @@ const AngularWorkflow = (defaultprops) => {
       }
     }, [executeWorkflow, executionText, workflow, lastSaved, executionRequestStarted])  
 
-	  if (isMobile) {
-		  return null
-	  }
-
     useEffect(() => {
       const handleKeyDown = (event) => {
         if ((event.metaKey || event.ctrlKey) && event.key === '/') {
@@ -15329,6 +15325,10 @@ const AngularWorkflow = (defaultprops) => {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }, [executeWorkflow, executionText, workflow, lastSaved, executionRequestStarted]);  
+
+	  if (isMobile) {
+		  return null
+	  }
 
 	  return (
 		  <div 

@@ -20,11 +20,6 @@ import IconButton from "@mui/material/IconButton";
 import { Tooltip } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
-import { FileCopy, Visibility, VisibilityOff } from "@mui/icons-material";
-import IconButton from "@mui/material/IconButton";
-import { Tooltip } from "@mui/material";
-
-
 const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, setUserData } = props;
   //const alert = useAlert();
@@ -65,42 +60,6 @@ const Settings = (props) => {
       setApiKeyCopied(false);
     }, 2000);
   }
-
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [apiKeyCopied, setApiKeyCopied] = useState(false);
-
-  const handleCopyApiKey = () => {
-    navigator.clipboard.writeText(userSettings.apikey);
-    setApiKeyCopied(true);
-    setTimeout(() => {
-      setApiKeyCopied(false);
-    }, 2000);
-  }
-
-  /*
-	const [userdata.eth_info, setEthInfo] = useState(userdata.eth_info !== undefined && userdata.eth_info.account !== undefined && userdata.eth_info.account.length > 0 ? userdata.eth_info : {
-		"account": "",
-		"balance": "", 
-	})
-	*/
-
-  /*
-	console.log(userdata.eth_info)
-	if (userdata.eth_info.account.length === 0 && userdata.eth_info !== undefined && userdata.eth_info.account !== undefined && userdata.eth_info.account.length > 0) {
-		setEthInfo(userdata.eth_info)
-	} else if (userdata.eth_info.balance.length > 0 && userdata.eth_info.parsed_balance === undefined) {
-		//console.log(window.ethereum)
-		//console.log(window.ethereum.utils.formatEther(userdata.eth_info.balance))
-		const parsed_balance = parseInt(userdata.eth_info.balance, 16)/1000000000000000000
-		console.log("Parsed balance: ", parsed_balance)
-		userdata.eth_info.parsed_balance = parsed_balance
-		userdata.eth_info.parsed_balance = parsed_balance
-		setEthInfo(userdata.eth_info)
-	} else if (userdata.eth_info !== undefined && userdata.eth_info.balance !== userdata.eth_info.balance) {
-		console.log("Updating balance: ", userdata.eth_info)
-		setEthInfo(userdata.eth_info)
-	}
-	*/
 
   //Returns the value from a storage position at a given address.
   const isCloud =
