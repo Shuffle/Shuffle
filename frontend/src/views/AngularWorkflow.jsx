@@ -14173,7 +14173,7 @@ const AngularWorkflow = (defaultprops) => {
     return null
   }
 
-  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : !userdata.support === true ? null : 
+  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : 
           <div style={appApiViewStyle}>
             <h3 style={{ marginBottom: "5px" }}>
               {selectedTrigger.app_name}: {selectedTrigger.status}
