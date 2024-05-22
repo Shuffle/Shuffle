@@ -20,6 +20,11 @@ import IconButton from "@mui/material/IconButton";
 import { Tooltip } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
+import { FileCopy, Visibility, VisibilityOff } from "@mui/icons-material";
+import IconButton from "@mui/material/IconButton";
+import { Tooltip } from "@mui/material";
+
+
 const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, setUserData } = props;
   //const alert = useAlert();
@@ -52,6 +57,17 @@ const Settings = (props) => {
   const [apiKeyCopied, setApiKeyCopied] = useState(false);
 
   const [accountDeleteButtonClicked, setAccountDeleteButtonClicked] = useState(false);
+
+  const handleCopyApiKey = () => {
+    navigator.clipboard.writeText(userSettings.apikey);
+    setApiKeyCopied(true);
+    setTimeout(() => {
+      setApiKeyCopied(false);
+    }, 2000);
+  }
+
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyCopied, setApiKeyCopied] = useState(false);
 
   const handleCopyApiKey = () => {
     navigator.clipboard.writeText(userSettings.apikey);
@@ -964,6 +980,7 @@ const Settings = (props) => {
           Submit password change
         </Button>
         <h3>{passwordFormMessage}</h3> 
+
 
         {isCloud && (
           <>

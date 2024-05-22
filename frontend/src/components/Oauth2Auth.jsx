@@ -362,6 +362,11 @@ const AuthenticationOauth2 = (props) => {
 			}
 		}
 
+		let workflowIdNew = ""
+		if (workflow !== undefined && workflow !== null && workflow.id !== undefined && workflow.id !== null) {
+			workflowIdNew = workflow.id
+		}
+
 		const appAuthData = {
 			"label": "OAuth2 for " + selectedApp.name,
 			"app": {
