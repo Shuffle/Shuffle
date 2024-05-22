@@ -1,0 +1,31 @@
+name: Docker Compose Up and Ping
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Docker
+      run: |
+        curl -fsSL https://get.docker.com | sh
+        sudo systemctl start docker
+
+    - name: Set up Docker Compose
+      run: |
+        curl -L "https://github.com/docker/compose/releases/download/v2.10.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+        docker-compose version
+
+    - name: Start Docker Compose
+      run: docker-compose up -d
+
+    - name: Wait for services to start
+      run: sleep 20
+
+    - name: Ping localhost
+      run: curl --fail http://localhost:3001 || exit 1
