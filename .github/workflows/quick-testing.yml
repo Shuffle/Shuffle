@@ -61,13 +61,13 @@ jobs:
             exit 0
           elif [ "$STATUS_CODE" -ne 502 ]; then
             echo "User registration failed with status code $STATUS_CODE."
-            echo "Fetching last 30 lines of logs from container $CONTAINER_NAME..."
-            logs_output=$(docker logs --tail 30 "$CONTAINER_NAME")
-            echo "$logs_output"
             exit 1
           fi
 
-          echo "Received status code 502. Retrying in $RETRY_INTERVAL seconds... ($i/$MAX_RETRIES)"
+          echo "Received status code $STATUS_CODE. Retrying in $RETRY_INTERVAL seconds... ($i/$MAX_RETRIES)"
+          echo "Fetching last 30 lines of logs from container $CONTAINER_NAME..."
+          logs_output=$(docker logs --tail 30 "$CONTAINER_NAME")
+          echo "$logs_output"
           sleep $RETRY_INTERVAL
         done
 
