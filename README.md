@@ -1,5 +1,3 @@
-<h1>Ayy, lmao</h1>
-
 <h1 align="center">
 
 [![Shuffle Logo](https://github.com/Shuffle/Shuffle/blob/main/frontend/public/images/Shuffle_logo_new.png)](https://shuffler.io)
