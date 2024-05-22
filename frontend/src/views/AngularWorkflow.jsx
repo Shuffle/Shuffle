@@ -3915,8 +3915,7 @@ const AngularWorkflow = (defaultprops) => {
 
   if (data.app_name === "Shuffle Workflow") {
     console.log("Shuffle Workflow selected")
-    if (data.parameters[0].value !== undefined && data.parameters[0].value !== null && data.parameters[0].value.length > 0) {
-      console.log("Get workflow apps calling")
+    if ((data.parameters !== undefined) && (data.parameters.length > 0)) {
       getWorkflowApps(data.parameters[0].value)
     }
   }
