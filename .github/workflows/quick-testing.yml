@@ -1,6 +1,10 @@
 name: Docker Compose Up and Ping
 
-on: [push]
+on:
+  workflow_run:
+    workflows: ["dockerbuild"]
+    types:
+      - completed
 
 jobs:
   build:
