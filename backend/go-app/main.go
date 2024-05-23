@@ -4887,7 +4887,7 @@ func initHandlers() {
 	}
 
 	for {
-		_, err = shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), gceProject, "onprem", true, elasticConfig)
+		_, err = shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), gceProject, "onprem", true, elasticConfig, false, 0)
 		if err != nil {
 			log.Printf("[ERROR] Error in initial database connection. Retrying in 5 seconds. %s", err)
 			time.Sleep(5 * time.Second)
