@@ -759,6 +759,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	go shuffle.CheckSessionOrgs(ctx, userInfo)
+
 	//log.Printf("%s  %s", session.Session, UserInfo.Session)
 	//if session.Session != userInfo.Session {
 	//	log.Printf("Session %s is not the same as %s for %s. %s", userInfo.Session, session.Session, userInfo.Username, err)
