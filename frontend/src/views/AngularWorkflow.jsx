@@ -4225,6 +4225,283 @@ const AngularWorkflow = (defaultprops) => {
     }
   })
 
+  	// Should get AI autocompletes
+	const aiSubmit = (value, setResponseMsg, setSuggestionLoading, inputAction) => {
+		if (setResponseMsg !== undefined) {
+			setResponseMsg("")
+		}
+
+		if (value === undefined || value === "") {
+			console.log("No value input!")
+			return
+		}
+
+		if (setSuggestionLoading !== undefined) {
+			setSuggestionLoading(true)
+		}
+	
+		console.log("Submit conversation with value: ", value);
+
+		// This is to find sample response and parse it as string
+		
+		var AppContext = []
+		if (inputAction !== undefined && inputAction !== null) {
+			const parents = getParents(inputAction)
+
+			console.log("Parents: ", parents)
+			var actionlist = []
+			if (parents.length > 1) {
+				for (let [key,keyval] in Object.entries(parents)) {
+					const item = parents[key];
+					if (item.label === "Execution Argument") {
+						continue;
+					}
+
+					var exampledata = item.example === undefined || item.example === null ? "" : item.example;
+					// Find previous execution and their variables
+					//exampledata === "" &&
+					if (workflowExecutions.length > 0) {
+						// Look for the ID
+						const found = false;
+						for (let [key,keyval] in Object.entries(workflowExecutions)) {
+							if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+								continue;
+							}
+
+							var foundResult = workflowExecutions[key].results.find((result) => result.action.id === item.id);
+							if (foundResult === undefined || foundResult === null) {
+								continue;
+							}
+
+							if (foundResult.result !== undefined && foundResult.result !== null) {
+								foundResult = foundResult.result
+							}
+
+							const valid = validateJson(foundResult, true)
+							if (valid.valid) {
+								if (valid.result.success === false) {
+									//console.log("Skipping success false autocomplete")
+								} else {
+									exampledata = valid.result;
+									break;
+								}
+							} else {
+								exampledata = foundResult;
+							}
+						}
+					}
+
+					// 1. Take
+					const itemlabelComplete = item.label === null || item.label === undefined ? "" : item.label.split(" ").join("_");
+
+					const actionvalue = {
+						app_name: item.app_name,
+						action_name: item.name,
+						label: item.label,
+
+						type: "action",
+						id: item.id,
+						name: item.label,
+						autocomplete: itemlabelComplete,
+						example: exampledata,
+					};
+
+					actionlist.push(actionvalue);
+				}
+			}
+
+			var fixedResults = []
+			for (var i = 0; i < actionlist.length; i++) {
+				const item = actionlist[i];
+				const responseFix = SetJsonDotnotation(item.example, "") 
+				
+				// Check if json
+				const validated = validateJson(responseFix)
+				var exampledata = responseFix;
+				if (validated.valid) {
+					exampledata = JSON.stringify(validated.result)
+				}
+
+				AppContext.push({
+					"app_name": item.app_name,
+					"action_name": item.action_name,
+					"label": item.label,
+					"example": exampledata,
+					"example_response": exampledata,
+				})
+			}
+		}
+
+		var conversationData = {
+			"query": value,
+			"output_format": "action",
+			"app_context": AppContext,
+
+			"workflow_id": workflow.id,
+		}
+
+		if (inputAction !== undefined) {
+			console.log("Add app context! This should them get parameters directly")
+			conversationData.output_format = "action_parameters"
+
+			conversationData.app_id = inputAction.app_id
+			conversationData.app_name = inputAction.app_name
+			conversationData.action_name = inputAction.name
+			conversationData.parameters = inputAction.parameters
+
+			if (!value.includes(inputAction.label)) {
+				conversationData.query = inputAction.label.replaceAll("_", " ")
+			}
+		}
+
+		// Onprem not available yet (April 2023)
+		// Should: Make OpenAI work for them with their own key
+		//fetch("https://shuffler.io/api/v1/conversation", {
+		fetch(`${globalUrl}/api/v1/conversation`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			body: JSON.stringify(conversationData),
+			credentials: "include",
+		})
+		.then((response) => {
+			if (setSuggestionLoading !== undefined) {
+				setSuggestionLoading(false)
+			}
+
+			if (response.status !== 200) {
+				console.log("Status not 200 for stream results :O!");
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			console.log("Conversation response: ", responseJson)
+			if (responseJson.success === false) {
+				if (responseJson.reason !== undefined) {
+					if (setResponseMsg !== undefined) {
+						setResponseMsg(responseJson.reason)
+					}
+				}
+
+				return
+			}
+
+			if (inputAction !== undefined) {
+				console.log("In input action! Should check params if they match, and add suggestions")
+
+				if (responseJson.parameters === undefined || responseJson.parameters.length === 0) {
+					return
+				}
+
+				var changed = false
+
+				for (let paramkey in inputAction.parameters) {
+					const actionParam = inputAction.parameters[paramkey]
+
+					if (actionParam.autocompleted === true) {
+						continue
+					}
+
+					if (actionParam.configuration === true && actionParam.name !== "url") {
+						continue
+					}
+
+					if (actionParam.value !== "" && actionParam.value !== actionParam.example) {
+						console.log("Skipping: ", actionParam)
+						continue
+					}
+
+					for (let respParam of responseJson.parameters) {
+						if (respParam.name === actionParam.name) {
+							console.log("Found match for param: ", respParam)
+
+							if (respParam.value === "") {
+								break
+							}
+
+							changed = true
+			
+							inputAction.parameters[paramkey].autocompleted = true
+							inputAction.parameters[paramkey].value = respParam.value
+							break
+						}
+					}
+				}
+
+				if (changed === true) {
+					console.log("Setting action! Force update pls :)")
+					setUpdate(Math.random())
+					setSelectedAction(inputAction)
+				}
+
+				return
+			}
+
+			console.log("Suggestionbox location: ", suggestionBox)
+
+			// Add action
+			if (responseJson.app_name !== undefined && responseJson.app_name !== null) {
+				// Always added to 0, 0
+				// Should use suggestionBox.position.x, suggestionBox.position.y
+				var newitem = {
+					"data": responseJson,
+					"position": {
+						"x": suggestionBox.node_position.x !== undefined ? suggestionBox.node_position.x : 0,
+						"y": suggestionBox.node_position.y !== undefined ? suggestionBox.node_position.y + 100 : 0,
+					},
+					"group": "nodes",
+				}
+
+				newitem.type = "ACTION"
+				newitem.isStartNode = false
+				newitem.data.id = uuidv4()
+				newitem.data.type = "ACTION"
+				newitem.data.isStartNode = false
+
+				newitem.data.is_valid = true
+				newitem.data.isValid = true
+
+				cy.add({
+					group: 	newitem.group,
+					data: 	newitem.data,
+					position: newitem.position,
+				});
+
+				// Add edge
+				const newId = uuidv4()
+				cy.add({
+					group: "edges",
+					data: {
+						id: newId,
+						_id: newId,
+						source: suggestionBox.attachedTo,
+						target: newitem.data.id,
+					}
+				})
+				//label: "Generated",
+		
+				setSuggestionBox({
+					"position": {
+						"top": 500,
+						"left": 500,
+					},
+					"open": false,
+					"attachedTo": "",
+				});
+			}
+		})
+		.catch((error) => {
+			if (setSuggestionLoading !== undefined) {
+				setSuggestionLoading(false)
+			}
+
+			console.log("Conv response error: ", error);
+		});
+	}
+
   // Nodeselectbatching:
   // https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
   // onNodeClick
@@ -13647,7 +13924,48 @@ const AngularWorkflow = (defaultprops) => {
       	  workflow.triggers[selectedTriggerIndex].parameters.length > 2
       	    ? workflow.triggers[selectedTriggerIndex].parameters[2].value
       	    : "";
-	  	}
+	  	}else if(
+        selectedTrigger.trigger_type === "USERINPUT"
+      ){
+        if (
+          workflow.triggers[selectedTriggerIndex].parameters === undefined ||
+          workflow.triggers[selectedTriggerIndex].parameters === null ||
+          workflow.triggers[selectedTriggerIndex].parameters.length === 0
+        ) {
+          workflow.triggers[selectedTriggerIndex].parameters = [];
+          workflow.triggers[selectedTriggerIndex].parameters[0] = {
+            name: "alertinfo",
+            value: "Do you want to continue the workflow? Start parameters: $exec",
+          };
+  
+          // boolean,
+          workflow.triggers[selectedTriggerIndex].parameters[1] = {
+            name: "options",
+            value: "boolean",
+          };
+  
+          // email,sms,app ...
+          workflow.triggers[selectedTriggerIndex].parameters[2] = {
+            name: "type",
+            value: "subflow",
+          };
+  
+          workflow.triggers[selectedTriggerIndex].parameters[3] = {
+            name: "email",
+            value: "test@test.com",
+          };
+          workflow.triggers[selectedTriggerIndex].parameters[4] = {
+            name: "sms",
+            value: "0000000",
+          };
+          workflow.triggers[selectedTriggerIndex].parameters[5] = {
+            name: "subflow",
+            value: "",
+          };
+  
+          setWorkflow(workflow);
+        }
+      }
   }
 
   const WebhookSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "WEBHOOK" ? null :
@@ -14442,48 +14760,7 @@ const AngularWorkflow = (defaultprops) => {
 	  })
   }
 
-  const UserinputSidebar = () => {
-    if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers[selectedTriggerIndex] !== undefined) {
-      if (
-        workflow.triggers[selectedTriggerIndex].parameters === undefined ||
-        workflow.triggers[selectedTriggerIndex].parameters === null ||
-        workflow.triggers[selectedTriggerIndex].parameters.length === 0
-      ) {
-        workflow.triggers[selectedTriggerIndex].parameters = [];
-        workflow.triggers[selectedTriggerIndex].parameters[0] = {
-          name: "alertinfo",
-          value: "Do you want to continue the workflow? Start parameters: $exec",
-        };
-
-        // boolean,
-        workflow.triggers[selectedTriggerIndex].parameters[1] = {
-          name: "options",
-          value: "boolean",
-        };
-
-        // email,sms,app ...
-        workflow.triggers[selectedTriggerIndex].parameters[2] = {
-          name: "type",
-          value: "subflow",
-        };
-
-        workflow.triggers[selectedTriggerIndex].parameters[3] = {
-          name: "email",
-          value: "test@test.com",
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[4] = {
-          name: "sms",
-          value: "0000000",
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[5] = {
-          name: "subflow",
-          value: "",
-        };
-
-        setWorkflow(workflow);
-      }
-
-      return (
+  const UserinputSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "USERINPUT" ? null :
         <div style={appApiViewStyle}>
 		  <h3 style={{ marginBottom: "5px" }}>
 			{selectedTrigger.app_name}
@@ -14820,11 +15097,6 @@ const AngularWorkflow = (defaultprops) => {
             
           </div>
         </div>
-      )
-    }
-
-    return null
-  }
 
   const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : 
           <div style={appApiViewStyle}>
@@ -16677,115 +16949,17 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const RightSideBar = (props) => {
-    const {
-      //workflow,
-      //setWorkflow,
-      //setSelectedAction,
-      //setUpdate,
-      //selectedApp,
-      //workflowExecutions,
-      //setSelectedResult,
-      //selectedAction,
-      //setSelectedApp,
-      //setSelectedTrigger,
-      //setSelectedEdge,
-      //setCurrentView,
-      //cy,
-      //setAuthenticationModalOpen,
-      //setVariablesModalOpen,
-      //setCodeModalOpen,
-      //selectedNameChange,
-      //rightsidebarStyle,
-      //showEnvironment,
-      //selectedActionEnvironment,
-      //environments,
-      //setNewSelectedAction,
-      //appApiViewStyle,
-      //globalUrl,
-      //setSelectedActionEnvironment,
-      //requiresAuthentication,
-      //scrollConfig,
-      //setScrollConfig,
-    } = props;
 
-    if (!rightSideBarOpen) {
-      return null;
-    }
 
     var defaultReturn = null
-    if (Object.getOwnPropertyNames(selectedAction).length > 0) {
-      if (Object.getOwnPropertyNames(selectedAction).length === 0) {
-        return null;
-      }
-
-      defaultReturn = <ParsedAction
-        id="rightside_subactions"
-        files={files}
-        isCloud={isCloud}
-        getParents={getParents}
-		toolsAppId={toolsApp.id}
-        setShowVideo={setShowVideo}
-        actionDelayChange={actionDelayChange}
-        getAppAuthentication={getAppAuthentication}
-        appAuthentication={appAuthentication}
-        authenticationType={authenticationType}
-        scrollConfig={scrollConfig}
-        setScrollConfig={setScrollConfig}
-        selectedAction={selectedAction}
-        workflow={workflow}
-        setWorkflow={setWorkflow}
-        setSelectedAction={setSelectedAction}
-        setUpdate={setUpdate}
-        selectedApp={selectedApp}
-        workflowExecutions={workflowExecutions}
-        setSelectedResult={setSelectedResult}
-        setSelectedApp={setSelectedApp}
-        setSelectedTrigger={setSelectedTrigger}
-        setSelectedEdge={setSelectedEdge}
-        setCurrentView={setCurrentView}
-        cy={cy}
-        setAuthenticationModalOpen={setAuthenticationModalOpen}
-        setVariablesModalOpen={setVariablesModalOpen}
-        setLastSaved={setLastSaved}
-        setCodeModalOpen={setCodeModalOpen}
-        selectedNameChange={selectedNameChange}
-        rightsidebarStyle={rightsidebarStyle}
-        showEnvironment={showEnvironment}
-        selectedActionEnvironment={selectedActionEnvironment}
-        environments={environments}
-        setNewSelectedAction={setNewSelectedAction}
-        sortByKey={sortByKey}
-        appApiViewStyle={appApiViewStyle}
-        globalUrl={globalUrl}
-        setSelectedActionEnvironment={setSelectedActionEnvironment}
-        requiresAuthentication={requiresAuthentication}
-        setLastSaved={setLastSaved}
-        lastSaved={lastSaved}
-		aiSubmit={aiSubmit}
-  		listCache={listCache}
-
-		authGroups={authGroups}
-		apps={apps}
-		expansionModalOpen={codeEditorModalOpen}
-		setExpansionModalOpen={setCodeEditorModalOpen}
-		setEditorData={setEditorData}
-		setAiQueryModalOpen={setAiQueryModalOpen}
-      />
-
-    } else if (Object.getOwnPropertyNames(selectedComment).length > 0) {
+ 
+    if (Object.getOwnPropertyNames(selectedComment).length > 0) {
       defaultReturn = <CommentSidebar />
     } else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
-      if (selectedTrigger.trigger_type === "SCHEDULE") {
-	    // Handled elsewhere as an experiment
-        defaultReturn = null 
-      } else if (selectedTrigger.trigger_type === "WEBHOOK") {
-        defaultReturn = null
-      } else if (selectedTrigger.trigger_type === "SUBFLOW") {
+      if (selectedTrigger.trigger_type === "SUBFLOW") {
 		defaultReturn = <SubflowSidebar />
       } else if (selectedTrigger.trigger_type === "EMAIL") {
         defaultReturn = <EmailSidebar />
-      } else if (selectedTrigger.trigger_type === "USERINPUT") {
-        defaultReturn = <UserinputSidebar />
       } else if (selectedTrigger.trigger_type === undefined) {
         //defaultReturn = <UserinputSidebar />
         return null;
@@ -19646,12 +19820,68 @@ const AngularWorkflow = (defaultprops) => {
       </div>
       {executionModal}
 
-      <RightSideBar />
-    
+      <RightSideBar />  
+      {
+        rightSideBarOpen && Object.getOwnPropertyNames(selectedAction).length > 0 ? 
+        <div id="rightside_actions" style={rightsidebarStyle}>
+          <ParsedAction
+        id="rightside_subactions"
+        files={files}
+        isCloud={isCloud}
+        getParents={getParents}
+		toolsAppId={toolsApp.id}
+        setShowVideo={setShowVideo}
+        actionDelayChange={actionDelayChange}
+        getAppAuthentication={getAppAuthentication}
+        appAuthentication={appAuthentication}
+        authenticationType={authenticationType}
+        scrollConfig={scrollConfig}
+        setScrollConfig={setScrollConfig}
+        selectedAction={selectedAction}
+        workflow={workflow}
+        setWorkflow={setWorkflow}
+        setSelectedAction={setSelectedAction}
+        setUpdate={setUpdate}
+        selectedApp={selectedApp}
+        workflowExecutions={workflowExecutions}
+        setSelectedResult={setSelectedResult}
+        setSelectedApp={setSelectedApp}
+        setSelectedTrigger={setSelectedTrigger}
+        setSelectedEdge={setSelectedEdge}
+        setCurrentView={setCurrentView}
+        cy={cy}
+        setAuthenticationModalOpen={setAuthenticationModalOpen}
+        setVariablesModalOpen={setVariablesModalOpen}
+        setLastSaved={setLastSaved}
+        setCodeModalOpen={setCodeModalOpen}
+        selectedNameChange={selectedNameChange}
+        rightsidebarStyle={rightsidebarStyle}
+        showEnvironment={showEnvironment}
+        selectedActionEnvironment={selectedActionEnvironment}
+        environments={environments}
+        setNewSelectedAction={setNewSelectedAction}
+        sortByKey={sortByKey}
+        appApiViewStyle={appApiViewStyle}
+        globalUrl={globalUrl}
+        setSelectedActionEnvironment={setSelectedActionEnvironment}
+        requiresAuthentication={requiresAuthentication}
+        setLastSaved={setLastSaved}
+        lastSaved={lastSaved}
+		aiSubmit={aiSubmit}
+  		listCache={listCache}
+
+		apps={apps}
+		expansionModalOpen={codeEditorModalOpen}
+		setExpansionModalOpen={setCodeEditorModalOpen}
+		setEditorData={setEditorData}
+		setAiQueryModalOpen={setAiQueryModalOpen}
+      />
+        </div> : null
+      }
 	  {/* Looks for triggers" */}
 	  {/* Only fixed the ones that require scrolling on a small screen */}
 	  {/* Most important: Actions. But these are a lot more complex */}
-	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK" || selectedTrigger.trigger_type === "PIPELINE") ?
+	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK" || selectedTrigger.trigger_type === "PIPELINE" || selectedTrigger.trigger_type === "USERINPUT") ?
 		  <div id="rightside_actions" style={rightsidebarStyle}>
 			  {Object.getOwnPropertyNames(selectedTrigger).length > 0 ? 
 				selectedTrigger.trigger_type === "SCHEDULE" ? 
@@ -19660,6 +19890,8 @@ const AngularWorkflow = (defaultprops) => {
 					PipelineSidebar 
 				: selectedTrigger.trigger_type === "WEBHOOK" ? 
 					WebhookSidebar
+        : selectedTrigger.trigger_type === "USERINPUT" ? 
+          UserinputSidebar
 				: null 
 			  : null}
 		  </div>
@@ -20914,282 +21146,7 @@ const AngularWorkflow = (defaultprops) => {
         </Dialog>
       ) : null;
 
-	// Should get AI autocompletes
-	const aiSubmit = (value, setResponseMsg, setSuggestionLoading, inputAction) => {
-		if (setResponseMsg !== undefined) {
-			setResponseMsg("")
-		}
 
-		if (value === undefined || value === "") {
-			console.log("No value input!")
-			return
-		}
-
-		if (setSuggestionLoading !== undefined) {
-			setSuggestionLoading(true)
-		}
-	
-		console.log("Submit conversation with value: ", value);
-
-		// This is to find sample response and parse it as string
-		
-		var AppContext = []
-		if (inputAction !== undefined && inputAction !== null) {
-			const parents = getParents(inputAction)
-
-			console.log("Parents: ", parents)
-			var actionlist = []
-			if (parents.length > 1) {
-				for (let [key,keyval] in Object.entries(parents)) {
-					const item = parents[key];
-					if (item.label === "Execution Argument") {
-						continue;
-					}
-
-					var exampledata = item.example === undefined || item.example === null ? "" : item.example;
-					// Find previous execution and their variables
-					//exampledata === "" &&
-					if (workflowExecutions.length > 0) {
-						// Look for the ID
-						const found = false;
-						for (let [key,keyval] in Object.entries(workflowExecutions)) {
-							if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
-								continue;
-							}
-
-							var foundResult = workflowExecutions[key].results.find((result) => result.action.id === item.id);
-							if (foundResult === undefined || foundResult === null) {
-								continue;
-							}
-
-							if (foundResult.result !== undefined && foundResult.result !== null) {
-								foundResult = foundResult.result
-							}
-
-							const valid = validateJson(foundResult, true)
-							if (valid.valid) {
-								if (valid.result.success === false) {
-									//console.log("Skipping success false autocomplete")
-								} else {
-									exampledata = valid.result;
-									break;
-								}
-							} else {
-								exampledata = foundResult;
-							}
-						}
-					}
-
-					// 1. Take
-					const itemlabelComplete = item.label === null || item.label === undefined ? "" : item.label.split(" ").join("_");
-
-					const actionvalue = {
-						app_name: item.app_name,
-						action_name: item.name,
-						label: item.label,
-
-						type: "action",
-						id: item.id,
-						name: item.label,
-						autocomplete: itemlabelComplete,
-						example: exampledata,
-					};
-
-					actionlist.push(actionvalue);
-				}
-			}
-
-			var fixedResults = []
-			for (var i = 0; i < actionlist.length; i++) {
-				const item = actionlist[i];
-				const responseFix = SetJsonDotnotation(item.example, "") 
-				
-				// Check if json
-				const validated = validateJson(responseFix)
-				var exampledata = responseFix;
-				if (validated.valid) {
-					exampledata = JSON.stringify(validated.result)
-				}
-
-				AppContext.push({
-					"app_name": item.app_name,
-					"action_name": item.action_name,
-					"label": item.label,
-					"example": exampledata,
-					"example_response": exampledata,
-				})
-			}
-		}
-
-		var conversationData = {
-			"query": value,
-			"output_format": "action",
-			"app_context": AppContext,
-
-			"workflow_id": workflow.id,
-		}
-
-		if (inputAction !== undefined) {
-			console.log("Add app context! This should them get parameters directly")
-			conversationData.output_format = "action_parameters"
-
-			conversationData.app_id = inputAction.app_id
-			conversationData.app_name = inputAction.app_name
-			conversationData.action_name = inputAction.name
-			conversationData.parameters = inputAction.parameters
-
-			if (!value.includes(inputAction.label)) {
-				conversationData.query = inputAction.label.replaceAll("_", " ")
-			}
-		}
-
-		// Onprem not available yet (April 2023)
-		// Should: Make OpenAI work for them with their own key
-		//fetch("https://shuffler.io/api/v1/conversation", {
-		fetch(`${globalUrl}/api/v1/conversation`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Accept: "application/json",
-			},
-			body: JSON.stringify(conversationData),
-			credentials: "include",
-		})
-		.then((response) => {
-			if (setSuggestionLoading !== undefined) {
-				setSuggestionLoading(false)
-			}
-
-			if (response.status !== 200) {
-				console.log("Status not 200 for stream results :O!");
-			}
-
-			return response.json();
-		})
-		.then((responseJson) => {
-			console.log("Conversation response: ", responseJson)
-			if (responseJson.success === false) {
-				if (responseJson.reason !== undefined) {
-					if (setResponseMsg !== undefined) {
-						setResponseMsg(responseJson.reason)
-					}
-				}
-
-				return
-			}
-
-			if (inputAction !== undefined) {
-				console.log("In input action! Should check params if they match, and add suggestions")
-
-				if (responseJson.parameters === undefined || responseJson.parameters.length === 0) {
-					return
-				}
-
-				var changed = false
-
-				for (let paramkey in inputAction.parameters) {
-					const actionParam = inputAction.parameters[paramkey]
-
-					if (actionParam.autocompleted === true) {
-						continue
-					}
-
-					if (actionParam.configuration === true && actionParam.name !== "url") {
-						continue
-					}
-
-					if (actionParam.value !== "" && actionParam.value !== actionParam.example) {
-						console.log("Skipping: ", actionParam)
-						continue
-					}
-
-					for (let respParam of responseJson.parameters) {
-						if (respParam.name === actionParam.name) {
-							console.log("Found match for param: ", respParam)
-
-							if (respParam.value === "") {
-								break
-							}
-
-							changed = true
-			
-							inputAction.parameters[paramkey].autocompleted = true
-							inputAction.parameters[paramkey].value = respParam.value
-							break
-						}
-					}
-				}
-
-				if (changed === true) {
-					console.log("Setting action! Force update pls :)")
-					setUpdate(Math.random())
-					setSelectedAction(inputAction)
-				}
-
-				return
-			}
-
-			console.log("Suggestionbox location: ", suggestionBox)
-
-			// Add action
-			if (responseJson.app_name !== undefined && responseJson.app_name !== null) {
-				// Always added to 0, 0
-				// Should use suggestionBox.position.x, suggestionBox.position.y
-				var newitem = {
-					"data": responseJson,
-					"position": {
-						"x": suggestionBox.node_position.x !== undefined ? suggestionBox.node_position.x : 0,
-						"y": suggestionBox.node_position.y !== undefined ? suggestionBox.node_position.y + 100 : 0,
-					},
-					"group": "nodes",
-				}
-
-				newitem.type = "ACTION"
-				newitem.isStartNode = false
-				newitem.data.id = uuidv4()
-				newitem.data.type = "ACTION"
-				newitem.data.isStartNode = false
-
-				newitem.data.is_valid = true
-				newitem.data.isValid = true
-
-				cy.add({
-					group: 	newitem.group,
-					data: 	newitem.data,
-					position: newitem.position,
-				});
-
-				// Add edge
-				const newId = uuidv4()
-				cy.add({
-					group: "edges",
-					data: {
-						id: newId,
-						_id: newId,
-						source: suggestionBox.attachedTo,
-						target: newitem.data.id,
-					}
-				})
-				//label: "Generated",
-		
-				setSuggestionBox({
-					"position": {
-						"top": 500,
-						"left": 500,
-					},
-					"open": false,
-					"attachedTo": "",
-				});
-			}
-		})
-		.catch((error) => {
-			if (setSuggestionLoading !== undefined) {
-				setSuggestionLoading(false)
-			}
-
-			console.log("Conv response error: ", error);
-		});
-	}
 
 	const SuggestionBoxUi = () => {
 		const [suggestionValue, setSuggestionValue] = useState("");

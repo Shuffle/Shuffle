@@ -182,7 +182,14 @@ const ParsedAction = (props) => {
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
   const [autoCompleting, setAutocompleting] = React.useState(false);
-
+  const [selectedActionParameters, setSelectedActionParameters] = React.useState([]);
+    const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
+    const [actionlist, setActionlist] = React.useState([]);
+    const [jsonList, setJsonList] = React.useState([]);
+    const [showDropdown, setShowDropdown] = React.useState(false);
+    const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
+    const [showAutocomplete, setShowAutocomplete] = React.useState(false);
+    const [menuPosition, setMenuPosition] = useState(null);
   const isIntegration = selectedAction.app_id === "integration"
 
   useEffect(() => {
@@ -372,15 +379,6 @@ const ParsedAction = (props) => {
     //setStartNode(selectedAction.id)
   };
 
-  const AppActionArguments = (props) => {
-    const [selectedActionParameters, setSelectedActionParameters] = React.useState([]);
-    const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
-    const [actionlist, setActionlist] = React.useState([]);
-    const [jsonList, setJsonList] = React.useState([]);
-    const [showDropdown, setShowDropdown] = React.useState(false);
-    const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
-    const [showAutocomplete, setShowAutocomplete] = React.useState(false);
-    const [menuPosition, setMenuPosition] = useState(null);
 
     useEffect(() => {
       if (selectedActionParameters !== undefined && selectedActionParameters !== null && selectedActionParameters.length === 0
@@ -1185,7 +1183,6 @@ const ParsedAction = (props) => {
 	}
 
     // FIXME: Issue #40 - selectedActionParameters not reset
-    if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
 
 	  var wrapperapp = {
 	  	"id": "",
@@ -1217,8 +1214,1198 @@ const ParsedAction = (props) => {
 	  	// Check the actual value and if it's the same
 	  	noAppSelected = true
 	  }
-      return (
-        <div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
+
+
+	const ActionSelectOption = (actionprops) => {
+		const { data, newActionname, newActiondescription, useIcon, extraDescription, } = actionprops;
+  		const [hover, setHover] = React.useState(false);
+
+		return (
+			<Tooltip
+			  color="secondary"
+			  title={newActiondescription}
+			  placement="left"
+			>
+				<div style={{
+					cursor: "pointer", 
+					padding: 8, 
+					paddingLeft: 14, 
+					paddingBottom: 4,
+					backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor,
+				}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+				onClick={() => {
+					//setSelectedAction(actionprops)
+					//setShowActionList(false)
+					//setUpdate(Math.random())
+					//
+					if (data !== undefined && data !== null) { 
+                		setNewSelectedAction({ 
+							target: { 
+								value: data.name 
+							} 
+						});
+              		}
+				}}
+				>
+					<div style={{ display: "flex", marginBottom: 0,}}>
+						<span
+							style={{
+								marginRight: 10,
+								marginTop: "auto",
+								marginBottom: 0,
+							}}
+						>
+							{useIcon}
+						</span>
+						<span style={{marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
+					</div>
+					{extraDescription.length > 0 ? 
+						<Typography variant="body2" color="textSecondary" style={{marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block",}}>
+							{extraDescription}	
+						</Typography>
+					: null}
+				</div>
+			</Tooltip>
+		)
+	}
+
+  const sortByCategoryLabel = (a, b) => {
+	  const aHasCategoryLabel = a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0
+	  const bHasCategoryLabel = b.category_label !== undefined && b.category_label !== null && b.category_label.length > 0
+
+	  // Sort by existence and length of "category_label"
+	  if (aHasCategoryLabel && !bHasCategoryLabel) {
+		return -1
+	  } else if (!aHasCategoryLabel && bHasCategoryLabel) {
+		return 1
+	  } else {
+		return 0
+	  }
+  }
+
+	// Function to deduplicate based on the "name" field
+	const deduplicateByName = (array) => {
+	  const uniqueNames = {};
+	  return array.filter(item => {
+		if (!item.hasOwnProperty('name') || !item.name.length) {
+		  return true
+		}
+		if (!uniqueNames[item.name]) {
+		  uniqueNames[item.name] = true
+		  return true
+		}
+		return false
+	  })
+	}
+
+  // Gets the most important actions first
+  const renderedActionOptions = deduplicateByName((
+	  selectedApp.actions === undefined || selectedApp.actions === null ? [] : 
+	  selectedApp.actions.filter((a) => 
+		  a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))
+      ).sort(sortByCategoryLabel))
+	
+
+  const selectedAppIcon = selectedAction.large_image
+  var baselabel = selectedAction.label
+  return (
+    <div style={appApiViewStyle} id="parsed_action_view">
+
+      {hideExtraTypes === true ? null : (
+        <span>
+          <div style={{ display: "flex", minHeight: 40, marginBottom: 30 }}>
+            <div style={{ flex: 1 }}>
+		  	  <div style={{ display: "flex", }}
+		  		onClick={() => {
+					//window.open("/apps/${selectedAction.app_id}", "_blank")
+				}}
+		  	  >
+		  		  <Tooltip title={"App: "+selectedAction.app_name} placement="top">
+					  <img src={selectedAppIcon} style={{ 
+						width: 30, 
+						height: 30, 
+						marginRight: 10, 
+						borderRadius: 5,
+						marginTop: 13, 
+					    border: "2px solid rgba(255,255,255,0.3)",
+					  }} />
+		  		  </Tooltip>
+				  <h3 style={{ }}>
+					{(
+					  selectedAction.app_name.charAt(0).toUpperCase() +
+					  selectedAction.app_name.substring(1)
+					).replaceAll("_", " ")}
+				  </h3>
+		  	  </div>
+              <div style={{display: "flex", marginTop: 0, }}>
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    paddingLeft: 0,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+                    if (workflowExecutions.length > 0) {
+                      // Look for the ID
+                      var found = false;
+                      for (let [key,keyval] in Object.entries(workflowExecutions)) {
+                        if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+                          continue;
+                        }
+
+                        var foundResult = workflowExecutions[key].results.find(
+                          (result) => result.action.id === selectedAction.id
+                        )
+
+                        if (foundResult === undefined || foundResult === null) {
+                          continue;
+                        }
+
+						const oldstartnode = cy.getElementById(selectedAction.id);
+						if (oldstartnode !== undefined && oldstartnode !== null) {
+							const foundname = oldstartnode.data("label")
+							if (foundname !== undefined && foundname !== null) {
+								foundResult.action.label = foundname
+							}
+						}
+
+                        setSelectedResult(foundResult);
+                        if (setCodeModalOpen !== undefined) {
+                          setCodeModalOpen(true);
+                      	
+						  found = true
+                        }
+
+                        break;
+                      }
+
+					  if (!found) {
+						  toast("No result for this action yet. Please run the workflow first.")
+					  }
+                    }
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title="See previous results for this action"
+                    placement="top"
+                  >
+                    <ArrowLeftIcon style={{ color: "rgba(255,255,255,0.7)" }} />
+                  </Tooltip>
+                </IconButton>
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+                    setAuthenticationModalOpen(true)
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title="Find app documentation"
+                    placement="top"
+                  >
+                    <DescriptionIcon style={{ color: "rgba(255,255,255,0.7)" }} />
+                  </Tooltip>
+                </IconButton>
+		  		{/*
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {}}
+                >
+                  <a
+                    href="https://shuffler.io/docs/workflows#nodes"
+                    rel="norefferer"
+                    target="_blank"
+                    style={{ textDecoration: "none", color: "#f85a3e" }}
+                  >
+                    <Tooltip
+                      color="primary"
+                      title="What are actions?"
+                      placement="top"
+                    >
+                      <HelpOutlineIcon style={{ color: "rgba(255,255,255,0.7)" }} />
+                    </Tooltip>
+                  </a>
+                </IconButton>
+				*/}
+								{/*
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+                    //setAuthenticationModalOpen(true);
+										console.log("Should enable/disable magic!")
+										console.log("Action: ", selectedAction)
+										if (selectedAction.run_magic_output === undefined) {
+											selectedAction.run_magic_output = true
+										} else {
+											if (selectedAction.run_magic_output === true) {
+												selectedAction.run_magic_output = false
+											} else {
+												selectedAction.run_magic_output = true 
+											}
+										}
+
+										setSelectedAction(selectedAction)
+										setUpdate(Math.random());
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title={selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "Click to enable magic parsing" : "Click to disable magic parsing"}
+                    placement="top"
+                  >
+										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "rgba(255,255,255,0.7)" : "#f86a3e"}} />
+                  </Tooltip>
+                </IconButton>
+								*/}
+		  		{/*
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title={"Find related tworkflows"}
+                    placement="top"
+                  >
+					<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
+						<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
+					</a>
+                  </Tooltip>
+                </IconButton>
+				*/}
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+		  		  disabled={autoCompleting}
+                  onClick={() => {
+					  //if (setAiQueryModalOpen !== undefined) {
+					  //  setAiQueryModalOpen(true)
+					  //} else {
+					  	aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
+					  //}
+  					  setAutocompleting(true)
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title={"Autocomplete fields. Uses the name of the current action, the fields and previous actions' results"}
+                    placement="top"
+                  >
+		  			{autoCompleting ? 
+						<CircularProgress style={{height: 20, width: 20, }} />
+						:
+						<AutoFixHighIcon style={{ color: "rgba(255,255,255,0.7)", height: 24, }} />
+					}
+                  </Tooltip>
+                </IconButton>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {/*selectedAction.id === workflow.start ? null : 
+
+							<Tooltip color="primary" title={"Make this node the start action"} placement="top">
+								<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
+									defineStartnode(e)	
+								}}>
+									<KeyboardArrowRightIcon />
+								</Button> 				
+							</Tooltip>
+						*/}
+              {selectedApp.versions !== null &&
+				  selectedApp.versions !== undefined &&
+				  selectedApp.versions.length > 1 ? (
+                <Select
+				  MenuProps={{
+				  	disableScrollLock: true,
+				  }}
+                  defaultValue={selectedAction.app_version}
+                  onChange={(event) => {
+                    const newversion = selectedApp.versions.find(
+                      (tmpApp) => tmpApp.version == event.target.value
+                    )
+
+                    if (newversion !== undefined && newversion !== null) {
+                      getApp(newversion.id, true)
+                    }
+
+					// Change in all actions in the workflow at the same time and add a toast.success() about it
+					for (var actionkey in workflow.actions) {
+						const action = workflow.actions[actionkey]
+						if (action.app_name === selectedAction.app_name) {
+							workflow.actions[actionkey].app_version = event.target.value
+						}
+					}
+
+					toast.success("Changed version of all nodes to "+event.target.value)
+                  }}
+                  style={{
+                    marginTop: 10,
+                    backgroundColor: theme.palette.surfaceColor,
+                    backgroundColor: theme.palette.inputColor,
+                    color: "white",
+                    height: 35,
+                    marginleft: 10,
+                    borderRadius: theme.palette.borderRadius,
+                  }}
+                  SelectDisplayProps={{
+                    style: {
+                    },
+                  }}
+                >
+                  {selectedApp.versions.map((data, index) => {
+                    return (
+                      <MenuItem
+                        key={index}
+                        style={{
+                          backgroundColor: theme.palette.inputColor,
+                          color: "white",
+                        }}
+                        value={data.version}
+                      >
+                        {data.version}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              ) : null}
+            </div>
+          </div>
+					<div style={{display: "flex"}}>
+						<div style={{flex: 5}}>
+							<Typography style={{color: "rgba(255,255,255,0.7)"}}>Name</Typography>
+							<TextField
+
+								style={theme.palette.textFieldStyle}
+								InputProps={{
+									style: theme.palette.innerTextfieldStyle,
+									disableUnderline: true,
+								}}
+								fullWidth
+								color="primary"
+								placeholder={selectedAction.label}
+								defaultValue={selectedAction.label}
+								onChange={selectedNameChange}
+								onBlur={(e) => {
+									// Copy the name value
+									const name = e.target.value
+									const parsedBaseLabel = "$"+baselabel.toLowerCase().replaceAll(" ", "_")
+									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
+
+									// Check if it's the same as the current name in use
+									//if (name === selectedAction.label) { 
+									//	console.log("Returning from name thing")
+									//	return
+									//}
+
+									// Change in actions, triggers & conditions
+									// Highlight the changes somehow with a glow?
+									if (workflow.branches !== undefined && workflow.branches !== null) {	
+										for (let [key,keyval] in Object.entries(workflow.branches)) {
+											if (workflow.branches[key].conditions !== undefined && workflow.branches[key].conditions !== null) {
+												for (let [subkey,subkeyval] in Object.entries(workflow.branches[key].conditions)) {
+													const condition = workflow.branches[key].conditions[subkey]
+													const sourceparam = condition.source
+													const destinationparam = condition.destination
+
+													// Should have a smarter way of discovering node names
+													// Finding index(es) and replacing at the location
+													if (sourceparam.value.includes("$")) {
+														try {
+															var cnt = -1
+															var previous = 0
+															while (true) {
+																cnt += 1 
+																// Need to make sure e.g. changing the first here doesn't change the 2nd
+																// $change_me
+																// $change_me_2
+																
+																const foundindex = sourceparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+																if (foundindex === previous && foundindex !== 0) {
+																	break
+																}
+	
+																if (foundindex >= 0) {
+																	previous = foundindex+newname.length
+																	// Need to add diff of length to word
+	
+																	// Check location:
+																	// If it's a-zA-Z_ then don't replace
+																	if (sourceparam.value.length > foundindex+parsedBaseLabel.length) {
+																		const regex = /[a-zA-Z0-9_]/g;
+																		const match = sourceparam.value[foundindex+parsedBaseLabel.length].match(regex);
+																		if (match !== null) {
+																			continue
+																		}
+																	}
+																	
+																	console.log("Old found: ", workflow.branches[key].conditions[subkey].source.value)
+																	const extralength = newname.length-parsedBaseLabel.length
+																	sourceparam.value = sourceparam.value.substring(0, foundindex) + newname + sourceparam.value.substring(foundindex-extralength+newname.length, sourceparam.value.length)
+
+																	console.log("New: ", workflow.branches[key].conditions[subkey].source.value)
+																} else { 
+																	break
+																}
+	
+																// Break no matter what after 5 replaces. May need to increase
+																if (cnt >= 5) {
+																	break
+																}
+	
+															}
+            								} catch (e) {
+															console.log("Failed value replacement based on index: ", e)
+														}
+													}
+
+													if (destinationparam.value.includes("$")) {
+														try {
+															var cnt = -1
+															var previous = 0
+															while (true) {
+																cnt += 1 
+																// Need to make sure e.g. changing the first here doesn't change the 2nd
+																// $change_me
+																// $change_me_2
+																
+																const foundindex = destinationparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+																if (foundindex === previous && foundindex !== 0) {
+																	break
+																}
+	
+																if (foundindex >= 0) {
+																	previous = foundindex+newname.length
+																	// Need to add diff of length to word
+	
+																	// Check location:
+																	// If it's a-zA-Z_ then don't replace
+																	if (destinationparam.value.length > foundindex+parsedBaseLabel.length) {
+																		const regex = /[a-zA-Z0-9_]/g;
+																		const match = destinationparam.value[foundindex+parsedBaseLabel.length].match(regex);
+																		if (match !== null) {
+																			continue
+																		}
+																	}
+																	
+																	console.log("Old found: ", workflow.branches[key].conditions[subkey].destination.value)
+																	const extralength = newname.length-parsedBaseLabel.length
+																	destinationparam.value = destinationparam.value.substring(0, foundindex) + newname + destinationparam.value.substring(foundindex-extralength+newname.length, destinationparam.value.length)
+
+																	console.log("New: ", workflow.branches[key].conditions[subkey].destination.value)
+																} else { 
+																	break
+																}
+	
+																// Break no matter what after 5 replaces. May need to increase
+																if (cnt >= 5) {
+																	break
+																}
+	
+															}
+            								} catch (e) {
+															console.log("Failed value replacement based on index: ", e)
+														}
+													}
+												}
+											}
+										}
+									}
+
+									for (let [key,keyval] in Object.entries(workflow.actions)) {
+										if (workflow.actions[key].id === selectedAction.id) {
+											continue
+										}
+
+										const params = workflow.actions[key].parameters
+										console.log(params)
+										if (params === null || params === undefined) {
+											continue
+										}
+
+										for (let [subkey, subkeyval] in Object.entries(params)) {
+											const param = workflow.actions[key].parameters[subkey];
+											if (!param.value.includes("$")) {
+												continue
+											}
+
+											// Should have a smarter way of discovering node names
+											// Do regex? 
+											// Finding index(es) and replacing at the location
+											//
+
+											try {
+												var cnt = -1
+												var previous = 0
+												while (true) {
+													cnt += 1 
+													// Need to make sure e.g. changing the first here doesn't change the 2nd
+													// $change_me
+													// $change_me_2
+													
+													const foundindex = param.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+													if (foundindex === previous && foundindex !== 0) {
+														break
+													}
+	
+													if (foundindex >= 0) {
+														previous = foundindex+newname.length
+														// Need to add diff of length to word
+	
+														// Check location:
+														// If it's a-zA-Z_ then don't replace
+														if (param.value.length > foundindex+parsedBaseLabel.length) {
+															const regex = /[a-zA-Z0-9_]/g;
+															const match = param.value[foundindex+parsedBaseLabel.length].match(regex);
+															if (match !== null) {
+																continue
+															}
+														}
+														
+														console.log("Old found: ", workflow.actions[key].parameters[subkey].value)
+														const extralength = newname.length-parsedBaseLabel.length
+														param.value = param.value.substring(0, foundindex) + newname + param.value.substring(foundindex-extralength+newname.length, param.value.length)
+
+														console.log("New: ", workflow.actions[key].parameters[subkey].value)
+													} else { 
+														break
+													}
+	
+													// Break no matter what after 5 replaces. May need to increase
+													if (cnt >= 5) {
+														break
+													}
+	
+												}
+            					} catch (e) {
+												console.log("Failed value replacement based on index: ", e)
+											}
+										}
+									}
+
+									setWorkflow(workflow);
+                  					setUpdate(Math.random());
+									baselabel = name
+								}}
+							/>
+						</div>
+						{/*!isCloud ? null :*/}
+							<div style={{flex: 1, marginLeft: 5,}}>
+								<Tooltip
+									color="primary"
+									title={"Delay before action executes (in seconds)"}
+									placement="top"
+								>
+									<span>
+										<Typography style={{color: "rgba(255,255,255,0.7)"}}>Delay</Typography>
+										<TextField
+											InputProps={{
+												style: theme.palette.innerTextfieldStyle,
+												disableUnderline: true,
+											}}
+											placeholder={selectedAction.execution_delay}
+											defaultValue={selectedAction.execution_delay}
+											onChange={(event) => {
+												if (actionDelayChange !== undefined) {
+													actionDelayChange(event) 
+												}
+											}}
+										/>
+									</span>
+								</Tooltip>
+							</div>
+						{/**/}
+					</div>
+        </span>
+      )}
+      {selectedApp.name !== undefined &&
+			selectedAction.authentication !== null &&
+			selectedAction.authentication !== undefined &&
+			selectedAction.authentication.length === 0 &&
+			requiresAuthentication ? (
+        <div style={{ marginTop: 15 }}>
+          <Tooltip
+            color="primary"
+            title={"Add authentication option"}
+            placement="top"
+          >
+            <span>
+              <Button
+                color="primary"
+                style={{}}
+                fullWidth
+                variant="contained"
+                onClick={() => {
+                  //if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
+                  //	return null
+                  //}
+
+                  setAuthenticationModalOpen(true);
+                }}
+              >
+                <AddIcon style={{ marginRight: 10 }} /> Authenticate{" "}
+                {selectedApp.name.replaceAll("_", " ")}
+              </Button>
+            </span>
+          </Tooltip>
+        </div>
+      ) : null}
+
+      {selectedAction.authentication !== undefined &&
+				selectedAction.authentication !== null &&
+				selectedAction.authentication.length > 0 ? (
+        <div style={{ marginTop: 15 }}>
+          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Authentication</Typography>
+          <div style={{ display: "flex" }}>
+            <Select
+			  MenuProps={{
+			  	disableScrollLock: true,
+			  }}
+              labelId="select-app-auth"
+              value={
+                Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0
+                  ? "No selection"
+                  : selectedAction.selectedAuthentication
+              }
+              SelectDisplayProps={{
+                style: {
+					maxWidth: 250,
+                },
+              }}
+              fullWidth
+              onChange={(e) => {
+                if (e.target.value === "No selection") {
+                  selectedAction.selectedAuthentication = {};
+                  selectedAction.authentication_id = "";
+
+                  for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
+                    //console.log(selectedAction.parameters[key])
+                    if (selectedAction.parameters[key].configuration) {
+                      selectedAction.parameters[key].value = "";
+                    }
+                  }
+                  setSelectedAction(selectedAction);
+                  setUpdate(Math.random());
+                } else {
+                  selectedAction.selectedAuthentication = e.target.value;
+                  selectedAction.authentication_id = e.target.value.id;
+                  setSelectedAction(selectedAction);
+                  setUpdate(Math.random());
+                }
+              }}
+              style={{
+                backgroundColor: theme.palette.inputColor,
+                color: "white",
+                height: 50,
+                maxWidth: rightsidebarStyle.maxWidth - 80,
+                borderRadius: theme.palette.borderRadius,
+              }}
+            >
+              <MenuItem
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  color: "white",
+                }}
+                value="No selection"
+              >
+                <em>No selection</em>
+              </MenuItem>
+              {selectedAction.authentication.map((data) => {
+				if (data.last_modified === true) {
+					//console.log("LAST MODIFIED: ", data.label)
+				}
+
+                return (
+                  <MenuItem
+                    key={data.id}
+                    style={{
+                      backgroundColor: theme.palette.inputColor,
+                      color: "white",
+					  maxWidth: 500, 
+					  overflowX: "auto",
+                    }}
+                    value={data}
+                  >
+					{data.last_modified === true ? 
+						<Chip
+							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+							label={"Latest"}
+							variant="outlined"
+							color="secondary"
+						/>
+					: null}
+					{data.app.app_version !== undefined && data.app.app_version !== null && data.app.app_version !== "" && data.app.app_version !== "undefined" ?
+						<Chip
+							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+							label={data.app.app_version}
+							variant="outlined"
+							color="secondary"
+						/>
+					: null}
+						{data.label} 
+                  </MenuItem>
+                );
+              })}
+            </Select>
+
+            {/*
+
+						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
+							AUTHENTICATE
+						</Button>
+						curaction.authentication = authenticationOptions
+							if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "")
+						*/}
+            <Tooltip
+              color="primary"
+              title={"Add authentication option"}
+              placement="top"
+            >
+              <IconButton
+                color="primary"
+								variant="outlined"
+                style={{}}
+                onClick={() => {
+                  setAuthenticationModalOpen(true);
+                }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
+          </div>
+        </div>
+      ) : null}
+
+      {showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
+        <div style={{ marginTop: "20px" }}>
+          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Environment</Typography>
+          <Select
+			MenuProps={{
+				disableScrollLock: true,
+			}}
+            value={
+              selectedActionEnvironment === undefined || selectedActionEnvironment === null ||
+              selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null 
+                ? isCloud ? "Cloud" : "Shuffle"
+                : selectedActionEnvironment.Name
+            }
+            SelectDisplayProps={{
+              style: {
+              },
+            }}
+            fullWidth
+            onChange={(e) => {
+              const env = environments.find((a) => a.Name === e.target.value);
+              setSelectedActionEnvironment(env);
+              selectedAction.environment = env.Name;
+              setSelectedAction(selectedAction);
+
+			  for (let actionkey in workflow.actions) {
+				  workflow.actions[actionkey].environment = env.Name
+			  }
+			  setWorkflow(workflow)
+			  toast("Set environment for ALL actions to " + env.Name)
+            }}
+            style={{
+              backgroundColor: theme.palette.inputColor,
+              color: "white",
+              height: "50px",
+              borderRadius: theme.palette.borderRadius,
+            }}
+          >
+            {environments.map((data, index) => {
+              if (data.archived === true) {
+                return null;
+              }
+
+              return (
+                <MenuItem
+									key={index}
+                  key={data.Name}
+                  style={{
+                    backgroundColor: theme.palette.inputColor,
+                    color: "white",
+                  }}
+                  value={data.Name}
+                >
+				  {data.default === true ?
+					  <Chip
+						style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+						label={"Default"}
+						variant="outlined"
+						color="secondary"
+					  />
+					  : null}
+                  {data.Name}
+                </MenuItem>
+              );
+            })}
+          </Select>
+        </div>
+      ) : null}
+
+      {workflow.execution_variables !== undefined &&
+      workflow.execution_variables !== null &&
+      workflow.execution_variables.length > 0 ? (
+        <div style={{ marginTop: "20px" }}>
+          <Typography>Execution variable (optional)</Typography>
+          <Select
+			MenuProps={{
+				disableScrollLock: true,
+			}}
+            value={
+              selectedAction.execution_variable !== undefined
+              && selectedAction.execution_variable !== null 
+              && selectedAction.execution_variable.name !== undefined 
+              && selectedAction.execution_variable.name !== null 
+              && selectedAction.execution_variable.name.length > 0 
+                ? selectedAction.execution_variable.name
+                : "No selection"
+            }
+            SelectDisplayProps={{
+              style: {
+              },
+            }}
+            fullWidth
+            onChange={(e) => {
+              if (e.target.value === "No selection") {
+                selectedAction.execution_variable = { name: "No selection" };
+              } else {
+                const value = workflow.execution_variables.find(
+                  (a) => a.name === e.target.value
+                );
+                selectedAction.execution_variable = value;
+              }
+              setSelectedAction(selectedAction);
+              setUpdate(Math.random());
+            }}
+            style={{
+              backgroundColor: theme.palette.inputColor,
+              color: "white",
+              height: "50px",
+              borderRadius: theme.palette.borderRadius,
+            }}
+          >
+            <MenuItem
+              style={{
+                backgroundColor: theme.palette.inputColor,
+                color: "white",
+              }}
+              value="No selection"
+            >
+              <em>No selection</em>
+            </MenuItem>
+            <Divider style={{ backgroundColor: theme.palette.inputColor }} />
+            {workflow.execution_variables.map((data) => (
+              <MenuItem
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  color: "white",
+                }}
+                value={data.name}
+              >
+                {data.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </div>
+      ) : null}
+
+      <Divider
+        style={{
+          marginTop: "20px",
+          height: "1px",
+          width: "100%",
+          backgroundColor: "rgb(91, 96, 100)",
+        }}
+      />
+      <div style={{ flex: "6", marginTop: "20px" }}>
+        {/*hideExtraTypes ? null : 
+					<div style={{marginBottom: 5}}>
+						<b>Actions</b>
+					</div>
+				*/}
+
+        {setNewSelectedAction !== undefined ? (
+          <Autocomplete
+            id="action_search"
+            autoHighlight
+            value={selectedAction}
+            classes={{ inputRoot: classes.inputRoot }}
+			groupBy={(option) => {
+				// Most popular
+				// Is categorized
+				// Uncategorized
+				return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
+			}}
+			renderGroup={(params) => {
+
+				return (
+					<li key={params.key}>
+						<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
+						<Typography variant="body2">{params.children}</Typography>
+					</li>
+				)	
+			}}
+            options={renderedActionOptions}
+            ListboxProps={{
+              style: {
+                backgroundColor: theme.palette.surfaceColor,
+                color: "white",
+              },
+            }}
+			filterOptions={(options, { inputValue }) => {
+				//console.log("Option contains?: ", inputValue, options)
+				const lowercaseValue = inputValue.toLowerCase()
+				options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
+
+				return options
+			}}
+            getOptionLabel={(option) => {
+              if (option === undefined || option === null || option.name === undefined || option.name === null ) {
+                return null;
+              }
+
+              const newname = (
+                option.name.charAt(0).toUpperCase() + option.name.substring(1)
+              ).replaceAll("_", " ");
+
+              return newname;
+            }}
+            fullWidth
+            style={{
+              backgroundColor: theme.palette.inputColor,
+              height: 50,
+              borderRadius: theme.palette.borderRadius,
+            }}
+            onChange={(event, newValue) => {
+              // Workaround with event lol
+              if (newValue !== undefined && newValue !== null) {
+                setNewSelectedAction({ 
+					target: { 
+						value: newValue.name 
+					} 
+				});
+              }
+            }}
+            renderOption={(props, data, state) => {
+              var newActionname = data.name;
+              if (data.label !== undefined && data.label !== null && data.label.length > 0) {
+                newActionname = data.label;
+              }
+
+              var newActiondescription = data.description;
+			  //console.log("DESC: ", newActiondescription)
+              if (data.description === undefined || data.description === null) {
+				newActiondescription = "Description: No description defined for this action"
+              } else {
+				newActiondescription = "Description: "+newActiondescription
+			  }
+
+              const iconInfo = GetIconInfo({ name: data.name });
+              const useIcon = iconInfo.originalIcon;
+
+			  if (newActionname === undefined || newActionname === null) {
+				  newActionname = "No name"
+				  data.name = "No name"
+				  data.label = "No name"
+			  }
+
+              newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
+
+				var method = ""
+				var extraDescription = ""
+				if (data.name.includes("get_")) {
+					method = "GET"
+				} else if (data.name.includes("post_")) {
+					method = "POST"
+				} else if (data.name.includes("put_")) {
+					method = "PUT"
+				} else if (data.name.includes("patch_")) {
+					method = "PATCH"
+				} else if (data.name.includes("delete_")) {
+					method = "DELETE"
+				} else if (data.name.includes("options_")) {
+					method = "OPTIONS"
+				} else if (data.name.includes("connect_")) {
+					method = "CONNECT"
+				}
+
+				// FIXME: Should it require a base URL?
+				if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
+					var extraUrl = ""
+					const descSplit = data.description.split("\n")
+					// Last line of descSplit
+					if (descSplit.length > 0) {
+						extraUrl = descSplit[descSplit.length-1]
+					} 
+
+					//for (let [line,lineval] in Object.entries(descSplit)) {
+					//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
+					//		const urlsplit = descSplit[line].split("/")
+					//		try {
+					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
+					//		} catch (e) {
+					//			//console.log("Failed - running with -1")
+					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
+					//		}
+
+
+					//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
+					//		//break
+					//	} 
+					//}
+
+					if (extraUrl.length > 0) {
+						if (extraUrl.includes(" ")) {
+							extraUrl = extraUrl.split(" ")[0]
+						}
+
+						if (extraUrl.includes("#")) {
+							extraUrl = extraUrl.split("#")[0]
+						}
+
+						extraDescription = `${method} ${extraUrl}`
+					} else {
+						//console.log("No url found. Check again :)")
+					}
+				}
+
+              return (
+			  	<ActionSelectOption
+					data={data}
+					newActiondescription={newActiondescription}
+					useIcon={useIcon}
+					newActionname={newActionname}
+					extraDescription={extraDescription}
+				/>
+              );
+            }}
+            renderInput={(params) => {
+				if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
+					const prefixes = ["Post", "Put", "Patch"]
+					for (let [key,keyval] in Object.entries(prefixes)) {
+						if (params.inputProps.value.startsWith(prefixes[key])) {
+							params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
+							if (params.inputProps.value.length > 1) {
+								params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
+							}
+							break
+						}
+					}
+
+					// Check if it starts with "Get List" and method is "Get"
+					if (params.inputProps.value.startsWith("Get List")) {
+						console.log("Get List")
+					}
+				}
+
+              return (
+					<TextField
+						{...params}
+
+						data-lpignore="true"
+						autocomplete="off"
+						dataLPIgnore="true"
+				  		autoComplete="off"
+
+						color="primary"
+						id="checkbox-search"
+						variant="body1"
+						style={{
+							backgroundColor: theme.palette.inputColor,
+							borderRadius: theme.palette.borderRadius,
+						}}
+						label={isIntegration ? "Choose a category" : "Find Actions"}
+						variant="outlined"
+				        name={`disable_autocomplete_${Math.random()}`}
+
+					/>
+              );
+            }}
+          />
+        ) : null}
+
+        {/*setNewSelectedAction !== undefined ? 
+					<Select
+						MenuProps={{
+							disableScrollLock: true,
+						}}
+						value={selectedAction.name}
+						fullWidth
+						onChange={setNewSelectedAction}
+						style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette.borderRadius,}}
+						SelectDisplayProps={{
+							style: {
+								marginLeft: 10,
+								maxHeight: 200,
+							}
+						}}
+					>
+						{sortByKey(selectedApp.actions, "label").map(data => {
+							var newActionname = data.name
+							if (data.label !== undefined && data.label !== null && data.label.length > 0) {
+								newActionname = data.label
+							}
+
+							const iconInfo = GetIconInfo({"name": data.name})
+							const useIcon = iconInfo.originalIcon
+
+							// ROFL FIXME - loop
+							newActionname = newActionname.replaceAll("_", " ")
+							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+							return (
+								<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: theme.palette.inputColor, color: "white", display: "flex",}} value={data.name}>
+									<span style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>{useIcon}</span> 
+									<span style={{}}>{newActionname}</span>
+								</MenuItem>
+							)
+						})}
+					</Select>
+				: null*/}
+
+        <div
+          style={{
+            marginTop: "10px",
+            borderColor: "white",
+            borderWidth: "2px",
+            marginBottom: hideExtraTypes ? 50 : 200,
+          }}
+        > {
+			Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0 ? 
+	<div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
 		  	{isIntegration ? 
 				apps !== undefined && apps !== null && apps.length > 0 ?
 					<div style={{display: "flex", maxWidth: 335, overflowX: "auto", overflowY: "hidden",}}>
@@ -2984,1247 +4171,9 @@ const ParsedAction = (props) => {
             );
           })}
         </div>
-      );
-    }
-    return null;
-  };
-
-
-	const ActionSelectOption = (actionprops) => {
-		const { data, newActionname, newActiondescription, useIcon, extraDescription, } = actionprops;
-  		const [hover, setHover] = React.useState(false);
-
-		return (
-			<Tooltip
-			  color="secondary"
-			  title={newActiondescription}
-			  placement="left"
-			>
-				<div style={{
-					cursor: "pointer", 
-					padding: 8, 
-					paddingLeft: 14, 
-					paddingBottom: 4,
-					backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor,
-				}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-				onClick={() => {
-					//setSelectedAction(actionprops)
-					//setShowActionList(false)
-					//setUpdate(Math.random())
-					//
-					if (data !== undefined && data !== null) { 
-                		setNewSelectedAction({ 
-							target: { 
-								value: data.name 
-							} 
-						});
-              		}
-				}}
-				>
-					<div style={{ display: "flex", marginBottom: 0,}}>
-						<span
-							style={{
-								marginRight: 10,
-								marginTop: "auto",
-								marginBottom: 0,
-							}}
-						>
-							{useIcon}
-						</span>
-						<span style={{marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
-					</div>
-					{extraDescription.length > 0 ? 
-						<Typography variant="body2" color="textSecondary" style={{marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block",}}>
-							{extraDescription}	
-						</Typography>
-					: null}
-				</div>
-			</Tooltip>
-		)
-	}
-
-  const sortByCategoryLabel = (a, b) => {
-	  const aHasCategoryLabel = a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0
-	  const bHasCategoryLabel = b.category_label !== undefined && b.category_label !== null && b.category_label.length > 0
-
-	  // Sort by existence and length of "category_label"
-	  if (aHasCategoryLabel && !bHasCategoryLabel) {
-		return -1
-	  } else if (!aHasCategoryLabel && bHasCategoryLabel) {
-		return 1
-	  } else {
-		return 0
-	  }
-  }
-
-	// Function to deduplicate based on the "name" field
-	const deduplicateByName = (array) => {
-	  const uniqueNames = {};
-	  return array.filter(item => {
-		if (!item.hasOwnProperty('name') || !item.name.length) {
-		  return true
+			: null
 		}
-		if (!uniqueNames[item.name]) {
-		  uniqueNames[item.name] = true
-		  return true
-		}
-		return false
-	  })
-	}
-
-  // Gets the most important actions first
-  const renderedActionOptions = deduplicateByName((
-	  selectedApp.actions === undefined || selectedApp.actions === null ? [] : 
-	  selectedApp.actions.filter((a) => 
-		  a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))
-      ).sort(sortByCategoryLabel))
-
-  const selectedAppIcon = selectedAction.large_image
-  var baselabel = selectedAction.label
-  return (
-    <div style={appApiViewStyle} id="parsed_action_view">
-
-      {hideExtraTypes === true ? null : (
-        <span>
-          <div style={{ display: "flex", minHeight: 40, marginBottom: 30 }}>
-            <div style={{ flex: 1 }}>
-		  	  <div style={{ display: "flex", }}
-		  		onClick={() => {
-					//window.open("/apps/${selectedAction.app_id}", "_blank")
-				}}
-		  	  >
-		  		  <Tooltip title={"App: "+selectedAction.app_name} placement="top">
-					  <img src={selectedAppIcon} style={{ 
-						width: 30, 
-						height: 30, 
-						marginRight: 10, 
-						borderRadius: 5,
-						marginTop: 13, 
-					    border: "2px solid rgba(255,255,255,0.3)",
-					  }} />
-		  		  </Tooltip>
-				  <h3 style={{ }}>
-					{(
-					  selectedAction.app_name.charAt(0).toUpperCase() +
-					  selectedAction.app_name.substring(1)
-					).replaceAll("_", " ")}
-				  </h3>
-		  	  </div>
-              <div style={{display: "flex", marginTop: 0, }}>
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    paddingLeft: 0,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {
-                    if (workflowExecutions.length > 0) {
-                      // Look for the ID
-                      var found = false;
-                      for (let [key,keyval] in Object.entries(workflowExecutions)) {
-                        if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
-                          continue;
-                        }
-
-                        var foundResult = workflowExecutions[key].results.find(
-                          (result) => result.action.id === selectedAction.id
-                        )
-
-                        if (foundResult === undefined || foundResult === null) {
-                          continue;
-                        }
-
-						const oldstartnode = cy.getElementById(selectedAction.id);
-						if (oldstartnode !== undefined && oldstartnode !== null) {
-							const foundname = oldstartnode.data("label")
-							if (foundname !== undefined && foundname !== null) {
-								foundResult.action.label = foundname
-							}
-						}
-
-                        setSelectedResult(foundResult);
-                        if (setCodeModalOpen !== undefined) {
-                          setCodeModalOpen(true);
-                      	
-						  found = true
-                        }
-
-                        break;
-                      }
-
-					  if (!found) {
-						  toast.info("No result for this action yet. Please run the workflow first.")
-					  }
-                    } else {
-						toast.info("No workflow runs to search through. Run the workflow first.") 
-					}
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title="See previous results for this action"
-                    placement="top"
-                  >
-                    <ArrowLeftIcon style={{ color: "rgba(255,255,255,0.7)" }} />
-                  </Tooltip>
-                </IconButton>
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {
-                    setAuthenticationModalOpen(true)
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title="Find app documentation"
-                    placement="top"
-                  >
-                    <DescriptionIcon style={{ color: "rgba(255,255,255,0.7)" }} />
-                  </Tooltip>
-                </IconButton>
-		  		{/*
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {}}
-                >
-                  <a
-                    href="https://shuffler.io/docs/workflows#nodes"
-                    rel="norefferer"
-                    target="_blank"
-                    style={{ textDecoration: "none", color: "#f85a3e" }}
-                  >
-                    <Tooltip
-                      color="primary"
-                      title="What are actions?"
-                      placement="top"
-                    >
-                      <HelpOutlineIcon style={{ color: "rgba(255,255,255,0.7)" }} />
-                    </Tooltip>
-                  </a>
-                </IconButton>
-				*/}
-								{/*
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {
-                    //setAuthenticationModalOpen(true);
-										console.log("Should enable/disable magic!")
-										console.log("Action: ", selectedAction)
-										if (selectedAction.run_magic_output === undefined) {
-											selectedAction.run_magic_output = true
-										} else {
-											if (selectedAction.run_magic_output === true) {
-												selectedAction.run_magic_output = false
-											} else {
-												selectedAction.run_magic_output = true 
-											}
-										}
-
-										setSelectedAction(selectedAction)
-										setUpdate(Math.random());
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title={selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "Click to enable magic parsing" : "Click to disable magic parsing"}
-                    placement="top"
-                  >
-										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "rgba(255,255,255,0.7)" : "#f86a3e"}} />
-                  </Tooltip>
-                </IconButton>
-								*/}
-		  		{/*
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title={"Find related tworkflows"}
-                    placement="top"
-                  >
-					<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
-						<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
-					</a>
-                  </Tooltip>
-                </IconButton>
-				*/}
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-		  		  disabled={autoCompleting}
-                  onClick={() => {
-					  //if (setAiQueryModalOpen !== undefined) {
-					  //  setAiQueryModalOpen(true)
-					  //} else {
-					  	aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
-					  //}
-  					  setAutocompleting(true)
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title={"Autocomplete fields. Uses the name of the current action, the fields and previous actions' results"}
-                    placement="top"
-                  >
-		  			{autoCompleting ? 
-						<CircularProgress style={{height: 20, width: 20, }} />
-						:
-						<AutoFixHighIcon style={{ color: "rgba(255,255,255,0.7)", height: 24, }} />
-					}
-                  </Tooltip>
-                </IconButton>
-              </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {/*selectedAction.id === workflow.start ? null : 
-
-							<Tooltip color="primary" title={"Make this node the start action"} placement="top">
-								<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
-									defineStartnode(e)	
-								}}>
-									<KeyboardArrowRightIcon />
-								</Button> 				
-							</Tooltip>
-						*/}
-              {selectedApp.versions !== null &&
-				  selectedApp.versions !== undefined &&
-				  selectedApp.versions.length > 1 ? (
-                <Select
-				  MenuProps={{
-				  	disableScrollLock: true,
-				  }}
-                  defaultValue={selectedAction.app_version}
-                  onChange={(event) => {
-                    const newversion = selectedApp.versions.find(
-                      (tmpApp) => tmpApp.version == event.target.value
-                    )
-
-                    if (newversion !== undefined && newversion !== null) {
-                      getApp(newversion.id, true)
-                    }
-
-					// Change in all actions in the workflow at the same time and add a toast.success() about it
-					for (var actionkey in workflow.actions) {
-						const action = workflow.actions[actionkey]
-						if (action.app_name === selectedAction.app_name) {
-							workflow.actions[actionkey].app_version = event.target.value
-						}
-					}
-
-					toast.success("Changed version of all nodes to "+event.target.value)
-                  }}
-                  style={{
-                    marginTop: 10,
-                    backgroundColor: theme.palette.surfaceColor,
-                    backgroundColor: theme.palette.inputColor,
-                    color: "white",
-                    height: 35,
-                    marginleft: 10,
-                    borderRadius: theme.palette.borderRadius,
-                  }}
-                  SelectDisplayProps={{
-                    style: {
-                    },
-                  }}
-                >
-                  {selectedApp.versions.map((data, index) => {
-                    return (
-                      <MenuItem
-                        key={index}
-                        style={{
-                          backgroundColor: theme.palette.inputColor,
-                          color: "white",
-                        }}
-                        value={data.version}
-                      >
-                        {data.version}
-                      </MenuItem>
-                    );
-                  })}
-                </Select>
-              ) : null}
-            </div>
-          </div>
-					<div style={{display: "flex"}}>
-						<div style={{flex: 5}}>
-							<Typography style={{color: "rgba(255,255,255,0.7)"}}>Name</Typography>
-							<TextField
-
-								style={theme.palette.textFieldStyle}
-								InputProps={{
-									style: theme.palette.innerTextfieldStyle,
-									disableUnderline: true,
-								}}
-								fullWidth
-								color="primary"
-								placeholder={selectedAction.label}
-								defaultValue={selectedAction.label}
-								onChange={selectedNameChange}
-								onBlur={(e) => {
-									// Copy the name value
-									const name = e.target.value
-									const parsedBaseLabel = "$"+baselabel.toLowerCase().replaceAll(" ", "_")
-									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
-
-									// Check if it's the same as the current name in use
-									//if (name === selectedAction.label) { 
-									//	console.log("Returning from name thing")
-									//	return
-									//}
-
-									// Change in actions, triggers & conditions
-									// Highlight the changes somehow with a glow?
-									if (workflow.branches !== undefined && workflow.branches !== null) {	
-										for (let [key,keyval] in Object.entries(workflow.branches)) {
-											if (workflow.branches[key].conditions !== undefined && workflow.branches[key].conditions !== null) {
-												for (let [subkey,subkeyval] in Object.entries(workflow.branches[key].conditions)) {
-													const condition = workflow.branches[key].conditions[subkey]
-													const sourceparam = condition.source
-													const destinationparam = condition.destination
-
-													// Should have a smarter way of discovering node names
-													// Finding index(es) and replacing at the location
-													if (sourceparam.value.includes("$")) {
-														try {
-															var cnt = -1
-															var previous = 0
-															while (true) {
-																cnt += 1 
-																// Need to make sure e.g. changing the first here doesn't change the 2nd
-																// $change_me
-																// $change_me_2
-																
-																const foundindex = sourceparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
-																if (foundindex === previous && foundindex !== 0) {
-																	break
-																}
-	
-																if (foundindex >= 0) {
-																	previous = foundindex+newname.length
-																	// Need to add diff of length to word
-	
-																	// Check location:
-																	// If it's a-zA-Z_ then don't replace
-																	if (sourceparam.value.length > foundindex+parsedBaseLabel.length) {
-																		const regex = /[a-zA-Z0-9_]/g;
-																		const match = sourceparam.value[foundindex+parsedBaseLabel.length].match(regex);
-																		if (match !== null) {
-																			continue
-																		}
-																	}
-																	
-																	console.log("Old found: ", workflow.branches[key].conditions[subkey].source.value)
-																	const extralength = newname.length-parsedBaseLabel.length
-																	sourceparam.value = sourceparam.value.substring(0, foundindex) + newname + sourceparam.value.substring(foundindex-extralength+newname.length, sourceparam.value.length)
-
-																	console.log("New: ", workflow.branches[key].conditions[subkey].source.value)
-																} else { 
-																	break
-																}
-	
-																// Break no matter what after 5 replaces. May need to increase
-																if (cnt >= 5) {
-																	break
-																}
-	
-															}
-            								} catch (e) {
-															console.log("Failed value replacement based on index: ", e)
-														}
-													}
-
-													if (destinationparam.value.includes("$")) {
-														try {
-															var cnt = -1
-															var previous = 0
-															while (true) {
-																cnt += 1 
-																// Need to make sure e.g. changing the first here doesn't change the 2nd
-																// $change_me
-																// $change_me_2
-																
-																const foundindex = destinationparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
-																if (foundindex === previous && foundindex !== 0) {
-																	break
-																}
-	
-																if (foundindex >= 0) {
-																	previous = foundindex+newname.length
-																	// Need to add diff of length to word
-	
-																	// Check location:
-																	// If it's a-zA-Z_ then don't replace
-																	if (destinationparam.value.length > foundindex+parsedBaseLabel.length) {
-																		const regex = /[a-zA-Z0-9_]/g;
-																		const match = destinationparam.value[foundindex+parsedBaseLabel.length].match(regex);
-																		if (match !== null) {
-																			continue
-																		}
-																	}
-																	
-																	console.log("Old found: ", workflow.branches[key].conditions[subkey].destination.value)
-																	const extralength = newname.length-parsedBaseLabel.length
-																	destinationparam.value = destinationparam.value.substring(0, foundindex) + newname + destinationparam.value.substring(foundindex-extralength+newname.length, destinationparam.value.length)
-
-																	console.log("New: ", workflow.branches[key].conditions[subkey].destination.value)
-																} else { 
-																	break
-																}
-	
-																// Break no matter what after 5 replaces. May need to increase
-																if (cnt >= 5) {
-																	break
-																}
-	
-															}
-            								} catch (e) {
-															console.log("Failed value replacement based on index: ", e)
-														}
-													}
-												}
-											}
-										}
-									}
-
-									for (let [key,keyval] in Object.entries(workflow.actions)) {
-										if (workflow.actions[key].id === selectedAction.id) {
-											continue
-										}
-
-										const params = workflow.actions[key].parameters
-										console.log(params)
-										if (params === null || params === undefined) {
-											continue
-										}
-
-										for (let [subkey, subkeyval] in Object.entries(params)) {
-											const param = workflow.actions[key].parameters[subkey];
-											if (!param.value.includes("$")) {
-												continue
-											}
-
-											// Should have a smarter way of discovering node names
-											// Do regex? 
-											// Finding index(es) and replacing at the location
-											//
-
-											try {
-												var cnt = -1
-												var previous = 0
-												while (true) {
-													cnt += 1 
-													// Need to make sure e.g. changing the first here doesn't change the 2nd
-													// $change_me
-													// $change_me_2
-													
-													const foundindex = param.value.toLowerCase().indexOf(parsedBaseLabel, previous)
-													if (foundindex === previous && foundindex !== 0) {
-														break
-													}
-	
-													if (foundindex >= 0) {
-														previous = foundindex+newname.length
-														// Need to add diff of length to word
-	
-														// Check location:
-														// If it's a-zA-Z_ then don't replace
-														if (param.value.length > foundindex+parsedBaseLabel.length) {
-															const regex = /[a-zA-Z0-9_]/g;
-															const match = param.value[foundindex+parsedBaseLabel.length].match(regex);
-															if (match !== null) {
-																continue
-															}
-														}
-														
-														console.log("Old found: ", workflow.actions[key].parameters[subkey].value)
-														const extralength = newname.length-parsedBaseLabel.length
-														param.value = param.value.substring(0, foundindex) + newname + param.value.substring(foundindex-extralength+newname.length, param.value.length)
-
-														console.log("New: ", workflow.actions[key].parameters[subkey].value)
-													} else { 
-														break
-													}
-	
-													// Break no matter what after 5 replaces. May need to increase
-													if (cnt >= 5) {
-														break
-													}
-	
-												}
-            					} catch (e) {
-												console.log("Failed value replacement based on index: ", e)
-											}
-										}
-									}
-
-									setWorkflow(workflow);
-                  					setUpdate(Math.random());
-									baselabel = name
-								}}
-							/>
-						</div>
-						{/*!isCloud ? null :*/}
-							<div style={{flex: 1, marginLeft: 5,}}>
-								<Tooltip
-									color="primary"
-									title={"Delay before action executes (in seconds)"}
-									placement="top"
-								>
-									<span>
-										<Typography style={{color: "rgba(255,255,255,0.7)"}}>Delay</Typography>
-										<TextField
-											InputProps={{
-												style: theme.palette.innerTextfieldStyle,
-												disableUnderline: true,
-											}}
-											placeholder={selectedAction.execution_delay}
-											defaultValue={selectedAction.execution_delay}
-											onChange={(event) => {
-												if (actionDelayChange !== undefined) {
-													actionDelayChange(event) 
-												}
-											}}
-										/>
-									</span>
-								</Tooltip>
-							</div>
-						{/**/}
-					</div>
-        </span>
-      )}
-      {selectedApp.name !== undefined &&
-			selectedAction.authentication !== null &&
-			selectedAction.authentication !== undefined &&
-			selectedAction.authentication.length === 0 &&
-			requiresAuthentication ? (
-        <div style={{ marginTop: 15 }}>
-          <Tooltip
-            color="primary"
-            title={"Add authentication option"}
-            placement="top"
-          >
-            <span>
-              <Button
-                color="primary"
-                style={{}}
-                fullWidth
-                variant="contained"
-                onClick={() => {
-                  //if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
-                  //	return null
-                  //}
-
-                  setAuthenticationModalOpen(true);
-                }}
-              >
-                <AddIcon style={{ marginRight: 10 }} /> Authenticate{" "}
-                {selectedApp.name.replaceAll("_", " ")}
-              </Button>
-            </span>
-          </Tooltip>
-        </div>
-      ) : null}
-
-      {selectedAction.authentication !== undefined &&
-				selectedAction.authentication !== null &&
-				selectedAction.authentication.length > 0 ? (
-        <div style={{ marginTop: 15 }}>
-          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Authentication</Typography>
-          <div style={{ display: "flex" }}>
-            <Select
-			  MenuProps={{
-			  	disableScrollLock: true,
-			  }}
-              labelId="select-app-auth"
-              value={
-				selectedAction.authentication_id === "authgroups" ? "authgroups" :
-                Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0
-                  ? "No selection"
-                  : selectedAction.selectedAuthentication
-              }
-              SelectDisplayProps={{
-                style: {
-					maxWidth: 250,
-                },
-              }}
-              fullWidth
-              onChange={(e) => {
-				console.log("AUTH CHANGE: ", e.target.value)
-
-                if (e.target.value === "No selection") {
-                  selectedAction.selectedAuthentication = {};
-                  selectedAction.authentication_id = "";
-
-                  for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
-                    //console.log(selectedAction.parameters[key])
-                    if (selectedAction.parameters[key].configuration) {
-                      selectedAction.parameters[key].value = "";
-                    }
-                  }
-                  setSelectedAction(selectedAction);
-                  setUpdate(Math.random())
-
-				} else if (e.target.value === "authgroups") {
-					if (authGroups !== undefined && authGroups !== null && authGroups.length === 0) {
-						toast("No auth groups created. Opening window to create one")
-
-						setTimeout(() => {
-							window.open("/admin?tab=app_auth", "_blank")
-						}, 2500)
-					} else {
-						selectedAction.selectedAuthentication = {};
-						selectedAction.authentication_id = "authgroups"
-
-						for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
-						  //console.log(selectedAction.parameters[key])
-						  if (selectedAction.parameters[key].configuration) {
-							selectedAction.parameters[key].value = "authgroup controlled"
-						  }
-						}
-
-						setSelectedAction(selectedAction)
-						setUpdate(Math.random())
-					}
-                } else {
-                  selectedAction.selectedAuthentication = e.target.value;
-                  selectedAction.authentication_id = e.target.value.id;
-                  setSelectedAction(selectedAction);
-                  setUpdate(Math.random());
-                }
-
-              }}
-              style={{
-                backgroundColor: theme.palette.inputColor,
-                color: "white",
-                height: 50,
-                maxWidth: rightsidebarStyle.maxWidth - 80,
-                borderRadius: theme.palette.borderRadius,
-              }}
-            >
-              <MenuItem
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  color: "white",
-                }}
-                value="No selection"
-              >
-                <em>No selection</em>
-              </MenuItem>
-
-              {selectedAction.authentication.map((data) => {
-				if (data.last_modified === true) {
-					//console.log("LAST MODIFIED: ", data.label)
-				}
-
-                return (
-                  <MenuItem
-                    key={data.id}
-                    style={{
-                      backgroundColor: theme.palette.inputColor,
-                      color: "white",
-					  maxWidth: 500, 
-					  overflowX: "auto",
-                    }}
-                    value={data}
-                  >
-					{data.last_modified === true ? 
-						<Chip
-							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
-							label={"Latest"}
-							variant="outlined"
-							color="secondary"
-						/>
-					: null}
-					{data.app.app_version !== undefined && data.app.app_version !== null && data.app.app_version !== "" && data.app.app_version !== "undefined" ?
-						<Chip
-							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
-							label={data.app.app_version}
-							variant="outlined"
-							color="secondary"
-						/>
-					: null}
-						{data.label} 
-                  </MenuItem>
-                );
-              })}
-
-
-			  <Divider style={{marginTop: 10, marginBottom: 10, }}/>
-
-              <MenuItem
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  color: "white",
-                }}
-                value="authgroups"
-              >
-                <em>Auth Groups</em>
-              </MenuItem>
-
-            </Select>
-
-            {/*
-
-						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
-							AUTHENTICATE
-						</Button>
-						curaction.authentication = authenticationOptions
-							if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "")
-						*/}
-            <Tooltip
-              color="primary"
-              title={"Add authentication option"}
-              placement="top"
-            >
-              <IconButton
-                color="primary"
-								variant="outlined"
-                style={{}}
-                onClick={() => {
-                  setAuthenticationModalOpen(true);
-                }}
-              >
-                <AddIcon />
-              </IconButton>
-            </Tooltip>
-          </div>
-        </div>
-      ) : null}
-
-
-      {showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
-        <div style={{ marginTop: "20px" }}>
-          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Environment</Typography>
-          <Select
-			MenuProps={{
-				disableScrollLock: true,
-			}}
-            value={
-              selectedActionEnvironment === undefined || selectedActionEnvironment === null || selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null 
-                ? 
-				selectedAction.environment !== undefined && selectedAction.environment !== null && selectedAction.environment.length > 0 ? selectedAction.environment : isCloud ? "Cloud" : "Shuffle"
-                : selectedActionEnvironment.Name
-            }
-            SelectDisplayProps={{
-              style: {
-              },
-            }}
-            fullWidth
-            onChange={(e) => {
-              const env = environments.find((a) => a.Name === e.target.value);
-              setSelectedActionEnvironment(env);
-              selectedAction.environment = env.Name;
-              setSelectedAction(selectedAction);
-
-			  for (let actionkey in workflow.actions) {
-				  workflow.actions[actionkey].environment = env.Name
-			  }
-			  setWorkflow(workflow)
-			  toast("Set environment for ALL actions to " + env.Name)
-            }}
-            style={{
-              backgroundColor: theme.palette.inputColor,
-              color: "white",
-              height: "50px",
-              borderRadius: theme.palette.borderRadius,
-            }}
-          >
-            {environments.map((data, index) => {
-              if (data.archived === true) {
-                return null;
-              }
-
-              return (
-                <MenuItem
-									key={index}
-                  key={data.Name}
-                  style={{
-                    backgroundColor: theme.palette.inputColor,
-                    color: "white",
-                  }}
-                  value={data.Name}
-                >
-				  {data.default === true ?
-					  <Chip
-						style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
-						label={"Default"}
-						variant="outlined"
-						color="secondary"
-					  />
-					  : null}
-                  {data.Name}
-                </MenuItem>
-              );
-            })}
-          </Select>
-        </div>
-      ) : null}
-
-      {workflow.execution_variables !== undefined &&
-      workflow.execution_variables !== null &&
-      workflow.execution_variables.length > 0 ? (
-        <div style={{ marginTop: "20px" }}>
-          <Typography>Execution variable (optional)</Typography>
-          <Select
-			MenuProps={{
-				disableScrollLock: true,
-			}}
-            value={
-              selectedAction.execution_variable !== undefined
-              && selectedAction.execution_variable !== null 
-              && selectedAction.execution_variable.name !== undefined 
-              && selectedAction.execution_variable.name !== null 
-              && selectedAction.execution_variable.name.length > 0 
-                ? selectedAction.execution_variable.name
-                : "No selection"
-            }
-            SelectDisplayProps={{
-              style: {
-              },
-            }}
-            fullWidth
-            onChange={(e) => {
-              if (e.target.value === "No selection") {
-                selectedAction.execution_variable = { name: "No selection" };
-              } else {
-                const value = workflow.execution_variables.find(
-                  (a) => a.name === e.target.value
-                );
-                selectedAction.execution_variable = value;
-              }
-              setSelectedAction(selectedAction);
-              setUpdate(Math.random());
-            }}
-            style={{
-              backgroundColor: theme.palette.inputColor,
-              color: "white",
-              height: "50px",
-              borderRadius: theme.palette.borderRadius,
-            }}
-          >
-            <MenuItem
-              style={{
-                backgroundColor: theme.palette.inputColor,
-                color: "white",
-              }}
-              value="No selection"
-            >
-              <em>No selection</em>
-            </MenuItem>
-            <Divider style={{ backgroundColor: theme.palette.inputColor }} />
-            {workflow.execution_variables.map((data) => (
-              <MenuItem
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  color: "white",
-                }}
-                value={data.name}
-              >
-                {data.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </div>
-      ) : null}
-
-      <Divider
-        style={{
-          marginTop: "20px",
-          height: "1px",
-          width: "100%",
-          backgroundColor: "rgb(91, 96, 100)",
-        }}
-      />
-      <div style={{ flex: "6", marginTop: "20px" }}>
-        {/*hideExtraTypes ? null : 
-					<div style={{marginBottom: 5}}>
-						<b>Actions</b>
-					</div>
-				*/}
-
-        {setNewSelectedAction !== undefined ? (
-          <Autocomplete
-            id="action_search"
-            autoHighlight
-            value={selectedAction}
-            classes={{ inputRoot: classes.inputRoot }}
-			groupBy={(option) => {
-				// Most popular
-				// Is categorized
-				// Uncategorized
-				return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
-			}}
-			renderGroup={(params) => {
-
-				return (
-					<li key={params.key}>
-						<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
-						<Typography variant="body2">{params.children}</Typography>
-					</li>
-				)	
-			}}
-            options={renderedActionOptions}
-            ListboxProps={{
-              style: {
-                backgroundColor: theme.palette.surfaceColor,
-                color: "white",
-              },
-            }}
-			filterOptions={(options, { inputValue }) => {
-				//console.log("Option contains?: ", inputValue, options)
-				const lowercaseValue = inputValue.toLowerCase()
-				options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
-
-				return options
-			}}
-            getOptionLabel={(option) => {
-              if (option === undefined || option === null || option.name === undefined || option.name === null ) {
-                return null;
-              }
-
-              const newname = (
-                option.name.charAt(0).toUpperCase() + option.name.substring(1)
-              ).replaceAll("_", " ");
-
-              return newname;
-            }}
-            fullWidth
-            style={{
-              backgroundColor: theme.palette.inputColor,
-              height: 50,
-              borderRadius: theme.palette.borderRadius,
-            }}
-            onChange={(event, newValue) => {
-              // Workaround with event lol
-              if (newValue !== undefined && newValue !== null) {
-                setNewSelectedAction({ 
-					target: { 
-						value: newValue.name 
-					} 
-				});
-              }
-            }}
-            renderOption={(props, data, state) => {
-              var newActionname = data.name;
-              if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-                newActionname = data.label;
-              }
-
-              var newActiondescription = data.description;
-			  //console.log("DESC: ", newActiondescription)
-              if (data.description === undefined || data.description === null) {
-				newActiondescription = "Description: No description defined for this action"
-              } else {
-				newActiondescription = "Description: "+newActiondescription
-			  }
-
-              const iconInfo = GetIconInfo({ name: data.name });
-              const useIcon = iconInfo.originalIcon;
-
-			  if (newActionname === undefined || newActionname === null) {
-				  newActionname = "No name"
-				  data.name = "No name"
-				  data.label = "No name"
-			  }
-
-              newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
-
-				var method = ""
-				var extraDescription = ""
-				if (data.name.includes("get_")) {
-					method = "GET"
-				} else if (data.name.includes("post_")) {
-					method = "POST"
-				} else if (data.name.includes("put_")) {
-					method = "PUT"
-				} else if (data.name.includes("patch_")) {
-					method = "PATCH"
-				} else if (data.name.includes("delete_")) {
-					method = "DELETE"
-				} else if (data.name.includes("options_")) {
-					method = "OPTIONS"
-				} else if (data.name.includes("connect_")) {
-					method = "CONNECT"
-				}
-
-				// FIXME: Should it require a base URL?
-				if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
-					var extraUrl = ""
-					const descSplit = data.description.split("\n")
-					// Last line of descSplit
-					if (descSplit.length > 0) {
-						extraUrl = descSplit[descSplit.length-1]
-					} 
-
-					//for (let [line,lineval] in Object.entries(descSplit)) {
-					//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
-					//		const urlsplit = descSplit[line].split("/")
-					//		try {
-					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
-					//		} catch (e) {
-					//			//console.log("Failed - running with -1")
-					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
-					//		}
-
-
-					//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
-					//		//break
-					//	} 
-					//}
-
-					if (extraUrl.length > 0) {
-						if (extraUrl.includes(" ")) {
-							extraUrl = extraUrl.split(" ")[0]
-						}
-
-						if (extraUrl.includes("#")) {
-							extraUrl = extraUrl.split("#")[0]
-						}
-
-						extraDescription = `${method} ${extraUrl}`
-					} else {
-						//console.log("No url found. Check again :)")
-					}
-				}
-
-              return (
-			  	<ActionSelectOption
-					data={data}
-					newActiondescription={newActiondescription}
-					useIcon={useIcon}
-					newActionname={newActionname}
-					extraDescription={extraDescription}
-				/>
-              );
-            }}
-            renderInput={(params) => {
-				if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
-					const prefixes = ["Post", "Put", "Patch"]
-					for (let [key,keyval] in Object.entries(prefixes)) {
-						if (params.inputProps.value.startsWith(prefixes[key])) {
-							params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
-							if (params.inputProps.value.length > 1) {
-								params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
-							}
-							break
-						}
-					}
-
-					// Check if it starts with "Get List" and method is "Get"
-					if (params.inputProps.value.startsWith("Get List")) {
-						console.log("Get List")
-					}
-				}
-
-              return (
-					<TextField
-						{...params}
-
-						data-lpignore="true"
-						autocomplete="off"
-						dataLPIgnore="true"
-				  		autoComplete="off"
-
-						color="primary"
-						id="checkbox-search"
-						variant="body1"
-						style={{
-							backgroundColor: theme.palette.inputColor,
-							borderRadius: theme.palette.borderRadius,
-						}}
-						label={isIntegration ? "Choose a category" : "Find Actions"}
-						variant="outlined"
-				        name={`disable_autocomplete_${Math.random()}`}
-
-					/>
-              );
-            }}
-          />
-        ) : null}
-
-        {/*setNewSelectedAction !== undefined ? 
-					<Select
-						MenuProps={{
-							disableScrollLock: true,
-						}}
-						value={selectedAction.name}
-						fullWidth
-						onChange={setNewSelectedAction}
-						style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette.borderRadius,}}
-						SelectDisplayProps={{
-							style: {
-								marginLeft: 10,
-								maxHeight: 200,
-							}
-						}}
-					>
-						{sortByKey(selectedApp.actions, "label").map(data => {
-							var newActionname = data.name
-							if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-								newActionname = data.label
-							}
-
-							const iconInfo = GetIconInfo({"name": data.name})
-							const useIcon = iconInfo.originalIcon
-
-							// ROFL FIXME - loop
-							newActionname = newActionname.replaceAll("_", " ")
-							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
-							return (
-								<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: theme.palette.inputColor, color: "white", display: "flex",}} value={data.name}>
-									<span style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>{useIcon}</span> 
-									<span style={{}}>{newActionname}</span>
-								</MenuItem>
-							)
-						})}
-					</Select>
-				: null*/}
-
-        <div
-          style={{
-            marginTop: "10px",
-            borderColor: "white",
-            borderWidth: "2px",
-            marginBottom: hideExtraTypes ? 50 : 200,
-          }}
-        >
-          <AppActionArguments
-            key={selectedAction.id}
-            selectedAction={selectedAction}
-          />
+          
         </div>
       </div>
     </div>
