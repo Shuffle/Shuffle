@@ -62,8 +62,7 @@ const Header = (props) => {
     userdata,
     isMobile,
     serverside,
-    curpath,
-    billingInfo
+    billingInfo,
   } = props;
 
   const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
@@ -113,6 +112,10 @@ const Header = (props) => {
       : window.location.host === "localhost:3002" ||
       window.location.host === "shuffler.io" ||
       window.location.host === "localhost:5002";
+
+  const curpath = (typeof window !== "undefined" && window.location && typeof window.location.pathname === "string")
+    ? window.location.pathname
+    : "";
 
   const clearNotifications = () => {
     // Don't really care about the logout
@@ -500,12 +503,15 @@ const Header = (props) => {
             //globalUrl = responseJson.region_url
           }
           if (responseJson["reason"] === "SSO_REDIRECT") {
-            window.location.href = responseJson["url"]
-            return
+			setTimeout(() => {
+				toast.info("Redirecting to SSO login page as SSO is required for this organization.")
+				window.location.href = responseJson["url"]
+				return
+			}, 2000)
           }
 
           setTimeout(() => {
-            window.location.reload();
+            window.location.reload()
           }, 2000);
 
           toast("Successfully changed active organization - refreshing!");
@@ -541,7 +547,7 @@ const Header = (props) => {
           >
             <img
               alt="Discord Community Join"
-              src={"/images/social/resized/discord.png"}
+              src={"/images/social/discord.png"}
               style={{ height: 30, width: 30 }}
             />
           </IconButton>
@@ -781,7 +787,7 @@ const Header = (props) => {
           </Link>
         </ListItem>
       </List>
-      <List style={{ flex: 1.5, display: "flex", flexDirect: "row", marginTop: 10, itemAlign: "center", }} component="nav">
+      <List style={{ flex: 1.5, display: "flex", flexDirect: "row", marginTop: 10, itemAlign: "center", padding: 0 }} component="nav">
         <ListItem style={{ textAlign: "center", marginLeft: "0px" }}>
           <Link to="/usecases" style={hrefStyle}>
             <Button
@@ -846,9 +852,27 @@ const Header = (props) => {
             </Button>
           </Link>
         </ListItem>
+        <ListItem
+          style={{
+            textAlign: "center",
+            marginLeft: 0,
+            paddingRight: 0,
+          }}
+        >
+          <Link rel="noopener noreferrer" to="/training" style={hrefStyle}>
+            <Button
+              variant="text"
+              color="secondary"
+              style={menuText}
+              onClick={() => { }}
+            >
+              Training
+            </Button>
+          </Link>
+        </ListItem>
       </List>
       <List
-        style={{ flex: 2, display: "flex", alignItems: "flex-start", }}
+        style={{ flex: 2, display: "flex", alignItems: "flex-start", padding: 0, }}
         component="nav"
       >
         <div style={{ maxWidth: 70, minWidth: 70, }} />
@@ -1511,14 +1535,15 @@ const Header = (props) => {
     */
 
   const topbarHeight = showTopbar ? 40 : 0
-  const topbar = !showTopbar ? null :
-    curpath === "/" || curpath.includes("/docs/") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" ?
+  const topbar = !isCloud || !showTopbar ? null :
+    curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/training" ?
       <span style={{ zIndex: 50001, }}>
         <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
           <Typography variant="body1" style={{ paddingTop: 7, margin: "auto", textAlign: "center", color: "white", }}>
-            Shuffle 1.4 is out! Read more about&nbsp;
-            <u>
-              <a href="https://github.com/Shuffle/Shuffle" style={{ color: "inherit", }} onClick={() => {
+            {/* Shuffle 1.4.0 is out! Read more about&nbsp; */}
+            Shuffle now offers&nbsp;
+            {/* <u>
+              <a href="https://github.com/Shuffle/Shuffle/releases/tag/v1.4.0" target="_blank" style={{ color: "inherit", }} onClick={() => {
                 ReactGA.event({
                   category: "landingpage",
                   action: "click_header_features",
@@ -1554,16 +1579,16 @@ const Header = (props) => {
                 Pricing
               </span>
             </u>
-            &nbsp;and&nbsp;
+            &nbsp;and&nbsp; */}
             <u>
               <span onClick={() => {
                 ReactGA.event({
                   category: "landingpage",
-                  action: "click_header_creators",
+                  action: "click_header_training",
                   label: "",
                 })
 
-                navigate("/creators")
+                navigate("/training")
 
                 //if (window.drift !== undefined) {
                 //	window.drift.api.startInteraction({ interactionId: 341911 })
@@ -1571,7 +1596,7 @@ const Header = (props) => {
                 //	console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
                 //}
               }} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
-                Earning as a Creator
+                Public Training!
               </span>
             </u>
           </Typography>
@@ -1583,8 +1608,8 @@ const Header = (props) => {
       :
       null
 
-  return !isMobile ?
-    <div style={{ marginTop: 0, }}>
+  return !isMobile ? (
+    <div style={{ marginTop: 0 }}>
       <AppBar
         color="transparent"
         elevation={0}
@@ -1596,17 +1621,24 @@ const Header = (props) => {
           backgroundColor: theme.palette.backgroundColor,
         }}
       >
-
         {topbar}
-
-			<div style={{ position: "sticky", top: 0, }}>
-				{loginTextBrowser}
-			</div>
-      {modalView}
-		</AppBar>
-	</div>
-    :
+        <div
+          style={{
+            position: "sticky",
+            top: 0,
+            minHeight: 68,
+            maxHeight: 68,
+            backgroundColor: theme.palette.backgroundColor,
+          }}
+        >
+          {loginTextBrowser}
+        </div>
+        {modalView}
+      </AppBar>
+    </div>
+  ) : (
     <MobileView>{loginTextMobile}</MobileView>
+  );
 };
 
 export default Header;

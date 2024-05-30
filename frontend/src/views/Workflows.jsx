@@ -4080,7 +4080,7 @@ const Workflows = (props) => {
         {publishModal}
         {workflowDownloadModalOpen}
 
-				{!drawerOpen ? <div style={{position: "fixed", top: 64, right: -5, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, }}>
+        {!drawerOpen ? <div style={{ position: "fixed", top: 64, right: -5, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, }}>
           <Tooltip title={`Getting started`} placement="bottom">
 						<IconButton onClick={() => {
 							setDrawerOpen(true)

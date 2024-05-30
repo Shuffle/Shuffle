@@ -821,7 +821,7 @@ const RuntimeDebugger = (props) => {
 						}}
 						onChange={(e)=>{handleQueryChange(e)}}
 						color="primary"
-						placeholder="Search Workflow Name, Status, Execution Argument, Results.."
+						placeholder="Filter by Workflow Name, Status, Execution Argument, Results.."
 						id="shuffle_search_field"
         				/>
 					</div>

@@ -47,8 +47,6 @@ const SetAuthentication = (props) => {
 
 	}
 
-  console.log("App: ", app)
-
   const getApp = (appid) => {
     if (serverside === true) {
       return;
@@ -100,7 +98,16 @@ const SetAuthentication = (props) => {
 	useEffect(() => {
 		// Find the ID for the app from the "app_id" query
 		const urlParams = new URLSearchParams(window.location.search);
-		const appid = urlParams.get("app_id");
+		const appid = urlParams.get("app_id")
+		const orgsession = urlParams.get("auth")
+		if (!serverside && orgsession !== null) {
+			// Set the orgsession to be a cookie for __session cookie
+
+			setTimeout(() => {
+				document.cookie = "__session=" + orgsession + "; path=/; max-age=1800"; // Cookie expires in 30 min 
+			}, 1000)
+		}
+
 		if (appid === null) {
 			setLoadFail(
 				<span>

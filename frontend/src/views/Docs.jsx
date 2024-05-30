@@ -901,7 +901,7 @@ const Docs = (defaultprops) => {
             <div style={{ textAlign: "left" }}>
                 <Typography variant="h6" style={headerStyle} >Tutorial</Typography>
                 <Typography variant="body1">
-                    <b>Dive in.</b> Hands-on is the best approach to see how Shuffle can transform your security operations. Our set of tutorials and videos teach you how to build your skills. Check out the <Link to="/docs/getting-started" style={hrefStyle2}>getting started</Link> section to give it a go!
+                    <b>Dive in.</b> Hands-on is the best approach to see how Shuffle can transform your security operations. Our set of tutorials and videos teach you how to build your skills. Check out the <Link to="/docs/getting_started" style={hrefStyle2}>getting started</Link> section to give it a go!
                 </Typography>
 
                 <Typography variant="h6" style={headerStyle}>Why Shuffle?</Typography>

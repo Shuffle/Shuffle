@@ -378,7 +378,7 @@ const svgSize = 24;
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const AngularWorkflow = (defaultprops) => {
-  const { globalUrl, isLoggedIn, isLoaded, userdata, data_id } = defaultprops;
+  const { globalUrl, setCookie, isLoggedIn, isLoaded, userdata, data_id } = defaultprops;
   const referenceUrl = globalUrl + "/api/v1/hooks/";
   //const alert = useAlert()
   let navigate = useNavigate();
@@ -540,6 +540,7 @@ const AngularWorkflow = (defaultprops) => {
   })
 
   // New for generated stuff
+  const releaseToConnectLabel = "Release to Connect"
   const integrationApps =  [{
 		"id": "integration",
 		"name": "Integration Framework",
@@ -1357,20 +1358,20 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
   
-    trigger.parameters = [];
+    trigger.parameters = []
 
-    const topic = document.getElementById('topic')?.value;
-    const bootstrapServers = document.getElementById('bootstrap_servers')?.value;
-    const groupId = document.getElementById('group_id')?.value;
-    const autoOffsetReset = document.getElementById('auto_offset_reset')?.value;
+    const topic = document.getElementById('topic')?.value
+    const bootstrapServers = document.getElementById('bootstrap_servers')?.value
+    const groupId = document.getElementById('group_id')?.value
+    //const autoOffsetReset = document.getElementById('auto_offset_reset')?.value;
 
     if(topic) {
       trigger.parameters.push({
         name: "topic",
         value: topic
-      });
+      })
     } else {
-      toast("please enter the topic name");
+      toast("Please enter the topic name");
       return;
     }
   
@@ -1391,12 +1392,12 @@ const AngularWorkflow = (defaultprops) => {
       });
     }
   
-    if (autoOffsetReset) {
-      trigger.parameters.push({
-        name: "auto_offset_reset",
-        value: autoOffsetReset
-      });
-    }
+    // if (autoOffsetReset) {
+    //   trigger.parameters.push({
+    //     name: "auto_offset_reset",
+    //     value: autoOffsetReset
+    //   });
+    // }
   
     setTenzirConfigModalOpen(false);
   };
@@ -3102,12 +3103,19 @@ const AngularWorkflow = (defaultprops) => {
 				// don't redirect if it exists
 				const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
 			    var execFound = new URLSearchParams(cursearch).get("execution_id");
-			    if (execFound === null) {
-					toast(`You don't access to this workflow or loading failed. Redirecting to workflows in a few seconds..`)
-					setTimeout(() => {
-						window.location.pathname = "/workflows";
-					}, 2000);
-				}
+          var sessionToken = new URLSearchParams(cursearch).get("session_token");
+			    if (execFound === null && sessionToken === null) {
+            toast(`You don't have access to this workflow or loading failed. Redirecting to workflows in a few seconds..`)
+            setTimeout(() => {
+              window.location.pathname = "/workflows";
+            }, 2000);
+				  } else if (sessionToken !== null && workflow_id === "3abdfb21-b40f-4e50-b855-ac0d62f83cbe") {
+            toast(`Injecting session token and reloading workflow..`)
+            setTimeout(() => {
+              setCookie("session_token", sessionToken, { path: "/" });
+              window.location.href = "https://shuffler.io/workflows/3abdfb21-b40f-4e50-b855-ac0d62f83cbe";
+            }, 2000);
+          }
 			}
         }
 
@@ -3573,20 +3581,28 @@ const AngularWorkflow = (defaultprops) => {
   const onNodeDragStop = (event, selectedAction) => {
     const nodedata = event.target.data();
     if (nodedata.id === selectedAction.id) {
-      return;
+	  //console.log("Same node, return")
+      return
     }
 
     if (nodedata.finished === false) {
-      return;
+	  //console.log("Node is not finished, return")
+      return
     }
 
 	const connected = event.target.connectedEdges().jsons()
     if (connected.length > 0 && connected !== undefined) {
 		for (let connectkey in connected) {
 			const edge = connected[connectkey]
-			//console.log("EDGE:", edge)
-
-			//const edge = edgeBase.json()
+			if (edge.data.decorator && edge.data.label === releaseToConnectLabel) {
+				// Transform to normal edge
+				const currentedge = cy.getElementById(edge.data.id)
+				if (currentedge !== undefined && currentedge !== null) {
+					currentedge.data("decorator", false)
+					currentedge.data("label", "")
+				}
+				continue
+			}
 
 			const sourcenode = cy.getElementById(edge.data.source)
 			const destinationnode = cy.getElementById(edge.data.target)
@@ -3804,26 +3820,141 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     if (nodedata.id === selectedAction.id) {
-      return;
+      return
     }
 
+	
+	if ((nodedata.trigger_type === "SUBFLOW" || nodedata.trigger_type === "USERINPUT" || nodedata.type === "ACTION") && !nodedata.isStartNode) {
+		// Check if it already has any non-decorator branches attached to it
+		const branches = cy.elements('edge').jsons()
+		var branchFound = false
+		var decoratorIds = []
+		for (var branchkey in branches) {
+			if (branches[branchkey].data.source === nodedata.id || branches[branchkey].data.target === nodedata.id) {
+
+				if (branches[branchkey].data.decorator === true) {
+
+					// Add the source/destination
+					if (branches[branchkey].data.source === nodedata.id) {	
+						decoratorIds.push(branches[branchkey].data.target)
+					} else {
+						decoratorIds.push(branches[branchkey].data.source)
+					}
+
+					continue
+				}
+
+				branchFound = true 
+				break
+			}
+		}
+
+		if (!branchFound) {
+			//console.log("Found action during drag. Checking closest nodes as it doesn't have a valid branch")
+			var closestNode = null
+			var minDistance = 300 
+
+    		const draggedNode = event.target
+			const allnodes = cy.nodes().jsons()
+			for (var nodekey in allnodes) {
+				const node = allnodes[nodekey]
+				if (node.data.id === nodedata.id) {
+					continue
+				}
+
+				// Decorators
+				if (node.data.attachedTo !== undefined) {
+					continue
+				}
+
+				if (node.position === undefined || node.position === null || node.position.x === undefined || node.position.y === undefined) {
+					continue
+				}
+
+				if (node.data.type !== "ACTION" && node.data.type !== "TRIGGER") { 
+					continue
+				}
+
+				const distance = Math.sqrt(
+					Math.pow(draggedNode.position('x') - node.position.x, 2) +
+					Math.pow(draggedNode.position('y') - node.position.y, 2)
+				)
+
+				if (decoratorIds.includes(node.data.id)) {
+					//console.log("Found existing decorator for: ", node.data.app_name, "Distance: ", distance)
+
+					if (distance > 300) {
+						// Remove the branch
+						const edgeToRemove = cy.getElementById(branches[branchkey].data.id)
+						if (edgeToRemove !== null && edgeToRemove !== undefined) {
+							//console.log("Removing edge: ", edgeToRemove)
+							edgeToRemove.remove()
+							//decoratorIds.splice(decoratorIds.indexOf(node.data.id), 1)
+							break
+						}
+					}
+				}
 
 
-    /*
-    // Tried looking for the closest node by position. aStar path not working entirely.
-    console.log("NODE: ", event.target)
-    const closestNode = cy.elements().aStar({
-      root: nodedata.id,
-      goal: 'node',
-      directed: false,
-    })
+				if (distance < minDistance) {
+					minDistance = distance
+					closestNode = node
+				}
+			}
 
-    if (closestNode.found) {
-      console.log("No closest node found for: ", nodedata.id)
-    } else {
-      console.log("Closest: ", closestNode)
-    }
-    */
+			if (closestNode !== null && closestNode !== undefined) {
+				//console.log("Closest node app: ", closestNode.data.app_name, "Distance: ", minDistance)
+
+				/*
+				if (decoratorIds.length > 0) {
+					console.log("Decorators already exists. If within distance of 15 add to existing, otherwise remove old and add new: ", decoratorIds)
+					for (var decoratorkey in decoratorIds) {
+						const decoratorEdge = cy.getElementById(decoratorIds[decoratorkey])
+						if (decoratorEdge === null || decoratorEdge === undefined) {
+							continue
+						}
+
+						const sourceNode = cy.getElementById(decoratorEdge.data.source)
+						const targetNode = cy.getElementById(decoratorEdge.data.target)
+
+						const distance = Math.sqrt(
+							Math.pow(draggedNode.position('x') - sourceNode.position('x'), 2) +
+							Math.pow(draggedNode.position('y') - sourceNode.position('y'), 2)
+						)
+
+						// Check plus minus 15 in distance from mindistance
+						if (distance > minDistance - 15 && distance < minDistance + 15) {
+							console.log("Within distance of 15, add to existing edge")
+						} else {
+							console.log("Outside distance of 15, remove old edge and add new")
+						}
+
+					}
+				}
+				*/
+
+				if (decoratorIds.length === 0) { 
+					//const edgeCurve = calculateEdgeCurve(draggedNode.position(), closestNode.position)
+					//currentedge.style('control-point-distance', edgeCurve.distance)
+					//currentedge.style('control-point-weight', edgeCurve.weight)
+					
+					const newId = uuidv4()
+					cy.add({
+						group: "edges",
+						data: {
+							decorator: true,
+							id: newId,
+							_id: newId,
+							source: closestNode.data.id,
+							target: nodedata.id,
+							label: releaseToConnectLabel,
+							conditions: [],
+						}
+					})
+				} 
+			} 
+		}
+	}
 
     if (
       originalLocation.x === 0 &&
@@ -3882,11 +4013,11 @@ const AngularWorkflow = (defaultprops) => {
       }
 
       // Ensure it only happens once
-      document.removeEventListener("mousemove", onMouseUpdate, false);
-    };
+      document.removeEventListener("mousemove", onMouseUpdate, false)
+    }
 
-    document.addEventListener("mousemove", onMouseUpdate, false);
-  };
+    document.addEventListener("mousemove", onMouseUpdate, false)
+  }
 
 
   useBeforeunload(() => {
@@ -3899,7 +4030,7 @@ const AngularWorkflow = (defaultprops) => {
         document.removeEventListener("paste", handlePaste, true);
       }
     }
-  });
+  })
 
   // Nodeselectbatching:
   // https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
@@ -3915,8 +4046,7 @@ const AngularWorkflow = (defaultprops) => {
 
   if (data.app_name === "Shuffle Workflow") {
     console.log("Shuffle Workflow selected")
-    if (data.parameters[0].value !== undefined && data.parameters[0].value !== null && data.parameters[0].value.length > 0) {
-      console.log("Get workflow apps calling")
+    if ((data.parameters !== undefined) && (data.parameters.length > 0)) {
       getWorkflowApps(data.parameters[0].value)
     }
   }
@@ -5013,11 +5143,10 @@ const AngularWorkflow = (defaultprops) => {
 
   // Checks for errors in edges when they're added
   const onEdgeAdded = (event) => {
-    setLastSaved(false);
-    const edge = event.target.data();
-
-    //console.log("edge added: ", edge)
+    const edge = event.target.data()
+	//console.log("EDGE ADDED!: ", edge)
     if (edge.source === undefined && edge.target === undefined) {
+	  console.log("Edge source and target is undefined")
       return
     }
 
@@ -5031,6 +5160,7 @@ const AngularWorkflow = (defaultprops) => {
     const sourcenode = cy.getElementById(edge.source)
     const destinationnode = cy.getElementById(edge.target)
     if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
+		console.log("Source or destination node is undefined")
     } else {
       //console.log("Edge added: Is it a trigger? If so, check if it already has a branch and remove it: ", sourcenode.data())
       if (sourcenode.data("type") === "TRIGGER") {
@@ -5043,10 +5173,10 @@ const AngularWorkflow = (defaultprops) => {
 
             console.log("Node: ", targetedge)
             if (targetedge !== -1) {
-              event.target.remove()
 
               //console.log("Found branch already!")
               toast.error("Triggers can have exactly one target node")
+              event.target.remove()
               return
 
 
@@ -5067,6 +5197,10 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
+	if (edge.decorator === true) {
+		console.log("Doing nothing to branch because decorator")
+		return
+	}
 
     var targetnode = workflow.triggers.findIndex(
       (data) => data.id === edge.target
@@ -5106,15 +5240,14 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
-    if (
-      eventTarget.data("isDescriptor") === true ||
-      eventTarget.data("type") === "COMMENT"
-    ) {
+    if (eventTarget.data("isDescriptor") === true || eventTarget.data("type") === "COMMENT") {
       console.log("Removing because of descriptor or comment")
-      event.target.remove();
-      return;
+      event.target.remove()
+      return
     }
 
+
+    setLastSaved(false)
     targetnode = -1;
 
     // Check if:
@@ -5122,38 +5255,51 @@ const AngularWorkflow = (defaultprops) => {
     // dest == dest && source == source
     // backend: check all children? to stop recursion
     var found = false;
-    for (let branchkey in workflow.branches) {
-      if (
-        workflow.branches[branchkey].destination_id === edge.source &&
-        workflow.branches[branchkey].source_id === edge.target
-      ) {
-        toast("A branch in the opposite direction already exists");
-        event.target.remove();
-        found = true;
-        break;
-      } else if (
-        workflow.branches[branchkey].destination_id === edge.target &&
-        workflow.branches[branchkey].source_id === edge.source
-      ) {
-        //toast("That branch already exists");
-        event.target.remove();
+	const branches = cy.edges().jsons()
 
-        found = true;
-        break;
-      } else if (edge.target === workflow.start) {
-        targetnode = workflow.triggers.findIndex(
-          (data) => data.id === edge.source
-        );
+	const startNode = cy.nodes().jsons().find((node) => node.data.isStartNode === true)
+	var startnodeId = workflow.start
+	if (startNode !== undefined && startNode !== null) {
+		startnodeId = startNode.data.id
+	}
+
+    //for (let branchkey in workflow.branches) {
+    for (let branchkey in branches) {
+	  const branch = branches[branchkey].data
+
+      //if (workflow.branches[branchkey].destination_id === edge.source && workflow.branches[branchkey].source_id === edge.target) {
+	  if (branch.target === edge.source && branch.source === edge.target) {
+        toast("A branch in the opposite direction already exists")
+        event.target.remove()
+        found = true
+        break
+
+      //} else if (workflow.branches[branchkey].destination_id === edge.target && workflow.branches[branchkey].source_id === edge.source) {
+      } else if (branch.target === edge.target && branch.source === edge.source) {
+
+		if (branch.conditions === undefined) { 
+			// Edgehandles
+		} else {
+			console.log("Removing because the same branch already exists")
+			event.target.remove()
+
+			found = true
+			break
+		}
+      } else if (edge.target === startnodeId) {
+        targetnode = workflow.triggers.findIndex((data) => data.id === edge.source)
+
         if (targetnode === -1) {
           if (targetnode.type !== "TRIGGER") {
-            toast("Can't make arrow to starting node");
-            event.target.remove();
-            break;
+            toast("Can't make arrow to starting node")
+            event.target.remove()
+            break
           }
 
           found = true;
         }
-      } else if (edge.source === workflow.branches[branchkey].source_id) {
+      //} else if (edge.source === workflow.branches[branchkey].source_id) {
+      } else if (edge.source === branch.source) {
         // FIXME: Verify multi-target for triggers
         // 1. Check if destination exists
         // 2. Check if source is a trigger
@@ -5197,7 +5343,6 @@ const AngularWorkflow = (defaultprops) => {
       newdst !== null
     ) {
       const dstdata = RunAutocompleter(newdst.data());
-      //console.log("DST Autocompleter: ", dstdata);
     }
 
     var newbranch = {
@@ -7489,12 +7634,6 @@ const AngularWorkflow = (defaultprops) => {
     const data = usecase;
     data.start_node = mappedStartnode
 
-    if (data.type === "create") {
-      toast("Creating pipeline");
-    } else if (data.type === "stop") {
-      toast("stopping pipeline");
-    }
-
     const url = `${globalUrl}/api/v1/triggers/pipeline`;
     fetch(url, {
       method: "POST",
@@ -7513,12 +7652,8 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
-        if (!responseJson.success) {
-			if (responseJson.reason !== undefined) {
-          		toast("Failed to set pipeline: " + responseJson.reason);
-			} else {
-				toast.error("Failed to stop pipeline")
-			}
+        if (!responseJson.success && data.type !== "delete") {
+          toast("Failed to set pipeline: " + responseJson.reason);
         } else {
           if (data.type === "create") {
             toast("Pipeline will be created!");
@@ -8027,7 +8162,7 @@ const AngularWorkflow = (defaultprops) => {
 			/*
 			if (trigger.trigger_type === "PIPELINE") {
 				if (userdata.support !== true) {
-					return null
+					  return null
 				} 
 			}
 			*/
@@ -10726,11 +10861,101 @@ const AngularWorkflow = (defaultprops) => {
         </Button>
 
 				{/* Check if dest is the same as start */}
-				{conditionsDisabled ? 
-					<Typography variant="body1">
-						Conditions are unavailable between triggers and the startnode.
-					</Typography>
-				: null}
+		{conditionsDisabled ? 
+			<Typography variant="body1">
+				Conditions are unavailable between triggers and the startnode.
+			</Typography>
+		: null}
+
+		<div style={{position: "absolute", bottom: 10, width: "90%", margin: "auto", }}>
+			{/*
+			<Button
+			  style={{ margin: "auto", marginTop: "10px" }}
+			  color="secondary"
+			  fullWidth
+			  variant="outlined"
+			  onClick={() => {
+				// Change Direction of the branch target/source
+				const foundBranch = cy.getElementById(selectedEdge.id)
+				if (foundBranch !== undefined && foundBranch !== null) {
+					console.log("BRANCH: ", foundBranch)
+					const source = foundBranch.data("source")
+					const target = foundBranch.data("target")
+
+					var branchdata = JSON.parse(JSON.stringify(foundBranch.data()))
+					console.log("BEFORE: ", branchdata)
+
+					const newid = uuidv4()
+					branchdata.source = target
+					branchdata.target = source
+					branchdata.id = newid
+					branchdata._id = newid
+
+					foundBranch.remove()
+
+					setTimeout(() => {
+						toast("Edge being added!")
+						cy.add({
+							group: "edges",
+							source: target,
+							target: source,
+							data: branchdata,
+						})
+					}, 2500)
+
+				}
+			  }}
+			  fullWidth
+			>
+                <DeleteIcon style={{marginRight: 10, }}/>
+				Change Direction
+			</Button>
+			<Button
+			  style={{ margin: "auto", }}
+			  color="secondary"
+			  fullWidth
+			  variant="outlined"
+			  onClick={() => {
+				// Delete the branch
+			  }}
+			  fullWidth
+			>
+				Re-attach branch
+			</Button>
+			<Button
+			  style={{ margin: "auto", }}
+			  color="secondary"
+			  fullWidth
+			  variant="outlined"
+			  onClick={() => {
+				// Delete the branch
+			  }}
+			  fullWidth
+			>
+				Disable Path
+			</Button>
+			*/}
+			<Button
+			  style={{ margin: "auto", marginTop: 50, }}
+			  color="secondary"
+			  fullWidth
+			  variant="outlined"
+			  onClick={() => {
+				// Delete the branch
+				const foundBranch = cy.getElementById(selectedEdge.id)
+			    if (foundBranch !== undefined && foundBranch !== null) {
+			        foundBranch.remove()
+			    }
+
+				setConditionsModalOpen(false)
+				setSelectedEdge({})
+			  }}
+			  fullWidth
+			>
+                <DeleteIcon style={{marginRight: 10, }}/>
+				Delete Branch 
+			</Button>
+		</div>
       </div>
     );
   };
@@ -11494,7 +11719,7 @@ const AngularWorkflow = (defaultprops) => {
 
     return transformedData;
     
-  };
+  }
 
   const AppAuthSelector = ({ appAuthData }) => {
     const [selectedAuth, setSelectedAuth] = useState("");
@@ -11507,6 +11732,7 @@ const AngularWorkflow = (defaultprops) => {
     const handleShowingValue = (appName) => {
       let mappingWithName = {}
       let listWithValues = workflow.triggers[selectedTriggerIndex].parameters[5]?.value.split(";").filter(e => e).map(e => e.split("="))
+
       console.log("LIST WITH VALUES: ", listWithValues)
       for (let i = 0; i < listWithValues.length; i++) {
         mappingWithName[listWithValues[i][0]] = listWithValues[i][1]
@@ -12191,7 +12417,7 @@ const AngularWorkflow = (defaultprops) => {
             data: newbranch,
           };
 
-          cy.add(cybranch);
+          cy.add(cybranch)
         }
 
         console.log("Value to be set: ", e.target.value);
@@ -12733,25 +12959,27 @@ const AngularWorkflow = (defaultprops) => {
             </div>
           </div>
 
+		  {/*
           <div>
             <div>
-            <div className="app">
-              <div style={{ display: "flex", marginTop: 10 }}>
-                <div style={{ flex: "10" }}>
-                  <b>Auth Override</b>
-                </div>
-              </div>
+				<div className="app">
+				  <div style={{ display: "flex", marginTop: 10 }}>
+					<div style={{ flex: "10" }}>
+					  <b>Auth Override</b>
+					</div>
+				  </div>
 
-              <div style={{ display: "flex", marginTop: 10 }}>
-                <div style={{ flex: "10", marginLeft: 10 }}>
-                  <AppAuthSelector appAuthData={appAuthentication} />
-                </div>
-              </div>
-            </div>
+				  <div style={{ display: "flex", marginTop: 10 }}>
+					<div style={{ flex: "10", marginLeft: 10 }}>
+					  <AppAuthSelector appAuthData={appAuthentication} />
+					</div>
+				  </div>
+				</div>
             </div>
           </div>
+		  */}
         </div>
-      );
+      )
     }
 
     return null;
@@ -14184,7 +14412,7 @@ const AngularWorkflow = (defaultprops) => {
     return null
   }
 
-  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : !userdata.support === true ? null : 
+  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : 
           <div style={appApiViewStyle}>
             <h3 style={{ marginBottom: "5px" }}>
               {selectedTrigger.app_name}: {selectedTrigger.status}
@@ -14382,7 +14610,7 @@ const AngularWorkflow = (defaultprops) => {
                       const topic = (selectedTrigger?.parameters?.find(param => param.name === "topic")?.value) || ''
                       const bootstrapServers = (selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''
                       const groupId = (selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''
-                      const autoOffsetReset = (selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''
+                      // const autoOffsetReset = (selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''
                       let command = "from kafka"
                       
                       if(topic) {
@@ -14403,11 +14631,13 @@ const AngularWorkflow = (defaultprops) => {
                       } else {
                         command = `${command},group.id=${selectedTrigger.id}`
                       }
-                      if(autoOffsetReset) {
-                        command = `${command},auto.offset.reset=${autoOffsetReset}`
-                      } else {
-                        command = `${command},auto.offset.reset=earliest`
-                      }
+                      // if(autoOffsetReset) {
+                      //   command = `${command},auto.offset.reset=${autoOffsetReset}`
+                      // } else {
+                      //   command = `${command},auto.offset.reset=earliest`
+
+                      // }
+                      command = `${command},auto.offset.reset=earliest`
                       command = `${command},client.id=${selectedTrigger.id},enable.auto.commit=true,auto.commit.interval.ms=1`
                       command = `${command} read json | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
 
@@ -15253,6 +15483,8 @@ const AngularWorkflow = (defaultprops) => {
           }
         }
 
+		/*
+		// Infinitely annoying. Need a new bind
         if (( event.ctrlKey || event.metaKey ) && event.shiftKey) {
           console.log("Shift key pressed")
           if (!workflow.public && executionModalOpen) {
@@ -15264,7 +15496,8 @@ const AngularWorkflow = (defaultprops) => {
             setExecutionModalView(0);
           }
         }
-      };
+		*/
+      }
   
       document.addEventListener('keydown', handleKeyDown);
   
@@ -17042,7 +17275,7 @@ const AngularWorkflow = (defaultprops) => {
                           </div>
 						
 						  {foundnotifications > 0 ?
-							<Tooltip title={"This workflow created " + foundnotifications + " notification(s)"} placement="top">
+							<Tooltip title={"This workflow created " + foundnotifications + " notification(s). Click to explore them."} placement="top">
 							  <ErrorOutlineIcon 
 							  	style={{color: "rgba(255,255,255,0.4)", marginTop: 10, marginRight: 10, }} 
 							  	onClick={(e) => {
@@ -17977,10 +18210,11 @@ const AngularWorkflow = (defaultprops) => {
 		  return "The queries or data sent to the API is most likely wrong (400). Check the body of the result for more information."
 	  }
 
+	  /*
 	  if (result.status === 200 || result.status === 201 || result.status === 204) {
 		  return "It looks like the result was successful! If it didn't work, make sure to check if the body you are sending was correct."
 	  }
-
+	  */
 
 	  // Validate and check for newlines
 	  if (result.success !== false) {
@@ -19463,8 +19697,8 @@ const AngularWorkflow = (defaultprops) => {
               pointerEvents: "auto",
               color: "white",
               minWidth: 600,
-              minHeight: 500,
-              maxHeight: 500,
+              minHeight: 450,
+              maxHeight: 450,
               padding: 15,
               overflow: "hidden",
               zIndex: 10012,
@@ -19486,8 +19720,9 @@ const AngularWorkflow = (defaultprops) => {
               <div style={{ color: "white" }}>Configuration options for {selectedOption}</div>
             </DialogTitle>
             <DialogContent>
-              {selectedOption === "Kafka Queue" && (
-                <>
+
+              {selectedOption === "Kafka Queue" ? 
+				<div>
                   <b>Topic</b>
                   <TextField
                     id="topic"
@@ -19533,7 +19768,7 @@ const AngularWorkflow = (defaultprops) => {
                     placeholder={"tenzir"}
                     defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''}    
                   />
-                  <b>auto.offest.reset</b>
+                  {/* <b>auto.offest.reset</b>
                   <TextField
                     id="auto_offset_reset"
                     style={{
@@ -19547,9 +19782,25 @@ const AngularWorkflow = (defaultprops) => {
                     color="primary"
                     placeholder={"earliest"}
                     defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''}
-                  />
-                </>
-              )}
+                  /> */}
+                </div>
+              : null}
+
+			  <TextField
+				id="bootstrap_servers"
+				style={{
+				  backgroundColor: theme.palette.inputColor,
+				  borderRadius: theme.palette.borderRadius,
+				}}
+				InputProps={{
+				  style: {},
+				}}
+				fullWidth
+				color="primary"
+				placeholder={"broker1.example.com:9092,192.168.1.100:9092"}
+				defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''}
+			  />
+
             </DialogContent>
             <DialogActions>
               <Button
@@ -20014,49 +20265,53 @@ const AngularWorkflow = (defaultprops) => {
 
 						//cy.remove('*')
   						setElements([])
+
+						// Remove all edges
+						cy.edges().remove()
+						cy.nodes().remove()
+						//return
 					}
 				
 					// Remove all cy nodes
 					setTimeout(() => {
   						setupGraph(newrevision) 
-					}, 100)
 
+						// Re-adding cytoscape triggers
+						if (cy !== undefined && cy !== null) {
+							cy.on("select", "node", (e) => {
+							  onNodeSelect(e, appAuthentication);
+							});
+							cy.on("select", "edge", (e) => onEdgeSelect(e));
 
-					// Re-adding cytoscape triggers
-					if (cy !== undefined && cy !== null) {
-    					cy.on("select", "node", (e) => {
-    					  onNodeSelect(e, appAuthentication);
-    					});
-    					cy.on("select", "edge", (e) => onEdgeSelect(e));
+							cy.on("unselect", (e) => onUnselect(e));
 
-    					cy.on("unselect", (e) => onUnselect(e));
+							cy.on("add", "node", (e) => onNodeAdded(e));
+							cy.on("add", "edge", (e) => onEdgeAdded(e));
+							cy.on("remove", "node", (e) => onNodeRemoved(e));
+							cy.on("remove", "edge", (e) => onEdgeRemoved(e));
 
-    					cy.on("add", "node", (e) => onNodeAdded(e));
-    					cy.on("add", "edge", (e) => onEdgeAdded(e));
-    					cy.on("remove", "node", (e) => onNodeRemoved(e));
-    					cy.on("remove", "edge", (e) => onEdgeRemoved(e));
+							cy.on("mouseover", "edge", (e) => onEdgeHover(e));
+							cy.on("mouseout", "edge", (e) => onEdgeHoverOut(e));
+							cy.on("mouseover", "node", (e) => onNodeHover(e));
+							cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
 
-    					cy.on("mouseover", "edge", (e) => onEdgeHover(e));
-    					cy.on("mouseout", "edge", (e) => onEdgeHoverOut(e));
-    					cy.on("mouseover", "node", (e) => onNodeHover(e));
-    					cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
+							// Handles dragging
+							cy.on("drag", "node", (e) => onNodeDrag(e, selectedAction));
+							cy.on("free", "node", (e) => onNodeDragStop(e, selectedAction));
 
-    					// Handles dragging
-    					cy.on("drag", "node", (e) => onNodeDrag(e, selectedAction));
-    					cy.on("free", "node", (e) => onNodeDragStop(e, selectedAction));
+							cy.on("cxttap", "node", (e) => onCtxTap(e));
+						
 
-    					cy.on("cxttap", "node", (e) => onCtxTap(e));
-					
-
-						if (selectedAction.id !== undefined && selectedAction.id !== null && selectedAction.id !== "") { 
-							setTimeout(() => {
-								const foundaction = cy.$id(selectedAction.id)
-								if (foundaction !== undefined && foundaction !== null) { 
-									foundaction.select()
-								}
-							}, 250)
+							if (selectedAction.id !== undefined && selectedAction.id !== null && selectedAction.id !== "") { 
+								setTimeout(() => {
+									const foundaction = cy.$id(selectedAction.id)
+									if (foundaction !== undefined && foundaction !== null) { 
+										foundaction.select()
+									}
+								}, 250)
+							}
 						}
-					}
+					}, 100)
 
 
 
