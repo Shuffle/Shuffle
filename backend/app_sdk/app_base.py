@@ -928,7 +928,7 @@ class AppBase:
         #self.action = action
 
         loopnames = []
-        #self.logger.info(f"Baseparams to check!!: {baseparams}")
+        self.logger.info(f"Baseparams to check: {baseparams}")
         for key, value in baseparams.items():
             check_value = ""
             for param in self.original_action["parameters"]:
@@ -991,51 +991,71 @@ class AppBase:
                         except:
                             pass
 
-            #self.logger.info(f"MERGE: {should_merge}")
+            #self.logger.info(f"VALUE LENGTH: {len(value)}")
             if isinstance(value, list):
+                #subvalue = []
+                # Override for single vs multi items
+                #if len(value) > 0:
+                #    if isinstance(value[0], list) and len(value[0]) == 1:
+                #        subvalue = value[0]
+
+                #    subvalue = value[0]
+
+
                 if len(value) <= 1:
+                    # FIXME: This broke some shit for a single item fml
+                    # Necessary as override again :(
                     if len(value) == 1:
                         baseparams[key] = value[0]
 
                     #if "#" in check_value:
                     #    should_merge = True
                 else:
+                    #if len(value) > 1:
                     if not should_merge: 
                         self.logger.info("[DEBUG] Adding WITHOUT looping list")
                     else:
                         if len(value) not in listlengths:
                             listlengths.append(len(value))
+                        #listlength
 
                         listitems.append(
                             {
                                 key: len(value)
                             }
                         )
-                    
+                        
                 all_list_keys.append(key)
                 all_lists.append(baseparams[key])
             else:
                 #self.logger.info(f"{value} is not a list")
                 pass
 
-        self.logger.info("[DEBUG] Listlengths: %s" % listlengths)
+        self.logger.info("[DEBUG] Listlengths: %s - listitems: %d" % (listlengths, len(listitems)))
+        #if len(listitems) == 0:
         if len(listlengths) == 0:
             self.logger.info("[DEBUG] NO multiplier. Running a single iteration.")
             paramlist.append(baseparams)
+
+        #elif len(listitems) == 1:
         elif len(listlengths) == 1:
+            self.logger.info("All subitems are the same length")
+
             for item in listitems:
                 # This loops should always be length 1
                 for key, value in item.items():
-                    if isinstance(value, int):
-                        if len(paramlist) == value:
-                            for subloop in range(value):
-                                baseitem = copy.deepcopy(baseparams)
-                                paramlist[subloop][key] = baseparams[key][subloop]
-                        else:
-                            for subloop in range(value):
-                                baseitem = copy.deepcopy(baseparams)
-                                baseitem[key] = baseparams[key][subloop]
-                                paramlist.append(baseitem)
+                    if not isinstance(value, int):
+                        continue
+
+                    if len(paramlist) == value:
+                        for subloop in range(value):
+                            baseitem = copy.deepcopy(baseparams)
+                            paramlist[subloop][key] = baseparams[key][subloop]
+                    else:
+                        for subloop in range(value):
+                            baseitem = copy.deepcopy(baseparams)
+                            baseitem[key] = baseparams[key][subloop]
+                            paramlist.append(baseitem)
                 
         else:
             newlength = 1
@@ -1046,10 +1066,14 @@ class AppBase:
             self.logger.info("[DEBUG] Newlength of array: %d. Lists: %s" % (newlength, all_lists))
             # Get the cartesian product of the arrays
             #cartesian = await self.cartesian_product(all_lists)
-            cartesian = self.cartesian_product(all_lists)
-            newlist = []
-            for item in cartesian:
-                newlist.append(list(item))
+            try:
+                cartesian = self.cartesian_product(all_lists)
+                newlist = []
+                for item in cartesian:
+                    newlist.append(list(item))
+            except Exception as e:
+                self.logger.info(f"[ERROR] Error in cartesian product: {e}")
+                newlist = []
 
             newobject = {}
             for subitem in range(len(newlist)):
@@ -1059,7 +1083,7 @@ class AppBase:
 
                 paramlist.append(baseitem)
 
-            #self.logger.info("PARAMLIST: %s" % paramlist)
+            self.logger.info("CARTESIAN PARAMLIST: %s" % paramlist)
 
             #newlist[subitem[0]]
             #if len(newlist) > 0:
@@ -1070,14 +1094,14 @@ class AppBase:
             #self.logger.info("Listlengths: %s" % listlengths)
             #paramlist = [baseparams]
 
-        #self.logger.info("[INFO] Return paramlist: %s" % paramlist)
+        #self.logger.info("[INFO] Return paramlist (1): %s" % paramlist)
         return paramlist
             
 
     # Runs recursed versions with inner loops and such 
     #async def run_recursed_items(self, func, baseparams, loop_wrapper):
     def run_recursed_items(self, func, baseparams, loop_wrapper):
-        #self.logger.info(f"RECURSED ITEMS: {baseparams}")
+        self.logger.info(f"PRE RECURSED ITEMS: {baseparams}")
         has_loop = False
 
         newparams = {}
@@ -1085,29 +1109,30 @@ class AppBase:
             if isinstance(value, list) and len(value) > 0:
                 self.logger.info(f"[DEBUG] In list check for {key}")
 
-                try:
-                    # Added skip for body (OpenAPI) which uses data= in requests
-                    # Can be screwed up if they name theirs body too 
-                    if key != "body":
-                        value[0] = json.loads(value[0])
-                except json.decoder.JSONDecodeError as e:
-                    pass
-                except TypeError as e:
-                    pass
+                for value_index in range(len(value)):
+                    try:
+                        # Added skip for body (OpenAPI) which uses data= in requests
+                        # Can be screwed up if they name theirs body too 
+                        if key != "body":
+                            value[value_index] = json.loads(value[value_index])
+                    except json.decoder.JSONDecodeError as e:
+                        pass
+                    except TypeError as e:
+                        pass
 
             try:
-                if isinstance(value, list) and len(value) == 1 and isinstance(value[0], list):
-                    try:
-                        loop_wrapper[key] += 1
-                    except Exception as e:
-                        self.logger.info("[WARNING] Exception in loop wrapper: {e}")
-                        loop_wrapper[key] = 1
+                #if isinstance(value, list) and len(value) == 1 and isinstance(value[0], list):
+                #    try:
+                #        loop_wrapper[key] += 1
+                #    except Exception as e:
+                #        self.logger.info(f"[WARNING] Exception in loop wrapper: {e}")
+                #        loop_wrapper[key] = 1
 
-                    newparams[key] = value[0]
-                    has_loop = True 
-                else:
+                #    newparams[key] = value[0]
+                #    has_loop = True 
+                #else:
                     #self.logger.info(f"Key {key} is NOT a list within a list. Value: {value}")
-                    newparams[key] = value
+                newparams[key] = value
             except Exception as e:
                 self.logger.info(f"[WARNING] Error in baseparams list: {e}")
                 newparams[key] = value
@@ -1119,19 +1144,18 @@ class AppBase:
             #ret = await self.run_recursed_items(func, newparams, loop_wrapper)
             ret = self.run_recursed_items(func, newparams, loop_wrapper)
         else:
-            #self.logger.info(f"[DEBUG] Should run multiplier check with params (inner): {newparams}")
-            self.logger.info(f"[DEBUG] Should run multiplier check with params (inner)")
+            self.logger.info(f"[DEBUG] Should run multiplier check with params (inner): {newparams}")
+            #self.logger.info(f"[DEBUG] Should run multiplier check with params (inner)")
+
             # 1. Find the loops that are required and create new multipliers
             # If here: check for multipliers within this scope.
             ret = []
-            #param_multiplier = await self.get_param_multipliers(newparams)
             param_multiplier = self.get_param_multipliers(newparams)
 
             #self.logger.info("PARAM MULTIPLIER: %s" % param_multiplier)
 
             # FIXME: This does a deduplication of the data
             new_params = self.validate_unique_fields(param_multiplier)
-            #self.logger.info(f"NEW PARAMS: {new_params}")
             if len(new_params) == 0:
                 self.logger.info("[WARNING] SHOULD STOP MULTI-EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
                 self.action_result = {
@@ -1151,8 +1175,9 @@ class AppBase:
                     return
             else:
                 #subparams = new_params
-                #self.logger.info(f"NEW PARAMS: {new_params}")
                 param_multiplier = new_params
+
+            #self.logger.info(f"NEW PARAM MULTIPLIER: {param_multiplier}")
 
             #if isinstance(new_params, list) and len(new_params) == 1:
             #    params = new_params[0]
@@ -1205,7 +1230,8 @@ class AppBase:
 
                     tmp = json.dumps({
                         "success": False,
-                        "reason": f"An error occured during execution: {e}",
+                        "reason": f"An error occured during the App Function Run (not Shuffle)",
+                        "details": f"{e}",
                     })
 
 
@@ -1255,7 +1281,7 @@ class AppBase:
                 #else:
                 ret.append(new_value)
 
-            self.logger.info("[INFO] Ret length: %d" % len(ret))
+            self.logger.info("[INFO] Function return length: %d" % len(ret))
             if len(ret) == 1:
                 #ret = ret[0]
                 self.logger.info("[DEBUG] DONT make list of 1 into 0!!")
@@ -1953,11 +1979,11 @@ class AppBase:
                     try:
                         #self.logger.info(f"[WARNING] INITIAL Parsing bug for length in app sdk: {e}")
                         # data = data.replace("\'", "\"")
-                        data = data.replace("True", "true")
-                        data = data.replace("False", "false")
-                        data = data.replace("None", "null")
-                        data = data.replace("\"", "\\\"")
-                        data = data.replace("'", "\"")
+                        data = data.replace("True", "true", -1)
+                        data = data.replace("False", "false", -1)
+                        data = data.replace("None", "null", -1)
+                        data = data.replace("\"", "\\\"", -1)
+                        data = data.replace("'", "\"", -1)
 
                         tmp_len = json.loads(data, parse_float=str, parse_int=str, parse_constant=str)
                     except (NameError, KeyError, TypeError, json.decoder.JSONDecodeError) as e:
@@ -2037,10 +2063,9 @@ class AppBase:
 
                     # if result is a string then parse else return
                     if isinstance(inner_result, str):
-                        parse_string = parse_string.replace(f"{custom_casting[0]}({c_parentheses})", inner_result)
+                        parse_string = parse_string.replace(f"{custom_casting[0]}({c_parentheses})", inner_result, 1)
                     elif isinstance(inner_result, list):
-                        parse_string = parse_string.replace(f"{custom_casting[0]}({c_parentheses})",
-                                                            json.dumps(inner_result))
+                        parse_string = parse_string.replace(f"{custom_casting[0]}({c_parentheses})", json.dumps(inner_result), 1)
                     else:
                         parse_string = inner_result
                         break
@@ -3432,6 +3457,7 @@ class AppBase:
                                 
                             # Loops in general goes in here to be parsed out as one->multi
                             if len(actualitem) > 0:
+                                self.logger.info(f"[INFO] Found {len(actualitem)} items in {parameter['name']}. MULTI EXEC.")
                                 multiexecution = True
 
                                 handled = False
@@ -3612,10 +3638,12 @@ class AppBase:
                         #self.logger.info()
                         
                         if not multiexecution:
+                            self.logger.info("NOT MULTI EXEC")
                             # Runs a single iteration here
                             new_params = self.validate_unique_fields(params)
                             if isinstance(new_params, list) and len(new_params) == 1:
                                 params = new_params[0]
+                                #params = new_params
                             else:
                                 #self.logger.info("[WARNING] SHOULD STOP EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
                                 self.action_result["status"] = "SKIPPED"
@@ -3663,7 +3691,7 @@ class AppBase:
                                     newres = {
                                         "success": False,
                                         "reason": "Iteration count more than 10. This happens if the input to the action is wrong. Try remaking the action, and contact support@shuffler.io if this persists.", 
-                                        "details": found_error,
+                                        "details": f"{found_error}",
                                     }
                                     break
 
@@ -3897,7 +3925,7 @@ class AppBase:
                     self.action_result["result"] = json.dumps({
                         "success": False, 
                         "reason": f"Typeerror. Most likely due to a list that should've been a string. See details for more info.",
-                        "details": e,
+                        "details": f"{e}",
                     })
                     #self.action_result["result"] = "TypeError: %s" % str(e)
             else:
@@ -3925,7 +3953,7 @@ class AppBase:
                 self.action_result["result"] = json.dumps({
                     "success": False, 
                     "reason": f"Request error - failing silently. Details in detail section",
-                    "details": e,
+                    "details": f"{e}",
                 })
             except json.decoder.JSONDecodeError as e:
                 self.action_result["result"] = f"Request error: {e}"
@@ -3942,7 +3970,7 @@ class AppBase:
             self.action_result["result"] = json.dumps({
                 "success": False,
                 "reason": f"General exception in the app. See shuffle action logs for more details.",
-                "details": e,
+                "details": f"{e}",
             })
 
         # Send the result :)

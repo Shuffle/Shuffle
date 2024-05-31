@@ -621,7 +621,7 @@ const ParsedAction = (props) => {
 			var helperText = ""
 			var looperText = ""
 			//const found = input_data.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
-			var found = input_data.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+			var found = input_data.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_@-]+\.?){1}([a-zA-Z0-9#_@-]+\.?){0,}/g)
 
 			if (found !== null && found !== undefined) {
 				var new_occurences = []

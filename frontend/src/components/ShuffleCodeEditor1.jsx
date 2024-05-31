@@ -580,12 +580,12 @@ const CodeEditor = (props) => {
 
 		// var session = localcodedata.getSession();
 		//var code_lines = localcodedata.split('\n')
-		var code_lines = value.split('\n')
 
         var newMarkers = []
+		var code_lines = value.split('\n')
 		for (var i = 0; i < code_lines.length; i++) {
-			var current_code_line = code_lines[i];
-			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g);
+			var current_code_line = code_lines[i]
+			var variable_occurence = current_code_line.match(/[\\]{0,1}[$]{1}([a-zA-Z0-9_@-]+\.?){1}([a-zA-Z0-9#_@-]+\.?){0,}/g);
 	
 			if (!variable_occurence) {
 				continue;
@@ -623,15 +623,26 @@ const CodeEditor = (props) => {
 
                     var startCh = dollar_occurence[occ]
                     var endCh = dollar_occurence[occ] + dollar_occurence_len[occ]
-
-                    newMarkers.push({
-                        startRow: i,
-                        startCol: startCh,
-                        endRow: i,
-                        endCol: endCh,
-                        className: correctVariable ? "good-marker" : "bad-marker",
-                        type: "text",
-					})
+					try {
+						newMarkers.push({
+							startRow: i,
+							startCol: startCh,
+							endRow: i+1,
+							endCol: endCh+1,
+							className: correctVariable ? "good-marker" : "bad-marker",
+							type: "text",
+						})
+					} catch (e) {
+						console.log("Error in color highlighting: ", e);
+						newMarkers.push({
+							startRow: i,
+							startCol: startCh,
+							endRow: i,
+							endCol: endCh,
+							className: correctVariable ? "good-marker" : "bad-marker",
+							type: "text",
+						})
+					}
 				
 					setMarkers(newMarkers)
                 }
@@ -643,7 +654,7 @@ const CodeEditor = (props) => {
 		}
         
 		setMarkers(newMarkers)
-	};
+	}
 
 	const replaceVariables = (swapVariable) => {
 		// var updatedCode = localcodedata.slice(0,index) + "$" + str + localcodedata.slice(index+currentVariable.length+1,)
@@ -686,7 +697,7 @@ const CodeEditor = (props) => {
 
 	const expectedOutput = (input) => {
 		//const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
-		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+		const found = input.match(/[$]{1}([a-zA-Z0-9_@-]+\.?){1}([a-zA-Z0-9#_@-]+\.?){0,}/g)
 
 		// Whelp this is inefficient af. Single loop pls
 		// When the found array is empty.
@@ -1450,32 +1461,9 @@ const CodeEditor = (props) => {
 
 					<IconButton
 						style={{
-							marginLeft: isMobile ? "80%" : 30, 
 							height: 50, 
 							width: 50, 
-						}}
-						onClick={() => {
-							
-						}}
-					>
-						<Tooltip
-							color="primary"
-							title={"Test Liquid in the playground"}
-							placement="top"
-						>
-							<a 
-								href="https://pwwang.github.io/liquidpy/playground/"
-								rel="norefferer"
-			  target="_blank"
-							>
-								<ExtensionIcon style={{color: "rgba(255,255,255,0.7)"}}/>
-							</a>
-						</Tooltip>
-					</IconButton>
-					<IconButton
-						style={{
-							height: 50, 
-							width: 50, 
+							marginLeft: 100, 
 						}}
 						disabled={isAiLoading}
 						onClick={() => {
@@ -1536,7 +1524,7 @@ const CodeEditor = (props) => {
 							setCurrentLine(cursorPosition.row)
 							findIndex(cursorPosition.row, cursorPosition.column)
 
-							highlight_variables(localcodedata)
+							//highlight_variables(localcodedata)
 							//console.log("VALUE CURSOR: ", value)
 						}}
 						onChange={(value, editor) => {

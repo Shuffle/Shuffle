@@ -18,6 +18,7 @@ import {
   ButtonBase,
   Tooltip,
   Select,
+  Autocomplete,
   MenuItem,
   Divider,
   Dialog,
@@ -296,7 +297,17 @@ const AuthenticationOauth2 = (props) => {
 	}
 
 
-  const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent, prompt) => {
+  const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent, prompt, skipScopeReplace) => {
+
+	  console.log("SKIP SCOPE: ", skipScopeReplace)
+	  if (skipScopeReplace === false || skipScopeReplace === undefined) {
+
+		  console.log("Selected scopes: ", selectedScopes)
+		  if (selectedScopes !== undefined && selectedScopes !== null && selectedScopes.length > 0) {
+			  toast("Using your scopes instead of the default ones")
+			  scopes = selectedScopes
+		  }
+	  }
 
 	  if ((authenticationType.redirect_uri === undefined || authenticationType.redirect_uri === null || authenticationType.redirect_uri.length === 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) {
 		  console.log("No redirect URI found, and token URI found. Assuming client credentials flow and saving directly in the database")
@@ -335,6 +346,7 @@ const AuthenticationOauth2 = (props) => {
 			"key": "token_uri",
 			"value": tokenUri,
 		}]
+
 
 		if (authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0) {
 			if (authenticationType.grant_type === "client_credentials") {
@@ -502,6 +514,8 @@ const AuthenticationOauth2 = (props) => {
 		  	getAppAuthentication(true, true, true);
 		  }
 
+		  toast("Authentication successful!")
+
 		  // This is more a guess than anything
 		  // Should be handled in getAppAuthentication()
 		  // in the parent component to make it accurate,
@@ -635,9 +649,7 @@ const AuthenticationOauth2 = (props) => {
   };
 
   const handleScopeChange = (event) => {
-    const {
-      target: { value },
-    } = event;
+    const {target: { value }} = event;
 
     console.log("VALUE: ", value);
 
@@ -972,13 +984,13 @@ const AuthenticationOauth2 = (props) => {
 			}
 
             {allscopes === undefined || allscopes === null || allscopes.length === 0 ? null : "Scopes (access rights)"}
+
             {allscopes === undefined || allscopes === null || allscopes.length === 0 ? null : (
 							<div style={{width: "100%", marginTop: 10, display: "flex"}}>
 								<span>
-									<Select
+									<Autocomplete
 										multiple
 										underline={false}
-										value={selectedScopes}
 										label="Scopes"
 										style={{
 											backgroundColor: theme.palette.inputColor,
@@ -987,23 +999,28 @@ const AuthenticationOauth2 = (props) => {
 											minWidth: 300,
 											maxWidth: 300,
 										}}
-										onChange={(e) => {
-											handleScopeChange(e)
+                  						onChange={(e, value) => {
+											//handleScopeChange(e)
+    										setSelectedScopes(typeof value === "string" ? value.split(",") : value);
 										}}
 										fullWidth
 										input={<Input id="select-multiple-native" />}
-										renderValue={(selected) => selected.join(", ")}
 										MenuProps={MenuProps}
-									>
-										{allscopes.map((data, index) => {
+										options={allscopes}
+				      					getOptionLabel={(option) => option}
+									    renderInput={(params) => {
 											return (
-												<MenuItem key={index} value={data}>
-													<Checkbox checked={selectedScopes.indexOf(data) > -1} />
-													<ListItemText primary={data} />
-												</MenuItem>
-											);
-										})}
-									</Select>
+												<div>
+													{/*<Checkbox checked={selectedScopes.indexOf(data) > -1} />*/}
+													<TextField
+													  {...params}
+													  label="Search Scopes"
+													  variant="outlined"
+													/>
+												</div>
+											)
+										}}
+									/>
 								</span>
 
 								{((authenticationType.redirect_uri === undefined || authenticationType.redirect_uri === null || authenticationType.redirect_uri.length === 0) && (authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0)) ? null : 
@@ -1039,7 +1056,7 @@ const AuthenticationOauth2 = (props) => {
 				"autoClose": 1500,
 			})
 
-            handleOauth2Request(clientId, clientSecret, oauthUrl, selectedScopes);
+            handleOauth2Request(clientId, clientSecret, oauthUrl, selectedScopes, undefined, true);
           }}
           color="primary"
         >

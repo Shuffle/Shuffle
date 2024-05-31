@@ -10,6 +10,8 @@ import theme from '../theme.jsx';
 //import { useAlert
 import { ToastContainer, toast } from "react-toastify" 
 
+//import "./CollapsibleList.css"
+
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import AuthenticationWindow from "../components/AuthenticationWindow.jsx";
 import { base64_decode, appCategories } from "../views/AppCreator.jsx";
@@ -46,8 +48,6 @@ const SetAuthentication = (props) => {
 		document.title = parsedapp.name + " App Auth";
 
 	}
-
-  console.log("App: ", app)
 
   const getApp = (appid) => {
     if (serverside === true) {
@@ -100,7 +100,16 @@ const SetAuthentication = (props) => {
 	useEffect(() => {
 		// Find the ID for the app from the "app_id" query
 		const urlParams = new URLSearchParams(window.location.search);
-		const appid = urlParams.get("app_id");
+		const appid = urlParams.get("app_id")
+		const orgsession = urlParams.get("auth")
+		if (!serverside && orgsession !== null) {
+			// Set the orgsession to be a cookie for __session cookie
+
+			setTimeout(() => {
+				document.cookie = "__session=" + orgsession + "; path=/; max-age=1800"; // Cookie expires in 30 min 
+			}, 1000)
+		}
+
 		if (appid === null) {
 			setLoadFail(
 				<span>
@@ -121,6 +130,12 @@ const SetAuthentication = (props) => {
 		}
 	}, []);
 
+	const [expandedIndex, setExpandedIndex] = useState(null);
+
+	const handleToggle = (index) => {
+	  setExpandedIndex(expandedIndex === index ? null : index);
+	};
+
 	// Handle:
 	// 1. Check for org_id, authentication, and app keys in queries
 	// 2. Load the app auth info from the orgs' apps 
@@ -128,43 +143,90 @@ const SetAuthentication = (props) => {
 	// Make sure to test both private and public apps
 
 	const appname = app.name !== undefined ? app.name : "";
+	const appLink = "/apps/" + app.id || "";
+
+	console.log("App: ", app)
 	
 	return (
 		<div style={{width: 1000, margin: "auto", marginTop: 50, }}>
 			{loadFail !== "" ? 
 				loadFail
 				:
-				<div>
-					<Typography variant="h4" style={{marginBottom: 20,}}>
-						Configure {appname} Authentication
-					</Typography> 
-					{app.authentication === undefined || app.authentication === null || app.authentication.length === 0 ?
-						null 
-						:
-						app.authentication.type === "oauth2" || app.authentication.type === "oauth2-app" ?
-							<AuthenticationOauth2
-								selectedApp={app}
-								selectedAction={{
-									"app_name": app.name,
-									"app_id": app.id,
-									"app_version": app.version,
-									"large_image": app.large_image,
-								}}
-								authenticationType={app.authentication}
-								isCloud={true}
-								authButtonOnly={true}
-								getAppAuthentication={undefined}
-							/>
+				<><div>
+					<Typography variant="h4" style={{ marginBottom: 20, }}>
+						A Shuffle Organization has invited you to: Configure <a href={appLink} target="_blank" style={{ color: '#FF8444', textDecoration: 'none' }}>{appname}</a> Authentication
+					</Typography>
+
+					{/* What does this mean box */}
+					<Typography variant="h6" style={{ marginBottom: 20, }}>
+						What does this mean?
+					</Typography>
+					<Typography variant="body1" style={{ marginBottom: 20, }}>
+						A Shuffle Organization has invited you to configure authentication for this app so that they can use this authentication in one of their workflows.
+					</Typography>
+
+					<Typography variant="h6">
+						Authenticate Here:
+					</Typography>
+
+					<Typography variant="body1" style={{ marginBottom: 20, }}>
+						{app.authentication === undefined || app.authentication === null || app.authentication.length === 0 ?
+							null
 							:
-							<AuthenticationWindow
-								globalUrl={globalUrl}
-								selectedApp={app}
-								authFieldsOnly={true}
-								getAppAuthentication={undefined}
-								appAuthentication={appAuthentication}
-							/>
-					}
+							app.authentication.type === "oauth2" || app.authentication.type === "oauth2-app" ?
+								<AuthenticationOauth2
+									selectedApp={app}
+									selectedAction={{
+										"app_name": app.name,
+										"app_id": app.id,
+										"app_version": app.version,
+										"large_image": app.large_image,
+									}}
+									authenticationType={app.authentication}
+									isCloud={true}
+									authButtonOnly={true}
+									getAppAuthentication={undefined} />
+								:
+								<AuthenticationWindow
+									globalUrl={globalUrl}
+									selectedApp={app}
+									authFieldsOnly={true}
+									getAppAuthentication={undefined}
+									appAuthentication={appAuthentication} />}
+					</Typography>
+
+					<Typography variant="h6" style={{ marginBottom: 20, }}>
+						What can they do with this?
+					</Typography>
+
+					<Typography variant="body1" style={{ marginBottom: 20, }}>
+						You can check the actions they want to use <a href={appLink} target="_blank" style={{ color: '#FF8444', textDecoration: 'none' }}>here</a>.
+					</Typography>
+
+					<Typography variant="body1" style={{ marginBottom: 20, }}>
+						{/* Add a box below */}
+						<div className="collapsible-container">
+							<div className="collapsible-list">
+								{app.actions?.map((item, index) => (
+									<div key={index} className="collapsible-item">
+										<div className="collapsible-label" onClick={() => handleToggle(index)}>
+											{item.label}
+										</div>
+										{expandedIndex === index && (
+											<div className="collapsible-description">
+												{item.description}
+											</div>
+										)}
+									</div>
+								))}
+							</div>
+						</div>
+					</Typography>
 				</div>
+					<>
+					<div style={{ height: 100, }}></div>
+					</>
+			</>
 			}
 		</div>
 	)

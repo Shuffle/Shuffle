@@ -102,6 +102,35 @@ export const CopyToClipboard = (props) => {
     )
 }
 
+export const Paragrah = (props) => {
+    const element = React.createElement(
+        `p`,
+        {},
+        props.children,
+    )
+
+    if (props.children[0] != undefined) {
+        if(typeof props.children[0] === "string") {
+            if (props.children[0].includes('.mp4')) {
+                return (
+                    <div>
+                        <video width="640" height="480" controls>
+                            <source src={`${props.children[0]}`} type="video/mp4" />
+                        </video>
+                    </div>
+                )
+            }
+        }
+    }
+
+
+    return (
+        <div class="sdf">
+            {element}
+        </div>
+    )
+}
+
 export const OuterLink = (props) => {
     if (props.href.includes("http") || props.href.includes("mailto")) {
         return (
@@ -581,8 +610,8 @@ const Docs = (defaultprops) => {
         position: "sticky",
         top: 50,
         paddingTop: "0.25em",
-        minHeight: "93vh",
-        maxHeight: "93vh",
+        minHeight: "95vh",
+        maxHeight: "95vh",
         overflowX: "hidden",
         overflowY: "auto",
         zIndex: 1000,
@@ -901,7 +930,7 @@ const Docs = (defaultprops) => {
             <div style={{ textAlign: "left" }}>
                 <Typography variant="h6" style={headerStyle} >Tutorial</Typography>
                 <Typography variant="body1">
-                    <b>Dive in.</b> Hands-on is the best approach to see how Shuffle can transform your security operations. Our set of tutorials and videos teach you how to build your skills. Check out the <Link to="/docs/getting-started" style={hrefStyle2}>getting started</Link> section to give it a go!
+                    <b>Dive in.</b> Hands-on is the best approach to see how Shuffle can transform your security operations. Our set of tutorials and videos teach you how to build your skills. Check out the <Link to="/docs/getting_started" style={hrefStyle2}>getting started</Link> section to give it a go!
                 </Typography>
 
                 <Typography variant="h6" style={headerStyle}>Why Shuffle?</Typography>
@@ -940,7 +969,8 @@ const Docs = (defaultprops) => {
         h4: Heading,
         h5: Heading,
         h6: Heading,
-        a: OuterLink,
+        a:  OuterLink,
+        p:  Paragrah,
     }
 
 
@@ -1188,7 +1218,7 @@ const Docs = (defaultprops) => {
 
     // Padding and zIndex etc set because of footer in cloud.
     const loadedCheck = (
-        <div style={{ minHeight: 1000, paddingTop: "60px", zIndex: 50000, maxWidth: 1920, minWidth: isMobile ? null : 1366, margin: "auto", }}>
+        <div style={{ minHeight: 1000, zIndex: 50000, maxWidth: 1920, minWidth: isMobile ? null : 1366, margin: "auto", }}>
             <BrowserView>{postDataBrowser}</BrowserView>
             <MobileView>{postDataMobile}</MobileView>
         </div>

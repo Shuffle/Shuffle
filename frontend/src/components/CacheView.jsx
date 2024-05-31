@@ -117,7 +117,7 @@ const CacheView = (props) => {
 
 
     const deleteCache = (orgId, key) => {
-        toast("Attempting to delete Cache");
+        //toast("Attempting to delete Cache");
 
         // method: "DELETE",
 		const method = "POST"

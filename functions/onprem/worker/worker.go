@@ -2456,12 +2456,13 @@ func downloadDockerImageBackend(client *http.Client, imageName string) error {
 		return nil
 	}
 	
-	log.Printf("[DEBUG] Trying to download image %s from backend %s as it doesn't exist. All images: %#v", imageName, baseUrl, downloadedImages)
 	
 	downloadedImages = append(downloadedImages, imageName)
 	
 	data := fmt.Sprintf(`{"name": "%s"}`, imageName)
 	dockerImgUrl := fmt.Sprintf("%s/api/v1/get_docker_image", baseUrl)
+
+	log.Printf("[DEBUG] Trying to download image %s from backend %s as it doesn't exist. Data sent: %#v, All images: %#v", imageName, baseUrl, data, downloadedImages)
 	
 	req, err := http.NewRequest(
 		"POST",

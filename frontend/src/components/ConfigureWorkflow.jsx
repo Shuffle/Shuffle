@@ -477,7 +477,7 @@ const ConfigureWorkflow = (props) => {
 		  setConfigureWorkflowModalOpen(false)
 		}
 
-		setRequiredTriggers(requiredTriggers)
+		//setRequiredTriggers(requiredTriggers)
 		setRequiredVariables(requiredVariables)
 		setRequiredActions(newactions)
 	}

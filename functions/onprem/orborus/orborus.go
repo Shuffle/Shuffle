@@ -693,6 +693,10 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 		env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
 
+		// FIXME: When a service account is used, the account is also mounted in the pod
+		// The volume mount location is: 
+		// /var/run/secrets/kubernetes.io/serviceaccount
+
 		// Look for if there is a default service account in use
 		if len(os.Getenv("KUBERNETES_SERVICE_ACCOUNT")) > 0 {
 			log.Printf("[DEBUG] Using Kubernetes service account %s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT"))
