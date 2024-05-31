@@ -677,7 +677,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
 		}
 
-
 		clientset, _, err := shuffle.GetKubernetesClient()
 		if err != nil {
 			log.Printf("[ERROR] Error getting kubernetes client:", err)
