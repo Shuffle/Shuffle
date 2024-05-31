@@ -48,13 +48,6 @@ import (
 	//"github.com/mackerelio/go-osstat/memory"
 	//"github.com/shirou/gopsutil/cpu"
 
-	//k8s deps
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
-	"path/filepath"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -685,13 +678,13 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 
 
-		clientset, config, err := getKubernetesClient()
+		clientset, config, err := shuffle.GetKubernetesClient()
 		if err != nil {
 			log.Printf("[ERROR] Error getting kubernetes client:", err)
 			return err
 		}
 
-		env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
+		//env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
 
 		// FIXME: When a service account is used, the account is also mounted in the pod
 		// The volume mount location is: 
@@ -1289,46 +1282,8 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 	return newStats
 }
 
-func isRunningInCluster() bool {
-	_, existsHost := os.LookupEnv("KUBERNETES_SERVICE_HOST")
-	_, existsPort := os.LookupEnv("KUBERNETES_SERVICE_PORT")
-	return existsHost && existsPort
-}
 
-func getKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
 
-	config := &rest.Config{}
-	var err error
-
-	if isRunningInCluster() {
-		config, err := rest.InClusterConfig()
-		if err != nil {
-			return nil, config, err
-		}
-
-		clientset, err := kubernetes.NewForConfig(config)
-		if err != nil {
-			return nil, config, err
-		}
-
-		return clientset, config, nil
-
-	} 
-
-	home := homedir.HomeDir()
-	kubeconfigPath := filepath.Join(home, ".kube", "config")
-	config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-	if err != nil {
-		return nil, config, err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, config, err
-	}
-
-	return clientset, config, nil
-}
 
 
 func sendRemoveRequest(client *http.Client, toBeRemoved shuffle.ExecutionRequestWrapper, baseUrl, environment, auth, org string, sleepTime int) error {
@@ -1404,7 +1359,7 @@ func main() {
 	//defer cleanup()
 
 	// Block until a signal is received
-	if isRunningInCluster() {
+	if shuffle.IsRunningInCluster() {
 		log.Printf("[INFO] Running inside k8s cluster")
 	}
 
@@ -2615,7 +2570,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 
 		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
 
-		clientset, _, err := getKubernetesClient()
+		clientset, _, err := shuffle.GetKubernetesClient()
 		if err != nil {
 			log.Printf("[ERROR] Failed getting kubernetes client: %s", err)
 			return 0

@@ -4,6 +4,8 @@ go 1.22.0
 
 toolchain go1.22.2
 
+replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
+
 require (
 	github.com/docker/docker v26.1.0+incompatible
 	github.com/docker/go-connections v0.5.0
