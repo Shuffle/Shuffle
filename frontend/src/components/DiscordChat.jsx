@@ -75,6 +75,11 @@ const DiscordChat = props => {
                         fullWidth
                         value={currentRefinement}
                         onChange={(event) => refine(event.currentTarget.value)}
+                        onKeyDown={(event) => {
+                            if(event.key === "Enter") {
+                                event.preventDefault();
+                            }
+                        }}
                         placeholder="Search Discord Chats"
                         style={{ backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%", }}
                         InputProps={{
