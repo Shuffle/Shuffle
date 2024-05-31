@@ -2981,7 +2981,7 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 func main() {
 	// Elasticsearch necessary to ensure we'ren ot running with Datastore configurations for minimal/maximal data sizes
 	// Recursive import kind of :)
-	_, err := shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), "", "worker", true, "elasticsearch")
+	_, err := shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), "", "worker", true, "elasticsearch", false, 0)
 	if err != nil {
 		if !strings.Contains(fmt.Sprintf("%s", err), "no such host") {
 			log.Printf("[ERROR] Failed to run worker init: %s", err)

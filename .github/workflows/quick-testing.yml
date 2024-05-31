@@ -1,0 +1,135 @@
+name: Docker Compose Up and Ping
+
+on:
+  workflow_run:
+    workflows: ["dockerbuild"]
+    types:
+      - completed
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        architecture: [x64, arm64]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Set up opensearch directory
+      run: mkdir shuffle-database && chmod -R 777 shuffle-database
+
+    - name: Build the stack
+      run: docker-compose up -d
+
+    - name: Wait for 30 seconds
+      run: sleep 30
+
+    - name: Check for restarting containers in a loop and fixing perms again 
+      run: |
+        # echo "Changing permissions on shuffle-database directory again"
+        # chmod -R 777 shuffle-database
+
+        ATTEMPTS=30  # Total time = ATTEMPTS * 5 seconds = 30 seconds
+        for i in $(seq 1 $ATTEMPTS); do
+          RESTARTING_CONTAINERS=$(docker ps --filter "status=restarting" --format "{{.Names}}")
+          if [ -n "$RESTARTING_CONTAINERS" ]; then
+            echo "The following containers are restarting:"
+            echo "$RESTARTING_CONTAINERS"
+            exit 1
+          fi
+          echo "No containers are restarting. Attempt $i/$ATTEMPTS."
+          sleep 1
+        done
+        echo "No containers were found in a restarting state after $ATTEMPTS checks."
+
+    - name: Check if the response from the frontend contains the word "Shuffle"
+      run: |
+        RESPONSE=$(curl -s http://localhost:3001)
+        if echo "$RESPONSE" | grep -q "Shuffle"; then
+          echo "The word 'Shuffle' was found in the response."
+        else
+          echo "The word 'Shuffle' was not found in the response."
+          exit 1
+        fi
+
+    - name: Register a user and check the status code
+      run: |
+        MAX_RETRIES=30
+        RETRY_INTERVAL=10
+        CONTAINER_NAME="shuffle-backend"
+
+        for (( i=1; i<=$MAX_RETRIES; i++ ))
+        do
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" 'http://localhost:3001/api/v1/register' \
+            -H 'Accept: */*' \
+            -H 'Accept-Language: en-US,en;q=0.9' \
+            -H 'Connection: keep-alive' \
+            -H 'Content-Type: application/json' \
+            --data-raw '{"username":"demo@demo.io","password":"supercoolpassword"}')
+
+          if [ "$STATUS_CODE" -eq 200 ]; then
+            echo "User registration was successful with status code 200."
+            exit 0
+          elif [ "$STATUS_CODE" -ne 502 ]; then
+            echo "User registration failed with status code $STATUS_CODE."
+            exit 1
+          fi
+
+          echo "Received status code $STATUS_CODE. Retrying in $RETRY_INTERVAL seconds... ($i/$MAX_RETRIES)"
+          echo "Fetching last 30 lines of logs from container $CONTAINER_NAME..."
+
+          logs_output=$(docker logs --tail 30 "$CONTAINER_NAME")
+          echo "$logs_output"
+
+          echo "Fetching last 30 lines of logs from container shuffle-opensearch..."
+
+          opensearch_logs=$(docker logs --tail 30 shuffle-opensearch)
+          echo "$opensearch_logs"
+
+          sleep $RETRY_INTERVAL
+        done
+
+        echo "User registration failed after $MAX_RETRIES attempts."
+        exit 1
+
+    - name: Get the API key and run a health check
+      run: |
+        RESPONSE=$(curl -s -k -u admin:StrongShufflePassword321! 'https://localhost:9200/users/_search')
+        API_KEY=$(echo "$RESPONSE" | jq -r '.hits.hits[0]._source.apikey')
+        if [ -n "$API_KEY" ]; then
+          echo "Admin API key: $API_KEY"
+        else
+          echo "Failed to retrieve the API key for the admin user."
+          exit 1
+        fi
+
+        HEALTH_RESPONSE=$(curl -s 'http://localhost:3001/api/v1/health?force=true' \
+          -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+          -H 'Accept-Language: en-US,en;q=0.9' \
+          -H 'Connection: keep-alive' \
+          -H 'Sec-Fetch-Dest: document' \
+          -H 'Sec-Fetch-Mode: navigate' \
+          -H 'Sec-Fetch-Site: none' \
+          -H "Authorization: Bearer $API_KEY" \
+          -H 'Sec-Fetch-User: ?1' \
+          -H 'Upgrade-Insecure-Requests: 1' \
+          -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' \
+          -H 'sec-ch-ua: "Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"' \
+          -H 'sec-ch-ua-mobile: ?0' \
+          -H 'sec-ch-ua-platform: "macOS"')
+
+        WORKFLOWS_CREATE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.create')
+        WORKFLOWS_RUN=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run')
+        WORKFLOWS_RUN_FINISHED=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_finished')
+        WORKFLOWS_RUN_STATUS=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.run_status')
+        WORKFLOWS_DELETE=$(echo "$HEALTH_RESPONSE" | jq -r '.workflows.delete')
+
+        if [ "$WORKFLOWS_CREATE" = "true" ] && [ "$WORKFLOWS_RUN" = "true" ] && [ "$WORKFLOWS_RUN_FINISHED" = "true" ] && [ "$WORKFLOWS_RUN_STATUS" = "FINISHED" ] && [ "$WORKFLOWS_DELETE" = "true" ]; then
+          echo "Health endpoint check was successful."
+        else
+          echo "Health endpoint check failed. Response did not meet expected criteria."
+          exit 1
+        fi

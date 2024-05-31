@@ -9,6 +9,8 @@ import GettingStarted from "./views/GettingStarted";
 import AngularWorkflow from "./views/AngularWorkflow.jsx";
 
 import Header from "./components/NewHeader.jsx";
+import HealthPage from "./components/HealthPage.jsx";
+
 //import Header from "./components/Header.jsx";
 import theme from "./theme";
 import Apps from "./views/Apps";
@@ -272,6 +274,38 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route
+				exact
+				path="/health"
+				element={
+					<HealthPage
+						cookies={cookies}
+						removeCookie={removeCookie}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						cookies={cookies}
+						userdata={userdata}
+						{...props}
+					/>
+				}
+			/>
+			<Route
+				exact
+				path="/status"
+				element={
+					<HealthPage
+						cookies={cookies}
+						removeCookie={removeCookie}
+						isLoaded={isLoaded}
+						isLoggedIn={isLoggedIn}
+						globalUrl={globalUrl}
+						cookies={cookies}
+						userdata={userdata}
+						{...props}
+					/>
+				}
+			/>
         	{userdata.id !== undefined ? (
         	  <Route
         	    exact

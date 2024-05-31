@@ -299,6 +299,7 @@ const OrgHeaderexpanded = (props) => {
 								client_secret: openidClientSecret,
 								openid_authorization: openidAuthorization,
 								openid_token: openidToken,
+								SSORequired: SSORequired
 							}
 						)
 					}
@@ -310,7 +311,16 @@ const OrgHeaderexpanded = (props) => {
 	);
 
 	const toggleBetweenRequiredOrOptional = (event) => {
-		setSSORequired(event.target.checked);
+		if (ssoEntrypoint === "" && openidAuthorization === "" && openidToken === "") {
+			if (!SSORequired) {
+				toast.error("Please fill in fields for either OpenID connect or SSO before continuing. ")
+				return
+			}
+		} else {
+			toast.info("Toggled SSO. Remember to save.")
+		}
+
+		setSSORequired(event.target.checked)
 	};
 
 	return (
@@ -503,23 +513,26 @@ const OrgHeaderexpanded = (props) => {
 					</span>
 				</Grid>
 				{/* {isCloud ? null : */}
+				<Typography variant="h4" style={{ textAlign: "left", marginTop: 75, marginLeft: 20, }}>Single Signon - SAML/OpenID</Typography>
 				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 20, marginLeft: 10, width: '100%', borderBottom: '1px solid #414347' }}>
+					<Typography variant="body1" style={{ margin: '5px 0px 5px 10px' }}>Make SAML SSO or OpenID Authentication required/optional for your organization. Tip: Do not make it required until you have tested the URL directly.</Typography>
 					<div>
 						<Switch
 							checked={SSORequired}
-							onChange={toggleBetweenRequiredOrOptional}
+							onChange={(e) => {
+								toggleBetweenRequiredOrOptional(e)
+							}}
 							name="onOffSwitch"
 							color="primary"
 							title="Make SAML SSO or OpenID Authentication Required or Optional for Your Organization"
 						/>
 						{SSORequired ? 'Required' : 'Optional'}
 					</div>
-					<Typography variant="body2" style={{ margin: '5px 0px 5px 10px' }}>Make SAML SSO or OpenID Authentication Required or Optional for Your Organization.</Typography>
 				</div>
 				<div>
 				</div>
 				<Grid item xs={12} style={{}}>
-					<Typography variant="h4" style={{ textAlign: "center", }}>OpenID connect</Typography>
+					<Typography variant="h6" style={{ textAlign: "left", }}>OpenID connect</Typography>
 					<Grid container style={{ marginTop: 10, }}>
 						<Grid item xs={6} style={{}}>
 							<span>
@@ -536,11 +549,6 @@ const OrgHeaderexpanded = (props) => {
 									type="name"
 									multiline={true}
 									rows={2}
-									disabled={
-										selectedOrganization.manager_orgs !== undefined &&
-										selectedOrganization.manager_orgs !== null &&
-										selectedOrganization.manager_orgs.length > 0
-									}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
@@ -575,11 +583,6 @@ const OrgHeaderexpanded = (props) => {
 									type="name"
 									multiline={true}
 									rows={2}
-									disabled={
-										selectedOrganization.manager_orgs !== undefined &&
-										selectedOrganization.manager_orgs !== null &&
-										selectedOrganization.manager_orgs.length > 0
-									}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
@@ -691,11 +694,6 @@ const OrgHeaderexpanded = (props) => {
 									type="name"
 									multiline={true}
 									rows={2}
-									disabled={
-										selectedOrganization.manager_orgs !== undefined &&
-										selectedOrganization.manager_orgs !== null &&
-										selectedOrganization.manager_orgs.length > 0
-									}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
