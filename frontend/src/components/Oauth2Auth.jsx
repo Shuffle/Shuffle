@@ -514,6 +514,8 @@ const AuthenticationOauth2 = (props) => {
 		  	getAppAuthentication(true, true, true);
 		  }
 
+		  toast("Authentication successful!")
+
 		  // This is more a guess than anything
 		  // Should be handled in getAppAuthentication()
 		  // in the parent component to make it accurate,

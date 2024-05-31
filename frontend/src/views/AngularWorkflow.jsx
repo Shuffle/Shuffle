@@ -8182,7 +8182,6 @@ const AngularWorkflow = (defaultprops) => {
 					  borderRadius: theme.palette.borderRadius, 
 					  width: imagesize, 
 					  height: imagesize, 
-					  pointerEvents: "none", 
 					  // Stretch if necessary
 					  objectFit: "cover",
 					  // Center the object
@@ -14938,9 +14937,6 @@ const AngularWorkflow = (defaultprops) => {
     top: isMobile ? 30 : appBarSize + 20,
   }
 
-
-
-
   const TopCytoscapeBar = (props) => {
     if (workflow.public === true) {
       return null
@@ -14956,6 +14952,7 @@ const AngularWorkflow = (defaultprops) => {
       <div style={topBarStyle}>
         <div style={{ 
 			margin: "0px 10px 0px 10px",
+			pointerevents: "none",
 		}}>
           <Breadcrumbs
             aria-label="breadcrumb"
@@ -14980,7 +14977,6 @@ const AngularWorkflow = (defaultprops) => {
             </Link>
             <h2 style={{ 
 				margin: 0,
-				pointerEvents: "none",
 			}}>{workflow.name}</h2>
           </Breadcrumbs>
 
