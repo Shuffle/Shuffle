@@ -4,13 +4,13 @@ go 1.22.0
 
 toolchain go1.22.2
 
-replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
+//replace github.com/shuffle/shuffle-shared => ../../../../shuffle-shared
 
 require (
 	github.com/docker/docker v26.1.0+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.6.29
+	github.com/shuffle/shuffle-shared v0.6.37
 	k8s.io/api v0.30.0
 	k8s.io/apimachinery v0.30.0
 	k8s.io/client-go v0.30.0

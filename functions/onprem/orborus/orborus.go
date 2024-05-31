@@ -678,7 +678,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 
 
-		clientset, config, err := shuffle.GetKubernetesClient()
+		clientset, _, err := shuffle.GetKubernetesClient()
 		if err != nil {
 			log.Printf("[ERROR] Error getting kubernetes client:", err)
 			return err
