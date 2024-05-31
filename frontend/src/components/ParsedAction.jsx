@@ -380,12 +380,13 @@ const ParsedAction = (props) => {
   };
 
 
-    useEffect(() => {
-      if (selectedActionParameters !== undefined && selectedActionParameters !== null
-      ) {
+    useEffect(
+		() => {
+    //   if (selectedActionParameters !== undefined && selectedActionParameters !== null
+    //   ) {
         if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
           setSelectedActionParameters(selectedAction.parameters);
-        }
+        // }
       }
       if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && workflow.workflow_variables !== null && workflow.workflow_variables.length > 0) {
       
@@ -2054,7 +2055,6 @@ const ParsedAction = (props) => {
 
               return (
                 <MenuItem
-									key={index}
                   key={data.Name}
                   style={{
                     backgroundColor: theme.palette.inputColor,
@@ -2776,7 +2776,7 @@ const ParsedAction = (props) => {
             
               placeholder = data.example;
 
-              if (data.name === "url" && data.value !== undefined && data.value !== null && data.value.length > 0) {
+              if (data.name === "url") {
                 data.value = data.example;
               }
 					// In case of data.example
@@ -3149,8 +3149,8 @@ const ParsedAction = (props) => {
                 id={clickedFieldId}
                 rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
                 color="primary"
-                defaultValue={data.value}
-                //value={data.value}
+                // defaultValue={data.value}
+                value={data.value}
                 //options={{
                 //	theme: 'gruvbox-dark',
                 //	keyMap: 'sublime',
