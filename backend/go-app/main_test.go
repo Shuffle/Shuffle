@@ -34,7 +34,7 @@ func init() {
 		log.Fatalf("[DEBUG] Database client error during init: %s", err)
 	}
 
-	_, err = shuffle.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", true, "elasticsearch")
+	_, err = shuffle.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", true, "elasticsearch", false, 0)
 	log.Printf("INIT")
 }
 

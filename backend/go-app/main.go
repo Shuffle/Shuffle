@@ -759,6 +759,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	go shuffle.CheckSessionOrgs(ctx, userInfo)
+
 	//log.Printf("%s  %s", session.Session, UserInfo.Session)
 	//if session.Session != userInfo.Session {
 	//	log.Printf("Session %s is not the same as %s for %s. %s", userInfo.Session, session.Session, userInfo.Username, err)
@@ -4887,7 +4889,7 @@ func initHandlers() {
 	}
 
 	for {
-		_, err = shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), gceProject, "onprem", true, elasticConfig)
+		_, err = shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), gceProject, "onprem", true, elasticConfig, false, 0)
 		if err != nil {
 			log.Printf("[ERROR] Error in initial database connection. Retrying in 5 seconds. %s", err)
 			time.Sleep(5 * time.Second)
@@ -4926,6 +4928,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/getsettings", shuffle.HandleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/updateuser", shuffle.HandleUpdateUser).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/users/{userID}/remove", shuffle.HandleDeleteUsersAccount).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", shuffle.DeleteUser).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{key}/get2fa", shuffle.HandleGet2fa).Methods("GET", "OPTIONS")
