@@ -11,7 +11,7 @@ on:
       - "!docker-compose.yml"
 jobs:
   main:
-    runs-on: ubuntu-nightly
+    runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
