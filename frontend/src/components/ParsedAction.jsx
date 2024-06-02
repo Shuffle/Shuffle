@@ -3149,8 +3149,8 @@ const ParsedAction = (props) => {
                 id={clickedFieldId}
                 rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
                 color="primary"
-                // defaultValue={data.value}
-                value={data.value}
+                defaultValue={data.value}
+                // value={data.value}
                 //options={{
                 //	theme: 'gruvbox-dark',
                 //	keyMap: 'sublime',
