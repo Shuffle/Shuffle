@@ -577,9 +577,8 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		if len(actionResult.ExecutionId) > 0 {
 			log.Printf("[WARNING][%s] Failed getting execution (streamresult): %s", actionResult.ExecutionId, err)
-		} else {
-			log.Printf("[WARNING] Execution ID is empty in stream result")
 		}
+
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
@@ -1058,29 +1057,25 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		}
 	}
 
-	workflowExecution, execInfo, _, workflowExecErr := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
-	if workflowExecErr != nil {
-		err := shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
+	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
+	if err != nil {
+		err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 		if err != nil {
 			log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
 		}
 
-		if strings.Contains(fmt.Sprintf("%s", workflowExecErr), "User Input") {
+		if strings.Contains(fmt.Sprintf("%s", err), "User Input") {
 			// Special for user input callbacks
 			log.Printf("[INFO] User input callback: %s", err)
-			// return workflowExecution, fmt.Sprintf("%s", err), nil
+			return workflowExecution, fmt.Sprintf("%s", err), nil
 		} else {
-			if err == nil && workflowExecErr != nil {
-				err = workflowExecErr
-			}
-
 			log.Printf("[ERROR] Failed in prepareExecution: '%s'", err)
 			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed starting workflow: %s", err), err
 		}
 	}
 
 
-	err := imageCheckBuilder(execInfo.ImageNames)
+	err = imageCheckBuilder(execInfo.ImageNames)
 	if err != nil {
 		log.Printf("[ERROR] Failed building the required images from %#v: %s", execInfo.ImageNames, err)
 		return shuffle.WorkflowExecution{}, "Failed unmarshal during execution", err
@@ -1343,17 +1338,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		}
 	}
 
-	// check if previous result.action.app_name was shuffle-subflow
-	if len(workflowExecution.Results) > 0 {
-		lastResult := workflowExecution.Results[len(workflowExecution.Results)-1]
-		if lastResult.Action.AppName == "shuffle-subflow" {
-			log.Printf("LAST RESULT: %s", lastResult.Action.AppName)
-
-			// newStartnode = "a4b01316-2d6d-4b25-9560-2f5586e1a770"
-		}
-	}
-
-
 	if !startnodeFound {
 		log.Printf("[INFO] Couldn't find startnode %s. Remapping to %#v", workflowExecution.Start, newStartnode)
 
@@ -1363,8 +1347,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode couldn't be found"), errors.New("Startnode isn't defined in this workflow..")
 		}
 	}
-
-	log.Printf("[INFO] Starting execution on %s", workflowExecution.Start)
 
 	childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start, []string{}, []string{})
 
