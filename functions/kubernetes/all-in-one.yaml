@@ -22,6 +22,7 @@ data:
   FRONTEND_PORT_HTTPS: "3443"
   HTTP_PROXY: ""
   HTTPS_PROXY: ""
+  KUBERNETES_NAMESPACE: shuffle
   ORBORUS_CONTAINER_NAME: "\t\t\t\t"
   ORG_ID: Shuffle
   OUTER_HOSTNAME: shuffle-backend
@@ -764,6 +765,11 @@ spec:
               value: "1.40"
             - name: ENVIRONMENT_NAME
               value: Shuffle
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  key: KUBERNETES_NAMESPACE
+                  name: env
             - name: ORG_ID
               value: Shuffle
             - name: SHUFFLE_APP_SDK_VERSION

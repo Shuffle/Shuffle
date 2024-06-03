@@ -455,7 +455,6 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			},
 			Spec: corev1.PodSpec{
 				RestartPolicy: "Never", // As a crash is not useful in this context 
-				DNSPolicy:     "Default",
 				// NodeName:      "worker1"
 				Containers: []corev1.Container{
 					{
