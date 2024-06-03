@@ -1057,17 +1057,17 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		}
 	}
 
-	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
-	if err != nil {
-		err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
+	workflowExecution, execInfo, _, workflowExecErr := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
+	if workflowExecErr != nil {
+		err := shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 		if err != nil {
 			log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
 		}
 
-		if strings.Contains(fmt.Sprintf("%s", err), "User Input") {
+		if strings.Contains(fmt.Sprintf("%s", workflowExecErr), "User Input") {
 			// Special for user input callbacks
-			log.Printf("[INFO] User input callback: %s", err)
-			return workflowExecution, fmt.Sprintf("%s", err), nil
+			log.Printf("[INFO] User input callback: %s", workflowExecErr)
+			// return workflowExecution, fmt.Sprintf("%s", err), nil
 		} else {
 			log.Printf("[ERROR] Failed in prepareExecution: '%s'", err)
 			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed starting workflow: %s", err), err
@@ -1075,7 +1075,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	}
 
 
-	err = imageCheckBuilder(execInfo.ImageNames)
+	err := imageCheckBuilder(execInfo.ImageNames)
 	if err != nil {
 		log.Printf("[ERROR] Failed building the required images from %#v: %s", execInfo.ImageNames, err)
 		return shuffle.WorkflowExecution{}, "Failed unmarshal during execution", err
