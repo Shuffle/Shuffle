@@ -180,9 +180,8 @@ const ParsedAction = (props) => {
 
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
-
   const [autoCompleting, setAutocompleting] = React.useState(false);
-  const [selectedActionParameters, setSelectedActionParameters] = React.useState([]);
+  const [selectedActionParameters, setSelectedActionParameters] = React.useState(selectedAction.parameters);
     const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
     const [actionlist, setActionlist] = React.useState([]);
     const [jsonList, setJsonList] = React.useState([]);
@@ -382,9 +381,12 @@ const ParsedAction = (props) => {
 
     useEffect(
 		() => {
+			console.log("UseEffect Rendered!")
+			console.log("Workflow", workflow)
     //   if (selectedActionParameters !== undefined && selectedActionParameters !== null
     //   ) {
         if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
+			console.log("Setting action parameters!!")
           setSelectedActionParameters(selectedAction.parameters);
         // }
       }
@@ -614,9 +616,13 @@ const ParsedAction = (props) => {
 		}
       }
     },
-	[selectedAction, selectedVariableParameter, workflowExecutions, listCache]);
-
-
+	[selectedAction,selectedApp,setNewSelectedAction]	
+	);
+		console.log("selectedActionParameters: ", selectedActionParameters)
+		console.log("selectedApp:", selectedApp)
+		console.log("selectedAction: ", selectedAction)
+		console.log("ACTIONLIST: ", actionlist)
+		console.log("selectedVariableParameter", selectedVariableParameter)
 		const calculateHelpertext = (input_data) => {
 			var helperText = ""
 			var looperText = ""
@@ -1184,7 +1190,7 @@ const ParsedAction = (props) => {
 	}
 
     // FIXME: Issue #40 - selectedActionParameters not reset
-
+	if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
 	  var wrapperapp = {
 	  	"id": "",
 	  	"name": "noapp",
@@ -1210,15 +1216,16 @@ const ParsedAction = (props) => {
 
       var authWritten = false;
 	  var noAppSelected = false 
-	  const paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
+	  var paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
 	  if (paramIndex === -1 || selectedAction.parameters[paramIndex].value === "" || selectedAction.parameters[paramIndex].value === "noapp") {
 	  	// Check the actual value and if it's the same
 	  	noAppSelected = true
 	  }
+	}
 
 
 	const ActionSelectOption = (actionprops) => {
-		const { data, newActionname, newActiondescription, useIcon, extraDescription, } = actionprops;
+		const { option, newActionname, newActiondescription, useIcon, extraDescription, } = actionprops;
   		const [hover, setHover] = React.useState(false);
 
 		return (
@@ -1234,18 +1241,20 @@ const ParsedAction = (props) => {
 					paddingBottom: 4,
 					backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor,
 				}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-				onClick={() => {
+				onClick={(event) => {
+					// event.preventDefault()
 					//setSelectedAction(actionprops)
 					//setShowActionList(false)
 					//setUpdate(Math.random())
 					//
-					if (data !== undefined && data !== null) { 
+					if (option !== undefined && option !== null) { 
                 		setNewSelectedAction({ 
 							target: { 
-								value: data.name 
+								value: option.name 
 							} 
 						});
               		}
+					  document.activeElement.blur();
 				}}
 				>
 					<div style={{ display: "flex", marginBottom: 0,}}>
@@ -1308,7 +1317,7 @@ const ParsedAction = (props) => {
 	
 
   const selectedAppIcon = selectedAction.large_image
-  console.log("Selected action: ", selectedAction)
+//   console.log("Selected action: ", selectedAction)
 		console.log("Selected action paramaters: ", selectedAction.parameters)
   var baselabel = selectedAction.label
   return (
@@ -2220,54 +2229,55 @@ const ParsedAction = (props) => {
 					} 
 				});
               }
-            }}
-            renderOption={(props, data, state) => {
-              var newActionname = data.name;
-              if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-                newActionname = data.label;
+			  event.target.blur();
+			}}
+            renderOption={(props, option, state) => {
+              var newActionname = option.name;
+              if (option.label !== undefined && option.label !== null && option.label.length > 0) {
+                newActionname = option.label;
               }
 
-              var newActiondescription = data.description;
+              var newActiondescription = option.description;
 			  //console.log("DESC: ", newActiondescription)
-              if (data.description === undefined || data.description === null) {
+              if (option.description === undefined || option.description === null) {
 				newActiondescription = "Description: No description defined for this action"
               } else {
 				newActiondescription = "Description: "+newActiondescription
 			  }
 
-              const iconInfo = GetIconInfo({ name: data.name });
+              const iconInfo = GetIconInfo({ name: option.name });
               const useIcon = iconInfo.originalIcon;
 
 			  if (newActionname === undefined || newActionname === null) {
 				  newActionname = "No name"
-				  data.name = "No name"
-				  data.label = "No name"
+				  option.name = "No name"
+				  option.label = "No name"
 			  }
 
               newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
 
 				var method = ""
 				var extraDescription = ""
-				if (data.name.includes("get_")) {
+				if (option.name.includes("get_")) {
 					method = "GET"
-				} else if (data.name.includes("post_")) {
+				} else if (option.name.includes("post_")) {
 					method = "POST"
-				} else if (data.name.includes("put_")) {
+				} else if (option.name.includes("put_")) {
 					method = "PUT"
-				} else if (data.name.includes("patch_")) {
+				} else if (option.name.includes("patch_")) {
 					method = "PATCH"
-				} else if (data.name.includes("delete_")) {
+				} else if (option.name.includes("delete_")) {
 					method = "DELETE"
-				} else if (data.name.includes("options_")) {
+				} else if (option.name.includes("options_")) {
 					method = "OPTIONS"
-				} else if (data.name.includes("connect_")) {
+				} else if (option.name.includes("connect_")) {
 					method = "CONNECT"
 				}
 
 				// FIXME: Should it require a base URL?
-				if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
+				if (method.length > 0 && option.description !== undefined && option.description !== null && option.description.includes("http")) {
 					var extraUrl = ""
-					const descSplit = data.description.split("\n")
+					const descSplit = option.description.split("\n")
 					// Last line of descSplit
 					if (descSplit.length > 0) {
 						extraUrl = descSplit[descSplit.length-1]
@@ -2306,7 +2316,8 @@ const ParsedAction = (props) => {
 
               return (
 			  	<ActionSelectOption
-					data={data}
+				  {...props}
+					option={option}
 					newActiondescription={newActiondescription}
 					useIcon={useIcon}
 					newActionname={newActionname}
