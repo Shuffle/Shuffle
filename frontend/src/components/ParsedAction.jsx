@@ -177,7 +177,8 @@ const ParsedAction = (props) => {
   const classes = useStyles();
   const [hideBody, setHideBody] = React.useState(true);
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
-
+  const [appActionName, setAppActionName] = React.useState(selectedAction.label);
+  const [delay, setDelay] = React.useState(selectedAction?.execution_delay);
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
   const [autoCompleting, setAutocompleting] = React.useState(false);
@@ -197,6 +198,7 @@ const ParsedAction = (props) => {
 	}
   }, [expansionModalOpen])
 
+ 
   useEffect(() => {
 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
 		return
@@ -383,6 +385,9 @@ const ParsedAction = (props) => {
 		() => {
 			console.log("UseEffect Rendered!")
 			console.log("Workflow", workflow)
+			setAppActionName(selectedAction.label)
+			setDelay(selectedAction.execution_delay)
+			
     //   if (selectedActionParameters !== undefined && selectedActionParameters !== null
     //   ) {
         if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
@@ -618,6 +623,12 @@ const ParsedAction = (props) => {
     },
 	[selectedAction,selectedApp,setNewSelectedAction]	
 	);
+
+	useEffect(() => {
+		selectedNameChange(appActionName)
+		actionDelayChange(delay) 
+	  },[appActionName,delay])
+
 		console.log("selectedActionParameters: ", selectedActionParameters)
 		console.log("selectedApp:", selectedApp)
 		console.log("selectedAction: ", selectedAction)
@@ -1628,11 +1639,17 @@ const ParsedAction = (props) => {
 								fullWidth
 								color="primary"
 								placeholder={selectedAction.label}
-								defaultValue={selectedAction.label}
-								onChange={selectedNameChange}
+								value={appActionName}
+								onChange={
+									(event) => {
+										let newValue = event.target.value
+										newValue = newValue.replaceAll(" ", "_")
+										setAppActionName(newValue)
+									}
+								}
 								onBlur={(e) => {
 									// Copy the name value
-									const name = e.target.value
+									const name = appActionName
 									const parsedBaseLabel = "$"+baselabel.toLowerCase().replaceAll(" ", "_")
 									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
 
@@ -1848,11 +1865,9 @@ const ParsedAction = (props) => {
 												disableUnderline: true,
 											}}
 											placeholder={selectedAction.execution_delay}
-											defaultValue={selectedAction.execution_delay}
+											value={delay}
 											onChange={(event) => {
-												if (actionDelayChange !== undefined) {
-													actionDelayChange(event) 
-												}
+												setDelay(event.target.value)
 											}}
 										/>
 									</span>

@@ -22,7 +22,6 @@ import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 import algoliasearch from 'algoliasearch/lite';
-
 import {
   Zoom,
   Fade,
@@ -10067,44 +10066,43 @@ const AngularWorkflow = (defaultprops) => {
   // appname & version
   // description
   // ACTION select
-  const selectedNameChange = (event) => {
-    event.target.value = event.target.value.replaceAll("(", "");
-    event.target.value = event.target.value.replaceAll(")", "");
-    event.target.value = event.target.value.replaceAll("]", "");
-    event.target.value = event.target.value.replaceAll("[", "");
-    event.target.value = event.target.value.replaceAll("{", "");
-    event.target.value = event.target.value.replaceAll("}", "");
-    event.target.value = event.target.value.replaceAll("*", "");
-    event.target.value = event.target.value.replaceAll("!", "");
-    event.target.value = event.target.value.replaceAll("@", "");
-    event.target.value = event.target.value.replaceAll("#", "");
-    event.target.value = event.target.value.replaceAll("$", "");
-    event.target.value = event.target.value.replaceAll("%", "");
-    event.target.value = event.target.value.replaceAll("&", "");
-    event.target.value = event.target.value.replaceAll("#", "");
-    event.target.value = event.target.value.replaceAll(".", "");
-    event.target.value = event.target.value.replaceAll(",", "");
-    event.target.value = event.target.value.replaceAll(" ", "_");
-    event.target.value = event.target.value.replaceAll("^", "_");
-    event.target.value = event.target.value.replaceAll("'", "_");
-    event.target.value = event.target.value.replaceAll("\"", "_");
-    event.target.value = event.target.value.replaceAll("\"", "_");
-    event.target.value = event.target.value.replaceAll(":", "_");
-    event.target.value = event.target.value.replaceAll(";", "_");
-    event.target.value = event.target.value.replaceAll("=", "_");
-    event.target.value = event.target.value.replaceAll("+", "_");
-
-    selectedAction.label = event.target.value;
+  const selectedNameChange = (appActionName) => {
+    appActionName = appActionName.replaceAll("(", "");
+    appActionName = appActionName.replaceAll(")", "");
+    appActionName = appActionName.replaceAll("]", "");
+    appActionName = appActionName.replaceAll("[", "");
+    appActionName = appActionName.replaceAll("{", "");
+    appActionName = appActionName.replaceAll("}", "");
+    appActionName = appActionName.replaceAll("*", "");
+    appActionName = appActionName.replaceAll("!", "");
+    appActionName = appActionName.replaceAll("@", "");
+    appActionName = appActionName.replaceAll("#", "");
+    appActionName = appActionName.replaceAll("$", "");
+    appActionName = appActionName.replaceAll("%", "");
+    appActionName = appActionName.replaceAll("&", "");
+    appActionName = appActionName.replaceAll("#", "");
+    appActionName = appActionName.replaceAll(".", "");
+    appActionName = appActionName.replaceAll(",", "");
+    appActionName = appActionName.replaceAll(" ", "_");
+    appActionName = appActionName.replaceAll("^", "_");
+    appActionName = appActionName.replaceAll("'", "_");
+    appActionName = appActionName.replaceAll("\"", "_");
+    appActionName = appActionName.replaceAll("\"", "_");
+    appActionName = appActionName.replaceAll(":", "_");
+    appActionName = appActionName.replaceAll(";", "_");
+    appActionName = appActionName.replaceAll("=", "_");
+    appActionName = appActionName.replaceAll("+", "_");
+    selectedAction.label = appActionName;
     setSelectedAction(selectedAction);
   };
 
-  const actionDelayChange = (event) => {
-    if (isNaN(event.target.value)) {
-      console.log("NAN: ", event.target.value)
+  const actionDelayChange = (delay) => {
+    if (isNaN(delay)) {
+      console.log("NAN: ", delay)
       return
     }
 
-    const parsedNumber = parseInt(event.target.value)
+    const parsedNumber = parseInt(delay)
     if (parsedNumber > 86400) {
       console.log("Max number is 1 day (86400)")
       return
