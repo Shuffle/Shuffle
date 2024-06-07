@@ -178,12 +178,16 @@ const ParsedAction = (props) => {
   const [hideBody, setHideBody] = React.useState(true);
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
   const [appActionName, setAppActionName] = React.useState(selectedAction.label);
-  const [delay, setDelay] = React.useState(selectedAction?.execution_delay);
+  const [delay, setDelay] = React.useState(selectedAction?.execution_delay || 0);
+  
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
   const [autoCompleting, setAutocompleting] = React.useState(false);
   const [selectedActionParameters, setSelectedActionParameters] = React.useState(selectedAction.parameters);
     const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
+	const [paramValues, setParamValues] = React.useState(
+		selectedAction.parameters.map((param) => param.value) || []
+	  );
     const [actionlist, setActionlist] = React.useState([]);
     const [jsonList, setJsonList] = React.useState([]);
     const [showDropdown, setShowDropdown] = React.useState(false);
@@ -386,8 +390,9 @@ const ParsedAction = (props) => {
 			console.log("UseEffect Rendered!")
 			console.log("Workflow", workflow)
 			setAppActionName(selectedAction.label)
-			setDelay(selectedAction.execution_delay)
+			setDelay(selectedAction?.execution_delay)
 			
+			setParamValues(selectedAction.parameters.map((param) => param.value) || [])
     //   if (selectedActionParameters !== undefined && selectedActionParameters !== null
     //   ) {
         if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
@@ -634,6 +639,16 @@ const ParsedAction = (props) => {
 		console.log("selectedAction: ", selectedAction)
 		console.log("ACTIONLIST: ", actionlist)
 		console.log("selectedVariableParameter", selectedVariableParameter)
+
+		const handleParamChange = (event, count,data) => {
+			setParamValues((prev) => {
+				const newValues = [...prev];
+				newValues[count] = event.target.value;
+				return newValues;
+			  }
+			);
+			changeActionParameter(event, count, data)
+		}
 		const calculateHelpertext = (input_data) => {
 			var helperText = ""
 			var looperText = ""
@@ -1574,7 +1589,7 @@ const ParsedAction = (props) => {
 				  MenuProps={{
 				  	disableScrollLock: true,
 				  }}
-                  defaultValue={selectedAction.app_version}
+                  value={selectedAction.app_version}
                   onChange={(event) => {
                     const newversion = selectedApp.versions.find(
                       (tmpApp) => tmpApp.version == event.target.value
@@ -2340,22 +2355,23 @@ const ParsedAction = (props) => {
 				/>
               );
             }}
-            renderInput={(params) => {
-				if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
-					const prefixes = ["Post", "Put", "Patch"]
-					for (let [key,keyval] in Object.entries(prefixes)) {
-						if (params.inputProps.value.startsWith(prefixes[key])) {
-							params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
-							if (params.inputProps.value.length > 1) {
-								params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
+			renderInput={(params) => {
+				if (params.inputProps?.value) {
+					const prefixes = ["Post", "Put", "Patch"];
+					for (let prefix of prefixes) {
+						if (params.inputProps.value.startsWith(prefix)) {
+							let newValue = params.inputProps.value.replace(prefix + " ", "");
+							if (newValue.length > 1) {
+								newValue = newValue.charAt(0).toUpperCase() + newValue.substring(1);
 							}
-							break
+							// Set the new value without mutating inputProps
+							params = { ...params, inputProps: { ...params.inputProps, value: newValue } };
+							break;
 						}
 					}
-
 					// Check if it starts with "Get List" and method is "Get"
 					if (params.inputProps.value.startsWith("Get List")) {
-						console.log("Get List")
+						console.log("Get List");
 					}
 				}
 
@@ -2802,9 +2818,9 @@ const ParsedAction = (props) => {
             
               placeholder = data.example;
 
-              if (data.name === "url") {
-                data.value = data.example;
-              }
+            //   if (data.name === "url") {
+            //     data.value = data.example;
+            //   }
 					// In case of data.example
 					if (data.value === undefined || data.value === null) {
 						data.value = ""
@@ -3046,7 +3062,6 @@ const ParsedAction = (props) => {
 					}
 				}
 				//selectedActionParameters
-
                 if (changed) {
 				  // Sort selectedActionParameters based on selectedActionParameters.required
 				  //selectedActionParameters.sort((a, b) => (a.required < b.required) ? 1 : -1)
@@ -3175,8 +3190,8 @@ const ParsedAction = (props) => {
                 id={clickedFieldId}
                 rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
                 color="primary"
-                defaultValue={data.value}
-                // value={data.value}
+                // defaultValue={data.value}
+                value={paramValues[count] !== undefined ? paramValues[count] : data.value}
                 //options={{
                 //	theme: 'gruvbox-dark',
                 //	keyMap: 'sublime',
@@ -3196,7 +3211,8 @@ const ParsedAction = (props) => {
                 placeholder={placeholder}
                 onChange={(event) => {
                   //changeActionParameterCodemirror(event, count, data)
-                  changeActionParameter(event, count, data);
+                //   changeActionParameter(event, count, data);
+				handleParamChange(event, count, data)
                 }}
                 helperText={returnHelperText(data.name, data.value)}
                 onBlur={(event) => {
