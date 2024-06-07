@@ -1,15 +1,13 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
-
 import { toast } from 'react-toastify';
 import Markdown from 'react-markdown'
-
 import theme from '../theme.jsx';
 import ReactJson from "react-json-view";
 import { isMobile } from "react-device-detect";
 import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
-
+import remarkGfm from 'remark-gfm'
 import {
     Grid,
     TextField,
@@ -26,7 +24,6 @@ import {
     ListItemButton,
     ListItemText
 } from "@mui/material";
-
 import {
     Link as LinkIcon,
     Edit as EditIcon,
@@ -36,6 +33,7 @@ import {
 } from "@mui/icons-material";
 import { fontGrid } from "@mui/material/styles/cssUtils.js";
 import { active } from "d3";
+import style from "./../index.css";
 
 const Body = {
     //maxWidth: 1000,
@@ -157,6 +155,7 @@ export const OuterLink = (props) => {
 export const Img = (props) => {
     return <img style={{ borderRadius: theme.palette.borderRadius, width: 750, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} alt={props.alt} src={props.src} />;
 }
+
 
 export const CodeHandler = (props) => {
     const propvalue = props.value !== undefined && props.value !== null ? props.value : props.children !== undefined && props.children !== null && props.children.length > 0 ? props.children[0] : ""
@@ -369,8 +368,7 @@ const Docs = (defaultprops) => {
             hash = hash.split('?')[0]
         }
         if (hash) {
-            console.log("HASH: ", hash)
-            const element = document.getElementById(hash)
+            const element = document.getElementById(hash.toLowerCase())
             if (element) {
                 element.scrollIntoView({
                     behavior: "instant",
@@ -1022,8 +1020,10 @@ const Docs = (defaultprops) => {
                             <Markdown
                                 components={markdownComponents}
                                 id="markdown_wrapper"
+                                className={"style.reactMarkdown"}
                                 escapeHtml={false}
                                 skipHtml={false}
+                                remarkPlugins={[remarkGfm]}
                                 style={{
                                     maxWidth: "100%", minWidth: "100%",
                                 }}
