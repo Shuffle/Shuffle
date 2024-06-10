@@ -390,16 +390,15 @@ const ParsedAction = (props) => {
 			console.log("UseEffect Rendered!")
 			console.log("Workflow", workflow)
 			setAppActionName(selectedAction.label)
-			setDelay(selectedAction?.execution_delay)
-			
+			setDelay(selectedAction?.execution_delay || 0)
+			if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
+				console.log("Setting action parameters!!")
+			  setSelectedActionParameters(selectedAction.parameters);
+			// }
+		  }
 			setParamValues(selectedAction.parameters.map((param) => param.value) || [])
     //   if (selectedActionParameters !== undefined && selectedActionParameters !== null
     //   ) {
-        if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
-			console.log("Setting action parameters!!")
-          setSelectedActionParameters(selectedAction.parameters);
-        // }
-      }
       if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && workflow.workflow_variables !== null && workflow.workflow_variables.length > 0) {
       
         // FIXME - this is the bad thing
