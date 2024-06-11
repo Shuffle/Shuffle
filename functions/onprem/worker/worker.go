@@ -1898,6 +1898,7 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 if request.Body == nil {
+	log.Printf("[WARNING] (2) No body in request for workflowqueue")
 	resp.WriteHeader(http.StatusBadRequest)
 	return
 }
