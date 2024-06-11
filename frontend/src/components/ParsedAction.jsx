@@ -3205,7 +3205,11 @@ const ParsedAction = (props) => {
                 rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
                 color="primary"
                 // defaultValue={data.value}
-                value={data.value}
+                value={
+					paramValues.find((param) => param.name === data.name) !== undefined
+						? paramValues.find((param) => param.name === data.name).value
+						: data.value
+				}
                 //options={{
                 //	theme: 'gruvbox-dark',
                 //	keyMap: 'sublime',
