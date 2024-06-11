@@ -15,6 +15,7 @@ import HealthPage from "./components/HealthPage.jsx";
 import theme from "./theme";
 import Apps from "./views/Apps";
 import AppCreator from "./views/AppCreator";
+import Dectection from "./views/Detection.jsx";
 
 import Welcome from "./views/Welcome.jsx";
 import Dashboard from "./views/Dashboard.jsx";
@@ -414,6 +415,11 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route
+			exact
+			path="/detections/sigma"
+			element={<Dectection globalUrl={globalUrl} />}
+			/>
         	<Route
         	  exact
         	  path="/workflows"
