@@ -885,10 +885,12 @@ const ParsedAction = (props) => {
       }
 
       //console.log("CHANGING ACTION COUNT !")
-			selectedActionParameters[count].autocompleted = false
-			selectedAction.parameters[count].autocompleted = false 
-      selectedActionParameters[count].value = event.target.value;
-      selectedAction.parameters[count].value = event.target.value;
+			setTimeout(() => {
+			// selectedActionParameters[count].autocompleted = false
+			selectedAction.parameters[count].autocompleted = false
+			// selectedActionParameters[count].value = event.target.value;
+			selectedAction.parameters[count].value = event.target.value;
+			},100) 
 
 			var forceUpdate = false 
 			if (isCloud && (selectedAction.app_name === "Shuffle Tools" || selectedAction.app_name === "email") && (selectedAction.name === "send_email_shuffle" || selectedAction.name === "send_sms_shuffle") && data.name === "apikey") {
@@ -3994,7 +3996,7 @@ const ParsedAction = (props) => {
             }
 
 			const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
-			const hasAutocomplete = data.autocompleted === true
+			const hasAutocomplete = data?.autocompleted === true
             return (
               <div key={data.name}>
                 {hideBodyButton}
