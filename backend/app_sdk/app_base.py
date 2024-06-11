@@ -652,7 +652,14 @@ class AppBase:
                 sleeptime = float(random.randint(0, 10) / 10)
 
                 try:
-                    ret = requests.post(url, headers=headers, json=action_result, timeout=10, verify=False, proxies=self.proxy_config)
+                    ret = requests.post(
+                            url, 
+                            headers=headers, 
+                            json=action_result, 
+                            timeout=10, 
+                            verify=False, 
+                            proxies=self.proxy_config,
+                    )
 
                     #self.logger.info(f"""[DEBUG] Successful result request: Status= {ret.status_code} (break on 200/201) & Action status: {action_result["status"]}. Response= {ret.text}""")
                     if ret.status_code == 200 or ret.status_code == 201:
@@ -660,7 +667,18 @@ class AppBase:
                         break
                     else:
                         # FIXME: Add a checker for 403, and Proxy logs failing
-                        self.logger.info(f"[ERROR] Bad resp ({ret.status_code}) in send_result for url '{url}'")
+                        headerauth = ""
+                        if "Authorization" in headers:
+                            headerauth = headers["Authorization"]
+
+                        try:
+
+                            self.logger.info(f"[ERROR] Bad resp ({ret.status_code}) in send_result for url '{url}'. Execution ID: %d, Authorization: %d, Header Auth: %d" % (len(action_result["execution_id"]), len(action_result["authorization"]), len(headerauth)))
+
+                        except Exception as e:
+                            self.logger.info(f"[ERROR] Bad resp ({ret.status_code}) in send_result for url '{url}' (no detail)") 
+                            pass
+
                         time.sleep(sleeptime)
             
 

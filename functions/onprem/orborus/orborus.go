@@ -683,6 +683,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			return err
 		}
 
+
 		//env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
 
 		// FIXME: When a service account is used, the account is also mounted in the pod
@@ -696,6 +697,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 			// use k8s downward API to find it if we are in a pod
 		}
+
 
 		// Check if namespace exist as variable. If so, make it
 		if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 && !namespacemade {
@@ -721,6 +723,18 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 
 		if len(kubernetesNamespace) == 0 {
+			foundNamespace, err := shuffle.GetKubernetesNamespace() 
+			if err != nil {
+				//log.Printf("[ERROR] Failed getting Kubernetes namespace: %s", err)
+			}
+
+			if len(foundNamespace) > 0 {
+				kubernetesNamespace = foundNamespace
+				os.Setenv("KUBERNETES_NAMESPACE", kubernetesNamespace)
+			}
+		}
+
+		if len(kubernetesNamespace) == 0 {
 			kubernetesNamespace = "default"
 		}
 
@@ -739,12 +753,40 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			}
 		}
 
+		containerLabels := map[string]string{
+			"container": "shuffle-worker",
+		}
+
+		containerAttachment := corev1.Container{
+			Name:  identifier,
+			Image: kubernetesImage,
+			Env:   buildEnvVars(envMap),
+			
+			//ImagePullPolicy: "Never",
+			ImagePullPolicy: corev1.PullIfNotPresent,
+		}
+
+		podname := shuffle.GetPodName()
+
+		ctx := context.Background()
+
+		if len(podname) > 0 {
+			currentPodStatus, err := shuffle.GetCurrentPodNetworkConfig(ctx, clientset, kubernetesNamespace, podname)
+			if err != nil {
+				log.Printf("[ERROR] Failed getting current pod network: %s", err)
+			} else {
+				log.Printf("[DEBUG] Current pod found!")
+				// currentPodStatus = k8s.io/api/core/v1.PodStatus
+			}
+		}
+
+
 		// While testing:
 		// kubectl delete pods --all --all-namespaces; kubectl delete services --all --all-namespaces
 		pod := &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   identifier,
-				Labels: map[string]string{"app": "shuffle-worker"},
+				Labels: containerLabels,
 			},
 			Spec: corev1.PodSpec{
 				RestartPolicy: "Never",
@@ -753,23 +795,20 @@ func deployWorker(image string, identifier string, env []string, executionReques
 				// 	"node": "master",
 				// },
 				Containers: []corev1.Container{
-					{
-						Name:  identifier,
-						Image: kubernetesImage,
-						Env:   buildEnvVars(envMap),
-						
-						//ImagePullPolicy: "Never",
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						//ImagePullPolicy: "Always",
-					},
+					containerAttachment,
 				},
 			},
 		}
 
 		// Check if running on ARM or x86 to download the correct image
 
-		// Add environment variables
-		// pod.Spec.Containers[0].Env = buildEnvVars(envMap)
+		// Get current pod's network so we can make the pod in it
+
+		networks, err := clientset.CoreV1().Pods(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			log.Printf("[ERROR] Failed listing pods: %s", err)
+		}
+
 
 		createdPod, err := clientset.CoreV1().Pods(kubernetesNamespace).Create(context.Background(), pod, metav1.CreateOptions{})
 		if err != nil {
