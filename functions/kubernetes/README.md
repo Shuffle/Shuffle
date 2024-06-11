@@ -34,3 +34,35 @@ Step 2: Open the ```all-in-one.yaml``` file and review the configuration values.
 
 Step 3: Now, open ```https://<YOUR_NODE_IP>:30008``` or ```http://<YOUR_NODE_IP>:30007```. You should be seeing a signup page. NODE_IP should be where the frontend is deployed.
 
+### Dev Mode
+
+1. Run backend and orborus with the environment variable `IS_KUBERNETES=true`:
+
+```bash
+export IS_KUBERNETES=true
+```
+
+2. Turn on the k8s engine with minikube:
+  
+```bash
+minikube start
+```
+
+3. To use the worker scale feature, build the image with the following command:
+
+```bash
+$NAME=shuffle-worker-scale
+$VERSION=1.2.0
+
+minikube build . -t shuffle/shuffle:$NAME -t shuffle/shuffle:$NAME_$VERSION -t docker.pkg.github.com/shuffle/shuffle/$NAME:$VERSION -t ghcr.io/shuffle/$NAME:$VERSION -t ghcr.io/shuffle/$NAME:nightly -t ghcr.io/shuffle/$NAME:$VERSION -t ghcr.io/shuffle/$NAME:nightly -t ghcr.io/shuffle/$NAME:latest
+```
+
+4. To run executions, Make sure to do the following:
+
+```bash
+kubectl create role pod-creator --namespace=default --verb=create --resource=pods
+kubectl create rolebinding pod-creator-binding --namespace=default --role=pod-creator --serviceaccount=default:default
+```
+
+
+
