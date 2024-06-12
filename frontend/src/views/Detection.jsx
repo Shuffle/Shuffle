@@ -134,7 +134,7 @@ const Detection = (props) => {
           }}
         >
           <Typography variant="h6" component="div">
-            Group 1 Title
+            Sigma Detection Rules
           </Typography>
           <ConnectedButton variant="contained">
             Not Connected to SIEM
