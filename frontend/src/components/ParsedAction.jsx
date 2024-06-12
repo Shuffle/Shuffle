@@ -401,244 +401,160 @@ const ParsedAction = (props) => {
 
     useEffect(
 		() => {
-			console.log("UseEffect Rendered!")
-			console.log("Workflow", workflow)
-			setAppActionName(selectedAction.label)
-			setDelay(selectedAction?.execution_delay || 0)
-			if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
-				console.log("Setting action parameters!!")
-			  setSelectedActionParameters(selectedAction.parameters);
-			// }
-		  }
-    //   if (selectedActionParameters !== undefined && selectedActionParameters !== null
-    //   ) {
-      if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && workflow.workflow_variables !== null && workflow.workflow_variables.length > 0) {
-      
-        // FIXME - this is the bad thing
-        setSelectedVariableParameter(workflow.workflow_variables[0].name);
-      }
-
-      if (actionlist.length === 0) {
-        // FIXME: Have previous execution values in here
-			if (workflowExecutions.length > 0) {
-				for (let [key,keyval] in Object.entries(workflowExecutions)) {
-					if (
-						workflowExecutions[key].execution_argument === undefined ||
-						workflowExecutions[key].execution_argument === null ||
-						workflowExecutions[key].execution_argument.length === 0 
-					) {
-						continue;
-					}
-
-					const valid = validateJson(workflowExecutions[key].execution_argument)
-					if (valid.valid) {
-						actionlist.push({
-							type: "Execution Argument",
-							name: "Execution Argument",
-							value: "$exec",
-							highlight: "exec",
-							autocomplete: "exec",
-							example: valid.result,
-						})
-						break
-					}
-				}
-
+			console.log("UseEffect Rendered!");
+			console.log("Workflow", workflow);
+			
+			// Only set app action name if it has changed
+			if (selectedAction.label !== appActionName) {
+				setAppActionName(selectedAction.label);
 			}
-
+		
+			// Only set delay if it has changed
+			const newDelay = selectedAction?.execution_delay || 0;
+			if (newDelay !== delay) {
+				setDelay(newDelay);
+			}
+		
+			// Only set selected action parameters if they have changed
+			if (selectedAction.parameters && selectedAction.parameters.length > 0) {
+				console.log("Setting action parameters!!");
+				setSelectedActionParameters(selectedAction.parameters);
+			}
+		
+			// Only set selected variable parameter if it is null or undefined
+			if (!selectedVariableParameter && workflow.workflow_variables?.length > 0) {
+				setSelectedVariableParameter(workflow.workflow_variables[0].name);
+			}
+		
+			// Initialize action list if it is empty
 			if (actionlist.length === 0) {
-				actionlist.push({
-					type: "Execution Argument",
-					name: "Execution Argument",
-					value: "$exec",
-					highlight: "exec",
-					autocomplete: "exec",
-					example: "",
-				})
-			}
-
-		/*
-        actionlist.push({
-          type: "Shuffle DB",
-          name: "Shuffle DB",
-          value: "$shuffle_cache",
-          highlight: "shuffle_cache",
-          autocomplete: "shuffle_cache",
-          example: {
-			  "what": "",
-			  "unique gmail ids new": "",
-		  },
-        })
-		*/
-
-		var cachekey = {
-          type: "Shuffle DB",
-          name: "Shuffle DB",
-          value: "$shuffle_cache",
-          highlight: "shuffle_cache",
-          autocomplete: "shuffle_cache",
-          example: "",
-        }
-
-		if (listCache !== undefined && listCache !== null && listCache.keys !== undefined && listCache.keys !== null && listCache.keys.length > 0) {
-			cachekey.example = {}
-
-			for (var i in listCache.keys) {
-				const item = listCache.keys[i]
-				if (item.key === undefined || item.key === null || item.key.length === 0) {
-					continue
-				}
-
-				var itemvalue = item.value === undefined || item.value === null ? "" : item.value
-				try{ 
-					if (itemvalue.length > 10000) {
-						itemvalue = ""
-					}
-
-				} catch (e) {
-					itemvalue = ""
-				}
-
-				var itemkey = item.key.split(" ").join("_")
-				cachekey.example[itemkey] = {
-					"value": itemvalue,
-				}
-			}
-		} else {
-		}
-
-        actionlist.push(cachekey)
-
-        if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
-          for (let [key,keyval] in Object.entries(workflow.workflow_variables)) {
-            const item = workflow.workflow_variables[key];
-            actionlist.push({
-              type: "workflow_variable",
-              name: item.name,
-              value: item.value,
-              id: item.id,
-              autocomplete: `${item.name.split(" ").join("_")}`,
-              example: item.value,
-            });
-          }
-        }
-
-        if (workflow.execution_variables !== null && workflow.execution_variables !== undefined && workflow.execution_variables.length > 0) {
-          for (let [key,keyval] in Object.entries(workflow.execution_variables)) {
-            const item = workflow.execution_variables[key]
-
-			var exampleoutput = ""
-			for (let execkey in workflowExecutions) {
-				const exec = workflowExecutions[execkey]
-				if (exec["execution_variables"] === undefined || exec["execution_variables"] === null) {
-					continue
-				}
-
-				const foundExec = exec.execution_variables.find((exvar) => exvar.name === item.name)
-				if (!foundExec) {
-					continue
-				}
-
-				if (foundExec.value !== undefined && foundExec.value !== null && foundExec.value.length > 0) {
-					exampleoutput = foundExec.value
-					break
-				}
-			}
-
-            actionlist.push({
-              type: "execution_variable",
-              name: item.name,
-              value: item.value,
-              id: item.id,
-              autocomplete: `${item.name.split(" ").join("_")}`,
-              example: exampleoutput,
-            });
-          }
-        }
-
-        // Loops parent nodes' old results to fix autocomplete
-		if (getParents !== undefined) {
-        	var parents = getParents(selectedAction)
-
-        	if (parents.length > 1) {
-			  var labels = []
-        	  //for (let [parentkey, parentkeyval] in Object.entries(parents)) {
-        	  for (let parentkey in parents) {
-        	    const parentNode = parents[parentkey]
-        	    if (parentNode.label === "Execution Argument") {
-        	      continue
-        	    }
-
-				//if (labels.includes(item.label)) {
-				//	continue
-				//}
-
-				labels.push(parentNode.label)
-
-        	    var exampledata = parentNode.example === undefined || parentNode.example === null ? "" : parentNode.example
-        	    // Find previous execution and their variables
-        	    //exampledata === "" &&
-        	    if (workflowExecutions.length > 0) {
-        	      // Look for the ID
-        	      const found = false;
-        	      for (let wfkey in workflowExecutions) {
-        	        if (workflowExecutions[wfkey].results === undefined || workflowExecutions[wfkey].results === null) {
-        	        
-        	          continue;
-        	        }
-
-        	        var foundResult = workflowExecutions[wfkey].results.find((result) => result.action.id === parentNode.id)
-
-        	        if (foundResult === undefined || foundResult === null) {
-        	          continue
-        	        }
-
-					if (foundResult.result !== undefined && foundResult.result !== null) {
-						foundResult = foundResult.result
-					}
-
-					const valid = validateJson(foundResult)
-					if (valid.valid) {
-						if (valid.result.success === false) {
-							//console.log("Skipping success false autocomplete")
-						} else {
-
-							// FIXME: Have a merge system to allow to use kind of any key from that node in the last 10-20 execs
-							//if (exampledata.length > 0) {
-							//	exampledata = valid.result
-							//} else {
-							//	exampledata = valid.result
-							//}
-
-							exampledata = valid.result
-							break
+				if (workflowExecutions.length > 0) {
+					for (let [key, keyval] of Object.entries(workflowExecutions)) {
+						const execArg = workflowExecutions[key].execution_argument;
+						if (execArg && execArg.length > 0) {
+							const valid = validateJson(execArg);
+							if (valid.valid) {
+								actionlist.push({
+									type: "Execution Argument",
+									name: "Execution Argument",
+									value: "$exec",
+									highlight: "exec",
+									autocomplete: "exec",
+									example: valid.result,
+								});
+								break;
+							}
 						}
-        	        } else {
-        	          exampledata = foundResult
 					}
-        	      }
-        	    }
-
-        	    // 1. Take
-        	    const itemlabelComplete = parentNode.label === null || parentNode.label === undefined ? "" : parentNode.label.split(" ").join("_");
-
-        	    const actionvalue = {
-        	      type: "action",
-        	      id: parentNode.id,
-        	      name: parentNode.label,
-        	      autocomplete: itemlabelComplete,
-        	      example: exampledata,
-        	    }
-
-        	    actionlist.push(actionvalue)
-        	  }
-        	}
-
-        	setActionlist(actionlist);
-		}
-      }
-    },
-	[selectedAction,selectedApp,setNewSelectedAction]	
+				}
+		
+				if (actionlist.length === 0) {
+					actionlist.push({
+						type: "Execution Argument",
+						name: "Execution Argument",
+						value: "$exec",
+						highlight: "exec",
+						autocomplete: "exec",
+						example: "",
+					});
+				}
+		
+				let cacheKey = {
+					type: "Shuffle DB",
+					name: "Shuffle DB",
+					value: "$shuffle_cache",
+					highlight: "shuffle_cache",
+					autocomplete: "shuffle_cache",
+					example: "",
+				};
+		
+				if (listCache?.keys?.length > 0) {
+					cacheKey.example = {};
+					for (let item of listCache.keys) {
+						if (item.key) {
+							let itemValue = item.value ?? "";
+							if (itemValue.length > 10000) {
+								itemValue = "";
+							}
+							cacheKey.example[item.key.split(" ").join("_")] = { value: itemValue };
+						}
+					}
+				}
+		
+				actionlist.push(cacheKey);
+		
+				if (workflow.workflow_variables?.length > 0) {
+					for (let [key, keyval] of Object.entries(workflow.workflow_variables)) {
+						const item = workflow.workflow_variables[key];
+						actionlist.push({
+							type: "workflow_variable",
+							name: item.name,
+							value: item.value,
+							id: item.id,
+							autocomplete: item.name.split(" ").join("_"),
+							example: item.value,
+						});
+					}
+				}
+		
+				if (workflow.execution_variables?.length > 0) {
+					for (let [key, keyval] of Object.entries(workflow.execution_variables)) {
+						const item = workflow.execution_variables[key];
+						let exampleOutput = "";
+						for (let exec of workflowExecutions) {
+							const foundExec = exec.execution_variables?.find(exvar => exvar.name === item.name);
+							if (foundExec?.value) {
+								exampleOutput = foundExec.value;
+								break;
+							}
+						}
+						actionlist.push({
+							type: "execution_variable",
+							name: item.name,
+							value: item.value,
+							id: item.id,
+							autocomplete: item.name.split(" ").join("_"),
+							example: exampleOutput,
+						});
+					}
+				}
+		
+				if (getParents) {
+					const parents = getParents(selectedAction);
+					if (parents.length > 1) {
+						const labels = [];
+						for (let parentNode of parents) {
+							if (parentNode.label !== "Execution Argument" && !labels.includes(parentNode.label)) {
+								labels.push(parentNode.label);
+								let exampleData = parentNode.example ?? "";
+								if (!exampleData && workflowExecutions.length > 0) {
+									for (let exec of workflowExecutions) {
+										const foundResult = exec.results?.find(result => result.action.id === parentNode.id);
+										if (foundResult) {
+											const valid = validateJson(foundResult.result);
+											if (valid.valid && valid.result.success !== false) {
+												exampleData = valid.result;
+												break;
+											}
+										}
+									}
+								}
+								actionlist.push({
+									type: "action",
+									id: parentNode.id,
+									name: parentNode.label,
+									autocomplete: parentNode.label.split(" ").join("_"),
+									example: exampleData,
+								});
+							}
+						}
+					}
+				}
+		
+				setActionlist(actionlist);
+			}
+		},
+	[selectedAction,selectedApp,setNewSelectedAction,workflow, workflowExecutions, listCache, getParents, actionlist]	
 	);
 
 	useEffect(() => {
@@ -886,9 +802,9 @@ const ParsedAction = (props) => {
 
       //console.log("CHANGING ACTION COUNT !")
 			setTimeout(() => {
-			// selectedActionParameters[count].autocompleted = false
+			selectedActionParameters[count].autocompleted = false
 			selectedAction.parameters[count].autocompleted = false
-			// selectedActionParameters[count].value = event.target.value;
+			selectedActionParameters[count].value = event.target.value;
 			selectedAction.parameters[count].value = event.target.value;
 			},100) 
 
@@ -1060,10 +976,12 @@ const ParsedAction = (props) => {
 				}
 			}
 
+			setTimeout(() => {
 			selectedActionParameters[count].autocompleted = false
 			selectedAction.parameters[count].autocompleted = false 
 			selectedActionParameters[count].value = data
 			selectedAction.parameters[count].value = data
+			}, 100);
 			setSelectedAction(selectedAction)
 			//setUpdate(Math.random())
 			//setUpdate(event.target.value)
