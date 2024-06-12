@@ -206,16 +206,16 @@ const ParsedAction = (props) => {
 		setLastSaved(false)
 	}
   }, [expansionModalOpen])
-  useEffect(() => {
-		setParamValues(selectedAction.parameters.map((param) => {
-			return {
-				name: param.name,
-				value: param.value,
-			}
-		}))
-  },[
-	selectedAction, selectedApp,setNewSelectedAction
-  ])
+//   useEffect(() => {
+// 		setParamValues(selectedAction.parameters.map((param) => {
+// 			return {
+// 				name: param.name,
+// 				value: param.value,
+// 			}
+// 		}))
+//   },[
+// 	selectedAction, selectedApp,setNewSelectedAction
+//   ])
 
   useEffect(() => {
 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
@@ -404,6 +404,12 @@ const ParsedAction = (props) => {
 			console.log("UseEffect Rendered!");
 			console.log("Workflow", workflow);
 			
+			setParamValues(selectedAction.parameters.map((param) => {
+				return {
+					name: param.name,
+					value: param.value,
+				}
+			}))
 			// Only set app action name if it has changed
 			if (selectedAction.label !== appActionName) {
 				setAppActionName(selectedAction.label);
@@ -554,14 +560,13 @@ const ParsedAction = (props) => {
 				setActionlist(actionlist);
 			}
 		},
-	[selectedAction,selectedApp,setNewSelectedAction,workflow, workflowExecutions, listCache, getParents, actionlist]	
+	[selectedAction,selectedApp,setNewSelectedAction,workflow, workflowExecutions, getParents]	
 	);
-
 	useEffect(() => {
 		selectedNameChange(appActionName)
 		actionDelayChange(delay) 
 	  },[appActionName,delay])
-
+	 
 		console.log("selectedActionParameters: ", selectedActionParameters)
 		console.log("selectedApp:", selectedApp)
 		console.log("selectedAction: ", selectedAction)
@@ -3126,7 +3131,7 @@ const ParsedAction = (props) => {
                 value={
 					paramValues.find((param) => param.name === data.name) !== undefined
 						? paramValues.find((param) => param.name === data.name).value
-						: data.value
+						: ""
 				}
                 //options={{
                 //	theme: 'gruvbox-dark',
