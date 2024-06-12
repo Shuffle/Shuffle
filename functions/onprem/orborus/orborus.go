@@ -2011,13 +2011,6 @@ func main() {
 					}
 
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-				} else if incRequest.Type == "CATEGORY_CHANGE" {
-                       err := handleFileCategoryChange()
-					   if err != nil {
-						log.Printf("[ERROR] Failed to download the file category: %s", err)
-					   }
-
-					   toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 				} else if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
 					log.Printf("[INFO] Should delete -> download new image %#v", incRequest.ExecutionArgument)
 
@@ -2029,11 +2022,47 @@ func main() {
 
 					}
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-				} else if incRequest.Type == "CATEGORY_UPDATE" {
-					  handleFileCategoryChange()
+					
+				}  else if incRequest.Type == "CATEGORY_UPDATE" {
+					err := handleFileCategoryChange()
+					if err != nil {
+					 log.Printf("[ERROR] Failed to download the file category: %s", err)
+					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+			    } else if incRequest.Type == "DISABLE_SIGMA_FILE" {
+					  fileName := incRequest.ExecutionArgument
+					  err = manageSigmaRule(fileName, "disable")
+					  if err != nil {
+						log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
+					}
+
 					  toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 
-				}else {
+				} else if incRequest.Type == "ENABLE_SIGMA_FILE" {
+					fileName := incRequest.ExecutionArgument
+					err = manageSigmaRule(fileName, "enable")
+					if err != nil {
+					  log.Printf("[ERROR] Failed to enable the sigma file %s, reason: %s",fileName, err)
+				  }
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+				}  else if incRequest.Type == "DISABLE_SIGMA_RULES" {
+					err := manageSigmaFolder("disable")
+					if err != nil {
+					 log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
+					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+			    } else if incRequest.Type == "ENABLE_SIGMA_RULES" {
+					err := manageSigmaFolder("enable")
+					if err != nil {
+					 log.Printf("[ERROR] Failed to enable the sigma rules: %s", err)
+					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+			    } else {
 					newrequests = append(newrequests, incRequest)
 				}
 			}
@@ -2883,7 +2912,7 @@ func searchPipeline(identifier string) (string, error) {
 }
 
 func handleFileCategoryChange() error{
-	apiEndpoint := "https://expert-acorn-v6vg4j4j5w7q2wg6g-5001.app.github.dev/api/v1/files/namespaces/hari"
+	apiEndpoint := baseUrl+"/api/v1/files/namespaces/sigma"
 	apiKey := "23e57313-5f0f-4a20-bddd-a9059c980adf"
 
 	req, err := http.NewRequest("GET", apiEndpoint, nil)
@@ -2919,14 +2948,14 @@ func handleFileCategoryChange() error{
 
 	fmt.Println("ZIP file downloaded successfully.")
 
-	err = extractZIP("files.zip", "unzipped_files")
+	err = extractZIP("files.zip", "sigma_rules")
 	if err != nil {
 		return err
 	}
 
-	destPath := "/var/lib/tenzir/unzipped_files"
+	destPath := "/var/lib/tenzir/sigma_rules"
 
-	err = copyToTenzir("unzipped_files", destPath)
+	err = copyToTenzir("sigma_rules", destPath)
 	if err != nil {
 		return err
 	}
