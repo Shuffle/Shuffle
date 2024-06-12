@@ -659,6 +659,161 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 	return nil
 }
 
+func deployK8sWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
+	env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
+	env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
+
+	if len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
+		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", os.Getenv("KUBERNETES_SERVICE_HOST")))
+	} 
+
+	if len(os.Getenv("KUBERNETES_SERVICE_PORT")) > 0 {
+		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
+	}
+
+	clientset, _, err := shuffle.GetKubernetesClient()
+	if err != nil {
+		log.Printf("[ERROR] Error getting kubernetes client:", err)
+		return err
+	}
+
+
+	//env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
+
+	// FIXME: When a service account is used, the account is also mounted in the pod
+	// The volume mount location is: 
+	// /var/run/secrets/kubernetes.io/serviceaccount
+
+	// Look for if there is a default service account in use
+	if len(os.Getenv("KUBERNETES_SERVICE_ACCOUNT")) > 0 {
+		log.Printf("[DEBUG] Using Kubernetes service account %s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT"))
+		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_ACCOUNT=%s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT")))
+
+		// use k8s downward API to find it if we are in a pod
+	}
+
+
+	// Check if namespace exist as variable. If so, make it
+	if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 && !namespacemade {
+		kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+
+		// Make the namespace
+		namespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: os.Getenv("KUBERNETES_NAMESPACE"),
+			},
+		}
+
+		_, err := clientset.CoreV1().Namespaces().Create(context.Background(), namespace, metav1.CreateOptions{})
+		if err != nil {
+			if !strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already exists") {
+				log.Printf("[ERROR] Failed creating Kubernetes namespace: %s", err)
+			} else {
+				namespacemade = true
+			}
+		} else {
+			namespacemade = true
+		}
+	}
+
+	if len(kubernetesNamespace) == 0 {
+		foundNamespace, err := shuffle.GetKubernetesNamespace() 
+		if err != nil {
+			//log.Printf("[ERROR] Failed getting Kubernetes namespace: %s", err)
+		}
+
+		if len(foundNamespace) > 0 {
+			kubernetesNamespace = foundNamespace
+			os.Setenv("KUBERNETES_NAMESPACE", kubernetesNamespace)
+		}
+	}
+
+	if len(kubernetesNamespace) == 0 {
+		kubernetesNamespace = "default"
+	}
+
+	kubernetesImage := os.Getenv("SHUFFLE_KUBERNETES_WORKER")
+	if len(kubernetesImage) == 0 {
+		kubernetesImage = image
+	}
+	log.Printf("[DEBUG] Using Kubernetes worker image '%s'", kubernetesImage)
+	// image = "shuffle-worker:v1" //hard coded image name to test locally
+
+	envMap := make(map[string]string)
+	for _, envStr := range env {
+		parts := strings.SplitN(envStr, "=", 2)
+		if len(parts) == 2 {
+			envMap[parts[0]] = parts[1]
+		}
+	}
+
+	containerLabels := map[string]string{
+		"container": "shuffle-worker",
+	}
+
+	containerAttachment := corev1.Container{
+		Name:  identifier,
+		Image: kubernetesImage,
+		Env:   buildEnvVars(envMap),
+		
+		//ImagePullPolicy: "Never",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+	}
+
+	podname := shuffle.GetPodName()
+
+	ctx := context.Background()
+
+	if len(podname) > 0 {
+		_, err := shuffle.GetCurrentPodNetworkConfig(ctx, clientset, kubernetesNamespace, podname)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting current pod network: %s", err)
+		} else {
+			log.Printf("[DEBUG] Current pod found!")
+			// currentPodStatus = k8s.io/api/core/v1.PodStatus
+		}
+	}
+
+
+	// While testing:
+	// kubectl delete pods --all --all-namespaces; kubectl delete services --all --all-namespaces
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   identifier,
+			Labels: containerLabels,
+		},
+		Spec: corev1.PodSpec{
+			RestartPolicy: "Never",
+			DNSPolicy:     "Default",
+			// NodeSelector: map[string]string{
+			// 	"node": "master",
+			// },
+			Containers: []corev1.Container{
+				containerAttachment,
+			},
+		},
+	}
+
+	// Check if running on ARM or x86 to download the correct image
+
+	// Get current pod's network so we can make the pod in it
+
+	_, err = clientset.CoreV1().Pods(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Failed listing pods: %s", err)
+	}
+
+
+	createdPod, err := clientset.CoreV1().Pods(kubernetesNamespace).Create(context.Background(), pod, metav1.CreateOptions{})
+	if err != nil {
+		//log.Printf("[ERROR] Failed creating pod: %v", err)
+		return err
+	}
+
+	log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
+	return nil
+}
+
 
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
 	if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
@@ -666,158 +821,12 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	}
 
 	if isKubernetes == "true" {
-		env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
-		env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
-
-		if len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
-			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", os.Getenv("KUBERNETES_SERVICE_HOST")))
-		} 
-
-		if len(os.Getenv("KUBERNETES_SERVICE_PORT")) > 0 {
-			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
-		}
-
-		clientset, _, err := shuffle.GetKubernetesClient()
+		err := deployK8sWorker(image, identifier, env, executionRequest)
 		if err != nil {
-			log.Printf("[ERROR] Error getting kubernetes client:", err)
-			return err
+			log.Printf("[ERROR] Failed deploying Kubernetes worker: %s", err)
 		}
 
-
-		//env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
-
-		// FIXME: When a service account is used, the account is also mounted in the pod
-		// The volume mount location is: 
-		// /var/run/secrets/kubernetes.io/serviceaccount
-
-		// Look for if there is a default service account in use
-		if len(os.Getenv("KUBERNETES_SERVICE_ACCOUNT")) > 0 {
-			log.Printf("[DEBUG] Using Kubernetes service account %s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT"))
-			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_ACCOUNT=%s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT")))
-
-			// use k8s downward API to find it if we are in a pod
-		}
-
-
-		// Check if namespace exist as variable. If so, make it
-		if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 && !namespacemade {
-			kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
-
-			// Make the namespace
-			namespace := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: os.Getenv("KUBERNETES_NAMESPACE"),
-				},
-			}
-
-			_, err := clientset.CoreV1().Namespaces().Create(context.Background(), namespace, metav1.CreateOptions{})
-			if err != nil {
-				if !strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already exists") {
-					log.Printf("[ERROR] Failed creating Kubernetes namespace: %s", err)
-				} else {
-					namespacemade = true
-				}
-			} else {
-				namespacemade = true
-			}
-		}
-
-		if len(kubernetesNamespace) == 0 {
-			foundNamespace, err := shuffle.GetKubernetesNamespace() 
-			if err != nil {
-				//log.Printf("[ERROR] Failed getting Kubernetes namespace: %s", err)
-			}
-
-			if len(foundNamespace) > 0 {
-				kubernetesNamespace = foundNamespace
-				os.Setenv("KUBERNETES_NAMESPACE", kubernetesNamespace)
-			}
-		}
-
-		if len(kubernetesNamespace) == 0 {
-			kubernetesNamespace = "default"
-		}
-
-		kubernetesImage := os.Getenv("SHUFFLE_KUBERNETES_WORKER")
-		if len(kubernetesImage) == 0 {
-			kubernetesImage = image
-		}
-		log.Printf("[DEBUG] Using Kubernetes worker image '%s'", kubernetesImage)
-		// image = "shuffle-worker:v1" //hard coded image name to test locally
-
-		envMap := make(map[string]string)
-		for _, envStr := range env {
-			parts := strings.SplitN(envStr, "=", 2)
-			if len(parts) == 2 {
-				envMap[parts[0]] = parts[1]
-			}
-		}
-
-		containerLabels := map[string]string{
-			"container": "shuffle-worker",
-		}
-
-		containerAttachment := corev1.Container{
-			Name:  identifier,
-			Image: kubernetesImage,
-			Env:   buildEnvVars(envMap),
-			
-			//ImagePullPolicy: "Never",
-			ImagePullPolicy: corev1.PullIfNotPresent,
-		}
-
-		podname := shuffle.GetPodName()
-
-		ctx := context.Background()
-
-		if len(podname) > 0 {
-			currentPodStatus, err := shuffle.GetCurrentPodNetworkConfig(ctx, clientset, kubernetesNamespace, podname)
-			if err != nil {
-				log.Printf("[ERROR] Failed getting current pod network: %s", err)
-			} else {
-				log.Printf("[DEBUG] Current pod found!")
-				// currentPodStatus = k8s.io/api/core/v1.PodStatus
-			}
-		}
-
-
-		// While testing:
-		// kubectl delete pods --all --all-namespaces; kubectl delete services --all --all-namespaces
-		pod := &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   identifier,
-				Labels: containerLabels,
-			},
-			Spec: corev1.PodSpec{
-				RestartPolicy: "Never",
-				DNSPolicy:     "Default",
-				// NodeSelector: map[string]string{
-				// 	"node": "master",
-				// },
-				Containers: []corev1.Container{
-					containerAttachment,
-				},
-			},
-		}
-
-		// Check if running on ARM or x86 to download the correct image
-
-		// Get current pod's network so we can make the pod in it
-
-		networks, err := clientset.CoreV1().Pods(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
-		if err != nil {
-			log.Printf("[ERROR] Failed listing pods: %s", err)
-		}
-
-
-		createdPod, err := clientset.CoreV1().Pods(kubernetesNamespace).Create(context.Background(), pod, metav1.CreateOptions{})
-		if err != nil {
-			//log.Printf("[ERROR] Failed creating pod: %v", err)
-			return err
-		}
-
-		log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
-		return nil
+		return err
 	}
 
 	// Binds is the actual "-v" volume.
