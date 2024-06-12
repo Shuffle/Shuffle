@@ -3001,6 +3001,92 @@ func copyToTenzir(srcPath, destPath string) error {
 	return nil
 }
 
+func manageSigmaRule(fileName, action string) error {
+	containerName := "tenzir-node"
+	srcPath := ""
+	destPath := ""
+
+	switch action {
+	case "disable":
+		srcPath = fmt.Sprintf("/var/lib/tenzir/sigma_files/%s", fileName)
+		destPath = "/var/lib/tenzir/disabled_rules"
+	case "enable":
+		srcPath = fmt.Sprintf("/var/lib/tenzir/disabled_rules/%s", fileName)
+		destPath = "/var/lib/tenzir/sigma_files"
+	default:
+		return fmt.Errorf("invalid action: %s", action)
+	}
+
+	checkSrcCmd := exec.Command("docker", "exec", containerName, "test", "-f", srcPath)
+	if err := checkSrcCmd.Run(); err != nil {
+		return fmt.Errorf("source file does not exist: %v", err)
+	}
+
+	checkDestCmd := exec.Command("docker", "exec", containerName, "test", "-d", destPath)
+	if err := checkDestCmd.Run(); err != nil {
+		mkdirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mkdir", "-p", destPath)
+		if err := mkdirCmd.Run(); err != nil {
+			return fmt.Errorf("error creating destination directory in container: %v", err)
+		}
+	}
+
+	// Move the file to the destination directory or shall we copy it and then remove the file from source dir
+	mvCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mv", srcPath, destPath)
+	if err := mvCmd.Run(); err != nil {
+		return fmt.Errorf("error moving file: %v", err)
+	}
+
+	return nil
+}
+
+func manageSigmaFolder(action string) error {
+	containerName := "tenzir-node"
+	sigmaPath := "/var/lib/tenzir/sigma_files"
+	disabledPath := "/var/lib/tenzir/disabled_sigma"
+
+	if action == "disable" {
+
+		checkSigmaCmd := exec.Command("docker", "exec", containerName, "test", "-d", sigmaPath)
+		if err := checkSigmaCmd.Run(); err != nil {
+			return fmt.Errorf("sigma_files directory does not exist: %v", err)
+		}
+
+		// Rename sigma_files to disabled_sigma
+		renameCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mv", sigmaPath, disabledPath)
+		if err := renameCmd.Run(); err != nil {
+			return fmt.Errorf("error renaming sigma_files to disabled_sigma: %v", err)
+		}
+
+		// Create a new sigma_files directory
+		createCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mkdir", sigmaPath)
+		if err := createCmd.Run(); err != nil {
+			return fmt.Errorf("error creating new sigma_files directory: %v", err)
+		}
+	} else if action == "enable" {
+		
+		checkDisabledCmd := exec.Command("docker", "exec", containerName, "test", "-d", disabledPath)
+		if err := checkDisabledCmd.Run(); err != nil {
+			return fmt.Errorf("disabled_sigma directory does not exist: %v", err)
+		}
+
+		removeCmd := exec.Command("docker", "exec", "-u", "root", containerName, "rm", "-rf", sigmaPath)
+		if err := removeCmd.Run(); err != nil {
+			return fmt.Errorf("error removing existing sigma_files directory: %v", err)
+		}
+
+		// Rename disabled_sigma back to sigma_files
+		renameBackCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mv", disabledPath, sigmaPath)
+		if err := renameBackCmd.Run(); err != nil {
+			return fmt.Errorf("error renaming disabled_sigma back to sigma_files: %v", err)
+		}
+	} else {
+		return fmt.Errorf("invalid action: %s", action)
+	}
+
+	return nil
+}
+
+
 // func savePipelineData(pipelineId, identifier, status string) error {
 
 // 	url :=  fmt.Sprintf("%s/api/v1/triggers/pipeline/save", baseUrl)
