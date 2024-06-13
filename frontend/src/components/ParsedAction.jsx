@@ -175,8 +175,8 @@ const ParsedAction = (props) => {
   } = props;
 
   const classes = useStyles();
-  const [hideBody, setHideBody] = React.useState(true);
-  const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
+//   const [hideBody, setHideBody] = React.useState(true);
+//   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
   const [appActionName, setAppActionName] = React.useState(selectedAction.label);
   const [delay, setDelay] = React.useState(selectedAction?.execution_delay || 0);
   
@@ -217,28 +217,28 @@ const ParsedAction = (props) => {
 // 	selectedAction, selectedApp,setNewSelectedAction
 //   ])
 
-  useEffect(() => {
-	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
-		return
-	}
+//   useEffect(() => {
+// 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
+// 		return
+// 	}
 
-	const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-	if (paramcheck === undefined || paramcheck === null) {
-		return
-	}
+// 	const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+// 	if (paramcheck === undefined || paramcheck === null) {
+// 		return
+// 	}
 
-	// This was just opposite..
-	if (paramcheck.id === "TOGGLED"){ 
-		setHideBody(true)
-	} else {
-		setHideBody(false)
+// 	// This was just opposite..
+// 	if (paramcheck.id === "TOGGLED"){ 
+// 		setHideBody(true)
+// 	} else {
+// 		setHideBody(false)
 
-		if (paramcheck.id === "UNTOGGLED") {
-			setActivateHidingBodyButton(false)
-		}
-	}
+// 		if (paramcheck.id === "UNTOGGLED") {
+// 			setActivateHidingBodyButton(false)
+// 		}
+// 	}
 
-  }, [])
+//   }, [])
 
   const keywords = [
     "len(",
@@ -2837,185 +2837,178 @@ const ParsedAction = (props) => {
               //setSelectedActionParameters(selectedActionParameters)
             }
 
-            var hideBodyButton = "";
-            const hideBodyButtonValue = (
-              <div
-				key={data.name}
-				id="hide_body_button"
-                style={{
-                  marginTop: 50,
-                  border: "1px solid rgba(255,255,255,0.7)",
-                  borderTop: "1px solid rgba(255,255,255,0.7)",
-                  borderRadius: theme.palette.borderRadius,
-                  alignItems: "center",
-                  textAlign: "center",
-                }}
-              >
-                <Tooltip
-                  color="secondary"
-                  title={hideBody ?  "Hide all body fields and only show the body itself" : "Show all body fields instead of the body itself"}
-                  placement="top"
-                >
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        tabIndex="-1"
-                        checked={hideBody}
-                        style={{
-                          color: theme.palette.primary.secondary,
-                        }}
-                        onChange={(event) => {
-						  var tag = "TOGGLED"
-						  if (hideBody) {
-						  	tag = "UNTOGGLED"
-						  } 
+            // var hideBodyButton = "";
+			// const hideBodyButtonValue = (
+			// 	<div
+			// 	  key={data.name}
+			// 	  id="hide_body_button"
+			// 	  style={{
+			// 		marginTop: 50,
+			// 		border: "1px solid rgba(255,255,255,0.7)",
+			// 		borderTop: "1px solid rgba(255,255,255,0.7)",
+			// 		borderRadius: theme.palette.borderRadius,
+			// 		alignItems: "center",
+			// 		textAlign: "center",
+			// 	  }}
+			// 	>
+			// 	  <Tooltip
+			// 		color="secondary"
+			// 		title={
+			// 		  hideBody
+			// 			? "Hide all body fields and only show the body itself"
+			// 			: "Show all body fields instead of the body itself"
+			// 		}
+			// 		placement="top"
+			// 	  >
+			// 		<FormControlLabel
+			// 		  control={
+			// 			<Checkbox
+			// 			  tabIndex="-1"
+			// 			  checked={hideBody}
+			// 			  style={{
+			// 				color: theme.palette.primary.secondary,
+			// 			  }}
+			// 			  onChange={(event) => {
+			// 				const newHideBody = !hideBody;
+			// 				setHideBody(newHideBody);
+			  
+			// 				const updatedParameters = selectedActionParameters.map((param) => {
+			// 				  if (param.name === "body") {
+			// 					return { ...param, id: newHideBody ? "UNTOGGLED" : "TOGGLED" };
+			// 				  }
+			// 				  if (param.description === openApiFieldDesc) {
+			// 					return { ...param, field_active: newHideBody };
+			// 				  }
+			// 				  return param;
+			// 				});
+			  
+			// 				setSelectedActionParameters(updatedParameters);
+			  
+			// 				setTimeout(() => {
+			// 				  const element = document.getElementById("hide_body_button");
+			// 				  if (element) {
+			// 					element.scrollIntoView({
+			// 					  behavior: "smooth",
+			// 					  block: "center",
+			// 					});
+			// 				  }
+			// 				}, 100);
+			// 			  }}
+			// 			  name="requires_unique"
+			// 			/>
+			// 		  }
+			// 		  label={hideBody ? "Show Body" : "Hide Body"}
+			// 		/>
+			// 	  </Tooltip>
+			// 	</div>
+			//   );
 
-                          setHideBody(!hideBody)
-                          for (let paramkey in Object.entries(selectedActionParameters)) {
-                            var currentItem = selectedActionParameters[paramkey];
-							if (currentItem.name === "ssl_verify") {
+            // if (selectedApp.generated && data.name === "body") {
+            //   const regex = /\${(\w+)}/g;
+            //   const found = placeholder.match(regex);
 
-							}
+			//   // setActivateHidingBodyButton(false)
+			// 	//
+            //   hideBodyButton = hideBodyButtonValue;
+            //   if (found === null || !hideBody) {
+            //     if (found === null) {
+            //       setActivateHidingBodyButton(true);
+            //     } else {
+			// 		//console.log("In found: ", found, hideBody)
+			// 	}
+            //   } else {
 
-							if (currentItem.name === "body") {
-								currentItem.id = tag
-							}
+            //     rows = "1";
+            //     disabled = true;
+            //     openApiHelperText = "OpenAPI spec: fill the following fields.";
 
-                            if (currentItem.description === openApiFieldDesc) {
-                              currentItem.field_active = !hideBody
-                            }
-                          }
-				
-							
-						  // Scroll to hide_body_button
-						  setTimeout(() => {
-							var element = document.getElementById("hide_body_button")
-							if (element !== undefined && element !== null) {
-								// Keep the button a little below the top
-								element.scrollIntoView({
-									behavior: "smooth",
-									block: "center",
-								})
-							}
-						  }, 100)
-							
+            //     var changed = false;
+			// 	var tempArray = []
+            //     for (let specKey in found) {
+            //       const tmpitem = found[specKey];
+            //       var skip = false;
 
-                        }}
-                        name="requires_unique"
-                      />
-                    }
-                    label={hideBody ? "Show Body" : "Hide Body"}
-                  />
-                </Tooltip>
-              </div>
-            )
+            //       for (let innerkey in selectedActionParameters) {
+            //         if (selectedActionParameters[innerkey].name === tmpitem) {
+            //           skip = true;
+            //           break;
+            //         }
+            //       }
 
-            if (selectedApp.generated && data.name === "body") {
-              const regex = /\${(\w+)}/g;
-              const found = placeholder.match(regex);
+            //       if (skip) {
+            //         //console.log("SKIPPING ", tmpitem)
+            //         continue;
+            //       }
 
-			  // setActivateHidingBodyButton(false)
-				//
-              hideBodyButton = hideBodyButtonValue;
-              if (found === null || !hideBody) {
-                if (found === null) {
-                  setActivateHidingBodyButton(true);
-                } else {
-					//console.log("In found: ", found, hideBody)
-				}
-              } else {
+            //       changed = true;
+			// 	  var isRequired = false
+			// 	  // Check if original field name is in the selectedAction.required_body_fields
+			// 	  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null) {
+			// 		  for (let innerkey in selectedAction.required_body_fields) {
+			// 			  if (selectedAction.required_body_fields[innerkey] === tmpitem) {
+			// 				  isRequired = true
+			// 				  break
+			// 			  }
+			// 		  }
+			// 	  }
 
-                rows = "1";
-                disabled = true;
-                openApiHelperText = "OpenAPI spec: fill the following fields.";
-
-                var changed = false;
-				var tempArray = []
-                for (let specKey in found) {
-                  const tmpitem = found[specKey];
-                  var skip = false;
-
-                  for (let innerkey in selectedActionParameters) {
-                    if (selectedActionParameters[innerkey].name === tmpitem) {
-                      skip = true;
-                      break;
-                    }
-                  }
-
-                  if (skip) {
-                    //console.log("SKIPPING ", tmpitem)
-                    continue;
-                  }
-
-                  changed = true;
-				  var isRequired = false
-				  // Check if original field name is in the selectedAction.required_body_fields
-				  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null) {
-					  for (let innerkey in selectedAction.required_body_fields) {
-						  if (selectedAction.required_body_fields[innerkey] === tmpitem) {
-							  isRequired = true
-							  break
-						  }
-					  }
-				  }
-
-				  tempArray.push({
-                    action_field: "",
-                    configuration: false,
-                    description: openApiFieldDesc,
-                    example: "",
-                    id: "",
-                    multiline: true,
-                    name: tmpitem,
-                    options: null,
-                    required: isRequired,
-                    schema: { type: "string" },
-                    skip_multicheck: false,
-                    tags: null,
-                    value: "",
-                    variant: "STATIC_VALUE",
-                    field_active: true,
+			// 	  tempArray.push({
+            //         action_field: "",
+            //         configuration: false,
+            //         description: openApiFieldDesc,
+            //         example: "",
+            //         id: "",
+            //         multiline: true,
+            //         name: tmpitem,
+            //         options: null,
+            //         required: isRequired,
+            //         schema: { type: "string" },
+            //         skip_multicheck: false,
+            //         tags: null,
+            //         value: "",
+            //         variant: "STATIC_VALUE",
+            //         field_active: true,
 					  
-					autocompleted: true,
-                  });
-                }
+			// 		autocompleted: true,
+            //       });
+            //     }
                   
-				console.log("TEMP ARRAY: ", tempArray)
-				var required = selectedActionParameters.filter(item => item.required === true)
-				var notRequired = selectedActionParameters.filter(item => item.required === false)
+			// 	console.log("TEMP ARRAY: ", tempArray)
+			// 	var required = selectedActionParameters.filter(item => item.required === true)
+			// 	var notRequired = selectedActionParameters.filter(item => item.required === false)
 
-				if (tempArray.length > 0) {
-					// Sort tempArray based on tempArray.required
-					tempArray.sort((a, b) => (a.required < b.required) ? 1 : -1)
-					// Add all items to the selectedActionParameters array
-					for (let innerkey in tempArray) {
-						tempArray[innerkey].id = "ADDED"
+			// 	if (tempArray.length > 0) {
+			// 		// Sort tempArray based on tempArray.required
+			// 		tempArray.sort((a, b) => (a.required < b.required) ? 1 : -1)
+			// 		// Add all items to the selectedActionParameters array
+			// 		for (let innerkey in tempArray) {
+			// 			tempArray[innerkey].id = "ADDED"
 
-						if (tempArray[innerkey].required === true) {
-							required.push(tempArray[innerkey])
-						} else {
-							notRequired.push(tempArray[innerkey])	
-						}
-					}
-				}
-				//selectedActionParameters
-                if (changed) {
-				  // Sort selectedActionParameters based on selectedActionParameters.required
-				  //selectedActionParameters.sort((a, b) => (a.required < b.required) ? 1 : -1)
-				  // Find the "headers" and "queries" field names and put them on the first indexes anyway
-				  var newArray = required.concat(notRequired)
+			// 			if (tempArray[innerkey].required === true) {
+			// 				required.push(tempArray[innerkey])
+			// 			} else {
+			// 				notRequired.push(tempArray[innerkey])	
+			// 			}
+			// 		}
+			// 	}
+			// 	//selectedActionParameters
+            //     if (changed) {
+			// 	  // Sort selectedActionParameters based on selectedActionParameters.required
+			// 	  //selectedActionParameters.sort((a, b) => (a.required < b.required) ? 1 : -1)
+			// 	  // Find the "headers" and "queries" field names and put them on the first indexes anyway
+			// 	  var newArray = required.concat(notRequired)
 				  
 
-                  setSelectedActionParameters(newArray)
-                }
+            //       setSelectedActionParameters(newArray)
+            //     }
 
-                return hideBodyButton;
-              }
-            }
+            //     return hideBodyButton;
+            //   }
+            // }
 
-            if (activateHidingBodyButton === true) {
-              hideBodyButton = "";
-            }
+            // if (activateHidingBodyButton === true) {
+            //   hideBodyButton = "";
+            // }
 
             const clickedFieldId = "rightside_field_" + count;
 
@@ -3926,7 +3919,7 @@ const ParsedAction = (props) => {
 			const hasAutocomplete = data?.autocompleted === true
             return (
               <div key={data.name}>
-                {hideBodyButton}
+                {/* {hideBodyButton} */}
                 <div
                   style={{ marginTop: 20, marginBottom: 0, display: "flex" }}
                 >
