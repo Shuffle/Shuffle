@@ -3,7 +3,7 @@ name: dockerbuild
 on:
   push:
     branches:
-      - 2.0.0 
+      - main 
     paths:
       - "**"
       - "!.github/**"
@@ -11,7 +11,7 @@ on:
       - "!docker-compose.yml"
 jobs:
   main:
-    runs-on: ubuntu-nightly
+    runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
@@ -19,23 +19,23 @@ jobs:
         include:
           - app: frontend
             path: frontend
-            version: nightly
+            version: 1.4.0
             experimental: true
           - app: backend
             path: backend
-            version: nightly
+            version: 1.4.0
             experimental: true
           - app: app_sdk
             path: backend/app_sdk
-            version: nightly
+            version: 1.4.0
             experimental: true
           - app: orborus
             path: functions/onprem/orborus
-            version: nightly
+            version: 1.4.0
             experimental: true
           - app: worker
             path: functions/onprem/worker
-            version: nightly
+            version: 1.4.0
             experimental: true
     steps:
       - name: Checkout
@@ -77,11 +77,11 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
             ghcr.io/shuffle/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            ghcr.io/shuffle/shuffle-${{ matrix.app }}:nightly
+            ghcr.io/shuffle/shuffle-${{ matrix.app }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly
+            ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:latest
             frikky/shuffle-${{ matrix.app }}:${{ matrix.version }}
-            frikky/shuffle-${{ matrix.app }}:nightly
+            frikky/shuffle-${{ matrix.app }}:latest
             frikky/shuffle:${{ matrix.app }}
 
       - name: Image digest
