@@ -167,6 +167,7 @@ const ParsedAction = (props) => {
 
 	listCache,
 	
+	authGroups,
 	apps,
 	setEditorData,
 	setcodedata,
@@ -1123,6 +1124,65 @@ const ParsedAction = (props) => {
 		return helperText
 	}
 
+	const analyzeFields = () => {
+
+		if (selectedAction === undefined || selectedAction === null) {
+			return null
+		}
+
+		if (selectedActionParameters === undefined || selectedActionParameters === null || selectedActionParameters.length === 0) {
+			return null
+		}
+
+		// Only shuffle tools for now
+		if (selectedAction.app_name !== "Shuffle Tools") {
+			return null
+		}
+
+		// Custom rules 
+		if (selectedAction.name === "set_cache_value") {
+			var actionKey = ""
+			var actionValue = ""
+			for (let [key,keyval] in Object.entries(selectedActionParameters)) {
+				const param = selectedActionParameters[key]
+				if (param.name === "key") {
+					actionKey = param.value
+				}
+
+				if (param.name === "value") {
+					actionValue = param.value
+				}
+			}
+
+			if (actionKey === "" || actionValue === "") {
+				return null
+			}
+
+			if (!actionKey.includes(".#") && actionValue.includes(".#")) {
+				return <span>When the key ({actionKey}) is static, but the value is a list ({actionValue}), it will overwrite the list. You may be looking for the <span onClick={() => {}} style={{cursor: "pointer", color: "#f85a3e", }}>Check Cache Contains</span> action instead.</span>
+			}
+		}
+
+		return null
+
+	}
+
+	const suggestionInfo = () => {
+		const suggestionText = analyzeFields()
+		if (suggestionText === undefined || suggestionText === null) {
+			return null
+		}
+
+		if (selectedAction.errors === undefined || selectedAction.errors === null || selectedAction.errors.length === 0) {
+			selectedAction.errors = ["Suggestion: " + suggestionText]
+		}
+
+		return <Paper style={{padding: 10, backgroundColor: theme.palette.surfaceColor, border: "1px solid red",}}>
+		  	<Typography variant="body" style={{color: "white", }}>
+		  		<b>Tip:</b> {suggestionText}
+	  		</Typography>
+		</Paper>
+	}
 
     // FIXME: Issue #40 - selectedActionParameters not reset
     if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
@@ -1310,6 +1370,7 @@ const ParsedAction = (props) => {
 					</Button>
 				</Tooltip>
 			}
+
 			{selectedAction.template === true && selectedAction.matching_actions !== undefined && selectedAction.matching_actions !== null && selectedAction.matching_actions.length > 0 ?
 			<div>
 			<Typography variant="body1">
@@ -1440,6 +1501,8 @@ const ParsedAction = (props) => {
 							</Typography>
 						</div>
 					) : null}
+
+		  {suggestionInfo()}
 
           {selectedActionParameters.map((data, count) => {
             if (data.variant === "") {
@@ -3606,6 +3669,7 @@ const ParsedAction = (props) => {
 			  }}
               labelId="select-app-auth"
               value={
+				selectedAction.authentication_id === "authgroups" ? "authgroups" :
                 Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0
                   ? "No selection"
                   : selectedAction.selectedAuthentication
@@ -3617,6 +3681,8 @@ const ParsedAction = (props) => {
               }}
               fullWidth
               onChange={(e) => {
+				console.log("AUTH CHANGE: ", e.target.value)
+
                 if (e.target.value === "No selection") {
                   selectedAction.selectedAuthentication = {};
                   selectedAction.authentication_id = "";
@@ -3628,13 +3694,36 @@ const ParsedAction = (props) => {
                     }
                   }
                   setSelectedAction(selectedAction);
-                  setUpdate(Math.random());
+                  setUpdate(Math.random())
+
+				} else if (e.target.value === "authgroups") {
+					if (authGroups !== undefined && authGroups !== null && authGroups.length === 0) {
+						toast("No auth groups created. Opening window to create one")
+
+						setTimeout(() => {
+							window.open("/admin?tab=app_auth", "_blank")
+						}, 2500)
+					} else {
+						selectedAction.selectedAuthentication = {};
+						selectedAction.authentication_id = "authgroups"
+
+						for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
+						  //console.log(selectedAction.parameters[key])
+						  if (selectedAction.parameters[key].configuration) {
+							selectedAction.parameters[key].value = "authgroup controlled"
+						  }
+						}
+
+						setSelectedAction(selectedAction)
+						setUpdate(Math.random())
+					}
                 } else {
                   selectedAction.selectedAuthentication = e.target.value;
                   selectedAction.authentication_id = e.target.value.id;
                   setSelectedAction(selectedAction);
                   setUpdate(Math.random());
                 }
+
               }}
               style={{
                 backgroundColor: theme.palette.inputColor,
@@ -3653,6 +3742,7 @@ const ParsedAction = (props) => {
               >
                 <em>No selection</em>
               </MenuItem>
+
               {selectedAction.authentication.map((data) => {
 				if (data.last_modified === true) {
 					//console.log("LAST MODIFIED: ", data.label)
@@ -3689,6 +3779,20 @@ const ParsedAction = (props) => {
                   </MenuItem>
                 );
               })}
+
+
+			  <Divider style={{marginTop: 10, marginBottom: 10, }}/>
+
+              <MenuItem
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  color: "white",
+                }}
+                value="authgroups"
+              >
+                <em>Auth Groups</em>
+              </MenuItem>
+
             </Select>
 
             {/*

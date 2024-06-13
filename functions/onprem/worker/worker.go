@@ -1897,87 +1897,87 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 }
 
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
-if request.Body == nil {
-	log.Printf("[WARNING] (2) No body in request for workflowqueue")
-	resp.WriteHeader(http.StatusBadRequest)
-	return
-}
-
-defer request.Body.Close()
-body, err := ioutil.ReadAll(request.Body)
-if err != nil {
-	log.Printf("[WARNING] (3) Failed reading body for workflowqueue")
-	resp.WriteHeader(401)
-	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-	return
-}
-
-var actionResult shuffle.ActionResult
-err = json.Unmarshal(body, &actionResult)
-if err != nil {
-	log.Printf("[ERROR] Failed shuffle.ActionResult unmarshaling (2): %s", err)
-	//resp.WriteHeader(401)
-	//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-	//return
-}
-
-if len(actionResult.ExecutionId) == 0 {
-	log.Printf("[ERROR] No workflow execution id in action result. Data: %s", string(body))
-	resp.WriteHeader(400)
-	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No workflow execution id in action result"}`)))
-	return
-}
-
-// 1. Get the shuffle.WorkflowExecution(ExecutionId) from the database
-// 2. if shuffle.ActionResult.Authentication != shuffle.WorkflowExecution.Authentication -> exit
-// 3. Add to and update actionResult in workflowExecution
-// 4. Push to db
-// IF FAIL: Set executionstatus: abort or cancel
-ctx := context.Background()
-workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
-if err != nil {
-	log.Printf("[ERROR][%s] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, actionResult.ExecutionId, err)
-	resp.WriteHeader(500)
-	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist locally."}`, actionResult.ExecutionId)))
-	return
-}
-
-if workflowExecution.Authorization != actionResult.Authorization {
-	log.Printf("[ERROR][%s] Bad authorization key when updating node (workflowQueue). Want: %s, Have: %s", actionResult.ExecutionId, workflowExecution.Authorization, actionResult.Authorization)
-	resp.WriteHeader(403)
-	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key"}`)))
-	return
-}
-
-if workflowExecution.Status == "FINISHED" {
-	log.Printf("[DEBUG][%s] Workflowexecution is already FINISHED. No further action can be taken", workflowExecution.ExecutionId)
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because it has status %s. Lastnode: %s"}`, workflowExecution.Status, workflowExecution.LastNode)))
-	return
-}
-
-if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-	log.Printf("[WARNING][%s] Workflowexecution already has status %s. No further action can be taken", workflowExecution.ExecutionId, workflowExecution.Status)
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is aborted because of %s with result %s and status %s"}`, workflowExecution.LastNode, workflowExecution.Result, workflowExecution.Status)))
-	return
-}
-
-retries := 0
-retry, retriesok := request.URL.Query()["retries"]
-if retriesok && len(retry) > 0 {
-	val, err := strconv.Atoi(retry[0])
-	if err == nil {
-		retries = val
+	if request.Body == nil {
+		log.Printf("[WARNING] (2) No body in request for workflowqueue")
+		resp.WriteHeader(http.StatusBadRequest)
+		return
 	}
-}
 
-log.Printf("[DEBUG][%s] Action: Received, Label: '%s', Action: '%s', Status: %s, Run status: %s, Extra=Retry:%d", workflowExecution.ExecutionId, actionResult.Action.Label, actionResult.Action.AppName, actionResult.Status, workflowExecution.Status, retries)
+	defer request.Body.Close()
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[WARNING] (3) Failed reading body for workflowqueue")
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
 
-//results = append(results, actionResult)
-//log.Printf("[INFO][%s] Time to execute %s (%s) with app %s:%s, function %s, env %s with %d parameters.", workflowExecution.ExecutionId, action.ID, action.Label, action.AppName, action.AppVersion, action.Name, action.Environment, len(action.Parameters))
-//log.Printf("[DEBUG][%s] In workflowQueue with transaction", workflowExecution.ExecutionId)
-runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
+	var actionResult shuffle.ActionResult
+	err = json.Unmarshal(body, &actionResult)
+	if err != nil {
+		log.Printf("[ERROR] Failed shuffle.ActionResult unmarshaling (2): %s", err)
+		//resp.WriteHeader(401)
+		//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		//return
+	}
+
+	if len(actionResult.ExecutionId) == 0 {
+		log.Printf("[ERROR] No workflow execution id in action result. Data: %s", string(body))
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No workflow execution id in action result"}`)))
+		return
+	}
+
+	// 1. Get the shuffle.WorkflowExecution(ExecutionId) from the database
+	// 2. if shuffle.ActionResult.Authentication != shuffle.WorkflowExecution.Authentication -> exit
+	// 3. Add to and update actionResult in workflowExecution
+	// 4. Push to db
+	// IF FAIL: Set executionstatus: abort or cancel
+	ctx := context.Background()
+	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
+	if err != nil {
+		log.Printf("[ERROR][%s] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, actionResult.ExecutionId, err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist locally."}`, actionResult.ExecutionId)))
+		return
+	}
+
+	if workflowExecution.Authorization != actionResult.Authorization {
+		log.Printf("[ERROR][%s] Bad authorization key when updating node (workflowQueue). Want: %s, Have: %s", actionResult.ExecutionId, workflowExecution.Authorization, actionResult.Authorization)
+		resp.WriteHeader(403)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key"}`)))
+		return
+	}
+
+	if workflowExecution.Status == "FINISHED" {
+		log.Printf("[DEBUG][%s] Workflowexecution is already FINISHED. No further action can be taken", workflowExecution.ExecutionId)
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because it has status %s. Lastnode: %s"}`, workflowExecution.Status, workflowExecution.LastNode)))
+		return
+	}
+
+	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
+		log.Printf("[WARNING][%s] Workflowexecution already has status %s. No further action can be taken", workflowExecution.ExecutionId, workflowExecution.Status)
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is aborted because of %s with result %s and status %s"}`, workflowExecution.LastNode, workflowExecution.Result, workflowExecution.Status)))
+		return
+	}
+
+	retries := 0
+	retry, retriesok := request.URL.Query()["retries"]
+	if retriesok && len(retry) > 0 {
+		val, err := strconv.Atoi(retry[0])
+		if err == nil {
+			retries = val
+		}
+	}
+
+	log.Printf("[DEBUG][%s] Action: Received, Label: '%s', Action: '%s', Status: %s, Run status: %s, Extra=Retry:%d", workflowExecution.ExecutionId, actionResult.Action.Label, actionResult.Action.AppName, actionResult.Status, workflowExecution.Status, retries)
+
+	//results = append(results, actionResult)
+	//log.Printf("[INFO][%s] Time to execute %s (%s) with app %s:%s, function %s, env %s with %d parameters.", workflowExecution.ExecutionId, action.ID, action.Label, action.AppName, action.AppVersion, action.Name, action.Environment, len(action.Parameters))
+	//log.Printf("[DEBUG][%s] In workflowQueue with transaction", workflowExecution.ExecutionId)
+	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 }
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
@@ -2090,7 +2090,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			*/
 		}
 	}
-	
+
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 		log.Printf("[DEBUG][%s] Running setexec with status %s and %d/%d results", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		//result(s)", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Results))

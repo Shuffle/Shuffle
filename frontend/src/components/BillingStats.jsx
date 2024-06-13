@@ -134,6 +134,9 @@ const AppStats = (defaultprops) => {
 				Accept: "application/json",
 			},
 			credentials: "include",
+	  }).catch((error) => {
+		  console.log("Error getting workflow stats: " + error);
+		  return workflow
 	  })
 
 	  if (response.status !== 200) {

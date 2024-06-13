@@ -134,6 +134,11 @@ const data = [
     },
   },
   {
+    selector: `node[?parent_controlled]`,
+    css: {
+    },
+  },
+  {
     selector: `node[app_name="Testing"]`,
     css: {
       width: "30px",

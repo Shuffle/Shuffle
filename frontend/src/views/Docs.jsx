@@ -46,6 +46,7 @@ const Body = {
     height: "100%",
     color: "white",
     position: "relative",
+	paddingTop: 40, 
     //textAlign: "center",
 };
 

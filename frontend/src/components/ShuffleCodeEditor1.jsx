@@ -627,8 +627,8 @@ const CodeEditor = (props) => {
 						newMarkers.push({
 							startRow: i,
 							startCol: startCh,
-							endRow: i+1,
-							endCol: endCh+1,
+							endRow: i,
+							endCol: endCh,
 							className: correctVariable ? "good-marker" : "bad-marker",
 							type: "text",
 						})

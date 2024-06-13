@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import theme from "../theme.jsx";
 import { BrowserView, MobileView } from "react-device-detect";
@@ -83,6 +83,15 @@ const Header = (props) => {
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
+
+  useEffect(() => {
+	const topbar = localStorage.getItem("topbar_closed")
+	if (topbar === "true") {
+		setShowTopbar(false)
+	} else {
+		setShowTopbar(true)
+	}
+  }, [])
 
   const handleClose = () => {
     setAnchorEl(null);
@@ -1590,17 +1599,17 @@ const Header = (props) => {
 
                 navigate("/training")
 
-                //if (window.drift !== undefined) {
-                //	window.drift.api.startInteraction({ interactionId: 341911 })
-                //} else {
-                //	console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
-                //}
               }} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
                 Public Training!
               </span>
             </u>
           </Typography>
-          <IconButton color="secondary" style={{ position: "absolute", top: -3, right: 20, }} onClick={(event) => { setShowTopbar(false) }}>
+          <IconButton color="secondary" style={{ position: "absolute", top: -3, right: 20, }} onClick={(event) => { 
+			  setShowTopbar(false) 
+
+			  // Set storage that it's clicked
+			  localStorage.setItem("topbar_closed", "true")
+		  }}>
             <CloseIcon />
           </IconButton>
         </div>

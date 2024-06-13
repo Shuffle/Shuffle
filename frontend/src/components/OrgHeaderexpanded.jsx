@@ -55,6 +55,10 @@ const OrgHeaderexpanded = (props) => {
 		globalUrl,
 		isCloud,
 		adminTab,
+
+		selectedStatus,
+		setSelectedStatus,
+		isEditOrgTab
 	} = props;
 
 	const classes = useStyles();
@@ -168,6 +172,11 @@ const OrgHeaderexpanded = (props) => {
 				? ""
 				: selectedOrganization.sso_config.openid_token
 	)
+
+	const [uploadRepo, setUploadRepo] = React.useState(selectedOrganization.defaults === undefined ? "" : selectedOrganization.defaults.workflow_upload_repo === undefined || selectedOrganization.defaults.workflow_upload_repo.length === 0 ? "" : selectedOrganization.defaults.workflow_upload_repo)
+	const [uploadBranch, setUploadBranch] = React.useState(selectedOrganization.defaults === undefined ? defaultBranch : selectedOrganization.defaults.workflow_upload_branch === undefined || selectedOrganization.defaults.workflow_upload_branch.length === 0 ? defaultBranch : selectedOrganization.defaults.workflow_upload_branch)
+	const [uploadUsername, setUploadUsername] = React.useState(selectedOrganization.defaults === undefined ? "" : selectedOrganization.defaults.workflow_upload_username === undefined || selectedOrganization.defaults.workflow_upload_username.length === 0 ? "" : selectedOrganization.defaults.workflow_upload_username)
+	const [uploadToken, setUploadToken] = React.useState(selectedOrganization.defaults === undefined ? "" : selectedOrganization.defaults.workflow_upload_token === undefined || selectedOrganization.defaults.workflow_upload_token.length === 0 ? "" : selectedOrganization.defaults.workflow_upload_token)
 
 	const [workflows, setWorkflows] = React.useState([])
 	const [workflow, setWorkflow] = React.useState({})
@@ -299,7 +308,6 @@ const OrgHeaderexpanded = (props) => {
 								client_secret: openidClientSecret,
 								openid_authorization: openidAuthorization,
 								openid_token: openidToken,
-								SSORequired: SSORequired
 							}
 						)
 					}
@@ -311,16 +319,7 @@ const OrgHeaderexpanded = (props) => {
 	);
 
 	const toggleBetweenRequiredOrOptional = (event) => {
-		if (ssoEntrypoint === "" && openidAuthorization === "" && openidToken === "") {
-			if (!SSORequired) {
-				toast.error("Please fill in fields for either OpenID connect or SSO before continuing. ")
-				return
-			}
-		} else {
-			toast.info("Toggled SSO. Remember to save.")
-		}
-
-		setSSORequired(event.target.checked)
+		setSSORequired(event.target.checked);
 	};
 
 	return (
@@ -512,16 +511,164 @@ const OrgHeaderexpanded = (props) => {
 						/>
 					</span>
 				</Grid>
-				{/* {isCloud ? null : */}
-				<Typography variant="h4" style={{ textAlign: "left", marginTop: 75, marginLeft: 20, }}>Single Signon - SAML/OpenID</Typography>
-				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 20, marginLeft: 10, width: '100%', borderBottom: '1px solid #414347' }}>
-					<Typography variant="body1" style={{ margin: '5px 0px 5px 10px' }}>Make SAML SSO or OpenID Authentication required/optional for your organization. Tip: Do not make it required until you have tested the URL directly.</Typography>
+
+				<Grid item xs={12} style={{ marginTop: 50, }}>
+					<Typography variant="h4" style={{ textAlign: "left", }}>Workflow Backup Repository</Typography>
+					<Typography variant="body2" style={{ textAlign: "left", marginTop: 5, }} color="textSecondary">
+						Decide where workflows are backed up in a Git repository. Will create logs and notifications if upload fails. The repository and branch must already have been initialized. Files will show up in the root folder in the format 'status_workflowid.json'
+					</Typography>
+					<Grid container style={{ marginTop: 10, }} spacing={2}>
+						<Grid item xs={6} style={{}}>
+							<span>
+								<Typography>Repository for workflow backup</Typography>
+								<TextField
+									required
+									style={{
+										flex: "1",
+										marginTop: "5px",
+										marginRight: "15px",
+										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									}}
+									fullWidth={true}
+									type="name"
+									multiline={true}
+									rows={1}
+									id="outlined-with-placeholder"
+									margin="normal"
+									variant="outlined"
+									placeholder="Ex: github/com/shuffle/workflowbackup "
+									value={uploadRepo}
+									onChange={(e) => {
+										setUploadRepo(e.target.value);
+									}}
+									InputProps={{
+										classes: {
+											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
+										},
+										style: {
+											color: "white",
+										},
+									}}
+								/>
+							</span>
+						</Grid>
+						<Grid item xs={6} style={{}}>
+							<span>
+								<Typography>Branch</Typography>
+								<TextField
+									required
+									style={{
+										flex: "1",
+										marginTop: "5px",
+										marginRight: "15px",
+										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									}}
+									fullWidth={true}
+									type="name"
+									id="outlined-with-placeholder"
+									margin="normal"
+									variant="outlined"
+									multiline={true}
+									rows={1}
+									placeholder="The branch to use for backup of workflows"
+									value={uploadBranch}
+									onChange={(e) => {
+										setUploadBranch(e.target.value);
+									}}
+									InputProps={{
+										classes: {
+											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
+										},
+										style: {
+											color: "white",
+										},
+									}}
+								/>
+							</span>
+						</Grid>
+					</Grid>
+					<Grid container style={{ marginTop: 10, }} spacing={2}>
+						<Grid item xs={6} style={{}}>
+							<span>
+								<Typography>Username</Typography>
+								<TextField
+									required
+									style={{
+										flex: "1",
+										marginTop: "5px",
+										marginRight: "15px",
+										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									}}
+									fullWidth={true}
+									type="name"
+									multiline={true}
+									rows={1}
+									id="outlined-with-placeholder"
+									margin="normal"
+									variant="outlined"
+									placeholder="The username to use for backup of workflows"
+									value={uploadUsername}
+									onChange={(e) => {
+										setUploadUsername(e.target.value);
+									}}
+									InputProps={{
+										classes: {
+											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
+										},
+										style: {
+											color: "white",
+										},
+									}}
+								/>
+							</span>
+						</Grid>
+						<Grid item xs={6} style={{}}>
+							<span>
+								<Typography>Git token/password</Typography>
+								<TextField
+									required
+									style={{
+										flex: "1",
+										marginTop: "5px",
+										marginRight: "15px",
+										backgroundColor: isEditOrgTab ? "rgba(33, 33, 33, 1)" : theme.palette.inputColor,
+									}}
+									fullWidth={true}
+									id="outlined-with-placeholder"
+									margin="normal"
+									variant="outlined"
+									multiline={true}
+									rows={1}
+									placeholder="The token to use for backup of workflows. PS: This will be stored in cleartext in the database for now."
+									value={uploadToken}
+									onChange={(e) => {
+										setUploadToken(e.target.value);
+									}}
+									InputProps={{
+										classes: {
+											notchedOutline: isEditOrgTab ? null : classes.notchedOutline,
+										},
+										style: {
+											color: "white",
+										},
+									}}
+									type="password"
+								/>
+							</span>
+						</Grid>
+					</Grid>
+				</Grid>
+
+				<Typography variant="h4" style={{ marginLeft: 20, paddingTop: 100, borderTop: "1px solid rgba(255, 255, 255, 0.12)", width: "100%", marginTop: 50, }}>
+					SSO Configuration
+				</Typography>
+
+				<div style={{ display: 'flex', flexDirection: 'column', marginLeft: 10, width: '100%', }}>
+					<Typography variant="body2" color="textSecondary" style={{ margin: '5px 0px 5px 10px' }}>Make SAML SSO or OpenID Authentication Required or Optional for Your Organization.</Typography>
 					<div>
 						<Switch
 							checked={SSORequired}
-							onChange={(e) => {
-								toggleBetweenRequiredOrOptional(e)
-							}}
+							onChange={toggleBetweenRequiredOrOptional}
 							name="onOffSwitch"
 							color="primary"
 							title="Make SAML SSO or OpenID Authentication Required or Optional for Your Organization"
@@ -529,10 +676,8 @@ const OrgHeaderexpanded = (props) => {
 						{SSORequired ? 'Required' : 'Optional'}
 					</div>
 				</div>
-				<div>
-				</div>
 				<Grid item xs={12} style={{}}>
-					<Typography variant="h6" style={{ textAlign: "left", }}>OpenID connect</Typography>
+					<Typography variant="h6" style={{ textAlign: "center", }}>OpenID connect</Typography>
 					<Grid container style={{ marginTop: 10, }}>
 						<Grid item xs={6} style={{}}>
 							<span>
@@ -549,6 +694,11 @@ const OrgHeaderexpanded = (props) => {
 									type="name"
 									multiline={true}
 									rows={2}
+									disabled={
+										selectedOrganization.manager_orgs !== undefined &&
+										selectedOrganization.manager_orgs !== null &&
+										selectedOrganization.manager_orgs.length > 0
+									}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
@@ -583,6 +733,11 @@ const OrgHeaderexpanded = (props) => {
 									type="name"
 									multiline={true}
 									rows={2}
+									disabled={
+										selectedOrganization.manager_orgs !== undefined &&
+										selectedOrganization.manager_orgs !== null &&
+										selectedOrganization.manager_orgs.length > 0
+									}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"
@@ -677,7 +832,7 @@ const OrgHeaderexpanded = (props) => {
 				{/* } */}
 				{/*isCloud ? null : */}
 				<Grid item xs={12} style={{ marginTop: 50, }}>
-					<Typography variant="h4" style={{ textAlign: "center", }}>SAML SSO (v1.1)</Typography>
+					<Typography variant="h6" style={{ textAlign: "center", }}>SAML SSO (v1.1)</Typography>
 					<Grid container style={{ marginTop: 20, }}>
 						<Grid item xs={6} style={{}}>
 							<span>
@@ -694,6 +849,11 @@ const OrgHeaderexpanded = (props) => {
 									type="name"
 									multiline={true}
 									rows={2}
+									disabled={
+										selectedOrganization.manager_orgs !== undefined &&
+										selectedOrganization.manager_orgs !== null &&
+										selectedOrganization.manager_orgs.length > 0
+									}
 									id="outlined-with-placeholder"
 									margin="normal"
 									variant="outlined"

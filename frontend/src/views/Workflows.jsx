@@ -74,6 +74,7 @@ import {
   ArrowLeft as ArrowLeftIcon,
   ArrowRight as ArrowRightIcon,
   QueryStats as QueryStatsIcon, 
+  Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
@@ -614,6 +615,7 @@ const Workflows = (props) => {
   const [videoViewOpen, setVideoViewOpen] = React.useState(false)
   const [gettingStartedItems, setGettingStartedItems] = React.useState([])
   const [selectedWorkflowIndexes, setSelectedWorkflowIndexes] = React.useState([])
+  const [highlightIds, setHighlightIds] = React.useState([])
 
   const [apps, setApps] = React.useState([]);
 
@@ -1213,7 +1215,24 @@ const Workflows = (props) => {
 				}
 
 				setFirstLoad(false)
-			}, 100)
+			}, 250)
+
+			/*
+			setTimeout(() => {
+				var timeout = 0
+				for (var key in newarray) {
+					const wf = newarray[key]
+					if (wf.actions === undefined || wf.actions === null || wf.actions.length === 0) {
+						setTimeout(() => {
+							sideloadWorkflow(wf.id, false)
+						}, timeout)
+							
+						timeout += 1000 
+					}
+
+				}
+			}, 1000)
+			*/
 
         } else {
           if (isLoggedIn) {
@@ -1637,20 +1656,24 @@ const Workflows = (props) => {
 		});
   };
 
-  const copyWorkflow = (data) => {
-    data = JSON.parse(JSON.stringify(data));
-    toast("Copying workflow " + data.name);
-    data.id = "";
-    data.name = data.name + "_copy";
-    data = deduplicateIds(data, true);
+  const duplicateWorkflow = (data) => {
+    //data = JSON.parse(JSON.stringify(data));
+    toast("Copying workflow '" + data.name + "'. The new workflow will load in and be highlighted.");
+    //data.id = "";
+    //data.name = data.name + "_copy";
+    //data = deduplicateIds(data, true);
 
-    fetch(globalUrl + "/api/v1/workflows", {
+	const duplicateData = {
+		name: data.name + "_copy",
+	}
+
+    fetch(`${globalUrl}/api/v1/workflows/${data.id}/duplicate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(duplicateData),
       credentials: "include",
     })
       .then((response) => {
@@ -1660,7 +1683,20 @@ const Workflows = (props) => {
         }
         return response.json();
       })
-      .then(() => {
+      .then((responseJson) => {
+		if (responseJson.success === false) {
+			if (responseJson.reason !== undefined) {
+				toast("Failed copying workflow: " + responseJson.reason)
+			} else {
+				toast("Failed copying workflow")
+			}
+
+			return
+		}
+
+		if (responseJson.id !== undefined) {
+			setHighlightIds([responseJson.id])
+		}
         setTimeout(() => {
           getAvailableWorkflows();
         }, 1000);
@@ -1689,15 +1725,68 @@ const Workflows = (props) => {
 		})
 	}
 
-  const sideloadWorkflow = (id, openEdit) => {
+	const exportSingleWorkflow = (data, setOpen) => { 
+		setExportModalOpen(true)
+
+		if (data.triggers !== null && data.triggers !== undefined) {
+		  var newSubflows = [];
+		  for (var key in data.triggers) {
+			const trigger = data.triggers[key];
+
+			if (
+			  trigger.parameters !== null &&
+			  trigger.parameters !== undefined
+			) {
+			  for (var subkey in trigger.parameters) {
+				const param = trigger.parameters[subkey];
+				if (
+				  param.name === "workflow" &&
+				  param.value !== data.id &&
+				  !newSubflows.includes(param.value)
+				) {
+				  newSubflows.push(param.value);
+				}
+			  }
+			}
+		  }
+
+		  var parsedworkflows = [];
+		  for (var key in newSubflows) {
+			const foundWorkflow = workflows.find(
+			  (workflow) => workflow.id === newSubflows[key]
+			);
+			if (foundWorkflow !== undefined && foundWorkflow !== null) {
+			  parsedworkflows.push(foundWorkflow);
+			}
+		  }
+
+		  if (parsedworkflows.length > 0) {
+			console.log(
+			  "Appending subflows during export: ",
+			  parsedworkflows.length
+			);
+			data.subflows = parsedworkflows;
+		  }
+		}
+
+		setExportData(data)
+		setOpen(false)
+	}
+
+  const sideloadWorkflow = (id, action, setOpen) => {
+
 	const storagewf = localStorage.getItem("workflows")
 	const storageWorkflows = JSON.parse(storagewf)
 	if (storageWorkflows === null || storageWorkflows === undefined || storageWorkflows.length === 0) {
 	} else {
 		for (var i = 0; i < storageWorkflows.length; i++) {
 			if (storageWorkflows[i].id === id) {
-				if (storageWorkflows[i].image !== "") {
-					return
+				if (storageWorkflows[i].image !== "" && storageWorkflows[i].image !== undefined && storageWorkflows[i].image !== null) {
+
+					if (action === undefined || action === null || action === "") {
+						console.log("RETURNING")
+						return
+					}
 				}
 			}
 		}
@@ -1718,8 +1807,16 @@ const Workflows = (props) => {
         return response.json()
       })
       .then((responseJson) => {
-		if (openEdit) { 
-			setEditing(responseJson) 
+		if (responseJson.success !== false && responseJson.id !== undefined) {
+			if (action === "edit") { 
+				setEditing(responseJson) 
+			} else if (action === "publish") {
+				setPublishModalOpen(true)
+				setSelectedWorkflow(responseJson)
+			} else if (action === "export") {
+				exportSingleWorkflow(responseJson, setOpen) 
+			}
+
 		}
 
 		for (var i = 0; i < storageWorkflows.length; i++) {
@@ -1730,8 +1827,9 @@ const Workflows = (props) => {
 			}
 		}
 
-		setWorkflows(storageWorkflows)
-		//setFilteredWorkflows(storageWorkflows)
+		//setWorkflows(storageWorkflows)
+		setFilteredWorkflows(storageWorkflows)
+		//setUpdate(Math.random())
       })
       .catch((error) => {
         console.log(error.toString())
@@ -1878,7 +1976,9 @@ const Workflows = (props) => {
 	const appGroup = getWorkflowAppgroup(data)
     const [triggers, subflows] = getWorkflowMeta(data)
 
-	const isDistributed = data.suborg_distribution !== undefined && data.suborg_distribution !== null && data.suborg_distribution.includes(userdata.active_org.id)
+	const hasSuborgs = data.suborg_distribution !== undefined && data.suborg_distribution !== null && data.suborg_distribution.length > 0
+	const isDistributed = (data.parentorg_workflow !== undefined && data.parentorg_workflow !== null && data.parentorg_workflow.length > 0) //|| (data.org_id !== userdata.active_org.id && data.org_id !== undefined && data.org_id !== null && data.org_id.length > 0)
+
     const workflowMenuButtons = (
       <Menu
         id="long-menu"
@@ -1890,8 +1990,20 @@ const Workflows = (props) => {
           setAnchorEl(null);
         }}
       >
+		{isDistributed ? 
+        <MenuItem
+			style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+			onClick={() => {
+				navigate(`/workflows/${data.id}`)
+			}}
+		>
+			<VisibilityIcon style={{ marginLeft: 0, marginRight: 8 }} />
+			Explore Workflow
+        </MenuItem>
+		: null}
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+		  disabled={isDistributed}
           onClick={(event) => {
 			event.stopPropagation()
 			if (data.actions !== undefined && data.actions !== null && data.actions.length > 0 && data.image !== "") {
@@ -1899,7 +2011,9 @@ const Workflows = (props) => {
 
 			} else {
 				//toast("Need to side-load workflow to be edited properly")
-				sideloadWorkflow(data.id, true)
+				sideloadWorkflow(data.id, "edit")
+
+				toast.info("Loading full workflow for editing. Please wait...") 
 			}
   		  }}
           key={"change"}
@@ -1909,9 +2023,11 @@ const Workflows = (props) => {
         </MenuItem>
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+		  disabled={isDistributed}
           onClick={() => {
-            setSelectedWorkflow(data);
-            setPublishModalOpen(true);
+			sideloadWorkflow(data.id, "publish")
+
+			toast.info("Loading full workflow for publishing. Please wait...") 
           }}
           key={"publish"}
         >
@@ -1920,9 +2036,10 @@ const Workflows = (props) => {
         </MenuItem>
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+		  disabled={isDistributed}
           onClick={() => {
-            copyWorkflow(data);
-            setOpen(false);
+            duplicateWorkflow(data)
+            setOpen(false)
           }}
           key={"duplicate"}
         >
@@ -1931,52 +2048,11 @@ const Workflows = (props) => {
         </MenuItem>
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+		  disabled={isDistributed}
           onClick={() => {
-            setExportModalOpen(true);
+			sideloadWorkflow(data.id, "export", setOpen)
 
-            if (data.triggers !== null && data.triggers !== undefined) {
-              var newSubflows = [];
-              for (var key in data.triggers) {
-                const trigger = data.triggers[key];
-
-                if (
-                  trigger.parameters !== null &&
-                  trigger.parameters !== undefined
-                ) {
-                  for (var subkey in trigger.parameters) {
-                    const param = trigger.parameters[subkey];
-                    if (
-                      param.name === "workflow" &&
-                      param.value !== data.id &&
-                      !newSubflows.includes(param.value)
-                    ) {
-                      newSubflows.push(param.value);
-                    }
-                  }
-                }
-              }
-
-              var parsedworkflows = [];
-              for (var key in newSubflows) {
-                const foundWorkflow = workflows.find(
-                  (workflow) => workflow.id === newSubflows[key]
-                );
-                if (foundWorkflow !== undefined && foundWorkflow !== null) {
-                  parsedworkflows.push(foundWorkflow);
-                }
-              }
-
-              if (parsedworkflows.length > 0) {
-                console.log(
-                  "Appending subflows during export: ",
-                  parsedworkflows.length
-                );
-                data.subflows = parsedworkflows;
-              }
-            }
-
-            setExportData(data);
-            setOpen(false);
+			toast.info("Loading full workflow to be exported. Please wait...") 
           }}
           key={"export"}
         >
@@ -1985,6 +2061,7 @@ const Workflows = (props) => {
         </MenuItem>
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+		  disabled={isDistributed}
           onClick={() => {
             setDeleteModalOpen(true);
             setSelectedWorkflowId(data.id);
@@ -2076,7 +2153,7 @@ const Workflows = (props) => {
 		}
 
     return (
-	  <div style={{width: "100%", minWidth: 321, position: "relative", border: isDistributed ? "2px solid #40E0D0" : "inherit", borderRadius: theme.palette.borderRadius, }}>
+	  <div style={{width: "100%", minWidth: 321, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? "2px solid #40E0D0" : "inherit", borderRadius: theme.palette.borderRadius, }}>
         <Paper square style={paperAppStyle}>
 			{selectedCategory !== "" ?
 				<Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -2462,6 +2539,8 @@ const Workflows = (props) => {
         }
 
         const reader = new FileReader();
+		var workflowids = []
+
         // Waits for the read
         reader.addEventListener("load", (event) => {
           var data = reader.result;
@@ -2497,7 +2576,8 @@ const Workflows = (props) => {
 			    data.org_id = userdata.active_org.id
 				data.org = []
 				data.execution_org = {}
-
+		
+				workflowids.push(data.id)
 
                 // Actually create it
                 setNewWorkflow(
@@ -2528,6 +2608,10 @@ const Workflows = (props) => {
     }
 
     setLoadWorkflowsModalOpen(false);
+
+	if (workflowids.length > 0) {
+		setHighlightIds(workflowids)
+	}
   };
 
   const getWorkflowMeta = (data) => {
@@ -3682,7 +3766,7 @@ const Workflows = (props) => {
 										workflowDelay += 75
 									} else {
 										return (
-											<Grid key={index} item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
+											<Grid key={index} item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px", }}>
 												<WorkflowPaper key={index} data={data} />
 											</Grid>
 										)

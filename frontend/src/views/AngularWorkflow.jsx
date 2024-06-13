@@ -451,6 +451,9 @@ const AngularWorkflow = (defaultprops) => {
   const [lastExecution, setLastExecution] = React.useState("");
   const [configureWorkflowModalOpen, setConfigureWorkflowModalOpen] = React.useState(false);
 
+  const [authgroupModalOpen, setAuthgroupModalOpen] = React.useState(false);
+  const [authGroups, setAuthGroups] = React.useState([])
+
   const curpath = typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname;
       
 
@@ -524,11 +527,12 @@ const AngularWorkflow = (defaultprops) => {
   const [workflowRecommendations, setWorkflowRecommendations] = React.useState(undefined);
   const [showErrors, setShowErrors] = React.useState(true);
   const [highlightedApp, setHighlightedApp] = React.useState("")
-
   const [listCache, setListCache] = React.useState([]);
-
   const [selectedOption, setSelectedOption] = React.useState("");
   const [tenzirConfigModalOpen, setTenzirConfigModalOpen] = React.useState(false);
+
+  const [distributedFromParent, setDistributedFromParent] = React.useState("")
+  const [suborgWorkflows, setSuborgWorkflows] = React.useState([])
 
   const [suggestionBox, setSuggestionBox] = React.useState({
   	"position": {
@@ -538,6 +542,12 @@ const AngularWorkflow = (defaultprops) => {
   	"open": false,
   	"attachedTo": "",
   })
+
+  useEffect(() => {
+	  if (!firstrequest && isLoaded && isLoggedIn && editWorkflowModalOpen === false) {
+        saveWorkflow(workflow)
+	  }
+  }, [editWorkflowModalOpen])
 
   // New for generated stuff
   const releaseToConnectLabel = "Release to Connect"
@@ -829,6 +839,75 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   useEffect(() => {
+	  if (workflow.id !== undefined && workflow.id !== null && workflow.id.length > 0 && workflow.id === originalWorkflow.id) {
+		  setOriginalWorkflow(workflow)
+	  } 
+
+	  // Special multi-workflow edgecase handler for events
+	  if (distributedFromParent === "" && suborgWorkflows === []) {
+	  } else {
+	    if (cy !== undefined) {
+	  	  cy.removeListener("select");
+	  	  cy.removeListener("unselect");
+	  	  cy.removeListener("add");
+	  	  cy.removeListener("remove");
+	  	  cy.removeListener("mouseover");
+	  	  cy.removeListener("mouseout");
+	  	  cy.removeListener("drag");
+	  	  cy.removeListener("free");
+	  	  cy.removeListener("cxttap");
+
+		  setTimeout(() => {
+			setupGraph(workflow) 
+
+			cy.on("select", "node", (e) => {
+			  onNodeSelect(e, appAuthentication);
+			});
+			cy.on("select", "edge", (e) => onEdgeSelect(e));
+
+			cy.on("unselect", (e) => onUnselect(e));
+
+			cy.on("add", "node", (e) => onNodeAdded(e));
+			cy.on("add", "edge", (e) => onEdgeAdded(e));
+			cy.on("remove", "node", (e) => onNodeRemoved(e));
+			cy.on("remove", "edge", (e) => onEdgeRemoved(e));
+
+			cy.on("mouseover", "edge", (e) => onEdgeHover(e));
+			cy.on("mouseout", "edge", (e) => onEdgeHoverOut(e));
+			cy.on("mouseover", "node", (e) => onNodeHover(e));
+			cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
+
+			// Handles dragging
+			cy.on("drag", "node", (e) => onNodeDrag(e, selectedAction));
+			cy.on("free", "node", (e) => onNodeDragStop(e, selectedAction));
+
+			cy.on("cxttap", "node", (e) => onCtxTap(e));
+
+		    cy.edgehandles({
+		      handleNodes: (el) => {
+		        if (el.isNode() &&
+		      	el.data("buttonType") != "ACTIONSUGGESTION" &&
+		      	!el.data("isButton") &&
+		      	!el.data("isDescriptor") &&
+		      	!el.data("isSuggestion") &&
+		      	el.data("type") !== "COMMENT") {
+		      	return true
+		        }
+
+		        return false
+		      },
+		      preview: false,
+		      toggleOffOnLeave: true,
+		      loopAllowed: function (node) {
+		        return false;
+		      },
+		    })
+		  }, 50)
+		}
+	  }
+  }, [workflow])
+
+  useEffect(() => {
 	  // Current variable + future state controlled
 	  // This is so that the loop can stop itself as well 
 	  if (loopRunning && loopRunning2) {
@@ -958,7 +1037,7 @@ const AngularWorkflow = (defaultprops) => {
   };  
 
   const getAvailableWorkflows = (trigger_index) => {
-    fetch(globalUrl + "/api/v1/workflows", {
+    fetch(globalUrl + "/api/v1/workflows?subflow=true", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -1307,7 +1386,7 @@ const AngularWorkflow = (defaultprops) => {
         if (response.status !== 200) {
           stop();
 	  	  setExecutionModalView(0);
-		  toast("Failed loading the workflow run")
+		  //toast("Failed loading the workflow run")
           console.log("Status not 200 for stream results :O!");
 
     	  //const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
@@ -1675,12 +1754,18 @@ const AngularWorkflow = (defaultprops) => {
       })
   }
 
-  const saveWorkflow = (curworkflow, executionArgument, startNode) => {
+  const saveWorkflow = (curworkflow, executionArgument, startNode, duplicationOrg) => {
     var success = false;
 
     if (isCloud && !isLoggedIn) {
       console.log("Should redirect to register with redirect.")
-      window.location.href = `/register?view=/workflows/${props.match.params.key}&message=You need sign up to use workflows with Shuffle`
+
+	  setTimeout(() => {
+		toast("You may not have access to this workflow.")
+		//window.location.href = `/register?view=/workflows/${props.match.params.key}&message=You need sign up to use workflows with Shuffle`
+		window.location.href = `/workflows`
+	  }, 2500)
+	
       return
     }
 
@@ -1910,13 +1995,19 @@ const AngularWorkflow = (defaultprops) => {
 		useworkflow.id = props.match.params.key
 	}
 
+	var headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+	if (useworkflow.org_id !== undefined && useworkflow.org_id !== null && useworkflow.org_id.length > 0) {
+		headers["Org-Id"] = useworkflow.org_id
+	}
+
     setLastSaved(true);
     fetch(`${globalUrl}/api/v1/workflows/${useworkflow.id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: headers,
       body: JSON.stringify(useworkflow),
       credentials: "include",
     })
@@ -1924,11 +2015,20 @@ const AngularWorkflow = (defaultprops) => {
         setSavingState(0);
         if (response.status !== 200) {
           console.log("Status not 200 for setting workflows :O!");
-        }
+        } else {
+	  		if (distributedFromParent === "" && suborgWorkflows === []) {
+			} else {
+  				getChildWorkflows(useworkflow.id) 
+			}
+		}
 
         return response.json();
       })
       .then((responseJson) => {
+		if (duplicationOrg !== undefined && duplicationOrg !== null && duplicationOrg.length > 0) {
+			duplicateParentWorkflow(useworkflow, duplicationOrg, true)
+		}
+
         if (executionArgument !== undefined && startNode !== undefined) {
           //console.log("Running execution AFTER saving");
           executeWorkflow(executionArgument, startNode, true);
@@ -1993,8 +2093,11 @@ const AngularWorkflow = (defaultprops) => {
         console.log("Save workflow error: ", error.toString());
       });
 
-	setOriginalWorkflow(useworkflow)
-    return success;
+	if (originalWorkflow.id === undefined || originalWorkflow.id === null || originalWorkflow.id.length === 0 || useworkflow.id === originalWorkflow.id) {
+		setOriginalWorkflow(useworkflow)
+	}
+
+    return success
   };
 
   const monitorUpdates = () => {
@@ -2087,14 +2190,20 @@ const AngularWorkflow = (defaultprops) => {
 	    curelements[i].addClass("not-executing-highlight");
 	  }
 
+	  var headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      }
+
+	  if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+	  	headers["Org-Id"] = workflow.org_id
+	  }
+
       const data = { execution_argument: executionArgument, start: startNode };
       fetch(`${globalUrl}/api/v1/workflows/${props.match.params.key}/execute`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
+          headers: headers,
           credentials: "include",
           body: JSON.stringify(data),
         }
@@ -2167,6 +2276,37 @@ const AngularWorkflow = (defaultprops) => {
   // This can be used to only show prioritzed ones later
   // Right now, it can prioritize authenticated ones
   //"Testing",
+	//
+	//
+
+  const getAuthGroups = () => {
+    fetch(globalUrl + "/api/v1/authentication/groups", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+	.then((response) => {
+		if (response.status !== 200) {
+			console.log("Status not 200 for app auth :O!");
+		}
+
+		return response.json();
+	})
+	.then((responseJson) => {
+		if (responseJson.success === true) {
+			setAuthGroups(responseJson.data)
+		} else {
+			console.log("AppAuth group loading error: " + responseJson.reason);
+		}
+    })
+    .catch((error) => {
+		setAuthGroups([]);
+        console.log("AppAuth group loading error: " + error.toString());
+    })
+  }
 
   const getAppAuthentication = (reset, updateAction, closeMenu) => {
     fetch(globalUrl + "/api/v1/apps/authentication", {
@@ -2177,127 +2317,130 @@ const AngularWorkflow = (defaultprops) => {
       },
       credentials: "include",
     })
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for app auth :O!");
+	.then((response) => {
+		if (response.status !== 200) {
+			console.log("Status not 200 for app auth :O!");
+		}
+
+		return response.json();
+	})
+	.then((responseJson) => {
+	var shouldClose = false 
+	if (responseJson.success) {
+	  getAuthGroups() 
+
+	  var newauth = [];
+	  for (let authkey in responseJson.data) {
+		if (responseJson.data[authkey].defined === false) {
+		  continue;
+		}
+
+		newauth.push(responseJson.data[authkey]);
+	  }
+
+	  setAppAuthentication(newauth);
+
+	  if (cy !== undefined) {
+		// Remove the old listener for select, run with new one
+		cy.removeListener("select");
+
+		cy.on("select", "node", (e) => onNodeSelect(e, newauth));
+		cy.on("select", "edge", (e) => onEdgeSelect(e));
+	  }
+
+	  if (updateAction === true) {
+		if (selectedApp.authentication.required) {
+		  // Setup auth here :)
+		  var appUpdates = false;
+		  const authenticationOptions = [];
+
+		  var tmpAuth = JSON.parse(JSON.stringify(newauth));
+		  var latest = 0;
+		  for (let authkey in tmpAuth) {
+			var item = tmpAuth[authkey];
+
+							//console.log("Got auth: ", item);
+
+			const newfields = {};
+			for (let filterkey in item.fields) {
+			  newfields[item.fields[filterkey].key] = item.fields[filterkey].value;
 			}
 
-			return response.json();
-		})
-		.then((responseJson) => {
-				var shouldClose = false 
-        if (responseJson.success) {
-          var newauth = [];
-          for (let authkey in responseJson.data) {
-            if (responseJson.data[authkey].defined === false) {
-              continue;
-            }
+			item.fields = newfields;
 
-            newauth.push(responseJson.data[authkey]);
-          }
+			const appname = selectedApp.name.toLowerCase().replaceAll(" ", "_", -1)
+			const itemname = item.app.name.toLowerCase().replaceAll(" ", "_", -1)
+			if (itemname === appname) {
+			  authenticationOptions.push(item);
 
-          setAppAuthentication(newauth);
+			  // Always becoming the last one
+			  if (item.edited > latest) {
+				latest = item.edited;
+				selectedAction.selectedAuthentication = item;
 
-          if (cy !== undefined) {
-            // Remove the old listener for select, run with new one
-            cy.removeListener("select");
-
-            cy.on("select", "node", (e) => onNodeSelect(e, newauth));
-            cy.on("select", "edge", (e) => onEdgeSelect(e));
-          }
-
-          if (updateAction === true) {
-            if (selectedApp.authentication.required) {
-              // Setup auth here :)
-              var appUpdates = false;
-              const authenticationOptions = [];
-
-              var tmpAuth = JSON.parse(JSON.stringify(newauth));
-              var latest = 0;
-              for (let authkey in tmpAuth) {
-                var item = tmpAuth[authkey];
-
-								//console.log("Got auth: ", item);
-
-                const newfields = {};
-                for (let filterkey in item.fields) {
-                  newfields[item.fields[filterkey].key] = item.fields[filterkey].value;
-                }
-
-                item.fields = newfields;
-
-								const appname = selectedApp.name.toLowerCase().replaceAll(" ", "_", -1)
-								const itemname = item.app.name.toLowerCase().replaceAll(" ", "_", -1)
-                if (itemname === appname) {
-                  authenticationOptions.push(item);
-
-                  // Always becoming the last one
-                  if (item.edited > latest) {
-                    latest = item.edited;
-                    selectedAction.selectedAuthentication = item;
-
-                    for (let actionkey in workflow.actions) {
-											const actionAppname = workflow.actions[actionkey].app_name.toLowerCase().replaceAll(" ", "_", -1)
-                      if (actionAppname === appname) {
-                        workflow.actions[actionkey].selectedAuthentication = item;
-                        workflow.actions[actionkey].authentication_id = item.id;
-                        appUpdates = true;
-                      }
-                    }
-                  } else {
-										//console.log("Not newer: ", item.edited, " vs ", latest)
-									}
-                } else {
-									//console.log("Appname is wrong: ", appname, " vs ", itemname)
-								}
-              }
-
-              selectedAction.authentication = authenticationOptions;
-              if (
-                selectedAction.selectedAuthentication === null ||
-                selectedAction.selectedAuthentication === undefined ||
-                selectedAction.selectedAuthentication.length === ""
-              ) {
-                selectedAction.selectedAuthentication = {};
-              }
-
-              if (appUpdates === true) {
-                console.log("Closing auth modal: Success")
-
-                setAuthenticationModalOpen(false);
-                setSelectedAction(selectedAction);
-                setWorkflow(workflow);
-                saveWorkflow(workflow);
-
-                toast("Added and updated authentication!");
-								shouldClose = true 
-              } else {
-                console.log("Closing auth modal? FAIL")
-
-                toast("Failed to find new authentication. See details in Oauth2 popup window where auth was attempted.");
-								shouldClose = false 
-              }
-            } else {
-              toast("No authentication to update");
-            }
-          } else {
-						shouldClose = true
-					}
-        } else {
-					setAppAuthentication([]);
-					shouldClose = true 
-        }
-
-				// Auto-closing if changes were made 
-				if (closeMenu === true && shouldClose === true) {
-					setAuthenticationModalOpen(false);
+				for (let actionkey in workflow.actions) {
+										const actionAppname = workflow.actions[actionkey].app_name.toLowerCase().replaceAll(" ", "_", -1)
+				  if (actionAppname === appname) {
+					workflow.actions[actionkey].selectedAuthentication = item;
+					workflow.actions[actionkey].authentication_id = item.id;
+					appUpdates = true;
+				  }
 				}
-      })
-      .catch((error) => {
-				setAppAuthentication([]);
-        //toast("Auth loading error: " + error.toString());
-        console.log("AppAuth error: " + error.toString());
-      });
+			  } else {
+				//console.log("Not newer: ", item.edited, " vs ", latest)
+			  }
+			} else {
+				//console.log("Appname is wrong: ", appname, " vs ", itemname)
+			}
+		  }
+
+		  selectedAction.authentication = authenticationOptions;
+		  if (
+			selectedAction.selectedAuthentication === null ||
+			selectedAction.selectedAuthentication === undefined ||
+			selectedAction.selectedAuthentication.length === ""
+		  ) {
+			selectedAction.selectedAuthentication = {};
+		  }
+
+		  if (appUpdates === true) {
+			console.log("Closing auth modal: Success")
+
+			setAuthenticationModalOpen(false);
+			setSelectedAction(selectedAction);
+			setWorkflow(workflow);
+			saveWorkflow(workflow);
+
+			toast("Added and updated authentication!");
+							shouldClose = true 
+		  } else {
+			console.log("Closing auth modal? FAIL")
+
+			toast("Failed to find new authentication. See details in Oauth2 popup window where auth was attempted.");
+							shouldClose = false 
+		  }
+		} else {
+		  toast("No authentication to update");
+		}
+	  } else {
+		shouldClose = true
+	  }
+
+		} else {
+			setAppAuthentication([]);
+			shouldClose = true 
+		}
+
+		// Auto-closing if changes were made 
+		if (closeMenu === true && shouldClose === true) {
+			setAuthenticationModalOpen(false);
+		}
+    })
+    .catch((error) => {
+      		setAppAuthentication([]);
+      //toast("Auth loading error: " + error.toString());
+      console.log("AppAuth error: " + error.toString());
+    });
   };
 
   const getApps = () => {
@@ -3082,6 +3225,36 @@ const AngularWorkflow = (defaultprops) => {
     return apps
   };
 
+  const getChildWorkflows = (parentWorkflowId) => {
+	if (workflow.suborg_distribution === undefined || workflow.suborg_distribution === null || workflow.suborg_distribution.length === 0) { 
+		return
+	}
+
+    fetch(`${globalUrl}/api/v1/workflows/${parentWorkflowId}/child_workflows`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+	.then((response) => {
+		if (response.status !== 200) {
+			console.log("Status not 200 for workflows :O!");
+		}
+
+		return response.json();
+	})
+	.then((responseJson) => {
+		if (responseJson.success !== false) {
+			setSuborgWorkflows(responseJson)
+		}
+	})
+	.catch((error) => {
+		console.log("Get child workflows error: ", error);
+	})
+  }
+
   const getWorkflow = (workflow_id, sourcenode) => {
     fetch(`${globalUrl}/api/v1/workflows/${workflow_id}`, {
       method: "GET",
@@ -3125,9 +3298,24 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
 		// Load as JSON
+		  //
+		  //
 		//console.log("Got workflow TXT: ", responseText)
 		//const responseJson = JSON.parse(responseText)
 		//console.log("Got workflow JSON: ", responseJson)
+		if (responseJson.id !== undefined && responseJson.id !== null && responseJson.id.length > 0 && responseJson.id !== workflow_id) {
+			toast("Workflow ID mismatch. Redirecting to your workflow")
+			navigate(`/workflows/${responseJson.id}`)
+		}
+
+		if (responseJson.parentorg_workflow !== undefined && responseJson.parentorg_workflow !== null && responseJson.parentorg_workflow !== "") {
+			setDistributedFromParent(responseJson.parentorg_workflow)
+		} 
+
+
+		if (responseJson.childorg_workflow_ids !== undefined && responseJson.childorg_workflow_ids !== null && responseJson.childorg_workflow_ids.length > 0) {
+  			getChildWorkflows(responseJson.id) 
+		}
 
         // Not sure why this is necessary.
         if (responseJson.isValid === undefined) {
@@ -3350,7 +3538,7 @@ const AngularWorkflow = (defaultprops) => {
           cy.on("add", "node", (e) => onNodeAdded(e));
           cy.on("add", "edge", (e) => onEdgeAdded(e));
         } else {
-          setOriginalWorkflow(responseJson);
+          setOriginalWorkflow(responseJson)
           setWorkflow(responseJson);
           setWorkflowDone(true);
 
@@ -3704,14 +3892,11 @@ const AngularWorkflow = (defaultprops) => {
 			}
 
 			if (nodedata.app_name === "Webhook" || nodedata.app_name === "Schedule" || nodedata.app_name === "Gmail" || nodedata.app_name === "Office365") {
-				console.log("Found triggers. Add!")
-
       			if (!found) {
 					console.log("Find amount of executions for the specific nodetype: ", nodedata.app_name, "Executions: ", workflowExecutions)
 					// Find how many executions it has 
 					var executions = 0
 					const matchingExecutions = workflowExecutions.filter((execution => execution.execution_source === nodedata.app_name.toLowerCase()))
-					console.log("Matches: ", matchingExecutions.length)
 					const color = matchingExecutions.length > 0 ? "#34a853" : "#ea4436"
 					const decoratorNode = {
 						position: {
@@ -4220,7 +4405,7 @@ const AngularWorkflow = (defaultprops) => {
 				return
 			}
 
-			// Inject HTML at a fixed location
+			// Inject HTML at a fixed location?
 			//const newHtml = "<div id='suggestion' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: white; z-index: 1000;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);'><h1>Do you want to add this suggestion?</h1><button id='suggestion_yes'>Yes</button><button id='suggestion_no'>No</button></div></div>"
 
 			// Find mouse cursor position on screen
@@ -4415,13 +4600,24 @@ const AngularWorkflow = (defaultprops) => {
 
         return;
       } else if (data.isDescriptor) {
-        console.log("Can't select descriptor");
+		// Find parent
+        event.target.unselect();
+
+		if (data.attachedTo !== undefined && data.attachedTo !== null && data.attachedTo.length > 0) {
+			const parentNode = cy.getElementById(data.attachedTo)
+			if (parentNode !== null && parentNode !== undefined) {
+				setTimeout(() => {
+					parentNode.select()
+				}, 100)
+			}
+		}
+
+        //console.log("Can't select descriptor");
 		if (data.isTrigger) {
 			console.log("But maybe we can select trigger descriptor? Maybe open execution tab?")
 			setExecutionModalOpen(true)
 		}
 
-        event.target.unselect();
         return;
       }
 
@@ -5701,9 +5897,6 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     setWorkflow(workflow);
-    //if (data.type === "TRIGGER") {
-    //  saveWorkflow(workflow);
-    //}
   }
 
   //var previouskey = 0
@@ -5983,7 +6176,15 @@ const AngularWorkflow = (defaultprops) => {
     workflow.id !== null &&
     workflow.id.length > 0
   ) {
-    window.location.pathname = "/workflows/" + props.match.params.key;
+
+	// Check if 
+	if (distributedFromParent === "" && suborgWorkflows === []) {
+		toast.info("Redirecting as the workflow ID does not match the URL")
+
+		setTimeout(() => {	
+			window.location.pathname = "/workflows/" + props.match.params.key;
+		}, 2500)
+	}
   }
 
   const animationDuration = 150;
@@ -6171,7 +6372,6 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const addActionSuggestions = (nodedata, event) => {
-	  console.log("App Action suggestions being added")
 	  if (nodedata.type !== "ACTION") {
 		  return
 	  }
@@ -6187,9 +6387,36 @@ const AngularWorkflow = (defaultprops) => {
 	  const parentlabel = parentNode.data("label").toLowerCase().replace(" ", "_")
 	  const parentname = parentNode.data("app_name").toLowerCase().replace(" ", "_")
 	  if (!parentlabel.startsWith(parentname)) {
-		  console.log("Bad startname to start with: ", parentname, parentlabel)
 		  return
 	  }
+
+	  // Check if action has changed
+	  const parentAppId = parentNode.data("app_id")
+	  const parentActionname = parentNode.data("name")
+	  for (var appkey in apps) {
+		  const curapp = apps[appkey]
+
+		  if (curapp.id !== parentAppId) {
+			  continue
+		  }
+
+		  if (curapp.actions === undefined || curapp.actions === null || curapp.actions.length === 0) {
+			  continue
+		  }
+
+		  var startIndex = curapp.actions.findIndex((action) => action.category_label !== undefined && action.category_label !== null && action.category_label.length > 0)
+		  if (startIndex === -1) {
+			  startIndex = 0
+		  }
+
+		  if (curapp.actions[startIndex].name !== parentActionname) {
+			  return
+		  }
+
+		  break
+	  }
+
+	  //const parentAction = parentNode.data("name")
 
       const iconInfo = {
         icon: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm-1 4l6 6v10c0 1.1-.9 2-2 2H7.99C6.89 23 6 22.1 6 21l.01-14c0-1.1.89-2 1.99-2h7zm-1 7h5.5L14 6.5V12z",
@@ -6204,8 +6431,7 @@ const AngularWorkflow = (defaultprops) => {
 	  // 2. Loop the apps' actions
 	  // 3. Find actions based on category label IF it exists
 		  
-	  console.log("Fidning app match for: ", parentname)
-	  var added = 0 
+	  var addedLabels = []
 	  for (let appKey in apps) {
 		  const curapp = apps[appKey]
 		  if (curapp.name.toLowerCase().replace(" ", "_") !== parentname) {
@@ -6216,7 +6442,6 @@ const AngularWorkflow = (defaultprops) => {
 			  continue
 		  }
 
-		  console.log("Found matching: ", curapp.name, parentname, curapp.actions.length)
 		  for (let actionKey in curapp.actions) {
 			  const curaction = curapp.actions[actionKey]
 			  
@@ -6226,7 +6451,13 @@ const AngularWorkflow = (defaultprops) => {
 			  }
 
 			  if (curaction.category_label !== undefined && curaction.category_label !== null && curaction.category_label.length > 0) { 
-				  console.log("IN NODE ADD")
+				  if (addedLabels.includes(curaction.category_label[0])) {
+					  continue
+				  }
+
+				  if (curaction.category_label[0].replaceAll("_", " ").toLowerCase() === "no label") {
+					  continue
+				  }
 
 				  cy.add({
 					group: "nodes",
@@ -6240,12 +6471,13 @@ const AngularWorkflow = (defaultprops) => {
 					},
 					position: {
 						x: px,
-						y: py + (added * 50),
+						y: py + (addedLabels.length * 50),
 					},
+      				locked: true,
 				  })
 
-				  added += 1
-				  if (added >= 3) {
+				  addedLabels.push(curaction.category_label[0])
+				  if (addedLabels.length >= 2) {
 					  break
 				  }
 			  }
@@ -6555,7 +6787,6 @@ const AngularWorkflow = (defaultprops) => {
 			}
 
 			if (!found) {
-				console.log("Find amount of executions for the specific nodetype: ", nodedata.app_name, "Executions: ", workflowExecutions)
 				// Find how many executions it has 
 				var executions = 0
 				const matchingExecutions = workflowExecutions.filter((execution => execution.execution_source === nodedata.app_name.toLowerCase()))
@@ -7087,6 +7318,11 @@ const AngularWorkflow = (defaultprops) => {
 	  }
 	  */
 
+	  var parentcontrolled = false
+	  if (branch.parent_controlled !== undefined && branch.parent_controlled !== null && branch.parent_controlled === true) {
+		  parentcontrolled = true
+	  }
+
       edge.data = {
         id: branch.id,
         _id: branch.id,
@@ -7096,6 +7332,7 @@ const AngularWorkflow = (defaultprops) => {
         conditions: conditions,
         hasErrors: branch.has_errors,
         decorator: false,
+		parent_controlled: parentcontrolled,
       };
 
       // This is an attempt at prettier edges. The numbers are weird to work with.
@@ -7125,7 +7362,6 @@ const AngularWorkflow = (defaultprops) => {
       return edge;
     });
 
-	console.log("VISUAL BRANCHES: ", inputworkflow.visual_branches)
     if (inputworkflow.visual_branches !== undefined && inputworkflow.visual_branches !== null && inputworkflow.visual_branches.length > 0) {
       const visualedges = inputworkflow.visual_branches.map((branch, index) => {
         const edge = {};
@@ -7187,8 +7423,6 @@ const AngularWorkflow = (defaultprops) => {
 	} else {
     	setElements(insertedNodes);
 	}
-
-    console.log("Setupgraph done 2!")
   }
 
   const removeNode = (nodeId) => {
@@ -7350,7 +7584,6 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (responseJson.success !== false) {
-          console.log("Usecases: ", usecases)
           setUsecases(responseJson)
         } else {
         }
@@ -7402,6 +7635,7 @@ const AngularWorkflow = (defaultprops) => {
   if (firstrequest) {
     setFirstrequest(false);
     getWorkflow(props.match.params.key, {});
+  	getChildWorkflows(props.match.params.key)
 	getRevisionHistory(props.match.params.key)
     getApps()
     fetchUsecases()
@@ -7502,7 +7736,7 @@ const AngularWorkflow = (defaultprops) => {
         loopAllowed: function (node) {
           return false;
         },
-      });
+      })
 
       //cy.edgehandles({
       //	preview: false,
@@ -7606,7 +7840,7 @@ const AngularWorkflow = (defaultprops) => {
         trigger.status = "stopped";
         setSelectedTrigger(trigger);
         setWorkflow(workflow);
-        saveWorkflow(workflow);
+        saveWorkflow(workflow)
       })
       .catch((error) => {
         console.log("Stop schedule error: ", error.toString())
@@ -7690,8 +7924,8 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
 
-		var mappedStartnode = ""
-		const alledges = cy.edges().jsons()
+	var mappedStartnode = ""
+	const alledges = cy.edges().jsons()
     if (alledges !== undefined && alledges !== null && alledges.length > 0) {
 		for (let edgekey in alledges) {
 			const tmp = alledges[edgekey]
@@ -10153,6 +10387,142 @@ const AngularWorkflow = (defaultprops) => {
 	  }
   }
 
+  const handleAppAuthGroupCheckbox = (data) => {
+    console.log("CHECKED: ", data)
+
+	if (workflow.auth_groups === undefined || workflow.auth_groups === null) {
+		workflow.auth_groups = []
+	}
+
+	const foundIndex = workflow.auth_groups.findIndex(auth => auth === data.id)
+	if (foundIndex >= 0) {
+		workflow.auth_groups.splice(foundIndex, 1)
+	} else {
+		workflow.auth_groups.push(data.id)
+	}
+
+	setWorkflow(workflow)
+	console.log("WF: ", workflow)
+	setUpdate(Math.random())
+  }
+
+  const authgroupModal = 
+	<Dialog
+      PaperComponent={PaperComponent}
+      disableEnforceFocus={true}
+      hideBackdrop={true}
+      disableBackdropClick={true}
+      style={{ pointerEvents: "none" }}
+      PaperComponent={PaperComponent}
+      aria-labelledby="draggable-dialog-title"
+      open={authgroupModalOpen}
+      PaperProps={{
+        style: {
+		  padding: 30,
+          pointerEvents: "auto",
+          color: "white",
+          minWidth: isMobile ? "90%" : 800,
+          border: theme.palette.defaultBorder,
+        },
+      }}
+      onClose={() => {
+      }}
+    >
+        <Tooltip
+          title="Close window"
+          placement="top"
+          style={{ zIndex: 10011 }}
+        >
+          <IconButton
+            style={{ zIndex: 5000, position: "absolute", top: 34, right: 34 }}
+            onClick={(e) => {
+              e.preventDefault();
+			  setAuthgroupModalOpen(false)
+            }}
+          >
+            <CloseIcon style={{ color: "white" }} />
+          </IconButton>
+        </Tooltip>
+        <DialogTitle id="draggable-dialog-title" style={{ cursor: "move", }}>
+          <span style={{ color: "white" }}>Authgroup Selection</span>
+        </DialogTitle>
+		<DialogContent>
+			<Typography variant="body1" color="textSecondary"> 
+				Authgroups are a way to control how a workflow runs. If chosen, the workflow will use the groups on the nodes that have them selected. If three are chosen, the workflows runs three times. This is an experimental MSSP feature to handle multiple environments.
+			</Typography>
+
+			<Divider style={{marginTop: 10, marginBottom: 20, }}/>
+
+	 		{authGroups.map((data, index) => {
+				var checked = false
+				if (workflow.auth_groups !== undefined && workflow.auth_groups !== null) {
+					checked = workflow.auth_groups.includes(data.id)
+				}
+
+				return (
+					<div 
+						style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', marginLeft: '5px', cursor: "pointer", }}
+						onClick={() => {
+							handleAppAuthGroupCheckbox(data)
+						}}
+					>
+					  <Checkbox
+						checked={checked}
+						name={data.label}
+					  />
+
+					  <Typography variant="body1" color="textSecondary" style={{minWidth: 200, maxWidth: 200, marginRight: 10, }}>
+						{data.label}
+					  </Typography>	
+
+					  <Typography variant="body1" color="textSecondary" style={{minWidth: 150, maxWidth: 150, marginRight: 10, }}>
+						{data.environment}
+					  </Typography>	
+
+					  {data.app_auths.map((appAuth, index) => {
+							if (appAuth.app.large_image === undefined || appAuth.app.large_image === null || appAuth.app.large_image === "") {
+								const foundImage = appAuthentication.find((auth) => auth.app.id === appAuth.app.id)
+								if (foundImage !== undefined) {
+									appAuth.app.large_image = foundImage.app.large_image
+
+									appAuth.app.name = foundImage.app.name
+								}
+							}
+
+							const tooltip = `${appAuth.app.name.replaceAll("_", " ")} (authname: ${appAuth.label})`
+
+							return (
+							  <Tooltip
+								title={tooltip}
+							  >
+								<img
+								  key={index}
+								  src={appAuth.app.large_image}
+								  alt={appAuth.app.name}
+								  style={{ width: 30, height: 30, marginRight: 5 }}
+								/>
+							  </Tooltip>
+                        	)
+						})}
+
+				  </div>
+				)
+			})}
+
+
+			<Button
+				variant="outlined"
+				color="primary"
+				onClick={() => {
+					setAuthgroupModalOpen(false)
+				}}
+				style={{ marginTop: 20, marginBottom: 20 }}
+			>
+				Submit
+			</Button>
+		</DialogContent>
+    </Dialog>
+
   const executionArgumentModal = 
 	<Dialog
       PaperComponent={PaperComponent}
@@ -11803,9 +12173,7 @@ const AngularWorkflow = (defaultprops) => {
       //   value: auth.id,
       // });
       setSelectedAuth(auth.id);
-    };
-
-    console.log("TRANSFORMED AUTH DATA: ", transformedAuthData);
+    }
 
     return (
     <div className="auth-container" style={{ padding: '20px', backgroundColor: '#26292D', borderRadius: '8px' }}>
@@ -12643,9 +13011,11 @@ const AngularWorkflow = (defaultprops) => {
                   </div>
                 )}
               </div>
+
               {workflows === undefined ||
                 workflows === null ||
                 workflows.length === 0 ? null : (
+
                 <Autocomplete
                   id="subflow_search"
                   autoHighlight
@@ -14916,7 +15286,7 @@ const AngularWorkflow = (defaultprops) => {
           </div>
         </div>
 
-  const cytoscapeViewWidths = isMobile ? 50 : 850;
+  const cytoscapeViewWidths = isMobile ? 50 : 950;
   const bottomBarStyle = {
     position: "fixed",
     right: isMobile ? 20 : 20,
@@ -14980,7 +15350,8 @@ const AngularWorkflow = (defaultprops) => {
 			}}>{workflow.name}</h2>
           </Breadcrumbs>
 
-		  {isCorrectOrg ? null :
+		  {!distributedFromParent ? 
+			isCorrectOrg ? null :
 			<Typography variant="body1">
 				<b>Warning</b>: Change <span
 			  		style={{color: "#f85a3e", cursor: "pointer"}}
@@ -15043,7 +15414,230 @@ const AngularWorkflow = (defaultprops) => {
 					}}
 			  	>Active Organization</span> to edit this Workflow.
 			</Typography>
+			:
+			<Typography variant="body1">
+				Warning: This workflow is controlled by your parent org and may not be editable.
+			</Typography>
 		  }
+
+		  {originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0 || originalWorkflow.suborg_distribution.includes("none") ? null :
+          <FormControl fullWidth style={{marginTop: 10, }}>
+
+            <InputLabel
+              id="suborg-changer"
+              style={{ color: "white" }}
+            >
+			  View Suborg workflow
+            </InputLabel>
+			<Select
+				style={{maxHeight: 50, maxWidth: 200, }}
+              	labelId="suborg-changer"
+				value={workflow.org_id}
+				onChange={(e) => {
+					if (workflow.org_id === e.target.value) {
+						return
+					}
+
+					if (e.target.value === originalWorkflow.org_id) {
+						updateCurrentWorkflow(originalWorkflow)
+						return
+					}
+
+					// Should look through childorg workflow
+					if (originalWorkflow.childorg_workflow_ids === undefined || originalWorkflow.childorg_workflow_ids === null || originalWorkflow.childorg_workflow_ids.length === 0) {
+
+						if (suborgWorkflows !== undefined && suborgWorkflows !== null && suborgWorkflows.length > 0) {
+							for (var suborgkey in suborgWorkflows) {
+								const suborgWorkflow = suborgWorkflows[suborgkey]
+								if (suborgWorkflow.org_id === e.target.value) {
+									updateCurrentWorkflow(suborgWorkflow)
+								}
+							}
+						} else {
+							//toast("(1) Creating new workflow for this org. Please wait a second while we duplicate.")
+          					saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
+						}
+					} else {
+						var workflowFound = false
+						for (var childorgidkey in originalWorkflow.childorg_workflow_ids) {
+							const childworkflowid = originalWorkflow.childorg_workflow_ids[childorgidkey]
+							for (var suborgWorkflowKey in suborgWorkflows) {
+								const suborgWorkflow = suborgWorkflows[suborgWorkflowKey]
+								if (suborgWorkflow.org_id === e.target.value) {
+									workflowFound = true
+
+									updateCurrentWorkflow(suborgWorkflow)
+									break
+								}
+							}
+
+							if (workflowFound) {
+								break
+							}
+						}
+
+						if (!workflowFound) { 
+							//toast("(2) Creating new workflow for this org. Please wait a few seconds while we prepare it for you.")
+          					saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
+						}
+					}
+				}}
+				label="Suborg Distribution"
+				fullWidth
+			>
+				<MenuItem key={originalWorkflow.org_id} value={originalWorkflow.org_id}>
+					  {userdata.active_org.large_image}{" "}
+					  <span style={{ marginLeft: 8 }}>
+						{userdata.active_org.name}
+					  </span>
+				</MenuItem>
+
+			  	<Divider style={{marginTop: 10, marginBottom: 10, }}/>
+
+				{originalWorkflow.suborg_distribution.map((org_id, index) => {
+					var data = {}
+					for (var key in userdata.orgs) {
+						if (userdata.orgs[key].id === org_id) {
+							data = userdata.orgs[key]
+							break
+						}
+					}
+
+					if (data.id === undefined || data.id === null) {
+						//toast("No org found for id: " + org_id)
+						return null
+					}
+
+					var skipOrg = false;
+
+					const imagesize = 22
+					const imageStyle = {
+					  width: imagesize,
+					  height: imagesize,
+					  pointerEvents: "none",
+					  marginRight: 10,
+					  marginLeft:
+						data.creator_org !== undefined &&
+						  data.creator_org !== null &&
+						  data.creator_org.length > 0
+						  ? data.id === userdata.active_org.id
+							? 0
+							: 0 
+						  : 0,
+					}
+
+					const image =
+					  data.image === "" ? (
+						<img
+						  alt={data.name}
+						  src={theme.palette.defaultImage}
+						  style={imageStyle}
+						/>
+					  ) : (
+						<img
+						  alt={data.name}
+						  src={data.image}
+						  style={imageStyle}
+						/>
+					  )
+
+
+					return (
+						<MenuItem key={index} value={data.id}>
+							  {image}{" "}
+							  <span style={{ marginLeft: 8 }}>
+								{data.name}
+							  </span>
+						</MenuItem>
+					)
+				})}
+			</Select>
+        </FormControl> 
+		}
+
+
+		  {authGroups !== undefined && authGroups !== null && authGroups.length > 0 ? 
+			  <Tooltip
+				color="secondary"
+				title="Configure Authentication Groups. The amount of auth groups selected is the amount of replications of any execution of this workflow."
+				placement="top"
+			  >
+				<span>
+				  <Button
+			  		onMouseEnter={() => {
+						if (cy !== undefined && cy !== null) {
+							const cynodes = cy.nodes().jsons()
+							for (var cynodekey in cynodes) {
+								const cynodedata = cynodes[cynodekey]
+								if (cynodedata.data.authentication_id === "authgroups") {
+									const foundnode = cy.getElementById(cynodedata.data.id)
+									if (foundnode !== undefined && foundnode !== null) {
+    									var parsedStyle = {
+    									  "border-width": "15px",
+    									  "border-opacity": ".9",
+    									  //"cursor": "pointer",
+    									}
+
+										const animationDuration = 150 
+    									foundnode.animate(
+    									  {
+    									    style: parsedStyle,
+    									  },
+    									  {
+    									    duration: animationDuration,
+    									  }
+    									)
+									}
+								}
+							}
+
+						}
+					}}
+					onMouseLeave={() => {
+
+						if (cy !== undefined && cy !== null) {
+							const cynodes = cy.nodes().jsons()
+							for (var cynodekey in cynodes) {
+								const cynodedata = cynodes[cynodekey]
+								if (cynodedata.data.authentication_id === "authgroups") {
+									const foundnode = cy.getElementById(cynodedata.data.id)
+									if (foundnode !== undefined && foundnode !== null) {
+    									var parsedStyle = {
+    									  "border-width": "3px",
+    									  "border-opacity": ".7",
+    									  //"cursor": "pointer",
+    									}
+
+										const animationDuration = 150 
+    									foundnode.animate(
+    									  {
+    									    style: parsedStyle,
+    									  },
+    									  {
+    									    duration: animationDuration,
+    									  }
+    									)
+									}
+								}
+							}
+
+						}
+
+					}}
+					disabled={workflow.public}
+					color="secondary"
+					style={{ height: 40, marginTop: 10, }}
+					variant={"outlined"}
+					onClick={() => {
+					  setAuthgroupModalOpen(true)
+					}}
+				  >
+  					<LockOpenIcon style={{marginRight: 10, }}/> Auth Group ( {workflow.auth_groups !== undefined && workflow.auth_groups !== null ? workflow.auth_groups.length : 0}/{authGroups.length} )
+				  </Button>
+				</span>
+			  </Tooltip>
+			: null}
+		  
         </div>
 				<div style={{display: "flex", marginLeft: 10, }}>
 					{parentWorkflows.slice(0,5).map((wf, index) => {
@@ -15346,7 +15940,7 @@ const AngularWorkflow = (defaultprops) => {
 	)
   }
 
-  const shownErrors = !isMobile && workflow.errors !== undefined && workflow.errors !== null && workflow.errors.length > 0 && showErrors && (!workflow.public || userdata.support === true) ?  
+  const shownErrors = !distributedFromParent && !isMobile && workflow.errors !== undefined && workflow.errors !== null && workflow.errors.length > 0 && showErrors && (!workflow.public || userdata.support === true) ?  
   	<div
   		style={{
 			border: "1px solid rgba(255,255,255,0.1)",
@@ -15533,6 +16127,7 @@ const AngularWorkflow = (defaultprops) => {
           }
         }
 
+		/*
         if (( event.ctrlKey || event.metaKey ) && event.shiftKey) {
           console.log("Shift key pressed")
           if (!workflow.public && executionModalOpen) {
@@ -15544,6 +16139,7 @@ const AngularWorkflow = (defaultprops) => {
             setExecutionModalView(0);
           }
         }
+		*/
       };
   
       document.addEventListener('keydown', handleKeyDown);
@@ -15594,6 +16190,106 @@ const AngularWorkflow = (defaultprops) => {
 	  )
   }
 
+  // Used for handling suborg workflow distribution management
+  const updateCurrentWorkflow = (inputworkflow) => {
+	setLastSaved(false)
+	setSelectedAction({});
+	setSelectedApp({})
+	setWorkflow(inputworkflow)
+
+	// Update props match key
+	if (inputworkflow.parentorg_workflow !== undefined && inputworkflow.parentorg_workflow !== null && inputworkflow.parentorg_workflow !== "") {
+		setDistributedFromParent(inputworkflow.parentorg_workflow)
+	} else {
+		setDistributedFromParent("")
+	}
+
+	if (cy !== undefined) {
+		cy.removeListener("select");
+		cy.removeListener("unselect");
+
+		cy.removeListener("add");
+		cy.removeListener("remove");
+
+		cy.removeListener("mouseover");
+		cy.removeListener("mouseout");
+
+		cy.removeListener("drag");
+		cy.removeListener("free");
+		cy.removeListener("cxttap");
+
+		setElements([])
+
+		// Remove all edges
+		cy.edges().remove()
+		cy.nodes().remove()
+	}
+
+	// Remove all cytoscape triggers first?
+	/*
+	setTimeout(() => {
+		setupGraph(inputworkflow)
+
+		cy.on("select", "node", (e) => {
+		  onNodeSelect(e, appAuthentication);
+		});
+		cy.on("select", "edge", (e) => onEdgeSelect(e));
+
+		cy.on("unselect", (e) => onUnselect(e));
+
+		cy.on("add", "node", (e) => onNodeAdded(e));
+		cy.on("add", "edge", (e) => onEdgeAdded(e));
+		cy.on("remove", "node", (e) => onNodeRemoved(e));
+		cy.on("remove", "edge", (e) => onEdgeRemoved(e));
+
+		cy.on("mouseover", "edge", (e) => onEdgeHover(e));
+		cy.on("mouseout", "edge", (e) => onEdgeHoverOut(e));
+		cy.on("mouseover", "node", (e) => onNodeHover(e));
+		cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
+
+		// Handles dragging
+		cy.on("drag", "node", (e) => onNodeDrag(e, selectedAction));
+		cy.on("free", "node", (e) => onNodeDragStop(e, selectedAction));
+
+		cy.on("cxttap", "node", (e) => onCtxTap(e));
+	}, 25)
+	*/
+
+  }
+
+  // Uses Org-Id referencing header to create a workflow while getting it in realtime
+  // This further ensures the user needs access to GET the workflow properly
+  const duplicateParentWorkflow = (inputWorkflow, org_id, setWorkflow) => {
+	  fetch(`${globalUrl}/api/v1/workflows/${inputWorkflow.id}`, {
+		  method: "GET",
+		  headers: {
+			  "Org-Id": org_id,
+			  "Content-Type": "application/json",
+		  },
+		  credentials: "include",
+	  })
+	  .then((response) => {
+		  if (response.status === 200) {
+  			  getChildWorkflows(inputWorkflow.id) 
+		  }
+
+		  return response.json();
+	  })
+	  .then((responseJson) => {
+		  if (responseJson.success === false) {
+			  //toast("Failed to duplicate workflow")
+		  } else {
+			  //toast("Successfully duplicated workflow. Reloading child workflows.")
+			  if (setWorkflow === true) {
+				  updateCurrentWorkflow(responseJson)
+			  }
+		  }
+	  })
+	  .catch((error) => {
+		  console.log("Dupe workflow for suborg error: ", error.toString())
+	  })
+  }
+
   const BottomCytoscapeBar = () => {
     if (workflow.id === undefined || workflow.id === null || (!workflow.public && apps.length === 0)) {
       return null;
@@ -15616,11 +16312,11 @@ const AngularWorkflow = (defaultprops) => {
         </span>
       </Tooltip>
     ) : (
-      <Tooltip color="primary" title="Test Execution (Ctrl + /)" placement="top">
         <span>
           <Button
             disabled={
-              workflow.public || executionRequestStarted
+              workflow.public 
+			  || executionRequestStarted
             }
             style={{ height: boxSize, width: boxSize }}
             color="primary"
@@ -15632,7 +16328,6 @@ const AngularWorkflow = (defaultprops) => {
             <PlayArrowIcon style={{ fontSize: isMobile ? 30 : 60 }} />
           </Button>
         </span>
-      </Tooltip>
     );
 
     return (
@@ -15669,6 +16364,7 @@ const AngularWorkflow = (defaultprops) => {
               />
             </Tooltip>
           )}
+
           {/*userdata.avatar === creatorProfile.github_avatar ? null :*/}
           <Tooltip color="primary" title={workflow.public === true ? "Use this Workflow in your organisation" : "Save Workflow"} placement="top">
             <span>
@@ -15903,6 +16599,8 @@ const AngularWorkflow = (defaultprops) => {
               </Button>
             </span>
           </Tooltip>
+
+		  
         </div>
       </div>
     );
@@ -16021,6 +16719,7 @@ const AngularWorkflow = (defaultprops) => {
 		aiSubmit={aiSubmit}
   		listCache={listCache}
 
+		authGroups={authGroups}
 		apps={apps}
 		expansionModalOpen={codeEditorModalOpen}
 		setExpansionModalOpen={setCodeEditorModalOpen}
@@ -16600,7 +17299,8 @@ const AngularWorkflow = (defaultprops) => {
 
     // This is the playbutton at 150x150
     const defaultImage =
-      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACOCAMAAADkWgEmAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAWlBMVEX4Wj69TDgmKCvkVTwlJyskJiokJikkJSkjJSn4Ykf+6+f5h3L////8xLr5alH/9fT7nYz4Wz/919H5cVn/+vr8qpv4XUL94d35e2X//v38t6v4YUbkVDy8SzcVIzHLAAAAAWJLR0QMgbNRYwAAAAlwSFlzAAARsAAAEbAByCf1VAAAAAd0SU1FB+QGGgsvBZ/GkmwAAAFKSURBVHja7dlrTgMxDEXhFgpTiukL2vLc/zbZQH5N7MmReu4KPmlGN4m9WgGzfhgtaOZxM1rQztNoQDvPowHtTKMB7WxHA2TJkiVLlixIZMmSRYgsWbIIkSVLFiGyZMkiRNZirBcma/eKZEW87ZGsOBxPRFbE+R3Jio/LlciKuH0iWfH1/UNkRSR3RRYruSvyWKldkcjK7IpUVl5X5LLSuiKbldQV6aycrihgZXRFCau/K2pY3V1RxersijJWX1cUsnq6opLV0RW1rNldUc2a2RXlrHldsQBrTlfcLwv5EZm/PLIgkHXKPHyQRzXzYoO8BjIvzcgnBvJBxny+Ih/7zNEIcpDEHLshh5TIkS5zAI5cFzCXK8hVFHNxh1xzQpfC0BV6XWTJkkWILFmyCJElSxYhsmTJIkSWLFmEyJIlixBZsmQB8stk/U3/Yb49pVcDMg4AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjAtMDYtMjZUMTE6NDc6MDUrMDI6MDD8QCPmAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDIwLTA2LTI2VDExOjQ3OjA1KzAyOjAwjR2bWgAAAABJRU5ErkJggg==";
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACOCAMAAADkWgEmAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAWlBMVEX4Wj69TDgmKCvkVTwlJyskJiokJikkJSkjJSn4Ykf+6+f5h3L////8xLr5alH/9fT7nYz4Wz/919H5cVn/+vr8qpv4XUL94d35e2X//v38t6v4YUbkVDy8SzcVIzHLAAAAAWJLR0QMgbNRYwAAAAlwSFlzAAARsAAAEbAByCf1VAAAAAd0SU1FB+QGGgsvBZ/GkmwAAAFKSURBVHja7dlrTgMxDEXhFgpTiukL2vLc/zbZQH5N7MmReu4KPmlGN4m9WgGzfhgtaOZxM1rQztNoQDvPowHtTKMB7WxHA2TJkiVLlixIZMmSRYgsWbIIkSVLFiGyZMkiRNZirBcma/eKZEW87ZGsOBxPRFbE+R3Jio/LlciKuH0iWfH1/UNkRSR3RRYruSvyWKldkcjK7IpUVl5X5LLSuiKbldQV6aycrihgZXRFCau/K2pY3V1RxersijJWX1cUsnq6opLV0RW1rNldUc2a2RXlrHldsQBrTlfcLwv5EZm/PLIgkHXKPHyQRzXzYoO8BjIvzcgnBvJBxny+Ih/7zNEIcpDEHLshh5TIkS5zAI5cFzCXK8hVFHNxh1xzQpfC0BV6XWTJkkWILFmyCJElSxYhsmTJIkSWLFmEyJIlixBZsmQB8stk/U3/Yb49pVcDMg4AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjAtMDYtMjZUMTE6NDc6MDUrMDI6MDD8QCPmAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDIwLTA2LTI2VDExOjQ3OjA1KzAyOjAwjR2bWgAAAABJRU5ErkJggg=="
+
     const size = 40;
 	const borderRadius = 5
     if (execution.execution_source === undefined || execution.execution_source === null || execution.execution_source.length === 0) {
@@ -16617,7 +17317,27 @@ const AngularWorkflow = (defaultprops) => {
       )
     }
 
-    if (execution.execution_source === "webhook") {
+    if (execution.execution_source === "authgroups") {
+	  const iconMargin = 7
+	  return (
+		<div style={{
+			width: size,
+			height: size,
+			borderRadius: borderRadius,
+			backgroundColor: "rgba(222,112,72,1)",
+		}}>
+			<LockOpenIcon
+				style={{
+					width: size/3*2, 
+					height: size/3*2, 
+					marginLeft: iconMargin,
+					marginTop: iconMargin,
+				}}
+			/>
+		</div>
+      )
+
+	} else if (execution.execution_source === "webhook") {
       return (
         <img
           alt={"webhook"}
@@ -17223,8 +17943,8 @@ const AngularWorkflow = (defaultprops) => {
                             />
 						    <Tooltip
 						      color="primary"
-						      title={`Execution was ran with a ${data.execution_source === 'default' ? 'manual run' : data.execution_source}.`}
-						      placement="top"
+						      title={`Execution Source: ${data.execution_source === 'default' ? 'manual run' : data.execution_source}.` + (data.authgroup !== undefined && data.authgroup !== null && data.authgroup.length > 0 ? ` Authgroup: ${data.authgroup}` : '')}
+						      placement="left"
 						    >
 								<div
 								  style={{
@@ -17251,7 +17971,7 @@ const AngularWorkflow = (defaultprops) => {
                             {data.workflow.actions !== null ? (
                               <Tooltip
                                 color="primary"
-                                title={`${successActions} action(s) ran. ${skippedActions} skipped. ${calculatedResult} total node(s).`}
+                                title={`${successActions} action(s) ran + ${skippedActions} skipped = ${calculatedResult} total node(s). If this doesn't add up, there is most likely a problem with the workflow (e.g. ABORTED/FAILURE)`}
                                 placement="top"
                               >
                                 <div
@@ -17262,7 +17982,7 @@ const AngularWorkflow = (defaultprops) => {
                                     marginBottom: "auto",
                                   }}
                                 >
-                                  {successActions} <span style={{color: "rgba(255,255,255,0.4)"}}>/</span> {skippedActions > 0 ? skippedActions : <span style={{color: "rgba(255,255,255,0.4)"}}>{skippedActions}</span>} <span style={{color: "rgba(255,255,255,0.4)"}}>/</span> {calculatedResult}
+                                  {successActions} <span style={{color: "rgba(255,255,255,0.4)"}}>+</span> {skippedActions > 0 ? skippedActions : <span style={{color: "rgba(255,255,255,0.4)"}}>{skippedActions}</span>} <span style={{color: "rgba(255,255,255,0.4)"}}>=</span> {calculatedResult}
                                 </div>
                               </Tooltip>
                             ) : null}
@@ -17453,7 +18173,7 @@ const AngularWorkflow = (defaultprops) => {
               </Tooltip>
             ) : null}
           </div>
-          {executionData.workflow !== undefined && executionData.workflow !== null && executionData.workflow.actions !== undefined && executionData.workflow.actions !== null && executionData.workflow.actions.length > 0 && executionData.workflow.actions[0].environment !== "Cloud" ?
+          {executionData.workflow !== undefined && executionData.workflow !== null && executionData.workflow.actions !== undefined && executionData.workflow.actions !== null && executionData.workflow.actions.length > 0  ?
             <div style={{ display: "flex", marginLeft: 10, }}>
               <Typography variant="body1">
                 <b>Env &nbsp;&nbsp;&nbsp;&nbsp;</b>
@@ -17481,16 +18201,29 @@ const AngularWorkflow = (defaultprops) => {
           {executionData.execution_source !== undefined &&
             executionData.execution_source !== null &&
             executionData.execution_source.length > 0 &&
-            executionData.execution_source !== "default" ? (
+            executionData.execution_source !== "default" ||
+			(executionData.authgroup !== undefined && executionData.authgroup !== null && executionData.authgroup.length > 0) ? (
             <div style={{ display: "flex", marginLeft: 10, }}>
               <Typography variant="body1">
                 <b>Source &nbsp;&nbsp;</b>
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                {executionData.execution_parent !== null &&
+
+
+				{executionData.execution_source === "authgroups" || (executionData.authgroup !== undefined && executionData.authgroup !== null && executionData.authgroup.length > 0) ? 
+					<a
+                      rel="noopener noreferrer"
+                      href={`/admin?tab=app_auth`}
+                      target="_blank"
+                      style={{ textDecoration: "none", color: "#f85a3e" }}
+                    >
+						Auth Group '{executionData.authgroup !== undefined && executionData.authgroup !== null && executionData.authgroup.length > 0 ? `${executionData.authgroup}` : null}'
+                    </a>
+				  :
+                executionData.execution_parent !== null &&
                   executionData.execution_parent !== undefined &&
                   executionData.execution_parent.length > 0 ? (
-                  executionData.execution_source === props.match.params.key ? (
+                  executionData.execution_source === props.match.params.key ? 
                     <span
                       style={{ cursor: "pointer", color: "#f85a3e" }}
                       onClick={(event) => {
@@ -17502,7 +18235,7 @@ const AngularWorkflow = (defaultprops) => {
                     >
                       Parent Execution
                     </span>
-                  ) : (
+                   : 
                     <a
                       rel="noopener noreferrer"
                       href={`/workflows/${executionData.execution_source}?view=executions&execution_id=${executionData.execution_parent}`}
@@ -17512,7 +18245,7 @@ const AngularWorkflow = (defaultprops) => {
                       Parent Workflow
                     </a>
                   )
-                ) : (
+                 : 
 				  executionData.execution_source === "questions" || executionData.execution_source === "web" ? 
                     <a
                       rel="noopener noreferrer"
@@ -17524,7 +18257,7 @@ const AngularWorkflow = (defaultprops) => {
                     </a>
 				  : 
                   executionData.execution_source
-                )}
+                }
               </Typography>
             </div>
           ) : null}
@@ -20657,6 +21390,7 @@ const AngularWorkflow = (defaultprops) => {
         {authenticationModal}
         {tenzirConfigModal}
         {/*editWorkflowModal*/}
+  		{authgroupModal} 
   		{executionArgumentModal}
         {configureWorkflowModal}
 		{/*usecaseSlidein*/}
@@ -20768,7 +21502,7 @@ const AngularWorkflow = (defaultprops) => {
       </div>
     ) : (
       <div style={{width: 200, margin: "auto", marginTop: 300, textAlign: "center", }}>
-		<CircularProgress variant="primary" style={{}} />
+		<CircularProgress style={{}} />
 		<Typography variant="body2" color="textSecondary" style={{marginTop: 10, }}>
 			Loading Workflow & Apps...
 		</Typography>
