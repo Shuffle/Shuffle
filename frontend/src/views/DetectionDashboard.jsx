@@ -52,7 +52,6 @@ const DetectionDashBoard = (props) => {
 
   const handleSave = (updatedContent) => {
    toast("this will be saved");
-    setSelectedRule(null); // Close the edit bar after saving
   };
 
   const getFileContent = (file_id) => {

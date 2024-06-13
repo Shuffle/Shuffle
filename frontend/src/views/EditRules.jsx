@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Box, Typography, Button, Switch, TextField } from '@mui/material';
+import React from 'react';
+import { Box, Typography, Button, TextField } from '@mui/material';
 
 const EditComponent = ({ ruleName, description, content, setContent, lastEdited, editedBy, onSave }) => {
 
