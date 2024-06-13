@@ -39,6 +39,12 @@ const DetectionDashBoard = (props) => {
     getSigmaInfo(globalUrl, setRuleInfo);
   }, [globalUrl]);
 
+  useEffect(() => {
+    if (ruleInfo.length > 0) {
+      openEditBar(ruleInfo[0]);
+    }
+  }, [ruleInfo]);
+
   const openEditBar = (rule) => {
     setSelectedRule(rule);
     getFileContent(rule.file_id)
@@ -50,6 +56,7 @@ const DetectionDashBoard = (props) => {
   };
 
   const getFileContent = (file_id) => {
+    setFileData("");
     fetch(globalUrl + "/api/v1/files/" + file_id + "/content", {
       method: "GET",
       headers: {
@@ -82,10 +89,10 @@ const DetectionDashBoard = (props) => {
   };
 
   return (
-    <Container style={{display: "flex", width: "100%"}}>
+    <Container style={{display: "flex"}}>
       {selectedRule ? (
         <EditComponent
-          ruleName={selectedRule.ruleName}
+          ruleName={selectedRule.title}
           description={selectedRule.description}
           content={fileData}
           setContent={setFileData}

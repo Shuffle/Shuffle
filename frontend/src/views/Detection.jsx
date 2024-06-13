@@ -7,7 +7,7 @@ import {
   Typography,
   Button,
 } from "@mui/material";
-import RuleCard from "./RuleCard"; 
+import RuleCard from "./RuleCard";
 import { styled } from "@mui/system";
 
 const ConnectedButton = styled(Button)({
@@ -18,7 +18,7 @@ const ConnectedButton = styled(Button)({
 const Detection = ({ globalUrl, ruleInfo, openEditBar }) => {
   return (
     <Container sx={{ mt: 4 }}>
-      <Box sx={{ border: "1px solid #ccc", borderRadius: 2, p: 3 }}>
+      <Box sx={{ border: "1px solid #ccc", borderRadius: 2, p: 3}}>
         <Box
           sx={{
             display: "flex",
@@ -50,18 +50,28 @@ const Detection = ({ globalUrl, ruleInfo, openEditBar }) => {
             <Switch defaultChecked />
           </Box>
         </Box>
-        {ruleInfo.length > 0 &&
-          ruleInfo.map((card) => (
-            <RuleCard
-              key={card.file_id}
-              ruleName={card.title}
-              description={card.description}
-              file_id={card.file_id}
-              globalUrl={globalUrl}
-              openEditBar={() => openEditBar(card)}
-              {...card}
-            />
-          ))}
+        <Box
+          sx={{
+            height: "500px",
+            width: "100%",  
+            overflowY: "auto",  
+            border: "1px solid #ddd",
+            p: 1,
+          }}
+        >
+          {ruleInfo.length > 0 &&
+            ruleInfo.map((card) => (
+              <RuleCard
+                key={card.file_id}
+                ruleName={card.title}
+                description={card.description}
+                file_id={card.file_id}
+                globalUrl={globalUrl}
+                openEditBar={() => openEditBar(card)}
+                {...card}
+              />
+            ))}
+        </Box>
       </Box>
     </Container>
   );

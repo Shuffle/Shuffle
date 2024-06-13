@@ -8,12 +8,9 @@ const EditComponent = ({ ruleName, description, content, setContent, lastEdited,
   };
 
   return (
-    <Box sx={{ p: 2, border: '1px solid #ccc', borderRadius: 2, width: '100%' }}>
+    <Box sx={{ p: 2, border: '1px solid #ccc', borderRadius: 2, height: '100%', width: '100%', marginTop:'30px'}}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <Typography variant="body2" style={{ marginTop: '2%' }}>{ruleName}</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Switch checked={true} />
-        </Box>
+      <Typography variant="h6">{ruleName}</Typography>
       </Box>
       <Typography variant="body2" style={{ marginTop: '2%' }}>
           {description}
