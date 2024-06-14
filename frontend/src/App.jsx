@@ -416,9 +416,9 @@ const App = (message, props) => {
         	  }
         	/>
 			<Route
-			exact
-			path="/detections/sigma"
-			element={<DetectionDashBoard globalUrl={globalUrl} />}
+				exact
+				path="/detections/sigma"
+				element={<DetectionDashBoard globalUrl={globalUrl} />}
 			/>
         	<Route
         	  exact

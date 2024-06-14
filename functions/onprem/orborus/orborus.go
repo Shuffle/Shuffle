@@ -2033,22 +2033,14 @@ func main() {
 
 			    } else if incRequest.Type == "DISABLE_SIGMA_FILE" {
 					  fileName := incRequest.ExecutionArgument
-					  err = manageSigmaRule(fileName, "disable")
+					  err = disableSigmaRule(fileName)
 					  if err != nil {
 						log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
 					}
 
 					  toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 
-				} else if incRequest.Type == "ENABLE_SIGMA_FILE" {
-					fileName := incRequest.ExecutionArgument
-					err = manageSigmaRule(fileName, "enable")
-					if err != nil {
-					  log.Printf("[ERROR] Failed to enable the sigma file %s, reason: %s",fileName, err)
-				  }
-
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-				}  else if incRequest.Type == "DISABLE_SIGMA_RULES" {
+				} else if incRequest.Type == "DISABLE_SIGMA_RULES" {
 					err := manageSigmaFolder("disable")
 					if err != nil {
 					 log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
@@ -2441,6 +2433,11 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[ERROR] Failed to create pipeline: %s", err)
 			return err
 		}
+		err = handleFileCategoryChange()
+		if err != nil {
+			log.Printf("[ERROR] Failed to download rules: %s", err)
+			return err
+		}
 	} else if incRequest.Type == "PIPELINE_DELETE" {
 		log.Printf("[INFO] Should delete pipeline %#v", identifier)
 		pipelineId, err := searchPipeline(identifier)
@@ -2686,13 +2683,15 @@ func createPipeline(command, identifier string) (string, error) {
 	// 		command = command[:startIndex] + baseUrl + command[endIndex:]
 	// 	}
 	// }
+
+	command = "from file /var/lib/tenzir/sysmon_logs.ndjson read json | sigma /var/lib/tenzir/rule.yaml | to https://shuffler.io/api/v1/hooks/webhook_d295c43a-e322-4afc-9a59-af167ae7c190"
 	requestBody := map[string]interface{}{
 		"definition": command,
 		"name":       identifier,
 		"hidden":     false,
 		"autostart": map[string]bool{
 			"created":   true,
-			"completed": true,
+			"completed": false,
 			"failed":    true,
 		},
 		"autodelete": map[string]bool{
@@ -2913,7 +2912,7 @@ func searchPipeline(identifier string) (string, error) {
 
 func handleFileCategoryChange() error{
 	apiEndpoint := baseUrl+"/api/v1/files/namespaces/sigma"
-	apiKey := "23e57313-5f0f-4a20-bddd-a9059c980adf"
+	apiKey := "12e7150e-1e03-4834-a839-de4688f50ad0"
 
 	req, err := http.NewRequest("GET", apiEndpoint, nil)
 	if err != nil {
@@ -3030,39 +3029,18 @@ func copyToTenzir(srcPath, destPath string) error {
 	return nil
 }
 
-func manageSigmaRule(fileName, action string) error {
+func disableSigmaRule(fileName string) error {
 	containerName := "tenzir-node"
-	srcPath := ""
-	destPath := ""
-
-	switch action {
-	case "disable":
-		srcPath = fmt.Sprintf("/var/lib/tenzir/sigma_files/%s", fileName)
-		destPath = "/var/lib/tenzir/disabled_rules"
-	case "enable":
-		srcPath = fmt.Sprintf("/var/lib/tenzir/disabled_rules/%s", fileName)
-		destPath = "/var/lib/tenzir/sigma_files"
-	default:
-		return fmt.Errorf("invalid action: %s", action)
-	}
+	srcPath := fmt.Sprintf("/var/lib/tenzir/sigma_rules/%s", fileName)
 
 	checkSrcCmd := exec.Command("docker", "exec", containerName, "test", "-f", srcPath)
 	if err := checkSrcCmd.Run(); err != nil {
 		return fmt.Errorf("source file does not exist: %v", err)
 	}
 
-	checkDestCmd := exec.Command("docker", "exec", containerName, "test", "-d", destPath)
-	if err := checkDestCmd.Run(); err != nil {
-		mkdirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mkdir", "-p", destPath)
-		if err := mkdirCmd.Run(); err != nil {
-			return fmt.Errorf("error creating destination directory in container: %v", err)
-		}
-	}
-
-	// Move the file to the destination directory or shall we copy it and then remove the file from source dir
-	mvCmd := exec.Command("docker", "exec", "-u", "root", containerName, "mv", srcPath, destPath)
-	if err := mvCmd.Run(); err != nil {
-		return fmt.Errorf("error moving file: %v", err)
+	rmCmd := exec.Command("docker", "exec", "-u", "root", containerName, "rm", srcPath)
+	if err := rmCmd.Run(); err != nil {
+		return fmt.Errorf("error removing file: %v", err)
 	}
 
 	return nil
@@ -3070,8 +3048,7 @@ func manageSigmaRule(fileName, action string) error {
 
 func manageSigmaFolder(action string) error {
 	containerName := "tenzir-node"
-	sigmaPath := "/var/lib/tenzir/sigma_files"
-	disabledPath := "/var/lib/tenzir/disabled_sigma"
+	sigmaPath := "/var/lib/tenzir/sigma_rules"
 
 	if action == "disable" {
 
