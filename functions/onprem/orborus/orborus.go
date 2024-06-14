@@ -50,6 +50,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Starts jobs in bulk, so this could be increased
@@ -659,7 +660,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 	return nil
 }
 
-func deployK8sWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
+func deployK8sWorker(image string, identifier string, env []string) error {
 	env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
 	env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
 
@@ -676,7 +677,6 @@ func deployK8sWorker(image string, identifier string, env []string, executionReq
 		log.Printf("[ERROR] Error getting kubernetes client:", err)
 		return err
 	}
-
 
 	//env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
 
@@ -715,6 +715,9 @@ func deployK8sWorker(image string, identifier string, env []string, executionReq
 			namespacemade = true
 		}
 	}
+
+	env = append(env, fmt.Sprintf("BASE_URL=%s", baseUrl))
+	env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", swarmConfig))
 
 	if len(kubernetesNamespace) == 0 {
 		foundNamespace, err := shuffle.GetKubernetesNamespace() 
@@ -811,6 +814,33 @@ func deployK8sWorker(image string, identifier string, env []string, executionReq
 	}
 
 	log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
+
+	// kubectl expose pod shuffle-workers --type=LoadBalancer --port=33333
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: identifier,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"container": "shuffle-worker",
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Protocol: "TCP",
+					Port:     33333,
+					TargetPort: intstr.FromInt(33333),
+				},
+			},
+			Type: corev1.ServiceTypeLoadBalancer,
+		},
+	}
+
+	_, err = clientset.CoreV1().Services(kubernetesNamespace).Create(context.TODO(), service, metav1.CreateOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Failed creating service: %v", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -820,14 +850,14 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
 	}
 
-	if isKubernetes == "true" {
-		err := deployK8sWorker(image, identifier, env, executionRequest)
-		if err != nil {
-			log.Printf("[ERROR] Failed deploying Kubernetes worker: %s", err)
-		}
+	// if isKubernetes == "true" {
+	// 	err := deployK8sWorker(image, identifier, env, executionRequest)
+	// 	if err != nil {
+	// 		log.Printf("[ERROR] Failed deploying Kubernetes worker: %s", err)
+	// 	}
 
-		return err
-	}
+	// 	return err
+	// }
 
 	// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
@@ -853,23 +883,25 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 	}
 
-	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-	if strings.ToLower(cleanupEnv) != "false" {
-		hostConfig.AutoRemove = true
-	}
-
 	config := &container.Config{
 		Image: image,
 		Env:   env,
 	}
 
+	if isKubernetes != "true" {
+		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+		if strings.ToLower(cleanupEnv) != "false" {
+			hostConfig.AutoRemove = true
+		}
+	}
+
 	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	parsedUuid := uuid.NewV4()
-	if swarmConfig == "run" || swarmConfig == "swarm" {
+	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
 		// FIXME: Should we handle replies properly?
 		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
 		// a 401 from the worker, which returns an error here
-		go sendWorkerRequest(executionRequest)
+		go sendWorkerRequest(executionRequest, image, env)
 
 		return nil
 	}
@@ -1510,16 +1542,26 @@ func main() {
 		workerImage = newWorkerImage
 	}
 
-	if swarmConfig == "run" || swarmConfig == "swarm" {
-		checkSwarmService(ctx)
+	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
 
-		log.Printf("[DEBUG] Cleaning up containers from previous run")
-		cleanupExistingNodes(ctx)
-		time.Sleep(time.Duration(5) * time.Second)
+		if isKubernetes != "true" {
+			checkSwarmService(ctx)
+			log.Printf("[DEBUG] Cleaning up containers from previous run")
+			cleanupExistingNodes(ctx)
+			time.Sleep(time.Duration(5) * time.Second)	
+		}
 
 		log.Printf("[DEBUG] Deploying worker image %s to swarm", workerImage)
-		deployServiceWorkers(workerImage)
-		log.Printf("[DEBUG] Waiting 45 seconds to ensure workers are deployed. Run: \"docker service ls\" for more info")
+
+		runString := "Run: \"docker service ls\" for more info"
+
+		if isKubernetes != "true" {
+			deployServiceWorkers(workerImage)
+		} else {
+			deployK8sWorker(workerImage, "shuffle-workers", []string{})
+			runString = "Run: \"kubectl get pods\" for more info"
+		}
+		log.Printf("[DEBUG] Waiting 45 seconds to ensure workers are deployed. %s", runString)
 		time.Sleep(time.Duration(45) * time.Second)
 
 		//deployServiceWorkers(workerImage)
@@ -1529,7 +1571,12 @@ func main() {
 
 	client := shuffle.GetExternalClient(baseUrl)
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
-	log.Printf("[INFO] Finished configuring docker environment. Connecting to %s", fullUrl)
+
+	if isKubernetes == "true" {
+		log.Printf("[INFO] Finished configuring kubernetes environment. Connecting to %s", fullUrl)
+	} else {
+		log.Printf("[INFO] Finished configuring docker environment. Connecting to %s", fullUrl)
+	}
 
 	forwardData := bytes.NewBuffer([]byte{})
 	forwardMethod := "POST"
@@ -2794,7 +2841,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	return nil
 }
 
-func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
+func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string, env []string) error {
 	parsedRequest := shuffle.OrborusExecutionRequest{
 		ExecutionId:           workflowExecution.ExecutionId,
 		Authorization:         workflowExecution.Authorization,
@@ -2827,6 +2874,15 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
 	}
 
+	identifier := "shuffle-workers"
+
+	if isKubernetes == "true" {
+		if shuffle.IsRunningInCluster() {
+			log.Printf("[INFO] Running in Kubernetes cluster")
+			// try getting the k8s worker server url
+		}
+	}
+
 	if len(workerServerUrl) > 0 {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
 	}
@@ -2851,7 +2907,12 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 			if len(newWorkerImage) > 0 {
 				workerImage = newWorkerImage
 			}
-			deployServiceWorkers(workerImage)
+
+			if isKubernetes == "true" {
+				deployK8sWorker(workerImage, identifier, env)
+			} else {
+				deployServiceWorkers(workerImage)
+			}
 
 			time.Sleep(time.Duration(10) * time.Second)
 			//err = sendWorkerRequest(executionRequest)
@@ -2870,7 +2931,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 				workerImage = newWorkerImage
 			}
 
-			deployServiceWorkers(workerImage)
+			if isKubernetes == "true" {
+				deployK8sWorker(workerImage, identifier, env)
+			} else {
+				deployServiceWorkers(workerImage)
+			}
 
 			time.Sleep(time.Duration(10) * time.Second)
 			//err = sendWorkerRequest(executionRequest)
@@ -2899,6 +2964,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	_ = body
 
-	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING:\ndocker service logs shuffle-workers 2>&1 -f | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
+	debugCommand := fmt.Sprintf("docker service logs shuffle-workers 2>&1 -f | grep %s", workflowExecution.ExecutionId)
+	if isKubernetes == "true" {
+		debugCommand = fmt.Sprintf("kubectl logs -n %s %s | grep %s", kubernetesNamespace, identifier, workflowExecution.ExecutionId)
+	}
+
+	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING:\n%s", workflowExecution.ExecutionId, streamUrl, debugCommand)
 	return nil
 }
