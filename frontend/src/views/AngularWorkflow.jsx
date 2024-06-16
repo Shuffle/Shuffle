@@ -12404,9 +12404,6 @@ const releaseToConnectLabel = "Release to Connect"
       setActionlist(actionlist);
     }
 
-    // Shows nested list of nodes > their JSON lists
-    const ActionlistWrapper = (props) => {
-      const { data } = props;
 
       const handleMenuClose = () => {
         setUpdate(Math.random());
@@ -12452,302 +12449,7 @@ const releaseToConnectLabel = "Release to Connect"
         marginRight: 15,
       };
 
-      return (
-        <Menu
-          anchorReference="anchorPosition"
-          anchorPosition={menuPosition}
-          onClose={() => {
-            handleMenuClose();
-          }}
-          open={!!menuPosition}
-          style={{
-            border: `2px solid #f85a3e`,
-            color: "white",
-            marginTop: 2,
-          }}
-        >
-          {actionlist.map((innerdata) => {
-            const icon =
-              innerdata.type === "action" ? (
-                <AppsIcon style={{ marginRight: 10 }} />
-              ) : innerdata.type === "workflow_variable" ||
-                innerdata.type === "execution_variable" ? (
-                <FavoriteBorderIcon style={{ marginRight: 10 }} />
-              ) : (
-                <ScheduleIcon style={{ marginRight: 10 }} />
-              );
-
-            const handleExecArgumentHover = (inside) => {
-              var exec_text_field = document.getElementById(
-                "execution_argument_input_field"
-              );
-              if (exec_text_field !== null) {
-                if (inside) {
-                  exec_text_field.style.border = "2px solid #f85a3e";
-                } else {
-                  exec_text_field.style.border = "";
-                }
-              }
-
-              // Also doing arguments
-              if (
-                workflow.triggers !== undefined &&
-                workflow.triggers !== null &&
-                workflow.triggers.length > 0
-              ) {
-                for (let triggerkey in workflow.triggers) {
-                  const item = workflow.triggers[triggerkey];
-
-                  if (cy !== undefined) {
-                    var node = cy.getElementById(item.id);
-                    if (node.length > 0) {
-                      if (inside) {
-                        node.addClass("shuffle-hover-highlight");
-                      } else {
-                        node.removeClass("shuffle-hover-highlight");
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            const handleActionHover = (inside, actionId) => {
-              if (cy !== undefined) {
-                var node = cy.getElementById(actionId);
-                if (node.length > 0) {
-                  if (inside) {
-                    node.addClass("shuffle-hover-highlight");
-                  } else {
-                    node.removeClass("shuffle-hover-highlight");
-                  }
-                }
-              }
-            };
-
-            const handleMouseover = () => {
-              if (innerdata.type === "Execution Argument") {
-                handleExecArgumentHover(true);
-              } else if (innerdata.type === "action") {
-                handleActionHover(true, innerdata.id);
-              }
-            };
-
-            const handleMouseOut = () => {
-              if (innerdata.type === "Execution Argument") {
-                handleExecArgumentHover(false);
-              } else if (innerdata.type === "action") {
-                handleActionHover(false, innerdata.id);
-              }
-            };
-
-            var parsedPaths = [];
-						console.log("Found example data: ", innerdata.example)
-            if (typeof innerdata.example === "object") {
-              parsedPaths = GetParsedPaths(innerdata.example, "");
-            }
-
-						const coverColor = "#82ccc3"
-
-            return parsedPaths.length > 0 ? (
-							<span>
-							{/*
-              <NestedMenuItem
-                key={innerdata.name}
-                label={
-                  <div style={{ display: "flex" }}>
-                    {icon} {innerdata.name}
-                  </div>
-                }
-                parentMenuOpen={!!menuPosition}
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  color: "white",
-                  minWidth: 250,
-                }}
-                onClick={() => {
-                  handleItemClick([innerdata]);
-                }}
-              >
-                {parsedPaths.map((pathdata, index) => {
-                  // FIXME: Should be recursive in here
-                  const icon =
-                    pathdata.type === "value" ? (
-                      <VpnKeyIcon style={iconStyle} />
-                    ) : pathdata.type === "list" ? (
-                      <FormatListNumberedIcon style={iconStyle} />
-                    ) : (
-                      <ExpandMoreIcon style={iconStyle} />
-                    )
-
-                  return (
-                    <MenuItem
-                      key={pathdata.name}
-                      style={{
-                        backgroundColor: theme.palette.inputColor,
-                        color: "white",
-                        minWidth: 250,
-                      }}
-                      value={pathdata}
-                      onMouseOver={() => { }}
-                      onClick={() => {
-                        handleItemClick([innerdata, pathdata]);
-                      }}
-                    >
-                      <Tooltip
-                        color="primary"
-                        title={`Ex. value: ${pathdata.value}`}
-                        placement="left"
-                      >
-                        <div style={{ display: "flex" }}>
-                          {icon} {pathdata.name}
-                        </div>
-                      </Tooltip>
-                    </MenuItem>
-                  );
-                })}
-              </NestedMenuItem>
-							*/}
-
-							<NestedMenuItem
-								key={innerdata.name}
-								label={
-									<div style={{ display: "flex", marginLeft: 0, }}>
-										{icon} {innerdata.name}
-									</div>
-								}
-								parentMenuOpen={!!menuPosition}
-								style={{
-									color: "white",
-									minWidth: 250,
-									maxWidth: 250,
-									maxHeight: 50,
-									overflow: "hidden",
-								}}
-								onClick={() => {
-									console.log("CLICKED: ", innerdata);
-									console.log(innerdata.example)
-									handleItemClick([innerdata]);
-								}}
-							>
-								<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition.top-200, left: menuPosition.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
-
-									<MenuItem
-										key={innerdata.name}
-										style={{
-											backgroundColor: theme.palette.inputColor,
-											marginLeft: 15,
-											color: "white",
-											minWidth: 250,
-											maxWidth: 250,
-											padding: 0, 
-											position: "relative",
-										}}
-										value={innerdata}
-										onMouseOver={() => {
-											//console.log("HOVER: ", pathdata);
-										}}
-										onClick={() => {
-											handleItemClick([innerdata]);
-										}}
-									>
-										<Typography variant="h6" style={{paddingBottom: 5}}>
-											{innerdata.name}
-										</Typography>
-									</MenuItem>
-
-									{parsedPaths.map((pathdata, index) => {
-										// FIXME: Should be recursive in here
-										//<VpnKeyIcon style={iconStyle} />
-										const icon =
-											pathdata.type === "value" ? (
-												<span style={{marginLeft: 9, }} />
-											) : pathdata.type === "list" ? (
-												<FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
-											) : (
-												<CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
-											);
-										//<ExpandMoreIcon style={iconStyle} />
-
-										const indentation_count = (pathdata.name.match(/\./g) || []).length+1
-										const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
-										//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
-										const boxPadding = 0 
-										const namesplit = pathdata.name.split(".")
-										const newname = namesplit[namesplit.length-1]
-										return (
-											<MenuItem
-												key={pathdata.name}
-												style={{
-													backgroundColor: theme.palette.inputColor,
-													color: "white",
-													minWidth: 250,
-													maxWidth: 250,
-													padding: boxPadding, 
-												}}
-												value={pathdata}
-												onMouseOver={() => {
-													//console.log("HOVER: ", pathdata);
-												}}
-												onClick={() => {
-													handleItemClick([innerdata, pathdata]);
-												}}
-											>
-												<Tooltip
-													color="primary"
-													title={`Ex. value: ${pathdata.value}`}
-													placement="left"
-												>
-													<div style={{ display: "flex", height: 30, }}>
-														{Array(indentation_count).fill().map((subdata, subindex) => {
-															return (
-																baseIndent
-															)
-														})}
-														{icon} {newname} 
-														{pathdata.type === "list" ? <SquareFootIcon style={{marginleft: 10, }} onClick={(e) => {
-
-														}} /> : null}
-													</div>
-												</Tooltip>
-											</MenuItem>
-										);
-									})}
-								</Paper>
-							</NestedMenuItem>
-							</span>
-            ) : (
-              <MenuItem
-                key={innerdata.name}
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  color: "white",
-                }}
-                value={innerdata}
-                onMouseOver={() => handleMouseover()}
-                onMouseOut={() => {
-                  handleMouseOut();
-                }}
-                onClick={() => {
-                  handleItemClick([innerdata]);
-                }}
-              >
-                <Tooltip
-                  color="primary"
-                  title={`Value: ${innerdata.value}`}
-                  placement="left"
-                >
-                  <div style={{ display: "flex" }}>
-                    {icon} {innerdata.name}
-                  </div>
-                </Tooltip>
-              </MenuItem>
-            );
-          })}
-        </Menu>
-      );
-    };
-
+  
     if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
       if (workflow.triggers[selectedTriggerIndex] === undefined) {
         return null;
@@ -13360,10 +13062,298 @@ const releaseToConnectLabel = "Release to Connect"
                 }}
               />
               {!showDropdown ? null :
-								<ActionlistWrapper
-									actionlist={actionlist}
-									data={workflow.triggers[selectedTriggerIndex]}
-								/>
+							  <Menu
+                anchorReference="anchorPosition"
+                anchorPosition={menuPosition}
+                onClose={() => {
+                  handleMenuClose();
+                }}
+                open={!!menuPosition}
+                style={{
+                  border: `2px solid #f85a3e`,
+                  color: "white",
+                  marginTop: 2,
+                }}
+              >
+                {actionlist.map((innerdata) => {
+                  const icon =
+                    innerdata.type === "action" ? (
+                      <AppsIcon style={{ marginRight: 10 }} />
+                    ) : innerdata.type === "workflow_variable" ||
+                      innerdata.type === "execution_variable" ? (
+                      <FavoriteBorderIcon style={{ marginRight: 10 }} />
+                    ) : (
+                      <ScheduleIcon style={{ marginRight: 10 }} />
+                    );
+      
+                  const handleExecArgumentHover = (inside) => {
+                    var exec_text_field = document.getElementById(
+                      "execution_argument_input_field"
+                    );
+                    if (exec_text_field !== null) {
+                      if (inside) {
+                        exec_text_field.style.border = "2px solid #f85a3e";
+                      } else {
+                        exec_text_field.style.border = "";
+                      }
+                    }
+      
+                    // Also doing arguments
+                    if (
+                      workflow.triggers !== undefined &&
+                      workflow.triggers !== null &&
+                      workflow.triggers.length > 0
+                    ) {
+                      for (let triggerkey in workflow.triggers) {
+                        const item = workflow.triggers[triggerkey];
+      
+                        if (cy !== undefined) {
+                          var node = cy.getElementById(item.id);
+                          if (node.length > 0) {
+                            if (inside) {
+                              node.addClass("shuffle-hover-highlight");
+                            } else {
+                              node.removeClass("shuffle-hover-highlight");
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+      
+                  const handleActionHover = (inside, actionId) => {
+                    if (cy !== undefined) {
+                      var node = cy.getElementById(actionId);
+                      if (node.length > 0) {
+                        if (inside) {
+                          node.addClass("shuffle-hover-highlight");
+                        } else {
+                          node.removeClass("shuffle-hover-highlight");
+                        }
+                      }
+                    }
+                  };
+      
+                  const handleMouseover = () => {
+                    if (innerdata.type === "Execution Argument") {
+                      handleExecArgumentHover(true);
+                    } else if (innerdata.type === "action") {
+                      handleActionHover(true, innerdata.id);
+                    }
+                  };
+      
+                  const handleMouseOut = () => {
+                    if (innerdata.type === "Execution Argument") {
+                      handleExecArgumentHover(false);
+                    } else if (innerdata.type === "action") {
+                      handleActionHover(false, innerdata.id);
+                    }
+                  };
+      
+                  var parsedPaths = [];
+                  console.log("Found example data: ", innerdata.example)
+                  if (typeof innerdata.example === "object") {
+                    parsedPaths = GetParsedPaths(innerdata.example, "");
+                  }
+      
+                  const coverColor = "#82ccc3"
+      
+                  return parsedPaths.length > 0 ? (
+                    <span>
+                    {/*
+                    <NestedMenuItem
+                      key={innerdata.name}
+                      label={
+                        <div style={{ display: "flex" }}>
+                          {icon} {innerdata.name}
+                        </div>
+                      }
+                      parentMenuOpen={!!menuPosition}
+                      style={{
+                        backgroundColor: theme.palette.inputColor,
+                        color: "white",
+                        minWidth: 250,
+                      }}
+                      onClick={() => {
+                        handleItemClick([innerdata]);
+                      }}
+                    >
+                      {parsedPaths.map((pathdata, index) => {
+                        // FIXME: Should be recursive in here
+                        const icon =
+                          pathdata.type === "value" ? (
+                            <VpnKeyIcon style={iconStyle} />
+                          ) : pathdata.type === "list" ? (
+                            <FormatListNumberedIcon style={iconStyle} />
+                          ) : (
+                            <ExpandMoreIcon style={iconStyle} />
+                          )
+      
+                        return (
+                          <MenuItem
+                            key={pathdata.name}
+                            style={{
+                              backgroundColor: theme.palette.inputColor,
+                              color: "white",
+                              minWidth: 250,
+                            }}
+                            value={pathdata}
+                            onMouseOver={() => { }}
+                            onClick={() => {
+                              handleItemClick([innerdata, pathdata]);
+                            }}
+                          >
+                            <Tooltip
+                              color="primary"
+                              title={`Ex. value: ${pathdata.value}`}
+                              placement="left"
+                            >
+                              <div style={{ display: "flex" }}>
+                                {icon} {pathdata.name}
+                              </div>
+                            </Tooltip>
+                          </MenuItem>
+                        );
+                      })}
+                    </NestedMenuItem>
+                    */}
+      
+                    <NestedMenuItem
+                      key={innerdata.name}
+                      label={
+                        <div style={{ display: "flex", marginLeft: 0, }}>
+                          {icon} {innerdata.name}
+                        </div>
+                      }
+                      parentMenuOpen={!!menuPosition}
+                      style={{
+                        color: "white",
+                        minWidth: 250,
+                        maxWidth: 250,
+                        maxHeight: 50,
+                        overflow: "hidden",
+                      }}
+                      onClick={() => {
+                        console.log("CLICKED: ", innerdata);
+                        console.log(innerdata.example)
+                        handleItemClick([innerdata]);
+                      }}
+                    >
+                      <Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition.top-200, left: menuPosition.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+      
+                        <MenuItem
+                          key={innerdata.name}
+                          style={{
+                            backgroundColor: theme.palette.inputColor,
+                            marginLeft: 15,
+                            color: "white",
+                            minWidth: 250,
+                            maxWidth: 250,
+                            padding: 0, 
+                            position: "relative",
+                          }}
+                          value={innerdata}
+                          onMouseOver={() => {
+                            //console.log("HOVER: ", pathdata);
+                          }}
+                          onClick={() => {
+                            handleItemClick([innerdata]);
+                          }}
+                        >
+                          <Typography variant="h6" style={{paddingBottom: 5}}>
+                            {innerdata.name}
+                          </Typography>
+                        </MenuItem>
+      
+                        {parsedPaths.map((pathdata, index) => {
+                          // FIXME: Should be recursive in here
+                          //<VpnKeyIcon style={iconStyle} />
+                          const icon =
+                            pathdata.type === "value" ? (
+                              <span style={{marginLeft: 9, }} />
+                            ) : pathdata.type === "list" ? (
+                              <FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
+                            ) : (
+                              <CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
+                            );
+                          //<ExpandMoreIcon style={iconStyle} />
+      
+                          const indentation_count = (pathdata.name.match(/\./g) || []).length+1
+                          const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
+                          //const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
+                          const boxPadding = 0 
+                          const namesplit = pathdata.name.split(".")
+                          const newname = namesplit[namesplit.length-1]
+                          return (
+                            <MenuItem
+                              key={pathdata.name}
+                              style={{
+                                backgroundColor: theme.palette.inputColor,
+                                color: "white",
+                                minWidth: 250,
+                                maxWidth: 250,
+                                padding: boxPadding, 
+                              }}
+                              value={pathdata}
+                              onMouseOver={() => {
+                                //console.log("HOVER: ", pathdata);
+                              }}
+                              onClick={() => {
+                                handleItemClick([innerdata, pathdata]);
+                              }}
+                            >
+                              <Tooltip
+                                color="primary"
+                                title={`Ex. value: ${pathdata.value}`}
+                                placement="left"
+                              >
+                                <div style={{ display: "flex", height: 30, }}>
+                                  {Array(indentation_count).fill().map((subdata, subindex) => {
+                                    return (
+                                      baseIndent
+                                    )
+                                  })}
+                                  {icon} {newname} 
+                                  {pathdata.type === "list" ? <SquareFootIcon style={{marginleft: 10, }} onClick={(e) => {
+      
+                                  }} /> : null}
+                                </div>
+                              </Tooltip>
+                            </MenuItem>
+                          );
+                        })}
+                      </Paper>
+                    </NestedMenuItem>
+                    </span>
+                  ) : (
+                    <MenuItem
+                      key={innerdata.name}
+                      style={{
+                        backgroundColor: theme.palette.inputColor,
+                        color: "white",
+                      }}
+                      value={innerdata}
+                      onMouseOver={() => handleMouseover()}
+                      onMouseOut={() => {
+                        handleMouseOut();
+                      }}
+                      onClick={() => {
+                        handleItemClick([innerdata]);
+                      }}
+                    >
+                      <Tooltip
+                        color="primary"
+                        title={`Value: ${innerdata.value}`}
+                        placement="left"
+                      >
+                        <div style={{ display: "flex" }}>
+                          {icon} {innerdata.name}
+                        </div>
+                      </Tooltip>
+                    </MenuItem>
+                  );
+                })}
+              </Menu>
                }
               {/*
 								<div
@@ -16709,9 +16699,7 @@ const releaseToConnectLabel = "Release to Connect"
     if (Object.getOwnPropertyNames(selectedComment).length > 0) {
       defaultReturn = <CommentSidebar />
     } else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
-      if (selectedTrigger.trigger_type === "SUBFLOW") {
-		defaultReturn = <SubflowSidebar />
-      } else if (selectedTrigger.trigger_type === "EMAIL") {
+      if (selectedTrigger.trigger_type === "EMAIL") {
         defaultReturn = <EmailSidebar />
       } else if (selectedTrigger.trigger_type === undefined) {
         //defaultReturn = <UserinputSidebar />
@@ -19648,6 +19636,13 @@ const releaseToConnectLabel = "Release to Connect"
 			  : null}
 		  </div>
 	  : null}
+
+    {
+      rightSideBarOpen && selectedTrigger.trigger_type === "SUBFLOW"&& Object.getOwnPropertyNames(selectedTrigger).length > 0   ? 
+      <div id="rightside_actions" style={rightsidebarStyle}>
+        <SubflowSidebar/>
+        </div> : null
+    }
 	  
 	  {/*
       <RightSideBar
