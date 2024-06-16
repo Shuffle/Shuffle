@@ -18,11 +18,9 @@ code {
   margin-right: -13px;
 }
 
-.toc:hover {
-    background-color: gray;
-    color: white;
+table th, table td {
+  border: 1px solid;
 }
-
 /* .cm-string{
   z-index: -1;
 }
