@@ -3382,6 +3382,8 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+	resp.Header().Add("X-Debug-Url", debugUrl)
 
 	workflowExecution.Priority = 11
 	environments, err := shuffle.GetEnvironments(ctx, user.ActiveOrg.Id)

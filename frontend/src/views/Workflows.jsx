@@ -2153,7 +2153,7 @@ const Workflows = (props) => {
 		}
 
     return (
-	  <div style={{width: "100%", minWidth: 321, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? "2px solid #40E0D0" : "inherit", borderRadius: theme.palette.borderRadius, }}>
+	  <div style={{width: "100%", minWidth: 321, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? "1px solid #40E0D0" : "inherit", borderRadius: theme.palette.borderRadius, }}>
         <Paper square style={paperAppStyle}>
 			{selectedCategory !== "" ?
 				<Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -2206,8 +2206,17 @@ const Workflows = (props) => {
 					<Typography>
 						Edit '{data.name}'
 					</Typography>
+
+					<br />
+
+					{isDistributed || hasSuborgs ?
+						<Typography>
+							This is a parentorg-controlled workflow.
+						</Typography>
+					: null}
 				</div>
 				} placement="right">
+
 				<Typography
                   variant="body1"
                   style={{

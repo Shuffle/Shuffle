@@ -44,6 +44,7 @@ import {
   Box,
   InputAdornment,
   Autocomplete,
+  Modal
 } from "@mui/material";
 
 import {
@@ -164,7 +165,7 @@ const Admin = (props) => {
   const [selectedOrganization, setSelectedOrganization] = React.useState({});
 
   //console.log("Selected: ", selectedOrganization)
-  const [appAuthenticationGroupModalOpen , setAppAuthenticationGroupModalOpen] = React.useState(false);
+  const [appAuthenticationGroupModalOpen, setAppAuthenticationGroupModalOpen] = React.useState(false);
   const [appsForAppAuthGroup, setAppsForAppAuthGroup] = React.useState([]);
   const [appAuthenticationGroupId, setAppAuthenticationGroupId] = React.useState("");
   const [appAuthenticationGroupName, setAppAuthenticationGroupName] = React.useState("");
@@ -212,6 +213,13 @@ const Admin = (props) => {
   const [allSchedules, setAllSchedules] = React.useState([]);
   const [pipelines, setPipelines] = React.useState([]);
   const [, forceUpdate] = React.useState();
+  const [MFARequired, setMFARequired] = React.useState(selectedOrganization.mfa_required === undefined ? false : selectedOrganization.mfa_required);
+
+  useEffect(() => {
+    if (selectedOrganization.mfa_required !== undefined) {
+      setMFARequired(selectedOrganization.mfa_required);
+    }
+  }, [selectedOrganization.mfa_required]);
 
   const [showDeleteAccountTextbox, setShowDeleteAccountTextbox] =
     React.useState(false);
@@ -1097,6 +1105,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       code: code,
       user_id: userId,
     };
+    toast("Verifying 2fa code. Please wait...");
 
     fetch(`${globalUrl}/api/v1/users/${userId}/set2fa`, {
       mode: "cors",
@@ -1120,11 +1129,15 @@ If you're interested, please let me know a time that works for you, or set up a 
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-          toast("Successfully enabled 2fa");
+          if (responseJson.MFAActive === true) {
+            toast.success("Successfully enabled 2fa");
+          }
+          if (responseJson.MFAActive === false) {
+            toast.success("Successfully disabled 2fa");
+          }
 
           setTimeout(() => {
             getUsers();
-
             setImage2FA("");
             setValue2FA("");
             setSecret2FA("");
@@ -2922,8 +2935,8 @@ If you're interested, please let me know a time that works for you, or set up a 
             color="primary"
           >
             {selectedUser.mfa_info !== undefined &&
-            selectedUser.mfa_info !== null &&
-            selectedUser.mfa_info.active === true
+              selectedUser.mfa_info !== null &&
+              selectedUser.mfa_info.active === true
               ? "Disable 2FA"
               : "Enable 2FA"}
           </Button>
@@ -3009,15 +3022,16 @@ If you're interested, please let me know a time that works for you, or set up a 
               maxWidth: 300,
               minWidth: 300,
               marginTop: 25,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}
           >
-            {/*<Divider style={{marginTop: 20, marginBottom: 20}} />*/}
-
             {secret2FA !== undefined &&
-            secret2FA !== null &&
-            secret2FA.length > 0 ? (
+              secret2FA !== null &&
+              secret2FA.length > 0 ? (
               <span>
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="body2" color="textSecondary" style={{ textAlign: 'left' }}>
                   Scan the image below with the two-factor authentication app on
                   your phone. If you can’t use a QR code, use the code{" "}
                   {secret2FA} instead.
@@ -3025,18 +3039,16 @@ If you're interested, please let me know a time that works for you, or set up a 
               </span>
             ) : null}
             {image2FA !== undefined &&
-            image2FA !== null &&
-            image2FA.length > 0 ? (
+              image2FA !== null &&
+              image2FA.length > 0 ? (
               <img
-                alt={"2 factor img"}
+                alt="2 factor img"
                 src={image2FA}
                 style={{
-                  margin: "auto",
-                  marginTop: 25,
+                  margin: "15px auto",
                   maxHeight: 200,
                   maxWidth: 200,
-                  minWidth: 200,
-                  maxWidth: 200,
+                  display: 'block',
                 }}
               />
             ) : (
@@ -3047,7 +3059,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               After scanning the QR code image, the app will display a code that
               you can enter below.
             </Typography>
-            <div style={{ display: "flex" }}>
+            <div style={{ display: "flex", width: '100%', marginTop: 10 }}>
               <TextField
                 color="primary"
                 style={{
@@ -3076,13 +3088,18 @@ If you're interested, please let me know a time that works for you, or set up a 
 
                   setValue2FA(event.target.value);
                 }}
+                onKeyPress={(event) => {
+                  if (event.key === 'Enter' && event.target.value.length === 6) {
+                    handleVerify2FA(userdata.id, event.target.value, false);
+                  }
+                }}
               />
               <Button
                 disabled={value2FA.length !== 6}
                 variant="contained"
                 style={{ marginTop: 15, height: 50, flex: 1 }}
                 onClick={() => {
-                  handleVerify2FA(userdata.id, value2FA);
+                  handleVerify2FA(userdata.id, value2FA, false);
                 }}
                 color="primary"
               >
@@ -4225,40 +4242,101 @@ If you're interested, please let me know a time that works for you, or set up a 
     </Dialog>
   );
 
+  const UpdateMFAInUserOrg = (org_id) => {
+    if (MFARequired === false) {
+      toast("Making MFA required for your organization. Please wait...");
+    } else {
+      toast("Making MFA optional for your organization. Please wait...");
+    }
+
+    const data = {
+      mfa_required: !selectedOrganization.mfa_required,
+      org_id: selectedOrganization.id,
+    }
+
+    const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+    fetch(url, {
+      mode: "cors",
+      method: "POST",
+      body: JSON.stringify(data),
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then((response) =>
+        response.json().then((responseJson) => {
+          console.log(responseJson)
+          if (responseJson["success"] === false) {
+            toast.error("Failed updating org: ", responseJson.reason);
+          } else {
+            if (MFARequired === false) {
+              setMFARequired(true)
+              toast.success("Successfully make MFA required for your organization!");
+            } else {
+              setMFARequired(false)
+              toast.success("Successfully make MFA optional for your organization!")
+            }
+          }
+        }),
+      )
+      .catch((error) => {
+        toast("Err: " + error.toString());
+      });
+  }
+
   const usersView =
     curTab === 1 ? (
       <div>
-        <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <h2 style={{ display: "inline" }}>User Management</h2>
-          <span style={{ marginLeft: 25 }}>
-            Add, edit, block or change passwords.{" "}
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              href="/docs/organizations#user_management"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
-            >
-              Learn more
-            </a>
-          </span>
+        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', }}>
+            <div>
+              <h2 style={{ display: "inline" }}>User Management</h2>
+              <span style={{ marginLeft: 25 }}>
+                Add, edit, block or change passwords.{" "}
+                <a
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  href="/docs/organizations#user_management"
+                  style={{ textDecoration: "none", color: "#f85a3e" }}
+                >
+                  Learn more
+                </a>
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'row', marginTop: 20, }}>
+              <Button
+                style={{}}
+                variant="contained"
+                color="primary"
+                onClick={() => setModalOpen(true)}
+              >
+                Add user
+              </Button>
+              <Button
+                style={{ marginLeft: 5, marginRight: 15 }}
+                variant="contained"
+                color="primary"
+                onClick={() => getUsers()}
+              >
+                <CachedIcon />
+              </Button>
+            </div>
+          </div>
+          <div />
+
+          <div style={{ marginleft: 20, maxWidth: 500 }}>
+            <Typography variant="body1">MFA Required</Typography>
+            <Switch
+              checked={MFARequired}
+              onChange={(event) => {
+                UpdateMFAInUserOrg(selectedOrganization.id);
+              }}
+            />
+          </div>
         </div>
-        <div />
-        <Button
-          style={{}}
-          variant="contained"
-          color="primary"
-          onClick={() => setModalOpen(true)}
-        >
-          Add user
-        </Button>
-        <Button
-          style={{ marginLeft: 5, marginRight: 15 }}
-          variant="contained"
-          color="primary"
-          onClick={() => getUsers()}
-        >
-          <CachedIcon />
-        </Button>
         <Divider
           style={{
             marginTop: 20,
@@ -4714,6 +4792,12 @@ If you're interested, please let me know a time that works for you, or set up a 
     ) : null;
 
   const run2FASetup = (data) => {
+
+    if (MFARequired === true && (selectedUser.mfa_info && selectedUser.mfa_info.active === true)) {
+      toast("MFA is required for your organization. You can't disable it.");
+      return;
+    }
+
     if (!show2faSetup) {
       get2faCode(data.id);
     } else {
@@ -5247,6 +5331,282 @@ If you're interested, please let me know a time that works for you, or set up a 
     setAppsForAppAuthGroup(newappauth.concat(data.id))
   }
 
+  const KMSItem = (props) => {
+	const { 
+		data, 
+		index,
+	} = props
+
+    const [showEnvironmentDropdown, setShowEnvironmentDropdown] = React.useState(false)
+
+	var bgColor = "#27292d";
+	if (index % 2 === 0) {
+	  bgColor = "#1f2023";
+	}
+
+	const isDistributed =
+	  data.suborg_distributed === true ? true : false;
+
+	const isKms = data.label !== undefined && data.label !== null && data.label.toLowerCase() === "kms shuffle storage"
+
+	var selectedEnvironment = ""
+	if (data.environment !== undefined && data.environment !== null && data.environment.length > 0) {
+		selectedEnvironment = data.environment
+	}
+
+	if (selectedEnvironment === "" && environments !== undefined && environments !== null && environments.length > 0) {
+		for (var i = 0; i < environments.length; i++) {
+			if (environments[i].default === true) {
+				selectedEnvironment = environments[i].Name
+				break
+			}
+		}
+	}
+
+	console.log("AUTH: ", data)
+
+	return (
+	  <ListItem key={index} style={{ backgroundColor: bgColor }}>
+		<ListItemText
+		  primary=<img
+			alt=""
+			src={data.app.large_image}
+			style={{
+			  maxWidth: 50,
+			  borderRadius: theme.palette.borderRadius,
+			}}
+		  />
+		  style={{ minWidth: 75, maxWidth: 75 }}
+		/>
+		<ListItemText
+		  primary={!isKms ? data.label : 
+			<div style={{display: "flex", flexDirection: "column", maxWidth: 200, }}>
+			  <Chip
+				label={"KMS Shuffle Storage"}
+				variant="contained"
+				color="secondary"
+				style={{cursor: "pointer"}}
+				onClick={() => {
+    				setShowEnvironmentDropdown(true)
+
+					if (environments === undefined || environments === null || environments.length === 0) {
+						toast.error("No environments found. Please try again in a second, or reload to configure environment to use for KMS")
+					}
+				}}
+			  />
+			  {showEnvironmentDropdown === true && environments !== undefined && environments !== null && environments.length > 0 ?
+				  <FormControl fullWidth sx={{ m: 1 }}>
+					<InputLabel id="envselect" style={{ padding: 5 }}>
+				  		Environment
+					</InputLabel>
+					<Select
+						labelId="envselect"
+						defaultValue={selectedEnvironment}
+						onChange={(e) => {
+							if (e.target.value === "") {
+								return
+							}
+
+							if (e.target.value === selectedEnvironment) {
+								return
+							}
+
+							toast.info("Updating environment KMS runs on to " + e.target.value)
+							data.environment = e.target.value
+							const envIndex = environments.findIndex((env) => env.Name === e.target.value)
+							if (envIndex === -1) {
+								toast.error("Environment not found")
+								return
+							}
+
+							environments[envIndex].environment = e.target.value
+							setEnvironments(environments)
+							setShowEnvironmentDropdown(false)
+  
+							saveAuthentication(data)
+						}}
+					  >
+						{environments.map((env, index) => {
+							if (env.archived === true) {
+								return null
+							}
+
+							return (
+								<MenuItem key={index} value={env.Name}>
+									{env.default === true ? "Default - " : ""}{env.Name}
+								</MenuItem>
+							)
+						})}
+					</Select>
+				  </FormControl>
+			  : null}
+			</div>
+		  }
+		  style={{
+			minWidth: 225,
+			maxWidth: 225,
+			overflow: "hidden",
+		  }}
+		/>
+		<ListItemText
+		  primary={data.app.name.replaceAll("_", " ")}
+		  style={{ minWidth: 175, maxWidth: 175, marginLeft: 10 }}
+		/>
+		{/*
+		<ListItemText
+		  primary={data.defined === false ? "No" : "Yes"}
+		  style={{ minWidth: 100, maxWidth: 100, }}
+		/>
+							*/}
+		<ListItemText
+		  primary={
+			data.workflow_count === null ? 0 : data.workflow_count
+		  }
+		  style={{
+			minWidth: 100,
+			maxWidth: 100,
+			textAlign: "center",
+			overflow: "hidden",
+		  }}
+		/>
+		{/*
+		<ListItemText
+		  primary={data.node_count}
+		  style={{
+			minWidth: 110,
+			maxWidth: 110,
+									textAlign: "center",
+			overflow: "hidden",
+		  }}
+		/>
+							*/}
+		<ListItemText
+		  primary={
+			data.fields === null || data.fields === undefined
+			  ? ""
+			  : data.fields
+				  .map((data) => {
+					return data.key;
+				  })
+				  .join(", ")
+		  }
+		  style={{
+			minWidth: 125,
+			maxWidth: 125,
+			overflow: "auto",
+			marginRight: 10,
+		  }}
+		/>
+		<ListItemText
+		  style={{
+			maxWidth: 230,
+			minWidth: 230,
+			overflow: "hidden",
+		  }}
+		  primary={new Date(data.edited * 1000).toISOString()}
+		/>
+		<ListItemText>
+		  <IconButton
+			onClick={() => {
+			  updateAppAuthentication(data);
+			}}
+			disabled={
+			  data.org_id !== selectedOrganization.id ? true : false
+			}
+		  >
+			<EditIcon color="secondary" />
+		  </IconButton>
+		  {data.defined ? (
+			<Tooltip
+			  color="primary"
+			  title="Set for EVERY instance of this App being used in this organization"
+			  placement="top"
+			>
+			  <IconButton
+				style={{ marginRight: 10 }}
+				disabled={
+				  data.defined === false ||
+				  data.org_id !== selectedOrganization.id
+					? true
+					: false
+				}
+				onClick={() => {
+				  editAuthenticationConfig(data.id);
+				}}
+			  >
+				<SelectAllIcon color={"secondary"} />
+			  </IconButton>
+			</Tooltip>
+		  ) : (
+			<Tooltip
+			  color="primary"
+			  title="Must edit before you can set in all workflows"
+			  placement="top"
+			>
+			  <IconButton
+				style={{}}
+				onClick={() => {}}
+				disabled={
+				  data.org_id !== selectedOrganization.id
+					? true
+					: false
+				}
+			  >
+				<SelectAllIcon color="secondary" />
+			  </IconButton>
+			</Tooltip>
+		  )}
+		  <IconButton
+			style={{ marginLeft: 0 }}
+			disabled={
+			  data.org_id !== selectedOrganization.id ? true : false
+			}
+			onClick={() => {
+			  deleteAuthentication(data);
+			}}
+		  >
+			<DeleteIcon color="secondary" />
+		  </IconButton>
+		</ListItemText>
+		<ListItemText>
+		  {selectedOrganization.id !== undefined &&
+		  data.org_id !== selectedOrganization.id ? (
+			<Tooltip
+			  title="Parent organization controlled auth. You can use, but not modify this auth. Contact an admin of your parent organization if you need changes to this."
+			  placement="top"
+			>
+			  <Chip
+				label={"Parent"}
+				variant="contained"
+				color="secondary"
+			  />
+			</Tooltip>
+		  ) : (
+			<Tooltip
+			  title="Distributed to sub-organizations. This means the sub organizations can use this authentication, but not modify it."
+			  placement="top"
+			>
+			  <Checkbox
+				disabled={
+				  selectedOrganization.creator_org !== undefined &&
+				  selectedOrganization.creator_org !== null &&
+				  selectedOrganization.creator_org !== ""
+					? true
+					: false
+				}
+				checked={isDistributed}
+				color="secondary"
+				onClick={() => {
+				  changeDistribution(data, !isDistributed);
+				}}
+			  />
+			</Tooltip>
+		  )}
+		</ListItemText>
+	  </ListItem>
+	)
+  }
+
   const authenticationView =
     curTab === 2 ? (
 
@@ -5361,6 +5721,10 @@ If you're interested, please let me know a time that works for you, or set up a 
               <div>
               {authentication.map((data, index) => {
 				var checked = data.checked
+				if (data.label !== undefined && data.label !== null && data.label.toLowerCase() === "kms shuffle storage") {
+					return null
+				}
+
 				if (checked === undefined || checked === null) {
 					checked = false
 				}
@@ -5476,11 +5840,6 @@ If you're interested, please let me know a time that works for you, or set up a 
           {authentication === undefined || authentication === null
             ? null
             : authentication.map((data, index) => {
-                var bgColor = "#27292d";
-                if (index % 2 === 0) {
-                  bgColor = "#1f2023";
-                }
-
                 //console.log("Auth data: ", data)
                 if (data.type === "oauth2") {
                   data.fields = [
@@ -5503,187 +5862,14 @@ If you're interested, please let me know a time that works for you, or set up a 
                   ];
                 }
 
-                const isDistributed =
-                  data.suborg_distributed === true ? true : false;
-
                 return (
-                  <ListItem key={index} style={{ backgroundColor: bgColor }}>
-                    <ListItemText
-                      primary=<img
-                        alt=""
-                        src={data.app.large_image}
-                        style={{
-                          maxWidth: 50,
-                          borderRadius: theme.palette.borderRadius,
-                        }}
-                      />
-                      style={{ minWidth: 75, maxWidth: 75 }}
-                    />
-                    <ListItemText
-                      primary={data.label}
-                      style={{
-                        minWidth: 225,
-                        maxWidth: 225,
-                        overflow: "hidden",
-                      }}
-                    />
-                    <ListItemText
-                      primary={data.app.name.replaceAll("_", " ")}
-                      style={{ minWidth: 175, maxWidth: 175, marginLeft: 10 }}
-                    />
-                    {/*
-                    <ListItemText
-                      primary={data.defined === false ? "No" : "Yes"}
-                      style={{ minWidth: 100, maxWidth: 100, }}
-                    />
-										*/}
-                    <ListItemText
-                      primary={
-                        data.workflow_count === null ? 0 : data.workflow_count
-                      }
-                      style={{
-                        minWidth: 100,
-                        maxWidth: 100,
-                        textAlign: "center",
-                        overflow: "hidden",
-                      }}
-                    />
-                    {/*
-                    <ListItemText
-                      primary={data.node_count}
-                      style={{
-                        minWidth: 110,
-                        maxWidth: 110,
-												textAlign: "center",
-                        overflow: "hidden",
-                      }}
-                    />
-										*/}
-                    <ListItemText
-                      primary={
-                        data.fields === null || data.fields === undefined
-                          ? ""
-                          : data.fields
-                              .map((data) => {
-                                return data.key;
-                              })
-                              .join(", ")
-                      }
-                      style={{
-                        minWidth: 125,
-                        maxWidth: 125,
-                        overflow: "auto",
-                        marginRight: 10,
-                      }}
-                    />
-                    <ListItemText
-                      style={{
-                        maxWidth: 230,
-                        minWidth: 230,
-                        overflow: "hidden",
-                      }}
-                      primary={new Date(data.edited * 1000).toISOString()}
-                    />
-                    <ListItemText>
-                      <IconButton
-                        onClick={() => {
-                          updateAppAuthentication(data);
-                        }}
-                        disabled={
-                          data.org_id !== selectedOrganization.id ? true : false
-                        }
-                      >
-                        <EditIcon color="secondary" />
-                      </IconButton>
-                      {data.defined ? (
-                        <Tooltip
-                          color="primary"
-                          title="Set for EVERY instance of this App being used in this organization"
-                          placement="top"
-                        >
-                          <IconButton
-                            style={{ marginRight: 10 }}
-                            disabled={
-                              data.defined === false ||
-                              data.org_id !== selectedOrganization.id
-                                ? true
-                                : false
-                            }
-                            onClick={() => {
-                              editAuthenticationConfig(data.id);
-                            }}
-                          >
-                            <SelectAllIcon color={"secondary"} />
-                          </IconButton>
-                        </Tooltip>
-                      ) : (
-                        <Tooltip
-                          color="primary"
-                          title="Must edit before you can set in all workflows"
-                          placement="top"
-                        >
-                          <IconButton
-                            style={{}}
-                            onClick={() => {}}
-                            disabled={
-                              data.org_id !== selectedOrganization.id
-                                ? true
-                                : false
-                            }
-                          >
-                            <SelectAllIcon color="secondary" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <IconButton
-                        style={{ marginLeft: 0 }}
-                        disabled={
-                          data.org_id !== selectedOrganization.id ? true : false
-                        }
-                        onClick={() => {
-                          deleteAuthentication(data);
-                        }}
-                      >
-                        <DeleteIcon color="secondary" />
-                      </IconButton>
-                    </ListItemText>
-                    <ListItemText>
-                      {selectedOrganization.id !== undefined &&
-                      data.org_id !== selectedOrganization.id ? (
-                        <Tooltip
-                          title="Parent organization controlled auth. You can use, but not modify this auth. Contact an admin of your parent organization if you need changes to this."
-                          placement="top"
-                        >
-                          <Chip
-                            label={"Parent"}
-                            variant="contained"
-                            color="secondary"
-                          />
-                        </Tooltip>
-                      ) : (
-                        <Tooltip
-                          title="Distributed to sub-organizations. This means the sub organizations can use this authentication, but not modify it."
-                          placement="top"
-                        >
-                          <Checkbox
-                            disabled={
-                              selectedOrganization.creator_org !== undefined &&
-                              selectedOrganization.creator_org !== null &&
-                              selectedOrganization.creator_org !== ""
-                                ? true
-                                : false
-                            }
-                            checked={isDistributed}
-                            color="secondary"
-                            onClick={() => {
-                              changeDistribution(data, !isDistributed);
-                            }}
-                          />
-                        </Tooltip>
-                      )}
-                    </ListItemText>
-                  </ListItem>
-                );
+				  <KMSItem
+					data={data}
+					index={index}
+				  />
+				)
+
+				
               })}
         </List>
       </div>

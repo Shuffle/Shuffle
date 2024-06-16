@@ -156,7 +156,13 @@ export const OuterLink = (props) => {
 
 
 export const Img = (props) => {
-    return <img style={{ borderRadius: theme.palette.borderRadius, width: 750, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} alt={props.alt} src={props.src} />;
+    return(
+	  <img 
+		style={{border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, width: 750, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} 
+		alt={props.alt} 
+		src={props.src} 
+	  />
+	)
 }
 
 export const CodeHandler = (props) => {

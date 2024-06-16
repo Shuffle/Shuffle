@@ -27,8 +27,9 @@ const Priorities = (props) => {
 
   const [selectedWorkflow, setSelectedWorkflow] = React.useState("NO HIGHLIGHT");
   const [selectedExecutionId, setSelectedExecutionId] = React.useState("NO HIGHLIGHT");
-  let navigate = useNavigate();
+  const [highlightKMS, setHighlightKMS] = React.useState(false)
 
+  let navigate = useNavigate();
 	useEffect(() => {
 		getFramework()
 
@@ -36,6 +37,12 @@ const Priorities = (props) => {
 		const urlParams = new URLSearchParams(window.location.search)
 		const workflow = urlParams.get("workflow")
 		const execution_id = urlParams.get("execution_id")
+		const kms = urlParams.get("kms")
+
+		if (kms !== null && kms !== undefined && kms.length > 0 && kms === "true") {
+			toast.info("KMS-related notifications are highlighted.")
+			setHighlightKMS(true)
+		}
 
 		if (execution_id !== null) {
 			setSelectedExecutionId(execution_id)
@@ -217,7 +224,16 @@ const Priorities = (props) => {
     	var orgId = "";
 
 
-		const highlighted = selectedExecutionId === "" && selectedWorkflow === "" ? false : data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0 ? false : data.reference_url.includes(selectedExecutionId) || data.reference_url.includes(selectedWorkflow) 
+		var highlighted = selectedExecutionId === "" && selectedWorkflow === "" ? false : data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0 ? false : data.reference_url.includes(selectedExecutionId) || data.reference_url.includes(selectedWorkflow) 
+
+		if (!highlighted && highlightKMS) {
+			if (data.title !== undefined && data.title !== null && data.title.toLowerCase().includes("kms")) {
+				highlighted = true
+			} else if (data.description !== undefined && data.description !== null && data.description.toLowerCase().includes("kms")) {
+				highlighted = true
+			}
+
+		}
 
     	if (userdata.orgs !== undefined) {
     	  const foundOrg = userdata.orgs.find((org) => org.id === data["org_id"]);

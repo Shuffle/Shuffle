@@ -1925,7 +1925,7 @@ const ParsedAction = (props) => {
 								}}
 							/>
 						</Tooltip>
-						<Tooltip title="Autocomplete text" placement="top">
+						<Tooltip title="Autocomplete text" placement="bottom">
 							<AddCircleOutlineIcon
 								style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
 								onClick={(event) => {
@@ -3078,7 +3078,6 @@ const ParsedAction = (props) => {
 	  selectedApp.actions.filter((a) => 
 		  a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))
       ).sort(sortByCategoryLabel))
-	
 
   const selectedAppIcon = selectedAction.large_image
   var baselabel = selectedAction.label
@@ -3156,9 +3155,11 @@ const ParsedAction = (props) => {
                       }
 
 					  if (!found) {
-						  toast("No result for this action yet. Please run the workflow first.")
+						  toast.info("No result for this action yet. Please run the workflow first.")
 					  }
-                    }
+                    } else {
+						toast.info("No workflow runs to search through. Run the workflow first.") 
+					}
                   }}
                 >
                   <Tooltip
@@ -3823,6 +3824,7 @@ const ParsedAction = (props) => {
         </div>
       ) : null}
 
+
       {showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
         <div style={{ marginTop: "20px" }}>
           <Typography style={{color: "rgba(255,255,255,0.7)"}}>Environment</Typography>
@@ -3831,9 +3833,9 @@ const ParsedAction = (props) => {
 				disableScrollLock: true,
 			}}
             value={
-              selectedActionEnvironment === undefined || selectedActionEnvironment === null ||
-              selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null 
-                ? isCloud ? "Cloud" : "Shuffle"
+              selectedActionEnvironment === undefined || selectedActionEnvironment === null || selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null 
+                ? 
+				selectedAction.environment !== undefined && selectedAction.environment !== null && selectedAction.environment.length > 0 ? selectedAction.environment : isCloud ? "Cloud" : "Shuffle"
                 : selectedActionEnvironment.Name
             }
             SelectDisplayProps={{

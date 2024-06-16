@@ -107,9 +107,8 @@ const CodeEditor = (props) => {
 		getParents,
 
 		fieldname,
+		contentLoading,
 	} = props
-
-
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
 
@@ -989,6 +988,17 @@ const CodeEditor = (props) => {
 				},
 			}}
 		>
+
+		{contentLoading === true ? 
+			  <Tooltip
+				color="primary"
+				title={`The File content is loading. Please wait a moment.`}
+				placement="top"
+			  >
+				<CircularProgress style={{position: "absolute", right: 106, top: 6, }}/>
+			  </Tooltip>
+		: null}
+
 		  <Tooltip
 		  	color="primary"
 		  	title={`Move window`}

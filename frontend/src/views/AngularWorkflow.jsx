@@ -88,6 +88,7 @@ import {
   Error as ErrorIcon,
   Warning as WarningIcon, 
   ArrowLeft as ArrowLeftIcon,
+  ArrowRight as ArrowRightIcon,
   Cached as CachedIcon,
   DirectionsRun as DirectionsRunIcon,
   FormatListNumbered as FormatListNumberedIcon,
@@ -122,6 +123,8 @@ import {
 
   Add as AddIcon,
   ErrorOutline as ErrorOutlineIcon, 
+
+  ArrowForward as ArrowForwardIcon,
 
 } from "@mui/icons-material";
 
@@ -378,7 +381,7 @@ const svgSize = 24;
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const AngularWorkflow = (defaultprops) => {
-  const { globalUrl, setCookie, isLoggedIn, isLoaded, userdata, data_id } = defaultprops;
+  const { globalUrl, setCookie, isLoggedIn, isLoaded, userdata, data_id, ReactGA, } = defaultprops;
   const referenceUrl = globalUrl + "/api/v1/hooks/";
   //const alert = useAlert()
   let navigate = useNavigate();
@@ -499,6 +502,7 @@ const AngularWorkflow = (defaultprops) => {
   const [selectedApp, setSelectedApp] = React.useState({});
   const [selectedAction, setSelectedAction] = React.useState({});
   const [selectedActionEnvironment, setSelectedActionEnvironment] = React.useState({});
+  const [selectedMeta, setSelectedMeta] = React.useState(undefined);
 
   // Disabled streaming for now
   const [streamDisabled, setStreamDisabled] = React.useState(true)
@@ -950,6 +954,10 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
+		  if (responseJson.meta !== undefined && responseJson.meta !== null && Object.getOwnPropertyNames(responseJson.meta).length > 0) {
+			  setSelectedMeta(responseJson.meta)
+		  }
+
           if (responseJson.reason !== undefined && responseJson.reason !== undefined && responseJson.reason.length > 0) {
             if (!responseJson.reason.includes("404: Not Found") && responseJson.reason.length > 25) {
 			  // Translate <img> into markdown ![]()
@@ -8018,10 +8026,10 @@ const AngularWorkflow = (defaultprops) => {
     backgroundColor: theme.palette.surfaceColor,
     cursor: "pointer",
     display: "flex",
-  };
+  }
 
-	const VariableItem = (props) => {
-		const { variable, index, type } = props;
+  const VariableItem = (props) => {
+	const { variable, index, type } = props;
 
     const [open, setOpen] = React.useState(false);
     const [anchorEl, setAnchorEl] = React.useState(null);
@@ -8792,7 +8800,25 @@ const AngularWorkflow = (defaultprops) => {
             ? "cloud"
             : environments[defaultEnvironmentIndex] === undefined
               ? "cloud"
-              : environments[defaultEnvironmentIndex].Name;
+              : environments[defaultEnvironmentIndex].Name
+
+		// Basic automatic auth mapping
+		var authId = ""
+		if (appAuthentication !== undefined && appAuthentication !== null && appAuthentication.length > 0) {
+			const appname = app.name.toLowerCase().replace(" ", "_")
+			for (var key in appAuthentication) {
+				const authKey = appAuthentication[key]
+				if (authKey.app.id === app.id) {
+					authId = authKey.id
+					break
+				}
+
+				const appauthname = authKey.app.name.toLowerCase().replace(" ", "_")
+				if (appauthname === appname) {
+					authId = authKey.id
+				}
+			}
+		}
 
 		// List other nodes in the workflow and see if they have an environment set. If they do, use that as the default
 		if (cy !== undefined && cy !== null) {
@@ -8840,7 +8866,7 @@ const AngularWorkflow = (defaultprops) => {
               app.categories.length > 0
               ? app.categories[0]
               : "",
-          authentication_id: "",
+          authentication_id: authId,
           finished: false,
           template: app.template === true ? true : false,
         };
@@ -9722,30 +9748,49 @@ const AngularWorkflow = (defaultprops) => {
       }
     }
 
-    setSelectedAction(newSelectedAction);
-    setUpdate(Math.random());
+	// Last fix for params
+	if (newSelectedAction.parameters !== undefined && newSelectedAction.parameters !== null && newSelectedAction.parameters.length > 0) {
+		for (let paramkey in newSelectedAction.parameters) {
+			const param = newSelectedAction.parameters[paramkey]
+			if (param.name !== "body") {
+				continue
+			}
 
-    const allNodes = cy.nodes().jsons();
-		if (allNodes !== undefined && allNodes !== null) {
-			for (let nodekey in allNodes) {
-				const currentNode = allNodes[nodekey];
-				if (
-					currentNode.data.attachedTo === oldaction.id &&
-					currentNode.data.isDescriptor
-				) {
-					const foundnode = cy.getElementById(currentNode.data.id);
-					if (foundnode !== null && foundnode !== undefined) {
-						const iconInfo = GetIconInfo(newaction);
-						const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
-						const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
-						foundnode.data("image", svgpin_Url);
-						foundnode.data("imageColor", iconInfo.iconBackgroundColor);
-					}
-
-					break;
+			if (param.example !== undefined && param.example !== null && param.example.length > 0) {
+				if (param.value === undefined || param.value === null || param.value.length === 0) {
+					param.value = param.example
 				}
 			}
+
+			newSelectedAction.parameters[paramkey] = param
 		}
+	}
+
+	console.log("New selected action: ", newSelectedAction)
+    setSelectedAction(newSelectedAction)
+    setUpdate(Math.random())
+
+    const allNodes = cy.nodes().jsons()
+	if (allNodes !== undefined && allNodes !== null) {
+		for (let nodekey in allNodes) {
+			const currentNode = allNodes[nodekey];
+			if (
+				currentNode.data.attachedTo === oldaction.id &&
+				currentNode.data.isDescriptor
+			) {
+				const foundnode = cy.getElementById(currentNode.data.id);
+				if (foundnode !== null && foundnode !== undefined) {
+					const iconInfo = GetIconInfo(newaction);
+					const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
+					const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
+					foundnode.data("image", svgpin_Url);
+					foundnode.data("imageColor", iconInfo.iconBackgroundColor);
+				}
+
+				break;
+			}
+		}
+	}
 
 		// Send it in here, after all fields are filled
 		// Disabled for now :(
@@ -17673,6 +17718,71 @@ const AngularWorkflow = (defaultprops) => {
     )
   }
 
+	const changeExecution = (data) => {
+		if ((data.result === undefined || data.result === null || data.result.length === 0) && data.status !== "FINISHED" && data.status !== "ABORTED") {
+		  start()
+		  setExecutionRunning(true)
+		  setExecutionRequestStarted(false)
+		}
+
+		var checkStarted = false
+		if (data.results !== undefined && data.results !== null && data.results.length > 0) {
+			if (data.execution_argument !== undefined && data.execution_argument !== null && data.execution_argument.includes("too large")) {
+				setExecutionData({});
+				checkStarted = true 
+				start();
+				setExecutionRunning(true);
+				setExecutionRequestStarted(false);
+			} else {
+				if (data.results !== undefined && data.results !== null) {
+					for (let resultkey in data.results) {
+						if (data.results[resultkey].status !== "SUCCESS") {
+							continue
+						}
+
+						if (data.results[resultkey].result.includes("too large")) {
+							setExecutionData({});
+							checkStarted = true
+							start();
+							setExecutionRunning(true);
+							setExecutionRequestStarted(false);
+							break
+						}
+					}
+				}
+			}
+		}
+
+		const cur_execution = {
+		  execution_id: data.execution_id,
+		  authorization: data.authorization,
+		}
+
+		setExecutionRequest(cur_execution)
+		setExecutionModalView(1)
+
+		if (!checkStarted) {
+		  handleUpdateResults(data, cur_execution)
+
+		  if (cy !== undefined && cy !== null) {
+			cy.elements().removeClass("success-highlight failure-highlight executing-highlight");
+			for (let actionKey in data.workflow.actions) {
+				var actionitem = data.workflow.actions[actionKey]
+
+				handleColoring(actionitem.id, "", actionitem.label)
+			}
+
+			for (let resultKey in data.results) {
+				var item = data.results[resultKey]
+
+				handleColoring(item.action.id, item.status, item.action.label)
+			}
+		  }
+
+		  setExecutionData(data)
+		}
+	}
+
   const ShowCopyingTooltip = () => {
     const [showCopying, setShowCopying] = React.useState(true)
 
@@ -18101,7 +18211,7 @@ const AngularWorkflow = (defaultprops) => {
             <h2>Details</h2>
             <Tooltip
               color="primary"
-              title="Rerun workflow"
+              title="Rerun workflow (uses same startnode as the original)"
               placement="top"
               style={{ zIndex: 50000 }}
             >
@@ -18147,7 +18257,80 @@ const AngularWorkflow = (defaultprops) => {
                 </span>
               </Tooltip>
             ) : null}
-            {isCloud ? (
+
+		    <Tooltip
+		      color="primary"
+		      title="Previous execution"
+		      placement="top"
+		      style={{ zIndex: 50000, }}
+		    >
+		      <span style={{}}>
+		        <Button
+		      	color="primary"
+		      	style={{ float: "right", marginTop: 20, marginLeft: 10 }}
+		      	onClick={() => {
+					// Find current one in execution list
+					var nextindex = -1
+					const currentIndex = workflowExecutions.findIndex((item) => item.execution_id === executionData.execution_id)
+					if (currentIndex === -1) {
+						nextindex = workflowExecutions.length - 1
+					} else {
+						nextindex = currentIndex - 1 
+					}
+
+					if (nextindex < 0) {
+						toast.warn("Use the workflow run debugger to dig deeper - nothing more to show here.")
+						return
+					}
+
+					const data = workflowExecutions[nextindex]
+					navigate(`?execution_id=${data.execution_id}`)
+
+					changeExecution(data)
+		      	}}
+		        >
+					<ArrowBackIcon color="secondary" />
+		        </Button>
+		      </span>
+		    </Tooltip>
+
+		    <Tooltip
+		      color="primary"
+		      title="Next execution"
+		      placement="top"
+		      style={{ zIndex: 50000, }}
+		    >
+		      <span style={{}}>
+		        <Button
+		      	color="primary"
+		      	style={{ float: "right", marginTop: 20, }}
+		      	onClick={() => {
+					// Find current one in execution list
+					var nextindex = -1
+					const currentIndex = workflowExecutions.findIndex((item) => item.execution_id === executionData.execution_id)
+					if (currentIndex === -1) {
+						nextindex = 0
+					} else {
+						nextindex = currentIndex + 1
+					}
+
+					if (nextindex >= workflowExecutions.length) {
+						toast.warn("Use the workflow run debugger to dig deeper - nothing more to show here.")
+						return
+					}
+
+					const data = workflowExecutions[nextindex]
+					navigate(`?execution_id=${data.execution_id}`)
+
+					changeExecution(data)
+		      	}}
+		        >
+					<ArrowForwardIcon color="secondary" />
+		        </Button>
+		      </span>
+		    </Tooltip>
+
+            {isCloud ? 
               <Tooltip
                 color="primary"
                 title="Explore logs for the workflow"
@@ -18171,7 +18354,8 @@ const AngularWorkflow = (defaultprops) => {
                   </Button>
                 </span>
               </Tooltip>
-            ) : null}
+             : null}
+
           </div>
           {executionData.workflow !== undefined && executionData.workflow !== null && executionData.workflow.actions !== undefined && executionData.workflow.actions !== null && executionData.workflow.actions.length > 0  ?
             <div style={{ display: "flex", marginLeft: 10, }}>
@@ -18801,12 +18985,40 @@ const AngularWorkflow = (defaultprops) => {
     validate.result = JSON.parse(validate.result)
   }
 
-  const AppResultVariable = ({ data }) => {
+  const AppResultVariable = ({ data, action }) => {
     const [open, setOpen] = React.useState(false)
     const showVariable = data.value.length < 60
 
 		// Check if it's valid JSON
 	const checked = validateJson(data.value.trim())
+
+	if (data.name === "shuffle_action_logs" && data.value !== undefined && data.value !== null && data.value.length > 0 && data.value.includes("add env SHUFFLE_LOGS_DISABLED")) {
+		return (
+			<div style={{ maxWidth: 600, marginTop: 15, overflowX: "hidden", }}>
+				<Typography
+				  variant="body1"
+				  style={{}}
+				>
+				  <b>Action Logs</b>
+				</Typography>
+				<Typography variant="body2" style={{ whiteSpace: 'pre-line', }}>
+					Logs for an action are not available without <a style={{color: "#f85a3e", }} href="/admin?tab=environments" target="_blank" rel="noopener noreferrer">an onprem environment</a> with the <a style={{color: "#f85a3e", }} href="/docs/configuration#scaling-shuffle" target="_blank" rel="noopener noreferrer">SHUFFLE_LOGS_DISABLED</a> environment variable set to false: SHUFFLE_LOGS_DISABLED=false. Logs are enabled by default, except in scale mode.
+				</Typography>
+			</div> 
+		)
+	}
+
+	var showlink = false
+	if (data.name.endsWith("-Url")) {
+		//data.name = data.name.toLowerCase().replaceAll("-", "_")
+		if (data.value.startsWith(", ")) {
+			data.value = data.value.substring(2)
+		}
+
+		if (!data.value.startsWith("http") || (data.value.startsWith("/") && data.value.includes("?"))) {
+			showlink = true 
+		}
+	}
 
     return (
       <div style={{ maxWidth: 600, overflowX: "hidden", }}>
@@ -18814,8 +19026,8 @@ const AngularWorkflow = (defaultprops) => {
           <IconButton
             style={{
               marginBottom: 0, 
-							marginTop: 5, 
-							cursor: "pointer",
+			  marginTop: 5, 
+			  cursor: "pointer",
               padding: 3,
               border: "1px solid rgba(255,255,255,0.3)",
               borderRadius: theme.palette.borderRadius,
@@ -18868,8 +19080,17 @@ const AngularWorkflow = (defaultprops) => {
 					variant="body2"
 					style={{
 						whiteSpace: 'pre-line',
+						color: showlink ? "#f85a3e" : "white",
+						cursor: showlink ? "pointer" : "default",
 					}}
-					color="textSecondary"
+					onClick={(e) => {
+						if (showlink) {
+							e.preventDefault()
+							e.stopPropagation()
+							window.open(data.value, "_blank")
+						}
+					}}
+					color={showlink ? "inherit" : "textSecondary"}
 				>
 					{data.value}
 				</Typography>
@@ -18981,6 +19202,10 @@ const AngularWorkflow = (defaultprops) => {
 		  return "Consider whether your Orborus environment can connect to a local IP or not."
 	  }
 
+	  if (stringjson.includes("kms/")) {
+		  return "KMS authentication most likely failed. Check your notifications for more details on this page: /admin?admin_tab=priorities. If you need help with KMS, please contact support@shuffler.io"
+	  }
+
 	  if (stringjson.includes("invalidurl")) {
 		// IF count of "http" is more than one, 1, it's prolly invalid
 		var additionalinfo = ""
@@ -19006,7 +19231,7 @@ const AngularWorkflow = (defaultprops) => {
 
 	  if (stringjson.includes("connectionerror")) {
 		  if (stringjson.includes("kms")) {
-			  return "KMS authentication failed. Check your notifications for more details."
+			  return "KMS authentication most likely failed (2). Check your notifications for more details on this page: /admin?admin_tab=priorities&kms=true. If you need help with KMS, please contact support@shuffler.io"
 		  }
 
 		  return "The URL is incorrect, or Shuffle can't reach it. Set up a Shuffle Environment in the same VLAN, or whitelist Shuffle's IPs."
@@ -19352,7 +19577,7 @@ const AngularWorkflow = (defaultprops) => {
                 }
 
                 return (
-                  <AppResultVariable key={index} data={data} />
+                  <AppResultVariable key={index} data={data} action={selectedResult.action} />
                 );
               })}
             </div>
@@ -20184,6 +20409,8 @@ const AngularWorkflow = (defaultprops) => {
         //if (configureWorkflowModalOpen) {
         //  setSelectedAction({});
         //}
+		  //
+		setSelectedMeta(undefined)
       }}
       PaperProps={{
         style: {
@@ -20315,11 +20542,27 @@ const AngularWorkflow = (defaultprops) => {
             overflowY: "auto",
             overflowX: "hidden",
           }}
+	  	  onLoad={() => {
+			  /*
+			if (isCloud && ReactGA !== undefined) {
+				toast("Sending GA info")
+				// Google analytics info about what app people are looking at 
+				ReactGA.event({
+					category: "workflow",
+					action: `documentation_load`,
+					label: selectedApp.name,
+				})
+
+			}
+			*/
+		  }}
         >
           {selectedApp.documentation === undefined ||
             selectedApp.documentation === null ||
             selectedApp.documentation.length === 0 ? (
-            <span style={{ textAlign: "center" }}>
+            <span 
+				style={{ textAlign: "center" }}
+			>
               <Typography
                 variant="body1"
                 style={{ marginLeft: 25, marginRight: 25 }}
@@ -20330,15 +20573,39 @@ const AngularWorkflow = (defaultprops) => {
                 style={{
                   marginTop: 25,
                   marginBottom: 25,
-                  backgroundColor: theme.palette.inputColor,
+                  backgroundColor: "rgba(255,255,255,0.6)",
                 }}
               />
-              <Typography variant="h6">
-                There is currently no extended documentation available for this
-                app.
-              </Typography>
+
+			  <div
+                    style={{
+                        backgroundColor: theme.palette.inputColor,
+                        padding: 15,
+                        borderRadius: theme.palette.borderRadius,
+                        marginBottom: 30,
+                    }}
+                >
+				  <Typography variant="h6" style={{marginBottom: 25, }}>
+					There is no Shuffle-specific documentation for this app yet. Documentation is written custom for each app, and is a community effort. Hope to see your contribution
+				  </Typography>
+				  <Button 
+						variant="contained" 
+						color="primary"
+						onClick={() => {
+							toast.success("Opening remote Github documentation link. Thanks for contributing!")
+
+							setTimeout(() => {
+								window.open(`https://github.com/Shuffle/openapi-apps/new/master/docs?filename=${selectedApp.name.toLowerCase()}.md`, "_blank")
+							}, 2500)
+						}}
+				   >
+					  <EditIcon /> &nbsp;&nbsp;Create Docs
+				   </Button>
+                </div>
+
               <Typography variant="body1" style={{ marginTop: 25 }}>
-                Want to help the making of, or imrpvoe this app?{" "}
+                Want to help the making of, or improve this app?{" "}
+				<br />
                 <a
                   rel="noopener noreferrer"
                   target="_blank"
@@ -20385,6 +20652,84 @@ const AngularWorkflow = (defaultprops) => {
               )}
             </span>
           ) : (
+			<div>
+			  {selectedMeta !== undefined && selectedMeta !== null && Object.getOwnPropertyNames(selectedMeta).length > 0 && selectedMeta.name !== undefined && selectedMeta.name !== null ? 
+				<div
+					style={{
+						backgroundColor: theme.palette.inputColor,
+						padding: 15,
+						borderRadius: theme.palette.borderRadius,
+						marginBottom: 30,
+						display: "flex",
+					}}
+				>
+				<div style={{ flex: 3, display: "flex", vAlign: "center", position: "sticky", top: 50, }}>
+					{isMobile ? null : (
+						<Typography style={{ display: "inline", marginTop: 6 }}>
+							<a
+								rel="noopener noreferrer"
+								target="_blank"
+								href={selectedMeta.link}
+								style={{ textDecoration: "none", color: "#f85a3e" }}
+							>
+								<Button style={{ color: "white", }} variant="outlined" color="secondary">
+									<EditIcon /> &nbsp;&nbsp;Edit
+								</Button>
+							</a>
+						</Typography>
+					)}
+					{isMobile ? null : (
+						<div
+							style={{
+								height: "100%",
+								width: 1,
+								backgroundColor: "white",
+								marginLeft: 50,
+								marginRight: 50,
+							}}
+						/>
+					)}
+					<Typography style={{ display: "inline", marginTop: 11 }}>
+						{selectedMeta.read_time} minute
+						{selectedMeta.read_time === 1 ? "" : "s"} to read
+					</Typography>
+				</div>
+				<div style={{ flex: 2 }}>
+					{isMobile ||
+						selectedMeta.contributors === undefined ||
+						selectedMeta.contributors === null ? (
+						""
+					) : (
+						<div style={{ margin: 10, height: "100%", display: "inline" }}>
+							{selectedMeta.contributors.slice(0, 7).map((data, index) => {
+								return (
+									<a
+										key={index}
+										rel="noopener noreferrer"
+										target="_blank"
+										href={data.url}
+										style={{ textDecoration: "none", color: "#f85a3e" }}
+									>
+										<Tooltip title={data.url} placement="bottom">
+											<img
+												alt={data.url}
+												src={data.image}
+												style={{
+													marginTop: 5,
+													marginRight: 10,
+													height: 40,
+													borderRadius: 40,
+												}}
+											/>
+										</Tooltip>
+									</a>
+								);
+							})}
+						</div>
+					)}
+				</div>
+			</div>
+		    : null}
 		    <Markdown
 		      components={{
 		      	img: Img,
@@ -20405,6 +20750,7 @@ const AngularWorkflow = (defaultprops) => {
 		    >
 			  {selectedApp.documentation}
 		    </Markdown>
+			</div>
           )}
         </div>
       </div>

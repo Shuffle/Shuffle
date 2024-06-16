@@ -10,6 +10,7 @@ import {
   Divider,
   TextField,
   Modal,
+  Switch,
 } from "@mui/material";
 //import { useAlert
 import { ToastContainer, toast } from "react-toastify";
@@ -19,6 +20,9 @@ import { FileCopy, Visibility, VisibilityOff } from "@mui/icons-material";
 import IconButton from "@mui/material/IconButton";
 import { Tooltip } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import { Box } from "@mui/system";
+import CircularProgress from "@mui/material/CircularProgress";
+
 
 const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, setUserData } = props;
@@ -32,6 +36,11 @@ const Settings = (props) => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
+  const [selectedOrganization, setSelectedOrganization] = useState({});
+  const [MFARequired, setMFARequired] = React.useState(false);
+  const [image2FA, setImage2FA] = React.useState("");
+  const [value2FA, setValue2FA] = React.useState("");
+
   // const [file, setFile] = React.useState("");
   // const [fileBase64, setFileBase64] = React.useState(
   //   userdata.image === undefined || userdata.image === null
@@ -86,6 +95,82 @@ const Settings = (props) => {
     display: "flex",
     flexDirection: "column",
   };
+
+  useEffect(() => {
+    if (userdata.active_org === undefined || userdata.active_org === null || userdata.active_org.id === undefined || userdata.active_org.id === null) {
+      return;
+    }
+
+    fetch(`${globalUrl}/api/v1/orgs/${userdata.active_org.id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        console.log("Received response:", response);
+        if (response.status !== 200) {
+          console.error("Status not 200:", response.status);
+          throw new Error(`Status not 200: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((responseJson) => {
+        setSelectedOrganization(responseJson);
+        setMFARequired(responseJson.mfa_required);
+      })
+      .catch((error) => {
+        console.error("Error fetching organization:", error);
+      });
+  }, [userdata]);
+
+  const UpdateMFAInUserOrg = (org_id) => {
+
+    if (MFARequired === false) {
+      toast("Making MFA required for your organization. Please wait...");
+    } else {
+      toast("Making MFA optional for your organization. Please wait...");
+    }
+
+    const data = {
+      mfa_required: !selectedOrganization.mfa_required,
+      org_id: selectedOrganization.id,
+    }
+
+    const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+    fetch(url, {
+      mode: "cors",
+      method: "POST",
+      body: JSON.stringify(data),
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then((response) =>
+        response.json().then((responseJson) => {
+          console.log(responseJson)
+          if (responseJson["success"] === false) {
+            toast.error("Failed updating org: ", responseJson.reason);
+          } else {
+            if (MFARequired === false) {
+              setMFARequired(true)
+              toast.success("Successfully make MFA required for your organization!");
+            } else {
+              setMFARequired(false)
+              toast.success("Successfully make MFA optional for your organization!")
+            }
+          }
+        }),
+      )
+      .catch((error) => {
+        toast("Err: " + error.toString());
+      });
+  }
 
   const checkOwner = (data, userdata) => {
     var currentOwner = false;
@@ -938,8 +1023,7 @@ const Settings = (props) => {
         >
           Submit password change
         </Button>
-        <h3>{passwordFormMessage}</h3> 
-
+        <h3>{passwordFormMessage}</h3>
 
         {isCloud && (
           <>

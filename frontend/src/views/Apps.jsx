@@ -955,7 +955,6 @@ const Apps = (props) => {
 					</Link>
 			: null
 
-	console.log("Sharing config: ", sharingConfiguration);
     const activateButton = 
       selectedApp.generated && !selectedApp.activated ? (
         <div>
@@ -1281,10 +1280,15 @@ const Apps = (props) => {
 		    {isCloud && !internalIds.includes(selectedApp.name.toLowerCase()) ? 
 				<Tooltip title="Deactivates this app for the current organisation. This means the app will not be usable again until you re-activate it." placement="top">
             		<Button
-            		  variant="contained"
+            		  variant={selectedApp.reference_org === userdata.active_org.id ? "outlined" : "contained"}
             		  component="label"
             		  color="primary"
             		  onClick={() => {
+						if (selectedApp.reference_org === userdata.active_org.id) {
+							toast.info("Can't deactivate apps made in this org. Please contact support if you want to deactivate this app.")
+							return
+						}
+
             		    const tmpurl = new URL(window.location.href);
             		    const searchParams = tmpurl.searchParams;
             		    const queryID = searchParams.get("queryID");
@@ -1316,7 +1320,7 @@ const Apps = (props) => {
             		      console.log("No query to handle when activating");
             		    }
 
-            		    activateApp(selectedApp.id, true)
+            		    activateApp(selectedApp.id, true, true)
             		  }}
             		  style={{ height: 35, marginTop: 0, marginLeft: 10, }}
             		>
@@ -1845,9 +1849,12 @@ const Apps = (props) => {
       )
     }
 
-	const activateApp = (appid, refresh) => {
+	const activateApp = (appid, refresh, deactivate) => {
 		const appExists = userdata.active_apps !== undefined && userdata.active_apps !== null && userdata.active_apps.includes(appid)
-		const url = appExists ? `${globalUrl}/api/v1/apps/${appid}/deactivate` : `${globalUrl}/api/v1/apps/${appid}/activate`
+		const url = deactivate === true ? 
+			`${globalUrl}/api/v1/apps/${appid}/deactivate`
+			:
+			appExists ? `${globalUrl}/api/v1/apps/${appid}/deactivate` : `${globalUrl}/api/v1/apps/${appid}/activate`
 
 		fetch(url, {
 			method: 'GET',
@@ -1876,7 +1883,7 @@ const Apps = (props) => {
 				    if (appExists) {
 				        toast("App deactivated for your organization! Existing workflows with the app will continue to work.")
 				    } else {
-				        toast("App activated for your organization!")
+				        toast("App activation changed for your organization!")
 				    }
 
 					if (refresh === true) {
@@ -2021,8 +2028,6 @@ const Apps = (props) => {
                           userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
                         }
                       ])
-                    } else {
-                      console.log("No query to handle when activating")
                     }
 
                     activateApp(hit.objectID, true)
