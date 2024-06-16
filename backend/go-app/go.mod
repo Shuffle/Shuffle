@@ -20,15 +20,15 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.6.46
+	github.com/shuffle/shuffle-shared v0.6.47
 	golang.org/x/crypto v0.22.0
 	google.golang.org/api v0.176.1
 	google.golang.org/grpc v1.63.2
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.30.0
-	k8s.io/apimachinery v0.30.0
-	k8s.io/client-go v0.30.0
+	k8s.io/api v0.30.2
+	k8s.io/apimachinery v0.30.2
+	k8s.io/client-go v0.30.2
 )
 
 require (
@@ -58,7 +58,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/frikky/schemaless v0.0.11 // indirect
+	github.com/frikky/schemaless v0.0.13 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
