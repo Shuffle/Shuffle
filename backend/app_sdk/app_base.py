@@ -97,6 +97,7 @@ def md5_base64(a):
     a = str(a)
     foundhash = hashlib.md5(a.encode('utf-8')).hexdigest()
     return base64.b64encode(foundhash.encode('utf-8'))
+
     
 @shuffle_filters.register
 def base64_encode(a):
@@ -106,6 +107,17 @@ def base64_encode(a):
         return base64.b64encode(a.encode('utf-8')).decode()
     except:
         return base64.b64encode(a).decode()
+
+@shuffle_filters.register
+def random_element(a):
+    # Choose a random item from an array
+    a = list(a)
+
+    if len(a) == 0:
+        return ""
+
+    return random.choice(a)
+
 
 @shuffle_filters.register
 def base64_decode(a):
