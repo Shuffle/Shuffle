@@ -13829,6 +13829,7 @@ const releaseToConnectLabel = "Release to Connect"
 
                   			  setUpdate(Math.random());
                   			}
+                        document.activeElement.blur();
 						}}
 					  >
                         <div style={{ display: "flex", marginBottom: 0, }}>
