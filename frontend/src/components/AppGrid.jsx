@@ -232,6 +232,11 @@ const AppGrid = (props) => {
             removeQuery("q");
             refine(event.currentTarget.value);
           }}
+          onKeyDown={(event) => {
+						if(event.key === "Enter") {
+							event.preventDefault();
+						}
+					}}
           limit={5}
         />
         {/*isSearchStalled ? 'My search is stalled' : ''*/}
@@ -994,6 +999,11 @@ const AppGrid = (props) => {
           onChange={(event) => {
             setSearchQuery(event.currentTarget.value);
           }}
+          onKeyDown={(event) => {
+						if(event.key === "Enter") {
+							event.preventDefault();
+						}
+					}}
           limit={5}
         />
         {/*isSearchStalled ? 'My search is stalled' : ''*/}

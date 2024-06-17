@@ -88,12 +88,12 @@ const SearchData = props => {
 
         const textFieldRef = useRef(null);
         const keyPressHandler = (e) => {
-            if (e.which === 13) {
+            if (e.key === "Enter") {
+                e.preventDefault();
                 // navigate(`/search?q=${currentRefinement}`, { state: value, replace: true });
                 // setModalOpen(false);
                 const trimmedValue = inputValue.trim();
                 if (trimmedValue !== '') {
-                    e.preventDefault();
                     navigate(`/search?q=${trimmedValue}`, { state: trimmedValue, replace: true });
                     setModalOpen(false);
                 }
