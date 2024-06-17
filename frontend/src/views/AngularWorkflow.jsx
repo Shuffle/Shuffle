@@ -2012,6 +2012,13 @@ const AngularWorkflow = (defaultprops) => {
 		headers["Org-Id"] = useworkflow.org_id
 	}
 
+	// Realtime makes the workflow if it doesn't exist
+	/*
+	if (duplicationOrg !== undefined && duplicationOrg !== null && duplicationOrg.length > 0) {
+		headers["Org-Id"] = duplicationOrg
+	}
+	*/
+
     setLastSaved(true);
     fetch(`${globalUrl}/api/v1/workflows/${useworkflow.id}`, {
       method: "PUT",
@@ -2033,7 +2040,8 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
-		if (duplicationOrg !== undefined && duplicationOrg !== null && duplicationOrg.length > 0) {
+		if (useworkflow.id === originalWorkflow.id && duplicationOrg !== undefined && duplicationOrg !== null && duplicationOrg.length > 0) {
+			//duplicateParentWorkflow(useworkflow, duplicationOrg, true)
 			duplicateParentWorkflow(useworkflow, duplicationOrg, true)
 		}
 
@@ -3234,15 +3242,19 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const getChildWorkflows = (parentWorkflowId) => {
-	if (workflow.suborg_distribution === undefined || workflow.suborg_distribution === null || workflow.suborg_distribution.length === 0) { 
+	if (originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0) { 
+		console.log("No suborg distribution")
 		return
 	}
+
+	const orgId = originalWorkflow.org_id === undefined || originalWorkflow.org_id === null || originalWorkflow.org_id === "" ? "" : originalWorkflow.org_id
 
     fetch(`${globalUrl}/api/v1/workflows/${parentWorkflowId}/child_workflows`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
+        "Accept": "application/json",
+		"Org-Id": orgId,
       },
       credentials: "include",
     })
@@ -3323,6 +3335,10 @@ const AngularWorkflow = (defaultprops) => {
 
 		if (responseJson.childorg_workflow_ids !== undefined && responseJson.childorg_workflow_ids !== null && responseJson.childorg_workflow_ids.length > 0) {
   			getChildWorkflows(responseJson.id) 
+		}
+
+		if (responseJson.parentorg_workflow !== undefined && responseJson.parentorg_workflow !== null && responseJson.parentorg_workflow.length > 0) {
+  			getChildWorkflows(responseJson.parentorg_workflow)
 		}
 
         // Not sure why this is necessary.
@@ -8584,6 +8600,11 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
 
+	if (parsedApp === undefined || parsedApp === null || parsedApp.data === undefined || parsedApp.data === null) {
+		toast("Failed to add trigger. Please try again.")
+		return
+	}
+
     // Using remove & replace, as this triggers the function
     // onNodeAdded() with this node after it's added
 
@@ -13584,7 +13605,7 @@ const AngularWorkflow = (defaultprops) => {
 
   // Special SCHEDULE handler
   var trigger_header_auth = ""
-  if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers[selectedTriggerIndex] !== undefined ) {
+  if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers !== null && workflow.triggers !== undefined && workflow.triggers.length >= selectedTriggerIndex && workflow.triggers[selectedTriggerIndex] !== undefined ) {
       if (selectedTrigger.trigger_type === "SCHEDULE" && workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null) {
 	    console.log("Autofixing schedule")
 
@@ -15475,34 +15496,49 @@ const AngularWorkflow = (defaultprops) => {
 			  View Suborg workflow
             </InputLabel>
 			<Select
-				style={{maxHeight: 50, maxWidth: 200, }}
+				style={{maxHeight: 50, maxWidth: 250, }}
               	labelId="suborg-changer"
 				value={workflow.org_id}
 				onChange={(e) => {
 					if (workflow.org_id === e.target.value) {
+						console.log("Same org selected. No change.")
 						return
 					}
 
 					if (e.target.value === originalWorkflow.org_id) {
+						console.log("Original org selected. No change.")
+
 						updateCurrentWorkflow(originalWorkflow)
 						return
 					}
 
 					// Should look through childorg workflow
 					if (originalWorkflow.childorg_workflow_ids === undefined || originalWorkflow.childorg_workflow_ids === null || originalWorkflow.childorg_workflow_ids.length === 0) {
+						console.log("In childorg no exist. Suborgworkflows: ", suborgWorkflows)
 
 						if (suborgWorkflows !== undefined && suborgWorkflows !== null && suborgWorkflows.length > 0) {
+							var found = false
 							for (var suborgkey in suborgWorkflows) {
 								const suborgWorkflow = suborgWorkflows[suborgkey]
 								if (suborgWorkflow.org_id === e.target.value) {
+									found = true 
 									updateCurrentWorkflow(suborgWorkflow)
+									break
 								}
+							}
+
+							if (!found) {
+								console.log("No workflow found out of suborg workflows.")
+          					
+								saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
 							}
 						} else {
 							//toast("(1) Creating new workflow for this org. Please wait a second while we duplicate.")
           					saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
 						}
 					} else {
+						console.log("In childorg EXIST!")
+
 						var workflowFound = false
 						for (var childorgidkey in originalWorkflow.childorg_workflow_ids) {
 							const childworkflowid = originalWorkflow.childorg_workflow_ids[childorgidkey]
@@ -15522,6 +15558,7 @@ const AngularWorkflow = (defaultprops) => {
 						}
 
 						if (!workflowFound) { 
+							console.log("No workflow found.")
 							//toast("(2) Creating new workflow for this org. Please wait a few seconds while we prepare it for you.")
           					saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
 						}
