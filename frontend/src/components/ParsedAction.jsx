@@ -214,8 +214,23 @@ const ParsedAction = (props) => {
 			}
 		}))
   },[
-	selectedAction, selectedApp,setNewSelectedAction, setUpdate, showDropdown, showAutocomplete, selectedActionParameters
+	selectedAction, selectedApp,setNewSelectedAction, workflow,
   ])
+
+//   useEffect(() => {
+// 	if(!showAutocomplete){
+// 		paramValueChange();
+// 	}
+//   },[menuPosition,showAutocomplete])
+
+//   const paramValueChange = () => {
+// 	setParamValues(selectedAction.parameters.map((param) => {
+// 		return {
+// 			name: param.name,
+// 			value: param.value,
+// 		}
+// 	}))
+//   }
 
 //   useEffect(() => {
 // 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
@@ -801,12 +816,10 @@ const ParsedAction = (props) => {
       }
 
       //console.log("CHANGING ACTION COUNT !")
-			setTimeout(() => {
 			selectedActionParameters[count].autocompleted = false
 			selectedAction.parameters[count].autocompleted = false
 			selectedActionParameters[count].value = event.target.value;
 			selectedAction.parameters[count].value = event.target.value;
-			},100) 
 
 			var forceUpdate = false 
 			if (isCloud && (selectedAction.app_name === "Shuffle Tools" || selectedAction.app_name === "email") && (selectedAction.name === "send_email_shuffle" || selectedAction.name === "send_sms_shuffle") && data.name === "apikey") {
@@ -3608,7 +3621,7 @@ const ParsedAction = (props) => {
                 //selectedAction.parameters[count].value = selectedActionParameters[count].value;
                 //setSelectedAction(selectedAction);
 								//setUpdate(Math.random());
-                
+	
 								setShowDropdown(false);
                 setMenuPosition(null);
               };
