@@ -7,6 +7,7 @@ import {
   Typography,
   Button,
 } from "@mui/material";
+import { toast } from "react-toastify";
 import RuleCard from "./RuleCard";
 import { styled } from "@mui/system";
 
@@ -15,7 +16,36 @@ const ConnectedButton = styled(Button)({
   color: "white",
 });
 
-const Detection = ({ globalUrl, ruleInfo, openEditBar }) => {
+const handleDirectoryChange = ( folderDisabled, setFolderDisabled, globalUrl) => {
+
+  const action = folderDisabled ? "enable_folder" : "disable_folder"
+  const url = `${globalUrl}/api/v1/files/detection/${action}`;
+
+  fetch(url, {
+    method: "PUT",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) =>
+      response.json().then((responseJson) => {
+        if (responseJson["success"] === true) {
+             if (action === "enable_folder") setFolderDisabled(false);
+             else setFolderDisabled(true); 
+        } else {
+          //toast(`failed to disable rule`);
+        }
+      })
+    )
+    .catch((error) => {
+      console.log(`Error in ${action} the rule: `, error);
+      toast(`An error occurred while ${action} the rule`);
+    });
+
+}
+
+const Detection = ({ globalUrl, ruleInfo, folderDisabled, setFolderDisabled, openEditBar }) => {
   return (
     <Container sx={{ mt: 4 }}>
       <Box sx={{ border: "1px solid #ccc", borderRadius: 2, p: 3}}>
@@ -47,7 +77,10 @@ const Detection = ({ globalUrl, ruleInfo, openEditBar }) => {
             <Typography variant="body2" sx={{ mr: 1 }}>
               Global disable/enable
             </Typography>
-            <Switch defaultChecked />
+              <Switch
+                checked={!folderDisabled}
+                onChange={() => handleDirectoryChange(folderDisabled, setFolderDisabled, globalUrl)}
+              />
           </Box>
         </Box>
         <Box
@@ -67,6 +100,7 @@ const Detection = ({ globalUrl, ruleInfo, openEditBar }) => {
                 description={card.description}
                 file_id={card.file_id}
                 globalUrl={globalUrl}
+                folderDisabled={folderDisabled}
                 openEditBar={() => openEditBar(card)}
                 {...card}
               />
