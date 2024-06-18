@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import Detection from "./Detection";
 import EditComponent from "./EditRules";
 
-const getSigmaInfo = (globalUrl, setRuleInfo) => {
+const getSigmaInfo = (globalUrl, setRuleInfo, setFolderDisabled) => {
   const url = globalUrl + "/api/v1/files/detection/sigma_rules";
 
   fetch(url, {
@@ -19,7 +19,8 @@ const getSigmaInfo = (globalUrl, setRuleInfo) => {
         if (responseJson["success"] === false) {
           toast("Failed to get sigma rules");
         } else {
-          setRuleInfo(responseJson);
+          setRuleInfo(responseJson.sigma_info);
+          setFolderDisabled(responseJson.folder_disabled);
         }
       })
     )
@@ -33,11 +34,13 @@ const DetectionDashBoard = (props) => {
   const { globalUrl } = props;
   const [ruleInfo, setRuleInfo] = useState([]);
   const [selectedRule, setSelectedRule] = useState(null);
-  const [fileData, setFileData] = useState("")
+  const [fileData, setFileData] = React.useState("");
+ 
+  const [folderDisabled, setFolderDisabled] = useState(false);
 
   useEffect(() => {
-    getSigmaInfo(globalUrl, setRuleInfo);
-  }, [globalUrl]);
+    getSigmaInfo(globalUrl, setRuleInfo, setFolderDisabled);
+  }, [folderDisabled]);
 
   useEffect(() => {
     if (ruleInfo.length > 0) {
@@ -89,7 +92,7 @@ const DetectionDashBoard = (props) => {
 
   return (
     <Container style={{display: "flex"}}>
-      {selectedRule ? (
+      {/* {selectedRule ? (
         <EditComponent
           ruleName={selectedRule.title}
           description={selectedRule.description}
@@ -99,8 +102,8 @@ const DetectionDashBoard = (props) => {
           editedBy={selectedRule.editedBy}
           onSave={handleSave}
         />
-      ) : null}
-      <Detection globalUrl={globalUrl} ruleInfo={ruleInfo} openEditBar={openEditBar} />
+      ) : null} */}
+      <Detection globalUrl={globalUrl} ruleInfo={ruleInfo} folderDisabled={folderDisabled} setFolderDisabled={setFolderDisabled} openEditBar={openEditBar} />
     </Container>
   );  
 };
