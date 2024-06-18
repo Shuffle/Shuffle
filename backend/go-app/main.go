@@ -1978,7 +1978,6 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 }
 
 func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
-
 	if request.Method != "POST" {
 		request.Method = "POST"
 	}
@@ -1999,7 +1998,7 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 	location := strings.Split(request.URL.String(), "/")
 
 	var pipelineId string
-	
+
 	if location[1] == "api" {
 		if len(location) <= 4 {
 			log.Printf("[INFO] Couldn't handle location. Too short in pipeline: %d", len(location))
@@ -2013,7 +2012,7 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 
 	userAgent := request.Header.Get("User-Agent")
 	if strings.Contains(strings.ToLower(userAgent), "microsoftpreview") || strings.Contains(strings.ToLower(userAgent), "googlebot") {
-		log.Printf("[AUDIT] Blocking googlebot and microsoftbot for pielines. UA: '%s'", userAgent)
+		log.Printf("[AUDIT] Blocking googlebot and microsoftbot for pipelines. UA: '%s'", userAgent)
 		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false, "reason": "Google/Microsoft preview bots not allowed. Please change the useragent."}`))
 		return
@@ -2058,7 +2057,23 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	parsedBody := shuffle.GetExecutionbody(body)
+	// Parse concatenated JSON logs
+	jsonList, err := parseConcatenatedJSONLogs(string(body))
+	if err != nil {
+		log.Printf("[DEBUG] JSON parsing error: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+// fix this
+	parsedBody, err := string(jsonList)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal jsonList: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
 	newBody := shuffle.ExecutionStruct{
 		Start:             pipeline.StartNode,
 		ExecutionSource:   "pipeline",
@@ -2093,8 +2108,7 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(pipeline.StartNode) == 0 {
-		log.Printf("[WARNING] No start node for pipeline %s - running with workflow default.", pipeline.TriggerId)
-
+		log.Printf("[WARNING] No start node for pipeline %s - running with workflow default.")
 	}
 
 	newRequest := &http.Request{
@@ -2114,6 +2128,43 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(500)
 	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
 }
+
+func parseConcatenatedJSONLogs(logs string) ([]map[string]interface{}, error) {
+	var jsonList []map[string]interface{}
+	var currentObject []rune
+	var depth int
+
+	for _, char := range logs {
+		if char == '{' {
+			depth++
+		}
+		if char == '}' {
+			depth--
+		}
+
+		currentObject = append(currentObject, char)
+
+		// When depth is 0, it means we have a complete JSON object but will this work ??
+		if depth == 0 && len(currentObject) > 0 {
+			var jsonObject map[string]interface{}
+			err := json.Unmarshal([]byte(string(currentObject)), &jsonObject)
+			if err != nil {
+				log.Printf("[WARNING] JSON unmarshal error: %s. Skipping this object.", err)
+			} else {
+				jsonList = append(jsonList, jsonObject)
+			}
+			currentObject = nil
+		}
+	}
+
+	currentObject = []rune(strings.TrimSpace(string(currentObject)))
+	if len(currentObject) > 0 {
+		log.Printf("[WARNING] Incomplete JSON object found: %s. Skipping this object.", string(currentObject))
+	}
+
+	return jsonList, nil
+}
+
 
 func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 	data, err := json.Marshal(action)
