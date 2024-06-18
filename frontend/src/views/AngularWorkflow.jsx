@@ -15449,7 +15449,8 @@ const releaseToConnectLabel = "Release to Connect"
                     disabled={selectedTrigger.status === "running"}
                     onClick={() => {
 
-                      const command = (selectedTrigger?.parameters?.find(param => param.name === "command")?.value) || ''
+                      let command = (selectedTrigger?.parameters?.find(param => param.name === "command")?.value) || ''
+                      command = `${command} | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
 
                       const pipelineConfig = {
                         command: command,
