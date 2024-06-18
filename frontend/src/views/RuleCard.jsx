@@ -11,52 +11,49 @@ import { toast } from "react-toastify";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 
 const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, ...otherProps }) => {
-  const [additionalProps, setAdditionalProps] = React.useState(otherProps);
   const [openCodeEditor, setOpenCodeEditor] = React.useState(false);
   const [fileData, setFileData] = React.useState("");
+  const [isEnabled, setIsEnabled] = React.useState(otherProps.is_enabled);
 
-  const isCloud =
-  window.location.host === "localhost:3002" ||
-  window.location.host === "shuffler.io";
+  const isCloud = ["localhost:3002", "shuffler.io"].includes(window.location.host);
 
   const handleSwitchChange = (event) => {
-    if(folderDisabled) {
+    if (folderDisabled) {
       toast("enable the directory to enable individual rules");
       return;
     }
-    const isEnabled = event.target.checked;
-    toggleRule(file_id, !isEnabled, globalUrl, () => {
-      setAdditionalProps((prevProps) => ({
-        ...prevProps,
-        is_enabled: isEnabled,
-      }));
+    const newIsEnabled = event.target.checked;
+    toggleRule(file_id, !newIsEnabled, globalUrl, () => {
+      setIsEnabled(newIsEnabled);
     });
   };
-  const UpdateText = (text) =>{
+
+  const UpdateText = (text) => {
     fetch(`${globalUrl}/api/v1/files/${file_id}/edit`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body:text,
+      body: text,
       credentials: "include",
     })
-	.then((response) => {
+      .then((response) => {
         if (response.status !== 200) {
           console.log("Can't update file");
         }
         return response.json();
-    })
-	.then((responseJson) => {
-		if (responseJson.success === true) {
-			toast("Successfully updated file");
-		}
-	})
-    .catch((error) => {
-		toast("Error updating file: " + error.toString());
-	})
-  }
+      })
+      .then((responseJson) => {
+        if (responseJson.success === true) {
+          toast("Successfully updated file");
+        }
+      })
+      .catch((error) => {
+        toast("Error updating file: " + error.toString());
+      });
+  };
+
   return (
     <Card variant="outlined" sx={{ mb: 2 }}>
       <CardContent>
@@ -74,7 +71,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, .
               <EditIcon />
             </IconButton>
             <Switch
-              checked={additionalProps.is_enabled && !folderDisabled}
+              checked={isEnabled && !folderDisabled}
               onChange={handleSwitchChange}
             />
           </div>
@@ -84,19 +81,19 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, .
         </Typography>
 
         <ShuffleCodeEditor
-					isCloud={isCloud}
-					expansionModalOpen={openCodeEditor}
-					setExpansionModalOpen={setOpenCodeEditor}
-					setcodedata = {setFileData}
-					codedata={fileData}
-					isFileEditor = {true}
-					key = {fileData} //https://reactjs.org/docs/reconciliation.html#recursing-on-children
-					runUpdateText = {UpdateText}
-				/>
+          isCloud={isCloud}
+          expansionModalOpen={openCodeEditor}
+          setExpansionModalOpen={setOpenCodeEditor}
+          setcodedata={setFileData}
+          codedata={fileData}
+          isFileEditor={true}
+          key={fileData} // https://reactjs.org/docs/reconciliation.html#recursing-on-children
+          runUpdateText={UpdateText}
+        />
       </CardContent>
     </Card>
   );
-};
+}
 
 const toggleRule = (fileId, isCurrentlyEnabled, globalUrl, callback) => {
   const action = isCurrentlyEnabled ? "disable" : "enable";
