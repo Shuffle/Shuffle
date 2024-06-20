@@ -2104,8 +2104,8 @@ const releaseToConnectLabel = "Release to Connect"
       })
       .catch((error) => {
         setSavingState(0);
-        //toast(error.toString());
         console.log("Save workflow error: ", error.toString());
+		toast.warn("Failed to save the workflow. Is the network down?")
       });
 
 	if (originalWorkflow.id === undefined || originalWorkflow.id === null || originalWorkflow.id.length === 0 || useworkflow.id === originalWorkflow.id) {
@@ -8431,7 +8431,7 @@ const releaseToConnectLabel = "Release to Connect"
 								})
               }}
             >
-              New execution variable
+              New Runtime variable
             </Button>
           </div>
         </div>
@@ -8739,7 +8739,8 @@ const releaseToConnectLabel = "Release to Connect"
     }
 
 	if (parsedApp === undefined || parsedApp === null || parsedApp.data === undefined || parsedApp.data === null) {
-		toast("Failed to add trigger. Please try again.")
+		toast("Failed to add node. Please try again.")
+		console.log("Failed to add node. Please try again. Parsed app:", parsedApp)
 		return
 	}
 
@@ -18987,7 +18988,7 @@ const releaseToConnectLabel = "Release to Connect"
 			data.value = data.value.substring(2)
 		}
 
-		if (!data.value.startsWith("http") || (data.value.startsWith("/") && data.value.includes("?"))) {
+		if (data.value.startsWith("http") || (data.value.startsWith("/") && data.value.includes("?"))) {
 			showlink = true 
 		}
 	}
@@ -19282,7 +19283,7 @@ const releaseToConnectLabel = "Release to Connect"
                 	  const result = execution.results.find((data) => data.status === "SUCCESS" && data.action.id === selectedResult.action.id)
 
 					  if (result !== undefined) {
-					  	const oldstartnode = cy.getElementById(selectedResult.action.id);
+					  	const oldstartnode = cy.getElementById(selectedResult.action.id)
 					  	if (oldstartnode !== undefined && oldstartnode !== null) {
 					  		const foundname = oldstartnode.data("label")
 					  		if (foundname !== undefined && foundname !== null) {
@@ -19290,8 +19291,8 @@ const releaseToConnectLabel = "Release to Connect"
 					  		}
 					  	}
 
-					  	setSelectedResult(result);
-					  	setUpdate(Math.random());
+					  	setSelectedResult(result)
+					  	setUpdate(Math.random())
 					  	break;
 					  }
                 	}

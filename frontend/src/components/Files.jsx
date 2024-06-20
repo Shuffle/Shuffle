@@ -410,6 +410,7 @@ const Files = (props) => {
         ) {
           toast("Failed to delete file: " + responseJson.reason);
         }
+
         setTimeout(() => {
   			getFiles(selectedCategory)
         }, 1500);
@@ -697,13 +698,14 @@ const Files = (props) => {
 						//setFile(fileObject)
 						//const files = event.target.files[0]
 						uploadFiles(event.target.files);
+
 					}}
 				/>
 				<Button
 					style={{ marginLeft: 5, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?81:null, height:isSelectedFiles?40:null, boxShadow: isSelectedFiles?'none':null, }}
 					variant="contained"
 					color="primary"
-					onClick={() => getFiles()}
+					onClick={() => getFiles(selectedCategory)}
 				>
 					<CachedIcon />
 				</Button>
@@ -846,7 +848,7 @@ const Files = (props) => {
 						/>
 						<ListItemText
 							primary="Md5"
-							style={{ minWidth: isSelectedFiles ? 210:250, maxWidth: isSelectedFiles?210:250, overflow: "hidden" }}
+							style={{ minWidth: 300, maxWidth: 300,  overflow: "hidden" }}
 						/>
 						<ListItemText
 							primary="Status"
@@ -962,8 +964,8 @@ const Files = (props) => {
 									<ListItemText
 										primary={file.md5_sum}
 										style={{
-											minWidth: isSelectedFiles?200:300,
-											maxWidth: isSelectedFiles?200:300,
+											minWidth: 300,
+											maxWidth: 300,
 											marginLeft:isSelectedFiles? 15:null,
 											overflow: isSelectedFiles?"auto":"hidden",
 										}}
@@ -1110,7 +1112,7 @@ const Files = (props) => {
 														disabled={file.status !== "active"}
 														style = {{padding: "6px"}}
 														onClick={() => {
-															deleteFile(file);
+															deleteFile(file)
 														}}
 													>
 														<DeleteIcon
