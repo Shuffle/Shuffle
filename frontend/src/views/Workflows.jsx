@@ -976,15 +976,16 @@ const Workflows = (props) => {
               }, 1000);
             } else if (selectedWorkflowIndexes.length > 0) {
 				// Do backwards so it doesn't change 
+				toast("Starting deletion of workflows. This might take a while.")
 				for (var i = selectedWorkflowIndexes.length - 1; i >= 0; i--) {
 					const workflow = filteredWorkflows[selectedWorkflowIndexes[i]-1]
 					if (workflow !== undefined && workflow !== null && workflow.id !== undefined && workflow.id !== null) {
-						deleteWorkflow(workflow.id);
+						deleteWorkflow(workflow.id, true)
 					}
 				}
 
 				setTimeout(() => {
-					getAvailableWorkflows();
+					getAvailableWorkflows()
 				}, 1000);
 
 				setSelectedWorkflowIndexes([]);
@@ -1115,7 +1116,7 @@ const Workflows = (props) => {
 		})
 	}
 
-  const getAvailableWorkflows = () => {
+  const getAvailableWorkflows = (amount) => {
 	var storageWorkflows = []
 	try {
 		const storagewf = localStorage.getItem("workflows")
@@ -1132,7 +1133,12 @@ const Workflows = (props) => {
 		//console.log("Failed to get workflows from localstorage: ", e)
 	}
 
-    fetch(globalUrl + "/api/v1/workflows", {
+	var url = `${globalUrl}/api/v1/workflows`
+	if (amount !== undefined && amount !== null) {
+		url += `?top=${amount}`
+	}
+
+    fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -1338,8 +1344,21 @@ const Workflows = (props) => {
         setView(tmpView);
       }
 
+      const urlSearchParams = new URLSearchParams(window.location.search);
+      const params = Object.fromEntries(urlSearchParams.entries());
+      const foundTab = params["top"];
+      if (foundTab !== null && foundTab !== undefined) {
+		// Check if it's a number
+		if (isNaN(foundTab)) {
+			getAvailableWorkflows()
+		} else {
+      		getAvailableWorkflows(foundTab)
+		}
+	  } else {
+      	getAvailableWorkflows()
+	  }
+
 	  getApps() 
-      getAvailableWorkflows();
 	  getFramework()
     }
   }, [])
@@ -1836,7 +1855,7 @@ const Workflows = (props) => {
       })
   }
 
-  const deleteWorkflow = (id) => {
+  const deleteWorkflow = (id, bulk) => {
     fetch(globalUrl + "/api/v1/workflows/" + id, {
       method: "DELETE",
       headers: {
@@ -1850,15 +1869,19 @@ const Workflows = (props) => {
           console.log("Status not 200 for setting workflows :O!");
           toast("Failed deleting workflow. Do you have access?");
         } else {
-          toast("Deleted workflow " + id);
+		  if (bulk !== true) {
+          	toast("Deleted workflow " + id);
+		  }
         }
 
         return response.json();
       })
       .then(() => {
-        setTimeout(() => {
-          getAvailableWorkflows();
-        }, 1000);
+		if (bulk !== true) {
+			setTimeout(() => {
+			  getAvailableWorkflows();
+			}, 1000);
+		}
       })
       .catch((error) => {
         toast(error.toString());
@@ -2962,7 +2985,7 @@ const Workflows = (props) => {
           className={classes.datagrid}
           rows={rows}
           columns={columns}
-          pageSize={25}
+          pageSize={100}
           checkboxSelection
           autoHeight
           density="standard"

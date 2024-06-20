@@ -3745,7 +3745,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               aria-label="disabled tabs example"
             >
               <Tab label=<span>Edit Details</span> />
-              <Tab label=<span>Cloud Synchronization</span> />
+              <Tab label=<span>Org Limits & Cloud Sync</span> />
               <Tab label=<span>Priorities</span> />
               <Tab label=<span>Billing & Stats</span> />
               <Tab disabled={!isCloud} label=<span>Branding (Beta)</span> />

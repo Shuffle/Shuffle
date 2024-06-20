@@ -166,7 +166,7 @@ const LoginDialog = (props) => {
             } else {
               if (responseJson["reason"] === "MFA_REDIRECT") {
                 setLoginInfo(
-                  "MFA required. Please the 6-digit code from your authenticator"
+                  "MFA required. Please enter the 6-digit code from your authenticator"
                 );
                 setMFAField(true);
                 return;

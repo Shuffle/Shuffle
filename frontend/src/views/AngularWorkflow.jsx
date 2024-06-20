@@ -2144,23 +2144,25 @@ const releaseToConnectLabel = "Release to Connect"
 
   const executeWorkflow = (executionArgument, startNode, hasSaved) => {
 
+    if (hasSaved === false) {
+      setExecutionRequestStarted(true)
+      saveWorkflow(workflow, executionArgument, startNode);
+      //console.log("FIXME: Might have forgotten to save before executing.");
+      return;
+    }
+
+    if (workflow.public) {
+      toast("Save it to get a new version");
+    }
+
+    var returncheck = monitorUpdates();
+    if (!returncheck) {
+      toast("No startnode set.");
+      return;
+    }
+
     ReactDOM.unstable_batchedUpdates(() => {
-      if (hasSaved === false) {
-        setExecutionRequestStarted(true);
-        saveWorkflow(workflow, executionArgument, startNode);
-        //console.log("FIXME: Might have forgotten to save before executing.");
-        return;
-      }
 
-      if (workflow.public) {
-        toast("Save it to get a new version");
-      }
-
-      var returncheck = monitorUpdates();
-      if (!returncheck) {
-        toast("No startnode set.");
-        return;
-      }
 
       setVisited([])
       setExecutionRequest({})
@@ -2168,37 +2170,48 @@ const releaseToConnectLabel = "Release to Connect"
 
 	  // FIXME: Check if any node contains $exec in a param
 	  // If they do, show a popup asking if they want to execute it without an execution argument, or to use a previous one
-	  if (executionArgument === undefined || executionArgument === null || executionArgument.length === 0 && workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
-		  var foundmissing = false
-		  for (let actionkey in workflow.actions) {
-			  if (workflow.actions[actionkey].parameters === undefined || workflow.actions[actionkey].parameters === null || workflow.actions[actionkey].parameters.length === 0) {
-				  continue
-			  }
+	  if (executionArgument === undefined || executionArgument === null || executionArgument.length === 0)
 
-			  for (let paramkey in workflow.actions[actionkey].parameters) {
-				  const param = workflow.actions[actionkey].parameters[paramkey]
-				  if (param.value === undefined || param.value === null || param.value.length === 0) {
+		  if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
+			  var foundmissing = false
+			  for (let actionkey in workflow.actions) {
+				  if (workflow.actions[actionkey].parameters === undefined || workflow.actions[actionkey].parameters === null || workflow.actions[actionkey].parameters.length === 0) {
 					  continue
 				  }
 
-				  if (param.value.indexOf("$exec") !== -1) {
-					  foundmissing = true
+				  for (let paramkey in workflow.actions[actionkey].parameters) {
+					  const param = workflow.actions[actionkey].parameters[paramkey]
+					  if (param.value === undefined || param.value === null || param.value.length === 0) {
+						  continue
+					  }
+
+					  if (param.value.indexOf("$exec") !== -1) {
+						  foundmissing = true
+						  break
+					  }
+				  }
+
+				  if (foundmissing) {
 					  break
 				  }
 			  }
 
 			  if (foundmissing) {
-				  break
+				  //toast("This workflow contains a node that requires an execution argument. Please provide one.")
+				  if (workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0) {
+					  setExecutionRequestStarted(false)
+					  setExecutionArgumentModalOpen(true)
+					  return
+				  }
+
+				  if (workflowExecutions.length > 0) {
+					setExecutionRequestStarted(false)
+					setExecutionArgumentModalOpen(true)
+
+					return
+				  }
 			  }
 		  }
-
-		  if (foundmissing) {
-			  //toast("This workflow contains a node that requires an execution argument. Please provide one.")
-          	  setExecutionRequestStarted(false)
-			  setExecutionArgumentModalOpen(true)
-			  return
-		  }
-	  }
 
 	  var curelements = cy.elements();
 	  for (let i = 0; i < curelements.length; i++) {
@@ -10738,7 +10751,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  padding: 30,
           pointerEvents: "auto",
           color: "white",
-          minWidth: isMobile ? "90%" : 800,
+          minWidth: isMobile ? "90%" : 650,
           border: theme.palette.defaultBorder,
         },
       }}
@@ -10754,77 +10767,120 @@ const releaseToConnectLabel = "Release to Connect"
             style={{ zIndex: 5000, position: "absolute", top: 34, right: 34 }}
             onClick={(e) => {
               e.preventDefault();
-			  setExecutionArgumentModalOpen(false);
+			  setExecutionArgumentModalOpen(false)
             }}
           >
             <CloseIcon style={{ color: "white" }} />
           </IconButton>
         </Tooltip>
         <DialogTitle id="draggable-dialog-title" style={{ cursor: "move", }}>
-          <span style={{ color: "white" }}>Provide a runtime argument</span>
+          <span style={{ color: "white" }}>Provide an execution argument</span>
         </DialogTitle>
 		<DialogContent>
-			<Typography variant="body1" color="textSecondary"> 
-				At least one node in this workflow requires a runtime argument ($exec). Please select one below, or provide a custom one in the text field next to the run button.
-			</Typography>
-			{/*
-			<div style={{marginTop: 10, }}>
-				<Tooltip
-				  color="primary"
-				  title="An argument to be used for execution. This is a variable available to every node in your workflow."
-				  placement="top"
-				>
-				  <TextField
-					id="execution_argument_input_field"
-					style={theme.palette.textFieldStyle}
-					disabled={workflow.public}
-					color="secondary"
-					placeholder={"Execution Argument"}
-					defaultValue={executionText}
-					onBlur={(e) => {
-					  setExecutionText(e.target.value);
-					}}
-				  />
-				</Tooltip>
-			</div>
-			*/}
 
-			<Divider style={{marginTop: 10, marginBottom: 20, }}/>
-			{availableArguments.length > 0 ?
-				<div>
-					<Typography variant="body1" style={{}}>
-						Previously used arguments:
-					</Typography>
-					{availableArguments.map((data) => {
-						return (
-							<Paper style={{ padding: 10, marginTop: 10, backgroundColor: theme.palette.platformColor, maxHeight: 70, overflow: "auto", cursor: "pointer", position: "relative", }}
-								onClick={() => {
-									setExecutionText(data)
-									executeWorkflow(data, workflow.start, lastSaved);
-									setExecutionArgumentModalOpen(false)
+		{workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
+			<div style={{marginBottom: 5, }}>
+				{workflow.input_questions.map((question, index) => {
+
+					return (
+						<div style={{marginBottom: 5}} key={index}>
+							{question.name}
+							<TextField
+								color="primary"
+								style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
+								multiLine
+								maxRows={2}
+								InputProps={{
+									style:{
+										height: "50px", 
+										color: "white",
+										fontSize: "1em",
+									},
 								}}
-							>
-								<div style={{height: "100%", width: 2, backgroundColor: "rgba(255, 255, 255, 0.5)", position: "absolute", left: 0, top: 0}} />
-								<Typography variant="body1" color="textSecondary">
-									{data}
-								</Typography>
-							</Paper>
-						)
-					})}
-				</div>
-			: null}
+								fullWidth={true}
+								placeholder=""
+								id="emailfield"
+								margin="normal"
+								variant="outlined"
+								onBlur={(e) => {
+									var newtext = {}
+									if (executionText.length > 0) {
+										try {
+											newtext = JSON.parse(executionText)
+											// Check if list or object, then make it object only
+											if (Array.isArray(newtext)) {
+												newtext = {}
+											}
+										} catch (e) {
+											console.log("Error parsing JSON: ", e)
+										}
+									} 
 
-			<Button
-				variant="outlined"
-				color="primary"
-				onClick={() => {
-              		executeWorkflow(" ", workflow.start, lastSaved);
-					setExecutionArgumentModalOpen(false);
-				}}
-				style={{ marginTop: 20, marginBottom: 20 }}
-			>
-				Run anyway 
-			</Button>
+									newtext[question.value] = e.target.value
+  									setExecutionText(JSON.stringify(newtext))
+								}}
+							/>
+						</div>
+					)
+				})}
+
+				<Button
+					variant="outlined"
+					color="primary"
+					onClick={() => {
+						executeWorkflow(executionText, workflow.start, lastSaved);
+						setExecutionArgumentModalOpen(false)
+					}}
+					style={{ marginTop: 20, marginBottom: 20 }}
+				>
+					Run Workflow 
+				</Button>
+			</div>
+			: 
+			<div>
+				<Typography variant="body1" color="textSecondary"> 
+					At least one node in this workflow requires an execution argument ($exec). Please select one below, or provide a custom one in the text field next to the run button.
+				</Typography>
+
+				<Divider style={{marginTop: 10, marginBottom: 20, }}/>
+				{availableArguments.length > 0 ?
+					<div>
+						<Typography variant="body1" style={{}}>
+							Previously used arguments:
+						</Typography>
+						{availableArguments.map((data) => {
+							return (
+								<Paper style={{ padding: 10, marginTop: 10, backgroundColor: theme.palette.platformColor, maxHeight: 70, overflow: "auto", cursor: "pointer", position: "relative", }}
+									onClick={() => {
+										setExecutionText(data)
+										executeWorkflow(data, workflow.start, lastSaved);
+
+										setExecutionArgumentModalOpen(false)
+									}}
+								>
+									<div style={{height: "100%", width: 2, backgroundColor: "rgba(255, 255, 255, 0.5)", position: "absolute", left: 0, top: 0}} />
+									<Typography variant="body1" color="textSecondary">
+										{data}
+									</Typography>
+								</Paper>
+							)
+						})}
+					</div>
+				: null}
+
+				<Button
+					variant="outlined"
+					color="primary"
+					onClick={() => {
+						executeWorkflow(" ", workflow.start, lastSaved);
+						setExecutionArgumentModalOpen(false)
+					}}
+					style={{ marginTop: 20, marginBottom: 20 }}
+				>
+					Run anyway 
+				</Button>
+			  </div>
+			}
 		</DialogContent>
     </Dialog>
 
@@ -14811,6 +14867,7 @@ const releaseToConnectLabel = "Release to Connect"
 					
 				</div>
             ) : null}
+
             {workflow.triggers[selectedTriggerIndex].parameters[2] !==
               undefined &&
               workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email") ? (
@@ -14842,6 +14899,7 @@ const releaseToConnectLabel = "Release to Connect"
                 }}
               />
             ) : null}
+
             {workflow.triggers[selectedTriggerIndex].parameters[2] !==
               undefined &&
               workflow.triggers[
@@ -14874,6 +14932,39 @@ const releaseToConnectLabel = "Release to Connect"
             ) : null}
             
           </div>
+
+		  <div style={{marginTop: 20, }} />
+          <b>Enabled Input-Questions</b>
+		  {workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
+			<div>
+				{workflow.input_questions.map((question, index) => {
+					const selectionClick = () => {
+						console.log("Clicked input question: ", question)
+						console.log("PARAMS: ", workflow.triggers[selectedTriggerIndex].parameters)
+					}
+
+					return (
+						<div key={index} style={{ display: "flex", cursor: "pointer", }} onClick={() => {
+							selectionClick()
+						}}>
+							<Checkbox
+								checked={false}
+							/>
+							<Typography variant="body2" style={{marginTop: 10, }}>
+								{question.name}
+							</Typography>
+						</div> 
+					)
+				})}
+			</div> 
+		  : 
+			<div style={{cursor: "pointer", color: "#f85a3e", marginTop: 10, }} onClick={() => {
+                setEditWorkflowModalOpen(true)
+			}}>
+			  <Typography variant="body2">No Input-Questions found. Click to add them!</Typography>
+			</div> 
+		  }
+
         </div>
 
   const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : 
@@ -16441,7 +16532,7 @@ const releaseToConnectLabel = "Release to Connect"
             <PlayArrowIcon style={{ fontSize: isMobile ? 30 : 60 }} />
           </Button>
         </span>
-    );
+    )
 
     return (
       <div style={bottomBarStyle}>

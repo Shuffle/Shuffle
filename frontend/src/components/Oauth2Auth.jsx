@@ -476,15 +476,15 @@ const AuthenticationOauth2 = (props) => {
 	var defaultPrompt = "login"
    	if (prompt !== undefined && prompt !== null && prompt.length > 0) {
 			defaultPrompt = prompt
-		}
+	}
 		
-		var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=${defaultPrompt}&scope=${resources}&state=${state}&access_type=offline`;
+	var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=${defaultPrompt}&scope=${resources}&state=${state}&access_type=offline`;
 
-		if (admin_consent === true) {
-			console.log("Running Oauth2 WITH admin consent")
-    	//url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=consent&scope=${resources}&state=${state}&access_type=offline`;
-    	url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=admin_consent&scope=${resources}&state=${state}&access_type=offline`;
-		}
+	if (admin_consent === true) {
+		console.log("Running Oauth2 WITH admin consent")
+		//url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=consent&scope=${resources}&state=${state}&access_type=offline`;
+		url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=admin_consent&scope=${resources}&state=${state}&access_type=offline`;
+	}
 
 		// Force new consent
     //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`;
@@ -997,7 +997,6 @@ const AuthenticationOauth2 = (props) => {
 											color: "white",
 											padding: 5, 
 											minWidth: 300,
-											maxWidth: 300,
 										}}
                   						onChange={(e, value) => {
 											//handleScopeChange(e)
