@@ -3804,15 +3804,9 @@ const releaseToConnectLabel = "Release to Connect"
     if (connected.length > 0 && connected !== undefined) {
 		for (let connectkey in connected) {
 			const edge = connected[connectkey]
-			if (edge.data.decorator && edge.data.label === releaseToConnectLabel) {
-				// Transform to normal edge
-				const currentedge = cy.getElementById(edge.data.id)
-				if (currentedge !== undefined && currentedge !== null) {
-					currentedge.data("decorator", false)
-					currentedge.data("label", "")
-				}
-				continue
-			}
+			//console.log("EDGE:", edge)
+
+			//const edge = edgeBase.json()
 
 			const sourcenode = cy.getElementById(edge.data.source)
 			const destinationnode = cy.getElementById(edge.data.target)
@@ -4027,87 +4021,19 @@ const releaseToConnectLabel = "Release to Connect"
     }
 
     if (nodedata.id === selectedAction.id) {
-      return
+      return;
     }
 
-	
-	if ((nodedata.trigger_type === "SUBFLOW" || nodedata.trigger_type === "USERINPUT" || nodedata.type === "ACTION") && !nodedata.isStartNode) {
-		// Check if it already has any non-decorator branches attached to it
-		const branches = cy.elements('edge').jsons()
-		var branchFound = false
-		var decoratorIds = []
-		for (var branchkey in branches) {
-			if (branches[branchkey].data.source === nodedata.id || branches[branchkey].data.target === nodedata.id) {
-
-				if (branches[branchkey].data.decorator === true) {
-
-					// Add the source/destination
-					if (branches[branchkey].data.source === nodedata.id) {	
-						decoratorIds.push(branches[branchkey].data.target)
-					} else {
-						decoratorIds.push(branches[branchkey].data.source)
-					}
-
-					continue
-				}
-
-				branchFound = true 
-				break
-			}
-		}
-
-		if (!branchFound) {
-			//console.log("Found action during drag. Checking closest nodes as it doesn't have a valid branch")
-			var closestNode = null
-			var minDistance = 300 
-
-    		const draggedNode = event.target
-			const allnodes = cy.nodes().jsons()
-			for (var nodekey in allnodes) {
-				const node = allnodes[nodekey]
-				if (node.data.id === nodedata.id) {
-					continue
-				}
-
-				// Decorators
-				if (node.data.attachedTo !== undefined) {
-					continue
-				}
-
-				if (node.position === undefined || node.position === null || node.position.x === undefined || node.position.y === undefined) {
-					continue
-				}
-
-				if (node.data.type !== "ACTION" && node.data.type !== "TRIGGER") { 
-					continue
-				}
-
-				const distance = Math.sqrt(
-					Math.pow(draggedNode.position('x') - node.position.x, 2) +
-					Math.pow(draggedNode.position('y') - node.position.y, 2)
-				)
-
-				if (decoratorIds.includes(node.data.id)) {
-					//console.log("Found existing decorator for: ", node.data.app_name, "Distance: ", distance)
-
-					if (distance > 300) {
-						// Remove the branch
-						const edgeToRemove = cy.getElementById(branches[branchkey].data.id)
-						if (edgeToRemove !== null && edgeToRemove !== undefined) {
-							//console.log("Removing edge: ", edgeToRemove)
-							edgeToRemove.remove()
-							//decoratorIds.splice(decoratorIds.indexOf(node.data.id), 1)
-							break
-						}
-					}
-				}
 
 
-				if (distance < minDistance) {
-					minDistance = distance
-					closestNode = node
-				}
-			}
+    /*
+    // Tried looking for the closest node by position. aStar path not working entirely.
+    console.log("NODE: ", event.target)
+    const closestNode = cy.elements().aStar({
+      root: nodedata.id,
+      goal: 'node',
+      directed: false,
+    })
 
 			if (closestNode !== null && closestNode !== undefined) {
 				//console.log("Closest node app: ", closestNode.data.app_name, "Distance: ", minDistance)
@@ -4220,11 +4146,11 @@ const releaseToConnectLabel = "Release to Connect"
       }
 
       // Ensure it only happens once
-      document.removeEventListener("mousemove", onMouseUpdate, false)
-    }
+      document.removeEventListener("mousemove", onMouseUpdate, false);
+    };
 
-    document.addEventListener("mousemove", onMouseUpdate, false)
-  }
+    document.addEventListener("mousemove", onMouseUpdate, false);
+  };
 
 
   useBeforeunload(() => {

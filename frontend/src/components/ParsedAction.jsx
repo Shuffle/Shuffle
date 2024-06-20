@@ -218,6 +218,17 @@ const ParsedAction = (props) => {
   ])
 
   useEffect(() => {
+		setParamValues(selectedAction.parameters.map((param) => {
+			return {
+				name: param.name,
+				value: param.value,
+			}
+		}))
+  },[
+	selectedAction, selectedApp,setNewSelectedAction, workflow,
+  ])
+
+  useEffect(() => {
 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
 		return
 	}
@@ -972,10 +983,12 @@ const ParsedAction = (props) => {
 				}
 			}
 
+			setTimeout(() => {
 			selectedActionParameters[count].autocompleted = false
 			selectedAction.parameters[count].autocompleted = false 
 			selectedActionParameters[count].value = data
 			selectedAction.parameters[count].value = data
+			}, 100);
 			setSelectedAction(selectedAction)
 			//setUpdate(Math.random())
 			//setUpdate(event.target.value)
@@ -1143,7 +1156,6 @@ const ParsedAction = (props) => {
 
     // FIXME: Issue #40 - selectedActionParameters not reset
 	if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
-
 	  var wrapperapp = {
 	  	"id": "",
 	  	"name": "noapp",
