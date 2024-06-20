@@ -194,7 +194,7 @@ const AppGrid = props => {
 			// Don't return anything unless refinement works
 			return null
 		}
-
+		
 		return (
 		  <form noValidate action="" role="search">
 		  	{onlyResults !== true ?
