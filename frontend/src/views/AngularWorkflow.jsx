@@ -4024,48 +4024,138 @@ const releaseToConnectLabel = "Release to Connect"
       return;
     }
 
-
-
-    /*
-    // Tried looking for the closest node by position. aStar path not working entirely.
-    console.log("NODE: ", event.target)
-    const closestNode = cy.elements().aStar({
-      root: nodedata.id,
-      goal: 'node',
-      directed: false,
-    })
-
-			if (closestNode !== null && closestNode !== undefined) {
-				//console.log("Closest node app: ", closestNode.data.app_name, "Distance: ", minDistance)
-
-				/*
-				if (decoratorIds.length > 0) {
-					console.log("Decorators already exists. If within distance of 15 add to existing, otherwise remove old and add new: ", decoratorIds)
-					for (var decoratorkey in decoratorIds) {
-						const decoratorEdge = cy.getElementById(decoratorIds[decoratorkey])
-						if (decoratorEdge === null || decoratorEdge === undefined) {
-							continue
-						}
-
-						const sourceNode = cy.getElementById(decoratorEdge.data.source)
-						const targetNode = cy.getElementById(decoratorEdge.data.target)
-
-						const distance = Math.sqrt(
-							Math.pow(draggedNode.position('x') - sourceNode.position('x'), 2) +
-							Math.pow(draggedNode.position('y') - sourceNode.position('y'), 2)
-						)
-
-						// Check plus minus 15 in distance from mindistance
-						if (distance > minDistance - 15 && distance < minDistance + 15) {
-							console.log("Within distance of 15, add to existing edge")
-    } else {
-      console.log("Outside distance of 15, remove old edge and add new")
-						}
-
-					}
-				}
-				*/
-
+    if ((nodedata.trigger_type === "SUBFLOW" || nodedata.trigger_type === "USERINPUT" || nodedata.type === "ACTION") && !nodedata.isStartNode) {
+      // Check if it already has any non-decorator branches attached to it
+      const branches = cy.elements('edge').jsons()
+      var branchFound = false
+      var decoratorIds = []
+      for (var branchkey in branches) {
+        if (branches[branchkey].data.source === nodedata.id || branches[branchkey].data.target === nodedata.id) {
+  
+          if (branches[branchkey].data.decorator === true) {
+  
+            // Add the source/destination
+            if (branches[branchkey].data.source === nodedata.id) {	
+              decoratorIds.push(branches[branchkey].data.target)
+            } else {
+              decoratorIds.push(branches[branchkey].data.source)
+            }
+  
+            continue
+          }
+  
+          branchFound = true 
+          break
+        }
+      }
+  
+      if (!branchFound) {
+        //console.log("Found action during drag. Checking closest nodes as it doesn't have a valid branch")
+        var closestNode = null
+        var minDistance = 300 
+  
+          const draggedNode = event.target
+        const allnodes = cy.nodes().jsons()
+        for (var nodekey in allnodes) {
+          const node = allnodes[nodekey]
+          if (node.data.id === nodedata.id) {
+            continue
+          }
+  
+          // Decorators
+          if (node.data.attachedTo !== undefined) {
+            continue
+          }
+  
+          if (node.position === undefined || node.position === null || node.position.x === undefined || node.position.y === undefined) {
+            continue
+          }
+  
+          if (node.data.type !== "ACTION" && node.data.type !== "TRIGGER") { 
+            continue
+          }
+  
+          const distance = Math.sqrt(
+            Math.pow(draggedNode.position('x') - node.position.x, 2) +
+            Math.pow(draggedNode.position('y') - node.position.y, 2)
+          )
+  
+          if (decoratorIds.includes(node.data.id)) {
+            //console.log("Found existing decorator for: ", node.data.app_name, "Distance: ", distance)
+  
+            if (distance > 300) {
+              // Remove the branch
+              const edgeToRemove = cy.getElementById(branches[branchkey].data.id)
+              if (edgeToRemove !== null && edgeToRemove !== undefined) {
+                //console.log("Removing edge: ", edgeToRemove)
+                edgeToRemove.remove()
+                //decoratorIds.splice(decoratorIds.indexOf(node.data.id), 1)
+                break
+              }
+            }
+          }
+  
+  
+          if (distance < minDistance) {
+            minDistance = distance
+            closestNode = node
+          }
+        }
+  
+        if (closestNode !== null && closestNode !== undefined) {
+          //console.log("Closest node app: ", closestNode.data.app_name, "Distance: ", minDistance)
+  
+          /*
+          if (decoratorIds.length > 0) {
+            console.log("Decorators already exists. If within distance of 15 add to existing, otherwise remove old and add new: ", decoratorIds)
+            for (var decoratorkey in decoratorIds) {
+              const decoratorEdge = cy.getElementById(decoratorIds[decoratorkey])
+              if (decoratorEdge === null || decoratorEdge === undefined) {
+                continue
+              }
+  
+              const sourceNode = cy.getElementById(decoratorEdge.data.source)
+              const targetNode = cy.getElementById(decoratorEdge.data.target)
+  
+              const distance = Math.sqrt(
+                Math.pow(draggedNode.position('x') - sourceNode.position('x'), 2) +
+                Math.pow(draggedNode.position('y') - sourceNode.position('y'), 2)
+              )
+  
+              // Check plus minus 15 in distance from mindistance
+              if (distance > minDistance - 15 && distance < minDistance + 15) {
+                console.log("Within distance of 15, add to existing edge")
+              } else {
+                console.log("Outside distance of 15, remove old edge and add new")
+              }
+  
+            }
+          }
+          */
+  
+          if (decoratorIds.length === 0) { 
+            //const edgeCurve = calculateEdgeCurve(draggedNode.position(), closestNode.position)
+            //currentedge.style('control-point-distance', edgeCurve.distance)
+            //currentedge.style('control-point-weight', edgeCurve.weight)
+            
+            const newId = uuidv4()
+            cy.add({
+              group: "edges",
+              data: {
+                decorator: true,
+                id: newId,
+                _id: newId,
+                source: closestNode.data.id,
+                target: nodedata.id,
+                label: releaseToConnectLabel,
+                conditions: [],
+              }
+            })
+          } 
+        } 
+      }
+    }
+    
     if (
       originalLocation.x === 0 &&
       originalLocation.y === 0 &&
