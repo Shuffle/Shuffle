@@ -175,8 +175,8 @@ const ParsedAction = (props) => {
   } = props;
 
   const classes = useStyles();
-//   const [hideBody, setHideBody] = React.useState(true);
-//   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
+  const [hideBody, setHideBody] = React.useState(true)
+  const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false)
   const [appActionName, setAppActionName] = React.useState(selectedAction.label);
   const [delay, setDelay] = React.useState(selectedAction?.execution_delay || 0);
   
@@ -195,6 +195,7 @@ const ParsedAction = (props) => {
 	);
     const [actionlist, setActionlist] = React.useState([]);
     const [jsonList, setJsonList] = React.useState([]);
+
     const [showDropdown, setShowDropdown] = React.useState(false);
     const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
     const [showAutocomplete, setShowAutocomplete] = React.useState(false);
@@ -206,6 +207,7 @@ const ParsedAction = (props) => {
 		setLastSaved(false)
 	}
   }, [expansionModalOpen])
+
   useEffect(() => {
 		setParamValues(selectedAction.parameters.map((param) => {
 			return {
@@ -217,43 +219,27 @@ const ParsedAction = (props) => {
 	selectedAction, selectedApp,setNewSelectedAction, workflow,
   ])
 
-//   useEffect(() => {
-// 	if(!showAutocomplete){
-// 		paramValueChange();
-// 	}
-//   },[menuPosition,showAutocomplete])
+  useEffect(() => {
+	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
+		return
+	}
+	
+	const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+	if (paramcheck === undefined || paramcheck === null) {
+		return
+	}
 
-//   const paramValueChange = () => {
-// 	setParamValues(selectedAction.parameters.map((param) => {
-// 		return {
-// 			name: param.name,
-// 			value: param.value,
-// 		}
-// 	}))
-//   }
-
-//   useEffect(() => {
-// 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
-// 		return
-// 	}
-
-// 	const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-// 	if (paramcheck === undefined || paramcheck === null) {
-// 		return
-// 	}
-
-// 	// This was just opposite..
-// 	if (paramcheck.id === "TOGGLED"){ 
-// 		setHideBody(true)
-// 	} else {
-// 		setHideBody(false)
-
-// 		if (paramcheck.id === "UNTOGGLED") {
-// 			setActivateHidingBodyButton(false)
-// 		}
-// 	}
-
-//   }, [])
+	// This was just opposite..
+	if (paramcheck.id === "TOGGLED"){ 
+		setHideBody(true)
+	} else {
+		setHideBody(false)
+	
+		if (paramcheck.id === "UNTOGGLED") {
+			setActivateHidingBodyButton(false)
+		}
+	}
+  }, [])
 
   const keywords = [
     "len(",
@@ -416,9 +402,6 @@ const ParsedAction = (props) => {
 
     useEffect(
 		() => {
-			console.log("UseEffect Rendered!");
-			console.log("Workflow", workflow);
-			
 			
 			// Only set app action name if it has changed
 			if (selectedAction.label !== appActionName) {
@@ -433,7 +416,6 @@ const ParsedAction = (props) => {
 		
 			// Only set selected action parameters if they have changed
 			if (selectedAction.parameters && selectedAction.parameters.length > 0) {
-				console.log("Setting action parameters!!");
 				setSelectedActionParameters(selectedAction.parameters);
 			}
 		
@@ -585,11 +567,6 @@ const ParsedAction = (props) => {
 		actionDelayChange(delay) 
 	  },[appActionName,delay])
 	 
-		console.log("selectedActionParameters: ", selectedActionParameters)
-		console.log("selectedApp:", selectedApp)
-		console.log("selectedAction: ", selectedAction)
-		console.log("ACTIONLIST: ", actionlist)
-		console.log("selectedVariableParameter", selectedVariableParameter)
 		const handleParamChange = (event, count,data) => {
 			const newParams = [...paramValues];
 			newParams.map((param) => {
@@ -1296,8 +1273,6 @@ const ParsedAction = (props) => {
 	
 
   const selectedAppIcon = selectedAction.large_image
-//   console.log("Selected action: ", selectedAction)
-		console.log("Selected action paramaters: ", selectedAction.parameters)
   var baselabel = selectedAction.label
   return (
     <div style={appApiViewStyle} id="parsed_action_view">
@@ -2852,178 +2827,181 @@ const ParsedAction = (props) => {
               //setSelectedActionParameters(selectedActionParameters)
             }
 
-            // var hideBodyButton = "";
-			// const hideBodyButtonValue = (
-			// 	<div
-			// 	  key={data.name}
-			// 	  id="hide_body_button"
-			// 	  style={{
-			// 		marginTop: 50,
-			// 		border: "1px solid rgba(255,255,255,0.7)",
-			// 		borderTop: "1px solid rgba(255,255,255,0.7)",
-			// 		borderRadius: theme.palette.borderRadius,
-			// 		alignItems: "center",
-			// 		textAlign: "center",
-			// 	  }}
-			// 	>
-			// 	  <Tooltip
-			// 		color="secondary"
-			// 		title={
-			// 		  hideBody
-			// 			? "Hide all body fields and only show the body itself"
-			// 			: "Show all body fields instead of the body itself"
-			// 		}
-			// 		placement="top"
-			// 	  >
-			// 		<FormControlLabel
-			// 		  control={
-			// 			<Checkbox
-			// 			  tabIndex="-1"
-			// 			  checked={hideBody}
-			// 			  style={{
-			// 				color: theme.palette.primary.secondary,
-			// 			  }}
-			// 			  onChange={(event) => {
-			// 				const newHideBody = !hideBody;
-			// 				setHideBody(newHideBody);
-			  
-			// 				const updatedParameters = selectedActionParameters.map((param) => {
-			// 				  if (param.name === "body") {
-			// 					return { ...param, id: newHideBody ? "UNTOGGLED" : "TOGGLED" };
-			// 				  }
-			// 				  if (param.description === openApiFieldDesc) {
-			// 					return { ...param, field_active: newHideBody };
-			// 				  }
-			// 				  return param;
-			// 				});
-			  
-			// 				setSelectedActionParameters(updatedParameters);
-			  
-			// 				setTimeout(() => {
-			// 				  const element = document.getElementById("hide_body_button");
-			// 				  if (element) {
-			// 					element.scrollIntoView({
-			// 					  behavior: "smooth",
-			// 					  block: "center",
-			// 					});
-			// 				  }
-			// 				}, 100);
-			// 			  }}
-			// 			  name="requires_unique"
-			// 			/>
-			// 		  }
-			// 		  label={hideBody ? "Show Body" : "Hide Body"}
-			// 		/>
-			// 	  </Tooltip>
-			// 	</div>
-			//   );
+             var hideBodyButton = "";
+			 const hideBodyButtonValue = (
+			 	<div
+			 	  key={data.name}
+			 	  id="hide_body_button"
+			 	  style={{
+			 		marginTop: 50,
+			 		border: "1px solid rgba(255,255,255,0.7)",
+			 		borderTop: "1px solid rgba(255,255,255,0.7)",
+			 		borderRadius: theme.palette.borderRadius,
+			 		alignItems: "center",
+			 		textAlign: "center",
+			 	  }}
+			 	>
+			 	  <Tooltip
+			 		color="secondary"
+			 		title={
+			 		  hideBody
+			 			? "Hide all body fields and only show the body itself"
+			 			: "Show all body fields instead of the body itself"
+			 		}
+			 		placement="top"
+			 	  >
+			 		<FormControlLabel
+			 		  control={
+			 			<Checkbox
+			 			  tabIndex="-1"
+			 			  checked={hideBody}
+			 			  style={{
+			 				color: theme.palette.primary.secondary,
+			 			  }}
+			 			  onChange={(event) => {
+			 				const newHideBody = !hideBody;
+			 				setHideBody(newHideBody)
+			
+			 				const updatedParameters = selectedActionParameters.map((param) => {
+			 				  if (param.name === "body") {
+			 					return { ...param, id: newHideBody ? "UNTOGGLED" : "TOGGLED" };
+			 				  }
+			 				  if (param.description === openApiFieldDesc) {
+			 					return { ...param, field_active: newHideBody };
+			 				  }
+			 				  return param;
+			 				});
+			
+			 				setSelectedActionParameters(updatedParameters);
+			
+							/*
+			 				setTimeout(() => {
+			 				  const element = document.getElementById("hide_body_button");
+			 				  if (element) {
+			 					element.scrollIntoView({
+			 					  behavior: "smooth",
+			 					  block: "center",
+			 					});
+			 				  }
+			 				}, 100);
+							*/
+			 			  }}
+			 			  name="requires_unique"
+			 			/>
+			 		  }
+			 		  label={hideBody ? "Show Body" : "Hide Body"}
+			 		/>
+			 	  </Tooltip>
+			 	</div>
+			   );
 
-            // if (selectedApp.generated && data.name === "body") {
-            //   const regex = /\${(\w+)}/g;
-            //   const found = placeholder.match(regex);
+             if (selectedApp.generated && data.name === "body") {
+               const regex = /\${(\w+)}/g;
+               const found = placeholder.match(regex);
 
-			//   // setActivateHidingBodyButton(false)
-			// 	//
-            //   hideBodyButton = hideBodyButtonValue;
-            //   if (found === null || !hideBody) {
-            //     if (found === null) {
-            //       setActivateHidingBodyButton(true);
-            //     } else {
-			// 		//console.log("In found: ", found, hideBody)
-			// 	}
-            //   } else {
+               hideBodyButton = hideBodyButtonValue;
+               if (found === null || !hideBody) {
+                 if (found === null) {
 
-            //     rows = "1";
-            //     disabled = true;
-            //     openApiHelperText = "OpenAPI spec: fill the following fields.";
+				   if (activateHidingBodyButton !== true) {
+                      setActivateHidingBodyButton(true)
+				   }
 
-            //     var changed = false;
-			// 	var tempArray = []
-            //     for (let specKey in found) {
-            //       const tmpitem = found[specKey];
-            //       var skip = false;
+                 } else {
+			 		//console.log("In found: ", found, hideBody)
+			 	}
+               } else {
 
-            //       for (let innerkey in selectedActionParameters) {
-            //         if (selectedActionParameters[innerkey].name === tmpitem) {
-            //           skip = true;
-            //           break;
-            //         }
-            //       }
+                 rows = "1";
+                 disabled = true;
+                 openApiHelperText = "OpenAPI spec: fill the following fields.";
 
-            //       if (skip) {
-            //         //console.log("SKIPPING ", tmpitem)
-            //         continue;
-            //       }
+                 var changed = false;
+			 	var tempArray = []
+                 for (let specKey in found) {
+                   const tmpitem = found[specKey];
+                   var skip = false;
 
-            //       changed = true;
-			// 	  var isRequired = false
-			// 	  // Check if original field name is in the selectedAction.required_body_fields
-			// 	  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null) {
-			// 		  for (let innerkey in selectedAction.required_body_fields) {
-			// 			  if (selectedAction.required_body_fields[innerkey] === tmpitem) {
-			// 				  isRequired = true
-			// 				  break
-			// 			  }
-			// 		  }
-			// 	  }
+                   for (let innerkey in selectedActionParameters) {
+                     if (selectedActionParameters[innerkey].name === tmpitem) {
+                       skip = true;
+                       break;
+                     }
+                   }
 
-			// 	  tempArray.push({
-            //         action_field: "",
-            //         configuration: false,
-            //         description: openApiFieldDesc,
-            //         example: "",
-            //         id: "",
-            //         multiline: true,
-            //         name: tmpitem,
-            //         options: null,
-            //         required: isRequired,
-            //         schema: { type: "string" },
-            //         skip_multicheck: false,
-            //         tags: null,
-            //         value: "",
-            //         variant: "STATIC_VALUE",
-            //         field_active: true,
-					  
-			// 		autocompleted: true,
-            //       });
-            //     }
-                  
-			// 	console.log("TEMP ARRAY: ", tempArray)
-			// 	var required = selectedActionParameters.filter(item => item.required === true)
-			// 	var notRequired = selectedActionParameters.filter(item => item.required === false)
+                   if (skip) {
+                     //console.log("SKIPPING ", tmpitem)
+                     continue;
+                   }
 
-			// 	if (tempArray.length > 0) {
-			// 		// Sort tempArray based on tempArray.required
-			// 		tempArray.sort((a, b) => (a.required < b.required) ? 1 : -1)
-			// 		// Add all items to the selectedActionParameters array
-			// 		for (let innerkey in tempArray) {
-			// 			tempArray[innerkey].id = "ADDED"
+                   changed = true;
+			 	  var isRequired = false
+			 	  // Check if original field name is in the selectedAction.required_body_fields
+			 	  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null) {
+			 		  for (let innerkey in selectedAction.required_body_fields) {
+			 			  if (selectedAction.required_body_fields[innerkey] === tmpitem) {
+			 				  isRequired = true
+			 				  break
+			 			  }
+			 		  }
+			 	  }
 
-			// 			if (tempArray[innerkey].required === true) {
-			// 				required.push(tempArray[innerkey])
-			// 			} else {
-			// 				notRequired.push(tempArray[innerkey])	
-			// 			}
-			// 		}
-			// 	}
-			// 	//selectedActionParameters
-            //     if (changed) {
-			// 	  // Sort selectedActionParameters based on selectedActionParameters.required
-			// 	  //selectedActionParameters.sort((a, b) => (a.required < b.required) ? 1 : -1)
-			// 	  // Find the "headers" and "queries" field names and put them on the first indexes anyway
-			// 	  var newArray = required.concat(notRequired)
-				  
+			 	  tempArray.push({
+                     action_field: "",
+                     configuration: false,
+                     description: openApiFieldDesc,
+                     example: "",
+                     id: "",
+                     multiline: true,
+                     name: tmpitem,
+                     options: null,
+                     required: isRequired,
+                     schema: { type: "string" },
+                     skip_multicheck: false,
+                     tags: null,
+                     value: "",
+                     variant: "STATIC_VALUE",
+                     field_active: true,
+			  	  
+			 		autocompleted: true,
+                   });
+                 }
+                
+			 	var required = selectedActionParameters.filter(item => item.required === true)
+			 	var notRequired = selectedActionParameters.filter(item => item.required === false)
 
-            //       setSelectedActionParameters(newArray)
-            //     }
+			 	if (tempArray.length > 0) {
+			 		// Sort tempArray based on tempArray.required
+			 		tempArray.sort((a, b) => (a.required < b.required) ? 1 : -1)
+			 		// Add all items to the selectedActionParameters array
+			 		for (let innerkey in tempArray) {
+			 			tempArray[innerkey].id = "ADDED"
 
-            //     return hideBodyButton;
-            //   }
-            // }
+			 			if (tempArray[innerkey].required === true) {
+			 				required.push(tempArray[innerkey])
+			 			} else {
+			 				notRequired.push(tempArray[innerkey])	
+			 			}
+			 		}
+			 	}
+			 	//selectedActionParameters
+                 if (changed) {
+			 	  // Sort selectedActionParameters based on selectedActionParameters.required
+			 	  //selectedActionParameters.sort((a, b) => (a.required < b.required) ? 1 : -1)
+			 	  // Find the "headers" and "queries" field names and put them on the first indexes anyway
+			 	  var newArray = required.concat(notRequired)
+			    
 
-            // if (activateHidingBodyButton === true) {
-            //   hideBodyButton = "";
-            // }
+                   setSelectedActionParameters(newArray)
+                 }
+
+                 return hideBodyButton;
+               }
+             }
+
+             if (activateHidingBodyButton === true) {
+               hideBodyButton = "";
+             }
 
             const clickedFieldId = "rightside_field_" + count;
 
@@ -3556,7 +3534,6 @@ const ParsedAction = (props) => {
               };
 
               const handleItemClick = (values) => {
-								console.log("In normal itemclick")
                 if (values === undefined ||values === null ||values.length === 0) {
                   return;
                 }
@@ -3579,31 +3556,28 @@ const ParsedAction = (props) => {
 
                 // Handles the fields under OpenAPI body to be parsed.
                 if (data.name.startsWith("${") && data.name.endsWith("}")) {
-                  console.log("INSIDE VALUE REPLACE: ", data.name, toComplete);
-                  // PARAM FIX - Gonna use the ID field, even though it's a hack
                   const paramcheck = selectedAction.parameters.find(
                     (param) => param.name === "body"
-                  );
+                  )
+
                   if (paramcheck !== undefined) {
-                    if (
-                      paramcheck["value_replace"] === undefined ||
-                      paramcheck["value_replace"] === null
-                    ) {
+                    if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
                       paramcheck["value_replace"] = [
                         {
                           key: data.name,
                           value: toComplete,
                         },
-                      ];
+                      ]
                     } else {
-                      const subparamindex = paramcheck[
-                        "value_replace"
-                      ].findIndex((param) => param.key === data.name);
+                      const subparamindex = paramcheck["value_replace"]
+						.findIndex((param) => param.key === data.name);
+
                       if (subparamindex === -1) {
                         paramcheck["value_replace"].push({
                           key: data.name,
                           value: toComplete,
-                        });
+                        })
+
                       } else {
                         paramcheck["value_replace"][subparamindex]["value"] +=
                           toComplete;
@@ -3611,7 +3585,9 @@ const ParsedAction = (props) => {
                     }
 
                     selectedActionParameters[count]["value_replace"] = paramcheck;
-                    selectedAction.parameters[count]["value_replace"] = paramcheck;
+
+					selectedAction.parameters = selectedActionParameters
+                    //selectedAction.parameters[count]["value_replace"] = paramcheck;
                     setSelectedAction(selectedAction);
                     setUpdate(Math.random());
 
@@ -3932,9 +3908,15 @@ const ParsedAction = (props) => {
 
 			const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
 			const hasAutocomplete = data?.autocompleted === true
+
+	
+			if (data.variant === undefined || data.variant === null) {
+				data.variant = "STATIC_VALUE"
+			}
+
             return (
               <div key={data.name}>
-                {/* {hideBodyButton} */}
+                {hideBodyButton}
                 <div
                   style={{ marginTop: 20, marginBottom: 0, display: "flex" }}
                 >
@@ -4068,9 +4050,9 @@ const ParsedAction = (props) => {
                       Autocomplete
                     </InputLabel>
                     <Select
-											MenuProps={{
-			          				disableScrollLock: true,
-								      }}
+					  MenuProps={{
+			        	disableScrollLock: true,
+					  }}
                       labelId="action-autocompleter"
                       SelectDisplayProps={{
                         style: {
@@ -4101,6 +4083,8 @@ const ParsedAction = (props) => {
                         borderRadius: theme.palette.borderRadius,
                       }}
                       onChange={(e) => {
+						  console.log("SELECT ONCHANGE DONE")
+
                         if (selectedActionParameters[count].value[selectedActionParameters[count].value.length - 1] === ".") {
                           e.target.value.autocomplete = e.target.value.autocomplete.slice(1,e.target.value.autocomplete.length);
                         }

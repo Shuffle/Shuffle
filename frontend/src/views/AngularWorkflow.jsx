@@ -4398,15 +4398,12 @@ const releaseToConnectLabel = "Release to Connect"
     
 	//const data = JSON.parse(JSON.stringify(event.target.data()))
     const data = event.target.data()
-  console.log("===============================Node selected=============================")
-  console.log("NODE SELECT: ", data)
 
-  if (data.app_name === "Shuffle Workflow") {
-    console.log("Shuffle Workflow selected")
-    if ((data.parameters !== undefined) && (data.parameters.length > 0)) {
-      getWorkflowApps(data.parameters[0].value)
+    if (data.app_name === "Shuffle Workflow") {
+      if ((data.parameters !== undefined) && (data.parameters.length > 0)) {
+        getWorkflowApps(data.parameters[0].value)
+      }
     }
-  }
 
 	if (data.buttonType == "ACTIONSUGGESTION") {
   	  const attachedToId = data.attachedTo
@@ -6930,8 +6927,6 @@ const releaseToConnectLabel = "Release to Connect"
 		const allNodes = cy.nodes().jsons();
 
 		if (nodedata.app_name === "Webhook" || nodedata.app_name === "Schedule" || nodedata.app_name === "Gmail" || nodedata.app_name === "Office365") {
-			console.log("In this :)")
-
 			var found = false;
 			for (let nodekey in allNodes) {
 				const currentNode = allNodes[nodekey];
@@ -9928,7 +9923,6 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 	}
 
-	console.log("New selected action: ", newSelectedAction)
     setSelectedAction(newSelectedAction)
     setUpdate(Math.random())
 
@@ -21328,14 +21322,11 @@ const releaseToConnectLabel = "Release to Connect"
 			if (paramcheck !== undefined) {
 				// Escapes all double quotes
 				const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
-				console.log("REPLACE WITH: ", toReplace)
 				if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
 					paramcheck["value_replace"] = [{
 						"key": data.name,
 						"value": toReplace,
 					}]
-
-					console.log("IN IF: ", paramcheck)
 
 				} else {
 					const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
@@ -21347,8 +21338,6 @@ const releaseToConnectLabel = "Release to Connect"
 					} else {
 						paramcheck["value_replace"][subparamindex]["value"] = toReplace 
 					}
-
-					console.log("IN ELSE: ", paramcheck)
 				}
 
 				if (paramcheck["value_replace"] === undefined) {
