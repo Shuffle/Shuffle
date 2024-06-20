@@ -3123,9 +3123,10 @@ const ParsedAction = (props) => {
                     if (workflowExecutions.length > 0) {
                       // Look for the ID
                       var found = false;
+					  var curResult = null
                       for (let [key,keyval] in Object.entries(workflowExecutions)) {
                         if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
-                          continue;
+                          continue
                         }
 
                         var foundResult = workflowExecutions[key].results.find(
@@ -3133,10 +3134,10 @@ const ParsedAction = (props) => {
                         )
 
                         if (foundResult === undefined || foundResult === null) {
-                          continue;
+                          continue
                         }
 
-						const oldstartnode = cy.getElementById(selectedAction.id);
+						const oldstartnode = cy.getElementById(selectedAction.id)
 						if (oldstartnode !== undefined && oldstartnode !== null) {
 							const foundname = oldstartnode.data("label")
 							if (foundname !== undefined && foundname !== null) {
@@ -3144,14 +3145,21 @@ const ParsedAction = (props) => {
 							}
 						}
 
-                        setSelectedResult(foundResult);
-                        if (setCodeModalOpen !== undefined) {
-                          setCodeModalOpen(true);
-                      	
-						  found = true
-                        }
+						// Not breaking unless necessary
+						curResult = foundResult
+						found = true
 
-                        break;
+						if (curResult.status === "SUCCESS") {
+							break
+						}
+					  }
+
+					  if (curResult !== null) {
+                        setSelectedResult(curResult)
+
+                        if (setCodeModalOpen !== undefined) {
+                          setCodeModalOpen(true)
+                        }
                       }
 
 					  if (!found) {

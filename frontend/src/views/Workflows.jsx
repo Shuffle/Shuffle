@@ -130,7 +130,6 @@ export const GetIconInfo = (action) => {
   // Finds the icon based on the action. Should be verbs.
   const iconList = [
     { key: "cases", values: ["cases"] },
-    { key: "communication", values: ["communication", "comms", "email",] },
     { key: "cache_add", values: ["set_cache"] },
     { key: "cache_get", values: ["get_cache"] },
     { key: "filter", values: ["filter"] },
@@ -200,6 +199,7 @@ export const GetIconInfo = (action) => {
       values: ["compare", "convert", "to", "filter", "translate", "parse"],
     },
     { key: "close", values: ["close", "stop", "cancel", "block"] },
+    { key: "communication", values: ["communication", "comms", "email", "mail",] },
   ];
 
   var selectedKey = ""
