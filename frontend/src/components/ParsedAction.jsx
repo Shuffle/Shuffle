@@ -195,7 +195,6 @@ const ParsedAction = (props) => {
 	);
     const [actionlist, setActionlist] = React.useState([]);
     const [jsonList, setJsonList] = React.useState([]);
-
     const [showDropdown, setShowDropdown] = React.useState(false);
     const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
     const [showAutocomplete, setShowAutocomplete] = React.useState(false);
@@ -207,6 +206,16 @@ const ParsedAction = (props) => {
 		setLastSaved(false)
 	}
   }, [expansionModalOpen])
+  useEffect(() => {
+		setParamValues(selectedAction.parameters.map((param) => {
+			return {
+				name: param.name,
+				value: param.value,
+			}
+		}))
+  },[
+	selectedAction, selectedApp,setNewSelectedAction, workflow,
+  ])
 
   useEffect(() => {
 		setParamValues(selectedAction.parameters.map((param) => {
@@ -3916,7 +3925,7 @@ const ParsedAction = (props) => {
 
             return (
               <div key={data.name}>
-                {hideBodyButton}
+                {/* {hideBodyButton} */}
                 <div
                   style={{ marginTop: 20, marginBottom: 0, display: "flex" }}
                 >

@@ -3295,11 +3295,18 @@ const releaseToConnectLabel = "Release to Connect"
 				// don't redirect if it exists
 				const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
 			    var execFound = new URLSearchParams(cursearch).get("execution_id");
-			    if (execFound === null) {
-					toast(`You don't access to this workflow or loading failed. Redirecting to workflows in a few seconds..`)
+			    var sessionToken = new URLSearchParams(cursearch).get("session_token");
+			    if (execFound === null && sessionToken === null) {
+					toast(`You don't have access to this workflow or loading failed. Redirecting to workflows in a few seconds..`)
 					setTimeout(() => {
 						window.location.pathname = "/workflows";
 					}, 2000);
+} else if (sessionToken !== null && workflow_id === "3abdfb21-b40f-4e50-b855-ac0d62f83cbe") {
+            toast(`Injecting session token and reloading workflow..`)
+            setTimeout(() => {
+              setCookie("session_token", sessionToken, { path: "/" });
+              window.location.href = "https://shuffler.io/workflows/3abdfb21-b40f-4e50-b855-ac0d62f83cbe";
+            }, 2000);
 				}
 			}
         }
@@ -3785,11 +3792,12 @@ const releaseToConnectLabel = "Release to Connect"
   const onNodeDragStop = (event, selectedAction) => {
     const nodedata = event.target.data();
     if (nodedata.id === selectedAction.id) {
-      return;
+      //console.log("Same node, return")
+      return
     }
 
     if (nodedata.finished === false) {
-      return;
+      return
     }
 
 	const connected = event.target.connectedEdges().jsons()
@@ -4027,12 +4035,36 @@ const releaseToConnectLabel = "Release to Connect"
       directed: false,
     })
 
-    if (closestNode.found) {
-      console.log("No closest node found for: ", nodedata.id)
+			if (closestNode !== null && closestNode !== undefined) {
+				//console.log("Closest node app: ", closestNode.data.app_name, "Distance: ", minDistance)
+
+				/*
+				if (decoratorIds.length > 0) {
+					console.log("Decorators already exists. If within distance of 15 add to existing, otherwise remove old and add new: ", decoratorIds)
+					for (var decoratorkey in decoratorIds) {
+						const decoratorEdge = cy.getElementById(decoratorIds[decoratorkey])
+						if (decoratorEdge === null || decoratorEdge === undefined) {
+							continue
+						}
+
+						const sourceNode = cy.getElementById(decoratorEdge.data.source)
+						const targetNode = cy.getElementById(decoratorEdge.data.target)
+
+						const distance = Math.sqrt(
+							Math.pow(draggedNode.position('x') - sourceNode.position('x'), 2) +
+							Math.pow(draggedNode.position('y') - sourceNode.position('y'), 2)
+						)
+
+						// Check plus minus 15 in distance from mindistance
+						if (distance > minDistance - 15 && distance < minDistance + 15) {
+							console.log("Within distance of 15, add to existing edge")
     } else {
-      console.log("Closest: ", closestNode)
-    }
-    */
+      console.log("Outside distance of 15, remove old edge and add new")
+						}
+
+					}
+				}
+				*/
 
     if (
       originalLocation.x === 0 &&
@@ -11435,6 +11467,96 @@ const releaseToConnectLabel = "Release to Connect"
 						Conditions are unavailable between triggers and the startnode.
 					</Typography>
 				: null}
+
+		<div style={{position: "absolute", bottom: 10, width: "90%", margin: "auto", }}>
+			{/*
+			<Button
+			  style={{ margin: "auto", marginTop: "10px" }}
+			  color="secondary"
+			  fullWidth
+			  variant="outlined"
+			  onClick={() => {
+				// Change Direction of the branch target/source
+				const foundBranch = cy.getElementById(selectedEdge.id)
+				if (foundBranch !== undefined && foundBranch !== null) {
+					console.log("BRANCH: ", foundBranch)
+					const source = foundBranch.data("source")
+					const target = foundBranch.data("target")
+
+					var branchdata = JSON.parse(JSON.stringify(foundBranch.data()))
+					console.log("BEFORE: ", branchdata)
+
+					const newid = uuidv4()
+					branchdata.source = target
+					branchdata.target = source
+					branchdata.id = newid
+					branchdata._id = newid
+
+					foundBranch.remove()
+
+					setTimeout(() => {
+						toast("Edge being added!")
+						cy.add({
+							group: "edges",
+							source: target,
+							target: source,
+							data: branchdata,
+						})
+					}, 2500)
+
+				}
+			  }}
+			  fullWidth
+			>
+                <DeleteIcon style={{marginRight: 10, }}/>
+				Change Direction
+			</Button>
+			<Button
+			  style={{ margin: "auto", }}
+			  color="secondary"
+			  fullWidth
+			  variant="outlined"
+			  onClick={() => {
+				// Delete the branch
+			  }}
+			  fullWidth
+			>
+				Re-attach branch
+			</Button>
+			<Button
+			  style={{ margin: "auto", }}
+			  color="secondary"
+			  fullWidth
+			  variant="outlined"
+			  onClick={() => {
+				// Delete the branch
+			  }}
+			  fullWidth
+			>
+				Disable Path
+			</Button>
+			*/}
+			<Button
+			  style={{ margin: "auto", marginTop: 50, }}
+			  color="secondary"
+			  fullWidth
+			  variant="outlined"
+			  onClick={() => {
+				// Delete the branch
+				const foundBranch = cy.getElementById(selectedEdge.id)
+			    if (foundBranch !== undefined && foundBranch !== null) {
+			        foundBranch.remove()
+			    }
+
+				setConditionsModalOpen(false)
+				setSelectedEdge({})
+			  }}
+			  fullWidth
+			>
+                <DeleteIcon style={{marginRight: 10, }}/>
+				Delete Branch 
+			</Button>
+		</div>
       </div>
     );
   };
@@ -12212,6 +12334,10 @@ const releaseToConnectLabel = "Release to Connect"
       let mappingWithName = {}
       let listWithValues = workflow.triggers[selectedTriggerIndex].parameters[5]?.value.split(";").filter(e => e).map(e => e.split("="))
       console.log("LIST WITH VALUES: ", listWithValues)
+      if (listWithValues === undefined || listWithValues === null || listWithValues.length === 0) {
+        return "no-overrides";
+      }
+
       for (let i = 0; i < listWithValues.length; i++) {
         mappingWithName[listWithValues[i][0]] = listWithValues[i][1]
       }
@@ -14875,7 +15001,6 @@ const releaseToConnectLabel = "Release to Connect"
             
           </div>
         </div>
-
   const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : 
           <div style={appApiViewStyle}>
             <h3 style={{ marginBottom: "5px" }}>
@@ -16745,7 +16870,6 @@ const releaseToConnectLabel = "Release to Connect"
   };
 
   const RightSideBar = (props) => {
-
 
     var defaultReturn = null
     if (Object.getOwnPropertyNames(selectedComment).length > 0) {
