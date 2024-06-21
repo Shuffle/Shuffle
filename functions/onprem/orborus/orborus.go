@@ -50,7 +50,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
 )
 
 // Starts jobs in bulk, so this could be increased
@@ -666,7 +668,11 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 
 	if len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
 		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", os.Getenv("KUBERNETES_SERVICE_HOST")))
-	} 
+	}
+
+	if len(os.Getenv("SHUFFLE_MEMCACHED")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_MEMCACHED=%s", os.Getenv("SHUFFLE_MEMCACHED")))
+	}
 
 	if len(os.Getenv("KUBERNETES_SERVICE_PORT")) > 0 {
 		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
@@ -787,7 +793,8 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		},
 		Spec: corev1.PodSpec{
 			RestartPolicy: "Never",
-			DNSPolicy:     "Default",
+			// DNSPolicy:     "Default",
+			DNSPolicy: 	corev1.DNSClusterFirst,
 			// NodeSelector: map[string]string{
 			// 	"node": "master",
 			// },
@@ -1442,6 +1449,115 @@ func main() {
 		log.Printf("[INFO] Running inside k8s cluster")
 	}
 
+	if isKubernetes == "true" {
+		clientset, _, err := shuffle.GetKubernetesClient()
+		if err != nil {
+			log.Printf("[ERROR] Error getting kubernetes client:", err)
+			os.Exit(1)
+		}
+
+		kubernetesNamespace := "default"
+
+		// Check if namespace exist as variable. If so, make it
+		if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 && !namespacemade {
+			kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+		}
+
+		// fix roles
+		// check if "service-creator" role is assigned to the service account "default"
+		roleBindingName := "service-creator-binding"
+		serviceAccountName := "default"
+		// Check if the RoleBinding exists
+		roleBinding, err := clientset.RbacV1().RoleBindings(kubernetesNamespace).Get(context.TODO(), roleBindingName, metav1.GetOptions{})
+		if err != nil {
+			log.Printf("[WARNING] Failed to get RoleBinding %s: %s", roleBindingName, err)
+			// create role and rolebinding
+			role := &rbacv1.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: roleBindingName,
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						APIGroups: []string{""},
+						Resources: []string{"services"},
+						Verbs:     []string{"create"},
+					},
+				},
+			}
+
+			ctx := context.TODO()
+
+			_, err := clientset.RbacV1().Roles(kubernetesNamespace).Create(ctx, role, metav1.CreateOptions{})	
+			if err != nil {
+				log.Printf("[ERROR] Failed to create Role %s: %s", roleBindingName, err)
+				if !strings.Contains(fmt.Sprintf("%s", err), "already exists") {
+					log.Printf("[INFO] role %s already exists", roleBindingName)
+				}
+			}
+
+			roleBinding := &rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: roleBindingName,
+				},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      serviceAccountName,
+						Namespace: kubernetesNamespace,
+					},
+				},
+				RoleRef: rbacv1.RoleRef{
+					Kind: "Role",
+					Name: roleBindingName,
+				},
+			}
+
+
+			
+			_, err = clientset.RbacV1().RoleBindings(kubernetesNamespace).Create(ctx, roleBinding, metav1.CreateOptions{})
+			if err != nil {
+				log.Printf("[ERROR] Failed to create RoleBinding %s: %s", roleBindingName, err)
+				if !strings.Contains(fmt.Sprintf("%s", err), "already exists") {
+					log.Printf("[INFO] rolebinding %s already exists", roleBindingName)
+				}
+			}
+
+
+			log.Printf("[INFO] Created Role %s and RoleBinding %s", roleBindingName, roleBindingName)
+			} else {
+				log.Printf("[INFO] RoleBinding %s exists", roleBindingName)
+			}
+
+			// Check if the RoleBinding is assigned to the service account
+			var found bool
+			for _, subject := range roleBinding.Subjects {
+				if subject.Kind == "ServiceAccount" && subject.Name == serviceAccountName {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("[WARNING] Service account %s is not assigned to RoleBinding %s\n", serviceAccountName, roleBindingName)
+				// assign the service account to the rolebinding
+				roleBinding.Subjects = append(roleBinding.Subjects, rbacv1.Subject{
+					Kind:      "ServiceAccount",
+					Name:      serviceAccountName,
+					Namespace: kubernetesNamespace,
+				})
+
+				ctx := context.TODO()
+
+				_, err := clientset.RbacV1().RoleBindings(kubernetesNamespace).Update(ctx, roleBinding, metav1.UpdateOptions{})
+				if err != nil {
+					log.Printf("[ERROR] Failed to update RoleBinding %s: %s", roleBindingName, err)
+					if !strings.Contains(fmt.Sprintf("%s", err), "already exists") {
+						log.Printf("[INFO] rolebinding %s already exists", roleBindingName)
+					}
+				}
+			}
+	}
+
 	startupDelay := os.Getenv("SHUFFLE_ORBORUS_STARTUP_DELAY")
 	if len(startupDelay) > 0 {
 		log.Printf("[DEBUG] Setting startup delay to %#v", startupDelay)
@@ -1543,7 +1659,6 @@ func main() {
 	}
 
 	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
-
 		if isKubernetes != "true" {
 			checkSwarmService(ctx)
 			log.Printf("[DEBUG] Cleaning up containers from previous run")
