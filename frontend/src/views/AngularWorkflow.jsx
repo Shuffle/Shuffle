@@ -5650,16 +5650,15 @@ const releaseToConnectLabel = "Release to Connect"
 
   // Checks for errors in edges when they're added
   const onEdgeAdded = (event) => {
-    setLastSaved(false);
-    const edge = event.target.data();
-
-    //console.log("edge added: ", edge)
+    const edge = event.target.data()
+	//console.log("EDGE ADDED!: ", edge)
     if (edge.source === undefined && edge.target === undefined) {
+	  // console.log("Edge source and target is undefined")
       return
     }
 
     if (edge.readded === true) {
-      console.log("Readded edge - stopping")
+      // console.log("Readded edge - stopping")
 
       event.target.data("readded", false)
       return
@@ -5668,6 +5667,7 @@ const releaseToConnectLabel = "Release to Connect"
     const sourcenode = cy.getElementById(edge.source)
     const destinationnode = cy.getElementById(edge.target)
     if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
+		// console.log("Source or destination node is undefined")
     } else {
       //console.log("Edge added: Is it a trigger? If so, check if it already has a branch and remove it: ", sourcenode.data())
       if (sourcenode.data("type") === "TRIGGER") {
@@ -5680,17 +5680,17 @@ const releaseToConnectLabel = "Release to Connect"
 
             console.log("Node: ", targetedge)
             if (targetedge !== -1) {
-              event.target.remove()
 
               //console.log("Found branch already!")
               toast.error("Triggers can have exactly one target node")
+              event.target.remove()
               return
 
 
               // name: "Shuffle Workflow",
               // name: "User Input",
             } else {
-              console.log("Node doesn't already have one")
+              // console.log("Node doesn't already have one")
             }
           }, 50)
         }
@@ -5704,6 +5704,10 @@ const releaseToConnectLabel = "Release to Connect"
       }
     }
 
+	if (edge.decorator === true) {
+		// console.log("Doing nothing to branch because decorator")
+		return
+	}
 
     var targetnode = workflow.triggers.findIndex(
       (data) => data.id === edge.target
@@ -5721,7 +5725,7 @@ const releaseToConnectLabel = "Release to Connect"
     if (eventTarget.data("isButton") === true) {
       const parentNode = cy.getElementById(eventTarget.data("attachedTo"))
       event.target.remove()
-      console.log("Setting it to parentnode: ", parentNode.data())
+      // console.log("Setting it to parentnode: ", parentNode.data())
       if (parentNode !== undefined && parentNode !== null) {
         //event.target.data("target", eventTarget.data("attachedTo"))
 
@@ -5743,15 +5747,14 @@ const releaseToConnectLabel = "Release to Connect"
       }
     }
 
-    if (
-      eventTarget.data("isDescriptor") === true ||
-      eventTarget.data("type") === "COMMENT"
-    ) {
-      console.log("Removing because of descriptor or comment")
-      event.target.remove();
-      return;
+    if (eventTarget.data("isDescriptor") === true || eventTarget.data("type") === "COMMENT") {
+      // console.log("Removing because of descriptor or comment")
+      event.target.remove()
+      return
     }
 
+
+    setLastSaved(false)
     targetnode = -1;
 
     // Check if:
@@ -5759,38 +5762,51 @@ const releaseToConnectLabel = "Release to Connect"
     // dest == dest && source == source
     // backend: check all children? to stop recursion
     var found = false;
-    for (let branchkey in workflow.branches) {
-      if (
-        workflow.branches[branchkey].destination_id === edge.source &&
-        workflow.branches[branchkey].source_id === edge.target
-      ) {
-        toast("A branch in the opposite direction already exists");
-        event.target.remove();
-        found = true;
-        break;
-      } else if (
-        workflow.branches[branchkey].destination_id === edge.target &&
-        workflow.branches[branchkey].source_id === edge.source
-      ) {
-        //toast("That branch already exists");
-        event.target.remove();
+	const branches = cy.edges().jsons()
 
-        found = true;
-        break;
-      } else if (edge.target === workflow.start) {
-        targetnode = workflow.triggers.findIndex(
-          (data) => data.id === edge.source
-        );
+	const startNode = cy.nodes().jsons().find((node) => node.data.isStartNode === true)
+	var startnodeId = workflow.start
+	if (startNode !== undefined && startNode !== null) {
+		startnodeId = startNode.data.id
+	}
+
+    //for (let branchkey in workflow.branches) {
+    for (let branchkey in branches) {
+	  const branch = branches[branchkey].data
+
+      //if (workflow.branches[branchkey].destination_id === edge.source && workflow.branches[branchkey].source_id === edge.target) {
+	  if (branch.target === edge.source && branch.source === edge.target) {
+        toast("A branch in the opposite direction already exists")
+        event.target.remove()
+        found = true
+        break
+
+      //} else if (workflow.branches[branchkey].destination_id === edge.target && workflow.branches[branchkey].source_id === edge.source) {
+      } else if (branch.target === edge.target && branch.source === edge.source) {
+
+		if (branch.conditions === undefined) { 
+			// Edgehandles
+		} else {
+			// console.log("Removing because the same branch already exists")
+			event.target.remove()
+
+			found = true
+			break
+		}
+      } else if (edge.target === startnodeId) {
+        targetnode = workflow.triggers.findIndex((data) => data.id === edge.source)
+
         if (targetnode === -1) {
           if (targetnode.type !== "TRIGGER") {
-            toast("Can't make arrow to starting node");
-            event.target.remove();
-            break;
+            toast("Can't make arrow to starting node")
+            event.target.remove()
+            break
           }
 
           found = true;
         }
-      } else if (edge.source === workflow.branches[branchkey].source_id) {
+      //} else if (edge.source === workflow.branches[branchkey].source_id) {
+      } else if (edge.source === branch.source) {
         // FIXME: Verify multi-target for triggers
         // 1. Check if destination exists
         // 2. Check if source is a trigger
@@ -5834,7 +5850,6 @@ const releaseToConnectLabel = "Release to Connect"
       newdst !== null
     ) {
       const dstdata = RunAutocompleter(newdst.data());
-      //console.log("DST Autocompleter: ", dstdata);
     }
 
     var newbranch = {
