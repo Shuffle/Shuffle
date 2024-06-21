@@ -15712,7 +15712,6 @@ const releaseToConnectLabel = "Release to Connect"
     right: 0,
     left: isMobile ? 20 : leftBarSize + 20,
     top: isMobile ? 30 : appBarSize + 20,
-	pointerEvents: "none",
   }
 
 
@@ -15733,7 +15732,6 @@ const releaseToConnectLabel = "Release to Connect"
       <div style={topBarStyle}>
         <div style={{ 
 			margin: "0px 10px 0px 10px",
-			pointerEvents: "none",
 		}}>
           <Breadcrumbs
             aria-label="breadcrumb"
@@ -15758,7 +15756,6 @@ const releaseToConnectLabel = "Release to Connect"
             </Link>
             <h2 style={{ 
 				margin: 0,
-				pointerEvents: "none",
 			}}>{workflow.name}</h2>
           </Breadcrumbs>
 
