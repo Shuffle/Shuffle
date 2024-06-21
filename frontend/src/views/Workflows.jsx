@@ -1162,10 +1162,11 @@ const Workflows = (props) => {
       })
       .then((responseJson) => {
         if (responseJson !== undefined) {
+
 			var newarray = []
-			for (var key in responseJson) {
-				const wf = responseJson[key]
-				if (wf.public === true) {
+			for (var wfkey in responseJson) {
+				const wf = responseJson[wfkey]
+				if (wf.public === true || wf.hidden === true) {
 					continue
 				}
 
@@ -1178,9 +1179,9 @@ const Workflows = (props) => {
 			var parsedactionlist = [];
 			for (var key in newarray) {
 				const workflow = newarray[key]
-				if (workflow.status === "production") {
-					setProdFilter = true 
-				}
+				//if (workflow.status === "production") {
+				//	setProdFilter = true 
+				//}
 
 				for (var actionkey in newarray[key].actions) {
 					const action = newarray[key].actions[actionkey];

@@ -5294,7 +5294,59 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
         setTimeout(() => {
-			setSelectedTriggerIndex(trigger_index);
+			if (trigger_index !== -1) {
+				const trigger = workflow.triggers[trigger_index]
+				if (trigger !== undefined && trigger !== null) {
+
+					// Autofixer
+					if (trigger.trigger_type === "USERINPUT") {
+						const relevantparams = [
+							"alertinfo",
+							"options",
+							"type",
+							"email",
+							"sms",
+							"subflow",
+						]
+						var foundparams = 0
+						for (var paramkey in trigger.parameters) {
+							if (relevantparams.includes(trigger.parameters[paramkey].name)) {
+								foundparams++
+							}
+						}
+
+						if (foundparams < 6) {
+							trigger.parameters = [{
+								name: "alertinfo",
+            					value: "Do you want to continue the workflow? Start parameters: $exec",
+          					},{
+            					name: "options",
+            					value: "boolean",
+          					},
+						    {
+						      name: "type",
+						      value: "subflow",
+						    },
+						    {
+						      name: "email",
+						      value: "test@test.com",
+						    },
+						    {
+						      name: "sms",
+						      value: "0000000",
+						    },
+						    {
+						      name: "subflow",
+						      value: "",
+						    }]
+
+							workflow.triggers[trigger_index].parameters = trigger.parameters
+						}
+					}
+				}
+			}
+
+			setSelectedTriggerIndex(trigger_index)
 			setSelectedTrigger(data)
 			setSelectedActionEnvironment(data.env)
 		}, 25)
@@ -12382,7 +12434,7 @@ const releaseToConnectLabel = "Release to Connect"
 		setSubworkflow(e.target.value);
 
 		// Sets the startnode
-		if (e.target.value.id !== workflow.id) {
+		if (e.target.value.id !== workflow.id && e.target.value.id.length > 0 ) {
 			console.log("WORKFLOW: ", e.target.value);
 
 			const startnode = e.target.value.actions.find((action) => action.id === e.target.value.start);
@@ -14808,6 +14860,10 @@ const releaseToConnectLabel = "Release to Connect"
 	  })
   }
 
+  if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0 && selectedTriggerIndex >= 0 && selectedTriggerIndex < workflow.triggers.length) { 
+    console.log(workflow.triggers[selectedTriggerIndex])
+  }
+
   const UserinputSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "USERINPUT" ? null :
         <div style={appApiViewStyle}>
 		  <h3 style={{ marginBottom: "5px" }}>
@@ -14994,7 +15050,12 @@ const releaseToConnectLabel = "Release to Connect"
               	      const newname = (option.name.charAt(0).toUpperCase() + option.name.substring(1)).replaceAll("_", " ");
               	      return newname;
               	    }}
-              	    options={workflows}
+              	    options={
+						[{
+							"id": "",
+							"name": "No Workflow Selected",
+						}].concat(workflows)
+					}
               	    fullWidth
               	    style={{
               	      backgroundColor: theme.palette.inputColor,
@@ -15149,14 +15210,40 @@ const releaseToConnectLabel = "Release to Connect"
             
           </div>
 
-		  <div style={{marginTop: 20, }} />
+		  <div style={{marginTop: 0, }} />
           <b>Enabled Input-Questions</b>
 		  {workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
 			<div>
 				{workflow.input_questions.map((question, index) => {
+					var foundParamIndex = workflow.triggers[selectedTriggerIndex].parameters.findIndex((param) => param.name === "input_questions")
+
 					const selectionClick = () => {
-						console.log("Clicked input question: ", question)
-						console.log("PARAMS: ", workflow.triggers[selectedTriggerIndex].parameters)
+						if (foundParamIndex === -1) {
+							workflow.triggers[selectedTriggerIndex].parameters.push({
+								"name": "input_questions",
+								"value": [],
+							})
+
+							foundParamIndex = workflow.triggers[selectedTriggerIndex].parameters.length - 1
+						} else {
+							try {
+								workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value = JSON.parse(workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value)
+							} catch (e) {
+								console.log("Couldn't parse input questions: ", e)
+								workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value = []
+							}
+						}
+
+						if (workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value.includes(question.name)) {
+							workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value = workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value.filter((item) => item !== question.name)
+						} else {
+							workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value.push(question.name)
+						}
+
+						// Make it back to a string
+						workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value = JSON.stringify(workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value)
+						setWorkflow(workflow)
+						setUpdate(Math.random())
 					}
 
 					return (
@@ -15164,7 +15251,7 @@ const releaseToConnectLabel = "Release to Connect"
 							selectionClick()
 						}}>
 							<Checkbox
-								checked={false}
+								checked={foundParamIndex !== -1 ? workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value.includes(question.name) : false}
 							/>
 							<Typography variant="body2" style={{marginTop: 10, }}>
 								{question.name}
@@ -15176,6 +15263,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  : 
 			<div style={{cursor: "pointer", color: "#f85a3e", marginTop: 10, }} onClick={() => {
                 setEditWorkflowModalOpen(true)
+				toast.info("Expand and scroll down to add input-questions")
 			}}>
 			  <Typography variant="body2">No Input-Questions found. Click to add them!</Typography>
 			</div> 
