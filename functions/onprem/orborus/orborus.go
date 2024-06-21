@@ -2462,7 +2462,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
 			return err
 		}
-		_, err = updatePipelineState(pipelineId, "stop")
+		_, err = updatePipelineState(command, pipelineId, "stop")
 		if err != nil {
 			log.Printf("[ERROR] Failed to stop Pipeline: %s reason:%s ", pipelineId, err)
 			return err
@@ -2482,7 +2482,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
 			return err
 		}
-		_, err = updatePipelineState(pipelineId, "start")
+		_, err = updatePipelineState(command, pipelineId, "start")
 		if err != nil {
 			log.Printf("[ERROR] Failed to start Pipeline: %s reason:%s ", pipelineId, err)
 			return err
@@ -2689,7 +2689,11 @@ func createPipeline(command, identifier string) (string, error) {
 	// 	}
 	// }
 
-	command = "from file /var/lib/tenzir/sysmon_logs.ndjson read json | sigma /var/lib/tenzir/rule.yaml | to https://shuffler.io/api/v1/hooks/webhook_d295c43a-e322-4afc-9a59-af167ae7c190"
+	//command = "from file /var/lib/tenzir/sysmon_logs.ndjson read json | sigma /var/lib/tenzir/rule.yaml"
+	//command = "from file /var/lib/tenzir/sysmon_logs.ndjson read json | import"
+	//command = "export | to https://expert-acorn-v6vg4j4j5w7q2wg6g-5001.app.github.dev/api/v1/hooks/webhook_623eab3f-0af4-4d40-abb9-699d9a493411"
+   log.Printf("[HARI] this is the command %s", command)
+
 	requestBody := map[string]interface{}{
 		"definition": command,
 		"name":       identifier,
@@ -2697,7 +2701,7 @@ func createPipeline(command, identifier string) (string, error) {
 		"autostart": map[string]bool{
 			"created":   true,
 			"completed": false,
-			"failed":    true,
+			"failed":    false,
 		},
 		"autodelete": map[string]bool{
 			"completed": false,
@@ -2763,13 +2767,14 @@ func createPipeline(command, identifier string) (string, error) {
 	return id, nil
 }
 
-func updatePipelineState(pipelineId, action string) (string, error) {
+func updatePipelineState(command, pipelineId, action string) (string, error) {
 
 	url := fmt.Sprintf("%s/api/v0/pipeline/update", tenzirUrl)
 	forwardMethod := "POST"
 
 	requestBody := map[string]interface{}{
 		"id":     pipelineId,
+		"definition": command,
 		"action": action,
 		"autostart": map[string]bool{
 			"created":   true,

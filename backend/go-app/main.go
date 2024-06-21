@@ -2065,8 +2065,8 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
-// fix this
-	parsedBody, err := string(jsonList)
+
+	parsedBody, err := json.Marshal(jsonList)
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal jsonList: %s", err)
 		resp.WriteHeader(500)
@@ -2077,7 +2077,7 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 	newBody := shuffle.ExecutionStruct{
 		Start:             pipeline.StartNode,
 		ExecutionSource:   "pipeline",
-		ExecutionArgument: parsedBody,
+		ExecutionArgument: string(parsedBody),
 	}
 
 	workflow, err := shuffle.GetWorkflow(ctx, pipeline.WorkflowId)
@@ -2130,41 +2130,24 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 }
 
 func parseConcatenatedJSONLogs(logs string) ([]map[string]interface{}, error) {
-	var jsonList []map[string]interface{}
-	var currentObject []rune
-	var depth int
+    var jsonList []map[string]interface{}
+    decoder := json.NewDecoder(strings.NewReader(logs))
 
-	for _, char := range logs {
-		if char == '{' {
-			depth++
-		}
-		if char == '}' {
-			depth--
-		}
+    for decoder.More() {
+        var jsonObject map[string]interface{}
+        if err := decoder.Decode(&jsonObject); err != nil {
+            log.Printf("[WARNING] JSON decoding error: %s. Skipping this object.", err)
+            continue
+        }
+        jsonList = append(jsonList, jsonObject)
+    }
 
-		currentObject = append(currentObject, char)
+    if err := decoder.Decode(&struct{}{}); err != io.EOF {
+        return nil, fmt.Errorf("error after decoding all JSON objects: %v", err)
+    }
 
-		// When depth is 0, it means we have a complete JSON object but will this work ??
-		if depth == 0 && len(currentObject) > 0 {
-			var jsonObject map[string]interface{}
-			err := json.Unmarshal([]byte(string(currentObject)), &jsonObject)
-			if err != nil {
-				log.Printf("[WARNING] JSON unmarshal error: %s. Skipping this object.", err)
-			} else {
-				jsonList = append(jsonList, jsonObject)
-			}
-			currentObject = nil
-		}
-	}
-
-	currentObject = []rune(strings.TrimSpace(string(currentObject)))
-	if len(currentObject) > 0 {
-		log.Printf("[WARNING] Incomplete JSON object found: %s. Skipping this object.", string(currentObject))
-	}
-
-	return jsonList, nil
+    return jsonList, nil
 }
-
 
 func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 	data, err := json.Marshal(action)
