@@ -12501,9 +12501,9 @@ const releaseToConnectLabel = "Release to Connect"
       let mappingWithName = {}
       let listWithValues = workflow.triggers[selectedTriggerIndex].parameters[5]?.value.split(";").filter(e => e).map(e => e.split("="))
       console.log("LIST WITH VALUES: ", listWithValues)
-      if (listWithValues === undefined || listWithValues === null || listWithValues.length === 0) {
-        return "no-overrides";
-      }
+      // if (listWithValues === undefined || listWithValues === null || listWithValues.length === 0) {
+      //   return "no-overrides";
+      // }
 
       for (let i = 0; i < listWithValues.length; i++) {
         mappingWithName[listWithValues[i][0]] = listWithValues[i][1]
@@ -18389,7 +18389,7 @@ const releaseToConnectLabel = "Release to Connect"
                           </div>
 						
 						  {foundnotifications > 0 ?
-							<Tooltip title={"This workflow created " + foundnotifications + " notification(s)"} placement="top">
+							<Tooltip title={"This workflow created " + foundnotifications + " notification(s). Click to explore them."} placement="top">
 							  <ErrorOutlineIcon 
 							  	style={{color: "rgba(255,255,255,0.4)", marginTop: 10, marginRight: 10, }} 
 							  	onClick={(e) => {
@@ -21401,7 +21401,11 @@ const releaseToConnectLabel = "Release to Connect"
 						//cy.remove('*')
   						setElements([])
 					}
-				
+
+          // // Remove all edges
+					// 	cy.edges().remove()
+					// 	cy.nodes().remove()
+
 					// Remove all cy nodes
 					setTimeout(() => {
   						setupGraph(newrevision) 
