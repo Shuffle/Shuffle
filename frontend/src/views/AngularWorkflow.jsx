@@ -3817,9 +3817,15 @@ const releaseToConnectLabel = "Release to Connect"
     if (connected.length > 0 && connected !== undefined) {
 		for (let connectkey in connected) {
 			const edge = connected[connectkey]
-			//console.log("EDGE:", edge)
-
-			//const edge = edgeBase.json()
+			if (edge.data.decorator && edge.data.label === releaseToConnectLabel) {
+				// Transform to normal edge
+				const currentedge = cy.getElementById(edge.data.id)
+				if (currentedge !== undefined && currentedge !== null) {
+					currentedge.data("decorator", false)
+					currentedge.data("label", "")
+				}
+				continue
+			}
 
 			const sourcenode = cy.getElementById(edge.data.source)
 			const destinationnode = cy.getElementById(edge.data.target)
