@@ -685,8 +685,8 @@ const EditWorkflow = (props) => {
 								<Typography variant="h6" style={{marginTop: 50, }}>
 									Input fields
 								</Typography>
-								<Typography variant="body1" color="textSecondary" style={{marginBottom: 20, }}>
-									Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/workflows/${workflow.id}/run`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>workflow run page</a>.
+								<Typography variant="body2" color="textSecondary" style={{marginBottom: 20, }}>
+									Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/workflows/${workflow.id}/run`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>workflow run page</a>. If chosen in the User Input node, these will be required fields.
 								</Typography>
 
 

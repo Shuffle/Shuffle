@@ -1073,22 +1073,20 @@ const releaseToConnectLabel = "Release to Connect"
 
 								// User Input & Subflow nodes
                 if (param.name === "workflow" || param.name === "subflow") {
-									const paramIndex = param.name === "workflow" ? 0 : 5
-									console.log("Current vs new: ", workflow.triggers[trigger_index].parameters[paramIndex].value, subworkflow.id)
-
-									if (workflow.triggers[trigger_index].parameters[paramIndex].value !== subworkflow.id) {
-										if (param.value === workflow.id) {
-											setSubworkflow(workflow);
-											baseSubflow = workflow
-										} else {
-											const sub = responseJson.find((data) => data.id === param.value);
-											if (sub !== undefined && subworkflow.id !== sub.id) {
-												baseSubflow = sub
-												setSubworkflow(sub);
-											}
-										}
-									}
-                }
+					const paramIndex = param.name === "workflow" ? 0 : 5
+					if (workflow.triggers[trigger_index].parameters[paramIndex].value !== subworkflow.id) {
+						if (param.value === workflow.id) {
+							setSubworkflow(workflow);
+							baseSubflow = workflow
+						} else {
+							const sub = responseJson.find((data) => data.id === param.value);
+							if (sub !== undefined && subworkflow.id !== sub.id) {
+								baseSubflow = sub
+								setSubworkflow(sub);
+							}
+						}
+					}
+				}
 
                 if (param.name === "startnode" && param.value !== undefined && param.value !== null) {
                 
@@ -3255,7 +3253,6 @@ const releaseToConnectLabel = "Release to Connect"
 
   const getChildWorkflows = (parentWorkflowId) => {
 	if (originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0) { 
-		console.log("No suborg distribution")
 		return
 	}
 
@@ -14866,10 +14863,6 @@ const releaseToConnectLabel = "Release to Connect"
 	  })
   }
 
-  if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0 && selectedTriggerIndex >= 0 && selectedTriggerIndex < workflow.triggers.length) { 
-    console.log(workflow.triggers[selectedTriggerIndex])
-  }
-
   const UserinputSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "USERINPUT" ? null :
         <div style={appApiViewStyle}>
 		  <h3 style={{ marginBottom: "5px" }}>
@@ -15217,7 +15210,7 @@ const releaseToConnectLabel = "Release to Connect"
           </div>
 
 		  <div style={{marginTop: 0, }} />
-          <b>Enabled Input-Questions</b>
+          <b>Required Input-Questions</b>
 		  {workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
 			<div>
 				{workflow.input_questions.map((question, index) => {
@@ -17156,10 +17149,12 @@ const releaseToConnectLabel = "Release to Connect"
         //defaultReturn = <UserinputSidebar />
         return null;
       } else {
+		/*
         console.log(
           "Unable to handle invalid trigger type " +
           selectedTrigger.trigger_type
         );
+		*/
         return null;
       }
     } else if (Object.getOwnPropertyNames(selectedEdge).length > 0) {
