@@ -2149,6 +2149,46 @@ func parseConcatenatedJSONLogs(logs string) ([]map[string]interface{}, error) {
     return jsonList, nil
 }
 
+func handleTenzirHealthUpdate(resp http.ResponseWriter, request *http.Request) {
+	if request.Method != "POST" {
+		request.Method = "POST"
+	}
+
+	type HealthUpdate struct {
+		Status string `json:"status"`
+	}
+
+	var healthUpdate HealthUpdate
+	err := json.NewDecoder(request.Body).Decode(&healthUpdate)
+	if err != nil {
+		resp.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(resp, "Failed to decode JSON: %v", err)
+		return
+	}
+	ctx := context.Background()
+	status := healthUpdate.Status
+
+	result, err := shuffle.GetDisabledRules(ctx)
+	if (err != nil && err.Error() != "rules doesn't exist") || err == nil {
+		result.IsTenzirActive = status
+		result.LastActive = time.Now().Unix()
+
+		err = shuffle.StoreDisabledRules(ctx, *result)
+		if err != nil {
+			resp.WriteHeader(500)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+		return
+	}
+	resp.WriteHeader(500)
+	resp.Write([]byte(`{"success": false}`))
+	return
+}
+
 func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 	data, err := json.Marshal(action)
 	if err != nil {
@@ -5091,6 +5131,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/triggers/pipeline", shuffle.HandleNewPipelineRegister).Methods("POST", "OPTIONS")
     //r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/pipelines/{key}", handlePipelineCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/pipelines/tenzir_node_health", handleTenzirHealthUpdate).Methods("POST","OPTIONS")
 	r.HandleFunc("/api/v1/triggers", shuffle.HandleGetTriggers).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 

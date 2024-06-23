@@ -1806,6 +1806,12 @@ func main() {
 		log.Printf("[WARNING] Defaulting to environment name %s. Set environment variable ENVIRONMENT_NAME to change. This should be the same as in the frontend action.", environment)
 	}
 
+	if tenzirUrl == "" {
+		tenzirUrl = "http://localhost:5160"
+		log.Printf("[WARNING] SHUFFLE_TENZIR_URL not set, falling back to default URL: %s",tenzirUrl)
+	}
+	
+
 	// FIXME - during init, BUILD and/or LOAD worker and app_sdk
 	// Build/load app_sdk so it can be loaded as 127.0.0.1:5000/walkoff_app_sdk
 	log.Printf("[INFO] Setting up Docker environment. Downloading worker and App SDK!")
@@ -2254,7 +2260,7 @@ func main() {
 			}
 
 		}
-
+		_ = sendTenzirHealthStatus()
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}
 }
@@ -2413,11 +2419,6 @@ func main() {
 // Read from Cache and send it to a webhook
 // docker run tenzir/tenzir:latest 'from http://192.168.86.44:5002/api/v1/orgs/7e9b9007-5df2-4b47-bca5-c4d267ef2943/cache/CIDR%20ranges?type=text&authorization=cec9d01f-09b2-4419-8a0a-76c6046e3fef read lines | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines'
 func handlePipeline(incRequest shuffle.ExecutionRequest) error {
-
-	if tenzirUrl == "" {
-		tenzirUrl = "http://localhost:5160"
-		log.Printf("[WARNING] SHUFFLE_TENZIR_URL not set, falling back to default URL: %s", tenzirUrl)
-	}
 
 	err := deployTenzirNode()
 	if err != nil {
@@ -3072,53 +3073,52 @@ func removePath(containerName, path string) error {
 	return nil
 }
 
-// func savePipelineData(pipelineId, identifier, status string) error {
+func sendTenzirHealthStatus() error {
+    var status string
+	url :=  fmt.Sprintf("%s/api/v1/triggers/pipeline/tenzir_node_health", baseUrl)
+	err := checkTenzirNode()
+	if err != nil {
+		return err
+	} else {
+		status = "active"
+	}
 
-// 	url :=  fmt.Sprintf("%s/api/v1/triggers/pipeline/save", baseUrl)
-// 	identifierWithoutPrefix := strings.TrimPrefix(identifier, "shuffle-")
+	forwardMethod := "POST"
+	payload := map[string]interface{}{
+		"status": status,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal payload: %s", err)
+		return err
+	}
+	forwardData := bytes.NewBuffer(payloadBytes)
+	req, err := http.NewRequest(
+		forwardMethod,
+		url,
+		forwardData,
+	)
+	if err != nil {
+		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
 
-// 	forwardMethod := "PUT"
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Failed to send HTTP request: %s", err)
+		return err
+	}
+	defer resp.Body.Close()
 
-// 	payload := map[string]interface{}{
-// 		"pipeline_id": pipelineId,
-// 		"trigger_id":  identifierWithoutPrefix,
-// 		"status":      status,
-// 	}
+	if resp.StatusCode != 200 {
+		log.Printf("[ERROR] Received non-successful HTTP status code: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
+	}
 
-// 	payloadBytes, err := json.Marshal(payload)
-// 	if err != nil {
-// 		log.Printf("[ERROR] Failed to marshal payload: %s", err)
-// 		return err
-// 	}
-
-// 	forwardData := bytes.NewBuffer(payloadBytes)
-
-// 	req, err := http.NewRequest(
-// 		forwardMethod,
-// 		url,
-// 		forwardData,
-// 	)
-// 	if err != nil {
-// 		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
-// 		return err
-// 	}
-// 	req.Header.Set("Content-Type", "application/json")
-
-// 	client := &http.Client{Timeout: 10 * time.Second}
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		log.Printf("[ERROR] Failed to send HTTP request: %s", err)
-// 		return err
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode != 200 {
-// 		log.Printf("[ERROR] Received non-successful HTTP status code: %d", resp.StatusCode)
-// 		return fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
-// 	}
-
-// 	return nil
-// }
+	return nil
+}
 
 // Is this ok to do with Docker? idk :)
 func getRunningWorkers(ctx context.Context, workerTimeout int) int {
