@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import Detection from "./Detection";
 import EditComponent from "./EditRules";
 
-const getSigmaInfo = (globalUrl, setRuleInfo, setFolderDisabled) => {
+const getSigmaInfo = (globalUrl, setRuleInfo, setFolderDisabled, setIsTenzirActive) => {
   const url = globalUrl + "/api/v1/files/detection/sigma_rules";
 
   fetch(url, {
@@ -21,6 +21,8 @@ const getSigmaInfo = (globalUrl, setRuleInfo, setFolderDisabled) => {
         } else {
           setRuleInfo(responseJson.sigma_info);
           setFolderDisabled(responseJson.folder_disabled);
+          setIsTenzirActive(responseJson.is_tenzir_active);
+
         }
       })
     )
@@ -35,11 +37,12 @@ const DetectionDashBoard = (props) => {
   const [ruleInfo, setRuleInfo] = useState([]);
   const [selectedRule, setSelectedRule] = useState(null);
   const [fileData, setFileData] = React.useState("");
+  const [isTenzirActive, setIsTenzirActive] = React.useState(false);
  
   const [folderDisabled, setFolderDisabled] = useState(false);
 
   useEffect(() => {
-    getSigmaInfo(globalUrl, setRuleInfo, setFolderDisabled);
+    getSigmaInfo(globalUrl, setRuleInfo, setFolderDisabled, setIsTenzirActive);
   }, [folderDisabled]);
 
   useEffect(() => {
@@ -103,7 +106,7 @@ const DetectionDashBoard = (props) => {
           onSave={handleSave}
         />
       ) : null} */}
-      <Detection globalUrl={globalUrl} ruleInfo={ruleInfo} folderDisabled={folderDisabled} setFolderDisabled={setFolderDisabled} openEditBar={openEditBar} />
+      <Detection globalUrl={globalUrl} ruleInfo={ruleInfo} folderDisabled={folderDisabled} setFolderDisabled={setFolderDisabled} openEditBar={openEditBar} isTenzirActive={isTenzirActive} />
     </Container>
   );  
 };
