@@ -11,14 +11,13 @@ import { toast } from "react-toastify";
 import RuleCard from "./RuleCard";
 import { styled } from "@mui/system";
 
-const ConnectedButton = styled(Button)({
-  backgroundColor: "red",
+const ConnectedButton = styled(Button)(({ theme, isConnected }) => ({
+  backgroundColor: isConnected ? "green" : "red",
   color: "white",
-});
+}));
 
-const handleDirectoryChange = ( folderDisabled, setFolderDisabled, globalUrl) => {
-
-  const action = folderDisabled ? "enable_folder" : "disable_folder"
+const handleDirectoryChange = (folderDisabled, setFolderDisabled, globalUrl) => {
+  const action = folderDisabled ? "enable_folder" : "disable_folder";
   const url = `${globalUrl}/api/v1/files/detection/${action}`;
 
   fetch(url, {
@@ -31,8 +30,8 @@ const handleDirectoryChange = ( folderDisabled, setFolderDisabled, globalUrl) =>
     .then((response) =>
       response.json().then((responseJson) => {
         if (responseJson["success"] === true) {
-             if (action === "enable_folder") setFolderDisabled(false);
-             else setFolderDisabled(true); 
+          if (action === "enable_folder") setFolderDisabled(false);
+          else setFolderDisabled(true);
         } else {
           //toast(`failed to disable rule`);
         }
@@ -42,13 +41,19 @@ const handleDirectoryChange = ( folderDisabled, setFolderDisabled, globalUrl) =>
       console.log(`Error in ${action} the rule: `, error);
       toast(`An error occurred while ${action} the rule`);
     });
+};
 
-}
-
-const Detection = ({ globalUrl, ruleInfo, folderDisabled, setFolderDisabled, openEditBar }) => {
+const Detection = ({
+  globalUrl,
+  ruleInfo,
+  folderDisabled,
+  setFolderDisabled,
+  openEditBar,
+  isTenzirActive,
+}) => {
   return (
     <Container sx={{ mt: 4 }}>
-      <Box sx={{ border: "1px solid #ccc", borderRadius: 2, p: 3}}>
+      <Box sx={{ border: "1px solid #ccc", borderRadius: 2, p: 3 }}>
         <Box
           sx={{
             display: "flex",
@@ -60,8 +65,11 @@ const Detection = ({ globalUrl, ruleInfo, folderDisabled, setFolderDisabled, ope
           <Typography variant="h6" component="div">
             Sigma Detection Rules
           </Typography>
-          <ConnectedButton variant="contained">
-            Not Connected to SIEM
+          <ConnectedButton
+            variant="contained"
+            isConnected={isTenzirActive}
+          >
+            {isTenzirActive ? "Connected to SIEM" : "Not Connected to SIEM"}
           </ConnectedButton>
         </Box>
         <Box
@@ -77,17 +85,19 @@ const Detection = ({ globalUrl, ruleInfo, folderDisabled, setFolderDisabled, ope
             <Typography variant="body2" sx={{ mr: 1 }}>
               Global disable/enable
             </Typography>
-              <Switch
-                checked={!folderDisabled}
-                onChange={() => handleDirectoryChange(folderDisabled, setFolderDisabled, globalUrl)}
-              />
+            <Switch
+              checked={!folderDisabled}
+              onChange={() =>
+                handleDirectoryChange(folderDisabled, setFolderDisabled, globalUrl)
+              }
+            />
           </Box>
         </Box>
         <Box
           sx={{
             height: "500px",
-            width: "100%",  
-            overflowY: "auto",  
+            width: "100%",
+            overflowY: "auto",
             border: "1px solid #ddd",
             p: 1,
           }}
