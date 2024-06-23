@@ -5131,7 +5131,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/triggers/pipeline", shuffle.HandleNewPipelineRegister).Methods("POST", "OPTIONS")
     //r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/pipelines/{key}", handlePipelineCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
-	r.HandleFunc("/api/v1/pipelines/tenzir_node_health", handleTenzirHealthUpdate).Methods("POST","OPTIONS")
 	r.HandleFunc("/api/v1/triggers", shuffle.HandleGetTriggers).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 
@@ -5200,6 +5199,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/detection/sigma_rules", shuffle.HandleGetSigmaRules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/detection/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/files/detection/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/detection/siem/node_health", handleTenzirHealthUpdate).Methods("POST","OPTIONS")
 
 	// Introduced in 0.9.21 to handle notifications for e.g. failed Workflow
 	r.HandleFunc("/api/v1/notifications", shuffle.HandleCreateNotification).Methods("POST", "OPTIONS")

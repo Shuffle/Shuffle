@@ -1913,6 +1913,7 @@ func main() {
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
 	for {
+		_ = sendTenzirHealthStatus()
 		if req.Method == "POST" {
 			// Should find data to send (memory etc.)
 
@@ -2260,7 +2261,6 @@ func main() {
 			}
 
 		}
-		_ = sendTenzirHealthStatus()
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}
 }
@@ -2580,9 +2580,9 @@ func deployTenzirNode() error {
 }
 
 func checkTenzirNode() error {
-	retries := 20
-	retryInterval := 3 * time.Second
-	url := fmt.Sprintf("%s/api/v0/ping", tenzirUrl)
+    retries := 5
+    retryInterval := 3 * time.Second
+	url := fmt.Sprintf("%s/api/v0/ping",tenzirUrl)
 	forwardMethod := "POST"
 
 	client := http.Client{}
@@ -3075,7 +3075,7 @@ func removePath(containerName, path string) error {
 
 func sendTenzirHealthStatus() error {
     var status string
-	url :=  fmt.Sprintf("%s/api/v1/triggers/pipeline/tenzir_node_health", baseUrl)
+	url :=  fmt.Sprintf("%s/api/v1/detection/siem/node_health", baseUrl)
 	err := checkTenzirNode()
 	if err != nil {
 		return err
@@ -3116,7 +3116,7 @@ func sendTenzirHealthStatus() error {
 		log.Printf("[ERROR] Received non-successful HTTP status code: %d", resp.StatusCode)
 		return fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
-
+   log.Printf("this is send successfully")
 	return nil
 }
 
