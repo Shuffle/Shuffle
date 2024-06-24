@@ -2094,12 +2094,14 @@ const releaseToConnectLabel = "Release to Connect"
 			}
 
             setWorkflow(workflow);
+            setSelectedRevision(workflow);
           }
 
           setSavingState(1);
           setTimeout(() => {
             setSavingState(0);
           }, 1500);
+          getRevisionHistory(useworkflow.id)
         }
       })
       .catch((error) => {
@@ -17027,6 +17029,10 @@ const releaseToConnectLabel = "Release to Connect"
                 style={{ height: 50, marginLeft: 10 }}
                 variant={"outlined"}
                 onClick={() => {
+                  if(!lastSaved){
+                    toast("Save the workflow first")
+                    return
+                  }
                   setShowWorkflowRevisions(true)
                   setSelectedRevision(workflow)
                   //setOriginalWorkflow(workflow)
@@ -21335,14 +21341,12 @@ const releaseToConnectLabel = "Release to Connect"
 	  }*/
 
   	const RevisionBox = (props) => {
-		  const { revision, } = props
-
-		  if (revision === undefined || revision === null || revision === {}) {
+		  const { revision, } = props 
+		  if (revision === undefined || revision === null) {
 			  return null
 		  }
 
 		  var newrevision = JSON.parse(JSON.stringify(revision))
-
 		  // Make unix timestamp into ISO timestamp in the format July 27th, 3:05 AM
 		  // Format: July 27th, 3:05 AM	
 		  //console.log("Edited time: ", revision.edited)
@@ -21402,9 +21406,9 @@ const releaseToConnectLabel = "Release to Connect"
   						setElements([])
 					}
 
-          // // Remove all edges
-					// 	cy.edges().remove()
-					// 	cy.nodes().remove()
+          // Remove all edges
+						cy.edges().remove()
+						cy.nodes().remove()
 
 					// Remove all cy nodes
 					setTimeout(() => {
@@ -21456,6 +21460,7 @@ const releaseToConnectLabel = "Release to Connect"
 					<span style={{flex: 5, }}>
 						<Typography variant="body1">
 							{translatedDate}
+               {/* {newrevision.edited.toString().slice(6,10)} | {newrevision.revision_id.slice(0,5)} */}
 						</Typography>
 					</span>
 					<span style={{flex: 2, }}>
@@ -21538,39 +21543,65 @@ const releaseToConnectLabel = "Release to Connect"
 			</Paper>
 		  )
 	  }
-
-	  const drawerData = originalWorkflow !== undefined && originalWorkflow !== null && originalWorkflow !== {} ?
-	  	<div style={{padding: "0px 25px 100px 25px", }}>
-			<Typography variant="h6" style={{marginTop: 10, marginBottom: 15, }}>
+    //! Logs
+    console.log("Selected Revision", selectedRevision)
+    console.log("Workflow state", workflow)
+    console.log("All revision", allRevisions)
+	  const drawerData = originalWorkflow !== undefined && originalWorkflow !== null ?
+      <div style={{ height: "100%"}}>
+      <Typography variant="h5" style={{ paddingLeft: 25, paddingTop:25, backgroundColor: theme.palette.surfaceColor,  height: "8%" }}>
 				Version History	(Beta)
 			</Typography>
+      <div style={{height: "92%" }}>
+          <div style={{paddingLeft: "25px", paddingRight: "25px", paddingTop: "10px"}}>
+          <div style={{marginBottom: "20px", }}>
+          <Typography variant="h6" style={{marginTop: 10, marginBottom: 5, }}>
+              Current Version
+            </Typography>
+            <RevisionBox 
+              revision={selectedRevision}
+            />
+          </div>
 
-			<RevisionBox 
-				revision={originalWorkflow}
-			/>
+          <Divider
+                style={{
+                    marginBottom: 15,
+                    height: 1,
+                    width: "100%",
+                    backgroundColor: "rgb(91, 96, 100)",
+                  }}
+            />
+          </div>
 
-			{allRevisions.length > 0 ?
-				allRevisions.map((revision, index) => {
-					if (revision.edited === originalWorkflow.edited) {
-						return null
-					}
 
-					return (
-						<RevisionBox 
-							revision={revision} 
-							key={index} 
-							index={index} 
-						/>
-					)
-				})
-			: 
-				<div style={{padding: 5, }}>
-					<Typography variant="body2">
-						No other revisions found. Save your workflow with changes to create a revision.
-					</Typography>
-				</div>
-			}
-		</div>
+          {allRevisions.length > 0 ?
+            <div style={{overflow: "auto", width: "100%" , height: "75%", paddingLeft: "25px", paddingRight: "20px", paddingTop: "10px", paddingBottom: "10px"}}>
+              {
+                 allRevisions.map((revision, index) => {
+                  if(revision.edited === selectedRevision.edited){
+                    return null
+                  }
+
+                  return (
+                    <RevisionBox 
+                      revision={revision} 
+                      key={index} 
+                      index={index} 
+                    />
+                  )
+                })
+              }
+            </div>
+
+          : 
+            <div style={{padding: 5, }}>
+              <Typography variant="body2">
+                No other revisions found. Save your workflow with changes to create a revision.
+              </Typography>
+            </div>
+          }
+		  </div>
+    </div>
 		: null
 
 	const workflowRevisions = !showWorkflowRevisions ? null : 
@@ -21581,7 +21612,7 @@ const releaseToConnectLabel = "Release to Connect"
 			onClose={() => {
 			  //setShowWorkflowRevisions(false)
 			}}
-			style={{ resize: "both", overflow: "auto", zIndex: 10005 }}
+			style={{ resize: "both", overflow: "hidden", zIndex: 10005 }}
 			hideBackdrop={true}
 			variant="persistent"
 			BackdropProps={{
@@ -21592,7 +21623,7 @@ const releaseToConnectLabel = "Release to Connect"
 			PaperProps={{
 				style: {
 				  resize: "both",
-				  overflow: "auto",
+          overflow: "hidden",
 				  minWidth: isMobile ? "100%" : 360,
 				  maxWidth: isMobile ? "100%" : 360,
 				  backgroundColor: theme.palette.platformColor,
@@ -21600,7 +21631,6 @@ const releaseToConnectLabel = "Release to Connect"
 				  fontSize: 18,
 				  zIndex: 15001,
 				  borderRight: theme.palette.defaultBorder,
-				  paddingTop: 15, 
 				},
 			}}
 		  >
