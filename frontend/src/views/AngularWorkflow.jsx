@@ -534,6 +534,7 @@ const AngularWorkflow = (defaultprops) => {
   const [listCache, setListCache] = React.useState([]);
   const [selectedOption, setSelectedOption] = React.useState("");
   const [tenzirConfigModalOpen, setTenzirConfigModalOpen] = React.useState(false);
+  const [rules, setRules] = React.useState([]);
 
   const [distributedFromParent, setDistributedFromParent] = React.useState("")
   const [suborgWorkflows, setSuborgWorkflows] = React.useState([])
@@ -991,6 +992,12 @@ const releaseToConnectLabel = "Release to Connect"
       }
     }
   }, [authenticationModalOpen])
+
+  useEffect(() =>{
+    if (tenzirConfigModalOpen === false) return;
+
+    getSigmaInfo();
+  },[tenzirConfigModalOpen])
 
 	const listOrgCache = (orgId) => {
 		fetch(`${globalUrl}/api/v1/orgs/${orgId}/list_cache`, {
@@ -8305,6 +8312,32 @@ const releaseToConnectLabel = "Release to Connect"
       .catch((error) => {
         //toast(error.toString());
         console.log("Get schedule error: ", error.toString());
+      });
+  };
+
+  const getSigmaInfo = () => {
+    const url = globalUrl + "/api/v1/files/detection/sigma_rules";
+  
+    fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) =>
+        response.json().then((responseJson) => {
+          if (responseJson["success"] === false) {
+            toast("Failed to get sigma rules");
+          } else {
+            setRules(responseJson.sigma_info);
+  
+          }
+        })
+      )
+      .catch((error) => {
+        console.log("Error in getting sigma files: ", error);
+        toast("An error occurred while fetching sigma rules");
       });
   };
 
@@ -21160,95 +21193,116 @@ const releaseToConnectLabel = "Release to Connect"
     </Dialog>
   ) : null;
 
-  const tenzirConfigModal = tenzirConfigModalOpen ? (
-        <Dialog
-          PaperComponent={PaperComponent}
-          hideBackdrop={true}
-          disableEnforceFocus={true}
-          disableBackdropClick={true}
-          style={{ pointerEvents: "none" }}
-          open={tenzirConfigModalOpen}
-          PaperProps={{
-            style: {
-              pointerEvents: "auto",
-              color: "white",
-              minWidth: 600,
-              minHeight: 200,
-              maxHeight: 200,
-              padding: 15,
-              overflow: "hidden",
-              zIndex: 10012,
-              border: theme.palette.defaultBorder,
-            },
+  const tenzirConfigModal = () => {
+    if (!tenzirConfigModalOpen) return null;
+
+    const [loading, setLoading] = useState(true);
+    const [selectedRules, setSelectedRules] = useState([]);
+
+    const handleRuleChange = (event) => {
+      setSelectedRules(event.target.value);
+    };
+
+    const handleSelectAll = () => {
+      const allEnabledRules = rules.filter(rule => rule.is_enabled).map(rule => rule.file_id);
+      setSelectedRules(allEnabledRules);
+    };
+
+    const handleClose = () => {
+      setTenzirConfigModalOpen(false);
+    };
+
+    const handleSubmit = () => {
+      const selectedRuleFiles = rules
+        .filter(rule => selectedRules.includes(rule.file_id));
+    
+      console.log('Selected Rule Files:', selectedRuleFiles);
+      console.log('Selected Rule File Names:', selectedRuleFiles.map(rule => rule.file_id));
+      
+      setTenzirConfigModalOpen(false);
+    };
+    
+
+    const enabledSigmaInfo = rules.filter(rule => rule.is_enabled);
+
+    <Dialog
+      PaperComponent={PaperComponent}
+      hideBackdrop={true}
+      disableEnforceFocus={true}
+      disableBackdropClick={true}
+      style={{ pointerEvents: "none" }}
+      open={tenzirConfigModalOpen}
+      PaperProps={{
+        style: {
+          pointerEvents: "auto",
+          color: "white",
+          minWidth: 600,
+          minHeight: 200,
+          maxHeight: 200,
+          padding: 15,
+          overflow: "hidden",
+          zIndex: 10012,
+          border: theme.palette.defaultBorder,
+        },
+      }}
+    >
+      {loading ? (
+        <CircularProgress />
+      ) : (
+        <div
+          style={{
+            flex: 2,
+            padding: 0,
+            minHeight: isMobile ? "90%" : 700,
+            maxHeight: isMobile ? "90%" : 700,
+            overflowY: "auto",
+            overflowX: isMobile ? "auto" : "hidden",
           }}
         >
-          <div
-            style={{
-              flex: 2,
-              padding: 0,
-              minHeight: isMobile ? "90%" : 700,
-              maxHeight: isMobile ? "90%" : 700,
-              overflowY: "auto",
-              overflowX: isMobile ? "auto" : "hidden",
-            }}
-          > 
-            <DialogContent>
-				   
-              <b>command</b>
-              <TextField
-                id="sigma"
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
-                }}
-                InputProps={{
-                  style: {},
-                }}
-                fullWidth
-                color="primary"
-                placeholder={"command"}
-                defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "command")?.value) || ''}
-              />
+          <DialogContent>
+            {selectedOption === 'sigmaRule' && (
+              <>
+                <FormControl fullWidth>
+                  <InputLabel>Select Sigma Rules</InputLabel>
+                  <Select
+                    multiple
+                    value={selectedRules}
+                    onChange={handleRuleChange}
+                    renderValue={(selected) => selected.join(', ')}
+                  >
+                    {enabledSigmaInfo.map(rule => (
+                      <MenuItem key={rule.file_id} value={rule.file_id}>
+                        <Checkbox checked={selectedRules.indexOf(rule.file_id) > -1} />
+                        <ListItemText primary={rule.title} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Button onClick={handleSelectAll}>Select All</Button>
+              </>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button style={{ borderRadius: "0px" }} onClick={handleClose} color="primary">Cancel</Button>
+            <Button style={{ borderRadius: "0px" }} onClick={handleSubmit} color="primary">Submit</Button>
+          </DialogActions>
+        </div>
+      )}
 
-            </DialogContent>
-            <DialogActions>
-              <Button
-                style={{ borderRadius: "0px" }}
-                onClick={() => {
-                  setTenzirConfigModalOpen(false);
-                }}
-                color="primary"
-              >
-                Cancel
-              </Button>
-              <Button
-                style={{ borderRadius: "0px" }}
-                onClick={() => {
-                  handleCommandSubmit(selectedTrigger);
-                }}
-                color="primary"
-              >
-                Submit
-              </Button>
-            </DialogActions>
-          </div>
-
-          <IconButton
-            style={{
-              zIndex: 5000,
-              position: "absolute",
-              top: 14,
-              right: 18,
-              color: "grey",
-            }}
-            onClick={() => {
-              setTenzirConfigModalOpen(false);
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Dialog>
-      ) : null;
+      <IconButton
+        style={{
+          zIndex: 5000,
+          position: "absolute",
+          top: 14,
+          right: 18,
+          color: "grey",
+        }}
+        onClick={handleClose}
+      >
+        <CloseIcon />
+      </IconButton>
+    </Dialog>
+}
 
 
 
