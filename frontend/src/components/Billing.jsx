@@ -1775,7 +1775,7 @@ const Billing = (props) => {
 					</div>
 				</div>
 				<Button
-					variant="contained"
+					variant="outlined"
 					color="primary"
 					style={{ marginTop: 15, textTransform: 'none' }}
 					onClick={addAlertThreshold}
@@ -1783,7 +1783,7 @@ const Billing = (props) => {
 					Add Threshold
 				</Button>
 				<Button
-					variant="contained"
+					variant="outlined"
 					color="primary"
 					style={{ marginTop: 15, textTransform: 'none', marginLeft: 20 }}
 					onClick={() => { HandleEditOrgForAlertThreshold(selectedOrganization.id) }}
