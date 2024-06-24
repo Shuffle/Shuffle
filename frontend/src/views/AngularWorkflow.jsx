@@ -432,7 +432,7 @@ const AngularWorkflow = (defaultprops) => {
   const [history, setHistory] = React.useState([]);
   const [historyIndex, setHistoryIndex] = React.useState(history.length);
   const [variableInfo, setVariableInfo] = React.useState({})
-
+  const [selectedVersion, setSelectedVersion] = React.useState(null)
   const [appAuthentication, setAppAuthentication] = React.useState(undefined);
   const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
   const [aiQueryModalOpen, setAiQueryModalOpen] = React.useState(false)
@@ -472,7 +472,6 @@ const AngularWorkflow = (defaultprops) => {
   const [conditionValue, setConditionValue] = React.useState({});
   const [dragging, setDragging] = React.useState(false);
   const [showWorkflowRevisions, setShowWorkflowRevisions] = React.useState(false);
-  const [selectedRevision, setSelectedRevision] = useState({})
   const [dragPosition, setDragPosition] = React.useState({
     x: 0,
     y: 0,
@@ -2094,7 +2093,6 @@ const releaseToConnectLabel = "Release to Connect"
 			}
 
             setWorkflow(workflow);
-            setSelectedRevision(workflow);
           }
 
           setSavingState(1);
@@ -7935,6 +7933,7 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
 		setAllRevisions(responseJson)
+    setSelectedVersion(responseJson[0])
 	  })
 	  .catch((error) => {
 		console.log("Error getting workflow revisions: ", error)
@@ -16502,7 +16501,6 @@ const releaseToConnectLabel = "Release to Connect"
           console.log("Show workflow revisions key pressed")
           if (!workflow.public) {
             setShowWorkflowRevisions(true)
-            setSelectedRevision(workflow)
             //setOriginalWorkflow(workflow)
           }
         }
@@ -16555,7 +16553,6 @@ const releaseToConnectLabel = "Release to Connect"
           console.log("Show workflow revisions key pressed")
           if (!workflow.public) {
             setShowWorkflowRevisions(true)
-            setSelectedRevision(workflow)
             //setOriginalWorkflow(workflow)
           }
         }
@@ -17029,12 +17026,7 @@ const releaseToConnectLabel = "Release to Connect"
                 style={{ height: 50, marginLeft: 10 }}
                 variant={"outlined"}
                 onClick={() => {
-                  if(!lastSaved){
-                    toast("Save the workflow first")
-                    return
-                  }
                   setShowWorkflowRevisions(true)
-                  setSelectedRevision(workflow)
                   //setOriginalWorkflow(workflow)
                 }}
               >
@@ -21371,18 +21363,17 @@ const releaseToConnectLabel = "Release to Connect"
 
 		  return (
 		  	<Paper 
-				style={{padding: "15px 15px 15px 25px", minHeight: 105, maxHeight: 105, cursor: "pointer", backgroundColor: newrevision.edited === selectedRevision.edited ? "rgba(255,255,255,0.3)" : theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", marginBottom: 10, 
+				style={{padding: "15px 15px 15px 25px", minHeight: 105, maxHeight: 105, cursor: "pointer", backgroundColor: newrevision.edited === selectedVersion.edited ? "rgba(255,255,255,0.3)" : theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", marginBottom: 10, 
 				}} onClick={(e) => {
-					if (newrevision.edited === selectedRevision.edited) {
+					if (newrevision.edited === selectedVersion.edited) {
 						console.log("Same revision! No setting.")
 						return
 					}
 
-
 					// Should render if it's not the same as workflow.edited
 					console.log("Clicked revision: ", newrevision)
-  					setLastSaved(false)
-					setSelectedRevision(newrevision)
+  				setLastSaved(false)
+          setSelectedVersion(newrevision);
 					setWorkflow(newrevision)
                 	setSelectedAction({});
   					setSelectedApp({})
@@ -21544,7 +21535,6 @@ const releaseToConnectLabel = "Release to Connect"
 		  )
 	  }
     //! Logs
-    console.log("Selected Revision", selectedRevision)
     console.log("Workflow state", workflow)
     console.log("All revision", allRevisions)
 	  const drawerData = originalWorkflow !== undefined && originalWorkflow !== null ?
@@ -21559,7 +21549,7 @@ const releaseToConnectLabel = "Release to Connect"
               Current Version
             </Typography>
             <RevisionBox 
-              revision={selectedRevision}
+              revision={selectedVersion}
             />
           </div>
 
@@ -21578,7 +21568,7 @@ const releaseToConnectLabel = "Release to Connect"
             <div style={{overflow: "auto", width: "100%" , height: "75%", paddingLeft: "25px", paddingRight: "20px", paddingTop: "10px", paddingBottom: "10px"}}>
               {
                  allRevisions.map((revision, index) => {
-                  if(revision.edited === selectedRevision.edited){
+                  if(revision.edited === selectedVersion.edited){
                     return null
                   }
 
@@ -21653,7 +21643,7 @@ const releaseToConnectLabel = "Release to Connect"
 				</div>
 				<div style={{textAlign: "center", color: "white", flex: 1, paddingTop: 20, }}>
 					<Typography variant="h6">
-						{selectedRevision.name}
+						{selectedVersion.name}
 					</Typography>
 				</div>
 				{/* Cross icon to close it */}
