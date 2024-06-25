@@ -2,6 +2,7 @@
 import React, {useState, useEffect} from 'react';
 import ReactDOM from "react-dom"
 
+import { ToastContainer, toast } from "react-toastify" 
 import { useInterval } from "react-powerhooks";
 import { makeStyles } from '@mui/material/styles';
 import { useNavigate, Link, useParams } from "react-router-dom";
@@ -43,7 +44,8 @@ const bodyDivStyle = {
 const RunWorkflow = (defaultprops) => {
   const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, register, serverside } = defaultprops;
 
-	let navigate = useNavigate();
+  let navigate = useNavigate();
+  const [_, setUpdate] = useState(""); // Used to force rendring, don't remove
   const [message, setMessage] = useState("");
   const [workflow, setWorkflow] = React.useState({});
   const [executionRequest, setExecutionRequest] = React.useState({});
@@ -55,6 +57,7 @@ const RunWorkflow = (defaultprops) => {
   const [selectedOrganization, setSelectedOrganization] = React.useState(undefined);
   const [apps, setApps] = React.useState([]);
   const [buttonClicked, setButtonClicked] = React.useState("");
+  const [foundSourcenode, setFoundSourcenode] = React.useState(undefined);
 
 	const boxStyle = {
 		color: "white",
@@ -340,6 +343,8 @@ const RunWorkflow = (defaultprops) => {
 			event.preventDefault()
 		}
 
+		console.log("ONSUBMIT: ", event, execution_id, authorization, answer)
+
 		stop()
   	    setMessage("")
   	    setExecutionLoading(true)
@@ -389,12 +394,27 @@ const RunWorkflow = (defaultprops) => {
 			url += `?reference_execution=${execution_id}&authorization=${authorization}&answer=${answer}`
 			data = {}
 			fetchBody.method = "GET"
+
+			if (executionArgument !== undefined && executionArgument !== null) {
+				try {
+					if (typeof executionArgument === "string") {
+						url += "&note=" + executionArgument
+					} else {
+						url += "&note=" + JSON.stringify(executionArgument)
+					}
+				} catch (e) {
+					url += "&note=" + executionArgument
+				}
+			}
+
 		} else {
 			fetchBody.method = "POST"
 			fetchBody.body = JSON.stringify(data)
 		}
 
-		console.log("Pre request: ", url, fetchBody)
+		// IF there is an execution argument, we should use it
+		console.log("FULL URL: ", url)
+
 		fetch(url, fetchBody)
 		.then((response) => {
 			if (response.status !== 200 && response.status !== 201) {
@@ -408,16 +428,26 @@ const RunWorkflow = (defaultprops) => {
 					})
 
 					start();
-					return
+					return response.json()
 				}
 			}
 
-			return response.json();
+			return response.json()
 		})
 		.then(responseJson => {
 			setExecutionLoading(false)
-			if (responseJson["success"] === false) {
+			if (responseJson.success === false) {
 				console.log("Failed sending execution request")
+				if (responseJson.reason !== undefined && responseJson.reason !== null) {
+					toast.warn(responseJson.reason)
+				}
+
+				stop()
+				setMessage("")
+				setExecutionData({})
+				setExecutionInfo("")
+				setExecutionRunning(false)
+				setExecutionRequest({})
 			} else {
 				console.log("Started execution")
 
@@ -426,17 +456,24 @@ const RunWorkflow = (defaultprops) => {
 				} else {
 					setExecutionRunning(true);
 					setExecutionRequest(responseJson)
-					start();
+					start()
 				}
 			}
 		})
 		.catch(error => {
 			//setExecutionInfo("Error in workflow startup: " + error)
+			toast.warn("Error in workflow startup: " + error)
+
+			stop()
+			setMessage("")
+			setExecutionData({})
+			setExecutionInfo("")
+
 			setExecutionLoading(false)
 		})
 	}
 
-	const getWorkflow = (workflow_id) => {
+	const getWorkflow = (workflow_id, selectedNode) => {
 		fetch(globalUrl + "/api/v1/workflows/" + workflow_id, {
 		  method: "GET",
 		  headers: {
@@ -480,6 +517,48 @@ const RunWorkflow = (defaultprops) => {
 			setExecutionArgument(newexec)
 		}
 
+		if (selectedNode !== undefined && selectedNode !== null && selectedNode.length > 0) {
+			var found = false
+			for (var actionkey in responseJson.actions) {
+				if (responseJson.actions[actionkey].id === selectedNode) {
+					found = true
+					setFoundSourcenode(responseJson.actions[actionkey])
+					break
+				}
+			}
+
+			if (!found) {
+				for (var triggerkey in responseJson.triggers) {
+					if (responseJson.triggers[triggerkey].id !== selectedNode) {
+						continue
+					}
+
+					setFoundSourcenode(responseJson.triggers[triggerkey])
+
+					if (responseJson.input_questions !== undefined && responseJson.input_questions !== null && responseJson.input_questions.length > 0 && responseJson.triggers[triggerkey].trigger_type === "USERINPUT") {
+
+						// Look for input questions param
+						for (var paramkey in responseJson.triggers[triggerkey].parameters) {
+							if (responseJson.triggers[triggerkey].parameters[paramkey].name === "input_questions") {
+
+								var relevantquestions = []
+								for (var questionkey in responseJson.input_questions) {
+									if (responseJson.triggers[triggerkey].parameters[paramkey].value.includes(responseJson.input_questions[questionkey].name)) {
+										relevantquestions.push(responseJson.input_questions[questionkey])
+									}
+								}
+
+								responseJson.input_questions = relevantquestions
+							}
+						}
+					}
+
+
+					break
+				}
+			}
+		}
+
 		handleGetOrg(responseJson.org_id)
 		setWorkflow(responseJson);
       })
@@ -489,7 +568,7 @@ const RunWorkflow = (defaultprops) => {
   };
 
   const { start, stop } = useInterval({
-    duration: 3000,
+    duration: 1500,
     startImmediate: true,
     callback: () => {
       fetchUpdates(executionRequest.execution_id, executionRequest.authorization)
@@ -526,15 +605,11 @@ const RunWorkflow = (defaultprops) => {
 
 				for (var key in responseJson.results) {
 					if (responseJson.results[key].status === "WAITING") {
-						console.log("Found: ", responseJson.results[key])
-			
 						const validate = validateJson(responseJson.results[key].result)
-						console.log("Validate: ", validate)
 						if (validate.valid && typeof validate.result === "string") {
 							validate.result = JSON.parse(validate.result)
 						} 
 
-						console.log("Newresult: ", validate.result)
 						if (validate.result["information"] !== undefined && validate.result["information"] !== null) {
 							setWorkflowQuestion(validate.result["information"])
 						}
@@ -623,15 +698,15 @@ const RunWorkflow = (defaultprops) => {
 			return
 		}
 
-    fetch(globalUrl + "/api/v1/streams/results", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(innerRequest),
-      credentials: "include",
-    })
+		fetch(globalUrl + "/api/v1/streams/results", {
+		  method: "POST",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  body: JSON.stringify(innerRequest),
+		  credentials: "include",
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for stream results :O!");
@@ -651,11 +726,14 @@ const RunWorkflow = (defaultprops) => {
 		});
   };
 
-	const answer = new URLSearchParams(window.location.search).get("answer")
-	const execution_id = new URLSearchParams(window.location.search).get("reference_execution")
-	const authorization = new URLSearchParams(window.location.search).get("authorization")
+	const searchParams = new URLSearchParams(window.location.search)
+	const answer = searchParams.get("answer")
+	const execution_id = searchParams.get("reference_execution")
+	const authorization = searchParams.get("authorization")
+	const sourceNode = searchParams.get("source_node")
+
 	useEffect(() => {
-		getWorkflow(props.match.params.key) 
+		getWorkflow(props.match.params.key, sourceNode) 
 		if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null) {
 			console.log("Get execution: ", execution_id)
 			fetchUpdates(execution_id, authorization, true)
@@ -667,12 +745,59 @@ const RunWorkflow = (defaultprops) => {
 	}, [])
 
 
+	useEffect(() => {
+		if (executionData === undefined || executionData === null || executionData === {}) {
+			return
+		}
+
+		if (foundSourcenode === undefined || foundSourcenode === null || foundSourcenode === {}) {
+			return
+		}
+
+		if (foundSourcenode.trigger_type !== "USERINPUT") {
+			return
+		}
+
+		if (executionData.results === undefined || executionData.results === null || executionData.results.length === 0) {
+			return
+		}
+
+		for (var resultkey in executionData.results) {
+			const result = executionData.results[resultkey]
+			if (result.action.id !== foundSourcenode.id) {
+				continue
+			}
+
+			var parsedresult = result.result
+			try {
+				parsedresult = JSON.parse(parsedresult)
+			} catch (e) {
+				console.log("Error parsing result: ", e)
+			}
+
+			if (result.status !== "WAITING") {
+				if (parsedresult.click_info !== undefined && parsedresult.click_info !== null) {
+					if (parsedresult.click_info.user !== undefined && parsedresult.click_info.user !== null && parsedresult.click_info.user.length > 0) {
+						setMessage("Already answered by " + parsedresult.click_info.user)
+					}
+				} else {
+					setMessage("Answered.")
+				}
+
+			}
+
+			break
+		}
+
+	}, [executionData, foundSourcenode])
 
 	const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)"
 	const buttonStyle = {borderRadius: 25, height: 50, fontSize: 18, backgroundImage: handleValidateForm(executionArgument) || executionLoading ? buttonBackground : "grey", color: "white"}
 	
-	//console.log("execdata: ", executionData)
 	const disabledButtons = message.length > 0 || executionData.status === "FINISHED" || executionData.status === "ABORTED"
+
+	//{disabledButtons ? null :
+
 
 	const organization = selectedOrganization !== undefined && selectedOrganization !== null ? selectedOrganization.name : "Unknown"
 	const contact = selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.org !== undefined && selectedOrganization.org !== null? selectedOrganization.org : "support@shuffler.io"
@@ -724,49 +849,54 @@ const RunWorkflow = (defaultprops) => {
 					<Typography variant="h6" style={{marginBottom: 10, marginTop: 50, textAlign: "center", }}>
 						{organization}
 					</Typography>
-					<Typography variant="body1" color="textSecondary" style={{marginBottom: 15, marginTop: 0, textAlign: "center",}}>
-						{contact}
-					</Typography>
 					<Divider style={{marginTop: 20, marginBottom: 20, }}/>
-  				<Typography color="textSecondary">{message}</Typography>
+
+					{disabledButtons && message.length > 0 ? null : 
+						<Typography color="textSecondary" style={{textAlign: "center", }}>
+							{message}
+						</Typography>
+					}
 
 					{answer !== undefined && answer !== null ? null :
-						<Typography variant="h6" style={{marginBottom: 15, }}><b>{workflow.name}</b></Typography>
+						<Typography variant="h6" style={{marginBottom: 15, textAlign: "center", }}><b>{workflow.name}</b></Typography>
 					}
 
 					{workflowQuestion.length > 0 ?
-						<Typography variant="body1"  style={{ marginBottom: 35, marginTop: 30, marginRight: 15, textAlign: "center", whiteSpace: "pre-line", }}>
-							{workflowQuestion}
-						</Typography>
+						<div style={{
+							backgroundColor: theme.palette.inputColor,
+							padding: 20,
+							borderRadius: theme.palette.borderRadius,
+							marginBottom: 35, 
+							marginTop: 30, 
+						}}>
+							<Typography variant="body1"  style={{ marginRight: 15, textAlign: "center", whiteSpace: "pre-line", }}>
+								{workflowQuestion}
+							</Typography>
+						</div>
 					: null}
 					
 					{workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
 						<div style={{marginBottom: 5, }}>
 							{workflow.input_questions.map((question, index) => {
-
 								return (
 									<div style={{marginBottom: 5}}>
 										{question.name}
 										<TextField
 											color="primary"
 											style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
-											multiLine
-											maxRows={2}
-											InputProps={{
-												style:{
-													height: "50px", 
-													color: "white",
-													fontSize: "1em",
-												},
-											}}
+											label={question.value}
+											required
+
+											disabled={disabledButtons}
 											fullWidth={true}
 											placeholder=""
 											id="emailfield"
 											margin="normal"
 											variant="outlined"
-											onChange={(e) => {
+											onBlur={(e) => {
 												//setExecutionArgument(e.target.value)	
 												executionArgument[question.value] = e.target.value
+												setUpdate(Math.random())
 											}}
 										/>
 									</div>
@@ -813,20 +943,27 @@ const RunWorkflow = (defaultprops) => {
 								</Typography>
 							: null}
 						</span>
-						
 						:
-						answer !== undefined && answer !== null ? 
+						((answer !== undefined && answer !== null) || (foundSourcenode !== undefined && foundSourcenode !== null)) ? 
 							<span style={{marginTop: 20, }}>
-								<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
-									{disabledButtons ? "Already answered. Nothing to do." : ""}
-								</Typography>
+
+								{disabledButtons && message.length > 0 ?
+									<Typography variant="body1"  style={{textAlign: "center", marginTop: 30, marginBottom: 20,  }}>
+										{message}. You may close this window.
+									</Typography>
+								: 
+									<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
+										{disabledButtons ? "Answered. You may close this window." : ""}
+									</Typography>
+								}
+
 								{disabledButtons ? null :
 									<Typography variant="body2" color="textSecondary" style={{textAlign: "center", marginTop: 10, }}>
 										What do you want to do?
 									</Typography>
 								}
 								<div fullWidth style={{width: "100%", marginTop: 10, marginBottom: 10, display: "flex", }}>
-									<Button fullWidth id="continue_execution" variant="contained" disabled={disabledButtons} color="primary" style={{border: answer === "true" ? "2px solid rgba(255,255,255,0.6)" : null, flex: 1,}} onClick={() => {
+									<Button fullWidth id="continue_execution" variant="contained" disabled={disabledButtons} color="primary" style={{flex: 1,}} onClick={() => {
 										onSubmit(null, execution_id, authorization, true) 
 
 										setButtonClicked("FINISHED")
@@ -837,7 +974,7 @@ const RunWorkflow = (defaultprops) => {
 									<Typography variant="body1" style={{marginLeft: 3, marginRight: 3, marginTop: 3, }}>
 										&nbsp;or&nbsp;
 									</Typography>
-									<Button fullWidth id="abort_execution" variant="contained" color="primary" disabled={disabledButtons} style={{border: answer !== "true" ? "2px solid rgba(255,255,255,0.6)" : null, flex: 1, }} onClick={() => {
+									<Button fullWidth id="abort_execution" variant="contained" color="primary" disabled={disabledButtons} style={{ flex: 1, }} onClick={() => {
 										onSubmit(null, execution_id, authorization, false) 
 
 										setButtonClicked("ABORTED")
@@ -856,7 +993,7 @@ const RunWorkflow = (defaultprops) => {
 						</div>
 					}
 
-  				{buttonClicked !== undefined && buttonClicked !== null && buttonClicked !== "finished" && buttonClicked.length > 0 ?
+  					{/*buttonClicked !== undefined && buttonClicked !== null && buttonClicked !== "finished" && buttonClicked.length > 0 ?
 						<img id="finalize_gif" src="/images/finalize.gif" alt="finalize workflow animation" style={{width: 150, marginLeft: 125, borderRadius: theme.palette.borderRadius, }}
 							onLoad={() => {
 								console.log("Img loaded.")
@@ -868,7 +1005,7 @@ const RunWorkflow = (defaultprops) => {
 
 							}}
 						/>
-					: null}
+					: null*/}
 
 					<div style={{marginTop: "10px"}}>
 						{executionInfo}

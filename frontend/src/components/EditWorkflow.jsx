@@ -338,26 +338,6 @@ const EditWorkflow = (props) => {
           	  autoFocus
           	  fullWidth
           	/>
-			<div style={{display: "flex", }}>
-				<TextField
-				  onBlur={(event) => {
-					setDescription(event.target.value)
-				  }}
-				  InputProps={{
-					style: {
-					  color: "white",
-					},
-				  }}
-				  maxRows={4}
-				  color="primary"
-				  defaultValue={innerWorkflow.description}
-				  placeholder="Description"
-				  multiline
-				  label="Description"
-				  margin="dense"
-				  fullWidth
-				/>
-			</div>
 						<div style={{display: "flex", marginTop: 10, }}>
 							{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
       					<FormControl style={{flex: 1, marginRight: 5,}}>
@@ -425,27 +405,56 @@ const EditWorkflow = (props) => {
 								fullWidth
 								value={newWorkflowTags}
 								onChange={(chip) => {
-									console.log("Chip: ", chip)
-									//newWorkflowTags.push(chip);
 									setNewWorkflowTags(chip);
 								}}
+								onBlur={(event) => {
+									if (event.target.value.length === 0) {
+										return
+									}
+
+									if (newWorkflowTags.includes(event.target.value)) {
+										return
+									}
+
+									newWorkflowTags.push(event.target.value)
+									setNewWorkflowTags(newWorkflowTags)
+
+									setUpdate(Math.random())
+								}}
 								onAdd={(chip) => {
-									newWorkflowTags.push(chip);
-									setNewWorkflowTags(newWorkflowTags);
+									newWorkflowTags.push(chip)
+									setNewWorkflowTags(newWorkflowTags)
 								}}
 								onDelete={(chip, index) => {
 									console.log("Deleting: ", chip, index)
-									newWorkflowTags.splice(index, 1);
-									setNewWorkflowTags(newWorkflowTags);
-									setUpdate(Math.random());
+									newWorkflowTags.splice(index, 1)
+									setNewWorkflowTags(newWorkflowTags)
+									setUpdate(Math.random())
 								}}
 							/>
 						</div>
 
   					{showMoreClicked === true ? 
-							<span style={{marginTop: 25, }}>
-
-
+						<div style={{marginTop: 50, }}>
+							<TextField
+							  onBlur={(event) => {
+								setDescription(event.target.value)
+							  }}
+							  InputProps={{
+								style: {
+								  color: "white",
+								},
+							  }}
+							  multiLine
+							  rows={3}
+							  color="primary"
+							  defaultValue={innerWorkflow.description}
+							  placeholder="Description"
+							  multiline
+							  label="Description"
+							  margin="dense"
+							  fullWidth
+							/>
 
 								<div style={{display: "flex"}}>
 									<FormControl style={{marginTop: 15, }}>
@@ -564,6 +573,8 @@ const EditWorkflow = (props) => {
 									fullWidth
 								/>
 
+								<Divider style={{marginTop: 20, marginBottom: 20, }} />
+
 								<Typography variant="body1" style={{marginTop: 50, }}>
 									MSSP Suborg Distribution (beta - contact support@shuffler.io for more info)
 								</Typography>
@@ -669,12 +680,13 @@ const EditWorkflow = (props) => {
 									</Link>
 								}
 									
+								<Divider style={{marginTop: 20, marginBottom: 20, }} />
 
 								<Typography variant="h6" style={{marginTop: 50, }}>
 									Input fields
 								</Typography>
-								<Typography variant="body1" color="textSecondary" style={{marginBottom: 20, }}>
-									Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/workflows/${workflow.id}/run`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>workflow run page</a>.
+								<Typography variant="body2" color="textSecondary" style={{marginBottom: 20, }}>
+									Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/workflows/${workflow.id}/run`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>workflow run page</a>. If chosen in the User Input node, these will be required fields.
 								</Typography>
 
 
@@ -781,6 +793,7 @@ const EditWorkflow = (props) => {
 								  <AddIcon style={{}} />
 								</Button>
 
+								<Divider style={{marginTop: 20, marginBottom: 20, }} />
 
 								<Typography variant="body1" style={{marginTop: 50, }}>
 									Git Backup Repository
@@ -931,7 +944,7 @@ const EditWorkflow = (props) => {
 										</span>
 									</Grid>
 								</Grid>
-							</span>
+							</div>
 						: null}
 
 

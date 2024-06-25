@@ -1072,22 +1072,20 @@ const releaseToConnectLabel = "Release to Connect"
 
 								// User Input & Subflow nodes
                 if (param.name === "workflow" || param.name === "subflow") {
-									const paramIndex = param.name === "workflow" ? 0 : 5
-									console.log("Current vs new: ", workflow.triggers[trigger_index].parameters[paramIndex].value, subworkflow.id)
-
-									if (workflow.triggers[trigger_index].parameters[paramIndex].value !== subworkflow.id) {
-										if (param.value === workflow.id) {
-											setSubworkflow(workflow);
-											baseSubflow = workflow
-										} else {
-											const sub = responseJson.find((data) => data.id === param.value);
-											if (sub !== undefined && subworkflow.id !== sub.id) {
-												baseSubflow = sub
-												setSubworkflow(sub);
-											}
-										}
-									}
-                }
+					const paramIndex = param.name === "workflow" ? 0 : 5
+					if (workflow.triggers[trigger_index].parameters[paramIndex].value !== subworkflow.id) {
+						if (param.value === workflow.id) {
+							setSubworkflow(workflow);
+							baseSubflow = workflow
+						} else {
+							const sub = responseJson.find((data) => data.id === param.value);
+							if (sub !== undefined && subworkflow.id !== sub.id) {
+								baseSubflow = sub
+								setSubworkflow(sub);
+							}
+						}
+					}
+				}
 
                 if (param.name === "startnode" && param.value !== undefined && param.value !== null) {
                 
@@ -3255,7 +3253,6 @@ const releaseToConnectLabel = "Release to Connect"
 
   const getChildWorkflows = (parentWorkflowId) => {
 	if (originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0) { 
-		console.log("No suborg distribution")
 		return
 	}
 
@@ -5300,7 +5297,59 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
         setTimeout(() => {
-			setSelectedTriggerIndex(trigger_index);
+			if (trigger_index !== -1) {
+				const trigger = workflow.triggers[trigger_index]
+				if (trigger !== undefined && trigger !== null) {
+
+					// Autofixer
+					if (trigger.trigger_type === "USERINPUT") {
+						const relevantparams = [
+							"alertinfo",
+							"options",
+							"type",
+							"email",
+							"sms",
+							"subflow",
+						]
+						var foundparams = 0
+						for (var paramkey in trigger.parameters) {
+							if (relevantparams.includes(trigger.parameters[paramkey].name)) {
+								foundparams++
+							}
+						}
+
+						if (foundparams < 6) {
+							trigger.parameters = [{
+								name: "alertinfo",
+            					value: "Do you want to continue the workflow? Start parameters: $exec",
+          					},{
+            					name: "options",
+            					value: "boolean",
+          					},
+						    {
+						      name: "type",
+						      value: "subflow",
+						    },
+						    {
+						      name: "email",
+						      value: "test@test.com",
+						    },
+						    {
+						      name: "sms",
+						      value: "0000000",
+						    },
+						    {
+						      name: "subflow",
+						      value: "",
+						    }]
+
+							workflow.triggers[trigger_index].parameters = trigger.parameters
+						}
+					}
+				}
+			}
+
+			setSelectedTriggerIndex(trigger_index)
 			setSelectedTrigger(data)
 			setSelectedActionEnvironment(data.env)
 		}, 25)
@@ -5650,15 +5699,16 @@ const releaseToConnectLabel = "Release to Connect"
 
   // Checks for errors in edges when they're added
   const onEdgeAdded = (event) => {
-    const edge = event.target.data()
-	//console.log("EDGE ADDED!: ", edge)
+    setLastSaved(false);
+    const edge = event.target.data();
+
+    //console.log("edge added: ", edge)
     if (edge.source === undefined && edge.target === undefined) {
-	  // console.log("Edge source and target is undefined")
       return
     }
 
     if (edge.readded === true) {
-      // console.log("Readded edge - stopping")
+      console.log("Readded edge - stopping")
 
       event.target.data("readded", false)
       return
@@ -5667,7 +5717,6 @@ const releaseToConnectLabel = "Release to Connect"
     const sourcenode = cy.getElementById(edge.source)
     const destinationnode = cy.getElementById(edge.target)
     if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
-		// console.log("Source or destination node is undefined")
     } else {
       //console.log("Edge added: Is it a trigger? If so, check if it already has a branch and remove it: ", sourcenode.data())
       if (sourcenode.data("type") === "TRIGGER") {
@@ -5680,17 +5729,17 @@ const releaseToConnectLabel = "Release to Connect"
 
             console.log("Node: ", targetedge)
             if (targetedge !== -1) {
+              event.target.remove()
 
               //console.log("Found branch already!")
               toast.error("Triggers can have exactly one target node")
-              event.target.remove()
               return
 
 
               // name: "Shuffle Workflow",
               // name: "User Input",
             } else {
-              // console.log("Node doesn't already have one")
+              console.log("Node doesn't already have one")
             }
           }, 50)
         }
@@ -5704,10 +5753,6 @@ const releaseToConnectLabel = "Release to Connect"
       }
     }
 
-	if (edge.decorator === true) {
-		// console.log("Doing nothing to branch because decorator")
-		return
-	}
 
     var targetnode = workflow.triggers.findIndex(
       (data) => data.id === edge.target
@@ -5725,7 +5770,7 @@ const releaseToConnectLabel = "Release to Connect"
     if (eventTarget.data("isButton") === true) {
       const parentNode = cy.getElementById(eventTarget.data("attachedTo"))
       event.target.remove()
-      // console.log("Setting it to parentnode: ", parentNode.data())
+      console.log("Setting it to parentnode: ", parentNode.data())
       if (parentNode !== undefined && parentNode !== null) {
         //event.target.data("target", eventTarget.data("attachedTo"))
 
@@ -5747,14 +5792,15 @@ const releaseToConnectLabel = "Release to Connect"
       }
     }
 
-    if (eventTarget.data("isDescriptor") === true || eventTarget.data("type") === "COMMENT") {
-      // console.log("Removing because of descriptor or comment")
-      event.target.remove()
-      return
+    if (
+      eventTarget.data("isDescriptor") === true ||
+      eventTarget.data("type") === "COMMENT"
+    ) {
+      console.log("Removing because of descriptor or comment")
+      event.target.remove();
+      return;
     }
 
-
-    setLastSaved(false)
     targetnode = -1;
 
     // Check if:
@@ -5762,51 +5808,38 @@ const releaseToConnectLabel = "Release to Connect"
     // dest == dest && source == source
     // backend: check all children? to stop recursion
     var found = false;
-	const branches = cy.edges().jsons()
+    for (let branchkey in workflow.branches) {
+      if (
+        workflow.branches[branchkey].destination_id === edge.source &&
+        workflow.branches[branchkey].source_id === edge.target
+      ) {
+        toast("A branch in the opposite direction already exists");
+        event.target.remove();
+        found = true;
+        break;
+      } else if (
+        workflow.branches[branchkey].destination_id === edge.target &&
+        workflow.branches[branchkey].source_id === edge.source
+      ) {
+        //toast("That branch already exists");
+        event.target.remove();
 
-	const startNode = cy.nodes().jsons().find((node) => node.data.isStartNode === true)
-	var startnodeId = workflow.start
-	if (startNode !== undefined && startNode !== null) {
-		startnodeId = startNode.data.id
-	}
-
-    //for (let branchkey in workflow.branches) {
-    for (let branchkey in branches) {
-	  const branch = branches[branchkey].data
-
-      //if (workflow.branches[branchkey].destination_id === edge.source && workflow.branches[branchkey].source_id === edge.target) {
-	  if (branch.target === edge.source && branch.source === edge.target) {
-        toast("A branch in the opposite direction already exists")
-        event.target.remove()
-        found = true
-        break
-
-      //} else if (workflow.branches[branchkey].destination_id === edge.target && workflow.branches[branchkey].source_id === edge.source) {
-      } else if (branch.target === edge.target && branch.source === edge.source) {
-
-		if (branch.conditions === undefined) { 
-			// Edgehandles
-		} else {
-			// console.log("Removing because the same branch already exists")
-			event.target.remove()
-
-			found = true
-			break
-		}
-      } else if (edge.target === startnodeId) {
-        targetnode = workflow.triggers.findIndex((data) => data.id === edge.source)
-
+        found = true;
+        break;
+      } else if (edge.target === workflow.start) {
+        targetnode = workflow.triggers.findIndex(
+          (data) => data.id === edge.source
+        );
         if (targetnode === -1) {
           if (targetnode.type !== "TRIGGER") {
-            toast("Can't make arrow to starting node")
-            event.target.remove()
-            break
+            toast("Can't make arrow to starting node");
+            event.target.remove();
+            break;
           }
 
           found = true;
         }
-      //} else if (edge.source === workflow.branches[branchkey].source_id) {
-      } else if (edge.source === branch.source) {
+      } else if (edge.source === workflow.branches[branchkey].source_id) {
         // FIXME: Verify multi-target for triggers
         // 1. Check if destination exists
         // 2. Check if source is a trigger
@@ -5850,6 +5883,7 @@ const releaseToConnectLabel = "Release to Connect"
       newdst !== null
     ) {
       const dstdata = RunAutocompleter(newdst.data());
+      //console.log("DST Autocompleter: ", dstdata);
     }
 
     var newbranch = {
@@ -12404,7 +12438,7 @@ const releaseToConnectLabel = "Release to Connect"
 		setSubworkflow(e.target.value);
 
 		// Sets the startnode
-		if (e.target.value.id !== workflow.id) {
+		if (e.target.value.id !== workflow.id && e.target.value.id.length > 0 ) {
 			console.log("WORKFLOW: ", e.target.value);
 
 			const startnode = e.target.value.actions.find((action) => action.id === e.target.value.start);
@@ -12502,9 +12536,9 @@ const releaseToConnectLabel = "Release to Connect"
       let mappingWithName = {}
       let listWithValues = workflow.triggers[selectedTriggerIndex].parameters[5]?.value.split(";").filter(e => e).map(e => e.split("="))
       console.log("LIST WITH VALUES: ", listWithValues)
-      // if (listWithValues === undefined || listWithValues === null || listWithValues.length === 0) {
-      //   return "no-overrides";
-      // }
+      if (listWithValues === undefined || listWithValues === null || listWithValues.length === 0) {
+        return "no-overrides";
+      }
 
       for (let i = 0; i < listWithValues.length; i++) {
         mappingWithName[listWithValues[i][0]] = listWithValues[i][1]
@@ -15016,7 +15050,12 @@ const releaseToConnectLabel = "Release to Connect"
               	      const newname = (option.name.charAt(0).toUpperCase() + option.name.substring(1)).replaceAll("_", " ");
               	      return newname;
               	    }}
-              	    options={workflows}
+              	    options={
+						[{
+							"id": "",
+							"name": "No Workflow Selected",
+						}].concat(workflows)
+					}
               	    fullWidth
               	    style={{
               	      backgroundColor: theme.palette.inputColor,
@@ -15171,14 +15210,40 @@ const releaseToConnectLabel = "Release to Connect"
             
           </div>
 
-		  <div style={{marginTop: 20, }} />
-          <b>Enabled Input-Questions</b>
+		  <div style={{marginTop: 0, }} />
+          <b>Required Input-Questions</b>
 		  {workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
 			<div>
 				{workflow.input_questions.map((question, index) => {
+					var foundParamIndex = workflow.triggers[selectedTriggerIndex].parameters.findIndex((param) => param.name === "input_questions")
+
 					const selectionClick = () => {
-						console.log("Clicked input question: ", question)
-						console.log("PARAMS: ", workflow.triggers[selectedTriggerIndex].parameters)
+						if (foundParamIndex === -1) {
+							workflow.triggers[selectedTriggerIndex].parameters.push({
+								"name": "input_questions",
+								"value": [],
+							})
+
+							foundParamIndex = workflow.triggers[selectedTriggerIndex].parameters.length - 1
+						} else {
+							try {
+								workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value = JSON.parse(workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value)
+							} catch (e) {
+								console.log("Couldn't parse input questions: ", e)
+								workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value = []
+							}
+						}
+
+						if (workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value.includes(question.name)) {
+							workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value = workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value.filter((item) => item !== question.name)
+						} else {
+							workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value.push(question.name)
+						}
+
+						// Make it back to a string
+						workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value = JSON.stringify(workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value)
+						setWorkflow(workflow)
+						setUpdate(Math.random())
 					}
 
 					return (
@@ -15186,7 +15251,7 @@ const releaseToConnectLabel = "Release to Connect"
 							selectionClick()
 						}}>
 							<Checkbox
-								checked={false}
+								checked={foundParamIndex !== -1 ? workflow.triggers[selectedTriggerIndex].parameters[foundParamIndex].value.includes(question.name) : false}
 							/>
 							<Typography variant="body2" style={{marginTop: 10, }}>
 								{question.name}
@@ -15198,6 +15263,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  : 
 			<div style={{cursor: "pointer", color: "#f85a3e", marginTop: 10, }} onClick={() => {
                 setEditWorkflowModalOpen(true)
+				toast.info("Expand and scroll down to add input-questions")
 			}}>
 			  <Typography variant="body2">No Input-Questions found. Click to add them!</Typography>
 			</div> 
@@ -15728,6 +15794,7 @@ const releaseToConnectLabel = "Release to Connect"
     right: 0,
     left: isMobile ? 20 : leftBarSize + 20,
     top: isMobile ? 30 : appBarSize + 20,
+	pointerEvents: "none",
   }
 
 
@@ -15748,14 +15815,17 @@ const releaseToConnectLabel = "Release to Connect"
       <div style={topBarStyle}>
         <div style={{ 
 			margin: "0px 10px 0px 10px",
+			pointerEvents: "auto",
 		}}>
           <Breadcrumbs
             aria-label="breadcrumb"
             separator="›"
             style={{ 
-			 color: "white" 
+			 	color: "white",
+				pointerEvents: "auto",
 			}}
           >
+
             <Link
               to="/workflows"
               style={{ textDecoration: "none", color: "inherit" }}
@@ -15772,6 +15842,7 @@ const releaseToConnectLabel = "Release to Connect"
             </Link>
             <h2 style={{ 
 				margin: 0,
+				pointerEvents: "none",
 			}}>{workflow.name}</h2>
           </Breadcrumbs>
 
@@ -15779,7 +15850,7 @@ const releaseToConnectLabel = "Release to Connect"
 			isCorrectOrg ? null :
 			<Typography variant="body1">
 				<b>Warning</b>: Change <span
-			  		style={{color: "#f85a3e", cursor: "pointer"}}
+			  		style={{color: "#f85a3e", cursor: "pointer", pointerEvents: "auto", }}
 			  		onClick={() => {
 						toast("Changing to correct organisation. Please wait a few seconds.")
 
@@ -16080,7 +16151,7 @@ const releaseToConnectLabel = "Release to Connect"
 			: null}
 		  
         </div>
-				<div style={{display: "flex", marginLeft: 10, }}>
+				<div style={{display: "flex", marginLeft: 10, pointerEvents: "auto", }}>
 					{parentWorkflows.slice(0,5).map((wf, index) => {
 						return (
 							<a href={`/workflows/${wf.id}`} target="_blank" rel="noopener noreferrer" key={index}>
@@ -17078,10 +17149,12 @@ const releaseToConnectLabel = "Release to Connect"
         //defaultReturn = <UserinputSidebar />
         return null;
       } else {
+		/*
         console.log(
           "Unable to handle invalid trigger type " +
           selectedTrigger.trigger_type
         );
+		*/
         return null;
       }
     } else if (Object.getOwnPropertyNames(selectedEdge).length > 0) {
@@ -18387,7 +18460,7 @@ const releaseToConnectLabel = "Release to Connect"
                           </div>
 						
 						  {foundnotifications > 0 ?
-							<Tooltip title={"This workflow created " + foundnotifications + " notification(s). Click to explore them."} placement="top">
+							<Tooltip title={"This workflow created " + foundnotifications + " notification(s)"} placement="top">
 							  <ErrorOutlineIcon 
 							  	style={{color: "rgba(255,255,255,0.4)", marginTop: 10, marginRight: 10, }} 
 							  	onClick={(e) => {
@@ -21662,6 +21735,8 @@ const releaseToConnectLabel = "Release to Connect"
 
 	const changeActionParameterCodeMirror = (event, count, data, actionlist) => {
 		// Check if event.target.value is an array. If it is, split with comma
+		console.log("1 - SELECTED ACTION: ", selectedAction)
+		console.log("1 - DATA: ", data)
 
 		if (data.startsWith("${") && data.endsWith("}")) {
 			// PARAM FIX - Gonna use the ID field, even though it's a hack
@@ -21700,8 +21775,6 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
 		if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
-			console.log("GET THE LAST ARGUMENT FOR NODE!")
-
 			var curstring = ""
 			var record = false
 			for (let [key,keyval] in Object.entries(selectedAction.parameters[count].value)) {
@@ -21716,7 +21789,6 @@ const releaseToConnectLabel = "Release to Connect"
 				}
 			}
 
-			//console.log("CURSTRING: ", curstring)
 			if (curstring.length > 0 && actionlist !== null) {
 				// Search back in the action list
 				curstring = curstring.split(" ").join("_").toLowerCase()
@@ -21737,8 +21809,32 @@ const releaseToConnectLabel = "Release to Connect"
 			}
 		} 
 
-		selectedAction.parameters[count].autocompleted = false 
-		selectedAction.parameters[count].value = data
+		console.log("2 - SELECTED ACTION: ", selectedAction)
+		console.log("2 - DATA: ", data)
+
+		if (selectedAction.app_name === "Shuffle Tools" && selectedAction.name === "filter_list" && count === 0) {
+			const parsedvalue = data
+			console.log("Parsed value: ", parsedvalue)
+			if (parsedvalue.includes("#")) {
+				const splitparsed = parsedvalue.split(".#.")
+				//console.log("Cant contain #: ", splitparsed)
+				if (splitparsed.length > 1) {
+					console.log("IN HERE AY")
+					//data.value = splitparsed[0]
+
+					selectedAction.parameters[0].value = splitparsed[0]
+					selectedAction.parameters[1].value = splitparsed[1] 
+
+					selectedAction.parameters[0].autocompleted = true 
+					selectedAction.parameters[1].autocompleted = true 
+					setUpdate(Math.random())
+				} 
+			}
+		} else {
+			selectedAction.parameters[count].autocompleted = false 
+			selectedAction.parameters[count].value = data
+		}
+
 		setSelectedAction(selectedAction)
 		//setUpdate(Math.random())
 	}

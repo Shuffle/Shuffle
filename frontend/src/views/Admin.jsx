@@ -1568,6 +1568,11 @@ If you're interested, please let me know a time that works for you, or set up a 
             responseJson.lead_info !== null
           ) {
             var leads = [];
+			  console.log("LEADINFO: ", responseJson.lead_info)
+            if (responseJson.lead_info.testing_shuffle) {
+              leads.push("testing shuffle");
+            }
+
             if (responseJson.lead_info.contacted) {
               leads.push("contacted");
             }
@@ -3572,7 +3577,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                 <FormControl sx={{ m: 1, width: 300 }} style={{}}>
                   <InputLabel id="">Status</InputLabel>
                   <Select
-                    style={{ minWidth: 150, maxWidth: 150 }}
+                    style={{ minWidth: 150, maxWidth: 150, }}
                     labelId="multiselect-status"
                     id="multiselect-status"
                     multiple
@@ -3583,9 +3588,10 @@ If you're interested, please let me know a time that works for you, or set up a 
                     MenuProps={MenuProps}
                   >
                     {[
+                      "testing shuffle",
                       "contacted",
                       "lead",
-                      "demo done",
+                      //"demo done",
                       "pov",
                       "customer",
                       "open source",
@@ -3745,7 +3751,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               aria-label="disabled tabs example"
             >
               <Tab label=<span>Edit Details</span> />
-              <Tab label=<span>Org Limits & Cloud Sync</span> />
+              <Tab label=<span>Limits & Cloud Sync</span> />
               <Tab label=<span>Priorities</span> />
               <Tab label=<span>Billing & Stats</span> />
               <Tab disabled={!isCloud} label=<span>Branding (Beta)</span> />

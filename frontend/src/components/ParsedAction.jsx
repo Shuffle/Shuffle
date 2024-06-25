@@ -823,7 +823,7 @@ const ParsedAction = (props) => {
 			if (selectedAction.app_name === "Shuffle Tools" && selectedAction.name === "filter_list" && data.name === "input_list") {
 				//console.log("FILTER LIST!: ", event, count, data)
 				const parsedvalue = event.target.value
-				if (parsedvalue.includes("#")) {
+				if (parsedvalue.includes(".#")) {
 					const splitparsed = parsedvalue.split(".#.")
 					//console.log("Cant contain #: ", splitparsed)
 					if (splitparsed.length > 1) {
@@ -832,14 +832,30 @@ const ParsedAction = (props) => {
 						selectedActionParameters[count].value = splitparsed[0]
 						selectedAction.parameters[count].value = splitparsed[0]
 
-          	selectedActionParameters[1].value = splitparsed[1] 
-      			selectedAction.parameters[1].value = splitparsed[1] 
-						forceUpdate = true
+	          			selectedActionParameters[1].value = splitparsed[1] 
+      					selectedAction.parameters[1].value = splitparsed[1] 
+					} else {
+						// Remove .# and after
+						const splitparsed = parsedvalue.split(".#")
+						data.value = splitparsed[0]
+						selectedActionParameters[0].value = splitparsed[0]
+						selectedAction.parameters[0].value = splitparsed[0]
+
+						selectedActionParameters[1].value = ""
+						selectedAction.parameters[1].value = ""
+
+						toast.warn("No value found in the list. Please select an item in the list to filter based on.")
 					}
+
+					forceUpdate = true
+					selectedActionParameters[0].autocompleted = true
+					selectedAction.parameters[0].autocompleted = true
+					selectedActionParameters[1].autocompleted = true
+					selectedAction.parameters[1].autocompleted = true
 				}
 			}
 
-      setSelectedAction(selectedAction);
+      		setSelectedAction(selectedAction);
 			if (forceUpdate || viewForceUpdate === true) {
 				setUpdate(Math.random())
 			}
@@ -909,6 +925,7 @@ const ParsedAction = (props) => {
 					setShowDropdown(false)
 				}
 			}
+
 
 			// bad detection mechanism probably
 			if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
@@ -3839,7 +3856,8 @@ const ParsedAction = (props) => {
 												newname = newname.slice(0, newname.length-5)
 											}
 										
-											selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
+											//selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
+											selectedActionParameters[count].value += `$${innerdata.name}.${newname}`
 											selectedAction.parameters[count].value = selectedActionParameters[count].value;
 											setSelectedAction(selectedAction);
 											setUpdate(Math.random());

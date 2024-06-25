@@ -3616,7 +3616,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	}
 
 	if org.SyncConfig.WorkflowBackup {
-		workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser)
+		workflows, err := shuffle.GetAllWorkflowsByQuery(ctx, foundUser, 250, "")
 		if err != nil {
 			log.Printf("[ERROR] Failed getting backup workflows for org %s: %s", org.Id, err)
 		} else {
