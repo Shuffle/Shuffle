@@ -5199,7 +5199,11 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/detection/sigma_rules", shuffle.HandleGetSigmaRules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/detection/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/files/detection/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
+
 	r.HandleFunc("/api/v1/detection/siem/node_health", handleTenzirHealthUpdate).Methods("POST","OPTIONS")
+	r.HandleFunc("/api/v1/detection/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET","OPTIONS")
+	r.HandleFunc("/api/v1/detection/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST","OPTIONS")
+
 
 	// Introduced in 0.9.21 to handle notifications for e.g. failed Workflow
 	r.HandleFunc("/api/v1/notifications", shuffle.HandleCreateNotification).Methods("POST", "OPTIONS")

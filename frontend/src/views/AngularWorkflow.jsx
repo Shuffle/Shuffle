@@ -21194,8 +21194,36 @@ const releaseToConnectLabel = "Release to Connect"
   ) : null;
 
   const TenzirConfigModal = () => {
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [selectedRules, setSelectedRules] = useState([]);
+  
+    useEffect(() => {
+      if (tenzirConfigModalOpen) {
+        try {
+          const url = globalUrl + "/api/v1/detection/" + selectedTrigger.id + "/selected_rules"
+          fetch(url, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+            .then(response => response.json())
+            .then(data => {
+              const savedRules = data.selected_rules.map(rule => rule.file_id);
+              setSelectedRules(savedRules);
+              setLoading(false);
+            })
+            .catch(error => {
+              console.error('Error fetching selected rules:', error);
+              setLoading(false);
+            });
+        } catch (error) {
+          console.error('Error:', error);
+          setLoading(false);
+        }
+      }
+    }, [tenzirConfigModalOpen]);
   
     const handleRuleChange = (event) => {
       setSelectedRules(event.target.value);
@@ -21211,31 +21239,43 @@ const releaseToConnectLabel = "Release to Connect"
     };
   
     const handleSubmit = () => {
-      const selectedRuleFiles = rules
-        .filter(rule => selectedRules.includes(rule.file_id));
-
-        if (selectedTrigger.trigger_type !== "PIPELINE") {
-          toast("Unable to save the configuration");
-          return;
-        }
-      
-        selectedTrigger.parameters = selectedRuleFiles;
-    
-    
-      console.log('Selected Rule Files:', selectedRuleFiles);
-      console.log('Selected Rule File Names:', selectedRuleFiles.map(rule => rule.file_id));
-      
-      setTenzirConfigModalOpen(false);
-    };
-
-    useEffect(()=>{
-      if (selectedTrigger.trigger_type !== "PIPELINE") {
-        //toast("Unable to save the configuration");
-        return;
+      const selectedRuleFiles = rules.filter(rule => selectedRules.includes(rule.file_id));
+  
+      const payload = {
+        selected_rules: selectedRuleFiles.map(rule => ({
+          file_name: rule.file_name,
+          title: rule.title,
+          description: rule.description,
+          file_id: rule.file_id,
+          is_enabled: rule.is_enabled,
+        }))
+      };
+  
+      try {
+        const url = globalUrl + "/api/v1/detection/" + selectedTrigger.id + "/selected_rules/save"
+        fetch(url, {
+          method: 'POST',
+          credentials: "include",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        })
+          .then(response => response.json())
+          .then(data => {
+            console.log('Rules saved successfully:', data);
+            setTenzirConfigModalOpen(false);
+          })
+          .catch(error => {
+            console.error('Error saving selected rules:', error);
+            toast("Unable to save the configuration");
+          });
+      } catch (error) {
+        console.error('Error:', error);
+        toast("Unable to save the configuration");
       }
-      setSelectedRules(selectedTrigger.parameters);
-    },[])
-    
+    };
+  
     const enabledSigmaInfo = rules.filter(rule => rule.is_enabled);
   
     if (!tenzirConfigModalOpen) return null;
@@ -21319,8 +21359,7 @@ const releaseToConnectLabel = "Release to Connect"
         </IconButton>
       </Dialog>
     );
-  }
-  
+  };
 
 
 
