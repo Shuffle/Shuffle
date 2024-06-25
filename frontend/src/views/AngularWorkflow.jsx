@@ -1474,7 +1474,7 @@ const releaseToConnectLabel = "Release to Connect"
       toast("Unable to save the configuration");
       return;
     }
-   if (selectedOption == "kafka Queue") {
+   if (selectedOption === "Kafka Queue") {
     trigger.parameters = []
 
     const topic = document.getElementById('topic')?.value
@@ -15541,8 +15541,41 @@ const releaseToConnectLabel = "Release to Connect"
                     disabled={selectedTrigger.status === "running"}
                     onClick={() => {
 
-                      let command = (selectedTrigger?.parameters?.find(param => param.name === "command")?.value) || ''
-                      command = `${command} | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
+                      if (selectedOption === "Kafka Queue"){
+
+                      const topic = (selectedTrigger?.parameters?.find(param => param.name === "topic")?.value) || ''
+                      const bootstrapServers = (selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''
+                      const groupId = (selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''
+                      const autoOffsetReset = (selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''
+                      let command = "from kafka"
+                      
+                      if(topic) {
+                        command = `${command} -t ${topic}`
+                      } else {
+                        toast("please enter the topic name")
+                        return;
+                      }
+                      if(bootstrapServers) {
+                        command = `${command} -e -o stored -X bootstrap.servers=${bootstrapServers}`
+                      } else {
+                        toast("please enter the bootstrap servers details")
+                        return;
+                      }
+
+                      if(groupId) {
+                         command = `${command},group.id=${groupId}`
+                      } else {
+                        command = `${command},group.id=${selectedTrigger.id}`
+                      }
+                      if(autoOffsetReset) {
+                        command = `${command},auto.offset.reset=${autoOffsetReset}`
+                      } else {
+                        command = `${command},auto.offset.reset=earliest`
+
+                      }
+                      command = `${command},auto.offset.reset=earliest`
+                      command = `${command},client.id=${selectedTrigger.id},enable.auto.commit=true,auto.commit.interval.ms=1`
+                      command = `${command} read json | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
 
                       const pipelineConfig = {
                         command: command,
@@ -15554,7 +15587,7 @@ const releaseToConnectLabel = "Release to Connect"
                         start_node: "",
                       };
                       submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
-                    }}
+                    }}}
                     color="primary"
                   >
                     Start
@@ -21268,8 +21301,8 @@ const releaseToConnectLabel = "Release to Connect"
             pointerEvents: "auto",
             color: "white",
             minWidth: 600,
-            minHeight: 200,
-            maxHeight: 200,
+            minHeight: 550,
+            maxHeight: 550,
             padding: 15,
             overflow: "hidden",
             zIndex: 10012,
