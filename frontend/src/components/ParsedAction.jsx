@@ -206,16 +206,6 @@ const ParsedAction = (props) => {
 		setLastSaved(false)
 	}
   }, [expansionModalOpen])
-  useEffect(() => {
-		setParamValues(selectedAction.parameters.map((param) => {
-			return {
-				name: param.name,
-				value: param.value,
-			}
-		}))
-  },[
-	selectedAction, selectedApp,setNewSelectedAction, workflow,
-  ])
 
   useEffect(() => {
 		setParamValues(selectedAction.parameters.map((param) => {
