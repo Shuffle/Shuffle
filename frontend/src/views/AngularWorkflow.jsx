@@ -535,6 +535,7 @@ const AngularWorkflow = (defaultprops) => {
   const [selectedOption, setSelectedOption] = React.useState("");
   const [tenzirConfigModalOpen, setTenzirConfigModalOpen] = React.useState(false);
   const [rules, setRules] = React.useState([]);
+  const [sigmaFilesNames, setSigmaFileNames] = React.useState("")
 
   const [distributedFromParent, setDistributedFromParent] = React.useState("")
   const [suborgWorkflows, setSuborgWorkflows] = React.useState([])
@@ -992,12 +993,6 @@ const releaseToConnectLabel = "Release to Connect"
       }
     }
   }, [authenticationModalOpen])
-
-  useEffect(() =>{
-    if (tenzirConfigModalOpen === false) return;
-
-    getSigmaInfo();
-  },[tenzirConfigModalOpen])
 
 	const listOrgCache = (orgId) => {
 		fetch(`${globalUrl}/api/v1/orgs/${orgId}/list_cache`, {
@@ -1473,6 +1468,59 @@ const releaseToConnectLabel = "Release to Connect"
   
     setTenzirConfigModalOpen(false);
   };
+
+  const handleSubmit = (trigger) => {
+    if (trigger.trigger_type !== "PIPELINE") {
+      toast("Unable to save the configuration");
+      return;
+    }
+   if (selectedOption == "kafka Queue") {
+    trigger.parameters = []
+
+    const topic = document.getElementById('topic')?.value
+    const bootstrapServers = document.getElementById('bootstrap_servers')?.value
+    const groupId = document.getElementById('group_id')?.value
+    const autoOffsetReset = document.getElementById('auto_offset_reset')?.value;
+
+    if(topic) {
+      trigger.parameters.push({
+        name: "topic",
+        value: topic
+      })
+    } else {
+      toast("Please enter the topic name");
+      return;
+    }
+  
+    if (bootstrapServers) {
+      trigger.parameters.push({
+        name: "bootstrap_servers",
+        value: bootstrapServers
+      });
+    } else {
+      toast("please enter bootstrap server details");
+      return;
+    }
+  
+    if (groupId) {
+      trigger.parameters.push({
+        name: "group_id",
+        value: groupId
+      });
+    }
+  
+    if (autoOffsetReset) {
+      trigger.parameters.push({
+        name: "auto_offset_reset",
+        value: autoOffsetReset
+      });
+    }
+  
+    setTenzirConfigModalOpen(false);
+  }
+
+  };
+  
   
 	const handleColoring = (actionId, status, label) => {
 		if (cy === undefined) {
@@ -15417,7 +15465,18 @@ const releaseToConnectLabel = "Release to Connect"
                       return;
                     } else {
                     setSelectedOption("SigmaRule");
-                    setTenzirConfigModalOpen(true);
+                    const command = `export | sigma /var/lib/tenzir/sigma_rules | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
+                    const pipelineConfig = {
+                      command: command,
+                      name: selectedTrigger.label,
+                      type: "create",
+                      environment: selectedTrigger.environment,
+                      workflow_id: workflow.id,
+                      trigger_id: selectedTrigger.id,
+                      start_node: "",
+                    };
+                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
+                 
                   }}}
                   style={{
                     border: "1px solid rgba(255,255,255,0.3)",
@@ -21194,90 +21253,6 @@ const releaseToConnectLabel = "Release to Connect"
   ) : null;
 
   const TenzirConfigModal = () => {
-    const [loading, setLoading] = useState(true);
-    const [selectedRules, setSelectedRules] = useState([]);
-  
-    useEffect(() => {
-      if (tenzirConfigModalOpen) {
-        try {
-          const url = globalUrl + "/api/v1/detection/" + selectedTrigger.id + "/selected_rules"
-          fetch(url, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          })
-            .then(response => response.json())
-            .then(data => {
-              const savedRules = data.selected_rules.map(rule => rule.file_id);
-              setSelectedRules(savedRules);
-              setLoading(false);
-            })
-            .catch(error => {
-              console.error('Error fetching selected rules:', error);
-              setLoading(false);
-            });
-        } catch (error) {
-          console.error('Error:', error);
-          setLoading(false);
-        }
-      }
-    }, [tenzirConfigModalOpen]);
-  
-    const handleRuleChange = (event) => {
-      setSelectedRules(event.target.value);
-    };
-  
-    const handleSelectAll = () => {
-      const allEnabledRules = rules.filter(rule => rule.is_enabled).map(rule => rule.file_id);
-      setSelectedRules(allEnabledRules);
-    };
-  
-    const handleClose = () => {
-      setTenzirConfigModalOpen(false);
-    };
-  
-    const handleSubmit = () => {
-      const selectedRuleFiles = rules.filter(rule => selectedRules.includes(rule.file_id));
-  
-      const payload = {
-        selected_rules: selectedRuleFiles.map(rule => ({
-          file_name: rule.file_name,
-          title: rule.title,
-          description: rule.description,
-          file_id: rule.file_id,
-          is_enabled: rule.is_enabled,
-        }))
-      };
-  
-      try {
-        const url = globalUrl + "/api/v1/detection/" + selectedTrigger.id + "/selected_rules/save"
-        fetch(url, {
-          method: 'POST',
-          credentials: "include",
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        })
-          .then(response => response.json())
-          .then(data => {
-            console.log('Rules saved successfully:', data);
-            setTenzirConfigModalOpen(false);
-          })
-          .catch(error => {
-            console.error('Error saving selected rules:', error);
-            toast("Unable to save the configuration");
-          });
-      } catch (error) {
-        console.error('Error:', error);
-        toast("Unable to save the configuration");
-      }
-    };
-  
-    const enabledSigmaInfo = rules.filter(rule => rule.is_enabled);
-  
     if (!tenzirConfigModalOpen) return null;
   
     return (
@@ -21302,65 +21277,116 @@ const releaseToConnectLabel = "Release to Connect"
           },
         }}
       >
-        {loading ? (
-          <CircularProgress />
-        ) : (
-          <div
-            style={{
-              flex: 2,
-              padding: 0,
-              minHeight: isMobile ? "90%" : 700,
-              maxHeight: isMobile ? "90%" : 700,
-              overflowY: "auto",
-              overflowX: isMobile ? "auto" : "hidden",
-            }}
-          >
-            <DialogContent>
-              {selectedOption === 'SigmaRule' && (
-                <>
-                  <FormControl fullWidth>
-                    <InputLabel>Select Sigma Rules</InputLabel>
-                    <Select
-                      multiple
-                      value={selectedRules}
-                      onChange={handleRuleChange}
-                      renderValue={(selected) => selected.join(', ')}
-                    >
-                      {enabledSigmaInfo.map(rule => (
-                        <MenuItem key={rule.file_id} value={rule.file_id}>
-                          <Checkbox checked={selectedRules.indexOf(rule.file_id) > -1} />
-                          <ListItemText primary={rule.title} />
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <Button onClick={handleSelectAll}>Select All</Button>
-                </>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button style={{ borderRadius: "0px" }} onClick={handleClose} color="primary">Cancel</Button>
-              <Button style={{ borderRadius: "0px" }} onClick={handleSubmit} color="primary">Submit</Button>
-            </DialogActions>
-          </div>
-        )}
+        <DialogTitle id="tenzir-config-modal" style={{ cursor: "move" }}>
+          <div style={{ color: "white" }}>Configuration options for Kafka</div>
+        </DialogTitle>
+        <DialogContent>
+          {selectedOption === "Kafka Queue" ? (
+            <div>
+              <b>Topic</b>
+              <TextField
+                id="topic"
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  borderRadius: theme.palette.borderRadius,
+                }}
+                InputProps={{
+                  style: {},
+                }}
+                fullWidth
+                color="primary"
+                placeholder={"topic name"}
+                defaultValue={
+                  selectedTrigger?.parameters?.find(
+                    (param) => param.name === "topic",
+                  )?.value || ""
+                }
+              />
+              <b>bootstrap.servers</b>
+              <TextField
+                id="bootstrap_servers"
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  borderRadius: theme.palette.borderRadius,
+                }}
+                InputProps={{
+                  style: {},
+                }}
+                fullWidth
+                color="primary"
+                placeholder={"broker1.example.com:9092,192.168.1.100:9092"}
+                defaultValue={
+                  selectedTrigger?.parameters?.find(
+                    (param) => param.name === "bootstrap_servers",
+                  )?.value || ""
+                }
+              />
+              <b>group.id</b>
+              <TextField
+                id="group_id"
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  borderRadius: theme.palette.borderRadius,
+                }}
+                InputProps={{
+                  style: {},
+                }}
+                fullWidth
+                color="primary"
+                placeholder={"tenzir"}
+                defaultValue={
+                  selectedTrigger?.parameters?.find(
+                    (param) => param.name === "group_id",
+                  )?.value || ""
+                }
+              />
+              <b>auto.offest.reset</b>
+              <TextField
+                id="auto_offset_reset"
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  borderRadius: theme.palette.borderRadius,
+                }}
+                InputProps={{
+                  style: {},
+                }}
+                fullWidth
+                color="primary"
+                placeholder={"earliest"}
+                defaultValue={
+                  selectedTrigger?.parameters?.find(
+                    (param) => param.name === "auto_offset_reset",
+                  )?.value || ""
+                }
+              />
+            </div>
+          ) : null}{" "}
+        </DialogContent>
   
-        <IconButton
-          style={{
-            zIndex: 5000,
-            position: "absolute",
-            top: 14,
-            right: 18,
-            color: "grey",
-          }}
-          onClick={handleClose}
-        >
-          <CloseIcon />
-        </IconButton>
+        <DialogActions>
+          <Button
+            style={{ borderRadius: "0px" }}
+            onClick={() => {
+              setTenzirConfigModalOpen(false);
+            }}
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button
+            style={{ borderRadius: "0px" }}
+            onClick={() => {
+              handleSubmit(selectedTrigger);
+            }}
+            color="primary"
+          >
+            Submit
+          </Button>
+        </DialogActions>
       </Dialog>
     );
   };
-
+  
 
 
 	const SuggestionBoxUi = () => {
