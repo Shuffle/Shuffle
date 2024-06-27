@@ -714,7 +714,10 @@ const Billing = (props) => {
 								userdata.has_card_available === true ?
 									"While you have a card attached to your account, Shuffle will no longer prevent workflows from running. Billing will occur at the start of each month."
 									:
-									`You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit.`
+									isCloud ? 
+										`You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit.`
+										:
+										`You are not subscribed to any plan and are using the free, open source plan. This plan has no enforced limits, but scale issues may occur due to CPU congestion.` 
 							}
 						</Typography>
 						<div style={{ display: 'flex', flexDirection: 'row' }}>

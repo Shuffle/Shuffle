@@ -573,7 +573,10 @@ const ParsedAction = (props) => {
 	
 	useEffect(() => {
 		selectedNameChange(appActionName)
-		actionDelayChange(delay) 
+
+		if (actionDelayChange !== undefined) {
+			actionDelayChange(delay) 
+		}
 	  },[appActionName,delay])
 	 
 		const handleParamChange = (event, count,data) => {

@@ -43,11 +43,10 @@ const Search = (props) => {
       const params = Object.fromEntries(urlSearchParams.entries());
       const foundTab = params["tab"];
       if (foundTab !== null && foundTab !== undefined) {
-        for (var key in Object.keys(views)) {
+        for (let key in views) {
           const value = views[key];
-          console.log(key, value);
           if (value === foundTab) {
-            setConfig("", key);
+            setConfig(null, key);
             break;
           }
         }
@@ -130,7 +129,7 @@ const Search = (props) => {
     display: "flex",
     flexDirection: "column",
     overflowX: "hidden",
-    minHeight: 400,
+    minHeight: 400
   };
 
   const views = {
@@ -138,7 +137,9 @@ const Search = (props) => {
     1: "workflows",
     2: "docs",
     3: "creators",
+    4: "discord"
   };
+
   const setConfig = (event, inputValue) => {
     const newValue = parseInt(inputValue);
 
@@ -216,7 +217,7 @@ const Search = (props) => {
       <div style={boxStyle}>
         <Tabs
           style={{
-            width: 741,
+            width: 757,
             margin: isHeader ? null : "auto",
             marginTop: hidemargins === true ? 0 : isHeader ? null : 25,
             backgroundColor: "rgba(33, 33, 33, 1)",
@@ -227,8 +228,8 @@ const Search = (props) => {
           textColor="secondary"
           onChange={setConfig}
           aria-label="disabled tabs example"
-          variant="scrollable"
-          scrollButtons="auto"
+          // variant="scrollable"
+          // scrollButtons="auto"
           classes={{ indicator: classes.hideIndicator, root: classes.customTab }}
         >
           <StyledTab

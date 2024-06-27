@@ -76,6 +76,7 @@ import {
   Help as HelpIcon,
   Flag as FlagIcon,
   FmdGood as FmdGoodIcon,
+  Warning as WarningIcon,
 } from "@mui/icons-material";
 
 //import { useAlert
@@ -5369,10 +5370,37 @@ If you're interested, please let me know a time that works for you, or set up a 
 		}
 	}
 
-	console.log("AUTH: ", data)
+	var validIcon = <CheckCircleIcon style={{ color: "green" }} />
+	if (data.validation !== null && data.validation !== undefined && data.validation.valid === false) {
+
+		if (data.validation.changed_at === 0) {
+			// Warning
+			validIcon = "" // <WarningIcon style={{ color: "" }} />
+		} else {
+	  		validIcon = <CancelIcon style={{ color: "red" }} />
+		}
+	}
 
 	return (
 	  <ListItem key={index} style={{ backgroundColor: bgColor }}>
+		<ListItemText
+			primary=
+				<Tooltip title={data.validation.valid === true ? "Valid. Click to explore." : "Configuration failed. Click to learn why"} placement="top">
+					<IconButton>
+						{validIcon}
+					</IconButton>
+				</Tooltip>
+		  	style={{ minWidth: 65, maxWidth: 65, }}
+			onClick={() => {
+				if (data.validation.workflow_id === undefined || data.validation.workflow_id === null || data.validation.workflow_id.length === 0) {
+					toast.warn("No workflow runs found for this auth yet. Check back later.")
+					return
+				}
+
+				const url = `/workflows/${data.validation.workflow_id}?execution_id=${data.validation.execution_id}&node=${data.validation.node_id}`
+				window.open(url, "_blank")
+			}}
+		/>
 		<ListItemText
 		  primary=<img
 			alt=""
@@ -5497,17 +5525,17 @@ If you're interested, please let me know a time that works for you, or set up a 
 				  .join(", ")
 		  }
 		  style={{
-			minWidth: 125,
-			maxWidth: 125,
+			minWidth: 140,
+			maxWidth: 140,
 			overflow: "auto",
 			marginRight: 10,
 		  }}
 		/>
 		<ListItemText
 		  style={{
-			maxWidth: 230,
-			minWidth: 230,
-			overflow: "hidden",
+			maxWidth: 150,
+			minWidth: 150,
+			overflow: "auto",
 		  }}
 		  primary={new Date(data.edited * 1000).toISOString()}
 		/>
@@ -5804,6 +5832,10 @@ If you're interested, please let me know a time that works for you, or set up a 
         <List>
           <ListItem>
             <ListItemText
+              primary="Valid"
+              style={{ minWidth: 65, maxWidth: 65 }}
+            />
+            <ListItemText
               primary="Icon"
               style={{ minWidth: 75, maxWidth: 75 }}
             />
@@ -5831,11 +5863,11 @@ If you're interested, please let me know a time that works for you, or set up a 
 						*/}
             <ListItemText
               primary="Fields"
-              style={{ minWidth: 135, maxWidth: 135, overflow: "hidden" }}
+              style={{ minWidth: 140, maxWidth: 140, overflow: "hidden" }}
             />
             <ListItemText
               primary="Edited"
-              style={{ minWidth: 230, maxWidth: 230, overflow: "hidden" }}
+              style={{ minWidth: 150, maxWidth: 150, overflow: "hidden" }}
             />
             <ListItemText
               primary="Actions"

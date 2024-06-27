@@ -1452,7 +1452,7 @@ func main() {
 	if isKubernetes == "true" {
 		clientset, _, err := shuffle.GetKubernetesClient()
 		if err != nil {
-			log.Printf("[ERROR] Error getting kubernetes client:", err)
+			log.Printf("[ERROR] Error getting kubernetes client: %s", err)
 			os.Exit(1)
 		}
 
