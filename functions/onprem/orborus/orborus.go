@@ -102,6 +102,7 @@ var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
 var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 var tenzirUrl = os.Getenv("SHUFFLE_TENZIR_URL")
+var apiKey = os.Getenv("AUTH_FOR_ORBORUS")
 
 var executionIds = []string{}
 var namespacemade = false // For K8s
@@ -2923,8 +2924,6 @@ func searchPipeline(identifier string) (string, error) {
 
 func handleFileCategoryChange() error{
 	apiEndpoint := baseUrl+"/api/v1/files/namespaces/sigma"
-	apiKey := "12e7150e-1e03-4834-a839-de4688f50ad0"
-
 	req, err := http.NewRequest("GET", apiEndpoint, nil)
 	if err != nil {
 		return err
@@ -3116,7 +3115,6 @@ func sendTenzirHealthStatus() error {
 		log.Printf("[ERROR] Received non-successful HTTP status code: %d", resp.StatusCode)
 		return fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
-   log.Printf("this is send successfully")
 	return nil
 }
 

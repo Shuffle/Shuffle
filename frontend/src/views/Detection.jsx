@@ -136,7 +136,7 @@ const Detection = ({
       });
   };
 
-  const filteredRules = ruleInfo.filter((rule) =>
+  const filteredRules = ruleInfo?.filter((rule) =>
     rule.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     rule.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -218,7 +218,7 @@ const Detection = ({
             p: 1,
           }}
         >
-          {filteredRules.length > 0 &&
+          {filteredRules?.length > 0 &&
             filteredRules.map((card) => (
               <RuleCard
                 key={card.file_id}

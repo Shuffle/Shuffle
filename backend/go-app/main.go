@@ -2169,7 +2169,7 @@ func handleTenzirHealthUpdate(resp http.ResponseWriter, request *http.Request) {
 	status := healthUpdate.Status
 
 	result, err := shuffle.GetDisabledRules(ctx)
-	if (err != nil && err.Error() != "rules doesn't exist") || err == nil {
+	if (err != nil && err.Error() == "rules doesn't exist") || err == nil {
 		result.IsTenzirActive = status
 		result.LastActive = time.Now().Unix()
 

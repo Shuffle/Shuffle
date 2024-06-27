@@ -46,7 +46,7 @@ const DetectionDashBoard = (props) => {
   }, [folderDisabled]);
 
   useEffect(() => {
-    if (ruleInfo.length > 0) {
+    if (ruleInfo?.length > 0) {
       openEditBar(ruleInfo[0]);
     }
   }, [ruleInfo]);
