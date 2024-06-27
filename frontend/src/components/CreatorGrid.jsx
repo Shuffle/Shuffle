@@ -152,6 +152,7 @@ const CreatorGrid = props => {
     flexWrap: "wrap",
     alignContent: "space-between",
     marginTop: 5,
+	padding:"0px 180px",
   }
 	
 	const Hits = ({ hits }) => {

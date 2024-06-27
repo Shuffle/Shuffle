@@ -32,8 +32,6 @@ import {
     FileCopy as FileCopyIcon
 } from "@mui/icons-material";
 import { fontGrid } from "@mui/material/styles/cssUtils.js";
-import { active } from "d3";
-import style from "./../index.css";
 
 const Body = {
     //maxWidth: 1000,

@@ -50,6 +50,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 )
 
 // Starts jobs in bulk, so this could be increased
@@ -659,166 +662,209 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 	return nil
 }
 
+func deployK8sWorker(image string, identifier string, env []string) error {
+	env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
+	env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
+
+	if len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
+		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", os.Getenv("KUBERNETES_SERVICE_HOST")))
+	}
+
+	if len(os.Getenv("SHUFFLE_MEMCACHED")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_MEMCACHED=%s", os.Getenv("SHUFFLE_MEMCACHED")))
+	}
+
+	if len(os.Getenv("KUBERNETES_SERVICE_PORT")) > 0 {
+		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
+	}
+
+	clientset, _, err := shuffle.GetKubernetesClient()
+	if err != nil {
+		log.Printf("[ERROR] Error getting kubernetes client:", err)
+		return err
+	}
+
+	//env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
+
+	// FIXME: When a service account is used, the account is also mounted in the pod
+	// The volume mount location is: 
+	// /var/run/secrets/kubernetes.io/serviceaccount
+
+	// Look for if there is a default service account in use
+	if len(os.Getenv("KUBERNETES_SERVICE_ACCOUNT")) > 0 {
+		log.Printf("[DEBUG] Using Kubernetes service account %s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT"))
+		env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_ACCOUNT=%s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT")))
+
+		// use k8s downward API to find it if we are in a pod
+	}
+
+
+	// Check if namespace exist as variable. If so, make it
+	if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 && !namespacemade {
+		kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+
+		// Make the namespace
+		namespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: os.Getenv("KUBERNETES_NAMESPACE"),
+			},
+		}
+
+		_, err := clientset.CoreV1().Namespaces().Create(context.Background(), namespace, metav1.CreateOptions{})
+		if err != nil {
+			if !strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already exists") {
+				log.Printf("[ERROR] Failed creating Kubernetes namespace: %s", err)
+			} else {
+				namespacemade = true
+			}
+		} else {
+			namespacemade = true
+		}
+	}
+
+	env = append(env, fmt.Sprintf("BASE_URL=%s", baseUrl))
+	env = append(env, fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", swarmConfig))
+
+	if len(kubernetesNamespace) == 0 {
+		foundNamespace, err := shuffle.GetKubernetesNamespace() 
+		if err != nil {
+			//log.Printf("[ERROR] Failed getting Kubernetes namespace: %s", err)
+		}
+
+		if len(foundNamespace) > 0 {
+			kubernetesNamespace = foundNamespace
+			os.Setenv("KUBERNETES_NAMESPACE", kubernetesNamespace)
+		}
+	}
+
+	if len(kubernetesNamespace) == 0 {
+		kubernetesNamespace = "default"
+	}
+
+	kubernetesImage := os.Getenv("SHUFFLE_KUBERNETES_WORKER")
+	if len(kubernetesImage) == 0 {
+		kubernetesImage = image
+	}
+	log.Printf("[DEBUG] Using Kubernetes worker image '%s'", kubernetesImage)
+	// image = "shuffle-worker:v1" //hard coded image name to test locally
+
+	envMap := make(map[string]string)
+	for _, envStr := range env {
+		parts := strings.SplitN(envStr, "=", 2)
+		if len(parts) == 2 {
+			envMap[parts[0]] = parts[1]
+		}
+	}
+
+	containerLabels := map[string]string{
+		"container": "shuffle-worker",
+	}
+
+	containerAttachment := corev1.Container{
+		Name:  identifier,
+		Image: kubernetesImage,
+		Env:   buildEnvVars(envMap),
+		
+		//ImagePullPolicy: "Never",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+	}
+
+	podname := shuffle.GetPodName()
+
+	ctx := context.Background()
+
+	if len(podname) > 0 {
+		_, err := shuffle.GetCurrentPodNetworkConfig(ctx, clientset, kubernetesNamespace, podname)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting current pod network: %s", err)
+		} else {
+			log.Printf("[DEBUG] Current pod found!")
+			// currentPodStatus = k8s.io/api/core/v1.PodStatus
+		}
+	}
+
+
+	// While testing:
+	// kubectl delete pods --all --all-namespaces; kubectl delete services --all --all-namespaces
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   identifier,
+			Labels: containerLabels,
+		},
+		Spec: corev1.PodSpec{
+			RestartPolicy: "Never",
+			// DNSPolicy:     "Default",
+			DNSPolicy: 	corev1.DNSClusterFirst,
+			// NodeSelector: map[string]string{
+			// 	"node": "master",
+			// },
+			Containers: []corev1.Container{
+				containerAttachment,
+			},
+		},
+	}
+
+	// Check if running on ARM or x86 to download the correct image
+
+	// Get current pod's network so we can make the pod in it
+
+	_, err = clientset.CoreV1().Pods(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Failed listing pods: %s", err)
+	}
+
+
+	createdPod, err := clientset.CoreV1().Pods(kubernetesNamespace).Create(context.Background(), pod, metav1.CreateOptions{})
+	if err != nil {
+		//log.Printf("[ERROR] Failed creating pod: %v", err)
+		return err
+	}
+
+	log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
+
+	// kubectl expose pod shuffle-workers --type=LoadBalancer --port=33333
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: identifier,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"container": "shuffle-worker",
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Protocol: "TCP",
+					Port:     33333,
+					TargetPort: intstr.FromInt(33333),
+				},
+			},
+			Type: corev1.ServiceTypeLoadBalancer,
+		},
+	}
+
+	_, err = clientset.CoreV1().Services(kubernetesNamespace).Create(context.TODO(), service, metav1.CreateOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Failed creating service: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
 	if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
 		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
 	}
 
-	if isKubernetes == "true" {
-		env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
-		env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
+	// if isKubernetes == "true" {
+	// 	err := deployK8sWorker(image, identifier, env, executionRequest)
+	// 	if err != nil {
+	// 		log.Printf("[ERROR] Failed deploying Kubernetes worker: %s", err)
+	// 	}
 
-		if len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
-			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", os.Getenv("KUBERNETES_SERVICE_HOST")))
-		} 
-
-		if len(os.Getenv("KUBERNETES_SERVICE_PORT")) > 0 {
-			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
-		}
-
-		clientset, _, err := shuffle.GetKubernetesClient()
-		if err != nil {
-			log.Printf("[ERROR] Error getting kubernetes client:", err)
-			return err
-		}
-
-
-		//env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
-
-		// FIXME: When a service account is used, the account is also mounted in the pod
-		// The volume mount location is: 
-		// /var/run/secrets/kubernetes.io/serviceaccount
-
-		// Look for if there is a default service account in use
-		if len(os.Getenv("KUBERNETES_SERVICE_ACCOUNT")) > 0 {
-			log.Printf("[DEBUG] Using Kubernetes service account %s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT"))
-			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_ACCOUNT=%s", os.Getenv("KUBERNETES_SERVICE_ACCOUNT")))
-
-			// use k8s downward API to find it if we are in a pod
-		}
-
-
-		// Check if namespace exist as variable. If so, make it
-		if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 && !namespacemade {
-			kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
-
-			// Make the namespace
-			namespace := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: os.Getenv("KUBERNETES_NAMESPACE"),
-				},
-			}
-
-			_, err := clientset.CoreV1().Namespaces().Create(context.Background(), namespace, metav1.CreateOptions{})
-			if err != nil {
-				if !strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already exists") {
-					log.Printf("[ERROR] Failed creating Kubernetes namespace: %s", err)
-				} else {
-					namespacemade = true
-				}
-			} else {
-				namespacemade = true
-			}
-		}
-
-		if len(kubernetesNamespace) == 0 {
-			foundNamespace, err := shuffle.GetKubernetesNamespace() 
-			if err != nil {
-				//log.Printf("[ERROR] Failed getting Kubernetes namespace: %s", err)
-			}
-
-			if len(foundNamespace) > 0 {
-				kubernetesNamespace = foundNamespace
-				os.Setenv("KUBERNETES_NAMESPACE", kubernetesNamespace)
-			}
-		}
-
-		if len(kubernetesNamespace) == 0 {
-			kubernetesNamespace = "default"
-		}
-
-		kubernetesImage := os.Getenv("SHUFFLE_KUBERNETES_WORKER")
-		if len(kubernetesImage) == 0 {
-			kubernetesImage = image
-		}
-		log.Printf("[DEBUG] Using Kubernetes worker image '%s'", kubernetesImage)
-		// image = "shuffle-worker:v1" //hard coded image name to test locally
-
-		envMap := make(map[string]string)
-		for _, envStr := range env {
-			parts := strings.SplitN(envStr, "=", 2)
-			if len(parts) == 2 {
-				envMap[parts[0]] = parts[1]
-			}
-		}
-
-		containerLabels := map[string]string{
-			"container": "shuffle-worker",
-		}
-
-		containerAttachment := corev1.Container{
-			Name:  identifier,
-			Image: kubernetesImage,
-			Env:   buildEnvVars(envMap),
-			
-			//ImagePullPolicy: "Never",
-			ImagePullPolicy: corev1.PullIfNotPresent,
-		}
-
-		podname := shuffle.GetPodName()
-
-		ctx := context.Background()
-
-		if len(podname) > 0 {
-			currentPodStatus, err := shuffle.GetCurrentPodNetworkConfig(ctx, clientset, kubernetesNamespace, podname)
-			if err != nil {
-				log.Printf("[ERROR] Failed getting current pod network: %s", err)
-			} else {
-				log.Printf("[DEBUG] Current pod found!")
-				// currentPodStatus = k8s.io/api/core/v1.PodStatus
-			}
-		}
-
-
-		// While testing:
-		// kubectl delete pods --all --all-namespaces; kubectl delete services --all --all-namespaces
-		pod := &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   identifier,
-				Labels: containerLabels,
-			},
-			Spec: corev1.PodSpec{
-				RestartPolicy: "Never",
-				DNSPolicy:     "Default",
-				// NodeSelector: map[string]string{
-				// 	"node": "master",
-				// },
-				Containers: []corev1.Container{
-					containerAttachment,
-				},
-			},
-		}
-
-		// Check if running on ARM or x86 to download the correct image
-
-		// Get current pod's network so we can make the pod in it
-
-		networks, err := clientset.CoreV1().Pods(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
-		if err != nil {
-			log.Printf("[ERROR] Failed listing pods: %s", err)
-		}
-
-
-		createdPod, err := clientset.CoreV1().Pods(kubernetesNamespace).Create(context.Background(), pod, metav1.CreateOptions{})
-		if err != nil {
-			//log.Printf("[ERROR] Failed creating pod: %v", err)
-			return err
-		}
-
-		log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
-		return nil
-	}
+	// 	return err
+	// }
 
 	// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
@@ -844,23 +890,25 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 	}
 
-	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-	if strings.ToLower(cleanupEnv) != "false" {
-		hostConfig.AutoRemove = true
-	}
-
 	config := &container.Config{
 		Image: image,
 		Env:   env,
 	}
 
+	if isKubernetes != "true" {
+		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+		if strings.ToLower(cleanupEnv) != "false" {
+			hostConfig.AutoRemove = true
+		}
+	}
+
 	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	parsedUuid := uuid.NewV4()
-	if swarmConfig == "run" || swarmConfig == "swarm" {
+	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
 		// FIXME: Should we handle replies properly?
 		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
 		// a 401 from the worker, which returns an error here
-		go sendWorkerRequest(executionRequest)
+		go sendWorkerRequest(executionRequest, image, env)
 
 		return nil
 	}
@@ -1401,6 +1449,115 @@ func main() {
 		log.Printf("[INFO] Running inside k8s cluster")
 	}
 
+	if isKubernetes == "true" {
+		clientset, _, err := shuffle.GetKubernetesClient()
+		if err != nil {
+			log.Printf("[ERROR] Error getting kubernetes client: %s", err)
+			os.Exit(1)
+		}
+
+		kubernetesNamespace := "default"
+
+		// Check if namespace exist as variable. If so, make it
+		if len(os.Getenv("KUBERNETES_NAMESPACE")) > 0 && !namespacemade {
+			kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+		}
+
+		// fix roles
+		// check if "service-creator" role is assigned to the service account "default"
+		roleBindingName := "service-creator-binding"
+		serviceAccountName := "default"
+		// Check if the RoleBinding exists
+		roleBinding, err := clientset.RbacV1().RoleBindings(kubernetesNamespace).Get(context.TODO(), roleBindingName, metav1.GetOptions{})
+		if err != nil {
+			log.Printf("[WARNING] Failed to get RoleBinding %s: %s", roleBindingName, err)
+			// create role and rolebinding
+			role := &rbacv1.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: roleBindingName,
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						APIGroups: []string{""},
+						Resources: []string{"services"},
+						Verbs:     []string{"create"},
+					},
+				},
+			}
+
+			ctx := context.TODO()
+
+			_, err := clientset.RbacV1().Roles(kubernetesNamespace).Create(ctx, role, metav1.CreateOptions{})	
+			if err != nil {
+				log.Printf("[ERROR] Failed to create Role %s: %s", roleBindingName, err)
+				if !strings.Contains(fmt.Sprintf("%s", err), "already exists") {
+					log.Printf("[INFO] role %s already exists", roleBindingName)
+				}
+			}
+
+			roleBinding := &rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: roleBindingName,
+				},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      serviceAccountName,
+						Namespace: kubernetesNamespace,
+					},
+				},
+				RoleRef: rbacv1.RoleRef{
+					Kind: "Role",
+					Name: roleBindingName,
+				},
+			}
+
+
+			
+			_, err = clientset.RbacV1().RoleBindings(kubernetesNamespace).Create(ctx, roleBinding, metav1.CreateOptions{})
+			if err != nil {
+				log.Printf("[ERROR] Failed to create RoleBinding %s: %s", roleBindingName, err)
+				if !strings.Contains(fmt.Sprintf("%s", err), "already exists") {
+					log.Printf("[INFO] rolebinding %s already exists", roleBindingName)
+				}
+			}
+
+
+			log.Printf("[INFO] Created Role %s and RoleBinding %s", roleBindingName, roleBindingName)
+			} else {
+				log.Printf("[INFO] RoleBinding %s exists", roleBindingName)
+			}
+
+			// Check if the RoleBinding is assigned to the service account
+			var found bool
+			for _, subject := range roleBinding.Subjects {
+				if subject.Kind == "ServiceAccount" && subject.Name == serviceAccountName {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("[WARNING] Service account %s is not assigned to RoleBinding %s\n", serviceAccountName, roleBindingName)
+				// assign the service account to the rolebinding
+				roleBinding.Subjects = append(roleBinding.Subjects, rbacv1.Subject{
+					Kind:      "ServiceAccount",
+					Name:      serviceAccountName,
+					Namespace: kubernetesNamespace,
+				})
+
+				ctx := context.TODO()
+
+				_, err := clientset.RbacV1().RoleBindings(kubernetesNamespace).Update(ctx, roleBinding, metav1.UpdateOptions{})
+				if err != nil {
+					log.Printf("[ERROR] Failed to update RoleBinding %s: %s", roleBindingName, err)
+					if !strings.Contains(fmt.Sprintf("%s", err), "already exists") {
+						log.Printf("[INFO] rolebinding %s already exists", roleBindingName)
+					}
+				}
+			}
+	}
+
 	startupDelay := os.Getenv("SHUFFLE_ORBORUS_STARTUP_DELAY")
 	if len(startupDelay) > 0 {
 		log.Printf("[DEBUG] Setting startup delay to %#v", startupDelay)
@@ -1501,16 +1658,25 @@ func main() {
 		workerImage = newWorkerImage
 	}
 
-	if swarmConfig == "run" || swarmConfig == "swarm" {
-		checkSwarmService(ctx)
-
-		log.Printf("[DEBUG] Cleaning up containers from previous run")
-		cleanupExistingNodes(ctx)
-		time.Sleep(time.Duration(5) * time.Second)
+	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
+		if isKubernetes != "true" {
+			checkSwarmService(ctx)
+			log.Printf("[DEBUG] Cleaning up containers from previous run")
+			cleanupExistingNodes(ctx)
+			time.Sleep(time.Duration(5) * time.Second)	
+		}
 
 		log.Printf("[DEBUG] Deploying worker image %s to swarm", workerImage)
-		deployServiceWorkers(workerImage)
-		log.Printf("[DEBUG] Waiting 45 seconds to ensure workers are deployed. Run: \"docker service ls\" for more info")
+
+		runString := "Run: \"docker service ls\" for more info"
+
+		if isKubernetes != "true" {
+			deployServiceWorkers(workerImage)
+		} else {
+			deployK8sWorker(workerImage, "shuffle-workers", []string{})
+			runString = "Run: \"kubectl get pods\" for more info"
+		}
+		log.Printf("[DEBUG] Waiting 45 seconds to ensure workers are deployed. %s", runString)
 		time.Sleep(time.Duration(45) * time.Second)
 
 		//deployServiceWorkers(workerImage)
@@ -1520,7 +1686,12 @@ func main() {
 
 	client := shuffle.GetExternalClient(baseUrl)
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
-	log.Printf("[INFO] Finished configuring docker environment. Connecting to %s", fullUrl)
+
+	if isKubernetes == "true" {
+		log.Printf("[INFO] Finished configuring kubernetes environment. Connecting to %s", fullUrl)
+	} else {
+		log.Printf("[INFO] Finished configuring docker environment. Connecting to %s", fullUrl)
+	}
 
 	forwardData := bytes.NewBuffer([]byte{})
 	forwardMethod := "POST"
@@ -2785,7 +2956,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	return nil
 }
 
-func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
+func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string, env []string) error {
 	parsedRequest := shuffle.OrborusExecutionRequest{
 		ExecutionId:           workflowExecution.ExecutionId,
 		Authorization:         workflowExecution.Authorization,
@@ -2818,6 +2989,15 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
 	}
 
+	identifier := "shuffle-workers"
+
+	if isKubernetes == "true" {
+		if shuffle.IsRunningInCluster() {
+			log.Printf("[INFO] Running in Kubernetes cluster")
+			// try getting the k8s worker server url
+		}
+	}
+
 	if len(workerServerUrl) > 0 {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
 	}
@@ -2842,7 +3022,12 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 			if len(newWorkerImage) > 0 {
 				workerImage = newWorkerImage
 			}
-			deployServiceWorkers(workerImage)
+
+			if isKubernetes == "true" {
+				deployK8sWorker(workerImage, identifier, env)
+			} else {
+				deployServiceWorkers(workerImage)
+			}
 
 			time.Sleep(time.Duration(10) * time.Second)
 			//err = sendWorkerRequest(executionRequest)
@@ -2861,7 +3046,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 				workerImage = newWorkerImage
 			}
 
-			deployServiceWorkers(workerImage)
+			if isKubernetes == "true" {
+				deployK8sWorker(workerImage, identifier, env)
+			} else {
+				deployServiceWorkers(workerImage)
+			}
 
 			time.Sleep(time.Duration(10) * time.Second)
 			//err = sendWorkerRequest(executionRequest)
@@ -2890,6 +3079,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	_ = body
 
-	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING:\ndocker service logs shuffle-workers 2>&1 -f | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
+	debugCommand := fmt.Sprintf("docker service logs shuffle-workers 2>&1 -f | grep %s", workflowExecution.ExecutionId)
+	if isKubernetes == "true" {
+		debugCommand = fmt.Sprintf("kubectl logs -n %s %s | grep %s", kubernetesNamespace, identifier, workflowExecution.ExecutionId)
+	}
+
+	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING:\n%s", workflowExecution.ExecutionId, streamUrl, debugCommand)
 	return nil
 }
