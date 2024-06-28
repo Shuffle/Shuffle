@@ -829,7 +829,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				"container": "shuffle-worker",
+				"container": "shuffle-workers",
 			},
 			Ports: []corev1.ServicePort{
 				{
