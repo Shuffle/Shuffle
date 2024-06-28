@@ -35,6 +35,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/swarm"
@@ -641,7 +642,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 		log.Printf("[DEBUG] Should remove existing image (s): %s", images)
 
 		// Remove the image
-		removeOptions := types.ImageRemoveOptions{
+		removeOptions := image.RemoveOptions{
 		}
 
 		for _, image := range strings.Split(images, ",") {
@@ -1073,7 +1074,7 @@ func initializeImages() {
 		newWorker,
 	}
 
-	pullOptions := types.ImagePullOptions{}
+	pullOptions := image.PullOptions{}
 	for _, image := range images {
 		if isKubernetes == "true" {
 			log.Printf("[DEBUG] Skipping image pull of '%s' because Kubernetes does it in realtime instead", image)
@@ -2328,7 +2329,7 @@ func deployTenzirNode() error {
             _, _, err := dockercli.ImageInspectWithRaw(ctx, imageName)
             if dockerclient.IsErrNotFound(err) {
                 log.Printf("[DEBUG] pulling image %s", imageName)
-                pullOptions := types.ImagePullOptions{}
+                pullOptions := image.PullOptions{}
                 out, err := dockercli.ImagePull(ctx, imageName, pullOptions)
                 if err != nil {
                     log.Printf("[ERROR] Failed to pull the Tenzir image: %s", err)
