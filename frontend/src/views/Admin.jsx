@@ -44,6 +44,7 @@ import {
   Box,
   InputAdornment,
   Autocomplete,
+  Modal
 } from "@mui/material";
 
 import {
@@ -75,6 +76,7 @@ import {
   Help as HelpIcon,
   Flag as FlagIcon,
   FmdGood as FmdGoodIcon,
+  Warning as WarningIcon,
 } from "@mui/icons-material";
 
 //import { useAlert
@@ -164,9 +166,11 @@ const Admin = (props) => {
   const [selectedOrganization, setSelectedOrganization] = React.useState({});
 
   //console.log("Selected: ", selectedOrganization)
-  const [appAuthenticationGroupModalOpen , setAppAuthenticationGroupModalOpen] = React.useState(false);
+  const [appAuthenticationGroupModalOpen, setAppAuthenticationGroupModalOpen] = React.useState(false);
   const [appsForAppAuthGroup, setAppsForAppAuthGroup] = React.useState([]);
+  const [appAuthenticationGroupId, setAppAuthenticationGroupId] = React.useState("");
   const [appAuthenticationGroupName, setAppAuthenticationGroupName] = React.useState("");
+  const [appAuthenticationGroupEnvironment, setAppAuthenticationGroupEnvironment] = React.useState("");
   const [appAuthenticationGroupDescription, setAppAuthenticationGroupDescription] = React.useState("");
   const [appAuthenticationGroups, setAppAuthenticationGroups] = React.useState([]);
   const [organizationFeatures, setOrganizationFeatures] = React.useState({});
@@ -210,6 +214,13 @@ const Admin = (props) => {
   const [allSchedules, setAllSchedules] = React.useState([]);
   const [pipelines, setPipelines] = React.useState([]);
   const [, forceUpdate] = React.useState();
+  const [MFARequired, setMFARequired] = React.useState(selectedOrganization.mfa_required === undefined ? false : selectedOrganization.mfa_required);
+
+  useEffect(() => {
+    if (selectedOrganization.mfa_required !== undefined) {
+      setMFARequired(selectedOrganization.mfa_required);
+    }
+  }, [selectedOrganization.mfa_required]);
 
   const [showDeleteAccountTextbox, setShowDeleteAccountTextbox] =
     React.useState(false);
@@ -431,23 +442,62 @@ const Admin = (props) => {
       });
   };
 
-  const createAppAuthenticationGroup = (name, description, appAuthIds) => {
+  const deleteAppAuthenticationGroup = (appAuthGroupId) => { 
+	  const url = `${globalUrl}/api/v1/authentication/group/${appAuthGroupId}`
+	  fetch(url, {
+		method: "DELETE",
+		credentials: "include",
+		headers: {
+		  "Content-Type": "application/json",
+		},
+	  })
+	  .then((response) => {
+		if (response.status !== 200) {
+		  console.log("Status not 200 for deleting app auth group");
+		}
+
+		return response.json();
+	  })
+	  .then((responseJson) => {
+		if (responseJson.success === false) {
+		  toast("Failed to delete app authentication group");
+		} else {
+		  toast("App authentication group deleted")
+		  getAppAuthenticationGroups()
+		}
+	  })
+	  .catch((error) => {
+		toast(error.toString())
+	  })
+  }
+
+  const createAppAuthenticationGroup = (name, environment, description, appAuthIds) => {
+	// Makes list of ids into a full-on list of auth, but just with the ID
+	// The backend fills in the rest
+	console.log("INput auth: ", appAuthIds)
     let app_auths = appAuthIds.map((appAuthId) => {
       return { id: appAuthId };
     })
 
-    fetch(globalUrl + "/api/v1/apps/authentication/group", {
+	var parsedAppGroup = {
+        label: name,
+		environment: environment,
+        description: description,
+        app_auths: app_auths
+      }
+
+	if (appAuthenticationGroupId !== undefined && appAuthenticationGroupId !== null && appAuthenticationGroupId !== "") {
+		parsedAppGroup.id = appAuthenticationGroupId
+	}
+
+    fetch(globalUrl + "/api/v1/authentication/group", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
       credentials: "include",
-      body: JSON.stringify({
-        label: name,
-        description: description,
-        app_auths: app_auths
-      }),
+      body: JSON.stringify(parsedAppGroup),
     })
       .then((response) => {
         if (response.status !== 200) {
@@ -457,8 +507,15 @@ const Admin = (props) => {
         return response.json();
       })
       .then((responseJson) => {
-        // getAppAuthenticationGroups();
-        toast("App authentication group created");
+		if (responseJson.success === false) {
+			toast("Failed to create. Please try again, or contact support@shuffler.io")
+		} else {
+			// Close the modal
+			setAppAuthenticationGroupModalOpen(false)
+
+        	toast("App authentication group created")
+        	getAppAuthenticationGroups()
+		}
       })
       .catch((error) => {
         toast(error.toString());
@@ -805,7 +862,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((responseJson) => {
         setWebHooks(responseJson.webhooks || []); // Handling the case where the result is null or undefined
         setAllSchedules(responseJson.schedules || []);
-        setPipelines(responseJson.pipelines || []);
+        // setPipelines(responseJson.pipelines || []);
       })
       .catch((error) => {
         // toast(error.toString());
@@ -990,13 +1047,11 @@ If you're interested, please let me know a time that works for you, or set up a 
     }
   
     const data = {
-      command: pipeline.command,
       name: pipeline.name,
       type: state,
       environment: pipeline.environment,
       workflow_id: pipeline.workflow_id,
       trigger_id: pipeline.trigger_id,
-      start_node: pipeline.start_node,
     };
   
     if (state === "start") toast("starting the pipeline");
@@ -1027,7 +1082,6 @@ If you're interested, please let me know a time that works for you, or set up a 
           if (state === "start") toast("Successfully created pipeline");
           else toast("Sucessfully stopped the pipeline");
         }
-        setTimeout(handleGetAllTriggers, 1000);
       })
       .catch((error) => {
         //toast(error.toString());
@@ -1052,6 +1106,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       code: code,
       user_id: userId,
     };
+    toast("Verifying 2fa code. Please wait...");
 
     fetch(`${globalUrl}/api/v1/users/${userId}/set2fa`, {
       mode: "cors",
@@ -1075,11 +1130,15 @@ If you're interested, please let me know a time that works for you, or set up a 
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-          toast("Successfully enabled 2fa");
+          if (responseJson.MFAActive === true) {
+            toast.success("Successfully enabled 2fa");
+          }
+          if (responseJson.MFAActive === false) {
+            toast.success("Successfully disabled 2fa");
+          }
 
           setTimeout(() => {
             getUsers();
-
             setImage2FA("");
             setValue2FA("");
             setSecret2FA("");
@@ -1510,6 +1569,11 @@ If you're interested, please let me know a time that works for you, or set up a 
             responseJson.lead_info !== null
           ) {
             var leads = [];
+			  console.log("LEADINFO: ", responseJson.lead_info)
+            if (responseJson.lead_info.testing_shuffle) {
+              leads.push("testing shuffle");
+            }
+
             if (responseJson.lead_info.contacted) {
               leads.push("contacted");
             }
@@ -2093,10 +2157,10 @@ If you're interested, please let me know a time that works for you, or set up a 
   };
 
   const getAppAuthenticationGroups = () => {
-	console.log("DEBUG: Skipping app auth group loading")
-    return
+	//console.log("DEBUG: Skipping app auth group loading")
+    //return
 
-    fetch(globalUrl + "/api/v1/apps/authentication/group", {
+    fetch(globalUrl + "/api/v1/authentication/group", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -2877,8 +2941,8 @@ If you're interested, please let me know a time that works for you, or set up a 
             color="primary"
           >
             {selectedUser.mfa_info !== undefined &&
-            selectedUser.mfa_info !== null &&
-            selectedUser.mfa_info.active === true
+              selectedUser.mfa_info !== null &&
+              selectedUser.mfa_info.active === true
               ? "Disable 2FA"
               : "Enable 2FA"}
           </Button>
@@ -2964,15 +3028,16 @@ If you're interested, please let me know a time that works for you, or set up a 
               maxWidth: 300,
               minWidth: 300,
               marginTop: 25,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}
           >
-            {/*<Divider style={{marginTop: 20, marginBottom: 20}} />*/}
-
             {secret2FA !== undefined &&
-            secret2FA !== null &&
-            secret2FA.length > 0 ? (
+              secret2FA !== null &&
+              secret2FA.length > 0 ? (
               <span>
-                <Typography variant="body2" color="textSecondary">
+                <Typography variant="body2" color="textSecondary" style={{ textAlign: 'left' }}>
                   Scan the image below with the two-factor authentication app on
                   your phone. If you can’t use a QR code, use the code{" "}
                   {secret2FA} instead.
@@ -2980,18 +3045,16 @@ If you're interested, please let me know a time that works for you, or set up a 
               </span>
             ) : null}
             {image2FA !== undefined &&
-            image2FA !== null &&
-            image2FA.length > 0 ? (
+              image2FA !== null &&
+              image2FA.length > 0 ? (
               <img
-                alt={"2 factor img"}
+                alt="2 factor img"
                 src={image2FA}
                 style={{
-                  margin: "auto",
-                  marginTop: 25,
+                  margin: "15px auto",
                   maxHeight: 200,
                   maxWidth: 200,
-                  minWidth: 200,
-                  maxWidth: 200,
+                  display: 'block',
                 }}
               />
             ) : (
@@ -3002,7 +3065,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               After scanning the QR code image, the app will display a code that
               you can enter below.
             </Typography>
-            <div style={{ display: "flex" }}>
+            <div style={{ display: "flex", width: '100%', marginTop: 10 }}>
               <TextField
                 color="primary"
                 style={{
@@ -3031,13 +3094,18 @@ If you're interested, please let me know a time that works for you, or set up a 
 
                   setValue2FA(event.target.value);
                 }}
+                onKeyPress={(event) => {
+                  if (event.key === 'Enter' && event.target.value.length === 6) {
+                    handleVerify2FA(userdata.id, event.target.value, false);
+                  }
+                }}
               />
               <Button
                 disabled={value2FA.length !== 6}
                 variant="contained"
                 style={{ marginTop: 15, height: 50, flex: 1 }}
                 onClick={() => {
-                  handleVerify2FA(userdata.id, value2FA);
+                  handleVerify2FA(userdata.id, value2FA, false);
                 }}
                 color="primary"
               >
@@ -3510,7 +3578,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                 <FormControl sx={{ m: 1, width: 300 }} style={{}}>
                   <InputLabel id="">Status</InputLabel>
                   <Select
-                    style={{ minWidth: 150, maxWidth: 150 }}
+                    style={{ minWidth: 150, maxWidth: 150, }}
                     labelId="multiselect-status"
                     id="multiselect-status"
                     multiple
@@ -3521,9 +3589,10 @@ If you're interested, please let me know a time that works for you, or set up a 
                     MenuProps={MenuProps}
                   >
                     {[
+                      "testing shuffle",
                       "contacted",
                       "lead",
-                      "demo done",
+                      //"demo done",
                       "pov",
                       "customer",
                       "open source",
@@ -3683,7 +3752,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               aria-label="disabled tabs example"
             >
               <Tab label=<span>Edit Details</span> />
-              <Tab label=<span>Cloud Synchronization</span> />
+              <Tab label=<span>Limits & Cloud Sync</span> />
               <Tab label=<span>Priorities</span> />
               <Tab label=<span>Billing & Stats</span> />
               <Tab disabled={!isCloud} label=<span>Branding (Beta)</span> />
@@ -4180,40 +4249,101 @@ If you're interested, please let me know a time that works for you, or set up a 
     </Dialog>
   );
 
+  const UpdateMFAInUserOrg = (org_id) => {
+    if (MFARequired === false) {
+      toast("Making MFA required for your organization. Please wait...");
+    } else {
+      toast("Making MFA optional for your organization. Please wait...");
+    }
+
+    const data = {
+      mfa_required: !selectedOrganization.mfa_required,
+      org_id: selectedOrganization.id,
+    }
+
+    const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+    fetch(url, {
+      mode: "cors",
+      method: "POST",
+      body: JSON.stringify(data),
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+      .then((response) =>
+        response.json().then((responseJson) => {
+          console.log(responseJson)
+          if (responseJson["success"] === false) {
+            toast.error("Failed updating org: ", responseJson.reason);
+          } else {
+            if (MFARequired === false) {
+              setMFARequired(true)
+              toast.success("Successfully make MFA required for your organization!");
+            } else {
+              setMFARequired(false)
+              toast.success("Successfully make MFA optional for your organization!")
+            }
+          }
+        }),
+      )
+      .catch((error) => {
+        toast("Err: " + error.toString());
+      });
+  }
+
   const usersView =
     curTab === 1 ? (
       <div>
-        <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <h2 style={{ display: "inline" }}>User Management</h2>
-          <span style={{ marginLeft: 25 }}>
-            Add, edit, block or change passwords.{" "}
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              href="/docs/organizations#user_management"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
-            >
-              Learn more
-            </a>
-          </span>
+        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', }}>
+            <div>
+              <h2 style={{ display: "inline" }}>User Management</h2>
+              <span style={{ marginLeft: 25 }}>
+                Add, edit, block or change passwords.{" "}
+                <a
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  href="/docs/organizations#user_management"
+                  style={{ textDecoration: "none", color: "#f85a3e" }}
+                >
+                  Learn more
+                </a>
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'row', marginTop: 20, }}>
+              <Button
+                style={{}}
+                variant="contained"
+                color="primary"
+                onClick={() => setModalOpen(true)}
+              >
+                Add user
+              </Button>
+              <Button
+                style={{ marginLeft: 5, marginRight: 15 }}
+                variant="contained"
+                color="primary"
+                onClick={() => getUsers()}
+              >
+                <CachedIcon />
+              </Button>
+            </div>
+          </div>
+          <div />
+
+          <div style={{ marginleft: 20, maxWidth: 500 }}>
+            <Typography variant="body1">MFA Required</Typography>
+            <Switch
+              checked={MFARequired}
+              onChange={(event) => {
+                UpdateMFAInUserOrg(selectedOrganization.id);
+              }}
+            />
+          </div>
         </div>
-        <div />
-        <Button
-          style={{}}
-          variant="contained"
-          color="primary"
-          onClick={() => setModalOpen(true)}
-        >
-          Add user
-        </Button>
-        <Button
-          style={{ marginLeft: 5, marginRight: 15 }}
-          variant="contained"
-          color="primary"
-          onClick={() => getUsers()}
-        >
-          <CachedIcon />
-        </Button>
         <Divider
           style={{
             marginTop: 20,
@@ -4669,6 +4799,12 @@ If you're interested, please let me know a time that works for you, or set up a 
     ) : null;
 
   const run2FASetup = (data) => {
+
+    if (MFARequired === true && (selectedUser.mfa_info && selectedUser.mfa_info.active === true)) {
+      toast("MFA is required for your organization. You can't disable it.");
+      return;
+    }
+
     if (!show2faSetup) {
       get2faCode(data.id);
     } else {
@@ -4941,7 +5077,7 @@ If you're interested, please let me know a time that works for you, or set up a 
   
                   <ListItemText>
                     <Button
-                      style={{ marginLeft: "140px" }}
+                      style={{ marginLeft: "18%" }}
                       variant={
                         webhook.status === "running" ? "contained" : "outlined"
                       }
@@ -4963,10 +5099,10 @@ If you're interested, please let me know a time that works for you, or set up a 
           </List>
         )}
   
-        <div style={{ marginTop: 20, marginBottom: 20 }}>
+        {/* <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Tenzir Pipelines</h2>
           <span style={{ marginLeft: 25 }}>
-             Controls the Tenzir pipeline operations.{" "}
+            Controls a pipeline to run things.{" "}
             <a
               target="_blank"
               rel="noopener noreferrer"
@@ -5013,7 +5149,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                 primary="Workflow"
                 style={{ maxWidth: 315, minWidth: 315 }}
               />
-            <ListItemText primary="Actions" style={{ marginLeft: '120px' }} />
+              <ListItemText primary="Actions" />
             </ListItem>
             {pipelines.map((pipeline, index) => {
               var bgColor = "#27292d";
@@ -5066,7 +5202,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               );
             })}
           </List>
-        )}
+        )}*/}
       </div>
     ) : null;
 
@@ -5170,31 +5306,366 @@ If you're interested, please let me know a time that works for you, or set up a 
 
 
   const handleAppAuthGroupCheckbox = (data) => {
-    let appOrginal = data.app
-    if (appsForAppAuthGroup.includes(appOrginal.id)) {
-      return;
-    }
+    //let groupApp = data.app.id
+	var newappauth = appsForAppAuthGroup
+	if (appsForAppAuthGroup.includes(data.app.id)) {
+		newappauth = newappauth.filter((item) => item !== data.app.id)
+	}
 
-    setAppsForAppAuthGroup([...appsForAppAuthGroup, data.id]);
-    console.log("Apps for app auth group: ", appsForAppAuthGroup);
-  };
+	if (appsForAppAuthGroup.includes(data.id)) {
+		// Remove app from app auth group
+		newappauth = newappauth.filter((item) => item !== data.id)
+		setAppsForAppAuthGroup(newappauth)
+		return
+	}
+
+	for (var i = 0; i < authentication.length; i++) {
+		if (authentication[i].id === data.id) {
+			continue
+		}
+
+		if (!appsForAppAuthGroup.includes(authentication[i].id)) {
+			continue
+		}
+
+		if (authentication[i].app.id === data.app.id) {
+			// Remove app from app auth group
+			newappauth = newappauth.filter((item) => item !== authentication[i].id)
+			toast(`App ${data.app.name} is already in this group`)
+		}
+	}
+
+    setAppsForAppAuthGroup(newappauth.concat(data.id))
+  }
+
+  const KMSItem = (props) => {
+	const { 
+		data, 
+		index,
+	} = props
+
+    const [showEnvironmentDropdown, setShowEnvironmentDropdown] = React.useState(false)
+
+	var bgColor = "#27292d";
+	if (index % 2 === 0) {
+	  bgColor = "#1f2023";
+	}
+
+	const isDistributed =
+	  data.suborg_distributed === true ? true : false;
+
+	const isKms = data.label !== undefined && data.label !== null && data.label.toLowerCase() === "kms shuffle storage"
+
+	var selectedEnvironment = ""
+	if (data.environment !== undefined && data.environment !== null && data.environment.length > 0) {
+		selectedEnvironment = data.environment
+	}
+
+	if (selectedEnvironment === "" && environments !== undefined && environments !== null && environments.length > 0) {
+		for (var i = 0; i < environments.length; i++) {
+			if (environments[i].default === true) {
+				selectedEnvironment = environments[i].Name
+				break
+			}
+		}
+	}
+
+	var validIcon = <CheckCircleIcon style={{ color: "green" }} />
+	if (data.validation !== null && data.validation !== undefined && data.validation.valid === false) {
+
+		if (data.validation.changed_at === 0) {
+			// Warning
+			validIcon = "" // <WarningIcon style={{ color: "" }} />
+		} else {
+	  		validIcon = <CancelIcon style={{ color: "red" }} />
+		}
+	}
+
+	return (
+	  <ListItem key={index} style={{ backgroundColor: bgColor }}>
+		<ListItemText
+			primary=
+				<Tooltip title={data.validation.valid === true ? "Valid. Click to explore." : "Configuration failed. Click to learn why"} placement="top">
+					<IconButton>
+						{validIcon}
+					</IconButton>
+				</Tooltip>
+		  	style={{ minWidth: 65, maxWidth: 65, }}
+			onClick={() => {
+				if (data.validation.workflow_id === undefined || data.validation.workflow_id === null || data.validation.workflow_id.length === 0) {
+					toast.warn("No workflow runs found for this auth yet. Check back later.")
+					return
+				}
+
+				const url = `/workflows/${data.validation.workflow_id}?execution_id=${data.validation.execution_id}&node=${data.validation.node_id}`
+				window.open(url, "_blank")
+			}}
+		/>
+		<ListItemText
+		  primary=<img
+			alt=""
+			src={data.app.large_image}
+			style={{
+			  maxWidth: 50,
+			  borderRadius: theme.palette.borderRadius,
+			}}
+		  />
+		  style={{ minWidth: 75, maxWidth: 75 }}
+		/>
+		<ListItemText
+		  primary={!isKms ? data.label : 
+			<div style={{display: "flex", flexDirection: "column", maxWidth: 200, }}>
+			  <Chip
+				label={"KMS Shuffle Storage"}
+				variant="contained"
+				color="secondary"
+				style={{cursor: "pointer"}}
+				onClick={() => {
+    				setShowEnvironmentDropdown(true)
+
+					if (environments === undefined || environments === null || environments.length === 0) {
+						toast.error("No environments found. Please try again in a second, or reload to configure environment to use for KMS")
+					}
+				}}
+			  />
+			  {showEnvironmentDropdown === true && environments !== undefined && environments !== null && environments.length > 0 ?
+				  <FormControl fullWidth sx={{ m: 1 }}>
+					<InputLabel id="envselect" style={{ padding: 5 }}>
+				  		Environment
+					</InputLabel>
+					<Select
+						labelId="envselect"
+						defaultValue={selectedEnvironment}
+						onChange={(e) => {
+							if (e.target.value === "") {
+								return
+							}
+
+							if (e.target.value === selectedEnvironment) {
+								return
+							}
+
+							toast.info("Updating environment KMS runs on to " + e.target.value)
+							data.environment = e.target.value
+							const envIndex = environments.findIndex((env) => env.Name === e.target.value)
+							if (envIndex === -1) {
+								toast.error("Environment not found")
+								return
+							}
+
+							environments[envIndex].environment = e.target.value
+							setEnvironments(environments)
+							setShowEnvironmentDropdown(false)
+  
+							saveAuthentication(data)
+						}}
+					  >
+						{environments.map((env, index) => {
+							if (env.archived === true) {
+								return null
+							}
+
+							return (
+								<MenuItem key={index} value={env.Name}>
+									{env.default === true ? "Default - " : ""}{env.Name}
+								</MenuItem>
+							)
+						})}
+					</Select>
+				  </FormControl>
+			  : null}
+			</div>
+		  }
+		  style={{
+			minWidth: 225,
+			maxWidth: 225,
+			overflow: "hidden",
+		  }}
+		/>
+		<ListItemText
+		  primary={data.app.name.replaceAll("_", " ")}
+		  style={{ minWidth: 175, maxWidth: 175, marginLeft: 10 }}
+		/>
+		{/*
+		<ListItemText
+		  primary={data.defined === false ? "No" : "Yes"}
+		  style={{ minWidth: 100, maxWidth: 100, }}
+		/>
+							*/}
+		<ListItemText
+		  primary={
+			data.workflow_count === null ? 0 : data.workflow_count
+		  }
+		  style={{
+			minWidth: 100,
+			maxWidth: 100,
+			textAlign: "center",
+			overflow: "hidden",
+		  }}
+		/>
+		{/*
+		<ListItemText
+		  primary={data.node_count}
+		  style={{
+			minWidth: 110,
+			maxWidth: 110,
+									textAlign: "center",
+			overflow: "hidden",
+		  }}
+		/>
+							*/}
+		<ListItemText
+		  primary={
+			data.fields === null || data.fields === undefined
+			  ? ""
+			  : data.fields
+				  .map((data) => {
+					return data.key;
+				  })
+				  .join(", ")
+		  }
+		  style={{
+			minWidth: 140,
+			maxWidth: 140,
+			overflow: "auto",
+			marginRight: 10,
+		  }}
+		/>
+		<ListItemText
+		  style={{
+			maxWidth: 150,
+			minWidth: 150,
+			overflow: "auto",
+		  }}
+		  primary={new Date(data.edited * 1000).toISOString()}
+		/>
+		<ListItemText>
+		  <IconButton
+			onClick={() => {
+			  updateAppAuthentication(data);
+			}}
+			disabled={
+			  data.org_id !== selectedOrganization.id ? true : false
+			}
+		  >
+			<EditIcon color="secondary" />
+		  </IconButton>
+		  {data.defined ? (
+			<Tooltip
+			  color="primary"
+			  title="Set for EVERY instance of this App being used in this organization"
+			  placement="top"
+			>
+			  <IconButton
+				style={{ marginRight: 10 }}
+				disabled={
+				  data.defined === false ||
+				  data.org_id !== selectedOrganization.id
+					? true
+					: false
+				}
+				onClick={() => {
+				  editAuthenticationConfig(data.id);
+				}}
+			  >
+				<SelectAllIcon color={"secondary"} />
+			  </IconButton>
+			</Tooltip>
+		  ) : (
+			<Tooltip
+			  color="primary"
+			  title="Must edit before you can set in all workflows"
+			  placement="top"
+			>
+			  <IconButton
+				style={{}}
+				onClick={() => {}}
+				disabled={
+				  data.org_id !== selectedOrganization.id
+					? true
+					: false
+				}
+			  >
+				<SelectAllIcon color="secondary" />
+			  </IconButton>
+			</Tooltip>
+		  )}
+		  <IconButton
+			style={{ marginLeft: 0 }}
+			disabled={
+			  data.org_id !== selectedOrganization.id ? true : false
+			}
+			onClick={() => {
+			  deleteAuthentication(data);
+			}}
+		  >
+			<DeleteIcon color="secondary" />
+		  </IconButton>
+		</ListItemText>
+		<ListItemText>
+		  {selectedOrganization.id !== undefined &&
+		  data.org_id !== selectedOrganization.id ? (
+			<Tooltip
+			  title="Parent organization controlled auth. You can use, but not modify this auth. Contact an admin of your parent organization if you need changes to this."
+			  placement="top"
+			>
+			  <Chip
+				label={"Parent"}
+				variant="contained"
+				color="secondary"
+			  />
+			</Tooltip>
+		  ) : (
+			<Tooltip
+			  title="Distributed to sub-organizations. This means the sub organizations can use this authentication, but not modify it."
+			  placement="top"
+			>
+			  <Checkbox
+				disabled={
+				  selectedOrganization.creator_org !== undefined &&
+				  selectedOrganization.creator_org !== null &&
+				  selectedOrganization.creator_org !== ""
+					? true
+					: false
+				}
+				checked={isDistributed}
+				color="secondary"
+				onClick={() => {
+				  changeDistribution(data, !isDistributed);
+				}}
+			  />
+			</Tooltip>
+		  )}
+		</ListItemText>
+	  </ListItem>
+	)
+  }
 
   const authenticationView =
     curTab === 2 ? (
-    <>
+
+    <div>
       {/* (appAuthenticationGroupModalOpen : { */}
       {appAuthenticationGroupModalOpen && (
         <Dialog
           open={appAuthenticationGroupModalOpen}
           onClose={() => {
             setAppAuthenticationGroupModalOpen(false);
+
+  			setAppAuthenticationGroupId("")
+			setAppAuthenticationGroupName("")
+			setAppAuthenticationGroupEnvironment("")
+			setAppAuthenticationGroupDescription("")
+			setAppsForAppAuthGroup([])
           }}
           PaperProps={{
             style: {
               backgroundColor: theme.palette.surfaceColor,
               color: "white",
-              minWidth: "1200px",
+              minWidth: "1000px",
               minHeight: "320px",
+			  padding: 25, 
+			  paddingLeft: 50, 
             },
           }}
         >
@@ -5202,106 +5673,134 @@ If you're interested, please let me know a time that works for you, or set up a 
             <span style={{ color: "white" }}>App Authentication Groups</span>
           </DialogTitle>
 
-          <DialogContent>
-            <div>
-              <TextField
-                color="primary"
-                style={{ backgroundColor: theme.palette.inputColor }}
-                autoFocus
-                InputProps={{
-                  style: {
-                    height: "50px",
-                    color: "white",
-                    fontSize: "1em",
-                  },
-                }}
-                required
-                fullWidth={true}
-                placeholder="Name"
-                id="namefield"
-                margin="normal"
-                variant="outlined"
-                onChange={(event) => {
-                  setAppAuthenticationGroupName(event.target.value);
-                }}
-              />
+          <DialogContent style={{marginLeft: 0, paddingLeft: 0, }}>
+            <div style={{display: "flex", position: "sticky", top: 0, zIndex: 1, backgroundColor: theme.palette.surfaceColor, borderRadius: theme.palette.borderRadius, padding: 20, marginBottom: 10, }}>
+		  		<div style={{marginRight: 50, minWidth: 250, }}>
+				  <Typography style={{marginTop: 10, }}>
+		  			Name
+				  </Typography>
+				  <TextField
+					color="primary"
+					label="Name"
+					style={{ backgroundColor: theme.palette.inputColor }}
+					autoFocus
+					InputProps={{
+					  style: {
+						height: "50px",
+						color: "white",
+						fontSize: "1em",
+					  },
+					}}
+					required
+					fullWidth={true}
+					placeholder="Name"
+					id="namefield"
+					margin="normal"
+					variant="outlined"
+		  			defaultValue={appAuthenticationGroupName}
+					onChange={(event) => {
+					  setAppAuthenticationGroupName(event.target.value);
+					}}
+				  />
+			  </div>
+		  	  <div style={{marginRight: 50, }}>
+		  	  <Typography style={{marginTop: 10, marginBottom: 10}}>
+		  		Evironment
+		  	  </Typography>
+		  	  {environments !== undefined && environments !== null && environments.length > 0 ?
+				  <Select
+					defaultValue={appAuthenticationGroupEnvironment === "" ? environments[0].Name : appAuthenticationGroupEnvironment}
+					onChange={(e) => {
+					  setAppAuthenticationGroupEnvironment(e.target.value);
+					}}
+				  >
+					{environments.map((env, index) => {
+						return (
+							<MenuItem key={index} value={env.Name}>
+								{env.Name}
+							</MenuItem>
+						)
+					})}
+				  </Select>
+			  : 
+				<Typography>
+				  	Environments failed to load. Please try again 
+				</Typography>
+			  }
             </div>
-            <div>
-              <TextField
-                color="primary"
-                style={{ backgroundColor: theme.palette.inputColor }}
-                autoFocus
-                InputProps={{
-                  style: {
-                    height: "50px",
-                    color: "white",
-                    fontSize: "1em",
-                  },
-                }}
-                required
-                fullWidth={true}
-                placeholder="Description"
-                id="descriptionfield"
-                margin="normal"
-                variant="outlined"
-                onChange={(event) => {
-                  setAppAuthenticationGroupDescription(event.target.value);
-                }}
-              />
-            </div>
-
-            <div>
-              {/* Show a check box list of all app authentications to add to the auth group */}
-              <div>
-              {authentication.map((data, index) => (
-                <div key={index}>
-                  <FormControlLabel
-                    control={
-                    <Tooltip
-                      title={data.app.name}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', marginLeft: '5px' }}>
-                          <img 
-                            src={data.app.large_image ? data.app.large_image : '/images/no_image.png'}
-                            alt=""
-                            style={{ width: '50px', height: '50px', marginRight: '10px' }} 
-                          />
-                          <Checkbox
-                            checked={data.checked}
-                            onChange={(event) => {
-                              handleAppAuthGroupCheckbox(data)
-                            }}
-                            name={data.label}
-                            disabled={data.app.id in appsForAppAuthGroup}
-                          />
-                      </div>
-                    </Tooltip>
-                    }
-                  label={data.label}
-                  />
-                </div>
-              ))}
-            </div>
-
-            </div>
-
-
-            <div>
+            <div style={{marginTop: 65, }}>
               <Button
                 style={{}}
+		  		disabled={appAuthenticationGroupName === "" || appAuthenticationGroupEnvironment === "" || appsForAppAuthGroup.length === 0}
                 variant="contained"
                 color="primary"
                 onClick={() => {
                   createAppAuthenticationGroup(
                     appAuthenticationGroupName,
+                    appAuthenticationGroupEnvironment,
                     appAuthenticationGroupDescription,
-                    appsForAppAuthGroup
+                    appsForAppAuthGroup,
                   );
                 }}
               >
-                Create
+                Set Group
               </Button>
             </div>
+            </div>
+
+		  	<Divider style={{marginTop: 10, marginBottom: 10, }}/>
+
+            <div style={{marginLeft: 25, }}>
+              {/* Show a check box list of all app authentications to add to the auth group */}
+              <div>
+              {authentication.map((data, index) => {
+				var checked = data.checked
+				if (data.label !== undefined && data.label !== null && data.label.toLowerCase() === "kms shuffle storage") {
+					return null
+				}
+
+				if (checked === undefined || checked === null) {
+					checked = false
+				}
+
+				if (appsForAppAuthGroup.includes(data.id)) { 
+					checked = true
+				}
+
+				return (
+					<div key={index}>
+					  <FormControlLabel
+						control={
+							<Tooltip
+							  title={data.app.name}
+							  placement="left"
+							>
+							  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', marginLeft: '5px', }}>
+								  <img 
+									src={data.app.large_image ? data.app.large_image : '/images/no_image.png'}
+									alt=""
+									style={{ borderRadius: theme.palette.borderRadius, width: 50, height: 50, marginRight: 10 }} 
+								  />
+								  <Checkbox
+									checked={checked}
+									onChange={(event) => {
+									  handleAppAuthGroupCheckbox(data)
+									}}
+									name={data.label}
+									disabled={data.app.id in appsForAppAuthGroup}
+								  />
+							  </div>
+							</Tooltip>
+						}
+					    label={data.label}
+					  />
+					</div>
+              	)
+			  })}
+            </div>
+        </div>
+
+
           </DialogContent>
         </Dialog>
       )}
@@ -5311,7 +5810,7 @@ If you're interested, please let me know a time that works for you, or set up a 
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>App Authentication</h2>
           <span style={{ marginLeft: 25 }}>
-            Control the authentication options for individual apps.
+            Control the authentication options for individual apps. App Groups are farther down on this page.
           </span>
           &nbsp;
           <a
@@ -5332,6 +5831,10 @@ If you're interested, please let me know a time that works for you, or set up a 
         />
         <List>
           <ListItem>
+            <ListItemText
+              primary="Valid"
+              style={{ minWidth: 65, maxWidth: 65 }}
+            />
             <ListItemText
               primary="Icon"
               style={{ minWidth: 75, maxWidth: 75 }}
@@ -5360,11 +5863,11 @@ If you're interested, please let me know a time that works for you, or set up a 
 						*/}
             <ListItemText
               primary="Fields"
-              style={{ minWidth: 135, maxWidth: 135, overflow: "hidden" }}
+              style={{ minWidth: 140, maxWidth: 140, overflow: "hidden" }}
             />
             <ListItemText
               primary="Edited"
-              style={{ minWidth: 230, maxWidth: 230, overflow: "hidden" }}
+              style={{ minWidth: 150, maxWidth: 150, overflow: "hidden" }}
             />
             <ListItemText
               primary="Actions"
@@ -5375,11 +5878,6 @@ If you're interested, please let me know a time that works for you, or set up a 
           {authentication === undefined || authentication === null
             ? null
             : authentication.map((data, index) => {
-                var bgColor = "#27292d";
-                if (index % 2 === 0) {
-                  bgColor = "#1f2023";
-                }
-
                 //console.log("Auth data: ", data)
                 if (data.type === "oauth2") {
                   data.fields = [
@@ -5402,195 +5900,30 @@ If you're interested, please let me know a time that works for you, or set up a 
                   ];
                 }
 
-                const isDistributed =
-                  data.suborg_distributed === true ? true : false;
-
                 return (
-                  <ListItem key={index} style={{ backgroundColor: bgColor }}>
-                    <ListItemText
-                      primary=<img
-                        alt=""
-                        src={data.app.large_image}
-                        style={{
-                          maxWidth: 50,
-                          borderRadius: theme.palette.borderRadius,
-                        }}
-                      />
-                      style={{ minWidth: 75, maxWidth: 75 }}
-                    />
-                    <ListItemText
-                      primary={data.label}
-                      style={{
-                        minWidth: 225,
-                        maxWidth: 225,
-                        overflow: "hidden",
-                      }}
-                    />
-                    <ListItemText
-                      primary={data.app.name.replaceAll("_", " ")}
-                      style={{ minWidth: 175, maxWidth: 175, marginLeft: 10 }}
-                    />
-                    {/*
-                    <ListItemText
-                      primary={data.defined === false ? "No" : "Yes"}
-                      style={{ minWidth: 100, maxWidth: 100, }}
-                    />
-										*/}
-                    <ListItemText
-                      primary={
-                        data.workflow_count === null ? 0 : data.workflow_count
-                      }
-                      style={{
-                        minWidth: 100,
-                        maxWidth: 100,
-                        textAlign: "center",
-                        overflow: "hidden",
-                      }}
-                    />
-                    {/*
-                    <ListItemText
-                      primary={data.node_count}
-                      style={{
-                        minWidth: 110,
-                        maxWidth: 110,
-												textAlign: "center",
-                        overflow: "hidden",
-                      }}
-                    />
-										*/}
-                    <ListItemText
-                      primary={
-                        data.fields === null || data.fields === undefined
-                          ? ""
-                          : data.fields
-                              .map((data) => {
-                                return data.key;
-                              })
-                              .join(", ")
-                      }
-                      style={{
-                        minWidth: 125,
-                        maxWidth: 125,
-                        overflow: "auto",
-                        marginRight: 10,
-                      }}
-                    />
-                    <ListItemText
-                      style={{
-                        maxWidth: 230,
-                        minWidth: 230,
-                        overflow: "hidden",
-                      }}
-                      primary={new Date(data.edited * 1000).toISOString()}
-                    />
-                    <ListItemText>
-                      <IconButton
-                        onClick={() => {
-                          updateAppAuthentication(data);
-                        }}
-                        disabled={
-                          data.org_id !== selectedOrganization.id ? true : false
-                        }
-                      >
-                        <EditIcon color="secondary" />
-                      </IconButton>
-                      {data.defined ? (
-                        <Tooltip
-                          color="primary"
-                          title="Set for EVERY instance of this App being used in this organization"
-                          placement="top"
-                        >
-                          <IconButton
-                            style={{ marginRight: 10 }}
-                            disabled={
-                              data.defined === false ||
-                              data.org_id !== selectedOrganization.id
-                                ? true
-                                : false
-                            }
-                            onClick={() => {
-                              editAuthenticationConfig(data.id);
-                            }}
-                          >
-                            <SelectAllIcon color={"secondary"} />
-                          </IconButton>
-                        </Tooltip>
-                      ) : (
-                        <Tooltip
-                          color="primary"
-                          title="Must edit before you can set in all workflows"
-                          placement="top"
-                        >
-                          <IconButton
-                            style={{}}
-                            onClick={() => {}}
-                            disabled={
-                              data.org_id !== selectedOrganization.id
-                                ? true
-                                : false
-                            }
-                          >
-                            <SelectAllIcon color="secondary" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <IconButton
-                        style={{ marginLeft: 0 }}
-                        disabled={
-                          data.org_id !== selectedOrganization.id ? true : false
-                        }
-                        onClick={() => {
-                          deleteAuthentication(data);
-                        }}
-                      >
-                        <DeleteIcon color="secondary" />
-                      </IconButton>
-                    </ListItemText>
-                    <ListItemText>
-                      {selectedOrganization.id !== undefined &&
-                      data.org_id !== selectedOrganization.id ? (
-                        <Tooltip
-                          title="Parent organization controlled auth. You can use, but not modify this auth. Contact an admin of your parent organization if you need changes to this."
-                          placement="top"
-                        >
-                          <Chip
-                            label={"Parent"}
-                            variant="contained"
-                            color="secondary"
-                          />
-                        </Tooltip>
-                      ) : (
-                        <Tooltip
-                          title="Distributed to sub-organizations. This means the sub organizations can use this authentication, but not modify it."
-                          placement="top"
-                        >
-                          <Checkbox
-                            disabled={
-                              selectedOrganization.creator_org !== undefined &&
-                              selectedOrganization.creator_org !== null &&
-                              selectedOrganization.creator_org !== ""
-                                ? true
-                                : false
-                            }
-                            checked={isDistributed}
-                            color="secondary"
-                            onClick={() => {
-                              changeDistribution(data, !isDistributed);
-                            }}
-                          />
-                        </Tooltip>
-                      )}
-                    </ListItemText>
-                  </ListItem>
-                );
+				  <KMSItem
+					data={data}
+					index={index}
+				  />
+				)
+
+				
               })}
         </List>
       </div>
 
-      {/* <div>
+	  <Divider
+		style={{
+		  marginTop: 20,
+		  marginBottom: 20,
+		  backgroundColor: theme.palette.inputColor,
+		}}
+	  />
+
+      <div style={{marginTop: 50, }}>
         <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <h2 style={{ display: "inline" }}>App Authentication Groups</h2>
-          <span style={{ marginLeft: 25 }}>
+          <h2 style={{ }}>App Authentication Groups</h2>
+          <span style={{ marginLeft: 0 }}>
             Groups of authentication options for subflows.{" "}
             <a
               target="_blank"
@@ -5602,29 +5935,39 @@ If you're interested, please let me know a time that works for you, or set up a 
             </a>
           </span>
 
-          <Divider
-            style={{
-              marginTop: 20,
-              marginBottom: 20,
-              backgroundColor: theme.palette.inputColor,
+		  <br />
+          <Button
+            style={{ marginTop: 20 }}
+            variant="contained"
+            color="primary"
+            onClick={() => {
+
+			  if (environments !== undefined && environments !== null && environments.length > 0) {
+				  setAppAuthenticationGroupEnvironment(environments[0].Name)
+			  }
+
+              setAppAuthenticationGroupModalOpen(true)
             }}
-          />
-          <List>
+          >
+            Add Group
+          </Button>
+
+          <List style={{marginTop: 25, }}>
             <ListItem>
               <ListItemText
                 primary="Label"
+                style={{ minWidth: 250, maxWidth: 250}}
+              />
+              <ListItemText
+                primary="Environment"
                 style={{ minWidth: 150, maxWidth: 150 }}
               />
               <ListItemText
-                primary="Description"
+                primary="App Auth"
                 style={{ minWidth: 250, maxWidth: 250 }}
               />
               <ListItemText
-                primary="Apps"
-                style={{ minWidth: 250, maxWidth: 250 }}
-              />
-              <ListItemText
-                primary="CreatedAt"
+                primary="Created At"
                 style={{ minWidth: 150, maxWidth: 150 }}
               />
               <ListItemText 
@@ -5638,31 +5981,49 @@ If you're interested, please let me know a time that works for you, or set up a 
               if (index % 2 === 0) {
                 bgColor = "#1f2023";
               }
+
+			  if (data.app_auths === undefined || data.app_auths === null) {
+				  data.app_auths = []
+			  }
+
               return (
                 <ListItem key={index} style={{ backgroundColor: bgColor }}>
                   <ListItemText
                     primary={data.label}
-                    style={{ minWidth: 150, maxWidth: 150 }}
+                    style={{ minWidth: 250, maxWidth: 250, }}
                   />
                   <ListItemText
-                    primary={data.description}
-                    style={{ minWidth: 250, maxWidth: 250 }}
+                    primary={data.environment}
+                    style={{ minWidth: 150, maxWidth: 150, }}
                   />
                   <ListItemText
                     primary={
                       <div style={{ display: 'flex' }}>
-                        {data.app_auths.map((appAuth, index) => (
-                          <Tooltip
-                            title={appAuth.app.name}
-                          >
-                            <img
-                              key={index}
-                              src={appAuth.app.large_image}
-                              alt={appAuth.app.name}
-                              style={{ width: '24px', height: '24px', marginRight: '5px' }}
-                            />
-                          </Tooltip>
-                        ))}
+                        {data.app_auths.map((appAuth, index) => {
+							if (appAuth.app.large_image === undefined || appAuth.app.large_image === null || appAuth.app.large_image === "") {
+								const foundImage = authentication.find((auth) => auth.app.id === appAuth.app.id)
+								if (foundImage !== undefined) {
+									appAuth.app.large_image = foundImage.app.large_image
+
+									appAuth.app.name = foundImage.app.name
+								}
+							}
+
+							const tooltip = `${appAuth.app.name.replaceAll("_", " ")} (authname: ${appAuth.label})`
+
+							return (
+							  <Tooltip
+								title={tooltip}
+							  >
+								<img
+								  key={index}
+								  src={appAuth.app.large_image}
+								  alt={appAuth.app.name}
+								  style={{ width: 30, height: 30, marginRight: 5 }}
+								/>
+							  </Tooltip>
+                        	)
+						})}
                       </div>
                     }
                     style={{ minWidth: 250, maxWidth: 250 }}
@@ -5676,16 +6037,22 @@ If you're interested, please let me know a time that works for you, or set up a 
                       <div style={{ display: 'flex' }}>
                         <IconButton
                           onClick={() => {
+							  setAppAuthenticationGroupId(data.id)
+
+							  setAppAuthenticationGroupName(data.label)
+							  setAppAuthenticationGroupDescription(data.description)
+
+							  setAppsForAppAuthGroup(data.app_auths.map((appAuth) => appAuth.id))
+				  			  setAppAuthenticationGroupEnvironment(data.environment)
+              				  setAppAuthenticationGroupModalOpen(true)
                           }}
-                          disabled={true}
                         >
                           <EditIcon />
                         </IconButton>
                         <IconButton
                           onClick={() => {
-                            // deleteAppAuthenticationGroup(data);
+  							deleteAppAuthenticationGroup(data.id) 
                           }}
-                          disabled={true}
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -5700,20 +6067,10 @@ If you're interested, please let me know a time that works for you, or set up a 
           )}
           </List>
 
-          <Button
-            style={{ marginLeft: 10 }}
-            variant="contained"
-            color="primary"
-            onClick={() => {
-              setAppAuthenticationGroupModalOpen(true);
-            }}
-          >
-            Add Group
-          </Button>
         
         </div>
-      </div> */}
-    </>
+      </div> 
+    </div>
     ) : null;
 
   const getLogs = async (ip, userId) => {

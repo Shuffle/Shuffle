@@ -1076,7 +1076,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			// return workflowExecution, fmt.Sprintf("%s", err), nil
 		} else {
 			log.Printf("[ERROR] Failed in prepareExecution: '%s'", err)
-			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed starting workflow: %s", err), err
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed running: %s", err), err
 		}
 	}
 
@@ -3382,6 +3382,8 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	debugUrl := fmt.Sprintf("/workflows/%s?execution_id=%s", workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+	resp.Header().Add("X-Debug-Url", debugUrl)
 
 	workflowExecution.Priority = 11
 	environments, err := shuffle.GetEnvironments(ctx, user.ActiveOrg.Id)

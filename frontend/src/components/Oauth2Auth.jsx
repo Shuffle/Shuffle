@@ -471,32 +471,26 @@ const AuthenticationOauth2 = (props) => {
       state += `%26refresh_uri%3d${authentication_url}`;
     }
 
-		// No prompt forcing
-    //var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=login&scope=${resources}&state=${state}&access_type=offline`;
+	// FIXME: Should this be =consent?
 	var defaultPrompt = "login"
    	if (prompt !== undefined && prompt !== null && prompt.length > 0) {
-			defaultPrompt = prompt
-		}
+		defaultPrompt = prompt
+	}
 		
-		var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=${defaultPrompt}&scope=${resources}&state=${state}&access_type=offline`;
+	var url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=${defaultPrompt}&scope=${resources}&state=${state}&access_type=offline`;
+	if (admin_consent === true) {
+		console.log("Running Oauth2 WITH admin consent")
+		//url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=consent&scope=${resources}&state=${state}&access_type=offline`;
+		url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=admin_consent&scope=${resources}&state=${state}&access_type=offline`;
+	}
 
-		if (admin_consent === true) {
-			console.log("Running Oauth2 WITH admin consent")
-    	//url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=consent&scope=${resources}&state=${state}&access_type=offline`;
-    	url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=admin_consent&scope=${resources}&state=${state}&access_type=offline`;
-		}
+	console.log("OAUTH2 URL: ", url)
 
-		// Force new consent
+	// Force new consent
     //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`;
 
-		// Admin consent
+	// Admin consent
     //const url = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${client_id}&scope=AaaServer.profile.Read&redirect_uri=${redirectUri}&prompt=consent`
-    
-		// &resource=https%3A%2F%2Fgraph.microsoft.com&
-
-    // FIXME: Awful, but works for prototyping
-    // How can we get a callback properly realtime?
-    // How can we properly try-catch without breaks on error?
     try {
       var newwin = window.open(url, "", "width=582,height=700");
       //console.log(newwin)
@@ -997,7 +991,6 @@ const AuthenticationOauth2 = (props) => {
 											color: "white",
 											padding: 5, 
 											minWidth: 300,
-											maxWidth: 300,
 										}}
                   						onChange={(e, value) => {
 											//handleScopeChange(e)

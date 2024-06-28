@@ -107,9 +107,8 @@ const CodeEditor = (props) => {
 		getParents,
 
 		fieldname,
+		contentLoading,
 	} = props
-
-
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
 
@@ -627,8 +626,8 @@ const CodeEditor = (props) => {
 						newMarkers.push({
 							startRow: i,
 							startCol: startCh,
-							endRow: i+1,
-							endCol: endCh+1,
+							endRow: i,
+							endCol: endCh,
 							className: correctVariable ? "good-marker" : "bad-marker",
 							type: "text",
 						})
@@ -989,6 +988,17 @@ const CodeEditor = (props) => {
 				},
 			}}
 		>
+
+		{contentLoading === true ? 
+			  <Tooltip
+				color="primary"
+				title={`The File content is loading. Please wait a moment.`}
+				placement="top"
+			  >
+				<CircularProgress style={{position: "absolute", right: 106, top: 6, }}/>
+			  </Tooltip>
+		: null}
+
 		  <Tooltip
 		  	color="primary"
 		  	title={`Move window`}
@@ -1571,7 +1581,8 @@ const CodeEditor = (props) => {
 								>
 									<div>
 										<span style={{color: "white"}}>
-											Expected Output
+
+											{selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "Code to run" : "Expected Output"}
 										</span>
 									</div>
 
@@ -1588,7 +1599,7 @@ const CodeEditor = (props) => {
 											border: `1px solid ${theme.palette.primary.main}`, 
 											position: "absolute",
 											top: 24,
-											right: 65, 
+											right: 100, 
 											maxHeight: 35, 
 											minWidth: 70, 
 										}} 
@@ -1599,7 +1610,7 @@ const CodeEditor = (props) => {
 										{executing ? 
 											<CircularProgress style={{height: 18, width: 18, }} /> 
 												: 						
-											<span>Try it <PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
+											<span>{selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "Run Python Code" : "Try it"}<PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
 										}
 									</Button>
 								</Tooltip>

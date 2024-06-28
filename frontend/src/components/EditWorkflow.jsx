@@ -78,7 +78,6 @@ const EditWorkflow = (props) => {
 	const [name, setName] = React.useState(workflow.name !== undefined ? workflow.name : "")
 	const [dueDate, setDueDate] = React.useState(workflow.due_date !== undefined && workflow.due_date !== null && workflow.due_date !== 0 ? dayjs(workflow.due_date*1000) : dayjs().subtract(1, 'day'))
 
-  console.log("WORKFLOW: ", workflow)
   const [inputQuestions, setInputQuestions] = React.useState(workflow.input_questions !== undefined && workflow.input_questions !== null ? JSON.parse(JSON.stringify(workflow.input_questions)) : []) 
 
   const classes = useStyles();
@@ -235,7 +234,7 @@ const EditWorkflow = (props) => {
 				</div>
       </DialogTitle>
       <FormControl>
-		<div style={{width: 600, position: "fixed", left: 0, bottom: 0, zIndex: 1002, backgroundColor: "rgba(53,53,53,1)", height: 75, paddingTop: 20, paddingLeft: 75, }}>
+		<div style={{borderTop: "1px solid rgba(255,255,255,0.5)", width: 600, position: "fixed", left: 0, bottom: 0, zIndex: 1002, backgroundColor: "rgba(53,53,53,1)", height: 75, paddingTop: 20, paddingLeft: 75, }}>
 		  {/*
           <Button
             style={{}}
@@ -315,7 +314,7 @@ const EditWorkflow = (props) => {
             }}
             color="primary"
           >
-            {submitLoading ? <CircularProgress color="secondary" /> : "Done"}
+            {submitLoading ? <CircularProgress color="secondary" /> : "Save Changes"}
           </Button>
         </div>
 
@@ -339,26 +338,6 @@ const EditWorkflow = (props) => {
           	  autoFocus
           	  fullWidth
           	/>
-			<div style={{display: "flex", }}>
-				<TextField
-				  onBlur={(event) => {
-					setDescription(event.target.value)
-				  }}
-				  InputProps={{
-					style: {
-					  color: "white",
-					},
-				  }}
-				  maxRows={4}
-				  color="primary"
-				  defaultValue={innerWorkflow.description}
-				  placeholder="Description"
-				  multiline
-				  label="Description"
-				  margin="dense"
-				  fullWidth
-				/>
-			</div>
 						<div style={{display: "flex", marginTop: 10, }}>
 							{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
       					<FormControl style={{flex: 1, marginRight: 5,}}>
@@ -426,27 +405,56 @@ const EditWorkflow = (props) => {
 								fullWidth
 								value={newWorkflowTags}
 								onChange={(chip) => {
-									console.log("Chip: ", chip)
-									//newWorkflowTags.push(chip);
 									setNewWorkflowTags(chip);
 								}}
+								onBlur={(event) => {
+									if (event.target.value.length === 0) {
+										return
+									}
+
+									if (newWorkflowTags.includes(event.target.value)) {
+										return
+									}
+
+									newWorkflowTags.push(event.target.value)
+									setNewWorkflowTags(newWorkflowTags)
+
+									setUpdate(Math.random())
+								}}
 								onAdd={(chip) => {
-									newWorkflowTags.push(chip);
-									setNewWorkflowTags(newWorkflowTags);
+									newWorkflowTags.push(chip)
+									setNewWorkflowTags(newWorkflowTags)
 								}}
 								onDelete={(chip, index) => {
 									console.log("Deleting: ", chip, index)
-									newWorkflowTags.splice(index, 1);
-									setNewWorkflowTags(newWorkflowTags);
-									setUpdate(Math.random());
+									newWorkflowTags.splice(index, 1)
+									setNewWorkflowTags(newWorkflowTags)
+									setUpdate(Math.random())
 								}}
 							/>
 						</div>
 
   					{showMoreClicked === true ? 
-							<span style={{marginTop: 25, }}>
-
-
+						<div style={{marginTop: 50, }}>
+							<TextField
+							  onBlur={(event) => {
+								setDescription(event.target.value)
+							  }}
+							  InputProps={{
+								style: {
+								  color: "white",
+								},
+							  }}
+							  multiLine
+							  rows={3}
+							  color="primary"
+							  defaultValue={innerWorkflow.description}
+							  placeholder="Description"
+							  multiline
+							  label="Description"
+							  margin="dense"
+							  fullWidth
+							/>
 
 								<div style={{display: "flex"}}>
 									<FormControl style={{marginTop: 15, }}>
@@ -565,14 +573,24 @@ const EditWorkflow = (props) => {
 									fullWidth
 								/>
 
-								<Typography variant="body2" style={{marginTop: 50, }}>
-									MSSP Suborg Distribution (beta - contact support@shuffler.io)
+								<Divider style={{marginTop: 20, marginBottom: 20, }} />
+
+								<Typography variant="body1" style={{marginTop: 50, }}>
+									MSSP Suborg Distribution (beta - contact support@shuffler.io for more info)
 								</Typography>
 								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
 									userdata.orgs.filter(org => org.creator_org === userdata.active_org.id).length === 0 ?
-										<Typography variant="body2" style={{marginTop: 10, color: "rgba(255,255,255,0.7)"}}>
-											You can only distribute to suborgs from a parent org.
-										</Typography>
+										userdata.active_org.creator_org === undefined || userdata.active_org.creator_org === null || userdata.active_org.creator_org === "" ?
+											<Typography variant="body2" style={{marginTop: 10, color: "rgba(255,255,255,0.7)"}}>
+												Your organization does not have any suborgs yet. Please <a href="/admin?tab=suborgs" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">make one</a>, then try again.
+											</Typography>
+											:
+											<Typography variant="body2" style={{marginTop: 10, color: "rgba(255,255,255,0.7)"}}>
+												{innerWorkflow.parentorg_workflow !== undefined && innerWorkflow.parentorg_workflow !== null && innerWorkflow.parentorg_workflow.length > 0 ? <span>This workflow is distributed from <a href={`/workflows/${innerWorkflow.parentorg_workflow}`} style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">your parent workflow</a> (you may not have access).</span> : null}
+												<br />
+												<br />
+												You can only distribute to suborgs from a parent org.
+											</Typography>
 									:
 									<Select
 										multiple
@@ -583,8 +601,6 @@ const EditWorkflow = (props) => {
 											if (newvalue.length > 1 && newvalue[0] === "none") {
 												newvalue = newvalue.filter(value => value !== "none")
 											}
-
-											console.log("NEWVALUE: ", newvalue)
 
 											if (newvalue.includes("none")) {
 												newvalue  = ["none"]
@@ -664,12 +680,13 @@ const EditWorkflow = (props) => {
 									</Link>
 								}
 									
+								<Divider style={{marginTop: 20, marginBottom: 20, }} />
 
 								<Typography variant="h6" style={{marginTop: 50, }}>
 									Input fields
 								</Typography>
-								<Typography variant="body1" color="textSecondary" style={{marginBottom: 20, }}>
-									Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/workflows/${workflow.id}/run`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>workflow run page</a>.
+								<Typography variant="body2" color="textSecondary" style={{marginBottom: 20, }}>
+									Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/workflows/${workflow.id}/run`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>workflow run page</a>. If chosen in the User Input node, these will be required fields.
 								</Typography>
 
 
@@ -775,18 +792,173 @@ const EditWorkflow = (props) => {
 								>
 								  <AddIcon style={{}} />
 								</Button>
-							</span>
+
+								<Divider style={{marginTop: 20, marginBottom: 20, }} />
+
+								<Typography variant="body1" style={{marginTop: 50, }}>
+									Git Backup Repository
+								</Typography>
+								<Typography variant="body2" style={{ textAlign: "left", marginTop: 5, }} color="textSecondary">
+									Decide where this workflow is backed up in a Git repository. Will create logs and notifications if upload fails. <b>The repository and branch must already have been initialized</b>. Files will show up in the root folder in the format 'orgid/workflow status/workflow id.json' without images. Overrides the <a href="/admin?admin_tab=organization" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">default backup repository</a> your org has chosen. All fields must be filled in for the backup to work.
+									<br />
+									PS: This is a beta feature, and might not work as expected. Credentials are NOT encrypted.
+								</Typography>
+								<Grid container style={{ marginTop: 10, }} spacing={2}>
+									<Grid item xs={6} style={{}}>
+										<span>
+											<Typography>Workflow Backup Repository</Typography>
+											<TextField
+												required
+												style={{
+													flex: "1",
+													marginTop: "5px",
+													marginRight: "15px",
+												}}
+												fullWidth={true}
+												type="name"
+												multiline={true}
+												rows={1}
+												id="outlined-with-placeholder"
+												margin="normal"
+												variant="outlined"
+												placeholder="github/com/shuffle/workflowbackup "
+												defaultValue={innerWorkflow.backup_config === undefined || innerWorkflow.backup_config.upload_repo === undefined || innerWorkflow.backup_config.upload_repo === null  || innerWorkflow.backup_config.upload_repo === "" ? "" : innerWorkflow.backup_config.upload_repo}
+												onChange={(e) => {
+													//setUploadRepo(e.target.value);
+													innerWorkflow.backup_config.upload_repo = e.target.value
+													setInnerWorkflow(innerWorkflow)
+												}}
+												InputProps={{
+													classes: {
+														notchedOutline: classes.notchedOutline,
+													},
+													style: {
+														color: "white",
+													},
+												}}
+											/>
+										</span>
+									</Grid>
+									<Grid item xs={6} style={{}}>
+										<span>
+											<Typography>Branch</Typography>
+											<TextField
+												required
+												style={{
+													flex: "1",
+													marginTop: "5px",
+													marginRight: "15px",
+												}}
+												fullWidth={true}
+												type="name"
+												id="outlined-with-placeholder"
+												margin="normal"
+												variant="outlined"
+												multiline={true}
+												rows={1}
+												placeholder="The branch to use"
+												defaultValue={innerWorkflow.backup_config === undefined || innerWorkflow.backup_config.upload_branch === undefined || innerWorkflow.backup_config.upload_branch === null  || innerWorkflow.backup_config.upload_branch === "" ? "" : innerWorkflow.backup_config.upload_branch}
+												onChange={(e) => {
+													innerWorkflow.backup_config.upload_branch = e.target.value
+													setInnerWorkflow(innerWorkflow)
+												}}
+												InputProps={{
+													classes: {
+														notchedOutline: classes.notchedOutline,
+													},
+													style: {
+														color: "white",
+													},
+												}}
+											/>
+										</span>
+									</Grid>
+								</Grid>
+								<Grid container style={{ }} spacing={2}>
+									<Grid item xs={6} style={{}}>
+										<span>
+											<Typography>Username</Typography>
+											<TextField
+												required
+												style={{
+													flex: "1",
+													marginTop: "5px",
+													marginRight: "15px",
+												}}
+												fullWidth={true}
+												type="name"
+												multiline={true}
+												rows={1}
+												id="outlined-with-placeholder"
+												margin="normal"
+												variant="outlined"
+												placeholder="The username to use" 
+												defaultValue={innerWorkflow.backup_config === undefined || innerWorkflow.backup_config.upload_username === undefined || innerWorkflow.backup_config.upload_username === null  || innerWorkflow.backup_config.upload_username === "" ? "" : innerWorkflow.backup_config.upload_username}
+												onChange={(e) => {
+													innerWorkflow.backup_config.upload_username = e.target.value
+													setInnerWorkflow(innerWorkflow)
+												}}
+												InputProps={{
+													classes: {
+														notchedOutline: classes.notchedOutline,
+													},
+													style: {
+														color: "white",
+													},
+												}}
+											/>
+										</span>
+									</Grid>
+									<Grid item xs={6} style={{}}>
+										<span>
+											<Typography>Git token/password</Typography>
+											<TextField
+												required
+												style={{
+													flex: "1",
+													marginTop: "5px",
+													marginRight: "15px",
+												}}
+												fullWidth={true}
+												id="outlined-with-placeholder"
+												margin="normal"
+												variant="outlined"
+												multiline={true}
+												rows={1}
+												placeholder="The API token to use" 
+												defaultValue={innerWorkflow.backup_config === undefined || innerWorkflow.backup_config.upload_token === undefined || innerWorkflow.backup_config.upload_token === null  || innerWorkflow.backup_config.upload_token === "" ? "" : innerWorkflow.backup_config.upload_token}
+												onChange={(e) => {
+													innerWorkflow.backup_config.upload_token = e.target.value
+													setInnerWorkflow(innerWorkflow)
+												}}
+												InputProps={{
+													classes: {
+														notchedOutline: classes.notchedOutline,
+													},
+													style: {
+														color: "white",
+													},
+												}}
+												type="password"
+											/>
+										</span>
+									</Grid>
+								</Grid>
+							</div>
 						: null}
 
+
 			<Tooltip color="primary" title={"Add more details"} placement="top">
-				<IconButton
-					style={{ color: "white", margin: "auto", textAlign: "center", width: 50, marginTop: 50, }}
+				<Button
+					style={{ margin: "auto", marginTop: 50, textAlign: "center",  }}
+					variant="outlined"
 					onClick={() => {
 						setShowMoreClicked(!showMoreClicked);
 					}}
 				>
 					{showMoreClicked ? <ExpandLessIcon /> : <ExpandMoreIcon/>}
-				</IconButton>
+					{showMoreClicked ? "Collapse": "Expand"}
+				</Button>
 			</Tooltip>
 		</div>
 

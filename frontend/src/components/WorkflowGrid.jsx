@@ -204,6 +204,9 @@ const AppGrid = props => {
 					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%",}} 
 					InputProps={{
 						style:{
+							color: "white",
+							fontSize: "1em",
+							height: 50,
 						},
 						startAdornment: (
 							<InputAdornment position="start">
@@ -221,6 +224,11 @@ const AppGrid = props => {
 						removeQuery("q")
 						refine(event.currentTarget.value)
 					}}
+					onKeyDown={(event) => {
+						if(event.key === "Enter") {
+							event.preventDefault();
+						}
+					}}
 					limit={5}
 				/>
 			: null}
@@ -233,6 +241,8 @@ const AppGrid = props => {
     flexWrap: "wrap",
     alignContent: "space-between",
     marginTop: 5,
+	padding: "0px 180px",
+	width:"auto"
   }
 	
 	var workflowDelay = -50

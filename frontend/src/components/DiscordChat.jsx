@@ -75,7 +75,12 @@ const DiscordChat = props => {
                         fullWidth
                         value={currentRefinement}
                         onChange={(event) => refine(event.currentTarget.value)}
-                        placeholder="Search Discord Chats"
+                        onKeyDown={(event) => {
+                            if(event.key === "Enter") {
+                                event.preventDefault();
+                            }
+                        }}
+                        placeholder="Search Discord Chats..."
                         style={{ backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%", }}
                         InputProps={{
                             style: {
@@ -143,7 +148,7 @@ const DiscordChat = props => {
     const CustomHits = connectHits(Hits);
 
     return (
-        <div style={{ width: "100%", textAlign:"center", position: "relative", height: "100%", }}>
+        <div style={{textAlign:"center", position: "relative", height: "100%", padding:"0px 240px" }}>
             <InstantSearch searchClient={searchClient} indexName="discord_chat">
                 <div style={{ maxWidth: 450, margin: "auto", marginTop: 15, marginBottom: 5, }}>
                     <CustomSearchBox />

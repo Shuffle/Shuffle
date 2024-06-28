@@ -44,9 +44,9 @@ const Files = (props) => {
   const { globalUrl, userdata, serverside, selectedOrganization, isCloud,isSelectedFiles } = props;
 
   const [files, setFiles] = React.useState([]);
-  const [selectedNamespace, setSelectedNamespace] = React.useState("default");
+  const [selectedCategory, setSelectedCategory] = React.useState("default");
   const [openFileId, setOpenFileId] = React.useState(false);
-  const [fileNamespaces, setFileNamespaces] = React.useState([]);
+  const [fileCategories, setFileCategories] = React.useState([]);
   const [fileContent, setFileContent] = React.useState("");
   const [openEditor, setOpenEditor] = React.useState(false);
   const [renderTextBox, setRenderTextBox] = React.useState(false);
@@ -57,6 +57,7 @@ const Files = (props) => {
   const [downloadUrl, setDownloadUrl] = React.useState("https://github.com/shuffle/standards")
   const [downloadBranch, setDownloadBranch] = React.useState("main");
   const [downloadFolder, setDownloadFolder] = React.useState("translation_standards");
+  const [contentLoading, setContentLoading] = React.useState(false)
 
   //const alert = useAlert();
   const allowedFileTypes = ["txt", "py", "yaml", "yml","json", "html", "js", "csv", "log", "eml", "msg", "md", "xml", "sh", "bat", "ps1", "psm1", "psd1", "ps1xml", "pssc", "psc1", "response"]
@@ -67,8 +68,8 @@ const Files = (props) => {
 
       console.log('do validate')
       console.log("new namespace name->",event.target.value);      
-      fileNamespaces.push(event.target.value);
-      setSelectedNamespace(event.target.value);
+      fileCategories.push(event.target.value);
+      setSelectedCategory(event.target.value);
       setRenderTextBox(false);
     }
 
@@ -107,12 +108,13 @@ const Files = (props) => {
 
   const getFiles = (namespace) => {
     var parsedurl = `${globalUrl}/api/v1/files`
-	if (namespace === undefined || namespace === "default") {
+
+	if (namespace === undefined || namespace === null || namespace === "default") {
 
 	} else if (namespace !== undefined && namespace !== null && namespace !== "") {
 	  	parsedurl = `${globalUrl}/api/v1/files/namespaces/${namespace}?ids=true`
-	} else if (selectedNamespace !== undefined && selectedNamespace !== null && selectedNamespace !== "default" && selectedNamespace !== "") {
-		parsedurl = `${globalUrl}/api/v1/files/namespaces/${selectedNamespace}?ids=true`
+	} else if (selectedCategory !== undefined && selectedCategory !== null && selectedCategory !== "default" && selectedCategory !== "") {
+		parsedurl = `${globalUrl}/api/v1/files/namespaces/${selectedCategory}?ids=true`
 	}
 
     fetch(parsedurl, {
@@ -149,9 +151,11 @@ const Files = (props) => {
           setFiles([]);
         }
 
-        if (responseJson.namespaces !== undefined && responseJson.namespaces !== null && (fileNamespaces.length === 0 || responseJson.namespaces.length > fileNamespaces.length)) {
-          setFileNamespaces(responseJson.namespaces);
-        }
+	    if (namespace === undefined || namespace === null || namespace === "default") {
+			if (responseJson.namespaces !== undefined && responseJson.namespaces !== null && (fileCategories.length === 0 || responseJson.namespaces.length > fileCategories.length)) {
+			  setFileCategories(responseJson.namespaces)
+			}
+		}
       })
       .catch((error) => {
         toast(error.toString());
@@ -159,7 +163,21 @@ const Files = (props) => {
   };
 
 	useEffect(() => {
-		getFiles(selectedNamespace)
+		getFiles("default")
+
+		setTimeout(() => {
+			var category = selectedCategory
+			if (window.location.search.includes("category=")) {
+				const urlParams = new URLSearchParams(window.location.search)
+				category = urlParams.get("category")
+			}
+
+			if (category !== undefined && category !== null && category.length > 0 && category !== "default") {
+				setSelectedCategory(category)
+			}
+
+			getFiles(category)
+		}, 1000)
 	}, []);
 
   const importStandardsFromUrl = (url, folder) => {
@@ -392,8 +410,9 @@ const Files = (props) => {
         ) {
           toast("Failed to delete file: " + responseJson.reason);
         }
+
         setTimeout(() => {
-          getFiles();
+  			getFiles(selectedCategory)
         }, 1500);
       })
       .catch((error) => {
@@ -402,6 +421,8 @@ const Files = (props) => {
   };
 
   const readFileData = (file) => {
+	setContentLoading(true)
+
     fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
       method: "GET",
       headers: {
@@ -411,6 +432,7 @@ const Files = (props) => {
       credentials: "include",
     })
       .then((response) => {
+		setContentLoading(false)
         if (response.status !== 200) {
           console.log("Status not 200 for file :O!");
           return "";
@@ -428,12 +450,12 @@ const Files = (props) => {
         return respdata
       })
       .then((responseData) => {
-      
-      setFileContent(responseData);
-      //console.log("filecontent state ",fileContent);
+		  setFileContent(responseData);
+		  //console.log("filecontent state ",fileContent);
       })
       .catch((error) => {
-        toast(error.toString());
+		setContentLoading(false)
+        toast(error.toString())
       });
   };
 
@@ -505,12 +527,12 @@ const Files = (props) => {
     };
 
     if (
-      selectedNamespace !== undefined &&
-      selectedNamespace !== null &&
-      selectedNamespace.length > 0 &&
-      selectedNamespace !== "default"
+      selectedCategory !== undefined &&
+      selectedCategory !== null &&
+      selectedCategory.length > 0 &&
+      selectedCategory !== "default"
     ) {
-      data.namespace = selectedNamespace;
+      data.namespace = selectedCategory;
     }
 
     fetch(globalUrl + "/api/v1/files/create", {
@@ -676,22 +698,23 @@ const Files = (props) => {
 						//setFile(fileObject)
 						//const files = event.target.files[0]
 						uploadFiles(event.target.files);
+
 					}}
 				/>
 				<Button
 					style={{ marginLeft: 5, marginRight: 15, backgroundColor:isSelectedFiles?"#2F2F2F":null,borderRadius:isSelectedFiles?200:null, width:isSelectedFiles?81:null, height:isSelectedFiles?40:null, boxShadow: isSelectedFiles?'none':null, }}
 					variant="contained"
 					color="primary"
-					onClick={() => getFiles()}
+					onClick={() => getFiles(selectedCategory)}
 				>
 					<CachedIcon />
 				</Button>
 
 
 
-				{fileNamespaces !== undefined &&
-				fileNamespaces !== null &&
-				fileNamespaces.length > 1 ? (
+				{fileCategories !== undefined &&
+				fileCategories !== null &&
+				fileCategories.length > 1 ? (
 					<FormControl style={{ minWidth: 150, maxWidth: 150 }}>
 						<InputLabel id="input-namespace-label">File Category</InputLabel>
 						<Select
@@ -703,18 +726,26 @@ const Files = (props) => {
 								maxWidth: 150,
 								float: "right",
 							}}
-							value={selectedNamespace}
+							value={selectedCategory}
 							onChange={(event) => {
-								setSelectedNamespace(event.target.value);
+								setSelectedCategory(event.target.value)
 
 								if (event.target.value === "all" || event.target.value === "default") {
   									getFiles() 
 								} else {
 									getFiles(event.target.value)
 								}
+
+								// Add it to the url as a query
+								if (window.location.search.includes("category=")) {
+									const newurl = window.location.href.replace(/category=[^&]+/, `category=${event.target.value}`)
+									window.history.pushState({ path: newurl }, "", newurl)
+								} else {
+									window.history.pushState({ path: window.location.href }, "", `${window.location.href}&category=${event.target.value}`)
+								}
 							}}
 						>
-							{fileNamespaces.map((data, index) => {
+							{fileCategories.map((data, index) => {
 								return (
 									<MenuItem
 										key={index}
@@ -731,31 +762,31 @@ const Files = (props) => {
 				<div style={{display: "inline-flex", position:"relative"}}>
 				{renderTextBox ? 
 				
-				<Tooltip title={"Close"} style={{}} aria-label={""}>
-					<Button
-						style={{ marginLeft: 5, marginRight: 15 }}
-						color="primary"
-						onClick={() => {
-							setRenderTextBox(false);
-							console.log(" close clicked")
-							}}
-					>
-						<ClearIcon/>
-					</Button>
-				</Tooltip>
-				:
-				<Tooltip title={"Add new file category"} style={{}} aria-label={""}>
-					<Button
-						style={{ marginLeft: 5, marginRight: 15 }}
-						color="primary"
-						onClick={() => {
-							setRenderTextBox(true);
-							}}
-					>
-						<AddIcon/>
-					</Button>
-				</Tooltip> }
-
+					<Tooltip title={"Close"} style={{}} aria-label={""}>
+						<Button
+							style={{ marginLeft: 5, marginRight: 15 }}
+							color="primary"
+							onClick={() => {
+								setRenderTextBox(false);
+								console.log(" close clicked")
+								}}
+						>
+							<ClearIcon/>
+						</Button>
+					</Tooltip>
+					:
+					<Tooltip title={"Add new file category"} style={{}} aria-label={""}>
+						<Button
+							style={{ marginLeft: 5, marginRight: 15 }}
+							color="primary"
+							onClick={() => {
+								setRenderTextBox(true);
+								}}
+						>
+							<AddIcon/>
+						</Button>
+					</Tooltip> 
+				}
 
 				{renderTextBox && <TextField
 					onKeyPress={(event)=>{
@@ -783,6 +814,7 @@ const Files = (props) => {
 					isFileEditor = {true}
 					key = {fileContent} //https://reactjs.org/docs/reconciliation.html#recursing-on-children
 					runUpdateText = {runUpdateText}
+					contentLoading = {contentLoading}
 				/>
 				{isSelectedFiles?null:
 				<Divider
@@ -795,15 +827,17 @@ const Files = (props) => {
 
 				<List style={{borderRadius: isSelectedFiles?8:null, border:isSelectedFiles?"1px solid #494949":null, marginTop:isSelectedFiles?24:null}}>
 					<ListItem style={{width:isSelectedFiles?"100%":null, borderBottom:isSelectedFiles?"1px solid #494949":null}}>
+						{/*
 						<ListItemText
 							primary="Updated"
 							style={{ maxWidth: 185, minWidth: 185 }}
 						/>
+						*/}
 						<ListItemText
 							primary="Name"
 							style={{
-								maxWidth: 150,
-								minWidth: 150,
+								maxWidth: 250,
+								minWidth: 250,
 								overflow: "hidden",
 								marginLeft: 10,
 							}}
@@ -814,7 +848,7 @@ const Files = (props) => {
 						/>
 						<ListItemText
 							primary="Md5"
-							style={{ minWidth: isSelectedFiles?210:250, maxWidth: isSelectedFiles?210:250, overflow: "hidden" }}
+							style={{ minWidth: 300, maxWidth: 300,  overflow: "hidden" }}
 						/>
 						<ListItemText
 							primary="Status"
@@ -832,7 +866,7 @@ const Files = (props) => {
 								file.namespace = "default";
 							}
 
-							if (file.namespace !== selectedNamespace) {
+							if (file.namespace !== selectedCategory) {
 								return null;
 							}
 
@@ -853,6 +887,7 @@ const Files = (props) => {
 										overflow: "hidden",
 									}}
 								>
+									{/*
 									<ListItemText
 										style={{
 											maxWidth: isSelectedFiles ? 170:225,
@@ -861,10 +896,11 @@ const Files = (props) => {
 										}}
 										primary={new Date(file.updated_at * 1000).toISOString()}
 									/>
+									*/}
 									<ListItemText
 										style={{
-											maxWidth: 150,
-											minWidth: 150,
+											maxWidth: 250,
+											minWidth: 250,
 											overflow: "hidden",
 											marginLeft: 10,
 										}}
@@ -928,8 +964,8 @@ const Files = (props) => {
 									<ListItemText
 										primary={file.md5_sum}
 										style={{
-											minWidth: isSelectedFiles?200:300,
-											maxWidth: isSelectedFiles?200:300,
+											minWidth: 300,
+											maxWidth: 300,
 											marginLeft:isSelectedFiles? 15:null,
 											overflow: isSelectedFiles?"auto":"hidden",
 										}}
@@ -1076,7 +1112,7 @@ const Files = (props) => {
 														disabled={file.status !== "active"}
 														style = {{padding: "6px"}}
 														onClick={() => {
-															deleteFile(file);
+															deleteFile(file)
 														}}
 													>
 														<DeleteIcon
