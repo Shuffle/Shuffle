@@ -26,7 +26,8 @@ import {
 	Tooltip,
 	DialogContentText,
 	DialogActions,
-	LinearProgress
+	LinearProgress,
+	Slider
 } from "@mui/material";
 
 import { useNavigate, Link, json } from "react-router-dom";
@@ -880,6 +881,305 @@ const Billing = (props) => {
 			</Paper>
 		)
 	}
+	const ConsultationManagement = (props) => {
+		const { globalUrl, userdata, selectedOrganization, } = props;
+
+		const [inputHour, setInputHour] = React.useState(
+			selectedOrganization.Billing &&
+				selectedOrganization.Billing.Consultation &&
+				selectedOrganization.Billing.Consultation.hours !== undefined &&
+				selectedOrganization.Billing.Consultation.hours !== ""
+				? selectedOrganization.Billing.Consultation.hours
+				: 0
+		);
+
+		const [inputMinutes, setInputMinutes] = React.useState(
+			selectedOrganization.Billing &&
+				selectedOrganization.Billing.Consultation &&
+				selectedOrganization.Billing.Consultation.minutes !== undefined &&
+				selectedOrganization.Billing.Consultation.minutes !== ""
+				? selectedOrganization.Billing.Consultation.minutes
+				: 0
+		);
+
+		const [editConsultation, setEditConsultation] = React.useState(false);
+		const [openUpgradePlan, setOpenUpgradePlan] = React.useState(false);
+		const [consultationHours, setConsultationHours] = React.useState(5);
+		const [message, setMessage] = React.useState("");
+		const [hovered, setHovered] = React.useState(false)
+
+		const formatedHours = String(inputHour).padStart(2, "0")
+		const formatedMinutes = String(inputMinutes).padStart(2, "0")
+
+		const handleHourChange = (event) => {
+			setInputHour(parseInt(event.target.value, 10));
+		};
+
+		const handleMinuteChange = (event) => {
+			setInputMinutes(parseInt(event.target.value, 10));
+		};
+		const toggleEditMode = () => {
+			setEditConsultation(!editConsultation);
+		};
+
+		const handleCancel = () => {
+			setEditConsultation(false);
+		};
+
+		const handleSave = () => {
+
+			toast("Saving consultation hours. Please wait.")
+
+			const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}`;
+			const data = {
+				org_id: selectedOrganization.id,
+				Billing: {
+					Consultation: {
+						hours: String(inputHour),
+						minutes: String(inputMinutes),
+					},
+				}
+			};
+
+			fetch(url, {
+				body: JSON.stringify(data),
+				mode: "cors",
+				method: "POST",
+				credentials: "include",
+				crossDomain: true,
+				withCredentials: true,
+				headers: {
+					"Content-Type": "application/json; charset=utf-8",
+				},
+			})
+				.then((response) => {
+					if (response.status !== 200) {
+						console.log("Error in response");
+					}
+					return response.json();
+				})
+				.then((responseJson) => {
+					console.log("Response from consultation save: ", responseJson);
+					if (responseJson.success === true) {
+						toast.success("Consultation hours saved successfully");
+						setEditConsultation(false);
+					} else {
+						toast.error("Failed saving consultation hours.");
+					}
+				})
+				.catch((error) => {
+					console.log("Error: ", error);
+				});
+		}
+
+		const handleUpgradeConsultation = () => {
+
+			toast("Sending request for consultation hours. Please wait.")
+
+			const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}/consultation`;
+			const data = {
+				org_id: selectedOrganization.id,
+				consultationHours: String(consultationHours),
+				message: message,
+			};
+
+			fetch(url, {
+				body: JSON.stringify(data),
+				mode: "cors",
+				method: "POST",
+				credentials: "include",
+				crossDomain: true,
+				withCredentials: true,
+				headers: {
+					"Content-Type": "application/json; charset=utf-8",
+				},
+			})
+				.then((response) => {
+					if (response.status !== 200) {
+						console.log("Error in response");
+					}
+					return response.json();
+				})
+				.then((responseJson) => {
+					console.log("Response from consultation save: ", responseJson);
+					if (responseJson.success === true) {
+						toast.success("Thank you for your request. We will get back to you soon.");
+						setOpenUpgradePlan(false);
+						setEditConsultation(false);
+					} else {
+						toast.error("Failed sending consultation hours request. Please try again later.");
+					}
+				})
+				.catch((error) => {
+					console.log("Error: ", error);
+				});
+		}
+
+		var newPaperstyle = JSON.parse(JSON.stringify(paperStyle))
+
+		return (
+			<Paper style={{
+				padding: 20,
+				height: "100%",
+				minHeight: 280,
+				maxWidth: 400,
+				width: "100%",
+				backgroundColor: hovered ? "#232427" : theme.palette.platformColor,
+				borderRadius: theme.palette.borderRadius * 2,
+				border: "1px solid rgba(255,255,255,0.3)",
+				marginRight: 10,
+				marginTop: 15,
+			}}
+				onMouseEnter={() => setHovered(true)}
+				onMouseLeave={() => setHovered(false)}>
+				<Typography variant="h6" style={{ marginTop: 10, marginBottom: 10, }}>
+					Professional Services
+				</Typography>
+				<Divider />
+				<Typography variant="body1" style={{ marginTop: 10, }}>
+					Consultation & Management
+				</Typography>
+				<div>
+					<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+						Current Plan includes total {inputHour} hours and {inputMinutes} minutes of consultation and management by our experts.
+					</Typography>
+					<div style={{ display: "flex", width: 'auto', justifyContent: 'center', marginTop: 10 }}>
+						{editConsultation ?
+							<>
+								<TextField
+									type="number"
+									value={formatedHours}
+									onChange={handleHourChange}
+									style={{ width: 60, marginRight: 10 }}
+									inputProps={{ min: 0, max: 23 }}
+								/>
+								<span style={{ margin: "auto 0" }}>:</span>
+								<TextField
+									type="number"
+									value={formatedMinutes}
+									onChange={handleMinuteChange}
+									style={{ width: 60, marginLeft: 10 }}
+									inputProps={{ min: 0, max: 59 }}
+								/>
+							</>
+							:
+							<Typography variant="h3" style={{ marginTop: 10, }}>
+								{`${formatedHours}h:${formatedMinutes}m`}
+							</Typography>}
+					</div>
+					{userdata.support === true ?
+						<div style={{ display: "flex", marginTop: 20, }}>
+							{editConsultation ? (
+								<Button
+									variant="contained"
+									color="primary"
+									onClick={handleCancel}
+								>
+									Cancel
+								</Button>
+							) : (
+								<Button
+									variant="contained"
+									color="primary"
+									onClick={toggleEditMode}
+								>
+									Edit
+								</Button>
+							)}
+							{editConsultation && <Button variant="contained" color="primary" style={{ marginLeft: 5 }} onClick={handleSave}>Save</Button>}
+						</div>
+						: null}
+					<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+						Features
+					</Typography>
+					<ul>
+						<li>
+							<Typography variant="body2" color="textPrimary" style={{}}>
+								Debug/Create workflows with our experts
+							</Typography>
+						</li>
+						<li>
+							<Typography variant="body2" color="textPrimary" style={{}}>
+								Ask questions and get help with your workflows and integrations by our experts
+							</Typography>
+						</li>
+					</ul>
+				</div>
+				<Button
+					fullWidth
+					disabled={false}
+					variant="outlined"
+					color="primary"
+					style={{
+						marginTop: 10,
+						borderRadius: 25,
+						height: 40,
+						fontSize: 14,
+						color: "white",
+						backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+					}}
+					onClick={() => {
+						setOpenUpgradePlan(true)
+					}}
+				>
+					Upgrade plan
+				</Button>
+				<Dialog open={openUpgradePlan}
+					onClose={() => setOpenUpgradePlan(false)}
+					fullWidth
+					style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+					PaperProps={{
+						style: {
+							width: 500,
+							margin: 0,
+						}
+					}}
+				>
+					<DialogTitle style={{ marginTop: 10, textAlign: 'center', fontWeight: 'bold' }}>
+						Upgrade Consultation Plan
+					</DialogTitle>
+					<DialogContent style={{ padding: '24px', }}>
+						<Typography variant="body1" color="textSecondary" style={{ marginBottom: '16px', textAlign: 'left' }}>
+							Enter the total hours of consultation you want to include in your plan.
+						</Typography>
+						<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '16px' }}>
+							<Slider
+								value={consultationHours}
+								onChange={(e, val) => setConsultationHours(val)}
+								aria-labelledby="continuous-slider"
+								step={5}
+								min={5}
+								max={50}
+								style={{ width: '80%', color: theme.palette.primary.main }} // Adding primary color for better visibility
+								marks
+								valueLabelDisplay="auto"
+							/>
+						</div>
+						<Typography variant="body1" color="textSecondary" style={{ marginTop: '24px', textAlign: 'left' }}>
+							If you have any additional requirements or questions, please leave a message below.
+						</Typography>
+						<TextField
+							variant="outlined"
+							fullWidth
+							multiline
+							rows={4}
+							placeholder="Your message"
+							style={{ marginTop: '16px', borderRadius: '8px' }}
+							onChange={(e) => setMessage(e.target.value)}
+						/>
+						<Button
+							variant="contained"
+							color="primary"
+							style={{ marginTop: '24px', display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px' }}
+							onClick={handleUpgradeConsultation}
+						>
+							Submit Request
+						</Button>
+					</DialogContent>
+				</Dialog>
+			</Paper >
+		)
+	}
 
 	const addDealModal = (
 		<Dialog
@@ -1405,6 +1705,12 @@ const Billing = (props) => {
 							/>
 						</span>
 						: null}
+				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ? isChildOrg ? null :
+					<ConsultationManagement
+						globalUrl={globalUrl}
+						userdata={userdata}
+						selectedOrganization={selectedOrganization}
+					/> : null}
 
 				{isCloud &&
 					selectedOrganization.subscriptions !== undefined &&
