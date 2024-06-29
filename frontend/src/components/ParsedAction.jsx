@@ -1751,7 +1751,6 @@ const ParsedAction = (props) => {
 										}
 
 										const params = workflow.actions[key].parameters
-										console.log(params)
 										if (params === null || params === undefined) {
 											continue
 										}

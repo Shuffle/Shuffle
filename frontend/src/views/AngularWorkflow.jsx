@@ -6731,7 +6731,8 @@ const releaseToConnectLabel = "Release to Connect"
 
 	  const parentlabel = parentNode.data("label").toLowerCase().replace(" ", "_")
 	  const parentname = parentNode.data("app_name").toLowerCase().replace(" ", "_")
-	  if (!parentlabel.startsWith(parentname)) {
+	  if (!parentlabel.startsWith(parentname)+"_") {
+		  console.log("Return 1")
 		  return
 	  }
 
@@ -6755,13 +6756,14 @@ const releaseToConnectLabel = "Release to Connect"
 		  }
 
 		  if (curapp.actions[startIndex].name !== parentActionname) {
+		  	  console.log("Return 2")
 			  return
 		  }
 
 		  break
 	  }
 
-	  //const parentAction = parentNode.data("name")
+	  console.log("CONTINUE EVEN WHEN FIELDS ARE FILLED")
 
       const iconInfo = {
         icon: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm-1 4l6 6v10c0 1.1-.9 2-2 2H7.99C6.89 23 6 22.1 6 21l.01-14c0-1.1.89-2 1.99-2h7zm-1 7h5.5L14 6.5V12z",
@@ -12491,15 +12493,10 @@ const releaseToConnectLabel = "Release to Connect"
     let appIdsInWorkflow = [];
 
     Object.entries(workflowApps).forEach(([key, value]) => {
-      console.log("VALUE: ", value)
       appIdsInWorkflow.push(value.app_id);
     })
 
     appIdsInWorkflow = [...new Set(appIdsInWorkflow)];
-
-    console.log("appIdsInWorkflow: ", appIdsInWorkflow)
-
-    console.log("authData: ", authData, "workflowApps: ", workflowApps)
     
     // loop through the authData and create transformedData which looks like:
     // appId: [auth1, auth2, ...]
@@ -12518,8 +12515,6 @@ const releaseToConnectLabel = "Release to Connect"
 
     });
 
-    console.log("transformedData: ", transformedData)
-
     return transformedData;
     
   };
@@ -12535,7 +12530,6 @@ const releaseToConnectLabel = "Release to Connect"
     const handleShowingValue = (appName) => {
       let mappingWithName = {}
       let listWithValues = workflow.triggers[selectedTriggerIndex].parameters[5]?.value.split(";").filter(e => e).map(e => e.split("="))
-      console.log("LIST WITH VALUES: ", listWithValues)
       if (listWithValues === undefined || listWithValues === null || listWithValues.length === 0) {
         return "no-overrides";
       }
@@ -12614,10 +12608,15 @@ const releaseToConnectLabel = "Release to Connect"
 
     return (
     <div className="auth-container" style={{ padding: '20px', backgroundColor: '#26292D', borderRadius: '8px' }}>
-      {Object.entries(transformedAuthData).map(([appId, authList]) => (
+      {Object.entries(transformedAuthData).map(([appId, authList]) => {
+		  if (authList === undefined || authList === null || authList.length < 2) {
+			  return null;
+		  }
+
+		  return (
         <div key={appId} className="auth-item" style={{ marginBottom: '20px' }}>
           <label className="auth-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#E8E8E8' }}>
-            Select Authentication for {authList[0].app.name}:
+            {authList[0].app.name} Authentication:
           </label>
           <select 
             value={handleShowingValue(authList[0].app.name)}
@@ -12652,7 +12651,7 @@ const releaseToConnectLabel = "Release to Connect"
             )}
           </select>
         </div>
-      ))}
+      )})}
     </div>
     );
   };
@@ -13053,7 +13052,7 @@ const releaseToConnectLabel = "Release to Connect"
               <div style={{ flex: 1, marginLeft: 5, }}>
                 <Tooltip
                   color="primary"
-                  title={"Delay before action executes (in seconds)"}
+                  title={"Delay before action runs (in seconds)"}
                   placement="top"
                 >
                   <span>
@@ -13758,9 +13757,9 @@ const releaseToConnectLabel = "Release to Connect"
           <div>
             <div>
             <div className="app">
-              <div style={{ display: "flex", marginTop: 10 }}>
+              <div style={{ display: "flex", marginTop: 50 }}>
                 <div style={{ flex: "10" }}>
-                  <b>Auth Override</b>
+                  <b>Authentication Override</b>
                 </div>
               </div>
 
@@ -15815,7 +15814,7 @@ const releaseToConnectLabel = "Release to Connect"
       <div style={topBarStyle}>
         <div style={{ 
 			margin: "0px 10px 0px 10px",
-			pointerEvents: "auto",
+			pointerEvents: "none",
 		}}>
           <Breadcrumbs
             aria-label="breadcrumb"
@@ -15917,7 +15916,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  }
 
 		  {originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0 || originalWorkflow.suborg_distribution.includes("none") ? null :
-          <FormControl fullWidth style={{marginTop: 10, }}>
+          <FormControl fullWidth style={{marginTop: 10, maxWidth: 250, pointerEvents: "auto", }}>
 
             <InputLabel
               id="suborg-changer"
@@ -16074,7 +16073,7 @@ const releaseToConnectLabel = "Release to Connect"
 				title="Configure Authentication Groups. The amount of auth groups selected is the amount of replications of any execution of this workflow."
 				placement="top"
 			  >
-				<span>
+				<span style={{pointerEvents: "auto", }}>
 				  <Button
 			  		onMouseEnter={() => {
 						if (cy !== undefined && cy !== null) {
@@ -16138,7 +16137,7 @@ const releaseToConnectLabel = "Release to Connect"
 					}}
 					disabled={workflow.public}
 					color="secondary"
-					style={{ height: 40, marginTop: 10, }}
+					style={{ height: 40, marginTop: 15, marginLeft: 5, }}
 					variant={"outlined"}
 					onClick={() => {
 					  setAuthgroupModalOpen(true)
@@ -21608,8 +21607,6 @@ const releaseToConnectLabel = "Release to Connect"
 		  )
 	  }
     //! Logs
-    console.log("Workflow state", workflow)
-    console.log("All revision", allRevisions)
 	  const drawerData = originalWorkflow !== undefined && originalWorkflow !== null ?
       <div style={{ height: "100%"}}>
       <Typography variant="h5" style={{ paddingLeft: 25, paddingTop:25, backgroundColor: theme.palette.surfaceColor,  height: "8%" }}>
