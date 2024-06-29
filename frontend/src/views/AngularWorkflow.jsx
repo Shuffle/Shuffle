@@ -21606,7 +21606,7 @@ const releaseToConnectLabel = "Release to Connect"
 			</Paper>
 		  )
 	  }
-    //! Logs
+
 	  const drawerData = originalWorkflow !== undefined && originalWorkflow !== null ?
       <div style={{ height: "100%"}}>
       <Typography variant="h5" style={{ paddingLeft: 25, paddingTop:25, backgroundColor: theme.palette.surfaceColor,  height: "8%" }}>
