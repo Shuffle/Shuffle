@@ -8,13 +8,11 @@ Shuffle Automation
 
 [Shuffle](https://shuffler.io) is an open source automation platform, built for and by the security professionals. Security operations is complex, but it doesn't have to be. Built to work well with MSSP's and other service providers in mind.
 
-[ Get training ](https://shuffler.io/training)
 [_Key Features_](https://shuffler.io/docs/features) —
 [_Community & Support_](https://discord.gg/B2CBzUm) —
+[ Get training ](https://shuffler.io/training) - 
 [_Documentation_](https://shuffler.io/docs) —
-[_Getting Started_](https://shuffler.io/docs/getting_started) —
-[_Development_](https://github.com/shuffle/Shuffle/blob/master/.github/CONTRIBUTING.md) 
-[ Set up a demo call ](https://shuffler.io/contact)
+[_Getting Started_](https://shuffler.io/docs/getting_started)
 
 Follow us on Twitter at [@shuffleio](https://twitter.com/shuffleio).
 
