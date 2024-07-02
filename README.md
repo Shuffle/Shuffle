@@ -10,7 +10,7 @@ Shuffle Automation
 
 [_Key Features_](https://shuffler.io/docs/features) —
 [_Community & Support_](https://discord.gg/B2CBzUm) —
-[ Get training ](https://shuffler.io/training) - 
+[ Get training ](https://shuffler.io/training) -
 [_Documentation_](https://shuffler.io/docs) —
 [_Getting Started_](https://shuffler.io/docs/getting_started)
 
