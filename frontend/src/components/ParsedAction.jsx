@@ -166,7 +166,7 @@ const ParsedAction = (props) => {
 	setExpansionModalOpen,
 
 	listCache,
-	
+	setActiveDialog,
 	authGroups,
 	apps,
 	setEditorData,
@@ -3079,7 +3079,7 @@ const ParsedAction = (props) => {
 									event.preventDefault()
 									setFieldCount(count)
 									setExpansionModalOpen(true)
-
+									setActiveDialog("codeeditor")
 									//setcodedata(data.value)
 									var parsedvalue = data.value
 									if (parsedvalue === undefined || parsedvalue === null) {

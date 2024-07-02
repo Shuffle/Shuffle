@@ -483,7 +483,7 @@ const AngularWorkflow = (defaultprops) => {
   const [selectedTriggerIndex, setSelectedTriggerIndex] = React.useState({});
   const [selectedEdge, setSelectedEdge] = React.useState({});
   const [selectedEdgeIndex, setSelectedEdgeIndex] = React.useState({});
-
+  const [activeDialog, setActiveDialog] = React.useState("");
   const [visited, setVisited] = React.useState([]);
   const [allRevisions, setAllRevisions] = useState([])
 
@@ -19170,6 +19170,7 @@ const releaseToConnectLabel = "Release to Connect"
 							  //console.log("Click data: ", data)
 							  //data.action.label = ""
 							  setSelectedResult(data);
+                setActiveDialog("result")
 							  setCodeModalOpen(true);
 						  } else {
 							  toast("Please wait until the workflow is loaded and try again")
@@ -19606,10 +19607,11 @@ const releaseToConnectLabel = "Release to Connect"
 		PaperComponent={PaperComponent}
 		aria-labelledby="draggable-dialog-title"
         disableEnforceFocus={true}
-        style={{ pointerEvents: "none" }}
+        style={{ pointerEvents: "none", zIndex : activeDialog === "result" ? 1200 : 1100 }}
         hideBackdrop={true}
         open={codeModalOpen}
         PaperProps={{
+          onClick : () => setActiveDialog("result"),
           style: {
             pointerEvents: "auto",
             color: "white",
@@ -19618,7 +19620,7 @@ const releaseToConnectLabel = "Release to Connect"
             maxHeight: 550,
             overflowY: "auto",
             overflowX: "hidden",
-            zIndex: 10012,
+            // zIndex: 10012,
 						border: theme.palette.defaultBorder,
           },
         }}
@@ -20054,7 +20056,7 @@ const releaseToConnectLabel = "Release to Connect"
         lastSaved={lastSaved}
 		aiSubmit={aiSubmit}
   		listCache={listCache}
-
+        setActiveDialog={setActiveDialog}
 		apps={apps}
 		expansionModalOpen={codeEditorModalOpen}
 		setExpansionModalOpen={setCodeEditorModalOpen}
@@ -21935,6 +21937,8 @@ const releaseToConnectLabel = "Release to Connect"
 				fieldname={editorData.field_id}
 
 				changeActionParameterCodeMirror={changeActionParameterCodeMirror}
+        activeDialog={activeDialog}
+        setActiveDialog={setActiveDialog}
 	  		/>
 		: null}
 
