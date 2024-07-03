@@ -15343,6 +15343,14 @@ const releaseToConnectLabel = "Release to Connect"
 		  }
 
         </div>
+  const defaultEnvironment = environments.find(
+    (env) => env.default && env.Name.toLowerCase() !== "cloud"
+  );
+
+  if (selectedTrigger.environment === "onprem" && defaultEnvironment !== undefined) {
+     selectedTrigger.environment = defaultEnvironment.Name
+     setSelectedTrigger(selectedTrigger)  }
+
   const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : 
           <div style={appApiViewStyle}>
             <h3 style={{ marginBottom: "5px" }}>
