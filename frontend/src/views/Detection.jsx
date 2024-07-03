@@ -10,12 +10,7 @@ import {
 import { Publish as PublishIcon } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import RuleCard from "./RuleCard";
-import { styled } from "@mui/system";
-
-const ConnectedButton = styled(Button)(({ theme, isConnected }) => ({
-  backgroundColor: isConnected ? "green" : "red",
-  color: "white",
-}));
+import CircularProgress from "@material-ui/core/CircularProgress";
 
 const handleDirectoryChange = (folderDisabled, setFolderDisabled, globalUrl) => {
   const action = folderDisabled ? "enable_folder" : "disable_folder";
@@ -54,6 +49,7 @@ const Detection = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const uploadRef = useRef(null);
+  const [loading, setLoading] = useState(false);
 
   const uploadFiles = (files) => {
     for (const key in files) {
@@ -136,6 +132,41 @@ const Detection = ({
       });
   };
 
+  const handleConnectClick = () => {
+    if (!isTenzirActive) {
+      setLoading(true);
+      const url = `${globalUrl}/api/v1/detection/siem/connect`;
+
+      fetch(url, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) =>
+          response.json().then((responseJson) => {
+            if (responseJson["success"] === true) {
+              setTimeout(() => {
+                setLoading(false);
+                window.location.reload();
+              }, 5000); 
+            } else {
+              setLoading(false);
+              toast("Failed to connect to SIEM");
+            }
+          })
+        )
+        .catch((error) => {
+          setLoading(false);
+          console.log(`Error in connecting to SIEM: `, error);
+          toast("An error occurred while connecting to SIEM");
+        });
+    } else {
+      console.log("Already connected to SIEM");
+    }
+  };
+
   const filteredRules = ruleInfo?.filter((rule) =>
     rule.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     rule.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -155,9 +186,14 @@ const Detection = ({
           <Typography variant="h6" component="div">
             Sigma Detection Rules
           </Typography>
-          <ConnectedButton variant="contained" isConnected={isTenzirActive}>
-            {isTenzirActive ? "Connected to SIEM" : "Not Connected to SIEM"}
-          </ConnectedButton>
+          <Button
+      variant="contained"
+      onClick={handleConnectClick}
+      disabled={loading} // Disable the button while loading
+      style={{ backgroundColor: isTenzirActive ? "green" : "red"}}
+    >
+      {loading ? <CircularProgress size={24} /> : isTenzirActive ? "Connected to siem" : "Connect to siem"}
+    </Button>
         </Box>
         <Box
           sx={{
@@ -180,7 +216,7 @@ const Detection = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <Button
+            {/* <Button
               color="primary"
               variant="contained"
               onClick={() => uploadRef.current.click()}
@@ -195,7 +231,7 @@ const Detection = ({
               onChange={(event) => {
                 uploadFiles(event.target.files);
               }}
-            />
+            /> */}
           </Box>
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Typography variant="body2" sx={{ mr: 1 }}>
