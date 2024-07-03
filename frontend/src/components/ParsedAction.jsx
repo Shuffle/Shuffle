@@ -307,7 +307,6 @@ const ParsedAction = (props) => {
             (action) =>
               action.name.toLowerCase() === selectedAction.name.toLowerCase()
           );
-          console.log("FOUNDACTION: ", foundAction);
           if (foundAction !== null && foundAction !== undefined) {
             var foundparams = [];
             for (let [paramkey,paramkeyval] in Object.entries(foundAction.parameters)) {
@@ -549,6 +548,11 @@ const ParsedAction = (props) => {
                                 }
                             }
                         }
+
+						if (parentNode.label === undefined) {
+							parentNode.label = ""
+						}
+
                         newActionList.push({
                             type: "action",
                             id: parentNode.id,

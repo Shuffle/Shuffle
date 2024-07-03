@@ -1623,12 +1623,12 @@ const Billing = (props) => {
 			{userdata.support === true ?
 				<div style={{ marginBottom: 10, marginTop: clickedFromOrgTab ? 16 : null, color: clickedFromOrgTab ? "#F1F1F1" : null }}>
 					For sales: Create&nbsp;
-					<a href={"https://docs.google.com/document/d/1OeJSi42812EMg7fUAw1HAj1ymOG8rfp8Ma_DGJKvwgI/copy?usp=sharing&organization=" + selectedOrganization.id} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
-						New Cloud Contract
+					<a href={"https://docs.google.com/document/d/1N-ZJNn8lWaqiXITrqYcnTt53oXGLNYFEzc5PU-tdAps/copy" + selectedOrganization.id} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+						EU contract
 					</a>
 					&nbsp;or&nbsp;
-					<a href={"https://docs.google.com/document/d/1IguxpeV4Wwwr9C0MPyUNhhajEu_PxjRfP7f0hYyRYOI/copy?usp=sharing&organization=" + selectedOrganization.id} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
-						New Onprem Contract
+					<a href={"https://docs.google.com/document/d/1cF-Cwxt1TcahlLrpl1GH2hFZO4gxppLeYjHW6QB0EzQ/copy" + selectedOrganization.id} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+						NOT EU contract
 					</a>
 					&nbsp; - &nbsp;
 					<a href={"https://drive.google.com/drive/folders/1zVvwwkbQXW3p-DJYa0GBDzFo_ZnV_I_5"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
@@ -1636,7 +1636,7 @@ const Billing = (props) => {
 					</a>
 					&nbsp; - &nbsp;
 					<a href={"https://github.com/Shuffle/Shuffle-docs/tree/master/handbook/Sales"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
-						Sales Process
+						Sales Process (old)
 					</a>
 				</div>
 				:

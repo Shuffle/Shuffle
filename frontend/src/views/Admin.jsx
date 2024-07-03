@@ -5385,13 +5385,17 @@ If you're interested, please let me know a time that works for you, or set up a 
 	  <ListItem key={index} style={{ backgroundColor: bgColor }}>
 		<ListItemText
 			primary=
-				<Tooltip title={data.validation.valid === true ? "Valid. Click to explore." : "Configuration failed. Click to learn why"} placement="top">
+				<Tooltip title={data.validation !== null && data.validation !== undefined && data.validation.valid === true ? "Valid. Click to explore." : "Configuration failed. Click to learn why"} placement="top">
 					<IconButton>
 						{validIcon}
 					</IconButton>
 				</Tooltip>
 		  	style={{ minWidth: 65, maxWidth: 65, }}
 			onClick={() => {
+				if (data.validation === null || data.validation === undefined) {
+					return
+				}
+
 				if (data.validation.workflow_id === undefined || data.validation.workflow_id === null || data.validation.workflow_id.length === 0) {
 					toast.warn("No workflow runs found for this auth yet. Check back later.")
 					return
