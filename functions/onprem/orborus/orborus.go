@@ -2072,7 +2072,16 @@ func main() {
 					}
 
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-			    } else {
+			    }  else if incRequest.Type == "START_TENZIR" {
+
+					err := deployTenzirNode()
+					if err != nil{
+						log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+				
+				} else {
 					newrequests = append(newrequests, incRequest)
 				}
 			}
