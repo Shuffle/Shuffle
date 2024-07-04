@@ -139,6 +139,7 @@ import Draggable from "react-draggable";
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 
+import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx"
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths, internalIds, } from "../views/Apps.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
@@ -319,6 +320,7 @@ export function SetJsonDotnotation(jsonInput, inputKey) {
 
 export const green = "#86c142";
 export const yellow = "#FECC00";
+export const red = "red";
 
 export function removeParam(key, sourceURL) {
   if (sourceURL === undefined) {
@@ -483,7 +485,7 @@ const AngularWorkflow = (defaultprops) => {
   const [selectedTriggerIndex, setSelectedTriggerIndex] = React.useState({});
   const [selectedEdge, setSelectedEdge] = React.useState({});
   const [selectedEdgeIndex, setSelectedEdgeIndex] = React.useState({});
-
+  const [activeDialog, setActiveDialog] = React.useState("");
   const [visited, setVisited] = React.useState([]);
   const [allRevisions, setAllRevisions] = useState([])
 
@@ -1641,7 +1643,6 @@ const releaseToConnectLabel = "Release to Connect"
             setExecutionData(responseJson)
           } else {
       		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status === "WAITING" || responseJson.status === "FINISHED") {
-				console.log("DONE!")
 				stop()
 			}
 
@@ -6731,7 +6732,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 	  const parentlabel = parentNode.data("label").toLowerCase().replace(" ", "_")
 	  const parentname = parentNode.data("app_name").toLowerCase().replace(" ", "_")
-	  if (!parentlabel.startsWith(parentname)) {
+	  if (!parentlabel.startsWith(parentname)+"_") {
 		  return
 	  }
 
@@ -6755,13 +6756,14 @@ const releaseToConnectLabel = "Release to Connect"
 		  }
 
 		  if (curapp.actions[startIndex].name !== parentActionname) {
+		  	  console.log("Return 2")
 			  return
 		  }
 
 		  break
 	  }
 
-	  //const parentAction = parentNode.data("name")
+	  console.log("CONTINUE EVEN WHEN FIELDS ARE FILLED")
 
       const iconInfo = {
         icon: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm-1 4l6 6v10c0 1.1-.9 2-2 2H7.99C6.89 23 6 22.1 6 21l.01-14c0-1.1.89-2 1.99-2h7zm-1 7h5.5L14 6.5V12z",
@@ -7133,7 +7135,6 @@ const releaseToConnectLabel = "Release to Connect"
 				// Find how many executions it has 
 				var executions = 0
 				const matchingExecutions = workflowExecutions.filter((execution => execution.execution_source === nodedata.app_name.toLowerCase()))
-				console.log("Matches: ", matchingExecutions.length)
 				const color = matchingExecutions.length > 0 ? "#34a853" : "#ea4436"
 				const decoratorNode = {
 					position: {
@@ -10202,6 +10203,7 @@ const releaseToConnectLabel = "Release to Connect"
 
   // Starts on current node and climbs UP the tree to the root object.
   // Sends back everything in it's path
+  // FIXME: Use the GetParentNodes in WorkflowValidationTimeline.jsx instead
   const getParents = (action) => {
     if (action === undefined || action === null) {
       return []
@@ -12491,15 +12493,10 @@ const releaseToConnectLabel = "Release to Connect"
     let appIdsInWorkflow = [];
 
     Object.entries(workflowApps).forEach(([key, value]) => {
-      console.log("VALUE: ", value)
       appIdsInWorkflow.push(value.app_id);
     })
 
     appIdsInWorkflow = [...new Set(appIdsInWorkflow)];
-
-    console.log("appIdsInWorkflow: ", appIdsInWorkflow)
-
-    console.log("authData: ", authData, "workflowApps: ", workflowApps)
     
     // loop through the authData and create transformedData which looks like:
     // appId: [auth1, auth2, ...]
@@ -12518,8 +12515,6 @@ const releaseToConnectLabel = "Release to Connect"
 
     });
 
-    console.log("transformedData: ", transformedData)
-
     return transformedData;
     
   };
@@ -12535,7 +12530,6 @@ const releaseToConnectLabel = "Release to Connect"
     const handleShowingValue = (appName) => {
       let mappingWithName = {}
       let listWithValues = workflow.triggers[selectedTriggerIndex].parameters[5]?.value.split(";").filter(e => e).map(e => e.split("="))
-      console.log("LIST WITH VALUES: ", listWithValues)
       if (listWithValues === undefined || listWithValues === null || listWithValues.length === 0) {
         return "no-overrides";
       }
@@ -12614,10 +12608,15 @@ const releaseToConnectLabel = "Release to Connect"
 
     return (
     <div className="auth-container" style={{ padding: '20px', backgroundColor: '#26292D', borderRadius: '8px' }}>
-      {Object.entries(transformedAuthData).map(([appId, authList]) => (
+      {Object.entries(transformedAuthData).map(([appId, authList]) => {
+		  if (authList === undefined || authList === null || authList.length < 2) {
+			  return null;
+		  }
+
+		  return (
         <div key={appId} className="auth-item" style={{ marginBottom: '20px' }}>
           <label className="auth-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#E8E8E8' }}>
-            Select Authentication for {authList[0].app.name}:
+            {authList[0].app.name} Authentication:
           </label>
           <select 
             value={handleShowingValue(authList[0].app.name)}
@@ -12652,7 +12651,7 @@ const releaseToConnectLabel = "Release to Connect"
             )}
           </select>
         </div>
-      ))}
+      )})}
     </div>
     );
   };
@@ -13053,7 +13052,7 @@ const releaseToConnectLabel = "Release to Connect"
               <div style={{ flex: 1, marginLeft: 5, }}>
                 <Tooltip
                   color="primary"
-                  title={"Delay before action executes (in seconds)"}
+                  title={"Delay before action runs (in seconds)"}
                   placement="top"
                 >
                   <span>
@@ -13758,9 +13757,9 @@ const releaseToConnectLabel = "Release to Connect"
           <div>
             <div>
             <div className="app">
-              <div style={{ display: "flex", marginTop: 10 }}>
+              <div style={{ display: "flex", marginTop: 50 }}>
                 <div style={{ flex: "10" }}>
-                  <b>Auth Override</b>
+                  <b>Authentication Override</b>
                 </div>
               </div>
 
@@ -15815,7 +15814,7 @@ const releaseToConnectLabel = "Release to Connect"
       <div style={topBarStyle}>
         <div style={{ 
 			margin: "0px 10px 0px 10px",
-			pointerEvents: "auto",
+			pointerEvents: "none",
 		}}>
           <Breadcrumbs
             aria-label="breadcrumb"
@@ -15917,7 +15916,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  }
 
 		  {originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0 || originalWorkflow.suborg_distribution.includes("none") ? null :
-          <FormControl fullWidth style={{marginTop: 10, }}>
+          <FormControl fullWidth style={{marginTop: 10, maxWidth: 250, pointerEvents: "auto", }}>
 
             <InputLabel
               id="suborg-changer"
@@ -16074,7 +16073,7 @@ const releaseToConnectLabel = "Release to Connect"
 				title="Configure Authentication Groups. The amount of auth groups selected is the amount of replications of any execution of this workflow."
 				placement="top"
 			  >
-				<span>
+				<span style={{pointerEvents: "auto", }}>
 				  <Button
 			  		onMouseEnter={() => {
 						if (cy !== undefined && cy !== null) {
@@ -16138,7 +16137,7 @@ const releaseToConnectLabel = "Release to Connect"
 					}}
 					disabled={workflow.public}
 					color="secondary"
-					style={{ height: 40, marginTop: 10, }}
+					style={{ height: 40, marginTop: 15, marginLeft: 5, }}
 					variant={"outlined"}
 					onClick={() => {
 					  setAuthgroupModalOpen(true)
@@ -18718,6 +18717,7 @@ const releaseToConnectLabel = "Release to Connect"
              : null}
 
           </div>
+
           {executionData.workflow !== undefined && executionData.workflow !== null && executionData.workflow.actions !== undefined && executionData.workflow.actions !== null && executionData.workflow.actions.length > 0  ?
             <div style={{ display: "flex", marginLeft: 10, }}>
               <Typography variant="body1">
@@ -18829,12 +18829,31 @@ const releaseToConnectLabel = "Release to Connect"
                 {new Date(executionData.completed_at * 1000).toLocaleString("en-GB")}
               </Typography>
             </div>
+
           ) : null}
+
+		  {executionData.workflow !== undefined && executionData.workflow !== null && executionData.status !== "EXECUTING" ? 
+			  <div style={{marginTop: 5, marginBottom: 5, }}>
+				  <WorkflowValidationTimeline 
+			  		originalWorkflow={workflow}
+
+			  		apps={apps}
+					workflow={executionData.workflow}
+			  		getParents={getParents}
+
+			  		execution={executionData}
+				  />
+			  </div>
+		  : null}
+
           <div style={{ marginTop: 10 }} />
-          {executionData.execution_argument !== undefined &&
-            executionData.execution_argument.length > 0
+
+          {executionData.execution_argument !== undefined && executionData.execution_argument !== null && 
+            executionData.execution_argument.length > 1
             ? parsedExecutionArgument()
-            : null}
+            : 
+			null}
+
           <Divider
             style={{
               backgroundColor: "rgba(255,255,255,0.6)",
@@ -18842,6 +18861,7 @@ const releaseToConnectLabel = "Release to Connect"
               marginBottom: 20,
             }}
           />
+
           {executionData.results !== undefined &&
             executionData.results !== null &&
             executionData.results.length > 1 &&
@@ -19171,6 +19191,7 @@ const releaseToConnectLabel = "Release to Connect"
 							  //console.log("Click data: ", data)
 							  //data.action.label = ""
 							  setSelectedResult(data);
+                setActiveDialog("result")
 							  setCodeModalOpen(true);
 						  } else {
 							  toast("Please wait until the workflow is loaded and try again")
@@ -19535,7 +19556,7 @@ const releaseToConnectLabel = "Release to Connect"
 				  if (stringjson.includes("\n") && !stringjson.includes("\n")) {
 					return "Looks like you have a newline problem. Consider using the | replace: '\n', '\\n' }} filter in Liquid."
 				  } else {
-					return "The result looks like it should be JSON, but is invalid. Look for potential"
+					return "The result looks like it should be JSON, but is invalid. Look for potential single quotes instead of double quotes, missing commas or newlines"
 				  }
 			  }
 		  }
@@ -19607,10 +19628,11 @@ const releaseToConnectLabel = "Release to Connect"
 		PaperComponent={PaperComponent}
 		aria-labelledby="draggable-dialog-title"
         disableEnforceFocus={true}
-        style={{ pointerEvents: "none" }}
+        style={{ pointerEvents: "none", zIndex : activeDialog === "result" ? 1200 : 1100 }}
         hideBackdrop={true}
         open={codeModalOpen}
         PaperProps={{
+          onClick : () => setActiveDialog("result"),
           style: {
             pointerEvents: "auto",
             color: "white",
@@ -19619,7 +19641,7 @@ const releaseToConnectLabel = "Release to Connect"
             maxHeight: 550,
             overflowY: "auto",
             overflowX: "hidden",
-            zIndex: 10012,
+            // zIndex: 10012,
 						border: theme.palette.defaultBorder,
           },
         }}
@@ -20055,7 +20077,7 @@ const releaseToConnectLabel = "Release to Connect"
         lastSaved={lastSaved}
 		aiSubmit={aiSubmit}
   		listCache={listCache}
-
+        setActiveDialog={setActiveDialog}
 		apps={apps}
 		expansionModalOpen={codeEditorModalOpen}
 		setExpansionModalOpen={setCodeEditorModalOpen}
@@ -21607,9 +21629,7 @@ const releaseToConnectLabel = "Release to Connect"
 			</Paper>
 		  )
 	  }
-    //! Logs
-    console.log("Workflow state", workflow)
-    console.log("All revision", allRevisions)
+
 	  const drawerData = originalWorkflow !== undefined && originalWorkflow !== null ?
       <div style={{ height: "100%"}}>
       <Typography variant="h5" style={{ paddingLeft: 25, paddingTop:25, backgroundColor: theme.palette.surfaceColor,  height: "8%" }}>
@@ -21938,6 +21958,8 @@ const releaseToConnectLabel = "Release to Connect"
 				fieldname={editorData.field_id}
 
 				changeActionParameterCodeMirror={changeActionParameterCodeMirror}
+        activeDialog={activeDialog}
+        setActiveDialog={setActiveDialog}
 	  		/>
 		: null}
 

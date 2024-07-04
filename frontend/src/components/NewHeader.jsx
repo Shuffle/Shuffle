@@ -517,12 +517,11 @@ const Header = (props) => {
 				window.location.href = responseJson["url"]
 				return
 			}, 2000)
-          }
-
+          } else {
           setTimeout(() => {
             window.location.reload()
           }, 2000);
-
+          }
           toast("Successfully changed active organization - refreshing!");
         } else {
           if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
@@ -1547,7 +1546,7 @@ const Header = (props) => {
         <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
           <Typography variant="body1" style={{ paddingTop: 7, margin: "auto", textAlign: "center", color: "white", }}>
             {/* Shuffle 1.4.0 is out! Read more about&nbsp; */}
-            Shuffle now offers&nbsp;
+            Early Success! More&nbsp;
             {/* <u>
               <a href="https://github.com/Shuffle/Shuffle/releases/tag/v1.4.0" target="_blank" style={{ color: "inherit", }} onClick={() => {
                 ReactGA.event({
@@ -1596,10 +1595,11 @@ const Header = (props) => {
 
                 navigate("/training")
 
-              }} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
-                Public Training!
+              }} style={{ cursor: "pointer", textDecoration: "none", fontWeight:600, color: "rgba(255,255,255,0.8)" }}>
+               Public Trainings
               </span>
             </u>
+            &nbsp;Ahead!
           </Typography>
           <IconButton color="secondary" style={{ position: "absolute", top: -3, right: 20, }} onClick={(event) => { 
 			  setShowTopbar(false) 

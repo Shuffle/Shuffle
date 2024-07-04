@@ -79,6 +79,7 @@ const AppGrid = (props) => {
   const [formMail, setFormMail] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [formMessage, setFormMessage] = React.useState("");
+  const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
 
   const buttonStyle = {
     borderRadius: 30,
@@ -352,7 +353,7 @@ const AppGrid = (props) => {
           if (responseJson.success === false) {
             toast.error(responseJson.reason);
           } else {
-            toast.success(`App ${type}d Successfully!`);
+            //toast.success(`App ${type}d Successfully!`);
             if (type === 'activate') {
               setAllActivatedAppIds(prev => [...prev, data.objectID]);
               setIsAnyAppActivated(true);
@@ -395,7 +396,7 @@ const AppGrid = (props) => {
         {!isLoading ? (
           <div>
             {hits.length === 0 && searchQuery.length >= 0 && showNoAppFound ? (
-              <Typography variant="body1" style={{ marginTop: '30%' }}>No App Found</Typography>
+              <Typography variant="body1" style={{ marginTop: '30%' }}>No Apps Found</Typography>
             ) : (
               <Grid item spacing={2} justifyContent="flex-start">
                 <div
@@ -1551,9 +1552,13 @@ const AppGrid = (props) => {
             <Typography variant="h5" style={{ marginBottom: 30, marginTop: 30, fontWeight: "400", fontSize: 24 }}>
               Filter By
             </Typography>
+
             <FilterUsersAndOrgsAppByCategory selectedCategoryForUsersAndOgsApps={selectedCategoryForUsersAndOgsApps} setselectedCategoryForUsersAndOgsApps={setselectedCategoryForUsersAndOgsApps} />
+
             <FilterUsersAndOrgsAppByActionLabel selectedTagsForUserAndOrgApps={selectedTagsForUserAndOrgApps} setSelectedTagsForUserAndOrgApps={setSelectedTagsForUserAndOrgApps} />
+
             <FilterUsersAndOrgsAppByCreatedWith selectedOptionOfCreatedWith={selectedOptionOfCreatedWith} setSelectedOptionOfCreatedWith={setSelectedOptionOfCreatedWith} />
+
             <FilterUsersAndOrgsAppCreatedBy />
           </div>
         )}
@@ -1722,6 +1727,10 @@ const AppGrid = (props) => {
                                 ? `/apps/${data.id}`
                                 : `https://shuffler.io/apps/${data.id}`;
 
+							if (data.name === "" && data.id === "") {
+								return null
+							}
+
                             return (
                               <Zoom
                                 key={index}
@@ -1818,17 +1827,71 @@ const AppGrid = (props) => {
                                               width: 230,
                                               textAlign: 'start',
                                               marginLeft: 8,
-                                              color: "rgba(158, 158, 158, 1)"
+                                              color: "rgba(158, 158, 158, 1)",
+											  display: "flex", 
                                             }}
                                           >
-                                            {data.tags &&
-                                              data.tags.map((tag, tagIndex) => (
-                                                <span key={tagIndex}>
-                                                  {normalizedString(tag)}
-                                                  {tagIndex < data.tags.length - 1 ? ", " : ""}
-                                                </span>
-                                              ))}
-                                          </div>
+											<div style={{minWidth: 120, overflow: "hidden", }}>
+												{data.generated !== true ?
+													<div>
+													{data.tags &&
+													  data.tags.slice(0,2).map((tag, tagIndex) => (
+														<span key={tagIndex}>
+														  {normalizedString(tag)}
+														  {tagIndex < data.tags.length - 1 ? ", " : ""}
+														</span>
+													  ))
+													}
+													</div>
+												: null}
+											</div>
+                                            {currTab === 1 &&  !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true ? 
+												<Button style={{
+													marginLeft: 15, 
+												  width: 102,
+												  height: 35,
+												  borderRadius: 200,
+												  backgroundColor: "rgba(73, 73, 73, 1)",
+												  color: "rgba(241, 241, 241, 1)",
+												  textTransform: "none",
+												}}
+												  onClick={(event) => {
+													//deactivatedIndexes.push(index)
+													//setDeactivatedIndexes(deactivatedIndexes)
+
+													event.preventDefault();
+													event.stopPropagation();
+													//handleActivateButton(event, data, "deactivate");
+													// FIXME: Put this in a function lol
+      												const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
+
+      												fetch(url, {
+      												  method: 'GET',
+      												  headers: {
+      												    'Content-Type': 'application/json',
+      												    'Accept': 'application/json',
+      												  },
+      												  credentials: "include",
+      												})
+      												  .then((response) => response.json())
+      												  .then((responseJson) => {
+      												    if (responseJson.success === false) {
+      												      toast.error(responseJson.reason);
+      												    } else {
+															toast.success("App Deactivated Successfully. Reload UI to see updated changes.")
+      												        //const updatedIds = allActivatedAppIds.filter(id => id !== data.objectID);
+      												        //setAllActivatedAppIds(updatedIds);
+      												    }
+      												  })
+      												  .catch(error => {
+      												    console.log("app error: ", error.toString());
+      												  })
+												  }}>
+												  Deactivate
+												</Button>
+											: null}
+										  </div>
+
                                           {/* )} */}
                                         </div>
                                       </ButtonBase>
@@ -1946,6 +2009,7 @@ const AppGrid = (props) => {
                 selectedOptionOfCreatedWith={selectedOptionOfCreatedWith}
               />
             )}
+
             <AppTab
               selectedCategoryForUsersAndOgsApps={selectedCategoryForUsersAndOgsApps}
               selectedTagsForUserAndOrgApps={selectedTagsForUserAndOrgApps}
@@ -1954,6 +2018,7 @@ const AppGrid = (props) => {
               setSelectedTagsForUserAndOrgApps={setSelectedTagsForUserAndOrgApps}
               setSelectedOptionOfCreatedWith={setSelectedOptionOfCreatedWith}
             />
+
           </div>
           <Configure clickAnalytics />
         </InstantSearch>

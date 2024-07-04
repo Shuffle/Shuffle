@@ -166,7 +166,7 @@ const ParsedAction = (props) => {
 	setExpansionModalOpen,
 
 	listCache,
-	
+	setActiveDialog,
 	authGroups,
 	apps,
 	setEditorData,
@@ -179,7 +179,7 @@ const ParsedAction = (props) => {
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false)
   const [appActionName, setAppActionName] = React.useState(selectedAction.label);
   const [delay, setDelay] = React.useState(selectedAction?.execution_delay || 0);
-  
+  const [prevActionName, setPrevActionName] = React.useState(selectedAction.label);
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
   const [autoCompleting, setAutocompleting] = React.useState(false);
@@ -206,16 +206,6 @@ const ParsedAction = (props) => {
 		setLastSaved(false)
 	}
   }, [expansionModalOpen])
-  useEffect(() => {
-		setParamValues(selectedAction.parameters.map((param) => {
-			return {
-				name: param.name,
-				value: param.value,
-			}
-		}))
-  },[
-	selectedAction, selectedApp,setNewSelectedAction, workflow,
-  ])
 
   useEffect(() => {
 		setParamValues(selectedAction.parameters.map((param) => {
@@ -317,7 +307,6 @@ const ParsedAction = (props) => {
             (action) =>
               action.name.toLowerCase() === selectedAction.name.toLowerCase()
           );
-          console.log("FOUNDACTION: ", foundAction);
           if (foundAction !== null && foundAction !== undefined) {
             var foundparams = [];
             for (let [paramkey,paramkeyval] in Object.entries(foundAction.parameters)) {
@@ -415,6 +404,10 @@ const ParsedAction = (props) => {
 			// Only set app action name if it has changed
 			if (selectedAction.label !== appActionName) {
 				setAppActionName(selectedAction.label);
+			}
+
+			if(selectedAction.label !== prevActionName){
+				setPrevActionName(selectedAction.label)
 			}
 		
 			// Only set delay if it has changed
@@ -555,6 +548,11 @@ const ParsedAction = (props) => {
                                 }
                             }
                         }
+
+						if (parentNode.label === undefined) {
+							parentNode.label = ""
+						}
+
                         newActionList.push({
                             type: "action",
                             id: parentNode.id,
@@ -1302,7 +1300,6 @@ const ParsedAction = (props) => {
 	
 
   const selectedAppIcon = selectedAction.large_image
-  var baselabel = selectedAction.label
   return (
     <div style={appApiViewStyle} id="parsed_action_view">
 
@@ -1621,8 +1618,8 @@ const ParsedAction = (props) => {
 								}
 								onBlur={(e) => {
 									// Copy the name value
-									const name = appActionName
-									const parsedBaseLabel = "$"+baselabel.toLowerCase().replaceAll(" ", "_")
+									const name = e.target.value
+									const parsedBaseLabel = "$"+prevActionName.toLowerCase().replaceAll(" ", "_")
 									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
 
 									// Check if it's the same as the current name in use
@@ -1751,7 +1748,6 @@ const ParsedAction = (props) => {
 										}
 
 										const params = workflow.actions[key].parameters
-										console.log(params)
 										if (params === null || params === undefined) {
 											continue
 										}
@@ -1775,7 +1771,6 @@ const ParsedAction = (props) => {
 													// Need to make sure e.g. changing the first here doesn't change the 2nd
 													// $change_me
 													// $change_me_2
-													
 													const foundindex = param.value.toLowerCase().indexOf(parsedBaseLabel, previous)
 													if (foundindex === previous && foundindex !== 0) {
 														break
@@ -1818,7 +1813,7 @@ const ParsedAction = (props) => {
 
 									setWorkflow(workflow);
                   					setUpdate(Math.random());
-									baselabel = name
+									setPrevActionName(name)
 								}}
 							/>
 						</div>
@@ -3088,7 +3083,7 @@ const ParsedAction = (props) => {
 									event.preventDefault()
 									setFieldCount(count)
 									setExpansionModalOpen(true)
-
+									setActiveDialog("codeeditor")
 									//setcodedata(data.value)
 									var parsedvalue = data.value
 									if (parsedvalue === undefined || parsedvalue === null) {

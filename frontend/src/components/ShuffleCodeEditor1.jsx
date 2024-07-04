@@ -105,7 +105,8 @@ const CodeEditor = (props) => {
 		selectedAction ,
 		workflowExecutions,
 		getParents,
-
+		activeDialog,
+		setActiveDialog,
 		fieldname,
 		contentLoading,
 	} = props
@@ -958,10 +959,10 @@ const CodeEditor = (props) => {
 
 	return (
 		<Dialog
-			aria-labelledby="draggable-code-modal"
-			disableBackdropClick={true}
+			aria-labelledby="draggable-dialog-title"
+			// disableBackdropClick={true}
 			disableEnforceFocus={true}
-      		//style={{ pointerEvents: "none" }}
+      		style={{ pointerEvents: "none", zIndex: activeDialog === "codeeditor" ? 1200 : 1100}}
 			hideBackdrop={true}
 			open={expansionModalOpen}
 			onClose={() => {
@@ -976,8 +977,10 @@ const CodeEditor = (props) => {
 			}}
 			PaperComponent={PaperComponent}
 			PaperProps={{
+				onClick: () => setActiveDialog("codeeditor"),
 				style: {
-					zIndex: 12501,
+					// zIndex: 12501,
+					pointerEvents: "auto",
 					color: "white",
 					minWidth: isMobile ? "100%" : isFileEditor ? 650 : "80%",
 					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1100,
@@ -1525,6 +1528,7 @@ const CodeEditor = (props) => {
 							whiteSpace: "pre-wrap",
 							wordWrap: "break-word",
 							backgroundColor: "rgba(40,40,40,1)",
+							zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
 						}}
 						onLoad={(editor) => {
 							highlight_variables(localcodedata)
@@ -1577,6 +1581,7 @@ const CodeEditor = (props) => {
 										paddingLeft: 10, 
 										paddingTop: 0, 
 										display: "flex", 
+										cursor: "move"
 									}}
 								>
 									<div>
@@ -1629,6 +1634,7 @@ const CodeEditor = (props) => {
 												overflow: "auto",
 												minWidth: 450, 
 												maxWidth: "100%", 
+												zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
 											}}
 											collapsed={false}
 											enableClipboard={(copy) => {
@@ -1661,6 +1667,7 @@ const CodeEditor = (props) => {
 												minHeight: 450, 
 												overflow: "auto", 
                                                 wordWrap: "anywhere",
+												zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
 											}}
 										>
 											{expOutput}
