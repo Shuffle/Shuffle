@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { toast } from 'react-toastify';
 import { makeStyles, createStyles } from "@mui/styles";
 import theme from '../theme.jsx';
@@ -207,16 +207,16 @@ const ParsedAction = (props) => {
 	}
   }, [expansionModalOpen])
 
-  useEffect(() => {
-		setParamValues(selectedAction.parameters.map((param) => {
-			return {
-				name: param.name,
-				value: param.value,
-			}
-		}))
-  },[
-	selectedAction, selectedApp,setNewSelectedAction, workflow,
-  ])
+//   useEffect(() => {
+// 		setParamValues(selectedAction.parameters?.map((param) => {
+// 			return {
+// 				name: param.name,
+// 				value: param.value,
+// 			}
+// 		}))
+//   },[
+// 	selectedAction, selectedApp,setNewSelectedAction, workflow,
+//   ])
 
   useEffect(() => {
 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
@@ -565,6 +565,79 @@ const ParsedAction = (props) => {
         setActionlist(newActionList);
     }, [workflow.execution_variables, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents]);
 	
+
+	const memoizedParam = useMemo(() => {
+		let appActions = [];
+		if (getParents) {
+            const parents = getParents(selectedAction);
+            if (parents.length > 1) {
+                const labels = [];
+                for (let parentNode of parents) {
+                    if (parentNode.label !== "Execution Argument" && !labels.includes(parentNode.label)) {
+                        labels.push(parentNode.label);
+                        let exampleData = parentNode.example ?? "";
+                        if (!exampleData && workflowExecutions.length > 0) {
+                            for (let exec of workflowExecutions) {
+                                const foundResult = exec.results?.find(result => result.action.id === parentNode.id);
+                                if (foundResult) {
+                                    const valid = validateJson(foundResult.result);
+                                    if (valid.valid && valid.result.success !== false) {
+                                        exampleData = valid.result;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        appActions.push({
+                            type: "action",
+                            id: parentNode.id,
+                            name: parentNode.label,
+                            autocomplete: parentNode.label.split(" ").join("_"),
+                            example: exampleData,
+                        });
+                    }
+                }
+            }
+        }
+
+		let newParameters =  selectedAction.parameters?.map((param) => {
+			let paramvalue = param.value;
+			if(paramvalue.includes("$")){
+				let actions = workflow.actions?.map((action) => {
+					return "$"+action.label.toLowerCase();
+				})
+				if(actionlist.length > 0){
+					let appParentActions = appActions?.map(action => "$" + action.name.toLowerCase());
+					let notPresentAction = actions?.filter((action) => !appParentActions?.includes(action))
+					console.log("ACTIONS: ", actions)
+					console.log("APP ACTIONS: ", appParentActions)
+					console.log("NOT PRESENT: ", notPresentAction)
+					notPresentAction?.forEach((action) => {
+						console.log("Not included Action: ", action)
+						if(paramvalue.includes(action)){
+							paramvalue = paramvalue.replace(action, "")
+							paramvalue = paramvalue.replace(/^\s*[\r\n]/gm, "");
+						}
+					})
+				}
+			}
+			console.log("After removing param value: ", paramvalue)
+			return {...param, value: paramvalue}
+		});	
+		selectedAction.parameters = newParameters;
+		setSelectedAction(selectedAction);
+		return newParameters;
+	},[actionlist,selectedAction,workflow.actions,workflow,selectedApp,setNewSelectedAction])
+
+	useEffect(() => {
+		setParamValues(memoizedParam.map((param) => {
+			return {
+				name: param.name,
+				value: param.value,
+			}
+		}))
+	},[memoizedParam])
+
 	useEffect(() => {
 		selectedNameChange(appActionName)
 

@@ -126,7 +126,7 @@ import {
   ArrowForward as ArrowForwardIcon,
 
 } from "@mui/icons-material";
-
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 //import * as cytoscape from "cytoscape";
 import cytoscape from "cytoscape";
 
@@ -11672,10 +11672,10 @@ const releaseToConnectLabel = "Release to Connect"
 					</Typography>
 				: null}
 
-		<div style={{position: "absolute", bottom: 10, width: "90%", margin: "auto", }}>
-			{/*
+		<div style={{position: "absolute", bottom: 15, width: "90%", margin: "auto", }}>
+			
 			<Button
-			  style={{ margin: "auto", marginTop: "10px" }}
+			  style={{ margin: "auto", marginTop: "15px" }}
 			  color="secondary"
 			  fullWidth
 			  variant="outlined"
@@ -11689,33 +11689,37 @@ const releaseToConnectLabel = "Release to Connect"
 
 					var branchdata = JSON.parse(JSON.stringify(foundBranch.data()))
 					console.log("BEFORE: ", branchdata)
-
-					const newid = uuidv4()
-					branchdata.source = target
-					branchdata.target = source
-					branchdata.id = newid
-					branchdata._id = newid
-
-					foundBranch.remove()
-
-					setTimeout(() => {
-						toast("Edge being added!")
-						cy.add({
-							group: "edges",
-							source: target,
-							target: source,
-							data: branchdata,
-						})
-					}, 2500)
-
+          console.log("Start node", workflow.start)
+          const startNode = workflow.start
+          if(source === startNode){
+            toast("Can't point to Start Node")
+          }else{
+            const newid = uuidv4()
+            branchdata.source = target
+            branchdata.target = source
+            branchdata.id = newid
+            branchdata._id = newid
+  
+            foundBranch.remove()
+  
+            cy.add({
+              group: "edges",
+              source: target,
+              target: source,
+              data: branchdata,
+            })
+            selectedEdge.id = newid
+            setSelectedEdge(selectedEdge)
+            toast("Branch direction changed!")
+          }
 				}
 			  }}
 			  fullWidth
 			>
-                <DeleteIcon style={{marginRight: 10, }}/>
-				Change Direction
+        <SwapHorizIcon style={{marginRight: 10 }}/>
+				Flip Branch
 			</Button>
-			<Button
+			{/*<Button
 			  style={{ margin: "auto", }}
 			  color="secondary"
 			  fullWidth
@@ -11741,7 +11745,7 @@ const releaseToConnectLabel = "Release to Connect"
 			</Button>
 			*/}
 			<Button
-			  style={{ margin: "auto", marginTop: 50, }}
+			  style={{ margin: "auto", marginTop: 20, }}
 			  color="secondary"
 			  fullWidth
 			  variant="outlined"
@@ -11751,7 +11755,6 @@ const releaseToConnectLabel = "Release to Connect"
 			    if (foundBranch !== undefined && foundBranch !== null) {
 			        foundBranch.remove()
 			    }
-
 				setConditionsModalOpen(false)
 				setSelectedEdge({})
 			  }}
