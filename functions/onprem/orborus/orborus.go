@@ -51,9 +51,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
+	// int32Ptr
+	
 )
 
 // Starts jobs in bulk, so this could be increased
@@ -218,7 +220,20 @@ func cleanupExistingNodes(ctx context.Context) error {
 			}
 		}
 
-		log.Printf("[INFO] Cleaned up all pods and services in namespace %s", kubernetesNamespace)
+		deployments, err := clientset.AppsV1().Deployments(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			log.Printf("[ERROR] Failed listing deployments: %s", err)
+			return err
+		}
+
+		for _, deployment := range deployments.Items {
+			err := clientset.AppsV1().Deployments(kubernetesNamespace).Delete(context.Background(), deployment.Name, metav1.DeleteOptions{})
+			if err != nil {
+				log.Printf("[ERROR] Failed deleting deployment %s: %s", deployment.Name, err)
+			}
+		}
+
+		log.Printf("[INFO] Cleaned up all pods, services and deployments in namespace %s", kubernetesNamespace)
 		return nil
 	}
 
@@ -832,51 +847,143 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 
 	// While testing:
 	// kubectl delete pods --all --all-namespaces; kubectl delete services --all --all-namespaces
-	pod := &corev1.Pod{
+	// pod := &corev1.Pod{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name:   identifier,
+	// 		Labels: containerLabels,
+	// 	},
+	// 	Spec: corev1.PodSpec{
+	// 		RestartPolicy: "Never",
+	// 		// DNSPolicy:     "Default",
+	// 		DNSPolicy: 	corev1.DNSClusterFirst,
+	// 		// NodeSelector: map[string]string{
+	// 		// 	"node": "master",
+	// 		// },
+	// 		Containers: []corev1.Container{
+	// 			containerAttachment,
+	// 		},
+	// 	},
+	// }
+
+	// // Check if running on ARM or x86 to download the correct image
+
+	// // Get current pod's network so we can make the pod in it
+
+	// _, err = clientset.CoreV1().Pods(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+	// if err != nil {
+	// 	log.Printf("[ERROR] Failed listing pods: %s", err)
+	// }
+
+
+	// createdPod, err := clientset.CoreV1().Pods(kubernetesNamespace).Create(context.Background(), pod, metav1.CreateOptions{})
+	// if err != nil {
+	// 	//log.Printf("[ERROR] Failed creating pod: %v", err)
+	// 	return err
+	// }
+
+	// log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
+
+	// // kubectl expose pod shuffle-workers --type=LoadBalancer --port=33333
+	// service := &corev1.Service{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name: identifier,
+	// 	},
+	// 	Spec: corev1.ServiceSpec{
+	// 		Selector: map[string]string{
+	// 			"container": "shuffle-workers",
+	// 		},
+	// 		Ports: []corev1.ServicePort{
+	// 			{
+	// 				Protocol: "TCP",
+	// 				Port:     33333,
+	// 				TargetPort: intstr.FromInt(33333),
+	// 			},
+	// 		},
+	// 		Type: corev1.ServiceTypeLoadBalancer,
+	// 	},
+	// }
+
+	// _, err = clientset.CoreV1().Services(kubernetesNamespace).Create(context.TODO(), service, metav1.CreateOptions{})
+	// if err != nil {
+	// 	log.Printf("[ERROR] Failed creating service: %v", err)
+	// 	return err
+	// }
+
+	// return nil
+
+	// experimenting with k8s deployments to enable autoscaling.
+
+	// 	Spec: corev1.PodSpec{
+	// 		RestartPolicy: "Never",
+	// 		// DNSPolicy:     "Default",
+	// 		DNSPolicy: 	corev1.DNSClusterFirst,
+	// 		// NodeSelector: map[string]string{
+	// 		// 	"node": "master",
+	// 		// },
+	// 		Containers: []corev1.Container{
+	// 			containerAttachment,
+	// 		},
+	// 	},
+
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   identifier,
-			Labels: containerLabels,
+			Name: identifier,
 		},
-		Spec: corev1.PodSpec{
-			RestartPolicy: "Never",
-			// DNSPolicy:     "Default",
-			DNSPolicy: 	corev1.DNSClusterFirst,
-			// NodeSelector: map[string]string{
-			// 	"node": "master",
-			// },
-			Containers: []corev1.Container{
-				containerAttachment,
+		Spec: appsv1.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: containerLabels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: containerLabels,
+				},
+				Spec: corev1.PodSpec{
+					DNSPolicy:    corev1.DNSClusterFirst,
+					// NodeSelector: map[string]string{
+					// 	"node": "master",
+					// },
+					Containers: []corev1.Container{
+						containerAttachment,
+					},
+				},
 			},
 		},
 	}
 
-	// Check if running on ARM or x86 to download the correct image
-
-	// Get current pod's network so we can make the pod in it
-
-	_, err = clientset.CoreV1().Pods(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+	_, err = clientset.AppsV1().Deployments(kubernetesNamespace).Create(context.Background(), deployment, metav1.CreateOptions{})
 	if err != nil {
-		log.Printf("[ERROR] Failed listing pods: %s", err)
-	}
-
-
-	createdPod, err := clientset.CoreV1().Pods(kubernetesNamespace).Create(context.Background(), pod, metav1.CreateOptions{})
-	if err != nil {
-		//log.Printf("[ERROR] Failed creating pod: %v", err)
+		log.Printf("[ERROR] Failed creating deployment: %v", err)
 		return err
 	}
 
-	log.Printf("[INFO] Created pod %q in namespace %q\n", createdPod.Name, createdPod.Namespace)
+	// // kubectl expose pod shuffle-workers --type=LoadBalancer --port=33333
+	// service := &corev1.Service{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name: identifier,
+	// 	},
+	// 	Spec: corev1.ServiceSpec{
+	// 		Selector: map[string]string{
+	// 			"container": "shuffle-workers",
+	// 		},
+	// 		Ports: []corev1.ServicePort{
+	// 			{
+	// 				Protocol: "TCP",
+	// 				Port:     33333,
+	// 				TargetPort: intstr.FromInt(33333),
+	// 			},
+	// 		},
+	// 		Type: corev1.ServiceTypeLoadBalancer,
+	// 	},
+	// }
 
-	// kubectl expose pod shuffle-workers --type=LoadBalancer --port=33333
+	// kubectl expose deployment shuffle-workers --type=NodePort --port=33333
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: identifier,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"container": "shuffle-workers",
-			},
+			Selector: containerLabels,
 			Ports: []corev1.ServicePort{
 				{
 					Protocol: "TCP",
@@ -884,11 +991,11 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 					TargetPort: intstr.FromInt(33333),
 				},
 			},
-			Type: corev1.ServiceTypeLoadBalancer,
+			Type: corev1.ServiceTypeNodePort,
 		},
 	}
 
-	_, err = clientset.CoreV1().Services(kubernetesNamespace).Create(context.TODO(), service, metav1.CreateOptions{})
+	_, err = clientset.CoreV1().Services(kubernetesNamespace).Create(context.Background(), service, metav1.CreateOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Failed creating service: %v", err)
 		return err
@@ -897,6 +1004,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	return nil
 }
 
+func int32Ptr(i int32) *int32 { return &i }
 
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
 	if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
