@@ -308,6 +308,7 @@ const OrgHeaderexpanded = (props) => {
 								client_secret: openidClientSecret,
 								openid_authorization: openidAuthorization,
 								openid_token: openidToken,
+								SSORequired: SSORequired,
 							}
 						)
 					}

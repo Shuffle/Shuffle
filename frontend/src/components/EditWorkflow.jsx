@@ -6,6 +6,7 @@ import UsecaseSearch from "../components/UsecaseSearch.jsx"
 import WorkflowGrid from "../components/WorkflowGrid.jsx"
 import dayjs from 'dayjs';
 import WorkflowTemplatePopup from "./WorkflowTemplatePopup.jsx";
+import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx"
 
 import {
   Badge,
@@ -206,6 +207,16 @@ const EditWorkflow = (props) => {
 				<Typography variant="body2" color="textSecondary" style={{marginTop: 20, maxWidth: 440,}}>
 					Workflows can be built from scratch, or from templates. <a href="/usecases" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
 				</Typography>
+
+				<div style={{marginTop: 10, marginBottom: 10, marginRight: 50, }}>
+					<WorkflowValidationTimeline 
+					  originalWorkflow={workflow}
+					
+					  apps={apps}
+					  workflow={workflow}
+					/>
+				</div>
+
 				{showUpload === true ? 
 					<div style={{ float: "right" }}>
 						<Tooltip color="primary" title={"Import manually"} placement="top">
@@ -957,7 +968,7 @@ const EditWorkflow = (props) => {
 					}}
 				>
 					{showMoreClicked ? <ExpandLessIcon /> : <ExpandMoreIcon/>}
-					{showMoreClicked ? "Collapse": "Expand"}
+					{showMoreClicked ? "Less Options": "More Options"}
 				</Button>
 			</Tooltip>
 		</div>

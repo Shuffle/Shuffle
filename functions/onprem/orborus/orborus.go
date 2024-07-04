@@ -178,6 +178,51 @@ func getThisContainerId() {
 }
 
 func cleanupExistingNodes(ctx context.Context) error {
+
+	if isKubernetes == "true" {
+		if kubernetesNamespace == "" {
+			kubernetesNamespace = "default"
+		}
+
+		clientset, _, err := shuffle.GetKubernetesClient()
+		if err != nil {
+			log.Printf("[ERROR] Error getting kubernetes client:", err)
+			return err
+		}
+
+		// Delete all pods
+		pods, err := clientset.CoreV1().Pods(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			log.Printf("[ERROR] Failed listing pods: %s", err)
+			return err
+		}
+
+		for _, pod := range pods.Items {
+			err := clientset.CoreV1().Pods(kubernetesNamespace).Delete(context.Background(), pod.Name, metav1.DeleteOptions{})
+			if err != nil {
+				log.Printf("[ERROR] Failed deleting pod %s: %s", pod.Name, err)
+			}
+		}
+
+		// Delete all services
+		services, err := clientset.CoreV1().Services(kubernetesNamespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			log.Printf("[ERROR] Failed listing services: %s", err)
+			return err
+		}
+
+		for _, service := range services.Items {
+			err := clientset.CoreV1().Services(kubernetesNamespace).Delete(context.Background(), service.Name, metav1.DeleteOptions{})
+			if err != nil {
+				log.Printf("[ERROR] Failed deleting service %s: %s", service.Name, err)
+			}
+		}
+
+		log.Printf("[INFO] Cleaned up all pods and services in namespace %s", kubernetesNamespace)
+		return nil
+	}
+
+
 	serviceListOptions := types.ServiceListOptions{}
 	services, err := dockercli.ServiceList(
 		context.Background(),
@@ -1662,10 +1707,11 @@ func main() {
 	if swarmConfig == "run" || swarmConfig == "swarm" || isKubernetes == "true" {
 		if isKubernetes != "true" {
 			checkSwarmService(ctx)
-			log.Printf("[DEBUG] Cleaning up containers from previous run")
-			cleanupExistingNodes(ctx)
-			time.Sleep(time.Duration(5) * time.Second)	
 		}
+
+		log.Printf("[DEBUG] Cleaning up containers from previous run")
+		cleanupExistingNodes(ctx)
+		time.Sleep(time.Duration(5) * time.Second)	
 
 		log.Printf("[DEBUG] Deploying worker image %s to swarm", workerImage)
 

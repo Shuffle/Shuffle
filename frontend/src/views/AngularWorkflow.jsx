@@ -139,6 +139,7 @@ import Draggable from "react-draggable";
 import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 
+import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx"
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths, internalIds, } from "../views/Apps.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
@@ -319,6 +320,7 @@ export function SetJsonDotnotation(jsonInput, inputKey) {
 
 export const green = "#86c142";
 export const yellow = "#FECC00";
+export const red = "red";
 
 export function removeParam(key, sourceURL) {
   if (sourceURL === undefined) {
@@ -1641,7 +1643,6 @@ const releaseToConnectLabel = "Release to Connect"
             setExecutionData(responseJson)
           } else {
       		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status === "WAITING" || responseJson.status === "FINISHED") {
-				console.log("DONE!")
 				stop()
 			}
 
@@ -6732,7 +6733,6 @@ const releaseToConnectLabel = "Release to Connect"
 	  const parentlabel = parentNode.data("label").toLowerCase().replace(" ", "_")
 	  const parentname = parentNode.data("app_name").toLowerCase().replace(" ", "_")
 	  if (!parentlabel.startsWith(parentname)+"_") {
-		  console.log("Return 1")
 		  return
 	  }
 
@@ -7135,7 +7135,6 @@ const releaseToConnectLabel = "Release to Connect"
 				// Find how many executions it has 
 				var executions = 0
 				const matchingExecutions = workflowExecutions.filter((execution => execution.execution_source === nodedata.app_name.toLowerCase()))
-				console.log("Matches: ", matchingExecutions.length)
 				const color = matchingExecutions.length > 0 ? "#34a853" : "#ea4436"
 				const decoratorNode = {
 					position: {
@@ -10204,6 +10203,7 @@ const releaseToConnectLabel = "Release to Connect"
 
   // Starts on current node and climbs UP the tree to the root object.
   // Sends back everything in it's path
+  // FIXME: Use the GetParentNodes in WorkflowValidationTimeline.jsx instead
   const getParents = (action) => {
     if (action === undefined || action === null) {
       return []
@@ -18720,6 +18720,7 @@ const releaseToConnectLabel = "Release to Connect"
              : null}
 
           </div>
+
           {executionData.workflow !== undefined && executionData.workflow !== null && executionData.workflow.actions !== undefined && executionData.workflow.actions !== null && executionData.workflow.actions.length > 0  ?
             <div style={{ display: "flex", marginLeft: 10, }}>
               <Typography variant="body1">
@@ -18831,12 +18832,31 @@ const releaseToConnectLabel = "Release to Connect"
                 {new Date(executionData.completed_at * 1000).toLocaleString("en-GB")}
               </Typography>
             </div>
+
           ) : null}
+
+		  {executionData.workflow !== undefined && executionData.workflow !== null && executionData.status !== "EXECUTING" ? 
+			  <div style={{marginTop: 5, marginBottom: 5, }}>
+				  <WorkflowValidationTimeline 
+			  		originalWorkflow={workflow}
+
+			  		apps={apps}
+					workflow={executionData.workflow}
+			  		getParents={getParents}
+
+			  		execution={executionData}
+				  />
+			  </div>
+		  : null}
+
           <div style={{ marginTop: 10 }} />
-          {executionData.execution_argument !== undefined &&
-            executionData.execution_argument.length > 0
+
+          {executionData.execution_argument !== undefined && executionData.execution_argument !== null && 
+            executionData.execution_argument.length > 1
             ? parsedExecutionArgument()
-            : null}
+            : 
+			null}
+
           <Divider
             style={{
               backgroundColor: "rgba(255,255,255,0.6)",
@@ -18844,6 +18864,7 @@ const releaseToConnectLabel = "Release to Connect"
               marginBottom: 20,
             }}
           />
+
           {executionData.results !== undefined &&
             executionData.results !== null &&
             executionData.results.length > 1 &&
@@ -19538,7 +19559,7 @@ const releaseToConnectLabel = "Release to Connect"
 				  if (stringjson.includes("\n") && !stringjson.includes("\n")) {
 					return "Looks like you have a newline problem. Consider using the | replace: '\n', '\\n' }} filter in Liquid."
 				  } else {
-					return "The result looks like it should be JSON, but is invalid. Look for potential"
+					return "The result looks like it should be JSON, but is invalid. Look for potential single quotes instead of double quotes, missing commas or newlines"
 				  }
 			  }
 		  }

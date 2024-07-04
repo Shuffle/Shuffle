@@ -515,16 +515,16 @@ const LicencePopup = (props) => {
     }
 
     useEffect(() => {
-        console.log("New variant: ", shuffleVariant)
+		console.log("New variant: ", shuffleVariant)
 
-        if (shuffleVariant === 1) {
-            setCalculatedCost("$600")
-            setSelectedValue(8)
-        } else {
-            setCalculatedCost("$540")
-            setSelectedValue(300)
-        }
-    }, [shuffleVariant])
+		if (shuffleVariant === 1) {
+			setCalculatedCost("$960")
+			setSelectedValue(8)
+		} else {
+			setCalculatedCost("$960")
+			setSelectedValue(300)
+		}
+	}, [shuffleVariant])
 
     if (typeof window === 'undefined' || window.location === undefined) {
         return null
@@ -680,7 +680,7 @@ const LicencePopup = (props) => {
         color: "white",
     }
 
-
+    console.log("Priceitem: ", shuffleVariant)
     const isLoggedInHandler = () => {
         if (calculatedCost === payasyougo) {
             handlePayasyougo(props.userdata)
@@ -690,7 +690,7 @@ const LicencePopup = (props) => {
         const priceItem = window.location.origin === "https://shuffler.io" ?
             shuffleVariant === 0 ? "app_executions" : "cores"
             :
-            shuffleVariant === 0 ? "price_1MROFrDzMUgUjxHShcSxgHO1" : "price_1NXjQqDzMUgUjxHSg690R4FP"
+            shuffleVariant === 0 ? "price_1PWI5zDzMUgUjxHSKkz0fGdN" : "price_1NXjQqDzMUgUjxHSg690R4FP"
 
         const successUrl = `${window.location.origin}/admin?admin_tab=billing&payment=success`
         const failUrl = `${window.location.origin}/pricing?admin_tab=billing&payment=failure`
