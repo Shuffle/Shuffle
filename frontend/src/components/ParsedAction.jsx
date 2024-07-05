@@ -629,6 +629,7 @@ const ParsedAction = (props) => {
 			return {...param, value: paramvalue}
 		});	
 		selectedAction.parameters = newParameters;
+		setSelectedActionParameters(newParameters);
 		setSelectedAction(selectedAction);
 		return newParameters;
 	},[actionlist,selectedAction,workflow.actions,workflow,selectedApp,setNewSelectedAction])
