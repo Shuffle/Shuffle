@@ -177,16 +177,16 @@ const ParsedAction = (props) => {
   const classes = useStyles();
   const [hideBody, setHideBody] = React.useState(true)
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false)
-  const [appActionName, setAppActionName] = React.useState(selectedAction.label);
+  const [appActionName, setAppActionName] = React.useState(selectedAction?.label);
   const [delay, setDelay] = React.useState(selectedAction?.execution_delay || 0);
-  const [prevActionName, setPrevActionName] = React.useState(selectedAction.label);
+  const [prevActionName, setPrevActionName] = React.useState(selectedAction?.label);
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
   const [autoCompleting, setAutocompleting] = React.useState(false);
   const [selectedActionParameters, setSelectedActionParameters] = React.useState(selectedAction?.parameters || []);
     const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
 	const [paramValues, setParamValues] = React.useState(
-		selectedAction?.parameters.map((param) => {
+		selectedAction?.parameters?.map((param) => {
 			return {
 				name: param.name,
 				value: param.value,
@@ -635,7 +635,7 @@ const ParsedAction = (props) => {
 	},[actionlist,selectedAction,workflow.actions,workflow,selectedApp,setNewSelectedAction])
 
 	useEffect(() => {
-		setParamValues(memoizedParam.map((param) => {
+		setParamValues(memoizedParam?.map((param) => {
 			return {
 				name: param.name,
 				value: param.value,
