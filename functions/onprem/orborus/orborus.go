@@ -831,6 +831,9 @@ func fixk8sRoles() {
 	}
 }
 
+
+func int32Ptr(i int32) *int32 { return &i }
+
 func deployK8sWorker(image string, identifier string, env []string) error {
 	env = append(env, fmt.Sprintf("IS_KUBERNETES=true"))
 	env = append(env, fmt.Sprintf("KUBERNETES_NAMESPACE=%s", os.Getenv("KUBERNETES_NAMESPACE")))
@@ -1015,11 +1018,25 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	// 	return err
 	// }
 
+	replicaNumberStr := os.Getenv("SHUFFLE_SCALE_REPLICAS")
+	replicaNumber := 1
+	if len(replicaNumberStr) > 0 {
+		tmpInt, err := strconv.Atoi(replicaNumberStr)
+		if err != nil {
+			log.Printf("[ERROR] %s is not a valid number for replication", replicaNumberStr)
+		} else {
+			replicaNumber = tmpInt
+		}
+	}
+
+	replicaNumberInt32 := int32(replicaNumber)
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: identifier,
 		},
 		Spec: appsv1.DeploymentSpec{
+			Replicas: int32Ptr(replicaNumberInt32),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: containerLabels,
 			},
