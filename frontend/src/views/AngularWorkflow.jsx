@@ -13160,7 +13160,7 @@ const releaseToConnectLabel = "Release to Connect"
                 <Autocomplete
                   id="subflow_search"
                   autoHighlight
-				  freeSolo
+				          freeSolo
                   value={subworkflow}
                   classes={{ inputRoot: classes.inputRoot }}
                   ListboxProps={{
@@ -13258,6 +13258,11 @@ const releaseToConnectLabel = "Release to Connect"
                         style={{
                           backgroundColor: theme.palette.inputColor,
                           borderRadius: theme.palette.borderRadius,
+                        }}
+                        sx={{
+                          '& .MuiInputLabel-root': {
+                            transition: 'none', // Disable the animation for the label
+                          },
                         }}
                         {...params}
                         label="Find your workflow"
@@ -13364,6 +13369,11 @@ const releaseToConnectLabel = "Release to Connect"
                           style={{
                             backgroundColor: theme.palette.inputColor,
                             borderRadius: theme.palette.borderRadius,
+                          }}
+                          sx={{
+                            '& .MuiInputLabel-root': {
+                              transition: 'none', // Disable the animation for the label
+                            },
                           }}
                           {...params}
                           label="Select a start-node (optional)"
