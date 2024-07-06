@@ -1767,6 +1767,7 @@ const CodeEditor = (props) => {
 						// This is to make it so we don't need to handle these fixes on the
 						// backend by itself
 						var fixedcodedata = localcodedata
+						console.log("Fixedcodedata: ", fixedcodedata)
 						const valid = validateJson(localcodedata, true)
 						if (valid.valid) {
 							fixedcodedata = JSON.stringify(valid.result, null, 2)
@@ -1779,6 +1780,11 @@ const CodeEditor = (props) => {
 							setcodedata(fixedcodedata);
 							setExpansionModalOpen(false)
 						} else if (changeActionParameterCodeMirror !== undefined) { 
+							console.log("Entering in Submit onCLick")
+							console.log("Data passing to chnageActionParameterCodeMirror: ", fixedcodedata)
+							console.log("Fieldcount: ", fieldCount)
+							console.log("Actionlist: ", actionlist)
+							console.log("Event: ", event)
 							//changeActionParameterCodeMirror(event, fieldCount, fixedcodedata)
 							changeActionParameterCodeMirror(event, fieldCount, fixedcodedata, actionlist)
 							setExpansionModalOpen(false)

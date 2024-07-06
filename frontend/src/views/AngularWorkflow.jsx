@@ -69,6 +69,7 @@ import {
   AvatarGroup,
   Autocomplete,
   Radio,
+  ButtonGroup,
 } from "@mui/material";
 
 import {
@@ -12833,6 +12834,7 @@ const releaseToConnectLabel = "Release to Connect"
         workflow.triggers[selectedTriggerIndex].parameters[1] = {
           name: "argument",
           value: "",
+          id:"subflow_field"
         };
         workflow.triggers[selectedTriggerIndex].parameters[2] = {
           name: "user_apikey",
@@ -13346,13 +13348,14 @@ const releaseToConnectLabel = "Release to Connect"
                             }
                           }}
                           disabled={isCloud && isParent}
-						  onClick={() => {
-                      		handleSubflowStartnodeSelection({ 
-								target: { 
-									value: action 
-								} 
-							})
-						  }}
+                          onClick={() => {
+                                      handleSubflowStartnodeSelection({ 
+                            target: { 
+                              value: action 
+                            } 
+                          })
+                          document.activeElement.blur();
+                          }}
                           style={{
                             backgroundColor: theme.palette.inputColor,
                             color: isParent ? "red" : "white",
@@ -13396,6 +13399,7 @@ const releaseToConnectLabel = "Release to Connect"
                 </div>
               </div>
               <TextField
+                id="subflow_field"
                 style={{
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
@@ -13405,19 +13409,51 @@ const releaseToConnectLabel = "Release to Connect"
                   },
                   endAdornment: (
                     <InputAdornment position="end">
-                      <Tooltip title="Autocomplete text" placement="top">
-                        <AddCircleOutlineIcon
-                          style={{ cursor: "pointer" }}
-                          onClick={(event) => {
-                            setMenuPosition({
-                              top: event.pageY + 10,
-                              left: event.pageX + 10,
-                            });
-                            //setShowDropdownNumber(3)
-                            setShowDropdown(true);
-                          }}
-                        />
-                      </Tooltip>
+                      <ButtonGroup orientation="vertical">
+                        <Tooltip title="Expand window" placement="top">
+                          <AspectRatioIcon
+                            style={{ cursor: "pointer", marginBottom: 10}}
+                            onClick={(event) => {
+                              event.preventDefault()
+                              // setFieldCount(count)
+                              setCodeEditorModalOpen(true)
+                              setActiveDialog("codeeditor")
+                              //setcodedata(data.value)
+                              var parsedvalue = workflow.triggers[selectedTriggerIndex].parameters[1].value
+                              // if (parsedvalue === undefined || parsedvalue === null) {
+                              //   parsedvalue = ""
+                              // }
+                              console.log("Data sending to codeeditor: ",{
+                                "name": workflow.triggers[selectedTriggerIndex].parameters[1].name,
+                                "value": parsedvalue,
+                                "field_number": 1,
+                                "actionlist": actionlist,
+                                "field_id": "subflow_field",
+                              })
+                              setEditorData({
+                                "name": workflow.triggers[selectedTriggerIndex].parameters[1].name,
+                                "value": parsedvalue,
+                                "field_number": 1,
+                                "actionlist": actionlist,
+                                "field_id": "subflow_field",
+                              })
+                            }}
+                          />
+                        </Tooltip>
+                        <Tooltip title="Autocomplete text" placement="top">
+                          <AddCircleOutlineIcon
+                            style={{ cursor: "pointer" }}
+                            onClick={(event) => {
+                              setMenuPosition({
+                                top: event.pageY + 10,
+                                left: event.pageX + 10,
+                              });
+                              //setShowDropdownNumber(3)
+                              setShowDropdown(true);
+                            }}
+                          />
+                        </Tooltip>
+                      </ButtonGroup>
                     </InputAdornment>
                   ),
                 }}
@@ -21767,108 +21803,154 @@ const releaseToConnectLabel = "Release to Connect"
 		</div>
 
 	const changeActionParameterCodeMirror = (event, count, data, actionlist) => {
-		// Check if event.target.value is an array. If it is, split with comma
-		console.log("1 - SELECTED ACTION: ", selectedAction)
-		console.log("1 - DATA: ", data)
+		
+    if(selectedAction && selectedAction.parameters && selectedAction.parameters.length > 0){
 
-		if (data.startsWith("${") && data.endsWith("}")) {
-			// PARAM FIX - Gonna use the ID field, even though it's a hack
-			const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-			if (paramcheck !== undefined) {
-				// Escapes all double quotes
-				const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
-				if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
-					paramcheck["value_replace"] = [{
-						"key": data.name,
-						"value": toReplace,
-					}]
+      // Check if event.target.value is an array. If it is, split with comma
+      console.log("1 - SELECTED ACTION: ", selectedAction)
+      console.log("1 - DATA: ", data)
 
-				} else {
-					const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
-					if (subparamindex === -1) {
-						paramcheck["value_replace"].push({
-							"key": data.name,
-							"value": toReplace,
-						})
-					} else {
-						paramcheck["value_replace"][subparamindex]["value"] = toReplace 
-					}
-				}
+      if (data.startsWith("${") && data.endsWith("}")) {
+        // PARAM FIX - Gonna use the ID field, even though it's a hack
+        const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+        if (paramcheck !== undefined) {
+          // Escapes all double quotes
+          const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
+          if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
+            paramcheck["value_replace"] = [{
+              "key": data.name,
+              "value": toReplace,
+            }]
 
-				if (paramcheck["value_replace"] === undefined) {
-					selectedAction.parameters[count]["value_replace"] = paramcheck
-				} else {
-					//selectedActionParameters[count]["value_replace"] = paramcheck["value_replace"]
-					selectedAction.parameters[count]["value_replace"] = paramcheck["value_replace"]
-				}
-				setSelectedAction(selectedAction)
-				//setUpdate(Math.random())
-				return
-			}
-		}
+          } else {
+            const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+            if (subparamindex === -1) {
+              paramcheck["value_replace"].push({
+                "key": data.name,
+                "value": toReplace,
+              })
+            } else {
+              paramcheck["value_replace"][subparamindex]["value"] = toReplace 
+            }
+          }
 
-		if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
-			var curstring = ""
-			var record = false
-			for (let [key,keyval] in Object.entries(selectedAction.parameters[count].value)) {
-				const item = selectedAction.parameters[count].value[key]
-				if (record) {
-					curstring += item
-				}
+          if (paramcheck["value_replace"] === undefined) {
+            selectedAction.parameters[count]["value_replace"] = paramcheck
+          } else {
+            //selectedActionParameters[count]["value_replace"] = paramcheck["value_replace"]
+            selectedAction.parameters[count]["value_replace"] = paramcheck["value_replace"]
+          }
+          setSelectedAction(selectedAction)
+          //setUpdate(Math.random())
+          return
+        }
+      }
 
-				if (item === "$") {
-					record = true
-					curstring = ""
-				}
-			}
+      if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
+        var curstring = ""
+        var record = false
+        for (let [key,keyval] in Object.entries(selectedAction.parameters[count].value)) {
+          const item = selectedAction.parameters[count].value[key]
+          if (record) {
+            curstring += item
+          }
 
-			if (curstring.length > 0 && actionlist !== null) {
-				// Search back in the action list
-				curstring = curstring.split(" ").join("_").toLowerCase()
-				var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
-				if (actionItem !== undefined) {
-					console.log("Found item: ", actionItem)
+          if (item === "$") {
+            record = true
+            curstring = ""
+          }
+        }
 
-					var jsonvalid = true
-					try {
-						const tmp = String(JSON.parse(actionItem.example))
-						if (!actionItem.example.includes("{") && !actionItem.example.includes("[")) {
-							jsonvalid = false
-						}
-					} catch (e) {
-						jsonvalid = false
-					}
-				}
-			}
-		} 
+        if (curstring.length > 0 && actionlist !== null) {
+          // Search back in the action list
+          curstring = curstring.split(" ").join("_").toLowerCase()
+          var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
+          if (actionItem !== undefined) {
+            console.log("Found item: ", actionItem)
 
-		console.log("2 - SELECTED ACTION: ", selectedAction)
-		console.log("2 - DATA: ", data)
+            var jsonvalid = true
+            try {
+              const tmp = String(JSON.parse(actionItem.example))
+              if (!actionItem.example.includes("{") && !actionItem.example.includes("[")) {
+                jsonvalid = false
+              }
+            } catch (e) {
+              jsonvalid = false
+            }
+          }
+        }
+      } 
 
-		if (selectedAction.app_name === "Shuffle Tools" && selectedAction.name === "filter_list" && count === 0) {
-			const parsedvalue = data
-			console.log("Parsed value: ", parsedvalue)
-			if (parsedvalue.includes("#")) {
-				const splitparsed = parsedvalue.split(".#.")
-				//console.log("Cant contain #: ", splitparsed)
-				if (splitparsed.length > 1) {
-					console.log("IN HERE AY")
-					//data.value = splitparsed[0]
+      console.log("2 - SELECTED ACTION: ", selectedAction)
+      console.log("2 - DATA: ", data)
 
-					selectedAction.parameters[0].value = splitparsed[0]
-					selectedAction.parameters[1].value = splitparsed[1] 
+      if (selectedAction.app_name === "Shuffle Tools" && selectedAction.name === "filter_list" && count === 0) {
+        const parsedvalue = data
+        console.log("Parsed value: ", parsedvalue)
+        if (parsedvalue.includes("#")) {
+          const splitparsed = parsedvalue.split(".#.")
+          //console.log("Cant contain #: ", splitparsed)
+          if (splitparsed.length > 1) {
+            console.log("IN HERE AY")
+            //data.value = splitparsed[0]
 
-					selectedAction.parameters[0].autocompleted = true 
-					selectedAction.parameters[1].autocompleted = true 
-					setUpdate(Math.random())
-				} 
-			}
-		} else {
-			selectedAction.parameters[count].autocompleted = false 
-			selectedAction.parameters[count].value = data
-		}
+            selectedAction.parameters[0].value = splitparsed[0]
+            selectedAction.parameters[1].value = splitparsed[1] 
 
-		setSelectedAction(selectedAction)
+            selectedAction.parameters[0].autocompleted = true 
+            selectedAction.parameters[1].autocompleted = true 
+            setUpdate(Math.random())
+          } 
+        }
+      } else {
+        selectedAction.parameters[count].autocompleted = false 
+        selectedAction.parameters[count].value = data
+      }
+
+      setSelectedAction(selectedAction)
+    }
+
+    if(selectedTrigger && selectedTrigger.parameters && selectedTrigger.parameters.length > 0){
+
+      if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
+        var curstring = ""
+        var record = false
+        for (let [key,keyval] in Object.entries(selectedTrigger.parameters[count].value)) {
+          const item = selectedTrigger.parameters[count].value[key]
+          if (record) {
+            curstring += item
+          }
+
+          if (item === "$") {
+            record = true
+            curstring = ""
+          }
+        }
+
+        if (curstring.length > 0 && actionlist !== null) {
+          // Search back in the action list
+          curstring = curstring.split(" ").join("_").toLowerCase()
+          var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
+          if (actionItem !== undefined) {
+            console.log("Found item: ", actionItem)
+
+            var jsonvalid = true
+            try {
+              const tmp = String(JSON.parse(actionItem.example))
+              if (!actionItem.example.includes("{") && !actionItem.example.includes("[")) {
+                jsonvalid = false
+              }
+            } catch (e) {
+              jsonvalid = false
+            }
+          }
+        }
+      } 
+
+      selectedTrigger.parameters[count].value = data      
+      setSelectedTrigger(selectedTrigger);
+      console.log("get into trigger controller", selectedTrigger,data)
+    }
 		//setUpdate(Math.random())
 	}
 

@@ -3162,7 +3162,13 @@ const ParsedAction = (props) => {
 									if (parsedvalue === undefined || parsedvalue === null) {
 										parsedvalue = ""
 									}
-
+									console.log("Data sending to codeeditor(Action): ", {
+										"name": data.name,
+										"value": parsedvalue,
+										"field_number": count,
+										"actionlist": actionlist,
+										"field_id": clickedFieldId,
+									} )
 									setEditorData({
 										"name": data.name,
 										"value": parsedvalue,
