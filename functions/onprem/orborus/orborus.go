@@ -179,6 +179,9 @@ func getThisContainerId() {
 func cleanupExistingNodes(ctx context.Context) error {
 
 	if isKubernetes == "true" {
+		// of course, this doesn't clean up "nodes" but
+		// rather pods, services, roles etc.
+
 		if kubernetesNamespace == "" {
 			kubernetesNamespace = "default"
 		}
@@ -197,6 +200,16 @@ func cleanupExistingNodes(ctx context.Context) error {
 		}
 
 		for _, pod := range pods.Items {
+			// check if pod.Name starts with:
+			// "backend-", "frontend-", "orborus-", "opensearch-" or "memcached-"
+			if strings.HasPrefix(pod.Name, "backend-") || 
+			   strings.HasPrefix(pod.Name, "frontend-") || 
+			   strings.HasPrefix(pod.Name, "orborus-") || 
+			   strings.HasPrefix(pod.Name, "opensearch-") || 
+			   strings.HasPrefix(pod.Name, "memcached-") {
+				continue
+			}
+
 			err := clientset.CoreV1().Pods(kubernetesNamespace).Delete(context.Background(), pod.Name, metav1.DeleteOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Failed deleting pod %s: %s", pod.Name, err)
@@ -211,6 +224,13 @@ func cleanupExistingNodes(ctx context.Context) error {
 		}
 
 		for _, service := range services.Items {
+			if strings.Contains(service.Name, "opensearch") ||
+			   strings.Contains(service.Name, "memcached") ||
+			   strings.Contains(service.Name, "shuffle-backend") || strings.Contains(service.Name, "backend") ||
+			   strings.Contains(service.Name, "frontend") {
+				continue
+			}
+
 			err := clientset.CoreV1().Services(kubernetesNamespace).Delete(context.Background(), service.Name, metav1.DeleteOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Failed deleting service %s: %s", service.Name, err)
