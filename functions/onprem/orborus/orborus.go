@@ -186,7 +186,7 @@ func skipCheckInCleanup(name string) bool {
 		strings.HasPrefix(name, "shuffle-orborus") ||
 		strings.HasPrefix(name, "opensearch") || 
 		strings.HasPrefix(name, "shuffle-opensearch") ||
-		strings.HasPrefix(name, "memcached")
+		strings.HasPrefix(name, "memcached") ||
 		strings.HasPrefix(name, "shuffle-memcached")
 }
 
