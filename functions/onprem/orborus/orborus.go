@@ -176,6 +176,17 @@ func getThisContainerId() {
 	log.Printf(`[INFO] Started with containerId "%s"`, containerId)
 }
 
+
+func skipCheckInCleanup(name string) bool {
+
+	return strings.HasPrefix(name, "backend-") || 
+		   strings.HasPrefix(name, "shuffle-backend") ||
+		   strings.HasPrefix(name, "frontend-") || 
+		   strings.HasPrefix(name, "orborus-") || 
+		   strings.HasPrefix(name, "opensearch-") || 
+		   strings.HasPrefix(name, "memcached-")
+}
+
 func cleanupExistingNodes(ctx context.Context) error {
 
 	if isKubernetes == "true" {
@@ -202,11 +213,7 @@ func cleanupExistingNodes(ctx context.Context) error {
 		for _, pod := range pods.Items {
 			// check if pod.Name starts with:
 			// "backend-", "frontend-", "orborus-", "opensearch-" or "memcached-"
-			if strings.HasPrefix(pod.Name, "backend-") || 
-			   strings.HasPrefix(pod.Name, "frontend-") || 
-			   strings.HasPrefix(pod.Name, "orborus-") || 
-			   strings.HasPrefix(pod.Name, "opensearch-") || 
-			   strings.HasPrefix(pod.Name, "memcached-") {
+			if skipCheckInCleanup(pod.Name) {
 				continue
 			}
 
@@ -224,10 +231,7 @@ func cleanupExistingNodes(ctx context.Context) error {
 		}
 
 		for _, service := range services.Items {
-			if strings.Contains(service.Name, "opensearch") ||
-			   strings.Contains(service.Name, "memcached") ||
-			   strings.Contains(service.Name, "shuffle-backend") || strings.Contains(service.Name, "backend") ||
-			   strings.Contains(service.Name, "frontend") {
+			if skipCheckInCleanup(service.Name) {
 				continue
 			}
 
@@ -244,6 +248,10 @@ func cleanupExistingNodes(ctx context.Context) error {
 		}
 
 		for _, deployment := range deployments.Items {
+			if skipCheckInCleanup(deployment.Name) {
+				continue
+			}			
+
 			err := clientset.AppsV1().Deployments(kubernetesNamespace).Delete(context.Background(), deployment.Name, metav1.DeleteOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Failed deleting deployment %s: %s", deployment.Name, err)
