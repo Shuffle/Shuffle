@@ -178,13 +178,12 @@ func getThisContainerId() {
 
 
 func skipCheckInCleanup(name string) bool {
-
-	return strings.HasPrefix(name, "backend-") || 
-		   strings.HasPrefix(name, "shuffle-backend") ||
-		   strings.HasPrefix(name, "frontend-") || 
-		   strings.HasPrefix(name, "orborus-") || 
-		   strings.HasPrefix(name, "opensearch-") || 
-		   strings.HasPrefix(name, "memcached-")
+	return strings.HasPrefix(name, "backend") || 
+		strings.HasPrefix(name, "shuffle-backend") ||
+		strings.HasPrefix(name, "frontend") || 
+		strings.HasPrefix(name, "orborus") || 
+		strings.HasPrefix(name, "opensearch") || 
+		strings.HasPrefix(name, "memcached")
 }
 
 func cleanupExistingNodes(ctx context.Context) error {
