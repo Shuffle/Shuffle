@@ -181,9 +181,13 @@ func skipCheckInCleanup(name string) bool {
 	return strings.HasPrefix(name, "backend") || 
 		strings.HasPrefix(name, "shuffle-backend") ||
 		strings.HasPrefix(name, "frontend") || 
+		strings.HasPrefix(name, "shuffle-frontend") ||
 		strings.HasPrefix(name, "orborus") || 
+		strings.HasPrefix(name, "shuffle-orborus") ||
 		strings.HasPrefix(name, "opensearch") || 
+		strings.HasPrefix(name, "shuffle-opensearch") ||
 		strings.HasPrefix(name, "memcached")
+		strings.HasPrefix(name, "shuffle-memcached")
 }
 
 func cleanupExistingNodes(ctx context.Context) error {
