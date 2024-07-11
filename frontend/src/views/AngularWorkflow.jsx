@@ -20103,6 +20103,7 @@ const releaseToConnectLabel = "Release to Connect"
         workflowExecutions={workflowExecutions}
         setSelectedResult={setSelectedResult}
         setSelectedApp={setSelectedApp}
+        selectedTrigger={selectedTrigger}
         setSelectedTrigger={setSelectedTrigger}
         setSelectedEdge={setSelectedEdge}
         setCurrentView={setCurrentView}
