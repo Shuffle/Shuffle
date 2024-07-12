@@ -522,7 +522,9 @@ const AngularWorkflow = (defaultprops) => {
 
   const [lastSaved, setLastSaved] = React.useState(true);
   const [selectionOpen, setSelectionOpen] = React.useState(false);
-
+  const [menuPosition, setMenuPosition] = useState(null);
+  const [showDropdown, setShowDropdown] = React.useState(false);
+  const [subflowActionList, setSubflowActionlist] = React.useState([]);
   // eslint-disable-next-line no-unused-vars
   const [_, setUpdate] = useState(""); // Used to force rendring, don't remove
 
@@ -538,7 +540,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const [distributedFromParent, setDistributedFromParent] = React.useState("")
   const [suborgWorkflows, setSuborgWorkflows] = React.useState([])
-
+  const [subflowExec, setSubflowExec] = React.useState("")
   const [suggestionBox, setSuggestionBox] = React.useState({
   	"position": {
   		"top": 500,
@@ -547,7 +549,6 @@ const AngularWorkflow = (defaultprops) => {
   	"open": false,
   	"attachedTo": "",
   })
-
   useEffect(() => {
 	  if (!firstrequest && isLoaded && isLoggedIn && editWorkflowModalOpen === false) {
         saveWorkflow(workflow)
@@ -787,6 +788,148 @@ const releaseToConnectLabel = "Release to Connect"
 	  }
 
   }, [selectedApp])
+
+  useEffect(() => {
+
+    const newActionList = [];
+    
+      // Process workflowExecutions
+      if (workflowExecutions.length > 0) {
+        for (let execution of workflowExecutions) {
+            const execArg = execution.execution_argument;
+            if (execArg && execArg.length > 0) {
+                const valid = validateJson(execArg);
+                if (valid.valid) {
+                    newActionList.push({
+                        type: "Execution Argument",
+                        name: "Execution Argument",
+                        value: "$exec",
+                        highlight: "exec",
+                        autocomplete: "exec",
+                        example: valid.result,
+                    });
+                    break;
+                }
+            }
+        }
+      }
+
+      if (newActionList.length === 0) {
+        // FIXME: Have previous execution values in here
+        newActionList.push({
+          type: "Execution Argument",
+          name: "Execution Argument",
+          value: "$exec",
+          highlight: "exec",
+          autocomplete: "exec",
+          example: "hello",
+        })
+        newActionList.push({
+          type: "Shuffle Database",
+          name: "Shuffle Database",
+          value: "$shuffle_cache",
+          highlight: "shuffle_db",
+          autocomplete: "shuffle_cache",
+          example: "hello",
+        })
+      }
+
+      if (
+        workflow.workflow_variables !== null &&
+        workflow.workflow_variables !== undefined &&
+        workflow.workflow_variables.length > 0
+      ) {
+        for (let varkey in workflow.workflow_variables) {
+          const item = workflow.workflow_variables[varkey];
+          newActionList.push({
+            type: "workflow_variable",
+            name: item.name,
+            value: item.value,
+            id: item.id,
+            autocomplete: `${item.name.split(" ").join("_")}`,
+            example: item.value,
+          });
+        }
+      }
+
+      // FIXME: Add values from previous executions if they exist
+      if (
+        workflow.execution_variables !== null &&
+        workflow.execution_variables !== undefined &&
+        workflow.execution_variables.length > 0
+      ) {
+        for (let varkey in workflow.execution_variables) {
+          const item = workflow.execution_variables[varkey];
+          newActionList.push({
+            type: "execution_variable",
+            name: item.name,
+            value: item.value,
+            id: item.id,
+            autocomplete: `${item.name.split(" ").join("_")}`,
+            example: "",
+          });
+        }
+      }
+
+      if(getParents){
+        var parents = getParents(selectedTrigger);
+        if (parents.length > 1) {
+          for (let parentkey in parents) {
+            const item = parents[parentkey];
+            if (item.label === "Execution Argument") {
+              continue;
+            }
+  
+            var exampledata = item.example === undefined ? "" : item.example;
+            // Find previous execution and their variables
+            if (workflowExecutions.length > 0) {
+              // Look for the ID
+              for (let execkey in workflowExecutions) {
+                if (
+                  workflowExecutions[execkey].results === undefined ||
+                  workflowExecutions[execkey].results === null
+                ) {
+                  continue;
+                }
+  
+                var foundResult = workflowExecutions[execkey].results.find(
+                  (result) => result.action.id === item.id
+                );
+                if (foundResult === undefined) {
+                  continue;
+                }
+  
+                const validated = validateJson(foundResult.result)
+                if (validated.valid) {
+                  exampledata = validateJson.result
+                  break
+                }
+              }
+            }
+  
+            // 1. Take
+            const actionvalue = {
+              type: "action",
+              id: item.id,
+              name: item.label,
+              autocomplete: `${item.label.split(" ").join("_")}`,
+              example: exampledata,
+            }
+            newActionList.push(actionvalue);
+          }
+        }
+      }
+
+      setSubflowActionlist(newActionList);
+
+  },[selectedTrigger, workflowExecutions]);
+
+
+  useEffect(() => {
+    if(selectedTrigger.parameters !== undefined && selectedTrigger.parameters.length > 1){
+    setSubflowExec(selectedTrigger?.parameters[1]?.value)
+    }
+  },[selectedTrigger,selectedTriggerIndex,subflowActionList]);
 
   const [executionArgumentModalOpen, setExecutionArgumentModalOpen] = React.useState(false);
 
@@ -4528,7 +4671,7 @@ const releaseToConnectLabel = "Release to Connect"
 	}
 
 
-
+  console.log("Selected Trigger: ", selectedTrigger)
   // Nodeselectbatching:
   // https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
   // onNodeClick
@@ -4540,9 +4683,11 @@ const releaseToConnectLabel = "Release to Connect"
     const data = event.target.data()
 
     if (data.app_name === "Shuffle Workflow") {
-      if ((data.parameters !== undefined) && (data.parameters.length > 0)) {
+      if ((data.parameters !== undefined) && (data?.parameters?.length > 0)) {
         getWorkflowApps(data.parameters[0].value)
       }
+      console.log("data", data)
+      // setSubflowExec(data?.parameters[1]?.value)
     }
 
 	if (data.buttonType == "ACTIONSUGGESTION") {
@@ -10220,7 +10365,7 @@ const releaseToConnectLabel = "Release to Connect"
     var maxiter = 10;
     while (true) {
       for (let parentkey in allkeys) {
-        var currentnode = cy.getElementById(allkeys[parentkey]);
+        var currentnode = cy?.getElementById(allkeys[parentkey]);
         if (currentnode === undefined || currentnode === null) {
           continue;
         }
@@ -12660,124 +12805,154 @@ const releaseToConnectLabel = "Release to Connect"
     );
   };
 
-  const SubflowSidebar = () => {
-    const [menuPosition, setMenuPosition] = useState(null);
-    const [showDropdown, setShowDropdown] = React.useState(false);
-    const [actionlist, setActionlist] = React.useState([]);
+  if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
+    if (workflow.triggers[selectedTriggerIndex] === undefined) {
+      return null;
+    }
 
-    if (actionlist.length === 0) {
-      // FIXME: Have previous execution values in here
-      actionlist.push({
-        type: "Execution Argument",
-        name: "Execution Argument",
-        value: "$exec",
-        highlight: "exec",
-        autocomplete: "exec",
-        example: "hello",
-      })
-      actionlist.push({
-        type: "Shuffle Database",
-        name: "Shuffle Database",
-        value: "$shuffle_cache",
-        highlight: "shuffle_db",
-        autocomplete: "shuffle_cache",
-        example: "hello",
-      })
+    if (
+      workflow.triggers[selectedTriggerIndex].parameters === undefined ||
+      workflow.triggers[selectedTriggerIndex].parameters === null ||
+      workflow.triggers[selectedTriggerIndex].parameters.length === 0
+    ) {
+      workflow.triggers[selectedTriggerIndex].parameters = [];
+      workflow.triggers[selectedTriggerIndex].parameters[0] = {
+        name: "workflow",
+        value: "",
+      };
+      workflow.triggers[selectedTriggerIndex].parameters[1] = {
+        name: "argument",
+        value: "",
+        id:"subflow_field"
+      };
+      workflow.triggers[selectedTriggerIndex].parameters[2] = {
+        name: "user_apikey",
+        value: "",
+      };
+      workflow.triggers[selectedTriggerIndex].parameters[3] = {
+        name: "startnode",
+        value: "",
+      };
+      workflow.triggers[selectedTriggerIndex].parameters[4] = {
+        name: "check_result",
+        value: "false",
+      };
+      workflow.triggers[selectedTriggerIndex].parameters[5] = {
+        name: "auth_override",
+        value: "",
+      };
+
+      /*
+      // API-key has been replaced by auth key for the execution. 
+      // Parents can now automatically execute children without auth from a user, as long as the subflow in question is owned by the same org and the subflow is actually referencing it during checkin.
+      console.log("SETTINGS: ", userSettings);
       if (
-        workflow.workflow_variables !== null &&
-        workflow.workflow_variables !== undefined &&
-        workflow.workflow_variables.length > 0
+        userSettings !== undefined &&
+        userSettings !== null &&
+        userSettings.apikey !== null &&
+        userSettings.apikey !== undefined &&
+        userSettings.apikey.length > 0
       ) {
-        for (let varkey in workflow.workflow_variables) {
-          const item = workflow.workflow_variables[varkey];
-          actionlist.push({
-            type: "workflow_variable",
-            name: item.name,
-            value: item.value,
-            id: item.id,
-            autocomplete: `${item.name.split(" ").join("_")}`,
-            example: item.value,
-          });
-        }
+        workflow.triggers[selectedTriggerIndex].parameters[2] = {
+          name: "user_apikey",
+          value: userSettings.apikey,
+        };
+      }
+      */
+    }
+
+    var handleSubflowStartnodeSelection = (e) => {
+      setSubworkflowStartnode(e.target.value);
+
+      if (e.target.value === null || e.target.value === undefined) {
+        return
       }
 
-      // FIXME: Add values from previous executions if they exist
-      if (
-        workflow.execution_variables !== null &&
-        workflow.execution_variables !== undefined &&
-        workflow.execution_variables.length > 0
-      ) {
-        for (let varkey in workflow.execution_variables) {
-          const item = workflow.execution_variables[varkey];
-          actionlist.push({
-            type: "execution_variable",
-            name: item.name,
-            value: item.value,
-            id: item.id,
-            autocomplete: `${item.name.split(" ").join("_")}`,
-            example: "",
-          });
-        }
-      }
+      const branchId = uuidv4();
+      const newbranch = {
+        source_id: workflow.triggers[selectedTriggerIndex].id,
+        destination_id: e.target.value.id,
+        source: workflow.triggers[selectedTriggerIndex].id,
+        target: e.target.value.id,
+        has_errors: false,
+        id: branchId,
+        _id: branchId,
+        label: "Subflow",
+        decorator: true,
+      };
 
-      var parents = getParents(selectedTrigger);
-      if (parents.length > 1) {
-        for (let parentkey in parents) {
-          const item = parents[parentkey];
-          if (item.label === "Execution Argument") {
-            continue;
-          }
-
-          var exampledata = item.example === undefined ? "" : item.example;
-          // Find previous execution and their variables
-          if (workflowExecutions.length > 0) {
-            // Look for the ID
-            for (let execkey in workflowExecutions) {
-              if (
-                workflowExecutions[execkey].results === undefined ||
-                workflowExecutions[execkey].results === null
-              ) {
-                continue;
-              }
-
-              var foundResult = workflowExecutions[execkey].results.find(
-                (result) => result.action.id === item.id
-              );
-              if (foundResult === undefined) {
-                continue;
-              }
-
-              const validated = validateJson(foundResult.result)
-              if (validated.valid) {
-                exampledata = validateJson.result
-                break
-              }
+      if (workflow.visual_branches !== undefined) {
+        if (workflow.visual_branches === null) {
+          workflow.visual_branches = [newbranch];
+        } else if (workflow.visual_branches.length === 0) {
+          workflow.visual_branches.push(newbranch);
+        } else {
+          const foundIndex = workflow.visual_branches.findIndex(
+            (branch) => branch.source_id === newbranch.source_id
+          );
+          if (foundIndex !== -1) {
+            const currentEdge = cy.getElementById(
+              workflow.visual_branches[foundIndex].id
+            );
+            if (
+              currentEdge !== undefined &&
+              currentEdge !== null
+            ) {
+              currentEdge.remove();
             }
           }
 
-          // 1. Take
-          const actionvalue = {
-            type: "action",
-            id: item.id,
-            name: item.label,
-            autocomplete: `${item.label.split(" ").join("_")}`,
-            example: exampledata,
-          }
-          actionlist.push(actionvalue);
+          workflow.visual_branches.splice(foundIndex, 1);
+          workflow.visual_branches.push(newbranch);
         }
       }
 
-      setActionlist(actionlist);
-    }
+      if (workflow.id === subworkflow.id) {
+        const cybranch = {
+          group: "edges",
+          source: newbranch.source_id,
+          target: newbranch.destination_id,
+          id: branchId,
+          data: newbranch,
+        };
+
+        cy.add(cybranch);
+      }
+
+      console.log("Value to be set: ", e.target.value);
+      try {
+        workflow.triggers[
+          selectedTriggerIndex
+        ].parameters[3].value = e.target.value.id;
+      } catch {
+        workflow.triggers[selectedTriggerIndex].parameters[3] =
+        {
+          name: "startnode",
+          value: e.target.value.id,
+        };
+      }
+
+      setWorkflow(workflow);
+    };
+  }
+
+    
+    var subflowtypes = [
+      {
+      name: "Any",
+        },
+      {
+      name: "Enrich",
+        }
+    ]
 
 
-      const handleMenuClose = () => {
-        setUpdate(Math.random());
-        setMenuPosition(null);
-      };
+    const handleMenuClose = () => {
+      setUpdate(Math.random());
+      setMenuPosition(null);
+    };
 
-      const handleItemClick = (values) => {
-        console.log("VALUES: ", values)
+    const handleItemClick = (values) => {
         if (values === undefined || values === null || values.length === 0) {
           return;
         }
@@ -12799,164 +12974,30 @@ const releaseToConnectLabel = "Release to Connect"
         }
         */
 
-        console.log("SELECTED TRIGGER: ", selectedTrigger)
         if (selectedTrigger.name === "Shuffle Workflow") {
           const toComplete = selectedTrigger.parameters[1].value + "$" + values[0].autocomplete
           selectedTrigger.parameters[1].value = toComplete
+          // setSubflowExec(selectedTrigger.parameters[1].value)
           setSelectedTrigger(selectedTrigger)
+          setWorkflow(workflow)
         }
 
         setUpdate(Math.random());
         setShowDropdown(false);
         setMenuPosition(null);
-      };
+    };
 
-      const iconStyle = {
-        marginRight: 15,
-      };
+    const handleSubflowExecChange = (e) => {
+        setSubflowExec(e.target.value)
+        // if(selectedTrigger.length > 0){
+        //   selectedTrigger.parameters[1].value = e.target.value
+        //   setSelectedTrigger(selectedTrigger)
+        //   setWorkflow(workflow)
+        //   setLastSaved(false)
+        // }
+    }
 
-  
-    if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
-      if (workflow.triggers[selectedTriggerIndex] === undefined) {
-        return null;
-      }
-
-      if (
-        workflow.triggers[selectedTriggerIndex].parameters === undefined ||
-        workflow.triggers[selectedTriggerIndex].parameters === null ||
-        workflow.triggers[selectedTriggerIndex].parameters.length === 0
-      ) {
-        workflow.triggers[selectedTriggerIndex].parameters = [];
-        workflow.triggers[selectedTriggerIndex].parameters[0] = {
-          name: "workflow",
-          value: "",
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[1] = {
-          name: "argument",
-          value: "",
-          id:"subflow_field"
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[2] = {
-          name: "user_apikey",
-          value: "",
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[3] = {
-          name: "startnode",
-          value: "",
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[4] = {
-          name: "check_result",
-          value: "false",
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[5] = {
-          name: "auth_override",
-          value: "",
-        };
-
-        /*
-        // API-key has been replaced by auth key for the execution. 
-        // Parents can now automatically execute children without auth from a user, as long as the subflow in question is owned by the same org and the subflow is actually referencing it during checkin.
-        console.log("SETTINGS: ", userSettings);
-        if (
-          userSettings !== undefined &&
-          userSettings !== null &&
-          userSettings.apikey !== null &&
-          userSettings.apikey !== undefined &&
-          userSettings.apikey.length > 0
-        ) {
-          workflow.triggers[selectedTriggerIndex].parameters[2] = {
-            name: "user_apikey",
-            value: userSettings.apikey,
-          };
-        }
-        */
-      }
-
-      const handleSubflowStartnodeSelection = (e) => {
-        setSubworkflowStartnode(e.target.value);
-
-        if (e.target.value === null || e.target.value === undefined) {
-          return
-        }
-
-        const branchId = uuidv4();
-        const newbranch = {
-          source_id: workflow.triggers[selectedTriggerIndex].id,
-          destination_id: e.target.value.id,
-          source: workflow.triggers[selectedTriggerIndex].id,
-          target: e.target.value.id,
-          has_errors: false,
-          id: branchId,
-          _id: branchId,
-          label: "Subflow",
-          decorator: true,
-        };
-
-        if (workflow.visual_branches !== undefined) {
-          if (workflow.visual_branches === null) {
-            workflow.visual_branches = [newbranch];
-          } else if (workflow.visual_branches.length === 0) {
-            workflow.visual_branches.push(newbranch);
-          } else {
-            const foundIndex = workflow.visual_branches.findIndex(
-              (branch) => branch.source_id === newbranch.source_id
-            );
-            if (foundIndex !== -1) {
-              const currentEdge = cy.getElementById(
-                workflow.visual_branches[foundIndex].id
-              );
-              if (
-                currentEdge !== undefined &&
-                currentEdge !== null
-              ) {
-                currentEdge.remove();
-              }
-            }
-
-            workflow.visual_branches.splice(foundIndex, 1);
-            workflow.visual_branches.push(newbranch);
-          }
-        }
-
-        if (workflow.id === subworkflow.id) {
-          const cybranch = {
-            group: "edges",
-            source: newbranch.source_id,
-            target: newbranch.destination_id,
-            id: branchId,
-            data: newbranch,
-          };
-
-          cy.add(cybranch);
-        }
-
-        console.log("Value to be set: ", e.target.value);
-        try {
-          workflow.triggers[
-            selectedTriggerIndex
-          ].parameters[3].value = e.target.value.id;
-        } catch {
-          workflow.triggers[selectedTriggerIndex].parameters[3] =
-          {
-            name: "startnode",
-            value: e.target.value.id,
-          };
-        }
-
-        setWorkflow(workflow);
-      }
-
-      
-	  const subflowtypes = [
-		  {
-			name: "Any",
-	  	  },
-		  {
-			name: "Enrich",
-	  	  }
-	  ]
-
-      return (
+   const SubflowSidebar =  Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "SUBFLOW" ? null :
         <div style={appApiViewStyle}>
 		  <span style={{display: "flex", }}>
 		    <h3 style={{ marginBottom: "5px", flex: 3, }}>
@@ -13419,7 +13460,7 @@ const releaseToConnectLabel = "Release to Connect"
                               setCodeEditorModalOpen(true)
                               setActiveDialog("codeeditor")
                               //setcodedata(data.value)
-                              var parsedvalue = workflow.triggers[selectedTriggerIndex].parameters[1].value
+                              var parsedvalue = workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
                               // if (parsedvalue === undefined || parsedvalue === null) {
                               //   parsedvalue = ""
                               // }
@@ -13427,14 +13468,14 @@ const releaseToConnectLabel = "Release to Connect"
                                 "name": workflow.triggers[selectedTriggerIndex].parameters[1].name,
                                 "value": parsedvalue,
                                 "field_number": 1,
-                                "actionlist": actionlist,
+                                "actionlist": subflowActionList,
                                 "field_id": "subflow_field",
                               })
                               setEditorData({
                                 "name": workflow.triggers[selectedTriggerIndex].parameters[1].name,
                                 "value": parsedvalue,
                                 "field_number": 1,
-                                "actionlist": actionlist,
+                                "actionlist": subflowActionList,
                                 "field_id": "subflow_field",
                               })
                             }}
@@ -13462,15 +13503,23 @@ const releaseToConnectLabel = "Release to Connect"
                 fullWidth
                 color="primary"
                 placeholder="Some execution data"
-                defaultValue={
-                  workflow.triggers[selectedTriggerIndex].parameters[1].value
-                }
-                onBlur={(e) => {
-      			  setLastSaved(false)
+                // defaultValue={
+                //   workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
+                // }
+                value={subflowExec}
+                onChange={(e) => {
+                  // handleSubflowExecChange(e)
+                  setSubflowExec(e.target.value)
+                    // workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
+                    // setWorkflow(workflow)
 
-                  workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
-                  setWorkflow(workflow)
                 }}
+              //   onBlur={(e) => {
+      			  // setLastSaved(false)
+
+              //     // workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
+              //     // setWorkflow(workflow)
+              //   }}
               />
               {!showDropdown ? null :
 							  <Menu
@@ -13486,7 +13535,7 @@ const releaseToConnectLabel = "Release to Connect"
                   marginTop: 2,
                 }}
               >
-                {actionlist.map((innerdata) => {
+                {subflowActionList.map((innerdata) => {
                   const icon =
                     innerdata.type === "action" ? (
                       <AppsIcon style={{ marginRight: 10 }} />
@@ -13821,11 +13870,6 @@ const releaseToConnectLabel = "Release to Connect"
             </div>
           </div>
         </div>
-      );
-    }
-
-    return null;
-  };
 
   const CommentSidebar = () => {
     if (Object.getOwnPropertyNames(selectedComment).length > 0) {
@@ -20139,7 +20183,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  {/* Looks for triggers" */}
 	  {/* Only fixed the ones that require scrolling on a small screen */}
 	  {/* Most important: Actions. But these are a lot more complex */}
-	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK" || selectedTrigger.trigger_type === "PIPELINE" || selectedTrigger.trigger_type === "USERINPUT") ?
+	  {rightSideBarOpen && (selectedTrigger.trigger_type === "SCHEDULE" || selectedTrigger.trigger_type === "WEBHOOK" || selectedTrigger.trigger_type === "PIPELINE" || selectedTrigger.trigger_type === "USERINPUT" || selectedTrigger.trigger_type === "SUBFLOW") ?
 		  <div id="rightside_actions" style={rightsidebarStyle}>
 			  {Object.getOwnPropertyNames(selectedTrigger).length > 0 ? 
 				selectedTrigger.trigger_type === "SCHEDULE" ? 
@@ -20150,17 +20194,19 @@ const releaseToConnectLabel = "Release to Connect"
 					WebhookSidebar
         : selectedTrigger.trigger_type === "USERINPUT" ? 
           UserinputSidebar
+        : selectedTrigger.trigger_type === "SUBFLOW" ?
+          SubflowSidebar
 				: null 
 			  : null}
 		  </div>
 	  : null}
 
-    {
+    {/* {
       rightSideBarOpen && selectedTrigger.trigger_type === "SUBFLOW"&& Object.getOwnPropertyNames(selectedTrigger).length > 0   ? 
       <div id="rightside_actions" style={rightsidebarStyle}>
         <SubflowSidebar/>
         </div> : null
-    }
+    } */}
 	  
 	  {/*
       <RightSideBar
