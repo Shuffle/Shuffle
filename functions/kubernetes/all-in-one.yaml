@@ -116,22 +116,22 @@ roleRef:
 
 ---
 
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: shuffle-os-pv
-  namespace: shuffle
-spec:
- capacity:
-   storage: 10Gi  # Adjust the storage size as per your requirements
- accessModes:
-   - ReadWriteOnce  # This allows read-write access to a single node
- persistentVolumeReclaimPolicy: Retain  # Adjust the reclaim policy as per your needs
- storageClassName: shuffle-data  # Set the desired storage class
- hostPath:
-   path: /mnt/shuffle-data/open-search
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: shuffle-os-pv
+#   namespace: shuffle
+# spec:
+#  capacity:
+#    storage: 10Gi  # Adjust the storage size as per your requirements
+#  accessModes:
+#    - ReadWriteOnce  # This allows read-write access to a single node
+#  persistentVolumeReclaimPolicy: Retain  # Adjust the reclaim policy as per your needs
+#  storageClassName: standard-rwo  # Set the desired storage class
+#  hostPath:
+#    path: /mnt/shuffle-data/open-search
 
----
+# ---
 
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -144,7 +144,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: shuffle-data
+  storageClassName: standard-rwo
   resources:
     requests:
       storage: 500Mi
@@ -254,38 +254,38 @@ status:
 
 ---
 
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  namespace: shuffle
-  name: shuffle-apps-pv
-spec:
- capacity:
-   storage: 5Gi
- accessModes:
-   - ReadWriteOnce
- persistentVolumeReclaimPolicy: Retain
- storageClassName: shuffle-data
- hostPath:
-   path: /mnt/shuffle-data/backend
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   namespace: shuffle
+#   name: shuffle-apps-pv
+# spec:
+#  capacity:
+#    storage: 5Gi
+#  accessModes:
+#    - ReadWriteOnce
+#  persistentVolumeReclaimPolicy: Retain
+#  storageClassName: shuffle-data
+#  hostPath:
+#    path: /mnt/shuffle-data/backend
 
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  namespace: shuffle
-  name: shuffle-files-pv
-spec:
- capacity:
-   storage: 5Gi
- accessModes:
-   - ReadWriteOnce
- persistentVolumeReclaimPolicy: Retain
- storageClassName: shuffle-data
- hostPath:
-   path: /mnt/shuffle-data/backend
+# ---
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   namespace: shuffle
+#   name: shuffle-files-pv
+# spec:
+#  capacity:
+#    storage: 5Gi
+#  accessModes:
+#    - ReadWriteOnce
+#  persistentVolumeReclaimPolicy: Retain
+#  storageClassName: shuffle-data
+#  hostPath:
+#    path: /mnt/shuffle-data/backend
 
----
+# ---
 
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -298,7 +298,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: shuffle-data
+  storageClassName: standard-rwo
   resources:
     requests:
       storage: 5Gi
@@ -317,7 +317,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: shuffle-data
+  storageClassName: standard-rwo
   resources:
     requests:
       storage: 5Gi
