@@ -8290,11 +8290,11 @@ const releaseToConnectLabel = "Release to Connect"
             toast("Pipeline deleted!")
             return
           }
-
+       if (trigger.parameters){
           trigger.parameters.push({
             name: data.name,
             value: data.command,
-          });
+          });}
           
           if (data.type === "stop") trigger.status = "stopped";
           else trigger.status = "running";
@@ -8302,7 +8302,6 @@ const releaseToConnectLabel = "Release to Connect"
   
           setSelectedTrigger(trigger);
           setWorkflow(workflow);
-          console.log("Should set the status to running and save");
           saveWorkflow(workflow);
         }
       })
@@ -15347,7 +15346,7 @@ const releaseToConnectLabel = "Release to Connect"
     (env) => env.default && env.Name.toLowerCase() !== "cloud"
   );
 
-  if (selectedTrigger.environment === "onprem" && defaultEnvironment !== undefined) {
+  if (selectedTrigger.trigger_type === "PIPELINE" && selectedTrigger.environment === "onprem" && defaultEnvironment !== undefined) {
      selectedTrigger.environment = defaultEnvironment.Name
      setSelectedTrigger(selectedTrigger)  }
 
@@ -15450,11 +15449,25 @@ const releaseToConnectLabel = "Release to Connect"
                   key="syslogListener"
                   onClick={() => {
                     if(selectedTrigger.status === "running"){
-                      toast("please stop the trigger to edit the configuration");
+                      //toast("please stop the trigger to edit the configuration");
                       return;
                     } else {
                     setSelectedOption("Syslog listener");
-                    setTenzirConfigModalOpen(true);
+                    const url = `${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
+                    const command = `from tcp://192.168.1.100:5162 read syslog | import`
+                    const pipelineConfig = {
+                      command: command,
+                      name: selectedTrigger.label,
+                      type: "create",
+                      environment: selectedTrigger.environment,
+                      workflow_id: workflow.id,
+                      trigger_id: selectedTrigger.id,
+                      start_node: "",
+                      url:url,
+                    };
+                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
+                 
+                  
                   }}}
                   style={{
                     border: "1px solid rgba(255,255,255,0.3)",
@@ -15470,12 +15483,15 @@ const releaseToConnectLabel = "Release to Connect"
                     control={
                       <Radio
                         checked={selectedOption === "Syslog listener"}
-                        onChange={() => setSelectedOption("Syslog listener")}
+                        onChange={() => {
+                          if (selectedTrigger.status !== "running"){
+                          setSelectedOption("Syslog listener")}}
+                        }
                         value={"Syslog listener"}
                         name="option"
                       />
                     }
-                    label="Start Syslog listener"
+                    label= {selectedOption === "Syslog listener" && selectedTrigger.status === "running" ? "listening at 192.168.1.100:5162" : "Start Syslog listener"}
                   />
                 </div>
 
@@ -15483,11 +15499,12 @@ const releaseToConnectLabel = "Release to Connect"
                   key="sigmaRulesearch"
                   onClick={() => {
                     if(selectedTrigger.status === "running"){
-                      toast("please stop the trigger to edit the configuration");
+                     // toast("please stop the trigger to edit the configuration");
                       return;
                     } else {
                     setSelectedOption("SigmaRule");
-                    const command = `export | sigma /var/lib/tenzir/sigma_rules | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
+                    const url = `${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
+                    const command = `export | sigma /var/lib/tenzir/sigma_rules | to ${url}`
                     const pipelineConfig = {
                       command: command,
                       name: selectedTrigger.label,
@@ -15496,6 +15513,7 @@ const releaseToConnectLabel = "Release to Connect"
                       workflow_id: workflow.id,
                       trigger_id: selectedTrigger.id,
                       start_node: "",
+                      url:url,
                     };
                     submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
                  
@@ -15514,7 +15532,9 @@ const releaseToConnectLabel = "Release to Connect"
                     control={
                       <Radio
                         checked={selectedOption === "SigmaRule"}
-                        onChange={() => setSelectedOption("SigmaRule")}
+                        onChange={() => {
+                          if (selectedTrigger.status !== "running"){
+                          setSelectedOption("SigmaRule")}}}
                         value={"Sigma Rulesearch"}
                         name="option"
                       />
@@ -15547,7 +15567,9 @@ const releaseToConnectLabel = "Release to Connect"
                     control={
                       <Radio
                         checked={selectedOption === "Kafka Queue"}
-                        onChange={() => setSelectedOption("Kafka Queue")}
+                        onChange={() => { 
+                          if (selectedTrigger.status !== "running"){
+                          setSelectedOption("Kafka Queue")}}}
                         value={"Kafka Queue"}
                         name="option"
                       />
@@ -15564,7 +15586,7 @@ const releaseToConnectLabel = "Release to Connect"
                     onClick={() => {
 
                       if (selectedOption === "Kafka Queue"){
-
+                      const url = `${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
                       const topic = (selectedTrigger?.parameters?.find(param => param.name === "topic")?.value) || ''
                       const bootstrapServers = (selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''
                       const groupId = (selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''
@@ -15594,10 +15616,10 @@ const releaseToConnectLabel = "Release to Connect"
                       } else {
                         command = `${command},auto.offset.reset=earliest`
 
-                      }
+                      }                      
                       command = `${command},auto.offset.reset=earliest`
                       command = `${command},client.id=${selectedTrigger.id},enable.auto.commit=true,auto.commit.interval.ms=1`
-                      command = `${command} read json | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
+                      command = `${command} read json | to ${url}`
 
                       const pipelineConfig = {
                         command: command,
@@ -15607,28 +15629,9 @@ const releaseToConnectLabel = "Release to Connect"
                         workflow_id: workflow.id,
                         trigger_id: selectedTrigger.id,
                         start_node: "",
+                        url: url,
                       };
                       submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
-                    } else if (selectedOption === "Syslog listener"){
-                      let command = ""
-                        const endpoint = (selectedTrigger?.parameters?.find(param => param.name === "endpoint")?.value) || ''
-                        if(endpoint) {
-                          command = `from tcp://${endpoint} | read syslog | import`
-                        } else {
-                          toast("please enter the topic name")
-                          return;
-                        }
-
-                        const pipelineConfig = {
-                          command: command,
-                          name: selectedTrigger.label,
-                          type: "create",
-                          environment: selectedTrigger.environment,
-                          workflow_id: workflow.id,
-                          trigger_id: selectedTrigger.id,
-                          start_node: "",
-                        };
-                        submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
                     }
                   }}
                     color="primary"
@@ -21438,29 +21441,6 @@ const releaseToConnectLabel = "Release to Connect"
             </div>
           ) : null}{" "}
 
-{selectedOption === "Syslog listener" ? (
-            <div>
-              <b>End Point</b>
-              <TextField
-                id="endpoint"
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
-                }}
-                InputProps={{
-                  style: {},
-                }}
-                fullWidth
-                color="primary"
-                placeholder={"0.0.0.0:5162"}
-                defaultValue={
-                  selectedTrigger?.parameters?.find(
-                    (param) => param.name === "endpoint",
-                  )?.value || ""
-                }
-              />
-            </div>
-          ) : null}{" "}
         </DialogContent>
   
         <DialogActions>
