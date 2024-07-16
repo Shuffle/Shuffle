@@ -10,7 +10,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import { toast } from "react-toastify";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 
-const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, ...otherProps }) => {
+const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, isTenzirActive, ...otherProps }) => {
   const [openCodeEditor, setOpenCodeEditor] = React.useState(false);
   const [fileData, setFileData] = React.useState("");
   const [isEnabled, setIsEnabled] = React.useState(otherProps.is_enabled);
@@ -20,6 +20,10 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, .
   const handleSwitchChange = (event) => {
     if (folderDisabled) {
       toast("enable the directory to enable individual rules");
+      return;
+    }
+    if (!isTenzirActive) {
+      toast("connect to the siem to enable/disable the rule");
       return;
     }
     const newIsEnabled = event.target.checked;
@@ -73,6 +77,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, .
             <Switch
               checked={isEnabled && !folderDisabled}
               onChange={handleSwitchChange}
+              disabled={!isTenzirActive}
             />
           </div>
         </div>
@@ -121,42 +126,43 @@ const toggleRule = (fileId, isCurrentlyEnabled, globalUrl, callback) => {
       toast(`An error occurred while ${action}ing the rule`);
     });
 };
-  const openEditBar = (file_id, setOpenCodeEditor, setFileData, globalUrl) => {
-    getFileContent(file_id, setFileData, globalUrl);
+
+const openEditBar = (file_id, setOpenCodeEditor, setFileData, globalUrl) => {
+    getFileContent(file_id, setFileData, globalUrl)
+    
     setOpenCodeEditor(true);
-  };
+};
 
-  const getFileContent = (file_id, setFileData, globalUrl) => {
-    setFileData("");
-    fetch(globalUrl + "/api/v1/files/" + file_id + "/content", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
+const getFileContent = (file_id, setFileData, globalUrl) => {
+  setFileData("");
+  fetch(globalUrl + "/api/v1/files/" + file_id + "/content", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    credentials: "include",
+  })
+    .then((response) => {
+      if (response.status !== 200) {
+        console.log("Status not 200 for file :O!");
+        return "";
+      }
+      return response.text();
     })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for file :O!");
-          return "";
-        }
-        return response.text();
-      })
-      .then((respdata) => {    
-        if (respdata.length === 0) {
-          toast("Failed getting file. Is it deleted?");
-          return;
-        }
-        return respdata
-      })
-      .then((responseData) => {
-      
-      setFileData(responseData);
-      })
-      .catch((error) => {
-        toast(error.toString());
-      });
-  };
-
+    .then((respdata) => {    
+      if (respdata.length === 0) {
+        toast("Failed getting file. Is it deleted?");
+        return;
+      }
+      return respdata
+    })
+    .then((responseData) => {
+    
+    setFileData(responseData);
+    })
+    .catch((error) => {
+      toast(error.toString());
+    });
+};
 export default RuleCard;
