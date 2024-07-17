@@ -12978,6 +12978,19 @@ const releaseToConnectLabel = "Release to Connect"
           setWorkflow(workflow)
         }
 
+        if(selectedTrigger.name === "User Input"){
+          const toComplete = selectedTrigger.parameters[0].value + "$" + values[0].autocomplete
+          // selectedTrigger.parameters[1].value = toComplete
+          workflow.triggers[selectedTriggerIndex].parameters[0].value = toComplete
+          const foundfield = document.getElementById("userinput_info")
+							if (foundfield !== undefined && foundfield !== null) {
+								foundfield.value = toComplete
+							}
+          // setSelectedTrigger(selectedTrigger)
+          // setSubflowExec(toComplete)
+          setWorkflow(workflow)
+        }
+
         setUpdate(Math.random());
         setShowDropdown(false);
         setMenuPosition(null);
@@ -14098,6 +14111,7 @@ const releaseToConnectLabel = "Release to Connect"
         ) {
           workflow.triggers[selectedTriggerIndex].parameters = [];
           workflow.triggers[selectedTriggerIndex].parameters[0] = {
+            id:"userinput_info",
             name: "alertinfo",
             value: "Do you want to continue the workflow? Start parameters: $exec",
           };
@@ -15003,6 +15017,7 @@ const releaseToConnectLabel = "Release to Connect"
               </div>
             </div>
             <TextField
+              id="userinput_info"
               style={{
                 backgroundColor: theme.palette.inputColor,
                 borderRadius: theme.palette.borderRadius,
@@ -15010,9 +15025,58 @@ const releaseToConnectLabel = "Release to Connect"
               InputProps={{
                 style: {
                 },
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <ButtonGroup orientation="vertical">
+                      <Tooltip title="Expand window" placement="top">
+                        <AspectRatioIcon
+                          style={{ cursor: "pointer", marginBottom: 10}}
+                          onClick={(event) => {
+                            event.preventDefault()
+                            // setFieldCount(count)
+                            setCodeEditorModalOpen(true)
+                            setActiveDialog("codeeditor")
+                            //setcodedata(data.value)
+                            var parsedvalue = workflow?.triggers[selectedTriggerIndex]?.parameters[0]?.value
+                            // if (parsedvalue === undefined || parsedvalue === null) {
+                            //   parsedvalue = ""
+                            // }
+                            console.log("Data sending to codeeditor: ",{
+                              "name": workflow.triggers[selectedTriggerIndex].parameters[0].name,
+                              "value": parsedvalue,
+                              "field_number": 0,
+                              "actionlist": subflowActionList,
+                              "field_id": "userinput_info",
+                            })
+                            setEditorData({
+                              "name": workflow.triggers[selectedTriggerIndex].parameters[0].name,
+                              "value": parsedvalue,
+                              "field_number": 0,
+                              "actionlist": subflowActionList,
+                              "field_id": "userinput_info",
+                            })
+                          }}
+                        />
+                      </Tooltip>
+                      <Tooltip title="Autocomplete text" placement="bottom">
+                          <AddCircleOutlineIcon
+                            style={{ cursor: "pointer" }}
+                            onClick={(event) => {
+                              setMenuPosition({
+                                top: event.pageY + 10,
+                                left: event.pageX + 10,
+                              });
+                              //setShowDropdownNumber(3)
+                              setShowDropdown(true);
+                            }}
+                          />
+                      </Tooltip>
+                    </ButtonGroup>
+                  </InputAdornment>
+                ),
               }}
               fullWidth
-              rows="4"
+              rows="6"
               multiline
               defaultValue={
 				workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers[selectedTriggerIndex].parameters !== undefined && workflow.triggers[selectedTriggerIndex].parameters.length > 0  && workflow.triggers[selectedTriggerIndex].parameters[0] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[0].value !== undefined ? workflow.triggers[selectedTriggerIndex].parameters[0].value : ""
@@ -15023,6 +15087,300 @@ const releaseToConnectLabel = "Release to Connect"
                 setTriggerTextInformationWrapper(e.target.value);
               }}
             />
+             {!showDropdown ? null :
+							  <Menu
+                anchorReference="anchorPosition"
+                anchorPosition={menuPosition}
+                onClose={() => {
+                  handleMenuClose();
+                }}
+                open={!!menuPosition}
+                style={{
+                  border: `2px solid #f85a3e`,
+                  color: "white",
+                  marginTop: 2,
+                }}
+              >
+                {subflowActionList.map((innerdata) => {
+                  const icon =
+                    innerdata.type === "action" ? (
+                      <AppsIcon style={{ marginRight: 10 }} />
+                    ) : innerdata.type === "workflow_variable" ||
+                      innerdata.type === "execution_variable" ? (
+                      <FavoriteBorderIcon style={{ marginRight: 10 }} />
+                    ) : (
+                      <ScheduleIcon style={{ marginRight: 10 }} />
+                    );
+      
+                  const handleExecArgumentHover = (inside) => {
+                    var exec_text_field = document.getElementById(
+                      "execution_argument_input_field"
+                    );
+                    if (exec_text_field !== null) {
+                      if (inside) {
+                        exec_text_field.style.border = "2px solid #f85a3e";
+                      } else {
+                        exec_text_field.style.border = "";
+                      }
+                    }
+      
+                    // Also doing arguments
+                    if (
+                      workflow.triggers !== undefined &&
+                      workflow.triggers !== null &&
+                      workflow.triggers.length > 0
+                    ) {
+                      for (let triggerkey in workflow.triggers) {
+                        const item = workflow.triggers[triggerkey];
+      
+                        if (cy !== undefined) {
+                          var node = cy.getElementById(item.id);
+                          if (node.length > 0) {
+                            if (inside) {
+                              node.addClass("shuffle-hover-highlight");
+                            } else {
+                              node.removeClass("shuffle-hover-highlight");
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+      
+                  const handleActionHover = (inside, actionId) => {
+                    if (cy !== undefined) {
+                      var node = cy.getElementById(actionId);
+                      if (node.length > 0) {
+                        if (inside) {
+                          node.addClass("shuffle-hover-highlight");
+                        } else {
+                          node.removeClass("shuffle-hover-highlight");
+                        }
+                      }
+                    }
+                  };
+      
+                  const handleMouseover = () => {
+                    if (innerdata.type === "Execution Argument") {
+                      handleExecArgumentHover(true);
+                    } else if (innerdata.type === "action") {
+                      handleActionHover(true, innerdata.id);
+                    }
+                  };
+      
+                  const handleMouseOut = () => {
+                    if (innerdata.type === "Execution Argument") {
+                      handleExecArgumentHover(false);
+                    } else if (innerdata.type === "action") {
+                      handleActionHover(false, innerdata.id);
+                    }
+                  };
+      
+                  var parsedPaths = [];
+                  console.log("Found example data: ", innerdata.example)
+                  if (typeof innerdata.example === "object") {
+                    parsedPaths = GetParsedPaths(innerdata.example, "");
+                  }
+      
+                  const coverColor = "#82ccc3"
+      
+                  return parsedPaths.length > 0 ? (
+                    <span>
+                    {/*
+                    <NestedMenuItem
+                      key={innerdata.name}
+                      label={
+                        <div style={{ display: "flex" }}>
+                          {icon} {innerdata.name}
+                        </div>
+                      }
+                      parentMenuOpen={!!menuPosition}
+                      style={{
+                        backgroundColor: theme.palette.inputColor,
+                        color: "white",
+                        minWidth: 250,
+                      }}
+                      onClick={() => {
+                        handleItemClick([innerdata]);
+                      }}
+                    >
+                      {parsedPaths.map((pathdata, index) => {
+                        // FIXME: Should be recursive in here
+                        const icon =
+                          pathdata.type === "value" ? (
+                            <VpnKeyIcon style={iconStyle} />
+                          ) : pathdata.type === "list" ? (
+                            <FormatListNumberedIcon style={iconStyle} />
+                          ) : (
+                            <ExpandMoreIcon style={iconStyle} />
+                          )
+      
+                        return (
+                          <MenuItem
+                            key={pathdata.name}
+                            style={{
+                              backgroundColor: theme.palette.inputColor,
+                              color: "white",
+                              minWidth: 250,
+                            }}
+                            value={pathdata}
+                            onMouseOver={() => { }}
+                            onClick={() => {
+                              handleItemClick([innerdata, pathdata]);
+                            }}
+                          >
+                            <Tooltip
+                              color="primary"
+                              title={`Ex. value: ${pathdata.value}`}
+                              placement="left"
+                            >
+                              <div style={{ display: "flex" }}>
+                                {icon} {pathdata.name}
+                              </div>
+                            </Tooltip>
+                          </MenuItem>
+                        );
+                      })}
+                    </NestedMenuItem>
+                    */}
+      
+                    <NestedMenuItem
+                      key={innerdata.name}
+                      label={
+                        <div style={{ display: "flex", marginLeft: 0, }}>
+                          {icon} {innerdata.name}
+                        </div>
+                      }
+                      parentMenuOpen={!!menuPosition}
+                      style={{
+                        color: "white",
+                        minWidth: 250,
+                        maxWidth: 250,
+                        maxHeight: 50,
+                        overflow: "hidden",
+                      }}
+                      onClick={() => {
+                        console.log("CLICKED: ", innerdata);
+                        console.log(innerdata.example)
+                        handleItemClick([innerdata]);
+                      }}
+                    >
+                      <Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition.top-200, left: menuPosition.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+      
+                        <MenuItem
+                          key={innerdata.name}
+                          style={{
+                            backgroundColor: theme.palette.inputColor,
+                            marginLeft: 15,
+                            color: "white",
+                            minWidth: 250,
+                            maxWidth: 250,
+                            padding: 0, 
+                            position: "relative",
+                          }}
+                          value={innerdata}
+                          onMouseOver={() => {
+                            //console.log("HOVER: ", pathdata);
+                          }}
+                          onClick={() => {
+                            handleItemClick([innerdata]);
+                          }}
+                        >
+                          <Typography variant="h6" style={{paddingBottom: 5}}>
+                            {innerdata.name}
+                          </Typography>
+                        </MenuItem>
+      
+                        {parsedPaths.map((pathdata, index) => {
+                          // FIXME: Should be recursive in here
+                          //<VpnKeyIcon style={iconStyle} />
+                          const icon =
+                            pathdata.type === "value" ? (
+                              <span style={{marginLeft: 9, }} />
+                            ) : pathdata.type === "list" ? (
+                              <FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
+                            ) : (
+                              <CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
+                            );
+                          //<ExpandMoreIcon style={iconStyle} />
+      
+                          const indentation_count = (pathdata.name.match(/\./g) || []).length+1
+                          const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
+                          //const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
+                          const boxPadding = 0 
+                          const namesplit = pathdata.name.split(".")
+                          const newname = namesplit[namesplit.length-1]
+                          return (
+                            <MenuItem
+                              key={pathdata.name}
+                              style={{
+                                backgroundColor: theme.palette.inputColor,
+                                color: "white",
+                                minWidth: 250,
+                                maxWidth: 250,
+                                padding: boxPadding, 
+                              }}
+                              value={pathdata}
+                              onMouseOver={() => {
+                                //console.log("HOVER: ", pathdata);
+                              }}
+                              onClick={() => {
+                                handleItemClick([innerdata, pathdata]);
+                              }}
+                            >
+                              <Tooltip
+                                color="primary"
+                                title={`Ex. value: ${pathdata.value}`}
+                                placement="left"
+                              >
+                                <div style={{ display: "flex", height: 30, }}>
+                                  {Array(indentation_count).fill().map((subdata, subindex) => {
+                                    return (
+                                      baseIndent
+                                    )
+                                  })}
+                                  {icon} {newname} 
+                                  {pathdata.type === "list" ? <SquareFootIcon style={{marginleft: 10, }} onClick={(e) => {
+      
+                                  }} /> : null}
+                                </div>
+                              </Tooltip>
+                            </MenuItem>
+                          );
+                        })}
+                      </Paper>
+                    </NestedMenuItem>
+                    </span>
+                  ) : (
+                    <MenuItem
+                      key={innerdata.name}
+                      style={{
+                        backgroundColor: theme.palette.inputColor,
+                        color: "white",
+                      }}
+                      value={innerdata}
+                      onMouseOver={() => handleMouseover()}
+                      onMouseOut={() => {
+                        handleMouseOut();
+                      }}
+                      onClick={() => {
+                        handleItemClick([innerdata]);
+                      }}
+                    >
+                      <Tooltip
+                        color="primary"
+                        title={`Value: ${innerdata.value}`}
+                        placement="left"
+                      >
+                        <div style={{ display: "flex" }}>
+                          {icon} {innerdata.name}
+                        </div>
+                      </Tooltip>
+                    </MenuItem>
+                  );
+                })}
+              </Menu>
+              }
             <div
               style={{
                 marginTop: "20px",

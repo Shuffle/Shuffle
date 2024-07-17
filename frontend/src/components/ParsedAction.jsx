@@ -1899,7 +1899,7 @@ const ParsedAction = (props) => {
 	
 											for (let [subkey, subkeyval] in Object.entries(params)) {
 												const param = workflow.triggers[key].parameters[subkey];
-												if(param.name === "argument"){
+												if(param.name === "argument" || param.name === "alertinfo"){
 													if (!param.value.includes("$")) {
 														continue
 													}
