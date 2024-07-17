@@ -1,15 +1,27 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shuffle
+
 ---
 
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: shuffle-data
+  namespace: shuffle
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 
 ---
 
 apiVersion: v1
+metadata:
+  namespace: shuffle
+  creationTimestamp: null
+  labels:
+    io.kompose.service: backend-env
+  name: env
 data:
   BACKEND_HOSTNAME: shuffle-backend
   BACKEND_PORT: "5001"
@@ -51,11 +63,13 @@ data:
   SHUFFLE_OPENSEARCH_APIKEY: ""
   SHUFFLE_OPENSEARCH_CERTIFICATE_FILE: ""
   SHUFFLE_OPENSEARCH_CLOUDID: ""
+  KUBERNETES_NAMESPACE: shuffle
   SHUFFLE_OPENSEARCH_INDEX_PREFIX: ""
   SHUFFLE_OPENSEARCH_PASSWORD: admin
   SHUFFLE_OPENSEARCH_PROXY: ""
   SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY: "true"
   SHUFFLE_OPENSEARCH_URL: https://opensearch:9200
+  SHUFFLE_MEMCACHED: shuffle-memcached:11211
   SHUFFLE_OPENSEARCH_USERNAME: admin
   SHUFFLE_ORBORUS_STARTUP_DELAY: "\t\t"
   SHUFFLE_PASS_APP_PROXY: "FALSE"
@@ -68,11 +82,6 @@ data:
   REGISTRY_AUTH: "false"
   SHUFFLE_KUBERNETES_WORKER: "ghcr.io/shuffle/shuffle-worker:nightly"
 kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    io.kompose.service: backend-env
-  name: env
 
 ---
 
@@ -107,25 +116,27 @@ roleRef:
 
 ---
 
-apiVersion: v1
-kind: PersistentVolume
-metadata:
- name: shuffle-os-pv
-spec:
- capacity:
-   storage: 10Gi  # Adjust the storage size as per your requirements
- accessModes:
-   - ReadWriteOnce  # This allows read-write access to a single node
- persistentVolumeReclaimPolicy: Retain  # Adjust the reclaim policy as per your needs
- storageClassName: shuffle-data  # Set the desired storage class
- hostPath:
-   path: /mnt/shuffle-data/open-search
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: shuffle-os-pv
+#   namespace: shuffle
+# spec:
+#  capacity:
+#    storage: 10Gi  # Adjust the storage size as per your requirements
+#  accessModes:
+#    - ReadWriteOnce  # This allows read-write access to a single node
+#  persistentVolumeReclaimPolicy: Retain  # Adjust the reclaim policy as per your needs
+#  storageClassName: standard-rwo  # Set the desired storage class
+#  hostPath:
+#    path: /mnt/shuffle-data/open-search
 
----
+# ---
 
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  namespace: shuffle
   creationTimestamp: null
   labels:
     io.kompose.service: opensearch-claim0
@@ -133,7 +144,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: shuffle-data
+  storageClassName: standard-rwo
   resources:
     requests:
       storage: 500Mi
@@ -143,6 +154,7 @@ status: {}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: shuffle
   annotations:
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.version: 1.26.0 (40646f47)
@@ -222,6 +234,7 @@ status: {}
 apiVersion: v1
 kind: Service
 metadata:
+  namespace: shuffle
   annotations:
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.version: 1.26.0 (40646f47)
@@ -241,51 +254,54 @@ status:
 
 ---
 
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   namespace: shuffle
+#   name: shuffle-apps-pv
+# spec:
+#  capacity:
+#    storage: 5Gi
+#  accessModes:
+#    - ReadWriteOnce
+#  persistentVolumeReclaimPolicy: Retain
+#  storageClassName: shuffle-data
+#  hostPath:
+#    path: /mnt/shuffle-data/backend
+
+# ---
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   namespace: shuffle
+#   name: shuffle-files-pv
+# spec:
+#  capacity:
+#    storage: 5Gi
+#  accessModes:
+#    - ReadWriteOnce
+#  persistentVolumeReclaimPolicy: Retain
+#  storageClassName: shuffle-data
+#  hostPath:
+#    path: /mnt/shuffle-data/backend
+
+# ---
+
 apiVersion: v1
-kind: PersistentVolume
+kind: PersistentVolumeClaim
 metadata:
- name: shuffle-apps-pv
+  namespace: shuffle
+  creationTimestamp: null
+  labels:
+    io.kompose.service: backend-files-claim
+  name: backend-files-claim
 spec:
- capacity:
-   storage: 5Gi
- accessModes:
-   - ReadWriteOnce
- persistentVolumeReclaimPolicy: Retain
- storageClassName: shuffle-data
- hostPath:
-   path: /mnt/shuffle-data/backend
-
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
- name: shuffle-files-pv
-spec:
- capacity:
-   storage: 5Gi
- accessModes:
-   - ReadWriteOnce
- persistentVolumeReclaimPolicy: Retain
- storageClassName: shuffle-data
- hostPath:
-   path: /mnt/shuffle-data/backend
-
----
-
- apiVersion: v1
- kind: PersistentVolumeClaim
- metadata:
-   creationTimestamp: null
-   labels:
-     io.kompose.service: backend-files-claim
-   name: backend-files-claim
- spec:
-   accessModes:
-     - ReadWriteOnce
-   storageClassName: shuffle-data
-   resources:
-     requests:
-       storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard-rwo
+  resources:
+    requests:
+      storage: 5Gi
 #  status: {}
 
 ---
@@ -293,6 +309,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  namespace: shuffle
   creationTimestamp: null
   labels:
     io.kompose.service: backend-apps-claim
@@ -300,7 +317,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: shuffle-data
+  storageClassName: standard-rwo
   resources:
     requests:
       storage: 5Gi
@@ -311,6 +328,48 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: shuffle-memcached
+  namespace: shuffle
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shuffle-memcached
+  template:
+    metadata:
+      labels:
+        app: shuffle-memcached
+    spec:
+      containers:
+      - name: shuffle-memcached
+        image: memcached:latest
+        ports:
+        - containerPort: 11211
+        resources: {}
+      restartPolicy: Always
+
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: shuffle
+  name: shuffle-memcached
+spec:
+  ports:
+  - port: 11211
+    targetPort: 11211
+  selector:
+    app: shuffle-memcached
+  type: ClusterIP
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: shuffle
   annotations:
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.version: 1.26.0 (40646f47)
@@ -538,6 +597,11 @@ spec:
                 configMapKeyRef:
                   key: SHUFFLE_OPENSEARCH_APIKEY
                   name: env
+            - name: SHUFFLE_MEMCACHED
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_MEMCACHED
+                  name: env
             - name: SHUFFLE_OPENSEARCH_CERTIFICATE_FILE
               valueFrom:
                 configMapKeyRef:
@@ -642,6 +706,7 @@ status: {}
 apiVersion: v1
 kind: Service
 metadata:
+  namespace: shuffle
   annotations:
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.version: 1.26.0 (40646f47)
@@ -664,6 +729,7 @@ status:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: shuffle
   annotations:
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.version: 1.26.0 (40646f47)
@@ -705,6 +771,7 @@ status: {}
 apiVersion: v1
 kind: Service
 metadata:
+  namespace: shuffle
   annotations:
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.version: 1.26.0 (40646f47)
@@ -733,6 +800,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: shuffle
   annotations:
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.version: 1.26.0 (40646f47)
@@ -779,6 +847,11 @@ spec:
                 configMapKeyRef:
                   key: IS_KUBERNETES
                   name: env
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  key: KUBERNETES_NAMESPACE
+                  name: env
             - name: REGISTRY_URL
               valueFrom:
                 configMapKeyRef:
@@ -790,6 +863,11 @@ spec:
                   key: SHUFFLE_KUBERNETES_WORKER
                   name: env
 
+            - name: SHUFFLE_MEMCACHED
+              valueFrom:
+                configMapKeyRef:
+                  key: SHUFFLE_MEMCACHED
+                  name: env
           image: ghcr.io/shuffle/shuffle-orborus:nightly
           #imagePullPolicy: Never
           name: shuffle-orborus
