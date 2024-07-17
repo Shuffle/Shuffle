@@ -1,5 +1,5 @@
 /* eslint-disable react/no-multi-comp */
-import React, { useState, useEffect, useLayoutEffect, memo, useMemo, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import ReactDOM from "react-dom"
 
 import theme from "../theme.jsx";
@@ -922,14 +922,8 @@ const releaseToConnectLabel = "Release to Connect"
 
       setSubflowActionlist(newActionList);
 
-  },[selectedTrigger, workflowExecutions]);
-
-
-  useEffect(() => {
-    if(selectedTrigger.parameters !== undefined && selectedTrigger.parameters.length > 1){
-    setSubflowExec(selectedTrigger?.parameters[1]?.value)
-    }
-  },[selectedTrigger,selectedTriggerIndex,subflowActionList]);
+  },[selectedTrigger, workflowExecutions, workflow.workflow_variables, workflow.execution_variables, workflow.branches,workflow]);
+  
 
   const [executionArgumentModalOpen, setExecutionArgumentModalOpen] = React.useState(false);
 
@@ -4671,7 +4665,6 @@ const releaseToConnectLabel = "Release to Connect"
 	}
 
 
-  console.log("Selected Trigger: ", selectedTrigger)
   // Nodeselectbatching:
   // https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
   // onNodeClick
@@ -4686,8 +4679,6 @@ const releaseToConnectLabel = "Release to Connect"
       if ((data.parameters !== undefined) && (data?.parameters?.length > 0)) {
         getWorkflowApps(data.parameters[0].value)
       }
-      console.log("data", data)
-      // setSubflowExec(data?.parameters[1]?.value)
     }
 
 	if (data.buttonType == "ACTIONSUGGESTION") {
@@ -12976,9 +12967,14 @@ const releaseToConnectLabel = "Release to Connect"
 
         if (selectedTrigger.name === "Shuffle Workflow") {
           const toComplete = selectedTrigger.parameters[1].value + "$" + values[0].autocomplete
-          selectedTrigger.parameters[1].value = toComplete
-          // setSubflowExec(selectedTrigger.parameters[1].value)
-          setSelectedTrigger(selectedTrigger)
+          // selectedTrigger.parameters[1].value = toComplete
+          workflow.triggers[selectedTriggerIndex].parameters[1].value = toComplete
+          const foundfield = document.getElementById("subflow_field")
+							if (foundfield !== undefined && foundfield !== null) {
+								foundfield.value = toComplete
+							}
+          // setSelectedTrigger(selectedTrigger)
+          // setSubflowExec(toComplete)
           setWorkflow(workflow)
         }
 
@@ -12986,16 +12982,6 @@ const releaseToConnectLabel = "Release to Connect"
         setShowDropdown(false);
         setMenuPosition(null);
     };
-
-    const handleSubflowExecChange = (e) => {
-        setSubflowExec(e.target.value)
-        // if(selectedTrigger.length > 0){
-        //   selectedTrigger.parameters[1].value = e.target.value
-        //   setSelectedTrigger(selectedTrigger)
-        //   setWorkflow(workflow)
-        //   setLastSaved(false)
-        // }
-    }
 
    const SubflowSidebar =  Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "SUBFLOW" ? null :
         <div style={appApiViewStyle}>
@@ -13287,6 +13273,7 @@ const releaseToConnectLabel = "Release to Connect"
 									value: data
 								}
 							})
+              document.activeElement.blur();
 						  }}
                         >
 						  <PolylineIcon style={{ marginRight: 8 }} />
@@ -13301,11 +13288,6 @@ const releaseToConnectLabel = "Release to Connect"
                         style={{
                           backgroundColor: theme.palette.inputColor,
                           borderRadius: theme.palette.borderRadius,
-                        }}
-                        sx={{
-                          '& .MuiInputLabel-root': {
-                            transition: 'none', // Disable the animation for the label
-                          },
                         }}
                         {...params}
                         label="Find your workflow"
@@ -13414,11 +13396,6 @@ const releaseToConnectLabel = "Release to Connect"
                             backgroundColor: theme.palette.inputColor,
                             borderRadius: theme.palette.borderRadius,
                           }}
-                          sx={{
-                            '& .MuiInputLabel-root': {
-                              transition: 'none', // Disable the animation for the label
-                            },
-                          }}
                           {...params}
                           label="Select a start-node (optional)"
                           variant="outlined"
@@ -13481,7 +13458,7 @@ const releaseToConnectLabel = "Release to Connect"
                             }}
                           />
                         </Tooltip>
-                        <Tooltip title="Autocomplete text" placement="top">
+                        <Tooltip title="Autocomplete text" placement="bottom">
                           <AddCircleOutlineIcon
                             style={{ cursor: "pointer" }}
                             onClick={(event) => {
@@ -13503,23 +13480,15 @@ const releaseToConnectLabel = "Release to Connect"
                 fullWidth
                 color="primary"
                 placeholder="Some execution data"
-                // defaultValue={
-                //   workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
-                // }
-                value={subflowExec}
-                onChange={(e) => {
-                  // handleSubflowExecChange(e)
-                  setSubflowExec(e.target.value)
-                    // workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
-                    // setWorkflow(workflow)
+                defaultValue={
+                  workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
+                }
+                onBlur={(e) => {
+                  workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
+                  setWorkflow(workflow)
+                  setLastSaved(false)
 
                 }}
-              //   onBlur={(e) => {
-      			  // setLastSaved(false)
-
-              //     // workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
-              //     // setWorkflow(workflow)
-              //   }}
               />
               {!showDropdown ? null :
 							  <Menu
@@ -22098,7 +22067,7 @@ const releaseToConnectLabel = "Release to Connect"
 				fieldCount={editorData.field_number}
 				actionlist={editorData.actionlist}
 				fieldname={editorData.field_id}
-
+        selectedTrigger={selectedTrigger}
 				changeActionParameterCodeMirror={changeActionParameterCodeMirror}
         activeDialog={activeDialog}
         setActiveDialog={setActiveDialog}
