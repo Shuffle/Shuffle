@@ -106,7 +106,6 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 	}
 
 	log.Printf("[INFO] Starting frequency for execution: %d", newfrequency)
-	
 
 	//jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
 	jobret, err := newscheduler.Every(newfrequency).Seconds().Run(job)
@@ -309,7 +308,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 						if envData.Swarm {
 							env.Licensed = true
 							env.RunType = "docker"
-						} 
+						}
 
 						if envData.Kubernetes {
 							env.RunType = "k8s"
@@ -741,7 +740,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
 	log.Printf("[DEBUG][%s] Running workflow execution update", workflowExecutionId)
 
-
 	// Should start a tx for the execution here
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
 	if err != nil {
@@ -925,7 +923,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	if len(workflow.ParentWorkflowId) > 0 {
 		resp.WriteHeader(403)
 		resp.Write([]byte(`{"success": false, "reason": "Can't delete a workflow distributed from your parent org"}`))
-		return 
+		return
 	}
 
 	if user.Id != workflow.Owner || len(user.Id) == 0 {
@@ -983,8 +981,6 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
 }
-
-
 
 func handleExecution(id string, workflow shuffle.Workflow, request *http.Request, orgId string) (shuffle.WorkflowExecution, string, error) {
 	//go func() {
@@ -1079,7 +1075,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed running: %s", err), err
 		}
 	}
-
 
 	err := imageCheckBuilder(execInfo.ImageNames)
 	if err != nil {
@@ -2822,6 +2817,82 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
+
+func handleSingleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	ctx := context.Background()
+	cacheKey := fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-0")
+	shuffle.DeleteCache(ctx, cacheKey)
+
+	// Just need to be logged in
+	// FIXME - should have some permissions?
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in app hotload: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Must be admin to hotload apps"}`))
+		return
+	}
+
+	location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
+	if len(location) == 0 {
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SHUFFLE_APP_HOTLOAD_FOLDER not specified in .env"}`)))
+		return
+	}
+
+	requestUrlFields := strings.Split(request.URL.String(), "/")
+
+	var appName string
+	if requestUrlFields[1] == "api" {
+		if len(requestUrlFields) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		appName = requestUrlFields[4]
+		if strings.Contains(appName, "?") {
+			appName = strings.Split(appName, "?")[0]
+		}
+	}
+
+	location = location + "/" + appName
+
+	log.Printf("[INFO] Starting hotloading from %s", location)
+	err = handleAppHotload(ctx, location, true)
+	if err != nil {
+		log.Printf("[WARNING] Failed app hotload: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	cacheKey = fmt.Sprintf("workflowapps-sorted-100")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
 func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 
 	ctx := context.Background()
@@ -3410,7 +3481,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	// FIXME: Should use environment that is in the source workflow if it exists
 	for i, _ := range workflowExecution.Workflow.Actions {
 		workflowExecution.Workflow.Actions[i].Environment = environment
-		workflowExecution.Workflow.Actions[i].Label = "TMP" 
+		workflowExecution.Workflow.Actions[i].Label = "TMP"
 	}
 	shuffle.SetWorkflowExecution(ctx, workflowExecution, false)
 
@@ -4192,7 +4263,6 @@ func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] Failed adding execution to db: %s", err)
 	}
-
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Reran workflow in %s"}`, parsedEnv)))
