@@ -14821,6 +14821,7 @@ const releaseToConnectLabel = "Release to Connect"
         setSelectedTrigger(trigger);
         setWorkflow(workflow);
         saveWorkflow(workflow);
+        setSelectedTrigger({})
    
       })
       .catch((error) => {
