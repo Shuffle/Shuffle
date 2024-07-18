@@ -2135,7 +2135,7 @@ const AppCreator = (defaultprops) => {
         var skipped = false;
 				var querynames = []
         for (let querykey in item.queries) {
-          const queryitem = item.queries[querykey];
+          let queryitem = item.queries[querykey];
 
 					if (queryitem === undefined || queryitem === null || queryitem.name === undefined || queryitem.name === null || queryitem.name === "") {
 						continue
@@ -2243,7 +2243,7 @@ const AppCreator = (defaultprops) => {
 
       if (item.paths.length > 0) {
         for (let querykey in item.paths) {
-          const queryitem = item.paths[querykey];
+          let queryitem = item.paths[querykey];
 
           if (queryitem.toLowerCase() == "url") {
             queryitem = "action_url";
@@ -2276,7 +2276,7 @@ const AppCreator = (defaultprops) => {
         const paths = values[0];
 
         for (let querykey in paths) {
-          const queryitem = paths[querykey];
+          let queryitem = paths[querykey];
           newitem = {
             in: "path",
             name: queryitem,
