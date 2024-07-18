@@ -1,15 +1,13 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
-
 import { toast } from 'react-toastify';
 import Markdown from 'react-markdown'
-
 import theme from '../theme.jsx';
 import ReactJson from "react-json-view";
 import { isMobile } from "react-device-detect";
 import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
-
+import remarkGfm from 'remark-gfm'
 import {
     Grid,
     TextField,
@@ -26,7 +24,6 @@ import {
     ListItemButton,
     ListItemText
 } from "@mui/material";
-
 import {
     Link as LinkIcon,
     Edit as EditIcon,
@@ -35,7 +32,6 @@ import {
     FileCopy as FileCopyIcon
 } from "@mui/icons-material";
 import { fontGrid } from "@mui/material/styles/cssUtils.js";
-import { active } from "d3";
 
 const Body = {
     //maxWidth: 1000,
@@ -46,6 +42,7 @@ const Body = {
     height: "100%",
     color: "white",
     position: "relative",
+	paddingTop: 40, 
     //textAlign: "center",
 };
 
@@ -125,7 +122,7 @@ export const Paragrah = (props) => {
 
 
     return (
-        <div class="sdf">
+        <div>
             {element}
         </div>
     )
@@ -155,8 +152,15 @@ export const OuterLink = (props) => {
 
 
 export const Img = (props) => {
-    return <img style={{ borderRadius: theme.palette.borderRadius, width: 750, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} alt={props.alt} src={props.src} />;
+    return(
+	  <img 
+		style={{border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, width: 750, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} 
+		alt={props.alt} 
+		src={props.src} 
+	  />
+	)
 }
+
 
 export const CodeHandler = (props) => {
     const propvalue = props.value !== undefined && props.value !== null ? props.value : props.children !== undefined && props.children !== null && props.children.length > 0 ? props.children[0] : ""
@@ -369,8 +373,7 @@ const Docs = (defaultprops) => {
             hash = hash.split('?')[0]
         }
         if (hash) {
-            console.log("HASH: ", hash)
-            const element = document.getElementById(hash)
+            const element = document.getElementById(hash.toLowerCase())
             if (element) {
                 element.scrollIntoView({
                     behavior: "instant",
@@ -453,6 +456,30 @@ const Docs = (defaultprops) => {
         paddingRight: 15,
         minHeight: "80vh",
     };
+
+    const noteLabelStyle = {
+        fontWeight: "bold",
+        color: "#f86a3e",
+        display: "block",
+        marginBottom: "5px",
+    };
+
+    const Blockquote = ({ children }) => {
+
+        const textContent = children.map(child =>
+          child.props && child.props.children ? child.props.children.join('') : child
+        ).join('').trim();
+
+        // Maybe some more contents....
+        const isNote = textContent.startsWith("[!TIP]");
+        return (
+          <blockquote style={isNote ? alertNote : {}}>
+            {isNote && <span style={noteLabelStyle}>Tips:</span>}
+            {isNote ? textContent.replace("[!TIP]", "").trim() : children}
+          </blockquote>
+        );
+      };
+
 
     const Heading = (props) => {
         const [hover, setHover] = useState(false);
@@ -837,6 +864,12 @@ const Docs = (defaultprops) => {
         fontSize: isMobile ? "1.3rem" : "1.1rem",
     };
 
+    const alertNote = {
+        padding: "10px",
+        borderLeft: "5px solid #f86a3e",
+        backgroundColor: "rgb(26,26,26)",
+    };
+
     const CustomButton = (props) => {
         const { title, icon, link } = props
 
@@ -971,7 +1004,9 @@ const Docs = (defaultprops) => {
         h6: Heading,
         a:  OuterLink,
         p:  Paragrah,
+        blockquote: Blockquote,
     }
+
 
 
     // PostDataBrowser Section
@@ -1022,8 +1057,10 @@ const Docs = (defaultprops) => {
                             <Markdown
                                 components={markdownComponents}
                                 id="markdown_wrapper"
+                                className={"style.reactMarkdown"}
                                 escapeHtml={false}
                                 skipHtml={false}
+                                remarkPlugins={[remarkGfm]}
                                 style={{
                                     maxWidth: "100%", minWidth: "100%",
                                 }}
