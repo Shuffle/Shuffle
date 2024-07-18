@@ -12796,61 +12796,6 @@ const releaseToConnectLabel = "Release to Connect"
     );
   };
 
-  if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
-    if (workflow.triggers[selectedTriggerIndex] === undefined) {
-      return null;
-    }
-
-    if (
-      workflow.triggers[selectedTriggerIndex].parameters === undefined ||
-      workflow.triggers[selectedTriggerIndex].parameters === null ||
-      workflow.triggers[selectedTriggerIndex].parameters.length === 0
-    ) {
-      workflow.triggers[selectedTriggerIndex].parameters = [];
-      workflow.triggers[selectedTriggerIndex].parameters[0] = {
-        name: "workflow",
-        value: "",
-      };
-      workflow.triggers[selectedTriggerIndex].parameters[1] = {
-        name: "argument",
-        value: "",
-        id:"subflow_field"
-      };
-      workflow.triggers[selectedTriggerIndex].parameters[2] = {
-        name: "user_apikey",
-        value: "",
-      };
-      workflow.triggers[selectedTriggerIndex].parameters[3] = {
-        name: "startnode",
-        value: "",
-      };
-      workflow.triggers[selectedTriggerIndex].parameters[4] = {
-        name: "check_result",
-        value: "false",
-      };
-      workflow.triggers[selectedTriggerIndex].parameters[5] = {
-        name: "auth_override",
-        value: "",
-      };
-
-      /*
-      // API-key has been replaced by auth key for the execution. 
-      // Parents can now automatically execute children without auth from a user, as long as the subflow in question is owned by the same org and the subflow is actually referencing it during checkin.
-      console.log("SETTINGS: ", userSettings);
-      if (
-        userSettings !== undefined &&
-        userSettings !== null &&
-        userSettings.apikey !== null &&
-        userSettings.apikey !== undefined &&
-        userSettings.apikey.length > 0
-      ) {
-        workflow.triggers[selectedTriggerIndex].parameters[2] = {
-          name: "user_apikey",
-          value: userSettings.apikey,
-        };
-      }
-      */
-    }
 
     var handleSubflowStartnodeSelection = (e) => {
       setSubworkflowStartnode(e.target.value);
@@ -12925,7 +12870,6 @@ const releaseToConnectLabel = "Release to Connect"
 
       setWorkflow(workflow);
     };
-  }
 
     
     var subflowtypes = [
@@ -12996,862 +12940,7 @@ const releaseToConnectLabel = "Release to Connect"
         setMenuPosition(null);
     };
 
-   const SubflowSidebar =  Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "SUBFLOW" ? null :
-        <div style={appApiViewStyle}>
-		  <span style={{display: "flex", }}>
-		    <h3 style={{ marginBottom: "5px", flex: 3, }}>
-		      {selectedTrigger.app_name}
-		    </h3>
-		  	<Tooltip title="Choose the type of subflow to run. This is NOT required, but is used to help Shuffle's workflow generators better understand the workflow." placement="top">
-				<Select
-				  MenuProps={{
-					disableScrollLock: true,
-				  }}
-				  value={selectedTrigger.tags !== undefined && selectedTrigger.tags !== null && selectedTrigger.tags.length > 0 ? selectedTrigger.tags[0] : "Any"}
-				  onChange={(event) => {
-					  if (selectedTrigger.tags === undefined || selectedTrigger.tags === null) {
-						  selectedTrigger.tags = [event.target.value]
-					  } else {
-						  if (selectedTrigger.tags.includes(event.target.value)) {
-							  return
-						  } 
-
-						  if (selectedTrigger.tags.length > 0) {
-							  selectedTrigger.tags = []
-						  }
-
-						  selectedTrigger.tags.push(event.target.value)
-					  }
-
-					  setSelectedTrigger(selectedTrigger)
-					  setUpdate(Math.random())
-				  }}
-				  style={{
-					marginTop: 10,
-					flex: 1, 
-					backgroundColor: theme.palette.inputColor,
-					color: "white",
-					height: 35,
-					marginleft: 10,
-					borderRadius: theme.palette.borderRadius,
-				    color: "rgba(255,255,255,0.4)",
-				  }}
-				  SelectDisplayProps={{
-					style: {
-					},
-				  }}
-				>
-				  {subflowtypes.map((data, index) => {
-					return (
-					  <MenuItem
-						key={index}
-						style={{
-						  backgroundColor: theme.palette.inputColor,
-						  color: "white",
-						}}
-						value={data.name}
-					  >
-						{data.name}
-					  </MenuItem>
-					);
-				  })}
-				</Select>
-		    </Tooltip>
-		  </span>
-	  	  <a
-			rel="noopener noreferrer"
-			target="_blank"
-			href="https://shuffler.io/docs/triggers#subflow"
-			style={{ textDecoration: "none", color: "#f85a3e" }}
-		  >
-			What are subflows?
-		  </a>
-          <Divider
-            style={{
-              marginBottom: "10px",
-              marginTop: "10px",
-              height: "1px",
-              width: "100%",
-              backgroundColor: "rgb(91, 96, 100)",
-            }}
-          />
-          <div style={{ display: "flex" }}>
-            <div style={{ flex: 5 }}>
-              <Typography>Name</Typography>
-              <TextField
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
-                }}
-                InputProps={{
-                  style: {
-                  },
-                }}
-                fullWidth
-                color="primary"
-                placeholder={selectedTrigger.label}
-                onChange={selectedTriggerChange}
-              />
-            </div>
-            <div>
-              <div style={{ flex: 1, marginLeft: 5, }}>
-                <Tooltip
-                  color="primary"
-                  title={"Delay before action runs (in seconds)"}
-                  placement="top"
-                >
-                  <span>
-                    <Typography>Delay</Typography>
-                    <TextField
-                      style={{
-                        backgroundColor: theme.palette.inputColor,
-						maxWidth: 50,
-                      }}
-                      InputProps={{
-                        style: theme.palette.innerTextfieldStyle,
-                      }}
-                      placeholder={selectedTrigger.execution_delay}
-                      defaultValue={selectedAction.execution_delay}
-                      onChange={(event) => {
-                        if (isNaN(event.target.value)) {
-                          console.log("NAN: ", event.target.value)
-                          return
-                        }
-
-                        const parsedNumber = parseInt(event.target.value)
-                        if (parsedNumber > 86400) {
-                          console.log("Max number is 1 day (86400)")
-                          return
-                        }
-
-                        selectedTrigger.execution_delay = parseInt(event.target.value)
-                        setSelectedTrigger(selectedTrigger)
-                      }}
-                    />
-                  </span>
-                </Tooltip>
-              </div>
-            </div>
-          </div>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={
-                  workflow.triggers[selectedTriggerIndex].parameters[4] !==
-                  undefined &&
-                  workflow.triggers[selectedTriggerIndex].parameters[4]
-                    .value === "true"
-                }
-                onChange={() => {
-                  const newvalue = workflow.triggers[selectedTriggerIndex].parameters[4] === undefined || workflow.triggers[selectedTriggerIndex].parameters[4].value === "false"? "true" : "false";
-                  workflow.triggers[selectedTriggerIndex].parameters[4] = {
-                    name: "check_result",
-                    value: newvalue,
-                  };
-
-                  setWorkflow(workflow);
-                  setUpdate(Math.random());
-                }}
-                color="primary"
-                value="Wait for results"
-              />
-            }
-            style={{ marginTop: 10 }}
-            label={<div style={{ color: "white" }}>Wait for results</div>}
-          />
-          <div style={{ flex: "6", marginTop: 10, }}>
-            <div>
-              <div style={{ display: "flex" }}>
-                <div
-                  style={{
-                    marginTop: "20px",
-                    marginBottom: "7px",
-                    display: "flex",
-                    flex: 5,
-                  }}
-                >
-                  <div style={{ flex: "10" }}>
-                    <b>Select a workflow to execute </b>
-                  </div>
-                </div>
-                {workflow.triggers[selectedTriggerIndex].parameters[0].value
-                  .length === 0 ? null : workflow.triggers[selectedTriggerIndex]
-                    .parameters[0].value === props.match.params.key ? null : (
-                  <div style={{ marginLeft: 5, flex: 1 }}>
-                    <a
-                      rel="noopener noreferrer"
-                      href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`}
-                      target="_blank"
-                      style={{
-                        textDecoration: "none",
-                        color: "#f85a3e",
-                        marginLeft: 5,
-                        marginTop: 10,
-                      }}
-                    >
-                      <OpenInNewIcon />
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {workflows === undefined ||
-                workflows === null ||
-                workflows.length === 0 ? null : (
-
-                <Autocomplete
-                  id="subflow_search"
-                  autoHighlight
-				          freeSolo
-                  value={subworkflow}
-                  classes={{ inputRoot: classes.inputRoot }}
-                  ListboxProps={{
-                    style: {
-                      backgroundColor: theme.palette.inputColor,
-                      color: "white",
-                    },
-                  }}
-                  getOptionSelected={(option, value) => option.id === value.id}
-                  getOptionLabel={(option) => {
-                    if (
-                      option === undefined ||
-                      option === null ||
-                      option.name === undefined ||
-                      option.name === null
-                    ) {
-                      return "No Workflow Selected";
-                    }
-
-                    const newname = (
-                      option.name.charAt(0).toUpperCase() + option.name.substring(1)
-                    ).replaceAll("_", " ");
-                    return newname;
-                  }}
-                  options={workflows}
-                  fullWidth
-                  style={{
-                    backgroundColor: theme.palette.inputColor,
-                    height: 50,
-                    borderRadius: theme.palette.borderRadius,
-                  }}
-                  onChange={(event, newValue) => {
-                    setLastSaved(false)
-                    console.log("Found value: ", newValue)
-
-					var parsedinput = { target: { value: newValue } }
-
-					// For variables
-					if (typeof newValue === 'string' && newValue.startsWith("$")) {
-						parsedinput = { 
-							target: { 
-								value: {
-									"name": newValue, 
-									"id": newValue,
-									"actions": [],
-									"triggers": [],
-								} 
-							} 
-						}
-					}
-
-                    handleWorkflowSelectionUpdate(parsedinput)
-                  }}
-            	  renderOption={(props, data, state) => {
-                    if (data.id === workflow.id) {
-                      data = workflow;
-                    }
-
-                    //key={index}
-                    return (
-                      <Tooltip arrow placement="left" title={
-                        <span style={{}}>
-                          {data.image !== undefined && data.image !== null && data.image.length > 0 ?
-                            <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
-                            : null}
-                          <Typography>
-                            Choose Subflow '{data.name}'
-                          </Typography>
-                        </span>
-                      }>
-                        <MenuItem
-                          style={{
-                            backgroundColor: theme.palette.inputColor,
-                            color: data.id === workflow.id ? "red" : "white",
-                          }}
-                          value={data}
-						  onClick={() => {	
-              getWorkflowApps(data.id);
-							handleWorkflowSelectionUpdate({
-								target: {
-									value: data
-								}
-							})
-              document.activeElement.blur();
-						  }}
-                        >
-						  <PolylineIcon style={{ marginRight: 8 }} />
-                          {data.name}
-                        </MenuItem>
-                      </Tooltip>
-                    )
-                  }}
-                  renderInput={(params) => {
-                    return (
-                      <TextField
-                        style={{
-                          backgroundColor: theme.palette.inputColor,
-                          borderRadius: theme.palette.borderRadius,
-                        }}
-                        {...params}
-                        label="Find your workflow"
-                        variant="outlined"
-                      />
-                    );
-                  }}
-                />
-              )}
-
-              {subworkflow === undefined ||
-                subworkflow === null ||
-                subworkflow.id === undefined ||
-                subworkflow.actions === null ||
-                subworkflow.actions === undefined ||
-                subworkflow.actions.length === 0 ? null : (
-                <span>
-                  <div
-                    style={{
-                      marginTop: "20px",
-                      marginBottom: "7px",
-                      display: "flex",
-                    }}
-                  >
-                    <div style={{ flex: "10" }}>
-                      <b>Select the Startnode</b>
-                    </div>
-                  </div>
-                  <Autocomplete
-                    id="subflow_node_search"
-                    autoHighlight
-                    value={subworkflowStartnode}
-                    classes={{ inputRoot: classes.inputRoot }}
-                    ListboxProps={{
-                      style: {
-                        backgroundColor: theme.palette.inputColor,
-                        color: "white",
-                      },
-                    }}
-                    getOptionSelected={(option, value) => option.id === value.id}
-                    getOptionLabel={(option) => {
-                      if (option === undefined || option === null || option.label === undefined || option.label === null) {
-                        if (option.length === 36) {
-
-                        }
-
-                        return "TMP";
-                      }
-
-                      const newname = (
-                        option.label.charAt(0).toUpperCase() + option.label.substring(1)
-                      ).replaceAll("_", " ");
-                      return newname;
-                    }}
-                    options={subworkflow.actions}
-                    fullWidth
-                    style={{
-                      backgroundColor: theme.palette.inputColor,
-                      height: 50,
-                      borderRadius: theme.palette.borderRadius,
-                    }}
-                    onChange={(event, newValue) => {
-      				        setLastSaved(false)
-                      handleSubflowStartnodeSelection({ target: { value: newValue } })
-                    }}
-            		renderOption={(props, action, state) => {
-                      const isParent = getParents(selectedTrigger).find(
-                        (parent) => parent.id === action.id
-                      )
-
-                      return (
-                        <MenuItem
-                          onMouseOver={() => {
-                            if (subworkflow.id === workflow.id) {
-                              handleActionHover(true, action.id)
-                            }
-                          }}
-                          onMouseOut={() => {
-                            if (subworkflow.id === workflow.id) {
-                              handleActionHover(false, action.id)
-                            }
-                          }}
-                          disabled={isCloud && isParent}
-                          onClick={() => {
-                                      handleSubflowStartnodeSelection({ 
-                            target: { 
-                              value: action 
-                            } 
-                          })
-                          document.activeElement.blur();
-                          }}
-                          style={{
-                            backgroundColor: theme.palette.inputColor,
-                            color: isParent ? "red" : "white",
-                          }}
-                          value={action}
-                        >
-                          {action.label}
-                        </MenuItem>
-                      );
-                    }}
-                    renderInput={(params) => {
-                      return (
-                        <TextField
-                          style={{
-                            backgroundColor: theme.palette.inputColor,
-                            borderRadius: theme.palette.borderRadius,
-                          }}
-                          {...params}
-                          label="Select a start-node (optional)"
-                          variant="outlined"
-                        />
-                      );
-                    }}
-                  />
-                </span>
-              )}
-              <div
-                style={{
-                  marginTop: "20px",
-                  marginBottom: "7px",
-                  display: "flex",
-                }}
-              >
-                <div style={{ flex: "10" }}>
-                  <b>Execution Argument</b>
-                </div>
-              </div>
-              <TextField
-                id="subflow_field"
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
-                }}
-                InputProps={{
-                  style: {
-                  },
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <ButtonGroup orientation="vertical">
-                        <Tooltip title="Expand window" placement="top">
-                          <AspectRatioIcon
-                            style={{ cursor: "pointer", marginBottom: 10}}
-                            onClick={(event) => {
-                              event.preventDefault()
-                              // setFieldCount(count)
-                              setCodeEditorModalOpen(true)
-                              setActiveDialog("codeeditor")
-                              //setcodedata(data.value)
-                              var parsedvalue = workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
-                              // if (parsedvalue === undefined || parsedvalue === null) {
-                              //   parsedvalue = ""
-                              // }
-                              console.log("Data sending to codeeditor: ",{
-                                "name": workflow.triggers[selectedTriggerIndex].parameters[1].name,
-                                "value": parsedvalue,
-                                "field_number": 1,
-                                "actionlist": subflowActionList,
-                                "field_id": "subflow_field",
-                              })
-                              setEditorData({
-                                "name": workflow.triggers[selectedTriggerIndex].parameters[1].name,
-                                "value": parsedvalue,
-                                "field_number": 1,
-                                "actionlist": subflowActionList,
-                                "field_id": "subflow_field",
-                              })
-                            }}
-                          />
-                        </Tooltip>
-                        <Tooltip title="Autocomplete text" placement="bottom">
-                          <AddCircleOutlineIcon
-                            style={{ cursor: "pointer" }}
-                            onClick={(event) => {
-                              setMenuPosition({
-                                top: event.pageY + 10,
-                                left: event.pageX + 10,
-                              });
-                              //setShowDropdownNumber(3)
-                              setShowDropdown(true);
-                            }}
-                          />
-                        </Tooltip>
-                      </ButtonGroup>
-                    </InputAdornment>
-                  ),
-                }}
-                rows="6"
-                multiline
-                fullWidth
-                color="primary"
-                placeholder="Some execution data"
-                defaultValue={
-                  workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
-                }
-                onBlur={(e) => {
-                  workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
-                  setWorkflow(workflow)
-                  setLastSaved(false)
-
-                }}
-              />
-              {!showDropdown ? null :
-							  <Menu
-                anchorReference="anchorPosition"
-                anchorPosition={menuPosition}
-                onClose={() => {
-                  handleMenuClose();
-                }}
-                open={!!menuPosition}
-                style={{
-                  border: `2px solid #f85a3e`,
-                  color: "white",
-                  marginTop: 2,
-                }}
-              >
-                {subflowActionList.map((innerdata) => {
-                  const icon =
-                    innerdata.type === "action" ? (
-                      <AppsIcon style={{ marginRight: 10 }} />
-                    ) : innerdata.type === "workflow_variable" ||
-                      innerdata.type === "execution_variable" ? (
-                      <FavoriteBorderIcon style={{ marginRight: 10 }} />
-                    ) : (
-                      <ScheduleIcon style={{ marginRight: 10 }} />
-                    );
-      
-                  const handleExecArgumentHover = (inside) => {
-                    var exec_text_field = document.getElementById(
-                      "execution_argument_input_field"
-                    );
-                    if (exec_text_field !== null) {
-                      if (inside) {
-                        exec_text_field.style.border = "2px solid #f85a3e";
-                      } else {
-                        exec_text_field.style.border = "";
-                      }
-                    }
-      
-                    // Also doing arguments
-                    if (
-                      workflow.triggers !== undefined &&
-                      workflow.triggers !== null &&
-                      workflow.triggers.length > 0
-                    ) {
-                      for (let triggerkey in workflow.triggers) {
-                        const item = workflow.triggers[triggerkey];
-      
-                        if (cy !== undefined) {
-                          var node = cy.getElementById(item.id);
-                          if (node.length > 0) {
-                            if (inside) {
-                              node.addClass("shuffle-hover-highlight");
-                            } else {
-                              node.removeClass("shuffle-hover-highlight");
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-      
-                  const handleActionHover = (inside, actionId) => {
-                    if (cy !== undefined) {
-                      var node = cy.getElementById(actionId);
-                      if (node.length > 0) {
-                        if (inside) {
-                          node.addClass("shuffle-hover-highlight");
-                        } else {
-                          node.removeClass("shuffle-hover-highlight");
-                        }
-                      }
-                    }
-                  };
-      
-                  const handleMouseover = () => {
-                    if (innerdata.type === "Execution Argument") {
-                      handleExecArgumentHover(true);
-                    } else if (innerdata.type === "action") {
-                      handleActionHover(true, innerdata.id);
-                    }
-                  };
-      
-                  const handleMouseOut = () => {
-                    if (innerdata.type === "Execution Argument") {
-                      handleExecArgumentHover(false);
-                    } else if (innerdata.type === "action") {
-                      handleActionHover(false, innerdata.id);
-                    }
-                  };
-      
-                  var parsedPaths = [];
-                  console.log("Found example data: ", innerdata.example)
-                  if (typeof innerdata.example === "object") {
-                    parsedPaths = GetParsedPaths(innerdata.example, "");
-                  }
-      
-                  const coverColor = "#82ccc3"
-      
-                  return parsedPaths.length > 0 ? (
-                    <span>
-                    {/*
-                    <NestedMenuItem
-                      key={innerdata.name}
-                      label={
-                        <div style={{ display: "flex" }}>
-                          {icon} {innerdata.name}
-                        </div>
-                      }
-                      parentMenuOpen={!!menuPosition}
-                      style={{
-                        backgroundColor: theme.palette.inputColor,
-                        color: "white",
-                        minWidth: 250,
-                      }}
-                      onClick={() => {
-                        handleItemClick([innerdata]);
-                      }}
-                    >
-                      {parsedPaths.map((pathdata, index) => {
-                        // FIXME: Should be recursive in here
-                        const icon =
-                          pathdata.type === "value" ? (
-                            <VpnKeyIcon style={iconStyle} />
-                          ) : pathdata.type === "list" ? (
-                            <FormatListNumberedIcon style={iconStyle} />
-                          ) : (
-                            <ExpandMoreIcon style={iconStyle} />
-                          )
-      
-                        return (
-                          <MenuItem
-                            key={pathdata.name}
-                            style={{
-                              backgroundColor: theme.palette.inputColor,
-                              color: "white",
-                              minWidth: 250,
-                            }}
-                            value={pathdata}
-                            onMouseOver={() => { }}
-                            onClick={() => {
-                              handleItemClick([innerdata, pathdata]);
-                            }}
-                          >
-                            <Tooltip
-                              color="primary"
-                              title={`Ex. value: ${pathdata.value}`}
-                              placement="left"
-                            >
-                              <div style={{ display: "flex" }}>
-                                {icon} {pathdata.name}
-                              </div>
-                            </Tooltip>
-                          </MenuItem>
-                        );
-                      })}
-                    </NestedMenuItem>
-                    */}
-      
-                    <NestedMenuItem
-                      key={innerdata.name}
-                      label={
-                        <div style={{ display: "flex", marginLeft: 0, }}>
-                          {icon} {innerdata.name}
-                        </div>
-                      }
-                      parentMenuOpen={!!menuPosition}
-                      style={{
-                        color: "white",
-                        minWidth: 250,
-                        maxWidth: 250,
-                        maxHeight: 50,
-                        overflow: "hidden",
-                      }}
-                      onClick={() => {
-                        console.log("CLICKED: ", innerdata);
-                        console.log(innerdata.example)
-                        handleItemClick([innerdata]);
-                      }}
-                    >
-                      <Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition.top-200, left: menuPosition.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
-      
-                        <MenuItem
-                          key={innerdata.name}
-                          style={{
-                            backgroundColor: theme.palette.inputColor,
-                            marginLeft: 15,
-                            color: "white",
-                            minWidth: 250,
-                            maxWidth: 250,
-                            padding: 0, 
-                            position: "relative",
-                          }}
-                          value={innerdata}
-                          onMouseOver={() => {
-                            //console.log("HOVER: ", pathdata);
-                          }}
-                          onClick={() => {
-                            handleItemClick([innerdata]);
-                          }}
-                        >
-                          <Typography variant="h6" style={{paddingBottom: 5}}>
-                            {innerdata.name}
-                          </Typography>
-                        </MenuItem>
-      
-                        {parsedPaths.map((pathdata, index) => {
-                          // FIXME: Should be recursive in here
-                          //<VpnKeyIcon style={iconStyle} />
-                          const icon =
-                            pathdata.type === "value" ? (
-                              <span style={{marginLeft: 9, }} />
-                            ) : pathdata.type === "list" ? (
-                              <FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
-                            ) : (
-                              <CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
-                            );
-                          //<ExpandMoreIcon style={iconStyle} />
-      
-                          const indentation_count = (pathdata.name.match(/\./g) || []).length+1
-                          const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
-                          //const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
-                          const boxPadding = 0 
-                          const namesplit = pathdata.name.split(".")
-                          const newname = namesplit[namesplit.length-1]
-                          return (
-                            <MenuItem
-                              key={pathdata.name}
-                              style={{
-                                backgroundColor: theme.palette.inputColor,
-                                color: "white",
-                                minWidth: 250,
-                                maxWidth: 250,
-                                padding: boxPadding, 
-                              }}
-                              value={pathdata}
-                              onMouseOver={() => {
-                                //console.log("HOVER: ", pathdata);
-                              }}
-                              onClick={() => {
-                                handleItemClick([innerdata, pathdata]);
-                              }}
-                            >
-                              <Tooltip
-                                color="primary"
-                                title={`Ex. value: ${pathdata.value}`}
-                                placement="left"
-                              >
-                                <div style={{ display: "flex", height: 30, }}>
-                                  {Array(indentation_count).fill().map((subdata, subindex) => {
-                                    return (
-                                      baseIndent
-                                    )
-                                  })}
-                                  {icon} {newname} 
-                                  {pathdata.type === "list" ? <SquareFootIcon style={{marginleft: 10, }} onClick={(e) => {
-      
-                                  }} /> : null}
-                                </div>
-                              </Tooltip>
-                            </MenuItem>
-                          );
-                        })}
-                      </Paper>
-                    </NestedMenuItem>
-                    </span>
-                  ) : (
-                    <MenuItem
-                      key={innerdata.name}
-                      style={{
-                        backgroundColor: theme.palette.inputColor,
-                        color: "white",
-                      }}
-                      value={innerdata}
-                      onMouseOver={() => handleMouseover()}
-                      onMouseOut={() => {
-                        handleMouseOut();
-                      }}
-                      onClick={() => {
-                        handleItemClick([innerdata]);
-                      }}
-                    >
-                      <Tooltip
-                        color="primary"
-                        title={`Value: ${innerdata.value}`}
-                        placement="left"
-                      >
-                        <div style={{ display: "flex" }}>
-                          {icon} {innerdata.name}
-                        </div>
-                      </Tooltip>
-                    </MenuItem>
-                  );
-                })}
-              </Menu>
-               }
-              {/*
-								<div
-									style={{
-										marginTop: "20px",
-										marginBottom: "7px",
-										display: "flex",
-									}}
-								>
-									<div style={{ flex: "10" }}>
-										<b>API-key </b>
-									</div>
-								</div>
-								<TextField
-									style={{
-										backgroundColor: theme.palette.inputColor,
-										borderRadius: theme.palette.borderRadius,
-									}}
-									InputProps={{
-										style: {
-										},
-									}}
-									fullWidth
-									color="primary"
-									placeholder="Your apikey"
-									defaultValue={
-										workflow.triggers[selectedTriggerIndex].parameters[2].value
-									}
-									onBlur={(e) => {
-										workflow.triggers[selectedTriggerIndex].parameters[2].value =
-											e.target.value;
-										setWorkflow(workflow);
-									}}
-								/>
-							*/}
-            </div>
-          </div>
-
-          <div>
-            <div>
-            <div className="app">
-              <div style={{ display: "flex", marginTop: 50 }}>
-                <div style={{ flex: "10" }}>
-                  <b>Authentication Override</b>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", marginTop: 10 }}>
-                <div style={{ flex: "10", marginLeft: 10 }}>
-                  <AppAuthSelector appAuthData={appAuthentication} />
-                </div>
-              </div>
-            </div>
-            </div>
-          </div>
-        </div>
+ 
 
   const CommentSidebar = () => {
     if (Object.getOwnPropertyNames(selectedComment).length > 0) {
@@ -14038,20 +13127,32 @@ const releaseToConnectLabel = "Release to Connect"
 
   // Special SCHEDULE handler
   var trigger_header_auth = ""
-  if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers !== null && workflow.triggers !== undefined && workflow.triggers.length >= selectedTriggerIndex && workflow.triggers[selectedTriggerIndex] !== undefined ) {
-      if (selectedTrigger.trigger_type === "SCHEDULE" && workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null) {
-	    console.log("Autofixing schedule")
 
-        workflow.triggers[selectedTriggerIndex].parameters = [];
-        workflow.triggers[selectedTriggerIndex].parameters[0] = {
-          name: "cron",
-          value: isCloud ? "*/25 * * * *" : "60",
-        };
-        workflow.triggers[selectedTriggerIndex].parameters[1] = {
-          name: "execution_argument",
-          value: '{"example": {"json": "is cool"}}',
-        };
-        setWorkflow(workflow);
+  if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers !== null && workflow.triggers !== undefined && workflow.triggers.length >= selectedTriggerIndex && workflow.triggers[selectedTriggerIndex] !== undefined ) {
+    
+    if (selectedTrigger.trigger_type === "SCHEDULE") {
+        if (workflow.triggers[selectedTriggerIndex] === undefined) {
+          return null;
+        }
+
+        if (
+          workflow.triggers[selectedTriggerIndex].parameters === undefined ||
+          workflow.triggers[selectedTriggerIndex].parameters === null ||
+          workflow.triggers[selectedTriggerIndex].parameters.length === 0
+        ) {
+        console.log("Autofixing schedule")
+
+          workflow.triggers[selectedTriggerIndex].parameters = [];
+          workflow.triggers[selectedTriggerIndex].parameters[0] = {
+            name: "cron",
+            value: isCloud ? "*/25 * * * *" : "60",
+          };
+          workflow.triggers[selectedTriggerIndex].parameters[1] = {
+            name: "execution_argument",
+            value: '{"example": {"json": "is cool"}}',
+          };
+          setWorkflow(workflow);
+        }
       } else if (selectedTrigger.trigger_type === "WEBHOOK") {
 	  	if (workflow.triggers[selectedTriggerIndex] === undefined) {
       	  return null;
@@ -14143,8 +13244,62 @@ const releaseToConnectLabel = "Release to Connect"
   
           setWorkflow(workflow);
         }
+      }else if(selectedTrigger.trigger_type === "SUBFLOW"){
+
+        if (
+          workflow.triggers[selectedTriggerIndex].parameters === undefined ||
+          workflow.triggers[selectedTriggerIndex].parameters === null ||
+          workflow.triggers[selectedTriggerIndex].parameters.length === 0
+        ) {
+          workflow.triggers[selectedTriggerIndex].parameters = [];
+          workflow.triggers[selectedTriggerIndex].parameters[0] = {
+            name: "workflow",
+            value: "",
+          };
+          workflow.triggers[selectedTriggerIndex].parameters[1] = {
+            name: "argument",
+            value: "",
+            id:"subflow_field"
+          };
+          workflow.triggers[selectedTriggerIndex].parameters[2] = {
+            name: "user_apikey",
+            value: "",
+          };
+          workflow.triggers[selectedTriggerIndex].parameters[3] = {
+            name: "startnode",
+            value: "",
+          };
+          workflow.triggers[selectedTriggerIndex].parameters[4] = {
+            name: "check_result",
+            value: "false",
+          };
+          workflow.triggers[selectedTriggerIndex].parameters[5] = {
+            name: "auth_override",
+            value: "",
+          };
+          setWorkflow(workflow)
+          /*
+          // API-key has been replaced by auth key for the execution. 
+          // Parents can now automatically execute children without auth from a user, as long as the subflow in question is owned by the same org and the subflow is actually referencing it during checkin.
+          console.log("SETTINGS: ", userSettings);
+          if (
+            userSettings !== undefined &&
+            userSettings !== null &&
+            userSettings.apikey !== null &&
+            userSettings.apikey !== undefined &&
+            userSettings.apikey.length > 0
+          ) {
+            workflow.triggers[selectedTriggerIndex].parameters[2] = {
+              name: "user_apikey",
+              value: userSettings.apikey,
+            };
+          }
+          */
+        }
       }
   }
+
+  console.log(selectedTrigger)
 
   const WebhookSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "WEBHOOK" ? null :
         <div style={appApiViewStyle}>
@@ -15689,7 +14844,8 @@ const releaseToConnectLabel = "Release to Connect"
 		  }
 
         </div>
-  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : 
+
+  const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "PIPELINE" ? null : 
           <div style={appApiViewStyle}>
             <h3 style={{ marginBottom: "5px" }}>
               {selectedTrigger.app_name}: {selectedTrigger.status}
@@ -16193,6 +15349,863 @@ const releaseToConnectLabel = "Release to Connect"
             </div>
           </div>
         </div>
+
+  const SubflowSidebar =  Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined || selectedTrigger.trigger_type !== "SUBFLOW" ? null :
+          <div style={appApiViewStyle}>
+          <span style={{display: "flex", }}>
+          <h3 style={{ marginBottom: "5px", flex: 3, }}>
+            {selectedTrigger.app_name}
+          </h3>
+          <Tooltip title="Choose the type of subflow to run. This is NOT required, but is used to help Shuffle's workflow generators better understand the workflow." placement="top">
+          <Select
+            MenuProps={{
+            disableScrollLock: true,
+            }}
+            value={selectedTrigger.tags !== undefined && selectedTrigger.tags !== null && selectedTrigger.tags.length > 0 ? selectedTrigger.tags[0] : "Any"}
+            onChange={(event) => {
+              if (selectedTrigger.tags === undefined || selectedTrigger.tags === null) {
+                selectedTrigger.tags = [event.target.value]
+              } else {
+                if (selectedTrigger.tags.includes(event.target.value)) {
+                  return
+                } 
+
+                if (selectedTrigger.tags.length > 0) {
+                  selectedTrigger.tags = []
+                }
+
+                selectedTrigger.tags.push(event.target.value)
+              }
+
+              setSelectedTrigger(selectedTrigger)
+              setUpdate(Math.random())
+            }}
+            style={{
+            marginTop: 10,
+            flex: 1, 
+            backgroundColor: theme.palette.inputColor,
+            color: "white",
+            height: 35,
+            marginleft: 10,
+            borderRadius: theme.palette.borderRadius,
+              color: "rgba(255,255,255,0.4)",
+            }}
+            SelectDisplayProps={{
+            style: {
+            },
+            }}
+          >
+            {subflowtypes.map((data, index) => {
+            return (
+              <MenuItem
+              key={index}
+              style={{
+                backgroundColor: theme.palette.inputColor,
+                color: "white",
+              }}
+              value={data.name}
+              >
+              {data.name}
+              </MenuItem>
+            );
+            })}
+          </Select>
+          </Tooltip>
+          </span>
+          <a
+          rel="noopener noreferrer"
+          target="_blank"
+          href="https://shuffler.io/docs/triggers#subflow"
+          style={{ textDecoration: "none", color: "#f85a3e" }}
+          >
+          What are subflows?
+          </a>
+            <Divider
+              style={{
+                marginBottom: "10px",
+                marginTop: "10px",
+                height: "1px",
+                width: "100%",
+                backgroundColor: "rgb(91, 96, 100)",
+              }}
+            />
+            <div style={{ display: "flex" }}>
+              <div style={{ flex: 5 }}>
+                <Typography>Name</Typography>
+                <TextField
+                  style={{
+                    backgroundColor: theme.palette.inputColor,
+                    borderRadius: theme.palette.borderRadius,
+                  }}
+                  InputProps={{
+                    style: {
+                    },
+                  }}
+                  fullWidth
+                  color="primary"
+                  placeholder={selectedTrigger.label}
+                  onChange={selectedTriggerChange}
+                />
+              </div>
+              <div>
+                <div style={{ flex: 1, marginLeft: 5, }}>
+                  <Tooltip
+                    color="primary"
+                    title={"Delay before action runs (in seconds)"}
+                    placement="top"
+                  >
+                    <span>
+                      <Typography>Delay</Typography>
+                      <TextField
+                        style={{
+                          backgroundColor: theme.palette.inputColor,
+              maxWidth: 50,
+                        }}
+                        InputProps={{
+                          style: theme.palette.innerTextfieldStyle,
+                        }}
+                        placeholder={selectedTrigger.execution_delay}
+                        defaultValue={selectedAction.execution_delay}
+                        onChange={(event) => {
+                          if (isNaN(event.target.value)) {
+                            console.log("NAN: ", event.target.value)
+                            return
+                          }
+
+                          const parsedNumber = parseInt(event.target.value)
+                          if (parsedNumber > 86400) {
+                            console.log("Max number is 1 day (86400)")
+                            return
+                          }
+
+                          selectedTrigger.execution_delay = parseInt(event.target.value)
+                          setSelectedTrigger(selectedTrigger)
+                        }}
+                      />
+                    </span>
+                  </Tooltip>
+                </div>
+              </div>
+            </div>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={
+                    workflow.triggers[selectedTriggerIndex].parameters[4] !==
+                    undefined &&
+                    workflow.triggers[selectedTriggerIndex].parameters[4]
+                      .value === "true"
+                  }
+                  onChange={() => {
+                    const newvalue = workflow.triggers[selectedTriggerIndex].parameters[4] === undefined || workflow.triggers[selectedTriggerIndex].parameters[4].value === "false"? "true" : "false";
+                    workflow.triggers[selectedTriggerIndex].parameters[4] = {
+                      name: "check_result",
+                      value: newvalue,
+                    };
+
+                    setWorkflow(workflow);
+                    setUpdate(Math.random());
+                  }}
+                  color="primary"
+                  value="Wait for results"
+                />
+              }
+              style={{ marginTop: 10 }}
+              label={<div style={{ color: "white" }}>Wait for results</div>}
+            />
+            <div style={{ flex: "6", marginTop: 10, }}>
+              <div>
+                <div style={{ display: "flex" }}>
+                  <div
+                    style={{
+                      marginTop: "20px",
+                      marginBottom: "7px",
+                      display: "flex",
+                      flex: 5,
+                    }}
+                  >
+                    <div style={{ flex: "10" }}>
+                      <b>Select a workflow to execute </b>
+                    </div>
+                  </div>
+                  {workflow.triggers[selectedTriggerIndex].parameters[0].value
+                    .length === 0 ? null : workflow.triggers[selectedTriggerIndex]
+                      .parameters[0].value === props.match.params.key ? null : (
+                    <div style={{ marginLeft: 5, flex: 1 }}>
+                      <a
+                        rel="noopener noreferrer"
+                        href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`}
+                        target="_blank"
+                        style={{
+                          textDecoration: "none",
+                          color: "#f85a3e",
+                          marginLeft: 5,
+                          marginTop: 10,
+                        }}
+                      >
+                        <OpenInNewIcon />
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {workflows === undefined ||
+                  workflows === null ||
+                  workflows.length === 0 ? null : (
+
+                  <Autocomplete
+                    id="subflow_search"
+                    autoHighlight
+                    freeSolo
+                    value={subworkflow}
+                    classes={{ inputRoot: classes.inputRoot }}
+                    ListboxProps={{
+                      style: {
+                        backgroundColor: theme.palette.inputColor,
+                        color: "white",
+                      },
+                    }}
+                    getOptionSelected={(option, value) => option.id === value.id}
+                    getOptionLabel={(option) => {
+                      if (
+                        option === undefined ||
+                        option === null ||
+                        option.name === undefined ||
+                        option.name === null
+                      ) {
+                        return "No Workflow Selected";
+                      }
+
+                      const newname = (
+                        option.name.charAt(0).toUpperCase() + option.name.substring(1)
+                      ).replaceAll("_", " ");
+                      return newname;
+                    }}
+                    options={workflows}
+                    fullWidth
+                    style={{
+                      backgroundColor: theme.palette.inputColor,
+                      height: 50,
+                      borderRadius: theme.palette.borderRadius,
+                    }}
+                    onChange={(event, newValue) => {
+                      setLastSaved(false)
+                      console.log("Found value: ", newValue)
+
+            var parsedinput = { target: { value: newValue } }
+
+            // For variables
+            if (typeof newValue === 'string' && newValue.startsWith("$")) {
+              parsedinput = { 
+                target: { 
+                  value: {
+                    "name": newValue, 
+                    "id": newValue,
+                    "actions": [],
+                    "triggers": [],
+                  } 
+                } 
+              }
+            }
+
+                      handleWorkflowSelectionUpdate(parsedinput)
+                    }}
+                  renderOption={(props, data, state) => {
+                      if (data.id === workflow.id) {
+                        data = workflow;
+                      }
+
+                      //key={index}
+                      return (
+                        <Tooltip arrow placement="left" title={
+                          <span style={{}}>
+                            {data.image !== undefined && data.image !== null && data.image.length > 0 ?
+                              <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+                              : null}
+                            <Typography>
+                              Choose Subflow '{data.name}'
+                            </Typography>
+                          </span>
+                        }>
+                          <MenuItem
+                            style={{
+                              backgroundColor: theme.palette.inputColor,
+                              color: data.id === workflow.id ? "red" : "white",
+                            }}
+                            value={data}
+                onClick={() => {	
+                getWorkflowApps(data.id);
+                handleWorkflowSelectionUpdate({
+                  target: {
+                    value: data
+                  }
+                })
+                document.activeElement.blur();
+                }}
+                          >
+                <PolylineIcon style={{ marginRight: 8 }} />
+                            {data.name}
+                          </MenuItem>
+                        </Tooltip>
+                      )
+                    }}
+                    renderInput={(params) => {
+                      return (
+                        <TextField
+                          style={{
+                            backgroundColor: theme.palette.inputColor,
+                            borderRadius: theme.palette.borderRadius,
+                          }}
+                          {...params}
+                          label="Find your workflow"
+                          variant="outlined"
+                        />
+                      );
+                    }}
+                  />
+                )}
+
+                {subworkflow === undefined ||
+                  subworkflow === null ||
+                  subworkflow.id === undefined ||
+                  subworkflow.actions === null ||
+                  subworkflow.actions === undefined ||
+                  subworkflow.actions.length === 0 ? null : (
+                  <span>
+                    <div
+                      style={{
+                        marginTop: "20px",
+                        marginBottom: "7px",
+                        display: "flex",
+                      }}
+                    >
+                      <div style={{ flex: "10" }}>
+                        <b>Select the Startnode</b>
+                      </div>
+                    </div>
+                    <Autocomplete
+                      id="subflow_node_search"
+                      autoHighlight
+                      value={subworkflowStartnode}
+                      classes={{ inputRoot: classes.inputRoot }}
+                      ListboxProps={{
+                        style: {
+                          backgroundColor: theme.palette.inputColor,
+                          color: "white",
+                        },
+                      }}
+                      getOptionSelected={(option, value) => option.id === value.id}
+                      getOptionLabel={(option) => {
+                        if (option === undefined || option === null || option.label === undefined || option.label === null) {
+                          if (option.length === 36) {
+
+                          }
+
+                          return "TMP";
+                        }
+
+                        const newname = (
+                          option.label.charAt(0).toUpperCase() + option.label.substring(1)
+                        ).replaceAll("_", " ");
+                        return newname;
+                      }}
+                      options={subworkflow.actions}
+                      fullWidth
+                      style={{
+                        backgroundColor: theme.palette.inputColor,
+                        height: 50,
+                        borderRadius: theme.palette.borderRadius,
+                      }}
+                      onChange={(event, newValue) => {
+                        setLastSaved(false)
+                        handleSubflowStartnodeSelection({ target: { value: newValue } })
+                      }}
+                  renderOption={(props, action, state) => {
+                        const isParent = getParents(selectedTrigger).find(
+                          (parent) => parent.id === action.id
+                        )
+
+                        return (
+                          <MenuItem
+                            onMouseOver={() => {
+                              if (subworkflow.id === workflow.id) {
+                                handleActionHover(true, action.id)
+                              }
+                            }}
+                            onMouseOut={() => {
+                              if (subworkflow.id === workflow.id) {
+                                handleActionHover(false, action.id)
+                              }
+                            }}
+                            disabled={isCloud && isParent}
+                            onClick={() => {
+                                        handleSubflowStartnodeSelection({ 
+                              target: { 
+                                value: action 
+                              } 
+                            })
+                            document.activeElement.blur();
+                            }}
+                            style={{
+                              backgroundColor: theme.palette.inputColor,
+                              color: isParent ? "red" : "white",
+                            }}
+                            value={action}
+                          >
+                            {action.label}
+                          </MenuItem>
+                        );
+                      }}
+                      renderInput={(params) => {
+                        return (
+                          <TextField
+                            style={{
+                              backgroundColor: theme.palette.inputColor,
+                              borderRadius: theme.palette.borderRadius,
+                            }}
+                            {...params}
+                            label="Select a start-node (optional)"
+                            variant="outlined"
+                          />
+                        );
+                      }}
+                    />
+                  </span>
+                )}
+                <div
+                  style={{
+                    marginTop: "20px",
+                    marginBottom: "7px",
+                    display: "flex",
+                  }}
+                >
+                  <div style={{ flex: "10" }}>
+                    <b>Execution Argument</b>
+                  </div>
+                </div>
+                <TextField
+                  id="subflow_field"
+                  style={{
+                    backgroundColor: theme.palette.inputColor,
+                    borderRadius: theme.palette.borderRadius,
+                  }}
+                  InputProps={{
+                    style: {
+                    },
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <ButtonGroup orientation="vertical">
+                          <Tooltip title="Expand window" placement="top">
+                            <AspectRatioIcon
+                              style={{ cursor: "pointer", marginBottom: 10}}
+                              onClick={(event) => {
+                                event.preventDefault()
+                                // setFieldCount(count)
+                                setCodeEditorModalOpen(true)
+                                setActiveDialog("codeeditor")
+                                //setcodedata(data.value)
+                                var parsedvalue = workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
+                                // if (parsedvalue === undefined || parsedvalue === null) {
+                                //   parsedvalue = ""
+                                // }
+                                console.log("Data sending to codeeditor: ",{
+                                  "name": workflow.triggers[selectedTriggerIndex].parameters[1].name,
+                                  "value": parsedvalue,
+                                  "field_number": 1,
+                                  "actionlist": subflowActionList,
+                                  "field_id": "subflow_field",
+                                })
+                                setEditorData({
+                                  "name": workflow.triggers[selectedTriggerIndex].parameters[1].name,
+                                  "value": parsedvalue,
+                                  "field_number": 1,
+                                  "actionlist": subflowActionList,
+                                  "field_id": "subflow_field",
+                                })
+                              }}
+                            />
+                          </Tooltip>
+                          <Tooltip title="Autocomplete text" placement="bottom">
+                            <AddCircleOutlineIcon
+                              style={{ cursor: "pointer" }}
+                              onClick={(event) => {
+                                setMenuPosition({
+                                  top: event.pageY + 10,
+                                  left: event.pageX + 10,
+                                });
+                                //setShowDropdownNumber(3)
+                                setShowDropdown(true);
+                              }}
+                            />
+                          </Tooltip>
+                        </ButtonGroup>
+                      </InputAdornment>
+                    ),
+                  }}
+                  rows="6"
+                  multiline
+                  fullWidth
+                  color="primary"
+                  placeholder="Some execution data"
+                  defaultValue={
+                    workflow?.triggers[selectedTriggerIndex]?.parameters[1]?.value
+                  }
+                  onBlur={(e) => {
+                    workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
+                    setWorkflow(workflow)
+                    setLastSaved(false)
+
+                  }}
+                />
+                {!showDropdown ? null :
+                  <Menu
+                  anchorReference="anchorPosition"
+                  anchorPosition={menuPosition}
+                  onClose={() => {
+                    handleMenuClose();
+                  }}
+                  open={!!menuPosition}
+                  style={{
+                    border: `2px solid #f85a3e`,
+                    color: "white",
+                    marginTop: 2,
+                  }}
+                >
+                  {subflowActionList.map((innerdata) => {
+                    const icon =
+                      innerdata.type === "action" ? (
+                        <AppsIcon style={{ marginRight: 10 }} />
+                      ) : innerdata.type === "workflow_variable" ||
+                        innerdata.type === "execution_variable" ? (
+                        <FavoriteBorderIcon style={{ marginRight: 10 }} />
+                      ) : (
+                        <ScheduleIcon style={{ marginRight: 10 }} />
+                      );
+
+                    const handleExecArgumentHover = (inside) => {
+                      var exec_text_field = document.getElementById(
+                        "execution_argument_input_field"
+                      );
+                      if (exec_text_field !== null) {
+                        if (inside) {
+                          exec_text_field.style.border = "2px solid #f85a3e";
+                        } else {
+                          exec_text_field.style.border = "";
+                        }
+                      }
+
+                      // Also doing arguments
+                      if (
+                        workflow.triggers !== undefined &&
+                        workflow.triggers !== null &&
+                        workflow.triggers.length > 0
+                      ) {
+                        for (let triggerkey in workflow.triggers) {
+                          const item = workflow.triggers[triggerkey];
+
+                          if (cy !== undefined) {
+                            var node = cy.getElementById(item.id);
+                            if (node.length > 0) {
+                              if (inside) {
+                                node.addClass("shuffle-hover-highlight");
+                              } else {
+                                node.removeClass("shuffle-hover-highlight");
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+
+                    const handleActionHover = (inside, actionId) => {
+                      if (cy !== undefined) {
+                        var node = cy.getElementById(actionId);
+                        if (node.length > 0) {
+                          if (inside) {
+                            node.addClass("shuffle-hover-highlight");
+                          } else {
+                            node.removeClass("shuffle-hover-highlight");
+                          }
+                        }
+                      }
+                    };
+
+                    const handleMouseover = () => {
+                      if (innerdata.type === "Execution Argument") {
+                        handleExecArgumentHover(true);
+                      } else if (innerdata.type === "action") {
+                        handleActionHover(true, innerdata.id);
+                      }
+                    };
+
+                    const handleMouseOut = () => {
+                      if (innerdata.type === "Execution Argument") {
+                        handleExecArgumentHover(false);
+                      } else if (innerdata.type === "action") {
+                        handleActionHover(false, innerdata.id);
+                      }
+                    };
+
+                    var parsedPaths = [];
+                    console.log("Found example data: ", innerdata.example)
+                    if (typeof innerdata.example === "object") {
+                      parsedPaths = GetParsedPaths(innerdata.example, "");
+                    }
+
+                    const coverColor = "#82ccc3"
+
+                    return parsedPaths.length > 0 ? (
+                      <span>
+                      {/*
+                      <NestedMenuItem
+                        key={innerdata.name}
+                        label={
+                          <div style={{ display: "flex" }}>
+                            {icon} {innerdata.name}
+                          </div>
+                        }
+                        parentMenuOpen={!!menuPosition}
+                        style={{
+                          backgroundColor: theme.palette.inputColor,
+                          color: "white",
+                          minWidth: 250,
+                        }}
+                        onClick={() => {
+                          handleItemClick([innerdata]);
+                        }}
+                      >
+                        {parsedPaths.map((pathdata, index) => {
+                          // FIXME: Should be recursive in here
+                          const icon =
+                            pathdata.type === "value" ? (
+                              <VpnKeyIcon style={iconStyle} />
+                            ) : pathdata.type === "list" ? (
+                              <FormatListNumberedIcon style={iconStyle} />
+                            ) : (
+                              <ExpandMoreIcon style={iconStyle} />
+                            )
+
+                          return (
+                            <MenuItem
+                              key={pathdata.name}
+                              style={{
+                                backgroundColor: theme.palette.inputColor,
+                                color: "white",
+                                minWidth: 250,
+                              }}
+                              value={pathdata}
+                              onMouseOver={() => { }}
+                              onClick={() => {
+                                handleItemClick([innerdata, pathdata]);
+                              }}
+                            >
+                              <Tooltip
+                                color="primary"
+                                title={`Ex. value: ${pathdata.value}`}
+                                placement="left"
+                              >
+                                <div style={{ display: "flex" }}>
+                                  {icon} {pathdata.name}
+                                </div>
+                              </Tooltip>
+                            </MenuItem>
+                          );
+                        })}
+                      </NestedMenuItem>
+                      */}
+
+                      <NestedMenuItem
+                        key={innerdata.name}
+                        label={
+                          <div style={{ display: "flex", marginLeft: 0, }}>
+                            {icon} {innerdata.name}
+                          </div>
+                        }
+                        parentMenuOpen={!!menuPosition}
+                        style={{
+                          color: "white",
+                          minWidth: 250,
+                          maxWidth: 250,
+                          maxHeight: 50,
+                          overflow: "hidden",
+                        }}
+                        onClick={() => {
+                          console.log("CLICKED: ", innerdata);
+                          console.log(innerdata.example)
+                          handleItemClick([innerdata]);
+                        }}
+                      >
+                        <Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition.top-200, left: menuPosition.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+
+                          <MenuItem
+                            key={innerdata.name}
+                            style={{
+                              backgroundColor: theme.palette.inputColor,
+                              marginLeft: 15,
+                              color: "white",
+                              minWidth: 250,
+                              maxWidth: 250,
+                              padding: 0, 
+                              position: "relative",
+                            }}
+                            value={innerdata}
+                            onMouseOver={() => {
+                              //console.log("HOVER: ", pathdata);
+                            }}
+                            onClick={() => {
+                              handleItemClick([innerdata]);
+                            }}
+                          >
+                            <Typography variant="h6" style={{paddingBottom: 5}}>
+                              {innerdata.name}
+                            </Typography>
+                          </MenuItem>
+
+                          {parsedPaths.map((pathdata, index) => {
+                            // FIXME: Should be recursive in here
+                            //<VpnKeyIcon style={iconStyle} />
+                            const icon =
+                              pathdata.type === "value" ? (
+                                <span style={{marginLeft: 9, }} />
+                              ) : pathdata.type === "list" ? (
+                                <FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
+                              ) : (
+                                <CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
+                              );
+                            //<ExpandMoreIcon style={iconStyle} />
+
+                            const indentation_count = (pathdata.name.match(/\./g) || []).length+1
+                            const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
+                            //const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
+                            const boxPadding = 0 
+                            const namesplit = pathdata.name.split(".")
+                            const newname = namesplit[namesplit.length-1]
+                            return (
+                              <MenuItem
+                                key={pathdata.name}
+                                style={{
+                                  backgroundColor: theme.palette.inputColor,
+                                  color: "white",
+                                  minWidth: 250,
+                                  maxWidth: 250,
+                                  padding: boxPadding, 
+                                }}
+                                value={pathdata}
+                                onMouseOver={() => {
+                                  //console.log("HOVER: ", pathdata);
+                                }}
+                                onClick={() => {
+                                  handleItemClick([innerdata, pathdata]);
+                                }}
+                              >
+                                <Tooltip
+                                  color="primary"
+                                  title={`Ex. value: ${pathdata.value}`}
+                                  placement="left"
+                                >
+                                  <div style={{ display: "flex", height: 30, }}>
+                                    {Array(indentation_count).fill().map((subdata, subindex) => {
+                                      return (
+                                        baseIndent
+                                      )
+                                    })}
+                                    {icon} {newname} 
+                                    {pathdata.type === "list" ? <SquareFootIcon style={{marginleft: 10, }} onClick={(e) => {
+
+                                    }} /> : null}
+                                  </div>
+                                </Tooltip>
+                              </MenuItem>
+                            );
+                          })}
+                        </Paper>
+                      </NestedMenuItem>
+                      </span>
+                    ) : (
+                      <MenuItem
+                        key={innerdata.name}
+                        style={{
+                          backgroundColor: theme.palette.inputColor,
+                          color: "white",
+                        }}
+                        value={innerdata}
+                        onMouseOver={() => handleMouseover()}
+                        onMouseOut={() => {
+                          handleMouseOut();
+                        }}
+                        onClick={() => {
+                          handleItemClick([innerdata]);
+                        }}
+                      >
+                        <Tooltip
+                          color="primary"
+                          title={`Value: ${innerdata.value}`}
+                          placement="left"
+                        >
+                          <div style={{ display: "flex" }}>
+                            {icon} {innerdata.name}
+                          </div>
+                        </Tooltip>
+                      </MenuItem>
+                    );
+                  })}
+                </Menu>
+                }
+                {/*
+                  <div
+                    style={{
+                      marginTop: "20px",
+                      marginBottom: "7px",
+                      display: "flex",
+                    }}
+                  >
+                    <div style={{ flex: "10" }}>
+                      <b>API-key </b>
+                    </div>
+                  </div>
+                  <TextField
+                    style={{
+                      backgroundColor: theme.palette.inputColor,
+                      borderRadius: theme.palette.borderRadius,
+                    }}
+                    InputProps={{
+                      style: {
+                      },
+                    }}
+                    fullWidth
+                    color="primary"
+                    placeholder="Your apikey"
+                    defaultValue={
+                      workflow.triggers[selectedTriggerIndex].parameters[2].value
+                    }
+                    onBlur={(e) => {
+                      workflow.triggers[selectedTriggerIndex].parameters[2].value =
+                        e.target.value;
+                      setWorkflow(workflow);
+                    }}
+                  />
+                */}
+              </div>
+            </div>
+
+            <div>
+              <div>
+              <div className="app">
+                <div style={{ display: "flex", marginTop: 50 }}>
+                  <div style={{ flex: "10" }}>
+                    <b>Authentication Override</b>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", marginTop: 10 }}>
+                  <div style={{ flex: "10", marginLeft: 10 }}>
+                    <AppAuthSelector appAuthData={appAuthentication} />
+                  </div>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
 
   const cytoscapeViewWidths = isMobile ? 50 : 950;
   const bottomBarStyle = {
