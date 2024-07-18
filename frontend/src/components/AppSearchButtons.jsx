@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import theme from '../theme.jsx';
 import ReactGA from 'react-ga4';
 import { useNavigate, Link } from 'react-router-dom';
-
+import { isMobile } from 'react-device-detect';
 import { Search as Searchicon, CloudQueue as CloudQueueicon, Code as Codeicon, Close as Closeicon, Folder as Foldericon, LibraryBooks as LibraryBooksicon, Delete as DeleteIcon, Close as CloseIcon, } from '@mui/icons-material';
 import aa from 'search-insights'
 import Deleteicon from '@mui/icons-material/Delete';
@@ -181,7 +181,7 @@ const AppSearchButtons = (props) => {
                         width: 319,
                         height: 395,
                         flexShrink: 0,
-                        marginLeft: 70,
+                        marginLeft: isMobile? null:70,
                         marginTop: 68,
                         position: "absolute",
                         zIndex: 100,

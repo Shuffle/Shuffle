@@ -36,6 +36,7 @@ import edgehandles from "cytoscape-edgehandles";
 
 import cytoscape from "cytoscape";
 import { toast } from 'react-toastify';
+import { isMobile } from 'react-device-detect';
 
 cytoscape.use(edgehandles)
 
@@ -2152,7 +2153,7 @@ const AppFramework = (props) => {
 
   		{
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
-					<Paper style={{width: 300, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 25, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: 50, }}>
+					<Paper style={{width: 300, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 25, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: isMobile?-50: 50, }}>
 						{paperTitle.length > 0 ? 
 							<span>
 								<Typography variant="h6" style={{textAlign: "center"}}>
@@ -2321,7 +2322,7 @@ const AppFramework = (props) => {
 				elements={elements} 
 				minZoom={0.35}
 				maxZoom={2.00}
-				style={{width: 560*scale, height: 560*scale, backgroundColor: theme.palette.backgroundColor, margin: "auto",}} 
+				style={{width: isMobile?null:560*scale, height: 560*scale, backgroundColor: theme.palette.backgroundColor, margin: isMobile?null:"auto",}} 
 				stylesheet={frameworkStyle}
 				boxSelectionEnabled={false}
 				panningEnabled={false}

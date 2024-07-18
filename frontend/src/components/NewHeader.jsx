@@ -25,9 +25,10 @@ import {
   Divider,
   LinearProgress,
   AppBar,
-	Dialog,
-	DialogTitle,
+  Dialog,
+  DialogTitle,
 } from "@mui/material";
+import { makeStyles } from '@mui/styles';
 
 import {
   Close as CloseIcon,
@@ -45,10 +46,80 @@ import {
   Analytics as AnalyticsIcon,
   Lightbulb as LightbulbIcon,
   ExpandMore as ExpandMoreIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon
 } from "@mui/icons-material";
+import zIndex from "@mui/material/styles/zIndex.js";
 
-const hoverColor = "#f85a3e";
-const hoverOutColor = "#e8eaf6";
+const useStyles = makeStyles((theme) => ({
+  menuButton: {
+    textTransform: "none !important",
+    fontStyle: "normal",
+    color: "#333",
+    textAlign: "center",
+    fontSize: "16px !important",
+    fontWeight: "500 !important",
+    display: "flex",
+    alignItems: "center",
+    '&:hover': {
+      backgroundColor: "transparent",
+    },
+  },
+  dropdownMenu: {
+    marginTop: theme.spacing(1),
+    borderRadius: "12px !important",
+    zIndex: 10,
+    "& .MuiPaper-root": {
+      border: "1px solid #f85a3e",
+      boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+      borderRadius: "12px !important",
+      top: -10,
+      overflow: "visible",
+      background: "#1A1A1A",
+      "&::before": {
+        content: '""',
+        display: "block",
+        position: "absolute",
+        top: -10,
+        left: "82%",
+        borderLeft: "10px solid transparent",
+        borderRight: "10px solid transparent",
+        borderBottom: "10px solid #f85a3e",
+      },
+    },
+  },
+  dropdownMenuItem: {
+    padding: theme.spacing(2, 3),
+    fontSize: "16px",
+    fontWeight: 400,
+    color: "#fff",
+    background: "#1A1A1A",
+    borderRadius: 16, // Ensure the border radius matches the container
+    transition: "background-color 0.3s, color 0.3s",
+    '&:hover': {
+      color: "#1A73E8",
+      background: "#3c3c3c",
+    },
+  },
+  menuList: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 0,
+    margin: 0,
+    listStyle: "none",
+    textTransform: "none",
+  },
+  cssStcg3yMenuList: {
+    borderRadius: "12px !important",
+  },
+  divider: {
+    width: "80%",
+    border: "0.5px solid #494949",
+    backgroundColor: "#fff",
+    alignItems: "center",
+    marginLeft: 17
+  },
+}));
 
 const Header = (props) => {
   const {
@@ -64,34 +135,61 @@ const Header = (props) => {
     serverside,
     billingInfo,
   } = props;
-
-  const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
-  const [SoarHoverColor, setSoarHoverColor] = useState(hoverOutColor);
-  const [LoginHoverColor, setLoginHoverColor] = useState(hoverOutColor);
-  const [DocsHoverColor, setDocsHoverColor] = useState(hoverOutColor);
-  const [HelpHoverColor, setHelpHoverColor] = useState(hoverOutColor);
   const [isHeader, setIsHeader] = React.useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
   const [upgradeHovered, setUpgradeHovered] = React.useState(false);
   const [showTopbar, setShowTopbar] = useState(false)
-  const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_XAxwE2Fp9DEbEcNYw4UKmyby00vIlIPPRp" : "pk_test_EdxgKfqmQGXY5JLjdBqtuhCw00BHbiKJDB"
+  const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_XAxwE2Fp9DEbEcNYw4UKmyby00vIlIPPRp" : "pk_test_51PXYYMEJjT17t98NbDkojZ3DRvsFUQBs35LGMx3i436BXwEBVFKB9nCvHt0Q3M4MG3dz4mHheuWvfoYvpaL3GmsG00k1Rb2ksO"
   let navigate = useNavigate();
+  const classes = useStyles();
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleMenuItemClick = (path) => {
+    navigate(path);
+    handleMenuClose();
+  };
+
+  const handleTooltipClose = () => {
+    setTooltipOpen(false);
+  };
+
+  const handleTooltipOpen = () => {
+    setTooltipOpen(true);
+  };
 
   useEffect(() => {
-	const topbar = localStorage.getItem("topbar_closed")
-	if (topbar === "true") {
-		setShowTopbar(false)
-	} else {
-		setShowTopbar(true)
-	}
+    const topbar = localStorage.getItem("topbar_closed")
+    if (topbar === "true") {
+      setShowTopbar(false)
+    } else {
+      setShowTopbar(true)
+    }
   }, [])
+
+  const hoverColor = "#f85a3e";
+  const hoverOutColor = "#e8eaf6";
+
+  const handleHover = (event) => {
+    event.target.style.color = hoverColor;
+  };
+
+  const handleHoverOut = (event) => {
+    event.target.style.color = hoverOutColor;
+  };
 
   const handleClose = () => {
     setAnchorEl(null);
@@ -103,6 +201,10 @@ const Header = (props) => {
   const hrefStyle = {
     color: hoverOutColor,
     textDecoration: "none",
+    textTransform: "none",
+    fontStyle: "normal",
+    width: "100%",
+    fontSize: "16px",
   };
 
   const menuText = {
@@ -227,47 +329,6 @@ const Header = (props) => {
       .catch((error) => {
         console.log(error);
       });
-  };
-
-  // Rofl this is weird
-  const handleDocsHover = () => {
-    setDocsHoverColor(hoverColor);
-  };
-
-  const handleDocsHoverOut = () => {
-    setDocsHoverColor(hoverOutColor);
-  };
-
-  const handleHomeHover = () => {
-    setHomeHoverColor(hoverColor);
-  };
-
-  const handleHelpHover = () => {
-    setHelpHoverColor(hoverColor);
-  };
-
-  const handleHelpHoverOut = () => {
-    setHelpHoverColor(hoverOutColor);
-  };
-
-  const handleSoarHover = () => {
-    setSoarHoverColor(hoverColor);
-  };
-
-  const handleSoarHoverOut = () => {
-    setSoarHoverColor(hoverOutColor);
-  };
-
-  const handleHomeHoverOut = () => {
-    setHomeHoverColor(hoverOutColor);
-  };
-
-  const handleLoginHover = () => {
-    setLoginHoverColor(hoverColor);
-  };
-
-  const handleLoginHoverOut = () => {
-    setLoginHoverColor(hoverOutColor);
   };
 
   const notificationWidth = 335
@@ -553,8 +614,8 @@ const Header = (props) => {
             aria-haspopup="true"
             onClick={(event) => { }}
           >
-	  		<svg viewBox="0 0 256 199" width="256" height="199" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid" style={{height: 30, width: 30, }}><path d="M216.856 16.597A208.502 208.502 0 0 0 164.042 0c-2.275 4.113-4.933 9.645-6.766 14.046-19.692-2.961-39.203-2.961-58.533 0-1.832-4.4-4.55-9.933-6.846-14.046a207.809 207.809 0 0 0-52.855 16.638C5.618 67.147-3.443 116.4 1.087 164.956c22.169 16.555 43.653 26.612 64.775 33.193A161.094 161.094 0 0 0 79.735 175.3a136.413 136.413 0 0 1-21.846-10.632 108.636 108.636 0 0 0 5.356-4.237c42.122 19.702 87.89 19.702 129.51 0a131.66 131.66 0 0 0 5.355 4.237 136.07 136.07 0 0 1-21.886 10.653c4.006 8.02 8.638 15.67 13.873 22.848 21.142-6.58 42.646-16.637 64.815-33.213 5.316-56.288-9.08-105.09-38.056-148.36ZM85.474 135.095c-12.645 0-23.015-11.805-23.015-26.18s10.149-26.2 23.015-26.2c12.867 0 23.236 11.804 23.015 26.2.02 14.375-10.148 26.18-23.015 26.18Zm85.051 0c-12.645 0-23.014-11.805-23.014-26.18s10.148-26.2 23.014-26.2c12.867 0 23.236 11.804 23.015 26.2 0 14.375-10.148 26.18-23.015 26.18Z" fill="#dadae1"/></svg>
-	  		{/*#f865f2*/}
+            <svg viewBox="0 0 256 199" width="256" height="199" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid" style={{ height: 30, width: 30, }}><path d="M216.856 16.597A208.502 208.502 0 0 0 164.042 0c-2.275 4.113-4.933 9.645-6.766 14.046-19.692-2.961-39.203-2.961-58.533 0-1.832-4.4-4.55-9.933-6.846-14.046a207.809 207.809 0 0 0-52.855 16.638C5.618 67.147-3.443 116.4 1.087 164.956c22.169 16.555 43.653 26.612 64.775 33.193A161.094 161.094 0 0 0 79.735 175.3a136.413 136.413 0 0 1-21.846-10.632 108.636 108.636 0 0 0 5.356-4.237c42.122 19.702 87.89 19.702 129.51 0a131.66 131.66 0 0 0 5.355 4.237 136.07 136.07 0 0 1-21.886 10.653c4.006 8.02 8.638 15.67 13.873 22.848 21.142-6.58 42.646-16.637 64.815-33.213 5.316-56.288-9.08-105.09-38.056-148.36ZM85.474 135.095c-12.645 0-23.015-11.805-23.015-26.18s10.149-26.2 23.015-26.2c12.867 0 23.236 11.804 23.015 26.2.02 14.375-10.148 26.18-23.015 26.18Zm85.051 0c-12.645 0-23.014-11.805-23.014-26.18s10.148-26.2 23.014-26.2c12.867 0 23.236 11.804 23.015 26.2 0 14.375-10.148 26.18-23.015 26.18Z" fill="#dadae1" /></svg>
+            {/*#f865f2*/}
           </IconButton>
         </Tooltip>
       </a>
@@ -690,67 +751,68 @@ const Header = (props) => {
     textAlign: "center",
     marginTop: "auto",
     marginBottom: "auto",
-    marginRight: 10,
+    // marginRight: 10,
   };
 
-  const modalView = 
-      <Dialog
-        open={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-        }}
-        PaperProps={{
-          style: {
-            color: "white",
-            minWidth: 850,
-            minHeight: 370,
-            padding: 20,
-            backgroundColor: "rgba(0, 0, 0, 1)",
-            borderRadius: theme.palette.borderRadius,
-          },
-        }}
-      >
-        <DialogTitle style={{ display: "flex" }}>
-          <span style={{ color: "white", fontSize: 24 }}>
-            Upgrade your plan
-          </span>
-          <IconButton
-            onClick={() => {
-              if (isCloud) {
+  const modalView =
+    <Dialog
+      open={modalOpen}
+      onClose={() => {
+        setModalOpen(false);
+      }}
+      PaperProps={{
+        style: {
+          color: "white",
+          minWidth: 850,
+          minHeight: 370,
+          padding: 20,
+          backgroundColor: "rgba(0, 0, 0, 1)",
+          borderRadius: theme.palette.borderRadius,
+        },
+      }}
+    >
+      <DialogTitle style={{ display: "flex" }}>
+        <span style={{ color: "white", fontSize: 24 }}>
+          Upgrade your plan
+        </span>
+        <IconButton
+          onClick={() => {
+            if (isCloud) {
               ReactGA.event({
                 category: "header",
                 action: "close_Upgread_popup",
                 label: "",
-              })};
-              setModalOpen(false);
-            }}
-            style={{
-              marginLeft: "auto",
-              position: "absolute",
-              top: 20,
-              right: 20,
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <div style={{ paddingLeft: "30px", paddingRight: "30px" }}>
-          <LicencePopup
-            serverside={serverside}
-            removeCookie={removeCookie}
-            isLoaded={isLoaded}
-            isLoggedIn={isLoggedIn}
-            globalUrl={globalUrl}
+              })
+            };
+            setModalOpen(false);
+          }}
+          style={{
+            marginLeft: "auto",
+            position: "absolute",
+            top: 20,
+            right: 20,
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <div style={{ paddingLeft: "30px", paddingRight: "30px" }}>
+        <LicencePopup
+          serverside={serverside}
+          removeCookie={removeCookie}
+          isLoaded={isLoaded}
+          isLoggedIn={isLoggedIn}
+          globalUrl={globalUrl}
 
-            billingInfo={billingInfo}
+          billingInfo={billingInfo}
 
-            userdata={userdata}
-            stripeKey={stripeKey}
-            setModalOpen={setModalOpen}
-            {...props}
-          />
-        </div>
-      </Dialog>
+          userdata={userdata}
+          stripeKey={stripeKey}
+          setModalOpen={setModalOpen}
+          {...props}
+        />
+      </div>
+    </Dialog>
 
   // Handle top bar or something
   const defaultTop = -2
@@ -792,13 +854,13 @@ const Header = (props) => {
           </Link>
         </ListItem>
       </List>
-      <List style={{ flex: 1.5, display: "flex", flexDirect: "row", marginTop: 10, itemAlign: "center", padding: 0 }} component="nav">
+      <List className={classes.menuList} component="nav">
         <ListItem style={{ textAlign: "center", marginLeft: "0px" }}>
           <Link to="/usecases" style={hrefStyle}>
             <Button
               variant="text"
               color="secondary"
-              style={menuText}
+              className={classes.menuButton}
               onClick={() => {
                 if (isCloud) {
                   ReactGA.event({
@@ -813,44 +875,12 @@ const Header = (props) => {
             </Button>
           </Link>
         </ListItem>
-        {isCloud ? (
-          <ListItem
-            style={{
-              textAlign: "center",
-              marginLeft: "0px",
-              paddingRight: 0,
-            }}
-          >
-            <Link to="/pricing" style={hrefStyle}>
-              <Button
-                variant="text"
-                color="secondary"
-                style={menuText}
-                onClick={() => {
-                  ReactGA.event({
-                    category: "header",
-                    action: "pricing_click",
-                    label: "",
-                  });
-                }}
-              >
-                Pricing
-              </Button>
-            </Link>
-          </ListItem>
-        ) : null}
-        <ListItem
-          style={{
-            textAlign: "center",
-            marginLeft: 0,
-            paddingRight: 0,
-          }}
-        >
+        <ListItem style={{ textAlign: "center", marginLeft: 0, paddingRight: 0 }}>
           <Link rel="noopener noreferrer" to="/docs" style={hrefStyle}>
             <Button
               variant="text"
               color="secondary"
-              style={menuText}
+              className={classes.menuButton}
               onClick={() => { }}
             >
               Docs
@@ -858,23 +888,62 @@ const Header = (props) => {
           </Link>
         </ListItem>
         <ListItem
-          style={{
-            textAlign: "center",
-            marginLeft: 0,
-            paddingRight: 0,
-          }}
+          style={{ textAlign: "center",  marginLeft: "0px", paddingRight: 0 }}
+        // onMouseEnter={handleMenuOpen}
+        // onMouseLeave={handleMenuClose}
         >
+          <Button
+            variant="text"
+            color="secondary"
+            className={classes.menuButton}
+            style={{width:200}}
+            onClick={handleMenuOpen}
+          >
+            Pricing & Services
+            <KeyboardArrowDownIcon style={{ marginLeft: 4 }} />
+          </Button>
+          <Menu
+            anchorEl={anchorEl}
+            keepMounted
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+            className={classes.dropdownMenu}
+            classes={{ paper: classes.dropdownMenu }}
+            MenuListProps={{ className: classes.cssStcg3yMenuList }}
+          >
+            {isCloud && (
+              <MenuItem className={classes.dropdownMenuItem} onClick={() => handleMenuItemClick('/pricing')}>
+                <Link to="/pricing" style={hrefStyle}>
+                  Pricing
+                </Link>
+              </MenuItem>
+            )}
+            <div className={classes.divider} />
+            <MenuItem className={classes.dropdownMenuItem} onClick={() => handleMenuItemClick('/professional-support')}>
+              <Link to="/professional-support" style={hrefStyle}>
+                Professional Services
+              </Link>
+            </MenuItem>
+            <div className={classes.divider} />
+            <MenuItem className={classes.dropdownMenuItem} onClick={() => handleMenuItemClick('/training')}>
+              <Link to="/training" style={hrefStyle}>
+                Training Courses
+              </Link>
+            </MenuItem>
+          </Menu>
+        </ListItem>
+        {/* <ListItem style={{ textAlign: "center", marginLeft: 0, paddingRight: 0 }}>
           <Link rel="noopener noreferrer" to="/training" style={hrefStyle}>
             <Button
               variant="text"
               color="secondary"
-              style={menuText}
+              className={classes.menuButton}
               onClick={() => { }}
             >
               Training
             </Button>
           </Link>
-        </ListItem>
+        </ListItem> */}
       </List>
       <List
         style={{ flex: 2, display: "flex", alignItems: "flex-start", padding: 0, }}
@@ -950,7 +1019,7 @@ const Header = (props) => {
           margin: "auto",
         }}
       >
-        <div style={{ flexDirection: "row" }}>
+        <div style={{ flexDirection: "row", marginLeft: 0}}>
           <List
             style={{
               height: 56,
@@ -966,9 +1035,9 @@ const Header = (props) => {
             <ListItem style={{ textAlign: "center", justifyContent: "center" }}>
               <Link to="/" style={hrefStyle}>
                 <div
-                  onMouseOver={handleHomeHover}
-                  onMouseOut={handleHomeHoverOut}
-                  style={{ color: HomeHoverColor, cursor: "pointer" }}
+                  onMouseOver={handleHover}
+                  onMouseOut={handleHoverOut}
+                  style={{ cursor: "pointer" }}
                 >
                   <Grid container direction="row" alignItems="center">
                     <Grid item style={{}}>
@@ -984,10 +1053,9 @@ const Header = (props) => {
               <ListItem style={listItemStyle}>
                 <Link to="/workflows" style={hrefStyle}>
                   <div
-                    onMouseOver={handleSoarHover}
-                    onMouseOut={handleSoarHoverOut}
+                    onMouseOver={handleHover}
+                    onMouseOut={handleHoverOut}
                     style={{
-                      color: SoarHoverColor,
                       cursor: "pointer",
                       display: "flex",
                       marginLeft: 25,
@@ -1005,10 +1073,9 @@ const Header = (props) => {
               <ListItem style={listItemStyle}>
                 <Link to="/apps" style={hrefStyle}>
                   <div
-                    onMouseOver={handleHelpHover}
-                    onMouseOut={handleHelpHoverOut}
+                    onMouseOver={handleHover}
+                    onMouseOut={handleHoverOut}
                     style={{
-                      color: HelpHoverColor,
                       cursor: "pointer",
                       display: "flex",
                     }}
@@ -1032,10 +1099,9 @@ const Header = (props) => {
               <ListItem style={listItemStyle}>
                 <Link to="/docs" style={hrefStyle}>
                   <div
-                    onMouseOver={handleDocsHover}
-                    onMouseOut={handleDocsHoverOut}
+                    onMouseOver={handleHover}
+                    onMouseOut={handleHoverOut}
                     style={{
-                      color: DocsHoverColor,
                       cursor: "pointer",
                       display: "flex",
                     }}
@@ -1049,6 +1115,25 @@ const Header = (props) => {
                   </div>
                 </Link>
               </ListItem>
+	  		  {/*
+              <ListItem style={listItemStyle}>
+                <Link to="/admin?admin_tab=billing" style={hrefStyle}>
+                  <div
+                    onMouseOver={handleHover}
+                    onMouseOut={handleHoverOut}
+                    style={{
+                      cursor: "pointer",
+                      display: "flex",
+                      width:170
+                    }}
+                  >
+                    <Typography style={{ marginTop: defaultTop }}>
+                    Pricing & Services
+                    </Typography>
+                  </div>
+                </Link>
+              </ListItem>
+			*/}
             </ListItem>
           </List>
         </div>
@@ -1260,7 +1345,7 @@ const Header = (props) => {
                         title={""}
                         placement="left"
                       >
-                        <div style={{ display: "flex", marginLeft:  50, marginRight: 50, }}>
+                        <div style={{ display: "flex", marginLeft: 50, marginRight: 50, }}>
                           <AddIcon />
                           <span style={{ marginLeft: 8 }}>
                             Add suborgs
@@ -1285,14 +1370,17 @@ const Header = (props) => {
                     marginRight: 7,
                     marginTop: 0,
                   }}
+                  title={upgradeHovered ? "Upgrade License" : ""}
+                  open={tooltipOpen}
+                  onClose={handleTooltipClose}
                 >
                   <Link style={hrefStyle}>
                     <Button
                       variant="contained"
                       color="primary"
                       style={{ textTransform: "none" }}
-                      onMouseOver={() => { setUpgradeHovered(true) }}
-                      onMouseOut={() => { setUpgradeHovered(false) }}
+                      onMouseOver={() => { setUpgradeHovered(true); handleTooltipOpen(); }}
+                      onMouseOut={() => { setUpgradeHovered(false); handleTooltipClose(); }}
                       onClick={() => {
                         if (isCloud) {
                           ReactGA.event({
@@ -1304,11 +1392,11 @@ const Header = (props) => {
                         setModalOpen(true)
                       }}
                     >
-                      {upgradeHovered ?
+                      {/* {upgradeHovered ?
                         "Upgrade License"
-                        :
-                        "Upgrade"
-                      }
+                        : */}
+                        Upgrade
+                      {/* } */}
 
                     </Button>
                   </Link>
@@ -1397,9 +1485,9 @@ const Header = (props) => {
         <ListItem style={{ textAlign: "center" }}>
           <Link to="/" style={hrefStyle}>
             <div
-              onMouseOver={handleHomeHover}
-              onMouseOut={handleHomeHoverOut}
-              style={{ color: HomeHoverColor, cursor: "pointer" }}
+              onMouseOver={handleHover}
+              onMouseOut={handleHoverOut}
+              style={{ cursor: "pointer" }}
             >
               <Grid container direction="row" alignItems="center">
                 <Grid item>
@@ -1421,9 +1509,9 @@ const Header = (props) => {
         <ListItem style={{ textAlign: "center" }}>
           <Link to="/docs" style={hrefStyle}>
             <div
-              onMouseOver={handleSoarHover}
-              onMouseOut={handleSoarHoverOut}
-              style={{ color: SoarHoverColor, cursor: "pointer" }}
+              onMouseOver={handleHover}
+              onMouseOut={handleHoverOut}
+              style={{ cursor: "pointer" }}
             >
               About
             </div>
@@ -1465,9 +1553,7 @@ const Header = (props) => {
           <ListItem style={{ textAlign: "center" }}>
             <Link to="/" style={hrefStyle}>
               <div
-                onMouseOver={handleHomeHover}
-                onMouseOut={handleHomeHoverOut}
-                style={{ color: HomeHoverColor, cursor: "pointer" }}
+                style={{ cursor: "pointer" }}
               >
                 <Grid container direction="row" alignItems="center">
                   <Grid item>
@@ -1512,10 +1598,10 @@ const Header = (props) => {
         >
           <ListItem style={{ flex: "1", textAlign: "center" }}>
             <div
-              onMouseOver={handleLoginHover}
-              onMouseOut={handleLoginHoverOut}
+              onMouseOver={handleHover}
+              onMouseOut={handleHoverOut}
               onClick={handleClickLogout}
-              style={{ color: LoginHoverColor, cursor: "pointer" }}
+              style={{ cursor: "pointer" }}
             >
               Logout
             </div>
@@ -1541,50 +1627,12 @@ const Header = (props) => {
 
   const topbarHeight = showTopbar ? 40 : 0
   const topbar = !isCloud || !showTopbar ? null :
-    curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/training" ?
+    curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/training" || curpath === "/professional-support" ?
       <span style={{ zIndex: 50001, }}>
         <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
           <Typography variant="body1" style={{ paddingTop: 7, margin: "auto", textAlign: "center", color: "white", }}>
             {/* Shuffle 1.4.0 is out! Read more about&nbsp; */}
-            Early Success! More&nbsp;
-            {/* <u>
-              <a href="https://github.com/Shuffle/Shuffle/releases/tag/v1.4.0" target="_blank" style={{ color: "inherit", }} onClick={() => {
-                ReactGA.event({
-                  category: "landingpage",
-                  action: "click_header_features",
-                  label: "",
-                })
-
-                //if (window.drift !== undefined) {
-                //	window.drift.api.startInteraction({ interactionId: 341911 })
-                //} else {
-                //	console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
-                //}
-              }} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
-                Features
-              </a>
-            </u>
-            ,&nbsp;
-            <u>
-              <span onClick={() => {
-                ReactGA.event({
-                  category: "landingpage",
-                  action: "click_header_pricing",
-                  label: "",
-                })
-
-                navigate("/pricing")
-
-                //if (window.drift !== undefined) {
-                //	window.drift.api.startInteraction({ interactionId: 341911 })
-                //} else {
-                //	console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
-                //}
-              }} style={{ cursor: "pointer", textDecoration: "none", color: "rgba(255,255,255,0.8)" }}>
-                Pricing
-              </span>
-            </u>
-            &nbsp;and&nbsp; */}
+			New Public&nbsp;
             <u>
               <span onClick={() => {
                 ReactGA.event({
@@ -1595,18 +1643,18 @@ const Header = (props) => {
 
                 navigate("/training")
 
-              }} style={{ cursor: "pointer", textDecoration: "none", fontWeight:600, color: "rgba(255,255,255,0.8)" }}>
-               Public Trainings
+              }} style={{ cursor: "pointer", textDecoration: "none", fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>
+				Training Dates Released
               </span>
             </u>
             &nbsp;Ahead!
           </Typography>
-          <IconButton color="secondary" style={{ position: "absolute", top: -3, right: 20, }} onClick={(event) => { 
-			  setShowTopbar(false) 
+          <IconButton color="secondary" style={{ position: "absolute", top: -3, right: 20, }} onClick={(event) => {
+            setShowTopbar(false)
 
-			  // Set storage that it's clicked
-			  localStorage.setItem("topbar_closed", "true")
-		  }}>
+            // Set storage that it's clicked
+            localStorage.setItem("topbar_closed", "true")
+          }}>
             <CloseIcon />
           </IconButton>
         </div>
