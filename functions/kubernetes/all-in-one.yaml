@@ -80,8 +80,7 @@ data:
   IS_KUBERNETES: "true"
   REGISTRY_URL: "192.168.29.16:5000"
   REGISTRY_AUTH: "false"
-  # SHUFFLE_KUBERNETES_WORKER: "ghcr.io/shuffle/shuffle-worker:nightly"
-  SHUFFLE_KUBERNETES_WORKER: gcr.io/shuffler/shuffle-worker-scale:latest
+  SHUFFLE_KUBERNETES_WORKER: "ghcr.io/shuffle/shuffle-worker:nightly"
 kind: ConfigMap
 
 ---
