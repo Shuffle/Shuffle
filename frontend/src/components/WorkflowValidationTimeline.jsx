@@ -153,7 +153,11 @@ const WorkflowValidationTimeline = (props) => {
 
 	// 1. Find startnode
 	// 2. Map childnodes from it
-	const startnodeId = workflow.start	
+	var startnodeId = workflow.start	
+
+	if (execution !== undefined && execution !== null) {
+		startnodeId = execution.start
+	}
 
 	// Find parent of startnodeId and if it's a webhook
 	var relevantactions = []
@@ -177,32 +181,38 @@ const WorkflowValidationTimeline = (props) => {
 		}
 	}
 
+	for (var key in workflow.actions) {
+		const action = workflow.actions[key]
+		if (action.id === startnodeId) {
+			action.order = 0
+			relevantactions.push(action)
+			continue
+		}
 
-	if (getParents !== undefined) {
-		for (var key in workflow.actions) {
-			const action = workflow.actions[key]
-			if (action.id === startnodeId) {
-				action.order = 0
+		var parents = []
+		if (getParents !== undefined) {
+			parents = getParents(action)
+		} else {
+			parents = getParentNodes(workflow, action)
+		}
+
+		//const parents = getParentNodes(workflow, action)
+		//console.log("PARENTS", key, parents)
+		if (parents !== undefined && parents !== null && parents.length > 0) {
+			const parentfound = parents.find((element) => element.id === startnodeId)
+			if (parentfound !== undefined) {
+
+				// FIXME: add order here based on how many steps away from the startnode
+				// This just has the parent count
+				action.order = parents.length
+
 				relevantactions.push(action)
-				continue
-			}
-
-			const parents = getParents(action)
-			//const parents = getParentNodes(workflow, action)
-			//console.log("PARENTS", key, parents)
-			if (parents !== undefined && parents !== null) {
-				const parentfound = parents.find((element) => element.id === startnodeId)
-				if (parentfound !== undefined) {
-
-					// FIXME: add order here based on how many steps away from the startnode
-					// This just has the parent count
-					action.order = parents.length
-
-					relevantactions.push(action)
-				}
 			}
 		}
-	} else {
+	}
+
+	if (getParents === undefined) {
+		var newactions = []
 		for (var key in workflow.triggers) {
 			const trigger = workflow.triggers[key]
 			if (trigger.trigger_type !== "SUBFLOW" && trigger.trigger_type !== "USERINPUT") {
@@ -210,11 +220,12 @@ const WorkflowValidationTimeline = (props) => {
 			}
 
 			if (workflow.actions.find((element) => element.id === trigger.id) === undefined) {
-				workflow.actions.push(trigger)
+				newactions.push(trigger)
+				//workflow.actions.push(trigger)
 			}
 		}
 
-		relevantactions = workflow.actions
+		relevantactions.push(...newactions)
 	}
 
 	// Sort according to how many parents a node has. MAY be wrong~
@@ -279,7 +290,10 @@ const WorkflowValidationTimeline = (props) => {
 						}
 
 						previousTools = true 
-						return null
+
+						if (startnodeId !== action.id) {
+							return null
+						}
 					} else {
 						if (action.status === "SUCCESS") {
 							nodecolor = green
@@ -405,7 +419,7 @@ const WorkflowValidationTimeline = (props) => {
 						: 
 							<Tooltip title={
 								<Typography variant="body1" style={{margin: 5, color: "white", }}>
-									{founderror.length > 0 ? founderror : ``} 
+									{founderror.length > 0 ? founderror : `${action.app_name.replaceAll('_', ' ')}`} 
 								</Typography>
 							} placement="top">
 

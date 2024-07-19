@@ -7514,7 +7514,6 @@ const releaseToConnectLabel = "Release to Connect"
         }
       } else if (action.app_name === "Integration Framework") {
 		  const iconInfo = GetIconInfo(action)
-		  console.log("FOUND INTEGRATION: iconInfo: ", iconInfo)
 		  if (iconInfo !== undefined && iconInfo !== null) {
 		  	action.fillGradient = iconInfo.fillGradient
 		  	action.iconBackground = iconInfo.iconBackgroundColor
@@ -12462,7 +12461,6 @@ const releaseToConnectLabel = "Release to Connect"
 
 				//setWorkflow(workflow);
 			}
-			console.log("STARTNODE: ", startnode);
 		} else {
 			console.log("WORKFLOW: ", workflow);
 		}
@@ -14823,6 +14821,7 @@ const releaseToConnectLabel = "Release to Connect"
         setSelectedTrigger(trigger);
         setWorkflow(workflow);
         saveWorkflow(workflow);
+        setSelectedTrigger({})
    
       })
       .catch((error) => {
@@ -16581,6 +16580,7 @@ const releaseToConnectLabel = "Release to Connect"
           }
         }
 
+		/*
         if (( event.ctrlKey || event.metaKey ) && event.shiftKey) {
           console.log("Shift key pressed")
           if (!workflow.public && executionModalOpen) {
@@ -16592,6 +16592,7 @@ const releaseToConnectLabel = "Release to Connect"
             setExecutionModalView(0);
           }
         }
+		*/
       };
   
       document.addEventListener('keydown', handleKeyDown);
@@ -21829,17 +21830,12 @@ const releaseToConnectLabel = "Release to Connect"
 			}
 		} 
 
-		console.log("2 - SELECTED ACTION: ", selectedAction)
-		console.log("2 - DATA: ", data)
-
 		if (selectedAction.app_name === "Shuffle Tools" && selectedAction.name === "filter_list" && count === 0) {
 			const parsedvalue = data
-			console.log("Parsed value: ", parsedvalue)
 			if (parsedvalue.includes("#")) {
 				const splitparsed = parsedvalue.split(".#.")
 				//console.log("Cant contain #: ", splitparsed)
 				if (splitparsed.length > 1) {
-					console.log("IN HERE AY")
 					//data.value = splitparsed[0]
 
 					selectedAction.parameters[0].value = splitparsed[0]

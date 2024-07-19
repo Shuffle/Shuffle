@@ -41,11 +41,12 @@ import {
 	Close as CloseIcon,
 	Delete,
 	RestaurantRounded,
+	Cloud,
 } from "@mui/icons-material";
 
 //import { useAlert 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
-import BillingStats from "../components/BillingStats.jsx";
+import BillingStats from "./BillingStats.jsx";
 import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 import DeleteIcon from '@mui/icons-material/Delete';
 
@@ -173,10 +174,10 @@ const Billing = (props) => {
 
 	const paperStyle = {
 		padding: 20,
-		height: "100%",
-		minHeight: 280,
-		maxWidth: 400,
-		width: "100%",
+		// maxWidth: 400,
+		width: 340,
+		height: 480,
+		// width: "100%",
 		backgroundColor: theme.palette.platformColor,
 		borderRadius: theme.palette.borderRadius * 2,
 		border: "1px solid rgba(255,255,255,0.3)",
@@ -470,9 +471,11 @@ const Billing = (props) => {
 						style: {
 							pointerEvents: "auto",
 							color: "white",
-							minWidth: 750,
+							// minWidth: 750,
+							width: 340,
 							padding: 30,
-							maxHeight: 700,
+							// maxHeight: 700,
+							height: 480,
 							overflowY: "auto",
 							overflowX: "hidden",
 							zIndex: 10012,
@@ -546,7 +549,7 @@ const Billing = (props) => {
 						</div>
 					</DialogContent>
 				</Dialog>
-				<div style={{ display: "flex" }}>
+				<div style={{ display: "flex", width: 340 }}>
 					{top_text === "Base Cloud Access" && userdata.has_card_available === true ?
 						<Chip
 							style={{
@@ -715,14 +718,14 @@ const Billing = (props) => {
 								userdata.has_card_available === true ?
 									"While you have a card attached to your account, Shuffle will no longer prevent workflows from running. Billing will occur at the start of each month."
 									:
-									isCloud ? 
+									isCloud ?
 										`You are not subscribed to any plan and are using the free plan with max 10,000 app runs per month. Upgrade to deactivate this limit.`
 										:
-										`You are not subscribed to any plan and are using the free, open source plan. This plan has no enforced limits, but scale issues may occur due to CPU congestion.` 
+										`You are not subscribed to any plan and are using the free, open source plan. This plan has no enforced limits, but scale issues may occur due to CPU congestion.`
 							}
 						</Typography>
 						<div style={{ display: 'flex', flexDirection: 'row' }}>
-							<Typography variant="body2" style={{}}>
+							<Typography variant="body2" style={{ marginTop: !userdata.has_card_available ? 5 : 0 }}>
 								Billing email: {BillingEmail}
 							</Typography>
 							{userdata.has_card_available === true && (
@@ -741,7 +744,7 @@ const Billing = (props) => {
 										boxShadow: 'none',
 										border: 'none',
 										cursor: 'pointer',
-										transition: 'background-color 0.3s, color 0.3s'
+										transition: 'background-color 0.3s, color 0.3s',
 									}}
 								>
 									Change
@@ -813,12 +816,13 @@ const Billing = (props) => {
 							variant="outlined"
 							color="primary"
 							style={{
-								marginTop: 10,
+								marginTop: !userdata.has_card_available ? 20 : 10,
 								borderRadius: 25,
 								height: 40,
-								fontSize: 14,
+								fontSize: 16,
 								color: "white",
 								backgroundImage: userdata.has_card_available ? null : "linear-gradient(to right, #f86a3e, #f34079)",
+								textTransform: "none",
 
 							}}
 							onClick={() => {
@@ -847,9 +851,10 @@ const Billing = (props) => {
 									marginTop: 10,
 									borderRadius: 25,
 									height: 40,
-									fontSize: 14,
+									fontSize: 16,
 									color: "white",
 									backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+									textTransform: 'none'
 								}}
 								onClick={() => {
 									if (isCloud) {
@@ -904,9 +909,11 @@ const Billing = (props) => {
 
 		const [editConsultation, setEditConsultation] = React.useState(false);
 		const [openUpgradePlan, setOpenUpgradePlan] = React.useState(false);
-		const [consultationHours, setConsultationHours] = React.useState(5);
+		const [consultationHours, setConsultationHours] = React.useState(1);
 		const [message, setMessage] = React.useState("");
 		const [hovered, setHovered] = React.useState(false)
+		const [getProfessionalServices, setGetProfessionalServices] = React.useState(false)
+		const [clickOnBuy, setClickOnBuy] = React.useState(false)
 
 		const formatedHours = String(inputHour).padStart(2, "0")
 		const formatedMinutes = String(inputMinutes).padStart(2, "0")
@@ -959,12 +966,16 @@ const Billing = (props) => {
 					return response.json();
 				})
 				.then((responseJson) => {
-					console.log("Response from consultation save: ", responseJson);
 					if (responseJson.success === true) {
 						toast.success("Consultation hours saved successfully");
 						setEditConsultation(false);
 					} else {
 						toast.error("Failed saving consultation hours.");
+					}
+					if (inputHour > 0 || inputMinutes > 0) {
+						setGetProfessionalServices(true)
+					} else {
+						setGetProfessionalServices(false)
 					}
 				})
 				.catch((error) => {
@@ -1001,7 +1012,6 @@ const Billing = (props) => {
 					return response.json();
 				})
 				.then((responseJson) => {
-					console.log("Response from consultation save: ", responseJson);
 					if (responseJson.success === true) {
 						toast.success("Thank you for your request. We will get back to you soon.");
 						setOpenUpgradePlan(false);
@@ -1015,18 +1025,23 @@ const Billing = (props) => {
 				});
 		}
 
-		var newPaperstyle = JSON.parse(JSON.stringify(paperStyle))
+		useEffect(() => {
+			if (inputHour !== undefined && inputMinutes !== undefined && inputHour > 0 || inputMinutes > 0) {
+				setGetProfessionalServices(true)
+			} else {
+				setGetProfessionalServices(false)
+			}
+		})
 
 		return (
 			<Paper style={{
 				padding: 20,
-				height: "100%",
-				minHeight: 280,
-				maxWidth: 400,
-				width: "100%",
+				// maxWidth: 400,
+				minWidth: 340,
+				height: 480,
 				backgroundColor: hovered ? "#232427" : theme.palette.platformColor,
 				borderRadius: theme.palette.borderRadius * 2,
-				border: "1px solid rgba(255,255,255,0.3)",
+				border: "1px solid #f85a3e",
 				marginRight: 10,
 				marginTop: 15,
 			}}
@@ -1041,9 +1056,9 @@ const Billing = (props) => {
 				</Typography>
 				<div>
 					<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
-						Current Plan includes total {inputHour} hours and {inputMinutes} minutes of consultation and management by our experts.
+						You currently have a total of {inputHour} hours and {inputMinutes} minutes of professional services available by our experts.
 					</Typography>
-					<div style={{ display: "flex", width: 'auto', justifyContent: 'center', marginTop: 10 }}>
+					<div style={{ display: "flex", minWidth: 340, justifyContent: 'center', marginTop: userdata.support ? 0 : 10 }}>
 						{editConsultation ?
 							<>
 								<TextField
@@ -1074,6 +1089,7 @@ const Billing = (props) => {
 									variant="contained"
 									color="primary"
 									onClick={handleCancel}
+									style={{ textTransform: 'none' }}
 								>
 									Cancel
 								</Button>
@@ -1082,48 +1098,113 @@ const Billing = (props) => {
 									variant="contained"
 									color="primary"
 									onClick={toggleEditMode}
+									style={{ textTransform: 'none' }}
 								>
 									Edit
 								</Button>
 							)}
-							{editConsultation && <Button variant="contained" color="primary" style={{ marginLeft: 5 }} onClick={handleSave}>Save</Button>}
+							{editConsultation && <Button variant="contained" color="primary" style={{ marginLeft: 5, textTransform: 'none' }} onClick={handleSave}>Save</Button>}
 						</div>
 						: null}
-					<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+					<Typography variant="body2" color="textSecondary" style={{ marginTop: userdata.support ? 5 : 10, }}>
 						Features
 					</Typography>
 					<ul>
 						<li>
 							<Typography variant="body2" color="textPrimary" style={{}}>
-								Debug/Create workflows with our experts
+								Build custom apps, integrations, and worklows for your specific use cases or applications
 							</Typography>
 						</li>
 						<li>
 							<Typography variant="body2" color="textPrimary" style={{}}>
-								Ask questions and get help with your workflows and integrations by our experts
+								Help solve / debug / update / add features and capabilities of the platform
 							</Typography>
 						</li>
 					</ul>
 				</div>
-				<Button
-					fullWidth
-					disabled={false}
-					variant="outlined"
-					color="primary"
-					style={{
-						marginTop: 10,
-						borderRadius: 25,
-						height: 40,
-						fontSize: 14,
-						color: "white",
-						backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
-					}}
-					onClick={() => {
-						setOpenUpgradePlan(true)
-					}}
-				>
-					Upgrade plan
-				</Button>
+				<div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', marginTop: 20 }}>
+					<Button
+						fullWidth
+						disabled={false}
+						variant="outlined"
+						color="primary"
+						style={{
+							marginTop: userdata.support ? 0 : 10,
+							borderRadius: 25,
+							height: 40,
+							fontSize: 16,
+							color: "white",
+							backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+							textTransform: 'none'
+						}}
+						onClick={() => {
+							if (Cloud) {
+								ReactGA.event({
+									category: "Billing",
+									action: "Buy_consultation_hours",
+								});
+							}
+							setClickOnBuy(true)
+						}}
+					>
+						Buy
+					</Button>
+					<Dialog open={clickOnBuy} onClose={() => { setClickOnBuy(false) }}>
+						<Typography variant="body1" style={{ marginTop: 10, textAlign: 'center', padding: 20, fontSize: 18 }}>
+							You will be taken to Stripe to book professional service hours. You can adjust the number of hours on the left side of the Stripe page.
+						</Typography>
+						<DialogContent>
+							<Button
+								variant="contained"
+								color="primary"
+								style={{ display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none', fontSize: 16 }}
+								onClick={() => {
+									if (Cloud) {
+										ReactGA.event({
+											category: "Billing",
+											action: "Buy_consultation_hours",
+										});
+									}
+									const url = userdata.licensed === true
+										? "https://book.stripe.com/6oEeY23fw2T84M06oq"
+										: "https://book.stripe.com/00g6rw3fw9hwguI289";
+									window.open(url, "_blank");
+								}}
+							>
+								Book Professional Service Hours
+							</Button>
+
+						</DialogContent>
+					</Dialog>
+					<Tooltip title={!getProfessionalServices ? "Please buy the consultation hours to get this professional service" : ""}>
+						<span>
+							<Button
+								fullWidth
+								disabled={!getProfessionalServices}
+								variant="outlined"
+								color="primary"
+								style={{
+									marginTop: userdata.support ? 5 : 10,
+									borderRadius: 25,
+									height: 40,
+									fontSize: 16,
+									color: "white",
+									backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+									textTransform: 'none',
+									cursor: getProfessionalServices ? 'pointer' : 'not-allowed',
+									opacity: getProfessionalServices ? 1 : 0.6,
+								}}
+								onClick={() => {
+									if (getProfessionalServices) {
+										setOpenUpgradePlan(true);
+									}
+								}}
+							>
+								Get Professional Service
+							</Button>
+						</span>
+					</Tooltip>
+				</div>
 				<Dialog open={openUpgradePlan}
 					onClose={() => setOpenUpgradePlan(false)}
 					fullWidth
@@ -1140,20 +1221,21 @@ const Billing = (props) => {
 					</DialogTitle>
 					<DialogContent style={{ padding: '24px', }}>
 						<Typography variant="body1" color="textSecondary" style={{ marginBottom: '16px', textAlign: 'left' }}>
-							Enter the total hours of consultation you want to include in your plan.
+							Enter the total hours of consultation you want.
 						</Typography>
 						<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '16px' }}>
 							<Slider
 								value={consultationHours}
 								onChange={(e, val) => setConsultationHours(val)}
 								aria-labelledby="continuous-slider"
-								step={5}
-								min={5}
-								max={50}
-								style={{ width: '80%', color: theme.palette.primary.main }} // Adding primary color for better visibility
+								step={1}
+								min={1}
+								max={(inputHour === "0" && inputMinutes > 0) ? 1 : inputHour}
+								style={{ width: '80%', color: theme.palette.primary.main }}
 								marks
 								valueLabelDisplay="auto"
 							/>
+
 						</div>
 						<Typography variant="body1" color="textSecondary" style={{ marginTop: '24px', textAlign: 'left' }}>
 							If you have any additional requirements or questions, please leave a message below.
@@ -1163,21 +1245,232 @@ const Billing = (props) => {
 							fullWidth
 							multiline
 							rows={4}
-							placeholder="Your message"
+							placeholder="What kind of services are you looking for?"
 							style={{ marginTop: '16px', borderRadius: '8px' }}
 							onChange={(e) => setMessage(e.target.value)}
 						/>
 						<Button
 							variant="contained"
 							color="primary"
-							style={{ marginTop: '24px', display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px' }}
+							style={{ marginTop: '24px', display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none' }}
 							onClick={handleUpgradeConsultation}
 						>
-							Submit Request
+							Submit Request for {consultationHours} hours
 						</Button>
 					</DialogContent>
 				</Dialog>
 			</Paper >
+		)
+	}
+
+	const TrainingService = () => {
+
+		const [hovered, setHovered] = React.useState(false)
+		const [openPrivateTraining, setOpenPrivateTraining] = React.useState(false)
+		const [PrivateTrainingMember, setPrivateTrainingMember] = React.useState(5)
+		const [message, setMessage] = React.useState("");
+
+		const handlePrivateTraining = () => {
+
+			toast("Submitting your request for private training. Please wait...")
+
+			const data = {
+				org_id: selectedOrganization.id,
+				trainingMembers: String(PrivateTrainingMember),
+				message: message
+			}
+
+			const url = `${globalUrl}/api/v1/orgs/${selectedOrganization.id}/privateTraining`
+
+			fetch(url, {
+				body: JSON.stringify(data),
+				mode: "cors",
+				method: "POST",
+				credentials: "include",
+				crossDomain: true,
+				withCredentials: true,
+				headers: {
+					"Content-Type": "application/json; charset=utf-8",
+				},
+			}).then((response) => {
+				if (response.status !== 200) {
+					console.log("Error in response");
+				}
+				return response.json();
+			}).then((responseJson) => {
+				if (responseJson.success === true) {
+					toast.success("Your request for private training has been submitted successfully. We will get back to you soon.")
+					setOpenPrivateTraining(false)
+				} else {
+					toast.error("Failed sending request for private training. Please try again later or contact support@shuffler.io for help.")
+				}
+			})
+		}
+
+		return (
+			<Paper
+				style={{
+					padding: 20,
+					height: 480,
+					// maxWidth: 400,
+					width: 340,
+					backgroundColor: hovered ? "#232427" : theme.palette.platformColor,
+					borderRadius: theme.palette.borderRadius * 2,
+					border: "1px solid #f85a3e",
+					marginRight: 10,
+					marginTop: 15,
+				}}
+				onMouseEnter={() => setHovered(true)}
+				onMouseLeave={() => setHovered(false)}
+			>
+				<Typography variant="h6" style={{ marginTop: 10, marginBottom: 10, }}>
+					Training
+				</Typography>
+				<Divider />
+				<Typography variant="body1" style={{ marginTop: 10, }}>
+					Become a Shuffle Expert
+				</Typography>
+				<div>
+					<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+						Public Training
+					</Typography>
+					<ul>
+						<li>
+							<Typography variant="body2" color="textPrimary">
+								Public course on Automation for Security Professionals
+							</Typography>
+						</li>
+						<li>
+							<Typography variant="body2" color="textPrimary">
+								Covers Shuffle Platform, Apps, Workflows, Usecases, JSON, Liquid Formatting, and more.
+							</Typography>
+						</li>
+					</ul>
+					<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+						Private Training
+					</Typography>
+					<ul>
+						<li>
+							<Typography variant="body2" color="textPrimary">
+								Everything from Public Training
+							</Typography>
+						</li>
+						<li>
+							<Typography variant="body2" color="textPrimary" >
+								Customized for your team’s usecases, date and time, location, and more.
+							</Typography>
+						</li>
+					</ul>
+				</div>
+				<div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', marginTop: 30, width: 340 }}>
+					<Button
+						fullWidth
+						disabled={false}
+						variant="outlined"
+						color="primary"
+						style={{
+							marginTop: 10,
+							borderRadius: 25,
+							height: 40,
+							fontSize: 16,
+							color: "white",
+							backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+							textTransform: 'none'
+						}}
+						onClick={() => {
+							if (Cloud) {
+								ReactGA.event({
+									category: "Billing",
+									action: "click_public_training_button",
+								});
+							}
+							navigate("/training")
+						}}
+					>
+						Public Training
+					</Button>
+					<Button
+						fullWidth
+						disabled={false}
+						variant="outlined"
+						color="primary"
+						style={{
+							marginTop: 10,
+							borderRadius: 25,
+							height: 40,
+							fontSize: 16,
+							color: "white",
+							backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+							textTransform: 'none'
+						}}
+						onClick={() => {
+							if (Cloud) {
+								ReactGA.event({
+									category: "Billing",
+									action: "click_public_training_button",
+								});
+							}
+							setOpenPrivateTraining(true)
+						}}
+					>
+						Private Training
+					</Button>
+					<Dialog open={openPrivateTraining}
+						onClose={() => setOpenPrivateTraining(false)}
+						fullWidth
+						style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+						PaperProps={{
+							style: {
+								width: 500,
+								margin: 0,
+							}
+						}}
+					>
+						<DialogTitle style={{ marginTop: 10, textAlign: 'center', fontWeight: 'bold' }}>
+							Private Training
+						</DialogTitle>
+						<DialogContent style={{ padding: '24px', }}>
+							<Typography variant="body1" color="textSecondary" style={{ marginBottom: '16px', textAlign: 'left' }}>
+								Enter the total members for private training. Minimum 5 members required.
+							</Typography>
+							<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '16px' }}>
+								<Slider
+									value={PrivateTrainingMember}
+									onChange={(e, val) => setPrivateTrainingMember(val)}
+									aria-labelledby="continuous-slider"
+									step={1}
+									min={5}
+									max={50}
+									style={{ width: '80%', color: theme.palette.primary.main }}
+									marks
+									valueLabelDisplay="auto"
+								/>
+
+							</div>
+							<Typography variant="body1" color="textSecondary" style={{ marginTop: '24px', textAlign: 'left' }}>
+								If you have any additional requirements or questions, please leave a message below.
+							</Typography>
+							<TextField
+								variant="outlined"
+								fullWidth
+								multiline
+								rows={4}
+								placeholder="Your message"
+								style={{ marginTop: '16px', borderRadius: '8px' }}
+								onChange={(e) => setMessage(e.target.value)}
+							/>
+							<Button
+								variant="contained"
+								color="primary"
+								style={{ marginTop: '24px', display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none' }}
+								onClick={handlePrivateTraining}
+							>
+								Submit Request
+							</Button>
+						</DialogContent>
+					</Dialog>
+				</div>
+			</Paper>
 		)
 	}
 
@@ -1623,11 +1916,11 @@ const Billing = (props) => {
 			{userdata.support === true ?
 				<div style={{ marginBottom: 10, marginTop: clickedFromOrgTab ? 16 : null, color: clickedFromOrgTab ? "#F1F1F1" : null }}>
 					For sales: Create&nbsp;
-					<a href={"https://docs.google.com/document/d/1N-ZJNn8lWaqiXITrqYcnTt53oXGLNYFEzc5PU-tdAps/copy" + selectedOrganization.id} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+					<a href={"https://docs.google.com/document/d/1N-ZJNn8lWaqiXITrqYcnTt53oXGLNYFEzc5PU-tdAps/copy"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
 						EU contract
 					</a>
 					&nbsp;or&nbsp;
-					<a href={"https://docs.google.com/document/d/1cF-Cwxt1TcahlLrpl1GH2hFZO4gxppLeYjHW6QB0EzQ/copy" + selectedOrganization.id} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
+					<a href={"https://docs.google.com/document/d/1cF-Cwxt1TcahlLrpl1GH2hFZO4gxppLeYjHW6QB0EzQ/copy"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
 						NOT EU contract
 					</a>
 					&nbsp; - &nbsp;
@@ -1650,7 +1943,7 @@ const Billing = (props) => {
 				</Typography>
 				: null}
 
-			<div style={{ display: "flex", maxWidth: 768, minWidth: 768, }}>
+			<div style={{ display: "flex", width: 1180, overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#494949 #2f2f2f', height: 580 }} >
 				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ? isChildOrg ? null :
 					<SubscriptionObject
 						index={0}
@@ -1711,6 +2004,9 @@ const Billing = (props) => {
 						userdata={userdata}
 						selectedOrganization={selectedOrganization}
 					/> : null}
+
+
+				<TrainingService />
 
 				{isCloud &&
 					selectedOrganization.subscriptions !== undefined &&
@@ -1966,9 +2262,9 @@ const Billing = (props) => {
 
 			  </div>
             ) : null*/}
-			<div style={{ marginTop: 50, marginLeft: 10 }}>
+			<div style={{ marginTop: 20, marginLeft: 10 }}>
 				<Typography
-					style={{ marginTop: 40, marginBottom: 5 }}
+					style={{ marginBottom: 5 }}
 					variant="h4"
 				>
 					Manage Billing
