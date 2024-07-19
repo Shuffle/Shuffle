@@ -690,7 +690,7 @@ const LicencePopup = (props) => {
         const priceItem = window.location.origin === "https://shuffler.io" ?
             shuffleVariant === 0 ? "app_executions" : "cores"
             :
-            shuffleVariant === 0 ? "price_1PWI5zDzMUgUjxHSKkz0fGdN" : "price_1NXjQqDzMUgUjxHSg690R4FP"
+            shuffleVariant === 0 ? "price_1PbO0cEJjT17t98NsfEMUlMn" : "price_1PbNnaEJjT17t98NLadq6Lhq"
 
         const successUrl = `${window.location.origin}/admin?admin_tab=billing&payment=success`
         const failUrl = `${window.location.origin}/pricing?admin_tab=billing&payment=failure`

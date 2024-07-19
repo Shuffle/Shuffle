@@ -513,10 +513,15 @@ export const validateJson = (showResult) => {
 		try {
 			for (const [key, value] of Object.entries(result)) {
 				if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
+					//console.log("CHECKING STRING: ", value)
+
 					const inside_result = validateJson(value)
 					if (inside_result.valid) {
+						//console.log("INSIDE RESULT: ", inside_result.result)
+
 						if (typeof inside_result.result === "string") {
-          		const newres = JSON.parse(inside_result.result)
+          					const newres = JSON.parse(inside_result.result)
+
 							result[key] = newres 
 						} else {
 							result[key] = inside_result.result
@@ -1037,9 +1042,9 @@ const Workflows = (props) => {
           data.default_return_value,
           {},
           false,
-					[],
-					"",
-					data.status,
+		  [],
+		  "",
+		  data.status,
         )
           .then((response) => {
             if (response !== undefined) {

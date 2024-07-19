@@ -124,7 +124,7 @@ const SearchField = props => {
 	);
 
 	return (
-		<div style={{ marginTop: "auto", marginLeft: !isLoggedIn ? 0 : 130 }}>
+		<div style={{ marginTop: "auto", marginLeft: !isLoggedIn ? 0: "auto", marginRight: !isLoggedIn ? 0 : "auto", width: !isLoggedIn ? "auto" : 300, }}>
 			{modalView}
 			<TextField
 				style={{ backgroundColor: "#212121", height: 48, borderRadius: rounded === true ? 25 : theme.palette.borderRadius, minWidth: fieldWidth, maxWidth: fieldWidth, }}
