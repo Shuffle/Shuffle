@@ -80,11 +80,11 @@ data:
   IS_KUBERNETES: "true"
   REGISTRY_URL: "192.168.29.16:5000"
   REGISTRY_AUTH: "false"
-  SHUFFLE_KUBERNETES_WORKER: "ghcr.io/shuffle/shuffle-worker:nightly"
+  # SHUFFLE_KUBERNETES_WORKER: "ghcr.io/shuffle/shuffle-worker:nightly"
+  SHUFFLE_KUBERNETES_WORKER: gcr.io/shuffler/shuffle-worker-scale:latest
 kind: ConfigMap
 
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -92,11 +92,17 @@ metadata:
   name: pod-manager
 rules:
 - apiGroups: [""]
-  resources: ["pods"]
+  resources: ["pods", "services", "deployments"]
   verbs: ["get", "list", "create", "update", "delete"]
 - apiGroups: ["batch"]
   resources: ["jobs"]
   verbs: ["create", "get", "list", "watch", "delete"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["rolebindings", "roles"]
+  verbs: ["get", "list", "create"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "pods", "services"]
+  verbs: ["create", "get", "list", "update", "delete"]
 
 ---
 
@@ -838,8 +844,8 @@ spec:
               value: nightly
             - name: SHUFFLE_SCALE_REPLICAS
               value: "5"
-              #- name: SHUFFLE_SWARM_CONFIG
-              #value: run
+            - name: SHUFFLE_SWARM_CONFIG
+              value: run
             - name: SHUFFLE_WORKER_VERSION
               value: nightly
             - name: IS_KUBERNETES
@@ -862,7 +868,6 @@ spec:
                 configMapKeyRef:
                   key: SHUFFLE_KUBERNETES_WORKER
                   name: env
-
             - name: SHUFFLE_MEMCACHED
               valueFrom:
                 configMapKeyRef:
