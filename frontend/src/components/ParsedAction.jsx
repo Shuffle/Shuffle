@@ -184,15 +184,8 @@ const ParsedAction = (props) => {
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
   const [autoCompleting, setAutocompleting] = React.useState(false);
   const [selectedActionParameters, setSelectedActionParameters] = React.useState(selectedAction?.parameters || []);
-    const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
-	const [paramValues, setParamValues] = React.useState(
-		selectedAction?.parameters?.map((param) => {
-			return {
-				name: param.name,
-				value: param.value,
-			}
-		})
-	);
+  const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
+  const [paramUpdate, setParamUpdate] = React.useState("");
     const [actionlist, setActionlist] = React.useState([]);
     const [jsonList, setJsonList] = React.useState([]);
     const [showDropdown, setShowDropdown] = React.useState(false);
@@ -207,16 +200,6 @@ const ParsedAction = (props) => {
 	}
   }, [expansionModalOpen])
 
-//   useEffect(() => {
-// 		setParamValues(selectedAction.parameters?.map((param) => {
-// 			return {
-// 				name: param.name,
-// 				value: param.value,
-// 			}
-// 		}))
-//   },[
-// 	selectedAction, selectedApp,setNewSelectedAction, workflow,
-//   ])
 
   useEffect(() => {
 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
@@ -417,8 +400,8 @@ const ParsedAction = (props) => {
 			}
 		
 			// Only set selected action parameters if they have changed
-			if (selectedAction.parameters && selectedAction.parameters.length > 0) {
-				setSelectedActionParameters(selectedAction.parameters);
+			if (selectedAction?.parameters && selectedAction?.parameters.length > 0) {
+				setSelectedActionParameters(selectedAction?.parameters);
 			}
 		
 			// Only set selected variable parameter if it is null or undefined
@@ -433,6 +416,7 @@ const ParsedAction = (props) => {
 
 	useEffect(() => {
         const newActionList = [];
+		const parentActionList = [];
 
         // Process workflowExecutions
         if (workflowExecutions.length > 0) {
@@ -560,89 +544,54 @@ const ParsedAction = (props) => {
                             autocomplete: parentNode.label.split(" ").join("_"),
                             example: exampleData,
                         });
-                    }
-                }
-            }
-        }
 
-        // Update the actionlist state
-        setActionlist(newActionList);
-    }, [workflow.execution_variables, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents]);
-	
-
-	const memoizedParam = useMemo(() => {
-		let appActions = [];
-		if (getParents) {
-            const parents = getParents(selectedAction);
-            if (parents.length > 1) {
-                const labels = [];
-                for (let parentNode of parents) {
-                    if (parentNode.label !== "Execution Argument" && !labels.includes(parentNode.label)) {
-                        labels.push(parentNode.label);
-                        let exampleData = parentNode.example ?? "";
-                        if (!exampleData && workflowExecutions.length > 0) {
-                            for (let exec of workflowExecutions) {
-                                const foundResult = exec.results?.find(result => result.action.id === parentNode.id);
-                                if (foundResult) {
-                                    const valid = validateJson(foundResult.result);
-                                    if (valid.valid && valid.result.success !== false) {
-                                        exampleData = valid.result;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        appActions.push({
+						parentActionList.push({
                             type: "action",
                             id: parentNode.id,
                             name: parentNode.label,
                             autocomplete: parentNode.label.split(" ").join("_"),
                             example: exampleData,
                         });
+
+							
                     }
                 }
             }
         }
 
-		let newParameters =  selectedAction.parameters?.map((param) => {
+		let newParameters =  selectedAction?.parameters?.map((param) => {
 			let paramvalue = param.value;
+			let errorVars = [];
 			if(paramvalue.includes("$")){
 				let actions = workflow.actions?.map((action) => {
 					return "$"+action.label.toLowerCase();
 				})
-				if(actionlist.length > 0){
-					let appParentActions = appActions?.map(action => "$" + action.name.toLowerCase());
+				if(newActionList.length > 0){
+					let appParentActions = parentActionList?.map(action => "$" + action.name.toLowerCase());
 					let notPresentAction = actions?.filter((action) => !appParentActions?.includes(action))
-					console.log("ACTIONS: ", actions)
-					console.log("APP ACTIONS: ", appParentActions)
-					console.log("NOT PRESENT: ", notPresentAction)
 					notPresentAction?.forEach((action) => {
-						console.log("Not included Action: ", action)
 						if(paramvalue.includes(action)){
-							
+							errorVars.push(action);
 							// paramvalue = paramvalue.replace(action, "")
 							// paramvalue = paramvalue.replace(/^\s*[\r\n]/gm, "");
 						}
 					})
 				}
 			}
-			console.log("After removing param value: ", paramvalue)
-			return {...param, value: paramvalue}
-		});	
-		selectedAction.parameters = newParameters;
-		setSelectedActionParameters(newParameters);
-		setSelectedAction(selectedAction);
-		return newParameters;
-	},[actionlist,selectedAction,workflow.actions,workflow,selectedApp,setNewSelectedAction])
 
-	useEffect(() => {
-		setParamValues(memoizedParam?.map((param) => {
-			return {
-				name: param.name,
-				value: param.value,
+			let message = "";
+			if(errorVars.length > 0){
+				if(errorVars.length === 1){
+					message = errorVars[0] + " is not accessible in this action";
+				}else{
+					message = errorVars.join(", ") + " are not accessible in this action";
+				}
 			}
-		}))
-	},[memoizedParam])
+			return {...param, value: paramvalue, error: message}
+		});	
+		setSelectedActionParameters(newParameters);
+        setActionlist(newActionList);
+    }, [workflow.execution_variables,paramUpdate, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents,setNewSelectedAction]);
 
 	useEffect(() => {
 		selectedNameChange(appActionName)
@@ -653,13 +602,14 @@ const ParsedAction = (props) => {
 	  },[appActionName,delay])
 	 
 		const handleParamChange = (event, count,data) => {
-			const newParams = [...paramValues];
+			const newParams = [...selectedActionParameters];
 			newParams.map((param) => {
 				if (param.name === data.name) {
 					param.value = event.target.value;
 				}
 			})
-			setParamValues(newParams);
+			setSelectedActionParameters(newParams);
+			setParamUpdate(event.target.value);
 			changeActionParameter(event, count, data)
 		}
 		const calculateHelpertext = (input_data) => {
@@ -1248,7 +1198,7 @@ const ParsedAction = (props) => {
 	}
 
     // FIXME: Issue #40 - selectedActionParameters not reset
-	if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
+	if (Object.getOwnPropertyNames(selectedAction)?.length > 0 && selectedActionParameters?.length > 0) {
 	  var wrapperapp = {
 	  	"id": "",
 	  	"name": "noapp",
@@ -2759,7 +2709,7 @@ const ParsedAction = (props) => {
 
 		  {suggestionInfo()}
 
-          {selectedActionParameters.map((data, count) => {
+          {selectedActionParameters?.map((data, count) => {
             if (data.variant === "") {
               data.variant = "STATIC_VALUE";
             }
@@ -3214,10 +3164,12 @@ const ParsedAction = (props) => {
                 color="primary"
                 // defaultValue={data.value}
                 value={
-					paramValues.find((param) => param.name === data.name) !== undefined
-						? paramValues.find((param) => param.name === data.name).value
-						: ""
+					data?.value
 				}
+				error={
+					data?.error?.length > 0 ? true : false
+				}
+				helperText={data?.error?.length > 0 ? data.error : returnHelperText(data.name, data.value)}
                 //options={{
                 //	theme: 'gruvbox-dark',
                 //	keyMap: 'sublime',
@@ -3240,7 +3192,6 @@ const ParsedAction = (props) => {
                 //   changeActionParameter(event, count, data);
 				handleParamChange(event, count, data)
                 }}
-                helperText={returnHelperText(data.name, data.value)}
                 onBlur={(event) => {
 					baseHelperText = calculateHelpertext(event.target.value)
 					if (setLastSaved !== undefined) {
