@@ -356,7 +356,7 @@ const Priorities = (props) => {
     	      	      dismissNotification(data.id);
     	      	    }}
     	      	  >
-    	      	    Dismiss
+    	      	    Dismiss 
     	      	  </Button>
     	      	) : null}
 				<Tooltip title="Disabling a notification makes it so similar notifications to this one will NOT be re-opened. It will NOT forward notifications to your notification workflow, but WILL still keep counting." placement="top">

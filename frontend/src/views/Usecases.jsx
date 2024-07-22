@@ -62,6 +62,7 @@ import {
 	TreeMapLabel,
 	TreeMapRect,
 } from 'reaviz';
+import { isMobile } from "react-device-detect"
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -381,7 +382,7 @@ const UsecaseListComponent = (props) => {
 						<Typography variant="h6">
 							{usecase.name}
 						</Typography>
-      					<Grid container spacing={3} style={{marginTop: 25}}>
+      					<Grid container spacing={3} style={{marginTop: isMobile ? null:25, padding: isMobile?20:null}}>
 							{usecase.list.map((subcase, subindex) => {
 								const selectedItem = subindex === expandedItem && index === expandedIndex
 
@@ -426,7 +427,7 @@ const UsecaseListComponent = (props) => {
 								const fixedName = subcase.name.toLowerCase().replace("_", " ")
 
 								return (
-      								<Grid id={fixedName} item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
+      								<Grid id={fixedName} item xs={isMobile ? 12 : selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
 										if (fixedName === "reporting") {
 											getUsecase(subcase, index, subindex) 
 											return
@@ -443,7 +444,7 @@ const UsecaseListComponent = (props) => {
 										}}>
 											{!selectedItem ? 
 												<div style={{textAlign: "left", position: "relative",}}>
-													<Typography variant="h6" style={{maxWidth: 215}}>
+													<Typography variant="h6" style={{maxWidth: isMobile? null:215}}>
 														<b>{subcase.name}</b>
 													</Typography>
 															{finished ? 
@@ -478,7 +479,7 @@ const UsecaseListComponent = (props) => {
 																		<IconButton
 																			style={{
 																				position: "absolute",
-																				bottom: -25,
+																				bottom: isMobile ? 11 :-20,
 																				right: -15,
 																			}}
 																			onClick={(e) => {
@@ -503,7 +504,7 @@ const UsecaseListComponent = (props) => {
 																		<IconButton
 																			style={{
 																				position: "absolute",
-																				bottom: -65,
+																				bottom: isMobile ? -22 : 10,
 																				right: -15,
 																			}}
 																			onClick={(e) => {
@@ -618,7 +619,7 @@ const UsecaseListComponent = (props) => {
           									  </IconButton>
           									</Tooltip>
 													</div>
-													<div style={{marginTop: 25, display: "flex", minHeight: 400, maxHeight: 400, marginRight: 15, }}>
+													<div style={{marginTop: isMobile? null:25, padding: isMobile?20:null, width: isMobile?"100%":null, display: isMobile ? null:"flex", minHeight: isMobile ? "auto":400, maxHeight: isMobile ? null:400, marginRight: isMobile?null:15 }}>
 														{editing ? 
 															<div style={{flex: 1, marginRight: 50, }}>
 																<TextField
@@ -979,7 +980,8 @@ const UsecaseListComponent = (props) => {
 															}
 															<div style={{
 																	height: 350, 
-																	width: 350, 
+																	width: isMobile? null:350, 
+																	marginTop: isMobile ? 50:null,
 																	borderRadius: theme.palette.borderRadius,
 																	border: "1px solid rgba(255,255,255,0.3)",
 																	padding: 5,
@@ -1066,8 +1068,8 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 		}}>
 			<RadialAreaChart
 				id="workflow_categories"
-				height={500}
-				width={500}
+				height={isMobile ? 400:500}
+				width={isMobile ? null:500}
 				data={keys}
     		axis={<RadialAxis type="category" />}
 				series={
@@ -1675,15 +1677,15 @@ const Dashboard = (props) => {
 	console.log("USECASES: ", usecases)
 
   const data = 
-    <div className="content" style={{width: 1000, margin: "auto", paddingBottom: 200, textAlign: "center",}}>
-			<div style={{width: 500, margin: "auto"}}>
+    <div className="content" style={{width: isMobile ? "100%": 1000, margin: "auto", paddingBottom: 200, textAlign: "center",}}>
+			<div style={{width: isMobile ? null:500, margin: "auto"}}>
 				{keys.length > 0 ?
 					<RadialChart keys={keys} setSelectedCategory={setSelectedUsecaseCategory} />
 				: null}
 			</div>
 
 			{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
-				<div style={{ display: "flex", marginLeft: 180, }}>
+				<div style={{ display: isMobile ? null:"flex", marginLeft: isMobile? null :180,  }}>
 					{usecases.map((usecase, index) => {
 						return (
 							<Chip
@@ -1693,6 +1695,7 @@ const Dashboard = (props) => {
 									marginRight: 10, 
 									paddingLeft: 5,
 									paddingRight: 5,
+									marginTop: isMobile? 10:null,
 									height: 28,
 									cursor: "pointer",
 									border: `1px solid ${usecase.color}`,

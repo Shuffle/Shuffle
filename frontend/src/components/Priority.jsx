@@ -27,6 +27,13 @@ const Priority = (props) => {
   	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 	let navigate = useNavigate();
 
+	if (window.location.pathname === "/workflows") {
+		const hidePriorities = localStorage.getItem("hidePriorities", "true")
+		if (hidePriorities === "true") {
+			return null
+		}
+	}
+
 	var realignedSrc = false
 	var realignedDst = false
 	let newdescription = priority.description
@@ -176,6 +183,20 @@ const Priority = (props) => {
 					<Button style={{borderRadius: 25, fontSize:16, boxShadow: clickedFromOrgTab ? "none":null,textTransform: clickedFromOrgTab ? 'capitalize':null, width: 100, height: 50, marginTop: 8, }} variant="text" color="secondary" onClick={() => {
 						// dismiss -> get envs
 						changeRecommendation(priority, "dismiss")
+
+						// Check window location if it's /workflows
+						if (window.location.pathname === "/workflows") {
+							// Set local storage to hide priorities for now
+							localStorage.setItem("hidePriorities", "true")
+						}
+
+						if (isCloud) {
+							ReactGA.event({
+								category: "recommendation",
+								action: `dismiss_${priority.name}`,
+								label: "",
+							})
+						}
 					}}>
 						Dismiss	
 					</Button>
