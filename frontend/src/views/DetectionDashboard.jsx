@@ -110,7 +110,7 @@ const DetectionDashBoard = (props) => {
     };
 
     toast(`Getting files from url ${url}. This may take a while if the repository is large. Please wait...`);
-    fetch(`${globalUrl}/api/v2/files/download_remote`, {
+    fetch(`${globalUrl}/api/v1/files/download_remote_enhanced`, {
       method: "POST",
       mode: "cors",
       headers: {
