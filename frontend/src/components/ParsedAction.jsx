@@ -566,10 +566,11 @@ const ParsedAction = (props) => {
 				let actions = workflow.actions?.map((action) => {
 					return "$"+action.label.toLowerCase();
 				})
-				if(newActionList.length > 0){
+				if(newActionList?.length > 0){
 					let appParentActions = parentActionList?.map(action => "$" + action.name.toLowerCase());
 					let notPresentAction = actions?.filter((action) => !appParentActions?.includes(action))
 					notPresentAction?.forEach((action) => {
+						action = action.replace(" ", "_");
 						if(paramvalue.includes(action)){
 							errorVars.push(action);
 							// paramvalue = paramvalue.replace(action, "")
@@ -582,9 +583,20 @@ const ParsedAction = (props) => {
 			let message = "";
 			if(errorVars.length > 0){
 				if(errorVars.length === 1){
-					message = errorVars[0] + " is not accessible in this action";
+					message = errorVars[0] + " is not accessible in this action.";
 				}else{
-					message = errorVars.join(", ") + " are not accessible in this action";
+					message = errorVars.join(", ") + " are not accessible in this action.";
+				}
+			}
+
+			if (param?.configuration) {
+				let regex = /(^|[^\\])\$/;
+				if (regex.test(paramvalue)) {
+					if(message.length > 0){
+					message += "\nUse \"\\$\" instead of \"$\".";
+					}else{
+					message = "Use \"\\$\" instead of \"$\".";
+					}
 				}
 			}
 			return {...param, value: paramvalue, error: message}
@@ -1136,6 +1148,15 @@ const ParsedAction = (props) => {
 
 		return helperText
 	}
+
+	const errorHelperText = (name, value, error) => {
+		return (
+			<div style={{ whiteSpace: 'pre-line' }}>
+				{error}
+			</div>
+		);
+	}
+
 
 	const analyzeFields = () => {
 
@@ -3169,7 +3190,7 @@ const ParsedAction = (props) => {
 				error={
 					data?.error?.length > 0 ? true : false
 				}
-				helperText={data?.error?.length > 0 ? data.error : returnHelperText(data.name, data.value)}
+				helperText={data?.error?.length > 0 ? errorHelperText(data?.name,data?.value,data?.error) : returnHelperText(data.name, data.value)}
                 //options={{
                 //	theme: 'gruvbox-dark',
                 //	keyMap: 'sublime',
@@ -3946,6 +3967,14 @@ const ParsedAction = (props) => {
                 <Typography variant="body2">
                   - Description: {description}
                 </Typography>
+				{
+					data?.configuration ? 
+					(
+					<Typography Typography variant="body2">
+					- Use "\$" instead of "$"
+					</Typography>
+					) : null
+				}
               </span>
             );
 
