@@ -1,6 +1,8 @@
 # Build environment
 FROM node:21 as builder
 
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 RUN mkdir /usr/src/app
 WORKDIR /usr/src/app
 ENV PATH /usr/src/app/node_modules/.bin:$PATH
@@ -52,7 +54,7 @@ COPY ./confd/templates/nginx.conf /etc/nginx/nginx.conf
 #COPY ./entrypoint.sh /
 #ENTRYPOINT [ "/entrypoint.sh" ]
 
-
+RUN export BACKEND_HOSTNAME=shuffle-backend
 CMD ["nginx", "-g", "daemon off;"]
 
 EXPOSE 80
