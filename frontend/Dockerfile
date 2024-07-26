@@ -43,7 +43,7 @@ COPY --from=builder /usr/src/app/certs/privkey.pem /etc/nginx/privkey.pem
 
 # install CONFD
 RUN apt-get update && apt-get install -y curl && apt-get clean
-COPY ./confd/templates/nginx.conf /etc/nginx/nginx.conf
+COPY ./confd/templates/nginx.conf /etc/nginx/nginx.conf.tmpl
 
 ## OLD CONFD THINGS (not compatible with arm) 
 #ENV CONFD_VERSION 0.16.0
@@ -51,10 +51,10 @@ COPY ./confd/templates/nginx.conf /etc/nginx/nginx.conf
 #    chmod +x /usr/local/bin/confd
 #COPY ./confd /etc/confd
 # rewrite command & entrypoint with ours
-#COPY ./entrypoint.sh /
-#ENTRYPOINT [ "/entrypoint.sh" ]
 
-RUN export BACKEND_HOSTNAME=shuffle-backend
+COPY ./entrypoint.sh /
+ENV BACKEND_HOSTNAME="shuffle-backend"
+ENTRYPOINT [ "/entrypoint.sh" ]
 CMD ["nginx", "-g", "daemon off;"]
 
 EXPOSE 80
