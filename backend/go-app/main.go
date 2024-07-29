@@ -2122,6 +2122,9 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 	if err == nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s"}`, workflowExecution.ExecutionId)))
+
+		// Track Sigma rules
+		trackSigmaRules(ctx, pipeline.OrgId, jsonList)
 		return
 	}
 
@@ -2130,23 +2133,39 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 }
 
 func parseConcatenatedJSONLogs(logs string) ([]map[string]interface{}, error) {
-    var jsonList []map[string]interface{}
-    decoder := json.NewDecoder(strings.NewReader(logs))
+	var jsonList []map[string]interface{}
+	decoder := json.NewDecoder(strings.NewReader(logs))
 
-    for decoder.More() {
-        var jsonObject map[string]interface{}
-        if err := decoder.Decode(&jsonObject); err != nil {
-            log.Printf("[WARNING] JSON decoding error: %s. Skipping this object.", err)
-            continue
-        }
-        jsonList = append(jsonList, jsonObject)
-    }
+	for decoder.More() {
+		var jsonObject map[string]interface{}
+		if err := decoder.Decode(&jsonObject); err != nil {
+			log.Printf("[WARNING] JSON decoding error: %s. Skipping this object.", err)
+			continue
+		}
+		jsonList = append(jsonList, jsonObject)
+	}
 
-    if err := decoder.Decode(&struct{}{}); err != io.EOF {
-        return nil, fmt.Errorf("error after decoding all JSON objects: %v", err)
-    }
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return nil, fmt.Errorf("error after decoding all JSON objects: %v", err)
+	}
 
-    return jsonList, nil
+	return jsonList, nil
+}
+
+func trackSigmaRules(ctx context.Context, orgId string, jsonList []map[string]interface{}) {
+	ruleCount := make(map[string]int)
+	for _, logEntry := range jsonList {
+		if rule, ok := logEntry["rule"].(map[string]interface{}); ok {
+			if ruleName, ok := rule["title"].(string); ok {
+				ruleCount[ruleName]++
+			}
+		}
+	}
+
+	for ruleName, count := range ruleCount {
+		shuffle.IncrementCache(ctx, orgId, ruleName, count)
+		log.Printf("[INFO] Rule %s incremented by %d", ruleName, count)
+	}
 }
 
 func handleTenzirHealthUpdate(resp http.ResponseWriter, request *http.Request) {
