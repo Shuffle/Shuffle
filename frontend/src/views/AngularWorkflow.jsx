@@ -1759,6 +1759,65 @@ const releaseToConnectLabel = "Release to Connect"
       })
   }
 
+  const saveSourceWorkflows = (workflow) => {
+    console.log("Checking for source workflows in:", workflow.name);
+
+    // Collect unique source workflow IDs
+    const sourceWorkflowIds = new Set();
+    workflow.actions.forEach(action => {
+        if (action.source_workflow && action.source_workflow !== workflow.id) {
+            sourceWorkflowIds.add(action.source_workflow);
+        }
+    });
+
+    // For each source workflow, fetch its data and send it back
+    sourceWorkflowIds.forEach(sourceWorkflowId => {
+        fetch(`${globalUrl}/api/v1/workflows/${sourceWorkflowId}`, {
+            method: "GET",
+            headers: {
+                Accept: "application/json",
+            },
+            credentials: "include",
+        })
+        .then(response => response.json())
+        .then(sourceWorkflow => {
+
+            console.log("SOURCE ",sourceWorkflow)
+            // Update relevant fields from the main workflow
+            workflow.actions.forEach(action => {
+                if (action.source_workflow === sourceWorkflowId) {
+                    const sourceAction = sourceWorkflow.actions.find(a => a.id === action.id);
+                    if (sourceAction) {
+                        Object.assign(sourceAction, action);
+                    }
+                }
+            });
+
+            // Send the entire source workflow data back
+            return fetch(`${globalUrl}/api/v1/workflows/${sourceWorkflowId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify(sourceWorkflow),
+                credentials: "include",
+            });
+        })
+        .then(response => response.json())
+        .then(responseJson => {
+            if (!responseJson.success) {
+                console.log(`Failed to update source workflow ${sourceWorkflowId}: ${responseJson.reason}`);
+            } else {
+                console.log(`Successfully updated source workflow ${sourceWorkflowId}`);
+            }
+        })
+        .catch(error => {
+            console.log(`Error updating source workflow ${sourceWorkflowId}: ${error}`);
+        });
+    });
+  };
+
   const saveWorkflow = (curworkflow, executionArgument, startNode, duplicationOrg) => {
     var success = false;
 
@@ -1947,7 +2006,7 @@ const releaseToConnectLabel = "Release to Connect"
             curworkflowComment.width = 200
           }
 
-		  curworkflowComment.position = cyelements[cyelementsKey].position();
+		      curworkflowComment.position = cyelements[cyelementsKey].position();
 						//console.log(curworkflowComment)
 
           newComments.push(curworkflowComment);
@@ -2056,6 +2115,8 @@ const releaseToConnectLabel = "Release to Connect"
             toast("Failed to save. Please contact your support@shuffler.io or your local admin if this is unexpected.")
           }
         } else {
+
+          saveSourceWorkflows(useworkflow);
 
           sendStreamRequest({
             "item": "workflow",
