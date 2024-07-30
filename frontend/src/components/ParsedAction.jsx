@@ -46,7 +46,8 @@ import {
   CircularProgress,
   Switch,
   Collapse,
-	Autocomplete 
+	Autocomplete, 
+	Box
 } from "@mui/material";
 
 import {
@@ -182,6 +183,7 @@ const ParsedAction = (props) => {
   const [prevActionName, setPrevActionName] = React.useState(selectedAction.label);
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
+  const [hiddenParameters, setHiddenParameters] = React.useState(true);
   const [autoCompleting, setAutocompleting] = React.useState(false);
   const [selectedActionParameters, setSelectedActionParameters] = React.useState(selectedAction?.parameters || []);
     const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
@@ -199,6 +201,7 @@ const ParsedAction = (props) => {
     const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
     const [showAutocomplete, setShowAutocomplete] = React.useState(false);
     const [menuPosition, setMenuPosition] = useState(null);
+	const [uiBox, setUiBox] = useState(null);
   const isIntegration = selectedAction.app_id === "integration"
 
   useEffect(() => {
@@ -1237,6 +1240,7 @@ const ParsedAction = (props) => {
 							} 
 						});
               		}
+					  setHiddenDescription(false)
 					  document.activeElement.blur();
 				}}
 				>
@@ -2326,8 +2330,63 @@ const ParsedAction = (props) => {
 					}
 				}
 
+
+			const actionDescription = (
+				<Box
+				p={1.5}
+				borderRadius={3}
+				boxShadow={2}
+				backgroundColor={theme.palette.textFieldStyle}
+				display="flex"
+				flexDirection="column"
+				>
+					<Box display="flex" alignItems="center" justifyContent="space-between">
+					<Typography variant="body1" style={{ flexGrow: 1 }}>
+						{params.inputProps.value}
+					</Typography>
+					<IconButton size="small"
+					 
+					 onMouseDown={(event) => {
+						event.preventDefault();
+						event.stopPropagation();
+					  }}
+					
+					 onClick={() => {
+						setHiddenDescription(true)
+						const inputElement = document.getElementById(uiBox);
+						if (inputElement) {
+						  inputElement.focus();
+						}
+					}}>
+						<CloseIcon fontSize="small" />
+					</IconButton>
+					</Box>
+					<Divider sx={{ backgroundColor: theme.palette.surfaceColor, marginTop: "5px", marginBottom : "10px", height: "3px" }}/>
+					<Box display="flex" flexDirection="column">
+						<Typography variant="body2" mb={0.5}>
+						<strong>Description: </strong> {selectedAction?.description}
+						</Typography>
+					</Box>
+				</Box>
+			);
+
               return (
-					<TextField
+					<Tooltip title={actionDescription}
+					placement="right" 
+					open={!hiddenDescription}
+					PopperProps={{
+						sx: {
+						'& .MuiTooltip-tooltip': {
+							backgroundColor: 'transparent',
+							boxShadow: 'none',
+						},
+						'& .MuiTooltip-arrow': {
+							color: 'transparent',
+						},
+						},
+					}}
+					>
+						<TextField
 						{...params}
 
 						data-lpignore="true"
@@ -2345,8 +2404,8 @@ const ParsedAction = (props) => {
 						label={isIntegration ? "Choose a category" : "Find Actions"}
 						variant="outlined"
 				        name={`disable_autocomplete_${Math.random()}`}
-
-					/>
+						/>	
+					</Tooltip>
               );
             }}
           />
@@ -2543,7 +2602,7 @@ const ParsedAction = (props) => {
 						fullWidth
 						disabled={selectedAction.description === undefined || selectedAction.description === null || selectedAction.description.length === 0}
 						onClick={() => {
-							setHiddenDescription(!hiddenDescription)
+							setHiddenParameters(!hiddenParameters)
 						}}
 					>
 						<b>Parameters</b>
@@ -2661,7 +2720,7 @@ const ParsedAction = (props) => {
           		/>
 						</div>
 					: null}
-        	{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 &&  hiddenDescription === false ? (
+        	{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 &&  hiddenParameters === false ? (
 						<div
 							style={{
 								border: "1px solid rgba(255,255,255,0.6)",
@@ -3055,8 +3114,71 @@ const ParsedAction = (props) => {
 						}
 
 						multiline = data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline
-						
+			
+			const description = data.description === undefined ? "" : data?.description;
+			
+			const tooltipDescription = (
+				<Box
+				p={1.5}
+				borderRadius={3}
+				boxShadow={2}
+				backgroundColor={theme.palette.textFieldStyle}
+				display="flex"
+				flexDirection="column"
+				>
+					<Box display="flex" alignItems="center" justifyContent="space-between">
+					<Typography variant="body1" style={{ flexGrow: 1 }}>
+						{tmpitem.charAt(0).toUpperCase() + tmpitem.slice(1)}
+					</Typography>
+					<IconButton size="small"
+					 
+					 onMouseDown={(event) => {
+						event.preventDefault();
+						event.stopPropagation();
+					  }}
+					
+					 onClick={() => {
+						setUiBox("closed")
+						const inputElement = document.getElementById(uiBox);
+						if (inputElement) {
+						  inputElement.focus();
+						}
+					}}>
+						<CloseIcon fontSize="small" />
+					</IconButton>
+					</Box>
+					<Divider sx={{ backgroundColor: theme.palette.surfaceColor, marginTop: "5px", marginBottom : "10px", height: "3px" }}/>
+					<Box display="flex" flexDirection="column">
+						<Typography variant="body2" mb={0.5}>
+						<strong>Required:</strong> {data.required === true || data.configuration === true ? "True" : "False"}
+						</Typography>
+						<Typography variant="body2" mb={0.5}>
+						<strong>Description:</strong> {description}
+						</Typography>
+						<Typography variant="body2">
+						<strong>Ex. :</strong> {data?.example.length > 0 ? data.example : "No example available"}
+						</Typography>
+					</Box>
+				</Box>
+			);
+
             var datafield = (
+			<Tooltip 
+				title={tooltipDescription} 
+				placement="right" 
+				open={clickedFieldId === uiBox}
+				PopperProps={{
+					sx: {
+					  '& .MuiTooltip-tooltip': {
+						backgroundColor: 'transparent',
+						boxShadow: 'none',
+					  },
+					  '& .MuiTooltip-arrow': {
+						color: 'transparent',
+					  },
+					},
+				  }}
+				>
               <TextField
                 disabled={disabled}
                 style={{
@@ -3166,13 +3288,20 @@ const ParsedAction = (props) => {
 				handleParamChange(event, count, data)
                 }}
                 helperText={returnHelperText(data.name, data.value)}
+				onFocus={(event) => {
+					setUiBox(event.target.id)
+					console.log(event.target.id)
+					
+				}}
                 onBlur={(event) => {
 					baseHelperText = calculateHelpertext(event.target.value)
 					if (setLastSaved !== undefined) {
 						setLastSaved(false)
 					}
+					setUiBox("closed")
                 }}
               />
+			</Tooltip>
             );
 		
 						// Finds headers from a string to be used for autocompletion
@@ -3904,24 +4033,6 @@ const ParsedAction = (props) => {
               );
             };
  
-            const description =
-              data.description === undefined ? "" : data.description;
-            const tooltipDescription = (
-              <span>
-                <Typography variant="body2">
-                  - Required:{" "}
-                  {data.required === true || data.configuration === true
-                    ? "True"
-                    : "False"}
-                </Typography>
-                <Typography variant="body2">
-                  - Example: {data.example}
-                </Typography>
-                <Typography variant="body2">
-                  - Description: {description}
-                </Typography>
-              </span>
-            );
 
             //var itemColor = "#f85a3e"
             //if (!data.required) {
@@ -4001,9 +4112,7 @@ const ParsedAction = (props) => {
                       marginBottom: "auto",
                     }}
                   >
-                    <Tooltip title={tooltipDescription} placement="top">
                       <b>{tmpitem} </b>
-                    </Tooltip>
                   </div>
 
                   {/*selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
