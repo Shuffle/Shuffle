@@ -107,7 +107,7 @@ http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 export SHUFFLE_OPENSEARCH_URL="https://localhost:9200"
 export SHUFFLE_ELASTIC=true
 export SHUFFLE_OPENSEARCH_USERNAME=admin
-export SHUFFLE_OPENSEARCH_PASSWORD=admin
+export SHUFFLE_OPENSEARCH_PASSWORD=StrongShufflePassword321!
 export SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY=true
 cd backend/go-app
 go run main.go walkoff.go docker.go
