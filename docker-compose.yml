@@ -41,6 +41,7 @@ services:
       - shuffle
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ${SHUFFLE_CERT_VOLUME:-/certs}:/certs:z
     environment:
       - SHUFFLE_APP_SDK_TIMEOUT=300
       - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=7 # The amount of concurrent executions Orborus can handle. 
@@ -53,6 +54,7 @@ services:
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
       - SHUFFLE_STATS_DISABLED=true
+      - CERT_PATH=/certs/cert.crt
     restart: unless-stopped
     security_opt:
       - seccomp:unconfined
