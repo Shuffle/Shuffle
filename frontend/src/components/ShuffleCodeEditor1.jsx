@@ -109,6 +109,7 @@ const CodeEditor = (props) => {
 		setActiveDialog,
 		fieldname,
 		contentLoading,
+		selectedTrigger,
 	} = props
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
@@ -436,7 +437,8 @@ const CodeEditor = (props) => {
 	}
 
 	const autoFormat = (input) => {
-		// Check if it's default too
+		if(selectedAction && selectedAction.parameters && selectedAction.parameters.length > 0){
+				// Check if it's default too
 		if (validation !== true) {
 
 			// Should try to automatically fix this input
@@ -474,6 +476,48 @@ const CodeEditor = (props) => {
 
 		if (input !== localcodedata) {
 			setlocalcodedata(input)
+		}
+		}
+
+		if(selectedTrigger && selectedTrigger.parameters && selectedTrigger.parameters.length > 0){
+			if (validation !== true) {
+
+				// Should try to automatically fix this input
+				console.log("Running AI input fixer")
+				if (aiSubmit !== undefined && parameterName !== undefined && selectedTrigger !== undefined) {
+	
+					// Should remove params from selectedAction that aren't parameterName  
+					var tmpAction = JSON.parse(JSON.stringify(selectedTrigger))
+					var tmpParams = selectedTrigger.parameters.filter((param) => param.name === parameterName)
+	
+					var aiMsg = `Make it valid for trigger ${tmpAction.label} with parameter ${parameterName}: `
+					if (tmpParams.length > 0) {
+						aiMsg += tmpParams[0].value
+					}
+	
+	
+					if (localcodedata.startsWith("//")) {
+						aiMsg = localcodedata
+					}
+	
+					tmpAction.parameters = tmpParams
+					console.log("Parameters: ", tmpParams.length)
+	
+					aiSubmit(aiMsg, tmpAction)
+				}
+	
+				return
+			}
+	
+			try {
+				input = JSON.stringify(JSON.parse(input), null, 4)
+			} catch (e) {
+				console.log("Failed magic JSON stringification: ", e)
+			}
+	
+			if (input !== localcodedata) {
+				setlocalcodedata(input)
+			}
 		}
 	}
 

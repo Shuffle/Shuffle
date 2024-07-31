@@ -132,6 +132,7 @@ const ParsedAction = (props) => {
     setSelectedResult,
     selectedAction,
     setSelectedApp,
+	selectedTrigger,
     setSelectedTrigger,
     setSelectedEdge,
     setCurrentView,
@@ -640,7 +641,7 @@ const ParsedAction = (props) => {
 		setSelectedActionParameters(newParameters);
         setActionlist(newActionList);
     }, [workflow.execution_variables,paramUpdate, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents,setNewSelectedAction]);
-	console.log("Selected Action:", selectedAction)
+
 	useEffect(() => {
 		selectedNameChange(appActionName)
 
@@ -1895,6 +1896,78 @@ const ParsedAction = (props) => {
 										}
 									}
 
+									if(workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
+										for(let [key,keyval] in Object.entries(workflow.triggers)) {
+											if(workflow.triggers[key].id === selectedTrigger.id) {
+												continue
+											}
+	
+											const params = workflow.triggers[key].parameters
+											if (params === null || params === undefined) {
+												continue
+											}
+	
+											for (let [subkey, subkeyval] in Object.entries(params)) {
+												const param = workflow.triggers[key].parameters[subkey];
+												if(param.name === "argument" || param.name === "alertinfo"){
+													if (!param.value.includes("$")) {
+														continue
+													}
+		
+													// Should have a smarter way of discovering node names
+													// Do regex? 
+													// Finding index(es) and replacing at the location
+													//
+		
+													try {
+														var cnt = -1
+														var previous = 0
+														while (true) {
+															cnt += 1 
+															// Need to make sure e.g. changing the first here doesn't change the 2nd
+															// $change_me
+															// $change_me_2
+															const foundindex = param.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+															if (foundindex === previous && foundindex !== 0) {
+																break
+															}
+			
+															if (foundindex >= 0) {
+																previous = foundindex+newname.length
+																// Need to add diff of length to word
+			
+																// Check location:
+																// If it's a-zA-Z_ then don't replace
+																if (param.value.length > foundindex+parsedBaseLabel.length) {
+																	const regex = /[a-zA-Z0-9_]/g;
+																	const match = param.value[foundindex+parsedBaseLabel.length].match(regex);
+																	if (match !== null) {
+																		continue
+																	}
+																}
+																
+																console.log("Old found: ", workflow.triggers[key].parameters[subkey].value)
+																const extralength = newname.length-parsedBaseLabel.length
+																param.value = param.value.substring(0, foundindex) + newname + param.value.substring(foundindex-extralength+newname.length, param.value.length)
+		
+																console.log("New: ", workflow.triggers[key].parameters[subkey].value)
+															} else { 
+																break
+															}
+			
+															// Break no matter what after 5 replaces. May need to increase
+															if (cnt >= 5) {
+																break
+															}
+			
+														}
+													} catch (e) {
+														console.log("Failed value replacement based on index: ", e)
+													}
+												}
+											}
+										}
+									}
 									setWorkflow(workflow);
                   					setUpdate(Math.random());
 									setPrevActionName(name)
@@ -3379,7 +3452,13 @@ const ParsedAction = (props) => {
 									if (parsedvalue === undefined || parsedvalue === null) {
 										parsedvalue = ""
 									}
-
+									console.log("Data sending to codeeditor(Action): ", {
+										"name": data.name,
+										"value": parsedvalue,
+										"field_number": count,
+										"actionlist": actionlist,
+										"field_id": clickedFieldId,
+									} )
 									setEditorData({
 										"name": data.name,
 										"value": parsedvalue,
