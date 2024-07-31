@@ -220,6 +220,7 @@ const ParsedAction = (props) => {
 	  }
   }, [])
 
+  /*
   useEffect(() => {
 		setParamValues(selectedAction.parameters.map((param) => {
 			return {
@@ -230,6 +231,7 @@ const ParsedAction = (props) => {
   },[
 	selectedAction, selectedApp,setNewSelectedAction, workflow,
   ])
+  */
 
 
   useEffect(() => {
