@@ -4,13 +4,23 @@ import theme from "../theme.jsx";
 import { ToastContainer, toast } from "react-toastify" 
 
 import {
+	CheckCircle as CheckCircleIcon,
+} from "@mui/icons-material";
+
+import {
 	Paper,
   Typography,
 	Divider,
 	Button,
+	Tooltip,
 	Grid,
 	Card,
 } from "@mui/material";
+
+import {
+	red,
+	green,
+} from "../views/AngularWorkflow.jsx"
 
 //import { useAlert 
 
@@ -45,7 +55,7 @@ const Branding = (props) => {
   	          	toast("Failed updating org: ", responseJson.reason);
   	        } else {
 				if (joinStatus == "join") {
-					setPublishingInfo("Your organization is now part of the Creator Incentive Program. You can now create and publish content to your organization's page. You can also create a creator account to manage your organization's content.")
+					setPublishingInfo("Your organization is now part of the Partner Program. You can now create, publish and manage content for your organization's public page.")
 				} else {
 					setPublishingInfo("Your organization is no longer part of the Creator Incentive Program. You can still create a creator account to manage your organization's content.")
 				}
@@ -70,7 +80,15 @@ const Branding = (props) => {
     }
 
 	const isOrganizationReady = () => {
-		console.log("Is organization ready?")
+
+		// Check if it's a suborg
+		if (selectedOrganization.creator_org !== "") {
+			const comment = "Child orgs can't become creators"
+			if (!publishRequirements.includes(comment)) {
+				setPublishRequirements([...publishRequirements, comment])
+			}
+			return false;
+		}
 
 		// A simple checklist to ensure the button shows up properly
 		if (selectedOrganization.name === selectedOrganization.org) {
@@ -79,15 +97,6 @@ const Branding = (props) => {
 				setPublishRequirements([...publishRequirements, comment])
 			}
 
-			return false;
-		}
-
-		// Check if it's a suborg
-		if (selectedOrganization.creator_org !== "") {
-			const comment = "Child orgs can't become creators"
-			if (!publishRequirements.includes(comment)) {
-				setPublishRequirements([...publishRequirements, comment])
-			}
 			return false;
 		}
 
@@ -102,6 +111,14 @@ const Branding = (props) => {
 		return true
 	}
 
+	const isPublished = selectedOrganization.creator_id === "" 
+	const leadinfo = selectedOrganization.lead_info === undefined || selectedOrganization.lead_info === null || selectedOrganization.lead_info === "" ? "" : JSON.stringify(selectedOrganization.lead_info)
+	const isPartner = leadinfo.includes("partner")
+
+	console.log("LEADINFO: ", leadinfo)
+
+	console.log("SELECTEDORGANIZATION: ", selectedOrganization)
+
 	return (
 		<div style={{ width: clickedFromOrgTab? 1030: "auto", padding: 27, height: "auto", backgroundColor: '#212121', borderRadius: '16px', }}>
 			<h2 style={{marginTop: clickedFromOrgTab ?0:null,}}>
@@ -111,26 +128,45 @@ const Branding = (props) => {
 				You can customize your organization's branding by uploading a logo, changing the color scheme and a lot more. 
 			</Typography>
 
+			<Typography variant="body1" color="textSecondary" style={{ marginTop: 20, marginBottom: 10 }}>
+					{isPublished ? <CheckCircleIcon style={{color: red, }} /> : <CheckCircleIcon style={{color: green, }} />}
+		<span style={{marginLeft: 10, color: isPublished ? red : green, }}>{isPublished ? "Not Published" : "Published"}</span>
+			</Typography>
+
+			<a href="https://shuffler.io/partners" target="_blank" style={{ textDecoration: "none", }}>
+				<Typography variant="body1" color="textSecondary" style={{ marginTop: 20, marginBottom: 10 }}>
+					{!isPartner ? <CheckCircleIcon style={{color: red, }} /> : <CheckCircleIcon style={{color: green, }} />}
+					<Tooltip title="Official Partner Program (manual verification)" placement="top" arrow>
+						<span style={{marginLeft: 10, color: !isPartner ? red : green, }}>{!isPartner? "Not Officially Partnered" : "Officially Partnered"}</span>
+					</Tooltip>
+				</Typography>
+			</a>
+
+			<a href={`/partners/${selectedOrganization.creator_id}/edit`} target="_blank">
+				<Button disabled={isPublished} variant="contained" style={{ marginTop: 20, marginBottom: 10, }} onClick={() => {
+				}}>
+					Modify Public Partner Details 
+				</Button>
+			</a>
+
 			<Divider style={{marginTop: 50, marginBottom: 50, }} />
 			<h2>
-				Creator Incentive Program 
+				Partner Program 
 			</h2>
 			<div style={{ display: "flex", width: 900, }}>
 				<div>
 					<span>
 						<Typography variant="body1" color="textSecondary">
-							By changing publishing settings, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your organization's non-sensitive data will be added as a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/creators">creator account</a>. None of your existing workflows, apps, or other stored data will be published. Any admin in your organization can manage the creator configuration. Becoming a creator organization is reversible.<div/>Support: <a href="mailto:support@shuffler.io"target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>support@shuffler.io</a>
+							By changing publishing settings, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your organization's non-sensitive data will be added as a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/creators">creator account</a>. None of your existing workflows, apps, or other stored data will be published. Any admin in your organization can manage the creator configuration. Becoming a creator organization IS reversible.<div/>Support: <a href="mailto:support@shuffler.io"target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>support@shuffler.io</a>
 						</Typography>
 						{selectedOrganization.creator_id == "" ? 
 							<Typography variant="h6" color="textSecondary" style={{ marginTop: 20, marginBottom: 10, color: "grey", }}>
 								&nbsp;
 							</Typography>
 						:
-							<Typography variant="h6" color="textSecondary" style={{ marginTop: 20, marginBottom: 10, color: "grey", }}>
-								 
-								<a href={`/creators/${selectedOrganization.creator_id}`} target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Modify your creator organization</a>
-							</Typography>
+							null
 						}
+
 
 						<Button
 							style={{ height: 40, marginTop: 10, width: 300,  }}
@@ -141,7 +177,7 @@ const Branding = (props) => {
 								handleChangePublishing();
 							}}
 						>
-							{selectedOrganization.creator_id == "" ? "Join" : "Leave"} Creators 
+							{selectedOrganization.creator_id == "" ? "Join" : "Leave"} Partner Program 
 							
 						</Button>
 						<Typography variant="body1" color="textSecondary" style={{ marginTop: 20, marginBottom: 10, color: "white", }}>

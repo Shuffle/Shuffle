@@ -74,6 +74,7 @@ import {
 import {
   Folder as FolderIcon,
   VerifiedUser as VerifiedUserIcon,
+  CheckCircle as CheckCircleIcon,
   Insights as InsightsIcon, 
   LibraryBooks as LibraryBooksIcon,
   OpenInNew as OpenInNewIcon,
@@ -320,7 +321,7 @@ export function SetJsonDotnotation(jsonInput, inputKey) {
 
 export const green = "#86c142";
 export const yellow = "#FECC00";
-export const red = "red";
+export const red = "#ff3632";
 
 export function removeParam(key, sourceURL) {
   if (sourceURL === undefined) {
@@ -3687,7 +3688,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 
       setSelectedEdge({})
-      setSelectedActionEnvironment({})
+      //setSelectedActionEnvironment({})
       setTriggerAuthentication({})
       setTriggerFolders([])
       setLocalFirstrequest(true)
@@ -6130,6 +6131,8 @@ const releaseToConnectLabel = "Release to Connect"
 			  if (curnode.data.id === edge.data("source")) {
 				console.log("Found matching trigger source: ", curnode)
 				if (curnode.data.app_name !== "Shuffle Workflow" && curnode.data.app_name !== "User Input") {
+
+
 				  // If it's started, READD the edge
 				  if (curnode.data.status === "running") {
 					//console.log("Edge is running - readd it: ", edge.data())
@@ -6144,7 +6147,8 @@ const releaseToConnectLabel = "Release to Connect"
 						data: newdata,
 					  })
 
-					  toast.error("You must STOP the trigger before deleting its branches")
+					  //toast.error("You must STOP the trigger before deleting its branches")
+					  console.log("You must STOP the trigger before deleting its branches")
 					} catch (e) {
 					  console.log("Failed re-adding edge: ", e)
 					}
@@ -9102,6 +9106,11 @@ const releaseToConnectLabel = "Release to Connect"
 		const startIndex = app.actions.findIndex((action) => action.category_label !== undefined && action.category_label !== null && action.category_label.length > 0)
 		const actionIndex = startIndex < 0 ? 0 : startIndex
 
+		if (app.actions[actionIndex] === undefined || app.actions[actionIndex] === null) {
+			console.log("No actions found for app: ", app)
+			return
+		}
+
 		// Make the first action the most relevant one for them based on previous use
         if (
           app.actions[actionIndex].parameters !== undefined &&
@@ -11605,7 +11614,7 @@ const releaseToConnectLabel = "Release to Connect"
       <div style={appApiViewStyle}>
           <div style={{ }}>
             <h3 style={{ marginBottom: 5, }}>
-              Branch: Conditions - {selectedEdgeIndex}
+              Conditions 
             </h3>
             <a
               rel="noopener noreferrer"
@@ -18166,6 +18175,7 @@ const releaseToConnectLabel = "Release to Connect"
     }
   }
 
+  const envStatus = !(executionData.workflow !== undefined && executionData.workflow !== null && executionData.workflow.actions !== undefined && executionData.workflow.actions !== null && executionData.workflow.actions.length > 0) ? "loading" : "success"
 
   var executionDelay = -75
   const executionModal = (
@@ -18598,26 +18608,6 @@ const releaseToConnectLabel = "Release to Connect"
                 </Button>
               </span>
             </Tooltip>
-            {executionData.status === "EXECUTING" ? (
-              <Tooltip
-                color="primary"
-                title="Abort workflow"
-                placement="top"
-                style={{ zIndex: 50000 }}
-              >
-                <span style={{}}>
-                  <Button
-                    color="primary"
-                    style={{ float: "right", marginTop: 20, marginLeft: 10 }}
-                    onClick={() => {
-                      abortExecution();
-                    }}
-                  >
-                    <PauseIcon style={{}} />
-                  </Button>
-                </span>
-              </Tooltip>
-            ) : null}
 
 		    <Tooltip
 		      color="primary"
@@ -18691,18 +18681,41 @@ const releaseToConnectLabel = "Release to Connect"
 		      </span>
 		    </Tooltip>
 
-            {isCloud ? 
+            {executionData.status === "EXECUTING" ? (
               <Tooltip
                 color="primary"
-                title="Explore logs for the workflow"
+                title="Abort workflow"
                 placement="top"
-                style={{ zIndex: 50000, }}
+                style={{ zIndex: 50000 }}
               >
                 <span style={{}}>
                   <Button
                     color="primary"
                     style={{ float: "right", marginTop: 20, marginLeft: 10 }}
-					disabled={userdata.region_url !== "https://shuffler.io"}
+                    onClick={() => {
+                      abortExecution();
+                    }}
+                  >
+                    <PauseIcon style={{}} />
+                  </Button>
+                </span>
+              </Tooltip>
+            ) : null}
+
+            {isCloud ? 
+              <Tooltip
+                color="primary"
+                title="Explore logs for the workflow (max 5 days ago)"
+                placement="top"
+                style={{ zIndex: 50000, }}
+              >
+                <span style={{}}>
+                  <Button
+                    color="secondary"
+                    style={{ float: "right", marginTop: 20, marginLeft: 10 }}
+
+					// Max 5 days in the past
+					disabled={userdata.region_url !== "https://shuffler.io" || executionData.started_at < (Math.floor(Date.now() / 1000) - 432000)}
                     onClick={() => {
 						toast("Opening logs in a new tab")
 
@@ -18711,7 +18724,7 @@ const releaseToConnectLabel = "Release to Connect"
 						}, 250)
                     }}
                   >
-					<InsightsIcon color="secondary" />
+					<InsightsIcon  />
                   </Button>
                 </span>
               </Tooltip>
@@ -18722,7 +18735,18 @@ const releaseToConnectLabel = "Release to Connect"
           {executionData.workflow !== undefined && executionData.workflow !== null && executionData.workflow.actions !== undefined && executionData.workflow.actions !== null && executionData.workflow.actions.length > 0  ?
             <div style={{ display: "flex", marginLeft: 10, }}>
               <Typography variant="body1">
-                <b>Env &nbsp;&nbsp;&nbsp;&nbsp;</b>
+
+			  	{/*envStatus === "success" ?
+					<Tooltip title="Environment is healthy" placement="top">
+						<CheckCircleIcon style={{ color: "green" }} />
+					</Tooltip>
+					: envStatus === "failure" ?
+					<Tooltip title="Environment is unhealthy" placement="top">
+						<ErrorIcon style={{ color: "red" }} />
+					</Tooltip>
+				: null*/}
+
+                <b style={{ }}>Env &nbsp;&nbsp;&nbsp;&nbsp;</b>
               </Typography>
 
               <Typography variant="body1" color="textSecondary" style={{color: "#f85a3e", cursor: "pointer", }} onClick={() => {
@@ -19580,7 +19604,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  return "The app's Docker Image is not available in the environment yet. Re-run the app to force a re-download of the app. If the problem persists, contact support" 
 	  }
 
-	  if (result.status !== 200 && result.url !== undefined && result.url !== null && (result.url.includes("192.168") || result.url.includes("172.16") || result.url.includes("10.0"))) {
+	  if (result.status !== 200 && result.url !== undefined && result.url !== null && typeof result.url === "string" && (result.url.includes("192.168") || result.url.includes("172.16") || result.url.includes("10.0"))) {
 		  return "Consider whether your Orborus environment can connect to a local IP or not."
 	  }
 
@@ -21737,7 +21761,7 @@ const releaseToConnectLabel = "Release to Connect"
 				</div>
 				<div style={{textAlign: "center", color: "white", flex: 1, paddingTop: 20, }}>
 					<Typography variant="h6">
-						{selectedVersion.name}
+						{selectedVersion?.name}
 					</Typography>
 				</div>
 				{/* Cross icon to close it */}

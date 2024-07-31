@@ -54,7 +54,6 @@ const Billing = (props) => {
 	const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, clickedFromOrgTab } = props;
 	//const alert = useAlert();
 	let navigate = useNavigate();
-
 	const [selectedDealModalOpen, setSelectedDealModalOpen] = React.useState(false);
 	const [dealList, setDealList] = React.useState([]);
 	const [dealName, setDealName] = React.useState("");
@@ -1055,10 +1054,10 @@ const Billing = (props) => {
 					Consultation & Management
 				</Typography>
 				<div>
-					<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+					<Typography variant="body2" color="textSecondary" style={{ marginTop: userdata.support ? 5 : 10, }}>
 						You currently have a total of {inputHour} hours and {inputMinutes} minutes of professional services available by our experts.
 					</Typography>
-					<div style={{ display: "flex", minWidth: 340, justifyContent: 'center', marginTop: userdata.support ? 0 : 10 }}>
+					<div style={{ display: "flex", minWidth: 340, justifyContent: 'center', marginTop: userdata.support ? 0 : 15 }}>
 						{editConsultation ?
 							<>
 								<TextField
@@ -1106,7 +1105,7 @@ const Billing = (props) => {
 							{editConsultation && <Button variant="contained" color="primary" style={{ marginLeft: 5, textTransform: 'none' }} onClick={handleSave}>Save</Button>}
 						</div>
 						: null}
-					<Typography variant="body2" color="textSecondary" style={{ marginTop: userdata.support ? 5 : 10, }}>
+					<Typography variant="body2" color="textSecondary" style={{ marginTop: userdata.support ? 5 : 25, }}>
 						Features
 					</Typography>
 					<ul>
@@ -1331,7 +1330,7 @@ const Billing = (props) => {
 					Become a Shuffle Expert
 				</Typography>
 				<div>
-					<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+					<Typography variant="body2" color="textSecondary" style={{ marginTop: 25, }}>
 						Public Training
 					</Typography>
 					<ul>
@@ -1346,7 +1345,7 @@ const Billing = (props) => {
 							</Typography>
 						</li>
 					</ul>
-					<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+					<Typography variant="body2" color="textSecondary" style={{ marginTop: 20, }}>
 						Private Training
 					</Typography>
 					<ul>
