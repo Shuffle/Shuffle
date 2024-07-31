@@ -632,6 +632,7 @@ class AppBase:
 
         # I wonder if this actually works 
         url = "%s%s" % (self.base_url, stream_path)
+        self.logger.info(f"[DEBUG][%s] Sending result to %s" % (self.current_execution_id, url))
 
         try:
             log_contents = "disabled: add env SHUFFLE_LOGS_DISABLED=true to Orborus to re-enable logs for apps. Can not be enabled natively in Cloud except in Hybrid mode."
@@ -655,6 +656,13 @@ class AppBase:
 
         except Exception as e:
             pass
+
+        # Check if type of headers is right
+        if not isinstance(headers, dict):
+            headers = {}
+
+        if not "User-Agent" in headers:
+            headers["User-Agent"] = "Shuffle App"
 
         try:
             finished = False
@@ -684,23 +692,23 @@ class AppBase:
                             headerauth = headers["Authorization"]
 
                         try:
-
                             self.logger.info(f"[ERROR] Bad resp ({ret.status_code}) in send_result for url '{url}'. Execution ID: %d, Authorization: %d, Header Auth: %d" % (len(action_result["execution_id"]), len(action_result["authorization"]), len(headerauth)))
 
                         except Exception as e:
                             self.logger.info(f"[ERROR] Bad resp ({ret.status_code}) in send_result for url '{url}' (no detail)") 
-                            pass
 
                         time.sleep(sleeptime)
             
 
                 # Proxyerrror
                 except requests.exceptions.ProxyError as e:
+                    self.logger.info(f"[ERROR][{self.current_execution_id}] Proxy error in send_result for url '{url}': {e}")
+
                     self.proxy_config = {}
                     continue
 
                 except requests.exceptions.RequestException as e:
-                    time.sleep(sleeptime)
+                    self.logger.info(f"[ERROR][{self.current_execution_id}] Request error in send_result for url '{url}': {e}")
 
                     # Check if we have a read timeout. If we do, exit as we most likely sent the result without getting a good result
                     if "Read timed out" in str(e):
@@ -713,24 +721,34 @@ class AppBase:
                         finished = True
                         break
 
+                    time.sleep(sleeptime)
+
                     #time.sleep(5)
                     continue
                 except TimeoutError as e:
+                    self.logger.info(f"[ERROR][{self.current_execution_id}] Timeout error in send_result for url '{url}': {e}")
+
                     time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except requests.exceptions.ConnectionError as e:
+                    self.logger.info(f"[ERROR][{self.current_execution_id}] Connection error in send_result for url '{url}': {e}")
+
                     time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except http.client.RemoteDisconnected as e:
+                    self.logger.info(f"[ERROR][{self.current_execution_id}] RemoteDisconnected error in send_result for url '{url}': {e}")
+
                     time.sleep(sleeptime)
 
                     #time.sleep(5)
                     continue
                 except urllib3.exceptions.ProtocolError as e:
+                    self.logger.info(f"[ERROR][{self.current_execution_id}] ProtocolError error in send_result for url '{url}': {e}")
+
                     time.sleep(0.1)
 
                     #time.sleep(5)
@@ -3668,7 +3686,7 @@ class AppBase:
                         #self.logger.info()
                         
                         if not multiexecution:
-                            self.logger.info("NOT MULTI EXEC")
+                            #self.logger.info("NOT MULTI EXEC")
                             # Runs a single iteration here
                             new_params = self.validate_unique_fields(params)
                             if isinstance(new_params, list) and len(new_params) == 1:

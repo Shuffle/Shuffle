@@ -3755,7 +3755,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               <Tab label=<span>Limits & Cloud Sync</span> />
               <Tab label=<span>Priorities</span> />
               <Tab label=<span>Billing & Stats</span> />
-              <Tab disabled={!isCloud} label=<span>Branding (Beta)</span> />
+              <Tab disabled={!isCloud} label=<span>Partner</span> />
             </Tabs>
 
             <Divider
