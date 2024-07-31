@@ -56,7 +56,6 @@ spec:
         io.kompose.network/shuffle: "true"
         io.kompose.service: orborus
     spec:
-      dnsPolicy: "Default"
       containers:
         - env:
             - name: BASE_URL
