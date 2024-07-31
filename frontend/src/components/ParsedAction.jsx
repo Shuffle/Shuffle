@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { toast } from 'react-toastify';
 import { makeStyles, createStyles } from "@mui/styles";
 import theme from '../theme.jsx';
 
-
+import { useNavigate, Link, useParams } from "react-router-dom";
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { NestedMenuItem } from "mui-nested-menu";
 import { parsedDatatypeImages } from "../components/AppFramework.jsx";
+import { green, yellow, red } from "../views/AngularWorkflow.jsx"
 //import { useAlert 
 
 import {
@@ -175,26 +176,21 @@ const ParsedAction = (props) => {
 	setAiQueryModalOpen,
   } = props;
 
+  let navigate = useNavigate();
   const classes = useStyles();
+
   const [hideBody, setHideBody] = React.useState(true)
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false)
-  const [appActionName, setAppActionName] = React.useState(selectedAction.label);
+  const [appActionName, setAppActionName] = React.useState(selectedAction?.label);
   const [delay, setDelay] = React.useState(selectedAction?.execution_delay || 0);
-  const [prevActionName, setPrevActionName] = React.useState(selectedAction.label);
+  const [prevActionName, setPrevActionName] = React.useState(selectedAction?.label);
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
   const [hiddenParameters, setHiddenParameters] = React.useState(true);
   const [autoCompleting, setAutocompleting] = React.useState(false);
   const [selectedActionParameters, setSelectedActionParameters] = React.useState(selectedAction?.parameters || []);
-    const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
-	const [paramValues, setParamValues] = React.useState(
-		selectedAction?.parameters.map((param) => {
-			return {
-				name: param.name,
-				value: param.value,
-			}
-		})
-	);
+  const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
+  const [paramUpdate, setParamUpdate] = React.useState("");
     const [actionlist, setActionlist] = React.useState([]);
     const [jsonList, setJsonList] = React.useState([]);
     const [showDropdown, setShowDropdown] = React.useState(false);
@@ -210,6 +206,24 @@ const ParsedAction = (props) => {
 	}
   }, [expansionModalOpen])
 
+
+  useEffect(() => {
+	  if (selectedActionEnvironment === undefined || selectedActionEnvironment === null || Object.keys(selectedActionEnvironment).length === 0) {
+
+		  if (environments !== undefined && environments !== null && environments.length > 0) {
+			  if (selectedAction.environment !== undefined && selectedAction.environment !== null) {
+
+				  const foundenv = environments.find(env => env.id === selectedAction.environment || selectedAction.environment === env.Name)
+
+				  if (foundenv !== undefined && foundenv !== null) {
+				  	setSelectedActionEnvironment(foundenv)
+				  }
+			  }
+		  }
+	  }
+  }, [])
+
+  /*
   useEffect(() => {
 		setParamValues(selectedAction.parameters.map((param) => {
 			return {
@@ -220,6 +234,8 @@ const ParsedAction = (props) => {
   },[
 	selectedAction, selectedApp,setNewSelectedAction, workflow,
   ])
+  */
+
 
   useEffect(() => {
 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
@@ -420,8 +436,8 @@ const ParsedAction = (props) => {
 			}
 		
 			// Only set selected action parameters if they have changed
-			if (selectedAction.parameters && selectedAction.parameters.length > 0) {
-				setSelectedActionParameters(selectedAction.parameters);
+			if (selectedAction?.parameters && selectedAction?.parameters.length > 0) {
+				setSelectedActionParameters(selectedAction?.parameters);
 			}
 		
 			// Only set selected variable parameter if it is null or undefined
@@ -436,6 +452,7 @@ const ParsedAction = (props) => {
 
 	useEffect(() => {
         const newActionList = [];
+		const parentActionList = [];
 
         // Process workflowExecutions
         if (workflowExecutions.length > 0) {
@@ -563,15 +580,67 @@ const ParsedAction = (props) => {
                             autocomplete: parentNode.label.split(" ").join("_"),
                             example: exampleData,
                         });
+
+						parentActionList.push({
+                            type: "action",
+                            id: parentNode.id,
+                            name: parentNode.label,
+                            autocomplete: parentNode.label.split(" ").join("_"),
+                            example: exampleData,
+                        });
+
+							
                     }
                 }
             }
         }
 
-        // Update the actionlist state
+		let newParameters =  selectedAction?.parameters?.map((param) => {
+			let paramvalue = param.value;
+			let errorVars = [];
+			if(paramvalue.includes("$")){
+				let actions = workflow.actions?.map((action) => {
+					return "$"+action.label.toLowerCase();
+				})
+				if(newActionList?.length > 0){
+					let appParentActions = parentActionList?.map(action => "$" + action.name.toLowerCase());
+					let notPresentAction = actions?.filter((action) => !appParentActions?.includes(action))
+					notPresentAction?.forEach((action) => {
+						action = action.replace(" ", "_");
+						if(paramvalue.includes(action)){
+							errorVars.push(action);
+							// paramvalue = paramvalue.replace(action, "")
+							// paramvalue = paramvalue.replace(/^\s*[\r\n]/gm, "");
+						}
+					})
+				}
+			}
+
+			let message = "";
+			if(errorVars.length > 0){
+				if(errorVars.length === 1){
+					message = errorVars[0] + " is not accessible in this action.";
+				}else{
+					message = errorVars.join(", ") + " are not accessible in this action.";
+				}
+			}
+
+			if (param?.configuration) {
+				let regex = /(^|[^\\])\$/;
+				if (regex.test(paramvalue)) {
+					if(message.length > 0){
+					message += "\nUse \"\\$\" instead of \"$\".";
+					}else{
+					message = "Use \"\\$\" instead of \"$\".";
+					}
+				}
+			}
+			return {...param, value: paramvalue, error: message}
+		});	
+		setSelectedActionParameters(newParameters);
         setActionlist(newActionList);
-    }, [workflow.execution_variables, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents]);
-	
+    }, [workflow.execution_variables,paramUpdate, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents,setNewSelectedAction]);
+	console.log("Selected Action:", selectedAction)
 	useEffect(() => {
 		selectedNameChange(appActionName)
 
@@ -581,15 +650,17 @@ const ParsedAction = (props) => {
 	  },[appActionName,delay])
 	 
 		const handleParamChange = (event, count,data) => {
-			const newParams = [...paramValues];
+			const newParams = [...selectedActionParameters];
 			newParams.map((param) => {
 				if (param.name === data.name) {
 					param.value = event.target.value;
 				}
 			})
-			setParamValues(newParams);
+			setSelectedActionParameters(newParams);
+			setParamUpdate(event.target.value);
 			changeActionParameter(event, count, data)
 		}
+
 		const calculateHelpertext = (input_data) => {
 			var helperText = ""
 			var looperText = ""
@@ -1115,6 +1186,15 @@ const ParsedAction = (props) => {
 		return helperText
 	}
 
+	const errorHelperText = (name, value, error) => {
+		return (
+			<div style={{ whiteSpace: 'pre-line' }}>
+				{error}
+			</div>
+		);
+	}
+
+
 	const analyzeFields = () => {
 
 		if (selectedAction === undefined || selectedAction === null) {
@@ -1176,7 +1256,7 @@ const ParsedAction = (props) => {
 	}
 
     // FIXME: Issue #40 - selectedActionParameters not reset
-	if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
+	if (Object.getOwnPropertyNames(selectedAction)?.length > 0 && selectedActionParameters?.length > 0) {
 	  var wrapperapp = {
 	  	"id": "",
 	  	"name": "noapp",
@@ -1893,6 +1973,7 @@ const ParsedAction = (props) => {
 			  }}
               labelId="select-app-auth"
               value={
+				selectedAction.authentication_id === "authgroups" ? "authgroups" :
                 Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0
                   ? "No selection"
                   : selectedAction.selectedAuthentication
@@ -1909,18 +1990,48 @@ const ParsedAction = (props) => {
                   selectedAction.authentication_id = "";
 
                   for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
-                    //console.log(selectedAction.parameters[key])
                     if (selectedAction.parameters[key].configuration) {
-                      selectedAction.parameters[key].value = "";
+
+					  if (selectedAction.parameters[key].example !== undefined && selectedAction.parameters[key].example !== null && selectedAction.parameters[key].example !== "") {
+		  				if (selectedAction.parameters[key].example.toLowerCase().includes("api") || selectedAction.parameters[key].example.toLowerCase().includes("key") || selectedAction.parameters[key].example.toLowerCase().includes("pass")) {
+                      		selectedAction.parameters[key].value = ""
+						} else {
+                      		selectedAction.parameters[key].value = selectedAction.parameters[key].example
+						}
+					  } else {
+                      	selectedAction.parameters[key].value = ""
+					  }
                     }
                   }
                   setSelectedAction(selectedAction);
                   setUpdate(Math.random());
+				
+				} else if (e.target.value === "authgroups") {
+					if (authGroups !== undefined && authGroups !== null && authGroups.length === 0) {
+						toast("No auth groups created. Opening window to create one")
+
+						setTimeout(() => {
+							window.open("/admin?tab=app_auth", "_blank")
+						}, 2500)
+					} else {
+						selectedAction.selectedAuthentication = {};
+						selectedAction.authentication_id = "authgroups"
+
+						for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
+						  //console.log(selectedAction.parameters[key])
+						  if (selectedAction.parameters[key].configuration) {
+							selectedAction.parameters[key].value = "authgroup controlled"
+						  }
+						}
+
+						setSelectedAction(selectedAction)
+						setUpdate(Math.random())
+					}
                 } else {
                   selectedAction.selectedAuthentication = e.target.value;
                   selectedAction.authentication_id = e.target.value.id;
-                  setSelectedAction(selectedAction);
-                  setUpdate(Math.random());
+                  setSelectedAction(selectedAction)
+                  setUpdate(Math.random())
                 }
               }}
               style={{
@@ -1976,6 +2087,19 @@ const ParsedAction = (props) => {
                   </MenuItem>
                 );
               })}
+
+			  <Divider style={{marginTop: 10, marginBottom: 10, }}/>
+
+              <MenuItem
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  color: "white",
+                }}
+                value="authgroups"
+              >
+                <em>Auth Groups</em>
+              </MenuItem>
+
             </Select>
 
             {/*
@@ -2006,6 +2130,7 @@ const ParsedAction = (props) => {
         </div>
       ) : null}
 
+
       {showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
         <div style={{ marginTop: "20px" }}>
           <Typography style={{color: "rgba(255,255,255,0.7)"}}>Environment</Typography>
@@ -2014,10 +2139,7 @@ const ParsedAction = (props) => {
 				disableScrollLock: true,
 			}}
             value={
-              selectedActionEnvironment === undefined || selectedActionEnvironment === null ||
-              selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null 
-                ? isCloud ? "Cloud" : "Shuffle"
-                : selectedActionEnvironment.Name
+              selectedActionEnvironment === undefined || selectedActionEnvironment === null || selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null ? isCloud ? "Cloud" : "Shuffle" : selectedActionEnvironment.Name
             }
             SelectDisplayProps={{
               style: {
@@ -2034,7 +2156,7 @@ const ParsedAction = (props) => {
 				  workflow.actions[actionkey].environment = env.Name
 			  }
 			  setWorkflow(workflow)
-			  toast("Set environment for ALL actions to " + env.Name)
+			  toast.success("Set environment for ALL actions to " + env.Name)
             }}
             style={{
               backgroundColor: theme.palette.inputColor,
@@ -2045,8 +2167,10 @@ const ParsedAction = (props) => {
           >
             {environments.map((data, index) => {
               if (data.archived === true) {
-                return null;
+                return null
               }
+
+			  const isRunning = data.running_ip !== "" 
 
               return (
                 <MenuItem
@@ -2057,6 +2181,27 @@ const ParsedAction = (props) => {
                   }}
                   value={data.Name}
                 >
+
+				  {data.Name === "cloud" || data.Name === "Cloud" ? null : !isRunning ?
+					  <a href={`/admin?tab=environments&env=${data.Name}`} target="_blank" style={{textDecoration: "none",}}>
+						  <Tooltip title={"Click to configure the environment"} placement="top">
+							  <Chip
+								style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", backgroundColor: red, }}
+								label={"Stopped"}
+								variant="outlined"
+								color="secondary"
+					  			onClick={(e) => {
+									e.preventDefault()
+									e.stopPropagation()
+									window.open(`/admin?tab=environments&env=${data.Name}`, "_blank", "noopener,noreferrer")
+								}}
+
+
+							  />
+						  </Tooltip>
+					  </a>
+					: null}
+
 				  {data.default === true ?
 					  <Chip
 						style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
@@ -2065,12 +2210,22 @@ const ParsedAction = (props) => {
 						color="secondary"
 					  />
 					  : null}
+
+
                   {data.Name}
                 </MenuItem>
               );
             })}
           </Select>
-        </div>
+
+		  {/*selectedActionEnvironment.running_ip === "" && selectedActionEnvironment.Name !== "Cloud" && selectedActionEnvironment.Name !== "cloud" ?
+			  <a href={`/admin?tab=environment&env=${selectedActionEnvironment.Name}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e",}}>
+				<Typography style={{}}>
+				  Configure the environment
+				</Typography>
+			  </a>
+		  : null*/}
+	</div>
       ) : null}
       {workflow.execution_variables !== undefined &&
       workflow.execution_variables !== null &&
@@ -2742,8 +2897,7 @@ const ParsedAction = (props) => {
 					) : null}
 
 		  {suggestionInfo()}
-
-          {selectedActionParameters.map((data, count) => {
+          {selectedActionParameters?.map((data, count) => {
             if (data.variant === "") {
               data.variant = "STATIC_VALUE";
             }
@@ -2752,10 +2906,16 @@ const ParsedAction = (props) => {
 			  return null
 			}
 
+			if (data.value === "authgroup controlled") {
+				return null
+			}
+
             // selectedAction.selectedAuthentication = e.target.value
             // selectedAction.authentication_id = e.target.value.id
             if (
-              !selectedAction.auth_not_required &&
+              (selectedAction.auth_not_required !== undefined && !selectedAction.auth_not_required) &&
+			  selectedActionParameters[count].value !== undefined &&
+			  selectedAction.parameters[count].value !== undefined &&
               selectedAction.selectedAuthentication !== undefined &&
               selectedAction.selectedAuthentication.fields !== undefined &&
               selectedAction.selectedAuthentication.fields[data.name] !==
@@ -3158,6 +3318,14 @@ const ParsedAction = (props) => {
 						<Typography variant="body2">
 						<strong>Ex. :</strong> {data?.example.length > 0 ? data.example : "No example available"}
 						</Typography>
+						{
+							data?.configuration === true ?
+							(
+								<Typography variant="body2" mt={0.5}>
+								<strong>Auth: </strong>Use "\$" instead of "$"
+								</Typography>
+							) : null
+						}
 					</Box>
 				</Box>
 			);
@@ -3261,10 +3429,12 @@ const ParsedAction = (props) => {
                 color="primary"
                 // defaultValue={data.value}
                 value={
-					paramValues.find((param) => param.name === data.name) !== undefined
-						? paramValues.find((param) => param.name === data.name).value
-						: ""
+					data?.value
 				}
+				error={
+					data?.error?.length > 0 ? true : false
+				}
+				helperText={data?.error?.length > 0 ? errorHelperText(data?.name,data?.value,data?.error) : returnHelperText(data.name, data.value)}
                 //options={{
                 //	theme: 'gruvbox-dark',
                 //	keyMap: 'sublime',
@@ -3287,10 +3457,8 @@ const ParsedAction = (props) => {
                 //   changeActionParameter(event, count, data);
 				handleParamChange(event, count, data)
                 }}
-                helperText={returnHelperText(data.name, data.value)}
 				onFocus={(event) => {
 					setUiBox(event.target.id)
-					console.log(event.target.id)
 					
 				}}
                 onBlur={(event) => {
@@ -4195,11 +4363,7 @@ const ParsedAction = (props) => {
                       onClose={() => {
                         setShowAutocomplete(false);
 
-                        if (
-                          !selectedActionParameters[count].value[
-                            selectedActionParameters[count].value.length - 1
-                          ] === "."
-                        ) {
+                        if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length - 1] === ".") {
                           setShowDropdown(false);
                         }
 

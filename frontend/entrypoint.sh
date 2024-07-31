@@ -1,7 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env sh
+set -eu
 
-# generate configs
-/usr/local/bin/confd -backend="env" -confdir="/etc/confd" -onetime
+envsubst '${BACKEND_HOSTNAME}' < /etc/nginx/nginx.conf.tmpl > /etc/nginx/nginx.conf
 
-# run main command
 exec "$@"

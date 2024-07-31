@@ -10,7 +10,7 @@ package main
 
 import (
 	"github.com/shuffle/shuffle-shared"
-
+    "archive/zip"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -29,6 +29,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"path/filepath"
 
 	//"os/signal"
 	//"syscall"
@@ -101,6 +102,7 @@ var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
 var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 var tenzirUrl = os.Getenv("SHUFFLE_TENZIR_URL")
+var apiKey = os.Getenv("AUTH_FOR_ORBORUS")
 
 var executionIds = []string{}
 var namespacemade = false // For K8s
@@ -1805,6 +1807,12 @@ func main() {
 		log.Printf("[WARNING] Defaulting to environment name %s. Set environment variable ENVIRONMENT_NAME to change. This should be the same as in the frontend action.", environment)
 	}
 
+	if tenzirUrl == "" {
+		tenzirUrl = "http://localhost:5160"
+		log.Printf("[WARNING] SHUFFLE_TENZIR_URL not set, falling back to default URL: %s",tenzirUrl)
+	}
+	
+
 	// FIXME - during init, BUILD and/or LOAD worker and app_sdk
 	// Build/load app_sdk so it can be loaded as 127.0.0.1:5000/walkoff_app_sdk
 	log.Printf("[INFO] Setting up Docker environment. Downloading worker and App SDK!")
@@ -1906,6 +1914,7 @@ func main() {
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
 	for {
+		_ = sendTenzirHealthStatus()
 		if req.Method == "POST" {
 			// Should find data to send (memory etc.)
 
@@ -2021,6 +2030,71 @@ func main() {
 
 					}
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+					
+				}  else if incRequest.Type == "CATEGORY_UPDATE" {
+
+					err := deployTenzirNode()
+					if err != nil{
+						log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+					}
+				
+					err = handleFileCategoryChange()
+					if err != nil {
+					 log.Printf("[ERROR] Failed to download the file category: %s", err)
+					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+			    } else if incRequest.Type == "DISABLE_SIGMA_FILE" {
+					  fileName := incRequest.ExecutionArgument
+					  err := deployTenzirNode()
+					  if err != nil{
+						  log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+					  }
+				  
+					  err = disableRule(fileName)
+					  if err != nil {
+						log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
+					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+				} else if incRequest.Type == "ENABLE_SIGMA_FILE" {
+					fileName := incRequest.ExecutionArgument
+					err := deployTenzirNode()
+					if err != nil{
+						log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+					}
+				
+					err = enableRule(fileName)
+					if err != nil {
+					  log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
+				  }
+
+				  toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+			  } else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
+
+					err := deployTenzirNode()
+					if err != nil{
+						log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+					}
+				
+					err = removeAllFiles()
+					if err != nil {
+					 log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
+					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+			    }  else if incRequest.Type == "START_TENZIR" {
+
+					err := deployTenzirNode()
+					if err != nil{
+						log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+					}
+
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+				
 				} else {
 					newrequests = append(newrequests, incRequest)
 				}
@@ -2211,7 +2285,6 @@ func main() {
 			}
 
 		}
-
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}
 }
@@ -2371,11 +2444,6 @@ func main() {
 // docker run tenzir/tenzir:latest 'from http://192.168.86.44:5002/api/v1/orgs/7e9b9007-5df2-4b47-bca5-c4d267ef2943/cache/CIDR%20ranges?type=text&authorization=cec9d01f-09b2-4419-8a0a-76c6046e3fef read lines | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines'
 func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 
-	if tenzirUrl == "" {
-		tenzirUrl = "http://localhost:5160"
-		log.Printf("[WARNING] SHUFFLE_TENZIR_URL not set, falling back to default URL: %s", tenzirUrl)
-	}
-
 	err := deployTenzirNode()
 	if err != nil {
 		log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
@@ -2419,7 +2487,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
 			return err
 		}
-		_, err = updatePipelineState(pipelineId, "stop")
+		_, err = updatePipelineState(command, pipelineId, "stop")
 		if err != nil {
 			log.Printf("[ERROR] Failed to stop Pipeline: %s reason:%s ", pipelineId, err)
 			return err
@@ -2439,7 +2507,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
 			return err
 		}
-		_, err = updatePipelineState(pipelineId, "start")
+		_, err = updatePipelineState(command, pipelineId, "start")
 		if err != nil {
 			log.Printf("[ERROR] Failed to start Pipeline: %s reason:%s ", pipelineId, err)
 			return err
@@ -2472,9 +2540,19 @@ func deployTenzirNode() error {
 		return nil
 	}
 
-	containerInfo, err := dockercli.ContainerInspect(ctx, containerName)
-	if err != nil {
-		if dockerclient.IsErrNotFound(err) {
+    containerInfo, err := dockercli.ContainerInspect(ctx, containerName)
+    if err != nil {
+        if dockerclient.IsErrNotFound(err) {
+            // Create network if it doesn't exist
+            networkName := "tenzir-network"
+            networkSubnet := "192.168.1.0/24"
+            networkGateway := "192.168.1.1"
+
+            err = createNetworkIfNotExists(ctx, networkName, networkSubnet, networkGateway)
+            if err != nil {
+                log.Printf("[ERROR] Failed to create network: %s", err)
+                return err
+            }
 
 			// Check if image exists
 			_, _, err := dockercli.ImageInspectWithRaw(ctx, imageName)
@@ -2535,30 +2613,6 @@ func deployTenzirNode() error {
 	return nil
 }
 
-func checkTenzirNode() error {
-	retries := 20
-	retryInterval := 3 * time.Second
-	url := fmt.Sprintf("%s/api/v0/ping", tenzirUrl)
-	forwardMethod := "POST"
-
-	client := http.Client{}
-	req, err := http.NewRequest(forwardMethod, url, nil)
-	if err != nil {
-		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
-		return err
-	}
-
-	for i := 0; i < retries; i++ {
-		resp, err := client.Do(req)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			return nil
-		}
-		time.Sleep(retryInterval)
-	}
-
-	return fmt.Errorf("tenzir node is not available")
-}
-
 func createAndStartTenzirNode(ctx context.Context, containerName, imageName string, containerStartOptions container.StartOptions) error {
 	healthconfig := &container.HealthConfig{
 		Test:     []string{"tenzir --connection-timeout=30s --connection-retry-delay=1s 'api /ping'"},
@@ -2574,23 +2628,34 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		Entrypoint:   []string{containerName},
 	}
 
-	hostConfig := &container.HostConfig{
-		PortBindings: nat.PortMap{
-			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
-		},
-		Mounts: []mount.Mount{
-			{
-				Type:   mount.TypeVolume,
-				Source: containerName,
-				Target: "/var/lib/tenzir/",
-			},
-		},
-		VolumeDriver: "local",
-	}
-	_, err := dockercli.ContainerCreate(ctx, config, hostConfig, nil, nil, containerName)
-	if err != nil {
-		return err
-	}
+    hostConfig := &container.HostConfig{
+        PortBindings: nat.PortMap{
+            "5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
+        },
+        Mounts: []mount.Mount{
+            {
+                Type:   mount.TypeVolume,
+                Source: containerName,
+                Target: "/var/lib/tenzir/",
+            },
+        },
+        VolumeDriver: "local",
+    }
+
+    networkingConfig := &network.NetworkingConfig{
+        EndpointsConfig: map[string]*network.EndpointSettings{
+            "tenzir-network": {
+                IPAMConfig: &network.EndpointIPAMConfig{
+                    IPv4Address: "192.168.1.100",
+                },
+            },
+        },
+    }
+
+    _, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
+    if err != nil {
+        return err
+    }
 
 	err = dockercli.ContainerStart(ctx, containerName, containerStartOptions)
 	if err != nil {
@@ -2599,14 +2664,74 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 	}
 	log.Printf("[INFO] Tenzir Node container started successfully")
 
-	log.Printf("[INFO] Waiting for Tenzir to become available ...")
-	err = checkTenzirNode()
-	if err != nil {
-		return err
-	}
-	log.Printf("[INFO] Successfully deployed Tenzir Node !")
+    log.Printf("[INFO] Waiting for Tenzir to become available ...")
+    err = checkTenzirNode()
+    if err != nil {
+        return err
+    }
+    log.Printf("[INFO] Successfully deployed Tenzir Node!")
 
 	return nil
+}
+
+func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway string) error {
+    networks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{})
+    if err != nil {
+        return err
+    }
+
+    for _, network := range networks {
+        if network.Name == networkName {
+            // Network exists
+            return nil
+        }
+    }
+
+    ipamConfig := &network.IPAM{
+        Config: []network.IPAMConfig{
+            {
+                Subnet:  subnet,
+                Gateway: gateway,
+            },
+        },
+    }
+
+    networkCreate := types.NetworkCreate{
+        CheckDuplicate: true,
+        Driver:         "bridge",
+        IPAM:           ipamConfig,
+    }
+
+    _, err = dockercli.NetworkCreate(ctx, networkName, networkCreate)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func checkTenzirNode() error {
+    retries := 5
+    retryInterval := 3 * time.Second
+	url := fmt.Sprintf("%s/api/v0/ping",tenzirUrl)
+	forwardMethod := "POST"
+
+    client := http.Client{}
+    req, err := http.NewRequest(forwardMethod, url, nil)
+	if err != nil {
+		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
+		return err
+	}
+
+    for i := 0; i < retries; i++ {
+        resp, err := client.Do(req)
+        if err == nil && resp.StatusCode == http.StatusOK {
+            return nil
+        }
+        time.Sleep(retryInterval)
+    }
+
+    return fmt.Errorf("tenzir node is not available")
 }
 
 func createPipeline(command, identifier string) (string, error) {
@@ -2627,32 +2752,36 @@ func createPipeline(command, identifier string) (string, error) {
 		log.Printf("[INFO] an existing pipeline found with ID: %s. it will be deleted", pipelineId)
 		toBeDeleted = true
 	}
-	if strings.Contains(command, "shuffler.io") {
+    // if strings.Contains(command, "shuffler.io") {
 
-	} else {
-		var scheme string
-		if strings.Contains(command, "http://") {
-			scheme = "http://"
-		} else if strings.Contains(command, "https://") {
-			scheme = "https://"
-		}
+	// } else {
+	// 	var scheme string
+	// 	if strings.Contains(command, "http://") {
+	// 		scheme = "http://"
+	// 	} else if strings.Contains(command, "https://") {
+	// 		scheme = "https://"
+	// 	}
 
-		startIndex := strings.Index(command, scheme)
-		if startIndex != -1 {
-			endIndex := startIndex + len(scheme)
-			endIndex += strings.Index(command[endIndex:], "/")
+	// 	startIndex := strings.Index(command, scheme)
+	// 	if startIndex != -1 {
+	// 		endIndex := startIndex + len(scheme)
+	// 		endIndex += strings.Index(command[endIndex:], "/")
+			
+	// 		command = command[:startIndex] + baseUrl + command[endIndex:]
+	// 	}
+	// }
 
-			command = command[:startIndex] + baseUrl + command[endIndex:]
-		}
-	}
+	//command = "from file /var/lib/tenzir/sysmon_logs.ndjson read json | sigma /var/lib/tenzir/rule.yaml"
+	//command = "from file /var/lib/tenzir/sysmon_logs.ndjson read json | import"
+
 	requestBody := map[string]interface{}{
 		"definition": command,
 		"name":       identifier,
 		"hidden":     false,
 		"autostart": map[string]bool{
 			"created":   true,
-			"completed": true,
-			"failed":    true,
+			"completed": false,
+			"failed":    false,
 		},
 		"autodelete": map[string]bool{
 			"completed": false,
@@ -2718,13 +2847,14 @@ func createPipeline(command, identifier string) (string, error) {
 	return id, nil
 }
 
-func updatePipelineState(pipelineId, action string) (string, error) {
+func updatePipelineState(command, pipelineId, action string) (string, error) {
 
 	url := fmt.Sprintf("%s/api/v0/pipeline/update", tenzirUrl)
 	forwardMethod := "POST"
 
 	requestBody := map[string]interface{}{
 		"id":     pipelineId,
+		"definition": command,
 		"action": action,
 		"autostart": map[string]bool{
 			"created":   true,
@@ -2870,53 +3000,308 @@ func searchPipeline(identifier string) (string, error) {
 	return "", errors.New("no existing pipeline found with name")
 }
 
-// func savePipelineData(pipelineId, identifier, status string) error {
+func handleFileCategoryChange() error {
+	apiEndpoint := baseUrl + "/api/v1/files/namespaces/sigma"
+	req, err := http.NewRequest("GET", apiEndpoint, nil)
+	if err != nil {
+		return err
+	}
 
-// 	url :=  fmt.Sprintf("%s/api/v1/triggers/pipeline/save", baseUrl)
-// 	identifierWithoutPrefix := strings.TrimPrefix(identifier, "shuffle-")
+	req.Header.Add("Authorization", "Bearer "+apiKey)
 
-// 	forwardMethod := "PUT"
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 
-// 	payload := map[string]interface{}{
-// 		"pipeline_id": pipelineId,
-// 		"trigger_id":  identifierWithoutPrefix,
-// 		"status":      status,
-// 	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("received non-200 response: %s", resp.Status)
+	}
 
-// 	payloadBytes, err := json.Marshal(payload)
-// 	if err != nil {
-// 		log.Printf("[ERROR] Failed to marshal payload: %s", err)
-// 		return err
-// 	}
+	out, err := os.Create("files.zip")
+	if err != nil {
+		return err
+	}
 
-// 	forwardData := bytes.NewBuffer(payloadBytes)
+	defer out.Close()
+	defer os.Remove("files.zip")
 
-// 	req, err := http.NewRequest(
-// 		forwardMethod,
-// 		url,
-// 		forwardData,
-// 	)
-// 	if err != nil {
-// 		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
-// 		return err
-// 	}
-// 	req.Header.Set("Content-Type", "application/json")
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
 
-// 	client := &http.Client{Timeout: 10 * time.Second}
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		log.Printf("[ERROR] Failed to send HTTP request: %s", err)
-// 		return err
-// 	}
-// 	defer resp.Body.Close()
+	log.Println("ZIP file downloaded successfully.")
 
-// 	if resp.StatusCode != 200 {
-// 		log.Printf("[ERROR] Received non-successful HTTP status code: %d", resp.StatusCode)
-// 		return fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
-// 	}
+	err = extractZIP("files.zip", "sigma_rules")
+	if err != nil {
+		return err
+	}
 
-// 	return nil
-// }
+	destPath := "/var/lib/tenzir/sigma_rules"
+
+	err = copyToTenzir("sigma_rules", destPath)
+	if err != nil {
+		return err
+	}
+
+	log.Println("Files copied to container successfully.")
+
+	checkDisabledDirCmd := exec.Command("docker", "exec", "tenzir-node", "sh", "-c", "test -d /var/lib/tenzir/disabled_rules")
+	if err := checkDisabledDirCmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			// Directory does not exist, nothing to do
+			log.Println("[DEBUG] /var/lib/tenzir/disabled_rules does not exist.")
+			return nil
+		}
+		
+		return fmt.Errorf("error checking disabled rules directory: %v", err)
+	}
+
+	// List files in /var/lib/tenzir/disabled_rules
+	listFilesCmd := exec.Command("docker", "exec", "tenzir-node", "sh", "-c", "ls /var/lib/tenzir/disabled_rules")
+	output, err := listFilesCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("error listing files in disabled rules directory: %v, output: %s", err, output)
+	}
+
+	files := strings.Split(strings.TrimSpace(string(output)), "\n")
+	for _, file := range files {
+		disabledFilePath := fmt.Sprintf("/var/lib/tenzir/sigma_rules/%s", file)
+		checkFileCmd := exec.Command("docker", "exec", "tenzir-node", "sh", "-c", fmt.Sprintf("test -f %s", disabledFilePath))
+		if err := checkFileCmd.Run(); err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+				log.Printf("[ERROR] File does not exist: %s, moving on.\n", disabledFilePath)
+				continue
+			}
+			return fmt.Errorf("error checking file: %v", err)
+		}
+
+		deleteFileCmd := exec.Command("docker", "exec", "-u", "root", "tenzir-node", "sh", "-c", fmt.Sprintf("rm -f %s", disabledFilePath))
+		if err := deleteFileCmd.Run(); err != nil {
+			return fmt.Errorf("error deleting file: %v", err)
+		}
+		log.Printf("[INFO] Deleted file: %s\n", disabledFilePath)
+	}
+
+	return nil
+}
+
+func extractZIP(zipFile, destDir string) error {
+	r, err := zip.OpenReader(zipFile)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return err
+	}
+
+	for _, f := range r.File {
+		err := extractFile(f, destDir)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func extractFile(f *zip.File, destDir string) error {
+	rc, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+
+	path := filepath.Join(destDir, f.Name)
+
+	out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, rc)
+	return err
+}
+
+func copyToTenzir(srcPath, destPath string) error {
+	containerName := "tenzir-node"
+
+	checkCmd := exec.Command("docker", "exec", containerName, "test", "-d", destPath)
+	if err := checkCmd.Run(); err == nil {
+		rmCmd := exec.Command("docker", "exec", "-u", "root", containerName, "rm", "-rf", destPath)
+		if err := rmCmd.Run(); err != nil {
+			return fmt.Errorf("error removing existing directory in container: %v", err)
+		}
+	}
+
+	cpCmd := exec.Command("docker", "cp", srcPath, fmt.Sprintf("%s:%s", containerName, destPath))
+	var out bytes.Buffer
+	cpCmd.Stdout = &out
+	cpCmd.Stderr = &out
+
+	err := cpCmd.Run()
+	if err != nil {
+		return fmt.Errorf("error copying files: %v, output: %s", err, out.String())
+	}
+
+	return nil
+}
+
+func removeAllFiles() error {
+    containerName := "tenzir-node"
+    sigmaPath := "/var/lib/tenzir/sigma_rules/*"
+
+    checkCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("ls %s", sigmaPath))
+    checkOutput, checkErr := checkCmd.CombinedOutput()
+    if checkErr != nil {
+        if strings.Contains(string(checkOutput), "No such file or directory") {
+            return nil // nothing to delete
+        }
+        return fmt.Errorf("error checking files: %v, output: %s", checkErr, checkOutput)
+    }
+
+    cmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("rm -rf %s", sigmaPath))
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        return fmt.Errorf("error removing files: %v, output: %s", err, output)
+    }
+    return nil
+}
+
+func removeFile(fileName string) error {
+	containerName := "tenzir-node"
+	srcPath := fmt.Sprintf("/var/lib/tenzir/sigma_rules/%s", fileName)
+
+	checkSrcCmd := exec.Command("docker", "exec", containerName, "sh", "-c", fmt.Sprintf("test -f %s", srcPath))
+	if err := checkSrcCmd.Run(); err != nil {
+		// If the file does not exist, simply return nil
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			log.Printf("[ERROR] No such file: %s, nothing to delete\n", srcPath)
+			return nil
+		}
+		return fmt.Errorf("error checking source file: %v", err)
+	}
+
+	return removePath(containerName, srcPath)
+}
+
+func removePath(containerName, path string) error {
+	rmCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("rm -rf %s", path))
+	output, err := rmCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("error removing path: %v, output: %s", err, output)
+	}
+	return nil
+}
+
+func sendTenzirHealthStatus() error {
+    var status string
+	url :=  fmt.Sprintf("%s/api/v1/detection/siem/node_health", baseUrl)
+	err := checkTenzirNode()
+	if err != nil {
+		return err
+	} else {
+		status = "active"
+	}
+
+	forwardMethod := "POST"
+	payload := map[string]interface{}{
+		"status": status,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal payload: %s", err)
+		return err
+	}
+	forwardData := bytes.NewBuffer(payloadBytes)
+	req, err := http.NewRequest(
+		forwardMethod,
+		url,
+		forwardData,
+	)
+	if err != nil {
+		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Failed to send HTTP request: %s", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		log.Printf("[ERROR] Received non-successful HTTP status code: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func disableRule(fileName string) error {
+	containerName := "tenzir-node"
+	srcPath := fmt.Sprintf("/var/lib/tenzir/sigma_rules/%s", fileName)
+	destDir := "/var/lib/tenzir/disabled_rules"
+	destPath := fmt.Sprintf("%s/%s", destDir, fileName)
+
+	checkSrcCmd := exec.Command("docker", "exec", containerName, "sh", "-c", fmt.Sprintf("test -f %s", srcPath))
+	if err := checkSrcCmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			fmt.Printf("File does not exist: %s\n", srcPath)
+			return nil // Nothing to disable
+		}
+		return fmt.Errorf("error checking source file: %v", err)
+	}
+
+	checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mkdir -p %s", destDir))
+	if err := checkDestDirCmd.Run(); err != nil {
+		return fmt.Errorf("error ensuring destination directory exists: %v", err)
+	}
+
+	moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mv %s %s", srcPath, destPath))
+	if err := moveCmd.Run(); err != nil {
+		return fmt.Errorf("error moving file: %v", err)
+	}
+
+	fmt.Printf("File %s moved to %s successfully.\n", fileName, destDir)
+	return nil
+}
+
+func enableRule(fileName string) error {
+	containerName := "tenzir-node"
+	srcPath := fmt.Sprintf("/var/lib/tenzir/disabled_rules/%s", fileName)
+	destDir := "/var/lib/tenzir/sigma_rules"
+	destPath := fmt.Sprintf("%s/%s", destDir, fileName)
+
+	checkSrcCmd := exec.Command("docker", "exec", containerName, "sh", "-c", fmt.Sprintf("test -f %s", srcPath))
+	if err := checkSrcCmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			fmt.Printf("File does not exist: %s\n", srcPath)
+			return nil // Nothing to enable
+		}
+		return fmt.Errorf("error checking source file: %v", err)
+	}
+
+	checkDestDirCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mkdir -p %s", destDir))
+	if err := checkDestDirCmd.Run(); err != nil {
+		return fmt.Errorf("error ensuring destination directory exists: %v", err)
+	}
+	moveCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("mv %s %s", srcPath, destPath))
+	if err := moveCmd.Run(); err != nil {
+		return fmt.Errorf("error moving file: %v", err)
+	}
+
+	fmt.Printf("File %s moved to %s successfully.\n", fileName, destDir)
+	return nil
+}
 
 // Is this ok to do with Docker? idk :)
 func getRunningWorkers(ctx context.Context, workerTimeout int) int {

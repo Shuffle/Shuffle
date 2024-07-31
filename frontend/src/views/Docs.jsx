@@ -122,7 +122,7 @@ export const Paragrah = (props) => {
 
 
     return (
-        <div class="sdf">
+        <div>
             {element}
         </div>
     )
@@ -456,6 +456,30 @@ const Docs = (defaultprops) => {
         paddingRight: 15,
         minHeight: "80vh",
     };
+
+    const noteLabelStyle = {
+        fontWeight: "bold",
+        color: "#f86a3e",
+        display: "block",
+        marginBottom: "5px",
+    };
+
+    const Blockquote = ({ children }) => {
+
+        const textContent = children.map(child =>
+          child.props && child.props.children ? child.props.children.join('') : child
+        ).join('').trim();
+
+        // Maybe some more contents....
+        const isNote = textContent.startsWith("[!TIP]");
+        return (
+          <blockquote style={isNote ? alertNote : {}}>
+            {isNote && <span style={noteLabelStyle}>Tips:</span>}
+            {isNote ? textContent.replace("[!TIP]", "").trim() : children}
+          </blockquote>
+        );
+      };
+
 
     const Heading = (props) => {
         const [hover, setHover] = useState(false);
@@ -840,6 +864,12 @@ const Docs = (defaultprops) => {
         fontSize: isMobile ? "1.3rem" : "1.1rem",
     };
 
+    const alertNote = {
+        padding: "10px",
+        borderLeft: "5px solid #f86a3e",
+        backgroundColor: "rgb(26,26,26)",
+    };
+
     const CustomButton = (props) => {
         const { title, icon, link } = props
 
@@ -974,7 +1004,9 @@ const Docs = (defaultprops) => {
         h6: Heading,
         a:  OuterLink,
         p:  Paragrah,
+        blockquote: Blockquote,
     }
+
 
 
     // PostDataBrowser Section
