@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { toast } from 'react-toastify';
 import { makeStyles, createStyles } from "@mui/styles";
 import theme from '../theme.jsx';
@@ -180,22 +180,15 @@ const ParsedAction = (props) => {
 
   const [hideBody, setHideBody] = React.useState(true)
   const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false)
-  const [appActionName, setAppActionName] = React.useState(selectedAction.label);
+  const [appActionName, setAppActionName] = React.useState(selectedAction?.label);
   const [delay, setDelay] = React.useState(selectedAction?.execution_delay || 0);
-  const [prevActionName, setPrevActionName] = React.useState(selectedAction.label);
+  const [prevActionName, setPrevActionName] = React.useState(selectedAction?.label);
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
   const [autoCompleting, setAutocompleting] = React.useState(false);
   const [selectedActionParameters, setSelectedActionParameters] = React.useState(selectedAction?.parameters || []);
-    const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
-	const [paramValues, setParamValues] = React.useState(
-		selectedAction?.parameters.map((param) => {
-			return {
-				name: param.name,
-				value: param.value,
-			}
-		})
-	);
+  const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
+  const [paramUpdate, setParamUpdate] = React.useState("");
     const [actionlist, setActionlist] = React.useState([]);
     const [jsonList, setJsonList] = React.useState([]);
     const [showDropdown, setShowDropdown] = React.useState(false);
@@ -209,6 +202,7 @@ const ParsedAction = (props) => {
 		setLastSaved(false)
 	}
   }, [expansionModalOpen])
+
 
   useEffect(() => {
 	  if (selectedActionEnvironment === undefined || selectedActionEnvironment === null || Object.keys(selectedActionEnvironment).length === 0) {
@@ -236,6 +230,7 @@ const ParsedAction = (props) => {
   },[
 	selectedAction, selectedApp,setNewSelectedAction, workflow,
   ])
+
 
   useEffect(() => {
 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
@@ -436,8 +431,8 @@ const ParsedAction = (props) => {
 			}
 		
 			// Only set selected action parameters if they have changed
-			if (selectedAction.parameters && selectedAction.parameters.length > 0) {
-				setSelectedActionParameters(selectedAction.parameters);
+			if (selectedAction?.parameters && selectedAction?.parameters.length > 0) {
+				setSelectedActionParameters(selectedAction?.parameters);
 			}
 		
 			// Only set selected variable parameter if it is null or undefined
@@ -452,6 +447,7 @@ const ParsedAction = (props) => {
 
 	useEffect(() => {
         const newActionList = [];
+		const parentActionList = [];
 
         // Process workflowExecutions
         if (workflowExecutions.length > 0) {
@@ -579,15 +575,67 @@ const ParsedAction = (props) => {
                             autocomplete: parentNode.label.split(" ").join("_"),
                             example: exampleData,
                         });
+
+						parentActionList.push({
+                            type: "action",
+                            id: parentNode.id,
+                            name: parentNode.label,
+                            autocomplete: parentNode.label.split(" ").join("_"),
+                            example: exampleData,
+                        });
+
+							
                     }
                 }
             }
         }
 
-        // Update the actionlist state
+		let newParameters =  selectedAction?.parameters?.map((param) => {
+			let paramvalue = param.value;
+			let errorVars = [];
+			if(paramvalue.includes("$")){
+				let actions = workflow.actions?.map((action) => {
+					return "$"+action.label.toLowerCase();
+				})
+				if(newActionList?.length > 0){
+					let appParentActions = parentActionList?.map(action => "$" + action.name.toLowerCase());
+					let notPresentAction = actions?.filter((action) => !appParentActions?.includes(action))
+					notPresentAction?.forEach((action) => {
+						action = action.replace(" ", "_");
+						if(paramvalue.includes(action)){
+							errorVars.push(action);
+							// paramvalue = paramvalue.replace(action, "")
+							// paramvalue = paramvalue.replace(/^\s*[\r\n]/gm, "");
+						}
+					})
+				}
+			}
+
+			let message = "";
+			if(errorVars.length > 0){
+				if(errorVars.length === 1){
+					message = errorVars[0] + " is not accessible in this action.";
+				}else{
+					message = errorVars.join(", ") + " are not accessible in this action.";
+				}
+			}
+
+			if (param?.configuration) {
+				let regex = /(^|[^\\])\$/;
+				if (regex.test(paramvalue)) {
+					if(message.length > 0){
+					message += "\nUse \"\\$\" instead of \"$\".";
+					}else{
+					message = "Use \"\\$\" instead of \"$\".";
+					}
+				}
+			}
+			return {...param, value: paramvalue, error: message}
+		});	
+		setSelectedActionParameters(newParameters);
         setActionlist(newActionList);
-    }, [workflow.execution_variables, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents]);
-	
+    }, [workflow.execution_variables,paramUpdate, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents,setNewSelectedAction]);
+
 	useEffect(() => {
 		selectedNameChange(appActionName)
 
@@ -597,13 +645,14 @@ const ParsedAction = (props) => {
 	  },[appActionName,delay])
 	 
 		const handleParamChange = (event, count,data) => {
-			const newParams = [...paramValues];
+			const newParams = [...selectedActionParameters];
 			newParams.map((param) => {
 				if (param.name === data.name) {
 					param.value = event.target.value;
 				}
 			})
-			setParamValues(newParams);
+			setSelectedActionParameters(newParams);
+			setParamUpdate(event.target.value);
 			changeActionParameter(event, count, data)
 		}
 
@@ -1132,6 +1181,15 @@ const ParsedAction = (props) => {
 		return helperText
 	}
 
+	const errorHelperText = (name, value, error) => {
+		return (
+			<div style={{ whiteSpace: 'pre-line' }}>
+				{error}
+			</div>
+		);
+	}
+
+
 	const analyzeFields = () => {
 
 		if (selectedAction === undefined || selectedAction === null) {
@@ -1193,7 +1251,7 @@ const ParsedAction = (props) => {
 	}
 
     // FIXME: Issue #40 - selectedActionParameters not reset
-	if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
+	if (Object.getOwnPropertyNames(selectedAction)?.length > 0 && selectedActionParameters?.length > 0) {
 	  var wrapperapp = {
 	  	"id": "",
 	  	"name": "noapp",
@@ -2779,7 +2837,7 @@ const ParsedAction = (props) => {
 
 		  {suggestionInfo()}
 
-          {selectedActionParameters.map((data, count) => {
+          {selectedActionParameters?.map((data, count) => {
             if (data.variant === "") {
               data.variant = "STATIC_VALUE";
             }
@@ -3238,10 +3296,12 @@ const ParsedAction = (props) => {
                 color="primary"
                 // defaultValue={data.value}
                 value={
-					paramValues.find((param) => param.name === data.name) !== undefined
-						? paramValues.find((param) => param.name === data.name).value
-						: ""
+					data?.value
 				}
+				error={
+					data?.error?.length > 0 ? true : false
+				}
+				helperText={data?.error?.length > 0 ? errorHelperText(data?.name,data?.value,data?.error) : returnHelperText(data.name, data.value)}
                 //options={{
                 //	theme: 'gruvbox-dark',
                 //	keyMap: 'sublime',
@@ -3264,7 +3324,6 @@ const ParsedAction = (props) => {
                 //   changeActionParameter(event, count, data);
 				handleParamChange(event, count, data)
                 }}
-                helperText={returnHelperText(data.name, data.value)}
                 onBlur={(event) => {
 					baseHelperText = calculateHelpertext(event.target.value)
 					if (setLastSaved !== undefined) {
@@ -4019,6 +4078,14 @@ const ParsedAction = (props) => {
                 <Typography variant="body2">
                   - Description: {description}
                 </Typography>
+				{
+					data?.configuration ? 
+					(
+					<Typography Typography variant="body2">
+					- Use "\$" instead of "$"
+					</Typography>
+					) : null
+				}
               </span>
             );
 
