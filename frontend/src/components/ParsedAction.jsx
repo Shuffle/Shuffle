@@ -2853,7 +2853,7 @@ const ParsedAction = (props) => {
             // selectedAction.selectedAuthentication = e.target.value
             // selectedAction.authentication_id = e.target.value.id
             if (
-              !selectedAction.auth_not_required &&
+            //   !selectedAction.auth_not_required &&
               selectedAction.selectedAuthentication !== undefined &&
               selectedAction.selectedAuthentication.fields !== undefined &&
               selectedAction.selectedAuthentication.fields[data.name] !==
