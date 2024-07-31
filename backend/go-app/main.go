@@ -1978,7 +1978,6 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 }
 
 func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
-
 	if request.Method != "POST" {
 		request.Method = "POST"
 	}
@@ -1999,7 +1998,7 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 	location := strings.Split(request.URL.String(), "/")
 
 	var pipelineId string
-	
+
 	if location[1] == "api" {
 		if len(location) <= 4 {
 			log.Printf("[INFO] Couldn't handle location. Too short in pipeline: %d", len(location))
@@ -2013,7 +2012,7 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 
 	userAgent := request.Header.Get("User-Agent")
 	if strings.Contains(strings.ToLower(userAgent), "microsoftpreview") || strings.Contains(strings.ToLower(userAgent), "googlebot") {
-		log.Printf("[AUDIT] Blocking googlebot and microsoftbot for pielines. UA: '%s'", userAgent)
+		log.Printf("[AUDIT] Blocking googlebot and microsoftbot for pipelines. UA: '%s'", userAgent)
 		resp.WriteHeader(400)
 		resp.Write([]byte(`{"success": false, "reason": "Google/Microsoft preview bots not allowed. Please change the useragent."}`))
 		return
@@ -2058,11 +2057,27 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	parsedBody := shuffle.GetExecutionbody(body)
+	// Parse concatenated JSON logs
+	jsonList, err := parseConcatenatedJSONLogs(string(body))
+	if err != nil {
+		log.Printf("[DEBUG] JSON parsing error: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	parsedBody, err := json.Marshal(jsonList)
+	if err != nil {
+		log.Printf("[ERROR] Failed to marshal jsonList: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
 	newBody := shuffle.ExecutionStruct{
 		Start:             pipeline.StartNode,
 		ExecutionSource:   "pipeline",
-		ExecutionArgument: parsedBody,
+		ExecutionArgument: string(parsedBody),
 	}
 
 	workflow, err := shuffle.GetWorkflow(ctx, pipeline.WorkflowId)
@@ -2093,8 +2108,7 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(pipeline.StartNode) == 0 {
-		log.Printf("[WARNING] No start node for pipeline %s - running with workflow default.", pipeline.TriggerId)
-
+		log.Printf("[WARNING] No start node for pipeline %s - running with workflow default.")
 	}
 
 	newRequest := &http.Request{
@@ -2108,11 +2122,90 @@ func handlePipelineCallback(resp http.ResponseWriter, request *http.Request) {
 	if err == nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s"}`, workflowExecution.ExecutionId)))
+
+		// Track Sigma rules
+		trackSigmaRules(ctx, pipeline.OrgId, jsonList)
 		return
 	}
 
 	resp.WriteHeader(500)
 	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
+}
+
+func parseConcatenatedJSONLogs(logs string) ([]map[string]interface{}, error) {
+	var jsonList []map[string]interface{}
+	decoder := json.NewDecoder(strings.NewReader(logs))
+
+	for decoder.More() {
+		var jsonObject map[string]interface{}
+		if err := decoder.Decode(&jsonObject); err != nil {
+			log.Printf("[WARNING] JSON decoding error: %s. Skipping this object.", err)
+			continue
+		}
+		jsonList = append(jsonList, jsonObject)
+	}
+
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return nil, fmt.Errorf("error after decoding all JSON objects: %v", err)
+	}
+
+	return jsonList, nil
+}
+
+func trackSigmaRules(ctx context.Context, orgId string, jsonList []map[string]interface{}) {
+	ruleCount := make(map[string]int)
+	for _, logEntry := range jsonList {
+		if rule, ok := logEntry["rule"].(map[string]interface{}); ok {
+			if ruleName, ok := rule["title"].(string); ok {
+				ruleCount[ruleName]++
+			}
+		}
+	}
+
+	for ruleName, count := range ruleCount {
+		shuffle.IncrementCache(ctx, orgId, ruleName, count)
+		log.Printf("[INFO] Rule %s incremented by %d", ruleName, count)
+	}
+}
+
+func handleTenzirHealthUpdate(resp http.ResponseWriter, request *http.Request) {
+	if request.Method != "POST" {
+		request.Method = "POST"
+	}
+
+	type HealthUpdate struct {
+		Status string `json:"status"`
+	}
+
+	var healthUpdate HealthUpdate
+	err := json.NewDecoder(request.Body).Decode(&healthUpdate)
+	if err != nil {
+		resp.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(resp, "Failed to decode JSON: %v", err)
+		return
+	}
+	ctx := context.Background()
+	status := healthUpdate.Status
+
+	result, err := shuffle.GetDisabledRules(ctx)
+	if (err != nil && err.Error() == "rules doesn't exist") || err == nil {
+		result.IsTenzirActive = status
+		result.LastActive = time.Now().Unix()
+
+		err = shuffle.StoreDisabledRules(ctx, *result)
+		if err != nil {
+			resp.WriteHeader(500)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+		return
+	}
+	resp.WriteHeader(500)
+	resp.Write([]byte(`{"success": false}`))
+	return
 }
 
 func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
@@ -5114,6 +5207,7 @@ func initHandlers() {
 	// PS: For cloud, this has to use cloud storage.
 	// https://developer.box.com/reference/get-files-id-content/
 	r.HandleFunc("/api/v1/files/download_remote", shuffle.HandleDownloadRemoteFiles).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/files/download_remote_enhanced", shuffle.HandleEnhancedDownloadRemoteFiles).Methods("POST", "OPTIONS")	
 	r.HandleFunc("/api/v1/files/namespaces/{namespace}", shuffle.HandleGetFileNamespace).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}/content", shuffle.HandleGetFileContent).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/create", shuffle.HandleCreateFile).Methods("POST", "OPTIONS")
@@ -5122,6 +5216,15 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleGetFileMeta).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleDeleteFile).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/files", shuffle.HandleGetFiles).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/files/detection/sigma_rules", shuffle.HandleGetSigmaRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/files/detection/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/files/detection/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
+
+	r.HandleFunc("/api/v1/detection/siem/connect", shuffle.HandleConnectSiem).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detection/siem/node_health", handleTenzirHealthUpdate).Methods("POST","OPTIONS")
+	r.HandleFunc("/api/v1/detection/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET","OPTIONS")
+	r.HandleFunc("/api/v1/detection/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST","OPTIONS")
+
 
 	// Introduced in 0.9.21 to handle notifications for e.g. failed Workflow
 	r.HandleFunc("/api/v1/notifications", shuffle.HandleCreateNotification).Methods("POST", "OPTIONS")

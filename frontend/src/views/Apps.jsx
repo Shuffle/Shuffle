@@ -2586,6 +2586,8 @@ const Apps = (props) => {
 			if (parsedtext.indexOf("openapi") === -1 && parsedtext.indexOf("swagger") === -1) {
 				setValidation(false);
 				setOpenApiError("Error in generation: "+parsedtext);
+
+
 				return;
 			}
 		} catch (e) {
@@ -2684,10 +2686,11 @@ const Apps = (props) => {
       body: openApidata,
       credentials: "include",
     })
-      .then((response) => {
+    .then((response) => {
+
         setValidation(false);
         return response.json();
-      })
+    })
       .then((responseJson) => {
         if (responseJson.success) {
           setAppValidation(responseJson.id);

@@ -74,6 +74,7 @@ import {
 import {
   Folder as FolderIcon,
   VerifiedUser as VerifiedUserIcon,
+  CheckCircle as CheckCircleIcon,
   Insights as InsightsIcon, 
   LibraryBooks as LibraryBooksIcon,
   OpenInNew as OpenInNewIcon,
@@ -320,7 +321,7 @@ export function SetJsonDotnotation(jsonInput, inputKey) {
 
 export const green = "#86c142";
 export const yellow = "#FECC00";
-export const red = "red";
+export const red = "#ff3632";
 
 export function removeParam(key, sourceURL) {
   if (sourceURL === undefined) {
@@ -534,6 +535,8 @@ const AngularWorkflow = (defaultprops) => {
   const [listCache, setListCache] = React.useState([]);
   const [selectedOption, setSelectedOption] = React.useState("");
   const [tenzirConfigModalOpen, setTenzirConfigModalOpen] = React.useState(false);
+  const [rules, setRules] = React.useState([]);
+  const [sigmaFilesNames, setSigmaFileNames] = React.useState("")
 
   const [distributedFromParent, setDistributedFromParent] = React.useState("")
   const [suborgWorkflows, setSuborgWorkflows] = React.useState([])
@@ -1437,7 +1440,7 @@ const releaseToConnectLabel = "Release to Connect"
       });
   };
 
-  const handleKafkaSubmit = (trigger) => {
+  const handleCommandSubmit = (trigger) => {
     if (trigger.trigger_type !== "PIPELINE") {
       toast("Unable to save the configuration");
       return;
@@ -1445,18 +1448,48 @@ const releaseToConnectLabel = "Release to Connect"
   
     trigger.parameters = []
 
-    const topic = document.getElementById('topic')?.value;
-    const bootstrapServers = document.getElementById('bootstrap_servers')?.value;
-    const groupId = document.getElementById('group_id')?.value;
-    //const autoOffsetReset = document.getElementById('auto_offset_reset')?.value;
+    const command = document.getElementById('sigma')?.value
+
+    if(command) {
+      trigger.parameters.push({
+        name: "command",
+        value: command
+      })
+    } else {
+      toast("Please enter the comamnd");
+      return;
+    }
+  
+    // if (autoOffsetReset) {
+    //   trigger.parameters.push({
+    //     name: "auto_offset_reset",
+    //     value: autoOffsetReset
+    //   });
+    // }
+  
+    setTenzirConfigModalOpen(false);
+  };
+
+  const handleSubmit = (trigger) => {
+    if (trigger.trigger_type !== "PIPELINE") {
+      toast("Unable to save the configuration");
+      return;
+    }
+   if (selectedOption === "Kafka Queue") {
+    trigger.parameters = []
+
+    const topic = document.getElementById('topic')?.value
+    const bootstrapServers = document.getElementById('bootstrap_servers')?.value
+    const groupId = document.getElementById('group_id')?.value
+    const autoOffsetReset = document.getElementById('auto_offset_reset')?.value;
 
     if(topic) {
       trigger.parameters.push({
         name: "topic",
         value: topic
-      });
+      })
     } else {
-      toast("please enter the topic name");
+      toast("Please enter the topic name");
       return;
     }
   
@@ -1477,15 +1510,32 @@ const releaseToConnectLabel = "Release to Connect"
       });
     }
   
-    // if (autoOffsetReset) {
-    //   trigger.parameters.push({
-    //     name: "auto_offset_reset",
-    //     value: autoOffsetReset
-    //   });
-    // }
+    if (autoOffsetReset) {
+      trigger.parameters.push({
+        name: "auto_offset_reset",
+        value: autoOffsetReset
+      });
+    }
   
     setTenzirConfigModalOpen(false);
+  } else if (selectedOption === "Syslog listener") {
+    trigger.parameters = []
+
+    const endpoint = document.getElementById('endpoint')?.value
+
+    if(endpoint) {
+      trigger.parameters.push({
+        name: "endpoint",
+        value: endpoint
+      })
+    } else {
+      toast("Please enter your endpoint");
+      return;
+    }
+  }
+
   };
+  
   
 	const handleColoring = (actionId, status, label) => {
 		if (cy === undefined) {
@@ -3687,7 +3737,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 
       setSelectedEdge({})
-      setSelectedActionEnvironment({})
+      //setSelectedActionEnvironment({})
       setTriggerAuthentication({})
       setTriggerFolders([])
       setLocalFirstrequest(true)
@@ -6130,6 +6180,8 @@ const releaseToConnectLabel = "Release to Connect"
 			  if (curnode.data.id === edge.data("source")) {
 				console.log("Found matching trigger source: ", curnode)
 				if (curnode.data.app_name !== "Shuffle Workflow" && curnode.data.app_name !== "User Input") {
+
+
 				  // If it's started, READD the edge
 				  if (curnode.data.status === "running") {
 					//console.log("Edge is running - readd it: ", edge.data())
@@ -6144,7 +6196,8 @@ const releaseToConnectLabel = "Release to Connect"
 						data: newdata,
 					  })
 
-					  toast.error("You must STOP the trigger before deleting its branches")
+					  //toast.error("You must STOP the trigger before deleting its branches")
+					  console.log("You must STOP the trigger before deleting its branches")
 					} catch (e) {
 					  console.log("Failed re-adding edge: ", e)
 					}
@@ -8241,11 +8294,11 @@ const releaseToConnectLabel = "Release to Connect"
             toast("Pipeline deleted!")
             return
           }
-
+       if (trigger.parameters){
           trigger.parameters.push({
             name: data.name,
             value: data.command,
-          });
+          });}
           
           if (data.type === "stop") trigger.status = "stopped";
           else trigger.status = "running";
@@ -8253,7 +8306,6 @@ const releaseToConnectLabel = "Release to Connect"
   
           setSelectedTrigger(trigger);
           setWorkflow(workflow);
-          console.log("Should set the status to running and save");
           saveWorkflow(workflow);
         }
       })
@@ -8325,6 +8377,32 @@ const releaseToConnectLabel = "Release to Connect"
       .catch((error) => {
         //toast(error.toString());
         console.log("Get schedule error: ", error.toString());
+      });
+  };
+
+  const getSigmaInfo = () => {
+    const url = globalUrl + "/api/v1/files/detection/sigma_rules";
+  
+    fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) =>
+        response.json().then((responseJson) => {
+          if (responseJson["success"] === false) {
+            toast("Failed to get sigma rules");
+          } else {
+            setRules(responseJson.sigma_info);
+  
+          }
+        })
+      )
+      .catch((error) => {
+        console.log("Error in getting sigma files: ", error);
+        toast("An error occurred while fetching sigma rules");
       });
   };
 
@@ -9101,6 +9179,11 @@ const releaseToConnectLabel = "Release to Connect"
 
 		const startIndex = app.actions.findIndex((action) => action.category_label !== undefined && action.category_label !== null && action.category_label.length > 0)
 		const actionIndex = startIndex < 0 ? 0 : startIndex
+
+		if (app.actions[actionIndex] === undefined || app.actions[actionIndex] === null) {
+			console.log("No actions found for app: ", app)
+			return
+		}
 
 		// Make the first action the most relevant one for them based on previous use
         if (
@@ -11605,7 +11688,7 @@ const releaseToConnectLabel = "Release to Connect"
       <div style={appApiViewStyle}>
           <div style={{ }}>
             <h3 style={{ marginBottom: 5, }}>
-              Branch: Conditions - {selectedEdgeIndex}
+              Conditions 
             </h3>
             <a
               rel="noopener noreferrer"
@@ -15271,6 +15354,14 @@ const releaseToConnectLabel = "Release to Connect"
 		  }
 
         </div>
+  const defaultEnvironment = environments.find(
+    (env) => env.default && env.Name.toLowerCase() !== "cloud"
+  );
+
+  if (selectedTrigger.trigger_type === "PIPELINE" && selectedTrigger.environment === "onprem" && defaultEnvironment !== undefined) {
+     selectedTrigger.environment = defaultEnvironment.Name
+     setSelectedTrigger(selectedTrigger)  }
+
   const PipelineSidebar = Object.getOwnPropertyNames(selectedTrigger).length === 0 || workflow.triggers[selectedTriggerIndex] === undefined && selectedTrigger.trigger_type !== "SCHEDULE" ? null : 
           <div style={appApiViewStyle}>
             <h3 style={{ marginBottom: "5px" }}>
@@ -15369,14 +15460,32 @@ const releaseToConnectLabel = "Release to Connect"
                 <div
                   key="syslogListener"
                   onClick={() => {
-                    // setSelectedOption("Syslog listener")
-                    // setTenzirConfigModalOpen(true);
-                  }}
+                    if(selectedTrigger.status === "running"){
+                      //toast("please stop the trigger to edit the configuration");
+                      return;
+                    } else {
+                    setSelectedOption("Syslog listener");
+                    const url = `${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
+                    const command = `from tcp://192.168.1.100:5162 read syslog | import`
+                    const pipelineConfig = {
+                      command: command,
+                      name: selectedTrigger.label,
+                      type: "create",
+                      environment: selectedTrigger.environment,
+                      workflow_id: workflow.id,
+                      trigger_id: selectedTrigger.id,
+                      start_node: "",
+                      url:url,
+                    };
+                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
+                 
+                  
+                  }}}
                   style={{
                     border: "1px solid rgba(255,255,255,0.3)",
                     borderRadius: theme.palette.borderRadius,
                     padding: 10,
-                    cursor: "not-allowed",
+                    cursor: "pointer",
                     marginTop: 5,
                     display: "flex",
                     alignItems: "center",
@@ -15386,27 +15495,46 @@ const releaseToConnectLabel = "Release to Connect"
                     control={
                       <Radio
                         checked={selectedOption === "Syslog listener"}
-                        onChange={() => setSelectedOption("Syslog listener")}
+                        onChange={() => {
+                          if (selectedTrigger.status !== "running"){
+                          setSelectedOption("Syslog listener")}}
+                        }
                         value={"Syslog listener"}
                         name="option"
-                        disabled={true}
                       />
                     }
-                    label="Start Syslog listener"
+                    label= {selectedOption === "Syslog listener" && selectedTrigger.status === "running" ? "listening at 192.168.1.100:5162" : "Start Syslog listener"}
                   />
                 </div>
 
                 <div
                   key="sigmaRulesearch"
                   onClick={() => {
-                    // setSelectedOption("Sigma Rulesearch")
-                    // setTenzirConfigModalOpen(true);
-                  }}
+                    if(selectedTrigger.status === "running"){
+                     // toast("please stop the trigger to edit the configuration");
+                      return;
+                    } else {
+                    setSelectedOption("SigmaRule");
+                    const url = `${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
+                    const command = `export | sigma /var/lib/tenzir/sigma_rules | to ${url}`
+                    const pipelineConfig = {
+                      command: command,
+                      name: selectedTrigger.label,
+                      type: "create",
+                      environment: selectedTrigger.environment,
+                      workflow_id: workflow.id,
+                      trigger_id: selectedTrigger.id,
+                      start_node: "",
+                      url:url,
+                    };
+                    submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
+                 
+                  }}}
                   style={{
                     border: "1px solid rgba(255,255,255,0.3)",
                     borderRadius: theme.palette.borderRadius,
                     padding: 10,
-                    cursor: "not-allowed",
+                    cursor: "pointer",
                     marginTop: 5,
                     display: "flex",
                     alignItems: "center",
@@ -15415,11 +15543,12 @@ const releaseToConnectLabel = "Release to Connect"
                   <FormControlLabel
                     control={
                       <Radio
-                        checked={selectedOption === "Sigma Rulesearch"}
-                        onChange={() => setSelectedOption("Sigma Rulesearch")}
+                        checked={selectedOption === "SigmaRule"}
+                        onChange={() => {
+                          if (selectedTrigger.status !== "running"){
+                          setSelectedOption("SigmaRule")}}}
                         value={"Sigma Rulesearch"}
                         name="option"
-                        disabled={true}
                       />
                     }
                     label="Run Sigma Rulesearch"
@@ -15450,7 +15579,9 @@ const releaseToConnectLabel = "Release to Connect"
                     control={
                       <Radio
                         checked={selectedOption === "Kafka Queue"}
-                        onChange={() => setSelectedOption("Kafka Queue")}
+                        onChange={() => { 
+                          if (selectedTrigger.status !== "running"){
+                          setSelectedOption("Kafka Queue")}}}
                         value={"Kafka Queue"}
                         name="option"
                       />
@@ -15466,10 +15597,12 @@ const releaseToConnectLabel = "Release to Connect"
                     disabled={selectedTrigger.status === "running"}
                     onClick={() => {
 
+                      if (selectedOption === "Kafka Queue"){
+                      const url = `${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
                       const topic = (selectedTrigger?.parameters?.find(param => param.name === "topic")?.value) || ''
                       const bootstrapServers = (selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''
                       const groupId = (selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''
-                      // const autoOffsetReset = (selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''
+                      const autoOffsetReset = (selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''
                       let command = "from kafka"
                       
                       if(topic) {
@@ -15490,15 +15623,15 @@ const releaseToConnectLabel = "Release to Connect"
                       } else {
                         command = `${command},group.id=${selectedTrigger.id}`
                       }
-                      // if(autoOffsetReset) {
-                      //   command = `${command},auto.offset.reset=${autoOffsetReset}`
-                      // } else {
-                      //   command = `${command},auto.offset.reset=earliest`
+                      if(autoOffsetReset) {
+                        command = `${command},auto.offset.reset=${autoOffsetReset}`
+                      } else {
+                        command = `${command},auto.offset.reset=earliest`
 
-                      // }
+                      }                      
                       command = `${command},auto.offset.reset=earliest`
                       command = `${command},client.id=${selectedTrigger.id},enable.auto.commit=true,auto.commit.interval.ms=1`
-                      command = `${command} read json | to ${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
+                      command = `${command} read json | to ${url}`
 
                       const pipelineConfig = {
                         command: command,
@@ -15508,9 +15641,11 @@ const releaseToConnectLabel = "Release to Connect"
                         workflow_id: workflow.id,
                         trigger_id: selectedTrigger.id,
                         start_node: "",
+                        url: url,
                       };
                       submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
-                    }}
+                    }
+                  }}
                     color="primary"
                   >
                     Start
@@ -18169,6 +18304,7 @@ const releaseToConnectLabel = "Release to Connect"
     }
   }
 
+  const envStatus = !(executionData.workflow !== undefined && executionData.workflow !== null && executionData.workflow.actions !== undefined && executionData.workflow.actions !== null && executionData.workflow.actions.length > 0) ? "loading" : "success"
 
   var executionDelay = -75
   const executionModal = (
@@ -18601,26 +18737,6 @@ const releaseToConnectLabel = "Release to Connect"
                 </Button>
               </span>
             </Tooltip>
-            {executionData.status === "EXECUTING" ? (
-              <Tooltip
-                color="primary"
-                title="Abort workflow"
-                placement="top"
-                style={{ zIndex: 50000 }}
-              >
-                <span style={{}}>
-                  <Button
-                    color="primary"
-                    style={{ float: "right", marginTop: 20, marginLeft: 10 }}
-                    onClick={() => {
-                      abortExecution();
-                    }}
-                  >
-                    <PauseIcon style={{}} />
-                  </Button>
-                </span>
-              </Tooltip>
-            ) : null}
 
 		    <Tooltip
 		      color="primary"
@@ -18694,18 +18810,41 @@ const releaseToConnectLabel = "Release to Connect"
 		      </span>
 		    </Tooltip>
 
-            {isCloud ? 
+            {executionData.status === "EXECUTING" ? (
               <Tooltip
                 color="primary"
-                title="Explore logs for the workflow"
+                title="Abort workflow"
                 placement="top"
-                style={{ zIndex: 50000, }}
+                style={{ zIndex: 50000 }}
               >
                 <span style={{}}>
                   <Button
                     color="primary"
                     style={{ float: "right", marginTop: 20, marginLeft: 10 }}
-					disabled={userdata.region_url !== "https://shuffler.io"}
+                    onClick={() => {
+                      abortExecution();
+                    }}
+                  >
+                    <PauseIcon style={{}} />
+                  </Button>
+                </span>
+              </Tooltip>
+            ) : null}
+
+            {isCloud ? 
+              <Tooltip
+                color="primary"
+                title="Explore logs for the workflow (max 5 days ago)"
+                placement="top"
+                style={{ zIndex: 50000, }}
+              >
+                <span style={{}}>
+                  <Button
+                    color="secondary"
+                    style={{ float: "right", marginTop: 20, marginLeft: 10 }}
+
+					// Max 5 days in the past
+					disabled={userdata.region_url !== "https://shuffler.io" || executionData.started_at < (Math.floor(Date.now() / 1000) - 432000)}
                     onClick={() => {
 						toast("Opening logs in a new tab")
 
@@ -18714,7 +18853,7 @@ const releaseToConnectLabel = "Release to Connect"
 						}, 250)
                     }}
                   >
-					<InsightsIcon color="secondary" />
+					<InsightsIcon  />
                   </Button>
                 </span>
               </Tooltip>
@@ -18725,7 +18864,18 @@ const releaseToConnectLabel = "Release to Connect"
           {executionData.workflow !== undefined && executionData.workflow !== null && executionData.workflow.actions !== undefined && executionData.workflow.actions !== null && executionData.workflow.actions.length > 0  ?
             <div style={{ display: "flex", marginLeft: 10, }}>
               <Typography variant="body1">
-                <b>Env &nbsp;&nbsp;&nbsp;&nbsp;</b>
+
+			  	{/*envStatus === "success" ?
+					<Tooltip title="Environment is healthy" placement="top">
+						<CheckCircleIcon style={{ color: "green" }} />
+					</Tooltip>
+					: envStatus === "failure" ?
+					<Tooltip title="Environment is unhealthy" placement="top">
+						<ErrorIcon style={{ color: "red" }} />
+					</Tooltip>
+				: null*/}
+
+                <b style={{ }}>Env &nbsp;&nbsp;&nbsp;&nbsp;</b>
               </Typography>
 
               <Typography variant="body1" color="textSecondary" style={{color: "#f85a3e", cursor: "pointer", }} onClick={() => {
@@ -19583,7 +19733,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  return "The app's Docker Image is not available in the environment yet. Re-run the app to force a re-download of the app. If the problem persists, contact support" 
 	  }
 
-	  if (result.status !== 200 && result.url !== undefined && result.url !== null && (result.url.includes("192.168") || result.url.includes("172.16") || result.url.includes("10.0"))) {
+	  if (result.status !== 200 && result.url !== undefined && result.url !== null && typeof result.url === "string" && (result.url.includes("192.168") || result.url.includes("172.16") || result.url.includes("10.0"))) {
 		  return "Consider whether your Orborus environment can connect to a local IP or not."
 	  }
 
@@ -21208,146 +21358,142 @@ const releaseToConnectLabel = "Release to Connect"
     </Dialog>
   ) : null;
 
-  const tenzirConfigModal = tenzirConfigModalOpen ? (
-        <Dialog
-          PaperComponent={PaperComponent}
-          hideBackdrop={true}
-          disableEnforceFocus={true}
-          disableBackdropClick={true}
-          style={{ pointerEvents: "none" }}
-          open={tenzirConfigModalOpen}
-          PaperProps={{
-            style: {
-              pointerEvents: "auto",
-              color: "white",
-              minWidth: 600,
-              minHeight: 450,
-              maxHeight: 450,
-              padding: 15,
-              overflow: "hidden",
-              zIndex: 10012,
-              border: theme.palette.defaultBorder,
-            },
-          }}
-        >
-          <div
-            style={{
-              flex: 2,
-              padding: 0,
-              minHeight: isMobile ? "90%" : 700,
-              maxHeight: isMobile ? "90%" : 700,
-              overflowY: "auto",
-              overflowX: isMobile ? "auto" : "hidden",
-            }}
-          >
-            <DialogTitle id="tenzir-config-modal" style={{ cursor: "move" }}>
-              <div style={{ color: "white" }}>Configuration options for {selectedOption}</div>
-            </DialogTitle>
-            <DialogContent>
-              {selectedOption === "Kafka Queue" && (
-                <>
-                  <b>Topic</b>
-                  <TextField
-                    id="topic"
-                    style={{
-                      backgroundColor: theme.palette.inputColor,
-                      borderRadius: theme.palette.borderRadius,
-                    }}
-                    InputProps={{
-                      style: {},
-                    }}
-                    fullWidth
-                    color="primary"
-                    placeholder={"topic name"}
-                    defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "topic")?.value) || ''}
-                  />
-                  <b>bootstrap.servers</b>
-                  <TextField
-                    id="bootstrap_servers"
-                    style={{
-                      backgroundColor: theme.palette.inputColor,
-                      borderRadius: theme.palette.borderRadius,
-                    }}
-                    InputProps={{
-                      style: {},
-                    }}
-                    fullWidth
-                    color="primary"
-                    placeholder={"broker1.example.com:9092,192.168.1.100:9092"}
-                    defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''}
-                  />
-                  <b>group.id</b>
-                  <TextField
-                    id="group_id"
-                    style={{
-                      backgroundColor: theme.palette.inputColor,
-                      borderRadius: theme.palette.borderRadius,
-                    }}
-                    InputProps={{
-                      style: {},
-                    }}
-                    fullWidth
-                    color="primary"
-                    placeholder={"tenzir"}
-                    defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''}    
-                  />
-                  {/* <b>auto.offest.reset</b>
-                  <TextField
-                    id="auto_offset_reset"
-                    style={{
-                      backgroundColor: theme.palette.inputColor,
-                      borderRadius: theme.palette.borderRadius,
-                    }}
-                    InputProps={{
-                      style: {},
-                    }}
-                    fullWidth
-                    color="primary"
-                    placeholder={"earliest"}
-                    defaultValue={(selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''}
-                  /> */}
-                </>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button
-                style={{ borderRadius: "0px" }}
-                onClick={() => {
-                  setTenzirConfigModalOpen(false);
+  const TenzirConfigModal = () => {
+    if (!tenzirConfigModalOpen) return null;
+  
+    return (
+      <Dialog
+        PaperComponent={PaperComponent}
+        hideBackdrop={true}
+        disableEnforceFocus={true}
+        disableBackdropClick={true}
+        style={{ pointerEvents: "none" }}
+        open={tenzirConfigModalOpen}
+        PaperProps={{
+          style: {
+            pointerEvents: "auto",
+            color: "white",
+            minWidth: 600,
+            minHeight: 550,
+            maxHeight: 550,
+            padding: 15,
+            overflow: "hidden",
+            zIndex: 10012,
+            border: theme.palette.defaultBorder,
+          },
+        }}
+      >
+        <DialogTitle id="tenzir-config-modal" style={{ cursor: "move" }}>
+          <div style={{ color: "white" }}>Configuration options for Kafka</div>
+        </DialogTitle>
+        <DialogContent>
+          {selectedOption === "Kafka Queue" ? (
+            <div>
+              <b>Topic</b>
+              <TextField
+                id="topic"
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  borderRadius: theme.palette.borderRadius,
                 }}
-                color="primary"
-              >
-                Cancel
-              </Button>
-              <Button
-                style={{ borderRadius: "0px" }}
-                onClick={() => {
-                  handleKafkaSubmit(selectedTrigger);
+                InputProps={{
+                  style: {},
                 }}
+                fullWidth
                 color="primary"
-              >
-                Submit
-              </Button>
-            </DialogActions>
-          </div>
+                placeholder={"topic name"}
+                defaultValue={
+                  selectedTrigger?.parameters?.find(
+                    (param) => param.name === "topic",
+                  )?.value || ""
+                }
+              />
+              <b>bootstrap.servers</b>
+              <TextField
+                id="bootstrap_servers"
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  borderRadius: theme.palette.borderRadius,
+                }}
+                InputProps={{
+                  style: {},
+                }}
+                fullWidth
+                color="primary"
+                placeholder={"broker1.example.com:9092,192.168.1.100:9092"}
+                defaultValue={
+                  selectedTrigger?.parameters?.find(
+                    (param) => param.name === "bootstrap_servers",
+                  )?.value || ""
+                }
+              />
+              <b>group.id</b>
+              <TextField
+                id="group_id"
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  borderRadius: theme.palette.borderRadius,
+                }}
+                InputProps={{
+                  style: {},
+                }}
+                fullWidth
+                color="primary"
+                placeholder={"tenzir"}
+                defaultValue={
+                  selectedTrigger?.parameters?.find(
+                    (param) => param.name === "group_id",
+                  )?.value || ""
+                }
+              />
+              <b>auto.offest.reset</b>
+              <TextField
+                id="auto_offset_reset"
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  borderRadius: theme.palette.borderRadius,
+                }}
+                InputProps={{
+                  style: {},
+                }}
+                fullWidth
+                color="primary"
+                placeholder={"earliest"}
+                defaultValue={
+                  selectedTrigger?.parameters?.find(
+                    (param) => param.name === "auto_offset_reset",
+                  )?.value || ""
+                }
+              />
+            </div>
+          ) : null}{" "}
 
-          <IconButton
-            style={{
-              zIndex: 5000,
-              position: "absolute",
-              top: 14,
-              right: 18,
-              color: "grey",
-            }}
+        </DialogContent>
+  
+        <DialogActions>
+          <Button
+            style={{ borderRadius: "0px" }}
             onClick={() => {
               setTenzirConfigModalOpen(false);
             }}
+            color="primary"
           >
-            <CloseIcon />
-          </IconButton>
-        </Dialog>
-      ) : null;
-
+            Cancel
+          </Button>
+          <Button
+            style={{ borderRadius: "0px" }}
+            onClick={() => {
+              handleSubmit(selectedTrigger);
+            }}
+            color="primary"
+          >
+            Submit
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+  
 
 
 	const SuggestionBoxUi = () => {
@@ -21740,7 +21886,7 @@ const releaseToConnectLabel = "Release to Connect"
 				</div>
 				<div style={{textAlign: "center", color: "white", flex: 1, paddingTop: 20, }}>
 					<Typography variant="h6">
-						{selectedVersion.name}
+						{selectedVersion?.name}
 					</Typography>
 				</div>
 				{/* Cross icon to close it */}
@@ -21926,7 +22072,7 @@ const releaseToConnectLabel = "Release to Connect"
         {codePopoutModal}
 		{workflowRevisions}
         {authenticationModal}
-        {tenzirConfigModal}
+        {<TenzirConfigModal/>}
         {/*editWorkflowModal*/}
   		{authgroupModal} 
   		{executionArgumentModal}

@@ -143,7 +143,7 @@ const Header = (props) => {
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
   const [upgradeHovered, setUpgradeHovered] = React.useState(false);
   const [showTopbar, setShowTopbar] = useState(false)
-  const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_XAxwE2Fp9DEbEcNYw4UKmyby00vIlIPPRp" : "pk_test_51PXYYMEJjT17t98NbDkojZ3DRvsFUQBs35LGMx3i436BXwEBVFKB9nCvHt0Q3M4MG3dz4mHheuWvfoYvpaL3GmsG00k1Rb2ksO"
+  const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_51PXYYMEJjT17t98N20qEqItyt1fLQjrnn41lPeG2PjnSlZHTDNKHuisAbW00s4KAn86nGuqB9uSVU4ds8MutbnMU00DPXpZ8ZD" : "pk_test_51PXYYMEJjT17t98NbDkojZ3DRvsFUQBs35LGMx3i436BXwEBVFKB9nCvHt0Q3M4MG3dz4mHheuWvfoYvpaL3GmsG00k1Rb2ksO"
   let navigate = useNavigate();
   const classes = useStyles();
 
@@ -171,8 +171,10 @@ const Header = (props) => {
     setTooltipOpen(true);
   };
 
+  const topbar_var = "topbar_closed2"
+
   useEffect(() => {
-    const topbar = localStorage.getItem("topbar_closed")
+    const topbar = localStorage.getItem(topbar_var)
     if (topbar === "true") {
       setShowTopbar(false)
     } else {
@@ -919,8 +921,8 @@ const Header = (props) => {
               </MenuItem>
             )}
             <div className={classes.divider} />
-            <MenuItem className={classes.dropdownMenuItem} onClick={() => handleMenuItemClick('/professional-support')}>
-              <Link to="/professional-support" style={hrefStyle}>
+            <MenuItem className={classes.dropdownMenuItem} onClick={() => handleMenuItemClick('/professional-services')}>
+              <Link to="/professional-services" style={hrefStyle}>
                 Professional Services
               </Link>
             </MenuItem>
@@ -930,8 +932,18 @@ const Header = (props) => {
                 Training Courses
               </Link>
             </MenuItem>
+	  		<Divider />
+
+	  		<MenuItem className={classes.dropdownMenuItem} onClick={() => handleMenuItemClick('/partners')}>
+              <Link to="/partners" style={hrefStyle}>
+	  			Partner Program
+              </Link>
+            </MenuItem>
           </Menu>
         </ListItem>
+
+
+
         {/* <ListItem style={{ textAlign: "center", marginLeft: 0, paddingRight: 0 }}>
           <Link rel="noopener noreferrer" to="/training" style={hrefStyle}>
             <Button
@@ -1627,7 +1639,7 @@ const Header = (props) => {
 
   const topbarHeight = showTopbar ? 40 : 0
   const topbar = !isCloud || !showTopbar ? null :
-    curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/training" || curpath === "/professional-support" ?
+    curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/training" || curpath === "/professional-services" ?
       <span style={{ zIndex: 50001, }}>
         <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
           <Typography variant="body1" style={{ paddingTop: 7, margin: "auto", textAlign: "center", color: "white", }}>
@@ -1653,7 +1665,7 @@ const Header = (props) => {
             setShowTopbar(false)
 
             // Set storage that it's clicked
-            localStorage.setItem("topbar_closed", "true")
+            localStorage.setItem(topbar_var, "true")
           }}>
             <CloseIcon />
           </IconButton>
