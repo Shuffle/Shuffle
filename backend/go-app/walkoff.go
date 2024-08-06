@@ -3940,6 +3940,19 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(tmpBody.Branch)
 		}
 
+        if os.Getenv("HTTP_PROXY") != "" {
+			cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+				URL: os.Getenv("HTTP_PROXY"),
+			}
+		}
+
+		if os.Getenv("HTTPS_PROXY") != "" {
+			cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+				URL: os.Getenv("HTTPS_PROXY"),
+			}
+		}
+
+
 		// FIXME: Better auth.
 		if len(tmpBody.Field1) > 0 && len(tmpBody.Field2) > 0 {
 			cloneOptions.Auth = &http2.BasicAuth{

@@ -36,6 +36,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+    gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -4238,6 +4239,19 @@ func runInitEs(ctx context.Context) {
 			}
 		}
 
+        if os.Getenv("HTTP_PROXY") != "" {
+			cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+				URL: os.Getenv("HTTP_PROXY"),
+			}
+		}
+
+		if os.Getenv("HTTPS_PROXY") != "" {
+			cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+				URL: os.Getenv("HTTPS_PROXY"),
+			}
+		}
+
+
 		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
 		if len(branch) > 0 && branch != "master" && branch != "main" {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
@@ -4281,6 +4295,18 @@ func runInitEs(ctx context.Context) {
 	storer := memory.NewStorage()
 	cloneOptions := &git.CloneOptions{
 		URL: apis,
+	}
+
+    if os.Getenv("HTTP_PROXY") != "" {
+	    cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+				URL: os.Getenv("HTTP_PROXY"),
+		}
+	}
+
+	if os.Getenv("HTTPS_PROXY") != "" {
+		cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+				URL: os.Getenv("HTTPS_PROXY"),
+		}
 	}
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
