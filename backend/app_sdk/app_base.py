@@ -288,6 +288,16 @@ def split(base, sep):
         return base.split(sep)
 
 
+@shuffle_filters.register
+def url_encode(base):
+    """url-encode a string"""
+    try:
+        from urllib import quote
+    except ImportError:
+        from urllib.parse import quote
+
+    return quote(base)
+
 ###
 ###
 ###
