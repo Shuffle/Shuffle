@@ -895,7 +895,22 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			Image:      org.Image,
 		}
 	}
-	//}
+
+	orgPriorities := org.Priorities
+	if len(org.Priorities) < 10 {
+		//log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
+		newPriorities, err := shuffle.GetPriorities(ctx, userInfo, org)
+		if err != nil {
+			log.Printf("[WARNING] Failed getting new priorities for org %s: %s", org.Id, err)
+			//orgPriorities = []shuffle.Priority{}
+		} else {
+			orgPriorities = newPriorities
+
+			// A way to manage them over time
+		}
+	}
+
+	orgInterests := org.Interests
 
 	userInfo.ActiveOrg.Users = []shuffle.UserMini{}
 	userOrgs := []shuffle.OrgMini{}
@@ -942,19 +957,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	userOrgs = shuffle.SortOrgList(userOrgs)
-	orgPriorities := org.Priorities
-	if len(org.Priorities) < 10 {
-		//log.Printf("[WARNING] Should find and add priorities as length is less than 10 for org %s", userInfo.ActiveOrg.Id)
-		newPriorities, err := shuffle.GetPriorities(ctx, userInfo, org)
-		if err != nil {
-			log.Printf("[WARNING] Failed getting new priorities for org %s: %s", org.Id, err)
-			//orgPriorities = []shuffle.Priority{}
-		} else {
-			orgPriorities = newPriorities
-
-			// A way to manage them over time
-		}
-	}
 
 	tutorialsFinished := []shuffle.Tutorial{}
 	for _, tutorial := range userInfo.PersonalInfo.Tutorials {
@@ -993,7 +995,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		ChatDisabled: chatDisabled,
 		Tutorials:    tutorialsFinished,
 
-		Priorities: orgPriorities,
+		Interests: 	  orgInterests,
+		Priorities:   orgPriorities,
 		Licensed: 		  licensed,
 	}
 
