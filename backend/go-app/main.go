@@ -397,6 +397,52 @@ func checkUsername(Username string) error {
 	return nil
 }
 
+func isNoProxy(rawURL string) bool {
+    noProxy := os.Getenv("NO_PROXY")
+    if noProxy == "" {
+        return false
+    }
+    
+    if noProxy == "*" {
+        return true
+    }
+
+    noProxyList := strings.Split(noProxy, ",")
+    parsedURL, err := url.Parse(rawURL)
+    if err != nil {
+        return false
+    }
+    host := parsedURL.Hostname()
+
+    for _,value := range noProxyList {
+        value = strings.TrimSpace(value)
+
+        if host == value {
+            return true 
+        }
+        if strings.HasPrefix(value, "*.") && strings.HasSuffix(host, value[2:]){
+            return true
+        }
+    }
+    return false
+}
+
+func checkGitProxy(cloneOptions *git.CloneOptions) *git.CloneOptions {
+    if os.Getenv("HTTP_PROXY") != "" && !isNoProxy(cloneOptions.URL){
+        cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+		    URL: os.Getenv("HTTP_PROXY"),
+	    }
+    }
+
+    if os.Getenv("HTTPS_PROXY") != "" && !isNoProxy(cloneOptions.URL) {
+        cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+		    URL: os.Getenv("HTTPS_PROXY"),
+	    }
+    }
+
+    return cloneOptions
+}
+
 func createNewUser(username, password, role, apikey string, org shuffle.OrgMini) error {
 	// Returns false if there is an issue
 	// Use this for register
@@ -4239,18 +4285,7 @@ func runInitEs(ctx context.Context) {
 			}
 		}
 
-        if os.Getenv("HTTP_PROXY") != "" {
-			cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-				URL: os.Getenv("HTTP_PROXY"),
-			}
-		}
-
-		if os.Getenv("HTTPS_PROXY") != "" {
-			cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-				URL: os.Getenv("HTTPS_PROXY"),
-			}
-		}
-
+        cloneOptions = checkGitProxy(cloneOptions)
 
 		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
 		if len(branch) > 0 && branch != "master" && branch != "main" {
@@ -4297,17 +4332,8 @@ func runInitEs(ctx context.Context) {
 		URL: apis,
 	}
 
-    if os.Getenv("HTTP_PROXY") != "" {
-	    cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-				URL: os.Getenv("HTTP_PROXY"),
-		}
-	}
+    cloneOptions = checkGitProxy(cloneOptions)
 
-	if os.Getenv("HTTPS_PROXY") != "" {
-		cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-				URL: os.Getenv("HTTPS_PROXY"),
-		}
-	}
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
 		log.Printf("[ERROR] Failed loading repo %s into memory: %s", apis, err)

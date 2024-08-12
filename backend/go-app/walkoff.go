@@ -34,7 +34,6 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/storage/memory"
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
@@ -2647,18 +2646,6 @@ func loadGithubWorkflows(url, username, password, userId, branch, orgId string) 
 			URL: url,
 		}
 
-		if os.Getenv("HTTP_PROXY") != "" {
-			cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-				URL: os.Getenv("HTTP_PROXY"),
-			}
-		}
-
-		if os.Getenv("HTTPS_PROXY") != "" {
-			cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-				URL: os.Getenv("HTTPS_PROXY"),
-			}
-		}
-
 		// FIXME: Better auth.
 		if len(username) > 0 && len(password) > 0 {
 			cloneOptions.Auth = &http2.BasicAuth{
@@ -2672,6 +2659,8 @@ func loadGithubWorkflows(url, username, password, userId, branch, orgId string) 
 		if len(branch) > 0 && branch != "main" && branch != "master" {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
+
+        cloneOptions = checkGitProxy(cloneOptions)
 
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
@@ -3940,19 +3929,6 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(tmpBody.Branch)
 		}
 
-        if os.Getenv("HTTP_PROXY") != "" {
-			cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-				URL: os.Getenv("HTTP_PROXY"),
-			}
-		}
-
-		if os.Getenv("HTTPS_PROXY") != "" {
-			cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-				URL: os.Getenv("HTTPS_PROXY"),
-			}
-		}
-
-
 		// FIXME: Better auth.
 		if len(tmpBody.Field1) > 0 && len(tmpBody.Field2) > 0 {
 			cloneOptions.Auth = &http2.BasicAuth{
@@ -3960,6 +3936,8 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 				Password: tmpBody.Field2,
 			}
 		}
+
+        cloneOptions = checkGitProxy(cloneOptions)
 
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
