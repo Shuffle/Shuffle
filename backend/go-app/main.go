@@ -397,7 +397,7 @@ func checkUsername(Username string) error {
 	return nil
 }
 
-func isNoProxy(rawURL string) bool {
+func isGitNoProxy(rawURL string) bool {
     noProxy := os.Getenv("NO_PROXY")
     if noProxy == "" {
         return false
@@ -428,13 +428,13 @@ func isNoProxy(rawURL string) bool {
 }
 
 func checkGitProxy(cloneOptions *git.CloneOptions) *git.CloneOptions {
-    if os.Getenv("HTTP_PROXY") != "" && !isNoProxy(cloneOptions.URL){
+    if os.Getenv("HTTP_PROXY") != "" && !isGitNoProxy(cloneOptions.URL){
         cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
 		    URL: os.Getenv("HTTP_PROXY"),
 	    }
     }
 
-    if os.Getenv("HTTPS_PROXY") != "" && !isNoProxy(cloneOptions.URL) {
+    if os.Getenv("HTTPS_PROXY") != "" && !isGitNoProxy(cloneOptions.URL) {
         cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
 		    URL: os.Getenv("HTTPS_PROXY"),
 	    }
