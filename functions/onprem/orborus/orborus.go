@@ -104,6 +104,8 @@ var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 var tenzirUrl = os.Getenv("SHUFFLE_TENZIR_URL")
 var apiKey = os.Getenv("AUTH_FOR_ORBORUS")
 
+var certPath = os.Getenv("SHUFFLE_CERT_DIR")
+
 var executionIds = []string{}
 var namespacemade = false // For K8s
 
@@ -1150,6 +1152,18 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		},
 		Resources: container.Resources{},
 	}
+    
+    _, err := os.ReadDir(certPath)
+
+    if certPath != "" && err == nil {
+        certVol := mount.Mount{
+            Type: mount.TypeBind,
+            Source: certPath,
+            Target: "/certs",
+        }
+
+        hostConfig.Mounts = append(hostConfig.Mounts, certVol)
+    }
 
 	if len(os.Getenv("DOCKER_HOST")) == 0 {
 		if runtime.GOOS == "windows" {
