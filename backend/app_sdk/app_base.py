@@ -3119,7 +3119,7 @@ class AppBase:
                     if len(json.loads(sourcevalue)) == 0:
                         return True
                 except Exception as e:
-                    self.logger.info(f"[WARNING] Failed to check if empty as list: {e}")
+                    self.logger.info(f"[ERROR] Failed to check if empty as list: {e}")
 
                 if len(str(sourcevalue)) == 0:
                     return True
