@@ -4,21 +4,28 @@ import { toast } from "react-toastify"
 
 import { 
 	Tooltip,
+	Chip,
 	Typography,
+	IconButton,
 
 	Avatar,
 	AvatarGroup,
 } from "@mui/material"
 
 import {
+	ErrorOutline as ErrorOutlineIcon,
+} from "@mui/icons-material"
+
+import {
 	green,
 	yellow,
 	red,
+	grey,
 } from "../views/AngularWorkflow.jsx"
 
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import theme from "../theme.jsx";
-const itemHeight = 40
+const itemHeight = 24
 
 export const getParentNodes = (workflow, action) => {
     if (action === undefined || action === null) {
@@ -123,6 +130,8 @@ export const getParentNodes = (workflow, action) => {
 const WorkflowValidationTimeline = (props) => {
 	const { workflow, originalWorkflow, apps, getParents, execution} = props
 
+	const showMiddle = false
+
 
 	if (workflow === undefined || workflow === null) {
 		return null
@@ -196,6 +205,15 @@ const WorkflowValidationTimeline = (props) => {
 			parents = getParentNodes(workflow, action)
 		}
 
+		if (action.app_name === "Integration Framework" || action.app_name === "Integration") {
+			for (var paramkey in action.parameters) {
+				const param = action.parameters[paramkey]
+				if (param.name === "app_name") {
+					action.app_name = param.value.charAt(0).toUpperCase() + param.value.slice(1)
+				}
+			}
+		}
+
 		//const parents = getParentNodes(workflow, action)
 		//console.log("PARENTS", key, parents)
 		if (parents !== undefined && parents !== null && parents.length > 0) {
@@ -219,6 +237,20 @@ const WorkflowValidationTimeline = (props) => {
 				continue
 			}
 
+			for (var branchkey in workflow.branches) {
+				const branch = workflow.branches[branchkey]
+
+				// Checking for OUTBOUND branches from it. 
+				// This will mean it's NOT the last node and is easy to visualize
+				if (branch.source_id !== trigger.id) {
+					continue
+				}
+
+				trigger.order = 2
+			}
+
+
+			// Just in case (:
 			if (workflow.actions.find((element) => element.id === trigger.id) === undefined) {
 				newactions.push(trigger)
 				//workflow.actions.push(trigger)
@@ -242,14 +274,19 @@ const WorkflowValidationTimeline = (props) => {
 	})
 
 	// FIXME: Add other relevant items as well from subflows (?)
-	var nodecolor = "grey"
-	var branchcolor = "grey"
+	var nodecolor = grey
+	var branchcolor = grey
 	var skipped = false
 
 	var previousTools = false
 
+	// Use this variable to control visualization
+	//const showMiddle = false
+	// border: workflow.validation.valid ? `2px solid ${green}` : "1px solid rgba(255,255,255,0.4)",
+	var middleError = ""
+	var startBranchColor = ""
 	return (
-		<div style={{border: workflow.validation.valid ? `2px solid ${green}` : "1px solid rgba(255,255,255,0.4)", padding: "10px 20px 10px 20px", borderRadius: theme.palette.borderRadius, }}>
+		<div style={{ padding: "10px 5px 10px 5px", borderRadius: theme.palette.borderRadius, }}>
 			<div style={{display: "flex", justifyContent: "center", alignItems: "center"}}> 
 			  {relevantactions.map((action, index) => {
 				action.result = {}
@@ -274,13 +311,13 @@ const WorkflowValidationTimeline = (props) => {
 								if (validate.result.success === true) {
 									branchcolor = green
 								} else {
-									branchcolor = "grey" 
+									branchcolor = grey 
 								}
 							}
 
 
 						} else if (action.status === "SKIPPED") {
-							branchcolor = "grey"
+							branchcolor = grey
 						} else {
 							if (action.status === undefined) {
 								branchcolor = green
@@ -292,13 +329,13 @@ const WorkflowValidationTimeline = (props) => {
 						previousTools = true 
 
 						if (startnodeId !== action.id) {
-							return null
+							//return null
 						}
 					} else {
 						if (action.status === "SUCCESS") {
 							nodecolor = green
 						} else if (action.status === "SKIPPED") {
-							nodecolor = "grey"
+							nodecolor = grey
 						} else {
 							if (action.status === undefined) {
 								nodecolor = green
@@ -308,7 +345,7 @@ const WorkflowValidationTimeline = (props) => {
 						}
 					}
 				} else {
-					nodecolor = "grey"
+					nodecolor = grey
 				}
 
 				if (action.status === "SKIPPED") {
@@ -340,18 +377,44 @@ const WorkflowValidationTimeline = (props) => {
 				}
 
 				var founderror = ""
+				//console.log("WORKFLOW VALIDATION: ", workflow.validation)
 				if (workflow.validation !== undefined && workflow.validation !== null && workflow.validation.errors !== undefined && workflow.validation.errors !== null) {
 					const foundError = workflow.validation.errors.find((element) => element.action_id === action.id)
 					if (foundError !== undefined) {
 						founderror = foundError.error
-						nodecolor = yellow 
-						branchcolor = yellow
+						nodecolor = red 
+						branchcolor = red 
+					} else {
+						//console.log("NO ERROR: ", action.id)
+					}
+				}
+
+				if (!showMiddle && relevantactions.length > 2 && index > 0 && index === relevantactions.length - 2) {
+					if (founderror.length > 0) {
+						middleError += founderror+"\n"
+					}
+
+					if (index === relevantactions.length-2 && relevantactions.length > 2) {
+
+						const selectedIcon = middleError.length > 0 ? 
+							<Tooltip title={middleError}>
+								<IconButton style={{width: 30, height: 30, backgroundColor: "rgba(255,255,255,0.0)", borderRadius: 30, marginTop: 2, }}>
+									<ErrorOutlineIcon style={{color: "red", }} /> 
+								</IconButton>
+							</Tooltip>
+						: null
+
+						return (
+							selectedIcon
+						)
+					} else {
+						return null
 					}
 				}
 
 				if (skipped && !lastitem) {
-					nodecolor = "grey"
-					branchcolor = "grey"
+					nodecolor = grey
+					branchcolor = grey
 				}
 
 				if (previousTools) {
@@ -379,14 +442,60 @@ const WorkflowValidationTimeline = (props) => {
 
 				}
 
+
 				var flex = index !== 0 && index !== relevantactions.length - 1 ? 1 : 3
+
+				if (nodecolor === green) {
+					branchcolor = green
+				} else if (nodecolor === yellow) {
+					branchcolor = yellow
+				} else if (nodecolor === red) {
+					branchcolor = red
+				}
+
+				if (index === 0) {
+					startBranchColor = branchcolor
+				}
+
+				if (lastitem && middleError.length === 0) {	
+					branchcolor = startBranchColor
+				}
+
 				const branchTooltip = branchcolor === yellow ? "Check nodes for errors" : ""
+				const appname = action.app_name.replaceAll('_', ' ').slice(0, 16)
+
+				const chipBackground = nodecolor === green ? "rgba(2,203,112, 0.2)" : nodecolor === grey ? "#494949": "rgba(245,52,52,0.8)" 
+				const chipColor = nodecolor === green ? "#02cb70" : nodecolor === grey ? "#CDCDCD" : "white" 
+
+				//const ballcolor = lastitem ? nodecolor : branchcolor 
+				const ballcolor = branchcolor 
+				const ballsize = 8
+				const topMargin = 20
+
+				const chipStyle = {
+					height: 40, 
+					minWidth: 125, 
+					maxWidth: 125, 
+					borderRadius: 50, 
+					color: chipColor, 
+					backgroundColor: chipBackground,
+
+					//border: `2px solid ${chipBackground}`, 
+					//backgroundColor: "rgba(0,0,0,0.0)", 
+				}
+
+				if (image === "") {
+					console.log("MISSING IMAGE: ", appname, image, action)
+				}
 
 				return (
 					<div style={{display: "flex", flex: flex, justifyContent: "right", }}> 
 						{lastitem ? 
 							<Tooltip title={branchTooltip}>
-								<div style={{marginLeft: 0, marginRight: 0, marginTop: 20, height: 3, width: "100%", backgroundColor: branchcolor, }} />
+								<div style={{display: "flex", width: "100%", position: "relative",}}>
+									<div style={{marginLeft: 0, marginRight: 0, marginTop: topMargin, height: 3, width: "100%", backgroundColor: branchcolor, }} />
+									<div style={{position: "absolute", right: -3, top: topMargin-2.5, backgroundColor: ballcolor, width: ballsize, height: ballsize, borderRadius: 10, }}/>
+								</div>
 							</Tooltip>
 						: null}
 
@@ -419,30 +528,36 @@ const WorkflowValidationTimeline = (props) => {
 						: 
 							<Tooltip title={
 								<Typography variant="body1" style={{margin: 5, color: "white", }}>
-									{founderror.length > 0 ? founderror : `${action.app_name.replaceAll('_', ' ')}`} 
+									{founderror.length > 0 ? founderror : `App: ${appname}`} 
 								</Typography>
 							} placement="top">
 
-								<Avatar
-									variant="round"
-									sx={{ backgroundColor: nodecolor, width: itemHeight, height: itemHeight, borderRadius: 50, border: `4px solid ${nodecolor}`,}}
-								>
-									{image !== "" ? 
-										<img 
-											src={image} 
-											style={{
-												width: itemHeight, 
-												height: itemHeight,  
-											}} 
-										/> 
-									: null}
-								</Avatar>
+								<Chip label={`${appname}`} style={chipStyle}  icon={
+									<Avatar
+										variant="round"
+										sx={{ backgroundColor: nodecolor, width: itemHeight, height: itemHeight, borderRadius: 50, border: `1px solid ${nodecolor}`,}}
+									>
+										{image !== "" ? 
+											<img 
+												src={image} 
+												style={{
+													width: itemHeight, 
+													height: itemHeight,  
+												}} 
+											/> 
+										: null}
+									</Avatar>
+								} />
+
 							</Tooltip>
 						}
 
 						{lastitem ? null :
 							<Tooltip title={branchTooltip}>
-								<div style={{marginLeft: 0, marginRight: 0, marginTop: 20, height: 3, width: "100%", backgroundColor: branchcolor, }} />
+								<div style={{display: "flex", width: "100%", position: "relative",}}>
+									<div style={{position: "absolute", left: -3, top: topMargin-2.5, backgroundColor: ballcolor, color: ballcolor, width: ballsize, height: ballsize, borderRadius: 10, }}/>
+									<div style={{marginLeft: 0, marginRight: 0, marginTop: 20, height: 3, width: "100%", backgroundColor: branchcolor, }} />
+								</div>
 							</Tooltip>
 						}
 					</div>

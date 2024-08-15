@@ -1542,12 +1542,15 @@ const Apps = (props) => {
 					flex: 1, 
 					padding: 15, 
 					margin: 10, 
+					paddingTop: 25,
 					backgroundColor: hover ? theme.palette.surfaceColor : "transparent",
 					border: hover ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)",
 					cursor: hover ? "pointer" : "default",
 					textAlign: "center",
 					minHeight: 150, 
 					maxHeight: 150, 
+
+					borderRadius: theme.palette.borderRadius,
 				}}
 			>
 				{icon} 
@@ -1569,7 +1572,7 @@ const Apps = (props) => {
 			</h2>
 			<div style={{display: "flex"}}>
 				<AppCreateButton 
-					text="Generate from OpenAPI/Swagger"
+					text="Upload OpenAPI or Swagger"
 					func={() => {
                   		setOpenApiModal(true)
 					}}

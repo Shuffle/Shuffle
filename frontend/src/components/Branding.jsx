@@ -122,7 +122,7 @@ const Branding = (props) => {
 	return (
 		<div style={{ width: clickedFromOrgTab? 1030: "auto", padding: 27, height: "auto", backgroundColor: '#212121', borderRadius: '16px', }}>
 			<h2 style={{marginTop: clickedFromOrgTab ?0:null,}}>
-				Branding
+				Partner Status & Branding
 			</h2>
 			<Typography variant="body1" color="textSecondary" style={{ marginTop: 20, marginBottom: 10 }}>
 				You can customize your organization's branding by uploading a logo, changing the color scheme and a lot more. 

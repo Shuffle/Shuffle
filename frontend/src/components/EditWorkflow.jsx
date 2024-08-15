@@ -63,12 +63,12 @@ import {
 } from "@mui/icons-material";
 
 const EditWorkflow = (props) => {
-	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, } = props
+	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, saveWorkflow, expanded, } = props
 
   const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
 
   const [submitLoading, setSubmitLoading] = React.useState(false);
-  const [showMoreClicked, setShowMoreClicked] = React.useState(false);
+  const [showMoreClicked, setShowMoreClicked] = React.useState(expanded === true ? true : false);
   const [innerWorkflow, setInnerWorkflow] = React.useState(workflow)
 
   const [newWorkflowTags, setNewWorkflowTags] = React.useState(workflow.tags !== undefined && workflow.tags !== null ? JSON.parse(JSON.stringify(workflow.tags)) : [])
@@ -80,6 +80,8 @@ const EditWorkflow = (props) => {
 	const [dueDate, setDueDate] = React.useState(workflow.due_date !== undefined && workflow.due_date !== null && workflow.due_date !== 0 ? dayjs(workflow.due_date*1000) : dayjs().subtract(1, 'day'))
 
   const [inputQuestions, setInputQuestions] = React.useState(workflow.input_questions !== undefined && workflow.input_questions !== null ? JSON.parse(JSON.stringify(workflow.input_questions)) : []) 
+	const [inputMarkdown, setInputMarkdown] = React.useState(workflow.input_markdown !== undefined && workflow.input_markdown !== null ? workflow.input_markdown : "")
+	const [outputMarkdown, setOutputMarkdown] = React.useState(workflow.output_markdown !== undefined && workflow.output_markdown !== null ? workflow.output_markdown : "")
 
   const classes = useStyles();
 
@@ -283,6 +285,7 @@ const EditWorkflow = (props) => {
 				}
 
 				innerWorkflow.input_questions = validfields
+				innerWorkflow.input_markdown = inputMarkdown
 
 				innerWorkflow.name = name 
 				innerWorkflow.description = description 
@@ -298,7 +301,13 @@ const EditWorkflow = (props) => {
 					innerWorkflow.due_date = new Date(`${dueDate["$y"]}-${dueDate["$M"]+1}-${dueDate["$D"]}`).getTime()/1000
 				}
 
-				if (setNewWorkflow !== undefined) {
+				if (saveWorkflow !== undefined) {
+					saveWorkflow(innerWorkflow)
+					
+					if (setWorkflow !== undefined) {
+						setWorkflow(innerWorkflow)
+					}
+				} else if (setNewWorkflow !== undefined) {
 					setNewWorkflow(
 						innerWorkflow.name,
 						innerWorkflow.description,
@@ -803,6 +812,40 @@ const EditWorkflow = (props) => {
 								>
 								  <AddIcon style={{}} />
 								</Button>
+
+								
+								{inputQuestions.length === 0 ? null : 
+									<div>
+										<Typography variant="h6" style={{marginTop: 50, }}>
+											Input Markdown 
+										</Typography>
+										<TextField
+											multiline
+											rows={3}
+											fullWidth
+											color="primary"
+											value={inputMarkdown}
+											onChange={(e) => {
+												setInputMarkdown(e.target.value)
+												workflow.input_markdown = e.target.value
+												setWorkflow(workflow)
+												setUpdate(Math.random())
+											}}
+										/>
+
+										{/*
+										<Typography variant="h6" style={{marginTop: 50, }}>
+											Output Markdown
+										</Typography>
+										<TextField
+											multiLine
+											rows={3}
+											fullWidth
+											color="primary"
+										/>
+										*/}
+									</div>
+								}
 
 								<Divider style={{marginTop: 20, marginBottom: 20, }} />
 

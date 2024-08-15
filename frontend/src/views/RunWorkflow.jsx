@@ -2,14 +2,17 @@
 import React, {useState, useEffect} from 'react';
 import ReactDOM from "react-dom"
 
-import { ToastContainer, toast } from "react-toastify" 
-import { useInterval } from "react-powerhooks";
-import { makeStyles } from '@mui/material/styles';
+import { green, yellow, red, grey} from "./AngularWorkflow.jsx";
+import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 import { useNavigate, Link, useParams } from "react-router-dom";
-import {isMobile} from "react-device-detect";
-import theme from '../theme.jsx';
 import { validateJson, GetIconInfo } from "./Workflows.jsx";
-import { green, yellow } from "./AngularWorkflow.jsx";
+import EditWorkflow from "../components/EditWorkflow.jsx"
+import { ToastContainer, toast } from "react-toastify" 
+import { makeStyles } from '@mui/material/styles';
+import { useInterval } from "react-powerhooks";
+import { isMobile } from "react-device-detect";
+import Markdown from "react-markdown";
+import theme from '../theme.jsx';
 
 import {
   Tooltip,
@@ -21,6 +24,10 @@ import {
 	Paper, 
 	Typography,
 	Divider,
+
+	Dialog,
+	DialogTitle,
+	DialogContent,
 } from '@mui/material';
 
 import {
@@ -35,14 +42,15 @@ const hrefStyle = {
 
 const bodyDivStyle = {
 	margin: "auto",
-	marginTop: 100,
 	width: isMobile? "100%":"500px",
 	position: "relative", 
+
+	marginTop: 25, 
 }
 
 
 const RunWorkflow = (defaultprops) => {
-  const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, register, serverside } = defaultprops;
+  const { globalUrl, userdata, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, register, serverside } = defaultprops;
 
   let navigate = useNavigate();
   const [_, setUpdate] = useState(""); // Used to force rendring, don't remove
@@ -58,15 +66,16 @@ const RunWorkflow = (defaultprops) => {
   const [apps, setApps] = React.useState([]);
   const [buttonClicked, setButtonClicked] = React.useState("");
   const [foundSourcenode, setFoundSourcenode] = React.useState(undefined);
+  const [editWorkflowModalOpen, setEditWorkflowModalOpen] = React.useState(false)
+  const [sharingOpen, setSharingOpen] = React.useState(false)
 
 	const boxStyle = {
 		color: "white",
-		paddingLeft: "30px",
-		paddingRight: "30px",
-		paddingBottom: "30px",
-		paddingTop: "30px",
+		padding: 50, 
 		backgroundColor: theme.palette.surfaceColor,
 		marginBottom: 150, 
+		borderRadius: 25, 
+		minHeight: 500, 
 	}
 
     const params = useParams();
@@ -74,7 +83,7 @@ const RunWorkflow = (defaultprops) => {
     props.match = {}
     props.match.params = params
 
-	const defaultTitle = "Run Workflow"
+	const defaultTitle = workflow.name !== undefined ? workflow.name : "Run Workflow"
 	if (document != undefined && document.title != defaultTitle) {
 		document.title = defaultTitle
 	}
@@ -96,16 +105,42 @@ const RunWorkflow = (defaultprops) => {
 		return true
 	}
 
+	const saveWorkflow = (workflow) => {
+		const url = `${globalUrl}/api/v1/workflows/${workflow.id}`
+		fetch(url, {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+			body: JSON.stringify(workflow),
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflows :O!");
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			toast.success("Saved workflow")
+		})
+		.catch((error) => {
+			toast.error("Save workflow error: " + error)
+		});
+
+	}
 
 	const getApps = () => {
-    fetch(globalUrl + "/api/v1/apps", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    })
+		fetch(globalUrl + "/api/v1/apps", {
+		  method: "GET",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  credentials: "include",
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!");
@@ -829,52 +864,75 @@ const RunWorkflow = (defaultprops) => {
 	const basedata = 
 		<div style={bodyDivStyle}>
 			<Paper style={boxStyle}>
-      			<form onSubmit={(e) => {onSubmit(e)}} style={{margin: "15px 15px 15px 15px"}}>
-		
-					<img
-						alt={workflow.name}
-						src={image}
-						style={{
-							marginRight: 20,
-							width: 100,
-							height: 100,
-							border: `2px solid ${green}`,
-							borderRadius: 50,
-							position: "absolute",
-							top: -50,
-							left: 200,
-						}}
-					/>
+				{workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0 ? 
+					<div style={{marginBottom: 20, }}>
+						<Markdown
+						  components={{
+							img: Img,
+							code: CodeHandler,
+							a: OuterLink,
+						  }}
+						  id="markdown_wrapper"
+						  escapeHtml={false}
+						  style={{
+							maxWidth: "100%", minWidth: "100%", 
+						  }}
+						>
+						  {workflow.input_markdown}
+		    			</Markdown>
+					</div> 
+				: null}
 
-					<Typography variant="h6" style={{marginBottom: 10, marginTop: 50, textAlign: "center", }}>
-						{organization}
-					</Typography>
-					<Divider style={{marginTop: 20, marginBottom: 20, }}/>
+      			<form onSubmit={(e) => {onSubmit(e)}} style={{margin: "50px 0px 15px 0px",}}>
+					{workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0 ? null : 
+					<div>
+						<img
+							alt={workflow.name}
+							src={image}
+							style={{
+								marginRight: 20,
+								width: 100,
+								height: 100,
+								border: `2px solid ${green}`,
+								borderRadius: 50,
+								position: "absolute",
+								top: -50,
+								left: 200,
+							}}
+						/>
 
-					{disabledButtons && message.length > 0 ? null : 
-						<Typography color="textSecondary" style={{textAlign: "center", }}>
-							{message}
+						<Typography variant="h6" style={{marginBottom: 10, marginTop: 50, textAlign: "center", }}>
+							{organization}
 						</Typography>
-					}
+						<Divider style={{marginTop: 20, marginBottom: 20, }}/>
 
-					{answer !== undefined && answer !== null ? null :
-						<Typography variant="h6" style={{marginBottom: 15, textAlign: "center", }}><b>{workflow.name}</b></Typography>
-					}
-
-					{workflowQuestion.length > 0 ?
-						<div style={{
-							backgroundColor: theme.palette.inputColor,
-							padding: 20,
-							borderRadius: theme.palette.borderRadius,
-							marginBottom: 35, 
-							marginTop: 30, 
-						}}>
-							<Typography variant="body1"  style={{ marginRight: 15, textAlign: "center", whiteSpace: "pre-line", }}>
-								{workflowQuestion}
+						{disabledButtons && message.length > 0 ? null : 
+							<Typography color="textSecondary" style={{textAlign: "center", }}>
+								{message}
 							</Typography>
+						}
+
+						{answer !== undefined && answer !== null ? null :
+							<Typography variant="h6" style={{marginBottom: 15, textAlign: "center", }}><b>{workflow.name}</b></Typography>
+						}
+
+						{workflowQuestion.length > 0 ?
+							<div style={{
+								backgroundColor: theme.palette.inputColor,
+								padding: 20,
+								borderRadius: theme.palette.borderRadius,
+								marginBottom: 35, 
+								marginTop: 30, 
+							}}>
+								<Typography variant="body1"  style={{ marginRight: 15, textAlign: "center", whiteSpace: "pre-line", }}>
+									{workflowQuestion}
+								</Typography>
+							</div>
+						: null}
+
 						</div>
-					: null}
-					
+					}
+						
 					{workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
 						<div style={{marginBottom: 5, }}>
 							{workflow.input_questions.map((question, index) => {
@@ -988,7 +1046,7 @@ const RunWorkflow = (defaultprops) => {
 						<div style={{display: "flex", marginTop: "15px"}}>
 							<Button variant="contained" type="submit" color="primary" fullWidth disabled={!handleValidateForm(executionArgument) || executionLoading}>
 								{executionLoading ? 
-									<CircularProgress color="secondary" style={{color: "white",}} /> : "Run Workflow"}
+									<CircularProgress color="secondary" style={{color: "white",}} /> : "Submit"}
 							</Button> 				
 						</div>
 					}
@@ -1018,12 +1076,79 @@ const RunWorkflow = (defaultprops) => {
 			</Paper>
 		</div>
 
+
+    // const isCorrectOrg = userdata.active_org.id === undefined || userdata.active_org.id === null || workflow.org_id === null || workflow.org_id === undefined || workflow.org_id.length === 0 || userdata.active_org.id === workflow.org_id 
 	const loadedCheck = isLoaded ? 
 		<div>
+			{editWorkflowModalOpen === true ?
+			  <EditWorkflow
+				saveWorkflow={saveWorkflow}
+				workflow={workflow}
+				setWorkflow={setWorkflow}
+				modalOpen={editWorkflowModalOpen}
+				setModalOpen={setEditWorkflowModalOpen}
+				isEditing={true}
+				userdata={userdata}
+				usecases={undefined}
+
+				expanded={true}
+			  />
+			: null}
+
+			<Dialog
+			  open={sharingOpen}
+			  onClose={() => {
+				setSharingOpen(false);
+			  }}
+			  PaperProps={{
+				style: {
+				  color: "white",
+				  minWidth: isMobile ? "90%" : 400,
+				  maxWidth: isMobile ? "90%" : 400,
+				  minHeight: 350,
+				  paddingTop: 25, 
+				  paddingLeft: 50, 
+				  //minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
+				  //maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
+				},
+			  }}
+			>
+			  	<DialogTitle style={{padding: 30, paddingBottom: 0, zIndex: 1000,}}>
+					Share Landingpage 
+			  	</DialogTitle>
+        		<DialogContent style={{paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, paddingBottom: 200, }}>
+				</DialogContent>
+			</Dialog>
+
+			{isLoggedIn && userdata?.active_org?.id === workflow?.org_id ?
+				<div style={{position: "fixed", top: 10, right: 20, }}>
+					<Button
+						variant={"outlined"}
+						color={"secondary"}
+						style={{marginRight: 10, }}
+						onClick={() => {
+							setEditWorkflowModalOpen(true)
+						}}
+					>
+						Edit Details
+					</Button>
+					<Button
+						variant={"outlined"}
+						color={"secondary"}
+						disabled
+						onClick={() => {
+							setSharingOpen(true)
+						}}
+					>
+						Manage Sharing	
+					</Button>
+				</div> 
+			: null}
       		{basedata}
 		</div>
 		:
 		<div>
+			<CircularProgress />
 		</div>
 
 	return (

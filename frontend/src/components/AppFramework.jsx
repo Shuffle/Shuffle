@@ -53,11 +53,13 @@ export const findSpecificApp = (framework, inputcategory) => {
   }
 
   const category = inputcategory.toLowerCase().split(":")[0].trim()
-
-  //console.log("findSpecificApp: ", category, framework)
   if (category === "edr" || category === "eradication" || category === "edr & av") {
-	  if (framework["EDR & AV"] !== undefined && framework["EDR & AV"].name !== undefined) { 
+	  if (framework["EDR & AV"] !== undefined && framework["EDR & AV"].name !== undefined && framework["EDR & AV"].name !== "") {
 		  return framework["EDR & AV"]	
+	  }
+
+	  if (framework["edr"] !== undefined && framework["edr"].name !== undefined && framework["edr"].name !== "") {
+		  return framework["edr"]
 	  }
 
 	  return {
@@ -68,8 +70,12 @@ export const findSpecificApp = (framework, inputcategory) => {
 		  id: "",
 	  }
   } else if (category === "communication" || category === "comms") {
-	  if (framework["Comms"] !== undefined && framework["Comms"].name !== undefined) {
+	  if (framework["Comms"] !== undefined && framework["Comms"].name !== undefined && framework["Comms"].name !== "") {
 		  return framework["Comms"]	
+	  }
+
+	  if (framework["communication"] !== undefined && framework["communication"].name !== undefined && framework["communication"].name !== "") {
+		  return framework["communication"]	
 	  }
 
 	  return {
@@ -80,8 +86,12 @@ export const findSpecificApp = (framework, inputcategory) => {
 		  id: "",
 	  }
   } else if (category === "email") {
-	  if (framework["Email"] !== undefined && framework["Email"].name !== undefined) {
+	  if (framework["Email"] !== undefined && framework["Email"].name !== undefined && framework["Email"].name !== "") {
 		  return framework["Email"]	
+	  }
+
+	  if (framework["email"] !== undefined && framework["email"].name !== undefined && framework["email"].name !== "") {
+		  return framework["email"]	
 	  }
 
 	  return {
@@ -92,8 +102,12 @@ export const findSpecificApp = (framework, inputcategory) => {
 		  id: "",
 	  }
   } else if (category === "assets") {
-	  if (framework["Assets"] !== undefined && framework["Assets"].name !== undefined) {
+	  if (framework["Assets"] !== undefined && framework["Assets"].name !== undefined && framework["Assets"].name !== "") {
 		  return framework["Assets"]	
+	  }
+
+	  if (framework["assets"] !== undefined && framework["assets"].name !== undefined && framework["assets"].name !== "") {
+		  return framework["assets"]	
 	  }
 
 	  return {
@@ -104,8 +118,12 @@ export const findSpecificApp = (framework, inputcategory) => {
 		  id: "",
 	  }
   } else if (category === "cases") {
-	  if (framework["Cases"] !== undefined && framework["Cases"].name !== undefined) {
+	  if (framework["Cases"] !== undefined && framework["Cases"].name !== undefined && framework["Cases"].name !== "") {
 		  return framework["Cases"]
+	  }
+
+	  if (framework["cases"] !== undefined && framework["cases"].name !== undefined && framework["cases"].name !== "") {
+		  return framework["cases"]
 	  }
 
 	  return {
@@ -116,8 +134,12 @@ export const findSpecificApp = (framework, inputcategory) => {
 		  id: "",
 	  }
   } else if (category === "iam") {
-	  if (framework["IAM"] !== undefined &&	framework["IAM"].name !== undefined) {
+	  if (framework["IAM"] !== undefined &&	framework["IAM"].name !== undefined && framework["IAM"].name !== "") {
 		  return framework["IAM"]
+	  }
+
+	  if (framework["iam"] !== undefined &&	framework["iam"].name !== undefined && framework["iam"].name !== "") {
+		  return framework["iam"]
 	  }
 
 	  return {
@@ -128,8 +150,12 @@ export const findSpecificApp = (framework, inputcategory) => {
 		  id: "",
 	  }
   } else if (category === "network") {
-	  if (framework["Network"] !== undefined && framework["Network"].name !== undefined) {
+	  if (framework["Network"] !== undefined && framework["Network"].name !== undefined && framework["Network"].name !== "") {
 		  return framework["Network"]
+	  }
+
+	  if (framework["network"] !== undefined && framework["network"].name !== undefined && framework["network"].name !== "") {
+		  return framework["network"]
 	  }
 
 	  return {
@@ -140,8 +166,12 @@ export const findSpecificApp = (framework, inputcategory) => {
 		  id: "",
 	  }
   } else if (category === "intel") {
-	  if (framework["Intel"] !== undefined && framework["Intel"].name !== undefined) {
+	  if (framework["Intel"] !== undefined && framework["Intel"].name !== undefined && framework["Intel"].name !== "") {
 		  return framework["Intel"]
+	  }
+
+	  if (framework["intel"] !== undefined && framework["intel"].name !== undefined && framework["intel"].name !== "") {
+		  return framework["intel"]
 	  }
 
 	  return {
@@ -152,8 +182,12 @@ export const findSpecificApp = (framework, inputcategory) => {
 		  id: "",
 	  }
   } else if (category === "siem") {
-	  if (framework["SIEM"] !== undefined && framework["SIEM"].name !== undefined) {
+	  if (framework["SIEM"] !== undefined && framework["SIEM"].name !== undefined && framework["SIEM"].name !== "") {
 		  return framework["SIEM"]
+	  }
+	  
+	  if (framework["siem"] !== undefined && framework["siem"].name !== undefined && framework["siem"].name !== "") {
+		  return framework["siem"]
 	  }
 
 	  return {

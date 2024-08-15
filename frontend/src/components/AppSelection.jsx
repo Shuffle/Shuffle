@@ -23,6 +23,7 @@ import {
     Paper,
     TextField,
     Collapse,
+    Fade,
     IconButton,
     Avatar,
     ButtonBase,
@@ -41,10 +42,12 @@ const AppSelection = props => {
         userdata,
         globalUrl,
         appFramework,
+		setAppFramework, 
         setActiveStep,
         defaultSearch,
         setDefaultSearch,
         checkLogin,
+
     } = props;
     const [discoveryData, setDiscoveryData] = React.useState({})
     const [selectionOpen, setSelectionOpen] = React.useState(false)
@@ -57,6 +60,7 @@ const AppSelection = props => {
     const [moreButton, setMoreButton] = useState(false);
 
     // const [mouseHoverIndex, setMouseHoverIndex] = useState(-1)
+  	document.title = "Choose your apps"
     const ref = useRef()
     let navigate = useNavigate();
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
@@ -98,74 +102,75 @@ const AppSelection = props => {
         else if (discoveryData === "IAM") {
             appFramework.iam = submitNewApp
         }
-        setFrameworkItem(submitNewApp);
-        setSelectionOpen(false);
-        console.log("Selected app changed (effect)");
+
+        setFrameworkItem(submitNewApp)
+        setSelectionOpen(false)
+
+		if (setAppFramework !== undefined) {
+			setAppFramework(appFramework)
+		}
+		GetApps()
     }, [newSelectedApp]);
 
+	const reloadAppButtons = (framework) => {
+		var tempApps = []
+		const lastApps = {}
+		let endTypes = ["network", "assets", "iam"]
+
+		if (framework === undefined || framework === null || Object.keys(framework).length === 0) {
+			//window.location.href = "/welcome"
+			return
+		}
+
+		Object.entries(framework).forEach(([key, value]) => {
+			// Overwrrite email properly
+			if (key.toLowerCase() === "communication") {
+				value["type"] = "email"
+				framework["email"] = value
+				return
+			}
+
+			if (key.toLowerCase() === "other") {
+				return
+			}
+
+			value.type = key;
+			if (endTypes.includes(value.type.toLowerCase())) {
+				lastApps[value.type] = value
+				return
+			}
+
+			if (lastPosted.type === value.type) {
+				value = lastPosted
+			}
+
+			tempApps.push(JSON.parse(JSON.stringify(value)));
+		});
+
+		tempApps.sort((a, b) => {
+			if (a.type.length > b.type.length) {
+				return -1;
+			} else if (a.type.length < b.type.length) {
+				return 1;
+			}
+		});
+
+		let lastType = lastPosted.type === undefined ? "" : lastPosted.type.toLowerCase()
+		if (endTypes.includes(lastType)) {
+			lastApps[lastPosted.type] = lastPosted
+		}
+
+		if (moreButton) {
+			tempApps.push(JSON.parse(JSON.stringify(lastApps["network"])))
+			tempApps.push(JSON.parse(JSON.stringify(lastApps["assets"])))
+			tempApps.push(JSON.parse(JSON.stringify(lastApps["iam"])))
+		}
+
+		setAppButtons(tempApps)
+	}
+
     useEffect(() => {
-        var tempApps = []
-        if (tempApps.length === 0) {
-            // Object.entries(appFramework).forEach(([key, value]) => {
-            //     value.type = key;
-            //     tempApps.push(value);
-            // });
-
-            // // Define the custom sorting order
-            // const customSortingOrder = ["CASES", "SIEM", "ENDPOINT", "INTEL", "EMAIL"];
-
-            const lastApps = {}
-            let endTypes = ["network", "assets", "iam"]
-
-            if (appFramework === undefined || appFramework === null || Object.keys(appFramework).length === 0) {
-                //window.location.href = "/welcome"
-                return
-            }
-
-
-            Object.entries(appFramework).forEach(([key, value]) => {
-                if (key.toLowerCase() === "other" || key.toLowerCase() === "communication") {
-                    return
-                }
-
-                value.type = key;
-
-                if (endTypes.includes(value.type.toLowerCase())) {
-                    lastApps[value.type] = value
-                    return
-                }
-
-                if (lastPosted.type === value.type) {
-                    value = lastPosted
-                }
-
-                tempApps.push(JSON.parse(JSON.stringify(value)));
-            });
-
-            tempApps.sort((a, b) => {
-                if (a.type.length > b.type.length) {
-                    return -1;
-                } else if (a.type.length < b.type.length) {
-                    return 1;
-                }
-            });
-
-            let lastType = lastPosted.type === undefined ? "" : lastPosted.type.toLowerCase()
-
-            if (endTypes.includes(lastType)) {
-                lastApps[lastPosted.type] = lastPosted
-            }
-
-            if (moreButton) {
-                tempApps.push(JSON.parse(JSON.stringify(lastApps["network"])))
-                tempApps.push(JSON.parse(JSON.stringify(lastApps["assets"])))
-                tempApps.push(JSON.parse(JSON.stringify(lastApps["iam"])))
-            }
-
-            setAppButtons(tempApps)
-            console.log("Updated appButtons: ", appButtons)
-            GetApps()
-        }
+		reloadAppButtons(appFramework)	
     }, [lastPosted, moreButton])
 
     if (appFramework === undefined || appFramework === null || Object.keys(appFramework).length === 0) {
@@ -174,11 +179,6 @@ const AppSelection = props => {
     }
 
     const setFrameworkItem = (data) => {
-        console.log("Setting framework item: ", data, isCloud)
-        // if (!isCloud) {
-        //   activateApp(data.id)
-        // }
-
         fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
             method: "POST",
             headers: {
@@ -241,31 +241,39 @@ const AppSelection = props => {
             body: JSON.stringify(data),
             credentials: "include",
         })
-            .then((responseJson) => {
-                if (responseJson === null) {
-                    console.log("null-response from server")
-                    const pretend_apps = [{
-                        "description": "TBD",
-                        "id": "TBD",
-                        "large_image": "",
-                        "name": "TBD",
-                        "type": "TBD"
-                    }]
+		.then((response) => {
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (responseJson === null || responseJson === undefined) {
+				console.log("null-response from server")
+				const pretend_apps = [{
+					"description": "TBD",
+					"id": "TBD",
+					"large_image": "",
+					"name": "TBD",
+					"type": "TBD"
+				}]
 
-                    setApps(pretend_apps)
-                    return
-                }
+				setApps(pretend_apps)
+				return
+			}
 
-                if (responseJson.success === false) {
-                    console.log("error loading apps: ", responseJson)
-                    return
-                }
+			if (responseJson.success === false) {
+				console.log("error loading apps: ", responseJson)
+				return
+			}
 
-                setApps(responseJson);
-            })
-            .catch((error) => {
-                console.log("App loading error: " + error.toString());
-            })
+			if (setAppFramework !== undefined) {
+				setAppFramework(responseJson)
+			}
+
+			setApps(responseJson)
+			reloadAppButtons(responseJson)
+		})
+		.catch((error) => {
+			console.log("App loading error: " + error.toString());
+		})
     }
 
     const onNodeSelect = (label) => {
@@ -276,8 +284,6 @@ const AppSelection = props => {
                 label: "",
             });
         }
-
-        console.log("NODESELECT: ", label)
 
         setDiscoveryData(label)
         setSelectionOpen(true)
@@ -304,209 +310,225 @@ const AppSelection = props => {
     };
 
     return (
-        <Collapse in={true}>
-            <Tooltip
-                title="Back"
-                placement="top"
-                style={{ zIndex: 10011 }}
-            >
-                <IconButton
-                    style={{
-                    }}
-                    onClick={() => {
-                        navigate('/welcome');
-                        window.location.reload();
-                    }}
-                >
-                    <ArrowBackIcon style={{ width: 20 }} />
-                    <Typography style={{fontSize : 16, marginLeft : 2}}>Back</Typography>
-                </IconButton>
-            </Tooltip>
-            <div
-                style={{
-                    // minHeight: sizing,
-                    // maxHeight: sizing,
-                    marginTop: 10,
-                    width: isMobile ? 350 : 500,
-                    marginBottom: 25,
-                    textAlign: isMobile ? "center" : null,
-                }}
-            >
-                {selectionOpen ? (
-                    <div
-                        style={{
-                            width: isMobile ? 225 : 319,
-                            height: 395,
-                            flexShrink: 0,
-                            marginLeft: 70,
-                            marginTop: 68,
-                            position: "absolute",
-                            zIndex: 100,
-                            borderRadius: 6,
-                            border: "1px solid var(--Container-Stroke, #494949)",
-                            background: "var(--Container, #212121)",
-                            boxShadow: "8px 8px 32px 24px rgba(0, 0, 0, 0.16)",
-                        }}
-                    >
-                        <div style={{ display: "flex" }}>
-                            <div style={{ display: "flex", textAlign: "center", textTransform: "capitalize" }}>
-                                <Typography style={{ padding: 16, color: "#FFFFFF", textTransform: "capitalize" }}> {discoveryData} </Typography>
-                            </div>
-                            <div style={{ display: "flex" }}>
-                                <Tooltip
-                                    title="Close"
-                                    placement="top"
-                                    style={{ zIndex: 10011 }}
-                                >
-                                    <IconButton
-                                        style={{
-                                            flex: 1,
-                                            // width: 224,
-                                            marginLeft: discoveryData === ("communication") ? 112 : 200,
-                                            width: "100%",
-                                            marginBottom: 23,
-                                            fontSize: 16,
-                                            background: "rgba(33, 33, 33, 1)",
-                                            borderColor: "rgba(33, 33, 33, 1)",
-                                            borderRadius: 8,
-                                        }}
-                                        onClick={() => {
-                                            setSelectionOpen(false)
-                                        }}
-                                    >
-                                        <CloseIcon style={{ width: 16 }} />
-                                    </IconButton>
-                                </Tooltip>
-                                <Tooltip
-                                    title="Delete app"
-                                    placement="bottom"
-                                    style={{ zIndex: 10011 }}
-                                >
-                                    <IconButton
-                                        style={{ zIndex: 12501, position: "absolute", top: 32, right: 16 }}
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            setSelectionOpen(false)
-                                            setDefaultSearch("")
-                                            const submitDeletedApp = {
-                                                "description": "",
-                                                "id": "remove",
-                                                "name": "",
-                                                "type": discoveryData
-                                            }
-                                            setFrameworkItem(submitDeletedApp)
-                                            setNewSelectedApp({})
-                                            setTimeout(() => {
-                                                setDiscoveryData({})
-                                                setFrameworkItem(submitDeletedApp)
-                                                setNewSelectedApp({})
-                                            }, 1000)
-                                            //setAppName(discoveryData.cases.name)
-                                        }}
-                                    >
-                                        <DeleteIcon style={{ color: "white", height: 15, width: 15, }} />
-                                    </IconButton>
-                                </Tooltip>
-                            </div>
-                        </div>
-                        <div
-                            style={{ width: "100%", border: "1px #494949 solid" }}
-                        />
-                        <AppSearch
-                            defaultSearch={defaultSearch}
-                            newSelectedApp={newSelectedApp}
-                            setNewSelectedApp={setNewSelectedApp}
-                            userdata={userdata}
-                        // cy={cy}
-                        />
-                    </div>
-                ) : null}
-                <Typography
-                    variant="h4"
-                    style={{
-                        marginLeft: 8,
-                        marginTop: isMobile ? null : 40,
-                        marginRight: 30,
-                        marginBottom: 0,
-                    }}
-                    color="rgba(241, 241, 241, 1)"
-                >
-                    Find your apps
-                </Typography>
-                <Typography
-                    variant="body2"
-                    style={{
-                        marginLeft: 8,
-                        marginTop: 10,
-                        marginRight: 30,
-                        marginBottom: 40,
-                    }}
-                    color="rgba(158, 158, 158, 1)"
-                >
-                    Select the apps you work with and we will connect them for you.
-                </Typography>
-                <Grid rowSpacing={1} columnSpacing={2} container >
-                    {appButtons.map((appData, index) => {
-                        // This is here due to a memory issue with setting apps properly
-                        if (appData.id === "remove") {
-                            console.log("Removed as appdata is overridden: ", appData)
+        <Fade in={true} timeout={1250}>
+			<div>
+				{/*
+            	<Tooltip
+            	    title="Back"
+            	    placement="top"
+            	    style={{ zIndex: 10011 }}
+            	>
+            	    <IconButton
+            	        style={{
+            	        }}
+            	        onClick={() => {
+            	            navigate('/welcome');
+            	            window.location.reload();
+            	        }}
+            	    >
+            	        <ArrowBackIcon style={{ width: 20 }} />
+            	        <Typography style={{fontSize : 16, marginLeft : 2}}>Back</Typography>
+            	    </IconButton>
+            	</Tooltip>
+				*/}
+            	<div
+            	    style={{
+            	        // minHeight: sizing,
+            	        // maxHeight: sizing,
+            	        marginTop: 10,
+            	        width: isMobile ? 350 : 500,
+            	        marginBottom: 25,
+            	        textAlign: isMobile ? "center" : null,
+            	    }}
+            	>
+            	    {selectionOpen ? (
+            	        <div
+            	            style={{
+            	                width: isMobile ? 225 : 319,
+            	                height: 395,
+            	                flexShrink: 0,
+            	                marginLeft: 70,
+            	                marginTop: 68,
+            	                position: "absolute",
+            	                zIndex: 100,
+            	                borderRadius: 6,
+            	                border: "1px solid var(--Container-Stroke, #494949)",
+            	                background: "var(--Container, #212121)",
+            	                boxShadow: "8px 8px 32px 24px rgba(0, 0, 0, 0.16)",
+            	            }}
+            	        >
+            	            <div style={{ display: "flex" }}>
+            	                <div style={{ display: "flex", textAlign: "center", textTransform: "capitalize" }}>
+            	                    <Typography style={{ padding: 16, color: "#FFFFFF", textTransform: "capitalize" }}> {discoveryData} </Typography>
+            	                </div>
+            	                <div style={{ display: "flex" }}>
+            	                    <Tooltip
+            	                        title="Close"
+            	                        placement="top"
+            	                        style={{ zIndex: 10011 }}
+            	                    >
+            	                        <IconButton
+            	                            style={{
+            	                                flex: 1,
 
-                            appData = {
-                                "count": 0,
-                                "description": "",
-                                "id": "",
-                                "large_image": "",
-                                "name": "",
-                                "type": appData.type,
-                            }
-                        }
+												position: "absolute",
+												top: 0,
+												right: 6,
+            	                            }}
+            	                            onClick={() => {
+            	                                setSelectionOpen(false)
+            	                            }}
+            	                        >
+            	                            <CloseIcon style={{ width: 16 }} />
+            	                        </IconButton>
+            	                    </Tooltip>
+            	                    <Tooltip
+            	                        title="Remove selection"
+            	                        placement="bottom"
+            	                        style={{ zIndex: 10011 }}
+            	                    >
+            	                        <IconButton
+            	                            style={{ zIndex: 12501, position: "absolute", top: 26, right: 6, }}
+            	                            onClick={(e) => {
+            	                                e.preventDefault();
+            	                                setSelectionOpen(false)
+            	                                setDefaultSearch("")
+            	                                const submitDeletedApp = {
+            	                                    "description": "",
+            	                                    "id": "remove",
+            	                                    "name": "",
+            	                                    "type": discoveryData
+            	                                }
 
-                        const appName = appData.name
-                        const AppImage = appData.large_image
-                        const appType = appData.type
+            	                                setFrameworkItem(submitDeletedApp)
+            	                                setNewSelectedApp({})
+            	                                setTimeout(() => {
+            	                                    setDiscoveryData({})
+            	                                    setFrameworkItem(submitDeletedApp)
+            	                                    setNewSelectedApp({})
+            	                                }, 200)
+            	                                //setAppName(discoveryData.cases.name)
+            	                            }}
+            	                        >
+            	                            <DeleteIcon style={{ color: "white", height: 15, width: 15, }} />
+            	                        </IconButton>
+            	                    </Tooltip>
+            	                </div>
+            	            </div>
+            	            <div
+            	                style={{ width: "100%", border: "1px #494949 solid" }}
+            	            />
+            	            <AppSearch
+            	                defaultSearch={defaultSearch}
+            	                newSelectedApp={newSelectedApp}
+            	                setNewSelectedApp={setNewSelectedApp}
+            	                userdata={userdata}
+            	            // cy={cy}
+            	            />
+            	        </div>
+            	    ) : null}
+            	    <Typography
+            	        variant="h4"
+            	        style={{
+            	            marginLeft: 8,
+            	            marginTop: isMobile ? null : 40,
+            	            marginRight: 30,
+            	            marginBottom: 0,
+            	        }}
+            	        color="rgba(241, 241, 241, 1)"
+            	    >
+            	        Find your apps
+            	    </Typography>
+            	    <Typography
+            	        variant="body2"
+            	        style={{
+            	            marginLeft: 8,
+            	            marginTop: 10,
+            	            marginRight: 30,
+            	            marginBottom: 40,
+            	        }}
+            	        color="rgba(158, 158, 158, 1)"
+            	    >
+            	        Select the apps you work with and we will connect them for you.
+            	    </Typography>
+            	    <Grid rowSpacing={1} columnSpacing={2} container >
+            	        {appButtons.map((appData, index) => {
+            	            // This is here due to a memory issue with setting apps properly
+            	            if (appData.id === "remove") {
+            	                appData = {
+            	                    "count": 0,
+            	                    "description": "",
+            	                    "id": "",
+            	                    "large_image": "",
+            	                    "name": "",
+            	                    "type": appData.type,
+            	                }
+            	            }
 
-                        return (
-                            <AppSearchButtons
-                                appFramework={appFramework}
-                                index={index}
-                                totalApps={appButtons.length}
-                                appName={appName}
-                                appType={appType}
-                                AppImage={AppImage}
-                                defaultSearch={defaultSearch}
-                                finishedApps={finishedApps}
-                                onNodeSelect={onNodeSelect}
-                                discoveryData={discoveryData}
-                                setDiscoveryData={setDiscoveryData}
-                                setDefaultSearch={setDefaultSearch}
-                                apps={apps}
-                                setMoreButton={setMoreButton}
-                                moreButton={moreButton}
-                            />
-                        )
-                    })}
-                </Grid>
-            </div>
-            {!moreButton ? (
-                <div style={{ width: "100%", marginLeft: isMobile ? 80 : 200, marginBottom: 20, textAlign: isMobile ? "center" : null }}>
-                    <Link style={{ color: "#FF8444" }} onClick={() => {
-                        setMoreButton(true)
 
-                        setTimeout(() => {
-                            navigate("/welcome?tab=2")
-                        }, 250)
-                    }}
-                    >See More Apps</Link>
-                </div>) : ""}
-            <div style={{ flexDirection: "row", width: isMobile ? 340 : null, textAlign: isMobile ? "center" : null }}>
-                <Button variant="contained" type="submit" fullWidth style={bottomButtonStyle} onClick={() => {
-                    navigate("/welcome?tab=3")
-                    setActiveStep(2)
-                }}>
-                    Continue
-                </Button>
-            </div>
-        </Collapse>
+							if (appData === undefined || appData === null || appData.name === undefined || appData.name === "") {
+								appData = {
+									"count": 0,
+									"description": "",
+									"id": "",
+									"large_image": "",
+									"name": "",
+									"type": appData.type,
+								}
+							}
+
+							//console.log("APP: ", appData)
+
+            	            const appName = appData.name
+            	            const AppImage = appData.large_image
+            	            const appType = appData.type
+
+            	            return (
+            	                <AppSearchButtons
+            	                    appFramework={appFramework}
+            	                    index={index}
+            	                    totalApps={appButtons.length}
+
+            	                    appName={appName}
+            	                    appType={appType}
+            	                    AppImage={AppImage}
+
+            	                    defaultSearch={defaultSearch}
+            	                    finishedApps={finishedApps}
+            	                    onNodeSelect={onNodeSelect}
+            	                    discoveryData={discoveryData}
+            	                    setDiscoveryData={setDiscoveryData}
+            	                    setDefaultSearch={setDefaultSearch}
+            	                    apps={apps}
+            	                    setMoreButton={setMoreButton}
+            	                    moreButton={moreButton}
+            	                />
+            	            )
+            	        })}
+            	    </Grid>
+            	</div>
+            	{!moreButton ? (
+            	    <div style={{ width: "100%", marginLeft: isMobile ? 80 : 200, marginBottom: 20, textAlign: isMobile ? "center" : null }}>
+            	        <Link style={{ color: "#FF8444" }} onClick={() => {
+            	            setMoreButton(true)
+
+            	            setTimeout(() => {
+            	                navigate("/welcome?tab=2")
+            	            }, 250)
+            	        }}
+            	        >See More Apps</Link>
+            	    </div>) : ""}
+
+            	<div style={{ flexDirection: "row", width: isMobile ? 340 : null, textAlign: isMobile ? "center" : null }}>
+            	    <Button variant="contained" type="submit" fullWidth style={bottomButtonStyle} onClick={() => {
+            	        navigate("/usecases2")
+            	        setActiveStep(2)
+            	    }}>
+						See usecases
+            	    </Button>
+            	</div>
+			</div>
+        </Fade>
     )
 }
 

@@ -21,6 +21,7 @@ import {
 	Paper,
 	Chip,
 	Checkbox,
+	Fade,
 } from "@mui/material";
 
 import {
@@ -1741,9 +1742,11 @@ const Dashboard = (props) => {
     </div>
 
   const dataWrapper = 
-    <div style={{ maxWidth: 1366, margin: "auto" }}>
-	  {data}
-	</div>
+	<Fade in={true} timeout={1250}>
+		<div style={{ maxWidth: 1366, margin: "auto" }}>
+		  {data}
+		</div>
+	</Fade>
   
 
   return dataWrapper

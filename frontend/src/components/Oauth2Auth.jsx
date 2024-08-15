@@ -299,12 +299,11 @@ const AuthenticationOauth2 = (props) => {
 
   const handleOauth2Request = (client_id, client_secret, oauth_url, scopes, admin_consent, prompt, skipScopeReplace) => {
 
-	  console.log("SKIP SCOPE: ", skipScopeReplace)
 	  if (skipScopeReplace === false || skipScopeReplace === undefined) {
 
 		  console.log("Selected scopes: ", selectedScopes)
 		  if (selectedScopes !== undefined && selectedScopes !== null && selectedScopes.length > 0) {
-			  toast("Using your scopes instead of the default ones")
+			  //toast("Using your scopes instead of the default ones")
 			  scopes = selectedScopes
 		  }
 	  }
@@ -484,7 +483,27 @@ const AuthenticationOauth2 = (props) => {
 		url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&prompt=admin_consent&scope=${resources}&state=${state}&access_type=offline`;
 	}
 
+	if (url !== undefined && url !== null && url.length > 0) {
+		if (url.toLowerCase().includes("{tenant")) {
+			// Check location of {tenant, then find the next } and replace with 'common'. Make sure next } is AFTER {tenant 
+			try { 
+				const tenantIndex = url.toLowerCase().indexOf("{tenant")
+				const substring = url.substring(tenantIndex)
+				const nextBracket = substring.indexOf("}")
+				const newUrl = url.substring(0, tenantIndex) + "common" + url.substring(tenantIndex + nextBracket + 1)
+				url = newUrl
+			} catch (e) {
+				console.log("Failed to replace {tenant} with common: ", e)
+			}
+
+		}
+	}
+
+	/*
 	console.log("OAUTH2 URL: ", url)
+	return 
+	*/
+
 
 	// Force new consent
     //const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`;

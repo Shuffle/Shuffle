@@ -171,7 +171,7 @@ const Header = (props) => {
     setTooltipOpen(true);
   };
 
-  const topbar_var = "topbar_closed2"
+  const topbar_var = "topbar_closed4"
 
   useEffect(() => {
     const topbar = localStorage.getItem(topbar_var)
@@ -575,15 +575,15 @@ const Header = (props) => {
             //globalUrl = responseJson.region_url
           }
           if (responseJson["reason"] === "SSO_REDIRECT") {
-			setTimeout(() => {
-				toast.info("Redirecting to SSO login page as SSO is required for this organization.")
-				window.location.href = responseJson["url"]
-				return
-			}, 2000)
+            setTimeout(() => {
+              toast.info("Redirecting to SSO login page as SSO is required for this organization.")
+              window.location.href = responseJson["url"]
+              return
+            }, 2000)
           } else {
-          setTimeout(() => {
-            window.location.reload()
-          }, 2000);
+            setTimeout(() => {
+              window.location.reload()
+            }, 2000);
           }
           toast("Successfully changed active organization - refreshing!");
         } else {
@@ -711,7 +711,7 @@ const Header = (props) => {
         	</MenuItem>
 				</Link>
 				*/}
-        <Link to="/usecases" style={hrefStyle}>
+        <Link to="/usecases2" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
               handleClose();
@@ -858,7 +858,7 @@ const Header = (props) => {
       </List>
       <List className={classes.menuList} component="nav">
         <ListItem style={{ textAlign: "center", marginLeft: "0px" }}>
-          <Link to="/usecases" style={hrefStyle}>
+          <Link to="/usecases2" style={hrefStyle}>
             <Button
               variant="text"
               color="secondary"
@@ -890,7 +890,7 @@ const Header = (props) => {
           </Link>
         </ListItem>
         <ListItem
-          style={{ textAlign: "center",  marginLeft: "0px", paddingRight: 0 }}
+          style={{ textAlign: "center", marginLeft: "0px", paddingRight: 0 }}
         // onMouseEnter={handleMenuOpen}
         // onMouseLeave={handleMenuClose}
         >
@@ -898,7 +898,7 @@ const Header = (props) => {
             variant="text"
             color="secondary"
             className={classes.menuButton}
-            style={{width:200}}
+            style={{ width: 200 }}
             onClick={handleMenuOpen}
           >
             Pricing & Services
@@ -932,11 +932,10 @@ const Header = (props) => {
                 Training Courses
               </Link>
             </MenuItem>
-	  		<Divider />
-
-	  		<MenuItem className={classes.dropdownMenuItem} onClick={() => handleMenuItemClick('/partners')}>
+            <div className={classes.divider} />
+            <MenuItem className={classes.dropdownMenuItem} onClick={() => handleMenuItemClick('/partners')}>
               <Link to="/partners" style={hrefStyle}>
-	  			Partner Program
+                Partner Program
               </Link>
             </MenuItem>
           </Menu>
@@ -1031,7 +1030,7 @@ const Header = (props) => {
           margin: "auto",
         }}
       >
-        <div style={{ flexDirection: "row", marginLeft: 0}}>
+        <div style={{ flexDirection: "row", marginLeft: 0 }}>
           <List
             style={{
               height: 56,
@@ -1127,7 +1126,7 @@ const Header = (props) => {
                   </div>
                 </Link>
               </ListItem>
-	  		  {/*
+              {/*
               <ListItem style={listItemStyle}>
                 <Link to="/admin?admin_tab=billing" style={hrefStyle}>
                   <div
@@ -1407,7 +1406,7 @@ const Header = (props) => {
                       {/* {upgradeHovered ?
                         "Upgrade License"
                         : */}
-                        Upgrade
+                      Upgrade
                       {/* } */}
 
                     </Button>
@@ -1639,12 +1638,12 @@ const Header = (props) => {
 
   const topbarHeight = showTopbar ? 40 : 0
   const topbar = !isCloud || !showTopbar ? null :
-    curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/training" || curpath === "/professional-services" ?
+    curpath === "/" || curpath.includes("/docs") || curpath === "/pricing" || curpath === "/contact" || curpath === "/search" || curpath === "/usecases" || curpath === "/usecases2" || curpath === "/training" || curpath === "/professional-services" ?
       <span style={{ zIndex: 50001, }}>
         <div style={{ position: "relative", height: topbarHeight, backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)", overflow: "hidden", }}>
-          <Typography variant="body1" style={{ paddingTop: 7, margin: "auto", textAlign: "center", color: "white", }}>
+          <Typography style={{ paddingTop: 7, fontSize:16, margin: "auto", textAlign: "center", color: "white", }}>
             {/* Shuffle 1.4.0 is out! Read more about&nbsp; */}
-			New Public&nbsp;
+            New&nbsp;
             <u>
               <span onClick={() => {
                 ReactGA.event({
@@ -1655,11 +1654,11 @@ const Header = (props) => {
 
                 navigate("/training")
 
-              }} style={{ cursor: "pointer", textDecoration: "none", fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>
-				Training Dates Released
+              }} style={{ cursor: "pointer", textDecoration: "none", fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>
+                Public Training
               </span>
             </u>
-            &nbsp;Ahead!
+            &nbsp;Dates Released! 
           </Typography>
           <IconButton color="secondary" style={{ position: "absolute", top: -3, right: 20, }} onClick={(event) => {
             setShowTopbar(false)

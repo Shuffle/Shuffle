@@ -600,8 +600,9 @@ const ParsedAction = (props) => {
 			let errorVars = [];
 			if(paramvalue.includes("$")){
 				let actions = workflow.actions?.map((action) => {
-					return "$"+action.label.toLowerCase();
+					return "$"+action.label?.toLowerCase();
 				})
+
 				if(newActionList?.length > 0){
 					let appParentActions = parentActionList?.map(action => "$" + action.name.toLowerCase());
 					let notPresentAction = actions?.filter((action) => !appParentActions?.includes(action))
@@ -629,9 +630,9 @@ const ParsedAction = (props) => {
 				let regex = /(^|[^\\])\$/;
 				if (regex.test(paramvalue)) {
 					if(message.length > 0){
-					message += "\nUse \"\\$\" instead of \"$\".";
+						message += "\nUse \"\\$\" instead of \"$\".";
 					}else{
-					message = "Use \"\\$\" instead of \"$\".";
+						message = "Use \"\\$\" instead of \"$\" to escape variables.";
 					}
 				}
 			}
@@ -640,7 +641,7 @@ const ParsedAction = (props) => {
 		setSelectedActionParameters(newParameters);
         setActionlist(newActionList);
     }, [workflow.execution_variables,paramUpdate, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents,setNewSelectedAction]);
-	console.log("Selected Action:", selectedAction)
+
 	useEffect(() => {
 		selectedNameChange(appActionName)
 
@@ -1280,12 +1281,14 @@ const ParsedAction = (props) => {
 		}
 	  }
 
-      var authWritten = false;
+	  var authWritten = false;
 	  var noAppSelected = false 
-	  var paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
-	  if (paramIndex === -1 || selectedAction.parameters[paramIndex].value === "" || selectedAction.parameters[paramIndex].value === "noapp") {
-	  	// Check the actual value and if it's the same
-	  	noAppSelected = true
+	  if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
+		  var paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
+		  if (paramIndex === -1 || selectedAction.parameters[paramIndex].value === "" || selectedAction.parameters[paramIndex].value === "noapp") {
+			// Check the actual value and if it's the same
+			noAppSelected = true
+		  }
 	  }
 	}
 
@@ -1320,8 +1323,14 @@ const ParsedAction = (props) => {
 							} 
 						});
               		}
-					  setHiddenDescription(false)
-					  document.activeElement.blur();
+
+					document.activeElement.blur();
+
+					const disabledUiBox = localStorage.getItem("disabled_ui_box")
+					if (disabledUiBox === "true") {
+					} else {
+						setHiddenDescription(false)
+					}
 				}}
 				>
 					<div style={{ display: "flex", marginBottom: 0,}}>
@@ -1874,11 +1883,9 @@ const ParsedAction = (props) => {
 															}
 														}
 														
-														console.log("Old found: ", workflow.actions[key].parameters[subkey].value)
 														const extralength = newname.length-parsedBaseLabel.length
 														param.value = param.value.substring(0, foundindex) + newname + param.value.substring(foundindex-extralength+newname.length, param.value.length)
 
-														console.log("New: ", workflow.actions[key].parameters[subkey].value)
 													} else { 
 														break
 													}
@@ -1990,18 +1997,25 @@ const ParsedAction = (props) => {
                   selectedAction.authentication_id = "";
 
                   for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
-                    if (selectedAction.parameters[key].configuration) {
+                    if (selectedAction.parameters[key].configuration === false) {
+						console.log("FIELDSKIP: ", selectedAction.parameters[key].name)
+						continue
+					} 
 
-					  if (selectedAction.parameters[key].example !== undefined && selectedAction.parameters[key].example !== null && selectedAction.parameters[key].example !== "") {
-		  				if (selectedAction.parameters[key].example.toLowerCase().includes("api") || selectedAction.parameters[key].example.toLowerCase().includes("key") || selectedAction.parameters[key].example.toLowerCase().includes("pass")) {
-                      		selectedAction.parameters[key].value = ""
-						} else {
-                      		selectedAction.parameters[key].value = selectedAction.parameters[key].example
-						}
-					  } else {
-                      	selectedAction.parameters[key].value = ""
-					  }
-                    }
+					if (selectedAction.parameters[key].name === "url" && authenticationType?.type === "oauth2-app" && selectedAction.parameters[key].value.includes("http")) { 
+						continue
+					}
+
+				    if (selectedAction.parameters[key].example !== undefined && selectedAction.parameters[key].example !== null && selectedAction.parameters[key].example !== "") {
+				      if (selectedAction.parameters[key].example.toLowerCase().includes("apik") || selectedAction.parameters[key].example.toLowerCase().includes("key") || selectedAction.parameters[key].example.toLowerCase().includes("pass") || selectedAction.parameters[key].example.toLowerCase().includes("****")) {
+				      	selectedAction.parameters[key].value = ""
+				      } else {
+				      	selectedAction.parameters[key].value = selectedAction.parameters[key].example
+				      }
+
+				    } else {
+				      selectedAction.parameters[key].value = ""
+				    }
                   }
                   setSelectedAction(selectedAction);
                   setUpdate(Math.random());
@@ -2020,7 +2034,11 @@ const ParsedAction = (props) => {
 						for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
 						  //console.log(selectedAction.parameters[key])
 						  if (selectedAction.parameters[key].configuration) {
-							selectedAction.parameters[key].value = "authgroup controlled"
+
+							if (selectedAction.parameters[key].name === "url" && authenticationType?.type === "oauth2-app") {
+							} else {
+								selectedAction.parameters[key].value = "authgroup controlled"
+							}
 						  }
 						}
 
@@ -2129,6 +2147,14 @@ const ParsedAction = (props) => {
           </div>
         </div>
       ) : null}
+
+	  {selectedAction.authentication_id === "authgroups" && (authGroups === undefined || authGroups === null || authGroups.length === 0) ? 
+		<a href="/admin?tab=app_auth" target="_blank" style={{textDecoration: "none", color: "#f85a3e",}}>
+			<Typography variant="body2" style={{marginTop: 5,}}>
+				Create your first Authentication group
+			</Typography>
+		</a>
+	  : null}
 
 
       {showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
@@ -2611,7 +2637,7 @@ const ParsedAction = (props) => {
             marginBottom: hideExtraTypes ? 50 : 200,
           }}
         > {
-			Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0 ? 
+			selectedActionParameters !== undefined && selectedActionParameters !== null && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0 ? 
 	<div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
 		  	{isIntegration ? 
 				apps !== undefined && apps !== null && apps.length > 0 ?
@@ -2907,20 +2933,59 @@ const ParsedAction = (props) => {
 			}
 
 			if (data.value === "authgroup controlled") {
-				return null
+				if (data?.name === "url" && authenticationType?.type === "oauth2-app") {
+				} else {
+					return null
+				}
 			}
 
-            // selectedAction.selectedAuthentication = e.target.value
-            // selectedAction.authentication_id = e.target.value.id
+			  /*
             if (
               (selectedAction.auth_not_required !== undefined && !selectedAction.auth_not_required) &&
+			  selectedActionParameters[count] !== undefined &&
+			  selectedActionParameters[count] !== null &&
 			  selectedActionParameters[count].value !== undefined &&
+			  selectedAction.parameters[count] !== undefined &&
+			  selectedAction.parameters[count] !== null &&
 			  selectedAction.parameters[count].value !== undefined &&
               selectedAction.selectedAuthentication !== undefined &&
               selectedAction.selectedAuthentication.fields !== undefined &&
               selectedAction.selectedAuthentication.fields[data.name] !==
                 undefined
             ) {
+			*/
+
+			/*
+			if (selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined && selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
+
+              // This sets the placeholder in the frontend. (Replaced in backend)
+              selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name];
+              selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name];
+              setSelectedAction(selectedAction);
+              //setUpdate(Math.random())
+
+              if (authWritten) {
+                return null
+              }
+
+              authWritten = true
+              return (
+                <Typography
+                  key={count}
+                  id="skip_auth"
+                  variant="body2"
+                  color="textSecondary"
+                  style={{ marginTop: 5 }}
+                >
+                  Authentication fields are hidden
+                </Typography>
+              )
+            }
+			*/
+
+
+            //!selectedAction.auth_not_required &&
+			if (selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined && selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
               // This sets the placeholder in the frontend. (Replaced in backend)
               selectedActionParameters[count].value =
                 selectedAction.selectedAuthentication.fields[data.name];
@@ -2946,6 +3011,7 @@ const ParsedAction = (props) => {
                 </Typography>
               );
             }
+
 
 			// Added autofill to make this ALOT simpler
 			if (isCloud && (selectedAction.app_name === "Shuffle Tools" || selectedAction.app_name === "email") && (selectedAction.name === "send_email_shuffle" || selectedAction.name === "send_sms_shuffle") && data.name === "apikey") {
@@ -3062,6 +3128,7 @@ const ParsedAction = (props) => {
             var disabled = false;
             var rows = "3";
             var openApiHelperText = "This is an OpenAPI specific field";
+
 
             if (selectedApp.generated && data.name === "headers") {
               //console.log("HEADER: ", data)
@@ -3278,7 +3345,7 @@ const ParsedAction = (props) => {
 			const description = data.description === undefined ? "" : data?.description;
 			
 			const tooltipDescription = (
-				<Box
+			<Box
 				p={1.5}
 				borderRadius={3}
 				boxShadow={2}
@@ -3291,19 +3358,17 @@ const ParsedAction = (props) => {
 						{tmpitem.charAt(0).toUpperCase() + tmpitem.slice(1)}
 					</Typography>
 					<IconButton size="small"
-					 
-					 onMouseDown={(event) => {
-						event.preventDefault();
-						event.stopPropagation();
-					  }}
-					
-					 onClick={() => {
-						setUiBox("closed")
-						const inputElement = document.getElementById(uiBox);
-						if (inputElement) {
-						  inputElement.focus();
-						}
-					}}>
+						 onClick={() => {
+							setUiBox("closed")
+							
+							/*
+							const inputElement = document.getElementById(uiBox);
+							if (inputElement) {
+							  inputElement.focus();
+							}
+							*/
+						}}
+					>
 						<CloseIcon fontSize="small" />
 					</IconButton>
 					</Box>
@@ -3316,7 +3381,7 @@ const ParsedAction = (props) => {
 						<strong>Description:</strong> {description}
 						</Typography>
 						<Typography variant="body2">
-						<strong>Ex. :</strong> {data?.example.length > 0 ? data.example : "No example available"}
+						<strong>Ex. :</strong> {data?.example?.length > 0 ? data.example : "No example available"}
 						</Typography>
 						{
 							data?.configuration === true ?
@@ -3326,15 +3391,31 @@ const ParsedAction = (props) => {
 								</Typography>
 							) : null
 						}
+
+						<div onClick={(e) => {
+							e.preventDefault()
+							e.stopPropagation()
+
+							localStorage.setItem("disabled_ui_box", "true")
+							setUiBox("closed")
+						}}>
+							<Typography style={{marginTop: 10, color: "#f85a3e", cursor: "pointer",}} variant="body2"> 
+								Don't show again
+							</Typography>
+						</div>
 					</Box>
 				</Box>
 			);
+
 
             var datafield = (
 			<Tooltip 
 				title={tooltipDescription} 
 				placement="right" 
 				open={clickedFieldId === uiBox}
+				style={{
+					zIndex: 0,
+				}}
 				PopperProps={{
 					sx: {
 					  '& .MuiTooltip-tooltip': {
@@ -3348,6 +3429,7 @@ const ParsedAction = (props) => {
 				  }}
 				>
               <TextField
+                id={clickedFieldId}
                 disabled={disabled}
                 style={{
                   backgroundColor: theme.palette.inputColor,
@@ -3424,7 +3506,6 @@ const ParsedAction = (props) => {
 						setScrollConfig(scrollConfig)
 					}
                 }}
-                id={clickedFieldId}
                 rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
                 color="primary"
                 // defaultValue={data.value}
@@ -3458,15 +3539,28 @@ const ParsedAction = (props) => {
 				handleParamChange(event, count, data)
                 }}
 				onFocus={(event) => {
-					setUiBox(event.target.id)
-					
+					// Get local storage key "disabled_ui_box" and check if it's true
+					const disabledUiBox = localStorage.getItem("disabled_ui_box")
+					if (disabledUiBox === "true") {
+					} else {
+						//setUiBox(event.target.id)
+					}
 				}}
                 onBlur={(event) => {
 					baseHelperText = calculateHelpertext(event.target.value)
 					if (setLastSaved !== undefined) {
 						setLastSaved(false)
 					}
-					setUiBox("closed")
+
+					// Check if we clicked the tooltip or not
+					const tooltipid = "rightside_field_tooltip" + count
+					const foundElement = document.getElementById(tooltipid)
+					if (foundElement !== null && foundElement !== undefined) {
+						console.log("FOUND: ", foundElement)
+					} else {
+						//console.log("TOOLTIP -> NOT FOUND")
+						//setUiBox("closed")
+					}
                 }}
               />
 			</Tooltip>
@@ -3664,7 +3758,6 @@ const ParsedAction = (props) => {
 								</div>
 						}
 
-            //console.log("FIELD VALUE: ", data.value)
             //const regexp = new RegExp("\W+\.", "g")
             //let match
             //while ((match = regexp.exec(data.value)) !== null) {
@@ -3680,15 +3773,13 @@ const ParsedAction = (props) => {
             //	}
             //}
 
-						// Basic helpertext
-
             if (files !== undefined && files !== null && data.name.toLowerCase() === "file_category") {
-              //selectedActionParameters[count].options.length > 0
-							console.log("FileS: ", files)
-							if (files.namespaces !== undefined && files.namespaces !== null && files.namespaces.length > 0) {
-								data.options = files.namespaces
-							}
-						}
+              	//selectedActionParameters[count].options.length > 0
+				console.log("FileS: ", files)
+				if (files.namespaces !== undefined && files.namespaces !== null && files.namespaces.length > 0) {
+					data.options = files.namespaces
+				}
+			}
 
             //const keywords = ["len", "lower", "upper", "trim", "split", "length", "number", "parse", "join"]
             if (
@@ -3736,26 +3827,11 @@ const ParsedAction = (props) => {
                   }}
                   onBlur={(event) => {}}
                 />
-              );
-              //const fileId = "6daabec1-892b-469c-b603-c902e47223a9"
-              //datafield = `SHOW FILES FROM OTHER NODES? Filename: ${selectedActionParameters[count].value}`
-              /*
-							if (selectedActionParameters[count].value != fileId) {
-								changeActionParameter(fileId, count, data)
-								setUpdate(Math.random())
-
-							}
-							*/
+              )
             } else if (
-              (data.options !== undefined &&
-              data.options !== null &&
-              data.options.length > 0) 
-							||
-              (selectedActionParameters[count].options !== undefined &&
-              selectedActionParameters[count].options !== null &&
-              selectedActionParameters[count].options.length > 0)
-            ) {
-							const parsedoptions = data.options !== undefined && data.options !== null && data.options.length > 0 ? data.options : selectedActionParameters[count].options 
+              (data.options !== undefined && data.options !== null && data.options.length > 0) ||
+              (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0)) {
+				const parsedoptions = data.options !== undefined && data.options !== null && data.options.length > 0 ? data.options : selectedActionParameters[count].options 
 
               if (selectedActionParameters[count].value === "") {
                 // && selectedActionParameters[count].required) {
@@ -3833,7 +3909,7 @@ const ParsedAction = (props) => {
             }
 
             if (data.field_active === false) {
-              return null;
+              	return null;
             }
 
 
@@ -4212,11 +4288,17 @@ const ParsedAction = (props) => {
 
 			const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
 			const hasAutocomplete = data?.autocompleted === true
-
-	
 			if (data.variant === undefined || data.variant === null) {
 				data.variant = "STATIC_VALUE"
 			}
+
+			/*
+			if (data?.configuration === true) {
+				if (data?.name === "url" && authenticationType?.type === "oauth2-app") {
+					data.configuration = false
+				}
+			}
+			*/
 
             return (
               <div key={data.name}>

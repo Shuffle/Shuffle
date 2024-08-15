@@ -2361,7 +2361,7 @@ If you're interested, please let me know a time that works for you, or set up a 
     1: "cloud_sync",
     2: "priorities",
     3: "billing",
-    4: "branding",
+    4: "partner",
   };
 
   const setConfig = (event, inputValue) => {
@@ -3753,7 +3753,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             >
               <Tab label=<span>Edit Details</span> />
               <Tab label=<span>Limits & Cloud Sync</span> />
-              <Tab label=<span>Priorities</span> />
+              <Tab label=<span>Notifications</span> />
               <Tab label=<span>Billing & Stats</span> />
               <Tab disabled={!isCloud} label=<span>Partner</span> />
             </Tabs>
@@ -4383,9 +4383,11 @@ If you're interested, please let me know a time that works for you, or set up a 
                 <Select
                   labelId="user-ip-simple-select-label"
                   id="user-ip-simple-select"
-                  onChange={async (event) => {
+                  onChange={(event) => {
                     setIpSelected(event.target.value);
-                    await getLogs(event.target.value, userLogViewing.id);
+                    getLogs(event.target.value, userLogViewing.id);
+
+
                   }}
                 >
                   {(() => {
@@ -4410,6 +4412,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                   })()}
                 </Select>
               </FormControl>
+
               {logsLoading && ipSelected.length !== 0 ? (
                 <div
                   style={{
@@ -4425,7 +4428,38 @@ If you're interested, please let me know a time that works for you, or set up a 
               ) : null}
 
               <List>
-                {logs.map((data, index) => (
+                  <ListItem>
+                    <ListItemText
+                      primary={
+						"Timestamp"
+                      }
+                      style={{
+                        minWidth: 200,
+                        maxWidth: 200,
+                      }}
+                    />
+                    <ListItemText
+                      primary={"Referer"}
+                      style={{
+                        minWidth: 300,
+                        maxWidth: 300,
+                        overflow: "hidden",
+                      }}
+                    />
+                    <ListItemText
+                      primary={"URL"}
+                      style={{
+                        minWidth: 700,
+                        maxWidth: 700,
+                        overflow: "hidden",
+                        marginLeft: 10,
+                      }}
+                    />
+                  </ListItem>
+                {logs.map((data, index) => {
+					//console.log("LOG: ", data)
+
+					return (
                   // redirect user to logs
                   // using request id or trace id
                   <ListItem
@@ -4436,7 +4470,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                   >
                     <ListItemText
                       primary={new Date(
-                        data.start_time.seconds * 1000,
+                        data.timestamp * 1000,
                       ).toLocaleString("en-US", {
                         year: "numeric",
                         month: "2-digit",
@@ -4452,7 +4486,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                       }}
                     />
                     <ListItemText
-                      primary={data.referrer}
+                      primary={data.referer}
                       style={{
                         minWidth: 300,
                         maxWidth: 300,
@@ -4460,7 +4494,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                       }}
                     />
                     <ListItemText
-                      primary={data.resource}
+                      primary={data.url}
                       style={{
                         minWidth: 700,
                         maxWidth: 700,
@@ -4469,7 +4503,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                       }}
                     />
                   </ListItem>
-                ))}
+                )})}
               </List>
             </DialogContent>
           </Dialog>
@@ -4567,6 +4601,11 @@ If you're interested, please let me know a time that works for you, or set up a 
                       onClick={() => {
                         setLogsViewModal(true);
                         setUserLogViewing(data);
+
+						if (userLogViewing.login_info !== undefined && userLogViewing.login_info !== null && userLogViewing.login_info.length > 0) {
+							getLogs(userLogViewing.login_info[0].ip, userLogViewing.id)
+                    		setIpSelected(userLogViewing.login_info[0].ip);
+						}
                       }}
                     >
                       {data.username}
@@ -6077,7 +6116,7 @@ If you're interested, please let me know a time that works for you, or set up a 
     </div>
     ) : null;
 
-  const getLogs = async (ip, userId) => {
+  const getLogs = (ip, userId) => {
     setLogsLoading(true);
     console.log("logs loading: ", logsLoading);
     fetch(`${globalUrl}/api/v1/users/${userId}/audit?user_ip=${ip}`, {

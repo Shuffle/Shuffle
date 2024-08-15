@@ -319,9 +319,12 @@ export function SetJsonDotnotation(jsonInput, inputKey) {
 	return jsonInput;
 }
 
-export const green = "#86c142";
+//export const green = "#86c142";
+export const green = "#02CB70"
 export const yellow = "#FECC00";
-export const red = "#ff3632";
+//export const red = "#ff3632";
+export const red = "#F53434";
+export const grey = "#b0b0b0";
 
 export function removeParam(key, sourceURL) {
   if (sourceURL === undefined) {
@@ -673,10 +676,16 @@ const releaseToConnectLabel = "Release to Connect"
 
 	const loadAppConfig = (appId, select) => {
 		if (appId === undefined || appId === null || appId.length === 0) {
+			console.log("No appId to load")
+			return
+		}
+
+		if (appId === "integration") {
 			return
 		}
 
 		if (loadedApps.includes(appId)) {
+			console.log("App already loaded: ", appId)
 			return
 		}
 
@@ -699,8 +708,6 @@ const releaseToConnectLabel = "Release to Connect"
 			if (responseJson.success === true && responseJson.app !== undefined && responseJson.app !== null && responseJson.app.length > 0) {
 				// Base64 decode into json
 				const foundapp = JSON.parse(atob(responseJson.app))	
-				console.log("Checked app: ", foundapp)
-
 				const selectedAppActions = selectedApp.actions === undefined  || selectedApp.actions === null ? [] : selectedApp.actions
 				if (foundapp.actions !== undefined && foundapp.actions !== null && foundapp.actions.length > selectedAppActions.length) {
 
@@ -749,6 +756,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  if (selectedApp.actions === undefined || selectedApp.actions === null || selectedApp.actions.length > 1) {
 		  return
 	  } else {
+
 		if (selectedApp.id !== undefined && selectedApp.id !== null && selectedApp.id.length > 0) {
 			loadAppConfig(selectedApp.id, true)
 		}
@@ -1241,8 +1249,14 @@ const releaseToConnectLabel = "Release to Connect"
     })
       .then((response) => {
         if (response.status !== 200) {
-          console.log("Status not 200 for setting app auth :O!");
-        }
+            console.log("Status not 200 for setting app auth :O!");
+
+			if (response.status === 400) {
+				toast.error("Failed setting new auth. Please try again", {
+					"autoClose": true,
+				})
+			}
+		}
 
         return response.json();
       })
@@ -1252,8 +1266,6 @@ const releaseToConnectLabel = "Release to Connect"
           toast.error("Error: " + responseJson.reason, {
 			"autoClose": false,
 		  })
-
-
 
         } else {
 		  if (refresh === true) {
@@ -2153,6 +2165,7 @@ const releaseToConnectLabel = "Release to Connect"
       })
       .catch((error) => {
         setSavingState(0);
+		setExecutionRequestStarted(false)
         console.log("Save workflow error: ", error.toString());
 		toast.warn("Failed to save the workflow. Is the network down?")
       });
@@ -2346,6 +2359,7 @@ const releaseToConnectLabel = "Release to Connect"
           //toast(error.toString());
           setExecutionRequestStarted(false)
           console.log("Execute workflow err: ", error.toString());
+		  toast.warn("Failed to run the workflow. Is the network down?")
         });
     })
   };
@@ -5092,6 +5106,10 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 		*/
 
+		if (curapp !== undefined && curapp !== null && curapp.id !== undefined && curapp.id !== null && curapp.id.length > 0) { 
+			loadAppConfig(curapp.id, true)
+		}
+
         if (!curapp || curapp === undefined) {
           const tmpapp = {
             name: curaction.app_name,
@@ -5753,8 +5771,10 @@ const releaseToConnectLabel = "Release to Connect"
     setLastSaved(false);
     const edge = event.target.data();
 
-    //console.log("edge added: ", edge)
+    console.log("edge added: ", edge)
     if (edge.source === undefined && edge.target === undefined) {
+	  console.log("Edge added without source or target")
+
       return
     }
 
@@ -5768,8 +5788,9 @@ const releaseToConnectLabel = "Release to Connect"
     const sourcenode = cy.getElementById(edge.source)
     const destinationnode = cy.getElementById(edge.target)
     if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
+	  console.log("Source or destination node is undefined or null: ", sourcenode, destinationnode)
     } else {
-      //console.log("Edge added: Is it a trigger? If so, check if it already has a branch and remove it: ", sourcenode.data())
+      console.log("Edge added: Is it a trigger? If so, check if it already has a branch and remove it: ", sourcenode.data())
       if (sourcenode.data("type") === "TRIGGER") {
         if (sourcenode.data("app_name") !== "Shuffle Workflow" && sourcenode.data("app_name") !== "User Input") {
           setTimeout(() => {
@@ -5778,7 +5799,6 @@ const releaseToConnectLabel = "Release to Connect"
               (data) => data.data.source === edge.source && data.data.id !== edge.id
             )
 
-            console.log("Node: ", targetedge)
             if (targetedge !== -1) {
               event.target.remove()
 
@@ -5810,14 +5830,15 @@ const releaseToConnectLabel = "Release to Connect"
     );
     if (targetnode !== -1) {
       if (workflow.triggers[targetnode].app_name === "User Input" || workflow.triggers[targetnode].app_name === "Shuffle Workflow" || workflow.triggers[targetnode].app_name === "Shuffle Subflow") {
+		  console.log("User Input or Shuffle Workflow")
       } else {
-        toast("Can't have triggers as target of branch");
-        event.target.remove();
+        toast("Can't have triggers as target of branch")
+        event.target.remove()
       }
     }
 
     const eventTarget = event.target.target()
-    //console.log("BUTTON ADDED! Find parent from: ", eventTarget)
+    console.log("BUTTON ADDED! Find parent from: ", eventTarget)
     if (eventTarget.data("isButton") === true) {
       const parentNode = cy.getElementById(eventTarget.data("attachedTo"))
       event.target.remove()
@@ -5843,13 +5864,10 @@ const releaseToConnectLabel = "Release to Connect"
       }
     }
 
-    if (
-      eventTarget.data("isDescriptor") === true ||
-      eventTarget.data("type") === "COMMENT"
-    ) {
+    if (eventTarget.data("isDescriptor") === true || eventTarget.data("type") === "COMMENT") {
       console.log("Removing because of descriptor or comment")
-      event.target.remove();
-      return;
+      event.target.remove()
+      return
     }
 
     targetnode = -1;
@@ -5858,26 +5876,33 @@ const releaseToConnectLabel = "Release to Connect"
     // dest == source && source == dest
     // dest == dest && source == source
     // backend: check all children? to stop recursion
+	  //
     var found = false;
     for (let branchkey in workflow.branches) {
-      if (
-        workflow.branches[branchkey].destination_id === edge.source &&
-        workflow.branches[branchkey].source_id === edge.target
-      ) {
-        toast("A branch in the opposite direction already exists");
-        event.target.remove();
-        found = true;
-        break;
-      } else if (
-        workflow.branches[branchkey].destination_id === edge.target &&
-        workflow.branches[branchkey].source_id === edge.source
-      ) {
-        //toast("That branch already exists");
-        event.target.remove();
+      if (workflow.branches[branchkey].destination_id === edge.source && workflow.branches[branchkey].source_id === edge.target) {
+        toast("A branch in the opposite direction already exists")
+        event.target.remove()
+        found = true
+        break
+      } 
 
-        found = true;
-        break;
-      } else if (edge.target === workflow.start) {
+	  if (workflow.branches[branchkey].destination_id === edge.target && workflow.branches[branchkey].source_id === edge.source) {
+
+		console.log("That branch already exists: ", workflow.branches[branchkey])
+		const foundbranch = cy.getElementById(workflow.branches[branchkey].id)
+		if (foundbranch !== undefined && foundbranch !== null && foundbranch.data() !== undefined && foundbranch.data() !== null) {
+			console.log("Removing branch: ", foundbranch.data())
+
+			event.target.remove()
+
+			found = true
+			break
+		} else {
+			console.log("Old branch didn't exist afterall. Remove.")
+		}
+      } 
+
+	  if (edge.target === workflow.start) {
         targetnode = workflow.triggers.findIndex(
           (data) => data.id === edge.source
         );
@@ -5890,7 +5915,9 @@ const releaseToConnectLabel = "Release to Connect"
 
           found = true;
         }
-      } else if (edge.source === workflow.branches[branchkey].source_id) {
+      } 
+
+	  if (edge.source === workflow.branches[branchkey].source_id) {
         // FIXME: Verify multi-target for triggers
         // 1. Check if destination exists
         // 2. Check if source is a trigger
@@ -7522,7 +7549,7 @@ const releaseToConnectLabel = "Release to Connect"
 	// Reset cytoscape nodes and branches
 	if (cy !== undefined && cy !== null) {
 		if (inputworkflow.actions !== undefined && inputworkflow.actions !== null && inputworkflow.actions.length > 0) {
-			cy.remove('*')
+			//cy.remove('*')
 		}
 	}
 
@@ -9181,6 +9208,10 @@ const releaseToConnectLabel = "Release to Connect"
 		const actionIndex = startIndex < 0 ? 0 : startIndex
 
 		if (app.actions[actionIndex] === undefined || app.actions[actionIndex] === null) {
+			if (app.id !== undefined && app.id !== null) {
+				loadAppConfig(app.id, false) 
+			}
+
 			console.log("No actions found for app: ", app)
 			return
 		}
@@ -9409,7 +9440,7 @@ const releaseToConnectLabel = "Release to Connect"
 
               setHover(true)
 
-			  if (app.actions !== undefined && app.actions !== null && app.actions.length === 1) {
+			  if (app.actions !== undefined && (app.actions === null || app.actions.length === 1)) {
 			  	console.log("HOVERING: ", app.id)
 			  	loadAppConfig(app.id, false) 
 			  }
@@ -10295,6 +10326,10 @@ const releaseToConnectLabel = "Release to Connect"
     var handled = [];
     var results = [];
 
+	if (cy === undefined || cy === null) {
+		return []
+	}
+
     // maxiter = max amount of parent nodes to loop
     // also handles breaks if there are issues
     var iterations = 0;
@@ -10932,6 +10967,10 @@ const releaseToConnectLabel = "Release to Connect"
 				var checked = false
 				if (workflow.auth_groups !== undefined && workflow.auth_groups !== null) {
 					checked = workflow.auth_groups.includes(data.id)
+				}
+
+				if (data === undefined || data === null || data.app_auths === undefined || data.app_auths === null || data.app_auths.length === 0) {
+					return null
 				}
 
 				return (
@@ -12528,7 +12567,7 @@ const releaseToConnectLabel = "Release to Connect"
 		if (e.target.value.id !== workflow.id && e.target.value.id.length > 0 ) {
 			console.log("WORKFLOW: ", e.target.value);
 
-			const startnode = e.target.value.actions.find((action) => action.id === e.target.value.start);
+			const startnode = e?.target?.value?.actions?.find((action) => action.id === e.target.value.start);
 			
 
 			if (startnode !== undefined && startnode !== null) {
@@ -16643,8 +16682,16 @@ const releaseToConnectLabel = "Release to Connect"
 									}
 
 									const foundnode = cy.nodes().filter((node) => {
-										return node.data().label === word
+										const nodelabel = node.data("label")
+										if (nodelabel === undefined || nodelabel === null) {
+											return false
+										}
+
+										console.log("Node: ", nodelabel.toLowerCase(), "Word: ", word.toLowerCase())
+										return nodelabel.toLowerCase() === word.toLowerCase()
 									})
+
+									console.log("FOUND: ", foundnode)
 
 									if (foundnode === undefined || foundnode === null || foundnode.length === 0) {
 										return
@@ -18986,7 +19033,7 @@ const releaseToConnectLabel = "Release to Connect"
 
           ) : null}
 
-		  {executionData.workflow !== undefined && executionData.workflow !== null && executionData.status !== "EXECUTING" ? 
+		  {userdata.support === true && executionData.workflow !== undefined && executionData.workflow !== null && executionData.status !== "EXECUTING" ? 
 			  <div style={{marginTop: 5, marginBottom: 5, }}>
 				  <WorkflowValidationTimeline 
 			  		originalWorkflow={workflow}
@@ -19110,7 +19157,7 @@ const releaseToConnectLabel = "Release to Connect"
                 }
               }
 
-			  if (imgSrc.length === 0 && cy !== undefined && cy !== null) {
+			  if ((imgSrc === undefined || imgSrc === null || imgSrc.length === 0) && cy !== undefined && cy !== null) {
 				  const foundnode = cy.getElementById(data.action.id)
 				  if (foundnode !== undefined && foundnode !== null && foundnode.length > 0) {
 					  // FIXME: Find image from cytoscape action
@@ -20837,6 +20884,25 @@ const releaseToConnectLabel = "Release to Connect"
           />
           <div />
           {selectedApp.authentication.parameters.map((data, index) => {
+			// FIXME: Look for relevant fields in the action that may already be filled in with the same name
+			if (data.value === "" || data.value === null || data.value === undefined || data.name === "url") {
+				if (selectedAction !== undefined && selectedAction !== null && selectedAction.parameters !== undefined && selectedAction.parameters !== null) {
+					for (var fieldkey in selectedAction.parameters) {
+						const field = selectedAction.parameters[fieldkey]
+						if (field.name !== data.name) {
+							continue
+						}
+
+						if (field.value !== undefined && field.value !== null && field.value.length > 0) {
+							data.value = field.value
+							data.autocomplete = true
+							break
+						}
+					}
+				}
+			}
+
+
             return (
               <div key={index} style={{ marginTop: 10 }}>
                 <LockOpenIcon style={{ marginRight: 10 }} />
@@ -21617,8 +21683,8 @@ const releaseToConnectLabel = "Release to Connect"
 
 					// Should render if it's not the same as workflow.edited
 					console.log("Clicked revision: ", newrevision)
-  				setLastSaved(false)
-          setSelectedVersion(newrevision);
+  					setLastSaved(false)
+          			setSelectedVersion(newrevision);
 					setWorkflow(newrevision)
                 	setSelectedAction({});
   					setSelectedApp({})
@@ -21638,18 +21704,19 @@ const releaseToConnectLabel = "Release to Connect"
 						cy.removeListener("free");
 						cy.removeListener("cxttap");
 
-						//cy.remove('*')
   						setElements([])
-					}
 
-          // Remove all edges
+						cy.remove('*')
 						cy.edges().remove()
 						cy.nodes().remove()
+					}
+
 
 					// Remove all cy nodes
 					setTimeout(() => {
+						//toast("Running setupgraph with new revision. Actions: " + newrevision.actions.length)
   						setupGraph(newrevision) 
-					}, 100)
+					}, 250)
 
 
 					// Re-adding cytoscape triggers

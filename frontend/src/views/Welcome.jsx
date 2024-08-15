@@ -32,7 +32,7 @@ const Welcome = (props) => {
     const [inputUsecase, setInputUsecase] = useState({});
   	const [frameworkData, setFrameworkData] = useState(undefined);
   	const [discoveryWrapper, setDiscoveryWrapper] = useState(undefined);
-    const [activeStep, setActiveStep] = React.useState(1);
+    const [activeStep, setActiveStep] = React.useState(0);
   	const [apps, setApps] = React.useState([]);
 	const [defaultSearch, setDefaultSearch] = React.useState("")
 	const [selectionOpen, setSelectionOpen] = React.useState(false)
@@ -285,6 +285,9 @@ const Welcome = (props) => {
 					}
 
 					setActiveStep(foundTab-1)
+
+					//setRenderDone(
+
 				}
 			}
 		}, [])
@@ -398,6 +401,7 @@ const Welcome = (props) => {
 												discoveryWrapper={discoveryWrapper}
 												setDiscoveryWrapper={setDiscoveryWrapper}
 												appFramework={frameworkData}
+												setAppFramework={setFrameworkData}
 												getFramework={getFramework}
 												steps={steps}
 												skipped={skipped}
@@ -462,7 +466,7 @@ const Welcome = (props) => {
 											OR
 										</Typography> */}
 									</div>
-									<Card style={paperObject} onClick={() => {
+									<Card disabled style={paperObject} onClick={() => {
 										if (isCloud) {
 												ReactGA.event({
 													category: "welcome",

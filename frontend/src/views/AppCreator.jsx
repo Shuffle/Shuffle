@@ -228,6 +228,8 @@ const parseCurl = (s) => {
 };
 
 // Basically CRUD for each category + special
+// These are already tracked in the shuffle/shuffle-shared/blobs.go file
+// as backend should be used for managing this long-term
 export const appCategories = [
 	{
 		"name": "Communication",

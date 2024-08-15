@@ -64,6 +64,7 @@ const WelcomeForm = (props) => {
     discoveryWrapper,
     setDiscoveryWrapper,
     appFramework,
+	setAppFramework,
     getFramework,
     activeStep,
     setActiveStep,
@@ -435,20 +436,6 @@ const WelcomeForm = (props) => {
     setSkipped(newSkipped);
   };
 
-  const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
-
-    if (activeStep === 2) {
-      setDiscoveryWrapper({});
-
-      if (getFramework !== undefined) {
-        getFramework();
-      }
-      navigate("/welcome?tab=2");
-    } else if (activeStep === 1) {
-      navigate("/welcome?tab=1");
-    }
-  };
 
   const handleReset = () => {
     setActiveStep(0);
@@ -645,6 +632,7 @@ const WelcomeForm = (props) => {
             globalUrl={globalUrl}
             userdata={userdata}
             appFramework={appFramework}
+			setAppFramework={setAppFramework}
             setActiveStep={setActiveStep}
             defaultSearch={defaultSearch}
             setDefaultSearch={setDefaultSearch}
