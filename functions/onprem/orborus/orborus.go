@@ -2697,7 +2697,7 @@ func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway 
     }
 
     networkCreate := types.NetworkCreate{
-        CheckDuplicate: true,
+        //CheckDuplicate: true,
         Driver:         "bridge",
         IPAM:           ipamConfig,
     }
