@@ -6,10 +6,13 @@ import {
   Switch,
   Typography,
   Button,
+  CircularProgress, 
+  Paper, 
 } from "@mui/material";
+
 import { toast } from "react-toastify";
-import RuleCard from "./RuleCard";
-import CircularProgress from "@material-ui/core/CircularProgress";
+import theme from '../theme.jsx';
+import DetectionRuleCard from "../components/DetectionRuleCard.jsx";
 
 const handleDirectoryChange = (folderDisabled, setFolderDisabled, globalUrl, isTenzirActive) => {
 
@@ -17,8 +20,9 @@ const handleDirectoryChange = (folderDisabled, setFolderDisabled, globalUrl, isT
     toast("connect to siem first for global enable/disable to work");
     return;
   }
+
   const action = folderDisabled ? "enable_folder" : "disable_folder";
-  const url = `${globalUrl}/api/v1/files/detection/${action}`;
+  const url = `${globalUrl}/api/v1/detection/${action}`;
 
   fetch(url, {
     method: "PUT",
@@ -43,13 +47,8 @@ const handleDirectoryChange = (folderDisabled, setFolderDisabled, globalUrl, isT
     });
 };
 
-const Detection = ({
-  globalUrl,
-  ruleInfo,
-  folderDisabled,
-  setFolderDisabled,
-  isTenzirActive,
-}) => {
+const Detection = (props)  => {
+  const { globalUrl, ruleInfo, folderDisabled, setFolderDisabled, isTenzirActive } = props;
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -94,8 +93,16 @@ const Detection = ({
   );
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Box sx={{ border: "1px solid #ccc", borderRadius: 2, p: 3 }}>
+    <Container>
+      <Paper
+	    style={{
+		  marginTop: 50, 
+	  	  width: "100%", 
+		  padding: 50, 
+	  	  backgroundColor: theme.palette.backgroundColor,
+		  borderRadius: theme.palette.borderRadius,
+	    }}
+	  >
         <Box
           sx={{
             display: "flex",
@@ -108,13 +115,14 @@ const Detection = ({
             Sigma Detection Rules
           </Typography>
           <Button
-      variant="contained"
-      onClick={handleConnectClick}
-      disabled={loading} // Disable the button while loading
-      style={{ backgroundColor: isTenzirActive ? "green" : "red"}}
-    >
-      {loading ? <CircularProgress size={24} /> : isTenzirActive ? "Connected to siem" : "Connect to siem"}
-    </Button>
+			  variant="contained"
+			  onClick={handleConnectClick}
+			  disabled={loading} // Disable the button while loading
+	  		  color={isTenzirActive ? "primary" : "secondary"}
+			  style={{ }}
+		  >
+      		{loading ? <CircularProgress size={24} /> : isTenzirActive ? "Connected to siem" : "Connect to siem"}
+    	  </Button>
         </Box>
         <Box
           sx={{
@@ -172,25 +180,29 @@ const Detection = ({
             height: "500px",
             width: "100%",
             overflowY: "auto",
-            border: "1px solid #ddd",
             p: 1,
           }}
         >
-          {filteredRules?.length > 0 &&
-            filteredRules.map((card) => (
-              <RuleCard
-                key={card.file_id}
-                ruleName={card.title}
-                description={card.description}
-                file_id={card.file_id}
-                globalUrl={globalUrl}
-                folderDisabled={folderDisabled}
-                isTenzirActive={isTenzirActive}
-                {...card}
-              />
-            ))}
+          {filteredRules?.length > 0 ?
+			  filteredRules.map((card) => {
+				console.log("RULE CARD: ", card);
+
+				return (
+				  <DetectionRuleCard
+					key={card.file_id}
+					ruleName={card.title}
+					description={card.description}
+					file_id={card.file_id}
+					globalUrl={globalUrl}
+					folderDisabled={folderDisabled}
+					isTenzirActive={isTenzirActive}
+					{...card}
+				  />
+				)
+			  }) 
+			: null } 
         </Box>
-      </Box>
+      </Paper>
     </Container>
   );
 };

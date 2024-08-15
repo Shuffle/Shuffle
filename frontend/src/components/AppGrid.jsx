@@ -299,7 +299,7 @@ const AppGrid = (props) => {
 
     useEffect(() => {
       var baseurl = globalUrl;
-      fetch(baseurl + "/api/v1/getinfo", {
+      fetch(baseurl + "/api/v1/me", {
         credentials: "include",
         headers: {
           'Content-Type': 'application/json',

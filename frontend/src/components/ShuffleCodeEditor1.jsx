@@ -977,7 +977,11 @@ const CodeEditor = (props) => {
 			}}
 			PaperComponent={PaperComponent}
 			PaperProps={{
-				onClick: () => setActiveDialog("codeeditor"),
+				onClick: () => {
+					if (setActiveDialog !== undefined) {
+						setActiveDialog("codeeditor")
+					}
+				},
 				style: {
 					// zIndex: 12501,
 					pointerEvents: "auto",

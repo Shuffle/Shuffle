@@ -18,11 +18,13 @@ const theme = createTheme(adaptV4Theme({
       secondary: "rgba(255,255,255,0.7)",
     },
     type: "dark",
-    inputColor: "rgba(39,41,45,1)",
     //inputColor: "#383B40",
+    
+	inputColor: "rgba(39,41,45,1)",
     surfaceColor: "#27292d",
     platformColor: "#1c1c1d",
     backgroundColor: "#1a1a1a",
+
     green: "#5cc879",
     borderRadius: 10,
     defaultBorder: "1px solid rgba(255,255,255,0.3)",

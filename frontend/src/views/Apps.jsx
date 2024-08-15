@@ -1533,6 +1533,8 @@ const Apps = (props) => {
 
 		const [hover, setHover] = React.useState(false);
 
+		const makeFancy = text?.includes("Generate") 
+
 		return (
 			<Paper 
 				onMouseEnter={() => setHover(true)}
@@ -1551,6 +1553,8 @@ const Apps = (props) => {
 					maxHeight: 150, 
 
 					borderRadius: theme.palette.borderRadius,
+					//borderImage: makeFancy ? "linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1" : null,
+
 				}}
 			>
 				{icon} 

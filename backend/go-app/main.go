@@ -2171,46 +2171,6 @@ func trackSigmaRules(ctx context.Context, orgId string, jsonList []map[string]in
 	}
 }
 
-func handleTenzirHealthUpdate(resp http.ResponseWriter, request *http.Request) {
-	if request.Method != "POST" {
-		request.Method = "POST"
-	}
-
-	type HealthUpdate struct {
-		Status string `json:"status"`
-	}
-
-	var healthUpdate HealthUpdate
-	err := json.NewDecoder(request.Body).Decode(&healthUpdate)
-	if err != nil {
-		resp.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(resp, "Failed to decode JSON: %v", err)
-		return
-	}
-	ctx := context.Background()
-	status := healthUpdate.Status
-
-	result, err := shuffle.GetDisabledRules(ctx)
-	if (err != nil && err.Error() == "rules doesn't exist") || err == nil {
-		result.IsTenzirActive = status
-		result.LastActive = time.Now().Unix()
-
-		err = shuffle.StoreDisabledRules(ctx, *result)
-		if err != nil {
-			resp.WriteHeader(500)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-		return
-	}
-	resp.WriteHeader(500)
-	resp.Write([]byte(`{"success": false}`))
-	return
-}
-
 func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 	data, err := json.Marshal(action)
 	if err != nil {
@@ -5038,6 +4998,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/getinfo", handleInfo).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/me", handleInfo).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/getsettings", shuffle.HandleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/generateapikey", shuffle.HandleApiGeneration).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
@@ -5219,12 +5180,14 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleGetFileMeta).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleDeleteFile).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/files", shuffle.HandleGetFiles).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/files/detection/sigma_rules", shuffle.HandleGetSigmaRules).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/files/detection/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/files/detection/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
+
+
+	r.HandleFunc("/api/v1/detection/sigma_rules", shuffle.HandleGetSigmaRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detection/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/detection/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
 
 	r.HandleFunc("/api/v1/detection/siem/connect", shuffle.HandleConnectSiem).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/detection/siem/node_health", handleTenzirHealthUpdate).Methods("POST","OPTIONS")
+	r.HandleFunc("/api/v1/detection/siem/node_health", shuffle.HandleTenzirHealthUpdate).Methods("POST","OPTIONS")
 	r.HandleFunc("/api/v1/detection/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET","OPTIONS")
 	r.HandleFunc("/api/v1/detection/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST","OPTIONS")
 

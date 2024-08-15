@@ -9,12 +9,12 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import { toast } from "react-toastify";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
+import theme from '../theme.jsx';
 
 const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, isTenzirActive, ...otherProps }) => {
   const [openCodeEditor, setOpenCodeEditor] = React.useState(false);
   const [fileData, setFileData] = React.useState("");
   const [isEnabled, setIsEnabled] = React.useState(otherProps.is_enabled);
-
   const isCloud = ["localhost:3002", "shuffler.io"].includes(window.location.host);
 
   const handleSwitchChange = (event) => {
@@ -50,7 +50,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
       })
       .then((responseJson) => {
         if (responseJson.success === true) {
-          toast("Successfully updated file");
+          toast("Successfully updated rule");
         }
       })
       .catch((error) => {
@@ -59,7 +59,10 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
   };
 
   return (
-    <Card variant="outlined" sx={{ mb: 2 }}>
+    <Card style={{
+		borderRadius: theme.palette.borderRadius,
+		minHeight: 100, 
+	}}>
       <CardContent>
         <div
           style={{
@@ -67,8 +70,10 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: 16,
+		color: "white",
           }}
         >
+	  	  <h1> HELO</h1>
           <Typography variant="h6">{ruleName}</Typography>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <IconButton onClick={() => openEditBar(file_id, setOpenCodeEditor, setFileData, globalUrl)}>
