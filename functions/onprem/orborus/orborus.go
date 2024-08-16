@@ -2030,7 +2030,7 @@ func main() {
 
 					}
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-					
+
 				}  else if incRequest.Type == "CATEGORY_UPDATE" {
 
 					err := deployTenzirNode()
@@ -2087,7 +2087,7 @@ func main() {
 
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 			    }  else if incRequest.Type == "START_TENZIR" {
-
+					log.Printf("[INFO] Got job to start tenzir")
 					err := deployTenzirNode()
 					if err != nil{
 						log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
