@@ -101,8 +101,9 @@ var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
 var memcached = os.Getenv("SHUFFLE_MEMCACHED")
-var tenzirUrl = os.Getenv("SHUFFLE_TENZIR_URL")
 var apiKey = os.Getenv("AUTH_FOR_ORBORUS")
+
+var pipelineUrl = os.Getenv("SHUFFLE_PIPELINE_URL")
 
 var executionIds = []string{}
 var namespacemade = false // For K8s
@@ -1807,9 +1808,22 @@ func main() {
 		log.Printf("[WARNING] Defaulting to environment name %s. Set environment variable ENVIRONMENT_NAME to change. This should be the same as in the frontend action.", environment)
 	}
 
-	if tenzirUrl == "" {
-		tenzirUrl = "http://localhost:5160"
-		log.Printf("[WARNING] SHUFFLE_TENZIR_URL not set, falling back to default URL: %s",tenzirUrl)
+	if pipelineUrl == "" {
+		pipelineUrl = "http://localhost:5160"
+
+		// Find the IP in baseUrl. Base format is http://<ip>:<port>
+		if baseUrl != "" {
+			urlSplit := strings.Split(baseUrl, "://")
+			if len(urlSplit) > 1 {
+				// Find the IP
+				ipSplit := strings.Split(urlSplit[1], ":")
+				if len(ipSplit) > 0 {
+					pipelineUrl = fmt.Sprintf("http://%s:5160", ipSplit[0])
+				}
+			}
+		}
+
+		log.Printf("[WARNING] SHUFFLE_PIPELINE_URL not set, falling back to default URL: %s. If BASE_URL is set, we use the external IP for that",pipelineUrl)
 	}
 	
 
@@ -2035,7 +2049,7 @@ func main() {
 
 					err := deployTenzirNode()
 					if err != nil{
-						log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+						log.Printf("[ERROR] Failed to deploy CATEGORY UPDATE, reason: %s", err)
 					}
 				
 					err = handleFileCategoryChange()
@@ -2049,7 +2063,7 @@ func main() {
 					  fileName := incRequest.ExecutionArgument
 					  err := deployTenzirNode()
 					  if err != nil{
-						  log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+						  log.Printf("[ERROR] Failed to deploy DISABLE SIGMA FILE, reason: %s", err)
 					  }
 				  
 					  err = disableRule(fileName)
@@ -2063,7 +2077,7 @@ func main() {
 					fileName := incRequest.ExecutionArgument
 					err := deployTenzirNode()
 					if err != nil{
-						log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+						log.Printf("[ERROR] Failed to deploy ENABLE SIGMA FILE, reason: %s", err)
 					}
 				
 					err = enableRule(fileName)
@@ -2074,10 +2088,9 @@ func main() {
 				  toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 
 			  } else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
-
 					err := deployTenzirNode()
 					if err != nil{
-						log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+						log.Printf("[ERROR] Failed to deploy DISABLE SIGMA FOLDER, reason: %s", err)
 					}
 				
 					err = removeAllFiles()
@@ -2090,7 +2103,7 @@ func main() {
 					log.Printf("[INFO] Got job to start tenzir")
 					err := deployTenzirNode()
 					if err != nil{
-						log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+						log.Printf("[ERROR] Failed to deploy the pipeline, reason: %s", err)
 					}
 
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
@@ -2446,7 +2459,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 
 	err := deployTenzirNode()
 	if err != nil {
-		log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
+		log.Printf("[ERROR] Failed to deploy the pipeline, reason: %s", err)
 		return err
 	}
 
@@ -2557,7 +2570,7 @@ func deployTenzirNode() error {
 			// Check if image exists
 			_, _, err := dockercli.ImageInspectWithRaw(ctx, imageName)
 			if dockerclient.IsErrNotFound(err) {
-				log.Printf("[DEBUG] pulling image %s", imageName)
+				log.Printf("[DEBUG] Pulling image %s", imageName)
 				pullOptions := image.PullOptions{}
 				out, err := dockercli.ImagePull(ctx, imageName, pullOptions)
 				if err != nil {
@@ -2713,7 +2726,7 @@ func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway 
 func checkTenzirNode() error {
     retries := 5
     retryInterval := 3 * time.Second
-	url := fmt.Sprintf("%s/api/v0/ping",tenzirUrl)
+	url := fmt.Sprintf("%s/api/v0/ping",pipelineUrl)
 	forwardMethod := "POST"
 
     client := http.Client{}
@@ -2739,7 +2752,7 @@ func createPipeline(command, identifier string) (string, error) {
 	toBeDeleted := false
 	pipelineId, err := searchPipeline(identifier)
 
-	url := fmt.Sprintf("%s/api/v0/pipeline/create", tenzirUrl)
+	url := fmt.Sprintf("%s/api/v0/pipeline/create", pipelineUrl)
 	forwardMethod := "POST"
 
 	if err != nil {
@@ -2849,7 +2862,7 @@ func createPipeline(command, identifier string) (string, error) {
 
 func updatePipelineState(command, pipelineId, action string) (string, error) {
 
-	url := fmt.Sprintf("%s/api/v0/pipeline/update", tenzirUrl)
+	url := fmt.Sprintf("%s/api/v0/pipeline/update", pipelineUrl)
 	forwardMethod := "POST"
 
 	requestBody := map[string]interface{}{
@@ -2919,7 +2932,7 @@ func deletePipeline(pipelineId string) error {
 		"id": pipelineId,
 	}
 
-	url := fmt.Sprintf("%s/api/v0/pipeline/delete", tenzirUrl)
+	url := fmt.Sprintf("%s/api/v0/pipeline/delete", pipelineUrl)
 	forwardMethod := "POST"
 
 	requestBodyJSON, err := json.Marshal(requestBody)
@@ -2967,7 +2980,7 @@ func searchPipeline(identifier string) (string, error) {
 
 	var reqBody []byte
 
-	url := fmt.Sprintf("%s/api/v0/pipeline/list", tenzirUrl)
+	url := fmt.Sprintf("%s/api/v0/pipeline/list", pipelineUrl)
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {

@@ -685,6 +685,7 @@ class AppBase:
         if not "User-Agent" in headers:
             headers["User-Agent"] = "Shuffle App"
 
+        self.logger.info(f"[DEBUG][{self.current_execution_id}] Starting to send result to {url}")
         try:
             finished = False
             ret = {}
@@ -702,8 +703,8 @@ class AppBase:
                             proxies=self.proxy_config,
                     )
 
-                    #self.logger.info(f"""[DEBUG] Successful result request: Status= {ret.status_code} (break on 200/201) & Action status: {action_result["status"]}. Response= {ret.text}""")
                     if ret.status_code == 200 or ret.status_code == 201:
+                        self.logger.info(f"[DEBUG][{self.current_execution_id}] Successful send_result request: Status= {ret.status_code} & Action status: {action_result['status']}. Response= {ret.text}") 
                         finished = True
                         break
                     else:
@@ -1258,6 +1259,7 @@ class AppBase:
             #    self.send_result(action_result, headers, stream_path)
             #    return
 
+            self.logger.info(f"[DEBUG][{self.current_execution_id}] Pre function with {len(param_multiplier)} multipliers")
             for subparams in param_multiplier:
                 #self.logger.info(f"SUBPARAMS IN MULTI: {subparams}")
                 tmp = ""
@@ -1354,6 +1356,8 @@ class AppBase:
             if len(ret) == 1:
                 #ret = ret[0]
                 self.logger.info("[DEBUG] DONT make list of 1 into 0!!")
+
+        self.logger.info(f"[DEBUG][%s] Done with execution recursion %d times" % (self.current_execution_id, len(param_multiplier)))
 
         #self.logger.info("Return from execution: %s" % ret)
         if ret == None:
@@ -1923,14 +1927,14 @@ class AppBase:
             """
             Generate strings contained in nested (), indexing i = level
             """
-            if len(re.findall("\(", string)) == len(re.findall("\)", string)):
+            if len(re.findall('(', string)) == len(re.findall(')', string)):
                 LeftRightIndex = [x for x in zip(
-                [Left.start()+1 for Left in re.finditer('\(', string)], 
-                reversed([Right.start() for Right in re.finditer('\)', string)]))]
+                [Left.start()+1 for Left in re.finditer('(', string)], 
+                reversed([Right.start() for Right in re.finditer(')', string)]))]
         
-            elif len(re.findall("\(", string)) > len(re.findall("\)", string)):
+            elif len(re.findall('(', string)) > len(re.findall(')', string)):
                 return parse_nested_param(string + ')', level)
-            elif len(re.findall("\(", string)) < len(re.findall("\)", string)):
+            elif len(re.findall('(', string)) < len(re.findall('"', string)):
                 return parse_nested_param('(' + string, level)
             else:
                 return 'Failed to parse params'
@@ -3388,7 +3392,6 @@ class AppBase:
             elif callable(func):
                 try:
                     if len(action["parameters"]) < 1:
-                        #result = await func()
                         result = func()
                     else:
                         # Potentially parse JSON here
