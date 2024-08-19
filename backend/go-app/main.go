@@ -36,6 +36,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+    gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -394,6 +395,52 @@ func checkUsername(Username string) error {
 	}
 
 	return nil
+}
+
+func isGitNoProxy(rawURL string) bool {
+    noProxy := os.Getenv("NO_PROXY")
+    if noProxy == "" {
+        return false
+    }
+    
+    if noProxy == "*" {
+        return true
+    }
+
+    noProxyList := strings.Split(noProxy, ",")
+    parsedURL, err := url.Parse(rawURL)
+    if err != nil {
+        return false
+    }
+    host := parsedURL.Hostname()
+
+    for _,value := range noProxyList {
+        value = strings.TrimSpace(value)
+
+        if host == value {
+            return true 
+        }
+        if strings.HasPrefix(value, "*.") && strings.HasSuffix(host, value[2:]){
+            return true
+        }
+    }
+    return false
+}
+
+func checkGitProxy(cloneOptions *git.CloneOptions) *git.CloneOptions {
+    if os.Getenv("HTTP_PROXY") != "" && !isGitNoProxy(cloneOptions.URL){
+        cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+		    URL: os.Getenv("HTTP_PROXY"),
+	    }
+    }
+
+    if os.Getenv("HTTPS_PROXY") != "" && !isGitNoProxy(cloneOptions.URL) {
+        cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+		    URL: os.Getenv("HTTPS_PROXY"),
+	    }
+    }
+
+    return cloneOptions
 }
 
 func createNewUser(username, password, role, apikey string, org shuffle.OrgMini) error {
@@ -4201,6 +4248,8 @@ func runInitEs(ctx context.Context) {
 			}
 		}
 
+        cloneOptions = checkGitProxy(cloneOptions)
+
 		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
 		if len(branch) > 0 && branch != "master" && branch != "main" {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
@@ -4245,6 +4294,9 @@ func runInitEs(ctx context.Context) {
 	cloneOptions := &git.CloneOptions{
 		URL: apis,
 	}
+
+    cloneOptions = checkGitProxy(cloneOptions)
+
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
 		log.Printf("[ERROR] Failed loading repo %s into memory: %s", apis, err)
