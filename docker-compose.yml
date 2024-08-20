@@ -45,7 +45,8 @@ services:
       - SHUFFLE_APP_SDK_TIMEOUT=300
       - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=7 # The amount of concurrent executions Orborus can handle. 
       #- DOCKER_HOST=tcp://docker-socket-proxy:2375
-      - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
+      - ENVIRONMENT_NAME=Shuffle
+      - ORG_ID=Shuffle
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
       - DOCKER_API_VERSION=1.40
       - HTTP_PROXY=${HTTP_PROXY}
@@ -53,6 +54,7 @@ services:
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
       - SHUFFLE_STATS_DISABLED=true
+    env_file: .env
     restart: unless-stopped
     security_opt:
       - seccomp:unconfined
