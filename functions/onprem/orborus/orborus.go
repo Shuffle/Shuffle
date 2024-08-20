@@ -9,13 +9,13 @@ package main
 // Ingress network may not exist (default)
 
 import (
-	"github.com/shuffle/shuffle-shared"
-    "archive/zip"
+	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/shuffle/shuffle-shared"
 	"io"
 	"io/ioutil"
 	"log"
@@ -24,12 +24,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"path/filepath"
 
 	//"os/signal"
 	//"syscall"
@@ -179,15 +179,14 @@ func getThisContainerId() {
 	log.Printf(`[INFO] Started with containerId "%s"`, containerId)
 }
 
-
 func skipCheckInCleanup(name string) bool {
-	return strings.HasPrefix(name, "backend") || 
+	return strings.HasPrefix(name, "backend") ||
 		strings.HasPrefix(name, "shuffle-backend") ||
-		strings.HasPrefix(name, "frontend") || 
+		strings.HasPrefix(name, "frontend") ||
 		strings.HasPrefix(name, "shuffle-frontend") ||
-		strings.HasPrefix(name, "orborus") || 
+		strings.HasPrefix(name, "orborus") ||
 		strings.HasPrefix(name, "shuffle-orborus") ||
-		strings.HasPrefix(name, "opensearch") || 
+		strings.HasPrefix(name, "opensearch") ||
 		strings.HasPrefix(name, "shuffle-opensearch") ||
 		strings.HasPrefix(name, "memcached") ||
 		strings.HasPrefix(name, "shuffle-memcached")
@@ -256,7 +255,7 @@ func cleanupExistingNodes(ctx context.Context) error {
 		for _, deployment := range deployments.Items {
 			if skipCheckInCleanup(deployment.Name) {
 				continue
-			}			
+			}
 
 			err := clientset.AppsV1().Deployments(kubernetesNamespace).Delete(context.Background(), deployment.Name, metav1.DeleteOptions{})
 			if err != nil {
@@ -265,7 +264,7 @@ func cleanupExistingNodes(ctx context.Context) error {
 		}
 
 		log.Printf("[INFO] Cleaned up all pods and services in namespace %s. Waiting 10 seconds for cleanup to reflect", kubernetesNamespace)
-		
+
 		time.Sleep(10 * time.Second)
 
 		return nil
@@ -865,7 +864,6 @@ func fixk8sRoles() {
 	}
 }
 
-
 func int32Ptr(i int32) *int32 { return &i }
 
 func deployK8sWorker(image string, identifier string, env []string) error {
@@ -1060,7 +1058,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 			log.Printf("[ERROR] %s is not a valid number for replication", replicaNumberStr)
 		} else {
 			replicaNumber = tmpInt
-		
+
 		}
 	}
 
@@ -1823,9 +1821,8 @@ func main() {
 			}
 		}
 
-		log.Printf("[WARNING] SHUFFLE_PIPELINE_URL not set, falling back to default URL: %s. If BASE_URL is set, we use the external IP for that",pipelineUrl)
+		log.Printf("[WARNING] SHUFFLE_PIPELINE_URL not set, falling back to default URL: %s. If BASE_URL is set, we use the external IP for that", pipelineUrl)
 	}
-	
 
 	// FIXME - during init, BUILD and/or LOAD worker and app_sdk
 	// Build/load app_sdk so it can be loaded as 127.0.0.1:5000/walkoff_app_sdk
@@ -2030,9 +2027,9 @@ func main() {
 					err := handlePipeline(incRequest)
 					if err != nil {
 						log.Printf("[ERROR] Failed handling pipeline: %s", err)
+					} else {
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
-
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 				} else if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
 					log.Printf("[INFO] Should delete -> download new image %#v", incRequest.ExecutionArgument)
 
@@ -2041,73 +2038,79 @@ func main() {
 						if err != nil {
 							log.Printf("[ERROR] Failed handling image delete -> download: %s", err)
 						}
-
 					}
+
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 
-				}  else if incRequest.Type == "CATEGORY_UPDATE" {
+				} else if incRequest.Type == "CATEGORY_UPDATE" {
 
 					err := deployTenzirNode()
-					if err != nil{
+					if err != nil {
 						log.Printf("[ERROR] Failed to deploy CATEGORY UPDATE, reason: %s", err)
+					} else {
+						continue
 					}
-				
+
 					err = handleFileCategoryChange()
 					if err != nil {
-					 log.Printf("[ERROR] Failed to download the file category: %s", err)
+						log.Printf("[ERROR] Failed to download the file category: %s", err)
+					} else {
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
 
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+				} else if incRequest.Type == "DISABLE_SIGMA_FILE" {
+					fileName := incRequest.ExecutionArgument
+					err := deployTenzirNode()
+					if err != nil {
+						log.Printf("[ERROR] Failed to deploy DISABLE SIGMA FILE, reason: %s", err)
+					} else {
+						continue
+					}
 
-			    } else if incRequest.Type == "DISABLE_SIGMA_FILE" {
-					  fileName := incRequest.ExecutionArgument
-					  err := deployTenzirNode()
-					  if err != nil{
-						  log.Printf("[ERROR] Failed to deploy DISABLE SIGMA FILE, reason: %s", err)
-					  }
-				  
-					  err = disableRule(fileName)
-					  if err != nil {
+					err = disableRule(fileName)
+					if err != nil {
 						log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
+					} else {
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
-
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 
 				} else if incRequest.Type == "ENABLE_SIGMA_FILE" {
 					fileName := incRequest.ExecutionArgument
 					err := deployTenzirNode()
-					if err != nil{
+					if err != nil {
 						log.Printf("[ERROR] Failed to deploy ENABLE SIGMA FILE, reason: %s", err)
+					} else {
+						continue
 					}
-				
+					
 					err = enableRule(fileName)
 					if err != nil {
-					  log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
-				  }
+						log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
+					} else {
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+					}
 
-				  toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-
-			  } else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
+				} else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
 					err := deployTenzirNode()
-					if err != nil{
+					if err != nil {
 						log.Printf("[ERROR] Failed to deploy DISABLE SIGMA FOLDER, reason: %s", err)
 					}
-				
+
 					err = removeAllFiles()
 					if err != nil {
-					 log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
+						log.Printf("[ERROR] Failed to disable the sigma rules: %s", err)
+					} else {
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
-
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-			    }  else if incRequest.Type == "START_TENZIR" {
+				} else if incRequest.Type == "START_TENZIR" {
 					log.Printf("[INFO] Got job to start tenzir")
 					err := deployTenzirNode()
-					if err != nil{
+					if err != nil {
 						log.Printf("[ERROR] Failed to deploy the pipeline, reason: %s", err)
+					} else {
+						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
 
-					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-				
 				} else {
 					newrequests = append(newrequests, incRequest)
 				}
@@ -2553,19 +2556,19 @@ func deployTenzirNode() error {
 		return nil
 	}
 
-    containerInfo, err := dockercli.ContainerInspect(ctx, containerName)
-    if err != nil {
-        if dockerclient.IsErrNotFound(err) {
-            // Create network if it doesn't exist
-            networkName := "tenzir-network"
-            networkSubnet := "192.168.1.0/24"
-            networkGateway := "192.168.1.1"
+	containerInfo, err := dockercli.ContainerInspect(ctx, containerName)
+	if err != nil {
+		if dockerclient.IsErrNotFound(err) {
+			// Create network if it doesn't exist
+			networkName := "tenzir-network"
+			networkSubnet := "192.168.1.0/24"
+			networkGateway := "192.168.1.1"
 
-            err = createNetworkIfNotExists(ctx, networkName, networkSubnet, networkGateway)
-            if err != nil {
-                log.Printf("[ERROR] Failed to create network: %s", err)
-                return err
-            }
+			err = createNetworkIfNotExists(ctx, networkName, networkSubnet, networkGateway)
+			if err != nil {
+				log.Printf("[ERROR] Failed to create network: %s", err)
+				return err
+			}
 
 			// Check if image exists
 			_, _, err := dockercli.ImageInspectWithRaw(ctx, imageName)
@@ -2641,34 +2644,34 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		Entrypoint:   []string{containerName},
 	}
 
-    hostConfig := &container.HostConfig{
-        PortBindings: nat.PortMap{
-            "5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
-        },
-        Mounts: []mount.Mount{
-            {
-                Type:   mount.TypeVolume,
-                Source: containerName,
-                Target: "/var/lib/tenzir/",
-            },
-        },
-        VolumeDriver: "local",
-    }
+	hostConfig := &container.HostConfig{
+		PortBindings: nat.PortMap{
+			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
+		},
+		Mounts: []mount.Mount{
+			{
+				Type:   mount.TypeVolume,
+				Source: containerName,
+				Target: "/var/lib/tenzir/",
+			},
+		},
+		VolumeDriver: "local",
+	}
 
-    networkingConfig := &network.NetworkingConfig{
-        EndpointsConfig: map[string]*network.EndpointSettings{
-            "tenzir-network": {
-                IPAMConfig: &network.EndpointIPAMConfig{
-                    IPv4Address: "192.168.1.100",
-                },
-            },
-        },
-    }
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			"tenzir-network": {
+				IPAMConfig: &network.EndpointIPAMConfig{
+					IPv4Address: "192.168.1.100",
+				},
+			},
+		},
+	}
 
-    _, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
-    if err != nil {
-        return err
-    }
+	_, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
+	if err != nil {
+		return err
+	}
 
 	err = dockercli.ContainerStart(ctx, containerName, containerStartOptions)
 	if err != nil {
@@ -2677,74 +2680,74 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 	}
 	log.Printf("[INFO] Tenzir Node container started successfully")
 
-    log.Printf("[INFO] Waiting for Tenzir to become available ...")
-    err = checkTenzirNode()
-    if err != nil {
-        return err
-    }
-    log.Printf("[INFO] Successfully deployed Tenzir Node!")
+	log.Printf("[INFO] Waiting for Tenzir to become available ...")
+	err = checkTenzirNode()
+	if err != nil {
+		return err
+	}
+	log.Printf("[INFO] Successfully deployed Tenzir Node!")
 
 	return nil
 }
 
 func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway string) error {
-    networks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{})
-    if err != nil {
-        return err
-    }
+	networks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{})
+	if err != nil {
+		return err
+	}
 
-    for _, network := range networks {
-        if network.Name == networkName {
-            // Network exists
-            return nil
-        }
-    }
+	for _, network := range networks {
+		if network.Name == networkName {
+			// Network exists
+			return nil
+		}
+	}
 
-    ipamConfig := &network.IPAM{
-        Config: []network.IPAMConfig{
-            {
-                Subnet:  subnet,
-                Gateway: gateway,
-            },
-        },
-    }
+	ipamConfig := &network.IPAM{
+		Config: []network.IPAMConfig{
+			{
+				Subnet:  subnet,
+				Gateway: gateway,
+			},
+		},
+	}
 
-    networkCreate := types.NetworkCreate{
-        //CheckDuplicate: true,
-        Driver:         "bridge",
-        IPAM:           ipamConfig,
-    }
+	networkCreate := types.NetworkCreate{
+		//CheckDuplicate: true,
+		Driver: "bridge",
+		IPAM:   ipamConfig,
+	}
 
-    _, err = dockercli.NetworkCreate(ctx, networkName, networkCreate)
-    if err != nil {
-        return err
-    }
+	_, err = dockercli.NetworkCreate(ctx, networkName, networkCreate)
+	if err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func checkTenzirNode() error {
-    retries := 5
-    retryInterval := 3 * time.Second
-	url := fmt.Sprintf("%s/api/v0/ping",pipelineUrl)
+	retries := 5
+	retryInterval := 3 * time.Second
+	url := fmt.Sprintf("%s/api/v0/ping", pipelineUrl)
 	forwardMethod := "POST"
 
-    client := http.Client{}
-    req, err := http.NewRequest(forwardMethod, url, nil)
+	client := http.Client{}
+	req, err := http.NewRequest(forwardMethod, url, nil)
 	if err != nil {
 		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
 		return err
 	}
 
-    for i := 0; i < retries; i++ {
-        resp, err := client.Do(req)
-        if err == nil && resp.StatusCode == http.StatusOK {
-            return nil
-        }
-        time.Sleep(retryInterval)
-    }
+	for i := 0; i < retries; i++ {
+		resp, err := client.Do(req)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			return nil
+		}
+		time.Sleep(retryInterval)
+	}
 
-    return fmt.Errorf("tenzir node is not available")
+	return fmt.Errorf("tenzir node is not available")
 }
 
 func createPipeline(command, identifier string) (string, error) {
@@ -2765,7 +2768,7 @@ func createPipeline(command, identifier string) (string, error) {
 		log.Printf("[INFO] an existing pipeline found with ID: %s. it will be deleted", pipelineId)
 		toBeDeleted = true
 	}
-    // if strings.Contains(command, "shuffler.io") {
+	// if strings.Contains(command, "shuffler.io") {
 
 	// } else {
 	// 	var scheme string
@@ -2779,7 +2782,7 @@ func createPipeline(command, identifier string) (string, error) {
 	// 	if startIndex != -1 {
 	// 		endIndex := startIndex + len(scheme)
 	// 		endIndex += strings.Index(command[endIndex:], "/")
-			
+
 	// 		command = command[:startIndex] + baseUrl + command[endIndex:]
 	// 	}
 	// }
@@ -2866,9 +2869,9 @@ func updatePipelineState(command, pipelineId, action string) (string, error) {
 	forwardMethod := "POST"
 
 	requestBody := map[string]interface{}{
-		"id":     pipelineId,
+		"id":         pipelineId,
 		"definition": command,
-		"action": action,
+		"action":     action,
 		"autostart": map[string]bool{
 			"created":   true,
 			"completed": true,
@@ -3069,7 +3072,7 @@ func handleFileCategoryChange() error {
 			log.Println("[DEBUG] /var/lib/tenzir/disabled_rules does not exist.")
 			return nil
 		}
-		
+
 		return fmt.Errorf("error checking disabled rules directory: %v", err)
 	}
 
@@ -3167,24 +3170,24 @@ func copyToTenzir(srcPath, destPath string) error {
 }
 
 func removeAllFiles() error {
-    containerName := "tenzir-node"
-    sigmaPath := "/var/lib/tenzir/sigma_rules/*"
+	containerName := "tenzir-node"
+	sigmaPath := "/var/lib/tenzir/sigma_rules/*"
 
-    checkCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("ls %s", sigmaPath))
-    checkOutput, checkErr := checkCmd.CombinedOutput()
-    if checkErr != nil {
-        if strings.Contains(string(checkOutput), "No such file or directory") {
-            return nil // nothing to delete
-        }
-        return fmt.Errorf("error checking files: %v, output: %s", checkErr, checkOutput)
-    }
+	checkCmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("ls %s", sigmaPath))
+	checkOutput, checkErr := checkCmd.CombinedOutput()
+	if checkErr != nil {
+		if strings.Contains(string(checkOutput), "No such file or directory") {
+			return nil // nothing to delete
+		}
+		return fmt.Errorf("error checking files: %v, output: %s", checkErr, checkOutput)
+	}
 
-    cmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("rm -rf %s", sigmaPath))
-    output, err := cmd.CombinedOutput()
-    if err != nil {
-        return fmt.Errorf("error removing files: %v, output: %s", err, output)
-    }
-    return nil
+	cmd := exec.Command("docker", "exec", "-u", "root", containerName, "sh", "-c", fmt.Sprintf("rm -rf %s", sigmaPath))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("error removing files: %v, output: %s", err, output)
+	}
+	return nil
 }
 
 func removeFile(fileName string) error {
@@ -3214,14 +3217,16 @@ func removePath(containerName, path string) error {
 }
 
 func sendTenzirHealthStatus() error {
-    var status string
-	url :=  fmt.Sprintf("%s/api/v1/detection/siem/node_health", baseUrl)
+	var status string
+	url := fmt.Sprintf("%s/api/v1/detection/siem/node_health", baseUrl)
 	err := checkTenzirNode()
 	if err != nil {
 		return err
 	} else {
 		status = "active"
 	}
+
+	log.Printf("[DEBUG] Sending health update to backend url %s", baseUrl)
 
 	forwardMethod := "POST"
 	payload := map[string]interface{}{
@@ -3250,12 +3255,13 @@ func sendTenzirHealthStatus() error {
 		log.Printf("[ERROR] Failed to send HTTP request: %s", err)
 		return err
 	}
-	defer resp.Body.Close()
 
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Printf("[ERROR] Received non-successful HTTP status code: %d", resp.StatusCode)
+		log.Printf("[ERROR] Pipeline: Received non-successful HTTP status code: %d", resp.StatusCode)
 		return fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
+
 	return nil
 }
 

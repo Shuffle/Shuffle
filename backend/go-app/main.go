@@ -894,6 +894,20 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			Role:       userInfo.ActiveOrg.Role,
 			Image:      org.Image,
 		}
+
+		if parsedAdmin == "false" {
+			// Validating admin user again just to make sure
+			// This is to avoid issues for the first org ever
+			for _, user := range org.Users {
+				if user.Id != userInfo.Id {
+					continue
+				}
+
+				if user.Role == "admin" {
+					break
+				}
+			}
+		}
 	}
 
 	orgPriorities := org.Priorities
@@ -5182,14 +5196,14 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files", shuffle.HandleGetFiles).Methods("GET", "OPTIONS")
 
 
-	r.HandleFunc("/api/v1/detection/sigma_rules", shuffle.HandleGetSigmaRules).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/detection/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/detection/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/sigma_rules", shuffle.HandleGetSigmaRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
 
-	r.HandleFunc("/api/v1/detection/siem/connect", shuffle.HandleConnectSiem).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/detection/siem/node_health", shuffle.HandleTenzirHealthUpdate).Methods("POST","OPTIONS")
-	r.HandleFunc("/api/v1/detection/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET","OPTIONS")
-	r.HandleFunc("/api/v1/detection/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST","OPTIONS")
+	r.HandleFunc("/api/v1/detections/siem/connect", shuffle.HandleConnectSiem).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/siem/node_health", shuffle.HandleTenzirHealthUpdate).Methods("POST","OPTIONS")
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET","OPTIONS")
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST","OPTIONS")
 
 
 	// Introduced in 0.9.21 to handle notifications for e.g. failed Workflow
