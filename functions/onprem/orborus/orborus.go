@@ -104,8 +104,6 @@ var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 var tenzirUrl = os.Getenv("SHUFFLE_TENZIR_URL")
 var apiKey = os.Getenv("AUTH_FOR_ORBORUS")
 
-var certPath = os.Getenv("SHUFFLE_CERT_DIR")
-
 var executionIds = []string{}
 var namespacemade = false // For K8s
 
@@ -1152,7 +1150,17 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		},
 		Resources: container.Resources{},
 	}
-    
+
+    certPath := "/certs"
+
+    // This is just to test the mounting locally so
+    // I can control from what source I'm mounting
+    // the certs to. Default behaviour is:  
+    // /certs:/certs.
+    if os.Getenv("SHUFFLE_CERT_PATH") != "" {
+        certPath = os.Getenv("SHUFFLE_CERT_PATH") 
+    }
+
     _, err := os.ReadDir(certPath)
 
     if certPath != "" && err == nil {
