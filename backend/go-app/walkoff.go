@@ -1082,6 +1082,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		return shuffle.WorkflowExecution{}, "Failed unmarshal during execution", err
 	}
 
+	/*
 	makeNew := true
 	start, startok := request.URL.Query()["start"]
 	if request.Method == "POST" {
@@ -1201,7 +1202,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 		answer, answerok := request.URL.Query()["answer"]
 		referenceId, referenceok := request.URL.Query()["reference_execution"]
-		if answerok && referenceok {
+		if answerok && referenceok && len(answer) > 0 && len(referenceId) > 0 {
 			// If answer is false, reference execution with result
 			log.Printf("[INFO] Answer is OK AND reference is OK!")
 			if answer[0] == "false" {
@@ -1225,7 +1226,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 					log.Printf("%s - %s", result.Action.ID, start[0])
 					if result.Action.ID == start[0] {
 						note, noteok := request.URL.Query()["note"]
-						if noteok {
+						if noteok && len(note) > 0 {
 							result.Result = fmt.Sprintf("User note: %s", note[0])
 						} else {
 							result.Result = fmt.Sprintf("User clicked %s", answer[0])
@@ -1555,7 +1556,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	//	newTriggers = append(newTriggers, trigger)
 	//}
 	//workflowExecution.Workflow.Triggers = newTriggers
-	_ = removeTriggers
 
 	if !startFound {
 		if len(workflowExecution.Start) == 0 && len(workflowExecution.Workflow.Start) > 0 {
@@ -1580,12 +1580,17 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	if len(workflowExecution.ExecutionOrg) == 0 && len(workflow.ExecutingOrg.Id) > 0 {
 		workflowExecution.ExecutionOrg = workflow.ExecutingOrg.Id
 	}
+	*/
 
+	//workflowExecution, execInfo, _, workflowExecErr := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
 	err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
 		log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
 	}
 
+	onpremExecution := execInfo.OnpremExecution
+	_ = onpremExecution
+	environments := execInfo.Environments
 	var allEnvs []shuffle.Environment
 	if len(workflowExecution.ExecutionOrg) > 0 {
 		//log.Printf("[INFO] Executing ORG: %s", workflowExecution.ExecutionOrg)
