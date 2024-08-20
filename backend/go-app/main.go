@@ -5237,7 +5237,6 @@ func initHandlers() {
 	// PS: For cloud, this has to use cloud storage.
 	// https://developer.box.com/reference/get-files-id-content/
 	r.HandleFunc("/api/v1/files/download_remote", shuffle.HandleDownloadRemoteFiles).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/files/download_remote_enhanced", shuffle.HandleEnhancedDownloadRemoteFiles).Methods("POST", "OPTIONS")	
 	r.HandleFunc("/api/v1/files/namespaces/{namespace}", shuffle.HandleGetFileNamespace).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}/content", shuffle.HandleGetFileContent).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/create", shuffle.HandleCreateFile).Methods("POST", "OPTIONS")
@@ -5247,15 +5246,16 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/{fileId}", shuffle.HandleDeleteFile).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/files", shuffle.HandleGetFiles).Methods("GET", "OPTIONS")
 
-
-	r.HandleFunc("/api/v1/detections/sigma_rules", shuffle.HandleGetSigmaRules).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/detections/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/detections/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
-
-	r.HandleFunc("/api/v1/detections/siem/connect", shuffle.HandleConnectSiem).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/detections/siem/node_health", shuffle.HandleTenzirHealthUpdate).Methods("POST","OPTIONS")
+	// This structure is horrendous. Needs fixing after we got the prototype up
+	r.HandleFunc("/api/v1/detections/{detectionType}/connect", shuffle.HandleDetectionAutoConnect).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{detection_type}", shuffle.HandleGetDetectionRules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET","OPTIONS")
 	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST","OPTIONS")
+	r.HandleFunc("/api/v1/detections/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
+
+	// This is weird.
+	r.HandleFunc("/api/v1/detections/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/siem/node_health", shuffle.HandleTenzirHealthUpdate).Methods("POST","OPTIONS")
 
 
 	// Introduced in 0.9.21 to handle notifications for e.g. failed Workflow
