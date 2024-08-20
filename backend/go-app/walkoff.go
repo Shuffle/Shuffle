@@ -669,7 +669,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Actionresult unmarshal: %s", string(body))
-	log.Printf("[DEBUG] Got workflow result from %s of length %d", request.RemoteAddr, len(body))
+	//log.Printf("[DEBUG] Got workflow result from %s of length %d", request.RemoteAddr, len(body))
 	ctx := context.Background()
 	err = shuffle.ValidateNewWorkerExecution(ctx, body)
 	if err == nil {
@@ -680,7 +680,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[DEBUG] Handling other execution variant (subflow?): %s", err)
 	}
 
-	log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
+	//log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
 
 	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
@@ -738,7 +738,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
-	log.Printf("[DEBUG][%s] Running workflow execution update", workflowExecutionId)
+	log.Printf("[DEBUG][%s] Running workflow execution update with result from %s (%s) of status %s", workflowExecutionId, actionResult.Action.Label, actionResult.Action.ID, actionResult.Status)
 
 	// Should start a tx for the execution here
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
@@ -769,7 +769,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	setExecution := true
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 		err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-		//err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
@@ -1000,17 +999,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		workflow = *tmpworkflow
 	}
 
-	/*
-		if len(workflow.ExecutingOrg.Id) == 0 {
-			if len(orgId) > 0 {
-				workflow.ExecutingOrg.Id = orgId
-			} else {
-				log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
-				return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
-			}
-		}
-	*/
-
 	if len(workflow.Actions) == 0 {
 		workflow.Actions = []shuffle.Action{}
 	} else {
@@ -1061,18 +1049,21 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	workflowExecution, execInfo, _, workflowExecErr := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
 	if workflowExecErr != nil {
-		err := shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
-		if err != nil {
-			log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
+		if len(workflowExecution.Workflow.Actions) > 0 && len(workflowExecution.Results) > 0 && len(workflowExecution.ExecutionId) > 0 { 
+			err := shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
+			if err != nil {
+				log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
+			}
 		}
 
 		if strings.Contains(fmt.Sprintf("%s", workflowExecErr), "User Input") {
 			// Special for user input callbacks
-			log.Printf("[INFO] User input callback: %s", workflowExecErr)
 			// return workflowExecution, fmt.Sprintf("%s", err), nil
+			//log.Printf("[INFO] User input callback: %s", workflowExecErr)
+			return shuffle.WorkflowExecution{}, "", nil
 		} else {
-			log.Printf("[ERROR] Failed in prepareExecution: '%s'", err)
-			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed running: %s", err), err
+			log.Printf("[ERROR] Failed in prepareExecution: '%s'", workflowExecErr)
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed running: %s", workflowExecErr), workflowExecErr 
 		}
 	}
 
@@ -1854,7 +1845,6 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("[INFO] Inside execute workflow for ID %s", fileId)
-
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil && workflow.ID == "" {

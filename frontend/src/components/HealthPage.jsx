@@ -11,14 +11,14 @@ import {
 import HealthBarChart from '../components/HealthBarChart.jsx';
 
 const HealthPage = (props) => {
-    const { userdata } = props;
+    const { globalUrl, userdata } = props;
     const [healthData, setHealthData] = useState(null);
     const [selectedRange, setSelectedRange] = useState('30d');
     const [filteredData, setFilteredData] = useState([]);
     const [averageUptime, setAverageUptime] = useState(0);
 
     const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
-    const globalUrl = `https://shuffler.io` 
+    //const globalUrl = `https://shuffler.io` 
 
 	console.log("HEALTHPAGE 1")
 

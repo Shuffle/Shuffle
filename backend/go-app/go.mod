@@ -2,7 +2,7 @@ module shuffle
 
 go 1.22.0
 
-// replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 
 toolchain go1.22.2
 
@@ -20,7 +20,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.6.62
+	github.com/shuffle/shuffle-shared v0.6.63
 	golang.org/x/crypto v0.22.0
 	google.golang.org/api v0.176.1
 	google.golang.org/grpc v1.63.2

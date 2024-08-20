@@ -6305,10 +6305,6 @@ If you're interested, please let me know a time that works for you, or set up a 
               primary="Actions"
               style={{ minWidth: 200, maxWidth: 200 }}
             />
-            <ListItemText
-              primary="Last Edited"
-              style={{ minWidth: 170, maxWidth: 170 }}
-            />
           </ListItem>
           {environments === undefined || environments === null
             ? null
@@ -6626,20 +6622,6 @@ If you're interested, please let me know a time that works for you, or set up a 
                           </ButtonGroup>
                         </div>
                       </ListItemText>
-                      <ListItemText
-                        style={{
-                          minWidth: 150,
-                          maxWidth: 150,
-                          overflow: "hidden",
-                        }}
-                        primary={
-                          environment.edited !== undefined &&
-                          environment.edited !== null &&
-                          environment.edited !== 0
-                            ? new Date(environment.edited * 1000).toISOString()
-                            : 0
-                        }
-                      />
                     </ListItem>
                     {showCPUAlert === false ? null : (
                       <ListItem

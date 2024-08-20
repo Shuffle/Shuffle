@@ -196,26 +196,30 @@ const App = (message, props) => {
 		}
 
 		<div style={{ minHeight: 68, maxHeight: 68, }}>
-			<Header
-				billingInfo={{}}
+			{curpath.includes("/workflows") && curpath.includes("/run") ? 
+				<div style={{ height: 60, }} />
+				:
+				<Header
+					billingInfo={{}}
 
-				notifications={notifications}
-				setNotifications={setNotifications}
-				checkLogin={checkLogin}
-				cookies={cookies}
-				removeCookie={removeCookie}
-				isLoaded={isLoaded}
-				globalUrl={globalUrl}
-				setIsLoggedIn={setIsLoggedIn}
-				isLoggedIn={isLoggedIn}
-				userdata={userdata}
+					notifications={notifications}
+					setNotifications={setNotifications}
+					checkLogin={checkLogin}
+					cookies={cookies}
+					removeCookie={removeCookie}
+					isLoaded={isLoaded}
+					globalUrl={globalUrl}
+					setIsLoggedIn={setIsLoggedIn}
+					isLoggedIn={isLoggedIn}
+					userdata={userdata}
 
-				curpath={curpath}
-				serverside={false}
-				isMobile={false}
+					curpath={curpath}
+					serverside={false}
+					isMobile={false}
 
-				{...props}
-			/>
+					{...props}
+				/>
+			}
 		</div>
 		
 				{/*

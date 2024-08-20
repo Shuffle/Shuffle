@@ -3926,7 +3926,7 @@ func runInitEs(ctx context.Context) {
 	}
 
 	if strings.Contains(os.Getenv("SHUFFLE_OPENSEARCH_URL"), "https") {
-		log.Printf("[INFO] Waiting during init to make sure the opensearch instance is up and running with security features properly")
+		log.Printf("[INFO] Waiting 30 seconds during init to make sure the opensearch instance is up and running with security features enabled")
 		time.Sleep(30 * time.Second)
 	}
 
