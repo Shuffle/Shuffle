@@ -4877,7 +4877,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             <a
               target="_blank"
               rel="noopener noreferrer"
-              href="/docs/organizations#schedules"
+              href="/docs/triggers#schedules"
               style={{ textDecoration: "none", color: "#f85a3e" }}
             >
               Learn more
@@ -4994,9 +4994,20 @@ If you're interested, please let me know a time that works for you, or set up a 
             })}
           </List>
         )}
-  
+
         <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <h2 style={{ display: "inline" }}>WebHooks</h2>
+          <h2 style={{ display: "inline" }}>Webhooks</h2>
+          <span style={{ marginLeft: 25 }}>
+			Webhooks used in Shuffle workflows.&nbsp;
+            <a
+              target="_blank"
+              rel="noopener noreferrer"
+              href="/docs/triggers#webhooks"
+              style={{ textDecoration: "none", color: "#f85a3e" }}
+            >
+              Learn more
+            </a>
+          </span>
         </div>
   
         <Divider
@@ -5138,8 +5149,8 @@ If you're interested, please let me know a time that works for you, or set up a 
           </List>
         )}
   
-        {/* <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <h2 style={{ display: "inline" }}>Tenzir Pipelines</h2>
+        <div style={{ marginTop: 20, marginBottom: 20 }}>
+          <h2 style={{ display: "inline" }}>Pipelines</h2>
           <span style={{ marginLeft: 25 }}>
             Controls a pipeline to run things.{" "}
             <a
@@ -5241,7 +5252,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               );
             })}
           </List>
-        )}*/}
+        )}
       </div>
     ) : null;
 

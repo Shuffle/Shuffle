@@ -334,6 +334,11 @@ const Apps = (props) => {
     },
   });
 
+  useEffect(() => {
+	  console.log("APPVALID: ", appValidation)
+	  redirectOpenApi()
+  }, [appValidation])
+
   const getUserProfile = (username) => {
     if (serverside === true || !isCloud) {
 	  setCreatorProfile({})
@@ -1535,27 +1540,34 @@ const Apps = (props) => {
 
 		const makeFancy = text?.includes("Generate") 
 
+		var parsedStyle = {
+			flex: 1, 
+			padding: 15, 
+			margin: 10, 
+			paddingTop: 25,
+			backgroundColor: hover ? theme.palette.surfaceColor : "transparent",
+			cursor: hover ? "pointer" : "default",
+			textAlign: "center",
+			minHeight: 150, 
+			maxHeight: 150, 
+
+			borderRadius: theme.palette.borderRadius,
+		}
+
+		if (!makeFancy) { 
+			parsedStyle.border = hover ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)"
+		} else {
+    		parsedStyle.border = "1px solid transparent"
+    		parsedStyle.borderImage = "linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1"
+			parsedStyle.borderRadius = 0 // This doesn't work. Try to hover with a high one, and it's weird due to borderImage
+		}
+
 		return (
 			<Paper 
 				onMouseEnter={() => setHover(true)}
 				onMouseLeave={() => setHover(false)}
 				onClick={func}
-				style={{
-					flex: 1, 
-					padding: 15, 
-					margin: 10, 
-					paddingTop: 25,
-					backgroundColor: hover ? theme.palette.surfaceColor : "transparent",
-					border: hover ? "1px solid #f85a3e" : "1px solid rgba(255,255,255,0.3)",
-					cursor: hover ? "pointer" : "default",
-					textAlign: "center",
-					minHeight: 150, 
-					maxHeight: 150, 
-
-					borderRadius: theme.palette.borderRadius,
-					//borderImage: makeFancy ? "linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1" : null,
-
-				}}
+				style={parsedStyle}
 			>
 				{icon} 
 				<Typography>
@@ -2568,7 +2580,8 @@ const Apps = (props) => {
 	}
 
     //fetch("http://localhost:8080/doc_to_openapi", {
-    fetch("https://doc-to-openapi-stbuwivzoq-nw.a.run.app/doc_to_openapi", {
+    //fetch("https://doc-to-openapi-stbuwivzoq-nw.a.run.app/doc_to_openapi", {
+    fetch("https://doc-to-openapi-stbuwivzoq-nw.a.run.app/api/v1/doc_to_openapi", {
       method: "POST",
       headers: {
         "Accept": "application/json",
@@ -2588,14 +2601,14 @@ const Apps = (props) => {
     })
     .then((responseJson) => {
 		// Check if openapi or swagger in string of the json
+		var parsedtext = responseJson
 		try {
-			const parsedtext = JSON.stringify(responseJson);
+			parsedtext = JSON.stringify(responseJson);
 			if (parsedtext.indexOf("openapi") === -1 && parsedtext.indexOf("swagger") === -1) {
-				setValidation(false);
-				setOpenApiError("Error in generation: "+parsedtext);
+				setValidation(false)
+				setOpenApiError("Error in generation: "+parsedtext)
 
-
-				return;
+				return
 			}
 		} catch (e) {
 			setValidation(false);
@@ -2604,7 +2617,7 @@ const Apps = (props) => {
 		}
 
 	    console.log("Validating response!");
-	    validateOpenApi(responseJson);
+	    validateOpenApi(parsedtext)
     })
     .catch((error) => {
       setValidation(false);
@@ -2716,8 +2729,16 @@ const Apps = (props) => {
   };
 
   const redirectOpenApi = () => {
+	if (appValidation === undefined || appValidation === null || appValidation.length === 0) {
+		return
+	}
+
+	toast.success("Successfully validated OpenAPI. Redirecting to app creation. Remember to save the app to be able to use it.", {
+		// Disable autoclose
+		autoClose: 10000,
+	})
     navigate(`/apps/new?id=${appValidation}`)
-  };
+  }
 
   const handleGithubValidation = (forceUpdate) => {
     getSpecificApps(openApi, forceUpdate);
@@ -2977,10 +2998,12 @@ const Apps = (props) => {
       }}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.platformColor,
+		  borderRadius: theme.palette.borderRadius,
           color: "white",
           minWidth: "800px",
           minHeight: "320px",
+		  padding: 50, 
         },
       }}
     >
@@ -3019,7 +3042,7 @@ const Apps = (props) => {
                     validateDocumentationUrl();
                   }}
                 >
-                  Validate
+				  Generate
                 </Button>
               ),
             }}
@@ -3034,22 +3057,6 @@ const Apps = (props) => {
             placeholder="API Documentation URL"
             fullWidth
           />
-          <p>Or upload document with the content (coming soon)</p>
-          <input
-            hidden
-            type="file"
-            ref={upload}
-            multiple={false}
-            onChange={uploadFileDocumentation}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-			disabled
-            onClick={() => upload.current.click()}
-          >
-            Upload
-          </Button>
           {errorText}
         </DialogContent>
         <DialogActions>
@@ -3068,17 +3075,6 @@ const Apps = (props) => {
           >
             Cancel
           </Button>
-          <Button
-            variant="contained"
-            style={{ borderRadius: "0px" }}
-            disabled={appValidation.length === 0}
-            onClick={() => {
-              redirectOpenApi();
-            }}
-            color="primary"
-          >
-            Continue
-          </Button>
         </DialogActions>
 	  </FormControl>
 	</Dialog>
@@ -3094,10 +3090,12 @@ const Apps = (props) => {
       }}
       PaperProps={{
         style: {
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.palette.platformColor,
+		  borderRadius: theme.palette.borderRadius,
           color: "white",
           minWidth: "800px",
           minHeight: "320px",
+		  padding: 50, 
         },
       }}
     >

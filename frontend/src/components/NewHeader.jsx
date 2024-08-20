@@ -456,15 +456,19 @@ const Header = (props) => {
             <LightbulbIcon style={{ marginRight: 5 }} /> Use Cases
           </MenuItem>
         </Link>
-        <Link to={`/creators/${userdata.public_username}`} style={hrefStyle}>
-          <MenuItem
-            onClick={(event) => {
-              handleClose();
-            }}
-          >
-            <EmojiObjectsIcon style={{ marginRight: 5 }} /> Creator page
-          </MenuItem>
-        </Link>
+
+	    {userdata?.public_username === undefined || userdata?.public_username === null || userdata?.public_username.length <= 0 ? null : 
+			<Link to={`/creators/${userdata.public_username}`} style={hrefStyle}>
+			  <MenuItem
+				onClick={(event) => {
+				  handleClose();
+				}}
+			  >
+				<EmojiObjectsIcon style={{ marginRight: 5 }} /> Creator page
+			  </MenuItem>
+			</Link>
+		}
+
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
         <MenuItem
           style={{ color: "white" }}
@@ -1155,7 +1159,11 @@ const Header = (props) => {
               userdata.app_execution_usage === undefined ||
               userdata.app_execution_usage < 1000 ? null : (
               <Tooltip
-                title={`Amount of App Runs used: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Shuffle normally, but your Workflow triggers will stop workflows from starting. Reach out to support@shuffler.io to extend this limit.`}
+                title={
+					<Typography variant="body1" style={{margin: 10, }}>
+						<b>App Runs used</b>: {userdata.app_execution_usage} / {userdata.app_execution_limit}. When the limit is reached, you can still use Shuffle normally, but your Workflow triggers will stop workflows from starting. Reach out to support@shuffler.io to extend this limit. Customer workflows are NOT stopped this way.
+					</Typography>
+				}
               >
                 <div
                   style={{

@@ -19,17 +19,19 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 
   const handleSwitchChange = (event) => {
     if (folderDisabled) {
-      toast("enable the directory to enable individual rules");
+      toast.warn("Enable the directory to enable individual rules");
       return;
     }
+
     if (!isTenzirActive) {
-      toast("connect to the siem to enable/disable the rule");
+      toast.warn("Connect to the siem first to enable/disable the rule");
       return;
     }
+
     const newIsEnabled = event.target.checked;
     toggleRule(file_id, !newIsEnabled, globalUrl, () => {
       setIsEnabled(newIsEnabled);
-    });
+    })
   };
 
   const UpdateText = (text) => {
@@ -73,7 +75,6 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 		color: "white",
           }}
         >
-	  	  <h1> HELO</h1>
           <Typography variant="h6">{ruleName}</Typography>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <IconButton onClick={() => openEditBar(file_id, setOpenCodeEditor, setFileData, globalUrl)}>
@@ -82,7 +83,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
             <Switch
               checked={isEnabled && !folderDisabled}
               onChange={handleSwitchChange}
-              disabled={!isTenzirActive}
+              disabled={false}
             />
           </div>
         </div>
@@ -107,7 +108,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 
 const toggleRule = (fileId, isCurrentlyEnabled, globalUrl, callback) => {
   const action = isCurrentlyEnabled ? "disable" : "enable";
-  const url = `${globalUrl}/api/v1/files/detection/${fileId}/${action}_rule`;
+  const url = `${globalUrl}/api/v1/detections/${fileId}/${action}_rule`;
 
   fetch(url, {
     method: "PUT",
