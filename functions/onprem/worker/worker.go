@@ -27,9 +27,15 @@ import (
 	dockerclient "github.com/docker/docker/client"
 
 	// This is for automatic removal of certain code :)
+	/*** STARTREMOVE ***/
+	"math/rand"
+
+	"github.com/docker/docker/api/types/swarm"
+	uuid "github.com/satori/go.uuid"
+
+	/*** ENDREMOVE ***/
 
 	"github.com/gorilla/mux"
-	uuid "github.com/satori/go.uuid"
 
 	//k8s deps
 	corev1 "k8s.io/api/core/v1"
@@ -138,6 +144,11 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 		return err
 	}
 
+	/*** STARTREMOVE ***/
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
+		return nil
+	}
+	/*** ENDREMOVE ***/
 
 	handleExecutionResult(workflowExecution)
 	validated := shuffle.ValidateFinished(ctx, -1, workflowExecution)
@@ -311,6 +322,11 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		*/
 	} else {
 
+		/*** STARTREMOVE ***/
+		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
+			log.Printf("[DEBUG][%s] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", workflowExecution.ExecutionId, 0, cleanupEnv)
+		}
+		/*** ENDREMOVE ***/
 	}
 
 	if len(reason) > 0 && len(nodeId) > 0 {
@@ -738,6 +754,88 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		}
 	}
 
+	/*** STARTREMOVE ***/
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
+
+		appName := strings.Replace(identifier, fmt.Sprintf("_%s", action.ID), "", -1)
+		appName = strings.Replace(appName, fmt.Sprintf("_%s", workflowExecution.ExecutionId), "", -1)
+		appName = strings.ToLower(appName)
+		//log.Printf("[INFO][%s] New appname: %s, image: %s", workflowExecution.ExecutionId, appName, image)
+
+		if !shuffle.ArrayContains(downloadedImages, image) && isKubernetes != "true" {
+			log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration for this image on the worker. Timeout: 60", image)
+			// FIXME: Not caring if it's ok or not. Just continuing
+			// This is working as intended, just designed to download an updated
+			// image on every Orborus/new worker restart.
+
+			// Running as coroutine for eventual completeness
+			//go downloadDockerImageBackend(&http.Client{}, image)
+			// FIXME: With goroutines it got too much trouble of deploying with an older version
+			// Allowing slow startups, as long as it's eventually fast, and uses the same registry as on host.
+			downloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+		}
+
+		var exposedPort int
+		var err error
+
+		if isKubernetes != "true" {
+			exposedPort, err = findAppInfo(image, appName)
+			if err != nil {
+				log.Printf("[ERROR] Failed finding and creating port for %s: %s", appName, err)
+				return err
+			}
+		} else {
+			// ** STARTREMOVE ***/
+			exposedPort = 80
+			err = findAppInfoKubernetes(image, appName, env)
+			if err != nil {
+				log.Printf("[ERROR] Failed finding and creating port for %s: %s", appName, err)
+				return err
+			}
+			// ** ENDREMOVE ***/
+		}
+
+		/*
+			// Makes it not run at all.
+			cacheData := []byte("1")
+			newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
+			err = shuffle.SetCache(ctx, newExecId, cacheData, 30)
+			if err != nil {
+				log.Printf("[WARNING] (1) Failed setting cache for action %s: %s", newExecId, err)
+			} else {
+				log.Printf("[DEBUG][%s] (1) Adding %s to cache (%#v)", workflowExecution.ExecutionId, newExecId, action.Name)
+			}
+		*/
+
+		log.Printf("[DEBUG][%s] Should run towards port %d for app %s. DELAY: %d", workflowExecution.ExecutionId, exposedPort, appName, action.ExecutionDelay)
+		ctx := context.Background()
+		if action.ExecutionDelay > 0 {
+			//log.Printf("[DEBUG] Running app %s with delay of %d", action.Name, action.ExecutionDelay)
+			waitTime := time.Duration(action.ExecutionDelay) * time.Second
+
+			time.AfterFunc(waitTime, func() {
+				err = sendAppRequest(ctx, baseUrl, appName, exposedPort, &action, &workflowExecution)
+				if err != nil {
+					log.Printf("[ERROR] Failed sending SCHEDULED request to app %s on port %d: %s", appName, exposedPort, err)
+				}
+			})
+
+		} else {
+			rand.Seed(time.Now().UnixNano())
+			waitTime := time.Duration(rand.Intn(500)) * time.Millisecond
+
+			// Added a random delay + context timeout to ensure that the function returns, and only once
+			time.AfterFunc(waitTime, func() {
+				ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+				defer cancel() // Cancel the context to release resources even if not used
+
+				go sendAppRequest(ctx, baseUrl, appName, exposedPort, &action, &workflowExecution)
+			})
+		}
+
+		return nil
+	}
+	/*** ENDREMOVE ***/
 
 	// Max 10% CPU every second
 	//CPUShares: 128,
@@ -2288,6 +2386,19 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 
+		/*** STARTREMOVE ***/
+		if workflowExecution.Status == "WAITING" && (os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm") {
+			log.Printf("[INFO][%s] Workflow execution is waiting while in swarm. Sending info to backend to ensure execution stops.", workflowExecution.ExecutionId)
+
+			shutdownData, err := json.Marshal(workflowExecution)
+			if err != nil {
+				log.Printf("[ERROR][%s] Failed marshalling execution (36) - not sending backend WAITING: %s", workflowExecution.ExecutionId, err)
+			} else {
+				sendResult(*workflowExecution, shutdownData)
+				shutdown(*workflowExecution, "", "", false)
+			}
+		}
+		/*** ENDREMOVE ***/
 	} else {
 		if strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already been ran") || strings.Contains(strings.ToLower(fmt.Sprintf("%s", err)), "already finished") {
 			log.Printf("[ERROR][%s] Skipping rerun of action result as it's already been ran: %s", workflowExecution.ExecutionId)
@@ -2372,6 +2483,22 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 
+		/*** STARTREMOVE ***/
+		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
+			finished := shuffle.ValidateFinished(ctx, -1, *workflowExecution)
+			if !finished {
+				log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
+				handleExecutionResult(*workflowExecution)
+			} else {
+				shutdownData, err := json.Marshal(workflowExecution)
+				if err != nil {
+					log.Printf("[ERROR] Failed marshalling shutdowndata during set: %s", err)
+				}
+
+				sendResult(*workflowExecution, shutdownData)
+			}
+		}
+		/*** ENDREMOVE ***/
 	} else {
 		log.Printf("[INFO][%s] Skipping setexec with status %s", workflowExecution.ExecutionId, workflowExecution.Status)
 
@@ -2391,6 +2518,12 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 func sendSelfRequest(actionResult shuffle.ActionResult) {
 
+	/*** STARTREMOVE ***/
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
+		log.Printf("[INFO][%s] Not sending self request info since source is default (not swarm)", actionResult.ExecutionId)
+		return
+	}
+	/*** ENDREMOVE ***/
 
 	data, err := json.Marshal(actionResult)
 	if err != nil {
@@ -2529,6 +2662,11 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 			}
 		}
 
+		/*** STARTREMOVE ***/
+		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
+			requestsSent += 1
+		}
+		/*** ENDREMOVE ***/
 
 		log.Printf("[DEBUG][%s] Should send full result to %s", workflowExecution.ExecutionId, baseUrl)
 
@@ -2613,6 +2751,74 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 // GetLocalIP returns the non loopback local IP of the host
 func getLocalIP() string {
 
+	/*** STARTREMOVE ***/
+	if os.Getenv("IS_KUBERNETES") == "true" {
+		return "shuffle-workers"
+	}
+
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
+		name, err := os.Hostname()
+		if err != nil {
+			log.Printf("[ERROR] Couldn't find hostname of worker: %s", err)
+			os.Exit(3)
+		}
+
+		log.Printf("[DEBUG] Found hostname %s since worker is running with \"run\" command", name)
+		return name
+
+		/**
+			Everything below was a test to see if we needed to match directly to a network interface. May require docker network API.
+		**/
+
+		log.Printf("[DEBUG] Looking for IP for the external docker-network %s", swarmNetworkName)
+		// Different process to ensure we find the right IP.
+		// Necessary due to Ingress being added to docker ser
+		ifaces, err := net.Interfaces()
+		if err != nil {
+			log.Printf("[ERROR] FATAL: networks the container is listening in %s: %s", swarmNetworkName, err)
+			os.Exit(3)
+		}
+
+		foundIP := ""
+		for _, i := range ifaces {
+			log.Printf("NETWORK: %s", i.Name)
+			//If i.Name != swarmNetworkName {
+			//	continue
+			//}
+
+			addrs, err := i.Addrs()
+			if err != nil {
+				log.Printf("[ERROR] FATAL: Failed getting address for listener in network %s: %s", swarmNetworkName, err)
+				continue
+			}
+
+			for _, addr := range addrs {
+				var ip net.IP
+				switch v := addr.(type) {
+				case *net.IPNet:
+					ip = v.IP
+				case *net.IPAddr:
+					ip = v.IP
+				}
+
+				log.Printf("%s: IP: %#v", i.Name, ip)
+
+				// FIXME: Allow for IPv6 too!
+				//if strings.Count(ip.String(), ".") == 3 {
+				//	foundIP = ip.String()
+				//	break
+				//}
+				// process IP address
+			}
+		}
+
+		if len(foundIP) == 0 {
+			log.Printf("[ERROR] FATAL: No valid IP found for network %s. Defaulting to base IP", swarmNetworkName)
+		} else {
+			return foundIP
+		}
+	}
+	/*** ENDREMOVE ***/
 
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -2663,6 +2869,27 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 
 	log.Printf("[DEBUG] OLD HOSTNAME: %s", appCallbackUrl)
 
+	/*** STARTREMOVE ***/
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
+		log.Printf("[DEBUG] Starting webserver (1) on port %d with hostname: %s", baseport, hostname)
+
+		os.Setenv("WORKER_PORT", fmt.Sprintf("%d", baseport))
+		appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
+		if os.Getenv("IS_KUBERNETES") == "true" {
+			appCallbackUrl = fmt.Sprintf("http://%s:%d", "shuffle-workers", baseport)
+			log.Printf("[DEBUG] NEW WORKER APP: %s", appCallbackUrl)
+			hostname = "shuffle-workers"
+		}
+
+		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", baseport))
+		if err != nil {
+			log.Printf("[ERROR] Failed to assign port to %d: %s", baseport, err)
+			return nil
+		}
+
+		return listener
+	}
+	/*** ENDREMOVE ***/
 
 	port := listener.Addr().(*net.TCPAddr).Port
 	// Set the port environment variable
@@ -2821,8 +3048,341 @@ func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 	*/
 }
 
+/*** STARTREMOVE ***/
+func deploySwarmService(dockercli *dockerclient.Client, name, image string, deployport int) error {
+	log.Printf("[DEBUG] Deploying service for %s to swarm on port %d", name, deployport)
+	//containerName := fmt.Sprintf("shuffle-worker-%s", parsedUuid)
+
+	if len(baseimagename) == 0 || baseimagename == "/" {
+		baseimagename = "frikky/shuffle"
+		//var baseimagename = "frikky/shuffle"
+		//var registryName = "registry.hub.docker.com"
+	}
+
+	//image := fmt.Sprintf("%s:%s", baseimagename, name)
+	networkName := "shuffle-executions"
+	if len(swarmNetworkName) > 0 {
+		networkName = swarmNetworkName
+	}
+
+	replicas := uint64(1)
+
+	// Sent from Orborus
+	// Should be equal to
+	scaleReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
+	if len(scaleReplicas) > 0 {
+		tmpInt, err := strconv.Atoi(scaleReplicas)
+		if err != nil {
+			log.Printf("[ERROR] %s is not a valid number for replication", scaleReplicas)
+		} else {
+			replicas = uint64(tmpInt)
+		}
+
+		log.Printf("[DEBUG] SHUFFLE_APP_REPLICAS set to value %#v. Trying to overwrite default (%d/node)", scaleReplicas, replicas)
+	}
+
+	cnt, err := findActiveSwarmNodes(dockercli)
+	if err != nil {
+		log.Printf("[ERROR] Unable to find active swarm nodes: %s", err)
+	}
+
+	nodeCount := uint64(1)
+	if cnt > 0 {
+		nodeCount = uint64(cnt)
+	}
+
+	replicatedJobs := uint64(replicas * nodeCount)
+	log.Printf("[DEBUG] Deploying app with name %s with image %s", name, image)
+
+	containerName := fmt.Sprintf(strings.Replace(name, ".", "-", -1))
+	serviceSpec := swarm.ServiceSpec{
+		Annotations: swarm.Annotations{
+			Name:   containerName,
+			Labels: map[string]string{},
+		},
+		Mode: swarm.ServiceMode{
+			Replicated: &swarm.ReplicatedService{
+				// Max replicas total (?)
+				Replicas: &replicatedJobs,
+			},
+		},
+		Networks: []swarm.NetworkAttachmentConfig{
+			swarm.NetworkAttachmentConfig{
+				Target: networkName,
+			},
+		},
+		EndpointSpec: &swarm.EndpointSpec{
+			Ports: []swarm.PortConfig{
+				swarm.PortConfig{
+					Protocol:      swarm.PortConfigProtocolTCP,
+					PublishMode:   swarm.PortConfigPublishModeIngress,
+					Name:          "app-port",
+					PublishedPort: uint32(deployport),
+					TargetPort:    uint32(deployport),
+				},
+			},
+		},
+		TaskTemplate: swarm.TaskSpec{
+			Resources: &swarm.ResourceRequirements{
+				Reservations: &swarm.Resources{},
+			},
+			LogDriver: &swarm.Driver{
+				Name: "json-file",
+				Options: map[string]string{
+					"max-size": "10m",
+				},
+			},
+			ContainerSpec: &swarm.ContainerSpec{
+				Image: image,
+				Env: []string{
+					fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%d", deployport),
+					fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
+					fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", logsDisabled),
+				},
+				Hosts: []string{
+					containerName,
+				},
+			},
+			RestartPolicy: &swarm.RestartPolicy{
+				Condition: swarm.RestartPolicyConditionAny,
+			},
+			Placement: &swarm.Placement{
+				// Max per node
+				MaxReplicas: replicatedJobs,
+			},
+		},
+	}
+
+	if len(os.Getenv("SHUFFLE_SWARM_OTHER_NETWORK")) > 0 {
+		serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
+			Target: "shuffle_shuffle",
+		})
+	}
+
+	if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+	}
+
+	overrideHttpProxy := os.Getenv("SHUFFLE_INTERNAL_HTTP_PROXY")
+	overrideHttpsProxy := os.Getenv("SHUFFLE_INTERNAL_HTTPS_PROXY")
+	if overrideHttpProxy != "" {
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTP_PROXY=%s", overrideHttpProxy))
+
+	}
+
+	if overrideHttpsProxy != "" {
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_INTERNAL_HTTPS_PROXY=%s", overrideHttpsProxy))
+	}
+
+	/*
+		Mounts: []mount.Mount{
+			mount.Mount{
+				Source: "/var/run/docker.sock",
+				Target: "/var/run/docker.sock",
+				Type:   mount.TypeBind,
+			},
+		},
+	*/
+
+	if dockerApiVersion != "" {
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
+	}
+
+	if len(os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")) > 0 {
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_APP_SDK_TIMEOUT=%s", os.Getenv("SHUFFLE_APP_SDK_TIMEOUT")))
+	}
+
+	// Required for certain apps
+	if timezone == "" {
+		timezone = "Europe/Amsterdam"
+	}
+
+	serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("TZ=%s", timezone))
+
+	serviceOptions := types.ServiceCreateOptions{}
+	service, err := dockercli.ServiceCreate(
+		context.Background(),
+		serviceSpec,
+		serviceOptions,
+	)
+	_ = service
+
+	if err != nil {
+		log.Printf("[DEBUG] Failed deploying %s with image %s: %s", name, image, err)
+		return err
+	}
+
+	log.Printf("[DEBUG] Successfully deployed service %s with image %s on port %d", name, image, deployport)
+
+	return nil
+}
+
+/*** ENDREMOVE ***/
 
 // Runs data discovery
+/*** STARTREMOVE ***/
+
+func findAppInfoKubernetes(image, name string, env []string) error {
+	clientset, _, err := shuffle.GetKubernetesClient()
+	if err != nil {
+		log.Printf("[ERROR] Failed getting kubernetes: %s", err)
+		return err
+	}
+
+	// Check if it exists as a pod
+	namespace := "default"
+	if len(kubernetesNamespace) > 0 {
+		namespace = kubernetesNamespace
+	}
+
+	// check deployments
+	deployments, err := clientset.AppsV1().Deployments(namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Failed listing deployments: %s", err)
+		return err
+	}
+
+	name = strings.Replace(name, "_", "-", -1)
+
+	// check if it exists as a pod
+	// for _, pod := range pods.Items {
+	// 	if pod.Name == name {
+	// 		log.Printf("[INFO] Found pod %s - no need to deploy another", name)
+	// 		return nil
+	// 	}
+	// }
+
+	for _, deployment := range deployments.Items {
+		if deployment.Name == name {
+			log.Printf("[INFO] Found deployment %s - no need to deploy another", name)
+			return nil
+		}
+	}
+
+	err = deployk8sApp(image, name, env)
+	return err
+}
+
+func findAppInfo(image, name string) (int, error) {
+	dockercli, err := dockerclient.NewEnvClient()
+	if err != nil {
+		log.Printf("[ERROR] Unable to create docker client (2): %s", err)
+		return -1, err
+	}
+
+	highest := baseport
+	exposedPort := -1
+
+	// Exists as a "cache" layer
+	if portMappings != nil {
+		for key, value := range portMappings {
+			if value > highest {
+				highest = value
+			}
+
+			if key == name {
+				exposedPort = value
+				break
+			}
+		}
+	} else {
+		portMappings = make(map[string]int)
+	}
+
+	//Filters:
+	if exposedPort == -1 {
+		serviceListOptions := types.ServiceListOptions{}
+		services, err := dockercli.ServiceList(
+			context.Background(),
+			serviceListOptions,
+		)
+
+		// Basic self-correction
+		if err != nil {
+			log.Printf("[ERROR] Unable to list services: %s (may continue anyway?)", err)
+			if strings.Contains(fmt.Sprintf("%s", err), "is too new") {
+				// Static for some reason
+				defaultVersion := "1.40"
+				dockerApiVersion = defaultVersion
+				os.Setenv("DOCKER_API_VERSION", defaultVersion)
+				log.Printf("[DEBUG] Setting Docker API to %s default and retrying listing requests", defaultVersion)
+			} else {
+				return -1, err
+			}
+
+			services, err = dockercli.ServiceList(
+				context.Background(),
+				serviceListOptions,
+			)
+
+			if err != nil {
+				log.Printf("[ERROR] Unable to list services (2): %s", err)
+				return -1, err
+			}
+		}
+
+		for _, service := range services {
+			//log.Printf("[INFO] Service: %#v", service.Spec.Annotations.Name)
+
+			for _, endpoint := range service.Spec.EndpointSpec.Ports {
+				if strings.Contains(endpoint.Name, "port") {
+					portMappings[service.Spec.Annotations.Name] = int(endpoint.PublishedPort)
+					if int(endpoint.PublishedPort) > highest {
+						highest = int(endpoint.PublishedPort)
+					}
+
+					if service.Spec.Annotations.Name == name || service.Spec.Annotations.Name == strings.Replace(name, ".", "-", -1) {
+						exposedPort = int(endpoint.PublishedPort)
+						//break
+					}
+				}
+			}
+
+			//log.Printf("%s - %s", service.Spec.Annotations.Name, strings.Replace(name, ".", "-", -1))
+			if service.Spec.Annotations.Name != name && service.Spec.Annotations.Name != strings.Replace(name, ".", "-", -1) {
+				continue
+			}
+
+			// Break if it's the correct port, as it's the right service
+			if exposedPort >= 0 {
+				break
+			}
+		}
+	}
+
+	//log.Printf("[DEBUG] Portmappings: %#v", portMappings)
+
+	if exposedPort >= 0 {
+		//log.Printf("[INFO] Found service %s on port %d - no need to deploy another", name, exposedPort)
+	} else {
+		// Increment by 1 for highest port
+		if highest <= baseport {
+			highest = baseport
+		}
+
+		highest += 1
+		err = deploySwarmService(dockercli, name, image, highest)
+		if err != nil {
+			log.Printf("[WARNING] NOT Found service: %s. error: %s", name, err)
+			return highest, err
+		} else {
+			log.Printf("[DEBUG] Deployed app with name %s", name)
+		}
+
+		exposedPort = highest
+
+		if appsInitialized {
+			log.Printf("[DEBUG] Waiting 30 seconds before moving on to let app start")
+			time.Sleep(time.Duration(30) * time.Second)
+		}
+	}
+
+	return exposedPort, nil
+}
+
+/*** ENDREMOVE ***/
 
 func sendAppRequest(ctx context.Context, incomingUrl, appName string, port int, action *shuffle.Action, workflowExecution *shuffle.WorkflowExecution) error {
 	parsedRequest := shuffle.OrborusExecutionRequest{
@@ -3218,6 +3778,11 @@ func getStreamResultsWrapper(client *http.Client, req *http.Request, workflowExe
 
 // Initial loop etc
 func main() {
+	/*** STARTREMOVE ***/
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
+		logsDisabled = "true"
+	}
+	/*** ENDREMOVE ***/
 	// Elasticsearch necessary to ensure we'ren ot running with Datastore configurations for minimal/maximal data sizes
 	// Recursive import kind of :)
 	_, err := shuffle.RunInit(*shuffle.GetDatastore(), *shuffle.GetStorage(), "", "worker", true, "elasticsearch", false, 0)
@@ -3251,6 +3816,22 @@ func main() {
 	swarmConfig := os.Getenv("SHUFFLE_SWARM_CONFIG")
 	log.Printf("[INFO] Running with timezone %s and swarm config %#v", timezone, swarmConfig)
 
+	/*** STARTREMOVE ***/
+	if swarmConfig == "run" || swarmConfig == "swarm" {
+		// Forcing download just in case on the first iteration.
+		log.Printf("[INFO] Running in swarm mode - forcing download of apps")
+		workflowExecution := shuffle.WorkflowExecution{}
+
+		go baseDeploy()
+
+		listener := webserverSetup(workflowExecution)
+		runWebserver(listener)
+
+		// Should never get down here
+		log.Printf("[ERROR] Stopped listener %#v - exiting.", listener)
+		os.Exit(3)
+	}
+	/*** ENDREMOVE ***/
 
 	authorization := ""
 	executionId := ""
@@ -3593,6 +4174,11 @@ func runWebserver(listener net.Listener) {
 	r.HandleFunc("/api/v1/run", handleRunExecution).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/download", handleDownloadImage).Methods("POST", "OPTIONS")
 
+	/*** STARTREMOVE ***/
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
+		log.Printf("[DEBUG] Running webserver config for SWARM and K8s")
+	}
+	/*** ENDREMOVE ***/
 
 	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
