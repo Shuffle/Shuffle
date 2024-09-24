@@ -32,9 +32,9 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	//k8s deps
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 )
@@ -137,6 +137,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 		log.Printf("[ERROR][%s] Failed adding to cache during setexecution", workflowExecution)
 		return err
 	}
+
 
 	handleExecutionResult(workflowExecution)
 	validated := shuffle.ValidateFinished(ctx, -1, workflowExecution)
@@ -515,7 +516,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// }
 
 	// use deployment instead of pod
-	// then expose a service similarly.
+	// then expose a service similarly. 
 	// number of replicas can be set to os.Getenv("SHUFFLE_SCALE_REPLICAS")
 	replicaNumberStr := os.Getenv("SHUFFLE_SCALE_REPLICAS")
 	replicaNumber := 1
@@ -525,7 +526,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			log.Printf("[ERROR] %s is not a valid number for replication", replicaNumberStr)
 		} else {
 			replicaNumber = tmpInt
-
+		
 		}
 	}
 
@@ -736,6 +737,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			}
 		}
 	}
+
 
 	// Max 10% CPU every second
 	//CPUShares: 128,
@@ -2389,6 +2391,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 func sendSelfRequest(actionResult shuffle.ActionResult) {
 
+
 	data, err := json.Marshal(actionResult)
 	if err != nil {
 		log.Printf("[ERROR][%s] Shutting down (24):  Failed to unmarshal data for backend: %s", actionResult.ExecutionId, err)
@@ -2526,6 +2529,7 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 			}
 		}
 
+
 		log.Printf("[DEBUG][%s] Should send full result to %s", workflowExecution.ExecutionId, baseUrl)
 
 		//data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, executionId, authorization)
@@ -2609,6 +2613,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 // GetLocalIP returns the non loopback local IP of the host
 func getLocalIP() string {
 
+
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return ""
@@ -2657,6 +2662,7 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 	}
 
 	log.Printf("[DEBUG] OLD HOSTNAME: %s", appCallbackUrl)
+
 
 	port := listener.Addr().(*net.TCPAddr).Port
 	// Set the port environment variable
@@ -2814,6 +2820,7 @@ func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 		})
 	*/
 }
+
 
 // Runs data discovery
 
@@ -3244,6 +3251,7 @@ func main() {
 	swarmConfig := os.Getenv("SHUFFLE_SWARM_CONFIG")
 	log.Printf("[INFO] Running with timezone %s and swarm config %#v", timezone, swarmConfig)
 
+
 	authorization := ""
 	executionId := ""
 
@@ -3585,6 +3593,7 @@ func runWebserver(listener net.Listener) {
 	r.HandleFunc("/api/v1/run", handleRunExecution).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/download", handleDownloadImage).Methods("POST", "OPTIONS")
 
+
 	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
 		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
@@ -3601,6 +3610,7 @@ func runWebserver(listener net.Listener) {
 	//}
 
 	//log.Fatal(http.Serve(listener, nil))
+
 
 	log.Printf("[DEBUG] NEW webserver setup")
 
