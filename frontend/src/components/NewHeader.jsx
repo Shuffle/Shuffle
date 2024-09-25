@@ -503,18 +503,18 @@ const Header = (props) => {
             //globalUrl = responseJson.region_url
           }
           if (responseJson["reason"] === "SSO_REDIRECT") {
-			setTimeout(() => {
-				toast.info("Redirecting to SSO login page as SSO is required for this organization.")
-				window.location.href = responseJson["url"]
-				return
-			}, 2000)
+            setTimeout(() => {
+              toast.info("Redirecting to SSO login page as SSO is required for this organization.")
+              window.location.href = responseJson["url"]
+              return
+            }, 2000)
+          } else {
+            toast("Successfully changed active organization - refreshing!");
+            setTimeout(() => {
+              window.location.reload()
+            }, 2000);
           }
 
-          setTimeout(() => {
-            window.location.reload()
-          }, 2000);
-
-          toast("Successfully changed active organization - refreshing!");
         } else {
           if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
             toast(responseJson.reason);
