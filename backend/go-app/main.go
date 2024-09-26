@@ -497,6 +497,7 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 	newUser.ActiveOrg = shuffle.OrgMini{
 		Id:   org.Id,
 		Name: org.Name,
+		Role: newUser.Role,
 	}
 
 	if len(apikey) > 0 {
@@ -934,10 +935,22 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 
 	//if err == nil {
 	if len(org.Id) > 0 {
+		if userInfo.Role == "" {
+			//err = shuffle.SetUser(ctx, &userInfo, false)
+			for _, user := range org.Users {
+				if user.Id != userInfo.Id {
+					continue
+				}
+
+				userInfo.ActiveOrg.Role = user.Role
+			}
+		}
+
 		userInfo.ActiveOrg = shuffle.OrgMini{
 			Id:         org.Id,
 			Name:       org.Name,
 			CreatorOrg: org.CreatorOrg,
+			ChildOrgs:  org.ChildOrgs,
 			Role:       userInfo.ActiveOrg.Role,
 			Image:      org.Image,
 		}
@@ -5219,6 +5232,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/delete_cache", shuffle.HandleDeleteCacheKeyPost).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/stats", shuffle.HandleAppendStatistics).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/statistics", shuffle.HandleGetStatistics).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/orgs/{orgId}/cache", shuffle.HandleListCacheKeys).Methods("GET", "OPTIONS")

@@ -30,6 +30,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"math/rand"
 
 	//"os/signal"
 	//"syscall"
@@ -101,8 +102,9 @@ var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
 var memcached = os.Getenv("SHUFFLE_MEMCACHED")
-var apiKey = os.Getenv("AUTH_FOR_ORBORUS")
 
+// For it to download from Sigma? 
+var apiKey = os.Getenv("AUTH_FOR_ORBORUS") 
 var pipelineUrl = os.Getenv("SHUFFLE_PIPELINE_URL")
 
 var executionIds = []string{}
@@ -1637,7 +1639,6 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 
 func sendRemoveRequest(client *http.Client, toBeRemoved shuffle.ExecutionRequestWrapper, baseUrl, environment, auth, org string, sleepTime int) error {
 	confirmUrl := fmt.Sprintf("%s/api/v1/workflows/queue/confirm", baseUrl)
-
 	data, err := json.Marshal(toBeRemoved)
 	if err != nil {
 		log.Printf("[WARNING] Failed removal marshalling: %s", err)
@@ -1926,6 +1927,7 @@ func main() {
 	hasStarted := false
 	for {
 		_ = sendTenzirHealthStatus()
+
 		if req.Method == "POST" {
 			// Should find data to send (memory etc.)
 
@@ -2727,12 +2729,15 @@ func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway 
 }
 
 func checkTenzirNode() error {
-	retries := 5
-	retryInterval := 3 * time.Second
+	retries := 1
+
+	//retryInterval := 3 * time.Second
 	url := fmt.Sprintf("%s/api/v0/ping", pipelineUrl)
 	forwardMethod := "POST"
 
-	client := http.Client{}
+	client := http.Client{
+		Timeout: 1 * time.Second,
+	}
 	req, err := http.NewRequest(forwardMethod, url, nil)
 	if err != nil {
 		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
@@ -2744,7 +2749,8 @@ func checkTenzirNode() error {
 		if err == nil && resp.StatusCode == http.StatusOK {
 			return nil
 		}
-		time.Sleep(retryInterval)
+
+		//time.Sleep(retryInterval)
 	}
 
 	return fmt.Errorf("tenzir node is not available")
@@ -3217,8 +3223,15 @@ func removePath(containerName, path string) error {
 }
 
 func sendTenzirHealthStatus() error {
+	// Check one in every 10 times only
+	randint := rand.Intn(10)
+	_ = randint
+	//if randint != 0 {
+	//	return nil
+	//}
+
 	var status string
-	url := fmt.Sprintf("%s/api/v1/detection/siem/node_health", baseUrl)
+	url := fmt.Sprintf("%s/api/v1/detections/siem/health", baseUrl)
 	err := checkTenzirNode()
 	if err != nil {
 		return err
@@ -3226,12 +3239,24 @@ func sendTenzirHealthStatus() error {
 		status = "active"
 	}
 
-	log.Printf("[DEBUG] Sending health update to backend url %s", baseUrl)
-
+	log.Printf("[DEBUG] Sending Tenzir health update to backend url '%s'", baseUrl)
 	forwardMethod := "POST"
 	payload := map[string]interface{}{
 		"status": status,
+		"environment": environment,
+		"authorization": "",
+		"org_id": "",
+
 	}
+
+	if len(auth) > 0 {
+		payload["authorization"] = auth
+	}
+
+	if len(org) > 0 {
+		payload["org_id"] = org
+	}
+
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("[ERROR] Failed to marshal payload: %s", err)
@@ -3247,8 +3272,8 @@ func sendTenzirHealthStatus() error {
 		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
 		return err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
+	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -3258,7 +3283,7 @@ func sendTenzirHealthStatus() error {
 
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Printf("[ERROR] Pipeline: Received non-successful HTTP status code: %d", resp.StatusCode)
+		log.Printf("[ERROR] Pipeline: status for URL %s: %d", url, resp.StatusCode)
 		return fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
 

@@ -1767,27 +1767,12 @@ class AppBase:
             self.send_result(self.action_result, headers, stream_path) 
             return
 
-
-        # Add async logger
-        # self.console_logger.handlers[0].stream.set_execution_id()
-
-        # FIXME: Shouldn't skip this, but it's good for minimzing API calls
-        #try:
-        #    ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result, verify=False)
-        #    self.logger.info("Workflow: %d" % ret.status_code)
-        #    if ret.status_code != 200:
-        #        self.logger.info(ret.text)
-        #except requests.exceptions.ConnectionError as e:
-        #    self.logger.info("Connectionerror: %s" %  e)
-
-        #    action_result["result"] = "Bad setup during startup: %s" % e 
-        #    self.send_result(action_result, headers, stream_path) 
-        #    return
-
         # Verify whether there are any parameters with ACTION_RESULT required
         # If found, we get the full results list from backend
+
+        # Forcing this to run due to potential self.full_execution loading issues in cloud run
         fullexecution = {}
-        if isinstance(self.full_execution, str) and len(self.full_execution) == 0:
+        if True or (isinstance(self.full_execution, str) and len(self.full_execution) == 0):
             #self.logger.info("[DEBUG] NO EXECUTION - LOADING!")
             try:
                 failed = False
