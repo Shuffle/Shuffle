@@ -769,10 +769,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			// image on every Orborus/new worker restart.
 
 			// Running as coroutine for eventual completeness
-			//go downloadDockerImageBackend(&http.Client{}, image)
+			//go shuffle.DownloadDockerImageBackend(&http.Client{}, image)
 			// FIXME: With goroutines it got too much trouble of deploying with an older version
 			// Allowing slow startups, as long as it's eventually fast, and uses the same registry as on host.
-			downloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+			shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
 		}
 
 		var exposedPort int
@@ -1499,7 +1499,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					return
 				}
 
-				err := downloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+				err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
 				executed := false
 				if err == nil {
 					log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", image)
@@ -1612,7 +1612,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					}
 
 					log.Printf("[DEBUG][%s] Failed deploy. Downloading image %s: %s", workflowExecution.ExecutionId, image, err)
-					err := downloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+					err := shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
 
 					executed := false
 					if err == nil {
@@ -2902,113 +2902,7 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 	return listener
 }
 
-func downloadDockerImageBackend(client *http.Client, imageName string) error {
-	// Check environment SHUFFLE_AUTO_IMAGE_DOWNLOAD
-	if os.Getenv("SHUFFLE_AUTO_IMAGE_DOWNLOAD") == "false" {
-		log.Printf("[DEBUG] SHUFFLE_AUTO_IMAGE_DOWNLOAD is false. Not downloading image %s", imageName)
-		return nil
-	}
 
-	if arrayContains(downloadedImages, imageName) {
-		log.Printf("[DEBUG] Image %s already downloaded - not re-downloading", imageName)
-		return nil
-	}
-
-	log.Printf("[DEBUG] Trying to download image %s from backend %s as it doesn't exist. All images: %#v", imageName, baseUrl, downloadedImages)
-
-	downloadedImages = append(downloadedImages, imageName)
-
-	data := fmt.Sprintf(`{"name": "%s"}`, imageName)
-	dockerImgUrl := fmt.Sprintf("%s/api/v1/get_docker_image", baseUrl)
-
-	req, err := http.NewRequest(
-		"POST",
-		dockerImgUrl,
-		bytes.NewBuffer([]byte(data)),
-	)
-
-	authorization := os.Getenv("AUTHORIZATION")
-	if len(authorization) > 0 {
-		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
-	} else {
-		log.Printf("[WARNING] No auth found - running backend download without it.")
-		//return
-	}
-
-	newresp, err := topClient.Do(req)
-	if err != nil {
-		log.Printf("[ERROR] Failed download request for %s: %s", imageName, err)
-		return err
-	}
-
-	defer newresp.Body.Close()
-	if newresp.StatusCode != 200 {
-		log.Printf("[ERROR] Docker download for image %s (backend) StatusCode (1): %d", imageName, newresp.StatusCode)
-		return errors.New(fmt.Sprintf("Failed to get image - status code %d", newresp.StatusCode))
-	}
-
-	newImageName := strings.Replace(imageName, "/", "_", -1)
-	newFileName := newImageName + ".tar"
-
-	tar, err := os.Create(newFileName)
-	if err != nil {
-		log.Printf("[WARNING] Failed creating file: %s", err)
-		return err
-	}
-
-	defer tar.Close()
-	_, err = io.Copy(tar, newresp.Body)
-	if err != nil {
-		log.Printf("[WARNING] Failed response body copying: %s", err)
-		return err
-	}
-	tar.Seek(0, 0)
-
-	dockercli, err := dockerclient.NewEnvClient()
-	if err != nil {
-		log.Printf("[ERROR] Unable to create docker client (3): %s", err)
-		return err
-	}
-
-	defer dockercli.Close()
-
-	imageLoadResponse, err := dockercli.ImageLoad(context.Background(), tar, true)
-	if err != nil {
-		log.Printf("[ERROR] Error loading images: %s", err)
-		return err
-	}
-
-	defer imageLoadResponse.Body.Close()
-	body, err := ioutil.ReadAll(imageLoadResponse.Body)
-	if err != nil {
-		log.Printf("[ERROR] Error reading: %s", err)
-		return err
-	}
-
-	if strings.Contains(string(body), "no such file") {
-		return errors.New(string(body))
-	}
-
-	baseTag := strings.Split(imageName, ":")
-	if len(baseTag) > 1 {
-		tag := baseTag[1]
-		log.Printf("[DEBUG] Creating tag copies of downloaded containers from tag %s", tag)
-
-		// Remapping
-		ctx := context.Background()
-		dockercli.ImageTag(ctx, imageName, fmt.Sprintf("frikky/shuffle:%s", tag))
-		dockercli.ImageTag(ctx, imageName, fmt.Sprintf("registry.hub.docker.com/frikky/shuffle:%s", tag))
-
-		downloadedImages = append(downloadedImages, fmt.Sprintf("frikky/shuffle:%s", tag))
-		downloadedImages = append(downloadedImages, fmt.Sprintf("registry.hub.docker.com/frikky/shuffle:%s", tag))
-
-	}
-
-	os.Remove(newFileName)
-
-	log.Printf("[INFO] Successfully loaded image %s: %s", imageName, string(body))
-	return nil
-}
 
 func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 	ctx := context.Background()
@@ -4159,7 +4053,7 @@ func handleDownloadImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("[INFO] Downloading image %s", image.Image)
-	downloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image.Image)
+	shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image.Image)
 
 	// return success
 	resp.WriteHeader(200)
