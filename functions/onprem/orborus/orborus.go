@@ -724,46 +724,105 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 }
 
 func handleBackendImageDownload(ctx context.Context, images string) error {
-
 	// Replicate images with lowercase, as the name may be wrong
 	// Most of the time lowercase is correct. Swapping to have that first
 	originalImages := images
 	images = strings.ToLower(images) + "," + originalImages
 
-	log.Printf("[DEBUG] Should remove existing image (s): %s", images)
-
 	// Remove the image
+	handled := []string{}
+	log.Printf("[DEBUG] Should remove existing image (s): %s", images)
 	removeOptions := image.RemoveOptions{}
+
+	newImages := []string{}
 	for _, image := range strings.Split(images, ",") {
 		image = strings.TrimSpace(image)
+		if shuffle.ArrayContains(handled, image) {
+			continue
+		}
+
+		handled = append(handled, image)
 		if !strings.Contains(image, "/") {
 			image = fmt.Sprintf("frikky/shuffle:%s", image)
 		}
 
+		newImages = append(newImages, image)
+
 		// There is no real point in actual removal. This may however be a good idea, as Worker will force download the new one anyway
 		resp, err := dockercli.ImageRemove(ctx, image, removeOptions)
 		if err != nil {
-			log.Printf("[ERROR] Failed removing image: %s", err)
+			log.Printf("[ERROR] Failed removing image: %s. Resp: %#v", err, resp)
+		
+			// Goroutining images that don't already exist, as they are most likely not the correct one
+			go shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
 		} else {
-			log.Printf("[DEBUG] Removed image: %s", resp)
-		}
+			log.Printf("[DEBUG] Removed image: %s", image)
 
-
-		err = shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
-		if err != nil {
-			log.Printf("[ERROR] Failed downloading image: %s", err)
-		} else {
-			log.Printf("[DEBUG] Downloaded image: %s", image)
-			//break
+			err = shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
+			if err != nil {
+				log.Printf("[ERROR] Failed downloading image: %s", err)
+			} else {
+				log.Printf("[DEBUG] Downloaded image: %s", image)
+				//break
+			}
 		}
 	}
 
 	if swarmConfig == "run" || swarmConfig == "swarm" {
-		log.Printf("[DEBUG] Should update service with new image after updating(s): %s. \n\nNOT IMPLEMENTED: Contact support@shuffler.io for support.\n\n", images)
+		log.Printf("[DEBUG] Should update service with new image after updating(s): %s. \n\nBETA REPLACEMENT IMPLEMENTATION: Contact support@shuffler.io for support.", strings.Join(newImages, "\n"))
 
 		// 1. Download the image
 		// 2. Find the existing service using the image
 		// 3. Update the service with the new image in a rolling restart
+
+		// Find the existing service
+		serviceListOptions := types.ServiceListOptions{}
+		services, err := dockercli.ServiceList(
+			ctx,
+			serviceListOptions,
+		)
+
+		if err != nil {
+			log.Printf("[ERROR] Failed finding containers: %s", err)
+		} else {
+			log.Printf("[DEBUG] Found %d services", len(services))
+
+			for _, service := range services {
+
+				log.Printf("Imagename: %s", service.Spec.TaskTemplate.ContainerSpec.Image)
+
+				for _, image := range newImages {
+					if !strings.Contains(service.Spec.TaskTemplate.ContainerSpec.Image, image) {
+						continue
+					}
+
+					log.Printf("[DEBUG] Found service for image %#v: %#v", service.Spec.Annotations.Name)
+
+					// Update the service to run with the new image
+					//docker service update --image username/imagename:latest servicename --force
+					serviceUpdateOptions := types.ServiceUpdateOptions{}
+					resp, err := dockercli.ServiceUpdate(
+						ctx, 
+						service.ID, 
+						service.Version, 
+						service.Spec, 
+						serviceUpdateOptions,
+					)
+
+					if err != nil {
+						log.Printf("[ERROR] Failed updating service %s with the new image %s: %s. Resp: %#v", service.Spec.Annotations.Name, image, err, resp)
+					} else {
+						log.Printf("[DEBUG] Updated service %s with the new image %s. Resp: %#v", service.Spec.Annotations.Name, image, resp)
+
+						if !strings.Contains(fmt.Sprintf("%s", resp), "error") {
+							break
+						}
+					}
+				}
+			}
+		
+		}
+
 	}
 
 	return nil
@@ -2047,11 +2106,11 @@ func main() {
 						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
 				} else if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
-					log.Printf("[INFO] Should delete -> download new image %#v", incRequest.ExecutionArgument)
+					log.Printf("[INFO] Should delete -> download new images: %#v", incRequest.ExecutionArgument)
 
 					if len(incRequest.ExecutionArgument) > 0 {
 						// FIXME: Wait X seconds before running this as the image build may not be done yet. This is shitty, but may be ok to do in Orborus. Easy fix for the future: Just let it run through jobs 5-10 times before actually picking it up
-						time.Sleep(time.Duration(25) * time.Second)
+						//time.Sleep(time.Duration(25) * time.Second)
 
 						err = handleBackendImageDownload(ctx, incRequest.ExecutionArgument)
 						if err != nil {

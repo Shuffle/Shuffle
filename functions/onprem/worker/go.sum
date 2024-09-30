@@ -403,6 +403,8 @@ github.com/shuffle/shuffle-shared v0.6.27 h1:q4qZD6bGZFIvZ5Y10unGr3N3rZ7OryWyvva
 github.com/shuffle/shuffle-shared v0.6.27/go.mod h1:rWkh1eWdIx7OqQzJ1+JzF3Hck1X/Ty1WkUtjLrp+CU4=
 github.com/shuffle/shuffle-shared v0.6.63 h1:eNQMpVhe/mAMxl61W9Wj6/Z4PrtPeEnbjvMtDdT1mqw=
 github.com/shuffle/shuffle-shared v0.6.63/go.mod h1:RAJiSFjmuKmijKTbbEf9A6Ojb+3/te7g71lED7JjPus=
+github.com/shuffle/shuffle-shared v0.6.71 h1:ZivcCTYmGQilxOjm0tBTNXP3caPMRH6f5ohEzfnh03I=
+github.com/shuffle/shuffle-shared v0.6.71/go.mod h1:RAJiSFjmuKmijKTbbEf9A6Ojb+3/te7g71lED7JjPus=
 github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
