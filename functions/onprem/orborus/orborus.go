@@ -756,7 +756,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			},
 			Spec: corev1.PodSpec{
 				RestartPolicy: "Never",
-				DNSPolicy:     "Default",
 				// NodeSelector: map[string]string{
 				// 	"node": "master",
 				// },
