@@ -100,6 +100,9 @@ Apps, specification and App SDK: MIT
 ## Architecture
 ![Shuffle Architecture](https://github.com/shuffle/Shuffle/blob/main/frontend/src/assets/img/shuffle_architecture.png)
 
+## Security Contributors: Hall of Fame
+[Pushpraj](https://github.com/PushprajPatil) - Reported several issues between July and August 2024
+
 ### Repository overview 
 Below is the folder structure with a short explanation
 ```bash
