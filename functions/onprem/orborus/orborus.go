@@ -724,6 +724,8 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 }
 
 func handleBackendImageDownload(ctx context.Context, images string) error {
+
+
 	// Replicate images with lowercase, as the name may be wrong
 	// Most of the time lowercase is correct. Swapping to have that first
 	originalImages := images
@@ -731,8 +733,10 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 
 	// Remove the image
 	handled := []string{}
-	log.Printf("[DEBUG] Should remove existing image (s): %s", images)
+	log.Printf("[DEBUG] Should remove existing image (s): %s. Waiting 30 seconds to ensure backend has the latest images built and ready to distribute.", images)
 	removeOptions := image.RemoveOptions{}
+
+	time.Sleep(time.Duration(30) * time.Second)
 
 	newImages := []string{}
 	for _, image := range strings.Split(images, ",") {
@@ -2110,12 +2114,9 @@ func main() {
 
 					if len(incRequest.ExecutionArgument) > 0 {
 						// FIXME: Wait X seconds before running this as the image build may not be done yet. This is shitty, but may be ok to do in Orborus. Easy fix for the future: Just let it run through jobs 5-10 times before actually picking it up
-						//time.Sleep(time.Duration(25) * time.Second)
 
-						err = handleBackendImageDownload(ctx, incRequest.ExecutionArgument)
-						if err != nil {
-							log.Printf("[ERROR] Failed handling image delete -> download: %s", err)
-						}
+						// Run after 25 seconds in the goroutine instead 
+						go handleBackendImageDownload(ctx, incRequest.ExecutionArgument)
 					} else {
 						log.Printf("[ERROR] No image name provided for download. Removing job from queue.")
 					}
@@ -3656,13 +3657,26 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 		}
 	}
 
-	if len(workerServerUrl) > 0 {
-		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
+	if strings.Contains(streamUrl, "shuffler.io") || strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "127.0.0.1") || strings.Contains(streamUrl, "shuffle-backend") {
+
+		// Specific to debugging 
+		if len(workerServerUrl) == 0 {
+			log.Printf("[INFO] Using default worker server url as previous is invalid: %s", streamUrl)
+		}
+
+		streamUrl = fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
 	}
 
-	if strings.Contains(streamUrl, "shuffler.io") || strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "shuffle-backend") {
-		log.Printf("[INFO] Using default worker server url as previous is invalid: %s", streamUrl)
-		streamUrl = fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
+	if len(workerServerUrl) > 0 {
+		// Check if a port is supplied or not
+		if strings.Contains(workerServerUrl, "/api/v1/execute") {
+			streamUrl = workerServerUrl
+		} else {
+			streamUrl = fmt.Sprintf("%s/api/v1/execute", workerServerUrl)
+			if !strings.Contains(workerServerUrl, ":") {
+				streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", workerServerUrl)
+			}
+		}
 	}
 
 	client := &http.Client{}
