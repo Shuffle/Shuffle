@@ -3318,7 +3318,7 @@ func sendTenzirHealthStatus() error {
 		status = "active"
 	}
 
-	log.Printf("[DEBUG] Sending Tenzir health update to backend url '%s'", baseUrl)
+	//log.Printf("[DEBUG] Sending Tenzir health update to backend url '%s'", baseUrl)
 	forwardMethod := "POST"
 	payload := map[string]interface{}{
 		"status": status,
@@ -3362,7 +3362,7 @@ func sendTenzirHealthStatus() error {
 
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Printf("[ERROR] Pipeline: status for URL %s: %d", url, resp.StatusCode)
+		//log.Printf("[ERROR] Pipeline: status for URL %s: %d", url, resp.StatusCode)
 		return fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
 
