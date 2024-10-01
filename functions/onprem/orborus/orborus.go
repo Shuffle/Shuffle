@@ -35,6 +35,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/swarm"
@@ -78,7 +79,6 @@ var isKubernetes = os.Getenv("IS_KUBERNETES")
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
 var maxCPUPercent = 90
 
-
 // var baseimagename = "docker.pkg.github.com/shuffle/shuffle"
 // var baseimagename = "ghcr.io/frikky"
 // var baseimagename = "shuffle/shuffle"
@@ -107,7 +107,7 @@ var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 var tenzirUrl = os.Getenv("SHUFFLE_TENZIR_URL")
 
 var executionIds = []string{}
-var namespacemade = false  // For K8s
+var namespacemade = false // For K8s
 
 var dockercli *dockerclient.Client
 var containerId string
@@ -630,11 +630,10 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 	return envVars
 }
 
-
 func handleBackendImageDownload(ctx context.Context, images string) error {
 	// Should use docker to:
-	// 1. Pull the image & tag it 
-	// 2. Distribute the image by updating service if "run" 
+	// 1. Pull the image & tag it
+	// 2. Distribute the image by updating service if "run"
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		log.Printf("[DEBUG] Should update service with new image after updating(s): %s. \n\nNOT IMPLEMENTED: Contact support@shuffler.io for support.\n\n", images)
 
@@ -645,8 +644,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 		log.Printf("[DEBUG] Should remove existing image (s): %s", images)
 
 		// Remove the image
-		removeOptions := types.ImageRemoveOptions{
-		}
+		removeOptions := types.ImageRemoveOptions{}
 
 		for _, image := range strings.Split(images, ",") {
 			image = strings.TrimSpace(image)
@@ -666,7 +664,6 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 	return nil
 }
 
-
 func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) error {
 	if len(os.Getenv("REGISTRY_URL")) > 0 && os.Getenv("REGISTRY_URL") != "" {
 		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
@@ -678,12 +675,11 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 		if len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
 			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", os.Getenv("KUBERNETES_SERVICE_HOST")))
-		} 
+		}
 
 		if len(os.Getenv("KUBERNETES_SERVICE_PORT")) > 0 {
 			env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", os.Getenv("KUBERNETES_SERVICE_PORT")))
 		}
-
 
 		clientset, config, err := getKubernetesClient()
 		if err != nil {
@@ -694,7 +690,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		env = append(env, fmt.Sprintf("KUBERNETES_CONFIG=%s", config.String()))
 
 		// FIXME: When a service account is used, the account is also mounted in the pod
-		// The volume mount location is: 
+		// The volume mount location is:
 		// /var/run/secrets/kubernetes.io/serviceaccount
 
 		// Look for if there is a default service account in use
@@ -765,7 +761,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 						Name:  identifier,
 						Image: kubernetesImage,
 						Env:   buildEnvVars(envMap),
-						
 						//ImagePullPolicy: "Never",
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						//ImagePullPolicy: "Always",
@@ -1174,8 +1169,7 @@ func getOrborusStats(ctx context.Context) shuffle.OrborusStats {
 		newStats.MaxMemory = int(pers.MemTotal)
 	}
 
-
-		// Get list of all running containers
+	// Get list of all running containers
 	containers, err := dockercli.ContainerList(ctx, container.ListOptions{})
 
 	if err != nil {
@@ -1313,7 +1307,7 @@ func getKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
 
 		return clientset, config, nil
 
-	} 
+	}
 
 	home := homedir.HomeDir()
 	kubeconfigPath := filepath.Join(home, ".kube", "config")
@@ -1329,7 +1323,6 @@ func getKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
 
 	return clientset, config, nil
 }
-
 
 func sendRemoveRequest(client *http.Client, toBeRemoved shuffle.ExecutionRequestWrapper, baseUrl, environment, auth, org string, sleepTime int) error {
 	confirmUrl := fmt.Sprintf("%s/api/v1/workflows/queue/confirm", baseUrl)
@@ -1583,6 +1576,13 @@ func main() {
 
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
+
+	lastExecutionCheck := time.Now()
+	numberOfExecution := 0
+	currentWorkers, err := strconv.Atoi(os.Getenv("SHUFFLE_SCALE_REPLICAS"))
+	if err != nil {
+		currentWorkers = 1
+	}
 	for {
 		if req.Method == "POST" {
 			// Should find data to send (memory etc.)
@@ -1668,13 +1668,12 @@ func main() {
 			continue
 		}
 
-
 		if hasStarted && len(executionRequests.Data) > 0 {
 			//log.Printf("[INFO] Body: %s", string(body))
 			// Type string `json:"type"`
 		}
 
-		// FIXME: Add features here for orborus & worker to 
+		// FIXME: Add features here for orborus & worker to
 		// do things on behalf of backend
 		var toBeRemoved shuffle.ExecutionRequestWrapper
 		if len(executionRequests.Data) > 0 {
@@ -1746,7 +1745,7 @@ func main() {
 				log.Printf("[WARNING] Throttle - Cutting down requests from %d to %d (MAX: %d, CUR: %d)", len(executionRequests.Data), allowed, maxConcurrency, executionCount)
 				executionRequests.Data = executionRequests.Data[0:allowed]
 			}
-		} else if (swarmControlMode && (swarmConfig == "run" || swarmConfig == "swarm")) {
+		} else if swarmControlMode && (swarmConfig == "run" || swarmConfig == "swarm") {
 			if len(executionRequests.Data) > 50 {
 				executionRequests.Data = executionRequests.Data[0:50]
 			}
@@ -1760,6 +1759,30 @@ func main() {
 			}
 
 			swarmRequestsMade += len(executionRequests.Data)
+		}
+
+		executionSince := time.Since(lastExecutionCheck)
+		numberOfExecution += len(executionRequests.Data)
+
+		// TODO: not always reset after 15 sec as CPU cycle could be busy
+		if executionSince.Seconds() > 15 {
+			log.Printf("START NOW PROBABLY")
+			lastExecutionCheck = time.Now()
+			numberOfExecution = 0
+		}
+
+		if numberOfExecution > 10*currentWorkers {
+			//os.Setenv("SHUFFLE_SCALE_REPLICAS", strconv.Itoa(currentWorkers+1))
+			//deployServiceWorkers(workerImage)
+			services, err := dockercli.ServiceList(context.Background(), types.ServiceListOptions{
+				Filters: filters.NewArgs(filters.Arg("name", "shuffle-workers")),
+			})
+
+			if err != nil {
+				log.Printf("FUCK ERRORS")
+			}
+
+			log.Printf("Services: %#v", services)
 		}
 
 		// New, abortable version. Should check executionid and remove everything else
@@ -1895,7 +1918,6 @@ func main() {
 	}
 }
 
-
 // func deployPipeline(image, identifier, command string) error {
 // 	if isKubernetes == "true" {
 // 		return errors.New("Kubernetes not implemented")
@@ -1919,7 +1941,6 @@ func main() {
 
 // 	envVariables := []string{
 // 	}
-
 
 // 	// Add volume binds for storage
 // 	// Want read/write with full access for the container
@@ -1957,8 +1978,7 @@ func main() {
 // 	config.Labels = map[string]string{
 // 		"name":   identifier,
 // 		"shuffle": "shuffle",
-// 	}			
-
+// 	}
 
 // 	cont, err := dockercli.ContainerCreate(
 // 		ctx,
@@ -1980,8 +2000,8 @@ func main() {
 
 // 	containerStartOptions := container.StartOptions{}
 // 	err = dockercli.ContainerStart(
-// 		ctx, 
-// 		cont.ID, 
+// 		ctx,
+// 		cont.ID,
 // 		containerStartOptions,
 // 	)
 // 	if err != nil {
@@ -2000,8 +2020,8 @@ func main() {
 // 			}
 
 // 			err = dockercli.ContainerStart(
-// 				ctx, 
-// 				cont.ID, 
+// 				ctx,
+// 				cont.ID,
 // 				containerStartOptions,
 // 			)
 // 			if err != nil {
@@ -2045,8 +2065,6 @@ func main() {
 // 	return nil
 // }
 
-
-
 // Tenzir command samples
 // docker pull ghcr.io/dominiklohmann/tenzir-arm64:latest
 // docker tag ghcr.io/dominiklohmann/tenzir-arm64:latest tenzir/tenzir:latest
@@ -2054,14 +2072,14 @@ func main() {
 // Read from Cache and send it to a webhook
 // docker run tenzir/tenzir:latest 'from http://192.168.86.44:5002/api/v1/orgs/7e9b9007-5df2-4b47-bca5-c4d267ef2943/cache/CIDR%20ranges?type=text&authorization=cec9d01f-09b2-4419-8a0a-76c6046e3fef read lines | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines'
 func handlePipeline(incRequest shuffle.ExecutionRequest) error {
-	
+
 	if tenzirUrl == "" {
 		tenzirUrl = "http://localhost:5160"
-		log.Printf("[WARNING] SHUFFLE_TENZIR_URL not set, falling back to default URL: %s",tenzirUrl)
+		log.Printf("[WARNING] SHUFFLE_TENZIR_URL not set, falling back to default URL: %s", tenzirUrl)
 	}
 
 	err := deployTenzirNode()
-	if err != nil{
+	if err != nil {
 		log.Printf("[ERROR] failed to deploy the pipeline, reason: %s", err)
 		return err
 	}
@@ -2095,7 +2113,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 		if err != nil {
 			log.Printf("[ERROR] Failed Deleting Pipeline %s", err)
 			return err
-		} 
+		}
 	} else if incRequest.Type == "PIPELINE_STOP" {
 		log.Printf("[INFO] Should stop the pipeline %#v", identifier)
 		pipelineId, err := searchPipeline(identifier)
@@ -2111,10 +2129,10 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[INFO] successfully stopped the Pipeline: %s", pipelineId)
 		}
 
-	}  else if incRequest.Type == "PIPELINE_START" {
+	} else if incRequest.Type == "PIPELINE_START" {
 		log.Printf("[INFO] Should start the pipeline %#v", identifier)
 		pipelineId, err := searchPipeline(identifier)
-		if err != nil { 
+		if err != nil {
 			if err.Error() == "no existing pipeline found with name" {
 				log.Printf("[WARNING] no pipeline found for %s, creating a new one", identifier)
 				_, CreateErr := createPipeline(command, identifier)
@@ -2140,157 +2158,157 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 }
 
 func deployTenzirNode() error {
-    if isKubernetes == "true" {
-        return errors.New("kubernetes not implemented")
-    }
+	if isKubernetes == "true" {
+		return errors.New("kubernetes not implemented")
+	}
 
-    ctx := context.Background()
-    cacheKey := "tenzir-key"
+	ctx := context.Background()
+	cacheKey := "tenzir-key"
 
-    imageName := "tenzir/tenzir:latest"
-    containerName := "tenzir-node"
-    containerStartOptions := container.StartOptions{}
+	imageName := "tenzir/tenzir:latest"
+	containerName := "tenzir-node"
+	containerStartOptions := container.StartOptions{}
 
-    _, err := shuffle.GetCache(ctx, cacheKey)
-    if err == nil {
-        return nil
-    }
+	_, err := shuffle.GetCache(ctx, cacheKey)
+	if err == nil {
+		return nil
+	}
 
-    containerInfo, err := dockercli.ContainerInspect(ctx, containerName)
-    if err != nil {
-        if dockerclient.IsErrNotFound(err) {
+	containerInfo, err := dockercli.ContainerInspect(ctx, containerName)
+	if err != nil {
+		if dockerclient.IsErrNotFound(err) {
 
-            // Check if image exists
-            _, _, err := dockercli.ImageInspectWithRaw(ctx, imageName)
-            if dockerclient.IsErrNotFound(err) {
-                log.Printf("[DEBUG] pulling image %s", imageName)
-                pullOptions := types.ImagePullOptions{}
-                out, err := dockercli.ImagePull(ctx, imageName, pullOptions)
-                if err != nil {
-                    log.Printf("[ERROR] Failed to pull the Tenzir image: %s", err)
-                    return err
-                }
-                defer out.Close()
+			// Check if image exists
+			_, _, err := dockercli.ImageInspectWithRaw(ctx, imageName)
+			if dockerclient.IsErrNotFound(err) {
+				log.Printf("[DEBUG] pulling image %s", imageName)
+				pullOptions := types.ImagePullOptions{}
+				out, err := dockercli.ImagePull(ctx, imageName, pullOptions)
+				if err != nil {
+					log.Printf("[ERROR] Failed to pull the Tenzir image: %s", err)
+					return err
+				}
+				defer out.Close()
 
-                io.Copy(io.Discard, out)
-            } else if err != nil {
-                return err
-            }
+				io.Copy(io.Discard, out)
+			} else if err != nil {
+				return err
+			}
 
-            err = createAndStartTenzirNode(ctx, containerName, imageName, containerStartOptions)
-            if err != nil {
-                return err
-            }
-        } else {
-            return err
-        }
-    } else {
-        if !containerInfo.State.Running {
-            log.Printf("[DEBUG] Tenzir Node exists but is not running")
-            err := dockercli.ContainerStart(ctx, containerName, containerStartOptions)
-            if err != nil {
-                log.Printf("[ERROR] Failed to start Tenzir Node container: %v", err)
-                return err
-            }
+			err = createAndStartTenzirNode(ctx, containerName, imageName, containerStartOptions)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	} else {
+		if !containerInfo.State.Running {
+			log.Printf("[DEBUG] Tenzir Node exists but is not running")
+			err := dockercli.ContainerStart(ctx, containerName, containerStartOptions)
+			if err != nil {
+				log.Printf("[ERROR] Failed to start Tenzir Node container: %v", err)
+				return err
+			}
 
-            log.Printf("[INFO] Waiting for Tenzir to become available ...")
-            err = checkTenzirNode()
-            if err != nil {
-                return err
-            }
-        }
-    }
+			log.Printf("[INFO] Waiting for Tenzir to become available ...")
+			err = checkTenzirNode()
+			if err != nil {
+				return err
+			}
+		}
+	}
 
-    tenzirStatus := struct {
-        ContainerStatus string `json:"container_status"`
-    }{
-        ContainerStatus: "running",
-    }
+	tenzirStatus := struct {
+		ContainerStatus string `json:"container_status"`
+	}{
+		ContainerStatus: "running",
+	}
 
-    cacheData, err := json.Marshal(tenzirStatus)
-    if err != nil {
-        log.Printf("[WARNING] Failed marshalling execution: %s", err)
-    }
-    err = shuffle.SetCache(ctx, cacheKey, cacheData, 1)
-    if err != nil {
-        log.Printf("[WARNING] Failed updating cache for tenzir: %s", err)
-    }
+	cacheData, err := json.Marshal(tenzirStatus)
+	if err != nil {
+		log.Printf("[WARNING] Failed marshalling execution: %s", err)
+	}
+	err = shuffle.SetCache(ctx, cacheKey, cacheData, 1)
+	if err != nil {
+		log.Printf("[WARNING] Failed updating cache for tenzir: %s", err)
+	}
 
-    return nil
+	return nil
 }
 
 func checkTenzirNode() error {
-    retries := 20
-    retryInterval := 3 * time.Second
-	url := fmt.Sprintf("%s/api/v0/ping",tenzirUrl)
+	retries := 20
+	retryInterval := 3 * time.Second
+	url := fmt.Sprintf("%s/api/v0/ping", tenzirUrl)
 	forwardMethod := "POST"
 
-    client := http.Client{}
-    req, err := http.NewRequest(forwardMethod, url, nil)
+	client := http.Client{}
+	req, err := http.NewRequest(forwardMethod, url, nil)
 	if err != nil {
 		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
 		return err
 	}
 
-    for i := 0; i < retries; i++ {
-        resp, err := client.Do(req)
-        if err == nil && resp.StatusCode == http.StatusOK {
-            return nil
-        }
-        time.Sleep(retryInterval)
-    }
+	for i := 0; i < retries; i++ {
+		resp, err := client.Do(req)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			return nil
+		}
+		time.Sleep(retryInterval)
+	}
 
-    return fmt.Errorf("tenzir node is not available")
+	return fmt.Errorf("tenzir node is not available")
 }
 
 func createAndStartTenzirNode(ctx context.Context, containerName, imageName string, containerStartOptions container.StartOptions) error {
-    healthconfig := &container.HealthConfig{
-        Test:     []string{"tenzir --connection-timeout=30s --connection-retry-delay=1s 'api /ping'"},
-        Interval: 30 * time.Second,
-        Retries:  1,
-    }
+	healthconfig := &container.HealthConfig{
+		Test:     []string{"tenzir --connection-timeout=30s --connection-retry-delay=1s 'api /ping'"},
+		Interval: 30 * time.Second,
+		Retries:  1,
+	}
 
-    config := &container.Config{
-        Cmd:          []string{"--commands=web server --mode=dev --bind=0.0.0.0"},
-        Image:        imageName,
-        Healthcheck:  healthconfig,
-        ExposedPorts: nat.PortSet{"5160/tcp": struct{}{}},
-        Entrypoint:   []string{containerName},
-    }
+	config := &container.Config{
+		Cmd:          []string{"--commands=web server --mode=dev --bind=0.0.0.0"},
+		Image:        imageName,
+		Healthcheck:  healthconfig,
+		ExposedPorts: nat.PortSet{"5160/tcp": struct{}{}},
+		Entrypoint:   []string{containerName},
+	}
 
-    hostConfig := &container.HostConfig{
-        PortBindings: nat.PortMap{
-            "5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
-        },
-        Mounts: []mount.Mount{
-            {
-                Type:   mount.TypeVolume,
-                Source: containerName,
-                Target: "/var/lib/tenzir/",
-            },
-        },
-        VolumeDriver: "local",
-    }
-    _, err := dockercli.ContainerCreate(ctx, config, hostConfig, nil, nil, containerName)
-    if err != nil {
-        return err
-    }
+	hostConfig := &container.HostConfig{
+		PortBindings: nat.PortMap{
+			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
+		},
+		Mounts: []mount.Mount{
+			{
+				Type:   mount.TypeVolume,
+				Source: containerName,
+				Target: "/var/lib/tenzir/",
+			},
+		},
+		VolumeDriver: "local",
+	}
+	_, err := dockercli.ContainerCreate(ctx, config, hostConfig, nil, nil, containerName)
+	if err != nil {
+		return err
+	}
 
-    err = dockercli.ContainerStart(ctx, containerName, containerStartOptions)
-    if err != nil {
-        log.Printf("[ERROR] Failed to start Tenzir Node container: %v", err)
-        return err
-    }
-    log.Printf("[INFO] Tenzir Node container started successfully")
+	err = dockercli.ContainerStart(ctx, containerName, containerStartOptions)
+	if err != nil {
+		log.Printf("[ERROR] Failed to start Tenzir Node container: %v", err)
+		return err
+	}
+	log.Printf("[INFO] Tenzir Node container started successfully")
 
-    log.Printf("[INFO] Waiting for Tenzir to become available ...")
-    err = checkTenzirNode()
-    if err != nil {
-        return err
-    }
-    log.Printf("[INFO] Successfully deployed Tenzir Node !")
+	log.Printf("[INFO] Waiting for Tenzir to become available ...")
+	err = checkTenzirNode()
+	if err != nil {
+		return err
+	}
+	log.Printf("[INFO] Successfully deployed Tenzir Node !")
 
-    return nil
+	return nil
 }
 
 func createPipeline(command, identifier string) (string, error) {
@@ -2298,7 +2316,7 @@ func createPipeline(command, identifier string) (string, error) {
 	toBeDeleted := false
 	pipelineId, err := searchPipeline(identifier)
 
-	url :=  fmt.Sprintf("%s/api/v0/pipeline/create", tenzirUrl)
+	url := fmt.Sprintf("%s/api/v0/pipeline/create", tenzirUrl)
 	forwardMethod := "POST"
 
 	if err != nil {
@@ -2311,7 +2329,7 @@ func createPipeline(command, identifier string) (string, error) {
 		log.Printf("[INFO] an existing pipeline found with ID: %s. it will be deleted", pipelineId)
 		toBeDeleted = true
 	}
-    if strings.Contains(command, "shuffler.io") {
+	if strings.Contains(command, "shuffler.io") {
 
 	} else {
 		var scheme string
@@ -2325,7 +2343,7 @@ func createPipeline(command, identifier string) (string, error) {
 		if startIndex != -1 {
 			endIndex := startIndex + len(scheme)
 			endIndex += strings.Index(command[endIndex:], "/")
-			
+
 			command = command[:startIndex] + baseUrl + command[endIndex:]
 		}
 	}
@@ -2404,7 +2422,7 @@ func createPipeline(command, identifier string) (string, error) {
 
 func updatePipelineState(pipelineId, action string) (string, error) {
 
-	url :=  fmt.Sprintf("%s/api/v0/pipeline/update", tenzirUrl)
+	url := fmt.Sprintf("%s/api/v0/pipeline/update", tenzirUrl)
 	forwardMethod := "POST"
 
 	requestBody := map[string]interface{}{
@@ -2473,7 +2491,7 @@ func deletePipeline(pipelineId string) error {
 		"id": pipelineId,
 	}
 
-	url :=  fmt.Sprintf("%s/api/v0/pipeline/delete", tenzirUrl)
+	url := fmt.Sprintf("%s/api/v0/pipeline/delete", tenzirUrl)
 	forwardMethod := "POST"
 
 	requestBodyJSON, err := json.Marshal(requestBody)
@@ -2519,9 +2537,9 @@ func searchPipeline(identifier string) (string, error) {
 		Name string `json:"name"`
 	}
 
-	var reqBody []byte 
+	var reqBody []byte
 
-	url :=  fmt.Sprintf("%s/api/v0/pipeline/list", tenzirUrl)
+	url := fmt.Sprintf("%s/api/v0/pipeline/list", tenzirUrl)
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
@@ -2606,9 +2624,8 @@ func searchPipeline(identifier string) (string, error) {
 func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	//log.Printf("[DEBUG] Getting running workers with API version %s", dockerApiVersion)
 	counter := 0
-	if isKubernetes  == "true" {
+	if isKubernetes == "true" {
 		log.Printf("[INFO] Getting running workers in kubernetes")
-
 
 		thresholdTime := time.Now().Add(time.Duration(-workerTimeout) * time.Second)
 
@@ -2835,6 +2852,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 	}
 
 	client := &http.Client{}
+
 	req, err := http.NewRequest(
 		"POST",
 		streamUrl,
