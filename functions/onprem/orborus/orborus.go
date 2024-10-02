@@ -1382,6 +1382,28 @@ func sendRemoveRequest(client *http.Client, toBeRemoved shuffle.ExecutionRequest
 	return nil
 }
 
+func scaleUp(s *swarm.Service) {
+	log.Printf("[INFO] Scaling Up the numeber of relicas")
+
+	numberOfreplicas := *s.Spec.Mode.Replicated.Replicas
+	newReplicas := numberOfreplicas + 1
+
+	s.Spec.Mode.Replicated.Replicas = &newReplicas
+
+	updateOps := types.ServiceUpdateOptions{}
+	_, err := dockercli.ServiceUpdate(
+		context.Background(),
+		s.ID,
+		s.Version,
+		s.Spec,
+		updateOps,
+	)
+
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 func cleanup() {
 	log.Printf("[INFO] Cleaning up during shutdown")
 	ctx := context.Background()
@@ -1779,10 +1801,12 @@ func main() {
 			})
 
 			if err != nil {
-				log.Printf("FUCK ERRORS")
+				log.Printf("[WARNING] Failed to get any service: %s", err)
 			}
 
-			log.Printf("Services: %#v", services)
+			scaleUp(&services[0])
+			currentWorkers += 1
+			numberOfExecution = 0
 		}
 
 		// New, abortable version. Should check executionid and remove everything else
