@@ -4,6 +4,16 @@ metadata:
   name: shuffle
 
 ---
+## ONLY for minikube
+# apiVersion: storage.k8s.io/v1
+# kind: StorageClass
+# metadata:
+#   name: standard-rwo
+# provisioner: k8s.io/minikube-hostpath
+# reclaimPolicy: Delete
+# volumeBindingMode: Immediate
+
+# ---
 
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -68,7 +78,7 @@ data:
   SHUFFLE_OPENSEARCH_PASSWORD: admin
   SHUFFLE_OPENSEARCH_PROXY: ""
   SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY: "true"
-  SHUFFLE_OPENSEARCH_URL: https://opensearch:9200
+  SHUFFLE_OPENSEARCH_URL: https://192.168.29.16:9200
   SHUFFLE_MEMCACHED: shuffle-memcached:11211
   SHUFFLE_OPENSEARCH_USERNAME: admin
   SHUFFLE_ORBORUS_STARTUP_DELAY: "\t\t"
@@ -78,7 +88,7 @@ data:
   SSO_REDIRECT_URL: ""
   TZ: "Europe/Amsterdam \t\t\t\t\t"
   IS_KUBERNETES: "true"
-  REGISTRY_URL: "192.168.29.16:5000"
+  REGISTRY_URL: "docker-registry:5000"
   REGISTRY_AUTH: "false"
   SHUFFLE_KUBERNETES_WORKER: "ghcr.io/shuffle/shuffle-worker:nightly"
 kind: ConfigMap
@@ -730,7 +740,6 @@ status:
   loadBalancer: {}
 
 ---
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -759,10 +768,14 @@ spec:
         io.kompose.service: frontend
     spec:
       containers:
-        - env:
-            - name: BACKEND_HOSTNAME
+        - name: shuffle-frontend
           image: ghcr.io/shuffle/shuffle-frontend:nightly
-          name: shuffle-frontend
+          env:
+            - name: BACKEND_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  key: BACKEND_HOSTNAME
+                  name: env
           ports:
             - containerPort: 80
             - containerPort: 443
