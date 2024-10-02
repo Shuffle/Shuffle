@@ -19,7 +19,6 @@ import urllib.parse
 import jinja2 
 import datetime
 import dateutil
-
 import threading
 import concurrent.futures
 
