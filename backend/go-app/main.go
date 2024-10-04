@@ -1131,9 +1131,9 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		// No childorg setup, only parent org
-		if len(org.ManagerOrgs) > 0 || len(org.CreatorOrg) > 0 {
-			continue
-		}
+		// if len(org.ManagerOrgs) > 0 || len(org.CreatorOrg) > 0 {
+		// 	continue
+		// }
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {

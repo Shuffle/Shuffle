@@ -296,38 +296,50 @@ const Header = (props) => {
         if (response.status !== 200) {
           console.log("Error in response");
         } else {
-          localStorage.removeItem("apps")
-          localStorage.removeItem("workflows")
-          localStorage.removeItem("userinfo")
+          localStorage.removeItem("apps");
+          localStorage.removeItem("workflows");
+          localStorage.removeItem("userinfo");
         }
 
         return response.json();
       })
       .then(function (responseJson) {
-        console.log("In here?")
+        console.log("In here?");
         if (responseJson.success === true) {
-          if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) {
+          if (
+            responseJson.region_url !== undefined &&
+            responseJson.region_url !== null &&
+            responseJson.region_url.length > 0
+          ) {
             console.log("Region Change: ", responseJson.region_url);
             localStorage.setItem("globalUrl", responseJson.region_url);
             //globalUrl = responseJson.region_url
           }
           if (responseJson["reason"] === "SSO_REDIRECT") {
             setTimeout(() => {
-              toast.info("Redirecting to SSO login page as SSO is required for this organization.")
-              window.location.href = responseJson["url"]
-              return
-            }, 2000)
+              toast.info(
+                "Redirecting to SSO login page as SSO is required for this organization."
+              );
+              window.location.href = responseJson["url"];
+              return;
+            }, 2000);
           } else {
+            toast("Successfully changed active organization - refreshing!");
             setTimeout(() => {
-              window.location.reload()
+              window.location.reload();
             }, 2000);
           }
-          toast("Successfully changed active organization - refreshing!");
         } else {
-          if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+          if (
+            responseJson.reason !== undefined &&
+            responseJson.reason !== null &&
+            responseJson.reason.length > 0
+          ) {
             toast(responseJson.reason);
           } else {
-            toast("Failed changing org. Try again or contact support@shuffler.io if this persists.");
+            toast(
+              "Failed changing org. Try again or contact support@shuffler.io if this persists."
+            );
           }
         }
       })
