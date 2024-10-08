@@ -3528,7 +3528,7 @@ const Workflows = (props) => {
 	var workflowDelay = -150
 	var appDelay = -75	
 
-	const foundPriority = userdata === undefined || userdata === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
+	const foundPriority = userdata === undefined || userdata === null || userdata.priorities === undefined || userdata.priorities === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
     return (
       <div style={viewStyle}>
         <div style={workflowViewStyle}>

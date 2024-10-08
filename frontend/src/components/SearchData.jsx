@@ -71,7 +71,7 @@ const SearchData = props => {
     //    return null
     //}
 
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+    const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
     // if (window.location.pathname === "/docs" || window.location.pathname === "/apps" || window.location.pathname === "/usecases"  ) {
     //     setModalOpen(false)
     // }

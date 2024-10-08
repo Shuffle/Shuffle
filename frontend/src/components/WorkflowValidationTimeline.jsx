@@ -23,6 +23,7 @@ import {
 	grey,
 } from "../views/AngularWorkflow.jsx"
 
+import WorkflowTemplatePopup2 from "../components/WorkflowTemplatePopup2.jsx"
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import theme from "../theme.jsx";
 const itemHeight = 24
@@ -63,7 +64,7 @@ export const getParentNodes = (workflow, action) => {
 			currentnode = workflow.triggers.find((element) => element.id === allkeys[parentkey])
 
 			if (currentnode === undefined) {
-				console.log("Could not find parent node for: ", allkeys[parentkey])
+				//console.log("Could not find parent node for: ", allkeys[parentkey])
 				continue
 			}
 		}
@@ -128,11 +129,13 @@ export const getParentNodes = (workflow, action) => {
 }
 
 const WorkflowValidationTimeline = (props) => {
-	const { workflow, originalWorkflow, apps, getParents, execution} = props
+	const { globalUrl, userdata, workflow, originalWorkflow, apps, getParents, execution, showHoverColor, } = props
+
+	const [hovering, setHovering] = useState(false)
+	const [decidedColor, setDecidedColor] = useState(grey)
+	const [isClicked, setIsClicked] = useState(false)
 
 	const showMiddle = false
-
-
 	if (workflow === undefined || workflow === null) {
 		return null
 	}
@@ -146,13 +149,11 @@ const WorkflowValidationTimeline = (props) => {
 	}
 
 	if (workflow.triggers === undefined || workflow.triggers === null) {
-		workflow.triggers = []
-	
+		workflow.triggers = []	
 	}
 
 	if (workflow.branches === undefined || workflow.branches === null) {
-		workflow.branches = []
-	
+		workflow.branches = []	
 	}
 
 	var results = []
@@ -260,6 +261,12 @@ const WorkflowValidationTimeline = (props) => {
 		relevantactions.push(...newactions)
 	}
 
+	console.log("Relevant actions (return null if 0-1): ", relevantactions)
+
+	if (relevantactions.length <= 1) {
+		return null
+	}
+
 	// Sort according to how many parents a node has. MAY be wrong~
 	relevantactions.sort((a, b) => {
 		if (a.order === undefined) {
@@ -279,15 +286,81 @@ const WorkflowValidationTimeline = (props) => {
 	var skipped = false
 
 	var previousTools = false
+	var scheduleNotStarted = false
+
+	if (workflow.validation !== undefined && workflow.validation !== null && workflow.validation.validation_ran === false) {
+		console.log("Validation didn't run. Why?")
+		return null
+	}
+
+	if (workflow.validation !== undefined && workflow.validation !== null && workflow.validation.errors !== undefined && workflow.validation.errors !== null && workflow.validation.errors.length > 0) {
+		var newErrors = []
+		for (var key in workflow.validation.errors) {
+			const error = workflow.validation.errors[key]
+			if (error.type === "SCHEDULE") {
+				scheduleNotStarted = true 
+				continue
+			}
+
+			newErrors.push(error)
+		}
+
+		workflow.validation.errors = newErrors
+	}
 
 	// Use this variable to control visualization
 	//const showMiddle = false
 	// border: workflow.validation.valid ? `2px solid ${green}` : "1px solid rgba(255,255,255,0.4)",
 	var middleError = ""
 	var startBranchColor = ""
+	var middleBranchColor = ""
+
+
+	const showHoverForClick = showHoverColor === true ? true : false
 	return (
-		<div style={{ padding: "10px 5px 10px 5px", borderRadius: theme.palette.borderRadius, }}>
+		<div 
+			style={{ 
+				padding: "10px 5px 10px 5px", 
+				borderRadius: theme.palette.borderRadius, 
+
+				border: hovering === true && showHoverForClick === true ? `1px solid ${decidedColor}` : "1px solid rgba(255,255,255,0.0)",
+				cursor: hovering === true && showHoverForClick === true ? "pointer" : "default",
+			}}
+			onMouseEnter={() => {
+				if (isClicked === false) {
+					setHovering(true)
+				}
+			}}
+			onMouseLeave={() => {
+				if (isClicked === false) {
+					setHovering(false)
+				}
+			}}
+			onClick={() => {
+				if (showHoverForClick === true) {
+					setIsClicked(true)
+				}
+			}}
+		>
+
+			{isClicked === false ? null :
+				<WorkflowTemplatePopup2 
+					globalUrl={globalUrl}
+					userdata={userdata}
+
+					isModalOpenDefault={isClicked}
+					workflowBuilt={true}
+					setIsClicked={setIsClicked}
+					inputWorkflowId={workflow.id}	
+				/>
+			}
+
 			<div style={{display: "flex", justifyContent: "center", alignItems: "center"}}> 
+
+			  {scheduleNotStarted === true ?  
+				  null
+			  : null}
+
 			  {relevantactions.map((action, index) => {
 				action.result = {}
 				if (results !== undefined) {
@@ -309,8 +382,10 @@ const WorkflowValidationTimeline = (props) => {
 							const validate = validateJson(action.result.result)
     						if (validate.valid) {
 								if (validate.result.success === true) {
+									nodecolor = green
 									branchcolor = green
 								} else {
+									nodecolor = grey 
 									branchcolor = grey 
 								}
 							}
@@ -319,9 +394,12 @@ const WorkflowValidationTimeline = (props) => {
 						} else if (action.status === "SKIPPED") {
 							branchcolor = grey
 						} else {
+							// FIXME: How do we handle this? 
 							if (action.status === undefined) {
-								branchcolor = green
+								nodecolor = grey 
+								branchcolor = grey 
 							} else {
+								nodecolor = red 
 								branchcolor = red
 							}
 						}
@@ -389,27 +467,62 @@ const WorkflowValidationTimeline = (props) => {
 					}
 				}
 
+				var appgroup = []
+				if (action.app_name === "shuffle-subflow") {
+					if (action.status === "SUCCESS") {
+						nodecolor = green
+						branchcolor = green
+					}
+
+					if (workflow.validation.subflow_apps !== undefined && workflow.validation.subflow_apps !== null && workflow.validation.subflow_apps.length > 0) {
+						nodecolor = red
+						branchcolor = red
+
+						for (var subflowkey in workflow.validation.subflow_apps) {
+							const subflowApp = workflow.validation.subflow_apps[subflowkey]
+							founderror += "- " + subflowApp.error+"\n"
+
+							if (subflowApp.error === action.id) {
+								appgroup.push(subflowApp)
+							}
+						}
+					}
+				}
+
 				if (!showMiddle && relevantactions.length > 2 && index > 0 && index === relevantactions.length - 2) {
 					if (founderror.length > 0) {
 						middleError += founderror+"\n"
+
+						middleBranchColor = branchcolor
 					}
 
 					if (index === relevantactions.length-2 && relevantactions.length > 2) {
 
 						const selectedIcon = middleError.length > 0 ? 
-							<Tooltip title={middleError}>
+							<Tooltip title={
+								<Typography variant="body1" style={{margin: 5, whiteSpace: "pre-line", }}>
+									{middleError}
+								</Typography>
+							}>
 								<IconButton style={{width: 30, height: 30, backgroundColor: "rgba(255,255,255,0.0)", borderRadius: 30, marginTop: 2, }}>
 									<ErrorOutlineIcon style={{color: "red", }} /> 
 								</IconButton>
 							</Tooltip>
 						: null
 
-						return (
-							selectedIcon
-						)
+						return selectedIcon
 					} else {
 						return null
 					}
+				}
+
+				// Returns for anything non-middle
+				if (relevantactions.length > 2 && index >= 1 && index < relevantactions.length - 2) {
+					if (founderror.length > 0) {
+						middleError += founderror+"\n"
+					}
+
+					return null
 				}
 
 				if (skipped && !lastitem) {
@@ -423,28 +536,14 @@ const WorkflowValidationTimeline = (props) => {
 					branchcolor = nodecolor
 				}
 
-				var appgroup = []
 				if (action.trigger_type === "WEBHOOK") {
 					nodecolor = green
 					branchcolor = green
-				} else if (action.app_name === "shuffle-subflow") {
-					if (action.status === "SUCCESS") {
-						nodecolor = green
-						branchcolor = green
-					}
-
-					for (var subflowkey in workflow.validation.subflow_apps) {
-						const subflowApp = workflow.validation.subflow_apps[subflowkey]
-						if (subflowApp.error === action.id) {
-							appgroup.push(subflowApp)
-						}
-					}
-
-				}
+				} 
+				
 
 
 				var flex = index !== 0 && index !== relevantactions.length - 1 ? 1 : 3
-
 				if (nodecolor === green) {
 					branchcolor = green
 				} else if (nodecolor === yellow) {
@@ -455,11 +554,28 @@ const WorkflowValidationTimeline = (props) => {
 
 				if (index === 0) {
 					startBranchColor = branchcolor
+				} else if (index !== 0 && index !== relevantactions.length - 1) {
+					// FIXME: This doesn't work yet
+					middleBranchColor = branchcolor
 				}
 
-				if (lastitem && middleError.length === 0) {	
-					branchcolor = startBranchColor
+				if (lastitem) {	
+					if (middleError.length === 0) {
+						branchcolor = startBranchColor
+					} else {
+						//branchcolor = middleBranchColor 
+					}
+
+					if (founderror === "") {
+						nodecolor = green
+					}
 				}
+
+				// FIXME: This could mean the workflow hasn't ran yet
+				if (workflow.validation.valid === false && (workflow.validation.errors === undefined || workflow.validation.errors === null || workflow.validation.errors.length == 0) && (workflow.validation.subflow_apps === undefined || workflow.validation.subflow_apps === null || workflow.validation.subflow_apps.length == 0)) {
+					nodecolor = grey 
+					branchcolor = grey
+				} 
 
 				const branchTooltip = branchcolor === yellow ? "Check nodes for errors" : ""
 				const appname = action.app_name.replaceAll('_', ' ').slice(0, 16)
@@ -486,6 +602,14 @@ const WorkflowValidationTimeline = (props) => {
 
 				if (image === "") {
 					console.log("MISSING IMAGE: ", appname, image, action)
+				}
+
+				if (decidedColor === grey && nodecolor === green) {
+					setDecidedColor(red)
+				}
+
+				if (decidedColor !== red && nodecolor === red) {
+					setDecidedColor(red)
 				}
 
 				return (
@@ -528,7 +652,7 @@ const WorkflowValidationTimeline = (props) => {
 						: 
 							<Tooltip title={
 								<Typography variant="body1" style={{margin: 5, color: "white", }}>
-									{founderror.length > 0 ? founderror : `App: ${appname}`} 
+									{founderror.length > 0 ? founderror : `App: ${appname} - Action: ${action.label}`} 
 								</Typography>
 							} placement="top">
 

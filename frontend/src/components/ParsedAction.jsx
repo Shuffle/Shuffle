@@ -90,9 +90,10 @@ import {
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
 	Storage as StorageIcon,
+	Check as CheckIcon,
 } from '@mui/icons-material';
 
-const useStyles = makeStyles({
+export const useStyles = makeStyles({
   notchedOutline: {
     borderColor: "#f85a3e !important",
   },
@@ -1500,92 +1501,7 @@ const ParsedAction = (props) => {
                     <DescriptionIcon style={{ color: "rgba(255,255,255,0.7)" }} />
                   </Tooltip>
                 </IconButton>
-		  		{/*
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {}}
-                >
-                  <a
-                    href="https://shuffler.io/docs/workflows#nodes"
-                    rel="norefferer"
-                    target="_blank"
-                    style={{ textDecoration: "none", color: "#f85a3e" }}
-                  >
-                    <Tooltip
-                      color="primary"
-                      title="What are actions?"
-                      placement="top"
-                    >
-                      <HelpOutlineIcon style={{ color: "rgba(255,255,255,0.7)" }} />
-                    </Tooltip>
-                  </a>
-                </IconButton>
-				*/}
-								{/*
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {
-                    //setAuthenticationModalOpen(true);
-										console.log("Should enable/disable magic!")
-										console.log("Action: ", selectedAction)
-										if (selectedAction.run_magic_output === undefined) {
-											selectedAction.run_magic_output = true
-										} else {
-											if (selectedAction.run_magic_output === true) {
-												selectedAction.run_magic_output = false
-											} else {
-												selectedAction.run_magic_output = true 
-											}
-										}
 
-										setSelectedAction(selectedAction)
-										setUpdate(Math.random());
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title={selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "Click to enable magic parsing" : "Click to disable magic parsing"}
-                    placement="top"
-                  >
-										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "rgba(255,255,255,0.7)" : "#f86a3e"}} />
-                  </Tooltip>
-                </IconButton>
-								*/}
-		  		{/*
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title={"Find related tworkflows"}
-                    placement="top"
-                  >
-					<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
-						<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
-					</a>
-                  </Tooltip>
-                </IconButton>
-				*/}
                 <IconButton
                   style={{
                     marginTop: "auto",
@@ -1602,6 +1518,10 @@ const ParsedAction = (props) => {
 					  	aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
 					  //}
   					  setAutocompleting(true)
+
+					  setTimeout(() => {
+						  setAutocompleting(false)
+					  }, 3000)
                   }}
                 >
                   <Tooltip
@@ -1998,7 +1918,7 @@ const ParsedAction = (props) => {
 
                   for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
                     if (selectedAction.parameters[key].configuration === false) {
-						console.log("FIELDSKIP: ", selectedAction.parameters[key].name)
+						//console.log("FIELDSKIP: ", selectedAction.parameters[key].name)
 						continue
 					} 
 
@@ -2085,7 +2005,18 @@ const ParsedAction = (props) => {
                     }}
                     value={data}
                   >
-					{data.last_modified === true ? 
+
+					{data?.validation?.valid === true ? 
+						<Tooltip title="Authentication has been validated" placement="top">
+							<Chip
+								style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", borderColor: green, }}
+								label={"Valid"}
+								variant="outlined"
+								color="secondary"
+							/>
+						</Tooltip>
+					: null }
+					{data?.last_modified === true ? 
 						<Chip
 							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
 							label={"Latest"}
@@ -2093,14 +2024,14 @@ const ParsedAction = (props) => {
 							color="secondary"
 						/>
 					: null}
-					{data.app.app_version !== undefined && data.app.app_version !== null && data.app.app_version !== "" && data.app.app_version !== "undefined" ?
+					{/*data.app.app_version !== undefined && data.app.app_version !== null && data.app.app_version !== "" && data.app.app_version !== "undefined" ?
 						<Chip
 							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
 							label={data.app.app_version}
 							variant="outlined"
 							color="secondary"
 						/>
-					: null}
+					: null*/}
 						{data.label} 
                   </MenuItem>
                 );
@@ -2342,6 +2273,7 @@ const ParsedAction = (props) => {
             value={selectedAction}
             classes={{ inputRoot: classes.inputRoot }}
 			groupBy={(option) => {
+				// FIXME: Sorting
 				// Most popular
 				// Is categorized
 				// Uncategorized
@@ -2364,7 +2296,6 @@ const ParsedAction = (props) => {
               },
             }}
 			filterOptions={(options, { inputValue }) => {
-				//console.log("Option contains?: ", inputValue, options)
 				const lowercaseValue = inputValue.toLowerCase()
 				options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
 
@@ -2449,22 +2380,6 @@ const ParsedAction = (props) => {
 						extraUrl = descSplit[descSplit.length-1]
 					} 
 
-					//for (let [line,lineval] in Object.entries(descSplit)) {
-					//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
-					//		const urlsplit = descSplit[line].split("/")
-					//		try {
-					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
-					//		} catch (e) {
-					//			//console.log("Failed - running with -1")
-					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
-					//		}
-
-
-					//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
-					//		//break
-					//	} 
-					//}
-
 					if (extraUrl.length > 0) {
 						if (extraUrl.includes(" ")) {
 							extraUrl = extraUrl.split(" ")[0]
@@ -2492,6 +2407,7 @@ const ParsedAction = (props) => {
               );
             }}
 			renderInput={(params) => {
+
 				if (params.inputProps?.value) {
 					const prefixes = ["Post", "Put", "Patch"];
 					for (let prefix of prefixes) {
@@ -2512,84 +2428,86 @@ const ParsedAction = (props) => {
 				}
 
 
-			const actionDescription = (
-				<Box
-				p={1.5}
-				borderRadius={3}
-				boxShadow={2}
-				backgroundColor={theme.palette.textFieldStyle}
-				display="flex"
-				flexDirection="column"
-				>
-					<Box display="flex" alignItems="center" justifyContent="space-between">
-					<Typography variant="body1" style={{ flexGrow: 1 }}>
-						{params.inputProps.value}
-					</Typography>
-					<IconButton size="small"
-					 
-					 onMouseDown={(event) => {
-						event.preventDefault();
-						event.stopPropagation();
-					  }}
-					
-					 onClick={() => {
-						setHiddenDescription(true)
-						const inputElement = document.getElementById(uiBox);
-						if (inputElement) {
-						  inputElement.focus();
-						}
-					}}>
-						<CloseIcon fontSize="small" />
-					</IconButton>
-					</Box>
-					<Divider sx={{ backgroundColor: theme.palette.surfaceColor, marginTop: "5px", marginBottom : "10px", height: "3px" }}/>
-					<Box display="flex" flexDirection="column">
-						<Typography variant="body2" mb={0.5}>
-						<strong>Description: </strong> {selectedAction?.description}
-						</Typography>
-					</Box>
-				</Box>
-			);
-
-              return (
-					<Tooltip title={actionDescription}
-					placement="right" 
-					open={!hiddenDescription}
-					PopperProps={{
-						sx: {
-						'& .MuiTooltip-tooltip': {
-							backgroundColor: 'transparent',
-							boxShadow: 'none',
-						},
-						'& .MuiTooltip-arrow': {
-							color: 'transparent',
-						},
-						},
-					}}
+				const actionDescription = null
+				/*(
+					<Box
+					p={1.5}
+					borderRadius={3}
+					boxShadow={2}
+					backgroundColor={theme.palette.textFieldStyle}
+					display="flex"
+					flexDirection="column"
 					>
-						<TextField
-						{...params}
+						<Box display="flex" alignItems="center" justifyContent="space-between">
+							<Typography variant="body1" style={{ flexGrow: 1 }}>
+								{params.inputProps.value}
+							</Typography>
+							<IconButton size="small"
+								 onMouseDown={(event) => {
+									event.preventDefault();
+									event.stopPropagation();
+								  }}
+								
+								 onClick={() => {
+									setHiddenDescription(true)
+									const inputElement = document.getElementById(uiBox);
+									if (inputElement) {
+									  inputElement.focus();
+									}
+								}}
+							>
+								<CloseIcon fontSize="small" />
+							</IconButton>
+						</Box>
+						<Divider sx={{ backgroundColor: theme.palette.surfaceColor, marginTop: "5px", marginBottom : "10px", height: "3px" }}/>
+						<Box display="flex" flexDirection="column">
+							<Typography variant="body2" mb={0.5}>
+							<strong>Description: </strong> {selectedAction?.description}
+							</Typography>
+						</Box>
+					</Box>
+				)
+				*/
 
-						data-lpignore="true"
-						autocomplete="off"
-						dataLPIgnore="true"
-				  		autoComplete="off"
-
-						color="primary"
-						id="checkbox-search"
-						variant="body1"
-						style={{
-							backgroundColor: theme.palette.inputColor,
-							borderRadius: theme.palette.borderRadius,
+				  return (
+						<Tooltip title={actionDescription}
+						placement="right" 
+						open={!hiddenDescription}
+						PopperProps={{
+							sx: {
+							'& .MuiTooltip-tooltip': {
+								backgroundColor: 'transparent',
+								boxShadow: 'none',
+							},
+							'& .MuiTooltip-arrow': {
+								color: 'transparent',
+							},
+							},
 						}}
-						label={isIntegration ? "Choose a category" : "Find Actions"}
-						variant="outlined"
-				        name={`disable_autocomplete_${Math.random()}`}
-						/>	
-					</Tooltip>
-              );
-            }}
-          />
+						>
+							<TextField
+							{...params}
+
+							data-lpignore="true"
+							autocomplete="off"
+							dataLPIgnore="true"
+							autoComplete="off"
+
+							color="primary"
+							id="checkbox-search"
+							variant="body1"
+							style={{
+								backgroundColor: theme.palette.inputColor,
+								borderRadius: theme.palette.borderRadius,
+							}}
+							label={isIntegration ? "Choose a category" : "Find Actions"}
+							variant="outlined"
+							name={`disable_autocomplete_${Math.random()}`}
+							/>	
+						</Tooltip>
+				  );
+				}}
+			/>
         ) : null}
 
         {/*setNewSelectedAction !== undefined ? 
@@ -2939,58 +2857,24 @@ const ParsedAction = (props) => {
 				}
 			}
 
-			  /*
-            if (
-              (selectedAction.auth_not_required !== undefined && !selectedAction.auth_not_required) &&
-			  selectedActionParameters[count] !== undefined &&
-			  selectedActionParameters[count] !== null &&
-			  selectedActionParameters[count].value !== undefined &&
-			  selectedAction.parameters[count] !== undefined &&
-			  selectedAction.parameters[count] !== null &&
-			  selectedAction.parameters[count].value !== undefined &&
-              selectedAction.selectedAuthentication !== undefined &&
-              selectedAction.selectedAuthentication.fields !== undefined &&
-              selectedAction.selectedAuthentication.fields[data.name] !==
-                undefined
-            ) {
-			*/
+			if (selectedAction.parameters === undefined || selectedAction.parameters === null || selectedAction.parameters.length !== selectedActionParameters.length) {
 
-			/*
-			if (selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined && selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
-
-              // This sets the placeholder in the frontend. (Replaced in backend)
-              selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name];
-              selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name];
-              setSelectedAction(selectedAction);
-              //setUpdate(Math.random())
-
-              if (authWritten) {
-                return null
-              }
-
-              authWritten = true
-              return (
-                <Typography
-                  key={count}
-                  id="skip_auth"
-                  variant="body2"
-                  color="textSecondary"
-                  style={{ marginTop: 5 }}
-                >
-                  Authentication fields are hidden
-                </Typography>
-              )
-            }
-			*/
-
+				//selectedAction.parameters = selectedActionParameters
+				console.log("PARAM BUG: ", selectedAction)
+			}
 
             //!selectedAction.auth_not_required &&
 			if (selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined && selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
+
               // This sets the placeholder in the frontend. (Replaced in backend)
-              selectedActionParameters[count].value =
-                selectedAction.selectedAuthentication.fields[data.name];
-              selectedAction.parameters[count].value =
-                selectedAction.selectedAuthentication.fields[data.name];
+              if (selectedActionParameters[count] !== undefined) {
+				  selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+			  }
+
+			  if (selectedAction.parameters[count] !== undefined) {
+              	  selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+			  }
+
               setSelectedAction(selectedAction);
               //setUpdate(Math.random())
 
@@ -3064,7 +2948,7 @@ const ParsedAction = (props) => {
 
 					if (data.value.length === 0) {
               			if (data.name.toLowerCase() === "headers") {
-							console.log("Should show headers field instead with + and -!")
+							//console.log("Should show headers field instead with + and -!")
 
 							// Check if file ID exists
 							//
@@ -3360,13 +3244,6 @@ const ParsedAction = (props) => {
 					<IconButton size="small"
 						 onClick={() => {
 							setUiBox("closed")
-							
-							/*
-							const inputElement = document.getElementById(uiBox);
-							if (inputElement) {
-							  inputElement.focus();
-							}
-							*/
 						}}
 					>
 						<CloseIcon fontSize="small" />

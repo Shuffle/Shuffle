@@ -323,6 +323,44 @@ const OrgHeaderexpanded = (props) => {
 		setSSORequired(event.target.checked);
 	};
 
+
+	const HandleTestSSO = () => {
+		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/change`;
+		const data = {
+			org_id: selectedOrganization?.id,
+			sso_test: true,
+		}
+		fetch(url, {
+			mode: "cors",
+			credentials: "include",
+			crossDomain: true,
+			method: "POST",
+			body: JSON.stringify(data),
+			withCredentials: true,
+			headers: {
+				"Content-Type": "application/json; charset=utf-8",
+			},
+		}).then((response) => {
+			if (response.status !== 200) {
+				toast.error("Failed to test sso. Please try again later or contact support@shuffler.io if issue persist.")
+				return
+			}
+			return response.json();
+		}).then((responjson) => {
+			if (responjson["reason"] === "SSO_REDIRECT") {
+				setTimeout(() => {
+					toast.info("Redirecting to SSO login page as SSO is required for this organization.")
+					window.location.href = responjson["url"];
+					return
+				}, 2000)
+			} else {
+				toast.error("No SSO found for this org. Please set up sso for this org.")
+			}
+		}).catch((err) => {
+			console.log("error for sso test is: ", err)
+		})
+	}
+
 	return (
 		<div style={{ textAlign: "center" }}>
 			<Grid container spacing={3} style={{ textAlign: "left" }}>
@@ -676,6 +714,42 @@ const OrgHeaderexpanded = (props) => {
 						/>
 						{SSORequired ? 'Required' : 'Optional'}
 					</div>
+				</div>
+				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 20, marginLeft: 10, width: "100%", borderBottom: '1px solid #414347', paddingBottom: 10 }}>
+					<Typography variant="body1" style={{ margin: '5px 0px 5px 10px' }}>
+						You can test your SSO configuration by clicking the button below. Before testing, ensure you have set Open ID Connect or SAML SSO credentials.
+					</Typography>
+					<Tooltip
+						title={
+							!(
+								ssoEntrypoint.length > 0 ||
+								ssoCertificate.length > 0 ||
+								openidAuthorization.length > 0 ||
+								openidClientId.length > 0
+							)
+								? "Please ensure all SSO credentials are set before testing."
+								: ""
+						}
+					>
+						<span style={{ width: 100 }}>
+							<Button
+								variant="outlined"
+								color="primary"
+								style={{ width: 100, textTransform: 'none', margin: 10 }}
+								disabled={
+									!(
+										ssoEntrypoint.length > 0 ||
+										ssoCertificate.length > 0 ||
+										openidAuthorization.length > 0 ||
+										openidClientId.length > 0
+									)
+								}
+								onClick={HandleTestSSO}
+							>
+								Test SSO
+							</Button>
+						</span>
+					</Tooltip>
 				</div>
 				<Grid item xs={12} style={{}}>
 					<Typography variant="h6" style={{ textAlign: "center", }}>OpenID connect</Typography>

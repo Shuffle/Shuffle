@@ -24,7 +24,7 @@ import {
 const Priority = (props) => {
   	const { globalUrl, clickedFromOrgTab,userdata, serverside, priority, checkLogin, setAdminTab, setCurTab, appFramework, } = props;
 
-  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  	const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
 	let navigate = useNavigate();
 
 	if (window.location.pathname === "/workflows") {

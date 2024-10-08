@@ -7,15 +7,17 @@ import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import EditWorkflow from "../components/EditWorkflow.jsx"
-import { ToastContainer, toast } from "react-toastify" 
+import { toast } from "react-toastify" 
 import { makeStyles } from '@mui/material/styles';
 import { useInterval } from "react-powerhooks";
 import { isMobile } from "react-device-detect";
 import Markdown from "react-markdown";
 import theme from '../theme.jsx';
+import rehypeRaw from "rehype-raw";
 
 import {
-  Tooltip,
+  	Tooltip,
+	Select,
 	IconButton,
 	CircularProgress, 
 	TextField, 
@@ -28,6 +30,7 @@ import {
 	Dialog,
 	DialogTitle,
 	DialogContent,
+	MenuItem,
 } from '@mui/material';
 
 import {
@@ -45,7 +48,7 @@ const bodyDivStyle = {
 	width: isMobile? "100%":"500px",
 	position: "relative", 
 
-	marginTop: 25, 
+	paddingBottom: 250,
 }
 
 
@@ -71,7 +74,7 @@ const RunWorkflow = (defaultprops) => {
 
 	const boxStyle = {
 		color: "white",
-		padding: 50, 
+		padding: "25px 50px 50px 50px", 
 		backgroundColor: theme.palette.surfaceColor,
 		marginBottom: 150, 
 		borderRadius: 25, 
@@ -102,6 +105,17 @@ const RunWorkflow = (defaultprops) => {
 	const [executionInfo, setExecutionInfo] = useState("");
 
 	const handleValidateForm = (executionArgument) => {
+		// Check if every field exists
+		if (executionArgument === undefined || executionArgument === null) {
+			return true 
+		}
+
+		for (var key in executionArgument) {
+			if (executionArgument[key] === undefined || executionArgument[key] === null || executionArgument[key] === "") {
+				return false
+			}
+		}
+
 		return true
 	}
 
@@ -124,7 +138,10 @@ const RunWorkflow = (defaultprops) => {
 			return response.json();
 		})
 		.then((responseJson) => {
-			toast.success("Saved workflow")
+			if (responseJson.success === false) {
+				toast.error("Failed saving workflow. Please try again.")
+			}
+			//toast.success("Saved workflow")
 		})
 		.catch((error) => {
 			toast.error("Save workflow error: " + error)
@@ -197,178 +214,25 @@ const RunWorkflow = (defaultprops) => {
 				*/}
 
 				{executionData.result !== undefined && executionData.result !== null && executionData.result.length > 0 ?
-					<Typography variant="h6">
-						{executionData.result}
-					</Typography> 
+					<div style={{marginTop: 20, }}>
+						<Divider />
+						<Markdown
+						  components={{
+							img: Img,
+							code: CodeHandler,
+							a: OuterLink,
+						  }}
+						  id="markdown_wrapper"
+						  escapeHtml={false}
+						  style={{
+							maxWidth: "100%", minWidth: "100%", 
+						  }}
+						>
+						  {executionData.result}
+		    			</Markdown>
+					</div> 
 				: null}
 
-				{/*executionData.results.map((data, index) => {
-					if (executionData.results.length !== 1 && (data.status === "SKIPPED")) {
-						return null;
-					}
-
-					// FIXME: The latter replace doens't really work if ' is used in a string
-					var showResult = data.result.trim();
-					const validate = validateJson(showResult);
-
-					const curapp = apps.find((a) => a.name === data.action.app_name && a.app_version === data.action.app_version);
-					const imgsize = 50;
-					const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? green : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : yellow;
-
-					var imgSrc = curapp === undefined ? "" : curapp.large_image;
-					if (
-						imgSrc.length === 0 &&
-						workflow.actions !== undefined &&
-						workflow.actions !== null
-					) {
-						// Look for the node in the workflow
-						const action = workflow.actions.find(
-							(action) => action.id === data.action.id
-						);
-						if (action !== undefined && action !== null) {
-							imgSrc = action.large_image;
-						}
-					}
-
-					var actionimg =
-						curapp === null ? null : (
-							<img
-								alt={data.action.app_name}
-								src={imgSrc}
-								style={{
-									marginRight: 20,
-									width: imgsize,
-									height: imgsize,
-									border: `2px solid ${statusColor}`,
-									borderRadius:
-										executionData.start === data.action.id ? 25 : 5,
-								}}
-							/>
-						);
-
-					if (data.action.app_name === "shuffle-subflow") {
-						//const parsedImage = triggers[2].large_image;
-						//actionimg = (
-						//	<img
-						//		alt={"Shuffle Subflow"}
-						//		src={parsedImage}
-						//		style={{
-						//			marginRight: 20,
-						//			width: imgsize,
-						//			height: imgsize,
-						//			border: `2px solid ${statusColor}`,
-						//			borderRadius:
-						//				executionData.start === data.action.id ? 25 : 5,
-						//		}}
-						//	/>
-						//);
-					} else if (data.action.app_name === "User Input") {
-						//actionimg = (
-						//	<img
-						//		alt={"Shuffle Subflow"}
-						//		src={triggers[3].large_image}
-						//		style={{
-						//			marginRight: 20,
-						//			width: imgsize,
-						//			height: imgsize,
-						//			border: `2px solid ${statusColor}`,
-						//			borderRadius:
-						//				executionData.start === data.action.id ? 25 : 5,
-						//		}}
-						//	/>
-						//);
-					}
-
-					if (validate.valid && typeof validate.result === "string") {
-						validate.result = JSON.parse(validate.result);
-					}
-
-					if (validate.valid && typeof validate.result === "object") {
-						if (
-							validate.result.result !== undefined &&
-							validate.result.result !== null
-						) {
-							try {
-								validate.result.result = JSON.parse(validate.result.result);
-							} catch (e) {
-								//console.log("ERROR PARSING: ", e)
-							}
-						}
-					}
-
-
-					var similarActionsView = null
-					if (data.similar_actions !== undefined && data.similar_actions !== null) {
-						var minimumMatch = 85
-						var matching_executions = []
-						if (data.similar_actions !== undefined && data.similar_actions !== null) {
-							for (let [k,kval] in Object.entries(data.similar_actions)){
-								if (data.similar_actions.hasOwnProperty(k)) {
-									if (data.similar_actions[k].similarity > minimumMatch) {
-										matching_executions.push(data.similar_actions[k].execution_id)
-									}
-								}
-							}
-						}
-
-						if (matching_executions.length !== 0) {
-							var parsed_url = matching_executions.join(",")
-
-							similarActionsView =
-								<Tooltip
-									color="primary"
-									title="See executions with similar results (not identical)"
-									placement="top"
-									style={{ zIndex: 50000, marginLeft: 50, }}
-								>
-									<IconButton
-										style={{
-											marginTop: "auto",
-											marginBottom: "auto",
-											height: 30,
-											paddingLeft: 0,
-											width: 30,
-										}}
-										onClick={() => {
-											//navigate(`?execution_highlight=${parsed_url}`)
-										}}
-									>
-										<PreviewIcon style={{ color: "rgba(255,255,255,0.5)" }} />
-									</IconButton>
-									</Tooltip>
-							}
-						}
-
-					return (
-						<div
-							key={index}
-							style={{
-								marginBottom: 20,
-								border:
-									data.action.sub_action === true
-										? "1px solid rgba(255,255,255,0.3)"
-										: "1px solid rgba(255,255,255, 0.3)",
-								borderRadius: theme.palette.borderRadius,
-								backgroundColor: theme.palette.inputColor,
-								padding: "15px 10px 10px 10px",
-								overflow: "hidden",
-							}}
-							onMouseOver={() => {
-							}}
-							onMouseOut={() => {
-							}}
-						>
-							<div style={{ marginBottom: 5, display: "flex" }}>
-								<Typography variant="body1">
-									<b>Status&nbsp;</b>
-								</Typography>
-								<Typography variant="body1" color="textSecondary" style={{ marginRight: 15, }}>
-									{data.status}
-								</Typography>
-							</div>
-						</div>
-					)
-				})*/}
 			</div>
 		)
 	}
@@ -388,7 +252,7 @@ const RunWorkflow = (defaultprops) => {
 
 		var data = {
 			"execution_argument": executionArgument,
-			"execution_source": "questions",
+			"execution_source": "form",
 		}
 
 		if (workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0) {
@@ -467,6 +331,10 @@ const RunWorkflow = (defaultprops) => {
 				}
 			}
 
+			if (response.status === 401 || response.status === 403) {
+				toast("This Form is not available for you to run. If you this is an error, contact support@shuffler.io with a link to this form")
+			}
+
 			return response.json()
 		})
 		.then(responseJson => {
@@ -509,7 +377,9 @@ const RunWorkflow = (defaultprops) => {
 	}
 
 	const getWorkflow = (workflow_id, selectedNode) => {
-		fetch(globalUrl + "/api/v1/workflows/" + workflow_id, {
+		const url = `${globalUrl}/api/v1/workflows/${workflow_id}`
+
+		fetch(url, {
 		  method: "GET",
 		  headers: {
 			"Content-Type": "application/json",
@@ -521,6 +391,10 @@ const RunWorkflow = (defaultprops) => {
         if (response.status !== 200) {
           console.log("Status not 200 for workflows :O!");
         }
+
+		if (response.status === 401 || response.status === 403) {
+			toast("This Form is not available to you. If you think this is an error, please contact support@shuffler.io with the URL.")
+		}
 
         return response.json();
       })
@@ -543,16 +417,24 @@ const RunWorkflow = (defaultprops) => {
         }
 
 		if (responseJson.input_questions !== undefined && responseJson.input_questions !== null && responseJson.input_questions.length > 0) {
+
 			var newexec = {}
 			for (let questionkey in responseJson.input_questions) {
 				const question = responseJson.input_questions[questionkey]
-				newexec[question.value] = ""
+
+				var multiChoiceOptions = question.value !== undefined && question.value !== null && question.value.length > 0 && question.value.includes(";") ? question.value.split(";") : []
+				if (multiChoiceOptions.length > 1) {
+					newexec[multiChoiceOptions[0]] = ""
+				} else {
+					newexec[question.value] = ""
+				}
 			}
 
 			setExecutionArgument(newexec)
 		}
 
 		if (selectedNode !== undefined && selectedNode !== null && selectedNode.length > 0) {
+
 			var found = false
 			for (var actionkey in responseJson.actions) {
 				if (responseJson.actions[actionkey].id === selectedNode) {
@@ -567,6 +449,7 @@ const RunWorkflow = (defaultprops) => {
 					if (responseJson.triggers[triggerkey].id !== selectedNode) {
 						continue
 					}
+		
 
 					setFoundSourcenode(responseJson.triggers[triggerkey])
 
@@ -864,215 +747,277 @@ const RunWorkflow = (defaultprops) => {
 	const basedata = 
 		<div style={bodyDivStyle}>
 			<Paper style={boxStyle}>
-				{workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0 ? 
-					<div style={{marginBottom: 20, }}>
-						<Markdown
-						  components={{
-							img: Img,
-							code: CodeHandler,
-							a: OuterLink,
-						  }}
-						  id="markdown_wrapper"
-						  escapeHtml={false}
-						  style={{
-							maxWidth: "100%", minWidth: "100%", 
-						  }}
-						>
-						  {workflow.input_markdown}
-		    			</Markdown>
-					</div> 
-				: null}
-
-      			<form onSubmit={(e) => {onSubmit(e)}} style={{margin: "50px 0px 15px 0px",}}>
-					{workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0 ? null : 
-					<div>
-						<img
-							alt={workflow.name}
-							src={image}
-							style={{
-								marginRight: 20,
-								width: 100,
-								height: 100,
-								border: `2px solid ${green}`,
-								borderRadius: 50,
-								position: "absolute",
-								top: -50,
-								left: 200,
-							}}
-						/>
-
-						<Typography variant="h6" style={{marginBottom: 10, marginTop: 50, textAlign: "center", }}>
-							{organization}
+				{workflow.id === undefined || workflow.id === null ?
+					<div style={{paddingTop: 150, marginTop: 150, width: 250, itemAlign: "center", textAlign: "center", margin: "auto", }}>
+						<CircularProgress />
+						<Typography variant="body1" style={{marginTop: 20, }}>
+							Loding Form Details...
 						</Typography>
-						<Divider style={{marginTop: 20, marginBottom: 20, }}/>
+					</div>
+				: 
+				<div>
 
-						{disabledButtons && message.length > 0 ? null : 
-							<Typography color="textSecondary" style={{textAlign: "center", }}>
-								{message}
+					{workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0 ? 
+						<div style={{marginBottom: 20, }}>
+							<Markdown
+							  components={{
+								img: Img,
+								code: CodeHandler,
+								a: OuterLink,
+							  }}
+							  id="markdown_wrapper"
+							  escapeHtml={false}
+							  style={{
+								maxWidth: "100%", minWidth: "100%", 
+							  }}
+							  rehypePlugins={[rehypeRaw]}
+							>
+							  {workflow.input_markdown}
+		    				</Markdown>
+						</div> 
+					: null}
+
+      				<form onSubmit={(e) => {onSubmit(e)}} style={{margin: "25px 0px 15px 0px",}}>
+						{workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0 ? null : 
+						<div>
+							<img
+								alt={workflow.name}
+								src={image}
+								style={{
+									marginRight: 20,
+									width: 100,
+									height: 100,
+									border: `2px solid ${green}`,
+									borderRadius: 50,
+									position: "absolute",
+									top: -50,
+									left: 200,
+								}}
+							/>
+
+							<Typography variant="h6" style={{marginBottom: 10, marginTop: 50, textAlign: "center", }}>
+								{organization}
 							</Typography>
-						}
+							<Divider style={{marginTop: 20, marginBottom: 20, }}/>
 
-						{answer !== undefined && answer !== null ? null :
-							<Typography variant="h6" style={{marginBottom: 15, textAlign: "center", }}><b>{workflow.name}</b></Typography>
-						}
-
-						{workflowQuestion.length > 0 ?
-							<div style={{
-								backgroundColor: theme.palette.inputColor,
-								padding: 20,
-								borderRadius: theme.palette.borderRadius,
-								marginBottom: 35, 
-								marginTop: 30, 
-							}}>
-								<Typography variant="body1"  style={{ marginRight: 15, textAlign: "center", whiteSpace: "pre-line", }}>
-									{workflowQuestion}
+							{disabledButtons && message.length > 0 ? null : 
+								<Typography color="textSecondary" style={{textAlign: "center", }}>
+									{message}
 								</Typography>
-							</div>
-						: null}
+							}
 
-						</div>
-					}
-						
-					{workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
-						<div style={{marginBottom: 5, }}>
-							{workflow.input_questions.map((question, index) => {
-								return (
-									<div style={{marginBottom: 5}}>
-										{question.name}
-										<TextField
-											color="primary"
-											style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
-											label={question.value}
-											required
+							{answer !== undefined && answer !== null ? null :
+								<Typography variant="h6" style={{marginBottom: 15, textAlign: "center", }}><b>{workflow.name}</b></Typography>
+							}
 
-											disabled={disabledButtons}
-											fullWidth={true}
-											placeholder=""
-											id="emailfield"
-											margin="normal"
-											variant="outlined"
-											onBlur={(e) => {
-												//setExecutionArgument(e.target.value)	
-												executionArgument[question.value] = e.target.value
-												setUpdate(Math.random())
-											}}
-										/>
-									</div>
-								)
-							})}
-						</div>
-					: 
-					answer !== undefined && answer !== null ? null :
-						<span>
-							Runtime Argument
-							<div style={{marginBottom: 5}}>
-								<TextField
-									color="primary"
-									style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
-									multiLine
-									maxRows={2}
-									InputProps={{
-										style:{
-											height: "50px", 
-											color: "white",
-											fontSize: "1em",
-										},
-									}}
-									fullWidth={true}
-									placeholder=""
-									id="emailfield"
-									margin="normal"
-									variant="outlined"
-									onChange={(e) => {
-										setExecutionArgument(e.target.value)	
-									}}
-								/>
-							</div>
-						</span>
-					}
-
-					{executionRunning ?
-						<span style={{width: 50, height: 50, margin: "auto", alignItems: "center", justifyContent: "center", textAlign: "center", }}>
-							<CircularProgress style={{marginTop: 20, marginBottom: 20, marginLeft: 185, }}/>
-
-							{executionData.status !== undefined && executionData.status !== null && executionData.status !== "" ?
-								<Typography variant="body2" style={{margin: "auto", marginTop: 20, marginBottom: 20, textAlign: "center", alignItem: "center", }} color="textSecondary">
-									Status: {executionData.status}
-								</Typography>
+							{workflowQuestion.length > 0 ?
+								<div style={{
+									backgroundColor: theme.palette.inputColor,
+									padding: 20,
+									borderRadius: theme.palette.borderRadius,
+									marginBottom: 35, 
+									marginTop: 30, 
+								}}>
+									<Typography variant="body1"  style={{ marginRight: 15, textAlign: "center", whiteSpace: "pre-line", }}>
+										{workflowQuestion}
+									</Typography>
+								</div>
 							: null}
-						</span>
-						:
-						((answer !== undefined && answer !== null) || (foundSourcenode !== undefined && foundSourcenode !== null)) ? 
-							<span style={{marginTop: 20, }}>
 
-								{disabledButtons && message.length > 0 ?
-									<Typography variant="body1"  style={{textAlign: "center", marginTop: 30, marginBottom: 20,  }}>
-										{message}. You may close this window.
-									</Typography>
-								: 
-									<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
-										{disabledButtons ? "Answered. You may close this window." : ""}
-									</Typography>
-								}
+							</div>
+						}
+							
+						{workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
+							<div style={{marginBottom: 5, }}>
+								{workflow.input_questions.map((question, index) => {
 
-								{disabledButtons ? null :
-									<Typography variant="body2" color="textSecondary" style={{textAlign: "center", marginTop: 10, }}>
-										What do you want to do?
-									</Typography>
-								}
-								<div fullWidth style={{width: "100%", marginTop: 10, marginBottom: 10, display: "flex", }}>
-									<Button fullWidth id="continue_execution" variant="contained" disabled={disabledButtons} color="primary" style={{flex: 1,}} onClick={() => {
-										onSubmit(null, execution_id, authorization, true) 
+									// Multiple choice checks for semicolon-splits
+									var multiChoiceOptions = question.value !== undefined && question.value !== null && question.value.length > 0 && question.value.includes(";") ? question.value.split(";") : []
+									// Remove empty keys from array
+									multiChoiceOptions = multiChoiceOptions.filter(function(e) { return e !== "" })
+									if (multiChoiceOptions.length > 1 && (executionArgument[multiChoiceOptions[0]] === undefined || executionArgument[multiChoiceOptions[0]] === null || executionArgument[multiChoiceOptions[0]] === "")) {
+										// Set the first item to be default
+										executionArgument[multiChoiceOptions[0]] = multiChoiceOptions[1]
+									}
 
-										setButtonClicked("FINISHED")
-										setExecutionData({
-											status: "FINISHED",
-										})
-									}}>Continue</Button>
-									<Typography variant="body1" style={{marginLeft: 3, marginRight: 3, marginTop: 3, }}>
-										&nbsp;or&nbsp;
-									</Typography>
-									<Button fullWidth id="abort_execution" variant="contained" color="primary" disabled={disabledButtons} style={{ flex: 1, }} onClick={() => {
-										onSubmit(null, execution_id, authorization, false) 
+									return (
+										<div style={{marginBottom: 10}} key={index}>
+											{question.name}
 
-										setButtonClicked("ABORTED")
-										setExecutionData({
-											status: "ABORTED",
-										})
-									}}>Stop</Button>
+											{multiChoiceOptions.length > 1 ?
+												<Select
+													fullWidth
+													required
+													label={multiChoiceOptions[0]}
+													value={executionArgument[multiChoiceOptions[0]]}
+													onChange={(e) => {
+														const curQuestion = multiChoiceOptions[0]
+														executionArgument[curQuestion] = e.target.value
+														setUpdate(Math.random())
+													}}
+												>
+
+													{multiChoiceOptions.map((option, menuIndex) => {
+														if (index === 0) {
+															return null
+														}
+
+														return (
+															<MenuItem 
+																key={menuIndex}
+																value={option}
+															>
+																{option}
+															</MenuItem>
+														)
+													})}
+
+
+												</Select>
+												:
+												<TextField
+													color="primary"
+													style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
+													label={question.value}
+													required
+
+													disabled={disabledButtons}
+													fullWidth={true}
+													placeholder=""
+													id="emailfield"
+													margin="normal"
+													variant="outlined"
+													onChange={(e) => {
+														executionArgument[question.value] = e.target.value
+														setExecutionArgument(executionArgument)
+														setUpdate(Math.random())
+													}}
+												/>
+											}
+										</div>
+									)
+								})}
+							</div>
+						: 
+						answer !== undefined && answer !== null ? null :
+							<span>
+								Runtime Argument
+								<div style={{marginBottom: 5}}>
+									<TextField
+										color="primary"
+										style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
+										multiLine
+										maxRows={2}
+										InputProps={{
+											style:{
+												height: "50px", 
+												color: "white",
+												fontSize: "1em",
+											},
+										}}
+										fullWidth={true}
+										placeholder=""
+										id="emailfield"
+										margin="normal"
+										variant="outlined"
+										onChange={(e) => {
+											setExecutionArgument(e.target.value)	
+										}}
+									/>
 								</div>
 							</span>
-						:
-						<div style={{display: "flex", marginTop: "15px"}}>
-							<Button variant="contained" type="submit" color="primary" fullWidth disabled={!handleValidateForm(executionArgument) || executionLoading}>
-								{executionLoading ? 
-									<CircularProgress color="secondary" style={{color: "white",}} /> : "Submit"}
-							</Button> 				
+						}
+
+						{executionRunning ?
+							<span style={{width: 50, height: 50, margin: "auto", alignItems: "center", justifyContent: "center", textAlign: "center", }}>
+								<CircularProgress style={{marginTop: 20, marginBottom: 20, marginLeft: 185, }}/>
+
+								{executionData.status !== undefined && executionData.status !== null && executionData.status !== "" ?
+									<Typography variant="body2" style={{margin: "auto", marginTop: 20, marginBottom: 20, textAlign: "center", alignItem: "center", }} color="textSecondary">
+										Status: {executionData.status}
+									</Typography>
+								: null}
+							</span>
+							:
+							((answer !== undefined && answer !== null) || (foundSourcenode !== undefined && foundSourcenode !== null)) ? 
+								<span style={{marginTop: 20, }}>
+
+									{disabledButtons && message.length > 0 ?
+										<Typography variant="body1"  style={{textAlign: "center", marginTop: 30, marginBottom: 20,  }}>
+											{message}. You may close this window.
+										</Typography>
+									: 
+										<Typography variant="body1" style={{textAlign: "center", marginTop: 30, marginBottom: 20, }}>
+											{disabledButtons ? "Answered. You may close this window." : ""}
+										</Typography>
+									}
+
+									{disabledButtons ? null :
+										<Typography variant="body2" color="textSecondary" style={{textAlign: "center", marginTop: 10, }}>
+											What do you want to do?
+										</Typography>
+									}
+									<div fullWidth style={{width: "100%", marginTop: 10, marginBottom: 10, display: "flex", }}>
+										<Button fullWidth id="continue_execution" variant="contained" disabled={disabledButtons} color="primary" style={{flex: 1,}} onClick={() => {
+											onSubmit(null, execution_id, authorization, true) 
+
+											setButtonClicked("FINISHED")
+											setExecutionData({
+												status: "FINISHED",
+											})
+										}}>Continue</Button>
+										<Typography variant="body1" style={{marginLeft: 3, marginRight: 3, marginTop: 3, }}>
+											&nbsp;or&nbsp;
+										</Typography>
+										<Button fullWidth id="abort_execution" variant="contained" color="primary" disabled={disabledButtons} style={{ flex: 1, }} onClick={() => {
+											onSubmit(null, execution_id, authorization, false) 
+
+											setButtonClicked("ABORTED")
+											setExecutionData({
+												status: "ABORTED",
+											})
+										}}>Stop</Button>
+									</div>
+								</span>
+							:
+							<div style={{display: "flex", marginTop: "15px"}}>
+								<Button 
+									variant={executionData.result !== undefined && executionData.result !== null && executionData.result.length > 0 ? "outlined" : "contained"}
+									type="submit" 
+									color="primary" 
+									fullWidth 
+									disabled={!handleValidateForm(executionArgument) || executionLoading}
+								>
+									{executionLoading ? 
+										<CircularProgress color="secondary" style={{color: "white",}} /> : "Submit"}
+								</Button> 				
+							</div>
+						}
+
+  						{/*buttonClicked !== undefined && buttonClicked !== null && buttonClicked !== "finished" && buttonClicked.length > 0 ?
+							<img id="finalize_gif" src="/images/finalize.gif" alt="finalize workflow animation" style={{width: 150, marginLeft: 125, borderRadius: theme.palette.borderRadius, }}
+								onLoad={() => {
+									console.log("Img loaded.")
+									setTimeout(() => {
+										console.log("Img closing.")
+										setButtonClicked("finished")
+
+									}, 1250)
+
+								}}
+							/>
+						: null*/}
+
+						<div style={{marginTop: "10px"}}>
+							{executionInfo}
 						</div>
-					}
-
-  					{/*buttonClicked !== undefined && buttonClicked !== null && buttonClicked !== "finished" && buttonClicked.length > 0 ?
-						<img id="finalize_gif" src="/images/finalize.gif" alt="finalize workflow animation" style={{width: 150, marginLeft: 125, borderRadius: theme.palette.borderRadius, }}
-							onLoad={() => {
-								console.log("Img loaded.")
-								setTimeout(() => {
-									console.log("Img closing.")
-									setButtonClicked("finished")
-
-								}, 1250)
-
-							}}
-						/>
-					: null*/}
-
-					<div style={{marginTop: "10px"}}>
-						{executionInfo}
-					</div>
 	
-					{answer !== undefined && answer !== null ? null :
-						<ShowExecutionResults executionData={executionData} />
-					}
-				</form>
+						{answer !== undefined && answer !== null ? null :
+							<ShowExecutionResults executionData={executionData} />
+						}
+					</form>
+				</div>
+				}
 			</Paper>
 		</div>
 
@@ -1092,6 +1037,7 @@ const RunWorkflow = (defaultprops) => {
 				usecases={undefined}
 
 				expanded={true}
+				scrollTo={"input_markdown"}
 			  />
 			: null}
 
@@ -1103,20 +1049,59 @@ const RunWorkflow = (defaultprops) => {
 			  PaperProps={{
 				style: {
 				  color: "white",
-				  minWidth: isMobile ? "90%" : 400,
-				  maxWidth: isMobile ? "90%" : 400,
-				  minHeight: 350,
-				  paddingTop: 25, 
-				  paddingLeft: 50, 
+				  minWidth: isMobile ? "90%" : 500,
+				  maxWidth: isMobile ? "90%" : 500,
+				  minHeight: 400,
+				  maxHeight: 400, 
+				  padding: 25, 
+				  borderRadius: theme.palette.borderRadius,
 				  //minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
 				  //maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
 				},
 			  }}
 			>
-			  	<DialogTitle style={{padding: 30, paddingBottom: 0, zIndex: 1000,}}>
-					Share Landingpage 
+			  	<DialogTitle style={{padding: 30, paddingLeft: 20, paddingBottom: 0, zIndex: 1000,}}>
+					Form Sharing Options for '{workflow.name}'
 			  	</DialogTitle>
-        		<DialogContent style={{paddingTop: 10, display: "flex", minHeight: 300, zIndex: 1001, paddingBottom: 200, }}>
+        		<DialogContent style={{marginTop: 20,}}>
+					<Typography variant="body1">
+						<b>General Access</b>
+					</Typography>
+
+					<Typography variant="body2" color="textSecondary">
+						Form sharing and workflow sharing are not the same. By sharing a form, you are enabling anyone with the link to fill out the form AND run the workflow. They will NOT have access to seeing workflow details. By default, anyone with access to an organization can use a form.
+					</Typography>
+
+					<div />
+					{workflow !== undefined && workflow !== null && workflow.sharing !== undefined && workflow.sharing !== null ?
+						<Select
+							fullWidth
+							style={{marginTop: 25, }}
+							value={workflow.sharing === "" ? "private" : workflow.sharing}
+							onChange={(e) => {
+								console.log("SHARING: ", e.target.value)
+
+								workflow.sharing = e.target.value
+								setWorkflow(workflow)
+								saveWorkflow(workflow) 
+								setUpdate(Math.random())
+
+								toast("Form sharing updated.")
+							}}
+						>
+							<MenuItem 
+								value={"private"}
+							>
+								Organization only
+							</MenuItem>
+							<Divider />
+							<MenuItem 
+								value={"form"}
+							>
+								Anyone with the link
+							</MenuItem>
+						</Select>
+					: null}
 				</DialogContent>
 			</Dialog>
 
@@ -1135,19 +1120,19 @@ const RunWorkflow = (defaultprops) => {
 					<Button
 						variant={"outlined"}
 						color={"secondary"}
-						disabled
 						onClick={() => {
 							setSharingOpen(true)
 						}}
 					>
-						Manage Sharing	
+						Share Form	
 					</Button>
 				</div> 
 			: null}
+
       		{basedata}
 		</div>
 		:
-		<div>
+		<div style={{width: 100, itemAlign: "center", textAlign: "center", margin: "auto", }}>
 			<CircularProgress />
 		</div>
 

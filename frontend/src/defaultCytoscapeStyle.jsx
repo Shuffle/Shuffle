@@ -467,13 +467,66 @@ const data = [
       "font-size": "0px",
     },
   },
-	{
-		selector: "node:selected",
-		css: {
-			"border-color": "#f86a3e",
-			"border-width": "7px",
-		},
-	},
+  {
+  	selector: "node:selected",
+  	css: {
+  		"border-color": "#f86a3e",
+  		"border-width": "7px",
+  	},
+  },
+  {
+    selector: `node[buttonType="condition-drag"]`,
+    css: {
+		"width": "5px",
+		"height": "5px",
+		"background-color": "#f85a3e",
+    },
+  },
+  {
+    selector: `node[name="switch"]`,
+    css: {
+      label: function(element) {
+		  // Load from the actual element
+		  var nodeheight = 400 
+		  var conditions = [{
+			  "name": "Condition 1",
+			  "check": "X equals Y",
+		  },
+		  {
+			  "name": "Condition 2",
+			  "check": "X2 equals Y2",
+		  },
+		  {
+			  "name": "Condition 3",
+			  "check": "X3 equals Y3",
+		  }]
+
+		  conditions.push({
+			  "name": "Else",
+			  "check": "If all else fails",
+		  })
+
+		  const newlines = nodeheight / conditions.length
+		  console.log("Newlines: ", newlines)
+
+		  const label = conditions.map((condition) => {
+			  return `${condition.name}\n\n\n`
+		  }).join("\n")
+
+		  return label
+	  },
+      color: "white",
+      "border-color": "#f85a3e",
+	  "background-color": "#1f1f1f",
+      "font-size": "19px",
+      "text-margin-x": "-110px",
+	  "text-wrap": "wrap",
+      shape: "roundrectangle",
+      width: "100",
+      height: "300",
+
+    },
+  },
 ];
 
 //{

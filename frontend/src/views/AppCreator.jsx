@@ -544,7 +544,7 @@ const AppCreator = (defaultprops) => {
   };
   
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
 
   useEffect(() => {
 		if (window.location.pathname.includes("apps/edit")) {
@@ -897,8 +897,31 @@ const AppCreator = (defaultprops) => {
             };
 
 			if (methodvalue["x-label"] !== undefined && methodvalue["x-label"] !== null) {
+				console.log("LABEL: ", methodvalue["x-label"])
+		
+				var correctlabel = "" 
+				const labels = methodvalue["x-label"].split(",")
+				for (let labelkey in labels) {
+					var label = labels[labelkey].trim()
+					if (label.toLowerCase() === "no label") {
+						continue
+					}
+
+					// Remove quotes and escapes
+					label = label.replace(/['"]+/g, '')
+					label = label.replace(/\\/g, '')
+
+					//label = label.replace("_", " ", -1)
+					//label = label.charAt(0).toUpperCase() + label.slice(1)
+
+					correctlabel = label
+					break
+				}
+
+				console.log("LABEL: ", correctlabel)
 				// FIX: Map labels only if they're actually in the category list
-				newaction.action_label = methodvalue["x-label"]
+				//newaction.action_label = methodvalue["x-label"]
+				newaction.action_label = correctlabel
 			}
 
 			if (methodvalue["x-required-fields"] !== undefined && methodvalue["x-required-fields"] !== null) {
@@ -3124,15 +3147,14 @@ const AppCreator = (defaultprops) => {
 		  Scopes for Oauth2
 		</Typography>
 		<MuiChipsInput
-		  style={{border: "2px solid #f86a3e", borderRadius: theme.palette.borderRadius,}}
-					required
+		  required
 		  InputProps={{
 			style: {
 			  color: "white",
-			  maxHeight: 50,
+			  maxHeight: 160,
 			},
 		  }}
-		  style={{ maxHeight: 80, overflowX: "hidden", overflowY: "auto" }}
+		  style={{ minHeight: 160, maxHeight: 160, overflowX: "hidden", overflowY: "auto" }}
 		  placeholder="Available Oauth2 Scopes"
 		  color="primary"
 		  fullWidth
@@ -3159,7 +3181,7 @@ const AppCreator = (defaultprops) => {
 							required
 							style={{ marginTop: 0, backgroundColor: inputColor }}
 							fullWidth={true}
-							placeholder="Field Name (key, NOT your actual API-key)"
+							placeholder="The Key to use as the header/query - NOT your actual API-key"
 							type="name"
 							id="standard-required"
 							margin="normal"
@@ -4441,7 +4463,7 @@ const AppCreator = (defaultprops) => {
 									setUpdate(Math.random())
 								}
 							}}
-							value={data.action_label}
+							value={data?.action_label?.replace(" ", "_").toLowerCase()}
 							style={{
 								border: data.action_label === undefined || data.action_label === "No Label" ? "" : `2px solid ${bgColor}`,
 								borderRadius: theme.shape.borderRadius,
@@ -4463,7 +4485,7 @@ const AppCreator = (defaultprops) => {
 								return (
 									<MenuItem
 										key={labelindex}
-										value={label}
+										value={label.replace(" ", "_").toLowerCase()}
 										style={{ 
 										}}
 									>

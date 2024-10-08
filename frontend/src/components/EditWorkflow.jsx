@@ -2,6 +2,7 @@ import React, { useEffect, useContext } from "react";
 import theme from '../theme.jsx';
 import { isMobile } from "react-device-detect" 
 import { MuiChipsInput } from "mui-chips-input";
+import { toast } from "react-toastify" 
 import UsecaseSearch from "../components/UsecaseSearch.jsx"
 import WorkflowGrid from "../components/WorkflowGrid.jsx"
 import dayjs from 'dayjs';
@@ -63,7 +64,7 @@ import {
 } from "@mui/icons-material";
 
 const EditWorkflow = (props) => {
-	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, saveWorkflow, expanded, } = props
+	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, saveWorkflow, expanded, scrollTo, } = props
 
   const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
 
@@ -79,15 +80,30 @@ const EditWorkflow = (props) => {
 	const [name, setName] = React.useState(workflow.name !== undefined ? workflow.name : "")
 	const [dueDate, setDueDate] = React.useState(workflow.due_date !== undefined && workflow.due_date !== null && workflow.due_date !== 0 ? dayjs(workflow.due_date*1000) : dayjs().subtract(1, 'day'))
 
-  const [inputQuestions, setInputQuestions] = React.useState(workflow.input_questions !== undefined && workflow.input_questions !== null ? JSON.parse(JSON.stringify(workflow.input_questions)) : []) 
+    const [inputQuestions, setInputQuestions] = React.useState(workflow.input_questions !== undefined && workflow.input_questions !== null ? JSON.parse(JSON.stringify(workflow.input_questions)) : []) 
 	const [inputMarkdown, setInputMarkdown] = React.useState(workflow.input_markdown !== undefined && workflow.input_markdown !== null ? workflow.input_markdown : "")
 	const [outputMarkdown, setOutputMarkdown] = React.useState(workflow.output_markdown !== undefined && workflow.output_markdown !== null ? workflow.output_markdown : "")
+	const [scrollDone, setScrollDone] = React.useState(false)
 
   const classes = useStyles();
 
+  if (scrollTo !== undefined && scrollTo !== null && scrollTo.length > 0 && scrollDone === false) {
+	  setTimeout(() => {
+		  const foundScroll = document.getElementById(scrollTo)
+		  if (foundScroll !== null) {
+			  // Smooth scroll
+			  foundScroll.scrollIntoView({ behavior: "smooth" })
+		  }
+			  
+	  }, 200)
+	  setScrollDone(true)
+
+  }
+
 	// Gets the generated workflow 
-	const getGeneratedWorkflow = (workflow_id) => {
-    fetch(globalUrl + "/api/v1/workflows/" + workflow_id, {
+  const getGeneratedWorkflow = (workflow_id) => {
+	const url = `${globalUrl}/api/v1/workflows/${workflow_id}`
+    fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -95,54 +111,55 @@ const EditWorkflow = (props) => {
       },
       credentials: "include",
     })
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 when getting workflow");
+	.then((response) => {
+		if (response.status !== 200) {
+			console.log("Status not 200 when getting workflow");
+		}
+
+
+		return response.json();
+	})
+	.then((responseJson) => {
+		if (responseJson.id === workflow_id) {
+			console.log("GOT WORKFLOW: ", responseJson)
+			if (name === "") {
+				innerWorkflow.name = responseJson.name
+				setName(responseJson.name)
 			}
 
-			return response.json();
-		})
-		.then((responseJson) => {
-			if (responseJson.id === workflow_id) {
-				console.log("GOT WORKFLOW: ", responseJson)
-				if (name === "") {
-					innerWorkflow.name = responseJson.name
-					setName(responseJson.name)
-				}
-
-				if (description === "") {
-					innerWorkflow.description = responseJson.description
-					setDescription(description)
-				}
-
-				if (newWorkflowTags === []) {
-					innerWorkflow.tags = responseJson.tags
-					setNewWorkflowTags(responseJson.tags)
-				}
-
-				if (selectedUsecases === []) {
-					selectedUsecases = responseJson.usecase_ids
-				}
-
-				innerWorkflow.id = responseJson.id
-				innerWorkflow.blogpost = responseJson.blogpost
-				innerWorkflow.actions = responseJson.actions
-				innerWorkflow.triggers = responseJson.triggers
-				innerWorkflow.branches = responseJson.branches
-				innerWorkflow.comments = responseJson.comments
-				innerWorkflow.workflow_variables = responseJson.workflow_variables
-				innerWorkflow.execution_variables = responseJson.execution_variables
-
-
-				setInnerWorkflow(innerWorkflow)
-    	  setUpdate(Math.random())
+			if (description === "") {
+				innerWorkflow.description = responseJson.description
+				setDescription(description)
 			}
-		})
-		.catch((error) => {
-			//toast(error.toString());
-			console.log("Get workflow error: ", error.toString());
-		})
-	}
+
+			if (newWorkflowTags === []) {
+				innerWorkflow.tags = responseJson.tags
+				setNewWorkflowTags(responseJson.tags)
+			}
+
+			if (selectedUsecases === []) {
+				selectedUsecases = responseJson.usecase_ids
+			}
+
+			innerWorkflow.id = responseJson.id
+			innerWorkflow.blogpost = responseJson.blogpost
+			innerWorkflow.actions = responseJson.actions
+			innerWorkflow.triggers = responseJson.triggers
+			innerWorkflow.branches = responseJson.branches
+			innerWorkflow.comments = responseJson.comments
+			innerWorkflow.workflow_variables = responseJson.workflow_variables
+			innerWorkflow.execution_variables = responseJson.execution_variables
+
+
+			setInnerWorkflow(innerWorkflow)
+    	  	setUpdate(Math.random())
+		}
+	})
+	.catch((error) => {
+		//toast(error.toString());
+		console.log("Get workflow error: ", error.toString());
+	})
+  }
 
 	if (foundWorkflowId.length > 0) {
 		getGeneratedWorkflow(foundWorkflowId)
@@ -162,6 +179,7 @@ const EditWorkflow = (props) => {
 
 	return (
     <Drawer
+	  anchor={"right"}
       open={modalOpen}
       onClose={() => {
         setModalOpen(false);
@@ -191,7 +209,7 @@ const EditWorkflow = (props) => {
 							<Tooltip title="Open Workflow Form for 'normal' users">
 								<a
 									rel="noopener noreferrer"
-									href={`/workflows/${workflow.id}/run`}
+									href={`/forms/${workflow.id}`}
 									target="_blank"
 									style={{
 										textDecoration: "none",
@@ -207,17 +225,18 @@ const EditWorkflow = (props) => {
 					}
 				</div>
 				<Typography variant="body2" color="textSecondary" style={{marginTop: 20, maxWidth: 440,}}>
-					Workflows can be built from scratch, or from templates. <a href="/usecases" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
+					Workflows can be built from scratch, or from templates. <a href="/usecases2" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
 				</Typography>
 
+				{/*
 				<div style={{marginTop: 10, marginBottom: 10, marginRight: 50, }}>
 					<WorkflowValidationTimeline 
-					  originalWorkflow={workflow}
 					
 					  apps={apps}
 					  workflow={workflow}
 					/>
 				</div>
+				*/}
 
 				{showUpload === true ? 
 					<div style={{ float: "right" }}>
@@ -247,7 +266,7 @@ const EditWorkflow = (props) => {
 				</div>
       </DialogTitle>
       <FormControl>
-		<div style={{borderTop: "1px solid rgba(255,255,255,0.5)", width: 600, position: "fixed", left: 0, bottom: 0, zIndex: 1002, backgroundColor: "rgba(53,53,53,1)", height: 75, paddingTop: 20, paddingLeft: 75, }}>
+		<div style={{borderTop: "1px solid rgba(255,255,255,0.5)", width: 600, position: "fixed", right: 20, bottom: 0, zIndex: 1002, backgroundColor: "rgba(53,53,53,1)", height: 75, paddingTop: 20, paddingLeft: 75, }}>
 		  {/*
           <Button
             style={{}}
@@ -602,7 +621,7 @@ const EditWorkflow = (props) => {
 									userdata.orgs.filter(org => org.creator_org === userdata.active_org.id).length === 0 ?
 										userdata.active_org.creator_org === undefined || userdata.active_org.creator_org === null || userdata.active_org.creator_org === "" ?
 											<Typography variant="body2" style={{marginTop: 10, color: "rgba(255,255,255,0.7)"}}>
-												Your organization does not have any suborgs yet. Please <a href="/admin?tab=suborgs" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">make one</a>, then try again.
+												Your organization does not have any suborgs yet, OR you may not have access to any suborgs directly.. Please <a href="/admin?tab=suborgs" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">make one</a> or get access to suborgs by admin, then try again.
 											</Typography>
 											:
 											<Typography variant="body2" style={{marginTop: 10, color: "rgba(255,255,255,0.7)"}}>
@@ -702,152 +721,7 @@ const EditWorkflow = (props) => {
 									
 								<Divider style={{marginTop: 20, marginBottom: 20, }} />
 
-								<Typography variant="h6" style={{marginTop: 50, }}>
-									Input fields
-								</Typography>
-								<Typography variant="body2" color="textSecondary" style={{marginBottom: 20, }}>
-									Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/workflows/${workflow.id}/run`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>workflow run page</a>. If chosen in the User Input node, these will be required fields.
-								</Typography>
-
-
-								{inputQuestions.map((data, index) => {
-									console.log("Inputfield: ", data)
-
-									return (
-										<div style={{display: "flex", }}>
-											<TextField
-											  disabled={data.deleted === true}
-											  style={{
-												height: 50,
-												flex: 2,
-												marginTop: 0,
-												marginBottom: 0,
-												backgroundColor: theme.palette.inputColor,
-												marginRight: 5,
-											  }}
-											  fullWidth={true}
-											  placeholder="Question"
-											  id="standard-required"
-											  margin="normal"
-											  variant="outlined"
-											  defaultValue={data.name}
-											  onChange={(e) => {
-												inputQuestions[index].name = e.target.value
-												setInputQuestions(inputQuestions)
-          									    setUpdate(Math.random());
-											  }}
-											  InputProps={{
-												classes: {
-												  notchedOutline: classes.notchedOutline,
-												},
-												style: {
-												  color: "white",
-												  minHeight: 50,
-												},
-											  }}
-											/>
-											<TextField
-											  disabled={data.deleted === true}
-											  style={{
-												height: 50,
-												flex: 2,
-												marginTop: 0,
-												marginBottom: 0,
-												backgroundColor: theme.palette.inputColor,
-												marginRight: 5,
-											  }}
-											  fullWidth={true}
-											  placeholder="JSON key"
-											  id="standard-required"
-											  margin="normal"
-											  variant="outlined"
-											  defaultValue={data.value}
-											  onChange={(e) => {
-												inputQuestions[index].value = e.target.value
-												setInputQuestions(inputQuestions)
-          									    setUpdate(Math.random());
-											  }}
-											  InputProps={{
-												classes: {
-												  notchedOutline: classes.notchedOutline,
-												},
-												style: {
-												  color: "white",
-												  minHeight: 50,
-												},
-											  }}
-											/>
-          									<Button
-          									  color="primary"
-          									  style={{ maxWidth: 50, marginLeft: 15 }}
-											  disabled={data.deleted === true}
-          									  variant="outlined"
-          									  onClick={() => {
-												  // Remove current index
-												  console.log("Removing index: ", index)
-												  inputQuestions[index].deleted = true
-          									      setUpdate(Math.random());
-          									  }}
-          									>
-          									  <RemoveIcon style={{}} />
-          									</Button>
-										</div>
-									)
-								})}
-
-								<Button
-								  color="primary"
-								  style={{ maxWidth: 50, marginLeft: 15, marginTop: 20, }}
-								  variant="outlined"
-								  onClick={() => {
-									inputQuestions.push({
-										"name": "",
-										"value": "",
-										"deleted": false, 
-										"required": false
-									})
-									setInputQuestions(inputQuestions)
-									setUpdate(Math.random());
-								  }}
-								>
-								  <AddIcon style={{}} />
-								</Button>
-
 								
-								{inputQuestions.length === 0 ? null : 
-									<div>
-										<Typography variant="h6" style={{marginTop: 50, }}>
-											Input Markdown 
-										</Typography>
-										<TextField
-											multiline
-											rows={3}
-											fullWidth
-											color="primary"
-											value={inputMarkdown}
-											onChange={(e) => {
-												setInputMarkdown(e.target.value)
-												workflow.input_markdown = e.target.value
-												setWorkflow(workflow)
-												setUpdate(Math.random())
-											}}
-										/>
-
-										{/*
-										<Typography variant="h6" style={{marginTop: 50, }}>
-											Output Markdown
-										</Typography>
-										<TextField
-											multiLine
-											rows={3}
-											fullWidth
-											color="primary"
-										/>
-										*/}
-									</div>
-								}
-
-								<Divider style={{marginTop: 20, marginBottom: 20, }} />
 
 								<Typography variant="body1" style={{marginTop: 50, }}>
 									Git Backup Repository
@@ -998,8 +872,152 @@ const EditWorkflow = (props) => {
 										</span>
 									</Grid>
 								</Grid>
-							</div>
-						: null}
+
+						<Divider style={{marginTop: 20, marginBottom: 20, }} />
+
+						<Typography variant="h6" style={{marginTop: 50, }}>
+							Input fields
+						</Typography>
+						<Typography variant="body2" color="textSecondary" style={{marginBottom: 20, }}>
+							Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/forms/${workflow.id}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Form page</a> for this workflow. If chosen in the User Input node, these will be required fields. Use Semi-Colon ";" to create dropdown options. The first key will be the name shown, and subsequent keys will be the available values.
+						</Typography>
+
+
+						{inputQuestions.map((data, index) => {
+							var showListinfo = false
+							if (data.value !== undefined && data.value !== null && data.value.length > 0) {
+								if (data.value.includes(";")) {
+									showListinfo = true 
+								}
+							}
+
+							return (
+								<div style={{display: "flex", }}>
+									<TextField
+									  disabled={data.deleted === true}
+									  style={{
+										flex: 2,
+										marginTop: 0,
+										marginBottom: 0,
+										backgroundColor: theme.palette.inputColor,
+										marginRight: 5,
+									  }}
+									  fullWidth={true}
+									  placeholder="Question"
+									  id="standard-required"
+									  margin="normal"
+									  variant="outlined"
+									  defaultValue={data.name}
+									  onChange={(e) => {
+										inputQuestions[index].name = e.target.value
+										setInputQuestions(inputQuestions)
+										setUpdate(Math.random());
+									  }}
+									  InputProps={{
+										classes: {
+										  notchedOutline: classes.notchedOutline,
+										},
+									  }}
+									/>
+									<TextField
+									  disabled={data.deleted === true}
+									  style={{
+										flex: 2,
+										marginTop: 0,
+										marginBottom: 0,
+										backgroundColor: theme.palette.inputColor,
+										marginRight: 5,
+									  }}
+									  fullWidth={true}
+									  placeholder="$exec JSON key"
+									  id="standard-required"
+									  margin="normal"
+									  variant="outlined"
+								      helperText={showListinfo === true ? "Dropdown list" : null}
+									  defaultValue={data.value}
+									  onChange={(e) => {
+										// Replace multiple semicolon with one
+										e.target.value = e.target.value.replace(";;", ";")
+
+										inputQuestions[index].value = e.target.value
+										setInputQuestions(inputQuestions)
+										setUpdate(Math.random());
+									  }}
+									  InputProps={{
+										classes: {
+										  notchedOutline: classes.notchedOutline,
+										},
+									  }}
+									/>
+									<Button
+									  color="primary"
+									  style={{ maxWidth: 50, marginLeft: 15 }}
+									  disabled={data.deleted === true}
+									  variant="outlined"
+									  onClick={() => {
+										  // Remove current index
+										  console.log("Removing index: ", index)
+										  inputQuestions[index].deleted = true
+										  setUpdate(Math.random());
+									  }}
+									>
+									  <RemoveIcon style={{}} />
+									</Button>
+								</div>
+							)
+						})}
+
+						<Button
+						  color="primary"
+						  style={{ maxWidth: 50, marginLeft: 15, marginTop: 20, }}
+						  variant="outlined"
+
+						  disabled={inputQuestions !== undefined && inputQuestions !== null && inputQuestions.length > 5}
+						  onClick={() => {
+							inputQuestions.push({
+								"name": "",
+								"value": "",
+								"deleted": false, 
+								"required": false
+							})
+							setInputQuestions(inputQuestions)
+							setUpdate(Math.random());
+						  }}
+						>
+						  <AddIcon style={{}} />
+						</Button>
+						
+						<div id="input_markdown">
+							<Typography variant="h6" style={{marginTop: 50, }}>
+								Input Markdown 
+							</Typography>
+							<Typography variant="body2" color="textSecondary" style={{marginBottom: 20, }}>
+								Markdown will be shown on the <a href={`/forms/${workflow.id}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Form page</a>. Output for a Workflow is also shown in Markdown, and is controlled by the LAST action that runs.  
+							</Typography>
+							<TextField
+								multiline
+								minRows={3}
+								fullWidth
+								color="primary"
+								value={inputMarkdown}
+						  		onKeyDown={(e) => {
+									//console.log("KEY: ", e.key)
+									if (e.key === "Tab") {
+      									e.preventDefault()
+									}
+								}}
+
+								onChange={(e) => {
+									setInputMarkdown(e.target.value)
+									workflow.input_markdown = e.target.value
+									setWorkflow(workflow)
+									setUpdate(Math.random())
+								}}
+							/>
+						</div>
+					</div>
+				: null}
+
 
 
 			<Tooltip color="primary" title={"Add more details"} placement="top">
@@ -1047,7 +1065,7 @@ const EditWorkflow = (props) => {
 			</span>
 		: null}
 
-		  {newWorkflow === true && name.length > 2 ?
+		  {/*newWorkflow === true && name.length > 2 ?
 			<div style={{marginLeft: 30, }}>
 				<WorkflowGrid 
 					maxRows={1}
@@ -1062,7 +1080,7 @@ const EditWorkflow = (props) => {
 					onlyResults={true}
 				/>
 			</div> 
-		  : null}
+		  : null*/}
       </FormControl>
     </Drawer>
 	)

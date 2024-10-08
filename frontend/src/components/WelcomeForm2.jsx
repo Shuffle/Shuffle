@@ -161,7 +161,7 @@ const WelcomeForm = (props) => {
   const [clickdiff, setclickdiff] = useState(0);
   const [mouseHoverIndex, setMouseHoverIndex] = useState(-1)
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
   //const alert = useAlert();
   let navigate = useNavigate();
 

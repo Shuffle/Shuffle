@@ -1,21 +1,56 @@
-import React from "react";
+import React, { useState, useEffect, } from "react";
 import {
   Card,
   CardContent,
   IconButton,
   Typography,
   Switch,
+  Tooltip,
+  Select,
+  MenuItem,
+  Divider,
+  FormLabel,
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
+
+import DashboardBarchart, { LoadStats } from '../components/DashboardBarchart.jsx';
+import {
+	Edit as EditIcon,
+} from "@mui/icons-material";
 import { toast } from "react-toastify";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 import theme from '../theme.jsx';
 
-const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, isTenzirActive, ...otherProps }) => {
+
+const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, isTenzirActive, availableDetection, ruleMapping, setRuleMapping, ...otherProps }) => {
   const [openCodeEditor, setOpenCodeEditor] = React.useState(false);
   const [fileData, setFileData] = React.useState("");
   const [isEnabled, setIsEnabled] = React.useState(otherProps.is_enabled);
+  const [filteredBarchart, setFilteredBarchart] = React.useState(null) 
+
+  const [responseValue, setResponseValue] = React.useState("No response action")
   const isCloud = ["localhost:3002", "shuffler.io"].includes(window.location.host);
+
+  console.log("Rulemapping: ", ruleMapping)
+  useEffect(() => {
+
+	//const url = `${globalUrl}/api/v1/stats/app_executions_test2`
+	//const resp = LoadStats(globalUrl, ruleName)
+	//const resp = LoadStats(globalUrl, "app_executions_test2")
+	const resp = LoadStats(globalUrl, "app_executions_cloud")
+	resp.then((data) => {
+		if (data === undefined) {
+			setFilteredBarchart([])
+		} else {
+			setFilteredBarchart(data)
+		}
+	})
+
+	if (ruleMapping !== undefined && ruleMapping !== null && ruleMapping.value !== undefined && ruleMapping.value !== null) {
+		console.log("FIX MAPPING FROM ruleMapping.value: ", ruleMapping)
+	}
+  }, [])
+
+  console.log("Response Value: ", responseValue)
 
   const handleSwitchChange = (event) => {
     if (folderDisabled) {
@@ -32,7 +67,8 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
     toggleRule(file_id, !newIsEnabled, globalUrl, () => {
       setIsEnabled(newIsEnabled);
     })
-  };
+  }
+
 
   const UpdateText = (text) => {
     fetch(`${globalUrl}/api/v1/files/${file_id}/edit`, {
@@ -64,32 +100,121 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
     <Card style={{
 		borderRadius: theme.palette.borderRadius,
 		minHeight: 100, 
+		marginBottom: 10, 
+		paddingBottom: 0, 
 	}}>
-      <CardContent>
+      <CardContent
+	  	style={{
+			padding: "10px 30px 0px 30px",
+		}}
+	  >
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: 16,
-		color: "white",
+			color: "white",
           }}
         >
-          <Typography variant="h6">{ruleName}</Typography>
+          <Typography variant="h6">{ruleName.replaceAll("_", " ")} ({filteredBarchart === null || filteredBarchart.total === undefined ? 0 : filteredBarchart.total})</Typography>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton onClick={() => openEditBar(file_id, setOpenCodeEditor, setFileData, globalUrl)}>
-              <EditIcon />
-            </IconButton>
-            <Switch
-              checked={isEnabled && !folderDisabled}
-              onChange={handleSwitchChange}
-              disabled={false}
-            />
+
+	  		<Select
+				  MenuProps={{
+					disableScrollLock: true,
+				  }}
+				  labelId="Response Action"
+				  value={responseValue}
+				  SelectDisplayProps={{
+					style: {
+						color: "rgba(255,255,255,0.4)",
+					},
+				  }}
+				  fullWidth
+				  onChange={(e) => {
+					  toast("Changing response: " + e.target.value)
+					  console.log("Target: ", e.target.value)
+
+					  setResponseValue(e.target.value)
+
+					  // FIXME: Handle:
+					  // 1. Get the current cache for the detection 
+					  // 2. Create a new mapping for Detection -> Response
+				  }}
+				  style={{
+					backgroundColor: theme.palette.inputColor,
+					color: "white",
+					height: 40,
+					borderRadius: theme.palette.borderRadius,
+				  }}
+				>
+				  <MenuItem
+					style={{
+					  backgroundColor: theme.palette.inputColor,
+					  color: "white",
+					}}
+					value="No response action"
+				  >
+					<em>No selected response</em>
+				  </MenuItem>
+
+	  			  <Divider />
+
+				  {availableDetection === undefined || availableDetection === null ? null : availableDetection.map((data, index) => {
+						return (
+						  <MenuItem
+							key={index}
+							style={{
+							  backgroundColor: theme.palette.inputColor,
+							  color: "white",
+							  overflowX: "auto",
+							}}
+							value={data.name}
+						  >
+							{data.name} 
+						  </MenuItem>
+						)
+				  })}
+				</Select>
+
+
+	  		<Tooltip title="Edit Rule" placement="top">
+				<IconButton onClick={() => openEditBar(file_id, setOpenCodeEditor, setFileData, globalUrl)}>
+				  <EditIcon />
+				</IconButton>
+	  		</Tooltip>
+	  		<Tooltip title={isEnabled && !folderDisabled ? "Disable Rule" : "Enable Rule"} placement="top">
+			  <Switch
+				  checked={isEnabled && !folderDisabled}
+				  onChange={handleSwitchChange}
+				  disabled={false}
+	  		  />
+	  	    </Tooltip>
           </div>
         </div>
+
+	  	<div style={{
+			overflow: 'visible', 
+			zIndex: 10,
+			//border: "1px solid rgba(255,255,255,0.3)", 
+			borderRadius: theme.palette.borderRadius,
+			marginTop: 5, 
+
+			minHeight: 40,
+			maxHeight: 40,
+		}}>
+	  		{filteredBarchart === null ? null :
+				<DashboardBarchart 
+					timelineData={filteredBarchart}
+				/>
+			}
+	  	</div>
+
+	  	{/*
         <Typography variant="body2" style={{ marginTop: '2%' }}>
           {description}
         </Typography>
+		*/}
 
         <ShuffleCodeEditor
           isCloud={isCloud}

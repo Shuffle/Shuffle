@@ -42,6 +42,7 @@ import {
 	Delete,
 	RestaurantRounded,
 	Cloud,
+	CheckCircle
 } from "@mui/icons-material";
 
 //import { useAlert 
@@ -71,6 +72,7 @@ const Billing = (props) => {
 	const [currentAppRunsInNumber, setCurrentAppRunsInNumber] = useState(0);
 	const [alertThresholds, setAlertThresholds] = useState(selectedOrganization.Billing !== undefined && selectedOrganization.Billing.AlertThreshold !== undefined && selectedOrganization.Billing.AlertThreshold !== null ? selectedOrganization.Billing.AlertThreshold : [{ percentage: '', count: '', Email_send: false }]);
 	const [currentIndex, setCurrentIndex] = useState(0);
+	const [deleteAlertVerification, setDeleteAlertVerification] = useState(false);
 
 	useEffect(() => {
 		if (userdata.app_execution_limit !== undefined && userdata.app_execution_usage !== undefined) {
@@ -353,13 +355,13 @@ const Billing = (props) => {
 		if (subscription.name === "Enterprise" && subscription.active === true) {
 			top_text = "Current Plan"
 
-			newPaperstyle.border = "1px solid #f85a3e"
+			// newPaperstyle.border = "1px solid #f85a3e"
 		}
 
 		var showSupport = false
 		if (subscription.name.includes("default")) {
 			top_text = "Custom Contract"
-			newPaperstyle.border = "1px solid #f85a3e"
+			newPaperstyle.border = "1px solid rgba(255,255,255,0.3)"
 			showSupport = true
 		}
 
@@ -379,7 +381,7 @@ const Billing = (props) => {
 
 		if (highlight === true) {
 			// Add an "Upgrade now" button
-			newPaperstyle.border = "1px solid #f85a3e"
+			newPaperstyle.border = "1px solid rgba(255,255,255,0.3)"
 		}
 
 		if (hovered) {
@@ -820,7 +822,8 @@ const Billing = (props) => {
 								height: 40,
 								fontSize: 16,
 								color: "white",
-								backgroundImage: userdata.has_card_available ? null : "linear-gradient(to right, #f86a3e, #f34079)",
+								backgroundColor: userdata.has_card_available ? null : "#f86743",
+								// backgroundImage: userdata.has_card_available ? null : "linear-gradient(to right, #f86a3e, #f34079)",
 								textTransform: "none",
 
 							}}
@@ -852,7 +855,7 @@ const Billing = (props) => {
 									height: 40,
 									fontSize: 16,
 									color: "white",
-									backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+									backgroundColor: "#f86743",
 									textTransform: 'none'
 								}}
 								onClick={() => {
@@ -1036,11 +1039,11 @@ const Billing = (props) => {
 			<Paper style={{
 				padding: 20,
 				// maxWidth: 400,
-				minWidth: 340,
+				width: 340,
 				height: 480,
 				backgroundColor: hovered ? "#232427" : theme.palette.platformColor,
 				borderRadius: theme.palette.borderRadius * 2,
-				border: "1px solid #f85a3e",
+				border: "1px solid rgba(255,255,255,0.3)",
 				marginRight: 10,
 				marginTop: 15,
 			}}
@@ -1133,8 +1136,8 @@ const Billing = (props) => {
 							height: 40,
 							fontSize: 16,
 							color: "white",
-							backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
-							textTransform: 'none'
+							backgroundColor: "#f86743",
+							textTransform: 'none',
 						}}
 						onClick={() => {
 							if (Cloud) {
@@ -1188,7 +1191,7 @@ const Billing = (props) => {
 									height: 40,
 									fontSize: 16,
 									color: "white",
-									backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+									backgroundColor: "#f86743",
 									textTransform: 'none',
 									cursor: getProfessionalServices ? 'pointer' : 'not-allowed',
 									opacity: getProfessionalServices ? 1 : 0.6,
@@ -1315,7 +1318,7 @@ const Billing = (props) => {
 					width: 340,
 					backgroundColor: hovered ? "#232427" : theme.palette.platformColor,
 					borderRadius: theme.palette.borderRadius * 2,
-					border: "1px solid #f85a3e",
+					border: "1px solid rgba(255,255,255,0.3)",
 					marginRight: 10,
 					marginTop: 15,
 				}}
@@ -1373,7 +1376,7 @@ const Billing = (props) => {
 							height: 40,
 							fontSize: 16,
 							color: "white",
-							backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+							backgroundColor: "#f86743",
 							textTransform: 'none'
 						}}
 						onClick={() => {
@@ -1381,6 +1384,8 @@ const Billing = (props) => {
 								ReactGA.event({
 									category: "Billing",
 									action: "click_public_training_button",
+									label: "Public Training",
+									userId: userdata?.id
 								});
 							}
 							navigate("/training")
@@ -1399,21 +1404,24 @@ const Billing = (props) => {
 							height: 40,
 							fontSize: 16,
 							color: "white",
-							backgroundImage: "linear-gradient(to right, #f86a3e, #f34079)",
+							backgroundColor: "#f86743",
 							textTransform: 'none'
 						}}
 						onClick={() => {
 							if (Cloud) {
 								ReactGA.event({
 									category: "Billing",
-									action: "click_public_training_button",
+									action: "click_private_training_button",
+									label: "Private Training",
+									userId: userdata?.id,
 								});
 							}
-							setOpenPrivateTraining(true)
+							setOpenPrivateTraining(true);
 						}}
 					>
 						Private Training
 					</Button>
+
 					<Dialog open={openPrivateTraining}
 						onClose={() => setOpenPrivateTraining(false)}
 						fullWidth
@@ -1818,6 +1826,7 @@ const Billing = (props) => {
 		// Update currentIndex based on remaining elements
 		const findCurrentIndex = newAlertThresholds.some(threshold => threshold.Email_send === false);
 		setCurrentIndex(findCurrentIndex ? newAlertThresholds.findIndex(threshold => threshold.Email_send === false) : - 1);
+		toast.info("Alert Threshold deleted successfully. Don't forget to save your changes.");
 	};
 
 	const HandleEditOrgForAlertThreshold = (orgId) => {
@@ -1997,15 +2006,6 @@ const Billing = (props) => {
 							/>
 						</span>
 						: null}
-				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ? isChildOrg ? null :
-					<ConsultationManagement
-						globalUrl={globalUrl}
-						userdata={userdata}
-						selectedOrganization={selectedOrganization}
-					/> : null}
-
-
-				<TrainingService />
 
 				{isCloud &&
 					selectedOrganization.subscriptions !== undefined &&
@@ -2261,7 +2261,29 @@ const Billing = (props) => {
 
 			  </div>
             ) : null*/}
-			<div style={{ marginTop: 20, marginLeft: 10 }}>
+			{!isChildOrg && isCloud && (
+				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 10 }}>
+					<Typography style={{ marginBottom: 5 }} variant="h4">
+						Professional Services
+					</Typography>
+					<Typography color="textSecondary">
+						We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at support@shuffler.io.
+					</Typography>
+					<div style={{ display: 'flex', flexDirection: 'row', marginTop: 5 }}>
+						{billingInfo.subscription !== undefined && billingInfo.subscription !== null ? (
+							isChildOrg ? null : (
+								<ConsultationManagement
+									globalUrl={globalUrl}
+									userdata={userdata}
+									selectedOrganization={selectedOrganization}
+								/>
+							)
+						) : null}
+						<TrainingService />
+					</div>
+				</div>
+			)}
+			<div style={{ marginTop: isCloud && 40, marginLeft: 10 }}>
 				<Typography
 					style={{ marginBottom: 5 }}
 					variant="h4"
@@ -2303,7 +2325,9 @@ const Billing = (props) => {
 							: " " + 0 + " "}
 						app runs.
 					</Typography>
-
+					<Typography variant="body1" color="textSecondary" style={{ marginTop: 10 }}>
+						Please note: Once your app runs reach the set alert threshold, all admins in the organization will receive an email notification.
+					</Typography>
 					<div style={{ marginTop: 15 }}>
 						{alertThresholds.map((threshold, index) => (
 							<div key={index} style={{ display: 'flex', alignItems: 'center' }}>
@@ -2354,6 +2378,7 @@ const Billing = (props) => {
 									margin="normal"
 									variant="outlined"
 								/>
+								<span style={{ marginLeft: alertThresholds[index].Email_send === true ? 10 : 35, color: 'green' }}>{alertThresholds[index].Email_send === true && <Tooltip title="We have already sent alert for this threshold."><CheckCircle /></Tooltip>}</span>
 								{
 									alertThresholds.length > 1 &&
 									(
@@ -2362,18 +2387,24 @@ const Billing = (props) => {
 											disableElevation
 											sx={{
 												padding: 0,
-												color: 'red',
 												'&:hover': {
 													backgroundColor: 'transparent',
 												},
 											}}
 
-											onClick={() => { handleDeleteAlertThreshold(index) }}
+											onClick={() => { setDeleteAlertVerification(true) }}
 										>
-											<DeleteIcon />
+											<DeleteIcon sx={{ color: theme.palette.secondary.main }} />
 										</Button>
 									)
 								}
+								<Dialog open={deleteAlertVerification} onClose={() => setDeleteAlertVerification(false)} sx={{ '& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.3)', }, }}>
+									<DialogTitle>Are you sure you want to delete this threshold?</DialogTitle>
+									<DialogActions>
+										<Button style={{ textTransform: 'none', fontSize: 16 }} color="primary" onClick={() => setDeleteAlertVerification(false)}>Cancel</Button>
+										<Button style={{ textTransform: 'none', fontSize: 16 }} color="secondary" onClick={() => { handleDeleteAlertThreshold(index); setDeleteAlertVerification(false) }} >Delete</Button>
+									</DialogActions>
+								</Dialog>
 							</div>
 						))}
 					</div>
