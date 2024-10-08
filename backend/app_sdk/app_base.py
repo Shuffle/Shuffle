@@ -1743,10 +1743,10 @@ class AppBase:
 
         elif check.lower() == "contains_any_of":
             newvalue = [destinationvalue.lower()]
-            if "," in destinationvalue:
-                newvalue = destinationvalue.split(",")
-            elif ", " in destinationvalue:
+            if ", " in destinationvalue:
                 newvalue = destinationvalue.split(", ")
+            elif "," in destinationvalue:
+                newvalue = destinationvalue.split(",")
 
             for item in newvalue:
                 if not item:
