@@ -959,6 +959,27 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	// Look for Child workflows and delete them
+	if workflow.ParentWorkflowId == "" {
+		log.Printf("[DEBUG] Looking for child workflows for workflow %s to delete. User %s (%s) in org %s (%s)", workflow.ID, user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id)
+
+		childWorkflows, err := shuffle.ListChildWorkflows(ctx, workflow.ID)
+		if err != nil {
+			log.Printf("[ERROR] Failed to list child workflows: %s", err)
+		} else { 
+			log.Printf("\n\n[DEBUG] Found %d child workflows for workflow %s\n\n", len(childWorkflows), workflow.ID)
+
+			// Find cookies and append them to request.Header to replicate current request as closely as possible
+			for _, childWorkflow := range childWorkflows {
+				if childWorkflow.Id == workflow.ID {
+					continue
+				}
+
+				go shuffle.SendDeleteWorkflowRequest(childWorkflow, request)
+			}
+		}
+	}
+
 	// Clean up triggers and executions
 	for _, item := range workflow.Triggers {
 		if item.TriggerType == "SCHEDULE" && item.Status != "uninitialized" {
