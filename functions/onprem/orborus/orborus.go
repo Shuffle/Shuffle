@@ -1498,8 +1498,19 @@ func checkSwarmService(ctx context.Context) {
 	// https://docs.docker.com/engine/reference/commandline/swarm_init/
 	ip := getLocalIP()
 	log.Printf("[DEBUG] Attempting swarm setup on %s", ip)
+
+	info, err := dockercli.Info(ctx)
+	if err != nil {
+		log.Printf("[WARNING] Failed to get Docker Info: %s", err)
+	}
+
+	if info.Swarm.ControlAvailable {
+		log.Printf("[INFO] Already part of swarm as a manager")
+		return
+	}
+
 	req := swarm.InitRequest{
-		ListenAddr:    fmt.Sprintf("0.0.0.0:2377", ip),
+		ListenAddr:    "0.0.0.0:2377",
 		AdvertiseAddr: fmt.Sprintf("%s:2377", ip),
 	}
 
@@ -1510,6 +1521,7 @@ func checkSwarmService(ctx context.Context) {
 
 	log.Printf("[DEBUG] Swarm info: %s\n\n", ret)
 }
+
 
 func getContainerResourceUsage(ctx context.Context, cli *dockerclient.Client, containerID string) (float64, float64, error) {
 	// Get container stats
