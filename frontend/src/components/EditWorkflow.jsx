@@ -61,10 +61,11 @@ import {
   OpenInNew as OpenInNewIcon,
   Add as AddIcon,
   Remove as RemoveIcon,
+  EditNote as EditNoteIcon,
 } from "@mui/icons-material";
 
 const EditWorkflow = (props) => {
-	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, saveWorkflow, expanded, scrollTo, } = props
+	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, saveWorkflow, expanded, scrollTo, setRealtimeMarkdown, } = props
 
   const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
 
@@ -82,8 +83,8 @@ const EditWorkflow = (props) => {
 
     const [inputQuestions, setInputQuestions] = React.useState(workflow.input_questions !== undefined && workflow.input_questions !== null ? JSON.parse(JSON.stringify(workflow.input_questions)) : []) 
 	const [inputMarkdown, setInputMarkdown] = React.useState(workflow.input_markdown !== undefined && workflow.input_markdown !== null ? workflow.input_markdown : "")
-	const [outputMarkdown, setOutputMarkdown] = React.useState(workflow.output_markdown !== undefined && workflow.output_markdown !== null ? workflow.output_markdown : "")
 	const [scrollDone, setScrollDone] = React.useState(false)
+	const [selectedYieldActions, setSelectedYieldActions] = React.useState(workflow.output_yields !== undefined && workflow.output_yields !== null ? JSON.parse(JSON.stringify(workflow.output_yields)) : [])
 
   const classes = useStyles();
 
@@ -204,25 +205,28 @@ const EditWorkflow = (props) => {
 					<Typography variant="h4" style={{flex: 9, }}>
 						{newWorkflow ? "New" : "Editing"} workflow
 					</Typography>
+
 					{newWorkflow === true ? null :
 						<div style={{ marginLeft: 5, flex: 1 }}>
-							<Tooltip title="Open Workflow Form for 'normal' users">
-								<a
-									rel="noopener noreferrer"
-									href={`/forms/${workflow.id}`}
-									target="_blank"
-									style={{
-										textDecoration: "none",
-										color: "#f85a3e",
-										marginLeft: 5,
-										marginTop: 10,
-									}}
-								>
-									<OpenInNewIcon />
-								</a>
+							<Tooltip title="Go to Public Form page">
+								<IconButton>
+									<a
+										rel="noopener noreferrer"
+										href={`/forms/${workflow.id}`}
+										target="_blank"
+										style={{
+											textDecoration: "none",
+											color: "#f85a3e",
+											marginLeft: 5,
+										}}
+									>
+										<EditNoteIcon />
+									</a>
+								</IconButton>
 							</Tooltip>
 						</div>
 					}
+
 				</div>
 				<Typography variant="body2" color="textSecondary" style={{marginTop: 20, maxWidth: 440,}}>
 					Workflows can be built from scratch, or from templates. <a href="/usecases2" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Usecases</a> can help you discover next steps, and you can <a href="/search?tab=workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>search</a> for them directly. <a href="/docs/workflows" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>
@@ -306,6 +310,8 @@ const EditWorkflow = (props) => {
 				innerWorkflow.input_questions = validfields
 				innerWorkflow.input_markdown = inputMarkdown
 
+				innerWorkflow.output_yields = selectedYieldActions
+
 				innerWorkflow.name = name 
 				innerWorkflow.description = description 
 				if (newWorkflowTags.length > 0) {
@@ -382,16 +388,16 @@ const EditWorkflow = (props) => {
       					<FormControl style={{flex: 1, marginRight: 5,}}>
       					  <InputLabel htmlFor="grouped-select-usecase">Usecases</InputLabel>
       					  <Select 
-										defaultValue="" 
-										id="grouped-select" 
-										label="Matching Usecase" 
-										multiple
-										value={selectedUsecases}
-										renderValue={(selected) => selected.join(', ')}
-										onChange={(event) => {
-											console.log("Changed: ", event)
-										}}
-									>
+								defaultValue="" 
+								id="grouped-select" 
+								label="Matching Usecase" 
+								multiple
+								value={selectedUsecases}
+								renderValue={(selected) => selected.join(', ')}
+								onChange={(event) => {
+									console.log("Changed: ", event)
+								}}
+							>
       					    <MenuItem value="">
       					      <em>None</em>
       					    </MenuItem>
@@ -614,6 +620,11 @@ const EditWorkflow = (props) => {
 
 								<Divider style={{marginTop: 20, marginBottom: 20, }} />
 
+								<Typography variant="h4" style={{marginTop: 50, }}>
+									MSSP controls
+								</Typography>
+
+
 								<Typography variant="body1" style={{marginTop: 50, }}>
 									MSSP Suborg Distribution (beta - contact support@shuffler.io for more info)
 								</Typography>
@@ -719,11 +730,11 @@ const EditWorkflow = (props) => {
 									</Link>
 								}
 									
-								<Divider style={{marginTop: 20, marginBottom: 20, }} />
+								{/*<Divider style={{marginTop: 20, marginBottom: 20, }} />*/}
 
 								
 
-								<Typography variant="body1" style={{marginTop: 50, }}>
+								<Typography variant="body1" style={{marginTop: 100, }}>
 									Git Backup Repository
 								</Typography>
 								<Typography variant="body2" style={{ textAlign: "left", marginTop: 5, }} color="textSecondary">
@@ -875,9 +886,38 @@ const EditWorkflow = (props) => {
 
 						<Divider style={{marginTop: 20, marginBottom: 20, }} />
 
-						<Typography variant="h6" style={{marginTop: 50, }}>
-							Input fields
-						</Typography>
+
+						<div id="form_fill" style={{position: "relative", }}>
+							<Typography variant="h4" style={{marginTop: 100, }}>
+								Form Control
+							</Typography>
+							<Typography variant="body1" color="textSecondary" style={{marginTop: 10, }}>
+								Form Control is used to control how the Form for the workflow is shown to users. You can add input fields, markdown, and more. This is the first step in the workflow, and is required for all workflows.
+							</Typography>
+
+							<Typography variant="h6" style={{marginTop: 50, }}>
+								Input fields
+							</Typography>
+
+							<Tooltip title="Go to Public Form page">
+								<IconButton style={{position: "absolute", top: 0, right: 10, }}>
+									<a
+										rel="noopener noreferrer"
+										href={`/forms/${workflow.id}`}
+										target="_blank"
+										style={{
+											textDecoration: "none",
+											color: "#f85a3e",
+											marginLeft: 5,
+										}}
+									>
+										<EditNoteIcon />
+									</a>
+								</IconButton>
+							</Tooltip>
+
+						</div>
+
 						<Typography variant="body2" color="textSecondary" style={{marginBottom: 20, }}>
 							Input fields are fields that will be used during the startup of the workflow. These will be formatted in JSON and is most commonly used from the <a href={`/forms/${workflow.id}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Form page</a> for this workflow. If chosen in the User Input node, these will be required fields. Use Semi-Colon ";" to create dropdown options. The first key will be the name shown, and subsequent keys will be the available values.
 						</Typography>
@@ -1008,12 +1048,71 @@ const EditWorkflow = (props) => {
 								}}
 
 								onChange={(e) => {
+									if (setRealtimeMarkdown !== undefined) {
+										setRealtimeMarkdown(e.target.value)
+									}
+
 									setInputMarkdown(e.target.value)
 									workflow.input_markdown = e.target.value
 									setWorkflow(workflow)
 									setUpdate(Math.random())
 								}}
 							/>
+						</div>
+
+						<div id="output_control">
+							<Typography variant="h6" style={{marginTop: 50, }}>
+								Output Control ({selectedYieldActions.length === 0 ? "No Returns" : selectedYieldActions.length === 1 ? "Returning 1 node" : `Returning ${selectedYieldActions.length} nodes`})
+							</Typography>
+
+							<Typography variant="body2" color="textSecondary" style={{marginBottom: 20, }}>
+								When running this workflow, the output will be shown as a Markdown object by default, with JSON objects being rendered. By adding nodes below, they will be shown while the workflow is running as soon as they get a result. Failing/Skipped nodes are not shown. This makes it possible to track progress for more complex usecases.
+							</Typography>
+
+							<FormControl style={{marginTop: 15, }}>
+							  <Select 
+									defaultValue="" 
+									id="output-yield-control" 
+									label="Yielding nodes" 
+									multiple
+									fullWidth
+									style={{width: 500, }}
+									value={selectedYieldActions === [] ? ["none"] : selectedYieldActions}
+									renderValue={(selected) => selected.join(', ')}
+									onChange={(event) => {
+										console.log("Value: ", event.target.value)
+										if (event.target.value.length > 0) { 
+											if (event.target.value.includes("none")) {
+												setSelectedYieldActions([])
+												return
+											}
+										}
+
+										const newvalue = event?.target?.value
+										if (newvalue === undefined || newvalue === null) {
+										} else {
+											setSelectedYieldActions(newvalue)
+										}
+									}}
+								>
+								<MenuItem value="none">
+								  <em>None</em>
+								</MenuItem>
+								{workflow.actions.map((action, actionIndex) => {
+									return (
+										<MenuItem 
+											key={actionIndex} 
+											value={action.id} 
+										>
+											<Tooltip title={action.app_name} key={actionIndex}>
+												<img src={action.large_image !== undefined && action.large_image !== null && action.large_image.length > 0 ? action.large_image : theme.palette.defaultImage} style={{width: 20, height: 20, marginRight: 10, }} />
+											</Tooltip>
+											{action.label}
+										</MenuItem>
+									)
+								})}
+							  </Select>
+							</FormControl>
 						</div>
 					</div>
 				: null}

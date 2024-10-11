@@ -75,6 +75,7 @@ import {
   ArrowRight as ArrowRightIcon,
   QueryStats as QueryStatsIcon, 
   Visibility as VisibilityIcon,
+  EditNote as EditNoteIcon,
 } from "@mui/icons-material";
 
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
@@ -2050,6 +2051,18 @@ const Workflows = (props) => {
           <EditIcon style={{ marginLeft: 0, marginRight: 8 }} />
           {"Edit details"}
         </MenuItem>
+
+        <MenuItem
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+          onClick={(event) => {
+			  window.open(`/forms/${data.id}`, "_blank")
+  		  }}
+          key={"explore forms"}
+        >
+          <EditNoteIcon style={{ marginLeft: 0, marginRight: 8 }} />
+          {"Create Form"}
+        </MenuItem>
+
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
 		  disabled={isDistributed}
@@ -2432,20 +2445,38 @@ const Workflows = (props) => {
                   })
                 : null}
             </Grid>
-          {data.actions !== undefined && data.actions !== null ? (
-			<div style={{position: "absolute", top: 10, right: 10, }}>
-				<IconButton
-					aria-label="more"
-					aria-controls="long-menu"
-					aria-haspopup="true"
-					onClick={menuClick}
-					style={{ padding: "0px", color: "#979797" }}
-				>
-					<MoreVertIcon />
-				</IconButton>
-				{workflowMenuButtons}
-			</div>
-          ) : null}
+			  {data.actions !== undefined && data.actions !== null ? (
+				<div style={{position: "absolute", top: 10, right: 10, }}>
+					<IconButton
+						aria-label="more"
+						aria-controls="long-menu"
+						aria-haspopup="true"
+						onClick={menuClick}
+						style={{ padding: "0px", color: "#979797" }}
+					>
+						<MoreVertIcon />
+					</IconButton>
+					{workflowMenuButtons}
+				</div>
+			  ) : null}
+			  {(data.sharing !== undefined && data.sharing !== null && data.sharing === "form") || (data.input_markdown !== undefined && data.input_markdown !== null && data.input_markdown !== "") ?
+				<Tooltip title="Edit Form" placement="top">
+					<div style={{position: "absolute", top: 45, right: 8, }}>
+						<IconButton
+							aria-label="more"
+							aria-controls="long-menu"
+							aria-haspopup="true"
+							onClick={() => {
+								navigate(`/forms/${data.id}`)
+							}}
+							style={{ padding: "0px", color: "#979797" }}
+						>
+					  		<EditNoteIcon />
+						</IconButton>
+						{workflowMenuButtons}
+					</div>
+				  </Tooltip>
+			   : null}
 				</Grid>
 			</Paper>
 		</div>

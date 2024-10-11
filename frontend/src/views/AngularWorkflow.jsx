@@ -8602,7 +8602,6 @@ const releaseToConnectLabel = "Release to Connect"
     if (alledges !== undefined && alledges !== null && alledges.length > 0) {
 		for (let edgekey in alledges) {
 			const tmp = alledges[edgekey]
-			console.log("TMP: ", tmp, tmp.data.source)
 			if (tmp.data.source === trigger.id) {
 				mappedStartnode = tmp.data.target
 				break
@@ -16079,7 +16078,7 @@ const releaseToConnectLabel = "Release to Connect"
                   }}
                 />
                 <div style={{ flex: "10" }}>
-                  <b>Interval (UTC) </b>
+                  <b>When to start: {isCloud || selectedTrigger?.environment === "cloud" ? <a href="https://crontab.guru" target="_blank" style={{color: "#f85a3e", }}>Cron formatting</a> : "every X second"}</b>
                 </div>
               </div>
               <TextField
@@ -16129,7 +16128,7 @@ const releaseToConnectLabel = "Release to Connect"
                   }}
                 />
                 <div style={{ flex: "10" }}>
-                  <b>Execution argument: </b>
+                  <b>Runtime Argument: </b>
                 </div>
               </div>
               <TextField
@@ -16145,7 +16144,7 @@ const releaseToConnectLabel = "Release to Connect"
                   workflow.triggers[selectedTriggerIndex] === null || workflow.triggers[selectedTriggerIndex] === undefined ? false : workflow.triggers[selectedTriggerIndex].status === "running"
                 }
                 fullWidth
-                rows="6"
+                rows="3"
                 multiline
                 color="primary"
                 defaultValue={
@@ -17556,7 +17555,7 @@ const releaseToConnectLabel = "Release to Connect"
           </Tooltip>
           <Tooltip
             color="secondary"
-            title="Show Workflow Revision History (Beta) (Ctrl + ])"
+            title="Show Workflow Revision History (Ctrl + ])"
             placement="top"
           >
             <span>
@@ -19303,11 +19302,11 @@ const releaseToConnectLabel = "Release to Connect"
 				  executionData.execution_source === "questions" || executionData.execution_source === "web" || executionData.execution_source === "form" || executionData.execution_source === "forms" ? 
                     <a
                       rel="noopener noreferrer"
-                      href={`/workflows/${executionData.workflow.id}/run`}
+                      href={`/forms/${executionData.workflow.id}`}
                       target="_blank"
                       style={{ textDecoration: "none", color: "#f85a3e" }}
                     >
-						Questions
+						Form	
                     </a>
 				  : 
                   executionData.execution_source
@@ -22178,9 +22177,9 @@ const releaseToConnectLabel = "Release to Connect"
 	  const drawerData = originalWorkflow !== undefined && originalWorkflow !== null ?
       <div style={{ height: "100%"}}>
       <Typography variant="h5" style={{ paddingLeft: 25, paddingTop:25, backgroundColor: theme.palette.surfaceColor,  height: "8%" }}>
-				Version History	(Beta)
+				Version History
 			</Typography>
-      <div style={{height: "92%" }}>
+      	  <div style={{height: "92%" }}>
           <div style={{paddingLeft: "25px", paddingRight: "25px", paddingTop: "10px"}}>
           <div style={{marginBottom: "20px", }}>
           <Typography variant="h6" style={{marginTop: 10, marginBottom: 5, }}>

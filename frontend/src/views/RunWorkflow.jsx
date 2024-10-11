@@ -2,6 +2,7 @@
 import React, {useState, useEffect} from 'react';
 import ReactDOM from "react-dom"
 
+import ReactJson from "react-json-view-ssr";
 import { green, yellow, red, grey} from "./AngularWorkflow.jsx";
 import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 import { useNavigate, Link, useParams } from "react-router-dom";
@@ -36,6 +37,8 @@ import {
 import {
   Preview as PreviewIcon,
   ContentCopy as ContentCopyIcon,
+  ArrowBack as ArrowBackIcon,
+  ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 
 const hrefStyle = {
@@ -71,6 +74,7 @@ const RunWorkflow = (defaultprops) => {
   const [foundSourcenode, setFoundSourcenode] = React.useState(undefined);
   const [editWorkflowModalOpen, setEditWorkflowModalOpen] = React.useState(false)
   const [sharingOpen, setSharingOpen] = React.useState(false)
+  const [realtimeMarkdown, setRealtimeMarkdown] = React.useState("")
 
 	const boxStyle = {
 		color: "white",
@@ -225,10 +229,13 @@ const RunWorkflow = (defaultprops) => {
 						  id="markdown_wrapper"
 						  escapeHtml={false}
 						  style={{
-							maxWidth: "100%", minWidth: "100%", 
+							maxWidth: "100%", 
+							minWidth: "100%", 
+							overflowX: "hidden",
+							overflowY: "auto",
 						  }}
 						>
-						  {executionData.result}
+							{executionData.result}
 		    			</Markdown>
 					</div> 
 				: null}
@@ -376,6 +383,7 @@ const RunWorkflow = (defaultprops) => {
 		})
 	}
 
+
 	const getWorkflow = (workflow_id, selectedNode) => {
 		const url = `${globalUrl}/api/v1/workflows/${workflow_id}`
 
@@ -473,6 +481,23 @@ const RunWorkflow = (defaultprops) => {
 
 
 					break
+				}
+			}
+		}
+
+		if (responseJson.input_markdown !== undefined && responseJson.input_markdown !== null && responseJson.input_markdown.length > 0) {
+			// Look for {{ uuid }} format, and try to run that workflow with their account
+			// This is a hack, but a fun one.
+			
+			const uuidRegex = /{{\s*[a-f0-9-]+\s*}}/g
+			const found = responseJson.input_markdown.match(uuidRegex)
+			if (found !== undefined && found !== null && found.length > 0) {
+				for (var foundkey in found) {
+					const uuid = found[foundkey].replace("{{", "").replace("}}", "").trim()
+					// Run the workflow, then replace it.
+					// Only run if logged in
+					console.log("Found UUID: " + uuid)
+					responseJson.input_markdown = responseJson.input_markdown.replace(found[foundkey], "")
 				}
 			}
 		}
@@ -651,6 +676,10 @@ const RunWorkflow = (defaultprops) => {
 	const sourceNode = searchParams.get("source_node")
 
 	useEffect(() => {
+		if (!isLoaded) {
+			return
+		}
+
 		getWorkflow(props.match.params.key, sourceNode) 
 		if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null) {
 			console.log("Get execution: ", execution_id)
@@ -660,7 +689,7 @@ const RunWorkflow = (defaultprops) => {
 		if (answer !== undefined && answer !== null) {
 			console.log("Got answer: ", answer)
 		}
-	}, [])
+	}, [isLoaded])
 
 
 	useEffect(() => {
@@ -744,6 +773,7 @@ const RunWorkflow = (defaultprops) => {
 		}
 	}
 
+	var validResults = 0
 	const basedata = 
 		<div style={bodyDivStyle}>
 			<Paper style={boxStyle}>
@@ -772,7 +802,7 @@ const RunWorkflow = (defaultprops) => {
 							  }}
 							  rehypePlugins={[rehypeRaw]}
 							>
-							  {workflow.input_markdown}
+							  {realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0 ? realtimeMarkdown : workflow.input_markdown}
 		    				</Markdown>
 						</div> 
 					: null}
@@ -858,7 +888,7 @@ const RunWorkflow = (defaultprops) => {
 												>
 
 													{multiChoiceOptions.map((option, menuIndex) => {
-														if (index === 0) {
+														if (menuIndex === 0) {
 															return null
 														}
 
@@ -928,15 +958,17 @@ const RunWorkflow = (defaultprops) => {
 							</span>
 						}
 
+						
+
 						{executionRunning ?
 							<span style={{width: 50, height: 50, margin: "auto", alignItems: "center", justifyContent: "center", textAlign: "center", }}>
 								<CircularProgress style={{marginTop: 20, marginBottom: 20, marginLeft: 185, }}/>
 
-								{executionData.status !== undefined && executionData.status !== null && executionData.status !== "" ?
+								{/*executionData.status !== undefined && executionData.status !== null && executionData.status !== "" ?
 									<Typography variant="body2" style={{margin: "auto", marginTop: 20, marginBottom: 20, textAlign: "center", alignItem: "center", }} color="textSecondary">
 										Status: {executionData.status}
 									</Typography>
-								: null}
+								: null*/}
 							</span>
 							:
 							((answer !== undefined && answer !== null) || (foundSourcenode !== undefined && foundSourcenode !== null)) ? 
@@ -994,19 +1026,62 @@ const RunWorkflow = (defaultprops) => {
 							</div>
 						}
 
-  						{/*buttonClicked !== undefined && buttonClicked !== null && buttonClicked !== "finished" && buttonClicked.length > 0 ?
-							<img id="finalize_gif" src="/images/finalize.gif" alt="finalize workflow animation" style={{width: 150, marginLeft: 125, borderRadius: theme.palette.borderRadius, }}
-								onLoad={() => {
-									console.log("Img loaded.")
-									setTimeout(() => {
-										console.log("Img closing.")
-										setButtonClicked("finished")
 
-									}, 1250)
+						{workflow.output_yields !== undefined && workflow.output_yields !== null && workflow.output_yields.length > 0 ?
+							<div style={{marginTop: 20, }}>
+								{workflow.output_yields.map((yieldItem, index) => {
+									if (executionData.results === undefined || executionData.results === null || executionData.results.length === 0) {
+										return null
+									}
 
-								}}
-							/>
-						: null*/}
+									const foundresult = executionData.results.find((result) => {
+										return result.action.id === yieldItem
+									})
+
+									if (foundresult === undefined || foundresult === null) {
+										return null
+									}
+
+									if (foundresult.status === "SKIPPED") {
+										return null
+									}
+
+									const validate = validateJson(foundresult.result)
+									validResults += 1
+									console.log("VAlid: ", validate)
+
+									var appendedDetails = foundresult.result
+									if (validate.valid) { 
+										appendedDetails = <ReactJson
+											src={validate.result}
+											theme={theme.palette.jsonTheme}
+											style={theme.palette.reactJsonStyle}
+											collapsed={true}
+											iconStyle={theme.palette.jsonIconStyle}
+											collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
+											displayArrayKey={false}
+											enableClipboard={(copy) => {
+											  //handleReactJsonClipboard(copy);
+											}}
+											displayDataTypes={false}
+											onSelect={(select) => {
+											  //HandleJsonCopy(validate.result, select, "exec");
+											}}
+											name={false}
+										  />
+									}
+
+									return (
+										<div style={{marginBottom: 10, }}>
+											{foundresult?.action?.label?.replaceAll("_", " ")} - {foundresult.status}:
+											<br />
+
+											{appendedDetails}
+										</div>
+									)
+								})}
+							</div>
+						: null}
 
 						<div style={{marginTop: "10px"}}>
 							{executionInfo}
@@ -1015,6 +1090,8 @@ const RunWorkflow = (defaultprops) => {
 						{answer !== undefined && answer !== null ? null :
 							<ShowExecutionResults executionData={executionData} />
 						}
+
+						
 					</form>
 				</div>
 				}
@@ -1037,7 +1114,8 @@ const RunWorkflow = (defaultprops) => {
 				usecases={undefined}
 
 				expanded={true}
-				scrollTo={"input_markdown"}
+				setRealtimeMarkdown={setRealtimeMarkdown}
+				scrollTo={"form_fill"}
 			  />
 			: null}
 
@@ -1112,19 +1190,45 @@ const RunWorkflow = (defaultprops) => {
 						color={"secondary"}
 						style={{marginRight: 10, }}
 						onClick={() => {
-							setEditWorkflowModalOpen(true)
+							navigate(`/workflows`)
 						}}
 					>
-						Edit Details
+						<ArrowBackIcon style={{marginRight: 5, }} />
+						Workflows
 					</Button>
+
 					<Button
 						variant={"outlined"}
 						color={"secondary"}
+						style={{marginRight: 10, }}
+						onClick={() => {
+							window.open(`/workflow/${workflow.id}`, "_blank")
+						}}
+					>
+						<ArrowForwardIcon style={{marginRight: 5, }} />
+						Workflow	
+					</Button>
+
+					<Button
+						variant={"outlined"}
+						color={"secondary"}
+						style={{marginRight: 10, }}
 						onClick={() => {
 							setSharingOpen(true)
 						}}
 					>
 						Share Form	
+					</Button>
+
+					<Button
+						variant={"contained"}
+						color={"primary"}
+						style={{}}
+						onClick={() => {
+							setEditWorkflowModalOpen(true)
+						}}
+					>
+						Edit Details
 					</Button>
 				</div> 
 			: null}
