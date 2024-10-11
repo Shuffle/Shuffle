@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import theme from "../theme.jsx";
 import { toast } from 'react-toastify';
-import ReactJson from "react-json-view";
+import ReactJson from "react-json-view-ssr";
 
 import {
 	Typography,

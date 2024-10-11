@@ -571,14 +571,20 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		//return
 	}
 
+	if len(actionResult.ExecutionId) == 0 {
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Provide execution_id and authorization"}`)))
+		return
+	}
+
 	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
-	if err != nil {
+	if err != nil || workflowExecution.ExecutionId != actionResult.ExecutionId {
 		if len(actionResult.ExecutionId) > 0 {
 			log.Printf("[WARNING][%s] Failed getting execution (streamresult): %s", actionResult.ExecutionId, err)
 		}
 
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
 	}
@@ -637,9 +643,26 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if workflowExecution.Workflow.Sharing == "form" {
+		newWorkflow := shuffle.Workflow{
+			Name:           workflowExecution.Workflow.Name,
+			ID:			 	workflowExecution.Workflow.ID,
+			Owner:          workflowExecution.Workflow.Owner,
+			OrgId:          workflowExecution.Workflow.OrgId,
+
+			Sharing: 		workflowExecution.Workflow.Sharing,
+			Description:    workflowExecution.Workflow.Description,
+			InputQuestions: workflowExecution.Workflow.InputQuestions,
+			InputMarkdown:  workflowExecution.Workflow.InputMarkdown,
+		}
+
+		workflowExecution.Results = []shuffle.ActionResult{}
+		workflowExecution.Workflow = newWorkflow
+	}
+
 	newjson, err := json.Marshal(workflowExecution)
 	if err != nil {
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow execution"}`)))
 		return
 	}

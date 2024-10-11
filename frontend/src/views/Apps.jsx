@@ -3035,7 +3035,7 @@ const Apps = (props) => {
                     height: "50px",
                   }}
                   variant="contained"
-                  disabled={openApi.length === 0 || appValidation.length > 0}
+                  disabled={openApi.length === 0 || appValidation.length > 0 || validation}
                   color="primary"
                   onClick={() => {
                     setOpenApiError("");
