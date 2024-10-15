@@ -3783,11 +3783,6 @@ func checkUnfinished(resp http.ResponseWriter, request *http.Request, execReques
 	ctx := context.Background()
 	exec, err := shuffle.GetWorkflowExecution(ctx, execRequest.ExecutionId)
 	log.Printf("[DEBUG][%s] Rechecking execution and it's status to send to backend IF the status is EXECUTING (%s - %d/%d finished)", execRequest.ExecutionId, exec.Status, len(exec.Results), len(exec.Workflow.Actions))
-	if err != nil {
-		log.Printf("[ERROR][%s] Got error: %s", execRequest.ExecutionId, err)
-		handleRunExecution(resp, request)
-		return
-	}
 
 	// FIXMe: Does this create issue with infinite loops?
 	// Usually caused by issue during startup
@@ -3883,6 +3878,8 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	)
 	if err != nil {
 		log.Printf("[ERROR][%s] Failed to create a new request", execRequest.ExecutionId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
 
