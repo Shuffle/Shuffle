@@ -3828,6 +3828,12 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
+
+	// Checks if a workflow is done 30 seconds later, and sends info to backend no matter what
+	go func() {
+		time.Sleep(time.Duration(30) * time.Second)
+		checkUnfinished(resp, request, execRequest)
+	}()
 	ctx := context.Background()
 
 	// FIXME: This should be PER EXECUTION
@@ -3924,12 +3930,6 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] Failed initializing execution saving for %s: %s", workflowExecution.ExecutionId, err)
 	}
-
-	// Checks if a workflow is done 30 seconds later, and sends info to backend no matter what
-	go func() {
-		time.Sleep(time.Duration(30) * time.Second)
-		checkUnfinished(resp, request, execRequest)
-	}()
 
 	if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
 		log.Printf("[DEBUG] Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
