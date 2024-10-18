@@ -13,7 +13,7 @@ COPY package.json /usr/src/app/package.json
 #RUN yarn config set "strict-ssl" false -g
 #RUN yarn install --network-timeout 1000000
 
-RUN npm install --legacy-peer-deps
+RUN npm install --timeout=60000 --legacy-peer-deps
 
 # copy only required files to not trigger rebuilding every time
 COPY ./certs /usr/src/app/certs/
