@@ -971,7 +971,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 			// Find cookies and append them to request.Header to replicate current request as closely as possible
 			for _, childWorkflow := range childWorkflows {
-				if childWorkflow.Id == workflow.ID {
+				if childWorkflow.ID == workflow.ID {
 					continue
 				}
 
@@ -2442,7 +2442,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	workflow.Schedules = append(workflow.Schedules, schedule)
+	//workflow.Schedules = append(workflow.Schedules, schedule)
 	err = shuffle.SetWorkflow(ctx, *workflow, workflow.ID)
 	if err != nil {
 		log.Printf("Failed setting workflow for schedule: %s", err)
@@ -3410,7 +3410,15 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body)
+
+	runValidationAction := false
+	query := request.URL.Query()
+	validation, ok := query["validation"]
+	if ok && validation[0] == "true" {
+		runValidationAction = true
+	}
+
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction)
 	if err != nil {
 		log.Printf("[INFO] Failed workflowrequest POST read: %s", err)
 		resp.WriteHeader(401)
