@@ -88,6 +88,7 @@
     "react-stripe-elements": "^6.1.2",
     "react-toastify": "^9.1.3",
     "reaviz": "^14.9.7",
+    "rehype-raw": "^7.0.0",
     "remark-gfm": "^3.0.1",
     "remark-html": "^16.0.1",
     "remark-images": "^4.0.0",
