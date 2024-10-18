@@ -28,7 +28,7 @@ import {
   Dialog,
   DialogTitle,
 } from "@mui/material";
-import { makeStyles } from '@mui/system';
+import { makeStyles } from "@mui/styles";
 
 import {
   Close as CloseIcon,

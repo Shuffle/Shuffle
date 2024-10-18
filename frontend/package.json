@@ -12,6 +12,7 @@
     "@metamask/detect-provider": "^1.2.0",
     "@mui/icons-material": "^5.14.0",
     "@mui/material": "^5.14.0",
+    "@mui/styles": "^6.1.4",
     "@mui/x-data-grid": "^5.17.11",
     "@mui/x-date-pickers": "^6.11.1",
     "@types/algoliasearch": "^3.34.11",
