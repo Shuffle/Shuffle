@@ -417,7 +417,37 @@ const chipStyle = {
   color: "white",
 };
 
+export const collapseField = (field) => {
+	if (field === undefined || field === null) {
+		return true
+	}
+
+	if (field.name === "headers" || field.name === "cookies") {
+		return true
+	}
+
+	if (field.type === "array") {
+		return true
+	}
+
+	// If more than 10 keys in object, collapse
+	if (field.type === "object") {
+		if (Object.keys(field.src).length > 7) {
+			return true
+		}
+	}
+
+	return false
+}
+
 export const validateJson = (showResult) => {
+	if (showResult === undefined || showResult === null) {
+		return {
+			valid: false,
+			result: "",
+		}
+	}
+
 	if (typeof showResult === 'string') {
 		showResult = showResult.split(" False").join(" false")
 		showResult = showResult.split(" True").join(" true")
@@ -645,24 +675,21 @@ const Workflows = (props) => {
 			}
 			setGettingStartedItems(activeFiltered)
 
-			//const doneFiltered = activeFiltered.filter((item) => item.done === true)
-			//if (doneFiltered.length > 0) { 
-			//	console.log("DONE: ", doneFiltered)
-			//}
-
-      const sidebar = localStorage.getItem(sidebarKey);
-			if (sidebar === null || sidebar === undefined) {
-				console.log("No sidebar defined")
-              
-			localStorage.setItem(sidebarKey, "open");
-  			setDrawerOpen(true)
-      } else {
+			/*
+      	    const sidebar = localStorage.getItem(sidebarKey)
+		    if (sidebar === null || sidebar === undefined) {
+		      console.log("No sidebar defined")
+		        
+		      localStorage.setItem(sidebarKey, "open");
+		      setDrawerOpen(true)
+		    } else {
 				if (sidebar === "open") {
-  				setDrawerOpen(true)
+					setDrawerOpen(true)
 				} else {
-  				setDrawerOpen(false)
+					setDrawerOpen(false)
 				}
 			}
+			*/
 		}
 
 	}
@@ -976,7 +1003,7 @@ const Workflows = (props) => {
           onClick={() => {
             console.log("Editing: ", editingWorkflow);
             if (selectedWorkflowId) {
-              deleteWorkflow(selectedWorkflowId);
+              deleteWorkflow(selectedWorkflowId)
               setTimeout(() => {
                 getAvailableWorkflows();
               }, 1000);
@@ -1877,7 +1904,7 @@ const Workflows = (props) => {
           toast("Failed deleting workflow. Do you have access?");
         } else {
 		  if (bulk !== true) {
-          	toast("Deleted workflow " + id);
+          	toast(`Deleted workflow ${id}. Child Workflows in Suborgs were also removed.`)
 		  }
         }
 
@@ -2063,6 +2090,8 @@ const Workflows = (props) => {
           {"Create Form"}
         </MenuItem>
 
+		<Divider />
+
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
 		  disabled={isDistributed}
@@ -2076,19 +2105,8 @@ const Workflows = (props) => {
           <CloudUploadIcon style={{ marginLeft: 0, marginRight: 8 }} />
           {"Publish Workflow"}
         </MenuItem>
-        <MenuItem
-          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
-		  disabled={isDistributed}
-          onClick={() => {
-            duplicateWorkflow(data)
-            setOpen(false)
-          }}
-          key={"duplicate"}
-        >
-          <FileCopyIcon style={{ marginLeft: 0, marginRight: 8 }} />
-          {"Duplicate Workflow"}
-        </MenuItem>
-        <MenuItem
+
+		<MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
 		  disabled={isDistributed}
           onClick={() => {
@@ -2101,6 +2119,22 @@ const Workflows = (props) => {
           <GetAppIcon style={{ marginLeft: 0, marginRight: 8 }} />
           {"Export Workflow"}
         </MenuItem>
+
+		<Divider />
+
+        <MenuItem
+          style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
+		  disabled={isDistributed}
+          onClick={() => {
+            duplicateWorkflow(data)
+            setOpen(false)
+          }}
+          key={"duplicate"}
+        >
+          <FileCopyIcon style={{ marginLeft: 0, marginRight: 8 }} />
+          {"Duplicate Workflow"}
+        </MenuItem>
+ 
         <MenuItem
           style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
 		  disabled={isDistributed}
@@ -4092,27 +4126,27 @@ const Workflows = (props) => {
 		)
 	}
 
-	const gettingStartedDrawer = 
-	<Drawer
-		anchor={"right"}
-		open={drawerOpen}
-		variant="persistent"
-		keepMounted={true}
-      	PaperProps={{
-        style: {
-          resize: "both",
-          overflow: "auto",
-          minWidth: drawerWidth,
-          maxWidth: drawerWidth,
-          backgroundColor: "#1F2023",
-          color: "white",
-          fontSize: 18,
-					borderLeft: theme.palette.defaultBorder,
-					marginTop: 100,
-					borderRadius: "5px 0px 0px 0px",
-        },
-      }}
-    >
+	const gettingStartedDrawer = true == true ? null : 
+		<Drawer
+			anchor={"right"}
+			open={drawerOpen}
+			variant="persistent"
+			keepMounted={true}
+			PaperProps={{
+			style: {
+			  resize: "both",
+			  overflow: "auto",
+			  minWidth: drawerWidth,
+			  maxWidth: drawerWidth,
+			  backgroundColor: "#1F2023",
+			  color: "white",
+			  fontSize: 18,
+						borderLeft: theme.palette.defaultBorder,
+						marginTop: 100,
+						borderRadius: "5px 0px 0px 0px",
+			},
+		  }}
+		>
 			<div style={{backgroundColor: "#f86a3e", display: "flex", }}>
 				<Typography variant="h6" style={{flex: 5, marginTop: 20, marginLeft: 20, marginBottom: 20, }}>
 					Getting Started
@@ -4222,6 +4256,7 @@ const Workflows = (props) => {
             maxWidth: window.innerWidth > 1366 ? 1366 : isMobile ? "100%" : 1200,
             margin: "auto",
             padding: 20,
+            paddingLeft: userdata?.support ? 80 : 0
           }}
           onDrop={uploadFile}
         >
@@ -4233,16 +4268,17 @@ const Workflows = (props) => {
         {publishModal}
         {workflowDownloadModalOpen}
 
-        {!drawerOpen ? <div style={{ position: "fixed", top: 64, right: -5, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, }}>
-          <Tooltip title={`Getting started`} placement="bottom">
-						<IconButton onClick={() => {
-							setDrawerOpen(true)
-							localStorage.setItem(sidebarKey, "open");
-						}}>
-							<ArrowLeftIcon /> 
-						</IconButton>
-					</Tooltip>
-				</div> : null}
+        {/*!drawerOpen ? 
+			<div style={{ position: "fixed", top: 64, right: -5, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, }}>
+          		<Tooltip title={`Getting Started`} placement="bottom">
+					<IconButton onClick={() => {
+						setDrawerOpen(true)
+						localStorage.setItem(sidebarKey, "open");
+					}}>
+						<ArrowLeftIcon /> 
+					</IconButton>
+				</Tooltip>
+			</div> : null*/}
 				{isMobile ? null : gettingStartedDrawer} 
 				{videoView} 
 

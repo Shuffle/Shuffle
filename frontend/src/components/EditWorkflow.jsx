@@ -626,13 +626,13 @@ const EditWorkflow = (props) => {
 
 
 								<Typography variant="body1" style={{marginTop: 50, }}>
-									MSSP Suborg Distribution (beta - contact support@shuffler.io for more info)
+									MSSP Suborg Distribution (<b>beta</b> - contact support@shuffler.io for more info)
 								</Typography>
 								{userdata !== undefined && userdata !== null && userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ?
 									userdata.orgs.filter(org => org.creator_org === userdata.active_org.id).length === 0 ?
 										userdata.active_org.creator_org === undefined || userdata.active_org.creator_org === null || userdata.active_org.creator_org === "" ?
 											<Typography variant="body2" style={{marginTop: 10, color: "rgba(255,255,255,0.7)"}}>
-												Your organization does not have any suborgs yet, OR you may not have access to any suborgs directly.. Please <a href="/admin?tab=suborgs" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">make one</a> or get access to suborgs by admin, then try again.
+												Your organization does not have any suborgs yet OR your user may not have access to available suborgs. Please <a href="/admin?tab=suborgs" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">make one</a> or get access to suborgs by another admin, then try again.
 											</Typography>
 											:
 											<Typography variant="body2" style={{marginTop: 10, color: "rgba(255,255,255,0.7)"}}>
@@ -738,9 +738,7 @@ const EditWorkflow = (props) => {
 									Git Backup Repository
 								</Typography>
 								<Typography variant="body2" style={{ textAlign: "left", marginTop: 5, }} color="textSecondary">
-									Decide where this workflow is backed up in a Git repository. Will create logs and notifications if upload fails. <b>The repository and branch must already have been initialized</b>. Files will show up in the root folder in the format 'orgid/workflow status/workflow id.json' without images. Overrides the <a href="/admin?admin_tab=organization" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">default backup repository</a> your org has chosen. All fields must be filled in for the backup to work.
-									<br />
-									PS: This is a beta feature, and might not work as expected. Credentials are NOT encrypted.
+									Decide where this workflow is backed up in a Git repository. Will create logs and notifications if upload fails. <b>The repository and branch must already have been initialized</b>. Files will show up in the root folder in the format 'orgid/workflow status/workflow id.json' without images. Overrides your <a href="/admin?admin_tab=organization" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">default backup repository</a>. <a href="/docs/configuration#environment-variables" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">Credentials are encrypted.</a> Creates <a href="/admin?admin_tab=priorities" style={{textDecoration: "none", color: "#f86a3e"}} target="_blank">notifications</a> if it fails.
 								</Typography>
 								<Grid container style={{ marginTop: 10, }} spacing={2}>
 									<Grid item xs={6} style={{}}>
@@ -782,7 +780,6 @@ const EditWorkflow = (props) => {
 										<span>
 											<Typography>Branch</Typography>
 											<TextField
-												required
 												style={{
 													flex: "1",
 													marginTop: "5px",
@@ -795,7 +792,7 @@ const EditWorkflow = (props) => {
 												variant="outlined"
 												multiline={true}
 												rows={1}
-												placeholder="The branch to use"
+												placeholder="The branch to use (default: master)"
 												defaultValue={innerWorkflow.backup_config === undefined || innerWorkflow.backup_config.upload_branch === undefined || innerWorkflow.backup_config.upload_branch === null  || innerWorkflow.backup_config.upload_branch === "" ? "" : innerWorkflow.backup_config.upload_branch}
 												onChange={(e) => {
 													innerWorkflow.backup_config.upload_branch = e.target.value
@@ -818,7 +815,6 @@ const EditWorkflow = (props) => {
 										<span>
 											<Typography>Username</Typography>
 											<TextField
-												required
 												style={{
 													flex: "1",
 													marginTop: "5px",
@@ -831,7 +827,7 @@ const EditWorkflow = (props) => {
 												id="outlined-with-placeholder"
 												margin="normal"
 												variant="outlined"
-												placeholder="The username to use" 
+												placeholder="Username to use" 
 												defaultValue={innerWorkflow.backup_config === undefined || innerWorkflow.backup_config.upload_username === undefined || innerWorkflow.backup_config.upload_username === null  || innerWorkflow.backup_config.upload_username === "" ? "" : innerWorkflow.backup_config.upload_username}
 												onChange={(e) => {
 													innerWorkflow.backup_config.upload_username = e.target.value
@@ -864,7 +860,7 @@ const EditWorkflow = (props) => {
 												variant="outlined"
 												multiline={true}
 												rows={1}
-												placeholder="The API token to use" 
+												placeholder="Your API token. Required." 
 												defaultValue={innerWorkflow.backup_config === undefined || innerWorkflow.backup_config.upload_token === undefined || innerWorkflow.backup_config.upload_token === null  || innerWorkflow.backup_config.upload_token === "" ? "" : innerWorkflow.backup_config.upload_token}
 												onChange={(e) => {
 													innerWorkflow.backup_config.upload_token = e.target.value
@@ -1032,7 +1028,7 @@ const EditWorkflow = (props) => {
 								Input Markdown 
 							</Typography>
 							<Typography variant="body2" color="textSecondary" style={{marginBottom: 20, }}>
-								Markdown will be shown on the <a href={`/forms/${workflow.id}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Form page</a>. Output for a Workflow is also shown in Markdown, and is controlled by the LAST action that runs.  
+								Markdown will be shown on the <a href={`/forms/${workflow.id}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Form page</a>. The first image added will be used in your Form Toolbox list. Output for a Workflow is shown in Markdown, and is controlled by the LAST action that runs. Supports HTML. 
 							</Typography>
 							<TextField
 								multiline
@@ -1098,7 +1094,7 @@ const EditWorkflow = (props) => {
 								<MenuItem value="none">
 								  <em>None</em>
 								</MenuItem>
-								{workflow.actions.map((action, actionIndex) => {
+								{workflow?.actions?.map((action, actionIndex) => {
 									return (
 										<MenuItem 
 											key={actionIndex} 
@@ -1121,14 +1117,17 @@ const EditWorkflow = (props) => {
 
 			<Tooltip color="primary" title={"Add more details"} placement="top">
 				<Button
-					style={{ margin: "auto", marginTop: 50, textAlign: "center",  }}
+					style={{ margin: "auto", marginTop: 50, textAlign: "center",  textTransform: "none", }}
 					variant="outlined"
+					disabled={newWorkflow === true}
+					color="secondary"
 					onClick={() => {
 						setShowMoreClicked(!showMoreClicked);
 					}}
 				>
-					{showMoreClicked ? <ExpandLessIcon /> : <ExpandMoreIcon/>}
+					{showMoreClicked ? <ExpandLessIcon style={{marginRight: 10, }}/> : <ExpandMoreIcon style={{marginRight: 10, }}/>}
 					{showMoreClicked ? "Less Options": "More Options"}
+
 				</Button>
 			</Tooltip>
 		</div>

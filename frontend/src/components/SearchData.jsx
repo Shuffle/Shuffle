@@ -47,7 +47,7 @@ const chipStyle = {
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const SearchData = props => {
-    const { serverside, globalUrl, userdata, setModalOpen, modalOpen } = props
+    const { serverside, globalUrl, userdata, searchBarModalOpen, setSearchBarModalOpen } = props
     let navigate = useNavigate();
     const borderRadius = 3
     const node = useRef()
@@ -56,8 +56,8 @@ const SearchData = props => {
     const [value, setValue] = useState("");
 
     const handleLinkClick = () => {
-        if (modalOpen) {
-            setModalOpen(false); // Assuming setModalOpen is defined correctly
+        if (searchBarModalOpen) {
+            setSearchBarModalOpen(false); // Assuming setModalOpen is defined correctly
         } else {
             console.log("Condition not met, staying on the same page");
         }
@@ -95,7 +95,7 @@ const SearchData = props => {
                 const trimmedValue = inputValue.trim();
                 if (trimmedValue !== '') {
                     navigate(`/search?q=${trimmedValue}`, { state: trimmedValue, replace: true });
-                    setModalOpen(false);
+                    setSearchBarModalOpen(false);
                 }
             }
         };
@@ -249,7 +249,7 @@ const SearchData = props => {
                                 <Link key={hit.objectID} to={parsedUrl} rel="noopener noreferrer" style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
                                     //console.log("CLICK")
                                     setSearchOpen(true)
-                                    setModalOpen(false)
+                                    setSearchBarModalOpen(false)
                                     aa('init', {
                                         appId: searchClient.appId,
                                         apiKey: searchClient.transporter.queryParameters["x-algolia-api-key"]
@@ -498,7 +498,7 @@ const SearchData = props => {
                             return (
                                 <Link key={hit.objectID} to={parsedUrl} style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
                                     setSearchOpen(true)
-                                    setModalOpen(false)
+                                    setSearchBarModalOpen(false)
                                     aa('init', {
                                         appId: searchClient.appId,
                                         apiKey: searchClient.transporter.queryParameters["x-algolia-api-key"]
@@ -702,7 +702,7 @@ const SearchData = props => {
 
                                     console.log("CLICK")
                                     setSearchOpen(true)
-                                    setModalOpen(false)
+                                    setSearchBarModalOpen(false)
                                 }}>
                                     <ListItem key={hit.objectID} style={innerlistitemStyle} onMouseOver={() => {
                                         setMouseHoverIndex(index)

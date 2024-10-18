@@ -261,8 +261,6 @@ const WorkflowValidationTimeline = (props) => {
 		relevantactions.push(...newactions)
 	}
 
-	console.log("Relevant actions (return null if 0-1): ", relevantactions)
-
 	if (relevantactions.length <= 1) {
 		return null
 	}

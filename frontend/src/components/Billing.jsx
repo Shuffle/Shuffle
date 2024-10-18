@@ -1097,7 +1097,7 @@ const Billing = (props) => {
 								</Button>
 							) : (
 								<Button
-									variant="contained"
+									variant="outlined"
 									color="primary"
 									onClick={toggleEditMode}
 									style={{ textTransform: 'none' }}
@@ -1191,7 +1191,6 @@ const Billing = (props) => {
 									height: 40,
 									fontSize: 16,
 									color: "white",
-									backgroundColor: "#f86743",
 									textTransform: 'none',
 									cursor: getProfessionalServices ? 'pointer' : 'not-allowed',
 									opacity: getProfessionalServices ? 1 : 0.6,
@@ -1202,7 +1201,7 @@ const Billing = (props) => {
 									}
 								}}
 							>
-								Get Professional Service
+								Use Professional Service Hours
 							</Button>
 						</span>
 					</Tooltip>
@@ -1368,7 +1367,7 @@ const Billing = (props) => {
 					<Button
 						fullWidth
 						disabled={false}
-						variant="outlined"
+						variant="contained"
 						color="primary"
 						style={{
 							marginTop: 10,
@@ -1376,7 +1375,6 @@ const Billing = (props) => {
 							height: 40,
 							fontSize: 16,
 							color: "white",
-							backgroundColor: "#f86743",
 							textTransform: 'none'
 						}}
 						onClick={() => {
@@ -1403,8 +1401,6 @@ const Billing = (props) => {
 							borderRadius: 25,
 							height: 40,
 							fontSize: 16,
-							color: "white",
-							backgroundColor: "#f86743",
 							textTransform: 'none'
 						}}
 						onClick={() => {

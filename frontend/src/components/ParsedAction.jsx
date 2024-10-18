@@ -207,7 +207,6 @@ const ParsedAction = (props) => {
 	}
   }, [expansionModalOpen])
 
-
   useEffect(() => {
 	  if (selectedActionEnvironment === undefined || selectedActionEnvironment === null || Object.keys(selectedActionEnvironment).length === 0) {
 
@@ -223,20 +222,6 @@ const ParsedAction = (props) => {
 		  }
 	  }
   }, [])
-
-  /*
-  useEffect(() => {
-		setParamValues(selectedAction.parameters.map((param) => {
-			return {
-				name: param.name,
-				value: param.value,
-			}
-		}))
-  },[
-	selectedAction, selectedApp,setNewSelectedAction, workflow,
-  ])
-  */
-
 
   useEffect(() => {
 	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
@@ -1855,6 +1840,7 @@ const ParsedAction = (props) => {
 					</div>
         </span>
       )}
+
       {selectedApp.name !== undefined &&
 			selectedAction.authentication !== null &&
 			selectedAction.authentication !== undefined &&
@@ -1937,8 +1923,8 @@ const ParsedAction = (props) => {
 				      selectedAction.parameters[key].value = ""
 				    }
                   }
-                  setSelectedAction(selectedAction);
-                  setUpdate(Math.random());
+                  setSelectedAction(selectedAction)
+                  setUpdate(Math.random())
 				
 				} else if (e.target.value === "authgroups") {
 					if (authGroups !== undefined && authGroups !== null && authGroups.length === 0) {
@@ -2051,14 +2037,6 @@ const ParsedAction = (props) => {
 
             </Select>
 
-            {/*
-
-						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
-							AUTHENTICATE
-						</Button>
-						curaction.authentication = authenticationOptions
-							if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "")
-						*/}
             <Tooltip
               color="primary"
               title={"Add authentication option"}
@@ -4163,19 +4141,11 @@ const ParsedAction = (props) => {
               /*<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>*/
             }
 
-			const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
+			const buttonTitle = `Authenticate API ${selectedApp.name.replaceAll("_", " ")}`
 			const hasAutocomplete = data?.autocompleted === true
 			if (data.variant === undefined || data.variant === null) {
 				data.variant = "STATIC_VALUE"
 			}
-
-			/*
-			if (data?.configuration === true) {
-				if (data?.name === "url" && authenticationType?.type === "oauth2-app") {
-					data.configuration = false
-				}
-			}
-			*/
 
             return (
               <div key={data.name}>

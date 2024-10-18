@@ -141,7 +141,7 @@ import cytoscapestyle from "../defaultCytoscapeStyle.jsx";
 import ShuffleCodeEditor from "../components/ShuffleCodeEditor1.jsx";
 
 import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx"
-import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
+import { validateJson, collapseField, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths, internalIds, } from "../views/Apps.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
@@ -1242,12 +1242,18 @@ const releaseToConnectLabel = "Release to Connect"
   };
 
   const setNewAppAuth = (appAuthData, refresh) => {
+	var headers = {
+		"Content-Type": "application/json",
+		"Accept": "application/json",
+	}
+
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+		headers["Org-Id"] = workflow.org_id
+	}
+
     fetch(globalUrl + "/api/v1/apps/authentication", {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: headers,
       body: JSON.stringify(appAuthData),
       credentials: "include",
     })
@@ -2522,13 +2528,11 @@ const releaseToConnectLabel = "Release to Connect"
 			}
 		  }
 
-		  selectedAction.authentication = authenticationOptions;
-		  if (
-			selectedAction.selectedAuthentication === null ||
-			selectedAction.selectedAuthentication === undefined ||
-			selectedAction.selectedAuthentication.length === ""
-		  ) {
-			selectedAction.selectedAuthentication = {};
+		  console.log("auth options: ", authenticationOptions)
+
+		  selectedAction.authentication = authenticationOptions
+		  if (selectedAction.selectedAuthentication === null || selectedAction.selectedAuthentication === undefined || selectedAction.selectedAuthentication.length === "") {
+			selectedAction.selectedAuthentication = {}
 		  }
 
 		  if (appUpdates === true) {
@@ -2555,7 +2559,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  }
 
 		} else {
-			setAppAuthentication([]);
+			setAppAuthentication([])
 			shouldClose = true 
 		}
 
@@ -5274,7 +5278,10 @@ const releaseToConnectLabel = "Release to Connect"
 				authenticationOptions[latestindex].last_modified = true
 		    }
 
-            curaction.authentication = authenticationOptions;
+
+		    console.log("auth options 2: ", authenticationOptions)
+
+            curaction.authentication = authenticationOptions
             if (
               curaction.selectedAuthentication === null ||
               curaction.selectedAuthentication === undefined ||
@@ -5283,7 +5290,9 @@ const releaseToConnectLabel = "Release to Connect"
               curaction.selectedAuthentication = {};
             }
           } else {
-            curaction.authentication = [];
+			console.log("auth option 3")
+
+            curaction.authentication = []
             curaction.authentication_id = "";
             curaction.selectedAuthentication = {};
           }
@@ -7022,9 +7031,9 @@ const releaseToConnectLabel = "Release to Connect"
 	  const px = parentNode.position("x") + 0;
 	  const py = parentNode.position("y") + 100;
 
-	  const parentlabel = parentNode.data("label").toLowerCase().replace(" ", "_")
-	  const parentname = parentNode.data("app_name").toLowerCase().replace(" ", "_")
-	  if (!parentlabel.startsWith(parentname)+"_") {
+	  const parentlabel = parentNode.data("label")?.toLowerCase().replace(" ", "_")
+	  const parentname = parentNode.data("app_name")?.toLowerCase().replace(" ", "_")
+	  if (!parentlabel?.startsWith(parentname)+"_") {
 		  return
 	  }
 
@@ -7855,6 +7864,7 @@ const releaseToConnectLabel = "Release to Connect"
       return node
     })
 
+	// What are these again? Where are they used?
     const decoratorNodes = inputworkflow.actions.map((action) => {
       if (!action.isStartNode) {
         if (action.app_name === "Testing") {
@@ -7866,11 +7876,20 @@ const releaseToConnectLabel = "Release to Connect"
         }
       }
 
+	  if (action.id === undefined || action.id === null) {
+		  return null
+	  }
+
+	  if (action.position === undefined || action.position === null || action.position.x === undefined || action.position.x === null || action.position.y === undefined || action.position.y === null) {
+		  return null
+	  }
+
       const iconInfo = GetIconInfo(action);
       const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
       const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
 
       const offset = action.isStartNode ? 36 : 44;
+
       const decoratorNode = {
         position: {
           x: action.position.x + offset,
@@ -7886,9 +7905,9 @@ const releaseToConnectLabel = "Release to Connect"
           imageColor: iconInfo.iconBackgroundColor,
           attachedTo: action.id,
         },
-      };
-      return decoratorNode;
-    });
+      }
+      return decoratorNode
+    })
 
 
     const foundtriggers = inputworkflow.triggers.map((trigger) => {
@@ -9371,6 +9390,7 @@ const releaseToConnectLabel = "Release to Connect"
           }
         }
       } else {
+
         newAppData.authentication = [];
         newAppData.authentication_id = "";
         newAppData.selectedAuthentication = {};
@@ -9505,11 +9525,9 @@ const releaseToConnectLabel = "Release to Connect"
         }
 
         var parsedEnvironments =
-          environments === null || environments === []
-            ? "cloud"
-            : environments[defaultEnvironmentIndex] === undefined
-              ? "cloud"
-              : environments[defaultEnvironmentIndex].Name
+          environments === undefined || environments === null || environments === []
+            ? isCloud ? "cloud" : "Shuffle" : environments[defaultEnvironmentIndex] === undefined
+              ? isCloud ? "cloud" : "Shuffle" : environments[defaultEnvironmentIndex].Name
 
 		// Basic automatic auth mapping
 		var authId = ""
@@ -10512,6 +10530,10 @@ const releaseToConnectLabel = "Release to Connect"
   // description
   // ACTION select
   const selectedNameChange = (appActionName) => {
+	if (appActionName === undefined || appActionName === null) {
+		return
+	}
+
     appActionName = appActionName.replaceAll("(", "");
     appActionName = appActionName.replaceAll(")", "");
     appActionName = appActionName.replaceAll("]", "");
@@ -18142,7 +18164,10 @@ const releaseToConnectLabel = "Release to Connect"
             src={validate.result}
             theme={theme.palette.jsonTheme}
             style={theme.palette.reactJsonStyle}
-            collapsed={true}
+            collapsed={false}
+			shouldCollapse={(jsonField) => {
+				return collapseField(jsonField)
+			}}
 		  	iconStyle={theme.palette.jsonIconStyle}
 		  	collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
 		    displayArrayKey={false}
@@ -18483,12 +18508,12 @@ const releaseToConnectLabel = "Release to Connect"
           theme={theme.palette.jsonTheme}
           style={theme.palette.reactJsonStyle}
           collapsed={parsedCollapse}
+		  shouldCollapse={(jsonField) => {
+			return collapseField(jsonField)
+		  }}
 		  iconStyle={theme.palette.jsonIconStyle}
 		  collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
 		  displayArrayKey={false}
-          shouldCollapse={(field) => {
-            console.log("FIELD: ", field)
-          }}
           enableClipboard={(copy) => {
             handleReactJsonClipboard(copy);
           }}
@@ -19799,7 +19824,10 @@ const releaseToConnectLabel = "Release to Connect"
                         src={validate.result}
                         theme={theme.palette.jsonTheme}
                         style={theme.palette.reactJsonStyle}
-                        collapsed={true}
+                        collapsed={false}
+		  				shouldCollapse={(jsonField) => {
+		  				  return collapseField(jsonField)
+		  				}}
 		  				iconStyle={theme.palette.jsonIconStyle}
 		  				collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
 		  				displayArrayKey={false}
@@ -19959,6 +19987,9 @@ const releaseToConnectLabel = "Release to Connect"
 					theme={theme.palette.jsonTheme}
 					style={theme.palette.reactJsonStyle}
 					collapsed={data.value.length < 10000 ? false : true}
+					shouldCollapse={(jsonField) => {
+					  return collapseField(jsonField)
+					}}
 		  			iconStyle={theme.palette.jsonIconStyle}
 		  			collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
 		  			displayArrayKey={false}
@@ -20379,6 +20410,9 @@ const releaseToConnectLabel = "Release to Connect"
             theme={theme.palette.jsonTheme}
             style={theme.palette.reactJsonStyle}
             collapsed={selectedResult.result.length < 10000 ? false : true}
+			shouldCollapse={(jsonField) => {
+			  return collapseField(jsonField)
+			}}
 		  	iconStyle={theme.palette.jsonIconStyle}
 		  	collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
 		  	displayArrayKey={false}
@@ -21098,13 +21132,13 @@ const releaseToConnectLabel = "Release to Connect"
         }
       }
 
-      console.log("Action: ", selectedAction);
       selectedAction.authentication_id = authenticationOption.id;
       selectedAction.selectedAuthentication = authenticationOption;
-      if (
-        selectedAction.authentication === undefined ||
-        selectedAction.authentication === null
-      ) {
+
+	  console.log("auth option 4: ", authenticationOption)
+
+      if (selectedAction.authentication === undefined || selectedAction.authentication === null) {
+
         selectedAction.authentication = [authenticationOption]
       } else {
 
@@ -21115,7 +21149,7 @@ const releaseToConnectLabel = "Release to Connect"
 		}
       }
 
-      setSelectedAction(selectedAction);
+      setSelectedAction(selectedAction)
 
       var newAuthOption = JSON.parse(JSON.stringify(authenticationOption));
       var newFields = [];
@@ -21128,21 +21162,18 @@ const releaseToConnectLabel = "Release to Connect"
         });
       }
 
-      newAuthOption.fields = newFields;
-      setNewAppAuth(newAuthOption);
+      newAuthOption.fields = newFields
+      setNewAppAuth(newAuthOption)
 
       if (configureWorkflowModalOpen) {
-        setSelectedAction({});
+        setSelectedAction({})
       }
 
-      setUpdate(authenticationOption.id);
-    };
+      setUpdate(authenticationOption.id)
+    }
 
-    if (
-      authenticationOption.label === null ||
-      authenticationOption.label === undefined
-    ) {
-      authenticationOption.label = selectedApp.name + " authentication";
+	if (authenticationOption.label === null || authenticationOption.label === undefined) {
+	  authenticationOption.label = selectedApp.name + " authentication";
     }
 
     return (
@@ -21164,7 +21195,7 @@ const releaseToConnectLabel = "Release to Connect"
           <div />
           These are required fields for authenticating with {selectedApp.name}
           <div style={{ marginTop: 15 }} />
-          <b>Name - what is this used for?</b>
+          <b>Label for you to remember</b>
           <TextField
             style={{
               backgroundColor: theme.palette.inputColor,
@@ -21294,19 +21325,20 @@ const releaseToConnectLabel = "Release to Connect"
         </DialogContent>
         <DialogActions>
           <Button
-            style={{ borderRadius: "0px" }}
+            style={{}}
             onClick={() => {
               setAuthenticationModalOpen(false);
             }}
-            color="primary"
+            color="secondary"
           >
             Cancel
           </Button>
           <Button
-            style={{ borderRadius: "0px" }}
+            style={{}}
+			variant="outlined"
             onClick={() => {
               setAuthenticationOptions(authenticationOption);
-              handleSubmitCheck();
+              handleSubmitCheck()
             }}
             color="primary"
           >
@@ -21410,11 +21442,12 @@ const releaseToConnectLabel = "Release to Connect"
           width: 50,
         }}
       >
-        {selectedApp.reference_info === undefined ||
+        { selectedApp.reference_info === undefined ||
           selectedApp.reference_info === null ||
           selectedApp.reference_info.github_url === undefined ||
           selectedApp.reference_info.github_url === null ||
           selectedApp.reference_info.github_url.length === 0 ? (
+
           <a
             rel="noopener noreferrer"
             target="_blank"
@@ -21557,12 +21590,30 @@ const releaseToConnectLabel = "Release to Connect"
             <span 
 				style={{ textAlign: "center" }}
 			>
-              <Typography
-                variant="body1"
-                style={{ marginLeft: 25, marginRight: 25 }}
-              >
-                {selectedApp.description}
-              </Typography>
+			  <div style={{textAlign: "left", }}>
+				  <Markdown
+					components={{
+						img: Img,
+						code: CodeHandler,
+						h1: Heading,
+						h2: Heading,
+						h3: Heading,
+						h4: Heading,
+						h5: Heading,
+						h6: Heading,
+						a: OuterLink,
+					}}
+					id="markdown_wrapper"
+					escapeHtml={false}
+					style={{
+						maxWidth: "100%", 
+						minWidth: "100%", 
+						textAlign: "left", 
+					}}
+				  >
+					{selectedApp.description}
+				  </Markdown>
+			  </div>
               <Divider
                 style={{
                   marginTop: 25,
@@ -21580,7 +21631,7 @@ const releaseToConnectLabel = "Release to Connect"
                     }}
                 >
 				  <Typography variant="h6" style={{marginBottom: 25, }}>
-					There is no Shuffle-specific documentation for this app yet. Documentation is written custom for each app, and is a community effort. Hope to see your contribution
+					There is no Shuffle-specific documentation for this app yet outside of the general description above. Documentation is written for each api, and is a community effort. We hope to see your contribution!
 				  </Typography>
 				  <Button 
 						variant="contained" 
@@ -21724,6 +21775,7 @@ const releaseToConnectLabel = "Release to Connect"
 				</div>
 			</div>
 		    : null}
+
 		    <Markdown
 		      components={{
 		      	img: Img,
@@ -22299,8 +22351,6 @@ const releaseToConnectLabel = "Release to Connect"
 
 	const changeActionParameterCodeMirror = (event, count, data, actionlist) => {
 		// Check if event.target.value is an array. If it is, split with comma
-		console.log("1 - SELECTED ACTION: ", selectedAction)
-		console.log("1 - DATA: ", data)
 
 		if (data.startsWith("${") && data.endsWith("}")) {
 			// PARAM FIX - Gonna use the ID field, even though it's a hack

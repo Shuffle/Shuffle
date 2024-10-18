@@ -142,7 +142,7 @@ const Header = (props) => {
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
   const [upgradeHovered, setUpgradeHovered] = React.useState(false);
-  const [showTopbar, setShowTopbar] = useState(false)
+  const [showTopbar, setShowTopbar] = useState(false) // Set to true to show top bar
   const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_51PXYYMEJjT17t98N20qEqItyt1fLQjrnn41lPeG2PjnSlZHTDNKHuisAbW00s4KAn86nGuqB9uSVU4ds8MutbnMU00DPXpZ8ZD" : "pk_test_51PXYYMEJjT17t98NbDkojZ3DRvsFUQBs35LGMx3i436BXwEBVFKB9nCvHt0Q3M4MG3dz4mHheuWvfoYvpaL3GmsG00k1Rb2ksO"
   let navigate = useNavigate();
   const classes = useStyles();
@@ -171,15 +171,13 @@ const Header = (props) => {
     setTooltipOpen(true);
   };
 
-  const topbar_var = "topbar_closed4"
-
+  const topbar_var = "topbar_closed5"
   useEffect(() => {
+	// Manually setShowTopbar(true) to show topbar by default
     const topbar = localStorage.getItem(topbar_var)
     if (topbar === "true") {
       setShowTopbar(false)
-    } else {
-      setShowTopbar(true)
-    }
+    } 
   }, [])
 
   const hoverColor = "#f85a3e";
@@ -433,29 +431,18 @@ const Header = (props) => {
         </Link>
 
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
-			<Link to="/admin?admin_tab=priorities" style={hrefStyle}>
-			  <MenuItem
-				onClick={(event) => {
-				  handleClose();
-				}}
-			  >
-				<NotificationsIcon style={{ marginRight: 5 }} /> Notifications ({
-					notifications === undefined || notifications === null ? 0 : 
-					notifications?.filter((notification) => notification.read === false).length
-				}) 
-			  </MenuItem>
-			</Link>
-        {/*
-				<Link to="/getting-started" style={hrefStyle}>
-					<MenuItem
-						onClick={(event) => {
-							handleClose();
-						}}
-					>
-            <AnalyticsIcon style={{marginRight: 5 }}/> Get Started 
-        	</MenuItem>
-				</Link>
-				*/}
+		<Link to="/admin?admin_tab=priorities" style={hrefStyle}>
+		  <MenuItem
+			onClick={(event) => {
+			  handleClose();
+			}}
+		  >
+			<NotificationsIcon style={{ marginRight: 5 }} /> Notifications ({
+				notifications === undefined || notifications === null ? 0 : 
+				notifications?.filter((notification) => notification.read === false).length
+			}) 
+		  </MenuItem>
+		</Link>
         <Link to="/usecases2" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
@@ -466,19 +453,8 @@ const Header = (props) => {
           </MenuItem>
         </Link>
 
-	    {/*userdata?.public_username === undefined || userdata?.public_username === null || userdata?.public_username.length <= 0 ? null : 
-			<Link to={`/creators/${userdata.public_username}`} style={hrefStyle}>
-			  <MenuItem
-				onClick={(event) => {
-				  handleClose();
-				}}
-			  >
-				<EmojiObjectsIcon style={{ marginRight: 5 }} /> Creator page
-			  </MenuItem>
-			</Link>
-		*/}
-
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
+
         <Link to="/docs" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {

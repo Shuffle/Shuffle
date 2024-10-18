@@ -382,46 +382,8 @@ const OrgHeaderexpanded = (props) => {
       })
       .catch((err) => {
         console.log("error for sso test is: ", err);
-      });
-  };
-
-
-	const HandleTestSSO = () => {
-		const url = `${globalUrl}/api/v1/orgs/${selectedOrganization?.id}/change`;
-		const data = {
-			org_id: selectedOrganization?.id,
-			sso_test: true,
-		}
-		fetch(url, {
-			mode: "cors",
-			credentials: "include",
-			crossDomain: true,
-			method: "POST",
-			body: JSON.stringify(data),
-			withCredentials: true,
-			headers: {
-				"Content-Type": "application/json; charset=utf-8",
-			},
-		}).then((response) => {
-			if (response.status !== 200) {
-				toast.error("Failed to test sso. Please try again later or contact support@shuffler.io if issue persist.")
-				return
-			}
-			return response.json();
-		}).then((responjson) => {
-			if (responjson["reason"] === "SSO_REDIRECT") {
-				setTimeout(() => {
-					toast.info("Redirecting to SSO login page as SSO is required for this organization.")
-					window.location.href = responjson["url"];
-					return
-				}, 2000)
-			} else {
-				toast.error("No SSO found for this org. Please set up sso for this org.")
-			}
-		}).catch((err) => {
-			console.log("error for sso test is: ", err)
-		})
-	}
+      })
+    }
 
 	return (
 		<div style={{ textAlign: "center" }}>

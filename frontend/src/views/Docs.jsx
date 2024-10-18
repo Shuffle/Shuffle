@@ -152,6 +152,8 @@ export const OuterLink = (props) => {
 
 
 export const Img = (props) => {
+	// Find parent container and check width
+
 	var height = "auto" 
 	var width = 750
 	if (props.height !== undefined && props.height !== null) {

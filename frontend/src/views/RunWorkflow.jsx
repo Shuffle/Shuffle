@@ -6,7 +6,7 @@ import ReactJson from "react-json-view-ssr";
 import { green, yellow, red, grey} from "./AngularWorkflow.jsx";
 import { CodeHandler, Img, OuterLink, } from "../views/Docs.jsx";
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { validateJson, GetIconInfo } from "./Workflows.jsx";
+import { validateJson, collapseField, GetIconInfo } from "./Workflows.jsx";
 import EditWorkflow from "../components/EditWorkflow.jsx"
 import { toast } from "react-toastify" 
 import { makeStyles } from '@mui/material/styles';
@@ -15,6 +15,7 @@ import { isMobile } from "react-device-detect";
 import Markdown from "react-markdown";
 import theme from '../theme.jsx';
 import rehypeRaw from "rehype-raw";
+import RecentWorkflow from "../components/RecentWorkflow.jsx";
 
 import {
   	Tooltip,
@@ -39,6 +40,9 @@ import {
   ContentCopy as ContentCopyIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
+  Lock as LockIcon,
+  LockOpen as LockOpenIcon,
+  OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 
 const hrefStyle = {
@@ -75,12 +79,30 @@ const RunWorkflow = (defaultprops) => {
   const [editWorkflowModalOpen, setEditWorkflowModalOpen] = React.useState(false)
   const [sharingOpen, setSharingOpen] = React.useState(false)
   const [realtimeMarkdown, setRealtimeMarkdown] = React.useState("")
+  const [forms, setForms] = React.useState([])
+
+	const IframeWrapper = (props) => {
+		var propsCopy = JSON.parse(JSON.stringify(props))
+		propsCopy.width = 400 
+		propsCopy.height = 225 
+
+		return <iframe {...propsCopy} style={{width: propsCopy.width, height: propsCopy.height, }} />
+	}
+
+	const ImgWrapper = (props) => {
+		var propsCopy = JSON.parse(JSON.stringify(props))
+		if (propsCopy.width === undefined || propsCopy.width === null) {
+			propsCopy.width = 400 
+			propsCopy.height = "auto"
+		}
+
+		return Img(propsCopy)
+	}
 
 	const boxStyle = {
 		color: "white",
 		padding: "25px 50px 50px 50px", 
 		backgroundColor: theme.palette.surfaceColor,
-		marginBottom: 150, 
 		borderRadius: 25, 
 		minHeight: 500, 
 	}
@@ -121,6 +143,39 @@ const RunWorkflow = (defaultprops) => {
 		}
 
 		return true
+	}
+
+	const loadForms = (orgId) => {
+		const url = `${globalUrl}/api/v1/orgs/${orgId}/forms`
+		fetch(url, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for org forms");
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				toast.error("Failed saving workflow. Please try again.")
+			} else {
+				if (responseJson?.length > 0) {
+					// Sort them by name
+					responseJson.sort((a, b) => a.name.localeCompare(b.name))
+					setForms(responseJson)
+				}
+			}
+		})
+		.catch((error) => {
+			//toast.error("Load form error: " + error)
+		})
 	}
 
 	const saveWorkflow = (workflow) => {
@@ -198,26 +253,13 @@ const RunWorkflow = (defaultprops) => {
 			return defaultReturn
 		}
 
+		const validate = validateJson(executionData.result)
+
 		return (
 			<div style={{marginTop: executionMargin, }}>
-				{/*executionData !== undefined && executionData !== null && executionData !== {} && executionData.status !== undefined && (answer === undefined || answer === null) ? 
-					<div style={{ marginBottom: 5, display: "flex" }}>
-						<Typography variant="body1">
-							<b>Status&nbsp;</b>
-						</Typography>
-						<Typography variant="body1" color="textSecondary" style={{ marginRight: 15, }}>
-							{executionData.status}
-						</Typography>
-					</div>
-				: null*/}
+				<Divider style={{marginTop: 20, marginBottom: 20, }}/>
 
-				{/*
-				<Typography variant="h6" style={{color: theme.palette.primaryColor}}>
-					Results: {executionData.results.length}/{executionData.workflow.actions.length}
-				</Typography>
-				*/}
-
-				{executionData.result !== undefined && executionData.result !== null && executionData.result.length > 0 ?
+				{validate.valid === false ?
 					<div style={{marginTop: 20, }}>
 						<Divider />
 						<Markdown
@@ -235,10 +277,31 @@ const RunWorkflow = (defaultprops) => {
 							overflowY: "auto",
 						  }}
 						>
-							{executionData.result}
+							{validate.result}
 		    			</Markdown>
 					</div> 
-				: null}
+				: 
+					<ReactJson
+						src={validate.result}
+						theme={theme.palette.jsonTheme}
+						style={theme.palette.reactJsonStyle}
+						collapsed={false}
+						iconStyle={theme.palette.jsonIconStyle}
+						collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
+					    shouldCollapse={(jsonField) => {
+							return collapseField(jsonField)
+						}}
+						displayArrayKey={false}
+						enableClipboard={(copy) => {
+						  //handleReactJsonClipboard(copy);
+						}}
+						displayDataTypes={false}
+						onSelect={(select) => {
+						  //HandleJsonCopy(validate.result, select, "exec");
+						}}
+						name={false}
+					  />
+				}
 
 			</div>
 		)
@@ -248,8 +311,6 @@ const RunWorkflow = (defaultprops) => {
 		if (event !== null) {
 			event.preventDefault()
 		}
-
-		console.log("ONSUBMIT: ", event, execution_id, authorization, answer)
 
 		stop()
   	    setMessage("")
@@ -285,7 +346,7 @@ const RunWorkflow = (defaultprops) => {
 			*/
 		}
 
-		var url = `${globalUrl}/api/v1/workflows/${props.match.params.key}/execute`
+		var url = `${globalUrl}/api/v1/workflows/${props.match.params.key}/run`
 		var fetchBody = {
 			headers: {
 				'Content-Type': 'application/json; charset=utf-8',
@@ -319,8 +380,6 @@ const RunWorkflow = (defaultprops) => {
 		}
 
 		// IF there is an execution argument, we should use it
-		console.log("FULL URL: ", url)
-
 		fetch(url, fetchBody)
 		.then((response) => {
 			if (response.status !== 200 && response.status !== 201) {
@@ -346,6 +405,10 @@ const RunWorkflow = (defaultprops) => {
 		})
 		.then(responseJson => {
 			setExecutionLoading(false)
+			if (responseJson.execution_id !== undefined && responseJson.execution_id !== null && responseJson.execution_id.length > 0) {
+				navigate(`?execution_id=${responseJson.execution_id}`)
+			}
+
 			if (responseJson.success === false) {
 				console.log("Failed sending execution request")
 				if (responseJson.reason !== undefined && responseJson.reason !== null) {
@@ -372,7 +435,7 @@ const RunWorkflow = (defaultprops) => {
 		})
 		.catch(error => {
 			//setExecutionInfo("Error in workflow startup: " + error)
-			toast.warn("Error in workflow startup: " + error)
+			toast.warn("Error submitting form. Please try again.")
 
 			stop()
 			setMessage("")
@@ -383,10 +446,104 @@ const RunWorkflow = (defaultprops) => {
 		})
 	}
 
+	/*
+    useEffect(() => {
+        if (executionRequest === undefined || executionRequest === null || executionRequest.execution_id === undefined || executionRequest.execution_id === null || executionRequest.execution_id.length === 0) {
+      	  return
+        }
+
+        if (executionRequest.start === true) {
+      	  start()
+        }
+    }, [executionRequest])
+	*/
+
+    const { start, stop } = useInterval({
+      duration: 1500,
+      startImmediate: true,
+      callback: () => {
+        fetchUpdates(executionRequest.execution_id, executionRequest.authorization)
+      },
+    })
+
+	const handleExecutionLoader = () => {
+	  if (window === undefined || window === null) {
+		  console.log("No window")
+		  return
+	  }
+
+	  const urlParams = new URLSearchParams(window.location.search)
+	  if (urlParams === undefined || urlParams === null) {
+		  console.log("No search params")
+		  return
+	  }
+
+	  const execution = urlParams.get("execution_id")
+	  if (execution === undefined || execution === null || execution.length === 0) {
+		  console.log("No execution")
+	  }
+
+	  // Only works if you're logged in
+      fetchUpdates(execution, "")
+	}
+
+	const loadInputWorkflowData = (workflow_id, inputWorkflow) => {
+
+		const url = `${globalUrl}/api/v1/workflows/${workflow_id}/run`
+		fetch(url, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflows :O!");
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			// Timeout after 5 seconds (max load time)
+			if (responseJson.execution_id !== undefined && responseJson.execution_id !== null && responseJson.execution_id.length > 0 && responseJson.authorization !== undefined && responseJson.authorization !== null && responseJson.authorization.length > 0) {
+	
+				//for (var key in responseJson.results) {
+				for (let i = 0; i < 5; i++) {
+					setTimeout(() => {
+						fetchUpdates(responseJson.execution_id, responseJson.authorization, false, true)
+					}, i * 1000)
+				}
+			} else {
+				// Replace the markdown with the result
+				if (realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0) {
+					const newmarkdown = realtimeMarkdown.replace(`{{ ${workflow_id} }}`, "", -1)
+					setRealtimeMarkdown(newmarkdown)
+				} else if (inputWorkflow.input_markdown !== undefined && inputWorkflow.input_markdown !== null && inputWorkflow.input_markdown.length > 0) {
+					const newmarkdown = inputWorkflow.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
+					setRealtimeMarkdown(newmarkdown)
+				}
+			}
+
+		})
+		.catch((error) => {
+			console.log("Get workflow error: ", error.toString())
+
+			if (realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0) {
+				const newmarkdown = inputWorkflow.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
+				setRealtimeMarkdown(newmarkdown)
+			} else if (inputWorkflow.input_markdown !== undefined && inputWorkflow.input_markdown !== null && inputWorkflow.input_markdown.length > 0) {
+				const newmarkdown = inputWorkflow.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
+				setRealtimeMarkdown(newmarkdown)
+			}
+		})
+	}
 
 	const getWorkflow = (workflow_id, selectedNode) => {
-		const url = `${globalUrl}/api/v1/workflows/${workflow_id}`
+  		setRealtimeMarkdown("")
 
+		const url = `${globalUrl}/api/v1/workflows/${workflow_id}`
 		fetch(url, {
 		  method: "GET",
 		  headers: {
@@ -404,7 +561,7 @@ const RunWorkflow = (defaultprops) => {
 			toast("This Form is not available to you. If you think this is an error, please contact support@shuffler.io with the URL.")
 		}
 
-        return response.json();
+        return response.json()
       })
       .then((responseJson) => {
         // Not sure why this is necessary.
@@ -488,19 +645,56 @@ const RunWorkflow = (defaultprops) => {
 		if (responseJson.input_markdown !== undefined && responseJson.input_markdown !== null && responseJson.input_markdown.length > 0) {
 			// Look for {{ uuid }} format, and try to run that workflow with their account
 			// This is a hack, but a fun one.
+			var newmarkdown = responseJson.input_markdown.replace("", "")
 			
-			const uuidRegex = /{{\s*[a-f0-9-]+\s*}}/g
-			const found = responseJson.input_markdown.match(uuidRegex)
+			const uuidRegex = /{{\s[a-f0-9-]+\s}}/g
+			const found = newmarkdown.match(uuidRegex)
 			if (found !== undefined && found !== null && found.length > 0) {
+				var handled = []
 				for (var foundkey in found) {
 					const uuid = found[foundkey].replace("{{", "").replace("}}", "").trim()
-					// Run the workflow, then replace it.
-					// Only run if logged in
-					console.log("Found UUID: " + uuid)
-					responseJson.input_markdown = responseJson.input_markdown.replace(found[foundkey], "")
+
+					if (handled.includes(uuid)) {
+						continue
+					}
+
+					handled.push(uuid)
+
+					const storageKey = `workflowresult_${uuid}`
+					const value = localStorage.getItem(storageKey)
+
+					var runWorkflow = false
+					if (value !== undefined && value !== null && value.length > 0) {
+						// Check if timestamp with new Date().getTime() is more than 10 minutes ago
+						const parsedValue = JSON.parse(value)
+						if (parsedValue.timestamp !== undefined && parsedValue.timestamp !== null) {
+							// 1 min = 60000ms -> 5 min = 300000ms
+							const now = new Date().getTime()
+							if (now - parsedValue.timestamp > 300000) {
+								localStorage.removeItem(storageKey)
+								runWorkflow = true 
+							} else {
+								newmarkdown = newmarkdown.replace(`{{ ${uuid} }}`, parsedValue.result, -1)
+							}
+						} else {
+							runWorkflow = true
+						}
+					} else {
+						runWorkflow = true
+					}
+
+					if (runWorkflow) {
+						loadInputWorkflowData(uuid, responseJson)
+					}
+
 				}
+
+				setRealtimeMarkdown(newmarkdown)
 			}
 		}
+
+
+		handleExecutionLoader()
 
 		handleGetOrg(responseJson.org_id)
 		setWorkflow(responseJson);
@@ -510,13 +704,6 @@ const RunWorkflow = (defaultprops) => {
       });
   };
 
-  const { start, stop } = useInterval({
-    duration: 1500,
-    startImmediate: true,
-    callback: () => {
-      fetchUpdates(executionRequest.execution_id, executionRequest.authorization)
-    },
-  });
 
   const handleUpdateResults = (responseJson, executionRequest) => {
 		if (responseJson === undefined || responseJson === null || responseJson.success === false) {
@@ -582,13 +769,16 @@ const RunWorkflow = (defaultprops) => {
 		})
 	}
 
-	const handleGetOrg = (orgId, execution_id, authorization) => {
-    if (orgId.length === 0) {
-      return;
+  const handleGetOrg = (orgId, execution_id, authorization) => {
+    if (orgId === undefined || orgId === null || orgId.length === 0) {
+      return
     }
 
     // Just use this one?
     var url = execution_id !== undefined && authorization !== undefined ?  `${globalUrl}/api/v1/orgs/${orgId}?reference_execution=${execution_id}&authorization=${authorization}` : `${globalUrl}/api/v1/orgs/${orgId}`;
+
+	loadForms(orgId)
+
     fetch(url, {
       method: "GET",
       credentials: "include",
@@ -611,6 +801,11 @@ const RunWorkflow = (defaultprops) => {
 		  if (document != undefined && document.title != defaultTitle) {
 		  	document.title = responseJson.name + " - " + defaultTitle
 		  }
+
+		  if (responseJson.image !== undefined && responseJson.image !== null && responseJson.image.length > 0) {
+		  } else {
+			  responseJson.image = theme.palette.defaultImage
+		  }
           setSelectedOrganization(responseJson)
         }
       })
@@ -619,23 +814,25 @@ const RunWorkflow = (defaultprops) => {
       });
   };
 
-	const fetchUpdates = (execution_id, authorization, getorg) => {
+	const fetchUpdates = (execution_id, authorization, getorg, replaceMarkdown) => {
 		if (execution_id === undefined || execution_id === null || execution_id === "") {
+			console.log("No execution id: ", execution_id)
 			stop()
 			return
 		}
 
 		const innerRequest = {
 			"execution_id": execution_id,
-			"authorization": authorization
+			"authorization": authorization === undefined || authorization === null ? "" : authorization,
 		}
 
-		if (executionRequest.execution_id !== innerRequest.execution_id) {
+		if (executionRequest.execution_id !== innerRequest.execution_id && replaceMarkdown !== true) {
 			setExecutionRequest(innerRequest)
 		}
 
-		if (execution_id === "" || authorization === "") {
-  		setExecutionLoading(false)
+		if (execution_id === "") {
+			console.log("No execution id or authorization")
+  			setExecutionLoading(false)
 			setExecutionRunning(false)
 			stop()
 			return
@@ -658,11 +855,38 @@ const RunWorkflow = (defaultprops) => {
 			return response.json();
 		})
 		.then((responseJson) => {
-			if (getorg === true) {
-				handleGetOrg(responseJson.org_id, execution_id, authorization)
+			if (responseJson.success == false) {
+				return
 			}
 
-			handleUpdateResults(responseJson, executionRequest);
+			if (replaceMarkdown === true) {
+				if (responseJson.result.length > 0) {
+					// Set local storage for the workflow id
+					const storageKey = `workflowresult_${responseJson.workflow.id}`
+					const value = {
+						"timestamp": new Date().getTime(),
+						"result": responseJson.result,
+					}
+
+					localStorage.setItem(storageKey, JSON.stringify(value))
+				}
+
+				if (realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0) {
+					const newmarkdown = realtimeMarkdown.replace(`{{ ${responseJson.workflow.id} }}`, responseJson.result, -1)
+					setRealtimeMarkdown(newmarkdown)
+
+				} else if (workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0) {
+					const newmarkdown = workflow.input_markdown.replace(`{{ ${responseJson.workflow.id} }}`, responseJson.result, -1)
+					setRealtimeMarkdown(newmarkdown)
+				}
+
+			} else {
+				if (getorg === true) {
+					handleGetOrg(responseJson.org_id, execution_id, authorization)
+				}
+
+				handleUpdateResults(responseJson, executionRequest);
+			}
 		})
 		.catch((error) => {
 			console.log("Execution result Error: ", error);
@@ -741,10 +965,8 @@ const RunWorkflow = (defaultprops) => {
 	const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)"
 	const buttonStyle = {borderRadius: 25, height: 50, fontSize: 18, backgroundImage: handleValidateForm(executionArgument) || executionLoading ? buttonBackground : "grey", color: "white"}
 	
-	const disabledButtons = message.length > 0 || executionData.status === "FINISHED" || executionData.status === "ABORTED"
-
-	//{disabledButtons ? null :
-
+	//const disabledButtons = message.length > 0 || executionData.status === "FINISHED" || executionData.status === "ABORTED"
+	const disabledButtons = executionLoading || executionRunning
 
 	const organization = selectedOrganization !== undefined && selectedOrganization !== null ? selectedOrganization.name : "Unknown"
 	const contact = selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.org !== undefined && selectedOrganization.org !== null? selectedOrganization.org : "support@shuffler.io"
@@ -786,12 +1008,12 @@ const RunWorkflow = (defaultprops) => {
 					</div>
 				: 
 				<div>
-
 					{workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0 ? 
 						<div style={{marginBottom: 20, }}>
 							<Markdown
 							  components={{
-								img: Img,
+								iframe: IframeWrapper,
+								img: ImgWrapper,
 								code: CodeHandler,
 								a: OuterLink,
 							  }}
@@ -872,43 +1094,47 @@ const RunWorkflow = (defaultprops) => {
 
 									return (
 										<div style={{marginBottom: 10}} key={index}>
-											{question.name}
 
 											{multiChoiceOptions.length > 1 ?
-												<Select
-													fullWidth
-													required
-													label={multiChoiceOptions[0]}
-													value={executionArgument[multiChoiceOptions[0]]}
-													onChange={(e) => {
-														const curQuestion = multiChoiceOptions[0]
-														executionArgument[curQuestion] = e.target.value
-														setUpdate(Math.random())
-													}}
-												>
+												<div>
+													{question.name}
+													<Select
+														disabled={disabledButtons}
+														fullWidth
+														required
+														label={multiChoiceOptions[0]}
+														value={executionArgument[multiChoiceOptions[0]]}
+														onChange={(e) => {
+															const curQuestion = multiChoiceOptions[0]
+															executionArgument[curQuestion] = e.target.value
+															setUpdate(Math.random())
+														}}
+													>
 
-													{multiChoiceOptions.map((option, menuIndex) => {
-														if (menuIndex === 0) {
-															return null
-														}
+														{multiChoiceOptions.map((option, menuIndex) => {
+															if (menuIndex === 0) {
+																return null
+															}
 
-														return (
-															<MenuItem 
-																key={menuIndex}
-																value={option}
-															>
-																{option}
-															</MenuItem>
-														)
-													})}
-
-
-												</Select>
+															return (
+																<MenuItem 
+																	key={menuIndex}
+																	value={option}
+																>
+																	{option}
+																</MenuItem>
+															)
+														})}
+													</Select>
+												</div>
 												:
 												<TextField
 													color="primary"
-													style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
-													label={question.value}
+													style={{
+														backgroundColor: theme.palette.inputColor, 
+														marginTop: 5, 
+													}}
+													label={question.value.charAt(0).toUpperCase() + question.value.slice(1)}
 													required
 
 													disabled={disabledButtons}
@@ -1021,7 +1247,12 @@ const RunWorkflow = (defaultprops) => {
 									disabled={!handleValidateForm(executionArgument) || executionLoading}
 								>
 									{executionLoading ? 
-										<CircularProgress color="secondary" style={{color: "white",}} /> : "Submit"}
+										<CircularProgress color="secondary" style={{color: "white",}} /> 
+										: 
+										executionData.result !== undefined && executionData.result !== null && executionData.result.length > 0 ? "Run Again" 
+											:
+											"Submit"
+										}
 								</Button> 				
 							</div>
 						}
@@ -1048,15 +1279,16 @@ const RunWorkflow = (defaultprops) => {
 
 									const validate = validateJson(foundresult.result)
 									validResults += 1
-									console.log("VAlid: ", validate)
-
 									var appendedDetails = foundresult.result
 									if (validate.valid) { 
 										appendedDetails = <ReactJson
 											src={validate.result}
 											theme={theme.palette.jsonTheme}
 											style={theme.palette.reactJsonStyle}
-											collapsed={true}
+											collapsed={false}
+					    					shouldCollapse={(jsonField) => {
+												return collapseField(jsonField)
+											}}
 											iconStyle={theme.palette.jsonIconStyle}
 											collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
 											displayArrayKey={false}
@@ -1096,6 +1328,9 @@ const RunWorkflow = (defaultprops) => {
 				</div>
 				}
 			</Paper>
+			<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 10, }} >
+				Forms are in Beta. Form submissions data includes your Organization's unique ID while logged in, or a unique identifier for your browser otherwise. Your input will be automatically sanitized.
+			</Typography>
 		</div>
 
 
@@ -1185,39 +1420,38 @@ const RunWorkflow = (defaultprops) => {
 
 			{isLoggedIn && userdata?.active_org?.id === workflow?.org_id ?
 				<div style={{position: "fixed", top: 10, right: 20, }}>
-					<Button
-						variant={"outlined"}
-						color={"secondary"}
-						style={{marginRight: 10, }}
-						onClick={() => {
-							navigate(`/workflows`)
-						}}
-					>
-						<ArrowBackIcon style={{marginRight: 5, }} />
-						Workflows
-					</Button>
 
 					<Button
 						variant={"outlined"}
 						color={"secondary"}
 						style={{marginRight: 10, }}
 						onClick={() => {
-							window.open(`/workflow/${workflow.id}`, "_blank")
+							window.open(`/workflows/${workflow.id}`, "_blank")
 						}}
 					>
-						<ArrowForwardIcon style={{marginRight: 5, }} />
+						<OpenInNewIcon style={{marginRight: 5, }}/>
 						Workflow	
 					</Button>
 
 					<Button
-						variant={"outlined"}
+						variant={workflow.sharing === "form" ? "outlined" : "contained"}
 						color={"secondary"}
 						style={{marginRight: 10, }}
 						onClick={() => {
 							setSharingOpen(true)
 						}}
 					>
-						Share Form	
+						{workflow.sharing === "form" ?
+							<LockOpenIcon style={{marginRight: 5, }} /> 
+							:
+							<LockIcon style={{marginRight: 5, }} /> 
+						}
+
+						{workflow.sharing === "form" ?
+							"Unshare"
+							:
+							"Share"
+						}
 					</Button>
 
 					<Button
@@ -1240,9 +1474,85 @@ const RunWorkflow = (defaultprops) => {
 			<CircularProgress />
 		</div>
 
+	// Check width
+	const overlap = window !== undefined && window.innerWidth !== undefined && window.innerWidth < 1300 
+	const formSidebar = !isLoaded || overlap || !(forms !== undefined && forms !== null && forms.length > 1) ? null :
+		<div style={{
+			minWidth: 215, 
+			maxWidth: 215,
+			overflowX: "hidden",
+			overflowY: "auto",
+			minHeight: 500,
+			maxHeight: 500, 
+			position: "absolute", 
+			left: 100, 
+			top: 0, 
+			border: "1px solid rgba(255,255,255,0.3)",
+			borderRadius: theme.palette.borderRadius,
+
+			padding: 25, 
+
+			backgroundColor: theme.palette.inputColor,
+			zIndex: 1000, 
+		}}>
+			{selectedOrganization !== undefined && selectedOrganization !== null ?
+				<div style={{display: "flex", marginBottom: 20, }}>
+					<img src={selectedOrganization.image} style={{width: 40, height: 40, borderRadius: theme.palette.borderRadius, }} />
+					<Typography variant="body1" style={{marginTop: 7, marginLeft: 10, }}>
+						{selectedOrganization.name}
+					</Typography>
+					<Divider style={{marginTop: 10, marginBottom: 10, }}/>
+				</div>
+			: null}
+
+			{forms !== undefined && forms !== null && forms.length > 0 ?
+				<div>
+					{forms.map((form, formIndex) => {
+						if (form.id === undefined || form.id === null) {
+							return null
+						}
+
+						return (
+							<div key={formIndex} style={{marginBottom: 10, }}>
+								<RecentWorkflow 
+									workflow={form}
+									onclickHandler={() => {
+										navigate(`/forms/${form.id}`)
+										getWorkflow(form.id, sourceNode) 
+									}}
+									currentWorkflowId={workflow.id}
+								/>
+
+								{/*
+								<Button
+									variant="outlined"
+									color="primary"
+									fullWidth
+									style={{textTransform: "none", }}
+									onClick={() => {
+										navigate(`/forms/${form.id}`)
+										getWorkflow(form.id, sourceNode) 
+									}}
+								>
+									{form.name}
+								</Button>
+								*/}
+							</div>
+						)
+					})}
+				</div>
+			: 
+				<div>
+					No forms loaded
+				</div>
+			}
+		</div>
+
+
 	return (
-		<div>
+		<div style={{position: "relative", }}>
 			{loadedCheck}
+			{formSidebar}
 		</div>
 	)
 }

@@ -460,15 +460,15 @@ const AuthenticationOauth2 = (props) => {
     }
 
 
-    if (
-      authenticationType.refresh_uri !== undefined &&
-      authenticationType.refresh_uri !== null &&
-      authenticationType.refresh_uri.length > 0
-    ) {
-      state += `%26refresh_uri%3d${authenticationType.refresh_uri}`;
+    if (authenticationType.refresh_uri !== undefined && authenticationType.refresh_uri !== null && authenticationType.refresh_uri.length > 0) {
+      state += `%26refresh_uri%3d${authenticationType.refresh_uri}`
     } else {
-      state += `%26refresh_uri%3d${authentication_url}`;
+      state += `%26refresh_uri%3d${authentication_url}`
     }
+
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+		state += `%26org_id%3d${workflow.org_id}`
+	}
 
 	// FIXME: Should this be =consent?
 	var defaultPrompt = "login"
@@ -524,7 +524,12 @@ const AuthenticationOauth2 = (props) => {
           //alert('"Secure Payment" window closed!');
 
 		  if (getAppAuthentication !== undefined) {
-		  	getAppAuthentication(true, true, true, selectedAction.id)
+			// This should be orgId, not action Id as to load auth properly
+			if (workflow !== undefined && workflow !== null && workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+	 	  		getAppAuthentication(true, true, true, workflow.org_id)
+			} else {
+	 	  		getAppAuthentication(true, true, true) 
+			}
 		  }
 
 		  toast("Authentication successful!")
