@@ -4,7 +4,7 @@ import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import SearchBox from "../components/SearchData.jsx";
 
-import { Context } from '../Context/contextApi.js';
+import { Context } from '../context/contextApi.jsx';
 
 import {
 	Chip,

@@ -48,6 +48,8 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import Drift from "react-driftjs";
 
+import { AppContext } from './context/contextApi.jsx';
+
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
 
@@ -612,26 +614,28 @@ const App = (message, props) => {
       </div>
 
   return (
-    <ThemeProvider theme={theme}>
-	  <CssBaseline />
-      <CookiesProvider>
-        <BrowserRouter>
-		  {includedData}
-        </BrowserRouter>
-		<ToastContainer 
-			position="bottom-center"
-			autoClose={5000}
-			hideProgressBar={false}
-			newestOnTop={false}
-			closeOnClick
-			rtl={false}
-			pauseOnFocusLoss
-			draggable
-			pauseOnHover
-			theme="dark"
-		/>
-      </CookiesProvider>
-    </ThemeProvider>
+	<AppContext>
+		<ThemeProvider theme={theme}>
+		  <CssBaseline />
+		  <CookiesProvider>
+			<BrowserRouter>
+			  {includedData}
+			</BrowserRouter>
+			<ToastContainer 
+				position="bottom-center"
+				autoClose={5000}
+				hideProgressBar={false}
+				newestOnTop={false}
+				closeOnClick
+				rtl={false}
+				pauseOnFocusLoss
+				draggable
+				pauseOnHover
+				theme="dark"
+			/>
+		  </CookiesProvider>
+		</ThemeProvider>
+	  </AppContext>
   );
 };
 
