@@ -7,7 +7,6 @@ import WorkflowGrid from "../components/WorkflowGrid.jsx";
 import CreatorGrid from "../components/CreatorGrid.jsx";
 import DocsGrid from "../components/DocsGrid.jsx";
 import { useNavigate } from "react-router-dom";
-import Typography from "@material-ui/core/Typography";
 import { Tabs, Tab, setRef } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { makeStyles } from '@mui/styles';
@@ -18,11 +17,14 @@ import {
   Code as CodeIcon,
   EmojiObjects as EmojiObjectsIcon,
   Chat as ChatIcon,
-  BorderBottom,
+  PeopleAltOutlined as PeopleAltOutlinedIcon, 
+  DescriptionOutlined as DescriptionOutlinedIcon, 
 } from "@mui/icons-material";
 
-import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import {
+	Typography
+} from "@mui/material"
+
 
 // Should be different if logged in :|
 const Search = (props) => {

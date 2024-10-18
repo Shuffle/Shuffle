@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import ReactGA from 'react-ga4';
 
 import theme from "../theme.jsx";
-import { useTheme } from "@mui/styles";
 import countries from "../components/Countries.jsx";
 import {
 	Box,
