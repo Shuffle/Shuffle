@@ -372,7 +372,6 @@ func buildImage(tags []string, dockerfileFolder string) error {
 		contextDir := strings.Replace(dockerfileFolder, "Dockerfile", "", -1)
 		contextDir = "/app/" + contextDir
 		log.Print("contextDir: ", contextDir)
-		dockerFile := "./Dockerfile"
 
 		client, err := getK8sClient()
 		if err != nil {
