@@ -28,7 +28,7 @@ import {
   Dialog,
   DialogTitle,
 } from "@mui/material";
-import { makeStyles } from '@mui/styles';
+import { makeStyles } from "@mui/styles";
 
 import {
   Close as CloseIcon,
@@ -132,6 +132,8 @@ const Header = (props) => {
     isMobile,
     serverside,
     billingInfo,
+
+	notifications,
   } = props;
   const [isHeader, setIsHeader] = React.useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -140,7 +142,7 @@ const Header = (props) => {
   const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
   const [subAnchorEl, setSubAnchorEl] = React.useState(null);
   const [upgradeHovered, setUpgradeHovered] = React.useState(false);
-  const [showTopbar, setShowTopbar] = useState(false)
+  const [showTopbar, setShowTopbar] = useState(false) // Set to true to show top bar
   const stripeKey = typeof window === 'undefined' || window.location === undefined ? "" : window.location.origin === "https://shuffler.io" ? "pk_live_51PXYYMEJjT17t98N20qEqItyt1fLQjrnn41lPeG2PjnSlZHTDNKHuisAbW00s4KAn86nGuqB9uSVU4ds8MutbnMU00DPXpZ8ZD" : "pk_test_51PXYYMEJjT17t98NbDkojZ3DRvsFUQBs35LGMx3i436BXwEBVFKB9nCvHt0Q3M4MG3dz4mHheuWvfoYvpaL3GmsG00k1Rb2ksO"
   let navigate = useNavigate();
   const classes = useStyles();
@@ -169,15 +171,13 @@ const Header = (props) => {
     setTooltipOpen(true);
   };
 
-  const topbar_var = "topbar_closed4"
-
+  const topbar_var = "topbar_closed5"
   useEffect(() => {
+	// Manually setShowTopbar(true) to show topbar by default
     const topbar = localStorage.getItem(topbar_var)
     if (topbar === "true") {
       setShowTopbar(false)
-    } else {
-      setShowTopbar(true)
-    }
+    } 
   }, [])
 
   const hoverColor = "#f85a3e";
@@ -296,38 +296,52 @@ const Header = (props) => {
         if (response.status !== 200) {
           console.log("Error in response");
         } else {
-          localStorage.removeItem("apps")
-          localStorage.removeItem("workflows")
-          localStorage.removeItem("userinfo")
+          localStorage.removeItem("apps");
+          localStorage.removeItem("workflows");
+          localStorage.removeItem("userinfo");
         }
 
         return response.json();
       })
       .then(function (responseJson) {
-        console.log("In here?")
+        console.log("In here?");
         if (responseJson.success === true) {
-          if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) {
+          if (
+            responseJson.region_url !== undefined &&
+            responseJson.region_url !== null &&
+            responseJson.region_url.length > 0
+          ) {
             console.log("Region Change: ", responseJson.region_url);
             localStorage.setItem("globalUrl", responseJson.region_url);
             //globalUrl = responseJson.region_url
           }
+
           if (responseJson["reason"] === "SSO_REDIRECT") {
+            toast.info("Redirecting to SSO login page as SSO is required for this organization.")
             setTimeout(() => {
-              toast.info("Redirecting to SSO login page as SSO is required for this organization.")
-              window.location.href = responseJson["url"]
-              return
-            }, 2000)
+              toast.info(
+                "Redirecting to SSO login page as SSO is required for this organization."
+              );
+              window.location.href = responseJson["url"];
+              return;
+            }, 2000);
           } else {
+            toast("Successfully changed active organization - refreshing!");
             setTimeout(() => {
-              window.location.reload()
+              window.location.reload();
             }, 2000);
           }
-          toast("Successfully changed active organization - refreshing!");
         } else {
-          if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.length > 0) {
+          if (
+            responseJson.reason !== undefined &&
+            responseJson.reason !== null &&
+            responseJson.reason.length > 0
+          ) {
             toast(responseJson.reason);
           } else {
-            toast("Failed changing org. Try again or contact support@shuffler.io if this persists.");
+            toast(
+              "Failed changing org. Try again or contact support@shuffler.io if this persists."
+            );
           }
         }
       })
@@ -416,37 +430,19 @@ const Header = (props) => {
           </MenuItem>
         </Link>
 
-        <Link to="/admin?admin_tab=priorities" style={hrefStyle}>
-          <MenuItem
-            onClick={(event) => {
-              handleClose();
-            }}
-          >
-            <NotificationsIcon style={{ marginRight: 5 }} /> Notifications
-          </MenuItem>
-        </Link>
-
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
-        <Link to="/docs" style={hrefStyle}>
-          <MenuItem
-            onClick={(event) => {
-              handleClose();
-            }}
-          >
-            <HelpOutlineIcon style={{ marginRight: 5 }} /> About
-          </MenuItem>
-        </Link>
-        {/*
-				<Link to="/getting-started" style={hrefStyle}>
-					<MenuItem
-						onClick={(event) => {
-							handleClose();
-						}}
-					>
-            <AnalyticsIcon style={{marginRight: 5 }}/> Get Started 
-        	</MenuItem>
-				</Link>
-				*/}
+		<Link to="/admin?admin_tab=priorities" style={hrefStyle}>
+		  <MenuItem
+			onClick={(event) => {
+			  handleClose();
+			}}
+		  >
+			<NotificationsIcon style={{ marginRight: 5 }} /> Notifications ({
+				notifications === undefined || notifications === null ? 0 : 
+				notifications?.filter((notification) => notification.read === false).length
+			}) 
+		  </MenuItem>
+		</Link>
         <Link to="/usecases2" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
@@ -457,19 +453,17 @@ const Header = (props) => {
           </MenuItem>
         </Link>
 
-	    {userdata?.public_username === undefined || userdata?.public_username === null || userdata?.public_username.length <= 0 ? null : 
-			<Link to={`/creators/${userdata.public_username}`} style={hrefStyle}>
-			  <MenuItem
-				onClick={(event) => {
-				  handleClose();
-				}}
-			  >
-				<EmojiObjectsIcon style={{ marginRight: 5 }} /> Creator page
-			  </MenuItem>
-			</Link>
-		}
-
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
+
+        <Link to="/docs" style={hrefStyle}>
+          <MenuItem
+            onClick={(event) => {
+              handleClose();
+            }}
+          >
+            <HelpOutlineIcon style={{ marginRight: 5 }} /> About
+          </MenuItem>
+        </Link>
         <MenuItem
           style={{ color: "white" }}
           onClick={(event) => {
@@ -483,7 +477,7 @@ const Header = (props) => {
         <Divider style={{ marginBottom: 10, }} />
 
         <Typography variant="body2" color="textSecondary" align="center" style={{ marginTop: 5, marginBottom: 5, }}>
-          Version: 1.4.0
+          Version: 1.4.5
         </Typography>
       </Menu>
     </span>
@@ -910,7 +904,6 @@ const Header = (props) => {
               }}
             >
               {avatarMenu}
-              {/*notificationMenu*/}
               {supportMenu}
               {logoCheck}
             </span>

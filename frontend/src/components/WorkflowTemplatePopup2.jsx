@@ -15,6 +15,7 @@ import {
 	DialogActions,
 	Drawer,
 	CircularProgress,
+	Fade,
 	IconButton,
 	Tooltip,
 } from "@mui/material";
@@ -24,20 +25,35 @@ import {
 	TrendingFlat as TrendingFlatIcon,
 	Close as CloseIcon,
 	East as EastIcon, 
+	Interests as InterestsIcon,
 } from '@mui/icons-material';
+
+import {
+	green,
+	yellow,
+	red,
+	grey,
+} from "../views/AngularWorkflow.jsx"
 
 import WorkflowTemplatePopup2 from "./WorkflowTemplatePopup.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
+import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx";
+import FixWorkflowValidationErrors from "../components/FixWorkflowValidationErrors.jsx";
 
 const WorkflowTemplatePopup = (props) => {
-	const { userdata, appFramework, globalUrl, img1, srcapp, img2, dstapp, title, description, visualOnly, apps, isLoggedIn, isHomePage, getAppFramework,  } = props;
+	const { 
+		userdata, appFramework, globalUrl, img1, srcapp, img2, dstapp, title, description, visualOnly, apps, isLoggedIn, isHomePage, getAppFramework, showTryit, shownColor, workflowBuilt, usecaseDetails, 
 
-	const [isActive, setIsActive] = useState(false);
+		isModalOpenDefault,
+		setIsClicked,
+		inputWorkflowId,
+	} = props;
+
+	const [isActive, setIsActive] = useState(workflowBuilt === true);
 	const [isHovered, setIsHovered] = useState(false);
-	const [modalOpen, setModalOpen] = useState(false);
+	const [modalOpen, setModalOpen] = useState(isModalOpenDefault === true ? true : false)
 	const [errorMessage, setErrorMessage] = useState("");
-	const [workflowLoading, setWorkflowLoading] = useState(false);
-	const [workflow, setWorkflow] = useState({});
+	const [workflowLoading, setWorkflowLoading] = useState(false)
 	const [showLoginButton, setShowLoginButton] = useState(false);
   	const [appAuthentication, setAppAuthentication] = React.useState(undefined);
   	const [missingSource, setMissingSource] = React.useState(undefined)
@@ -46,14 +62,78 @@ const WorkflowTemplatePopup = (props) => {
 	const [appSetupDone, setAppSetupDone] = React.useState(false)
 
 	const [requestSent, setRequestSent] = React.useState(false)
-  	
-	const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
-	let navigate = useNavigate();
-	useEffect(() => {
-		if (modalOpen !== true) {
+	const [showTryitOut, setShowTryitout] = React.useState(showTryit === true ? true : false)
+
+	const [loadingWorkflow, setLoadingWorkflow] = React.useState(false)
+	const [workflow, setWorkflow] = useState({});
+	const [_, setUpdate] = useState(0)
+
+	const fetchWorkflow = (id) => {
+		if (id === undefined || id === null || id === "") {
 			return
 		}
 
+		if (loadingWorkflow === true) {
+			return
+		}
+
+		setLoadingWorkflow(true)
+		const url = `${globalUrl}/api/v1/workflows/${id}`
+		fetch(url, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+		})
+		.then((response) => {
+			setLoadingWorkflow(false)
+			if (response.status !== 200) {
+				console.log("Status not 200 for framework!");
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				console.log("Error in workflow loading for ID ", id)
+			} else {
+				setWorkflow(responseJson)
+			}
+		})
+		.catch((error) => {
+			console.log("err in framework: ", error.toString());
+			setLoadingWorkflow(false)
+		})
+
+
+	}
+
+	if (inputWorkflowId !== undefined && inputWorkflowId !== null && inputWorkflowId !== "" && workflow.id !== inputWorkflowId) {
+		fetchWorkflow(inputWorkflowId)
+	}
+
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+	let navigate = useNavigate();
+	useEffect(() => {
+		if (modalOpen !== true) {
+			if (workflowLoading === true) {
+				setWorkflowLoading(false)
+			}
+
+			//console.log("Modal is not open, so we are not doing anything.")
+			return
+		}
+
+		if (workflowLoading !== true) {
+			//console.log("Workflow loading is false, so we can try to get the workflow.")
+			return
+		}
+
+		console.log("DEBUG: Skipped direct generation without Try it for now.")
+
+		/*
 		if (!srcapp.includes(":default") && !dstapp.includes(":default")) {
 			if (appSetupDone === false && setAppSetupDone !== undefined) {
 				setAppSetupDone(true)
@@ -73,89 +153,79 @@ const WorkflowTemplatePopup = (props) => {
 				getAppFramework()
 			}, 500)
 		}
+		*/
 	}, [modalOpen, missingSource, missingDestination])
 
 	useEffect(() => {
 		//console.log("IN USEEFFECT FOR CONFIG: ", configurationFinished)
 		if (configurationFinished === true && workflow.id !== undefined && workflow.id !== null && workflow.id !== "") {
-			toast.success("Generation Successful. Redirecting to the workflow..")
+			//toast.success("Generation Successful")
+
+			/*
 			setTimeout(() => {
 				navigate("/workflows/" + workflow.id)
 			}, 2000)
+			*/
 		}
 	}, [configurationFinished, workflow])
 
-
+	const imageSize = 32
+	const defaultBorder = "1px solid rgba(255,255,255,0.6)"
 	const imagestyleWrapper = {
-        height: 40,
-		width: 40,
-        borderRadius: 40,
-		border: isHomePage ? null : "1px solid rgba(255,255,255,0.3)",
+        height: imageSize,
+		width: imageSize,
+        borderRadius: imageSize,
+		border: isHomePage ? null : defaultBorder,
 		overflow: "hidden",
 		display: "flex",
+
+		backgroundColor: theme.palette.inputColor,
     }
 
 	const imagestyleWrapperDefault = {
-        height: 40,
-		width: 40,
-        borderRadius: 40,
-		border: isHomePage ? null : "1px solid rgba(255,255,255,0.3)",
+        height: imageSize,
+		width: imageSize,
+        borderRadius: imageSize,
+		border: isHomePage ? null : defaultBorder,
 		overflow: "hidden",
 		display: "flex",
+
+		backgroundColor: theme.palette.inputColor,
 	}
 
     const imagestyle = {
-        height: 40,
-		width: 40,
-        borderRadius: 40,
-		border: isHomePage ? null : "1px solid rgba(255,255,255,0.3)",
+        height: imageSize,
+		width: imageSize,
+        borderRadius: imageSize,
+		//border: isHomePage ? null : defaultBorder,
 		overflow: "hidden",
+
+		backgroundColor: theme.palette.inputColor,
     }
 
 	const imagestyleDefault = {
 		display: "block",
-		marginLeft: 12,
-		marginTop: 11,
-		height: 35,
+		marginLeft: 9,
+		marginTop: 9,
+		height: imageSize,
 		width: "auto",
+
+		backgroundColor: theme.palette.inputColor,
 	}
 
-	if (title === undefined || title === null || title === "") {
+	if (modalOpen === false && (title === undefined || title === null || title === "")) {
+		if (setIsClicked !== undefined) {
+			setIsClicked(false)
+		}
+
 		console.log("No title for workflow template popup!");
 		return null
 	}
 
-	const getWorkflow = (workflowId) => {
-		fetch(`${globalUrl}/api/v1/workflows/${workflowId}`, {
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
-				Accept: "application/json",
-			},
-			credentials: "include",
-		})
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for framework!");
-			}
-
-			return response.json();
-		})
-		.then((responseJson) => {
-			if (responseJson.success === false) {
-				console.log("Error in workflow loading for ID ", workflowId)
-			} else {
-				setWorkflow(responseJson)
-			}
-		})
-		.catch((error) => {
-			console.log("err in framework: ", error.toString());
-			setWorkflowLoading(false)
-		})
-	}
 
 	const loadAppAuth = () => {	
 		// Check if it exists, and has keys
+		//
 		if (userdata === undefined || userdata === null || Object.keys(userdata).length === 0) {
 			setErrorMessage("You need to be logged in to try the pre-built Workflow Templates.")
 			setShowLoginButton(true)
@@ -310,9 +380,13 @@ const WorkflowTemplatePopup = (props) => {
 		if (requestSent === true) {
 			return
 		}
-		
 
-		if (srcapp.includes(":default") || dstapp.includes(":default")) {
+		console.log("SRCAPP: ", srcapp, "DSTAPP: ", dstapp)
+		if (srcapp === undefined || srcapp === null) {
+			srcapp = ""
+		}
+
+		if ((srcapp !== undefined && srcapp !== null && srcapp.includes(":default")) || (dstapp !== undefined && dstapp !== null && dstapp.includes(":default"))) {
 			toast("You need to select both a source and destination app before generating this workflow.")
 
 			if (srcapp !== undefined && srcapp !== null && srcapp.includes(":default")) {
@@ -381,7 +455,7 @@ const WorkflowTemplatePopup = (props) => {
 				//console.log("Error in workflow template: ", responseJson.error);
 				setRequestSent(false)
 
-				const defaultMessage = "Failed to generate workflow the workflow - the Shuffle team has been notified. Contact support@shuffler.io for further assistance."
+				const defaultMessage = "Error: Failed to generate workflow the workflow - the Shuffle team has been notified. Contact support@shuffler.io if you want manual help building this usecase until the AI system is handled."
 				if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason !== "") {
 					setErrorMessage(defaultMessage + "\n\n" + responseJson.reason)
 				} else {
@@ -400,7 +474,7 @@ const WorkflowTemplatePopup = (props) => {
 					return
 				}
 	
-				getWorkflow(responseJson.workflow_id)
+				fetchWorkflow(responseJson.workflow_id)
 			}
 		})
 		.catch((error) => {
@@ -410,13 +484,14 @@ const WorkflowTemplatePopup = (props) => {
 		})
 	}
 
-	if (modalOpen === true && !srcapp.includes(":default") && !dstapp.includes(":default")) {
+	if (modalOpen === true && !srcapp?.includes(":default") && !dstapp?.includes(":default")) {
 		if (appSetupDone === false && setAppSetupDone !== undefined) {
 			setAppSetupDone(true)
 		}
 
+		// No autoruns anymore without clicking "Try it"
 		if (workflow.id === undefined && workflowLoading === false && errorMessage === "") {
-			getGeneratedWorkflow() 
+			//getGeneratedWorkflow() 
 		}
 	}
 
@@ -447,17 +522,21 @@ const WorkflowTemplatePopup = (props) => {
 
 		return (
         	<Drawer
-				anchor={"left"}
+				anchor={"right"}
         	    open={modalOpen}
         	    onClose={() => {
         	        setModalOpen(false);
+
+					if (setIsClicked !== undefined) {
+						setIsClicked(false)
+					}
         	    }}
         	    PaperProps={{
         	        style: {
 						backgroundColor: "black",
         	            color: "white",
-        	            minWidth: isHomePage ? null : isMobile ? 300 : 700,
-        	            maxWidth: isHomePage ? null : isMobile ? 300 : 700,
+        	            minWidth: isHomePage ? null : isMobile ? 300 : 850,
+        	            maxWidth: isHomePage ? null : isMobile ? 300 : 850,
 						paddingTop: isMobile ? null : 75, 
 						itemAlign: "center",
         	        },
@@ -481,22 +560,47 @@ const WorkflowTemplatePopup = (props) => {
 					<Typography variant="h4" style={{ fontSize: isMobile ? 20 : null}}>
 						<b>Configure Workflow</b>
 					</Typography> 
-					<Typography variant="body2" color="textSecondary" style={{marginTop: 25, }}>
-						Selected Workflow:
-					</Typography> 
-					<div style={{marginBottom: 0, }} id="workflow-template">
-						<WorkflowTemplatePopup2 
+
+					{title === undefined || title === null || title === "" ? null : 
+						<span>
+							<Typography variant="body2" color="textSecondary" style={{marginTop: 25, }}>
+								Selected Workflow:
+							</Typography> 
+							<div style={{marginBottom: 0, }} id="workflow-template">
+								<WorkflowTemplatePopup2 
+									globalUrl={globalUrl}
+									img1={img1}
+									srcapp={srcapp}
+									img2={img2}
+									dstapp={dstapp}
+									title={title}
+									description={description}
+									visualOnly={true} 
+
+									workflowBuilt={workflowBuilt}
+									shownColor={shownColor}
+								/>
+
+							</div>
+						</span>
+					}
+
+					<div style={{marginTop: 15, }}>
+						{/* Fix the timeline when errors are fixed.. how? */}
+						<WorkflowValidationTimeline
+							workflow={workflow}
+						/>
+
+						<FixWorkflowValidationErrors
 							globalUrl={globalUrl}
-							img1={img1}
-							srcapp={srcapp}
-							img2={img2}
-							dstapp={dstapp}
-							title={title}
-							description={description}
-							visualOnly={true} 
+							workflow={workflow}
+							setWorkflow={setWorkflow}
+
+							setUpdateParent={setUpdate}
 						/>
 					</div>
-					{workflowLoading ? 
+
+					{workflowLoading === true ? 
 						<div style={{marginTop: 75, textAlign: "center", }}>
 							<Typography variant="h4"> Generating the Workflow...
 							</Typography> 
@@ -504,6 +608,11 @@ const WorkflowTemplatePopup = (props) => {
 						</div>
 						:
 						<div>
+							{usecaseDetails === undefined ? null :
+								<Typography variant="h6" style={{marginTop: 75, }}>
+									{usecaseDetails?.description}
+								</Typography> 
+							}
 							<Typography variant="h6" style={{marginTop: 75, }}>
 								{errorMessage !== "" ? errorMessage : ""}
 							</Typography> 
@@ -528,84 +637,92 @@ const WorkflowTemplatePopup = (props) => {
 									  <EastIcon style={{ marginTop: 3, marginLeft: 7 }} />
 									</Typography>
 								</Link>
-							: null}
+							: 
+								!showTryitOut && !isActive ?
+									<Button
+										variant="outlined"
+										style={{
+											textTransform: "none",
+										}}
+										onClick={() => {
+											//setWorkflowLoading(true)
+											getGeneratedWorkflow()
+											loadAppAuth() 
+										}}
+									>
+										Try this usecase <TrendingFlatIcon style={{ }} />
+									</Button>
+								: null}
 						</div>
 					}
 
-					{(appSetupDone === false && missingSource !== undefined || missingDestination !== undefined) ? 
-						<Typography variant="body1" style={{marginTop: 75, marginBottom: 10, }}>
-							{"Find relevant Apps for this Usecase"}
-						</Typography>
-					: null}
+					{!isLoggedIn ? null : 
+						<div>
+							{(appSetupDone === false && missingSource !== undefined || missingDestination !== undefined) ? 
+								<Typography variant="body1" style={{marginTop: 75, marginBottom: 10, }}>
+									{"Find relevant Apps for this Usecase"}
+								</Typography>
+							: null}
 
-					{(missingSource !== undefined) ? 
-						<div style={{}}>
-							<AppSearchButtons
-								globalUrl={globalUrl}
-								appFramework={appFramework}
+							{(missingSource !== undefined) ? 
+								<div style={{}}>
+									<AppSearchButtons
+										globalUrl={globalUrl}
+										appFramework={appFramework}
 
-								appType={missingSource.type}
-								AppImage={missingSource.image}
+										appType={missingSource.type}
+										AppImage={missingSource.image}
 
-								setMissing={setMissingSource}
+										setMissing={setMissingSource}
 
-								getAppFramework={getAppFramework}
-							/>
+										getAppFramework={getAppFramework}
+									/>
+								</div>
+							: null}
+
+							{(missingDestination !== undefined) ? 
+								<div style={{}}>
+									<AppSearchButtons
+										globalUrl={globalUrl}
+										appFramework={appFramework}
+
+										appType={missingDestination.type}
+										AppImage={missingDestination.image}
+
+										setMissing={setMissingDestination}
+
+										getAppFramework={getAppFramework}
+									/>
+								</div>
+							: null}
 						</div>
-					: null}
-
-					{(missingDestination !== undefined) ? 
-						<div style={{}}>
-							<AppSearchButtons
-								globalUrl={globalUrl}
-								appFramework={appFramework}
-
-								appType={missingDestination.type}
-								AppImage={missingDestination.image}
-
-								setMissing={setMissingDestination}
-
-								getAppFramework={getAppFramework}
-							/>
-						</div>
-					: null}
+					}
 
 					<ConfigureWorkflow
 					  userdata={userdata}
 					  theme={theme}
 					  globalUrl={globalUrl}
-					  workflow={workflow}
   					  appAuthentication={appAuthentication}
 					  setAppAuthentication={setAppAuthentication}
+
+					  workflow={workflow}
 					  apps={apps}
 
 					  setConfigurationFinished={setConfigurationFinished}
 					/>
-
-					{/*errorMessage === "" && configurationFinished === true && workflow.id !== undefined && workflowLoading === false ?
-						<Tooltip title="Click to explore the workflow" placement="top">
-							<span 
-								style={{position: "fixed", display: "flex", right: "10%", top: "20%", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, padding: "15px 30px 15px 30px", backgroundColor: theme.palette.platformColor, cursor: "pointer", }}
-								onClick={() => {
-									// Open in new tab
-									window.open("/workflows/" + workflow.id, "_blank")
-								}}
-							>
-								<Typography variant="h5" style={{ }}>
-									Workflow Successfully Generated!
-								</Typography>
-							</span>
-						</Tooltip>
-					: null*/}
 
 				</DialogContent>
         	</Drawer>
     	)
 	}
 
-	var parsedTitle = title
-	const maxlength = 30
-	if (title.length > maxlength) {
+	if (isModalOpenDefault === true) {
+		return <ModalView />
+	}
+
+	var parsedTitle = title !== undefined && title !== null ? title : ""
+	const maxlength = 50 
+	if (title !== undefined && title !== null && title.length > maxlength) {
 		parsedTitle = title.substring(0, maxlength) + "..."
 	}
 	
@@ -613,31 +730,64 @@ const WorkflowTemplatePopup = (props) => {
 
 	const parsedDescription = description !== undefined && description !== null ? description.replaceAll("_", " ") : ""
 
+	const boxHeight = 104
+	const highlightColor = shownColor !== undefined && shownColor !== null && shownColor !== "" ? shownColor : "#f85a3e"
+
+	var hasInterest = false
+	if (userdata.interests !== undefined && userdata.interests !== null && userdata.interests.length > 0) {
+		const comparisonTitle = title === undefined || title === null ? "" : title.trim().toLowerCase().replaceAll(" ", "_")
+		for (var interestkey in userdata.interests) {
+			if (userdata.interests[interestkey].name === undefined || userdata.interests[interestkey].name === null || userdata.interests[interestkey].name === "") {
+				continue
+			}
+
+			if (modalOpen) { 
+				console.log("COMPARE: ", userdata.interests[interestkey].name.trim().toLowerCase().replaceAll(" ", "_"), comparisonTitle)
+			}
+
+			if (userdata.interests[interestkey].name.trim().toLowerCase().replaceAll(" ", "_") === comparisonTitle) {
+				if (modalOpen) { 
+					console.log("FOUND: ", comparisonTitle)
+				}
+
+				hasInterest = true
+				break
+			}
+		}
+	}
+
+	const borderStyle = isHomePage ? null : isHovered && isActive ? errorMessage !== "" ? "1px solid red" : `2px solid ${theme.palette.green}` : isHovered ? `1px solid ${highlightColor}` : "1px solid rgba(33, 33, 33, 1)"
 
 	return (
-		<div style={{ display: "flex", maxWidth: isCloud ? isMobile ? null : 470 : isMobile? 345: 450, minWidth: isCloud ? isMobile ? null : 470 : isMobile? null: 450, height: 78, borderRadius: 8, justifyContent: isMobile ? null : "center" }}>
+		<div style={{ display: "flex", height: boxHeight, borderRadius: theme.palette.borderRadius, justifyContent: isMobile ? null : "center" }}
+		>
 			<ModalView />
+
 			<div
 				// variant={isActive === 1 ? "contained" : "outlined"} 
 				color="secondary"
 				disabled={visualOnly === true}
 				style={{
-					margin: isHomePage ? isMobile ? null : 4 : 4 , 
-					width: isHomePage? isMobile ? null : "100%" : "100%",
+					width: isHomePage? isMobile ? null : "100%" : "99%",
 					borderRadius: 8,
 					textTransform: "none",
 					backgroundColor: isHomePage ? null : theme.palette.inputColor,
-					border:  isHomePage ? null : isActive ? errorMessage !== "" ? "1px solid red" : `2px solid ${theme.palette.green}` : isHovered ? "1px solid #f85a3e" : "1px solid rgba(33, 33, 33, 1)",
+					border: borderStyle,
 					cursor: isActive ? errorMessage !== "" ? "not-allowed" : "pointer" : "pointer",
-					padding: "10px 20px 10px 20px", 
 					position: "relative",
 					
 				}}
 				onMouseEnter={() => {
 					setIsHovered(true)
+
+					setShowTryitout(true)
 				}}
 				onMouseLeave={() => {
 					setIsHovered(false)
+
+					if (showTryit !== true) {
+						setShowTryitout(false)
+					}
 				}}
 				onClick={() => {
 					if (visualOnly === true) {
@@ -645,65 +795,102 @@ const WorkflowTemplatePopup = (props) => {
 						return
 					}
 
-					//setIsActive(!isActive)
-					if (errorMessage !== "") {
-						toast("Already failed to generate a workflow for this usecase. Please try again later or contact support@shuffler.io.")
+					if (!isLoggedIn) {
+						loadAppAuth()
+						setModalOpen(true)
+					} else if (isLoggedIn && errorMessage !== "") {
+						toast.error("Already failed to generate a workflow for this usecase. Please try again later or contact support@shuffler.io.")
 
 						setModalOpen(true)
 					} else if (isActive) {
-						toast("Workflow already generated. Please try another workflow template!")
+						// toast.success("Workflow already generated. Please try another workflow template!")
 
 						// FIXME: Remove these?
 						loadAppAuth() 
 						setModalOpen(true)
 						//getGeneratedWorkflow()
 					} else {
-	
-						loadAppAuth() 
 						setModalOpen(true)
-						getGeneratedWorkflow()
+						//setWorkflowLoading(false)
 					}
 				}}
 			>
-				<div style={{ display: "flex", itemAlign: "left", textAlign: "left", }}>
-					<div style={{display: "flex", flex: 1, marginTop: 3, }}>
-						{img1 !== undefined && img1 !== "" && srcapp !== undefined && srcapp !== "" ?
-							<Tooltip title={srcapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
-								<div style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
-									<img src={img1} style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleDefault : imagestyle} />
-								</div>
-							</Tooltip>
-						: 
-							<div style={{width: 50, }} />
-						}
-						{img2 !== undefined && img2 !== "" && dstapp !== undefined && dstapp !== "" ?
-							<Tooltip title={dstapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
-								<div style={{display: "flex", }}>
-									<TrendingFlatIcon style={{ marginTop: 7, }} />
-									<div style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
-										<img src={img2} style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleDefault : imagestyle} />
+
+				<div style={{display: "flex", }}>
+					{shownColor !== undefined && shownColor !== null && shownColor !== "" ? 
+						<div style={{position: "absolute", left: 0, height: boxHeight-2, width: 4, backgroundColor: shownColor, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, }} />
+					: null}
+
+					<div style={{ display: "flex", itemAlign: "left", textAlign: "left", }}>
+						<div style={{display: "flex", flex: 1, marginLeft: 25, marginTop: showTryitOut && !isActive ? 14 : 30, }}>
+							<div style={{zIndex: 51}}>
+								{img1 !== undefined && img1 !== "" && srcapp !== undefined && srcapp !== "" ?
+									<Tooltip title={srcapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
+										<div style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
+											<img src={img1} style={srcapp !== undefined && srcapp.includes(":default") ? imagestyleDefault : imagestyle} />
+										</div>
+									</Tooltip>
+								: 
+									<div style={{width: 50, }} />
+								}
+							</div>
+
+
+							{img2 !== undefined && img2 !== "" && dstapp !== undefined && dstapp !== "" ?
+								<Tooltip title={dstapp.replaceAll(":default", "").replaceAll("_", " ").replaceAll(" API", "")} placement="top">
+									<div style={{display: "flex", position: "relative", left: -10, }}>
+										<div style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleWrapperDefault : imagestyleWrapper}>
+											<img src={img2} style={dstapp !== undefined && dstapp.includes(":default") ? imagestyleDefault : imagestyle} />
+										</div>
 									</div>
-								</div>
-							</Tooltip>
-						:
-							<div style={{width: 50, }} />
-						}	
+								</Tooltip>
+							:
+								<div style={{width: 0, }} />
+							}	
+
+						</div>
+						<div style={{ marginLeft: 20, overflow: "hidden", maxHeight: 30, marginTop: showTryitOut && !isActive ? 8 : 23, }}>
+							<Typography variant="body1" style={{ marginTop: parsedDescription.length === 0 ? 10 : 0, fontSize: isMobile ? 13 : 16, fontWeight: isHomePage ? 600 : null, textTransform: 'capitalize', color: isHomePage ? "var(--White-text, #F1F1F1)" : "rgba(241, 241, 241, 1)"}} >
+								<b>{parsedTitle}</b>
+							</Typography>
+						</div>
 					</div>
-					<div style={{ flex: 3, marginLeft: 20, maxHeight: 50, overflow: "hidden", }}>
-						<Typography variant="body1" style={{ marginTop: parsedDescription.length === 0 ? 10 : 0, fontSize: isMobile ? 13 : 16,fontWeight: isHomePage? 600 : null,textTransform: 'capitalize', color: isHomePage ? "var(--White-text, #F1F1F1)" :"rgba(241, 241, 241, 1)"}} >
-							{parsedTitle}
-						</Typography>
-						<Typography variant="body2" color="textSecondary" style={{ fontSize: isMobile ? 10: 16, fontWeight: isHomePage ? 400 : null, textTransform: 'capitalize', marginTop: 0, overflow: "hidden", maxHeight: 31,}} color="rgba(158, 158, 158, 1)">
-							{parsedDescription}
-						</Typography>
-					</div>
-				</div>
-				<div>
-					{isActive === true && errorMessage === "" ?
-						<CheckIcon color="primary" sx={{ borderRadius: 4 }} style={{ position: "absolute", color: theme.palette.green, top: 10, right: 10, }} /> 
-					: ""}
 				</div>
 
+				<div>
+					{isActive === true && errorMessage === "" ?
+						<Tooltip title="You already have workflows that are based on this usecase" placement="top">
+							<CheckIcon color="primary" sx={{ borderRadius: 4 }} style={{ position: "absolute", color: theme.palette.green, top: 10, right: 10, }} /> 
+						</Tooltip>
+					: ""}
+
+					{!isActive && hasInterest === true ?
+						<Tooltip title="Your team has shown interest in this usecase previously." placement="top">
+							<InterestsIcon color="primary" sx={{ borderRadius: 4 }} style={{ position: "absolute", color: "rgba(254, 204, 0, 0.5)", top: 10, right: 10, }} />
+						</Tooltip>
+					 : null}
+				</div>
+
+
+				{showTryitOut && !isActive ? 
+					<Fade in={showTryitOut} timeout={300}>
+						<Button
+							variant="text"
+							style={{
+								textTransform: "none",
+								marginTop: 8, 
+								marginLeft: 15, 
+							}}
+							onClick={() => {
+								//setWorkflowLoading(true)
+								getGeneratedWorkflow()
+								loadAppAuth() 
+							}}
+						>
+							Try it out <TrendingFlatIcon style={{ }} />
+						</Button>
+					</Fade>
+				: null}
 			</div>
 
 

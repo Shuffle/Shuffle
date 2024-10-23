@@ -19,7 +19,6 @@ import urllib.parse
 import jinja2 
 import datetime
 import dateutil
-
 import threading
 import concurrent.futures
 
@@ -1714,6 +1713,112 @@ class AppBase:
             ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers, verify=False, proxies=self.proxy_config)
 
         return file_ids
+
+    def validate_condition(self, sourcevalue, check, destinationvalue):
+        if check == "=" or check == "==" or check.lower() == "equals":
+            if str(sourcevalue).lower() == str(destinationvalue).lower():
+                return True
+        elif check == "!=" or check.lower() == "does not equal":
+            if str(sourcevalue).lower() != str(destinationvalue).lower():
+                return True
+        elif check.lower() == "startswith":
+            if str(sourcevalue).lower().startswith(str(destinationvalue).lower()):
+                return True
+        elif check.lower() == "endswith":
+            if str(sourcevalue).lower().endswith(str(destinationvalue).lower()):
+                return True
+        elif check.lower() == "contains":
+            if destinationvalue.lower() in sourcevalue.lower():
+                return True
+
+        elif check.lower() == "is empty" or check.lower() == "is_empty":
+            try:
+                if len(json.loads(sourcevalue)) == 0:
+                    return True
+            except Exception as e:
+                self.logger.info(f"[ERROR] Failed to check if empty as list: {e}")
+
+            if len(str(sourcevalue)) == 0:
+                return True
+
+        elif check.lower() == "contains_any_of":
+            newvalue = [destinationvalue.lower()]
+            if ", " in destinationvalue:
+                newvalue = destinationvalue.split(", ")
+            elif "," in destinationvalue:
+                newvalue = destinationvalue.split(",")
+
+            for item in newvalue:
+                if not item:
+                    continue
+
+                if item.strip() in sourcevalue:
+                    return True
+                
+
+        # FIXME: This will be buggy if using > and >= operators in the future.
+        elif check.lower() == "larger than" or check.lower() == "bigger than" or check == ">" or check == ">=":
+            try:
+                if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
+                    if int(sourcevalue) > int(destinationvalue):
+                        return True
+
+            except AttributeError as e:
+                self.logger.info("[WARNING] Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
+
+            try:
+                destinationvalue = len(json.loads(destinationvalue))
+            except Exception as e:
+                self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
+            try:
+                # Check if it's a list in autocast and if so, check the length
+                if len(json.loads(sourcevalue)) > int(destinationvalue):
+                    return True
+            except Exception as e:
+                self.logger.info(f"[WARNING] Failed to check if larger than as list: {e}")
+
+
+        # FIXME: This will be buggy if using < and <= operators in the future.
+        elif check.lower() == "smaller than" or check.lower() == "less than" or check == "<" or check == "<=":
+            self.logger.info("In smaller than check: %s %s" % (sourcevalue, destinationvalue))
+
+            try:
+                if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
+                    if int(sourcevalue) < int(destinationvalue):
+                        return True
+
+            except AttributeError as e:
+                pass
+
+            try:
+                destinationvalue = len(json.loads(destinationvalue))
+            except Exception as e:
+                self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
+
+            try:
+                # Check if it's a list in autocast and if so, check the length
+                if len(json.loads(sourcevalue)) < int(destinationvalue):
+                    return True
+            except Exception as e:
+                self.logger.info(f"[WARNING] Failed to check if smaller than as list: {e}")
+
+        elif check.lower() == "re" or check.lower() == "matches regex":
+            try:
+                found = re.search(str(destinationvalue), str(sourcevalue))
+            except re.error as e:
+                return False
+            except Exception as e:
+                return False
+
+            if found == None:
+                return False
+
+            return True
+        else:
+            self.logger.error("[DEBUG] Condition: can't handle %s yet. Setting to true" % check)
+
+        return False
+
     
     #async def execute_action(self, action):
     def execute_action(self, action):
@@ -2597,7 +2702,6 @@ class AppBase:
                 return returndata, is_loop
 
 
-
         # Sending self as it's not a normal function
         def parse_liquid(template, self):
             
@@ -3084,110 +3188,7 @@ class AppBase:
 
             return "", parameter["value"], is_loop
 
-        def run_validation(sourcevalue, check, destinationvalue):
-            #self.logger.info("[DEBUG] Checking %s '%s' %s" % (sourcevalue, check, destinationvalue))
-
-            if check == "=" or check.lower() == "equals":
-                if str(sourcevalue).lower() == str(destinationvalue).lower():
-                    return True
-            elif check == "!=" or check.lower() == "does not equal":
-                if str(sourcevalue).lower() != str(destinationvalue).lower():
-                    return True
-            elif check.lower() == "startswith":
-                if str(sourcevalue).lower().startswith(str(destinationvalue).lower()):
-                    return True
-            elif check.lower() == "endswith":
-                if str(sourcevalue).lower().endswith(str(destinationvalue).lower()):
-                    return True
-            elif check.lower() == "contains":
-                if destinationvalue.lower() in sourcevalue.lower():
-                    return True
-
-            elif check.lower() == "is empty" or check.lower() == "is_empty":
-                try:
-                    if len(json.loads(sourcevalue)) == 0:
-                        return True
-                except Exception as e:
-                    self.logger.info(f"[ERROR] Failed to check if empty as list: {e}")
-
-                if len(str(sourcevalue)) == 0:
-                    return True
-
-            elif check.lower() == "contains_any_of":
-                newvalue = [destinationvalue.lower()]
-                if "," in destinationvalue:
-                    newvalue = destinationvalue.split(",")
-                elif ", " in destinationvalue:
-                    newvalue = destinationvalue.split(", ")
-
-                for item in newvalue:
-                    if not item:
-                        continue
-
-                    if item.strip() in sourcevalue:
-                        return True
-                    
-            elif check.lower() == "larger than" or check.lower() == "bigger than":
-                try:
-                    if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
-                        if int(sourcevalue) > int(destinationvalue):
-                            return True
-
-                except AttributeError as e:
-                    self.logger.info("[WARNING] Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
-
-                try:
-                    destinationvalue = len(json.loads(destinationvalue))
-                except Exception as e:
-                    self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
-                try:
-                    # Check if it's a list in autocast and if so, check the length
-                    if len(json.loads(sourcevalue)) > int(destinationvalue):
-                        return True
-                except Exception as e:
-                    self.logger.info(f"[WARNING] Failed to check if larger than as list: {e}")
-
-
-            elif check.lower() == "smaller than" or check.lower() == "less than":
-                self.logger.info("In smaller than check: %s %s" % (sourcevalue, destinationvalue))
-
-                try:
-                    if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
-                        if int(sourcevalue) < int(destinationvalue):
-                            return True
-
-                except AttributeError as e:
-                    pass
-
-                try:
-                    destinationvalue = len(json.loads(destinationvalue))
-                except Exception as e:
-                    self.logger.info(f"[WARNING] Failed to convert destination to list: {e}")
-
-                try:
-                    # Check if it's a list in autocast and if so, check the length
-                    if len(json.loads(sourcevalue)) < int(destinationvalue):
-                        return True
-                except Exception as e:
-                    self.logger.info(f"[WARNING] Failed to check if smaller than as list: {e}")
-
-            elif check.lower() == "re" or check.lower() == "matches regex":
-                try:
-                    found = re.search(str(destinationvalue), str(sourcevalue))
-                except re.error as e:
-                    return False
-                except Exception as e:
-                    return False
-
-                if found == None:
-                    return False
-
-                return True
-            else:
-                self.logger.error("[DEBUG] Condition: can't handle %s yet. Setting to true" % check)
-
-            return False
-
+     
         def check_branch_conditions(action, fullexecution, self):
             # relevantbranches = workflow.branches where destination = action
             try:
@@ -3287,8 +3288,7 @@ class AppBase:
                         self.logger.error("[ERROR] Skipping '%s' -> %s -> '%s' because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
                         continue
 
-                    # Configuration = negated because of WorkflowAppActionParam..
-                    validation = run_validation(sourcevalue, condition["condition"]["value"], destinationvalue)
+                    validation = self.validate_condition(sourcevalue, condition["condition"]["value"], destinationvalue)
                     try:
                         if condition["condition"]["configuration"]:
                             validation = not validation

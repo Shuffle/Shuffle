@@ -44,7 +44,7 @@ import {
 
 
 import { validateJson } from "../views/Workflows.jsx";
-import ReactJson from "react-json-view";
+import ReactJson from "react-json-view-ssr";
 import PaperComponent from "../components/PaperComponent.jsx";
 
 import { padding, textAlign } from '@mui/system';

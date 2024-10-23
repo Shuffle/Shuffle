@@ -393,7 +393,10 @@ const Priorities = (props) => {
 
 	return (
 		<div style={{width: clickedFromOrgTab ? 1030:1000, padding: clickedFromOrgTab ? 27:null, height: clickedFromOrgTab ? "auto":null, backgroundColor: clickedFromOrgTab ? '#212121':null, borderRadius: clickedFromOrgTab ? '16px':null,  }}>
-			<h2 style={{ display: clickedFromOrgTab?null:"inline", marginBottom: clickedFromOrgTab? 8:null, marginTop: clickedFromOrgTab?40:null, color: clickedFromOrgTab?"#ffffff":null }}>Notifications</h2>
+			<h2 style={{ display: clickedFromOrgTab?null:"inline", marginBottom: clickedFromOrgTab? 8:null, marginTop: clickedFromOrgTab?40:null, color: clickedFromOrgTab?"#ffffff":null }}>Notifications ({
+				notifications?.filter((notification) => showRead === true || notification.read === false).length
+				})</h2>
+
 			<span style={{ marginLeft: clickedFromOrgTab?null:25, color: clickedFromOrgTab?"#9E9E9E":null, }}>
 				Notifications help you find potential problems with your workflows and apps.&nbsp;
 				<a

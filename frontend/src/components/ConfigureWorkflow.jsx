@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
 import { toast } from 'react-toastify';
 import theme from "../theme.jsx";
+import WorkflowValidationTimeline from "../components/WorkflowValidationTimeline.jsx"
 
 import {
   InputAdornment,
@@ -79,7 +80,7 @@ const ConfigureWorkflow = (props) => {
   useEffect(() => { 
 	  if (requiredActions.length === 0) { 
 		  if (setConfigurationFinished !== undefined) {
-			setConfigurationFinished(true)
+		      setConfigurationFinished(true)
 		  }
 	  }
   }, [requiredActions])
@@ -141,17 +142,18 @@ const ConfigureWorkflow = (props) => {
 
 	// Where is this from?
   if (workflow === undefined || workflow === null || workflow.id === undefined) {
-    return null;
+	//console.log("Workflow is undefined or null: ", workflow)
+    return null
   }
 
   if (apps === undefined || apps === null) {
 	  console.log("Apps is undefined or null: ", apps)
-      return null;
+      return null
   }
 
   if (appAuthentication === undefined || appAuthentication === null) {
 	  console.log("App authentication is undefined or null: ", appAuthentication)
-      return null;
+      return null
   }
 
   const getApp = (actionId, appId) => {
@@ -310,7 +312,7 @@ const ConfigureWorkflow = (props) => {
 			}
 		}
 
-        if (action.authentication_id === "" && app.authentication.required === true && action.parameters !== undefined && action.parameters !== null) {
+        if (action?.authentication_id === "" && app?.authentication?.required === true && action.parameters !== undefined && action.parameters !== null) {
 		  // Check if configuration is filled or not
           var filled = true;
           for (let [key,keyval] in Object.entries(action.parameters)) {
@@ -1386,9 +1388,23 @@ const ConfigureWorkflow = (props) => {
 			: null
 		}
 
+	    <div style={{marginTop: 10, }} />
+
+	  	{/*
+	    <WorkflowValidationTimeline 
+			workflow={workflow}
+
+			apps={apps}
+
+			getParents={undefined}
+			execution={undefined}
+		  />
+	    <div style={{marginBottom: 10, }} />
+		*/}
+
       	{requiredActions.length > 0 ? (
       	  <span>
-			<Typography variant="body2" style={{}}>
+			<Typography variant="body2" color="textSecondary">
 			  Please configure the following steps to help us complete your workflow. This can also be done later.
 			</Typography>
 

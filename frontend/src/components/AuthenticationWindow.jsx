@@ -104,14 +104,19 @@ const AuthenticationData = (props) => {
           	toast("Failed to set app auth: " + responseJson.reason);
 					}
         } else {
-					setSubmitSuccessful(true)
-					if (getAppAuthentication !== undefined) {
-          	getAppAuthentication(true, false);
-					}
+			setSubmitSuccessful(true)
+			if (getAppAuthentication !== undefined) {
 
-					if (setAuthenticationModalOpen !== undefined) {
-						setAuthenticationModalOpen(false)
-					}
+				if (workflow !== undefined && workflow !== null && workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+          			getAppAuthentication(true, false, undefined, workflow.org_id)
+				} else {
+          			getAppAuthentication(true, false)
+				}
+			}
+
+			if (setAuthenticationModalOpen !== undefined) {
+				setAuthenticationModalOpen(false)
+			}
         }
       })
       .catch((error) => {

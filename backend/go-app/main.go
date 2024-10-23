@@ -1131,9 +1131,9 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		// No childorg setup, only parent org
-		if len(org.ManagerOrgs) > 0 || len(org.CreatorOrg) > 0 {
-			continue
-		}
+		// if len(org.ManagerOrgs) > 0 || len(org.CreatorOrg) > 0 {
+		// 	continue
+		// }
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
@@ -5213,6 +5213,7 @@ func initHandlers() {
 	//r.HandleFunc("/api/v1/orgs/", shuffle.HandleGetOrgs).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", shuffle.HandleGetOrg).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", shuffle.HandleEditOrg).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgid}/forms", shuffle.HandleGetOrgForms).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/create_sub_org", shuffle.HandleCreateSubOrg).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/change", shuffle.HandleChangeUserOrg).Methods("POST", "OPTIONS") // Swaps to the org
 
@@ -5270,7 +5271,7 @@ func initHandlers() {
 
 	// This is weird.
 	r.HandleFunc("/api/v1/detections/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/detections/siem/node_health", shuffle.HandleTenzirHealthUpdate).Methods("POST","OPTIONS")
+	//r.HandleFunc("/api/v1/detections/siem/node_health", shuffle.HandleTenzirHealthUpdate).Methods("POST","OPTIONS")
 
 
 	// Introduced in 0.9.21 to handle notifications for e.g. failed Workflow

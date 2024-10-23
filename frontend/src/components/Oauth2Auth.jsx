@@ -167,7 +167,7 @@ const AuthenticationOauth2 = (props) => {
 		//console.log("APP: ", selectedApp)
 		if (selectedApp.name.toLowerCase() == "outlook_graph" || selectedApp.name.toLowerCase() == "outlook_office365") {
 			handleOauth2Request(
-				"efe4c3fe-84a1-4821-a84f-23a6cfe8e72d",
+				"fd55c175-aa30-4fa6-b303-09a29fb3f750",
 				"",
 				"https://graph.microsoft.com",
 				["Mail.ReadWrite", "Mail.Send", "offline_access"],
@@ -460,15 +460,15 @@ const AuthenticationOauth2 = (props) => {
     }
 
 
-    if (
-      authenticationType.refresh_uri !== undefined &&
-      authenticationType.refresh_uri !== null &&
-      authenticationType.refresh_uri.length > 0
-    ) {
-      state += `%26refresh_uri%3d${authenticationType.refresh_uri}`;
+    if (authenticationType.refresh_uri !== undefined && authenticationType.refresh_uri !== null && authenticationType.refresh_uri.length > 0) {
+      state += `%26refresh_uri%3d${authenticationType.refresh_uri}`
     } else {
-      state += `%26refresh_uri%3d${authentication_url}`;
+      state += `%26refresh_uri%3d${authentication_url}`
     }
+
+	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+		state += `%26org_id%3d${workflow.org_id}`
+	}
 
 	// FIXME: Should this be =consent?
 	var defaultPrompt = "login"
@@ -524,7 +524,12 @@ const AuthenticationOauth2 = (props) => {
           //alert('"Secure Payment" window closed!');
 
 		  if (getAppAuthentication !== undefined) {
-		  	getAppAuthentication(true, true, true);
+			// This should be orgId, not action Id as to load auth properly
+			if (workflow !== undefined && workflow !== null && workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+	 	  		getAppAuthentication(true, true, true, workflow.org_id)
+			} else {
+	 	  		getAppAuthentication(true, true, true) 
+			}
 		  }
 
 		  toast("Authentication successful!")
@@ -538,7 +543,7 @@ const AuthenticationOauth2 = (props) => {
 			  setFinalized(true)
 		  }
         } else {
-			console.log("Not closed")
+			//console.log("Not closed")
 		}
       }, 1000);
       //do {
@@ -739,7 +744,7 @@ const AuthenticationOauth2 = (props) => {
       </DialogTitle>
       <DialogContent>
         <span style={{}}>
-            Oauth2 requires a client ID and secret to authenticate, defined in the remote system. {authenticationType.type === "oauth2-app" ? null : <span>Your redirect URL is <b>{window.location.origin}/set_authentication</b>&nbsp;-&nbsp;</span>}
+            Oauth2 requires a client ID and secret to authenticate, defined in the remote system. <span>Your redirect URL is <b>{window.location.origin}/set_authentication</b>&nbsp;-&nbsp;</span>
           <a
             target="_blank"
             rel="norefferer"

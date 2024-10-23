@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { toast } from 'react-toastify';
 import Markdown from 'react-markdown'
 import theme from '../theme.jsx';
-import ReactJson from "react-json-view";
+import ReactJson from "react-json-view-ssr";
 import { isMobile } from "react-device-detect";
 import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
@@ -152,9 +152,21 @@ export const OuterLink = (props) => {
 
 
 export const Img = (props) => {
+	// Find parent container and check width
+
+	var height = "auto" 
+	var width = 750
+	if (props.height !== undefined && props.height !== null) {
+		height = props.height
+	}
+
+	if (props.width !== undefined && props.width !== null) {
+		width = props.width
+	}
+
     return(
 	  <img 
-		style={{border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, width: 750, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} 
+		style={{border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, width: width, maxWidth: width, margin: "auto", marginTop: 10, marginBottom: 10, }} 
 		alt={props.alt} 
 		src={props.src} 
 	  />

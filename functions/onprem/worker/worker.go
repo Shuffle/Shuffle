@@ -38,9 +38,9 @@ import (
 	"github.com/gorilla/mux"
 
 	//k8s deps
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 )
@@ -140,15 +140,9 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 
 	err = shuffle.SetCache(ctx, cacheKey, execData, 30)
 	if err != nil {
-		log.Printf("[ERROR][%s] Failed adding to cache during setexecution", workflowExecution)
+		log.Printf("[ERROR][%s] Failed adding to cache during setexecution", workflowExecution.ExecutionId)
 		return err
 	}
-
-	/*** STARTREMOVE ***/
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
-		return nil
-	}
-	/*** ENDREMOVE ***/
 
 	handleExecutionResult(workflowExecution)
 	validated := shuffle.ValidateFinished(ctx, -1, workflowExecution)
@@ -532,7 +526,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// }
 
 	// use deployment instead of pod
-	// then expose a service similarly. 
+	// then expose a service similarly.
 	// number of replicas can be set to os.Getenv("SHUFFLE_SCALE_REPLICAS")
 	replicaNumberStr := os.Getenv("SHUFFLE_SCALE_REPLICAS")
 	replicaNumber := 1
@@ -542,7 +536,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 			log.Printf("[ERROR] %s is not a valid number for replication", replicaNumberStr)
 		} else {
 			replicaNumber = tmpInt
-		
+
 		}
 	}
 
@@ -2902,8 +2896,6 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 	return listener
 }
 
-
-
 func findActiveSwarmNodes(dockercli *dockerclient.Client) (int64, error) {
 	ctx := context.Background()
 	nodes, err := dockercli.NodeList(ctx, types.NodeListOptions{})
@@ -3791,9 +3783,6 @@ func checkUnfinished(resp http.ResponseWriter, request *http.Request, execReques
 	ctx := context.Background()
 	exec, err := shuffle.GetWorkflowExecution(ctx, execRequest.ExecutionId)
 	log.Printf("[DEBUG][%s] Rechecking execution and it's status to send to backend IF the status is EXECUTING (%s - %d/%d finished)", execRequest.ExecutionId, exec.Status, len(exec.Results), len(exec.Workflow.Actions))
-	if err != nil {
-		return
-	}
 
 	// FIXMe: Does this create issue with infinite loops?
 	// Usually caused by issue during startup
@@ -3840,6 +3829,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		time.Sleep(time.Duration(30) * time.Second)
 		checkUnfinished(resp, request, execRequest)
 	}()
+	ctx := context.Background()
 
 	// FIXME: This should be PER EXECUTION
 	//if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
@@ -3880,13 +3870,18 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	var workflowExecution shuffle.WorkflowExecution
-	data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, execRequest.ExecutionId, execRequest.Authorization)
 	streamResultUrl := fmt.Sprintf("%s/api/v1/streams/results", baseUrl)
 	req, err := http.NewRequest(
 		"POST",
 		streamResultUrl,
-		bytes.NewBuffer([]byte(data)),
+		bytes.NewBuffer([]byte(fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, execRequest.ExecutionId, execRequest.Authorization))),
 	)
+	if err != nil {
+		log.Printf("[ERROR][%s] Failed to create a new request", execRequest.ExecutionId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
 
 	client := shuffle.GetExternalClient(streamResultUrl)
 	newresp, err := client.Do(req)
@@ -3900,14 +3895,14 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	defer newresp.Body.Close()
 	body, err = ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("[ERROR] Failed reading body (2): %s", err)
+		log.Printf("[ERROR][%s] Failed reading body (2): %s", execRequest.ExecutionId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
 
 	if newresp.StatusCode != 200 {
-		log.Printf("[ERROR] Bad statuscode: %d, %s", newresp.StatusCode, string(body))
+		log.Printf("[ERROR][%s] Bad statuscode: %d, %s", execRequest.ExecutionId, newresp.StatusCode, string(body))
 
 		if strings.Contains(string(body), "Workflowexecution is already finished") {
 			log.Printf("[DEBUG] Shutting down (19)")
@@ -3927,7 +3922,6 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
 	//err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 	err = setWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
@@ -3978,7 +3972,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 
 	err = executionInit(workflowExecution)
 	if err != nil {
-		log.Printf("[DEBUG][%s] Shutting down (30) - Workflow setup failed: %s", workflowExecution.ExecutionId, workflowExecution.ExecutionId, err)
+		log.Printf("[DEBUG][%s] Shutting down (30) - Workflow setup failed: %s", workflowExecution.ExecutionId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in execution init: %s"}`, err)))
 		return
@@ -4090,7 +4084,6 @@ func runWebserver(listener net.Listener) {
 	//}
 
 	//log.Fatal(http.Serve(listener, nil))
-
 
 	log.Printf("[DEBUG] NEW webserver setup")
 

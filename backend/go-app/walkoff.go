@@ -571,14 +571,20 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		//return
 	}
 
+	if len(actionResult.ExecutionId) == 0 {
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Provide execution_id and authorization"}`)))
+		return
+	}
+
 	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
-	if err != nil {
+	if err != nil || workflowExecution.ExecutionId != actionResult.ExecutionId {
 		if len(actionResult.ExecutionId) > 0 {
 			log.Printf("[WARNING][%s] Failed getting execution (streamresult): %s", actionResult.ExecutionId, err)
 		}
 
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
 	}
@@ -637,9 +643,26 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if workflowExecution.Workflow.Sharing == "form" {
+		newWorkflow := shuffle.Workflow{
+			Name:           workflowExecution.Workflow.Name,
+			ID:			 	workflowExecution.Workflow.ID,
+			Owner:          workflowExecution.Workflow.Owner,
+			OrgId:          workflowExecution.Workflow.OrgId,
+
+			Sharing: 		workflowExecution.Workflow.Sharing,
+			Description:    workflowExecution.Workflow.Description,
+			InputQuestions: workflowExecution.Workflow.InputQuestions,
+			InputMarkdown:  workflowExecution.Workflow.InputMarkdown,
+		}
+
+		workflowExecution.Results = []shuffle.ActionResult{}
+		workflowExecution.Workflow = newWorkflow
+	}
+
 	newjson, err := json.Marshal(workflowExecution)
 	if err != nil {
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow execution"}`)))
 		return
 	}
@@ -933,6 +956,27 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
+		}
+	}
+
+	// Look for Child workflows and delete them
+	if workflow.ParentWorkflowId == "" {
+		log.Printf("[DEBUG] Looking for child workflows for workflow %s to delete. User %s (%s) in org %s (%s)", workflow.ID, user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id)
+
+		childWorkflows, err := shuffle.ListChildWorkflows(ctx, workflow.ID)
+		if err != nil {
+			log.Printf("[ERROR] Failed to list child workflows: %s", err)
+		} else { 
+			log.Printf("\n\n[DEBUG] Found %d child workflows for workflow %s\n\n", len(childWorkflows), workflow.ID)
+
+			// Find cookies and append them to request.Header to replicate current request as closely as possible
+			for _, childWorkflow := range childWorkflows {
+				if childWorkflow.ID == workflow.ID {
+					continue
+				}
+
+				go shuffle.SendDeleteWorkflowRequest(childWorkflow, request)
+			}
 		}
 	}
 
@@ -2398,7 +2442,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	workflow.Schedules = append(workflow.Schedules, schedule)
+	//workflow.Schedules = append(workflow.Schedules, schedule)
 	err = shuffle.SetWorkflow(ctx, *workflow, workflow.ID)
 	if err != nil {
 		log.Printf("Failed setting workflow for schedule: %s", err)
@@ -3366,7 +3410,15 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body)
+
+	runValidationAction := false
+	query := request.URL.Query()
+	validation, ok := query["validation"]
+	if ok && validation[0] == "true" {
+		runValidationAction = true
+	}
+
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction)
 	if err != nil {
 		log.Printf("[INFO] Failed workflowrequest POST read: %s", err)
 		resp.WriteHeader(401)

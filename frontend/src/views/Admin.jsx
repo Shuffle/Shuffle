@@ -6274,7 +6274,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               style={{ minWidth: 50, maxWidth: 50 }}
             />
             <ListItemText
-              primary="License"
+              primary="Scale"
               style={{ minWidth: 85, maxWidth: 85 }}
             />
             <ListItemText
@@ -6406,7 +6406,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                             </Tooltip>
                           ) : (
                             <Tooltip
-                              title="Not licensed, and can't scale.. This may cause service disruption."
+                              title="In Verbose mode. Set SHUFFLE_SWARM_CONFIG=run to Scale. This will not be as verbose. Details: https://shuffler.io/docs/configuration#scaling-shuffle"
                               placement="top"
                             >
                               <a
@@ -6441,7 +6441,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                             environment.running_ip.length === 0 ? (
                               <div>Not running</div>
                             ) : (
-                              environment.running_ip.split(":")[0]
+                              environment.running_ip
                             )
                           ) : (
                             "N/A"

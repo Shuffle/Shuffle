@@ -62,7 +62,6 @@ services:
     image: opensearchproject/opensearch:2.14.0
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
-    env_file: .env
     environment:
       - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
       - bootstrap.memory_lock=true
@@ -73,6 +72,7 @@ services:
       - node.name=shuffle-opensearch
       - node.store.allow_mmap=false
       - discovery.seed_hosts=shuffle-opensearch
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${SHUFFLE_OPENSEARCH_PASSWORD}
     ulimits:
       memlock:
         soft: -1
