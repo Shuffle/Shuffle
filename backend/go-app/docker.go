@@ -420,9 +420,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 								},
 							},
 						},
-						NodeSelector: map[string]string{
-							"node": backendNodeName,
-						},
+						NodeName:      backendNodeName,
 						RestartPolicy: corev1.RestartPolicyNever,
 						Volumes: []corev1.Volume{
 							{
