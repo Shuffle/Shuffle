@@ -349,7 +349,7 @@ func deleteJob(client *kubernetes.Clientset, jobName, namespace string) error {
 	})
 }
 
-func buildImage(tags []string, dockerfileFolder string) error {
+func buildImage(tags []string, dockerfileLocation string) error {
 
 	isKubernetes := false
 	if os.Getenv("IS_KUBERNETES") == "true" {
@@ -369,10 +369,8 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 		log.Printf("[INFO] registry name: %s", registryName)
 
-		contextDir := strings.Replace(dockerfileFolder, "Dockerfile", "", -1)
-		contextDir = "/app/" + contextDir
+		contextDir := filepath.Join("/app/", filepath.Dir(dockerfileLocation))
 		log.Print("contextDir: ", contextDir)
-		dockerFile := "./Dockerfile"
 
 		client, err := getK8sClient()
 		if err != nil {
@@ -407,7 +405,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 								Image: "gcr.io/kaniko-project/executor:latest",
 								Args: []string{
 									"--verbosity=debug",
-									"--dockerfile=" + dockerFile,
+									"--dockerfile=Dockerfile",
 									"--context=dir://" + contextDir,
 									"--skip-tls-verify",
 									"--destination=" + registryName + "/" + tags[1],
@@ -420,9 +418,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 								},
 							},
 						},
-						NodeSelector: map[string]string{
-							"node": backendNodeName,
-						},
+						NodeName:      backendNodeName,
 						RestartPolicy: corev1.RestartPolicyNever,
 						Volumes: []corev1.Volume{
 							{
@@ -486,7 +482,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 		}
 
 		log.Printf("[INFO] Docker Tags: %s", tags)
-		dockerfileSplit := strings.Split(dockerfileFolder, "/")
+		dockerfileSplit := strings.Split(dockerfileLocation, "/")
 
 		// Create a buffer
 		buf := new(bytes.Buffer)
