@@ -1,7 +1,7 @@
 {
     "name": "Shuffle",
     "description": "Security Automation Platform",
-    "repository": "https://github.com/Shuffle/Shuffle",
+    "repository": "https://github.com/0x0elliot/Shuffle",
     "ref": "2.0.0",
     "scripts": {
       "postclone": "chmod +x startup.sh && ./startup.sh"
