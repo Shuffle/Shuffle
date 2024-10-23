@@ -1,15 +1,9 @@
 {
     "name": "Shuffle",
     "description": "Security Automation Platform",
-    "repository": "https://github.com/shuffle/shuffle",
-    "env": {
-      "SERVICE_NAME": {
-        "description": "Name of the Cloud Run service",
-        "value": "shuffle-app"
-      },
-      "REGION": {
-        "description": "GCP region to deploy to",
-        "value": "us-central1"
-      }
+    "repository": "https://github.com/Shuffle/Shuffle",
+    "ref": "2.0.0",
+    "scripts": {
+      "postclone": "chmod +x startup.sh && ./startup.sh"
     }
   }
