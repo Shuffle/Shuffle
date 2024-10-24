@@ -1645,6 +1645,25 @@ class AppBase:
             #return value.json()
             return {"success": False}
 
+    def update_file(self, file_id, content):
+        full_execution = self.full_execution
+        workflow_id = full_execution["workflow"]["id"]
+        org_id = full_execution["workflow"]["execution_org"]["id"]
+
+        new_headers = {
+            "Authorization": f"Bearer {self.authorization}",
+            "User-Agent": "Shuffle 1.1.0",
+        }
+
+        upload_path = "/api/v1/files/%s/edit?execution_id=%s" % (file_id, full_execution["execution_id"])
+
+        files={"shuffle_file": ("filename", content)}
+
+        ret = requests.put("%s%s" % (self.url, upload_path), files=files, headers=new_headers, verify=False, proxies=self.proxy_config)
+        print(ret.status_code)
+        return ret.json()
+
+
     # Wrapper for set_files
     def set_file(self, infiles):
         return self.set_files(infiles)
