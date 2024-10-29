@@ -1301,9 +1301,6 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			log.Printf("[ERROR] Unable to create docker client (3): %s", err)
 			return
 		}
-	}
-
-	if isKubernetes == "true" {
 		defer dockercli.Close()
 	}
 
