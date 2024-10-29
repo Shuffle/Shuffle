@@ -6,7 +6,7 @@ Shuffle Automation
 
 [![CodeQL](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml)
 [![Autobuild](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml)
-[![Deploy to Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run/?git_repo=https://github.com/Shuffle/Shuffle&ref=2.0.0)
+[![Deploy to Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run/?git_repo=https://github.com/0x0elliot/Shuffle&ref=2.0.0)
 
 </h1><h4 align="center">
 
