@@ -3726,7 +3726,9 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 
 	newresp, err := client.Do(req)
 	if err != nil {
+		// Connection refused?
 		log.Printf("[ERROR] Error running worker request to %s (1): %s", streamUrl, err)
+
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 
