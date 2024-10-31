@@ -291,34 +291,49 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	ctx := shuffle.GetContext(request)
 	env, err := shuffle.GetEnvironment(ctx, orgId, "")
 	timeNow := time.Now().Unix()
-	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 {
+	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 && request.Method == "POST" { 
 		// Updates every 60 seconds~
 		if time.Now().Unix() > env.Edited+60 {
 			env.RunningIp = shuffle.GetRequestIp(request)
+
+			// Orborus label = custom label for Orborus
 			if len(orborusLabel) > 0 {
 				env.RunningIp = orborusLabel
 			}
 
-			if request.Method == "POST" {
-				body, err := ioutil.ReadAll(request.Body)
-				if err == nil {
-					var envData shuffle.OrborusStats
-					err = json.Unmarshal(body, &envData)
-					if err == nil {
-						if envData.Swarm {
-							env.Licensed = true
-							env.RunType = "docker"
-						}
+			// Set the checkin cache
 
-						if envData.Kubernetes {
-							env.RunType = "k8s"
-						}
+
+			body, err := ioutil.ReadAll(request.Body)
+			if err == nil {
+				var envData shuffle.OrborusStats
+				err = json.Unmarshal(body, &envData)
+				if err == nil {
+					envData.RunningIp = env.RunningIp
+
+					marshalled, err := json.Marshal(envData)
+					if err == nil {
+						cacheKey := fmt.Sprintf("queueconfig-%s-%s", env.Name, env.OrgId)
+						go shuffle.SetCache(context.Background(), cacheKey, marshalled, 2)
 					}
+
+
+
+					if envData.Swarm {
+						env.Licensed = true
+						env.RunType = "docker"
+					} 
+
+					if envData.Kubernetes {
+						env.RunType = "k8s"
+					}
+
+					envData.DataLake = env.DataLake
 				}
 			}
 
 			env.Checkin = timeNow
-			err = shuffle.SetEnvironment(ctx, env)
+			err = shuffle.SetEnvironment(ctx, &env)
 			if err != nil {
 				log.Printf("[ERROR] Failed updating environment: %s", err)
 			}
