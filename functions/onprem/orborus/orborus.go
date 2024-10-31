@@ -110,6 +110,7 @@ var pipelineUrl = os.Getenv("SHUFFLE_PIPELINE_URL")
 var executionIds = []string{}
 var pipelines = []shuffle.PipelineInfoMini{}
 var namespacemade = false // For K8s
+var skipPipelineMount = false 
 
 var dockercli *dockerclient.Client
 var containerId string
@@ -2838,8 +2839,22 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		anyFound = true 
 	}
 
+	tenzirStorageFolder := os.Getenv("SHUFFLE_STORAGE_FOLDER")
+	if len(tenzirStorageFolder) > 0 {
+		tenzirStorageFolder = tenzirStorageFolder 
+
+		if !strings.HasSuffix(tenzirStorageFolder, "/") {
+			tenzirStorageFolder = tenzirStorageFolder + "/"
+		}
+	} else {
+		tenzirStorageFolder = "/tmp/tenzir/"
+	}
+
+
 	if !anyFound {
 		log.Printf("[DEBUG] No Tenzir Plugin environment variables found.") 
+	} else {
+		//log.Printf("[DEBUG] Attempting Tenzir connection with app.tenzir.com tenant '%s'", tenzirPluginsPlatform)
 	}
 
 	hostConfig := &container.HostConfig{
@@ -2850,15 +2865,29 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		},
 		Mounts: []mount.Mount{
 			{
-				Type:   mount.TypeVolume,
-				Source: containerName,
+				Type:   "bind",
+				Source: tenzirStorageFolder,
 				Target: "/var/lib/tenzir/",
+			},
+			{
+				Type:   "bind",
+				Source: tenzirStorageFolder,
+				Target: "/var/log/tenzir/",
+			},
+			{
+				Type:   "bind",
+				Source: tenzirStorageFolder,
+				Target: "/var/cache/tenzir/",
 			},
 		},
 		VolumeDriver: "local",
 		RestartPolicy: container.RestartPolicy{
 			Name: "always",
 		},
+	}
+
+	if skipPipelineMount {
+		hostConfig.Mounts = []mount.Mount{}
 	}
 
 	networkingConfig := &network.NetworkingConfig{
@@ -2873,6 +2902,13 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 
 	_, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
+		if strings.Contains(err.Error(), "path does not exist") {
+			log.Printf("[ERROR] Not using permanent pipeline storage as storage folder /opt/tenzir/ does not exist. If you want permanent storage, create the /opt/tendir/ folder then restart Orborus. Raw: %s", err)
+			skipPipelineMount = true
+		} else {
+			log.Printf("[ERROR] Failed to create Tenzir Node container: %v", err)
+		}
+
 		return err
 	}
 
@@ -2886,6 +2922,7 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 	time.Sleep(10 * time.Second)
 	err = checkTenzirNode()
 	if err != nil {
+		log.Printf("[ERROR] Tenzir node is not available during deployment: %s", err)
 		return err
 	}
 
