@@ -1915,6 +1915,7 @@ func main() {
 		}
 
 		log.Printf("[WARNING] SHUFFLE_PIPELINE_URL not set, falling back to default URL: %s. If BASE_URL is set, we use the external IP for that", pipelineUrl)
+		os.Setenv("SHUFFLE_PIPELINE_URL", pipelineUrl)
 	}
 
 	// FIXME - during init, BUILD and/or LOAD worker and app_sdk
@@ -2028,6 +2029,7 @@ func main() {
 			// Marshal and set body
 			orborusStats := getOrborusStats(ctx)
 			pipelinePayload, pipelineerr := sendPipelineHealthStatus()
+
 			if pipelineerr != nil {
 				// Too verbose to be enabled.
 				//log.Printf("[ERROR] Failed sending pipeline health status: %s", pipelineerr)
@@ -2702,7 +2704,12 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 
 func deployTenzirNode() error {
 	if isKubernetes == "true" {
-		return errors.New("kubernetes not implemented")
+		return errors.New("Kubernetes not implemented for Tenzir node")
+	}
+
+	err := checkTenzirNode()
+	if err == nil {
+		return nil
 	}
 
 	ctx := context.Background()
@@ -2711,8 +2718,7 @@ func deployTenzirNode() error {
 	imageName := "tenzir/tenzir:latest"
 	containerName := "tenzir-node"
 	containerStartOptions := container.StartOptions{}
-
-	_, err := shuffle.GetCache(ctx, cacheKey)
+	_, err = shuffle.GetCache(ctx, cacheKey)
 	if err == nil {
 		return nil
 	}
@@ -2757,13 +2763,14 @@ func deployTenzirNode() error {
 		}
 	} else {
 		if !containerInfo.State.Running {
-			log.Printf("[DEBUG] Tenzir Node exists but is not running")
+			log.Printf("[DEBUG] Tenzir Node exists but is not running. Restarting it.")
 			err := dockercli.ContainerStart(ctx, containerName, containerStartOptions)
 			if err != nil {
 				log.Printf("[ERROR] Failed to start Tenzir Node container: %v", err)
 				return err
 			}
 
+			time.Sleep(10 * time.Second)
 			log.Printf("[INFO] Waiting for Tenzir to become available ...")
 			err = checkTenzirNode()
 			if err != nil {
@@ -2797,16 +2804,47 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		Retries:  1,
 	}
 
+	// Ensure restart policy is there
 	config := &container.Config{
 		Cmd:          []string{"--commands=web server --mode=dev --bind=0.0.0.0"},
 		Image:        imageName,
 		Healthcheck:  healthconfig,
-		ExposedPorts: nat.PortSet{"5160/tcp": struct{}{}},
+		ExposedPorts: nat.PortSet{
+			"5160/tcp": struct{}{},
+			"514/udp": struct{}{},
+			"514/tcp": struct{}{},
+		},
 		Entrypoint:   []string{containerName},
+		Env:		  []string{},
+	}
+
+	tenzirApikey := os.Getenv("TENZIR_PLUGINS__PLATFORM__API_KEY")
+	tenzirControlEndpoint := os.Getenv("TENZIR_PLUGINS__PLATFORM__CONTROL_ENDPOINT")
+	tenzirPluginsPlatform := os.Getenv("TENZIR_PLUGINS__PLATFORM__TENANT_ID")
+
+	anyFound := false
+	if len(tenzirApikey) > 0 {
+		config.Env = append(config.Env, fmt.Sprintf("TENZIR_PLUGINS__PLATFORM__API_KEY=%s", tenzirApikey))
+		anyFound = true 
+	}
+
+	if len(tenzirControlEndpoint) > 0 {
+		config.Env = append(config.Env, fmt.Sprintf("TENZIR_PLUGINS__PLATFORM__CONTROL_ENDPOINT=%s", tenzirControlEndpoint))
+		anyFound = true 
+	}
+
+	if len(tenzirPluginsPlatform) > 0 {
+		config.Env = append(config.Env, fmt.Sprintf("TENZIR_PLUGINS__PLATFORM__TENANT_ID=%s", tenzirPluginsPlatform))
+		anyFound = true 
+	}
+
+	if !anyFound {
+		log.Printf("[DEBUG] No Tenzir Plugin environment variables found.") 
 	}
 
 	hostConfig := &container.HostConfig{
 		PortBindings: nat.PortMap{
+			"514/tcp":  []nat.PortBinding{{HostPort: "514"}},
 			"514/udp":  []nat.PortBinding{{HostPort: "514"}},
 			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
 		},
@@ -2818,6 +2856,9 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 			},
 		},
 		VolumeDriver: "local",
+		RestartPolicy: container.RestartPolicy{
+			Name: "always",
+		},
 	}
 
 	networkingConfig := &network.NetworkingConfig{
@@ -3432,7 +3473,8 @@ func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
 	}
 
 	//url := fmt.Sprintf("%s/api/v1/detections/siem/health", baseUrl)
-	err := checkTenzirNode()
+	//err := checkTenzirNode()
+	err := deployTenzirNode() 
 	if err != nil {
 		return pipelinePayload, err
 	}
