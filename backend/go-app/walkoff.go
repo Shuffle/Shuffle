@@ -291,34 +291,49 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	ctx := shuffle.GetContext(request)
 	env, err := shuffle.GetEnvironment(ctx, orgId, "")
 	timeNow := time.Now().Unix()
-	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 {
+	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 && request.Method == "POST" { 
 		// Updates every 60 seconds~
 		if time.Now().Unix() > env.Edited+60 {
 			env.RunningIp = shuffle.GetRequestIp(request)
+
+			// Orborus label = custom label for Orborus
 			if len(orborusLabel) > 0 {
 				env.RunningIp = orborusLabel
 			}
 
-			if request.Method == "POST" {
-				body, err := ioutil.ReadAll(request.Body)
-				if err == nil {
-					var envData shuffle.OrborusStats
-					err = json.Unmarshal(body, &envData)
-					if err == nil {
-						if envData.Swarm {
-							env.Licensed = true
-							env.RunType = "docker"
-						}
+			// Set the checkin cache
 
-						if envData.Kubernetes {
-							env.RunType = "k8s"
-						}
+
+			body, err := ioutil.ReadAll(request.Body)
+			if err == nil {
+				var envData shuffle.OrborusStats
+				err = json.Unmarshal(body, &envData)
+				if err == nil {
+					envData.RunningIp = env.RunningIp
+
+					marshalled, err := json.Marshal(envData)
+					if err == nil {
+						cacheKey := fmt.Sprintf("queueconfig-%s-%s", env.Name, env.OrgId)
+						go shuffle.SetCache(context.Background(), cacheKey, marshalled, 2)
 					}
+
+
+
+					if envData.Swarm {
+						env.Licensed = true
+						env.RunType = "docker"
+					} 
+
+					if envData.Kubernetes {
+						env.RunType = "k8s"
+					}
+
+					envData.DataLake = env.DataLake
 				}
 			}
 
 			env.Checkin = timeNow
-			err = shuffle.SetEnvironment(ctx, env)
+			err = shuffle.SetEnvironment(ctx, &env)
 			if err != nil {
 				log.Printf("[ERROR] Failed updating environment: %s", err)
 			}
@@ -2798,6 +2813,70 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
+func handleSingleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+	ctx := context.Background()
+	cacheKey := fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-0")
+	shuffle.DeleteCache(ctx, cacheKey)
+	// Just need to be logged in
+	// FIXME - should have some permissions?
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in app hotload: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+	if user.Role != "admin" {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Must be admin to hotload apps"}`))
+		return
+	}
+	location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
+	if len(location) == 0 {
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SHUFFLE_APP_HOTLOAD_FOLDER not specified in .env"}`)))
+		return
+	}
+	requestUrlFields := strings.Split(request.URL.String(), "/")
+	var appName string
+	if requestUrlFields[1] == "api" {
+		if len(requestUrlFields) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+		appName = requestUrlFields[4]
+		if strings.Contains(appName, "?") {
+			appName = strings.Split(appName, "?")[0]
+		}
+	}
+	location = location + "/" + appName
+	log.Printf("[INFO] Starting hotloading from %s", location)
+	err = handleAppHotload(ctx, location, true)
+	if err != nil {
+		log.Printf("[WARNING] Failed app hotload: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+	cacheKey = fmt.Sprintf("workflowapps-sorted-100")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }

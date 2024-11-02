@@ -30,8 +30,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"math/rand"
 
+	"math/rand"
 	//"os/signal"
 	//"syscall"
 
@@ -103,12 +103,14 @@ var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
 var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 
-// For it to download from Sigma? 
-var apiKey = os.Getenv("AUTH_FOR_ORBORUS") 
+// For it to download from Sigma?
+var apiKey = os.Getenv("AUTH_FOR_ORBORUS")
 var pipelineUrl = os.Getenv("SHUFFLE_PIPELINE_URL")
 
 var executionIds = []string{}
+var pipelines = []shuffle.PipelineInfoMini{}
 var namespacemade = false // For K8s
+var skipPipelineMount = false 
 
 var dockercli *dockerclient.Client
 var containerId string
@@ -725,7 +727,6 @@ func buildEnvVars(envMap map[string]string) []corev1.EnvVar {
 
 func handleBackendImageDownload(ctx context.Context, images string) error {
 
-
 	// Replicate images with lowercase, as the name may be wrong
 	// Most of the time lowercase is correct. Swapping to have that first
 	originalImages := images
@@ -756,7 +757,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 		resp, err := dockercli.ImageRemove(ctx, image, removeOptions)
 		if err != nil {
 			log.Printf("[ERROR] Failed removing image: %s. Resp: %#v", err, resp)
-		
+
 			// Goroutining images that don't already exist, as they are most likely not the correct one
 			go shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)
 		} else {
@@ -806,10 +807,10 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 					//docker service update --image username/imagename:latest servicename --force
 					serviceUpdateOptions := types.ServiceUpdateOptions{}
 					resp, err := dockercli.ServiceUpdate(
-						ctx, 
-						service.ID, 
-						service.Version, 
-						service.Spec, 
+						ctx,
+						service.ID,
+						service.Version,
+						service.Spec,
 						serviceUpdateOptions,
 					)
 
@@ -824,7 +825,7 @@ func handleBackendImageDownload(ctx context.Context, images string) error {
 					}
 				}
 			}
-		
+
 		}
 
 	}
@@ -1522,7 +1523,6 @@ func checkSwarmService(ctx context.Context) {
 	log.Printf("[DEBUG] Swarm info: %s\n\n", ret)
 }
 
-
 func getContainerResourceUsage(ctx context.Context, cli *dockerclient.Client, containerID string) (float64, float64, error) {
 	// Get container stats
 	stats, err := cli.ContainerStats(ctx, containerID, false)
@@ -1916,6 +1916,7 @@ func main() {
 		}
 
 		log.Printf("[WARNING] SHUFFLE_PIPELINE_URL not set, falling back to default URL: %s. If BASE_URL is set, we use the external IP for that", pipelineUrl)
+		os.Setenv("SHUFFLE_PIPELINE_URL", pipelineUrl)
 	}
 
 	// FIXME - during init, BUILD and/or LOAD worker and app_sdk
@@ -2019,8 +2020,6 @@ func main() {
 	log.Printf("[INFO] Waiting for executions at %s with Environment %#v", fullUrl, environment)
 	hasStarted := false
 	for {
-		_ = sendTenzirHealthStatus()
-
 		if req.Method == "POST" {
 			// Should find data to send (memory etc.)
 
@@ -2030,6 +2029,14 @@ func main() {
 
 			// Marshal and set body
 			orborusStats := getOrborusStats(ctx)
+			pipelinePayload, pipelineerr := sendPipelineHealthStatus()
+
+			if pipelineerr != nil {
+				// Too verbose to be enabled.
+				//log.Printf("[ERROR] Failed sending pipeline health status: %s", pipelineerr)
+			}
+
+			orborusStats.DataLake = pipelinePayload
 			jsonData, err := json.Marshal(orborusStats)
 			if err == nil {
 				req.Body = ioutil.NopCloser(bytes.NewBuffer(jsonData))
@@ -2115,23 +2122,52 @@ func main() {
 		var toBeRemoved shuffle.ExecutionRequestWrapper
 		if len(executionRequests.Data) > 0 {
 			newrequests := []shuffle.ExecutionRequest{}
+
+			// Deduplicating in case same job shows up multiple times
+			// This is specifically to handle data pipelines better
+			deduplicatedJobs := []shuffle.ExecutionRequest{}
 			for _, incRequest := range executionRequests.Data {
+				if !strings.Contains(incRequest.Type, "DOCKER") && !strings.Contains(incRequest.Type, "PIPELINE") && !strings.Contains(incRequest.Type, "SIGMA") && !strings.Contains(incRequest.Type, "TENZIR") {
+					deduplicatedJobs = append(deduplicatedJobs, incRequest)
+					continue
+				}
+
+				found := false
+				for _, dedupRequest := range deduplicatedJobs {
+					if incRequest.ExecutionArgument == dedupRequest.ExecutionArgument && incRequest.Type == dedupRequest.Type {
+						found = true
+						break
+					}
+				}
+
+				if found {
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+					continue
+				}
+
+				deduplicatedJobs = append(deduplicatedJobs, incRequest)
+			}
+
+			executionRequests.Data = deduplicatedJobs
+			for _, incRequest := range executionRequests.Data {
+
 				// Looking for specific jobs
 				if incRequest.Type == "PIPELINE_CREATE" || incRequest.Type == "PIPELINE_START" || incRequest.Type == "PIPELINE_STOP" || incRequest.Type == "PIPELINE_DELETE" {
 
 					err := handlePipeline(incRequest)
 					if err != nil {
-						log.Printf("[ERROR] Failed handling pipeline: %s", err)
-					} else {
-						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+
+						log.Printf("[ERROR] Failed handling pipeline (%s %s): %s. Deleting job anyway.", incRequest.Type, incRequest.ExecutionSource, err)
 					}
+			
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 				} else if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
 					log.Printf("[INFO] Should delete -> download new images: %#v", incRequest.ExecutionArgument)
 
 					if len(incRequest.ExecutionArgument) > 0 {
 						// FIXME: Wait X seconds before running this as the image build may not be done yet. This is shitty, but may be ok to do in Orborus. Easy fix for the future: Just let it run through jobs 5-10 times before actually picking it up
 
-						// Run after 25 seconds in the goroutine instead 
+						// Run after 25 seconds in the goroutine instead
 						go handleBackendImageDownload(ctx, incRequest.ExecutionArgument)
 					} else {
 						log.Printf("[ERROR] No image name provided for download. Removing job from queue.")
@@ -2143,7 +2179,7 @@ func main() {
 
 					err := deployTenzirNode()
 					if err != nil {
-						log.Printf("[ERROR] Failed to deploy CATEGORY UPDATE, reason: %s", err)
+						log.Printf("[ERROR] Failed to run CATEGORY UPDATE, reason: %s", err)
 					} else {
 						continue
 					}
@@ -2159,7 +2195,7 @@ func main() {
 					fileName := incRequest.ExecutionArgument
 					err := deployTenzirNode()
 					if err != nil {
-						log.Printf("[ERROR] Failed to deploy DISABLE SIGMA FILE, reason: %s", err)
+						log.Printf("[ERROR] Failed to run DISABLE SIGMA FILE, reason: %s", err)
 					} else {
 						continue
 					}
@@ -2175,11 +2211,11 @@ func main() {
 					fileName := incRequest.ExecutionArgument
 					err := deployTenzirNode()
 					if err != nil {
-						log.Printf("[ERROR] Failed to deploy ENABLE SIGMA FILE, reason: %s", err)
+						log.Printf("[ERROR] Failed to run ENABLE SIGMA FILE, reason: %s", err)
 					} else {
 						continue
 					}
-					
+
 					err = enableRule(fileName)
 					if err != nil {
 						log.Printf("[ERROR] Failed to disable the sigma file %s, reason: %s", fileName, err)
@@ -2190,7 +2226,7 @@ func main() {
 				} else if incRequest.Type == "DISABLE_SIGMA_FOLDER" {
 					err := deployTenzirNode()
 					if err != nil {
-						log.Printf("[ERROR] Failed to deploy DISABLE SIGMA FOLDER, reason: %s", err)
+						log.Printf("[ERROR] Failed to run DISABLE SIGMA FOLDER, reason: %s", err)
 					}
 
 					err = removeAllFiles()
@@ -2201,9 +2237,28 @@ func main() {
 					}
 				} else if incRequest.Type == "START_TENZIR" {
 					log.Printf("[INFO] Got job to start tenzir")
+
 					err := deployTenzirNode()
 					if err != nil {
-						log.Printf("[ERROR] Failed to deploy the pipeline, reason: %s", err)
+						if strings.Contains(fmt.Sprintf("%s", err), "node available") {
+							toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+						} else {
+							log.Printf("[ERROR] Failed to start tenzir, reason: %s", err)
+							err = shuffle.CreateOrgNotification(
+								ctx,
+								fmt.Sprintf("Failed to start Tenzir: %s", err),
+								fmt.Sprintf("Tenzir failed to start due to: %s", err),
+								fmt.Sprintf("/detections/Sigma"),
+								org,
+								true,
+							)
+
+							if err != nil {
+								log.Printf("[ERROR] Failed to send notification: %s", err)
+								return
+							}
+						}
+
 					} else {
 						toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 					}
@@ -2557,6 +2612,8 @@ func main() {
 // docker run tenzir/tenzir:latest 'from http://192.168.86.44:5002/api/v1/orgs/7e9b9007-5df2-4b47-bca5-c4d267ef2943/cache/CIDR%20ranges?type=text&authorization=cec9d01f-09b2-4419-8a0a-76c6046e3fef read lines | to http://192.168.86.44:5002/api/v1/hooks/webhook_665ace5f-f27b-496a-a365-6e07eb61078c write lines'
 func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 
+	log.Printf("[INFO] Pipeline: %s to %s", incRequest.Type, incRequest.ExecutionSource)
+
 	err := deployTenzirNode()
 	if err != nil {
 		log.Printf("[ERROR] Failed to deploy the pipeline, reason: %s", err)
@@ -2569,10 +2626,13 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 
 		return errors.New("no execution argument found for pipeline create. Skipping")
 	}
-	//image := "tenzir/tenzir:latest"
-	identifier := fmt.Sprintf("shuffle-%s", strings.ToLower(strings.ReplaceAll(incRequest.ExecutionSource, " ", "-")))
-	command := incRequest.ExecutionArgument
 
+	identifier := strings.ToLower(strings.ReplaceAll(incRequest.ExecutionSource, " ", "-"))
+	if !strings.HasPrefix(strings.ToLower(incRequest.ExecutionSource), "shuffle") {
+		identifier = fmt.Sprintf("shuffle-%s", strings.ToLower(strings.ReplaceAll(incRequest.ExecutionSource, " ", "-")))
+	}
+
+	command := incRequest.ExecutionArgument
 	if incRequest.Type == "PIPELINE_CREATE" {
 		log.Printf("[INFO] Should delete -> recreate new pipeline with id %#v", identifier)
 		//err := deployPipeline(image, identifier, command)
@@ -2581,23 +2641,28 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[ERROR] Failed to create pipeline: %s", err)
 			return err
 		}
-	} else if incRequest.Type == "PIPELINE_DELETE" {
+	} else if incRequest.Type == "PIPELINE_DELETE" || incRequest.Type == "PIPELINE_STOP" { {
 		log.Printf("[INFO] Should delete pipeline %#v", identifier)
 		pipelineId, err := searchPipeline(identifier)
 		if err != nil {
 			log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
 			return err
 		}
+
 		err = deletePipeline(pipelineId)
 		if err != nil {
 			log.Printf("[ERROR] Failed Deleting Pipeline %s", err)
 			return err
 		}
+	}
+		
+	/*
 	} else if incRequest.Type == "PIPELINE_STOP" {
 		log.Printf("[INFO] Should stop the pipeline %#v", identifier)
 		pipelineId, err := searchPipeline(identifier)
 		if err != nil {
 			log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
+			toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 			return err
 		}
 		_, err = updatePipelineState(command, pipelineId, "stop")
@@ -2605,18 +2670,20 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[ERROR] Failed to stop Pipeline: %s reason:%s ", pipelineId, err)
 			return err
 		} else {
-			log.Printf("[INFO] successfully stopped the Pipeline: %s", pipelineId)
+			log.Printf("[INFO] Successfully stopped the Pipeline: %s", pipelineId)
 		}
+		*/
 
 	} else if incRequest.Type == "PIPELINE_START" {
 		log.Printf("[INFO] Should start the pipeline %#v", identifier)
 		pipelineId, err := searchPipeline(identifier)
 		if err != nil {
 			if err.Error() == "no existing pipeline found with name" {
-				log.Printf("[WARNING] no pipeline found for %s, creating a new one", identifier)
+				log.Printf("[WARNING] No pipeline found for '%s', creating a new one", identifier)
 				_, CreateErr := createPipeline(command, identifier)
 				return CreateErr
 			}
+
 			log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
 			return err
 		}
@@ -2625,7 +2692,7 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[ERROR] Failed to start Pipeline: %s reason:%s ", pipelineId, err)
 			return err
 		} else {
-			log.Printf("[INFO] successfully started the Pipeline: %s", pipelineId)
+			log.Printf("[INFO] Successfully started the Pipeline: %s", pipelineId)
 		}
 
 	} else {
@@ -2638,7 +2705,12 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 
 func deployTenzirNode() error {
 	if isKubernetes == "true" {
-		return errors.New("kubernetes not implemented")
+		return errors.New("Kubernetes not implemented for Tenzir node")
+	}
+
+	err := checkTenzirNode()
+	if err == nil {
+		return nil
 	}
 
 	ctx := context.Background()
@@ -2647,8 +2719,7 @@ func deployTenzirNode() error {
 	imageName := "tenzir/tenzir:latest"
 	containerName := "tenzir-node"
 	containerStartOptions := container.StartOptions{}
-
-	_, err := shuffle.GetCache(ctx, cacheKey)
+	_, err = shuffle.GetCache(ctx, cacheKey)
 	if err == nil {
 		return nil
 	}
@@ -2693,13 +2764,14 @@ func deployTenzirNode() error {
 		}
 	} else {
 		if !containerInfo.State.Running {
-			log.Printf("[DEBUG] Tenzir Node exists but is not running")
+			log.Printf("[DEBUG] Tenzir Node exists but is not running. Restarting it.")
 			err := dockercli.ContainerStart(ctx, containerName, containerStartOptions)
 			if err != nil {
 				log.Printf("[ERROR] Failed to start Tenzir Node container: %v", err)
 				return err
 			}
 
+			time.Sleep(10 * time.Second)
 			log.Printf("[INFO] Waiting for Tenzir to become available ...")
 			err = checkTenzirNode()
 			if err != nil {
@@ -2733,26 +2805,89 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		Retries:  1,
 	}
 
+	// Ensure restart policy is there
 	config := &container.Config{
 		Cmd:          []string{"--commands=web server --mode=dev --bind=0.0.0.0"},
 		Image:        imageName,
 		Healthcheck:  healthconfig,
-		ExposedPorts: nat.PortSet{"5160/tcp": struct{}{}},
+		ExposedPorts: nat.PortSet{
+			"5160/tcp": struct{}{},
+			"514/udp": struct{}{},
+			"514/tcp": struct{}{},
+		},
 		Entrypoint:   []string{containerName},
+		Env:		  []string{},
+	}
+
+	tenzirApikey := os.Getenv("TENZIR_PLUGINS__PLATFORM__API_KEY")
+	tenzirControlEndpoint := os.Getenv("TENZIR_PLUGINS__PLATFORM__CONTROL_ENDPOINT")
+	tenzirPluginsPlatform := os.Getenv("TENZIR_PLUGINS__PLATFORM__TENANT_ID")
+
+	anyFound := false
+	if len(tenzirApikey) > 0 {
+		config.Env = append(config.Env, fmt.Sprintf("TENZIR_PLUGINS__PLATFORM__API_KEY=%s", tenzirApikey))
+		anyFound = true 
+	}
+
+	if len(tenzirControlEndpoint) > 0 {
+		config.Env = append(config.Env, fmt.Sprintf("TENZIR_PLUGINS__PLATFORM__CONTROL_ENDPOINT=%s", tenzirControlEndpoint))
+		anyFound = true 
+	}
+
+	if len(tenzirPluginsPlatform) > 0 {
+		config.Env = append(config.Env, fmt.Sprintf("TENZIR_PLUGINS__PLATFORM__TENANT_ID=%s", tenzirPluginsPlatform))
+		anyFound = true 
+	}
+
+	tenzirStorageFolder := os.Getenv("SHUFFLE_STORAGE_FOLDER")
+	if len(tenzirStorageFolder) > 0 {
+		tenzirStorageFolder = tenzirStorageFolder 
+
+		if !strings.HasSuffix(tenzirStorageFolder, "/") {
+			tenzirStorageFolder = tenzirStorageFolder + "/"
+		}
+	} else {
+		tenzirStorageFolder = "/tmp/tenzir/"
+	}
+
+
+	if !anyFound {
+		log.Printf("[DEBUG] No Tenzir Plugin environment variables found.") 
+	} else {
+		//log.Printf("[DEBUG] Attempting Tenzir connection with app.tenzir.com tenant '%s'", tenzirPluginsPlatform)
 	}
 
 	hostConfig := &container.HostConfig{
 		PortBindings: nat.PortMap{
+			"514/tcp":  []nat.PortBinding{{HostPort: "514"}},
+			"514/udp":  []nat.PortBinding{{HostPort: "514"}},
 			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
 		},
 		Mounts: []mount.Mount{
 			{
-				Type:   mount.TypeVolume,
-				Source: containerName,
+				Type:   "bind",
+				Source: tenzirStorageFolder,
 				Target: "/var/lib/tenzir/",
+			},
+			{
+				Type:   "bind",
+				Source: tenzirStorageFolder,
+				Target: "/var/log/tenzir/",
+			},
+			{
+				Type:   "bind",
+				Source: tenzirStorageFolder,
+				Target: "/var/cache/tenzir/",
 			},
 		},
 		VolumeDriver: "local",
+		RestartPolicy: container.RestartPolicy{
+			Name: "always",
+		},
+	}
+
+	if skipPipelineMount {
+		hostConfig.Mounts = []mount.Mount{}
 	}
 
 	networkingConfig := &network.NetworkingConfig{
@@ -2767,6 +2902,13 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 
 	_, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
+		if strings.Contains(err.Error(), "path does not exist") {
+			log.Printf("[ERROR] Not using permanent pipeline storage as storage folder /opt/tenzir/ does not exist. If you want permanent storage, create the /opt/tendir/ folder then restart Orborus. Raw: %s", err)
+			skipPipelineMount = true
+		} else {
+			log.Printf("[ERROR] Failed to create Tenzir Node container: %v", err)
+		}
+
 		return err
 	}
 
@@ -2775,14 +2917,23 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		log.Printf("[ERROR] Failed to start Tenzir Node container: %v", err)
 		return err
 	}
-	log.Printf("[INFO] Tenzir Node container started successfully")
 
-	log.Printf("[INFO] Waiting for Tenzir to become available ...")
+	log.Printf("[INFO] Tenzir Node container started successfully. Waiting for it to become available..")
+	time.Sleep(10 * time.Second)
 	err = checkTenzirNode()
 	if err != nil {
+		log.Printf("[ERROR] Tenzir node is not available during deployment: %s", err)
 		return err
 	}
-	log.Printf("[INFO] Successfully deployed Tenzir Node!")
+
+	log.Printf("[INFO] Successfully deployed Tenzir Node! Setting up default syslog listener on UDP 514")
+
+	command := "from udp://0.0.0.0:514 read syslog | import"
+	_, err = createPipeline(command, "default-syslog-514")
+	if err != nil {
+		log.Printf("[ERROR] Failed to create default syslog pipeline: %s", err)
+		return nil
+	}
 
 	return nil
 }
@@ -2853,22 +3004,31 @@ func checkTenzirNode() error {
 
 func createPipeline(command, identifier string) (string, error) {
 
-	toBeDeleted := false
-	pipelineId, err := searchPipeline(identifier)
+	//toBeDeleted := false
+	/*
+		// Pre-checked. No point here
+		pipelineId, err := searchPipeline(identifier)
+		if err != nil {
+			return "", err
+		}
+	*/
 
 	url := fmt.Sprintf("%s/api/v0/pipeline/create", pipelineUrl)
 	forwardMethod := "POST"
 
-	if err != nil {
-		if strings.Contains(fmt.Sprintf("%s", err), "no existing pipeline found") {
-			log.Printf("[INFO] No existing pipeline found with id: %s. Creating a new one!", identifier)
+	/*
+		if err != nil {
+			if strings.Contains(fmt.Sprintf("%s", err), "no existing pipeline found") {
+				log.Printf("[INFO] No existing pipeline found with id: %s. Creating a new one!", identifier)
+			} else {
+				log.Printf("[ERROR] Failed to search for existing pipeline but continuing anyway : %s", err)
+			}
 		} else {
-			log.Printf("[ERROR] Failed to search for existing pipeline but continuing anyway : %s", err)
+			log.Printf("[INFO] an existing pipeline found with ID: %s. it will be deleted", pipelineId)
+			toBeDeleted = true
 		}
-	} else {
-		log.Printf("[INFO] an existing pipeline found with ID: %s. it will be deleted", pipelineId)
-		toBeDeleted = true
-	}
+	*/
+
 	// if strings.Contains(command, "shuffler.io") {
 
 	// } else {
@@ -2957,9 +3117,9 @@ func createPipeline(command, identifier string) (string, error) {
 
 	id := response.ID
 
-	if toBeDeleted {
-		go deletePipeline(pipelineId)
-	}
+	//if toBeDeleted {
+	//	go deletePipeline(pipelineId)
+	//}
 
 	return id, nil
 }
@@ -3071,44 +3231,48 @@ func deletePipeline(pipelineId string) error {
 		return fmt.Errorf("got the status code %d instead of 200", resp.StatusCode)
 	}
 
-	log.Printf("[INFO] pipeline with ID: %s deleted successfully", pipelineId)
+	log.Printf("[INFO] Pipeline with ID: %s deleted successfully", pipelineId)
+
+	pipelines = []shuffle.PipelineInfoMini{}
 	return nil
 }
 
-func searchPipeline(identifier string) (string, error) {
-
-	type pipelineInfo struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
+// Lists the pipelines from the API exactly as they are. Definition is set up in Shuffle structs
+func listPipelines() ([]shuffle.PipelineInfo, error) {
+	responseData := shuffle.PipelineInfoWrapper{}
 
 	var reqBody []byte
-
 	url := fmt.Sprintf("%s/api/v0/pipeline/list", pipelineUrl)
-
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
 
+	if err != nil {
+		return responseData.Pipelines, err
+	}
+
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("got the status code %d instead of 200", resp.StatusCode)
+		return responseData.Pipelines, fmt.Errorf("Got the status code %d instead of 200 from Pipeline node", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return responseData.Pipelines, err
 	}
 
-	var responseData struct {
-		Pipelines []pipelineInfo `json:"pipelines"`
-	}
 	if err := json.Unmarshal(body, &responseData); err != nil {
+		return responseData.Pipelines, err
+	}
+
+	return responseData.Pipelines, nil
+}
+
+func searchPipeline(identifier string) (string, error) {
+	allPipelines, err := listPipelines()
+	if err != nil {
 		return "", err
 	}
 
-	for _, pipeline := range responseData.Pipelines {
+	for _, pipeline := range allPipelines {
 		if pipeline.Name == identifier {
 			return pipeline.ID, nil
 		}
@@ -3317,72 +3481,45 @@ func removePath(containerName, path string) error {
 	return nil
 }
 
-func sendTenzirHealthStatus() error {
-	// Check one in every 10 times only
-	randint := rand.Intn(10)
-	_ = randint
-	//if randint != 0 {
-	//	return nil
-	//}
+func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
+	pipelinePayload := shuffle.LakeConfig{
+		Enabled:   false,
+		Pipelines: []shuffle.PipelineInfoMini{},
+	}
 
-	var status string
-	url := fmt.Sprintf("%s/api/v1/detections/siem/health", baseUrl)
-	err := checkTenzirNode()
-	if err != nil {
-		return err
+	// To not spam down the list API too much
+	randint := rand.Intn(5)
+	if len(pipelines) == 0 || randint == 0 {
+		pipelineDef, err := listPipelines()
+
+		if err == nil {
+			for _, pipeline := range pipelineDef {
+				pipelinePayload.Pipelines = append(pipelinePayload.Pipelines, shuffle.PipelineInfoMini{
+					ID:         pipeline.ID,
+					Name:       pipeline.Name,
+					Definition: pipeline.Definition,
+					TotalRuns:  pipeline.TotalRuns,
+					CreatedAt:  pipeline.CreatedAt,
+				})
+			}
+
+			pipelines = pipelinePayload.Pipelines
+		}
 	} else {
-		status = "active"
+		pipelinePayload.Pipelines = pipelines
 	}
 
-	//log.Printf("[DEBUG] Sending Tenzir health update to backend url '%s'", baseUrl)
-	forwardMethod := "POST"
-	payload := map[string]interface{}{
-		"status": status,
-		"environment": environment,
-		"authorization": "",
-		"org_id": "",
-
-	}
-
-	if len(auth) > 0 {
-		payload["authorization"] = auth
-	}
-
-	if len(org) > 0 {
-		payload["org_id"] = org
-	}
-
-	payloadBytes, err := json.Marshal(payload)
+	//url := fmt.Sprintf("%s/api/v1/detections/siem/health", baseUrl)
+	//err := checkTenzirNode()
+	err := deployTenzirNode() 
 	if err != nil {
-		log.Printf("[ERROR] Failed to marshal payload: %s", err)
-		return err
-	}
-	forwardData := bytes.NewBuffer(payloadBytes)
-	req, err := http.NewRequest(
-		forwardMethod,
-		url,
-		forwardData,
-	)
-	if err != nil {
-		log.Printf("[ERROR] Failed to create HTTP request: %s", err)
-		return err
+		return pipelinePayload, err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("[ERROR] Failed to send HTTP request: %s", err)
-		return err
-	}
+	pipelinePayload.Enabled = true
 
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		//log.Printf("[ERROR] Pipeline: status for URL %s: %d", url, resp.StatusCode)
-		return fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
-	}
-
-	return nil
+	// No direct sending.
+	return pipelinePayload, nil
 }
 
 func disableRule(fileName string) error {
@@ -3438,7 +3575,7 @@ func enableRule(fileName string) error {
 		return fmt.Errorf("error moving file: %v", err)
 	}
 
-	fmt.Printf("File %s moved to %s successfully.\n", fileName, destDir)
+	fmt.Printf("[DEBUG] File %s moved to %s successfully.\n", fileName, destDir)
 	return nil
 }
 
@@ -3575,7 +3712,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Check image name
 			if !shuffleFound {
-				log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
+				//log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
 				continue
 			}
 			//} else {
@@ -3675,7 +3812,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 
 	if strings.Contains(streamUrl, "shuffler.io") || strings.Contains(streamUrl, "localhost") || strings.Contains(streamUrl, "127.0.0.1") || strings.Contains(streamUrl, "shuffle-backend") {
 
-		// Specific to debugging 
+		// Specific to debugging
 		if len(workerServerUrl) == 0 {
 			log.Printf("[INFO] Using default worker server url as previous is invalid: %s", streamUrl)
 		}
