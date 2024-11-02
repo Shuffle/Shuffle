@@ -1,4 +1,4 @@
-name: dockerbuild
+name: Nightly Release
 on:
   release:
     types: [published]
