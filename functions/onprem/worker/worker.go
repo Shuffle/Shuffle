@@ -423,8 +423,24 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// value = strings.ReplaceAll(value, "_", "-")
 	value := identifier
 
+	baseDeployMode := false
+
+	// check if autoDeploy contains a value 
+	// that is equal to the image being deployed.
+	for _, value := range autoDeploy {
+		if value == image {
+			log.Printf("[DEBUG] Detected baseDeploy image. Resorting to not using the registry")
+			baseDeployMode = true
+		}
+	}
+
+	localRegistry := ""
+
 	// Checking if app is generated or not
-	localRegistry := os.Getenv("REGISTRY_URL")
+	if !baseDeployMode {
+		localRegistry := os.Getenv("REGISTRY_URL")
+	}
+
 	/*
 		appDetails := strings.Split(image, ":")[1]
 		appDetailsSplit := strings.Split(appDetails, "_")
@@ -445,11 +461,11 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		}
 	*/
 
-	if len(localRegistry) == 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0 {
+	if (len(localRegistry) == 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0) && !baseDeployMode {
 		localRegistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
 	}
 
-	if len(localRegistry) > 0 && strings.Count(image, "/") <= 2 {
+	if (len(localRegistry) > 0 && strings.Count(image, "/") <= 2) {
 		log.Printf("[DEBUG] Using REGISTRY_URL %s", localRegistry)
 		image = fmt.Sprintf("%s/%s", localRegistry, image)
 	} else {
