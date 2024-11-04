@@ -439,7 +439,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 
 	// Checking if app is generated or not
 	if !baseDeployMode && !autoDeployOverride {
-		localRegistry := os.Getenv("REGISTRY_URL")
+		localRegistry = os.Getenv("REGISTRY_URL")
 	} else {
 		log.Printf("[DEBUG] Detected baseDeploy image (%s) and dockerhub override. Resorting to using dockerhub instead of registry", image)
 	}
