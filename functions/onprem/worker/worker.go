@@ -433,7 +433,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		}
 	}
 
-	autoDeployOverride := os.Getenv("SHUFFLE_USE_DOCKERHUB_FOR_AUTODEPLOY") == "true"
+	autoDeployOverride := os.Getenv("SHUFFLE_USE_GCHR_OVERRIDE_FOR_AUTODEPLOY") == "true"
 
 	localRegistry := ""
 
