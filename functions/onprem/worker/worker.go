@@ -472,7 +472,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		log.Printf("[DEBUG] Using REGISTRY_URL %s", localRegistry)
 		image = fmt.Sprintf("%s/%s", localRegistry, image)
 	} else {
-		if strings.Count(image, "/") <= 2 {
+		if strings.Count(image, "/") <= 2 && !strings.HasPrefix(image, "frikky/shuffle:") {
 			image = fmt.Sprintf("frikky/shuffle:%s", image)
 		}
 	}
