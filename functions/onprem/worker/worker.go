@@ -429,16 +429,19 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// that is equal to the image being deployed.
 	for _, value := range autoDeploy {
 		if value == image {
-			log.Printf("[DEBUG] Detected baseDeploy image. Resorting to not using the registry")
 			baseDeployMode = true
 		}
 	}
 
+	autoDeployOverride := os.Getenv("SHUFFLE_USE_DOCKERHUB_FOR_AUTODEPLOY") == "true"
+
 	localRegistry := ""
 
 	// Checking if app is generated or not
-	if !baseDeployMode {
+	if !baseDeployMode && !autoDeployOverride {
 		localRegistry := os.Getenv("REGISTRY_URL")
+	} else {
+		log.Printf("[DEBUG] Detected baseDeploy image (%s) and dockerhub override. Resorting to using dockerhub instead of registry", image)
 	}
 
 	/*

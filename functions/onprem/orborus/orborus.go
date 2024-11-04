@@ -966,6 +966,10 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 		env = append(env, fmt.Sprintf("REGISTRY_URL=%s", os.Getenv("REGISTRY_URL")))
 	}
 
+	if len(os.Getenv("SHUFFLE_USE_DOCKERHUB_FOR_AUTODEPLOY")) > 0 {
+		env = append(env, fmt.Sprintf("SHUFFLE_USE_DOCKERHUB_FOR_AUTODEPLOY=%s", os.Getenv("SHUFFLE_USE_DOCKERHUB_FOR_AUTODEPLOY")))
+	}
+
 	clientset, _, err := shuffle.GetKubernetesClient()
 	if err != nil {
 		log.Printf("[ERROR] Error getting kubernetes client:", err)
