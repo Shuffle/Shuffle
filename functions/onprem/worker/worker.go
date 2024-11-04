@@ -441,7 +441,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	if !baseDeployMode && !autoDeployOverride {
 		localRegistry = os.Getenv("REGISTRY_URL")
 	} else {
-		log.Printf("[DEBUG] Detected baseDeploy image (%s) and dockerhub override. Resorting to using dockerhub instead of registry", image)
+		log.Printf("[DEBUG] Detected baseDeploy image (%s) and ghcr override. Resorting to using ghcr instead of registry", image)
 	}
 
 	/*
