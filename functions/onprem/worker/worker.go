@@ -464,11 +464,11 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		}
 	*/
 
-	if (len(localRegistry) == 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0) && !baseDeployMode {
+	if (len(localRegistry) == 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0) && !(baseDeployMode && autoDeployOverride) {
 		localRegistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
 	}
 
-	if (len(localRegistry) > 0 && strings.Count(image, "/") <= 2) {
+	if (len(localRegistry) > 0 && strings.Count(image, "/") <= 2) && !(baseDeployMode && autoDeployOverride) {
 		log.Printf("[DEBUG] Using REGISTRY_URL %s", localRegistry)
 		image = fmt.Sprintf("%s/%s", localRegistry, image)
 	} else {
