@@ -967,7 +967,7 @@ func deployK8sWorker(image string, identifier string, env []string) error {
 	}
 
 	if len(os.Getenv("SHUFFLE_USE_GCHR_OVERRIDE_FOR_AUTODEPLOY")) > 0 {
-		env = append(env, fmt.Sprintf("SHUFFLE_USE_DOCKERHUB_FOR_AUTODEPLOY=%s", os.Getenv("SHUFFLE_USE_DOCKERHUB_FOR_AUTODEPLOY")))
+		env = append(env, fmt.Sprintf("SHUFFLE_USE_GCHR_OVERRIDE_FOR_AUTODEPLOY=%s", os.Getenv("SHUFFLE_USE_GCHR_OVERRIDE_FOR_AUTODEPLOY")))
 	}
 
 	clientset, _, err := shuffle.GetKubernetesClient()
