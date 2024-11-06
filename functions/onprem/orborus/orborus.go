@@ -2903,7 +2903,7 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 	_, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
 		if strings.Contains(err.Error(), "path does not exist") {
-			log.Printf("[ERROR] Not using permanent pipeline storage as storage folder /opt/tenzir/ does not exist. If you want permanent storage, create the /opt/tendir/ folder then restart Orborus. Raw: %s", err)
+			log.Printf("[ERROR] Not using permanent pipeline storage as storage folder %s does not exist. If you want permanent storage, create the %s folder then restart Orborus (1). Raw: %s", tenzirStorageFolder, tenzirStorageFolder, err)
 			skipPipelineMount = true
 		} else {
 			log.Printf("[ERROR] Failed to create Tenzir Node container: %v", err)
@@ -2914,7 +2914,13 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 
 	err = dockercli.ContainerStart(ctx, containerName, containerStartOptions)
 	if err != nil {
-		log.Printf("[ERROR] Failed to start Tenzir Node container: %v", err)
+		if strings.Contains(err.Error(), "path does not exist") {
+			log.Printf("[ERROR] Not using permanent pipeline storage as storage folder %s does not exist. If you want permanent storage, create the %s folder then restart Orborus (2). Raw: %s", tenzirStorageFolder, tenzirStorageFolder, err)
+			skipPipelineMount = true
+		} else {
+			log.Printf("[ERROR] Failed to START Tenzir Node container: %v", err)
+		}
+
 		return err
 	}
 
