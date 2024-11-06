@@ -423,8 +423,27 @@ func deployk8sApp(image string, identifier string, env []string) error {
 	// value = strings.ReplaceAll(value, "_", "-")
 	value := identifier
 
+	baseDeployMode := false
+
+	// check if autoDeploy contains a value 
+	// that is equal to the image being deployed.
+	for _, value := range autoDeploy {
+		if value == image {
+			baseDeployMode = true
+		}
+	}
+
+	autoDeployOverride := os.Getenv("SHUFFLE_USE_GCHR_OVERRIDE_FOR_AUTODEPLOY") == "true"
+
+	localRegistry := ""
+
 	// Checking if app is generated or not
-	localRegistry := os.Getenv("REGISTRY_URL")
+	if !baseDeployMode && !autoDeployOverride {
+		localRegistry = os.Getenv("REGISTRY_URL")
+	} else {
+		log.Printf("[DEBUG] Detected baseDeploy image (%s) and ghcr override. Resorting to using ghcr instead of registry", image)
+	}
+
 	/*
 		appDetails := strings.Split(image, ":")[1]
 		appDetailsSplit := strings.Split(appDetails, "_")
@@ -445,15 +464,15 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		}
 	*/
 
-	if len(localRegistry) == 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0 {
+	if (len(localRegistry) == 0 && len(os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")) > 0) && !(baseDeployMode && autoDeployOverride) {
 		localRegistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
 	}
 
-	if len(localRegistry) > 0 && strings.Count(image, "/") <= 2 {
+	if (len(localRegistry) > 0 && strings.Count(image, "/") <= 2) && !(baseDeployMode && autoDeployOverride) {
 		log.Printf("[DEBUG] Using REGISTRY_URL %s", localRegistry)
 		image = fmt.Sprintf("%s/%s", localRegistry, image)
 	} else {
-		if strings.Count(image, "/") <= 2 {
+		if strings.Count(image, "/") <= 2 && !strings.HasPrefix(image, "frikky/shuffle:") {
 			image = fmt.Sprintf("frikky/shuffle:%s", image)
 		}
 	}
