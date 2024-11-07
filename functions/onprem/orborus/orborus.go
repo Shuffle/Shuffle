@@ -3519,9 +3519,8 @@ func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
 		pipelinePayload.Pipelines = pipelines
 	}
 
-	//url := fmt.Sprintf("%s/api/v1/detections/siem/health", baseUrl)
-	//err := checkTenzirNode()
-	err := deployTenzirNode() 
+	//err := deployTenzirNode() 
+	err := checkTenzirNode()
 	if err != nil {
 		return pipelinePayload, err
 	}
