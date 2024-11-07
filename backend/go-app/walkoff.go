@@ -333,7 +333,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			env.Checkin = timeNow
-			err = shuffle.SetEnvironment(ctx, &env)
+			err = shuffle.SetEnvironment(ctx, env)
 			if err != nil {
 				log.Printf("[ERROR] Failed updating environment: %s", err)
 			}
@@ -668,7 +668,8 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 			Sharing: 		workflowExecution.Workflow.Sharing,
 			Description:    workflowExecution.Workflow.Description,
 			InputQuestions: workflowExecution.Workflow.InputQuestions,
-			InputMarkdown:  workflowExecution.Workflow.InputMarkdown,
+
+			FormControl:	workflowExecution.Workflow.FormControl,
 		}
 
 		workflowExecution.Results = []shuffle.ActionResult{}
