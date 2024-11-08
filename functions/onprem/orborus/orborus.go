@@ -1,7 +1,7 @@
 package main
 
 /*
-	Orborus exists to listen for new workflow executions which are deployed as workers.
+	Orborus exists to listen for new jobs which are deployed as workers.
 */
 
 //  Potential issues:
@@ -2708,12 +2708,17 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 }
 
 func deployTenzirNode() error {
+	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" {
+		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
+	}
+
 	if isKubernetes == "true" {
 		return errors.New("Kubernetes not implemented for Tenzir node")
 	}
 
 	err := checkTenzirNode()
 	if err == nil {
+		log.Printf("[INFO] Tenzir Node is already running")
 		return nil
 	}
 
@@ -2851,15 +2856,17 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 			tenzirStorageFolder = tenzirStorageFolder + "/"
 		}
 	} else {
-		tenzirStorageFolder = "/tmp/tenzir/"
+		tenzirStorageFolder = "/tmp/"
+		log.Printf("[DEBUG] Using folder %s for Tenzir storage. Change it using SHUFFLE_STORAGE_FOLDER", tenzirStorageFolder) 
 	}
 
 
 	if !anyFound {
-		log.Printf("[DEBUG] No Tenzir Plugin environment variables found.") 
+		//log.Printf("[DEBUG] No Tenzir Plugin environment variables found.") 
 	} else {
 		//log.Printf("[DEBUG] Attempting Tenzir connection with app.tenzir.com tenant '%s'", tenzirPluginsPlatform)
 	}
+
 
 	hostConfig := &container.HostConfig{
 		PortBindings: nat.PortMap{
@@ -2929,7 +2936,7 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 	}
 
 	log.Printf("[INFO] Tenzir Node container started successfully. Waiting for it to become available..")
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	err = checkTenzirNode()
 	if err != nil {
 		log.Printf("[ERROR] Tenzir node is not available during deployment: %s", err)
@@ -2985,6 +2992,10 @@ func createNetworkIfNotExists(ctx context.Context, networkName, subnet, gateway 
 }
 
 func checkTenzirNode() error {
+	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" {
+		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
+	}
+
 	retries := 1
 
 	//retryInterval := 3 * time.Second
@@ -3519,9 +3530,13 @@ func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
 		pipelinePayload.Pipelines = pipelines
 	}
 
-	//err := deployTenzirNode() 
-	err := checkTenzirNode()
+	//err := checkTenzirNode()
+	err := deployTenzirNode() 
 	if err != nil {
+		if (!strings.Contains(err.Error(), "SHUFFLE_SKIP_PIPELINES")) {
+			log.Printf("[ERROR] Tenzir node connection problem: %s", err)
+		}	
+
 		return pipelinePayload, err
 	}
 
