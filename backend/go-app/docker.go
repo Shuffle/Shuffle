@@ -211,6 +211,7 @@ func fixTags(tags []string) []string {
 func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder string, downloadIfFail bool) error {
 	ctx := context.Background()
 	client, err := client.NewEnvClient()
+        defer client.Close()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
 		return err
@@ -476,6 +477,7 @@ func buildImage(tags []string, dockerfileLocation string) error {
 
 		ctx := context.Background()
 		client, err := client.NewEnvClient()
+                defer client.Close()
 		if err != nil {
 			log.Printf("Unable to create docker client: %s", err)
 			return err
