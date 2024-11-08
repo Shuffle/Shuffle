@@ -111,6 +111,7 @@ var executionIds = []string{}
 var pipelines = []shuffle.PipelineInfoMini{}
 var namespacemade = false // For K8s
 var skipPipelineMount = false 
+var tenzirDisabled = false 
 
 var dockercli *dockerclient.Client
 var containerId string
@@ -684,7 +685,8 @@ func deployServiceWorkers(image string) {
 			serviceOptions,
 		)
 
-		//dockercli.ServiceUpdate(
+		// Force deploy if it's not disabled
+		deployTenzirNode()
 
 		if err == nil {
 			log.Printf("[DEBUG] Successfully deployed workers with %d replica(s) on %d node(s)", replicas, cnt)
@@ -2461,153 +2463,6 @@ func main() {
 	}
 }
 
-// func deployPipeline(image, identifier, command string) error {
-// 	if isKubernetes == "true" {
-// 		return errors.New("Kubernetes not implemented")
-// 	}
-
-// 	ctx := context.Background()
-// 	hostConfig := &container.HostConfig{
-// 		LogConfig: container.LogConfig{
-// 			Type: "json-file",
-// 			Config: map[string]string{
-// 				"max-size": "10m",
-// 			},
-// 		},
-// 		Resources: container.Resources{},
-// 	}
-
-// 	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-// 	if strings.ToLower(cleanupEnv) != "false" {
-// 		hostConfig.AutoRemove = true
-// 	}
-
-// 	envVariables := []string{
-// 	}
-
-// 	// Add volume binds for storage
-// 	// Want read/write with full access for the container
-// 	//sourceFolder := "/Users/frikky/git/shuffle/shuffle-database"
-// 	//destinationFolder := "/tmp/storage"
-// 	//hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
-// 	//	Type:   mount.TypeBind,
-// 	//	Source: sourceFolder,
-// 	//	Target: destinationFolder,
-// 	//})
-
-// 	// FIXME: Is using sigma "automatically" here good?
-// 	// Or is it better to run it as a separate workflow?
-// 	if strings.Contains(command, "sigma") {
-// 		log.Printf("[DEBUG] Should LOAD sigma from backend in realtime and dump it in a folder inside the container")
-
-// 		//sourceFolder := "/tmp/tenzir/sigma"
-// 		//sigmaFolder := "/tmp/tenzir/sigma"
-// 		//hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
-// 		//	Type:   mount.TypeBind,
-// 		//	Source: sigmaFolder,
-// 		//	Target: sigmaFolder,
-// 		//}
-// 	}
-
-// 	config := &container.Config{
-// 		Image: image,
-// 		Env:   envVariables,
-// 		Cmd:   []string{
-// 			command,
-// 		},
-// 	}
-
-// 	// Add label to container in case of zombies
-// 	config.Labels = map[string]string{
-// 		"name":   identifier,
-// 		"shuffle": "shuffle",
-// 	}
-
-// 	cont, err := dockercli.ContainerCreate(
-// 		ctx,
-// 		config,
-// 		hostConfig,
-// 		nil,
-// 		nil,
-// 		identifier,
-// 	)
-
-// 	if err != nil {
-// 		if strings.Contains(fmt.Sprintf("%s", err), "Conflict. The container name ") {
-// 			log.Printf("[DEBUG] Pipeline Container %s already exists, removing it", identifier)
-// 		} else {
-// 			log.Printf("[ERROR] Failed to create pipeline container %s: %s", identifier, err)
-// 			return err
-// 		}
-// 	}
-
-// 	containerStartOptions := container.StartOptions{}
-// 	err = dockercli.ContainerStart(
-// 		ctx,
-// 		cont.ID,
-// 		containerStartOptions,
-// 	)
-// 	if err != nil {
-// 		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
-// 			hostConfig.NetworkMode = ""
-// 			cont, err = dockercli.ContainerCreate(
-// 				ctx,
-// 				config,
-// 				hostConfig,
-// 				nil,
-// 				nil,
-// 				identifier+"-2",
-// 			)
-// 			if err != nil {
-// 				log.Printf("[ERROR] Failed to CREATE pipeline container (2): %s", err)
-// 			}
-
-// 			err = dockercli.ContainerStart(
-// 				ctx,
-// 				cont.ID,
-// 				containerStartOptions,
-// 			)
-// 			if err != nil {
-// 				log.Printf("[ERROR] Failed to start pipeline container (2): %s", err)
-// 				return err
-// 			}
-// 		} else {
-// 			log.Printf("[ERROR] Failed initial pipeline container start. Quitting as this is NOT a simple network issue. Err: %s", err)
-// 		}
-
-// 		if err != nil {
-// 			log.Printf("[ERROR] Failed to start pipeline container in environment %s: %s", environment, err)
-// 			return err
-// 		} else {
-// 			log.Printf("[INFO] Pipeline Container created (1). Environment %s: docker logs %s", environment, cont.ID)
-// 		}
-
-// 		stats, err := dockercli.ContainerInspect(ctx, cont.ID)
-// 		if err != nil {
-// 			log.Printf("[ERROR] Failed checking pipeline with containername '%s'", cont.ID)
-// 			return nil
-// 		}
-
-// 		containerStatus := stats.ContainerJSONBase.State.Status
-// 		log.Printf("[DEBUG] Status of pipeline '%s' is %s. Should be running. Will reset", containerName, containerStatus)
-// 	}
-
-// 	// Wait for the container to finish
-// 	/*
-// 	statusCh, errCh := dockercli.ContainerWait(ctx, cont.ID, container.WaitConditionNotRunning)
-// 	select {
-// 	case err := <-errCh:
-// 		if err != nil {
-// 			log.Printf("[ERROR] Failed to wait for container: %s", err)
-// 		}
-// 	case <-statusCh:
-// 		log.Printf("[INFO] Container finished")
-// 	}
-// 	*/
-
-// 	return nil
-// }
-
 // Tenzir command samples
 // docker pull ghcr.io/dominiklohmann/tenzir-arm64:latest
 // docker tag ghcr.io/dominiklohmann/tenzir-arm64:latest tenzir/tenzir:latest
@@ -2909,6 +2764,13 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 				},
 			},
 		},
+	}
+
+	if isKubernetes != "true" {
+		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+		if strings.ToLower(cleanupEnv) != "false" {
+			hostConfig.AutoRemove = true
+		}
 	}
 
 	_, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
@@ -3530,12 +3392,19 @@ func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
 		pipelinePayload.Pipelines = pipelines
 	}
 
-	//err := checkTenzirNode()
+	if tenzirDisabled {
+		return pipelinePayload, nil
+	}
+
 	err := deployTenzirNode() 
 	if err != nil {
-		if (!strings.Contains(err.Error(), "SHUFFLE_SKIP_PIPELINES")) {
+		if (!strings.Contains(err.Error(), "SHUFFLE_SKIP_PIPELINES") && !strings.Contains(err.Error(), "Kubernetes not implemented for Tenzir node")) && !strings.Contains(err.Error(), "Tenzir Node is already running") && !strings.Contains(err.Error(), "docker daemon") {
+
 			log.Printf("[ERROR] Tenzir node connection problem: %s", err)
-		}	
+		} else {
+			tenzirDisabled = true
+			log.Printf("[ERROR] Disabling pipelines: %s. You will need to restart the Orborus to fix this.", err)
+		}
 
 		return pipelinePayload, err
 	}
