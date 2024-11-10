@@ -4074,9 +4074,14 @@ func runWebserver(listener net.Listener) {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/download", handleDownloadImage).Methods("POST", "OPTIONS")
+
+	// Synonyms. Require an execution ID + auth + shuffle backend
 	r.HandleFunc("/api/v1/execute", handleRunExecution).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/run", handleRunExecution).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/download", handleDownloadImage).Methods("POST", "OPTIONS")
+
+	// What would be require to run a workflow otherwise?
+	// Maybe directly /workflow/run
 
 	/*** STARTREMOVE ***/
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {

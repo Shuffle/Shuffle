@@ -2,7 +2,7 @@ module shuffle
 
 go 1.22.0
 
-//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 
 toolchain go1.22.2
 

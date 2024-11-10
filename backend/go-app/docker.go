@@ -211,6 +211,7 @@ func fixTags(tags []string) []string {
 func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder string, downloadIfFail bool) error {
 	ctx := context.Background()
 	client, err := client.NewEnvClient()
+        defer client.Close()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
 		return err
@@ -476,6 +477,7 @@ func buildImage(tags []string, dockerfileLocation string) error {
 
 		ctx := context.Background()
 		client, err := client.NewEnvClient()
+                defer client.Close()
 		if err != nil {
 			log.Printf("Unable to create docker client: %s", err)
 			return err
@@ -832,14 +834,23 @@ func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user
 		type tmpapp struct {
 			Success bool   `json:"success"`
 			OpenAPI string `json:"openapi"`
+			App 	string `json:"app"`
 		}
 
 		app := tmpapp{}
 		err := json.Unmarshal(respBody, &app)
 		if err != nil || app.Success == false || len(app.OpenAPI) == 0 {
 			log.Printf("[ERROR] Failed app unmarshal during auto-download. Success: %#v. Applength: %d: %s", app.Success, len(app.OpenAPI), err)
+
 			resp.WriteHeader(401)
+			if len(app.App) > 0 {
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Not an OpenAPI app, but a Python app. Please download the app using the Remote Download system: https://shuffler.io/docs/apps#importing-remote-apps"}`)))
+			} else {
+				resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			}
+
 			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+
 			return
 		}
 
