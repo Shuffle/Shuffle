@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='shuffle_app_sdk',  # Name of the package
+    name='shuffle_sdk',  # Name of the package
     version='0.0.1',  # Version number
     description='The SDK used for Shuffle',  
     long_description=open('README.md').read(),  
