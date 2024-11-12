@@ -38,7 +38,10 @@ jobs:
         python -m build
 
     - name: Move build artifacts
-      run: mv ./backend/app_sdk/dist/* ./dist/
+      run: |
+        ls -alh
+        ls -alh ./backend/app_sdk
+        mv ./backend/app_sdk/dist ./dist
 
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@v1.10.2
