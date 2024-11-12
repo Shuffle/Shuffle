@@ -1294,7 +1294,7 @@ const DocsWrapper = memo(({userdata, children })=>{
     return (
         <div style={{
             minHeight: 1000, zIndex: 1, 
-            maxWidth: Math.min(!userdata.support ? 1920 : leftSideBarOpenByClick ? windowWidth - 300 : windowWidth - 200, 1920), 
+            maxWidth: Math.min(!userdata?.support ? 1920 : leftSideBarOpenByClick ? windowWidth - 300 : windowWidth - 200, 1920), 
             minWidth: isMobile ? null : userdata?.support ? leftSideBarOpenByClick ? 800 : 900 : null, margin: "auto", 
             position: userdata?.support && leftSideBarOpenByClick ? "relative" : "static", 
             left: userdata?.support && leftSideBarOpenByClick ? 120 : userdata?.support && !leftSideBarOpenByClick ? 80 : 0, 
