@@ -65,7 +65,6 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   dropdownMenu: {
-    marginTop: theme.spacing(1),
     borderRadius: "12px !important",
     zIndex: 10,
     "& .MuiPaper-root": {
@@ -88,7 +87,6 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   dropdownMenuItem: {
-    padding: theme.spacing(2, 3),
     fontSize: "16px",
     fontWeight: 400,
     color: "#fff",
@@ -503,7 +501,7 @@ const Header = (props) => {
           minHeight: 370,
           padding: 20,
           backgroundColor: "rgba(0, 0, 0, 1)",
-          borderRadius: theme.palette.borderRadius,
+          borderRadius: theme.palette?.borderRadius,
         },
       }}
     >
@@ -928,7 +926,7 @@ const Header = (props) => {
                     },
                   }}
                   style={{
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                     backgroundColor: theme.palette.surfaceColor,
                     marginRight: 15,
                     color: "white",
@@ -1056,7 +1054,7 @@ const Header = (props) => {
                               <Typography
                                 variant="body2"
                                 style={{
-                                  borderRadius: theme.palette.borderRadius,
+                                  borderRadius: theme.palette?.borderRadius,
                                   float: "left",
                                   margin: "0 0 0 0",
                                   marginRight: 25,
@@ -1165,7 +1163,7 @@ const Header = (props) => {
                     padding: 8,
                     textAlign: "center",
                     cursor: "pointer",
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                     marginTop: 5,
                     backgroundColor: theme.palette.surfaceColor,
                     minWidth: 60,

@@ -69,6 +69,7 @@ import {
   AvatarGroup,
   Autocomplete,
   Radio,
+  ButtonGroup,
 } from "@mui/material";
 
 import {
@@ -186,6 +187,20 @@ export const triggers = [
       long_description: "Create a schedule based on cron",
 	  id: "",
     },
+    {
+      name: "Pipelines",
+      type: "TRIGGER",
+      status: "uninitialized",
+      description: "Run a pipeline trigger",
+      trigger_type: "PIPELINE",
+      errors: null,
+      is_valid: true, 
+      label: "Pipeline",
+      environment: "onprem",
+      large_image: "/images/workflows/tenzir2.png",
+      long_description: "Controls a pipeline to run things",
+	  id: "",
+    },
 	{
       name: "Shuffle Workflow",
       type: "TRIGGER",
@@ -213,20 +228,6 @@ export const triggers = [
       label: "User input",
       environment: "cloud",
       long_description: "Take user input to continue execution",
-	  id: "",
-    },
-    {
-      name: "Pipelines",
-      type: "TRIGGER",
-      status: "uninitialized",
-      description: "Run a pipeline trigger",
-      trigger_type: "PIPELINE",
-      errors: null,
-      is_valid: true, 
-      label: "Pipeline",
-      environment: "onprem",
-      large_image: "/images/workflows/tenzir2.png",
-      long_description: "Controls a pipeline to run things",
 	  id: "",
     },
   ];
@@ -404,7 +405,6 @@ const AngularWorkflow = (defaultprops) => {
   const [toolsApp, setToolsApp] = React.useState({});
   const [currentView, setCurrentView] = React.useState(0);
   const [triggerAuthentication, setTriggerAuthentication] = React.useState({});
-  const [triggerFolders, setTriggerFolders] = React.useState([]);
   const [workflows, setWorkflows] = React.useState([]);
   const [parentWorkflows, setParentWorkflows] = React.useState([]);
   const [showEnvironment, setShowEnvironment] = React.useState(false);
@@ -458,6 +458,7 @@ const AngularWorkflow = (defaultprops) => {
   const [showSkippedActions, setShowSkippedActions] = React.useState(false);
   const [lastExecution, setLastExecution] = React.useState("");
   const [configureWorkflowModalOpen, setConfigureWorkflowModalOpen] = React.useState(false);
+  const [autoCompleting, setAutocompleting] = React.useState(false);
 
   const [authgroupModalOpen, setAuthgroupModalOpen] = React.useState(false);
   const [authGroups, setAuthGroups] = React.useState([])
@@ -529,6 +530,7 @@ const AngularWorkflow = (defaultprops) => {
   // eslint-disable-next-line no-unused-vars
   const [_, setUpdate] = useState(""); // Used to force rendring, don't remove
 
+  const [executionFilter, setExecutionFilter] = React.useState("ALL")
   const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
   const [workflowExecutionCount, setWorkflowExecutionCount] = React.useState(0);
   const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0);
@@ -543,6 +545,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const [distributedFromParent, setDistributedFromParent] = React.useState("")
   const [suborgWorkflows, setSuborgWorkflows] = React.useState([])
+  const [allTriggers, setAllTriggers] = React.useState(undefined)
 
   const [suggestionBox, setSuggestionBox] = React.useState({
   	"position": {
@@ -670,6 +673,8 @@ const releaseToConnectLabel = "Release to Connect"
 	"field_number": -1,
 	"actionlist": [],	
 	"field_id": "",
+	
+	"example": "",
   })
 
   const [loadedApps, setLoadedApps] = React.useState([])
@@ -1033,6 +1038,7 @@ const releaseToConnectLabel = "Release to Connect"
 	};
 
   const getWorkflowExecutionCount = (workflowId) => {
+
     fetch(`${globalUrl}/api/v1/workflows/${workflowId}/executions/count`, {
       method: "GET",
       headers: {
@@ -1302,15 +1308,41 @@ const releaseToConnectLabel = "Release to Connect"
       });
   };
 
-  const getWorkflowExecution = (id, execution_id) => {
-    fetch(`${globalUrl}/api/v2/workflows/${id}/executions`, {
-      method: "GET",
+  const getWorkflowExecution = (id, execution_id, filter) => {
+	var url = `${globalUrl}/api/v2/workflows/${id}/executions`
+	var method = "GET"
+	if (filter === undefined || filter === null || filter.toUpperCase() === "ALL") {
+
+		// Check for 
+		if (executionFilter !== undefined && executionFilter !== null && executionFilter.length > 0) {
+			filter = executionFilter
+		} else {
+			filter = "ALL"
+		}
+	} 
+
+	var formattedBody = {
+      method: method,
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
       credentials: "include",
-    })
+    }
+
+	if (filter !== "ALL") {
+	  formattedBody.method = "POST"
+
+	  formattedBody.body = JSON.stringify({
+		  "status": filter,
+		  "workflow_id": id,
+	  })
+
+	  url = `${globalUrl}/api/v1/workflows/search`
+
+    }
+
+    fetch(url, formattedBody)
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for WORKFLOW EXECUTION :O!");
@@ -1319,6 +1351,10 @@ const releaseToConnectLabel = "Release to Connect"
         return response.json();
       })
       .then((responseJson) => {
+        if (responseJson !== undefined && responseJson !== null && responseJson.runs !== undefined && responseJson.runs !== null) {
+			responseJson.executions = responseJson.runs
+		}
+
         if (responseJson !== undefined && responseJson !== null && responseJson.executions !== undefined && responseJson.executions !== null) {
 
           // - means it's opposite
@@ -1383,8 +1419,6 @@ const releaseToConnectLabel = "Release to Connect"
         } else {
           const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
           var tmpView = new URLSearchParams(cursearch).get("execution_id");
-		  console.log("Alertnative execution id check: ", tmpView)
-
           if (tmpView === undefined || tmpView === null || tmpView.length === 0) {
             const execution_id = tmpView;
 		    setExecutionModalView(1);
@@ -1500,44 +1534,7 @@ const releaseToConnectLabel = "Release to Connect"
    if (selectedOption === "Kafka Queue") {
     trigger.parameters = []
 
-    const topic = document.getElementById('topic')?.value
-    const bootstrapServers = document.getElementById('bootstrap_servers')?.value
-    const groupId = document.getElementById('group_id')?.value
-    const autoOffsetReset = document.getElementById('auto_offset_reset')?.value;
-
-    if(topic) {
-      trigger.parameters.push({
-        name: "topic",
-        value: topic
-      })
-    } else {
-      toast("Please enter the topic name");
-      return;
-    }
-  
-    if (bootstrapServers) {
-      trigger.parameters.push({
-        name: "bootstrap_servers",
-        value: bootstrapServers
-      });
-    } else {
-      toast("please enter bootstrap server details");
-      return;
-    }
-  
-    if (groupId) {
-      trigger.parameters.push({
-        name: "group_id",
-        value: groupId
-      });
-    }
-  
-    if (autoOffsetReset) {
-      trigger.parameters.push({
-        name: "auto_offset_reset",
-        value: autoOffsetReset
-      });
-    }
+    const pipeline = document.getElementById('pipeline')?.value
   
     setTenzirConfigModalOpen(false);
   } else if (selectedOption === "Syslog listener") {
@@ -3457,9 +3454,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 		if (responseJson.childorg_workflow_ids !== undefined && responseJson.childorg_workflow_ids !== null && responseJson.childorg_workflow_ids.length > 0) {
   			getChildWorkflows(responseJson.id) 
-		}
-
-		if (responseJson.parentorg_workflow !== undefined && responseJson.parentorg_workflow !== null && responseJson.parentorg_workflow.length > 0) {
+		} else if (responseJson.parentorg_workflow !== undefined && responseJson.parentorg_workflow !== null && responseJson.parentorg_workflow.length > 0) {
   			getChildWorkflows(responseJson.parentorg_workflow)
 		}
 
@@ -3805,13 +3800,9 @@ const releaseToConnectLabel = "Release to Connect"
       setSelectedAction({});
       setSelectedApp({});
       setSelectedComment({})
-      setSelectedEdge({});
-
-
       setSelectedEdge({})
       //setSelectedActionEnvironment({})
       setTriggerAuthentication({})
-      setTriggerFolders([])
       setLocalFirstrequest(true)
 
       setSelectedTrigger({});
@@ -4036,13 +4027,9 @@ const releaseToConnectLabel = "Release to Connect"
 			var found = false;
 			for (let nodekey in allNodes) {
 				const currentNode = allNodes[nodekey];
-				if (
-					currentNode.data.attachedTo === nodedata.id &&
-					currentNode.data.isDescriptor
-				) {
-					found = true;
-					console.log("FOUND THE NODE!");
-					break;
+				if (currentNode.data.attachedTo === nodedata.id && currentNode.data.isDescriptor) {
+					found = true
+					break
 				}
 			}
 
@@ -4391,10 +4378,14 @@ const releaseToConnectLabel = "Release to Connect"
 		// This is to find sample response and parse it as string
 		
 		var AppContext = []
+		var originalParams = []
+					
 		if (inputAction !== undefined && inputAction !== null) {
+			// Reload the data without copying
+			inputAction = JSON.parse(JSON.stringify(inputAction))
+			originalParams = JSON.parse(JSON.stringify(inputAction.parameters))
 			const parents = getParents(inputAction)
 
-			console.log("Parents: ", parents)
 			var actionlist = []
 			if (parents.length > 1) {
 				for (let [key,keyval] in Object.entries(parents)) {
@@ -4473,9 +4464,26 @@ const releaseToConnectLabel = "Release to Connect"
 					"action_name": item.action_name,
 					"label": item.label,
 					"example": exampledata,
-					"example_response": exampledata,
+					//"example_response": exampledata,
 				})
 			}
+
+			var params = []
+			for (var paramkey in inputAction.parameters) {
+				const param = inputAction.parameters[paramkey]
+				if (param.configuration) {
+					continue
+				}
+
+				// Mainly for booleans
+				if (param.options !== undefined && param.options !== null && param.options.length > 0) {
+					continue
+				}
+
+				params.push(param)
+			}
+
+			inputAction.parameters = params
 		}
 
 		var conversationData = {
@@ -4486,6 +4494,7 @@ const releaseToConnectLabel = "Release to Connect"
 			"workflow_id": workflow.id,
 		}
 
+
 		if (inputAction !== undefined) {
 			console.log("Add app context! This should them get parameters directly")
 			conversationData.output_format = "action_parameters"
@@ -4494,16 +4503,13 @@ const releaseToConnectLabel = "Release to Connect"
 			conversationData.app_name = inputAction.app_name
 			conversationData.action_name = inputAction.name
 			conversationData.parameters = inputAction.parameters
-
-			if (!value.includes(inputAction.label)) {
-				conversationData.query = inputAction.label.replaceAll("_", " ")
-			}
 		}
 
 		// Onprem not available yet (April 2023)
 		// Should: Make OpenAI work for them with their own key
-		//fetch("https://shuffler.io/api/v1/conversation", {
-		fetch(`${globalUrl}/api/v1/conversation`, {
+		//fetch(`${globalUrl}/api/v1/conversation`, {
+		const url = `${globalUrl}/api/v1/conversation`
+		fetch(url, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -4513,12 +4519,16 @@ const releaseToConnectLabel = "Release to Connect"
 			credentials: "include",
 		})
 		.then((response) => {
+		    setAiQueryModalOpen(false)
+  			setAutocompleting(false)
 			if (setSuggestionLoading !== undefined) {
 				setSuggestionLoading(false)
 			}
 
 			if (response.status !== 200) {
 				console.log("Status not 200 for stream results :O!");
+			} else {
+				toast("Completion finished. Please verify your action!")
 			}
 
 			return response.json();
@@ -4543,52 +4553,71 @@ const releaseToConnectLabel = "Release to Connect"
 				}
 
 				var changed = false
-
-				for (let paramkey in inputAction.parameters) {
-					const actionParam = inputAction.parameters[paramkey]
-
-					if (actionParam.autocompleted === true) {
+				for (let respParamKey in responseJson.parameters) {
+					var respParam = responseJson.parameters[respParamKey]
+					if (respParam.value === undefined || respParam.value === null || respParam.value === "" ) {
 						continue
 					}
 
-					if (actionParam.configuration === true && actionParam.name !== "url") {
-						continue
-					}
-
-					if (actionParam.value !== "" && actionParam.value !== actionParam.example) {
-						console.log("Skipping: ", actionParam)
-						continue
-					}
-
-					for (let respParam of responseJson.parameters) {
-						if (respParam.name === actionParam.name) {
-							console.log("Found match for param: ", respParam)
-
-							if (respParam.value === "") {
-								break
-							}
-
-							changed = true
-			
-							inputAction.parameters[paramkey].autocompleted = true
-							inputAction.parameters[paramkey].value = respParam.value
-							break
+					for (let paramkey in originalParams) {
+						const actionParam = originalParams[paramkey]
+						/*
+						if (actionParam.value !== "" && actionParam.value !== actionParam.example) {
+							console.log("Skipping: ", actionParam)
+							continue
 						}
+						*/
+
+						if (respParam.name !== actionParam.name) {
+							continue
+						}
+
+						const codeeditor = document.getElementById("shuffle-codeeditor")
+						if (codeeditor !== undefined && codeeditor !== null) {
+							const editorInstance = window?.ace?.edit("shuffle-codeeditor")
+							if (editorInstance === undefined || editorInstance === null) {
+								toast.error("Failed to find code editor instance")
+								return
+							} else {
+								editorInstance.setValue(respParam.value)
+								originalParams[paramkey].autocompleted = true
+								changed = true
+							}
+						}
+
+						if (!changed) {
+							console.log("Found match for param: ", respParam)
+							changed = true
+							originalParams[paramkey].autocompleted = true
+							originalParams[paramkey].value = respParam.value
+						}
+
+						break
 					}
 				}
 
 				if (changed === true) {
+					inputAction.parameters = originalParams
 					console.log("Setting action! Force update pls :)")
 					setUpdate(Math.random())
+
 					setSelectedAction(inputAction)
+
+					// Find it in cytoscape and update the action 
+					if (cy !== undefined && cy !== null) {
+						const cyAction = cy.getElementById(inputAction.id)
+						if (cyAction !== undefined && cyAction !== null) {
+							cyAction.data("parameters", inputAction.parameters)
+						}
+					}
+
 				}
 
 				return
 			}
 
-			console.log("Suggestionbox location: ", suggestionBox)
-
 			// Add action
+			console.log("Suggestionbox location: ", suggestionBox)
 			if (responseJson.app_name !== undefined && responseJson.app_name !== null) {
 				// Always added to 0, 0
 				// Should use suggestionBox.position.x, suggestionBox.position.y
@@ -4640,6 +4669,8 @@ const releaseToConnectLabel = "Release to Connect"
 			}
 		})
 		.catch((error) => {
+		    setAiQueryModalOpen(false)
+  			setAutocompleting(false)
 			if (setSuggestionLoading !== undefined) {
 				setSuggestionLoading(false)
 			}
@@ -5278,9 +5309,6 @@ const releaseToConnectLabel = "Release to Connect"
 				authenticationOptions[latestindex].last_modified = true
 		    }
 
-
-		    console.log("auth options 2: ", authenticationOptions)
-
             curaction.authentication = authenticationOptions
             if (
               curaction.selectedAuthentication === null ||
@@ -5290,7 +5318,6 @@ const releaseToConnectLabel = "Release to Connect"
               curaction.selectedAuthentication = {};
             }
           } else {
-			console.log("auth option 3")
 
             curaction.authentication = []
             curaction.authentication_id = "";
@@ -5374,7 +5401,7 @@ const releaseToConnectLabel = "Release to Connect"
 
         var trigger_index = workflow.triggers.findIndex(
           (a) => a.id === data.id
-        );
+        )
 
         if (trigger_index === -1) {
           workflow.triggers.push(data)
@@ -5393,7 +5420,6 @@ const releaseToConnectLabel = "Release to Connect"
 			}
         } else if (data.app_name === "Webhook") {
           if (workflow.triggers[trigger_index].parameters !== undefined && workflow.triggers[trigger_index].parameters !== null && workflow.triggers[trigger_index].parameters.length > 0) {
-			console.log("Can set params here!")
             workflow.triggers[trigger_index].parameters[0] = {
               name: "url",
               value: referenceUrl + "webhook_" + workflow.triggers[trigger_index].id,
@@ -5476,6 +5502,34 @@ const releaseToConnectLabel = "Release to Connect"
 						    }]
 
 							workflow.triggers[trigger_index].parameters = trigger.parameters
+						}
+					}
+				}
+			}
+
+			if (allTriggers !== undefined && allTriggers !== null) { 
+
+				// Just checking all three. Could just make a new list, but meh 
+				if (allTriggers.pipelines !== undefined && allTriggers.pipelines !== null) {
+					for (var pipelineKey in allTriggers.pipelines) {
+						if (allTriggers.pipelines[pipelineKey].id === data.id) {
+							data.status = allTriggers.pipelines[pipelineKey].status
+						}
+					}
+				}
+
+				if (allTriggers.webhooks !== undefined && allTriggers.webhooks !== null) {
+					for (var webhookKey in allTriggers.webhooks) {
+						if (allTriggers.webhooks[webhookKey].id === data.id) {
+							data.status = allTriggers.webhooks[webhookKey].status
+						}
+					}
+				}
+
+				if (allTriggers.schedules !== undefined && allTriggers.schedules !== null) {
+					for (var scheduleKey in allTriggers.schedules) {
+						if (allTriggers.schedules[scheduleKey].id === data.id) {
+							data.status = allTriggers.schedules[scheduleKey].status
 						}
 					}
 				}
@@ -7392,6 +7446,7 @@ const releaseToConnectLabel = "Release to Connect"
       console.log("NODE UNFINISHED (hover in): ", nodedata)
 
 	  // Should just be 1, so this should be fast enough :3
+	  /*
 	  const incomingEdges = event.target.incomers("edge").jsons()
 	  if (incomingEdges !== undefined && incomingEdges !== null) {
 		  for (var i = 0; i < incomingEdges.length; i++) {
@@ -7410,6 +7465,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  }
 
       return
+	  */
     }
 
 
@@ -8315,10 +8371,36 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
 		setAllRevisions(responseJson)
-    setSelectedVersion(responseJson[0])
+    	setSelectedVersion(responseJson[0])
 	  })
 	  .catch((error) => {
 		console.log("Error getting workflow revisions: ", error)
+	  });
+    }
+
+	const loadTriggers = () => {
+	  const url = `${globalUrl}/api/v1/triggers`
+      fetch(url,
+        {
+          method: "GET",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+        }
+      )
+	  .then((response) => {
+	    if (response.status !== 200) {
+	  		throw new Error("No folders :o!");
+	    }
+
+	    return response.json();
+	  })
+	  .then((responseJson) => {
+	  	if (responseJson.success !== false) {
+	  		setAllTriggers(responseJson)
+	  	}
+	  })
+	  .catch((error) => {
+	    console.log("Get outlook folders error: ", error.toString());
 	  });
     }
 
@@ -8329,6 +8411,7 @@ const releaseToConnectLabel = "Release to Connect"
     getWorkflow(props.match.params.key, {});
   	getChildWorkflows(props.match.params.key)
 	getRevisionHistory(props.match.params.key)
+	loadTriggers() 
     getApps()
     fetchUsecases()
 
@@ -8374,16 +8457,12 @@ const releaseToConnectLabel = "Release to Connect"
     // 2nd load - configures cytoscape
   //} else if (!established && cy !== undefined && ((apps !== null && apps !== undefined && apps.length > 0) || workflow.public === true) && Object.getOwnPropertyNames(workflow).length > 0 && appAuthentication !== undefined && workflowRecommendations !== undefined) {
   } else if (!established && cy !== undefined && ((apps !== null && apps !== undefined && apps.length > 0) || workflow.public === true) && Object.getOwnPropertyNames(workflow).length > 0 && appAuthentication !== undefined) {
-    console.log("In POST graph setup!")
-
 
     //This part has to load LAST, as it's kind of not async.
     //This means we need everything else to happen first.
 
     setEstablished(true);
     // Validate if the node is just a node lol
-
-    console.log("CY grid: ", cy.gridGuide)
 
     // https://www.npmjs.com/package/cytoscape-grid-guide
     //
@@ -8441,7 +8520,6 @@ const releaseToConnectLabel = "Release to Connect"
     }
     // preview: true,
 
-    console.log("In POST graph setup 2")
     cy.fit(null, 200);
 
     cy.on("boxselect", "node", (e) => {
@@ -8493,7 +8571,6 @@ const releaseToConnectLabel = "Release to Connect"
 
     document.title = "Workflow - " + workflow.name;
 
-    console.log("In POST graph setup 3")
 	startWorkflowStream(props.match.params.key);
 
     registerKeys();
@@ -8551,7 +8628,6 @@ const releaseToConnectLabel = "Release to Connect"
     if (alledges !== undefined && alledges !== null && alledges.length > 0) {
       for (let edgekey in alledges) {
         const tmp = alledges[edgekey];
-        console.log("TMP: ", tmp, tmp.data.source);
         if (tmp.data.source === trigger.id) {
           mappedStartnode = tmp.data.target;
           break;
@@ -8712,7 +8788,7 @@ const releaseToConnectLabel = "Release to Connect"
   };
 
   const paperAppStyle = {
-    borderRadius: theme.palette.borderRadius,
+    borderRadius: theme.palette?.borderRadius,
     minHeight: isMobile ? 50 : 70,
     maxHeight: isMobile ? 50 : 70,
     minWidth: isMobile ? 50 : "100%",
@@ -8725,7 +8801,7 @@ const releaseToConnectLabel = "Release to Connect"
   };
 
   const paperVariableStyle = {
-    borderRadius: theme.palette.borderRadius,
+    borderRadius: theme.palette?.borderRadius,
     minHeight: 50,
     maxHeight: 50,
     minWidth: "100%",
@@ -9114,27 +9190,19 @@ const releaseToConnectLabel = "Release to Connect"
         <div style={appScrollStyle}>
           {triggers.map((trigger, index) => {
 
-			/*
-			if (trigger.trigger_type === "PIPELINE") {
-				if (userdata.support !== true) {
-					  return null
-				} 
-			}
-			*/
-
 			// Hiding since March 2024
 			if (trigger.trigger_type === "EMAIL") {
 				return null
 			}
 
 			const imagesize = isMobile ? 40 : trigger.large_image.includes("svg") ? 50 : 50 
-            var imageline = trigger.large_image.length === 0 ? <img alt="" style={{ borderRadius: theme.palette.borderRadius, width: isMobile ? 40 : 60 , pointerEvents: "none" }} />
+            var imageline = trigger.large_image.length === 0 ? <img alt="" style={{ borderRadius: theme.palette?.borderRadius, width: isMobile ? 40 : 60 , pointerEvents: "none" }} />
               : 
                 <img
                   alt=""
                   src={trigger.large_image}
                   style={{ 
-					  borderRadius: theme.palette.borderRadius, 
+					  borderRadius: theme.palette?.borderRadius, 
 					  width: imagesize, 
 					  height: imagesize, 
 					  // Stretch if necessary
@@ -9251,7 +9319,7 @@ const releaseToConnectLabel = "Release to Connect"
           y: e.pageY - cycontainer.offsetTop,
         };
 
-        const newAppData = {
+        var newAppData = {
           app_name: data.name,
           app_version: "1.0.0",
           environment: isCloud ? "cloud" : data.environment,
@@ -9271,7 +9339,29 @@ const releaseToConnectLabel = "Release to Connect"
           name: data.name,
           isStartNode: false,
           position: newposition,
-        };
+        }
+
+		if (data.name === "Pipelines") {	
+			var newenv = environments.find((env) => {
+				if (env.archived) {
+					return false
+				}
+
+				if (env.Name === "cloud" || env.Type === "cloud") {
+					return false
+				}
+
+				return true
+			})
+
+			console.log("NEWENV: ", environments, newenv)
+			if (newenv !== undefined && newenv !== null) {
+				newAppData.environment = newenv.Name
+			} else {
+				newAppData.environment = ""
+			}
+		}
+	    console.log("NEW DATA: ", newAppData)
 
         // Can all the data be in here? hmm
         const nodeToBeAdded = {
@@ -9418,6 +9508,8 @@ const releaseToConnectLabel = "Release to Connect"
 
   const handleAppDrag = (e, app) => {
     const cycontainer = cy.container();
+
+	console.log("APPDRAG!")
 
 
 	if (app.type === "TRIGGER") {
@@ -9816,7 +9908,7 @@ const releaseToConnectLabel = "Release to Connect"
                     pointerEvents: "none",
                     userDrag: "none",
                     userSelect: "none",
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                     height: isMobile ? 40 : 55,
                     width: isMobile ? 40 : 55,
                   }}
@@ -9915,7 +10007,7 @@ const releaseToConnectLabel = "Release to Connect"
         }}>
           <TextField
             fullWidth
-            style={{ backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, maxWidth: leftBarSize - 20, }}
+            style={{ backgroundColor: theme.palette.inputColor, borderRadius: theme.palette?.borderRadius, maxWidth: leftBarSize - 20, }}
             InputProps={{
               style: {
               },
@@ -10139,7 +10231,7 @@ const releaseToConnectLabel = "Release to Connect"
           <TextField
             style={{
               backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
               marginTop: 5,
               marginRight: 10,
             }}
@@ -10695,7 +10787,7 @@ const releaseToConnectLabel = "Release to Connect"
     maxHeight: "100vh",
     border: "1px solid rgb(91, 96, 100)",
     zIndex: 1000,
-    borderRadius: theme.palette.borderRadius,
+    borderRadius: theme.palette?.borderRadius,
     resize: "both",
     overflow: "auto",
 
@@ -10939,7 +11031,7 @@ const releaseToConnectLabel = "Release to Connect"
       <TextField
         style={{
           backgroundColor: theme.palette.inputColor,
-          borderRadius: theme.palette.borderRadius,
+          borderRadius: theme.palette?.borderRadius,
         }}
         InputProps={{
           style: {
@@ -11455,30 +11547,171 @@ const releaseToConnectLabel = "Release to Connect"
 		</DialogContent>
     </Dialog>
 
+  const submitQueryModal = () => {
+	const changeActionTextfield = document.getElementById("change-action-textfield")
+	if (changeActionTextfield === undefined || changeActionTextfield === null) {
+		setAiQueryModalOpen(false)
+		toast.error("Failed to find textfield")
+		return
+	}
+
+	if (changeActionTextfield.value === undefined || changeActionTextfield.value === null || changeActionTextfield.value === "") { 
+		toast("Please provide how you want formatting to happen")
+		return
+	}
+
+	setAutocompleting(true)
+	if (codeEditorModalOpen === true) { 
+		autoFormatCodemodal(changeActionTextfield.value)
+	} else {
+		aiSubmit(changeActionTextfield.value, undefined, undefined, selectedAction)
+	}
+  }
+
+	const autoFormatCodemodal = (input) => {
+		if (codeEditorModalOpen !== true) { 
+			toast.error("Code editor is not open")
+			return
+		}
+
+		if (editorData.name === undefined || editorData.name === null || editorData.name === "") {
+			toast.error("Failed to find editor field name")
+			return
+		}
+
+		const codeeditor = document.getElementById("shuffle-codeeditor")
+		if (codeeditor === undefined || codeeditor === null) {
+			toast.error("Failed to find code editor html")
+			return
+		} 
+
+		const editorInstance = window?.ace?.edit("shuffle-codeeditor")
+		if (editorInstance === undefined || editorInstance === null) {
+			toast.error("Failed to find code editor instance")
+			return
+		}
+
+		//console.log("ACE data: ", editorInstance.getValue())
+		//editorInstance.setValue("HELO")
+
+		// Should try to automatically fix this input
+		console.log("Running AI input fixer: ", selectedResult)
+		if (aiSubmit === undefined || selectedAction === undefined) {
+			toast.error("Failed to find AI submit function")
+			return
+		}
+			
+		// Should remove params from selectedAction that aren't parameterName  
+		var tmpAction = JSON.parse(JSON.stringify(selectedAction))
+		var tmpParams = tmpAction.parameters.filter((param) => param.name === editorData.name)
+		if (tmpParams.length !== 1) {
+			toast.error("Failed to find correct parameter in action")
+			return
+		}
+
+		tmpParams[0].value = editorInstance.getValue() 
+		tmpAction.parameters = tmpParams
+		aiSubmit(input, undefined, undefined, tmpAction)
+	}
+
   const aiQueryModal = 
     <Dialog
-      PaperComponent={PaperComponent}
-      disableEnforceFocus={true}
-      hideBackdrop={true}
-      disableBackdropClick={true}
-      style={{ pointerEvents: "none" }}
       PaperComponent={PaperComponent}
       aria-labelledby="draggable-dialog-title"
       open={aiQueryModalOpen}
       PaperProps={{
         style: {
-          pointerEvents: "auto",
           color: "white",
-          minWidth: isMobile ? "90%" : 800,
+          minWidth: isMobile ? "90%" : 450,
           border: theme.palette.defaultBorder,
+		  padding: 50, 
+		  paddingBottom: 70,
+
+    	  borderImage: "linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1",
         },
       }}
       onClose={() => {
+		  setAiQueryModalOpen(false)
       }}
     >
-        <DialogTitle id="draggable-dialog-title" style={{ cursor: "move", }}>
-          <span style={{ color: "white" }}>Condition</span>
-        </DialogTitle>
+        <Tooltip
+          title="Move window"
+          placement="top"
+          style={{ zIndex: 10011 }}
+        >
+          <IconButton
+            id="draggable-dialog-title"
+            style={{ 
+				position: "absolute", 
+				top: 4, 
+				right: 34, 
+				cursor: "move",
+			}}
+            onClick={(e) => {
+            }}
+          >
+            <DragIndicatorIcon style={{ color: "white" }} />
+          </IconButton>
+        </Tooltip>
+		<IconButton
+		  style={{
+			position: "absolute",
+			top: 6,
+			right: 6,
+			color: "white",
+		  }}
+		  onClick={() => {
+			setAiQueryModalOpen(false)
+		  }}
+		>
+		  <CloseIcon />
+		</IconButton>
+        <Typography variant="h6" color="textPrimary">
+			Shuffle AI	
+		</Typography>
+        <Typography variant="body2" color="textSecondary">
+			What you write here will be fed to the Shuffle AI to generate a change for the selected action or field. Best used for when you are stuck with formatting. Uses your AI credits (resets monthly). Alpha feature. Please give feedback to support@shuffler.io {"<"}3
+
+		</Typography>
+		<TextField
+			color="primary"
+			autoFocus
+			label={codeEditorModalOpen ? `How do you want to change the ${editorData?.name} field?` : ""}
+			id="change-action-textfield"
+			disabled={autoCompleting}
+			minRows={1}
+			maxRows={4}
+			multiline
+			style={{
+				backgroundColor: theme.palette.inputColor, 
+				marginTop: 15, 
+			}}
+			defaultValue={codeEditorModalOpen === true ? "" : selectedAction?.label !== undefined ? selectedAction.label.replaceAll("_", " ") : ""}
+			fullWidth
+			InputProps={{
+				endAdornment: (
+					<InputAdornment position="end">
+						<Button
+							color="primary"
+							edge="end"
+							disabled={autoCompleting}
+							onClick={() => {
+								submitQueryModal()
+							}}
+						>	
+							{autoCompleting ? <CircularProgress size={20} /> : "Submit"}
+							<SendIcon style={{marginLeft: 10, }}/>
+						</Button>
+					</InputAdornment>
+				),
+				onKeyPress: (e) => {
+					if (e.key === "Enter" && !e.shiftKey) {
+						submitQueryModal()
+					}
+				},
+			}}
+
+		/>
     </Dialog>
 
 
@@ -12159,659 +12392,6 @@ const releaseToConnectLabel = "Release to Connect"
     );
   };
 
-  // 1. GET the trigger authentication data
-  // 2. Parse the fields that are used (outlook & gmail)
-  // 3. Parse the folders that are selected
-  // 4. Start / stop
-  const EmailSidebar = () => {
-    if (Object.getOwnPropertyNames(selectedTrigger).length === 0) {
-      return null;
-    }
-
-    if (workflow.triggers[selectedTriggerIndex] === undefined) {
-      return null;
-    }
-
-    if (
-      workflow.triggers[selectedTriggerIndex].parameters === undefined ||
-      workflow.triggers[selectedTriggerIndex].parameters === null ||
-      workflow.triggers[selectedTriggerIndex].parameters.length === 0
-    ) {
-      workflow.triggers[selectedTriggerIndex].parameters = [
-        { value: "No folders selected yet", name: "outlookfolder" },
-      ];
-      selectedTrigger.parameters = [
-        { value: "No folders selected yet", name: "outlookfolder" },
-      ];
-      setWorkflow(workflow);
-      setSelectedTrigger(selectedTrigger);
-    }
-
-    const setGmailFolders = () => {
-      console.log("In set gmail folders");
-      fetch(
-        globalUrl +
-        "/api/v1/triggers/gmail/getFolders?trigger_id=" +
-        selectedTrigger.id,
-        {
-          method: "GET",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-        }
-      )
-        .then((response) => {
-          if (response.status !== 200) {
-            throw new Error("No folders :o!");
-          }
-
-          return response.json();
-        })
-        .then((responseJson) => {
-          if (
-            responseJson !== undefined &&
-            responseJson !== null &&
-            responseJson.success !== false &&
-            responseJson.length > 0
-          ) {
-            setTriggerFolders(responseJson);
-          }
-
-          if (
-            workflow.triggers[selectedTriggerIndex].parameters.length === 0 &&
-            responseJson.length > 0
-          ) {
-            workflow.triggers[selectedTriggerIndex].parameters = [
-              {
-                value: responseJson[0].displayName,
-                name: "outlookfolder",
-                id: responseJson[0].id,
-              },
-            ];
-            selectedTrigger.parameters = [
-              {
-                value: responseJson[0].displayName,
-                name: "outlookfolder",
-                id: responseJson[0].id,
-              },
-            ];
-            setWorkflow(workflow);
-            setSelectedTrigger(selectedTrigger);
-          }
-        })
-        .catch((error) => {
-          console.log("Get gmail folder error: ", error.toString());
-        });
-    };
-
-    const setOutlookFolders = () => {
-      fetch(
-        globalUrl +
-        "/api/v1/triggers/outlook/getFolders?trigger_id=" +
-        selectedTrigger.id,
-        {
-          method: "GET",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-        }
-      )
-        .then((response) => {
-          if (response.status !== 200) {
-            throw new Error("No folders :o!");
-          }
-
-          return response.json();
-        })
-        .then((responseJson) => {
-          if (
-            responseJson !== null &&
-            responseJson.success !== false &&
-            responseJson.length > 0
-          ) {
-            console.log("Got trigger folders: ", triggerFolders)
-            setTriggerFolders(responseJson);
-          }
-
-          if (
-            workflow.triggers[selectedTriggerIndex].parameters.length === 0 &&
-            responseJson.length > 0
-          ) {
-            workflow.triggers[selectedTriggerIndex].parameters = [
-              {
-                value: responseJson[0].displayName,
-                name: "outlookfolder",
-                id: responseJson[0].id,
-              },
-            ]
-            selectedTrigger.parameters = [
-              {
-                value: responseJson[0].displayName,
-                name: "outlookfolder",
-                id: responseJson[0].id,
-              },
-            ];
-            setWorkflow(workflow);
-            setSelectedTrigger(selectedTrigger);
-          }
-        })
-        .catch((error) => {
-          console.log("Get outlook folders error: ", error.toString());
-        });
-    };
-
-    const getTriggerAuth = () => {
-      fetch(`${globalUrl}/api/v1/triggers/${selectedTrigger.id}`, {
-        method: "GET",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-      })
-        .then((response) => {
-          if (response.status !== 200) {
-            throw new Error("No trigger info :o!");
-          }
-
-          return response.json();
-        })
-        .then((responseJson) => {
-
-          setTriggerAuthentication(responseJson);
-        })
-        .catch((error) => {
-          //console.log(error.toString());
-          console.log("Set trigger auth error: ", error.toString());
-        });
-    };
-
-    // Getting the triggers and the folders if they exist
-    if (localFirstrequest) {
-      //console.log("Trigger: ", selectedTrigger)
-      //console.log("Triggername: ", selectedTrigger.name)
-      //if (selectedTrigger.name.toLowerCase() === "gmail") {
-      setGmailFolders();
-      setOutlookFolders();
-
-      getTriggerAuth();
-      setLocalFirstrequest(false);
-    }
-
-    const gmailButton =
-      selectedTrigger.name !== "Gmail" ? null : (
-        <Button
-          fullWidth
-          variant="contained"
-          style={{
-            flex: 1,
-            textTransform: "none",
-            textAlign: "left",
-            justifyContent: "flex-start",
-            marginTop: 10,
-            padding: 0,
-            backgroundColor: "#4285f4",
-            color: "white",
-          }}
-          color="primary"
-          onClick={() => {
-            console.log("HOST: ", window.location.host);
-            console.log("HOST: ", window.location);
-            const redirectUri = isCloud
-              ? window.location.host === "localhost:3002"
-                ? "http%3A%2F%2Flocalhost:5002%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister"
-                : "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister"
-              : window.location.protocol === "http:" ?
-                `http%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister`
-                :
-                `https%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister`
-
-            const client_id =
-              "253565968129-c0a35knic7q1pdk6i6qk9gdkvr07ci49.apps.googleusercontent.com";
-            const username = userdata.id;
-            console.log(redirectUri);
-            console.log("USER: ", username, userdata);
-
-            const branch = workflow.branches.find(
-              (branch) => branch.source_id === selectedTrigger.id
-            );
-            if (branch === undefined || branch === null) {
-              toast(
-                "No startnode connected to node. Connect it to an action."
-              );
-              return;
-            }
-
-            console.log("BRANCH: ", branch);
-            const startnode = branch.destination_id;
-            const scopes = "https://www.googleapis.com/auth/gmail.readonly";
-            const url = `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Dgmail%26start%3d${startnode}`;
-            console.log("URL: ", url);
-
-            var newwin = window.open(url, "", "width=800,height=600");
-
-            // Check whether we got a callback somewhere
-            var id = setInterval(function () {
-              fetch(
-                `${globalUrl}/api/v1/triggers/${selectedTrigger.id}`,
-                {
-                  method: "GET",
-                  headers: { "content-type": "application/json" },
-                  credentials: "include",
-                }
-              )
-                .then((response) => {
-                  if (response.status !== 200) {
-                    throw new Error("No trigger info :o!");
-                  }
-
-                  return response.json();
-                })
-                .then((responseJson) => {
-                  setTriggerAuthentication(responseJson);
-                  clearInterval(id);
-                  newwin.close();
-                  setGmailFolders();
-                })
-                .catch((error) => {
-                  console.log("Set gmail trigg error: ", error.toString());
-                });
-            }, 2500);
-
-            saveWorkflow(workflow);
-          }}
-        >
-          <img
-            alt=""
-            style={{ margin: 0 }}
-            src="/images/btn_google_light_focus_ios.svg"
-          />
-          <Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
-            Sign in with Google
-          </Typography>
-        </Button>
-      );
-
-    const outlookButton =
-      selectedTrigger.name !== "Office365" ? null : (
-        <Button
-          fullWidth
-          variant="contained"
-          style={{
-            flex: 1,
-            textTransform: "none",
-            textAlign: "left",
-            justifyContent: "flex-start",
-            marginTop: 10,
-            backgroundColor: "#2f2f2f",
-            color: "white",
-            padding: "5px 5px 5px 10px",
-          }}
-          color="primary"
-          onClick={() => {
-            console.log(window.location)
-            const redirectUri = isCloud
-              ? window.location.host === "localhost:3002"
-                ? "http%3A%2F%2Flocalhost:5002%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
-                : "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
-              : window.location.protocol === "http:" ?
-                `http%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister`
-                :
-                `https%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister`
-
-            //const client_id = "fd55c175-aa30-4fa6-b303-09a29fb3f750"
-            //const client_id = "bb4bff85-0d0b-4f5d-8a69-3cee8029b11a";
-            const client_id = "efe4c3fe-84a1-4821-a84f-23a6cfe8e72d";
-
-            const username = userdata.id;
-            console.log(redirectUri);
-            console.log("USER: ", username, userdata);
-
-            const branch = workflow.branches.find(
-              (branch) => branch.source_id === selectedTrigger.id
-            );
-            if (branch === undefined || branch === null) {
-              toast(
-                "No startnode connected to node. Connect it to an action."
-              );
-              return;
-            }
-
-            console.log("BRANCH: ", branch);
-            const startnode = branch.destination_id;
-            // prompt=login
-            const url = `https://login.microsoftonline.com/common/oauth2/authorize?access_type=offline&client_id=${client_id}&redirect_uri=${redirectUri}&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Doutlook%26start%3d${startnode}`;
-            //const url = `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Dgmail%26start%3d${startnode}`
-
-            //const scopes = "https://www.googleapis.com/auth/gmail.readonly"
-            //const url = `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Dgmail%26start%3d${startnode}`
-
-            console.log("URL: ", url);
-
-            var newwin = window.open(url, "", "width=800,height=600");
-
-            // Check whether we got a callback somewhere
-            var id = setInterval(function () {
-              fetch(
-                `${globalUrl}/api/v1/triggers/${selectedTrigger.id}`,
-                {
-                  method: "GET",
-                  headers: { "content-type": "application/json" },
-                  credentials: "include",
-                }
-              )
-                .then((response) => {
-                  if (response.status !== 200) {
-                    throw new Error("No trigger info :o!");
-                  }
-
-                  return response.json();
-                })
-                .then((responseJson) => {
-                  setTriggerAuthentication(responseJson);
-                  clearInterval(id);
-                  newwin.close();
-                  setOutlookFolders();
-                })
-                .catch((error) => {
-                  console.log("Set outlook trigger error: ", error.toString());
-                });
-            }, 2500);
-
-            saveWorkflow(workflow);
-          }}
-        >
-          <img
-            alt=""
-            style={{ margin: 0 }}
-            src="/images/ms_symbol_dark.svg"
-          />
-          <Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
-            Sign in with Microsoft
-          </Typography>
-        </Button>
-      );
-
-    // FIXME - set everything in here to multifolder etc
-    var triggerInfo = "SET UP BUT NO TYPE :)";
-    if (Object.getOwnPropertyNames(triggerAuthentication).length > 0) {
-      // Should get the folders if they don't already exist
-
-      if (
-        triggerAuthentication.type === "outlook" ||
-        triggerAuthentication.type === "gmail"
-      ) {
-        triggerInfo = (
-          <div>
-            {selectedTrigger.status === "running" ? null : (
-              <span>
-                <div
-                  style={{ marginTop: 20, marginBottom: 7, display: "flex" }}
-                >
-                  <div
-                    style={{
-                      width: 17,
-                      height: 17,
-                      borderRadius: 17 / 2,
-                      backgroundColor: "#f85a3e",
-                      marginRight: 10,
-                    }}
-                  />
-                  <div style={{ flex: "10" }}>
-                    <b>Change auth </b>
-                  </div>
-                </div>
-                {outlookButton}
-                {gmailButton}
-                <Typography variant="body2" color="textSecondary" style={{ marginTop: 5 }}>
-                  If you have trouble using this trigger, please <a href="https://shuffler.io/contact" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>contact us</a> to get access
-                </Typography>
-              </span>
-            )}
-
-            {triggerFolders === undefined || triggerFolders === null ? null : (
-              <span>
-                <div
-                  style={{
-                    marginTop: "20px",
-                    marginBottom: "7px",
-                    display: "flex",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "17px",
-                      height: "17px",
-                      borderRadius: 17 / 2,
-                      backgroundColor: "#f85a3e",
-                      marginRight: "10px",
-                    }}
-                  />
-                  <div style={{ flex: "10" }}>
-                    <b>Select {triggerAuthentication.type === "gmail" ? "labels" : "a folder"}</b>
-                  </div>
-                </div>
-                {triggerFolders.length === 0 ?
-                  <Typography variant="body2">
-                    No folders found. Please authenticate first. If this persists, <a href="https://shuffler.io/contact" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>contact us</a>.
-                  </Typography>
-                  :
-                  <Select
-                    MenuProps={{
-                      disableScrollLock: true,
-                      sx: {
-                        "&& .MuiMenuItem-root": {
-                          backgroundColor: theme.palette.inputColor,
-                          color: "white",
-                        }
-                      }
-                    }}
-                    multiple={triggerAuthentication.type === "gmail"}
-                    native
-                    rows="10"
-                    value={selectedTrigger.parameters[0].value.split(splitter)}
-                    style={{ backgroundColor: theme.palette.inputColor, color: "white" }}
-                    disabled={selectedTrigger.status === "running"}
-                    SelectDisplayProps={{
-                      style: {
-                      },
-                    }}
-                    onChange={(e) => {
-                      setTriggerFolderWrapperMulti(e)
-                    }}
-                    fullWidth
-                    input={<Input id="select-multiple-native" style={{ backgroundColor: theme.palette.inputColor, color: "white" }} />}
-                    key={selectedTrigger}
-                  >
-                    {triggerFolders.map((folder) => {
-                      var folderItem = (
-                        <option
-                          key={folder.displayName}
-                          style={{
-                            backgroundColor: theme.palette.inputColor,
-                            fontSize: "1.2em",
-                          }}
-                          value={folder.displayName}
-                        >
-                          {folder.displayName}
-                        </option>
-                      );
-
-                      if (folder.childFolderCount > 0) {
-                        // Here to handle subfolders sometime later
-                        folderItem = (
-                          <option
-                            key={folder.displayName}
-                            value={folder.displayName}
-                            style={{ marginLeft: "10px" }}
-                          >
-                            {folder.displayName}
-                          </option>
-                        );
-                      }
-
-                      return folderItem;
-                    })}
-                  </Select>
-                }
-              </span>
-            )}
-          </div>
-        );
-      } else if (triggerAuthentication.type === "gmail") {
-        console.log("AUTH: ", triggerAuthentication);
-        triggerInfo = "SPECIAL GMAIL";
-      }
-    }
-
-    // Check
-    const argumentView =
-      Object.getOwnPropertyNames(triggerAuthentication).length > 0 ? (
-        <div>{triggerInfo}</div>
-      ) : (
-        <div>
-          <div
-            style={{ marginTop: "20px", marginBottom: "7px", display: "flex" }}
-          >
-            <div
-              style={{
-                width: "17px",
-                height: "17px",
-                borderRadius: 17 / 2,
-                backgroundColor: "#f85a3e",
-                marginRight: "10px",
-              }}
-            />
-            <div style={{ flex: "10" }}>
-              <b>Login</b>
-            </div>
-          </div>
-          {outlookButton}
-          {gmailButton}
-          <Typography variant="body2" color="textSecondary" style={{ marginTop: 5 }}>
-            If you have trouble using this trigger, please <span style={{ textDecoration: "none", color: "#f86a3e" }} onClick={() => {
-              if (window.drift !== undefined) {
-                window.drift.api.startInteraction({ interactionId: 340043 })
-              } else {
-                console.log("Couldn't find drift in window.drift and not .drift-open-chat with querySelector: ", window.drift)
-              }
-            }}>contact us</span> to get access
-          </Typography>
-        </div>
-      );
-
-    return (
-      <div style={appApiViewStyle}>
-		<h3 style={{ marginBottom: "5px" }}>
-		  {selectedTrigger.app_name}: {selectedTrigger.status}
-		</h3>
-		<a
-		  rel="noopener noreferrer"
-		  target="_blank"
-		  href="https://shuffler.io/docs/triggers#email"
-		  style={{ textDecoration: "none", color: "#f85a3e" }}
-		>
-		  What are email triggers?
-		</a>
-        <Divider
-          style={{
-            marginBottom: "10px",
-            marginTop: "10px",
-            height: "1px",
-            width: "100%",
-            backgroundColor: "rgb(91, 96, 100)",
-          }}
-        />
-        <div>Name</div>
-        <TextField
-          style={{
-            backgroundColor: theme.palette.inputColor,
-            borderRadius: theme.palette.borderRadius,
-          }}
-          InputProps={{
-            style: {
-            },
-          }}
-          fullWidth
-          color="primary"
-          placeholder={selectedTrigger.label}
-          onChange={selectedTriggerChange}
-        />
-		{/*
-        <div style={{ marginTop: "20px" }}>
-          Environment:
-          <TextField
-            style={{
-              backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette.borderRadius,
-            }}
-            InputProps={{
-              style: {
-              },
-            }}
-            required
-            disabled
-            fullWidth
-            color="primary"
-            value={selectedTrigger.environment}
-          />
-        </div>
-		*/}
-        <Divider
-          style={{
-            marginTop: "20px",
-            height: "1px",
-            width: "100%",
-            backgroundColor: "rgb(91, 96, 100)",
-          }}
-        />
-        {argumentView}
-        <div style={{ flex: "6", marginTop: "20px" }}>
-          <div>
-            <Divider
-              style={{
-                marginTop: "20px",
-                height: "1px",
-                width: "100%",
-                backgroundColor: "rgb(91, 96, 100)",
-              }}
-            />
-            <div
-              style={{
-                marginTop: "20px",
-                marginBottom: "7px",
-                display: "flex",
-              }}
-            >
-              <Button
-                variant="contained"
-                style={{ flex: "1" }}
-                disabled={
-                  selectedTrigger.status === "running" ||
-                  triggerFolders === undefined ||
-                  triggerFolders === null ||
-                  triggerFolders.length === 0
-                }
-                onClick={() => {
-                  startMailSub(selectedTrigger, selectedTriggerIndex);
-                }}
-                color="primary"
-              >
-                Start
-              </Button>
-              <Button
-                variant="outlined"
-                style={{ flex: "1" }}
-                disabled={selectedTrigger.status !== "running"}
-                onClick={() => {
-                  stopMailSub(selectedTrigger, selectedTriggerIndex);
-                }}
-                color="primary"
-              >
-                Stop
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
 	const handleWorkflowSelectionUpdate = (e, isUserinput) => {
 
 		if (e.target.value === undefined || e.target.value === null || e.target.value.id === undefined) {
@@ -13380,7 +12960,7 @@ const releaseToConnectLabel = "Release to Connect"
 					color: "white",
 					height: 35,
 					marginleft: 10,
-					borderRadius: theme.palette.borderRadius,
+					borderRadius: theme.palette?.borderRadius,
 				    color: "rgba(255,255,255,0.4)",
 				  }}
 				  SelectDisplayProps={{
@@ -13428,7 +13008,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 InputProps={{
                   style: {
@@ -13579,7 +13159,7 @@ const releaseToConnectLabel = "Release to Connect"
                   style={{
                     backgroundColor: theme.palette.inputColor,
                     height: 50,
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                   }}
                   onChange={(event, newValue) => {
                     setLastSaved(false)
@@ -13613,7 +13193,7 @@ const releaseToConnectLabel = "Release to Connect"
                       <Tooltip arrow placement="left" title={
                         <span style={{}}>
                           {data.image !== undefined && data.image !== null && data.image.length > 0 ?
-                            <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+                            <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
                             : null}
                           <Typography>
                             Choose Subflow '{data.name}'
@@ -13627,7 +13207,7 @@ const releaseToConnectLabel = "Release to Connect"
                           }}
                           value={data}
 						  onClick={() => {	
-              getWorkflowApps(data.id);
+              				getWorkflowApps(data.id);
 							handleWorkflowSelectionUpdate({
 								target: {
 									value: data
@@ -13646,7 +13226,7 @@ const releaseToConnectLabel = "Release to Connect"
                       <TextField
                         style={{
                           backgroundColor: theme.palette.inputColor,
-                          borderRadius: theme.palette.borderRadius,
+                          borderRadius: theme.palette?.borderRadius,
                         }}
                         {...params}
                         label="Find your workflow"
@@ -13706,7 +13286,7 @@ const releaseToConnectLabel = "Release to Connect"
                     style={{
                       backgroundColor: theme.palette.inputColor,
                       height: 50,
-                      borderRadius: theme.palette.borderRadius,
+                      borderRadius: theme.palette?.borderRadius,
                     }}
                     onChange={(event, newValue) => {
       				        setLastSaved(false)
@@ -13752,7 +13332,7 @@ const releaseToConnectLabel = "Release to Connect"
                         <TextField
                           style={{
                             backgroundColor: theme.palette.inputColor,
-                            borderRadius: theme.palette.borderRadius,
+                            borderRadius: theme.palette?.borderRadius,
                           }}
                           {...params}
                           label="Select a start-node (optional)"
@@ -13777,7 +13357,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 InputProps={{
                   style: {
@@ -14124,7 +13704,7 @@ const releaseToConnectLabel = "Release to Connect"
 								<TextField
 									style={{
 										backgroundColor: theme.palette.inputColor,
-										borderRadius: theme.palette.borderRadius,
+										borderRadius: theme.palette?.borderRadius,
 									}}
 									InputProps={{
 										style: {
@@ -14221,7 +13801,7 @@ const releaseToConnectLabel = "Release to Connect"
           <TextField
             style={{
               backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
             InputProps={{
               style: {
@@ -14244,7 +13824,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 InputProps={{
                   style: {
@@ -14265,7 +13845,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 InputProps={{
                   style: {
@@ -14288,7 +13868,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 InputProps={{
                   style: {
@@ -14309,7 +13889,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 InputProps={{
                   style: {
@@ -14330,7 +13910,7 @@ const releaseToConnectLabel = "Release to Connect"
           <TextField
             style={{
               backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
             InputProps={{
               style: {
@@ -14366,7 +13946,7 @@ const releaseToConnectLabel = "Release to Connect"
         };
         workflow.triggers[selectedTriggerIndex].parameters[1] = {
           name: "execution_argument",
-          value: '{"example": {"json": "is cool"}}',
+          value: '{"name": "value"}',
         };
         setWorkflow(workflow);
       } else if (selectedTrigger.trigger_type === "WEBHOOK") {
@@ -14488,7 +14068,7 @@ const releaseToConnectLabel = "Release to Connect"
           <TextField
             style={{
               backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
             InputProps={{
               style: {
@@ -14539,7 +14119,7 @@ const releaseToConnectLabel = "Release to Connect"
                 style={{
                   backgroundColor: theme.palette.inputColor,
                   height: 50,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 onChange={(event, newValue) => {
                   // Workaround with event lol
@@ -14609,7 +14189,7 @@ const releaseToConnectLabel = "Release to Connect"
                       variant="body1"
                       style={{
                         backgroundColor: theme.palette.inputColor,
-                        borderRadius: theme.palette.borderRadius,
+                        borderRadius: theme.palette?.borderRadius,
                       }}
                       {...params}
                       label="Find Associated App (optional)"
@@ -14628,7 +14208,20 @@ const releaseToConnectLabel = "Release to Connect"
                 MenuProps={{
                   disableScrollLock: true,
                 }}
-                value={selectedTrigger.environment}
+                value={selectedTrigger.environment === undefined || selectedTrigger.environment === null || selectedTrigger.environment === "" ? 
+					environments?.find((env) => {
+						if (env.archived) {
+							return false
+						}
+
+						if (env.name === "cloud" || env.type === "cloud") {
+							return false 
+						}
+
+
+						return true 
+					}).name
+				: selectedTrigger.environment}
                 disabled={selectedTrigger.status === "running"}
                 SelectDisplayProps={{
                   style: {
@@ -14663,7 +14256,7 @@ const releaseToConnectLabel = "Release to Connect"
               >
                 {triggerEnvironments.map((data) => {
                   if (data.archived) {
-                    return null;
+                    return null
                   }
 
                   return (
@@ -14713,7 +14306,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 id="webhook_uri_field"
                 onClick={() => {
@@ -14845,7 +14438,7 @@ const releaseToConnectLabel = "Release to Connect"
                 <TextField
                   style={{
                     backgroundColor: theme.palette.inputColor,
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                   }}
                   id="webhook_uri_header"
                   onClick={() => { }}
@@ -14898,7 +14491,7 @@ const releaseToConnectLabel = "Release to Connect"
                 <TextField
                   style={{
                     backgroundColor: theme.palette.inputColor,
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                   }}
                   id="webhook_uri_header"
                   onClick={() => { }}
@@ -15009,85 +14602,6 @@ const releaseToConnectLabel = "Release to Connect"
       .catch((error) => {
         //toast(error.toString());
         console.log("Stop mailsub error: ", error.toString());
-      });
-  };
-
-  const startMailSub = (trigger, triggerindex) => {
-    var folders = [];
-
-    if (triggerFolders === null || triggerFolders === undefined) {
-      return null;
-    }
-
-    const splitItem =
-      workflow.triggers[selectedTriggerIndex].parameters[0].value.split(
-        splitter
-      )
-
-		console.log("Starting mail sub: ", workflow.triggers[selectedTriggerIndex].parameters[0].value, splitItem);
-    for (let splitkey in splitItem) {
-      const item = splitItem[splitkey];
-      const curfolder = triggerFolders.find((a) => a.displayName === item);
-      if (curfolder === undefined) {
-        toast("Something went wrong with folder selection: " + item);
-        return;
-      }
-
-      folders.push(curfolder.id);
-    }
-
-    const data = {
-      name: trigger.name,
-      folders: folders,
-      id: trigger.id,
-    };
-
-    const requesttype = triggerAuthentication.type;
-    toast(
-      "Creating " + requesttype + " subscription with name " + trigger.name
-    );
-
-    fetch(
-      globalUrl +
-      "/api/v1/workflows/" +
-      props.match.params.key +
-      "/" +
-      requesttype,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(data),
-        credentials: "include",
-      }
-    )
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for stream results :O!");
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        if (!responseJson.success) {
-          toast("Failed to start trigger: " + responseJson.reason);
-        } else {
-          toast(
-            "Successfully started folder subscription trigger. Test it by sending yoursend an email"
-          );
-
-          workflow.triggers[triggerindex].status = "running";
-          trigger.status = "running";
-          setWorkflow(workflow);
-          setSelectedTrigger(trigger);
-          saveWorkflow(workflow);
-        }
-      })
-      .catch((error) => {
-        //toast(error.toString());
-        console.log("Start mailsub error: ", error.toString());
       });
   };
 
@@ -15282,7 +14796,7 @@ const releaseToConnectLabel = "Release to Connect"
           <TextField
             style={{
               backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
             InputProps={{
               style: {
@@ -15299,7 +14813,7 @@ const releaseToConnectLabel = "Release to Connect"
             <TextField
               style={{
                 backgroundColor: theme.palette.inputColor,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
               }}
               InputProps={{
                 style: {
@@ -15336,7 +14850,7 @@ const releaseToConnectLabel = "Release to Connect"
             <TextField
               style={{
                 backgroundColor: theme.palette.inputColor,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
               }}
               InputProps={{
                 style: {
@@ -15452,7 +14966,7 @@ const releaseToConnectLabel = "Release to Connect"
               	    style={{
               	      backgroundColor: theme.palette.inputColor,
               	      height: 50,
-              	      borderRadius: theme.palette.borderRadius,
+              	      borderRadius: theme.palette?.borderRadius,
 						marginTop: 15,
 						marginBottom: 15,
               	    }}
@@ -15470,7 +14984,7 @@ const releaseToConnectLabel = "Release to Connect"
               	        <Tooltip arrow placement="left" title={
               	          <span style={{}}>
               	            {data.image !== undefined && data.image !== null && data.image.length > 0 ?
-              	              <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+              	              <img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
               	              : null}
               	            <Typography>
               	              Choose Trigger '{data.name}'
@@ -15502,7 +15016,7 @@ const releaseToConnectLabel = "Release to Connect"
               	        <TextField
               	          style={{
               	            backgroundColor: theme.palette.inputColor,
-              	            borderRadius: theme.palette.borderRadius,
+              	            borderRadius: theme.palette?.borderRadius,
               	          }}
               	          {...params}
               	          label="Find the workflow you want to trigger"
@@ -15543,7 +15057,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
 									marginTop: 10,
                 }}
                 InputProps={{
@@ -15577,7 +15091,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
 									marginTop: 10,
                 }}
                 InputProps={{
@@ -15696,7 +15210,7 @@ const releaseToConnectLabel = "Release to Connect"
             <TextField
               style={{
                 backgroundColor: theme.palette.inputColor,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
               }}
               InputProps={{
                 style: {},
@@ -15764,7 +15278,8 @@ const releaseToConnectLabel = "Release to Connect"
             />
             <div style={{ flex: 6, marginTop: 20 }}>
               <div>
-                <b>Parameters</b>
+                <b>What would you like to do?</b>
+				{/*
                 <div
                   key="syslogListener"
                   onClick={() => {
@@ -15791,7 +15306,7 @@ const releaseToConnectLabel = "Release to Connect"
                   }}}
                   style={{
                     border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                     padding: 10,
                     cursor: "pointer",
                     marginTop: 5,
@@ -15804,9 +15319,8 @@ const releaseToConnectLabel = "Release to Connect"
                       <Radio
                         checked={selectedOption === "Syslog listener"}
                         onChange={() => {
-                          if (selectedTrigger.status !== "running"){
                           setSelectedOption("Syslog listener")}}
-                        }
+
                         value={"Syslog listener"}
                         name="option"
                       />
@@ -15840,7 +15354,7 @@ const releaseToConnectLabel = "Release to Connect"
                   }}}
                   style={{
                     border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                     padding: 10,
                     cursor: "pointer",
                     marginTop: 5,
@@ -15854,7 +15368,9 @@ const releaseToConnectLabel = "Release to Connect"
                         checked={selectedOption === "SigmaRule"}
                         onChange={() => {
                           if (selectedTrigger.status !== "running"){
-                          setSelectedOption("SigmaRule")}}}
+                          	setSelectedOption("SigmaRule")
+						  }
+						}}
                         value={"Sigma Rulesearch"}
                         name="option"
                       />
@@ -15863,19 +15379,22 @@ const releaseToConnectLabel = "Release to Connect"
                   />
                 </div>
 
+				*/}
+
                 <div
                   key="kafkaQueue"
                   onClick={() => {
-                    if(selectedTrigger.status === "running"){
+                    if (selectedTrigger.status === "running"){
                       toast("please stop the trigger to edit the configuration");
                       return;
                     } else {
-                    setSelectedOption("Kafka Queue");
-                    setTenzirConfigModalOpen(true);
-                  }}}
+                    	setSelectedOption("Kafka Queue");
+                    	setTenzirConfigModalOpen(true);
+                  	}
+				  }}
                   style={{
                     border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                     padding: 10,
                     cursor: "pointer",
                     marginTop: 5,
@@ -15888,76 +15407,21 @@ const releaseToConnectLabel = "Release to Connect"
                       <Radio
                         checked={selectedOption === "Kafka Queue"}
                         onChange={() => { 
-                          if (selectedTrigger.status !== "running"){
-                          setSelectedOption("Kafka Queue")}}}
+                          if (selectedTrigger.status !== "running") {
+                          	setSelectedOption("Kafka Queue")
+
+						  }
+						}}
+
                         value={"Kafka Queue"}
                         name="option"
                       />
                     }
-                    label="Follow Kafka Queue"
+                    label="Subscribe to a Kafka Queue"
                   />
                 </div>
 
                 <div style={{ marginTop: 20, marginBottom: 7, display: "flex" }}>
-                  <Button
-                    style={{ flex: 1, marginRight: 7 }}
-                    variant="contained"
-                    disabled={selectedTrigger.status === "running"}
-                    onClick={() => {
-
-                      if (selectedOption === "Kafka Queue"){
-                      const url = `${globalUrl}/api/v1/pipelines/pipeline_${selectedTrigger.id}`
-                      const topic = (selectedTrigger?.parameters?.find(param => param.name === "topic")?.value) || ''
-                      const bootstrapServers = (selectedTrigger?.parameters?.find(param => param.name === "bootstrap_servers")?.value) || ''
-                      const groupId = (selectedTrigger?.parameters?.find(param => param.name === "group_id")?.value) || ''
-                      const autoOffsetReset = (selectedTrigger?.parameters?.find(param => param.name === "auto_offset_reset")?.value) || ''
-                      let command = "from kafka"
-                      
-                      if(topic) {
-                        command = `${command} -t ${topic}`
-                      } else {
-                        toast("please enter the topic name")
-                        return;
-                      }
-                      if(bootstrapServers) {
-                        command = `${command} -e -o stored -X bootstrap.servers=${bootstrapServers}`
-                      } else {
-                        toast("please enter the bootstrap servers details")
-                        return;
-                      }
-
-                      if(groupId) {
-                         command = `${command},group.id=${groupId}`
-                      } else {
-                        command = `${command},group.id=${selectedTrigger.id}`
-                      }
-                      if(autoOffsetReset) {
-                        command = `${command},auto.offset.reset=${autoOffsetReset}`
-                      } else {
-                        command = `${command},auto.offset.reset=earliest`
-
-                      }                      
-                      command = `${command},auto.offset.reset=earliest`
-                      command = `${command},client.id=${selectedTrigger.id},enable.auto.commit=true,auto.commit.interval.ms=1`
-                      command = `${command} read json | to ${url}`
-
-                      const pipelineConfig = {
-                        command: command,
-                        name: selectedTrigger.label,
-                        type: "create",
-                        environment: selectedTrigger.environment,
-                        workflow_id: workflow.id,
-                        trigger_id: selectedTrigger.id,
-                        start_node: "",
-                        url: url,
-                      };
-                      submitPipeline(selectedTrigger, selectedTriggerIndex, pipelineConfig);
-                    }
-                  }}
-                    color="primary"
-                  >
-                    Start
-                  </Button>
                   <Button
                     style={{ flex: 1 }}
                     variant="contained"
@@ -16008,7 +15472,7 @@ const releaseToConnectLabel = "Release to Connect"
           <TextField
             style={{
               backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
             InputProps={{
               style: {
@@ -16106,7 +15570,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 InputProps={{
                   style: {
@@ -16156,7 +15620,7 @@ const releaseToConnectLabel = "Release to Connect"
               <TextField
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 InputProps={{
                   style: {
@@ -16172,7 +15636,7 @@ const releaseToConnectLabel = "Release to Connect"
                 defaultValue={
                   workflow.triggers[selectedTriggerIndex] !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== undefined && workflow.triggers[selectedTriggerIndex].parameters !== null && workflow.triggers[selectedTriggerIndex].parameters.length > 1 ? workflow.triggers[selectedTriggerIndex].parameters[1].value : ""
                 }
-                placeholder='{"example": {"json": "is cool"}}'
+                placeholder='{"key": "value"}'
                 onBlur={(e) => {
                   setTriggerBodyWrapper(e.target.value);
                 }}
@@ -16375,10 +15839,18 @@ const releaseToConnectLabel = "Release to Connect"
               id="suborg-changer"
               style={{ color: "white" }}
             >
-			  View Suborg workflow
+				Select an Org
             </InputLabel>
 			<Select
-				style={{maxHeight: 50, maxWidth: 250, }}
+				style={{
+					  pointerEvents: "auto", 
+					  backgroundColor: theme.palette.inputColor,
+					  color: "white",
+					  height: 50,
+					  maxWidth: 250, 
+					  minWidth: 250, 
+					  borderRadius: theme.palette?.borderRadius,
+				}}
               	labelId="suborg-changer"
 				value={workflow.org_id}
 			  	disabled={savingState !== 0}
@@ -16475,7 +15947,7 @@ const releaseToConnectLabel = "Release to Connect"
 				fullWidth
 			>
 				<MenuItem key={originalWorkflow.org_id} value={originalWorkflow.org_id}>
-					  {userdata.active_org.large_image}{" "}
+					  Parent: {userdata.active_org.large_image}{" "}
 					  <span style={{ marginLeft: 8 }}>
 						{userdata.active_org.name}
 					  </span>
@@ -16544,119 +16016,136 @@ const releaseToConnectLabel = "Release to Connect"
         </FormControl> 
 		}
 
-		  {authGroups !== undefined && authGroups !== null && authGroups.length > 0 ? 
-			  <Tooltip
-				color="secondary"
-				title="Configure Authentication Groups. The amount of auth groups selected is the amount of replications of any execution of this workflow."
-				placement="top"
-			  >
-				<span style={{pointerEvents: "auto", }}>
-				  <Button
-			  		onMouseEnter={() => {
-						if (cy !== undefined && cy !== null) {
-							const cynodes = cy.nodes().jsons()
-							for (var cynodekey in cynodes) {
-								const cynodedata = cynodes[cynodekey]
-								if (cynodedata.data.authentication_id === "authgroups") {
-									const foundnode = cy.getElementById(cynodedata.data.id)
-									if (foundnode !== undefined && foundnode !== null) {
-    									var parsedStyle = {
-    									  "border-width": "15px",
-    									  "border-opacity": ".9",
-    									  //"cursor": "pointer",
-    									}
+        </div>
+		<div style={{display: "flex", marginLeft: 10, pointerEvents: "auto", }}>
+			{parentWorkflows.slice(0,5).map((wf, index) => {
+				return (
+					<a href={`/workflows/${wf.id}`} target="_blank" rel="noopener noreferrer" key={index}>
+						<Tooltip arrow placement="left" title={
+							<span style={{}}>
+								{wf.image !== undefined && wf.image !== null && wf.image.length > 0 ?
+									<img 
+										src={wf.image} 
+										alt={wf.name} 
+										style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} 
+										
+									/>
+									: null}
+								<Typography>
+									Parent workflow: '{wf.name}'
+								</Typography>
+							</span>
 
-										const animationDuration = 150 
-    									foundnode.animate(
-    									  {
-    									    style: parsedStyle,
-    									  },
-    									  {
-    									    duration: animationDuration,
-    									  }
-    									)
-									}
-								}
-							}
+						} placement="bottom">
+							<span onClick={() => {
+								console.log("Click: ", wf)
+							}}>
+								<img src={theme.palette.defaultImage} style={{height: 25, width: 25, cursor: "pointer", border: 15, marginRight: 5, marginTop: 5, filter: "grayscale(90%)", }} />
+							</span>
+						</Tooltip>
+					</a>
+				)
+			})}
+		</div>
 
-						}
+			{showEnvironment === true && environments.length > 1 ?
+			    <FormControl fullWidth style={{marginTop: 15, marginleft: 10, pointerEvents: "auto", }}>
+
+					<InputLabel
+					  id="execution_location"
+					  style={{ color: "white" }}
+					>
+						Execution Location
+					</InputLabel>
+					<Select
+					labelId="execution_location"
+					MenuProps={{
 					}}
-					onMouseLeave={() => {
-
-						if (cy !== undefined && cy !== null) {
-							const cynodes = cy.nodes().jsons()
-							for (var cynodekey in cynodes) {
-								const cynodedata = cynodes[cynodekey]
-								if (cynodedata.data.authentication_id === "authgroups") {
-									const foundnode = cy.getElementById(cynodedata.data.id)
-									if (foundnode !== undefined && foundnode !== null) {
-    									var parsedStyle = {
-    									  "border-width": "3px",
-    									  "border-opacity": ".7",
-    									  //"cursor": "pointer",
-    									}
-
-										const animationDuration = 150 
-    									foundnode.animate(
-    									  {
-    									    style: parsedStyle,
-    									  },
-    									  {
-    									    duration: animationDuration,
-    									  }
-    									)
-									}
-								}
-							}
-
-						}
-
+					value={
+					  selectedActionEnvironment === undefined || selectedActionEnvironment === null || selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null ? isCloud ? "Cloud" : "Shuffle" : selectedActionEnvironment.Name
+					}
+					SelectDisplayProps={{
+					  style: {
+					  },
 					}}
-					disabled={workflow.public}
-					color="secondary"
-					style={{ height: 40, marginTop: 15, marginLeft: 5, }}
-					variant={"outlined"}
-					onClick={() => {
-					  setAuthgroupModalOpen(true)
+					onChange={(e) => {
+					  const env = environments.find((a) => a.Name === e.target.value);
+					  setSelectedActionEnvironment(env);
+					  selectedAction.environment = env.Name;
+					  setSelectedAction(selectedAction);
+
+					  for (let actionkey in workflow.actions) {
+						  workflow.actions[actionkey].environment = env.Name
+					  }
+					  setWorkflow(workflow)
+					  toast.success("Set execution location for ALL actions to " + env.Name)
+					}}
+					style={{
+					  pointerEvents: "auto", 
+					  backgroundColor: theme.palette.inputColor,
+					  color: "white",
+					  height: 50,
+					  maxWidth: 250, 
+					  minWidth: 250, 
+					  borderRadius: theme.palette?.borderRadius,
+					  marginLeft: 10, 
 					}}
 				  >
-  					<LockOpenIcon style={{marginRight: 10, }}/> Auth Group ( {workflow.auth_groups !== undefined && workflow.auth_groups !== null ? workflow.auth_groups.length : 0}/{authGroups.length} )
-				  </Button>
-				</span>
-			  </Tooltip>
-			: null}
-		  
-        </div>
-				<div style={{display: "flex", marginLeft: 10, pointerEvents: "auto", }}>
-					{parentWorkflows.slice(0,5).map((wf, index) => {
-						return (
-							<a href={`/workflows/${wf.id}`} target="_blank" rel="noopener noreferrer" key={index}>
-								<Tooltip arrow placement="left" title={
-									<span style={{}}>
-										{wf.image !== undefined && wf.image !== null && wf.image.length > 0 ?
-											<img 
-												src={wf.image} 
-												alt={wf.name} 
-												style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} 
-												
-											/>
-											: null}
-										<Typography>
-											Parent workflow: '{wf.name}'
-										</Typography>
-									</span>
+					{environments.map((data, index) => {
+					  if (data.archived === true) {
+						return null
+					  }
 
-								} placement="bottom">
-									<span onClick={() => {
-										console.log("Click: ", wf)
-									}}>
-										<img src={theme.palette.defaultImage} style={{height: 25, width: 25, cursor: "pointer", border: 15, marginRight: 5, marginTop: 5, filter: "grayscale(90%)", }} />
-									</span>
-								</Tooltip>
-							</a>
-						)
+					  const isRunning = data.running_ip !== "" 
+
+					  return (
+						<MenuItem
+						  key={data.Name}
+						  style={{
+							backgroundColor: theme.palette.inputColor,
+							color: "white",
+						  }}
+						  value={data.Name}
+						>
+
+						  {data.Name === "cloud" || data.Name === "Cloud" ? null : !isRunning ?
+							  <a href={`/admin?tab=locations&env=${data.Name}`} target="_blank" style={{textDecoration: "none",}}>
+								  <Tooltip title={"Click to configure the environment"} placement="top">
+									  <Chip
+										style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", backgroundColor: red, }}
+										label={"Stopped"}
+										variant="outlined"
+										color="secondary"
+										onClick={(e) => {
+											e.preventDefault()
+											e.stopPropagation()
+											window.open(`/admin?tab=locations&env=${data.Name}`, "_blank", "noopener,noreferrer")
+										}}
+
+
+									  />
+								  </Tooltip>
+							  </a>
+							: null}
+
+						  {data.default === true ?
+							  <Chip
+								style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+								label={"Default"}
+								variant="outlined"
+								color="secondary"
+							  />
+							  : null}
+
+
+						  {data.Name}
+						</MenuItem>
+					  );
 					})}
-				</div>
+				  </Select>
+				</FormControl> 
+			: null}
+
       </div>
     );
   };
@@ -16937,7 +16426,7 @@ const releaseToConnectLabel = "Release to Connect"
   			left: leftBarSize+20,
 			color: "white",
 			padding: 10, 
-			borderRadius: theme.palette.borderRadius,
+			borderRadius: theme.palette?.borderRadius,
   		}}
   	>
 
@@ -17155,7 +16644,7 @@ const releaseToConnectLabel = "Release to Connect"
 				height: 235, 
 				border: "1px solid #f85a3e", 
 				cursor: "pointer", 
-				borderRadius: theme.palette.borderRadius, 
+				borderRadius: theme.palette?.borderRadius, 
 				padding: 10, 
 				backgroundColor: hovered ? theme.palette.surfaceColor : theme.palette.platformColor, 
 			}}
@@ -17221,37 +16710,6 @@ const releaseToConnectLabel = "Release to Connect"
 		cy.edges().remove()
 		cy.nodes().remove()
 	}
-
-	// Remove all cytoscape triggers first?
-	/*
-	setTimeout(() => {
-		setupGraph(inputworkflow)
-
-		cy.on("select", "node", (e) => {
-		  onNodeSelect(e, appAuthentication);
-		});
-		cy.on("select", "edge", (e) => onEdgeSelect(e));
-
-		cy.on("unselect", (e) => onUnselect(e));
-
-		cy.on("add", "node", (e) => onNodeAdded(e));
-		cy.on("add", "edge", (e) => onEdgeAdded(e));
-		cy.on("remove", "node", (e) => onNodeRemoved(e));
-		cy.on("remove", "edge", (e) => onEdgeRemoved(e));
-
-		cy.on("mouseover", "edge", (e) => onEdgeHover(e));
-		cy.on("mouseout", "edge", (e) => onEdgeHoverOut(e));
-		cy.on("mouseover", "node", (e) => onNodeHover(e));
-		cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
-
-		// Handles dragging
-		cy.on("drag", "node", (e) => onNodeDrag(e, selectedAction));
-		cy.on("free", "node", (e) => onNodeDragStop(e, selectedAction));
-
-		cy.on("cxttap", "node", (e) => onCtxTap(e));
-	}, 25)
-	*/
-
   }
 
   // Uses Org-Id referencing header to create a workflow while getting it in realtime
@@ -17469,7 +16927,7 @@ const releaseToConnectLabel = "Release to Connect"
           <Tooltip color="secondary" title="Undo" placement="top-start">
             <span>
               <Button
-                disabled={history.length === 0}
+                disabled={history.length === 0 || !(originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0 || originalWorkflow.suborg_distribution.includes("none"))}
                 color="primary"
                 style={{ height: 50, marginLeft: 10 }}
                 variant="outlined"
@@ -17632,9 +17090,7 @@ const releaseToConnectLabel = "Release to Connect"
     if (Object.getOwnPropertyNames(selectedComment).length > 0) {
       defaultReturn = <CommentSidebar />
     } else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
-      if (selectedTrigger.trigger_type === "EMAIL") {
-        defaultReturn = <EmailSidebar />
-      } else if (selectedTrigger.trigger_type === undefined) {
+      if (selectedTrigger.trigger_type === undefined) {
         //defaultReturn = <UserinputSidebar />
         return null;
       } else {
@@ -18727,14 +18183,14 @@ const releaseToConnectLabel = "Release to Connect"
 				</h2>
 			  </Breadcrumbs>
 			  <Tooltip
-				title={"Explore Executions further"}
+				title={"Explore and Debug all Workflow Runs"}
 				placement="left-start"
 				style={{ zIndex: 10010 }}
 			  >
 		  		<a target="_blank" href={`/workflows/debug?workflow_id=${workflow.id}`} style={{textDecoration: "none", }}>
 				  <Button
 		  			color="secondary"
-		  			style={{marginLeft: 50, maxHeight: 30, marginTop: 20, }}
+		  			style={{marginLeft: 125, maxHeight: 30, marginTop: 20, }}
 				  >
 		  			<QueryStatsIcon style={{color: "white", }}/>
 				  </Button>
@@ -18743,21 +18199,65 @@ const releaseToConnectLabel = "Release to Connect"
 		  </div>
         <Tooltip title="Refresh runs (Ctrl + ;)" arrow>
           <Button
-            style={{ borderRadius: theme.palette.borderRadius, }}
+            style={{ borderRadius: theme.palette?.borderRadius, }}
             variant="outlined"
             fullWidth
             onClick={() => {
-              getWorkflowExecution(props.match.params.key, "");
+              getWorkflowExecution(props.match.params.key, "", executionFilter)
             }}
-            color="primary"
+            color="secondary"
           >
             <CachedIcon style={{ marginRight: 10 }} />
             Refresh Runs
           </Button>
         </Tooltip>
-          <Divider
+		<ButtonGroup 
+			fullWidth  
+		  	style={{marginTop: 5, maxHeight: 50, overflow: "hidden", }}>
+		>
+		  <Button
+		  	color="secondary"
+		  	variant={executionFilter === "ALL" ? "contained" : "outlined"}
+		  	onClick={() => {
+				setExecutionFilter("ALL")
+				getWorkflowExecution(props.match.params.key, "", "ALL")
+			}}
+		  >
+		  	All
+		  </Button>
+		  <Button
+		  	color="secondary"
+		  	variant={executionFilter === "FINISHED" ? "contained" : "outlined"}
+		  	onClick={() => {
+				setExecutionFilter("FINISHED")
+				getWorkflowExecution(props.match.params.key, "", "FINISHED")
+			}}
+		  >
+		  	Finished
+		  </Button>
+		  <Button
+		  	color="secondary"
+		  	variant={executionFilter === "EXECUTING" ? "contained" : "outlined"}
+		  	onClick={() => {
+				setExecutionFilter("EXECUTING")
+				getWorkflowExecution(props.match.params.key, "", "EXECUTING")
+			}}
+		  >
+		  	Executing
+		  </Button>
+		  <Button
+		  	color="secondary"
+		  	variant={executionFilter === "ABORTED" ? "contained" : "outlined"}
+		  	onClick={() => {
+				setExecutionFilter("ABORTED")
+				getWorkflowExecution(props.match.params.key, "", "ABORTED")
+			}}
+		  >
+		  	Aborted	
+		  </Button>
+		</ButtonGroup>
+          <div
             style={{
-              backgroundColor: "rgba(255,255,255,0.5)",
               marginTop: 10,
               marginBottom: 10,
             }}
@@ -18989,22 +18489,26 @@ const releaseToConnectLabel = "Release to Connect"
               })}
             </div>
           ) : (
-            <div>
-				<Typography>
-					There are no executions yet, or they are not loaded.
-				</Typography>
-				<Button 
-					variant="contained"
-					style={{
-						marginTop: 100,
-					}}
-					onClick={() => {
-              			executeWorkflow(executionText, workflow.start, lastSaved);
-					}}
-				>
-					Test Workflow <PlayArrowIcon style={{marginLeft: 15, }} />
-				</Button>
-			</div>
+          	<Fade in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
+				<div style={{marginTop: 100, }}>
+					<Typography variant="body1" color="textSecondary">
+						No executions found for the '{executionFilter}' filter. 
+					</Typography>
+
+					<Button 
+						fullWidth
+						variant="outlined"
+						style={{
+							marginTop: 20,
+						}}
+						onClick={() => {
+							executeWorkflow(executionText, workflow.start, lastSaved);
+						}}
+					>
+						Test Workflow <PlayArrowIcon style={{marginLeft: 15, }} />
+					</Button>
+				</div>
+			  </Fade>
           )}
         </div>
       ) : (
@@ -19258,7 +18762,7 @@ const releaseToConnectLabel = "Release to Connect"
               </Typography>
 
               <Typography variant="body1" color="textSecondary" style={{color: "#f85a3e", cursor: "pointer", }} onClick={() => {
-				  window.open("/admin?tab=environments", "_blank")
+				  window.open("/admin?tab=locations", "_blank")
 			  }}>
                 {executionData.workflow.actions[0].environment}
               </Typography>
@@ -19434,7 +18938,7 @@ const releaseToConnectLabel = "Release to Connect"
 
                   {environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 && environments[defaultEnvironmentIndex].Name !== "Cloud" ?
                     <Typography variant="body2" color="textSecondary" style={{}}>
-                      No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Find out here</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@shuffler.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@shuffler.io</a>
+                      No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=locations" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Find out here</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@shuffler.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@shuffler.io</a>
                     </Typography>
                     : null}
                 </div>
@@ -19450,7 +18954,7 @@ const releaseToConnectLabel = "Release to Connect"
 							<CircularProgress style={{marginLeft: 145, marginBottom: 10, }} /> 
 								{environments.length > 0 && defaultEnvironmentIndex < environments.length && nonskippedResults.length === 0 && environments[defaultEnvironmentIndex].Name !== "Cloud" ?
 									<Typography variant="body2" color="textSecondary" style={{}}>
-										No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=environments" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@shuffler.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@shuffler.io</a>
+										No results yet. Is Orborus running for the "{environments[defaultEnvironmentIndex].Name}" environment? <a href="/admin?tab=locations" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>Learn more</a>. If the Workflow doesn't start within 30 seconds with Orborus running, contact support: <a href="mailto:support@shuffler.io" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e" }}>support@shuffler.io</a>
 									</Typography>
 								: 
 								null}
@@ -19524,7 +19028,7 @@ const releaseToConnectLabel = "Release to Connect"
 
               if (triggers.length > 2) {
                 if (data.action.app_name === "shuffle-subflow") {
-                  const parsedImage = triggers[2].large_image;
+                  const parsedImage = triggers[3].large_image;
                   actionimg = (
                     <img
                       alt={"Shuffle Subflow"}
@@ -19544,7 +19048,7 @@ const releaseToConnectLabel = "Release to Connect"
                   actionimg = (
                     <img
                       alt={"Shuffle Subflow"}
-                      src={triggers[3].large_image}
+                      src={triggers[4].large_image}
                       style={{
                         marginRight: 20,
                         width: imgsize,
@@ -19668,7 +19172,7 @@ const releaseToConnectLabel = "Release to Connect"
                       data.action.sub_action === true
                         ? "1px solid rgba(255,255,255,0.3)"
                         : "1px solid rgba(255,255,255, 0.3)",
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                     backgroundColor: theme.palette.inputColor,
                     padding: "15px 10px 10px 10px",
                     overflow: "hidden",
@@ -19920,7 +19424,7 @@ const releaseToConnectLabel = "Release to Connect"
 				  <b>Action Logs</b>
 				</Typography>
 				<Typography variant="body2" style={{ whiteSpace: 'pre-line', }}>
-					Logs for an action are not available without <a style={{color: "#f85a3e", }} href="/admin?tab=environments" target="_blank" rel="noopener noreferrer">an onprem environment</a> with the <a style={{color: "#f85a3e", }} href="/docs/configuration#scaling-shuffle" target="_blank" rel="noopener noreferrer">SHUFFLE_LOGS_DISABLED</a> environment variable set to false: SHUFFLE_LOGS_DISABLED=false. Logs are enabled by default, except in scale mode.
+					Logs for an action are not available without <a style={{color: "#f85a3e", }} href="/admin?tab=locations" target="_blank" rel="noopener noreferrer">an onprem environment</a> with the <a style={{color: "#f85a3e", }} href="/docs/configuration#scaling-shuffle" target="_blank" rel="noopener noreferrer">SHUFFLE_LOGS_DISABLED</a> environment variable set to false: SHUFFLE_LOGS_DISABLED=false. Logs are enabled by default, except in scale mode.
 				</Typography>
 			</div> 
 		)
@@ -19948,7 +19452,7 @@ const releaseToConnectLabel = "Release to Connect"
 			  cursor: "pointer",
               padding: 3,
               border: "1px solid rgba(255,255,255,0.3)",
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
             onClick={() => {
               if (!showVariable) {
@@ -20141,7 +19645,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  }
 
 	  if (isCloud && stringjson.toLowerCase().includes("timeout error")) {
-		  return "Run this workflow in a local environment to increase the timeout. Go to https://shuffler.io/admin?tab=environments to create an environment to connect to"
+		  return "Run this workflow in a local environment to increase the timeout. Go to https://shuffler.io/admin?tab=locationsto create an environment to connect to"
 	  }
 
 	  if (stringjson.toLowerCase().includes("invalid header")) {
@@ -20366,7 +19870,7 @@ const releaseToConnectLabel = "Release to Connect"
           {curapp === null ? null : (
             <img
               alt={selectedResult.action.app_name}
-              src={selectedResult === undefined ? theme.palette.defaultImage : selectedResult.action.app_name === "shuffle-subflow" ? triggers[2].large_image : selectedResult.action.app_name === "User Input" ? triggers[3].large_image : selectedResult.action !== undefined && selectedResult.action.large_image !== undefined && selectedResult.action.large_image !== null && selectedResult.action.large_image !== "" ? selectedResult.action.large_image : curapp !== undefined ? curapp.large_image : theme.palette.defaultImage}
+              src={selectedResult === undefined ? theme.palette.defaultImage : selectedResult.action.app_name === "shuffle-subflow" ? triggers[3].large_image : selectedResult.action.app_name === "User Input" ? triggers[4].large_image : selectedResult.action !== undefined && selectedResult.action.large_image !== undefined && selectedResult.action.large_image !== null && selectedResult.action.large_image !== "" ? selectedResult.action.large_image : curapp !== undefined ? curapp.large_image : theme.palette.defaultImage}
               style={{
                 marginRight: 20,
                 width: imgsize,
@@ -20573,60 +20077,63 @@ const releaseToConnectLabel = "Release to Connect"
       <RightSideBar />  
       {
         rightSideBarOpen && Object.getOwnPropertyNames(selectedAction).length > 0 ? 
-        <div id="rightside_actions" style={rightsidebarStyle}>
-          <ParsedAction
-        id="rightside_subactions"
-        files={files}
-        isCloud={isCloud}
-        getParents={getParents}
-		toolsAppId={toolsApp.id}
-        setShowVideo={setShowVideo}
-        actionDelayChange={actionDelayChange}
-        getAppAuthentication={getAppAuthentication}
-        appAuthentication={appAuthentication}
-        authenticationType={authenticationType}
-        scrollConfig={scrollConfig}
-        setScrollConfig={setScrollConfig}
-        selectedAction={selectedAction}
-        workflow={workflow}
-        setWorkflow={setWorkflow}
-        setSelectedAction={setSelectedAction}
-        setUpdate={setUpdate}
-        selectedApp={selectedApp}
-        workflowExecutions={workflowExecutions}
-        setSelectedResult={setSelectedResult}
-        setSelectedApp={setSelectedApp}
-        setSelectedTrigger={setSelectedTrigger}
-        setSelectedEdge={setSelectedEdge}
-        setCurrentView={setCurrentView}
-        cy={cy}
-        setAuthenticationModalOpen={setAuthenticationModalOpen}
-        setVariablesModalOpen={setVariablesModalOpen}
-        setLastSaved={setLastSaved}
-        setCodeModalOpen={setCodeModalOpen}
-        selectedNameChange={selectedNameChange}
-        rightsidebarStyle={rightsidebarStyle}
-        showEnvironment={showEnvironment}
-        selectedActionEnvironment={selectedActionEnvironment}
-        environments={environments}
-        setNewSelectedAction={setNewSelectedAction}
-        sortByKey={sortByKey}
-        appApiViewStyle={appApiViewStyle}
-        globalUrl={globalUrl}
-        setSelectedActionEnvironment={setSelectedActionEnvironment}
-        requiresAuthentication={requiresAuthentication}
-        setLastSaved={setLastSaved}
-        lastSaved={lastSaved}
-		aiSubmit={aiSubmit}
-  		listCache={listCache}
-        setActiveDialog={setActiveDialog}
-		apps={apps}
-		expansionModalOpen={codeEditorModalOpen}
-		setExpansionModalOpen={setCodeEditorModalOpen}
-		setEditorData={setEditorData}
-		setAiQueryModalOpen={setAiQueryModalOpen}
-      />
-        </div> : null
+		<Fade in={true} timeout={250} style={{ transitionDelay: `${0}ms` }}>
+        	<div id="rightside_actions" style={rightsidebarStyle}>
+			  <ParsedAction
+				id="rightside_subactions"
+				files={files}
+				isCloud={isCloud}
+				getParents={getParents}
+				toolsAppId={toolsApp.id}
+				setShowVideo={setShowVideo}
+				actionDelayChange={actionDelayChange}
+				getAppAuthentication={getAppAuthentication}
+				appAuthentication={appAuthentication}
+				authenticationType={authenticationType}
+				scrollConfig={scrollConfig}
+				setScrollConfig={setScrollConfig}
+				selectedAction={selectedAction}
+				workflow={workflow}
+				setWorkflow={setWorkflow}
+				setSelectedAction={setSelectedAction}
+				setUpdate={setUpdate}
+				selectedApp={selectedApp}
+				workflowExecutions={workflowExecutions}
+				setSelectedResult={setSelectedResult}
+				setSelectedApp={setSelectedApp}
+				setSelectedTrigger={setSelectedTrigger}
+				setSelectedEdge={setSelectedEdge}
+				setCurrentView={setCurrentView}
+				cy={cy}
+				setAuthenticationModalOpen={setAuthenticationModalOpen}
+				setVariablesModalOpen={setVariablesModalOpen}
+				setLastSaved={setLastSaved}
+				setCodeModalOpen={setCodeModalOpen}
+				selectedNameChange={selectedNameChange}
+				rightsidebarStyle={rightsidebarStyle}
+				showEnvironment={showEnvironment}
+				selectedActionEnvironment={selectedActionEnvironment}
+				environments={environments}
+				setNewSelectedAction={setNewSelectedAction}
+				sortByKey={sortByKey}
+				appApiViewStyle={appApiViewStyle}
+				globalUrl={globalUrl}
+				setSelectedActionEnvironment={setSelectedActionEnvironment}
+				requiresAuthentication={requiresAuthentication}
+				setLastSaved={setLastSaved}
+				lastSaved={lastSaved}
+				aiSubmit={aiSubmit}
+				listCache={listCache}
+				setActiveDialog={setActiveDialog}
+				apps={apps}
+				expansionModalOpen={codeEditorModalOpen}
+				setExpansionModalOpen={setCodeEditorModalOpen}
+				setEditorData={setEditorData}
+				setAiQueryModalOpen={setAiQueryModalOpen}
+			  />
+        	</div> 
+		</Fade>
+		  : null
       }
 	  {/* Looks for triggers" */}
 	  {/* Only fixed the ones that require scrolling on a small screen */}
@@ -21199,7 +20706,7 @@ const releaseToConnectLabel = "Release to Connect"
           <TextField
             style={{
               backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
             InputProps={{
               style: {
@@ -21294,7 +20801,7 @@ const releaseToConnectLabel = "Release to Connect"
                   <TextField
                     style={{
                       backgroundColor: theme.palette.inputColor,
-                      borderRadius: theme.palette.borderRadius,
+                      borderRadius: theme.palette?.borderRadius,
                     }}
                     InputProps={{
                       style: {
@@ -21461,7 +20968,7 @@ const releaseToConnectLabel = "Release to Connect"
                 width: 30,
                 height: 30,
                 border: "2px solid rgba(255,255,255,0.6)",
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
                 maxHeight: 30,
                 maxWidth: 30,
                 overflow: "hidden",
@@ -21483,7 +20990,7 @@ const releaseToConnectLabel = "Release to Connect"
                 width: 30,
                 height: 30,
                 border: "2px solid rgba(255,255,255,0.6)",
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
                 maxWidth: 30,
                 maxHeight: 30,
                 overflow: "hidden",
@@ -21626,7 +21133,7 @@ const releaseToConnectLabel = "Release to Connect"
                     style={{
                         backgroundColor: theme.palette.inputColor,
                         padding: 15,
-                        borderRadius: theme.palette.borderRadius,
+                        borderRadius: theme.palette?.borderRadius,
                         marginBottom: 30,
                     }}
                 >
@@ -21703,7 +21210,7 @@ const releaseToConnectLabel = "Release to Connect"
 					style={{
 						backgroundColor: theme.palette.inputColor,
 						padding: 15,
-						borderRadius: theme.palette.borderRadius,
+						borderRadius: theme.palette?.borderRadius,
 						marginBottom: 30,
 						display: "flex",
 					}}
@@ -21803,10 +21310,7 @@ const releaseToConnectLabel = "Release to Connect"
     </Dialog>
   ) : null;
 
-  const TenzirConfigModal = () => {
-    if (!tenzirConfigModalOpen) return null;
-  
-    return (
+  const tenzirConfigModal = !tenzirConfigModalOpen ? null : 
       <Dialog
         PaperComponent={PaperComponent}
         hideBackdrop={true}
@@ -21819,9 +21323,9 @@ const releaseToConnectLabel = "Release to Connect"
             pointerEvents: "auto",
             color: "white",
             minWidth: 600,
-            minHeight: 550,
-            maxHeight: 550,
-            padding: 15,
+            minHeight: 250,
+            maxHeight: 250,
+            padding: 50,
             overflow: "hidden",
             zIndex: 10012,
             border: theme.palette.defaultBorder,
@@ -21829,89 +21333,29 @@ const releaseToConnectLabel = "Release to Connect"
         }}
       >
         <DialogTitle id="tenzir-config-modal" style={{ cursor: "move" }}>
-          <div style={{ color: "white" }}>Configuration options for Kafka</div>
+          <div style={{ color: "white" }}>Run a Tenzir Pipeline</div>
+		  <Typography variant="body2" color="textSecondary" style={{ marginTop: 10, }}>
+			Runs a Tenzir pipeline. You can use the output of the pipeline in your workflow.
+		  </Typography>
         </DialogTitle>
         <DialogContent>
-          {selectedOption === "Kafka Queue" ? (
             <div>
-              <b>Topic</b>
+              <b>Pipeline</b>
               <TextField
                 id="topic"
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                 }}
                 InputProps={{
                   style: {},
                 }}
                 fullWidth
                 color="primary"
-                placeholder={"topic name"}
-                defaultValue={
-                  selectedTrigger?.parameters?.find(
-                    (param) => param.name === "topic",
-                  )?.value || ""
-                }
-              />
-              <b>bootstrap.servers</b>
-              <TextField
-                id="bootstrap_servers"
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
-                }}
-                InputProps={{
-                  style: {},
-                }}
-                fullWidth
-                color="primary"
-                placeholder={"broker1.example.com:9092,192.168.1.100:9092"}
-                defaultValue={
-                  selectedTrigger?.parameters?.find(
-                    (param) => param.name === "bootstrap_servers",
-                  )?.value || ""
-                }
-              />
-              <b>group.id</b>
-              <TextField
-                id="group_id"
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
-                }}
-                InputProps={{
-                  style: {},
-                }}
-                fullWidth
-                color="primary"
-                placeholder={"tenzir"}
-                defaultValue={
-                  selectedTrigger?.parameters?.find(
-                    (param) => param.name === "group_id",
-                  )?.value || ""
-                }
-              />
-              <b>auto.offest.reset</b>
-              <TextField
-                id="auto_offset_reset"
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
-                }}
-                InputProps={{
-                  style: {},
-                }}
-                fullWidth
-                color="primary"
-                placeholder={"earliest"}
-                defaultValue={
-                  selectedTrigger?.parameters?.find(
-                    (param) => param.name === "auto_offset_reset",
-                  )?.value || ""
-                }
+                placeholder={""}
+  				defaultValue={selectedOption}
               />
             </div>
-          ) : null}{" "}
 
         </DialogContent>
   
@@ -21921,12 +21365,13 @@ const releaseToConnectLabel = "Release to Connect"
             onClick={() => {
               setTenzirConfigModalOpen(false);
             }}
-            color="primary"
+            color="secondary"
           >
             Cancel
           </Button>
           <Button
             style={{ borderRadius: "0px" }}
+			variant="contained"
             onClick={() => {
               handleSubmit(selectedTrigger);
             }}
@@ -21936,10 +21381,6 @@ const releaseToConnectLabel = "Release to Connect"
           </Button>
         </DialogActions>
       </Dialog>
-    );
-  };
-  
-
 
 	const SuggestionBoxUi = () => {
 		const [suggestionValue, setSuggestionValue] = useState("");
@@ -21951,7 +21392,7 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
 		return ( 
-			<div style={{width: 350, padding: 15, position: "fixed", top: suggestionBox.position.top, left: suggestionBox.position.left, borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", }}>
+			<div style={{width: 350, padding: 15, position: "fixed", top: suggestionBox.position.top, left: suggestionBox.position.left, borderRadius: theme.palette?.borderRadius, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", }}>
 				{/*
 				<AutoFixHighIcon style={{height: 12, width: 12, color: "white", position: "absolute", top: 10, right: 24, }} />
 				*/}
@@ -22023,7 +21464,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  }*/
 
   	const RevisionBox = (props) => {
-		  const { revision, } = props 
+		  const { revision, showBorder,  } = props 
 		  if (revision === undefined || revision === null) {
 			  return null
 		  }
@@ -22053,7 +21494,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 		  return (
 		  	<Paper 
-				style={{padding: "15px 15px 15px 25px", minHeight: 105, maxHeight: 105, cursor: "pointer", backgroundColor: newrevision.edited === selectedVersion.edited ? "rgba(255,255,255,0.3)" : theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", marginBottom: 10, 
+				style={{padding: "15px 15px 15px 25px", minHeight: 105, maxHeight: 105, cursor: "pointer", backgroundColor: newrevision.edited === selectedVersion.edited ? "rgba(255,255,255,0.3)" : theme.palette.surfaceColor, border: showBorder === true ? `1px solid ${green}` : "1px solid rgba(255,255,255,0.3)", marginBottom: 10, 
 				}} onClick={(e) => {
 					if (newrevision.edited === selectedVersion.edited) {
 						console.log("Same revision! No setting.")
@@ -22146,12 +21587,14 @@ const releaseToConnectLabel = "Release to Connect"
 						</Typography>
 					</span>
 					<span style={{flex: 2, }}>
-						<Chip
-							style={{marginLeft: 10, padding: 0, }}
-							label={workflowStatus}
-							variant="outlined"
-							color="secondary"
-						/>
+			  			<Tooltip title="Workflow status. Change in the Edit Workflow panel" placement="top">
+							<Chip
+								style={{marginLeft: 10, padding: 0, }}
+								label={workflowStatus}
+								variant="outlined"
+								color="secondary"
+							/>
+			  			</Tooltip>
 					</span>
 				</div>
 				{/*revision.edited === originalWorkflow.edited ?
@@ -22228,44 +21671,54 @@ const releaseToConnectLabel = "Release to Connect"
 
 	  const drawerData = originalWorkflow !== undefined && originalWorkflow !== null ?
       <div style={{ height: "100%"}}>
-      <Typography variant="h5" style={{ paddingLeft: 25, paddingTop:25, backgroundColor: theme.palette.surfaceColor,  height: "8%" }}>
-				Version History
-			</Typography>
-      	  <div style={{height: "92%" }}>
-          <div style={{paddingLeft: "25px", paddingRight: "25px", paddingTop: "10px"}}>
-          <div style={{marginBottom: "20px", }}>
-          <Typography variant="h6" style={{marginTop: 10, marginBottom: 5, }}>
-              Current Version
-            </Typography>
-            <RevisionBox 
-              revision={selectedVersion}
-            />
-          </div>
+      	<Typography variant="h4" style={{ paddingLeft: 25, paddingTop:25, backgroundColor: theme.palette.surfaceColor, }}>
+			Version History
+		</Typography>
+		<Typography variant="body2" color="textSecondary" style={{ paddingLeft: 25, paddingTop: 5, paddingBottom: 5, backgroundColor: theme.palette.surfaceColor, }}>
+			Versions are stored for every change made, up to once per minute. When restoring a version, the changes will not take effect until you save the workflow.
+		</Typography>
+		<Divider style={{marginTop: 25, }}/>
+      	  <div style={{height: "100%", }}>
+			  {/*
+			  <div style={{paddingLeft: "25px", paddingRight: "25px", paddingTop: "10px"}}>
+				  <div style={{marginBottom: "20px", }}>
+					  <Typography variant="h6" style={{marginTop: 10, marginBottom: 5, }}>
+						  Current Version
+						</Typography>
+						<RevisionBox 
+						  revision={selectedVersion}
+						/>
+					</div>
 
-          <Divider
-                style={{
-                    marginBottom: 15,
-                    height: 1,
-                    width: "100%",
-                    backgroundColor: "rgb(91, 96, 100)",
-                  }}
-            />
-          </div>
+					<Divider
+						style={{
+							marginBottom: 15,
+							height: 1,
+							width: "100%",
+							backgroundColor: "rgb(91, 96, 100)",
+						  }}
+					/>
+          		</div>
+				*/}
 
 
           {allRevisions.length > 0 ?
             <div style={{overflow: "auto", width: "100%" , height: "75%", paddingLeft: "25px", paddingRight: "20px", paddingTop: "10px", paddingBottom: "10px"}}>
               {
                  allRevisions.map((revision, index) => {
+					 /*
                   if(revision.edited === selectedVersion.edited){
                     return null
                   }
+				  */
 
                   return (
                     <RevisionBox 
                       revision={revision} 
                       key={index} 
                       index={index} 
+
+					  showBorder={revision.edited === selectedVersion.edited}
                     />
                   )
                 })
@@ -22440,8 +21893,10 @@ const releaseToConnectLabel = "Release to Connect"
 				} 
 			}
 		} else {
-			selectedAction.parameters[count].autocompleted = false 
-			selectedAction.parameters[count].value = data
+			if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > count) {
+				selectedAction.parameters[count].autocompleted = false 
+				selectedAction.parameters[count].value = data
+			}
 		}
 
 		setSelectedAction(selectedAction)
@@ -22487,7 +21942,7 @@ const releaseToConnectLabel = "Release to Connect"
 
   const templatePopup = foundusecase.name === undefined || foundusecase.name === null || foundusecase.name === "" ? null :
 	<Slide direction="down" in={true} mountOnEnter unmountOnExit>
-		<div style={{position: "fixed", top: "10%", left: "37%", border: "1px solid rgba(255,255,255,0.3)", backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, display: "flex", }}>
+		<div style={{position: "fixed", top: "10%", left: "37%", border: "1px solid rgba(255,255,255,0.3)", backgroundColor: theme.palette.inputColor, borderRadius: theme.palette?.borderRadius, display: "flex", }}>
 			<WorkflowTemplatePopup 
 				isLoggedIn={isLoggedIn}
 				userdata={userdata}
@@ -22516,7 +21971,7 @@ const releaseToConnectLabel = "Release to Connect"
         {codePopoutModal}
 		{workflowRevisions}
         {authenticationModal}
-        {<TenzirConfigModal/>}
+        {tenzirConfigModal}
         {/*editWorkflowModal*/}
   		{authgroupModal} 
   		{executionArgumentModal}
@@ -22545,10 +22000,13 @@ const releaseToConnectLabel = "Release to Connect"
 				fieldCount={editorData.field_number}
 				actionlist={editorData.actionlist}
 				fieldname={editorData.field_id}
+				editorData={editorData}
 
 				changeActionParameterCodeMirror={changeActionParameterCodeMirror}
-        activeDialog={activeDialog}
-        setActiveDialog={setActiveDialog}
+				activeDialog={activeDialog}
+				setActiveDialog={setActiveDialog}
+
+  				setAiQueryModalOpen={setAiQueryModalOpen}
 	  		/>
 		: null}
 
@@ -22565,7 +22023,7 @@ const releaseToConnectLabel = "Release to Connect"
           : null}
         
         {/*selectionOpen === true ?
-          <div style={{ borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.surfaceColor, zIndex: 12501,position:"fixed", left: 190, bottom: 20,top:70, width: 950, overflowY: "scroll"}}>
+          <div style={{ borderRadius: theme.palette?.borderRadius, backgroundColor: theme.palette.surfaceColor, zIndex: 12501,position:"fixed", left: 190, bottom: 20,top:70, width: 950, overflowY: "scroll"}}>
             <div>
             <IconButton
               style={{
@@ -22593,7 +22051,7 @@ const releaseToConnectLabel = "Release to Connect"
         : null*/}
 
         {showVideo !== undefined && showVideo.length > 0 ?
-          <div style={{ borderRadius: theme.palette.borderRadius, zIndex: 12501, position: "fixed", left: 40, bottom: 150, width: 300, }}>
+          <div style={{ borderRadius: theme.palette?.borderRadius, zIndex: 12501, position: "fixed", left: 40, bottom: 150, width: 300, }}>
             <IconButton
               style={{
                 zIndex: 12502,

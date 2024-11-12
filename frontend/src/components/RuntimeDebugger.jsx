@@ -35,6 +35,7 @@ import {
     PlayArrow as PlayArrowIcon,
 	Insights as InsightsIcon, 
 	Replay as ReplayIcon, 
+	EditNote as EditNoteIcon,
 } from '@mui/icons-material';
 
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid'
@@ -75,6 +76,10 @@ const RuntimeDebugger = (props) => {
 	const [workflows, setWorkflows] = useState([
 		{"id": "", "name": "All Workflows",}
 	])
+
+	if (document != undefined) { 
+		document.title = "Workflow Run Debugger"
+	}
 
 	// Shitty workflow search on purpose :)
 	const handleWorkflowUsageCount = (workflows) => {
@@ -219,7 +224,7 @@ const RuntimeDebugger = (props) => {
 	}
 
 
-	  const getAvailableWorkflows = () => {
+	  const getAvailableWorkflows = (workflowId) => {
 		fetch(globalUrl + "/api/v1/workflows", {
 		  method: "GET",
 		  headers: {
@@ -240,6 +245,15 @@ const RuntimeDebugger = (props) => {
 			  var foundWorkflows = [{"id": "", "name": "All Workflows",}]
 			  foundWorkflows.push(...responseJson)
 			  setWorkflows(foundWorkflows)
+
+			  if (workflowId !== undefined && workflowId !== null && workflowId !== "" && workflowId.length === 36) {
+				  for (var key in responseJson) {
+					  if (responseJson[key].id === workflowId) {
+						  setWorkflow(responseJson[key])
+						  break
+					  }
+				  }
+			  }
 		  }
 		})
 		.catch((error) => {
@@ -248,7 +262,6 @@ const RuntimeDebugger = (props) => {
 	  }
 
 	useEffect(() => {
-	  	getAvailableWorkflows()
 
 		// Find workflow_id in url query
 		const urlParams = new URLSearchParams(window.location.search);
@@ -264,6 +277,8 @@ const RuntimeDebugger = (props) => {
 				}
 			}
 		}
+
+	  	getAvailableWorkflows(workflowId)
 
 		const foundStatus = urlParams.get('status');
 		if (foundStatus !== undefined && foundStatus !== null && foundStatus !== "") {
@@ -314,15 +329,17 @@ const RuntimeDebugger = (props) => {
 
 				var source = params.row.execution_source
 				if (source === "schedule") {
-					foundSource = <img src={alltriggers[1].large_image} alt="schedule" style={{borderRadius: theme.palette.borderRadius, height: imageSize, width: imageSize, }} />
+					foundSource = <img src={alltriggers[1].large_image} alt="schedule" style={{borderRadius: theme.palette?.borderRadius, height: imageSize, width: imageSize, }} />
 				} else if (source === "webhook") {
-					foundSource = <img src={alltriggers[0].large_image} alt="webhook" style={{borderRadius: theme.palette.borderRadius, height: imageSize, width: imageSize, }} />
+					foundSource = <img src={alltriggers[0].large_image} alt="webhook" style={{borderRadius: theme.palette?.borderRadius, height: imageSize, width: imageSize, }} />
 				} else if (source === "subflow" || source.length === 36) {
-					foundSource = <img src={alltriggers[4].large_image} alt="subflow" style={{borderRadius: theme.palette.borderRadius, height: imageSize, width: imageSize, }} />
+					foundSource = <img src={alltriggers[3].large_image} alt="subflow" style={{borderRadius: theme.palette?.borderRadius, height: imageSize, width: imageSize, }} />
 					source = "subflow"
 				} else if (source === "rerun" || source.length === 36) {
 					foundSource = <ReplayIcon style={{color: theme.palette.primary.secondary, height: imageSize, width: imageSize, }} />
 					source = "rerun of a previous run"
+				} else if (source === "form") { 
+					foundSource = <EditNoteIcon style={{color: theme.palette.primary.secondary, height: imageSize, width: imageSize, }} />
 				} else {
 					source = "manual"
 				}
@@ -888,13 +905,13 @@ const RuntimeDebugger = (props) => {
 				{userdata.support === true ? 
 					<Button
 						variant={ignoreOrg ? "contained" : "outlined"}
-						color="primary"
-						style={{maxHeight: 40, marginTop: 25, }}
+						color="secondary"
+						style={{marginLeft: 100, maxHeight: 40, marginTop: 25, }}
 						onClick={() => {
 							setIgnoreOrg(!ignoreOrg)
 						}}
 					>
-						{ignoreOrg ? "Ignoring Org" : "Ignore Org"}
+						{ignoreOrg ? "Ignoring Org" : "Ignore Org (Support Only)"}
 					</Button>
 				: null}
 			</div>
@@ -942,11 +959,8 @@ const RuntimeDebugger = (props) => {
 					},
 				  }}
 				  getOptionLabel={(option) => {
-					if (
-					  option === undefined ||
-					  option === null ||
-					  option.name === undefined ||
-					  option.name === null
+					if (option === undefined || option === null ||
+					  option.name === undefined || option.name === null
 					) {
 					  return "No Workflow Selected";
 					}
@@ -961,7 +975,7 @@ const RuntimeDebugger = (props) => {
 				  style={{
 					backgroundColor: theme.palette.inputColor,
 					height: 50,
-					borderRadius: theme.palette.borderRadius,
+					borderRadius: theme.palette?.borderRadius,
 					marginTop: 5, 
 					marginLeft: 5,
 				  }}
@@ -995,13 +1009,13 @@ const RuntimeDebugger = (props) => {
 					  <Tooltip arrow placement="left" title={
 						<span style={{}}>
 						  {data.image !== undefined && data.image !== null && data.image.length > 0 ?
-							<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+							<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
 							: null}
 						  <Typography>
 							Choose {data.name}
 						  </Typography>
 						</span>
-					  } placement="bottom">
+					  }>
 						<MenuItem
 						  style={{
 							backgroundColor: theme.palette.inputColor,
@@ -1023,7 +1037,7 @@ const RuntimeDebugger = (props) => {
 					  <TextField
 						style={{
 						  backgroundColor: theme.palette.inputColor,
-						  borderRadius: theme.palette.borderRadius,
+						  borderRadius: theme.palette?.borderRadius,
 						}}
 						{...params}
 						label="Workflow"

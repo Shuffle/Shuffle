@@ -627,7 +627,7 @@ const Settings = (props) => {
       display: "flex",
       flexDirection: "column",
       padding: "0px 0px 12px 0px",
-      borderRadius: theme.palette.borderRadius,
+      borderRadius: theme.palette?.borderRadius,
     };
 
     const currentOwner = checkOwner(data, userdata);
@@ -636,7 +636,7 @@ const Settings = (props) => {
     }
 
     return (
-      <Grid item xs={4} style={{ borderRadius: theme.palette.borderRadius }}>
+      <Grid item xs={4} style={{ borderRadius: theme.palette?.borderRadius }}>
         <Paper style={innerPaperStyle}>
           <img
             src={data.image}
@@ -692,7 +692,7 @@ const Settings = (props) => {
   );
 
   const landingpageData = (
-    <div style={{ display: "flex", marginTop: 120 }}>
+    <div style={{ display: "flex", paddingTop: 120 }}>
       <Paper style={boxStyle}>
         {imageInfo}
         <h2>Settings</h2>
@@ -1065,7 +1065,7 @@ const Settings = (props) => {
                   <Paper
                     square
                     style={{
-                      borderRadius: theme.palette.borderRadius,
+                      borderRadius: theme.palette?.borderRadius,
                       padding: 50,
                       backgroundColor: theme.palette.inputColor,
                     }}
@@ -1100,7 +1100,7 @@ const Settings = (props) => {
               <Paper
                 square
                 style={{
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                   padding: 50,
                   backgroundColor: theme.palette.inputColor,
                 }}

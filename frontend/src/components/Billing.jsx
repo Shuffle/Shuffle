@@ -179,7 +179,7 @@ const Billing = (props) => {
 		height: 480,
 		// width: "100%",
 		backgroundColor: theme.palette.platformColor,
-		borderRadius: theme.palette.borderRadius * 2,
+		borderRadius: theme.palette?.borderRadius * 2,
 		border: "1px solid rgba(255,255,255,0.3)",
 		marginRight: 10,
 		marginTop: 15,
@@ -583,7 +583,7 @@ const Billing = (props) => {
 								margin: "auto",
 								width: 100,
 								backgroundColor: "white",
-								borderRadius: theme.palette.borderRadius,
+								borderRadius: theme.palette?.borderRadius,
 							}}
 						/>
 						: null}
@@ -653,7 +653,7 @@ const Billing = (props) => {
 												value={feature.split("Worker License: ")[1]}
 												style={{
 													backgroundColor: theme.palette.inputColor,
-													borderRadius: theme.palette.borderRadius,
+													borderRadius: theme.palette?.borderRadius,
 												}}
 												id={fieldId}
 												onClick={() => { }}
@@ -1041,7 +1041,7 @@ const Billing = (props) => {
 				width: 340,
 				height: 480,
 				backgroundColor: hovered ? "#232427" : theme.palette.platformColor,
-				borderRadius: theme.palette.borderRadius * 2,
+				borderRadius: theme.palette?.borderRadius * 2,
 				border: "1px solid rgba(255,255,255,0.3)",
 				marginRight: 10,
 				marginTop: 15,
@@ -1315,7 +1315,7 @@ const Billing = (props) => {
 					// maxWidth: 400,
 					width: 340,
 					backgroundColor: hovered ? "#232427" : theme.palette.platformColor,
-					borderRadius: theme.palette.borderRadius * 2,
+					borderRadius: theme.palette?.borderRadius * 2,
 					border: "1px solid rgba(255,255,255,0.3)",
 					marginRight: 10,
 					marginTop: 15,

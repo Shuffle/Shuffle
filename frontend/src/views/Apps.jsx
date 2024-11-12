@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useContext, memo } from "react";
 
 import { useInterval } from "react-powerhooks";
 import theme from '../theme.jsx';
@@ -49,6 +49,7 @@ import {
 	Folder as FolderIcon,
 	LibraryBooks as LibraryBooksIcon,
 } from "@mui/icons-material";
+import { Context } from "../context/ContextApi.jsx";
 
 import {
 	ForkRight as ForkRightIcon,
@@ -280,6 +281,7 @@ const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e52
 const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata, serverside, } = props;
 
+
   //const [workflows, setWorkflows] = React.useState([]);
   const baseRepository = "https://github.com/frikky/shuffle-apps";
   //const alert = useAlert();
@@ -423,7 +425,7 @@ const Apps = (props) => {
     minWidth: "100%",
     maxWidth: 612.5,
     marginBottom: 5,
-    borderRadius: theme.palette.borderRadius,
+    borderRadius: theme.palette?.borderRadius,
     color: "white",
     backgroundColor: surfaceColor,
     cursor: "pointer",
@@ -875,7 +877,7 @@ const Apps = (props) => {
     minWidth: viewWidth,
     maxWidth: viewWidth,
     color: "white",
-    borderRadius: theme.palette.borderRadius,
+    borderRadius: theme.palette?.borderRadius,
     backgroundColor: surfaceColor,
     //display: "flex",
     marginBottom: 10,
@@ -1551,7 +1553,7 @@ const Apps = (props) => {
 			minHeight: 150, 
 			maxHeight: 150, 
 
-			borderRadius: theme.palette.borderRadius,
+			borderRadius: theme.palette?.borderRadius,
 		}
 
 		if (!makeFancy) { 
@@ -1829,7 +1831,7 @@ const Apps = (props) => {
         }}>
           <TextField
             fullWidth
-            style={{ backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, maxWidth: leftBarSize - 20, }}
+            style={{ backgroundColor: theme.palette.inputColor, borderRadius: theme.palette?.borderRadius, maxWidth: leftBarSize - 20, }}
             InputProps={{
               style: {
                 color: "white",
@@ -2185,7 +2187,7 @@ const Apps = (props) => {
           </div>
           <div style={{ height: 50 }}>
             <TextField
-              style={{ backgroundColor: inputColor, borderRadius: theme.palette.borderRadius, }}
+              style={{ backgroundColor: inputColor, borderRadius: theme.palette?.borderRadius, }}
               InputProps={{
                 style: {
                 },
@@ -2236,7 +2238,7 @@ const Apps = (props) => {
     							minWidth: viewWidth,
     							maxWidth: viewWidth,
     							color: "white",
-    							borderRadius: theme.palette.borderRadius,
+    							borderRadius: theme.palette?.borderRadius,
     							//display: "flex",
     							marginBottom: 10,
     							overflow: "hidden",
@@ -2373,6 +2375,7 @@ const Apps = (props) => {
     toast("Hotloading apps from location in .env");
     setIsLoading(true);
     fetch(globalUrl + "/api/v1/apps/run_hotload", {
+	  method: "POST",
       mode: "cors",
       headers: {
         Accept: "application/json",
@@ -2999,7 +3002,7 @@ const Apps = (props) => {
       PaperProps={{
         style: {
           backgroundColor: theme.palette.platformColor,
-		  borderRadius: theme.palette.borderRadius,
+		  borderRadius: theme.palette?.borderRadius,
           color: "white",
           minWidth: "800px",
           minHeight: "320px",
@@ -3091,7 +3094,7 @@ const Apps = (props) => {
       PaperProps={{
         style: {
           backgroundColor: theme.palette.platformColor,
-		  borderRadius: theme.palette.borderRadius,
+		  borderRadius: theme.palette?.borderRadius,
           color: "white",
           minWidth: "800px",
           minHeight: "320px",
@@ -3202,22 +3205,50 @@ const Apps = (props) => {
     </Dialog>
   ) : null;
 
-  const loadedCheck =
-    isLoaded && !firstrequest ? (
-      <div>
-        {appView}
-        {modalView}
-  		{publishModal} 
-  		{generateAppView} 
-        {appsModalLoad}
-        {deleteModal}
-      </div>
-    ) : (
-      <div></div>
-    );
+  const loadedCheck = isLoaded && !firstrequest ? (
+    <SidebarAdjustWrapper userdata={userdata}>
+      <AppsWrapper
+        userdata={userdata}
+        appView={appView}
+        modalView={modalView}
+        publishModal={publishModal}
+        generateAppView={generateAppView}
+        appsModalLoad={appsModalLoad}
+        deleteModal={deleteModal}
+      />
+    </SidebarAdjustWrapper>
+  ) : (
+    <div></div>
+  );
 
-  // Maybe use gridview or something, idk
   return loadedCheck;
 };
 
 export default Apps;
+
+
+const AppsWrapper = memo(({ appView, modalView, userdata, publishModal, generateAppView, appsModalLoad, deleteModal }) => (
+  <>
+    {appView}
+    {modalView}
+    {publishModal}
+    {generateAppView}
+    {appsModalLoad}
+    {deleteModal}
+  </>
+));
+
+
+const SidebarAdjustWrapper = memo(({ userdata, children }) => {
+
+  const {leftSideBarOpenByClick } = useContext(Context)
+  const marginLeft = userdata?.support
+    ? leftSideBarOpenByClick ? 250 : 80
+    : 0;
+
+  return (
+    <div style={{ marginLeft, transition: 'margin-left 0.3s ease' }}>
+      {children}
+    </div>
+  );
+});

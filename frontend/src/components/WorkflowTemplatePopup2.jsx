@@ -759,7 +759,7 @@ const WorkflowTemplatePopup = (props) => {
 	const borderStyle = isHomePage ? null : isHovered && isActive ? errorMessage !== "" ? "1px solid red" : `2px solid ${theme.palette.green}` : isHovered ? `1px solid ${highlightColor}` : "1px solid rgba(33, 33, 33, 1)"
 
 	return (
-		<div style={{ display: "flex", height: boxHeight, borderRadius: theme.palette.borderRadius, justifyContent: isMobile ? null : "center" }}
+		<div style={{ display: "flex", height: boxHeight, borderRadius: theme.palette?.borderRadius, justifyContent: isMobile ? null : "center" }}
 		>
 			<ModalView />
 

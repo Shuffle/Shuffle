@@ -263,7 +263,9 @@ const data = [
   {
     selector: "node[?isStartNode]",
     css: {
-      shape: "ellipse",
+      shape: function(element) {
+		  return "ellipse" 
+	  },
       "border-color": "#80deea",
       width: "80px",
       height: "80px",

@@ -1431,7 +1431,7 @@ const ParsedAction = (props) => {
                         )
 
                         if (foundResult === undefined || foundResult === null) {
-                          continue;
+                          continue
                         }
 
 						const oldstartnode = cy.getElementById(selectedAction.id);
@@ -1444,12 +1444,12 @@ const ParsedAction = (props) => {
 
                         setSelectedResult(foundResult);
                         if (setCodeModalOpen !== undefined) {
-                          setCodeModalOpen(true);
+                          setCodeModalOpen(true)
                       	
 						  found = true
                         }
 
-                        break;
+                        break
                       }
 
 					  if (!found) {
@@ -1497,13 +1497,13 @@ const ParsedAction = (props) => {
                   }}
 		  		  disabled={autoCompleting}
                   onClick={() => {
-					  //if (setAiQueryModalOpen !== undefined) {
-					  //  setAiQueryModalOpen(true)
-					  //} else {
-					  	aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
-					  //}
-  					  setAutocompleting(true)
-
+					  if (setAiQueryModalOpen !== undefined) {
+					    setAiQueryModalOpen(true)
+					  } else {
+						  aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
+					  }
+						
+					  setAutocompleting(true)
 					  setTimeout(() => {
 						  setAutocompleting(false)
 					  }, 3000)
@@ -1511,7 +1511,7 @@ const ParsedAction = (props) => {
                 >
                   <Tooltip
                     color="primary"
-                    title={"Autocomplete fields. Uses the name of the current action, the fields and previous actions' results"}
+                    title={"Autocomplete the action"}
                     placement="top"
                   >
 		  			{autoCompleting ? 
@@ -1568,7 +1568,7 @@ const ParsedAction = (props) => {
                     color: "white",
                     height: 35,
                     marginleft: 10,
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                   }}
                   SelectDisplayProps={{
                     style: {
@@ -1963,7 +1963,7 @@ const ParsedAction = (props) => {
                 color: "white",
                 height: 50,
                 maxWidth: rightsidebarStyle.maxWidth - 80,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
               }}
             >
               <MenuItem
@@ -2066,7 +2066,7 @@ const ParsedAction = (props) => {
 	  : null}
 
 
-      {showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
+      {/*showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
         <div style={{ marginTop: "20px" }}>
           <Typography style={{color: "rgba(255,255,255,0.7)"}}>Environment</Typography>
           <Select
@@ -2097,7 +2097,7 @@ const ParsedAction = (props) => {
               backgroundColor: theme.palette.inputColor,
               color: "white",
               height: "50px",
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
           >
             {environments.map((data, index) => {
@@ -2153,15 +2153,9 @@ const ParsedAction = (props) => {
             })}
           </Select>
 
-		  {/*selectedActionEnvironment.running_ip === "" && selectedActionEnvironment.Name !== "Cloud" && selectedActionEnvironment.Name !== "cloud" ?
-			  <a href={`/admin?tab=environment&env=${selectedActionEnvironment.Name}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e",}}>
-				<Typography style={{}}>
-				  Configure the environment
-				</Typography>
-			  </a>
-		  : null*/}
-	</div>
-      ) : null}
+		</div>
+      ) : null*/}
+
       {workflow.execution_variables !== undefined &&
       workflow.execution_variables !== null &&
       workflow.execution_variables.length > 0 ? (
@@ -2201,7 +2195,7 @@ const ParsedAction = (props) => {
               backgroundColor: theme.palette.inputColor,
               color: "white",
               height: "50px",
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
           >
             <MenuItem
@@ -2294,7 +2288,7 @@ const ParsedAction = (props) => {
             style={{
               backgroundColor: theme.palette.inputColor,
               height: 50,
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
             onChange={(event, newValue) => {
               // Workaround with event lol
@@ -2476,7 +2470,7 @@ const ParsedAction = (props) => {
 							variant="body1"
 							style={{
 								backgroundColor: theme.palette.inputColor,
-								borderRadius: theme.palette.borderRadius,
+								borderRadius: theme.palette?.borderRadius,
 							}}
 							label={isIntegration ? "Choose a category" : "Find Actions"}
 							variant="outlined"
@@ -2496,7 +2490,7 @@ const ParsedAction = (props) => {
 						value={selectedAction.name}
 						fullWidth
 						onChange={setNewSelectedAction}
-						style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette.borderRadius,}}
+						style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette?.borderRadius,}}
 						SelectDisplayProps={{
 							style: {
 								marginLeft: 10,
@@ -2724,7 +2718,7 @@ const ParsedAction = (props) => {
           		  style={{
           		    backgroundColor: theme.palette.inputColor,
           		    height: 50,
-          		    borderRadius: theme.palette.borderRadius,
+          		    borderRadius: theme.palette?.borderRadius,
           		  }}
           		  onChange={(event, newValue) => {
 					console.log("SELECT: ", event, newValue)
@@ -2786,7 +2780,7 @@ const ParsedAction = (props) => {
 						<TextField
 							style={{
 								backgroundColor: theme.palette.inputColor,
-								borderRadius: theme.palette.borderRadius,
+								borderRadius: theme.palette?.borderRadius,
 							}}
 							{...params}
 							label="Find App to Translate"
@@ -2801,7 +2795,7 @@ const ParsedAction = (props) => {
 						<div
 							style={{
 								border: "1px solid rgba(255,255,255,0.6)",
-								borderRadius: theme.palette.borderRadius,
+								borderRadius: theme.palette?.borderRadius,
 								marginTop: 15,
 								marginBottom: 10,
 								maxHeight: 70,
@@ -2838,7 +2832,7 @@ const ParsedAction = (props) => {
 			if (selectedAction.parameters === undefined || selectedAction.parameters === null || selectedAction.parameters.length !== selectedActionParameters.length) {
 
 				//selectedAction.parameters = selectedActionParameters
-				console.log("PARAM BUG: ", selectedAction)
+				console.log("PARAM BUG - length change(?): ", selectedAction)
 			}
 
             //!selectedAction.auth_not_required &&
@@ -3008,7 +3002,7 @@ const ParsedAction = (props) => {
 			 		marginTop: 50,
 			 		border: "1px solid rgba(255,255,255,0.7)",
 			 		borderTop: "1px solid rgba(255,255,255,0.7)",
-			 		borderRadius: theme.palette.borderRadius,
+			 		borderRadius: theme.palette?.borderRadius,
 			 		alignItems: "center",
 			 		textAlign: "center",
 			 	  }}
@@ -3284,11 +3278,13 @@ const ParsedAction = (props) => {
 				  }}
 				>
               <TextField
+				autofill="off"
+				autoComplete="off"
                 id={clickedFieldId}
                 disabled={disabled}
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
                   border:
                     selectedActionParameters[count].required ||
                     selectedActionParameters[count].configuration
@@ -3323,6 +3319,8 @@ const ParsedAction = (props) => {
 										"field_number": count,
 										"actionlist": actionlist,
 										"field_id": clickedFieldId,
+
+										"example": selectedActionParameters[count].example,
 									})
 								}}
 							/>
@@ -3646,7 +3644,7 @@ const ParsedAction = (props) => {
                 <TextField
                   style={{
                     backgroundColor: theme.palette.inputColor,
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                   }}
                   InputProps={{
                     endAdornment: hideExtraTypes ? null : (
@@ -3730,7 +3728,7 @@ const ParsedAction = (props) => {
                     backgroundColor: theme.palette.surfaceColor,
                     color: "white",
                     height: "50px",
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                   }}
                 >
                   {parsedoptions.map(
@@ -4307,7 +4305,7 @@ const ParsedAction = (props) => {
                         color: "white",
                         height: 50,
                         marginTop: 2,
-                        borderRadius: theme.palette.borderRadius,
+                        borderRadius: theme.palette?.borderRadius,
                       }}
                       onChange={(e) => {
 						  console.log("SELECT ONCHANGE DONE")

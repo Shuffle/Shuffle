@@ -2467,7 +2467,7 @@ const GettingStarted = (props) => {
                 maxWidth: 1024,
                 zIndex: 11,
                 border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
                 textAlign: "center",
                 overflow: "auto",
               }}

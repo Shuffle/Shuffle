@@ -40,6 +40,7 @@ import {
 
 	Close as CloseIcon,
 	DragIndicator as DragIndicatorIcon, 
+	RestartAlt as RestartAltIcon,
 } from '@mui/icons-material';
 
 
@@ -56,6 +57,7 @@ import { tags as t } from '@lezer/highlight';
 import AceEditor from "react-ace";
 import ace from "ace-builds";
 import 'ace-builds/src-noconflict/mode-python';
+import 'ace-builds/src-noconflict/mode-json';
 //import 'ace-builds/src-noconflict/theme-twilight';
 //import 'ace-builds/src-noconflict/theme-solarized_dark';
 import 'ace-builds/src-noconflict/theme-gruvbox';
@@ -109,6 +111,9 @@ const CodeEditor = (props) => {
 		setActiveDialog,
 		fieldname,
 		contentLoading,
+		editorData, 
+							
+		setAiQueryModalOpen,
 	} = props
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
@@ -162,6 +167,11 @@ const CodeEditor = (props) => {
 
 		setMenuPosition(null);
 	}
+
+	useEffect(() => {
+		highlight_variables(localcodedata)
+		expectedOutput(localcodedata)
+	}, [localcodedata])
 
 	let navigate = useNavigate();
 
@@ -811,11 +821,7 @@ const CodeEditor = (props) => {
 	}
 
   const handleItemClick = (values) => {
-		if (
-			values === undefined ||
-			values === null ||
-			values.length === 0
-		) {
+		if (values === undefined || values === null || values.length === 0) {
 			return;
 		}
 
@@ -830,7 +836,11 @@ const CodeEditor = (props) => {
 			toComplete += values[key].autocomplete;
 		}
 
-		setlocalcodedata(localcodedata+toComplete)
+
+		handleClick({
+			"value": toComplete
+		})
+		//setlocalcodedata(localcodedata+toComplete)
 		setMenuPosition(null)
 	}
 
@@ -839,10 +849,37 @@ const CodeEditor = (props) => {
 			return
 		}
 
-		if (!item.value.includes("{%") && !item.value.includes("{{")) {
-			setlocalcodedata(localcodedata+" | "+item.value+" }}")
-		} else {
-			setlocalcodedata(localcodedata+item.value)
+		// Injects it in the right spot instead of random
+		var edited = false
+		if (currentCharacter !== undefined && currentCharacter !== null && currentCharacter !== -1 && currentLine !== undefined && currentLine !== null && currentLine !== -1) {
+			// Input at the right spot
+			var codedatasplit = localcodedata.split('\n')
+			if (codedatasplit.length > currentLine) {
+				var currentLineData = codedatasplit[currentLine]
+
+				// Remove newlines from item.value
+				if (item.value.includes("% python %")) {
+					item.value = item.value.replaceAll("\n", ";")
+					item.value = item.value.replaceAll("python %};", "python %}")
+				} else {
+					item.value = item.value.replaceAll("\n", "")
+				}
+
+				currentLineData = currentLineData.slice(0, currentCharacter) + item.value + currentLineData.slice(currentCharacter)
+				codedatasplit[currentLine] = currentLineData
+
+				setlocalcodedata(codedatasplit.join('\n'))
+
+				edited = true 
+			}
+		}
+
+		if (edited === false) {
+			if (!item.value.includes("{%") && !item.value.includes("{{")) {
+				setlocalcodedata(localcodedata+" | "+item.value+" }}")
+			} else {
+				setlocalcodedata(localcodedata+item.value)
+			}
 		}
 
 		setAnchorEl(null)
@@ -946,14 +983,19 @@ const CodeEditor = (props) => {
 
 
     // Define a custom completer for the Ace Editor
-	const customVariables = availableVariables
     const customCompleter = {
       getCompletions: function(editor, session, pos, prefix, callback) {
-        callback(null, customVariables.map((variable) => ({
-      	caption: variable,
-      	value: variable,
-      	meta: 'custom',
-        })));
+		console.log("CUSTOM COMPLETER: ", prefix)
+
+        callback(null, availableVariables.map((variable) => {
+			console.log("CUSTOM VAR: ", variable)
+
+			return ({
+				caption: variable,
+				value: variable,
+				meta: 'custom',
+        	})
+		}))
       }
     }
 
@@ -1338,6 +1380,8 @@ const CodeEditor = (props) => {
 										onClick={() => {
 											console.log("CLICKED: ", innerdata);
 											console.log(innerdata.example)
+
+											//const handleClick = (item) => {
 											handleItemClick([innerdata]);
 										}}
 									>
@@ -1482,14 +1526,37 @@ const CodeEditor = (props) => {
 							width: 50, 
 							marginLeft: 100, 
 						}}
-						disabled={isAiLoading}
+						disabled={editorData === undefined || editorData.example === undefined || editorData.example === null || editorData.example.length === 0}
 						onClick={() => {
-							autoFormat(localcodedata) 
+							setlocalcodedata(editorData.example)
+						}}
+						color="secondary"
+					>
+						<Tooltip
+							title={"Reset to example body"}
+							placement="top"
+						>
+							<RestartAltIcon /> 
+						</Tooltip>
+					</IconButton>
+					<IconButton
+						style={{
+							height: 50, 
+							width: 50, 
+							marginLeft: 0, 
+						}}
+						disabled={isAiLoading || editorData.name !== "body"}
+						onClick={() => {
+						  	if (setAiQueryModalOpen !== undefined) {
+								setAiQueryModalOpen(true)
+							} else {
+								autoFormat(localcodedata) 
+							}
 						}}
 					>
 						<Tooltip
 							color="primary"
-							title={"Auto format data"}
+							title={"Format with AI"}
 							placement="top"
 						>
 							{isAiLoading ? 
@@ -1504,7 +1571,7 @@ const CodeEditor = (props) => {
 			}
 					
 			<div style={{
-				borderRadius: theme.palette.borderRadius,
+				borderRadius: theme.palette?.borderRadius,
 				position: "relative",
 				paddingTop: 0, 
 				// minHeight: 548,
@@ -1512,8 +1579,10 @@ const CodeEditor = (props) => {
 			}}>
 				{(availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0) || isFileEditor ? (
 					<AceEditor
+						id="shuffle-codeeditor"
+						name="shuffle-codeeditor"
 						value={localcodedata}
-						mode={selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "python" : ""}
+						mode={selectedAction === undefined ? "json" : selectedAction.name === "execute_python" ? "python" : "json"}
 						theme="gruvbox"
 						height={isFileEditor ? 450 : 550} 
 						width={isFileEditor ? 650 : "100%"}
@@ -1538,12 +1607,10 @@ const CodeEditor = (props) => {
 							highlight_variables(localcodedata)
 						}}
 						onCursorChange={(cursorPosition, editor, value) => {
-							setCurrentCharacter(cursorPosition.column)
-							setCurrentLine(cursorPosition.row)
+							setCurrentCharacter(cursorPosition.cursor.column)
+							setCurrentLine(cursorPosition.cursor.row)
 							findIndex(cursorPosition.row, cursorPosition.column)
 
-							//highlight_variables(localcodedata)
-							//console.log("VALUE CURSOR: ", value)
 						}}
 						onChange={(value, editor) => {
 							// setlocalcodedata(value)
@@ -1666,7 +1733,7 @@ const CodeEditor = (props) => {
 												padding: 10,
 												marginTop: -2,
 												border: `2px solid ${theme.palette.inputColor}`,
-												borderRadius: theme.palette.borderRadius,
+												borderRadius: theme.palette?.borderRadius,
 												maxHeight: 450,
 												minHeight: 450, 
 												overflow: "auto", 

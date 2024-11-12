@@ -441,7 +441,7 @@ const UsecaseListComponent = (props) => {
 											navigate(`/usecases?selected_object=${fixedName}`)
 										}
 									}}>
-										<Paper style={{padding: 25, minHeight: isCloud ? 75 : 122, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor, borderRadius: theme.palette.borderRadius, }} onClick={() => {
+										<Paper style={{padding: 25, minHeight: isCloud ? 75 : 122, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor, borderRadius: theme.palette?.borderRadius, }} onClick={() => {
 										}}>
 											{!selectedItem ? 
 												<div style={{textAlign: "left", position: "relative",}}>
@@ -799,7 +799,7 @@ const UsecaseListComponent = (props) => {
           													  style={{
           													    backgroundColor: theme.palette.inputColor,
           													    height: 50,
-          													    borderRadius: theme.palette.borderRadius,
+          													    borderRadius: theme.palette?.borderRadius,
           													  }}
           													  onChange={(event, newValue) => {
 																//handleWorkflowSelectionUpdate({ target: { value: newValue} })
@@ -856,7 +856,7 @@ const UsecaseListComponent = (props) => {
 																			<Tooltip arrow placement="left" title={
 																				<span style={{}}>
 																					{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
-																						<img src={data.image} alt={newname} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+																						<img src={data.image} alt={newname} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
 																					: null}
 																					<Typography>
 																						Choose {newname}
@@ -881,7 +881,7 @@ const UsecaseListComponent = (props) => {
 																	<TextField
 																		style={{
 																			backgroundColor: theme.palette.inputColor,
-																			borderRadius: theme.palette.borderRadius,
+																			borderRadius: theme.palette?.borderRadius,
 																		}}
 																		{...params}
 																		label="Find your workflows"
@@ -952,8 +952,8 @@ const UsecaseListComponent = (props) => {
 																							target="_blank"
 																							style={{ textDecoration: "none", color: "rgba(255,255,255,0.7)", marginRight: 5, }}
 																						>
-																							<div style={{width: 160, display: "flex", borderRadius: theme.palette.borderRadius, cursor: "pointer", border: highlight ? "2px solid #f86a3e" : "1px solid rgba(255,255,255,0.7)", backgroundColor: theme.palette.inputColor, padding: "0px 0px 15px 15px", overflow: "hidden",}}>
-																								<img src={subdata.image} style={{width: 40, height: 40, borderRadius: theme.palette.borderRadius, marginTop: 15, }} />
+																							<div style={{width: 160, display: "flex", borderRadius: theme.palette?.borderRadius, cursor: "pointer", border: highlight ? "2px solid #f86a3e" : "1px solid rgba(255,255,255,0.7)", backgroundColor: theme.palette.inputColor, padding: "0px 0px 15px 15px", overflow: "hidden",}}>
+																								<img src={subdata.image} style={{width: 40, height: 40, borderRadius: theme.palette?.borderRadius, marginTop: 15, }} />
 																								<Typography variant="body1" style={{lineHeight: "95%", marginLeft: 12, marginTop: marginTop === 0 ? 19 : 25, maxHeight: 34, }}>
 																									{subdata.name}
 																								</Typography>
@@ -983,7 +983,7 @@ const UsecaseListComponent = (props) => {
 																	height: 350, 
 																	width: isMobile? null:350, 
 																	marginTop: isMobile ? 50:null,
-																	borderRadius: theme.palette.borderRadius,
+																	borderRadius: theme.palette?.borderRadius,
 																	border: "1px solid rgba(255,255,255,0.3)",
 																	padding: 5,
 																	backgroundColor: theme.palette.backgroundColor,
@@ -1113,7 +1113,7 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 										}}
 										content={(data, color) => {
 											return (
-												<div style={{borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
+												<div style={{borderRadius: theme.palette?.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
 													<Typography variant="body1">
 														{data.x}
 													</Typography>

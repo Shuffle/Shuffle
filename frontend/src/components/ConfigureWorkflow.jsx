@@ -147,12 +147,12 @@ const ConfigureWorkflow = (props) => {
   }
 
   if (apps === undefined || apps === null) {
-	  console.log("Apps is undefined or null: ", apps)
+	  //console.log("Apps is undefined or null: ", apps)
       return null
   }
 
   if (appAuthentication === undefined || appAuthentication === null) {
-	  console.log("App authentication is undefined or null: ", appAuthentication)
+	  //console.log("App authentication is undefined or null: ", appAuthentication)
       return null
   }
 
@@ -427,7 +427,6 @@ const ConfigureWorkflow = (props) => {
 		  trigger.index = key;
 
 		  if (trigger.trigger_type === "WEBHOOK") {
-		  	console.log("Found webhook: ", trigger)
 
 		  	if (trigger.app_association !== undefined && trigger.app_association.name !== null && trigger.app_association.name !== "") {
 		  		const findapp = trigger.app_association.name.toLowerCase()
@@ -599,7 +598,7 @@ const ConfigureWorkflow = (props) => {
             <TextField
               style={{
                 backgroundColor: theme.palette.inputColor,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
               }}
               InputProps={{
                 endAdornment: <InputAdornment position="end"></InputAdornment>,
@@ -800,7 +799,7 @@ const ConfigureWorkflow = (props) => {
 		>
 			<div 
 				style={{
-					border: filled ? `1px solid ${theme.palette.green}` : "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, width: "100%", padding: 12, cursor: "pointer", 
+					border: filled ? `1px solid ${theme.palette.green}` : "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, width: "100%", padding: 12, cursor: "pointer", 
 				}}
 				id="app-config"
 			>
@@ -997,7 +996,7 @@ const ConfigureWorkflow = (props) => {
 				justifyContent: "flex-start",
 				backgroundColor: action.auth_done ? theme.palette.surfaceColor : theme.palette.inputColor,
 				color: action.auth_done ? "#686a6c" : "#ffffff",
-				borderRadius: theme.palette.borderRadius,
+				borderRadius: theme.palette?.borderRadius,
 				minWidth: 350, 
 				maxHeight: 50,
 				overflow: "hidden",
@@ -1037,7 +1036,7 @@ const ConfigureWorkflow = (props) => {
 		>
 			<img
 				alt={action.app_name}
-				style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+				style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette?.borderRadius, }}
 				src={action.large_image}
 			/>
 			<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
@@ -1057,7 +1056,7 @@ const ConfigureWorkflow = (props) => {
 							justifyContent: "flex-start",
 							backgroundColor: action.auth_done ? theme.palette.surfaceColor : theme.palette.inputColor,
 							color: action.auth_done ? "#686a6c" : "#ffffff",
-							borderRadius: theme.palette.borderRadius,
+							borderRadius: theme.palette?.borderRadius,
 							minWidth: 350, 
 							maxHeight: 50,
 							overflow: "hidden",
@@ -1088,7 +1087,7 @@ const ConfigureWorkflow = (props) => {
           >
 						<img
 							alt={action.app_name}
-							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette?.borderRadius, }}
 							src={action.large_image}
 						/>
 						<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
@@ -1108,7 +1107,7 @@ const ConfigureWorkflow = (props) => {
 								justifyContent: "flex-start",
 								backgroundColor: action.auth_done ? theme.palette.surfaceColor : theme.palette.inputColor,
 								color: action.auth_done ? "#686a6c" : "#ffffff",
-								borderRadius: theme.palette.borderRadius,
+								borderRadius: theme.palette?.borderRadius,
 								minWidth: 350, 
 								maxHeight: 50,
 								overflow: "hidden",
@@ -1123,7 +1122,7 @@ const ConfigureWorkflow = (props) => {
 					>
 						<img
 							alt={action.app_name}
-							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette?.borderRadius, }}
 							src={action.large_image}
 						/>
 						<Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
@@ -1275,7 +1274,7 @@ const ConfigureWorkflow = (props) => {
 		const [finishCount, setFinishCount] = useState(0)
 
 		return (
-			<div style={{backgroundColor: hovered ? theme.palette.inputColor : "inherit", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, cursor: "pointer", }} 
+			<div style={{backgroundColor: hovered ? theme.palette.inputColor : "inherit", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, cursor: "pointer", }} 
 			>
 				<div style={{display: "flex", marginLeft: 15, marginTop: 15, marginBottom: 15, }} 
 					onClick={() => {

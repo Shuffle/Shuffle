@@ -438,7 +438,7 @@ const OrgHeaderexpanded = (props) => {
 									style={{
 										backgroundColor: theme.palette.inputColor,
 										height: 50,
-										borderRadius: theme.palette.borderRadius,
+										borderRadius: theme.palette?.borderRadius,
 									}}
 									onChange={(event, newValue) => {
 										console.log("Found value: ", newValue)
@@ -470,7 +470,7 @@ const OrgHeaderexpanded = (props) => {
 											<Tooltip arrow placement="left" title={
 												<span style={{}}>
 													{data.image !== undefined && data.image !== null && data.image.length > 0 ?
-														<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+														<img src={data.image} alt={data.name} style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
 														: null}
 													<Typography>
 														Choose {data.name}
@@ -498,7 +498,7 @@ const OrgHeaderexpanded = (props) => {
 											<TextField
 												style={{
 													backgroundColor: theme.palette.inputColor,
-													borderRadius: theme.palette.borderRadius,
+													borderRadius: theme.palette?.borderRadius,
 												}}
 												{...params}
 												label="Find a notification workflow"

@@ -152,7 +152,7 @@ const AuthenticationItem = (props) => {
 						src={data.app.large_image}
 						style={{
 							maxWidth: 50,
-							borderRadius: theme.palette.borderRadius,
+							borderRadius: theme.palette?.borderRadius,
 						}}
 					/>
 					style={{ minWidth: 75, maxWidth: 75 }}

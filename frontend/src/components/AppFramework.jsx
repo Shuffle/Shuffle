@@ -1972,14 +1972,14 @@ const AppFramework = (props) => {
 						{data.name}
 					</Typography>
 					<div style={{display: "flex", width: 200, margin: "auto", marginTop: 15, }}>
-						<div style={{backgroundColor: theme.palette.inputColor, height: 75, width: 75, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginRight: 15, position: "relative",}}>
+						<div style={{backgroundColor: theme.palette.inputColor, height: 75, width: 75, borderRadius: theme.palette?.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginRight: 15, position: "relative",}}>
 							{parsedLeftImage}
 							{parsedLeftText}
 						</div>
-						<div style={{backgroundColor: theme.palette.inputColor, maxHeight: 30, maxWidth: 30, height: 30, width: 30, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginTop: 22, padding: "10px 0px 0px 9px",}}>
+						<div style={{backgroundColor: theme.palette.inputColor, maxHeight: 30, maxWidth: 30, height: 30, width: 30, borderRadius: theme.palette?.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginTop: 22, padding: "10px 0px 0px 9px",}}>
 							{svgIcon}
 						</div>
-						<div style={{backgroundColor: theme.palette.inputColor, height: 75, width: 75, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginLeft: 15, position: "relative",}}>
+						<div style={{backgroundColor: theme.palette.inputColor, height: 75, width: 75, borderRadius: theme.palette?.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginLeft: 15, position: "relative",}}>
 							{parsedRightImage}
 							{parsedRightText}
 						</div>

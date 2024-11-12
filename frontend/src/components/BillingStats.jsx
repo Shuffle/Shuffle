@@ -43,7 +43,7 @@ const LineChartWrapper = ({keys, inputname, height, width}) => {
 	const inputdata = keys.data === undefined ? keys : keys.data
 	
 	return (
-		<div style={{color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, padding: 30, marginTop: 15, backgroundColor: theme.palette.platformColor, overflow: "hidden", }}>
+		<div style={{color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, padding: 30, marginTop: 15, backgroundColor: theme.palette.platformColor, overflow: "hidden", }}>
 			<Typography variant="h6" style={{marginBotton: 15, }}>
 				{inputname}
 			</Typography>

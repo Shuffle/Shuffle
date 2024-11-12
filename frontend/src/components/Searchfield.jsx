@@ -4,7 +4,7 @@ import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import SearchBox from "../components/SearchData.jsx";
 
-import { Context } from '../context/contextApi.jsx';
+import { Context } from '../context/ContextApi.jsx';
 
 import {
 	Chip,
@@ -101,7 +101,7 @@ const SearchField = props => {
 			</div>
 				: null}
 			<DialogContent className='dialog-content' style={{}}>
-				<SearchBox globalUrl={globalUrl} setSearchBarModalOpen={setSearchBarModalOpen} modalOpen={searchBarModalOpen} serverside={serverside} userdata={userdata} />
+				<SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
 			</DialogContent>
 			<Divider style={{overflow: "hidden"}}/>
 			<span style={{display:"flex", width:"100%", height:30}}>
@@ -131,7 +131,7 @@ const SearchField = props => {
 		<div style={{ marginTop: "auto", marginLeft: !isLoggedIn ? 0: "auto", marginRight: !isLoggedIn ? 0 : "auto", width: !isLoggedIn ? "auto" : 410, }}>
 			{modalView}
 			<TextField
-				style={{ backgroundColor: "#212121", height: 48, borderRadius: rounded === true ? 25 : theme.palette.borderRadius, minWidth: fieldWidth, maxWidth: fieldWidth, }}
+				style={{ backgroundColor: "#212121", height: 48, borderRadius: rounded === true ? 25 : theme.palette?.borderRadius, minWidth: fieldWidth, maxWidth: fieldWidth, }}
 				InputProps={{
 					style: {
 						color: "white",

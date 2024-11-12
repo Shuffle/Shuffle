@@ -1,5 +1,6 @@
 import React from "react"
 
+import { Link } from "react-router-dom";
 import { 
 	Avatar, 
 	Box, 
@@ -20,7 +21,6 @@ const RecentWorkflow = ({ workflow, onclickHandler, leftNavOpen, currentWorkflow
     const navigate = useNavigate();
 
 	const [hovered, setHovered] = React.useState(false)
-
 	if (workflow === undefined || workflow === null) {
 		console.log("No workflow")
 		return null
@@ -39,12 +39,11 @@ const RecentWorkflow = ({ workflow, onclickHandler, leftNavOpen, currentWorkflow
 
 	// Check if workflow.input_markdown has an image in it
 	// If it does, show it as the main thing
-	//
 	var relevantImageUrl = ""
-	if (workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown !== "") {
+	if (workflow?.form_control?.input_markdown !== undefined && workflow?.form_control?.input_markdown !== null && workflow?.form_control?.input_markdown !== "") {
 		// Look for <img> tag or ![alt](src) markdown
 		// html > markdown
-		const imgTag = workflow.input_markdown.match(/<img[^>]+>/g)
+		const imgTag = workflow?.form_control?.input_markdown.match(/<img[^>]+>/g)
 
 		if (imgTag !== null) {
 			const src = imgTag[0].match(/src="([^"]+)"/)
@@ -52,7 +51,7 @@ const RecentWorkflow = ({ workflow, onclickHandler, leftNavOpen, currentWorkflow
 				relevantImageUrl = src[1]
 			}
 		} else {
-			const markdownTag = workflow.input_markdown.match(/!\[.*\]\(.*\)/g)
+			const markdownTag = workflow?.form_control?.input_markdown.match(/!\[.*\]\(.*\)/g)
 
 			if (markdownTag !== null) {
 				const src = markdownTag[0].match(/\(([^)]+)\)/)
@@ -68,15 +67,13 @@ const RecentWorkflow = ({ workflow, onclickHandler, leftNavOpen, currentWorkflow
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}
 		>
+			<Link to={`/workflows/` + workflow?.id} style={{textDecoration: "none"}}>
 			<Button
-			  onClick={() => {
+			  onClick={(e) => {
 				if (onclickHandler !== undefined) {
+					e.preventDefault()
+					e.stopPropagation()
 					onclickHandler()
-				} else {
-					navigate(`/workflows/` + workflow?.id)
-					setTimeout(() => {
-					  window.location.reload()
-					}, 100)
 				}
 			  }}
 			  style={{
@@ -89,7 +86,7 @@ const RecentWorkflow = ({ workflow, onclickHandler, leftNavOpen, currentWorkflow
 				opacity: expandLeftNav ? 1 : 0,
 				transition: "opacity 0.1s",
 
-				borderRadius: theme.palette.borderRadius, 
+				borderRadius: theme.palette?.borderRadius, 
 				backgroundColor: hovered || currentWorkflowId === workflow.id ? "#1f1f1f" : "transparent",
 			  }}
 			  disableRipple
@@ -150,6 +147,7 @@ const RecentWorkflow = ({ workflow, onclickHandler, leftNavOpen, currentWorkflow
 				}
 			  </Box>
 			</Button>
+			</Link> 
 		</div>
 	)
 }

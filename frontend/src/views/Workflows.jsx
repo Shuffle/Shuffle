@@ -1,4 +1,4 @@
-import React, { useEffect, useContext } from "react";
+import React, { useEffect, useContext, memo } from "react";
 import ReactDOM from "react-dom"
 
 import { makeStyles } from "@mui/styles";
@@ -6,7 +6,7 @@ import { Navigate } from "react-router-dom";
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import EditWorkflow from "../components/EditWorkflow.jsx" 
 import Priority from "../components/Priority.jsx";
-
+import { Context } from "../context/ContextApi.jsx";
 import { isMobile } from "react-device-detect" 
 
 import {
@@ -92,37 +92,40 @@ import theme from "../theme.jsx";
 const svgSize = 24;
 const imagesize = 22;
 
-const useStyles = makeStyles((theme) => ({
-  datagrid: {
-    border: 0,
-    "& .MuiDataGrid-columnsContainer": {
-      backgroundColor:
-        theme.palette.type === "light" ? "#fafafa" : theme.palette.inputColor,
-    },
-    "& .MuiDataGrid-iconSeparator": {
-      display: "none",
-    },
-    "& .MuiDataGrid-colCell, .MuiDataGrid-cell": {
-      borderRight: `1px solid ${
-        theme.palette.type === "light" ? "white" : "#303030"
-      }`,
-    },
-    "& .MuiDataGrid-columnsContainer, .MuiDataGrid-cell": {
-      borderBottom: `1px solid ${
-        theme.palette.type === "light" ? "#f0f0f0" : "#303030"
-      }`,
-    },
-    "& .MuiDataGrid-cell": {
-      color:
-        theme.palette.type === "light" ? "white" : "rgba(255,255,255,0.65)",
-    },
-    "& .MuiPaginationItem-root, .MuiTablePagination-actions, .MuiTablePagination-caption":
-      {
-        borderRadius: 0,
-        color: "white",
-      },
-  },
-}));
+const useStyles = makeStyles(() => {
+
+  return {
+	  datagrid: {
+		border: 0,
+		"& .MuiDataGrid-columnsContainer": {
+		  backgroundColor:
+				theme?.palette?.type === "light" ? "#fafafa" : theme?.palette?.inputColor,
+			},
+			"& .MuiDataGrid-iconSeparator": {
+			  display: "none",
+			},
+			"& .MuiDataGrid-colCell, .MuiDataGrid-cell": {
+			  borderRight: `1px solid ${
+				theme?.palette?.type === "light" ? "white" : "#303030"
+			  }`,
+			},
+			"& .MuiDataGrid-columnsContainer, .MuiDataGrid-cell": {
+			  borderBottom: `1px solid ${
+				theme?.palette?.type === "light" ? "#f0f0f0" : "#303030"
+			  }`,
+			},
+			"& .MuiDataGrid-cell": {
+			  color:
+				theme?.palette?.type === "light" ? "white" : "rgba(255,255,255,0.65)",
+			},
+			"& .MuiPaginationItem-root, .MuiTablePagination-actions, .MuiTablePagination-caption":
+			  {
+				borderRadius: 0,
+				color: "white",
+			  },
+		  },
+	  }
+})
 
 // Takes an action in Shuffle and
 // Returns information about the icon, the color etc to be used
@@ -481,9 +484,9 @@ export const validateJson = (showResult) => {
 		};
     }
   } catch (e) {
-    showResult = showResult.split("'").join('"');
 
     try {
+      showResult = showResult.split("'").join('"');
       if (!showResult.includes("{") && !showResult.includes("[")) {
         jsonvalid = false;
       }
@@ -590,13 +593,37 @@ export const validateJson = (showResult) => {
   };
 };
 
+//Custom hook for handling styling of the dropzone
+const useDropzoneStyles = () => {
+  const { leftSideBarOpenByClick } = useContext(Context);
+
+  return {
+    maxWidth: window.innerWidth > 1366 ? 1366 : isMobile ? "100%" : 1200,
+    margin: "auto",
+    padding: 20,
+    paddingLeft: leftSideBarOpenByClick ? 200 : 0,
+    transition: "padding-left 0.3s ease",
+  };
+};
+
+//Wrapper for the dropzone component
+const DropzoneWrapper = memo(({ onDrop, WorkflowView }) => {
+  const dropzoneStyles = useDropzoneStyles(); 
+  return (
+    <Dropzone style={dropzoneStyles} onDrop={onDrop}>
+      <WorkflowView />
+    </Dropzone>
+  );
+});
+
+
 const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata, checkLogin } = props;
 
   document.title = "Shuffle - Workflows";
 	let navigate = useNavigate();
 
-  const classes = useStyles(theme);
+  const classes = useStyles(theme)
   const imgSize = 60;
 
   const referenceUrl = globalUrl + "/api/v1/hooks/";
@@ -702,7 +729,7 @@ const Workflows = (props) => {
 	console.log("Using filters: ", filters)
     if (filters.length === 0) {
       setFilteredWorkflows(workflows);
-			handleKeysetting(allUsecases, workflows)
+	  handleKeysetting(allUsecases, workflows)
       return;
     }
 
@@ -778,9 +805,9 @@ const Workflows = (props) => {
       }
     }
 
-		console.log("Changing workflow filter, and finding new usecase mappings!")
+	console.log("Changing workflow filter, and finding new usecase mappings!")
     if (newWorkflows.length !== workflows.length) {
-			handleKeysetting(allUsecases, newWorkflows)
+	  handleKeysetting(allUsecases, newWorkflows)
 
       setFilteredWorkflows(newWorkflows);
     }
@@ -1194,8 +1221,8 @@ const Workflows = (props) => {
         return response.json();
       })
       .then((responseJson) => {
-        if (responseJson !== undefined) {
 
+        if (responseJson !== undefined) {
 			var newarray = []
 			for (var wfkey in responseJson) {
 				const wf = responseJson[wfkey]
@@ -1228,12 +1255,10 @@ const Workflows = (props) => {
 				}
 			}
 
-			if (newarray.length > 0) {
-				try {
-					localStorage.setItem("workflows", JSON.stringify(newarray))
-				} catch (e) {
-					console.log("Failed to set workflows in localstorage: ", e)
-				}
+			try {
+				localStorage.setItem("workflows", JSON.stringify(newarray))
+			} catch (e) {
+				console.log("Failed to set workflows in localstorage: ", e)
 			}
 
 			// Ensures the zooming happens only once per load
@@ -1285,7 +1310,41 @@ const Workflows = (props) => {
       .catch((error) => {
         toast(error.toString());
       });
-  };
+    }
+
+	const findMatches = (category, workflows) => {
+		category.matches = []
+		for (var subcategorykey in category.list) {
+			var subcategory = category.list[subcategorykey]
+			subcategory.matches = []
+
+			for (var workflowkey in workflows) {
+				const workflow = workflows[workflowkey]
+
+				if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
+					for (var usecasekey in workflow.usecase_ids) {
+
+						if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
+							//console.log("Got match: ", workflow.usecase_ids[usecasekey])
+
+							category.matches.push({
+								"workflow": workflow.id,
+								"category": subcategory.name,
+							})
+							subcategory.matches.push(workflow.id)
+							break
+						}
+					}
+				}
+
+				if (subcategory.matches.length > 0) {
+					break
+				}
+			}
+		}
+
+		return category
+	}
 
 	const handleKeysetting = (categorydata, workflows) => {
 		if (workflows !== undefined && workflows !== null) {
@@ -1297,37 +1356,7 @@ const Workflows = (props) => {
 					continue
 				}
 
-				category.matches = []
-
-				for (var subcategorykey in category.list) {
-					var subcategory = category.list[subcategorykey]
-					subcategory.matches = []
-
-					for (var workflowkey in workflows) {
-						const workflow = workflows[workflowkey]
-
-						if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
-							for (var usecasekey in workflow.usecase_ids) {
-
-								if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
-									//console.log("Got match: ", workflow.usecase_ids[usecasekey])
-
-									category.matches.push({
-										"workflow": workflow.id,
-										"category": subcategory.name,
-									})
-									subcategory.matches.push(workflow.id)
-									break
-								}
-							}
-						}
-
-						if (subcategory.matches.length > 0) {
-							break
-						}
-					}
-				}
-
+				category = findMatches(category, workflows)
 				newcategories.push(category)
 			} 
 
@@ -1440,7 +1469,7 @@ const Workflows = (props) => {
     display: "flex",
     boxSizing: "border-box",
     position: "relative",
-    borderRadius: theme.palette.borderRadius,
+    borderRadius: theme.palette?.borderRadius,
     backgroundColor: theme.palette.surfaceColor,
   };
 
@@ -2229,7 +2258,7 @@ const Workflows = (props) => {
 		}
 
     return (
-	  <div style={{width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? "1px solid #40E0D0" : "inherit", borderRadius: theme.palette.borderRadius, }}>
+	  <div style={{width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? "1px solid #40E0D0" : "inherit", borderRadius: theme.palette?.borderRadius, }}>
         <Paper square style={paperAppStyle}>
 			{selectedCategory !== "" ?
 				<Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -2277,7 +2306,7 @@ const Workflows = (props) => {
 				title={
 				<div style={{width: "100%", minWidth: 250, maxWidth: 310, }}>
 					{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
-						<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxWidth: 300, minWidth: 250, borderRadius: theme.palette.borderRadius, }} />
+						<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxWidth: 300, minWidth: 250, borderRadius: theme.palette?.borderRadius, }} />
 					: null}
 					<Typography>
 						Edit '{data.name}'
@@ -2493,7 +2522,7 @@ const Workflows = (props) => {
 					{workflowMenuButtons}
 				</div>
 			  ) : null}
-			  {(data.sharing !== undefined && data.sharing !== null && data.sharing === "form") || (data.input_markdown !== undefined && data.input_markdown !== null && data.input_markdown !== "") ?
+			  {(data.sharing !== undefined && data.sharing !== null && data.sharing === "form") || (data?.form_control?.input_markdown !== undefined && data?.form_control?.input_markdown !== null && data?.form_control?.input_markdown !== "") ?
 				<Tooltip title="Edit Form" placement="top">
 					<div style={{position: "absolute", top: 45, right: 8, }}>
 						<IconButton
@@ -3061,9 +3090,6 @@ const Workflows = (props) => {
           autoHeight
           density="standard"
 		  onSelectionModelChange={(newSelection) => {
-		      //setSelectedWorkflows(newSelection.selectionModel);
-			  console.log(newSelection)
-  
 			  setSelectedWorkflowIndexes(newSelection)
 		  }}
 		  selectionModel={selectedWorkflowIndexes}
@@ -3210,7 +3236,6 @@ const Workflows = (props) => {
       				      <em>None</em>
       				    </MenuItem>
 							{usecases.map((usecase, index) => {
-								//console.log(usecase)
 								return (
 									<span key={index}>
 										<ListSubheader
@@ -3586,7 +3611,7 @@ const Workflows = (props) => {
 	// 	  );
 	// 	}
 
-  const WorkflowView = () => {
+  const WorkflowView = memo(() => {
     if (workflows.length === 0) {
     }
 
@@ -3660,9 +3685,14 @@ const Workflows = (props) => {
 						{!isMobile && !hasWorkflows && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
 							<div style={{ display: "flex", }}>
 								{usecases.map((usecase, index) => {
-									//console.log(usecase)
+									if (usecase.name === "5. Verify") {
+										return null
+									}
+
 									const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length/usecase.list.length*100) : 0
-									//console.log("Usecase Matches: ", usecase.matches, ", Percent: ", percentDone)
+									if (percentDone === 0) {
+										usecase = findMatches(usecase, workflows)
+									}
 
 									return (
 										<Paper
@@ -3671,7 +3701,7 @@ const Workflows = (props) => {
 												flex: 1,
 												backgroundImage: `linear-gradient(to right, ${usecase.color}, ${usecase.color} ${percentDone}%, transparent ${percentDone}%, transparent 100%)`,
 												backgroundColor: filters.includes(usecase.name.toLowerCase()) ? null : theme.palette.surfaceColor,
-												borderRadius: theme.palette.borderRadius,
+												borderRadius: theme.palette?.borderRadius,
 												marginRight: index === usecases.length-1 ? 0 : 10, 
 												cursor: "pointer",
 												border: `2px solid ${usecase.color}`,
@@ -3692,7 +3722,7 @@ const Workflows = (props) => {
 												<Typography variant="body1" color="textPrimary" style={{flex: 4, }}>
 													{usecase.name}
 												</Typography>
-												<Typography variant="body2" color="textSecondary" style={{flex: 1, marginTop: 5,}}>
+												<Typography variant="body2" color="textSecondary" style={{flex: 1, marginTop: 0,}}>
 													{usecase.matches.length}/{usecase.list.length}
 												</Typography>
 											</span>
@@ -3715,7 +3745,7 @@ const Workflows = (props) => {
                 minWidth: isMobile ? "100%" : 1024,
                 zIndex: 11,
                 border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
                 textAlign: "center",
                 overflow: "auto",
               }}
@@ -3734,7 +3764,6 @@ const Workflows = (props) => {
                 }
 
 				if (data.app_name.toLowerCase() === "integration framework") {
-					console.log("Skipping: ", data.app_name)
 					return null
 				}
 
@@ -3813,7 +3842,7 @@ const Workflows = (props) => {
           ) : null}
 
 					{userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0 && userdata.priorities[0].name.includes("CPU") && userdata.priorities[0].active === true ?
-						<div style={{border: "1px solid rgba(255,255,255,0.1)" , borderRadius: theme.palette.borderRadius, marginTop: 10,
+						<div style={{border: "1px solid rgba(255,255,255,0.1)" , borderRadius: theme.palette?.borderRadius, marginTop: 10,
             marginBottom: 10, padding: 15, textAlign: "center" , height: 70, textAlign: "left" , backgroundColor:
             theme.palette.surfaceColor, display: "flex" , maxHeight: "105px", minHeight: "110px"}}
             >
@@ -3905,7 +3934,7 @@ const Workflows = (props) => {
 				</div>
 			</div>
     );
-  };
+  });
 
   const importWorkflowsFromUrl = (url) => {
     console.log("IMPORT WORKFLOWS FROM ", downloadUrl);
@@ -4173,7 +4202,7 @@ const Workflows = (props) => {
 					Setup progress: <b>{isNaN(percentDone) ? 0 : percentDone}%</b>
 				</Typography>
 
-				<LinearProgress color="primary" variant="determinate" value={percentDone} style={{marginTop: 5, height: 7, borderRadius: theme.palette.borderRadius, }} />
+				<LinearProgress color="primary" variant="determinate" value={percentDone} style={{marginTop: 5, height: 7, borderRadius: theme.palette?.borderRadius, }} />
 
 				<Typography variant="body2" style={{marginTop: 20, }}>
 					Follow these steps to get you up and running!
@@ -4251,17 +4280,7 @@ const Workflows = (props) => {
 					<TourButton />
 				</ShepherdTour>
 				*/}
-        <Dropzone
-          style={{
-            maxWidth: window.innerWidth > 1366 ? 1366 : isMobile ? "100%" : 1200,
-            margin: "auto",
-            padding: 20,
-            paddingLeft: userdata?.support ? 80 : 0
-          }}
-          onDrop={uploadFile}
-        >
-          <WorkflowView />
-        </Dropzone>
+        <DropzoneWrapper onDrop={uploadFile} WorkflowView={WorkflowView}/>
         {/*modalView*/}
         {deleteModal}
         {exportVerifyModal}
@@ -4269,7 +4288,7 @@ const Workflows = (props) => {
         {workflowDownloadModalOpen}
 
         {/*!drawerOpen ? 
-			<div style={{ position: "fixed", top: 64, right: -5, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, }}>
+			<div style={{ position: "fixed", top: 64, right: -5, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette?.borderRadius, }}>
           		<Tooltip title={`Getting Started`} placement="bottom">
 					<IconButton onClick={() => {
 						setDrawerOpen(true)

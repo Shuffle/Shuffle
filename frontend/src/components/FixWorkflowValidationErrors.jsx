@@ -325,7 +325,7 @@ const FixWorkflowValidationErrors = (props) => {
 						width: 25, 
 						height: 25, 
 						marginRight: 10, 
-						borderRadius: theme.palette.borderRadius, 
+						borderRadius: theme.palette?.borderRadius, 
 						border: `1px solid ${theme.palette.borderColor}`,
 					}} 
 				/>
@@ -467,7 +467,7 @@ const FixWorkflowValidationErrors = (props) => {
 					backgroundColor: theme.palette.inputColor,
 					color: "white",
 					height: 40,
-					borderRadius: theme.palette.borderRadius,
+					borderRadius: theme.palette?.borderRadius,
 				  }}
 				>
 				  <MenuItem
@@ -559,7 +559,7 @@ const FixWorkflowValidationErrors = (props) => {
 						justifyContent: !validating ? "flex-start" : "center",
 						textTransform: "none",
 						fontSize: 18,
-						borderRadius: theme.palette.borderRadius,
+						borderRadius: theme.palette?.borderRadius,
 					}}
 					onClick={() => {
 						toast("Validating app")

@@ -648,7 +648,7 @@ const WelcomeForm = (props) => {
 
               <div style={{ marginTop: 0, }}>
                 <div className="thumbs" style={{ display: "flex" }}>
-                  <div style={{ minWidth: isMobile ? 300 :  554, maxWidth: isMobile ? 300 : 554, borderRadius: theme.palette.borderRadius, }}>
+                  <div style={{ minWidth: isMobile ? 300 :  554, maxWidth: isMobile ? 300 : 554, borderRadius: theme.palette?.borderRadius, }}>
                     <ExploreWorkflow
                       globalUrl={globalUrl}
 					  isLoggedIn={isLoggedIn}

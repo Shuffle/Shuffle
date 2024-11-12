@@ -2,7 +2,7 @@ import React, {useState, useEffect, useLayoutEffect} from 'react';
 
 import Draggable from "react-draggable";
 import {
-		Paper
+	Paper
 } from "@mui/material";
 
 const PaperComponent = (props) => {
@@ -11,7 +11,9 @@ const PaperComponent = (props) => {
       handle="#draggable-dialog-title"
       cancel={'[class*="MuiDialogContent-root"]'}
     >
-      <Paper {...props} />
+      <Paper 
+	  	{...props} 
+	  />
     </Draggable>
   )
 }

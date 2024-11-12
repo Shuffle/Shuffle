@@ -286,7 +286,7 @@ const Priorities = (props) => {
     	      borderBottom: "1px solid rgba(255,255,255,0.4)",
 			  marginBottom: 20, 
 			  border: highlighted ? "2px solid #f85a3e" : null,
-			  borderRadius: theme.palette.borderRadius,
+			  borderRadius: theme.palette?.borderRadius,
     	    }}
     	  >
 			<div style={{display: "flex", }}>

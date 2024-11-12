@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useContext } from "react";
 
 import theme from "../theme.jsx";
 import { isMobile } from "react-device-detect";
@@ -11,6 +11,7 @@ import { Tabs, Tab, setRef } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { makeStyles } from '@mui/styles';
 import DiscordChat from "../components/DiscordChat.jsx";
+import { Context } from "../context/ContextApi.jsx";
 
 import {
   Apps as AppsIcon,
@@ -21,16 +22,14 @@ import {
   DescriptionOutlined as DescriptionOutlinedIcon, 
 } from "@mui/icons-material";
 
-import {
-	Typography
-} from "@mui/material"
-
+import {Typography} from "@mui/material";
 
 // Should be different if logged in :|
 const Search = (props) => {
   const { globalUrl, isLoaded, serverside, userdata, hidemargins, isHeader } =
     props;
   let navigate = useNavigate();
+  const { leftSideBarOpenByClick } = useContext(Context);
 
   const [curTab, setCurTab] = useState(0);
   const iconStyle = { marginRight: isHeader ? null : 10 };
@@ -124,14 +123,15 @@ const Search = (props) => {
     flex: "1",
     marginLeft: isHeader ? null : 10,
     marginRight: isHeader ? null : 10,
-    paddingLeft: isHeader ? null : 30,
     paddingRight: isHeader ? null : 30,
     paddingBottom: isHeader ? null : 30,
     paddingTop: hidemargins === true ? 0 : isHeader ? null : 30,
     display: "flex",
     flexDirection: "column",
     overflowX: "hidden",
-    minHeight: 400
+    minHeight: 400,
+    paddingLeft: leftSideBarOpenByClick ? 250 : 0,
+    transition: "padding-left 0.3s ease",
   };
 
   const views = {
@@ -223,7 +223,7 @@ const Search = (props) => {
             margin: isHeader ? null : "auto",
             marginTop: hidemargins === true ? 0 : isHeader ? null : 25,
             backgroundColor: "rgba(33, 33, 33, 1)",
-            borderRadius: 8
+            borderRadius: 8,
           }}
           value={curTab}
           indicatorColor="primary"

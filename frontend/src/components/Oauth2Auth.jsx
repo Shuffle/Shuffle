@@ -696,7 +696,7 @@ const AuthenticationOauth2 = (props) => {
 					justifyContent: "flex-start",
 					backgroundColor: "#ffffff",
 					color: "#2f2f2f",
-					borderRadius: theme.palette.borderRadius,
+					borderRadius: theme.palette?.borderRadius,
 					minWidth:  300, 
 					maxWidth: 300,
 					maxHeight: 50,
@@ -721,7 +721,7 @@ const AuthenticationOauth2 = (props) => {
 					<span style={{display: "flex"}}>
 						<img
 							alt={selectedAction.app_name}
-							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette?.borderRadius, }}
 							src={selectedAction.large_image}
 						/>
 						<Typography style={{ margin: 0, marginLeft: 10, marginTop: 5,}} variant="body1">
@@ -803,7 +803,7 @@ const AuthenticationOauth2 = (props) => {
 					</span>
 				: null}
         {/*<TextField
-						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
+						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette?.borderRadius,}} 
 						InputProps={{
 							style:{
 							},
@@ -893,7 +893,7 @@ const AuthenticationOauth2 = (props) => {
                     <TextField
                       style={{
                         backgroundColor: theme.palette.inputColor,
-                        borderRadius: theme.palette.borderRadius,
+                        borderRadius: theme.palette?.borderRadius,
                       }}
                       InputProps={{
                         style: {
@@ -924,7 +924,7 @@ const AuthenticationOauth2 = (props) => {
               style={{
                 marginTop: 20,
                 backgroundColor: theme.palette.inputColor,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
               }}
               InputProps={{
                 style: {
@@ -942,7 +942,7 @@ const AuthenticationOauth2 = (props) => {
             <TextField
               style={{
                 backgroundColor: theme.palette.inputColor,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
 								marginBottom: 10, 
               }}
               InputProps={{
@@ -964,7 +964,7 @@ const AuthenticationOauth2 = (props) => {
 					<TextField
 					  style={{
 						backgroundColor: theme.palette.inputColor,
-						borderRadius: theme.palette.borderRadius,
+						borderRadius: theme.palette?.borderRadius,
 					  }}
 					  InputProps={{
 						style: {
@@ -982,7 +982,7 @@ const AuthenticationOauth2 = (props) => {
 					<TextField
 					  style={{
 						backgroundColor: theme.palette.inputColor,
-						borderRadius: theme.palette.borderRadius,
+						borderRadius: theme.palette?.borderRadius,
 						marginBottom: 10, 
 					  }}
 					  InputProps={{
@@ -1061,7 +1061,7 @@ const AuthenticationOauth2 = (props) => {
           style={{
             marginBottom: 40,
             marginTop: 20,
-            borderRadius: theme.palette.borderRadius,
+            borderRadius: theme.palette?.borderRadius,
           }}
           disabled={
             clientSecret.length === 0 || clientId.length === 0 || buttonClicked || (allscopes.length !== 0 && selectedScopes.length === 0)
@@ -1092,7 +1092,7 @@ const AuthenticationOauth2 = (props) => {
             <Button
               style={{
                 marginLeft: 10,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
               }}
               disabled={clientSecret.length === 0 || clientId.length === 0}
               variant="text"
