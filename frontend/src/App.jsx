@@ -48,7 +48,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import Drift from "react-driftjs";
 
-import { AppContext } from './context/contextApi.jsx';
+import { AppContext } from './context/ContextApi.jsx';
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
