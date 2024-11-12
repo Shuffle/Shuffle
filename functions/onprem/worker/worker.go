@@ -433,12 +433,12 @@ func deployk8sApp(image string, identifier string, env []string) error {
 		}
 	}
 
-	autoDeployOverride := os.Getenv("SHUFFLE_USE_GCHR_OVERRIDE_FOR_AUTODEPLOY") == "true"
+	autoDeployOverride := os.Getenv("SHUFFLE_USE_GHCR_OVERRIDE_FOR_AUTODEPLOY") == "true"
 
 	localRegistry := ""
 
 	// Checking if app is generated or not
-	if !baseDeployMode && !autoDeployOverride {
+	if !(baseDeployMode && autoDeployOverride) {
 		localRegistry = os.Getenv("REGISTRY_URL")
 	} else {
 		log.Printf("[DEBUG] Detected baseDeploy image (%s) and ghcr override. Resorting to using ghcr instead of registry", image)
