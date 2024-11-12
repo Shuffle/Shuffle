@@ -37,8 +37,9 @@ jobs:
         cd ./backend/app_sdk
         python -m build
 
-    #- name: Move build artifacts
-    #  run: mv ./backend/app_sdk/dist/* ./dist/
+    - name: Move build artifacts
+      run: mv ./backend/app_sdk/dist/* ./dist/
+
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@v1.10.2
       with:
@@ -48,5 +49,4 @@ jobs:
         password: ${{ secrets.PYPI_API_TOKEN }}
       env:
         ACTIONS_STEP_DEBUG: true  # Enables debug mode for this step
-      working-directory: ./backend/app_sdk
 
