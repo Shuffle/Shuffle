@@ -93,8 +93,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/distribution/reference v0.6.0 h1:0IXCQ5g4/QMHHkarYzh5l+u8T3t73zM5QvfrDyIgxBk=
 github.com/distribution/reference v0.6.0/go.mod h1:BbU0aIcezP1/5jX/8MP0YiH4SdvB5Y4f/wlDRiLyi3E=
-github.com/docker/docker v27.0.2+incompatible h1:mNhCtgXNV1fIRns102grG7rdzIsGGCq1OlOD0KunZos=
-github.com/docker/docker v27.0.2+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+github.com/docker/docker v27.1.1+incompatible h1:hO/M4MtV36kzKldqnA37IWhebRA+LnqqcqDja6kVaKY=
+github.com/docker/docker v27.1.1+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/go-connections v0.5.0 h1:USnMq7hx7gwdVZq1L49hLXaFtUdTADjXGp+uj1Br63c=
 github.com/docker/go-connections v0.5.0/go.mod h1:ov60Kzw0kKElRwhNs9UlUHAE/F9Fe6GLaXnqyDdmEXc=
 github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
@@ -301,12 +301,8 @@ github.com/sendgrid/sendgrid-go v3.14.0+incompatible h1:KDSasSTktAqMJCYClHVE94Fc
 github.com/sendgrid/sendgrid-go v3.14.0+incompatible/go.mod h1:QRQt+LX/NmgVEvmdRw0VT/QgUn499+iza2FnDca9fg8=
 github.com/sergi/go-diff v1.1.0 h1:we8PVUC3FE2uYfodKH/nBHMSetSfHDR6scGdBi+erh0=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
-github.com/shuffle/shuffle-shared v0.6.74 h1:os3BDSFZnl4U8ZgsTAY8IsTDADcMXhbc1rS9UMa0BIY=
-github.com/shuffle/shuffle-shared v0.6.74/go.mod h1:RAJiSFjmuKmijKTbbEf9A6Ojb+3/te7g71lED7JjPus=
 github.com/shuffle/shuffle-shared v0.6.83 h1:gceT91WtFqh3h9juzTipDhWpxZLfrdtbcsnK+XNj57g=
 github.com/shuffle/shuffle-shared v0.6.83/go.mod h1:RAJiSFjmuKmijKTbbEf9A6Ojb+3/te7g71lED7JjPus=
-github.com/shuffle/shuffle-shared v0.6.79 h1:MIy5kcShHYN05ov/50YJ+la1C2v1rL8IENapOvX9I8U=
-github.com/shuffle/shuffle-shared v0.6.79/go.mod h1:RAJiSFjmuKmijKTbbEf9A6Ojb+3/te7g71lED7JjPus=
 github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
