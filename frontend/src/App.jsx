@@ -417,6 +417,7 @@ const App = (message, props) => {
 				<Apps2
 					serverside={false} 
 					isLoaded={isLoaded} 
+					isLoggedIn={isLoggedIn}
 					userdata={userdata} 
 					globalUrl={globalUrl} 
 					surfaceColor={theme.palette.surfaceColor} 

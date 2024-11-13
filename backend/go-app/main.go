@@ -35,8 +35,8 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/storage/memory"
-    gitProxy "github.com/go-git/go-git/v5/plumbing/transport"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -257,7 +257,6 @@ type Hook struct {
 	Environment string       `json:"environment" datastore:"environment"`
 }
 
-
 func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
 		"id": "12345",
@@ -398,49 +397,49 @@ func checkUsername(Username string) error {
 }
 
 func isGitNoProxy(rawURL string) bool {
-    noProxy := os.Getenv("NO_PROXY")
-    if noProxy == "" {
-        return false
-    }
-    
-    if noProxy == "*" {
-        return true
-    }
+	noProxy := os.Getenv("NO_PROXY")
+	if noProxy == "" {
+		return false
+	}
 
-    noProxyList := strings.Split(noProxy, ",")
-    parsedURL, err := url.Parse(rawURL)
-    if err != nil {
-        return false
-    }
-    host := parsedURL.Hostname()
+	if noProxy == "*" {
+		return true
+	}
 
-    for _,value := range noProxyList {
-        value = strings.TrimSpace(value)
+	noProxyList := strings.Split(noProxy, ",")
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	host := parsedURL.Hostname()
 
-        if host == value {
-            return true 
-        }
-        if strings.HasPrefix(value, "*.") && strings.HasSuffix(host, value[2:]){
-            return true
-        }
-    }
-    return false
+	for _, value := range noProxyList {
+		value = strings.TrimSpace(value)
+
+		if host == value {
+			return true
+		}
+		if strings.HasPrefix(value, "*.") && strings.HasSuffix(host, value[2:]) {
+			return true
+		}
+	}
+	return false
 }
 
 func checkGitProxy(cloneOptions *git.CloneOptions) *git.CloneOptions {
-    if os.Getenv("HTTP_PROXY") != "" && !isGitNoProxy(cloneOptions.URL){
-        cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-		    URL: os.Getenv("HTTP_PROXY"),
-	    }
-    }
+	if os.Getenv("HTTP_PROXY") != "" && !isGitNoProxy(cloneOptions.URL) {
+		cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+			URL: os.Getenv("HTTP_PROXY"),
+		}
+	}
 
-    if os.Getenv("HTTPS_PROXY") != "" && !isGitNoProxy(cloneOptions.URL) {
-        cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
-		    URL: os.Getenv("HTTPS_PROXY"),
-	    }
-    }
+	if os.Getenv("HTTPS_PROXY") != "" && !isGitNoProxy(cloneOptions.URL) {
+		cloneOptions.ProxyOptions = gitProxy.ProxyOptions{
+			URL: os.Getenv("HTTPS_PROXY"),
+		}
+	}
 
-    return cloneOptions
+	return cloneOptions
 }
 
 func createNewUser(username, password, role, apikey string, org shuffle.OrgMini) error {
@@ -559,7 +558,6 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 		}
 	}
 
-
 	return nil
 }
 
@@ -663,7 +661,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 					Name: newOrg.Name,
 				}
 
-                user.ActiveOrg = currentOrg
+				user.ActiveOrg = currentOrg
 			}
 		}
 	}
@@ -932,7 +930,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[DEBUG] Failed to get org during getinfo: %s", err)
 	}
 
-
 	//if err == nil {
 	if len(org.Id) > 0 {
 		if userInfo.Role == "" {
@@ -1069,9 +1066,9 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		ChatDisabled: chatDisabled,
 		Tutorials:    tutorialsFinished,
 
-		Interests: 	  orgInterests,
-		Priorities:   orgPriorities,
-		Licensed: 		  licensed,
+		Interests:  orgInterests,
+		Priorities: orgPriorities,
+		Licensed:   licensed,
 	}
 
 	returnData, err := json.Marshal(returnValue)
@@ -1091,7 +1088,6 @@ type passwordReset struct {
 	Password2 string `json:"newpassword2"`
 	Reference string `json:"reference"`
 }
-
 
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
@@ -3338,7 +3334,6 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User, s
 		}
 	}
 
-
 	log.Printf("[DEBUG] Successfully built app %s (%s)", api.Name, api.ID)
 	if len(user.Id) > 0 {
 		resp.WriteHeader(200)
@@ -3378,8 +3373,6 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	buildSwaggerApp(resp, body, user, false)
 }
-
-
 
 // Hotloads new apps from a folder
 func handleAppHotload(ctx context.Context, location string, forceUpdate bool) error {
@@ -3727,11 +3720,10 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	return nil
 }
 
-
 func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 
 	// Check if it's 1 in 10 (10% chance random)
-	backupJob := shuffle.BackupJob{} 
+	backupJob := shuffle.BackupJob{}
 
 	// Check if workflow backup is active
 	// Check if app backup is active
@@ -3776,7 +3768,6 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		log.Printf("[ERROR] Failed marshalling backup job: %s", err)
 		backupJobData = []byte{}
 	}
-
 
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync", syncUrl)
 	client := shuffle.GetExternalClient(syncUrl)
@@ -3983,7 +3974,7 @@ func runInitEs(ctx context.Context) {
 			}
 
 			// FIXME: Add a randomized timer to avoid all schedules running at the same time
-			// Many are at 5 minutes / 1 hour. The point is to spread these out 
+			// Many are at 5 minutes / 1 hour. The point is to spread these out
 			// a bit instead of all of them starting at the exact same time
 
 			//log.Printf("Schedule: %#v", schedule)
@@ -4275,7 +4266,7 @@ func runInitEs(ctx context.Context) {
 			}
 		}
 
-        cloneOptions = checkGitProxy(cloneOptions)
+		cloneOptions = checkGitProxy(cloneOptions)
 
 		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
 		if len(branch) > 0 && branch != "master" && branch != "main" {
@@ -4322,7 +4313,7 @@ func runInitEs(ctx context.Context) {
 		URL: apis,
 	}
 
-    cloneOptions = checkGitProxy(cloneOptions)
+	cloneOptions = checkGitProxy(cloneOptions)
 
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
@@ -4340,17 +4331,16 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Skipping download of extra API samples as %d were found", len(workflowapps))
 	}
 
-	
 	if os.Getenv("SHUFFLE_HEALTHCHECK_DISABLED") != "true" {
-		healthcheckInterval := 30 
+		healthcheckInterval := 30
 		log.Printf("[INFO] Starting healthcheck job every %d minute. Stats available on /api/v1/health/stats. Disable with SHUFFLE_HEALTHCHECK_DISABLED=true", healthcheckInterval)
 		job := func() {
-			// Prepare a fake http.responsewriter 
+			// Prepare a fake http.responsewriter
 			resp := httptest.NewRecorder()
 
 			request := http.Request{}
 			// Add the "force=true" query to the fake request
-			request.URL, err  = url.Parse("/api/v1/health/stats?force=true")
+			request.URL, err = url.Parse("/api/v1/health/stats?force=true")
 			if err != nil {
 				log.Printf("[ERROR] Failed to parse test url for healthstats: %s", err)
 			}
@@ -4368,7 +4358,6 @@ func runInitEs(ctx context.Context) {
 
 	log.Printf("[INFO] Finished INIT (ES)")
 }
-
 
 func handleVerifyCloudsync(orgId string) (shuffle.SyncFeatures, error) {
 	ctx := context.Background()
@@ -4948,8 +4937,6 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
-
-
 func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -5008,8 +4995,6 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte("OK"))
 }
 
-
-
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -5056,7 +5041,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
-
+	r.HandleFunc("/api/v1/users/{userId}/apps", shuffle.HandleGetUserApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/apps", shuffle.HandleGetUserApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/generateapikey", shuffle.HandleApiGeneration).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/logout", shuffle.HandleLogout).Methods("POST", "OPTIONS")
@@ -5192,7 +5177,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/pipeline", shuffle.HandleNewPipelineRegister).Methods("POST", "OPTIONS")
-    //r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
+	//r.HandleFunc("/api/v1/triggers/pipeline/save", shuffle.HandleSavePipelineInfo).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/pipelines/{key}", handlePipelineCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers", shuffle.HandleGetTriggers).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
@@ -5220,7 +5205,7 @@ func initHandlers() {
 
 	r.HandleFunc("/api/v1/orgs/{orgId}", shuffle.HandleDeleteOrg).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/suborgs", shuffle.HandleGetSubOrgs).Methods("GET", "OPTIONS")
-	
+
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
 	r.HandleFunc("/api/v1/environments/{key}/stop", shuffle.HandleStopExecutions).Methods("GET", "POST", "OPTIONS")
@@ -5244,7 +5229,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}/datastore", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/datastore/{cache_key}", shuffle.HandleDeleteCacheKey).Methods("DELETE", "OPTIONS")
 
-
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
@@ -5266,14 +5250,13 @@ func initHandlers() {
 	// This structure is horrendous. Needs fixing after we got the prototype up
 	r.HandleFunc("/api/v1/detections/{detectionType}/connect", shuffle.HandleDetectionAutoConnect).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/detections/{detection_type}", shuffle.HandleGetDetectionRules).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET","OPTIONS")
-	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST","OPTIONS")
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules", shuffle.HandleGetSelectedRules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/detections/{triggerId}/selected_rules/save", shuffle.HandleSaveSelectedRules).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/detections/{action}", shuffle.HandleFolderToggle).Methods("PUT", "OPTIONS")
 
 	// This is weird.
 	r.HandleFunc("/api/v1/detections/{fileId}/{action}", shuffle.HandleToggleRule).Methods("PUT", "OPTIONS")
 	//r.HandleFunc("/api/v1/detections/siem/node_health", shuffle.HandleTenzirHealthUpdate).Methods("POST","OPTIONS")
-
 
 	// Introduced in 0.9.21 to handle notifications for e.g. failed Workflow
 	r.HandleFunc("/api/v1/notifications", shuffle.HandleCreateNotification).Methods("POST", "OPTIONS")
