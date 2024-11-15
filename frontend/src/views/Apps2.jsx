@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback, memo, useMemo } from "react";
+import React, { useState, useEffect, useContext, useCallback, memo, useMemo, useRef } from "react";
 import theme from "../theme.jsx";
 import { isMobile } from "react-device-detect";
 import AppGrid from "../components/AppGrid.jsx";
@@ -19,10 +19,11 @@ import InputAdornment from '@mui/material/InputAdornment';
 import Search from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 
-import { ClearRefinements, connectHits, connectSearchBox, connectStateResults, InstantSearch, RefinementList, connectRefinementList } from "react-instantsearch-dom";
+import { ClearRefinements, connectHits, connectSearchBox, connectStateResults, InstantSearch, RefinementList, connectRefinementList, Configure } from "react-instantsearch-dom";
 import { removeQuery } from "../components/ScrollToTop.jsx";
 import { toast } from "react-toastify";
 import algoliasearch from "algoliasearch/lite";
+import { debounce } from "lodash";
 
 
 const searchClient = algoliasearch(
@@ -180,7 +181,6 @@ const Hits = ({
   isLoading,
   isLoggedIn,
 }) => {
-  var counted = 0;
   const [hoverEffect, setHoverEffect] = useState(-1);
   const [allActivatedAppIds, setAllActivatedAppIds] = useState(userdata?.active_apps);
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
@@ -201,31 +201,6 @@ const Hits = ({
 
 
 
-  // const fetchUserData = useCallback(async () => {
-  //   try {
-  //     const response = await fetch(`${globalUrl}/api/v1/me`, {
-  //       credentials: "include",
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //     });
-  //     const responseJson = await response.json();
-  //     console.log("responseJson : user data", responseJson)
-  //     if (responseJson.success) {
-  //       setUserdata(responseJson);
-  //       setAllActivatedAppIds(responseJson.active_apps);
-  //       setIsLoggedIn(true);
-  //     } else {
-  //       setIsLoggedIn(false);
-  //     }
-  //   } catch (error) {
-  //     console.log("Failed login check: ", error);
-  //   }
-  // }, [globalUrl]); // Added globalUrl as a dependency
-
-  // useEffect(() => {
-  //   fetchUserData();
-  // }, [fetchUserData]); // Ensure fetchUserData is stable
 
   //Function for activation and deactivation of app
   const handleActivateButton = (event, data, type) => {
@@ -312,7 +287,6 @@ const Hits = ({
                     display: "flex",
                     flexWrap: "wrap",
                     justifyContent: "flex-start",
-                    // marginLeft: 24,
                     maxHeight: 570,
                     scrollbarWidth: "thin",
                     scrollbarColor: "#494949 #2f2f2f",
@@ -521,11 +495,10 @@ const Hits = ({
                         </Grid>
                       </Zoom>
                     );
-                  })
-                  }
+                  })}
                 </div>
               </div>
-            </Grid >
+            </Grid>
           )}
         </div>
       ) : (
@@ -575,6 +548,85 @@ const CategoryDropdown = ({ items, currentRefinement, refine }) => {
 };
 
 const CustomCategoryDropdown = connectRefinementList(CategoryDropdown);
+
+// Custom SearchBox Component
+const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
+  const inputRef = useRef(null);
+  const [localQuery, setLocalQuery] = useState(searchQuery);
+
+  // Debounced function to refine search
+  const debouncedRefine = useRef(
+    debounce((value) => {
+      setSearchQuery(value);
+      removeQuery("q");
+      refine(value);
+    }, 300) // Adjust the delay as needed
+  ).current;
+
+  useEffect(() => {
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const params = Object.fromEntries(urlSearchParams.entries());
+    const foundQuery = params["q"];
+    if (foundQuery) {
+      setLocalQuery(foundQuery);
+      debouncedRefine(foundQuery);
+    }
+  }, [debouncedRefine]);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [searchQuery]);
+
+  const handleChange = (event) => {
+    const value = event.target.value;
+    setLocalQuery(value);
+    debouncedRefine(value);
+  };
+
+  return (
+    <TextField
+      fullWidth
+      variant="outlined"
+      placeholder="Search for apps"
+      value={localQuery}
+      id="shuffle_search_field"
+      inputRef={inputRef}
+      onChange={handleChange}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+        }
+      }}
+      style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
+      InputProps={{
+        style: {
+          borderRadius: 8,
+        },
+        endAdornment: (
+          <InputAdornment position="end">
+            {localQuery?.length === 0 ? <Search /> : (
+              <ClearIcon
+                style={{
+                  cursor: "pointer",
+                  marginRight: 10
+                }}
+                onClick={() => {
+                  setLocalQuery('');
+                  debouncedRefine('');
+                }}
+              />
+            )}
+          </InputAdornment>
+        ),
+      }}
+    />
+  );
+};
+
+const CustomSearchBox = connectSearchBox(SearchBox);
+const CustomHits = connectHits(Hits);
 
 // Main Apps Component
 const Apps2 = (props) => {
@@ -631,8 +683,6 @@ const Apps2 = (props) => {
         url = `${baseUrl}/api/v1/users/${userId}/apps`;
       } else if (currTab === 0) {
         url = `${baseUrl}/api/v1/apps`;
-      } else {
-        return; // No need to fetch if not in the relevant tabs
       }
       setIsLoading(true);
       try {
@@ -814,87 +864,6 @@ const Apps2 = (props) => {
     maxWidth: "60%",
     // padding: '20px 380px',
   };
-
-
-  const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
-    const inputRef = React.useRef(null); // Create a ref for the input field
-
-    // Check for query in URL and set it
-    React.useEffect(() => {
-      if (
-        window !== undefined &&
-        window.location !== undefined &&
-        window.location.search !== undefined &&
-        window.location.search !== null
-      ) {
-        const urlSearchParams = new URLSearchParams(window.location.search);
-        const params = Object.fromEntries(urlSearchParams.entries());
-        const foundQuery = params["q"];
-        if (foundQuery !== null && foundQuery !== undefined) {
-          console.log("Got query: ", foundQuery);
-          refine(foundQuery);
-          setSearchQuery(foundQuery); // Use setSearchQuery to update state
-        }
-      }
-    }, [refine, setSearchQuery]); // Add dependencies
-
-    // Use useEffect to focus the input when it mounts or when searchQuery changes
-    React.useEffect(() => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    }, [searchQuery]); // Focus whenever searchQuery changes
-
-    console.log("searchQuery", searchQuery);
-
-    return (
-      <TextField
-        fullWidth
-        variant="outlined"
-        placeholder="Search for apps"
-        value={searchQuery}
-        id="shuffle_search_field"
-        inputRef={inputRef} // Attach the ref to the input field
-        onChange={(event) => {
-          setSearchQuery(event.target.value); // Update the search query
-          removeQuery("q");
-          refine(event.target.value); // Refine the search
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-          }
-        }}
-        limit={5}
-        style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
-        InputProps={{
-          style: {
-            borderRadius: 8,
-          },
-          endAdornment: (
-            <InputAdornment position="end">
-              {searchQuery?.length === 0 ? <Search /> : (
-                <ClearIcon
-                  style={{
-                    cursor: "pointer",
-                    marginRight: 10
-                  }}
-                  onClick={() => {
-                    setSearchQuery(''); // Clear the search query
-                    removeQuery("q");
-                    refine(''); // Clear the refinement
-                  }}
-                />
-              )}
-            </InputAdornment>
-          ),
-        }}
-      />
-    );
-  };
-
-  const CustomSearchBox = connectSearchBox(SearchBox);
-  const CustomHits = connectHits(Hits)
 
 
   const handleCategoryChange = (event) => {
@@ -1120,7 +1089,6 @@ const Apps2 = (props) => {
 
           {
             currTab === 2 &&
-
             <CustomHits
               isLoggedIn={isLoggedIn}
               userdata={userdata}
@@ -1133,14 +1101,8 @@ const Apps2 = (props) => {
             />
           }
         </div>
-        {/* <AppGrid
-        maxRows={4}
-        showSuggestion={true}
-        globalUrl={globalUrl}
-        isMobile={isMobile}
-        userdata={userdata}
-      /> */}
       </div >
+      <Configure clickAnalytics />
     </InstantSearch>
   );
 };
