@@ -24,6 +24,7 @@ import { removeQuery } from "../components/ScrollToTop.jsx";
 import { toast } from "react-toastify";
 import algoliasearch from "algoliasearch/lite";
 import { debounce } from "lodash";
+import AppSelection from "../components/AppSelection.jsx";
 
 
 const searchClient = algoliasearch(
@@ -32,7 +33,7 @@ const searchClient = algoliasearch(
 );
 
 // AppCard Component
-const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes }) => {
+const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab }) => {
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
 
@@ -50,9 +51,13 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
 
   return (
     <Grid item xs={12} key={index}>
-      <a href={appUrl} rel="noopener noreferrer" style={{ textDecoration: "none", color: "#f85a3e" }}>
-        <Paper elevation={0} style={paperStyle} onMouseOver={() => setMouseHoverIndex(index)} onMouseOut={() => setMouseHoverIndex(-1)}>
-          <ButtonBase style={{
+      <Paper elevation={0} 
+        style={paperStyle} 
+        onMouseOver={() => setMouseHoverIndex(index)} 
+        onMouseOut={() => setMouseHoverIndex(-1)}
+      >
+        <ButtonBase 
+          style={{
             borderRadius: 6,
             fontSize: 16,
             overflow: "hidden",
@@ -60,71 +65,80 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
             alignItems: "flex-start",
             width: '100%',
             backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "#212121"
+          }}
+          onClick={(event) => {
+            // if (!event.target.closest('.deactivate-button')) {
+            //   window.location.href = appUrl;
+            // }
+            console.log("clicked");
+          }}
+        >
+          <img
+            alt={data.name}
+            src={data.small_image || data.large_image ? (data.small_image || data.large_image) : "/images/no_image.png"}
+            style={{
+              width: 100,
+              height: 100,
+              borderRadius: 6,
+              margin: 10,
+              border: "1px solid #212122",
+              boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
+            }}
+          />
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            width: 339,
+            gap: 8,
+            fontWeight: '400',
+            overflow: "hidden",
+            margin: "12px 0",
+            fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
           }}>
-            <img
-              alt={data.name}
-              src={data.small_image || data.large_image ? (data.small_image || data.large_image) : "/images/no_image.png"}
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: 6,
-                margin: 10,
-                border: "1px solid #212122",
-                boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
-              }}
-            />
             <div style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              width: 339,
-              gap: 8,
-              fontWeight: '400',
+              display: 'flex',
+              flexDirection: 'row',
               overflow: "hidden",
-              margin: "12px 0",
-              fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              marginLeft: 8,
+              gap: 8
             }}>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'row',
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                marginLeft: 8,
-                gap: 8
-              }}>
-                {data.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+              {data.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+            </div>
+            <div style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              marginLeft: 8,
+              color: "rgba(158, 158, 158, 1)"
+            }}>
+              {data.categories ? data.categories.join(", ") : "NA"}
+            </div>
+            <div style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              width: 230,
+              textAlign: 'start',
+              marginLeft: 8,
+              color: "rgba(158, 158, 158, 1)",
+              display: "flex"
+            }}>
+              <div style={{ minWidth: 120, overflow: "hidden" }}>
+                {data.generated !== true && data.tags && data.tags.slice(0, 2).map((tag, tagIndex) => (
+                  <span key={tagIndex}>
+                    {tag}
+                    {tagIndex < data.tags.length - 1 ? ", " : ""}
+                  </span>
+                ))}
               </div>
-              <div style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                marginLeft: 8,
-                color: "rgba(158, 158, 158, 1)"
-              }}>
-                {data.categories ? data.categories.join(", ") : "NA"}
-              </div>
-              <div style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                width: 230,
-                textAlign: 'start',
-                marginLeft: 8,
-                color: "rgba(158, 158, 158, 1)",
-                display: "flex"
-              }}>
-                <div style={{ minWidth: 120, overflow: "hidden" }}>
-                  {data.generated !== true && data.tags && data.tags.slice(0, 2).map((tag, tagIndex) => (
-                    <span key={tagIndex}>
-                      {tag}
-                      {tagIndex < data.tags.length - 1 ? ", " : ""}
-                    </span>
-                  ))}
-                </div>
-                {/* Deactivate button logic */}
-                {mouseHoverIndex === index ?
-                  <Button style={{
+              {/* Deactivate button */}
+              {currTab === 0 && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
+                <Button 
+                  className="deactivate-button"
+                  style={{
                     marginLeft: 15,
                     width: 102,
                     height: 35,
@@ -133,39 +147,38 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                     color: "rgba(241, 241, 241, 1)",
                     textTransform: "none",
                   }}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
 
-                      fetch(url, {
-                        method: 'GET',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Accept': 'application/json',
-                        },
-                        credentials: "include",
+                    fetch(url, {
+                      method: 'GET',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                      },
+                      credentials: "include",
+                    })
+                      .then((response) => response.json())
+                      .then((responseJson) => {
+                        if (responseJson.success === false) {
+                          toast.error(responseJson.reason);
+                        } else {
+                          toast.success("App Deactivated Successfully. Reload UI to see updated changes.");
+                        }
                       })
-                        .then((response) => response.json())
-                        .then((responseJson) => {
-                          if (responseJson.success === false) {
-                            toast.error(responseJson.reason);
-                          } else {
-                            toast.success("App Deactivated Successfully. Reload UI to see updated changes.");
-                          }
-                        })
-                        .catch(error => {
-                          console.log("app error: ", error.toString());
-                        });
-                    }}>
-                    Deactivate
-                  </Button>
-                  : null}
-              </div>
+                      .catch(error => {
+                        console.log("app error: ", error.toString());
+                      });
+                  }}
+                >
+                  Deactivate
+                </Button>
+              )}
             </div>
-          </ButtonBase>
-        </Paper>
-      </a>
+          </div>
+        </ButtonBase>
+      </Paper>
     </Grid>
   );
 };
@@ -183,7 +196,7 @@ const Hits = ({
 }) => {
   const [hoverEffect, setHoverEffect] = useState(-1);
   const [allActivatedAppIds, setAllActivatedAppIds] = useState(userdata?.active_apps);
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
 
   const normalizedString = (name) => {
@@ -193,12 +206,6 @@ const Hits = ({
       return name;
     }
   };
-
-  useEffect(() => {
-    console.log("searchQuery", searchQuery)
-    console.log("hits", hits)
-  }, [searchQuery, hits])
-
 
 
 
@@ -270,7 +277,9 @@ const Hits = ({
       {!isLoading ? (
         <div>
           {hits?.length === 0 && searchQuery.length >= 0 && showNoAppFound ? (
-            <Typography variant="body1" style={{ marginTop: '30%' }}>No Apps Found</Typography>
+            <div style={{ marginTop: 100, fontSize: 20, fontWeight: 500, width: "100%", textAlign: "center" }}>
+              <Typography variant="body1">No Apps Found</Typography>
+            </div>
           ) : (
             <Grid item spacing={2} justifyContent="flex-start">
               <div
@@ -574,6 +583,9 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
   }, [debouncedRefine]);
 
   useEffect(() => {
+    if (searchQuery === "") {
+      return;
+    }
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -628,24 +640,62 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
 const CustomSearchBox = connectSearchBox(SearchBox);
 const CustomHits = connectHits(Hits);
 
+// Custom Label Dropdown Component
+const LabelDropdown = ({ items, currentRefinement, refine }) => {
+  const handleChange = (event) => {
+    const value = event.target.value;
+    refine(value);
+  };
+
+  return (
+    <Select
+      fullWidth
+      variant="outlined"
+      value={currentRefinement}
+      onChange={handleChange}
+      displayEmpty
+      multiple
+      style={{
+        width: '100%',
+        maxWidth: '300px',
+        borderRadius: '7px',
+        fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+      renderValue={(selected) => selected.length ? selected.join(', ') : 'All Labels'}
+    >
+      <MenuItem disabled value="">
+        All Labels
+      </MenuItem>
+      {items.map(item => (
+        <MenuItem key={item.label} value={item.label}>
+          <Checkbox checked={currentRefinement.includes(item.label)} />
+          {item.label} ({item.count})
+        </MenuItem>
+      ))}
+    </Select>
+  );
+};
+
+const CustomLabelDropdown = connectRefinementList(LabelDropdown);
+
 // Main Apps Component
 const Apps2 = (props) => {
-  const { globalUrl, isLoaded, serverside, userdata, isLoggedIn } = props;
+  const { globalUrl, isLoaded, serverside, userdata, isLoggedIn, checkLogin } = props;
   let navigate = useNavigate();
   const { leftSideBarOpenByClick } = useContext(Context);
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState([]);
   const [selectedLabel, setSelectedLabel] = useState([]);
-  const [algoliaSelectedLabels, setAlgoliaSelectedLabels] = useState([]);
   const [currTab, setCurrTab] = useState(0);
   const [categories, setCategories] = useState([]);
   const [labels, setLabels] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [userApps, setUserApps] = useState([]);
   const [orgApps, setOrgApps] = useState([]);
-  const [selectedCategoryForUsersAndOgsApps, setselectedCategoryForUsersAndOgsApps] = useState([]);
-  const [selectedTagsForUserAndOrgApps, setSelectedTagsForUserAndOrgApps] = useState([]);
   const [appsToShow, setAppsToShow] = useState([]);
   const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
   const [IsAnyAppActivated, setIsAnyAppActivated] = useState(false);
@@ -654,6 +704,8 @@ const Apps2 = (props) => {
   const [showNoAppFound, setShowNoAppFound] = useState(false);
 
 
+  const [appFramework, setAppFramework] = useState(undefined);
+  const [defaultSearch, setDefaultSearch] = useState("");
   // Set the current tab based on the query parameter
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -666,11 +718,47 @@ const Apps2 = (props) => {
       } else {
         setCurrTab(2);
       }
-    } else {
-      setCurrTab(0);
     }
   }, [location.search]);
 
+  useEffect(() => {
+
+    const getFramework = () => {
+      fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        credentials: "include",
+      })
+        .then((response) => {
+          if (response.status !== 200) {
+            console.log("Status not 200 for framework!");
+          }
+
+          return response.json();
+        })
+        .then((responseJson) => {
+          if (responseJson.success === false) {
+            setAppFramework({})
+
+            if (responseJson.reason !== undefined) {
+              //toast("Failed loading: " + responseJson.reason)
+            } else {
+              //toast("Failed to load framework for your org.")
+            }
+          } else {
+            setAppFramework(responseJson)
+          }
+        })
+        .catch((error) => {
+          console.log("err in framework: ", error.toString());
+        })
+    }
+
+    getFramework();
+  }, []);
 
   // Fetch apps based on the current tab : 0 -> org_apps, 1 -> my_apps, 2 -> all_apps
   useEffect(() => {
@@ -695,23 +783,27 @@ const Apps2 = (props) => {
         });
         const data = await response.json();
         if (currTab === 1) {
-          console.log("data from userApps", data)
           setAppsToShow(data);
           setUserApps(data);
-          setIsLoading(false);
         } else if (currTab === 0) {
-          console.log("data from orgApps", data)
           setAppsToShow(data);
           setOrgApps(data);
-          setIsLoading(false);
+          // For testing the empty state
+          // setAppsToShow([]);
+          // setOrgApps([]);
         }
+        setIsLoading(false);
       } catch (err) {
         console.error("Error fetching apps:", err);
+        setIsLoading(false);
       }
     };
 
-    fetchApps();
-  }, [currTab, globalUrl, location.search]); // Added globalUrl to dependencies to avoid stale closures
+    // Only fetch if we have required data
+    if (globalUrl && (currTab === 0 || (currTab === 1 && userdata?.id))) {
+      fetchApps();
+    }
+  }, [currTab, globalUrl, userdata?.id]); // Remove location.search dependency
 
   useEffect(() => {
     setSearchQuery("");
@@ -789,8 +881,9 @@ const Apps2 = (props) => {
     return topTags;
   };
 
-  const handleCreateApp = () => {
-    navigate('/create-app');
+  const handleCreateApp = (e) => {
+    e.preventDefault();
+    console.log("Create app clicked")
   };
 
 
@@ -832,7 +925,6 @@ const Apps2 = (props) => {
 
 
   const handleTabChange = (newTab) => {
-    console.log("Current Tab", newTab)
     setCurrTab(newTab);
     if (newTab === 0) {
       setAppsToShow(orgApps)
@@ -956,44 +1048,34 @@ const Apps2 = (props) => {
                     {category.category}
                   </MenuItem>
                 ))}
-                {
-                  selectedCategory.length > 0 && (
-                    <MenuItem onClick={() => setSelectedCategory([])} style={{ display: 'flex', justifyContent: 'center', padding: '10px', backgroundColor: '#212121', color: '#fff', marginTop: '10px', cursor: 'pointer' }}>
-                      <Typography style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }}>Remove All Categories</Typography>
-                    </MenuItem>
-                  )
-                }
               </Select>
             )}
           </div>
           <div style={{ flex: 1, marginRight: 10 }}>
-            <Select
-              fullWidth
-              variant="outlined"
-              value={selectedLabel}
-              onChange={handleLabelChange}
-              displayEmpty
-              multiple
-              style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", maxWidth: "300px" }}
-              renderValue={(selected) => selected.length ? selected.join(', ') : 'All Labels'}
-            >
-              <MenuItem disabled value="">
-                All Labels
-              </MenuItem>
-              {labels?.map((tag) => (
-                <MenuItem key={tag.tag} value={tag.tag}>
-                  <Checkbox checked={selectedLabel.includes(tag.tag)} />
-                  {tag.tag}
+            {currTab === 2 ? (
+              <CustomLabelDropdown attribute="action_labels" />
+            ) : (
+              <Select
+                fullWidth
+                variant="outlined"
+                value={selectedLabel}
+                onChange={handleLabelChange}
+                displayEmpty
+                multiple
+                style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", maxWidth: "300px" }}
+                renderValue={(selected) => selected.length ? selected.join(', ') : 'All Labels'}
+              >
+                <MenuItem disabled value="">
+                  All Labels
                 </MenuItem>
-              ))}
-              {
-                selectedLabel.length > 0 && (
-                  <MenuItem onClick={() => setSelectedCategory([])} style={{ display: 'flex', justifyContent: 'center', padding: '10px', backgroundColor: '#212121', color: '#fff', marginTop: '10px', cursor: 'pointer' }}>
-                    <Typography style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }}>Remove All Labels</Typography>
+                {labels?.map((tag) => (
+                  <MenuItem key={tag.tag} value={tag.tag}>
+                    <Checkbox checked={selectedLabel.includes(tag.tag)} />
+                    {tag.tag}
                   </MenuItem>
-                )
-              }
-            </Select>
+                ))}
+              </Select>
+            )}
           </div>
           <div style={{ flex: 1, marginRight: 10 }}>
             <Button
@@ -1013,7 +1095,7 @@ const Apps2 = (props) => {
             currTab === 0 && (
               <div style={{ minHeight: 570, overflowY: "auto", overflowX: "hidden" }}>
                 {isLoading ? (
-                  <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  <div style={{ width: "100%", textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
                     <CircularProgress />
                   </div>
                 ) : (
@@ -1021,12 +1103,21 @@ const Apps2 = (props) => {
                     {appsToShow?.length > 0 && appsToShow !== undefined && !isLoading ? (
                       <div style={{ rowGap: 16, columnGap: 16, marginTop: 16, display: "flex", flexWrap: "wrap", justifyContent: "flex-start", maxHeight: 570, scrollbarWidth: "thin", scrollbarColor: "#494949 #2f2f2f" }}>
                         {appsToShow.map((data, index) => (
-                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} />
+                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} />
                         ))}
                       </div>
                     ) : (
-                      <div style={{ marginTop: 100, fontSize: 20, fontWeight: 500, width: "100%", textAlign: "center" }}>
-                        No apps found
+                      <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        <AppSelection
+                          userdata={userdata}
+                          globalUrl={globalUrl}
+                          appFramework={appFramework}
+                          setAppFramework={setAppFramework}
+                          defaultSearch={defaultSearch}
+                          setDefaultSearch={setDefaultSearch}
+                          checkLogin={checkLogin}
+                          isAppPage={true}
+                        />
                       </div>
                     )}
                   </>
@@ -1035,55 +1126,28 @@ const Apps2 = (props) => {
             )
           }
           {
-            currTab === 1 &&
-            (userApps.length > 0 ? (
-              <div style={{
-                minHeight: 570,
-                overflowY: "auto",
-                overflowX: "hidden",
-              }}>
-                <div style={{
-                  rowGap: 16,
-                  columnGap: 16,
-                  marginTop: 16,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  justifyContent: "flex-start",
-                  maxHeight: 570,
-                  scrollbarWidth: "thin",
-                  scrollbarColor: "#494949 #2f2f2f",
-                  // minHeight: 570
-                }}>
-                  {
-                    isLoading ? <div
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    > <CircularProgress /></div>
-                      :
-                      (
-                        userApps.map((data, index) => (
-                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} />
-                        ))
-                      )
-                  }
-                </div>
+            currTab === 1 && (
+              <div style={{ minHeight: 570, overflowY: "auto", overflowX: "hidden" }}>
+                {isLoading ? (
+                  <div style={{ width: "100%", textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                    <CircularProgress />
+                  </div>
+                ) : (
+                  <>
+                    {appsToShow?.length > 0 && appsToShow !== undefined ? (
+                      <div style={{ rowGap: 16, columnGap: 16, marginTop: 16, display: "flex", flexWrap: "wrap", justifyContent: "flex-start", maxHeight: 570, scrollbarWidth: "thin", scrollbarColor: "#494949 #2f2f2f" }}>
+                        {appsToShow.map((data, index) => (
+                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        <Typography variant="body1">No Apps Found</Typography>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            ) : !isLoading && (
-              <div
-                style={{
-                  marginTop: 100,
-                  fontSize: 20,
-                  fontWeight: 500,
-                  width: "100%",
-                  textAlign: "center",
-                }}
-              >No apps found</div>
-            )
             )
           }
 

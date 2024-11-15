@@ -418,6 +418,7 @@ const App = (message, props) => {
 					serverside={false} 
 					isLoaded={isLoaded} 
 					isLoggedIn={isLoggedIn}
+					checkLogin={checkLogin}
 					userdata={userdata} 
 					globalUrl={globalUrl} 
 					surfaceColor={theme.palette.surfaceColor} 
