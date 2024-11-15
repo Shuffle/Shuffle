@@ -11,6 +11,7 @@ import {
   Tooltip,
   Box,
   CircularProgress,
+  Checkbox,
 } from "@mui/material";
 import { Context } from "../context/ContextApi.jsx";
 import Add from '@mui/icons-material/Add';
@@ -18,7 +19,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import Search from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 
-import { ClearRefinements, connectHits, connectSearchBox, connectStateResults, InstantSearch, RefinementList } from "react-instantsearch-dom";
+import { ClearRefinements, connectHits, connectSearchBox, connectStateResults, InstantSearch, RefinementList, connectRefinementList } from "react-instantsearch-dom";
 import { removeQuery } from "../components/ScrollToTop.jsx";
 import { toast } from "react-toastify";
 import algoliasearch from "algoliasearch/lite";
@@ -173,7 +174,6 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
 const Hits = ({
   userdata,
   hits,
-  algoliaSelectedCategories,
   setIsAnyAppActivated,
   searchQuery,
   globalUrl,
@@ -200,10 +200,6 @@ const Hits = ({
   }, [searchQuery, hits])
 
 
-  const filteredHits = hits?.filter(hit => {
-    if (algoliaSelectedCategories?.length === 0) return true; // If no categories are selected, show all hits
-    return hit.categories?.some(category => algoliaSelectedCategories.includes(category));
-  });
 
   // const fetchUserData = useCallback(async () => {
   //   try {
@@ -298,7 +294,7 @@ const Hits = ({
     <div>
       {!isLoading ? (
         <div>
-          {filteredHits?.length === 0 && searchQuery.length >= 0 && showNoAppFound ? (
+          {hits?.length === 0 && searchQuery.length >= 0 && showNoAppFound ? (
             <Typography variant="body1" style={{ marginTop: '30%' }}>No Apps Found</Typography>
           ) : (
             <Grid item spacing={2} justifyContent="flex-start">
@@ -322,7 +318,7 @@ const Hits = ({
                     scrollbarColor: "#494949 #2f2f2f",
                   }}
                 >
-                  {filteredHits?.map((data, index) => {
+                  {hits?.map((data, index) => {
                     const appUrl =
                       isCloud
                         ? `/apps/${data.objectID}?queryID=${data.__queryID}`
@@ -539,6 +535,47 @@ const Hits = ({
   );
 }
 
+// Custom Category Dropdown Component
+const CategoryDropdown = ({ items, currentRefinement, refine }) => {
+  const handleChange = (event) => {
+    const value = event.target.value;
+    refine(value);
+  };
+
+  return (
+    <Select
+      fullWidth
+      variant="outlined"
+      value={currentRefinement}
+      onChange={handleChange}
+      displayEmpty
+      multiple
+      style={{
+        width: '100%',
+        maxWidth: '300px',
+        borderRadius: '7px',
+        fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+      renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
+    >
+      <MenuItem disabled value="">
+        All Categories
+      </MenuItem>
+      {items.map(item => (
+        <MenuItem key={item.label} value={item.label}>
+          <Checkbox checked={currentRefinement.includes(item.label)} />
+          {item.label} ({item.count})
+        </MenuItem>
+      ))}
+    </Select>
+  );
+};
+
+const CustomCategoryDropdown = connectRefinementList(CategoryDropdown);
+
 // Main Apps Component
 const Apps2 = (props) => {
   const { globalUrl, isLoaded, serverside, userdata, isLoggedIn } = props;
@@ -546,9 +583,8 @@ const Apps2 = (props) => {
   const { leftSideBarOpenByClick } = useContext(Context);
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [algoliaSelectedCategories, setAlgoliaSelectedCategories] = useState([]);
-  const [selectedLabel, setSelectedLabel] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState([]);
+  const [selectedLabel, setSelectedLabel] = useState([]);
   const [algoliaSelectedLabels, setAlgoliaSelectedLabels] = useState([]);
   const [currTab, setCurrTab] = useState(0);
   const [categories, setCategories] = useState([]);
@@ -679,7 +715,7 @@ const Apps2 = (props) => {
   const findTopTags = () => {
     const tagCountMap = {};
     const apps = currTab === 1 ? userApps : orgApps;
-    
+
     if (Array.isArray(apps)) {
       apps.forEach((app) => {
         const tags = app.tags;
@@ -725,22 +761,22 @@ const Apps2 = (props) => {
       );
 
       const matchesSelectedCategories = (
-        selectedCategory === "" || // If no category is selected, match all apps
+        selectedCategory.length === 0 || // If no category is selected, match all apps
         (app.categories && app.categories.some(category =>
           selectedCategory.includes(category)
         ))
       );
 
       const matchesSelectedTags = (
-        selectedLabel === "" || // If no label is selected, match all apps
+        selectedLabel.length === 0 || // If no label is selected, match all apps
         (app.tags && app.tags.some(tag =>
-          tag.toLowerCase().includes(selectedLabel.toLowerCase())
+          selectedLabel.includes(tag)
         ))
       );
 
       return matchesSearchQuery && matchesSelectedCategories && matchesSelectedTags;
     }) : [];
-    
+
     setAppsToShow(filteredUserAppdata);
   }, [searchQuery, selectedCategory, selectedLabel]);
 
@@ -778,13 +814,6 @@ const Apps2 = (props) => {
     maxWidth: "60%",
     // padding: '20px 380px',
   };
-
-  const CustomClearRefinements = connectStateResults(({ searchResults, ...rest }) => {
-    const hasFilters = searchResults && searchResults.nbHits !== searchResults.nbSortedHits;
-    return <ClearRefinements translations={{ reset: <span style={{ textDecoration: 'underline' }}>Clear All</span> }}  {...rest} disabled={!hasFilters} />;
-  });
-
-
 
 
   const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
@@ -868,21 +897,15 @@ const Apps2 = (props) => {
   const CustomHits = connectHits(Hits)
 
 
-  const handleCategoryChange = (selectedValue) => {
-    setAlgoliaSelectedCategories(prev => {
-      if (prev.includes(selectedValue)) {
-        // If the category is already selected, remove it
-        return prev.filter(category => category !== selectedValue);
-      } else {
-        // Otherwise, add it to the selected categories
-        return [...prev, selectedValue];
-      }
-    });
+  const handleCategoryChange = (event) => {
+    const value = event.target.value;
+    setSelectedCategory(value);
   };
 
-  useEffect(() => {
-    console.log("algoliaSelectedCategories", algoliaSelectedCategories)
-  }, [algoliaSelectedCategories])
+  const handleLabelChange = (event) => {
+    const value = event.target.value;
+    setSelectedLabel(value);
+  };
 
 
   return (
@@ -942,75 +965,63 @@ const Apps2 = (props) => {
             }
           </div>
           <div style={{ flex: 1, marginRight: 10 }}>
-            <Select
-              fullWidth
-              variant="outlined"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              displayEmpty
-              style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
-            >
-              <MenuItem value="">
-                All Categories
-              </MenuItem>
-              {
-                currTab === 0 &&
-                (
-                  categories?.map((category) => (
-                    <MenuItem key={category.category} value={category.category}>
-                      {category.category}
+            {currTab === 2 ? (
+              <CustomCategoryDropdown attribute="categories" />
+            ) : (
+              <Select
+                fullWidth
+                variant="outlined"
+                value={selectedCategory}
+                onChange={handleCategoryChange}
+                displayEmpty
+                multiple
+                style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", maxWidth: "300px" }}
+                renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
+              >
+                <MenuItem disabled value="">
+                  All Categories
+                </MenuItem>
+                {categories?.map((category) => (
+                  <MenuItem key={category.category} value={category.category}>
+                    <Checkbox checked={selectedCategory.includes(category.category)} />
+                    {category.category}
+                  </MenuItem>
+                ))}
+                {
+                  selectedCategory.length > 0 && (
+                    <MenuItem onClick={() => setSelectedCategory([])} style={{ display: 'flex', justifyContent: 'center', padding: '10px', backgroundColor: '#212121', color: '#fff', marginTop: '10px', cursor: 'pointer' }}>
+                      <Typography style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }}>Remove All Categories</Typography>
                     </MenuItem>
-                  ))
-                )
-              }
-              {
-                currTab === 2 &&
-                (
-                  <div style={{ padding: "5px 10px" }}>
-                    <RefinementList
-                      attribute="categories"
-                      defaultRefinement={algoliaSelectedCategories}
-                      onChange={(selectedItems) => {
-                        handleCategoryChange(selectedItems);
-                      }}
-                      transformItems={(items) => {
-                        console.log("items", items)
-                        return items;
-                      }}
-                    />
-                  </div>
-                )
-              }
-            </Select>
+                  )
+                }
+              </Select>
+            )}
           </div>
           <div style={{ flex: 1, marginRight: 10 }}>
             <Select
               fullWidth
               variant="outlined"
               value={selectedLabel}
-              onChange={(e) => setSelectedLabel(e.target.value)}
+              onChange={handleLabelChange}
               displayEmpty
-              style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
+              multiple
+              style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", maxWidth: "300px" }}
+              renderValue={(selected) => selected.length ? selected.join(', ') : 'All Labels'}
             >
-              <MenuItem value="">
+              <MenuItem disabled value="">
                 All Labels
               </MenuItem>
+              {labels?.map((tag) => (
+                <MenuItem key={tag.tag} value={tag.tag}>
+                  <Checkbox checked={selectedLabel.includes(tag.tag)} />
+                  {tag.tag}
+                </MenuItem>
+              ))}
               {
-                currTab === 0 &&
-                (
-                  labels?.map((tag) => (
-                    <MenuItem value={tag.tag}>
-                      {tag.tag}
-                    </MenuItem>
-                  ))
-                )
-              }
-              {
-                currTab === 2 &&
-                (
-                  <div style={{ padding: "5px 10px" }}>
-                    <RefinementList attribute="action_labels" />
-                  </div>
+                selectedLabel.length > 0 && (
+                  <MenuItem onClick={() => setSelectedCategory([])} style={{ display: 'flex', justifyContent: 'center', padding: '10px', backgroundColor: '#212121', color: '#fff', marginTop: '10px', cursor: 'pointer' }}>
+                    <Typography style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }}>Remove All Labels</Typography>
+                  </MenuItem>
                 )
               }
             </Select>
@@ -1117,7 +1128,6 @@ const Apps2 = (props) => {
               hitsPerPage={5}
               globalUrl={globalUrl}
               searchQuery={searchQuery}
-              algoliaSelectedCategories={algoliaSelectedCategories}
               mouseHoverIndex={mouseHoverIndex}
               setMouseHoverIndex={setMouseHoverIndex}
             />
