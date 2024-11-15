@@ -29,6 +29,7 @@ const searchClient = algoliasearch(
   "db08e40265e2941b9a7d8f644b6e5240"
 );
 
+// AppCard Component
 const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes }) => {
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
@@ -42,7 +43,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
     height: 96,
     borderRadius: 8,
     boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
-    // marginBottom: 20,
+    marginBottom: 20,
   };
 
   return (
@@ -169,13 +170,13 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
 
 
 // Component to fetch all public app from the algolia.
-const Hits = memo(({
+const Hits = ({
   userdata,
   hits,
+  algoliaSelectedCategories,
   setIsAnyAppActivated,
   searchQuery,
   globalUrl,
-  setIsLoggedIn,
   isLoading,
   isLoggedIn,
 }) => {
@@ -193,6 +194,16 @@ const Hits = memo(({
     }
   };
 
+  useEffect(() => {
+    console.log("searchQuery", searchQuery)
+    console.log("hits", hits)
+  }, [searchQuery, hits])
+
+
+  const filteredHits = hits?.filter(hit => {
+    if (algoliaSelectedCategories?.length === 0) return true; // If no categories are selected, show all hits
+    return hit.categories?.some(category => algoliaSelectedCategories.includes(category));
+  });
 
   // const fetchUserData = useCallback(async () => {
   //   try {
@@ -281,237 +292,242 @@ const Hits = memo(({
     return () => clearTimeout(timer);
   }, []);
 
-  const memoizedHits = useMemo(() => hits, [hits]);
 
 
   return (
     <div>
       {!isLoading ? (
         <div>
-          {memoizedHits?.length === 0 && searchQuery.length >= 0 && showNoAppFound ? (
+          {filteredHits?.length === 0 && searchQuery.length >= 0 && showNoAppFound ? (
             <Typography variant="body1" style={{ marginTop: '30%' }}>No Apps Found</Typography>
           ) : (
             <Grid item spacing={2} justifyContent="flex-start">
               <div
                 style={{
-                  gap: 16,
-                  marginTop: 16,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  justifyContent: "flex-start",
-                  marginLeft: 24,
+                  minHeight: 570,
                   overflowY: "auto",
                   overflowX: "hidden",
-                  maxHeight: 570,
-                  scrollbarWidth: "thin",
-                  scrollbarColor: "#494949 #2f2f2f",
-                }}
-              >
-                {memoizedHits.map((data, index) => {
-                  const appUrl =
-                    isCloud
-                      ? `/apps/${data.objectID}?queryID=${data.__queryID}`
-                      : `https://shuffler.io/apps/${data.objectID}?queryID=${data.__queryID}`;
+                }}>
+                <div
+                  style={{
+                    rowGap: 16,
+                    columnGap: 16,
+                    marginTop: 16,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "flex-start",
+                    // marginLeft: 24,
+                    maxHeight: 570,
+                    scrollbarWidth: "thin",
+                    scrollbarColor: "#494949 #2f2f2f",
+                  }}
+                >
+                  {filteredHits?.map((data, index) => {
+                    const appUrl =
+                      isCloud
+                        ? `/apps/${data.objectID}?queryID=${data.__queryID}`
+                        : `https://shuffler.io/apps/${data.objectID}?queryID=${data.__queryID}`;
 
-                  return (
-                    <Zoom
-                      key={index}
-                      in={true}
-                      style={{
-                        transitionDelay: `${workflowDelay}ms`,
-                      }}
-                    >
-                      <Grid>
-                        <a
-                          href={appUrl}
-                          rel="noopener noreferrer"
-                          target="_blank"
-                          style={{
-                            textDecoration: "none",
-                            color: "#f85a3e",
-                          }}
-                        >
-                          <Paper
-                            elevation={0}
+                    return (
+                      <Zoom
+                        key={index}
+                        in={true}
+                        style={{
+                          transitionDelay: `${workflowDelay}ms`,
+                        }}
+                      >
+                        <Grid>
+                          <a
+                            href={appUrl}
+                            rel="noopener noreferrer"
+                            target="_blank"
                             style={{
-                              backgroundColor: hoverEffect === index ? "rgba(26, 26, 26, 1)" : "#1A1A1A",
-                              color: "rgba(241, 241, 241, 1)",
-                              cursor: "pointer",
-                              position: "relative",
-                              width: 365,
-                              height: 96,
-                              borderRadius: 8,
-                              boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
-                              marginBottom: 20,
-                            }}
-                            onMouseEnter={() => {
-                              setHoverEffect(index);
-                            }}
-                            onMouseLeave={() => {
-                              setHoverEffect(-1);
+                              textDecoration: "none",
+                              color: "#f85a3e",
                             }}
                           >
-                            <ButtonBase style={{
-                              borderRadius: 6,
-                              fontSize: 16,
-                              overflow: "hidden",
-                              display: "flex",
-                              alignItems: "flex-start",
-                              width: '100%',
-                              backgroundColor: hoverEffect === index ? "#2F2F2F" : "#212121"
-                            }}>
-                              <img
-                                alt={data.name}
-                                src={data.image_url ? data.image_url : "/images/no_image.png"}
-                                style={{
-                                  width: 100,
-                                  height: 100,
-                                  borderRadius: 6,
-                                  margin: 10,
-                                  border: "1px solid #212122",
-                                  boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
-                                }}
-                              />
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  alignItems: "flex-start",
-                                  width: 339,
-                                  gap: 8,
-                                  fontWeight: '400',
-                                  overflow: "hidden",
-                                  margin: "12px 0",
-                                  fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
-                                }}
-                              >
-                                <div
+                            <Paper
+                              elevation={0}
+                              style={{
+                                backgroundColor: hoverEffect === index ? "rgba(26, 26, 26, 1)" : "#1A1A1A",
+                                color: "rgba(241, 241, 241, 1)",
+                                cursor: "pointer",
+                                position: "relative",
+                                width: 365,
+                                height: 96,
+                                borderRadius: 8,
+                                boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
+                                marginBottom: 20,
+                              }}
+                              onMouseEnter={() => {
+                                setHoverEffect(index);
+                              }}
+                              onMouseLeave={() => {
+                                setHoverEffect(-1);
+                              }}
+                            >
+                              <ButtonBase style={{
+                                borderRadius: 6,
+                                fontSize: 16,
+                                overflow: "hidden",
+                                display: "flex",
+                                alignItems: "flex-start",
+                                width: '100%',
+                                backgroundColor: hoverEffect === index ? "#2F2F2F" : "#212121"
+                              }}>
+                                <img
+                                  alt={data.name}
+                                  src={data.image_url ? data.image_url : "/images/no_image.png"}
                                   style={{
-                                    display: 'flex',
-                                    flexDirection: "row",
-                                    overflow: "hidden",
-                                    gap: 8,
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    color: '#F1F1F1'
+                                    width: 100,
+                                    height: 100,
+                                    borderRadius: 6,
+                                    margin: 10,
+                                    border: "1px solid #212122",
+                                    boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
                                   }}
-                                >
-                                  {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
-                                  {normalizedString(data.name)}
-                                </div>
-
-                                <div
-                                  style={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    color: "rgba(158, 158, 158, 1)",
-                                    marginTop: 5
-                                  }}
-                                >
-                                  {data.categories !== null
-                                    ? normalizedString(data.categories).join(", ")
-                                    : "NA"}
-                                </div>
+                                />
                                 <div
                                   style={{
                                     display: "flex",
-                                    justifyContent: 'space-between',
-                                    width: 230,
-                                    textAlign: 'start',
-                                    color: "rgba(158, 158, 158, 1)",
+                                    flexDirection: "column",
+                                    alignItems: "flex-start",
+                                    width: 339,
+                                    gap: 8,
+                                    fontWeight: '400',
+                                    overflow: "hidden",
+                                    margin: "12px 0",
+                                    fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
                                   }}
                                 >
-                                  <div style={{ marginBottom: 15, }}>
-                                    {hoverEffect === index && isCloud ? (
-                                      <div>
-                                        {data.tags && (
-                                          <Tooltip
-                                            title={data.tags.join(", ")}
-                                            placement="bottom"
-                                            componentsProps={{
-                                              tooltip: {
-                                                sx: {
-                                                  backgroundColor: "rgba(33, 33, 33, 1)",
-                                                  color: "rgba(241, 241, 241, 1)",
-                                                  width: "auto",
-                                                  height: "auto",
-                                                  fontSize: 16,
-                                                  border: "1px solid rgba(73, 73, 73, 1)",
-                                                }
-                                              }
-                                            }}
-                                          >
-                                            <span>
-                                              {data.tags.slice(0, 1).map((tag, tagIndex) => (
-                                                <span key={tagIndex}>
-                                                  {normalizedString(tag)}
-                                                  {tagIndex < 1 ? ", " : ""}
-                                                </span>
-                                              ))}
-                                            </span>
-                                          </Tooltip>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div style={{ width: 230, textOverflow: "ellipsis", overflow: 'hidden', whiteSpace: 'nowrap', }}>
-                                        {data.tags &&
-                                          data.tags.map((tag, tagIndex) => (
-                                            <span key={tagIndex}>
-                                              {normalizedString(tag)}
-                                              {tagIndex < data.tags.length - 1 ? ", " : ""}
-                                            </span>
-                                          ))}
-                                      </div>
-                                    )}
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      flexDirection: "row",
+                                      overflow: "hidden",
+                                      gap: 8,
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      color: '#F1F1F1'
+                                    }}
+                                  >
+                                    {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
+                                    {normalizedString(data.name)}
                                   </div>
-                                  <div style={{ position: 'relative', bottom: 5 }}>
-                                    {hoverEffect === index && isCloud && (
-                                      <div>
-                                        {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
-                                          <Button style={{
-                                            width: 102,
-                                            height: 35,
-                                            borderRadius: 200,
-                                            backgroundColor: "rgba(73, 73, 73, 1)",
-                                            color: "rgba(241, 241, 241, 1)",
-                                            textTransform: "none",
-                                          }}
-                                            onClick={(event) => {
-                                              handleActivateButton(event, data, "deactivate");
-                                            }}>
-                                            Deactivate
-                                          </Button>
-                                        ) : (
-                                          <Button
-                                            style={{
+
+                                  <div
+                                    style={{
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      color: "rgba(158, 158, 158, 1)",
+                                      marginTop: 5
+                                    }}
+                                  >
+                                    {data.categories !== null
+                                      ? normalizedString(data.categories).join(", ")
+                                      : "NA"}
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: 'space-between',
+                                      width: 230,
+                                      textAlign: 'start',
+                                      color: "rgba(158, 158, 158, 1)",
+                                    }}
+                                  >
+                                    <div style={{ marginBottom: 15, }}>
+                                      {hoverEffect === index && isCloud ? (
+                                        <div>
+                                          {data.tags && (
+                                            <Tooltip
+                                              title={data.tags.join(", ")}
+                                              placement="bottom"
+                                              componentsProps={{
+                                                tooltip: {
+                                                  sx: {
+                                                    backgroundColor: "rgba(33, 33, 33, 1)",
+                                                    color: "rgba(241, 241, 241, 1)",
+                                                    width: "auto",
+                                                    height: "auto",
+                                                    fontSize: 16,
+                                                    border: "1px solid rgba(73, 73, 73, 1)",
+                                                  }
+                                                }
+                                              }}
+                                            >
+                                              <span>
+                                                {data.tags.slice(0, 1).map((tag, tagIndex) => (
+                                                  <span key={tagIndex}>
+                                                    {normalizedString(tag)}
+                                                    {tagIndex < 1 ? ", " : ""}
+                                                  </span>
+                                                ))}
+                                              </span>
+                                            </Tooltip>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div style={{ width: 230, textOverflow: "ellipsis", overflow: 'hidden', whiteSpace: 'nowrap', }}>
+                                          {data.tags &&
+                                            data.tags.map((tag, tagIndex) => (
+                                              <span key={tagIndex}>
+                                                {normalizedString(tag)}
+                                                {tagIndex < data.tags.length - 1 ? ", " : ""}
+                                              </span>
+                                            ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div style={{ position: 'relative', bottom: 5 }}>
+                                      {hoverEffect === index && isCloud && (
+                                        <div>
+                                          {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
+                                            <Button style={{
                                               width: 102,
                                               height: 35,
                                               borderRadius: 200,
-                                              backgroundColor: "rgba(242, 101, 59, 1)",
-                                              color: "rgba(255, 255, 255, 1)",
+                                              backgroundColor: "rgba(73, 73, 73, 1)",
+                                              color: "rgba(241, 241, 241, 1)",
                                               textTransform: "none",
                                             }}
-                                            onClick={(event) => {
-                                              handleActivateButton(event, data, "activate");
-                                            }}
-                                          >
-                                            Activate
-                                          </Button>
-                                        )}
-                                      </div>
-                                    )}
+                                              onClick={(event) => {
+                                                handleActivateButton(event, data, "deactivate");
+                                              }}>
+                                              Deactivate
+                                            </Button>
+                                          ) : (
+                                            <Button
+                                              style={{
+                                                width: 102,
+                                                height: 35,
+                                                borderRadius: 200,
+                                                backgroundColor: "rgba(242, 101, 59, 1)",
+                                                color: "rgba(255, 255, 255, 1)",
+                                                textTransform: "none",
+                                              }}
+                                              onClick={(event) => {
+                                                handleActivateButton(event, data, "activate");
+                                              }}
+                                            >
+                                              Activate
+                                            </Button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </ButtonBase>
-                          </Paper>
-                        </a>
-                      </Grid>
-                    </Zoom>
-                  );
-                })
-                }
+                              </ButtonBase>
+                            </Paper>
+                          </a>
+                        </Grid>
+                      </Zoom>
+                    );
+                  })
+                  }
+                </div>
               </div>
             </Grid >
           )}
@@ -521,8 +537,9 @@ const Hits = memo(({
       )}
     </div>
   );
-});
+}
 
+// Main Apps Component
 const Apps2 = (props) => {
   const { globalUrl, isLoaded, serverside, userdata, isLoggedIn } = props;
   let navigate = useNavigate();
@@ -530,11 +547,13 @@ const Apps2 = (props) => {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [algoliaSelectedCategories, setAlgoliaSelectedCategories] = useState([]);
   const [selectedLabel, setSelectedLabel] = useState("");
+  const [algoliaSelectedLabels, setAlgoliaSelectedLabels] = useState([]);
   const [currTab, setCurrTab] = useState(0);
   const [categories, setCategories] = useState([]);
   const [labels, setLabels] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [userApps, setUserApps] = useState([]);
   const [orgApps, setOrgApps] = useState([]);
   const [selectedCategoryForUsersAndOgsApps, setselectedCategoryForUsersAndOgsApps] = useState([]);
@@ -542,13 +561,12 @@ const Apps2 = (props) => {
   const [appsToShow, setAppsToShow] = useState([]);
   const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
   const [IsAnyAppActivated, setIsAnyAppActivated] = useState(false);
-
   const [mouseHoverIndex, setMouseHoverIndex] = useState(-1);
   var counted = 0;
   const [showNoAppFound, setShowNoAppFound] = useState(false);
 
-  const CustomHits = connectHits(Hits)
 
+  // Set the current tab based on the query parameter
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const tabParam = queryParams.get('tab');
@@ -560,10 +578,13 @@ const Apps2 = (props) => {
       } else {
         setCurrTab(2);
       }
+    } else {
+      setCurrTab(0);
     }
   }, [location.search]);
 
 
+  // Fetch apps based on the current tab : 0 -> org_apps, 1 -> my_apps, 2 -> all_apps
   useEffect(() => {
     const fetchApps = async () => {
       const baseUrl = globalUrl;
@@ -589,9 +610,12 @@ const Apps2 = (props) => {
         const data = await response.json();
         if (currTab === 1) {
           console.log("data from userApps", data)
+          setAppsToShow(data);
           setUserApps(data);
           setIsLoading(false);
         } else if (currTab === 0) {
+          console.log("data from orgApps", data)
+          setAppsToShow(data);
           setOrgApps(data);
           setIsLoading(false);
         }
@@ -601,9 +625,20 @@ const Apps2 = (props) => {
     };
 
     fetchApps();
-  }, [currTab, globalUrl]); // Added globalUrl to dependencies to avoid stale closures
+  }, [currTab, globalUrl, location.search]); // Added globalUrl to dependencies to avoid stale closures
+
+  useEffect(() => {
+    setSearchQuery("");
+  }, [currTab])
 
 
+  // Find top categories and tags based on the current tab
+  useEffect(() => {
+    if (currTab === 0) {
+      setCategories(findTopCategories());
+      setLabels(findTopTags());
+    }
+  }, [currTab, appsToShow])
 
 
   useEffect(() => {
@@ -612,13 +647,13 @@ const Apps2 = (props) => {
     }
   }, [serverside]);
 
-  
+
   const findTopCategories = () => {
     const categoryCountMap = {};
-
+    const apps = currTab === 1 ? userApps : orgApps;
     // Check if userAndOrgsApp is an array before iterating over it and Find top 10 Category from the apps
-    if (Array.isArray(appsToShow)) {
-      appsToShow.forEach((app) => {
+    if (Array.isArray(apps)) {
+      apps.forEach((app) => {
         const categories = app.categories;
 
         if (categories && categories.length > 0) {
@@ -643,9 +678,10 @@ const Apps2 = (props) => {
 
   const findTopTags = () => {
     const tagCountMap = {};
-
-    if (Array.isArray(appsToShow)) {
-      appsToShow.forEach((app) => {
+    const apps = currTab === 1 ? userApps : orgApps;
+    
+    if (Array.isArray(apps)) {
+      apps.forEach((app) => {
         const tags = app.tags;
         if (tags && tags.length > 0) {
           tags.forEach((tag) => {
@@ -666,42 +702,47 @@ const Apps2 = (props) => {
 
     return topTags;
   };
-  
+
   const handleCreateApp = () => {
     navigate('/create-app');
   };
 
 
-  //Search app base on app name, category and tag
-  const filteredUserAppdata = Array.isArray(appsToShow) ? appsToShow.filter((app) => {
-    const matchesSearchQuery = (
-      searchQuery === "" ||
-      app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (app.tags && app.tags.some(tag =>
-        tag.toLowerCase().includes(searchQuery.toLowerCase())
-      )) ||
-      (app.categories && app.categories.some((category) =>
-        category.toLowerCase().includes(searchQuery.toLowerCase())
-      ))
-    );
+  useEffect(() => {
+    const apps = currTab === 1 ? userApps : orgApps;
+    // Search app based on app name, category, and tag
+    const filteredUserAppdata = Array.isArray(apps) ? apps.filter((app) => {
 
-    const matchesSelectedCategories = (
-      selectedCategoryForUsersAndOgsApps.length === 0 ||
-      (app.categories && app.categories.some(category =>
-        selectedCategoryForUsersAndOgsApps.includes(category)
-      ))
-    );
+      const matchesSearchQuery = (
+        searchQuery === "" || // If searchQuery is empty, match all apps
+        app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (app.tags && app.tags.some(tag =>
+          tag.toLowerCase().includes(searchQuery.toLowerCase())
+        )) ||
+        (app.categories && app.categories.some((category) =>
+          category.toLowerCase().includes(searchQuery.toLowerCase())
+        ))
+      );
 
-    const matchesSelectedTags = (
-      selectedTagsForUserAndOrgApps.length === 0 ||
-      (app.tags && selectedTagsForUserAndOrgApps.some(tag =>
-        app.tags.includes(tag)
-      ))
-    );
+      const matchesSelectedCategories = (
+        selectedCategory === "" || // If no category is selected, match all apps
+        (app.categories && app.categories.some(category =>
+          selectedCategory.includes(category)
+        ))
+      );
 
+      const matchesSelectedTags = (
+        selectedLabel === "" || // If no label is selected, match all apps
+        (app.tags && app.tags.some(tag =>
+          tag.toLowerCase().includes(selectedLabel.toLowerCase())
+        ))
+      );
 
-    return matchesSearchQuery && matchesSelectedCategories && matchesSelectedTags;
-  }) : [];
+      return matchesSearchQuery && matchesSelectedCategories && matchesSelectedTags;
+    }) : [];
+    
+    setAppsToShow(filteredUserAppdata);
+  }, [searchQuery, selectedCategory, selectedLabel]);
 
 
   const handleTabChange = (newTab) => {
@@ -746,6 +787,104 @@ const Apps2 = (props) => {
 
 
 
+  const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
+    const inputRef = React.useRef(null); // Create a ref for the input field
+
+    // Check for query in URL and set it
+    React.useEffect(() => {
+      if (
+        window !== undefined &&
+        window.location !== undefined &&
+        window.location.search !== undefined &&
+        window.location.search !== null
+      ) {
+        const urlSearchParams = new URLSearchParams(window.location.search);
+        const params = Object.fromEntries(urlSearchParams.entries());
+        const foundQuery = params["q"];
+        if (foundQuery !== null && foundQuery !== undefined) {
+          console.log("Got query: ", foundQuery);
+          refine(foundQuery);
+          setSearchQuery(foundQuery); // Use setSearchQuery to update state
+        }
+      }
+    }, [refine, setSearchQuery]); // Add dependencies
+
+    // Use useEffect to focus the input when it mounts or when searchQuery changes
+    React.useEffect(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, [searchQuery]); // Focus whenever searchQuery changes
+
+    console.log("searchQuery", searchQuery);
+
+    return (
+      <TextField
+        fullWidth
+        variant="outlined"
+        placeholder="Search for apps"
+        value={searchQuery}
+        id="shuffle_search_field"
+        inputRef={inputRef} // Attach the ref to the input field
+        onChange={(event) => {
+          setSearchQuery(event.target.value); // Update the search query
+          removeQuery("q");
+          refine(event.target.value); // Refine the search
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+          }
+        }}
+        limit={5}
+        style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
+        InputProps={{
+          style: {
+            borderRadius: 8,
+          },
+          endAdornment: (
+            <InputAdornment position="end">
+              {searchQuery?.length === 0 ? <Search /> : (
+                <ClearIcon
+                  style={{
+                    cursor: "pointer",
+                    marginRight: 10
+                  }}
+                  onClick={() => {
+                    setSearchQuery(''); // Clear the search query
+                    removeQuery("q");
+                    refine(''); // Clear the refinement
+                  }}
+                />
+              )}
+            </InputAdornment>
+          ),
+        }}
+      />
+    );
+  };
+
+  const CustomSearchBox = connectSearchBox(SearchBox);
+  const CustomHits = connectHits(Hits)
+
+
+  const handleCategoryChange = (selectedValue) => {
+    setAlgoliaSelectedCategories(prev => {
+      if (prev.includes(selectedValue)) {
+        // If the category is already selected, remove it
+        return prev.filter(category => category !== selectedValue);
+      } else {
+        // Otherwise, add it to the selected categories
+        return [...prev, selectedValue];
+      }
+    });
+  };
+
+  useEffect(() => {
+    console.log("algoliaSelectedCategories", algoliaSelectedCategories)
+  }, [algoliaSelectedCategories])
+
+
   return (
     <InstantSearch searchClient={searchClient} indexName="appsearch">
       <div style={boxStyle}>
@@ -765,38 +904,42 @@ const Apps2 = (props) => {
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ flex: 1, marginRight: 10 }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search for apps"
-              value={searchQuery}
-              id="shuffle_search_field"
-              onChange={(event) => {
-                setSearchQuery(event.currentTarget.value);
-                removeQuery("q");
-                // refine(event.currentTarget.value);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                }
-              }}
-              limit={5}
-              style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
-              InputProps={{
-                style: {
-                  borderRadius: 8,
-                },
-                endAdornment: (
-                  <InputAdornment position="end">
-                    {
-                      searchQuery.length === 0 ? <Search /> : <ClearIcon />
-                    }
-                  </InputAdornment>
-                ),
-              }}
-            />
-            {/* <CustomSearchBox searchQuery={searchQuery} setSearchQuery={setSearchQuery} /> */}
+            {
+              (currTab === 0 || currTab === 1) &&
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Search for apps"
+                value={searchQuery}
+                id="shuffle_search_field"
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                  }
+                }}
+                limit={5}
+                style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
+                InputProps={{
+                  style: {
+                    borderRadius: 8,
+                  },
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {
+                        searchQuery.length === 0 ? <Search /> : <ClearIcon />
+                      }
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            }
+            {
+              currTab === 2 &&
+              <CustomSearchBox searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+            }
           </div>
           <div style={{ flex: 1, marginRight: 10 }}>
             <Select
@@ -807,14 +950,14 @@ const Apps2 = (props) => {
               displayEmpty
               style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
             >
-              <MenuItem value="" >
+              <MenuItem value="">
                 All Categories
               </MenuItem>
               {
                 currTab === 0 &&
                 (
                   categories?.map((category) => (
-                    <MenuItem value={category.category}>
+                    <MenuItem key={category.category} value={category.category}>
                       {category.category}
                     </MenuItem>
                   ))
@@ -824,11 +967,20 @@ const Apps2 = (props) => {
                 currTab === 2 &&
                 (
                   <div style={{ padding: "5px 10px" }}>
-                    <RefinementList attribute="categories" />
+                    <RefinementList
+                      attribute="categories"
+                      defaultRefinement={algoliaSelectedCategories}
+                      onChange={(selectedItems) => {
+                        handleCategoryChange(selectedItems);
+                      }}
+                      transformItems={(items) => {
+                        console.log("items", items)
+                        return items;
+                      }}
+                    />
                   </div>
                 )
               }
-
             </Select>
           </div>
           <div style={{ flex: 1, marginRight: 10 }}>
@@ -878,74 +1030,86 @@ const Apps2 = (props) => {
         <div>
 
           {
-            currTab === 0 &&
-            (orgApps.length > 0 ? (
-              <div style={{ rowGap: 16, columnGap: 16, marginTop: 16, display: "flex", flexWrap: "wrap", justifyContent: "flex-start", overflowY: "auto", overflowX: "hidden", maxHeight: 570, scrollbarWidth: "thin", scrollbarColor: "#494949 #2f2f2f", maxHeight: 570, minHeight: 570 }}>
-                {
-                  isLoading ? <div
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  > <CircularProgress /></div>
-                    :
-                    (
-                      filteredUserAppdata?.map((data, index) => (
-                        <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} />
-                      ))
-                    )
-                }
+            currTab === 0 && (
+              <div style={{ minHeight: 570, overflowY: "auto", overflowX: "hidden" }}>
+                {isLoading ? (
+                  <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                    <CircularProgress />
+                  </div>
+                ) : (
+                  <>
+                    {appsToShow?.length > 0 && appsToShow !== undefined && !isLoading ? (
+                      <div style={{ rowGap: 16, columnGap: 16, marginTop: 16, display: "flex", flexWrap: "wrap", justifyContent: "flex-start", maxHeight: 570, scrollbarWidth: "thin", scrollbarColor: "#494949 #2f2f2f" }}>
+                        {appsToShow.map((data, index) => (
+                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: 100, fontSize: 20, fontWeight: 500, width: "100%", textAlign: "center" }}>
+                        No apps found
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            ) : <div
-              style={{
-                marginTop: 100,
-                fontSize: 20,
-                fontWeight: 500,
-                width: "100%",
-                textAlign: "center",
-              }}
-            >No apps found</div>
             )
           }
           {
             currTab === 1 &&
             (userApps.length > 0 ? (
-              <div style={{ rowGap: 16, columnGap: 16, marginTop: 16, display: "flex", flexWrap: "wrap", justifyContent: "flex-start", overflowY: "auto", overflowX: "hidden", maxHeight: 570, scrollbarWidth: "thin", scrollbarColor: "#494949 #2f2f2f", maxHeight: 570 }}>
-                {
-                  isLoading ? <div
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  > <CircularProgress /></div>
-                    :
-                    (
-                      userApps.map((data, index) => (
-                        <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} />
-                      ))
-                    )
-                }
+              <div style={{
+                minHeight: 570,
+                overflowY: "auto",
+                overflowX: "hidden",
+              }}>
+                <div style={{
+                  rowGap: 16,
+                  columnGap: 16,
+                  marginTop: 16,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "flex-start",
+                  maxHeight: 570,
+                  scrollbarWidth: "thin",
+                  scrollbarColor: "#494949 #2f2f2f",
+                  // minHeight: 570
+                }}>
+                  {
+                    isLoading ? <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    > <CircularProgress /></div>
+                      :
+                      (
+                        userApps.map((data, index) => (
+                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} />
+                        ))
+                      )
+                  }
+                </div>
               </div>
-            ) : <div
-              style={{
-                marginTop: 100,
-                fontSize: 20,
-                fontWeight: 500,
-                width: "100%",
-                textAlign: "center",
-              }}
-            >No apps found</div>
+            ) : !isLoading && (
+              <div
+                style={{
+                  marginTop: 100,
+                  fontSize: 20,
+                  fontWeight: 500,
+                  width: "100%",
+                  textAlign: "center",
+                }}
+              >No apps found</div>
+            )
             )
           }
 
           {
             currTab === 2 &&
+
             <CustomHits
               isLoggedIn={isLoggedIn}
               userdata={userdata}
@@ -953,6 +1117,7 @@ const Apps2 = (props) => {
               hitsPerPage={5}
               globalUrl={globalUrl}
               searchQuery={searchQuery}
+              algoliaSelectedCategories={algoliaSelectedCategories}
               mouseHoverIndex={mouseHoverIndex}
               setMouseHoverIndex={setMouseHoverIndex}
             />
