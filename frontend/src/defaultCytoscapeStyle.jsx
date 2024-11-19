@@ -13,6 +13,30 @@ const data = [
 		  return elementname
 	  },
       "text-valign": "center",
+	  "text-margin-x": function(element) {
+		  // Attempt at bottom-positioning
+		  // Required text-valign: bottom
+		  // FIXME: Disabled for now.
+		  return "15px"
+
+
+
+		  const name = element.data("label")
+		  console.log("Name: ", name)
+		  if (name === null || name === undefined || name == "" || document=== undefined || document === null) {
+			  return "0px"
+		  }
+
+		  const canvas = document.createElement('canvas');
+    	  const context = canvas.getContext('2d')
+
+		  context.font = '18px Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif'
+
+		  const textWidth = context.measureText(name).width
+		  return textWidth + "px"
+		  //return -1*(textWidth) + "px"
+	  },
+
       "font-family": "Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif",
       "font-weight": "lighter",
       "font-size": "18px",
@@ -23,7 +47,6 @@ const data = [
       padding: "10px",
       margin: "5px",
       "border-width": "1px",
-      "text-margin-x": "10px",
       "z-index": 5001,
     },
   },

@@ -566,7 +566,7 @@ const AngularWorkflow = (defaultprops) => {
 const releaseToConnectLabel = "Release to Connect"
   const integrationApps =  [{
 		"id": "integration",
-		"name": "Integration Framework",
+		"name": "Singul",
 		"type": "ACTION",
 	    "app_version": "1.0.0",
 		"loop_versions": ["1.0.0"],
@@ -737,8 +737,64 @@ const releaseToConnectLabel = "Release to Connect"
 					}
 				}
 
+				if (cy !== undefined && cy !== null) {
+
+					// Check if any apps in the workflow has 
+					cy.nodes().forEach((node) => {
+						const data = node.data()
+						if (data.app_id === foundapp.id) {
+
+							if (data.name === "tmp" && data.parameters !== undefined && data.parameters !== null && data.parameters.length === 1 && data.parameters[0].name === "tmp" && foundapp.actions !== undefined && foundapp.actions !== null && foundapp.actions.length > 0) {
+								const startIndex = foundapp.actions.findIndex((action) => action.category_label !== undefined && action.category_label !== null && action.category_label.length > 0)
+								const actionIndex = startIndex < 0 ? 0 : startIndex
+
+								node.data("name", foundapp.actions[actionIndex].name)
+								node.data("large_image", foundapp.large_image)
+								node.data("parameters", foundapp.actions[actionIndex].parameters)
+								node.data("finished", true)
+								node.data("category", foundapp.categories !== null && foundapp.categories !== undefined && foundapp.categories.length > 0 ? foundapp.categories[0] : "")
+
+								/*
+								  name: app.actions[actionIndex].name,
+								  label: actionLabel,
+								  app_name: app.name,
+								  app_version: app.app_version,
+								  app_id: app.id,
+								  sharing: app.sharing,
+								  private_id: app.private_id,
+								  description: description,
+								  environment: parsedEnvironments,
+								  errors: [],
+								  finished: false,
+								  id_: newNodeId,
+								  _id_: newNodeId,
+								  id: newNodeId,
+								  is_valid: true,
+								  type: actionType,
+								  parameters: parameters,
+								  isStartNode: false,
+								  large_image: app.large_image,
+								  run_magic_output: false,
+								  authentication: [],
+								  execution_variable: undefined,
+								  example: example,
+								  required_body_fields: app.actions[actionIndex].required_body_fields,
+								  authentication_id: authId,
+								  finished: false,
+								  template: app.template === true ? true : false,
+								  */
+
+								toast("REPLACING ACTIONS")
+							}
+						}
+					})
+					//if (action.app_id === same && app.actions.length === 1 && app.actions[0].parameters.length === 1 && app.actions[0].parameters[0].name === "tmp") {
+				}
+
+
 				// FIXME: Add it to the existing list AND update the selected app
 			}
+				
 		})
 		.catch((error) => {
 			console.log(`Failed side-loading app ${appId}: ${error}`)
@@ -974,7 +1030,6 @@ const releaseToConnectLabel = "Release to Connect"
 
           if (responseJson.reason !== undefined && responseJson.reason !== undefined && responseJson.reason.length > 0) {
             if (!responseJson.reason.includes("404: Not Found") && responseJson.reason.length > 25) {
-			  // Translate <img> into markdown ![]()
 			  const imgRegex = /<img.*?src="(.*?)"/g;
 			  const newdata = responseJson.reason.replace(imgRegex, '![]($1)');
 
@@ -993,7 +1048,6 @@ const releaseToConnectLabel = "Release to Connect"
 
   useEffect(() => {
     if (authenticationModalOpen === true && selectedAction.app_name !== undefined) {
-      console.log(`Should get app docs for: ${selectedAction.app_name}`)
       //console.log(selectedAction)
       //console.log("APP: ", selectedApp)
 
@@ -2607,7 +2661,7 @@ const releaseToConnectLabel = "Release to Connect"
           return
         }
 
-		console.log("Apps loaded. JSON decoding next")
+		//console.log("Apps loaded. JSON decoding next")
 
         return response.json()
       })
@@ -3816,7 +3870,6 @@ const releaseToConnectLabel = "Release to Connect"
         left: 0,
         selected: "",
       });
-      //console.timeEnd("UNSELECT");
     })
 
     sendStreamRequest({
@@ -4020,6 +4073,7 @@ const releaseToConnectLabel = "Release to Connect"
         nodedata.app_name !== "Testing" &&
         nodedata.app_name !== "Shuffle Workflow" &&
         nodedata.app_name !== "Integration Framework" &&
+        nodedata.app_name !== "Singul" &&
         nodedata.app_name !== "User Input") ||
         nodedata.isStartNode)
     ) {
@@ -4280,13 +4334,30 @@ const releaseToConnectLabel = "Release to Connect"
           } 
         } 
       }
+
+	  /* 
+	  // FIXME: This is the start of a highlighter for the node
+	  // to better match it up with other elements
+	  // 1. Get current node's position in X/Y on the screen
+	  // 2. Draw a red line on the X and Y axis for positioning
+	  
+	  // Draw a red div line in the HTML
+	  const position = event.target.position()
+	  const redline = document.getElementById("redline")
+	  if (redline !== null && redline !== undefined) {
+		redline.style.display = "block"
+		redline.style.position = "absolute"
+		redline.style.left = position.x + "px"
+		redline.style.top = position.y + "px"
+		redline.style.height = "10000px"
+		redline.style.width = 1
+		console.log("REDLINE!")
+	  }
+	  */
+
     }
     
-    if (
-      originalLocation.x === 0 &&
-      originalLocation.y === 0 &&
-      nodedata.position !== undefined
-    ) {
+    if (originalLocation.x === 0 && originalLocation.y === 0 && nodedata.position !== undefined) {
       originalLocation.x = nodedata.position.x;
       originalLocation.y = nodedata.position.y;
     }
@@ -5340,37 +5411,61 @@ const releaseToConnectLabel = "Release to Connect"
     	        }
     	      }
     	    } else {
-						console.log("Should check APP if it has the same params as ACTION")
-						for (let actionKey in curapp.actions) {
-							const tmpaction = curapp.actions[actionKey]
-							if (tmpaction.name === curaction.name) {
-								console.log("Found action - needs change?", tmpaction)
-								if (tmpaction.parameters !== undefined && tmpaction.parameters !== null && tmpaction.parameters.length > 0) {
-									curaction.parameters = JSON.parse(JSON.stringify(tmpaction.parameters))
-								}
-								break
-							}
+				console.log("Should check APP if it has the same params as ACTION")
+				for (let actionKey in curapp.actions) {
+					const tmpaction = curapp.actions[actionKey]
+					if (tmpaction.name === curaction.name) {
+						console.log("Found action - needs change?", tmpaction)
+						if (tmpaction.parameters !== undefined && tmpaction.parameters !== null && tmpaction.parameters.length > 0) {
+							curaction.parameters = JSON.parse(JSON.stringify(tmpaction.parameters))
+						}
+						break
+					}
+				}
+			}
+
+		  // Fix authentication fields that may be missing in the UI
+		  if (curapp.authentication.required && !curapp?.authentication?.type?.includes("oauth")) { 
+			if (curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null) {
+				var actionChanged = false
+				for	(let paramKey in curapp.authentication.parameters) {
+					var param = curapp.authentication.parameters[paramKey]
+
+					if (curaction.parameters === undefined || curaction.parameters === null) {
+						curaction.parameters = []
+					}
+
+					var found = false
+					for (let actionParamKey in curaction.parameters) {
+						if (curaction.parameters[actionParamKey].name === param.name) {
+							found = true
+							break
 						}
 					}
 
-					//curaction["authentication"] = []
-					//curaction["authentication_id"] = ""
-					// Fix parameters that are... Not ideal
-					//var paramnames = []
-					//var newparams = []
-					//for (let paramKey in curaction.parameters) {
-					//	console.log("Name: ", curaction.parameters[paramKey].name)
-					//	if (paramnames.includes(curaction.parameters[paramKey].name)) {
-					//		continue
-					//	}
+					if (!found) {
+						param.configuration = true
+						curaction.parameters.push(param)
+				
+						actionChanged = true 
+					}
+				}
 
-					//	paramnames.push(curaction.parameters[paramKey].name)
-					//	newparams.push(curaction.parameters[paramKey])
-					//}
+				if (actionChanged && workflow.actions !== undefined && workflow.actions !== null) {
+					// Find it in the workflow and set it
+					for (let wfActionKey in workflow.actions) {
+						if (workflow.actions[wfActionKey].id === curaction.id) {
+							workflow.actions[wfActionKey] = curaction
+						}
+					}
 
-					//curaction.parameters = newparams
+					setWorkflow(workflow)
+					
+				}
+			}
+		  }
 
-          setSelectedApp(curapp);
+          setSelectedApp(curapp)
           setSelectedAction(curaction);
 
           cy.removeListener("drag");
@@ -5537,7 +5632,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 			setSelectedTriggerIndex(trigger_index)
 			setSelectedTrigger(data)
-			setSelectedActionEnvironment(data.env)
+			//setSelectedActionEnvironment(data.env)
 		}, 25)
       } else if (data.type === "COMMENT") {
         setSelectedComment(data);
@@ -5889,7 +5984,7 @@ const releaseToConnectLabel = "Release to Connect"
     const edge = event.target.data();
 
     if (edge.source === undefined && edge.target === undefined) {
-	  console.log("Edge added without source or target")
+	  //console.log("Edge added without source or target")
 
       return
     }
@@ -6020,7 +6115,7 @@ const releaseToConnectLabel = "Release to Connect"
 			found = true
 			break
 		} else {
-			console.log("Old branch didn't exist afterall. Remove.")
+			//console.log("Old branch didn't exist afterall. Remove.")
 		}
       } 
 
@@ -6115,28 +6210,13 @@ const releaseToConnectLabel = "Release to Connect"
     const node = event.target;
     const nodedata = event.target.data();
 
-    //if (Object.keys(nodedata).length === 1) {
-    //  console.log("Check if another node actually exists before adding")
-    //}
-
     if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)
     ) {
-      //if (nodedata.app_id === undefined) {
-      //console.log("Returning because node is not valid: ", nodedata)
       return;
     }
 
-	// Check for recommendations when a new action is added 
-	// if (isLoaded === true && firstrequest === false) {
-	// 	fetchRecommendations(workflow) 
-	// }
-
-
     // DONT MOVE THIS LINE RIGHT HERE v
     setLastSaved(false)
-    // Dont move the line above. May break stuff.
-
-
     if (node.isNode() && cy.nodes().size() === 1) {
       workflow.start = node.data("id");
       nodedata.isStartNode = true;
@@ -6169,15 +6249,8 @@ const releaseToConnectLabel = "Release to Connect"
 	}
 
     if (nodedata.type === "ACTION") {
-		// Should get recommendations to load in for all nodesma
+	  // Should get recommendations to load in for all nodesma
 
-      /*
-      var curaction = workflow.actions.find((a) => a.id === nodedata.id);
-      if (curaction === null || curaction === undefined) {
-        toast("Node not found. Please remake it.")
-        event.target.remove();
-      }
-      */
       if (workflow.actions.length === 1 && workflow.actions[0].id === workflow.start) {
         const newEdgeUuid = uuidv4();
         const newcybranch = {
@@ -6216,11 +6289,7 @@ const releaseToConnectLabel = "Release to Connect"
       }
 
 
-      if (
-        nodedata.parameters !== undefined &&
-        nodedata.parameters !== null &&
-        !nodedata.label.endsWith("_copy")
-      ) {
+      if (nodedata.parameters !== undefined && nodedata.parameters !== null && !nodedata.label.endsWith("_copy")) {
         var newparameters = [];
 
         for (let [subkey,subkeyval] in Object.entries(nodedata.parameters)) {
@@ -6679,42 +6748,58 @@ const releaseToConnectLabel = "Release to Connect"
         return response.json();
       })
       .then((responseJson) => {
-        var found = false;
-        var showEnvCnt = 0;
+        var found = false
+        var showEnvCnt = 0
         for (let jsonkey in responseJson) {
           if (responseJson[jsonkey].default && !found) {
-            setDefaultEnvironmentIndex(jsonkey);
-            found = true;
+            setDefaultEnvironmentIndex(jsonkey)
+            found = true
           }
 
           if (responseJson[jsonkey].archived === false) {
-            showEnvCnt += 1;
+            showEnvCnt += 1
           }
         }
 
         if (showEnvCnt > 1) {
-          setShowEnvironment(true);
+          setShowEnvironment(true)
         }
 
         if (!found) {
           for (let jsonkey in responseJson) {
             if (!responseJson[jsonkey].archived) {
-              setDefaultEnvironmentIndex(jsonkey);
+              setDefaultEnvironmentIndex(jsonkey)
               break;
             }
           }
         }
 
-        // FIXME: Don't allow multiple in cloud yet. Cloud -> Onprem isn't stable.
         if (isCloud) {
           if (responseJson !== undefined && responseJson !== null && responseJson.length > 0) {
-            setEnvironments(responseJson);
+            setEnvironments(responseJson)
           } else {
-            setEnvironments([{ Name: "Cloud", Type: "cloud" }]);
+            setEnvironments([{ Name: "Cloud", Type: "cloud" }])
           }
         } else {
-          setEnvironments(responseJson);
+          setEnvironments(responseJson)
         }
+
+		/*
+		setTimeout(() => {
+			console.log("ACTIONS: ", workflow.actions)
+			if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
+				for (var actionkey in workflow.actions) {
+					if (workflow.actions[actionkey].environment !== undefined && workflow.actions[actionkey].environment !== null && workflow.actions[actionkey].environment.length > 0) {
+
+						const env = environments.findIndex((data) => data.Name === workflow.actions[actionkey].environment)
+						if (env !== -1) {
+							setSelectedActionEnvironment(environments[env])
+						}
+					}
+				}
+			}
+		}, 2500)
+		*/
       })
       .catch((error) => {
         //toast(error.toString());
@@ -7446,7 +7531,6 @@ const releaseToConnectLabel = "Release to Connect"
       console.log("NODE UNFINISHED (hover in): ", nodedata)
 
 	  // Should just be 1, so this should be fast enough :3
-	  /*
 	  const incomingEdges = event.target.incomers("edge").jsons()
 	  if (incomingEdges !== undefined && incomingEdges !== null) {
 		  for (var i = 0; i < incomingEdges.length; i++) {
@@ -7465,7 +7549,6 @@ const releaseToConnectLabel = "Release to Connect"
 	  }
 
       return
-	  */
     }
 
 
@@ -7603,28 +7686,6 @@ const releaseToConnectLabel = "Release to Connect"
 
     if (nodedata.type !== "COMMENT") {
       parsedStyle.color = "white";
-
-      //if (!event.target.data("isButton") && !event.target.data("buttonId")) {
-      //	const px = event.target.position("x") - 0;
-      //	const py = event.target.position("y") - 50;
-      //	const circleId = (newNodeId = uuidv4());
-
-      //	console.log("Got px, py: ", px, py)
-      //	
-      //	cy.add({
-      //		group: "nodes",
-      //		data: {
-      //			weight: 30,
-      //			id: circleId,
-      //			isButton: true,
-      //			attachedTo: event.target.data("id"),
-      //			buttonType: "edgehandler",
-      //			is_valid: true,
-      //		},
-      //		position: { x: px, y: py },
-      //		locked: true,
-      //	})
-      //}
     } 
 
     if (event.target !== undefined && event.target !== null) {
@@ -7884,7 +7945,7 @@ const releaseToConnectLabel = "Release to Connect"
         } else {
           action.iconBackground = iconInfo.iconBackgroundColor;
         }
-      } else if (action.app_name === "Integration Framework") {
+      } else if (action.app_name === "Integration Framework" || action.app_name === "Singul") {
 		  const iconInfo = GetIconInfo(action)
 		  if (iconInfo !== undefined && iconInfo !== null) {
 		  	action.fillGradient = iconInfo.fillGradient
@@ -7921,13 +7982,17 @@ const releaseToConnectLabel = "Release to Connect"
     })
 
 	// What are these again? Where are they used?
+	const decoratorNodes = []
+
+	/*
+	// Removed for now as it wasn't really that helpful 
     const decoratorNodes = inputworkflow.actions.map((action) => {
       if (!action.isStartNode) {
         if (action.app_name === "Testing") {
           return null
         } else if (action.app_name === "Shuffle Tools") {
           return null
-        } else if (action.app_name === "Integration Framework") {
+        } else if (action.app_name === "Integration Framework" || action.app_name === "Singul") {
           return null
         }
       }
@@ -7964,6 +8029,7 @@ const releaseToConnectLabel = "Release to Connect"
       }
       return decoratorNode
     })
+	*/
 
 
     const foundtriggers = inputworkflow.triggers.map((trigger) => {
@@ -9509,8 +9575,22 @@ const releaseToConnectLabel = "Release to Connect"
   const handleAppDrag = (e, app) => {
     const cycontainer = cy.container();
 
-	console.log("APPDRAG!")
+	// Handling drag of public apps
+	if (app.objectID !== undefined && app.objectID !== null && app.objectID.length > 0) {
+		// FIXME: This is still buggy for now. Not allowed
+		return
+		loadAppConfig(app.objectID, undefined)
 
+		// Some arbitrary check
+
+        app.id = app.objectID
+		app.actions = [{
+			"name": "tmp",
+			"parameters": [{
+				"name": "tmp",
+			}]
+		}]
+	}
 
 	if (app.type === "TRIGGER") {
     	handleTriggerDrag(e, app)
@@ -9520,13 +9600,8 @@ const releaseToConnectLabel = "Release to Connect"
     //console.log("e: ", e)
     //console.log("Offset: ", cycontainer)
 
-    // Chrome lol
-    if (
-      e.pageX > cycontainer.offsetLeft &&
-      e.pageX < cycontainer.offsetLeft + cycontainer.offsetWidth &&
-      e.pageY > cycontainer.offsetTop &&
-      e.pageY < cycontainer.offsetTop + cycontainer.offsetHeight
-    ) {
+    // HTML -> Canvas overlap check
+    if (e.pageX > cycontainer.offsetLeft && e.pageX < cycontainer.offsetLeft + cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop && e.pageY < cycontainer.offsetTop + cycontainer.offsetHeight) {
       if (newNodeId.length > 0) {
         var currentnode = cy.getElementById(newNodeId);
         if (
@@ -9902,8 +9977,19 @@ const releaseToConnectLabel = "Release to Connect"
             >
               <Grid item>
                 <img
-                  alt={newAppname}
+		  		  id={`image_${props?.index}`}
                   src={image}
+		  		  onError={(e) => {
+					  if (props.index !== undefined && props.index !== null) {
+						  // Replace the image with the default image
+
+						  const foundImage = document.getElementById(`image_${props.index}`)
+						  if (foundImage !== undefined && foundImage !== null) {
+							  foundImage.src = theme.palette.defaultImage
+      						  app.large_image = theme.palette.defaultImage
+						  }
+					  }
+				  }}
                   style={{
                     pointerEvents: "none",
                     userDrag: "none",
@@ -10063,7 +10149,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 
 	  const clickedApp = (hit) => {
-	  	toast.success(`Activating App. Please wait a moment.`)
+	  	toast.success(`Activating App. Please wait a moment, and it will show up highlighted in your apps.`)
 
 	  	const queryID = hit.__queryID
 
@@ -10174,6 +10260,7 @@ const releaseToConnectLabel = "Release to Connect"
 						  e.preventDefault()
 						  e.stopPropagation()
 
+  						  handleAppDrag(e, hit) 
 						  if (!appdragged) { 
 						  	clickedApp(hit)
 						  }
@@ -10184,8 +10271,8 @@ const releaseToConnectLabel = "Release to Connect"
 					    }}
 					    dragging={false}
 					    position={{
-					  	x: 0,
-					  	y: 0,
+							x: 0,
+							y: 0,
 					    }}
 					  >
         	          <div style={{ textDecoration: "none", color: "white", }} onClick={(event) => {
@@ -10297,14 +10384,14 @@ const releaseToConnectLabel = "Release to Connect"
 				  	<span>
                     	{/*<Zoom key={index} in={true} style={{ transitionDelay: `${delay}ms` }}>*/}
                       <div>
-                        <ParsedAppPaper key={index} app={app} />
+                        <ParsedAppPaper key={index} index={index} app={app} />
                       </div>
                     	{/*</Zoom>*/}
 					</span>
                     :
                     <div key={index}>
                       {extraMessage}
-                      <ParsedAppPaper key={index} app={app} />
+                      <ParsedAppPaper key={index} index={index} app={app} />
                     </div>
                 )
               })}
@@ -12728,7 +12815,7 @@ const releaseToConnectLabel = "Release to Connect"
             type: "action",
             id: item.id,
             name: item.label,
-            autocomplete: `${item.label.split(" ").join("_")}`,
+            autocomplete: `${item?.label?.split(" ")?.join("_")}`,
             example: exampledata,
           }
           actionlist.push(actionvalue);
@@ -14843,7 +14930,7 @@ const releaseToConnectLabel = "Release to Connect"
               <div style={{ flex: "10" }}>
                 <b>Information</b>
 		  		<Typography variant="body2" color="textSecondary">
-		  			The information you want to show the user. Supports variables.
+		  			The information you want to show the user. Supports variables. Supports Markdown & HTML.
 		  		</Typography>
               </div>
             </div>
@@ -15058,7 +15145,7 @@ const releaseToConnectLabel = "Release to Connect"
                 style={{
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
-									marginTop: 10,
+				  marginTop: 10,
                 }}
                 InputProps={{
                   style: {
@@ -15092,7 +15179,7 @@ const releaseToConnectLabel = "Release to Connect"
                 style={{
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
-									marginTop: 10,
+				  marginTop: 10,
                 }}
                 InputProps={{
                   style: {
@@ -15114,9 +15201,8 @@ const releaseToConnectLabel = "Release to Connect"
               />
             ) : null}
             
-          </div>
 
-		  <div style={{marginTop: 0, }} />
+		  <div style={{marginTop: 50, }} />
           <b>Required Input-Questions</b>
 		  {workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
 			<div>
@@ -15174,6 +15260,7 @@ const releaseToConnectLabel = "Release to Connect"
 			  <Typography variant="body2">No Input-Questions found. Click to add them!</Typography>
 			</div> 
 		  }
+          </div>
 
         </div>
   const defaultEnvironment = environments.find(
@@ -15876,71 +15963,77 @@ const releaseToConnectLabel = "Release to Connect"
 						getFiles(e.target.value)
 						listOrgCache(e.target.value) 
 
-						if (e.target.value === originalWorkflow.org_id) {
-							console.log("Original org selected. No change.")
-
-							updateCurrentWorkflow(originalWorkflow)
-							return
-						} else {
-							// Load environments, auth, auth groups
-							//toast("Loading correct info for suborg")
-						}
-
+						// FIXME: There is a timing problem here. 
+						// For events to have the data they need, they 
+						// need to be registered with setupGraph()
+						// AFTER all the APIs are done
 
 						// Should look through childorg workflow
-						console.log("Original: ", originalWorkflow)
-						if (originalWorkflow.childorg_workflow_ids === undefined || originalWorkflow.childorg_workflow_ids === null || originalWorkflow.childorg_workflow_ids.length === 0) {
-							console.log("In childorg doesn't exist. Suborgworkflows: ", suborgWorkflows)
+						setTimeout(() => {
+							if (e.target.value === originalWorkflow.org_id) {
+								console.log("Original org selected. No change.")
 
-							if (suborgWorkflows !== undefined && suborgWorkflows !== null && suborgWorkflows.length > 0) {
-								var found = false
-								for (var suborgkey in suborgWorkflows) {
-									const suborgWorkflow = suborgWorkflows[suborgkey]
-									if (suborgWorkflow.org_id === e.target.value) {
-										found = true 
-										updateCurrentWorkflow(suborgWorkflow)
-										break
+								updateCurrentWorkflow(originalWorkflow)
+								return
+							} else {
+								// Load environments, auth, auth groups
+								//toast("Loading correct info for suborg")
+							}
+
+							console.log("Original: ", originalWorkflow)
+							if (originalWorkflow.childorg_workflow_ids === undefined || originalWorkflow.childorg_workflow_ids === null || originalWorkflow.childorg_workflow_ids.length === 0) {
+								console.log("In childorg doesn't exist. Suborgworkflows: ", suborgWorkflows)
+
+								if (suborgWorkflows !== undefined && suborgWorkflows !== null && suborgWorkflows.length > 0) {
+									var found = false
+									for (var suborgkey in suborgWorkflows) {
+										const suborgWorkflow = suborgWorkflows[suborgkey]
+										if (suborgWorkflow.org_id === e.target.value) {
+											found = true 
+											updateCurrentWorkflow(suborgWorkflow)
+											break
+										}
 									}
-								}
 
-								if (!found) {
-									toast("(3) Creating new workflow for this org. Please wait a second while we duplicate.")
-									//console.log("No workflow found out of suborg workflows.")
-          						
-									//saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
+									if (!found) {
+										toast("(3) Creating new workflow for this org. Please wait a second while we duplicate.")
+										//console.log("No workflow found out of suborg workflows.")
+          							
+										//saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
+									}
+								} else {
+									console.log("Suborgworkflows: ", suborgWorkflows)
+									toast("(1) Loading NEW  workflow for this org (?). Please wait a second.")
+          							saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
 								}
 							} else {
-								console.log("Suborgworkflows: ", suborgWorkflows)
-								toast("(1) Loading NEW  workflow for this org (?). Please wait a second.")
-          						saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
-							}
-						} else {
-							console.log("In childorg EXIST!")
+								console.log("In childorg EXIST!")
 
-							var workflowFound = false
-							for (var childorgidkey in originalWorkflow.childorg_workflow_ids) {
-								const childworkflowid = originalWorkflow.childorg_workflow_ids[childorgidkey]
-								for (var suborgWorkflowKey in suborgWorkflows) {
-									const suborgWorkflow = suborgWorkflows[suborgWorkflowKey]
-									if (suborgWorkflow.org_id === e.target.value) {
-										workflowFound = true
+								var workflowFound = false
+								for (var childorgidkey in originalWorkflow.childorg_workflow_ids) {
+									const childworkflowid = originalWorkflow.childorg_workflow_ids[childorgidkey]
+									for (var suborgWorkflowKey in suborgWorkflows) {
+										const suborgWorkflow = suborgWorkflows[suborgWorkflowKey]
+										if (suborgWorkflow.org_id === e.target.value) {
+											workflowFound = true
 
-										updateCurrentWorkflow(suborgWorkflow)
+											updateCurrentWorkflow(suborgWorkflow)
+											break
+										}
+									}
+
+									if (workflowFound) {
 										break
 									}
 								}
 
-								if (workflowFound) {
-									break
+								if (!workflowFound) { 
+									console.log("No workflow found.")
+									toast("(2) Creating new workflow for this org. Please wait a few seconds while we prepare it for you.")
+          							//saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
 								}
 							}
-
-							if (!workflowFound) { 
-								console.log("No workflow found.")
-								toast("(2) Creating new workflow for this org. Please wait a few seconds while we prepare it for you.")
-          						//saveWorkflow(originalWorkflow, undefined, undefined, e.target.value)
-							}
-						}
+						}, 500)
     				})
 				}}
 				label="Suborg Distribution"
@@ -16048,7 +16141,7 @@ const releaseToConnectLabel = "Release to Connect"
 			})}
 		</div>
 
-			{showEnvironment === true && environments.length > 1 ?
+			{showEnvironment === true && environments.length > 1 && selectedActionEnvironment !== undefined && selectedActionEnvironment !== null && selectedActionEnvironment.Name !== undefined && selectedActionEnvironment.Name !== null ?
 			    <FormControl fullWidth style={{marginTop: 15, marginleft: 10, pointerEvents: "auto", }}>
 
 					<InputLabel
@@ -16069,10 +16162,11 @@ const releaseToConnectLabel = "Release to Connect"
 					  },
 					}}
 					onChange={(e) => {
+  					  setLastSaved(false)
 					  const env = environments.find((a) => a.Name === e.target.value);
-					  setSelectedActionEnvironment(env);
-					  selectedAction.environment = env.Name;
-					  setSelectedAction(selectedAction);
+					  setSelectedActionEnvironment(env)
+					  selectedAction.environment = env.Name
+					  setSelectedAction(selectedAction)
 
 					  for (let actionkey in workflow.actions) {
 						  workflow.actions[actionkey].environment = env.Name
@@ -16110,7 +16204,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 						  {data.Name === "cloud" || data.Name === "Cloud" ? null : !isRunning ?
 							  <a href={`/admin?tab=locations&env=${data.Name}`} target="_blank" style={{textDecoration: "none",}}>
-								  <Tooltip title={"Click to configure the environment"} placement="top">
+								  <Tooltip title={"Click to configure this location"} placement="top">
 									  <Chip
 										style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", backgroundColor: red, }}
 										label={"Stopped"}
@@ -19684,8 +19778,7 @@ const releaseToConnectLabel = "Release to Connect"
             maxHeight: 550,
             overflowY: "auto",
             overflowX: "hidden",
-            // zIndex: 10012,
-						border: theme.palette.defaultBorder,
+			border: theme.palette.defaultBorder,
           },
         }}
       >
@@ -19866,7 +19959,7 @@ const releaseToConnectLabel = "Release to Connect"
       </span>
 
       <div style={{ marginBottom: 40,  }}>
-        <div style={{ display: "flex", marginBottom: 15, position: "sticky", top: -31, zIndex: 10000, backgroundColor: "rgba(56,56,56, 1)", }}>
+        <div style={{ display: "flex", marginBottom: 15, position: "sticky", top: -31, zIndex: 10000, }}>
           {curapp === null ? null : (
             <img
               alt={selectedResult.action.app_name}
@@ -20631,7 +20724,7 @@ const releaseToConnectLabel = "Release to Connect"
               toast(
                 "Field " +
                 selectedApp.authentication.parameters[paramkey].name +
-                " can't be empty"
+                " can't be empty. If you want it empty, put space."
               );
               return;
             }
@@ -20660,7 +20753,6 @@ const releaseToConnectLabel = "Release to Connect"
 
       var newAuthOption = JSON.parse(JSON.stringify(authenticationOption));
       var newFields = [];
-	  console.log("Fields: ", newAuthOption.fields)
       for (let authkey in newAuthOption.fields) {
         const value = newAuthOption.fields[authkey];
         newFields.push({
@@ -20673,7 +20765,7 @@ const releaseToConnectLabel = "Release to Connect"
       setNewAppAuth(newAuthOption)
 
       if (configureWorkflowModalOpen) {
-        setSelectedAction({})
+        //setSelectedAction({})
       }
 
       setUpdate(authenticationOption.id)
@@ -20750,8 +20842,14 @@ const releaseToConnectLabel = "Release to Connect"
 
             return (
               <div key={index} style={{ marginTop: 10 }}>
-                <LockOpenIcon style={{ marginRight: 10 }} />
-                <b>{data.name}</b>
+				<div style={{display: "flex", }}>
+					<LockOpenIcon style={{ 
+						marginRight: 10 
+					}} />
+					<Typography variant="body1">
+						{data?.name?.endsWith("_basic") ? data?.name?.replace("_basic", "") : data?.name}
+					</Typography>
+				</div>
 
                 {data.schema !== undefined &&
                   data.schema !== null &&
@@ -20815,7 +20913,7 @@ const releaseToConnectLabel = "Release to Connect"
                     }
                     color="primary"
                     defaultValue={
-                      data.value !== undefined && data.value !== null
+                      data.value !== undefined && data.value !== null && !data.value.includes("Secret. Replace") 
                         ? data.value
                         : ""
                     }
@@ -20824,6 +20922,7 @@ const releaseToConnectLabel = "Release to Connect"
                       authenticationOption.fields[data.name] =
                         event.target.value;
                     }}
+					id={`${data.name}_auth`}
                   />
                 )}
               </div>
@@ -20832,19 +20931,11 @@ const releaseToConnectLabel = "Release to Connect"
         </DialogContent>
         <DialogActions>
           <Button
-            style={{}}
-            onClick={() => {
-              setAuthenticationModalOpen(false);
-            }}
-            color="secondary"
-          >
-            Cancel
-          </Button>
-          <Button
-            style={{}}
+            style={{width: 150, margin: "auto", }}
+			disabled={false}
 			variant="outlined"
             onClick={() => {
-              setAuthenticationOptions(authenticationOption);
+              setAuthenticationOptions(authenticationOption)
               handleSubmitCheck()
             }}
             color="primary"
@@ -20856,7 +20947,8 @@ const releaseToConnectLabel = "Release to Connect"
     );
   };
 
-  const configureWorkflowModal =
+  // FIXME: Re-enable?
+  const configureWorkflowModal = true ? null :  
     configureWorkflowModalOpen && apps.length !== 0 ? (
       <Dialog
         open={configureWorkflowModalOpen}
@@ -20919,10 +21011,6 @@ const releaseToConnectLabel = "Release to Connect"
       style={{ pointerEvents: "none" }}
       open={authenticationModalOpen}
       onClose={() => {
-        //if (configureWorkflowModalOpen) {
-        //  setSelectedAction({});
-        //}
-		  //
 		setSelectedMeta(undefined)
       }}
       PaperProps={{
@@ -21031,7 +21119,7 @@ const releaseToConnectLabel = "Release to Connect"
         onClick={() => {
           setAuthenticationModalOpen(false);
           if (configureWorkflowModalOpen) {
-            setSelectedAction({});
+            //setSelectedAction({});
           }
         }}
       >
@@ -21360,15 +21448,6 @@ const releaseToConnectLabel = "Release to Connect"
         </DialogContent>
   
         <DialogActions>
-          <Button
-            style={{ borderRadius: "0px" }}
-            onClick={() => {
-              setTenzirConfigModalOpen(false);
-            }}
-            color="secondary"
-          >
-            Cancel
-          </Button>
           <Button
             style={{ borderRadius: "0px" }}
 			variant="contained"
@@ -22049,6 +22128,13 @@ const releaseToConnectLabel = "Release to Connect"
             </div>
           </div>
         : null*/}
+
+		<div 
+			id="redline" 
+			style={{
+				display: "none",
+			}}
+		/>
 
         {showVideo !== undefined && showVideo.length > 0 ?
           <div style={{ borderRadius: theme.palette?.borderRadius, zIndex: 12501, position: "fixed", left: 40, bottom: 150, width: 300, }}>

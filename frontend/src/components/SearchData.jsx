@@ -874,10 +874,11 @@ const SearchData = props => {
                 </List>
             </Grid>
             <Grid style={{ textAlign: "end", width: "100%", textTransform: 'capitalize', }}>
-                <Button style={{ textAlign: "center", textTransform: 'capitalize' }}
-                    onClick={() => { window.location = "/search"; }} >
-                    See More
-                </Button>
+				<Link to="/search" style={{ textDecoration: "none", color: "#f85a3e" }}>	
+                	<Button style={{ textAlign: "center", textTransform: 'capitalize' }}>
+                    	See More
+                	</Button>
+				</Link>
             </Grid>
         </Grid>
     ) : null

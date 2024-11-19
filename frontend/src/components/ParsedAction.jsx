@@ -192,13 +192,13 @@ const ParsedAction = (props) => {
   const [selectedActionParameters, setSelectedActionParameters] = React.useState(selectedAction?.parameters || []);
   const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
   const [paramUpdate, setParamUpdate] = React.useState("");
-    const [actionlist, setActionlist] = React.useState([]);
-    const [jsonList, setJsonList] = React.useState([]);
-    const [showDropdown, setShowDropdown] = React.useState(false);
-    const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
-    const [showAutocomplete, setShowAutocomplete] = React.useState(false);
-    const [menuPosition, setMenuPosition] = useState(null);
-	const [uiBox, setUiBox] = useState(null);
+  const [actionlist, setActionlist] = React.useState([]);
+  const [jsonList, setJsonList] = React.useState([]);
+  const [showDropdown, setShowDropdown] = React.useState(false);
+  const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
+  const [showAutocomplete, setShowAutocomplete] = React.useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
+  const [uiBox, setUiBox] = useState(null);
   const isIntegration = selectedAction.app_id === "integration"
 
   useEffect(() => {
@@ -206,6 +206,53 @@ const ParsedAction = (props) => {
 		setLastSaved(false)
 	}
   }, [expansionModalOpen])
+
+  useEffect(() => {
+	  // Changes the order of params to show in order:
+	  // auth, required, optional
+	  var changed = false
+	  if (selectedActionParameters === undefined || selectedActionParameters === null || selectedActionParameters.length === 0) {
+		  return 
+	  }
+
+	  var auth = []
+	  var required = []
+	  var optional = []
+
+	  var keyorder = []
+	  for (let paramkey in selectedActionParameters) {
+		  const param = selectedActionParameters[paramkey]
+		  keyorder.push(param.name)
+
+		  if (param.configuration) {
+			  auth.push(param)
+			  continue
+		  }
+
+		  if (param.required) {
+			  required.push(param)
+			  continue
+		  }
+
+		  optional.push(param)
+	  }
+
+	  // Check new keyorder
+	  const newparams = auth.concat(required).concat(optional)
+	  var newkeyorder = []
+	  for (let paramkey in newparams) {
+		  newkeyorder.push(newparams[paramkey].name)
+	  }
+
+	  if (keyorder.join(",") !== newkeyorder.join(",")) {
+		  //toast("Changed order of params")
+		  setSelectedActionParameters(newparams)
+		  selectedAction.parameters = newparams
+		  setSelectedAction(selectedAction)
+	  }
+
+
+  }, [selectedActionParameters])
 
   useEffect(() => {
 	  if (selectedActionEnvironment === undefined || selectedActionEnvironment === null || Object.keys(selectedActionEnvironment).length === 0) {
@@ -582,8 +629,9 @@ const ParsedAction = (props) => {
         }
 
 		let newParameters =  selectedAction?.parameters?.map((param) => {
-			let paramvalue = param.value;
+			let paramvalue = param.value === undefined || param.value === null ? "" : param.value;
 			let errorVars = [];
+
 			if(paramvalue.includes("$")){
 				let actions = workflow.actions?.map((action) => {
 					return "$"+action.label?.toLowerCase();
@@ -1161,7 +1209,7 @@ const ParsedAction = (props) => {
 		var helperText = ""
 		if (name.includes("url")) {
 			if (value.includes("localhost") || value.includes("127.0.0.1")) {
-				helperText = "Can't use localhost. Please change to your external IP." 
+				helperText = "Can't use localhost in Shuffle. Please change to server's IP." 
 			}
 		}
 
@@ -1855,7 +1903,9 @@ const ParsedAction = (props) => {
             <span>
               <Button
                 color="primary"
-                style={{}}
+                style={{
+					textTransform: "none",
+				}}
                 fullWidth
                 variant="contained"
                 onClick={() => {
@@ -2832,7 +2882,7 @@ const ParsedAction = (props) => {
 			if (selectedAction.parameters === undefined || selectedAction.parameters === null || selectedAction.parameters.length !== selectedActionParameters.length) {
 
 				//selectedAction.parameters = selectedActionParameters
-				console.log("PARAM BUG - length change(?): ", selectedAction)
+				//console.log("PARAM BUG - length change(?): ", selectedAction)
 			}
 
             //!selectedAction.auth_not_required &&

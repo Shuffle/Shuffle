@@ -6223,9 +6223,9 @@ If you're interested, please let me know a time that works for you, or set up a 
 	--name="shuffle-orborus" \\
 	--pull=always \\
 	--volume "/var/run/docker.sock:/var/run/docker.sock" \\
-	-e AUTH="d85b017c-7f47-4d3a-bb20-9b00731bc397" \\
-	-e ENVIRONMENT_NAME="swarm testing" \\
-	-e ORG="9c4e7cd9-cfa4-457b-9ee5-3a9faa6e8c3c" \\
+	-e AUTH="${environment.auth}" \\
+	-e ENVIRONMENT_NAME="${environment.Name}" \\
+	-e ORG="${environment.org_id}" \\
 	-e SHUFFLE_WORKER_IMAGE="ghcr.io/shuffle/shuffle-worker:nightly" \\
 	-e SHUFFLE_SWARM_CONFIG=run \\
 	-e SHUFFLE_LOGS_DISABLED=true \\
@@ -6284,7 +6284,7 @@ curTab === 6 ? (
 	<div style={{ marginTop: 20, marginBottom: 20 }}>
 	  <h2 style={{ display: "inline" }}>Locations</h2>
 	  <span style={{ marginLeft: 25 }}>
-		Decides where to run your workflows and actions. Uses Shuffle's Orborus runner to handle queued jobs. Previously "Environments".
+		Decides where to run your workflows and actions. Uses Shuffle's Orborus runner to handle queued jobs onprem. Previously "Environments".
 
 		If you have scale problems, talk to our team: support@shuffler.io.&nbsp;
 		<a

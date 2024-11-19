@@ -330,8 +330,8 @@ const AuthenticationData = (props) => {
 		<Button
 			style={{ borderRadius: theme.palette?.borderRadius, marginTop: authFieldsOnly ? 20 : 0 }}
 			onClick={() => {
-				setAuthenticationOptions(authenticationOption);
-				handleSubmitCheck();
+				setAuthenticationOptions(authenticationOption)
+				handleSubmitCheck()
 			}}
 			variant={"contained"}
 			disabled={submitSuccessful}
