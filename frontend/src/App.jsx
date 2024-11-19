@@ -14,6 +14,7 @@ import HealthPage from "./components/HealthPage.jsx";
 //import Header from "./components/Header.jsx";
 import theme from "./theme";
 import Apps from "./views/Apps";
+import Apps2 from "./views/Apps2.jsx";
 import AppCreator from "./views/AppCreator";
 import DetectionDashBoard from "./views/DetectionDashboard.jsx";
 
@@ -406,6 +407,23 @@ const App = (message, props) => {
 					globalUrl={globalUrl}
 					userdata={userdata}
 					{...props}
+				/>
+        	  }
+        	/>
+			<Route
+        	  exact
+        	  path="/apps2"
+        	  element={
+				<Apps2
+					serverside={false} 
+					isLoaded={isLoaded} 
+					isLoggedIn={isLoggedIn}
+					checkLogin={checkLogin}
+					userdata={userdata} 
+					globalUrl={globalUrl} 
+					surfaceColor={theme.palette.surfaceColor} 
+					inputColor={theme.palette.inputColor} 
+					{...props} 
 				/>
         	  }
         	/>

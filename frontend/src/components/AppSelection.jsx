@@ -47,6 +47,7 @@ const AppSelection = props => {
         defaultSearch,
         setDefaultSearch,
         checkLogin,
+		isAppPage=false
 
     } = props;
     const [discoveryData, setDiscoveryData] = React.useState({})
@@ -507,26 +508,31 @@ const AppSelection = props => {
             	        })}
             	    </Grid>
             	</div>
-            	{!moreButton ? (
-            	    <div style={{ width: "100%", marginLeft: isMobile ? 80 : 200, marginBottom: 20, textAlign: isMobile ? "center" : null }}>
-            	        <Link style={{ color: "#FF8444" }} onClick={() => {
+            	{
+					!isAppPage && (
+						<>
+						{!moreButton ? (
+            	    	<div style={{ width: "100%", marginLeft: isMobile ? 80 : 200, marginBottom: 20, textAlign: isMobile ? "center" : null }}>
+            	        	<Link style={{ color: "#FF8444" }} onClick={() => {
             	            setMoreButton(true)
-
             	            setTimeout(() => {
             	                navigate("/welcome?tab=2")
             	            }, 250)
             	        }}
             	        >See More Apps</Link>
-            	    </div>) : ""}
+            	    	</div>) : ""}
 
-            	<div style={{ flexDirection: "row", width: isMobile ? 340 : null, textAlign: isMobile ? "center" : null }}>
-            	    <Button variant="contained" type="submit" fullWidth style={bottomButtonStyle} onClick={() => {
-            	        navigate("/usecases2")
-            	        setActiveStep(2)
-            	    }}>
-						See usecases
-            	    </Button>
-            	</div>
+            			<div style={{ flexDirection: "row", width: isMobile ? 340 : null, textAlign: isMobile ? "center" : null }}>
+            	    	<Button variant="contained" type="submit" fullWidth style={bottomButtonStyle} onClick={() => {
+            	      	  	navigate("/usecases2")
+            	        	setActiveStep(2)
+            	    	}}>
+							See usecases
+            	    	</Button>
+            			</div>
+						</>
+					)
+				}
 			</div>
         </Fade>
     )
