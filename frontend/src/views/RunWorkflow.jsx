@@ -43,19 +43,12 @@ import {
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
   OpenInNew as OpenInNewIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 
 const hrefStyle = {
 	color: "white", 
 	textDecoration: "none"
-}
-
-const bodyDivStyle = {
-	margin: "auto",
-	width: isMobile? "100%":"500px",
-	position: "relative", 
-
-	paddingBottom: 250,
 }
 
 
@@ -64,6 +57,7 @@ const RunWorkflow = (defaultprops) => {
 
   let navigate = useNavigate();
   const [_, setUpdate] = useState(""); // Used to force rendring, don't remove
+  const [explorerUi, setExplorerUi] = useState(false)
   const [message, setMessage] = useState("");
   const [workflow, setWorkflow] = React.useState({});
   const [executionRequest, setExecutionRequest] = React.useState({});
@@ -80,6 +74,8 @@ const RunWorkflow = (defaultprops) => {
   const [sharingOpen, setSharingOpen] = React.useState(false)
   const [realtimeMarkdown, setRealtimeMarkdown] = React.useState("")
   const [forms, setForms] = React.useState([])
+  const [boxWidth, setBoxWidth] = React.useState(500)
+  const [inputQuestions, setInputQuestions] = React.useState([])
 
 	const IframeWrapper = (props) => {
 		var propsCopy = JSON.parse(JSON.stringify(props))
@@ -94,9 +90,19 @@ const RunWorkflow = (defaultprops) => {
 		if (propsCopy.width === undefined || propsCopy.width === null) {
 			propsCopy.width = 400 
 			propsCopy.height = "auto"
+
+			propsCopy.margin = "auto"
 		}
 
 		return Img(propsCopy)
+	}
+
+	const bodyDivStyle = {
+		margin: "auto",
+		width: isMobile? "100%" : boxWidth,
+		position: "relative", 
+
+		paddingBottom: 250,
 	}
 
 	const boxStyle = {
@@ -112,7 +118,7 @@ const RunWorkflow = (defaultprops) => {
     props.match = {}
     props.match.params = params
 
-	const defaultTitle = workflow.name !== undefined ? workflow.name : "Run Workflow"
+	const defaultTitle = workflow.name !== undefined ? "Shuffle - Form for " + workflow.name : "Shuffle - Form to Run Workflows"
 	if (document != undefined && document.title != defaultTitle) {
 		document.title = defaultTitle
 	}
@@ -136,6 +142,18 @@ const RunWorkflow = (defaultprops) => {
 			return true 
 		}
 
+		// Check if it's an object or not
+		if (typeof executionArgument === "string") {
+			// Make it an object
+			try {
+				executionArgument = JSON.parse(executionArgument)
+			} catch (e) {
+				console.log("Error parsing execution argument: ", e)
+				executionArgument = {}
+			}
+		}
+
+		console.log("EXEC: ", executionArgument)
 		for (var key in executionArgument) {
 			if (executionArgument[key] === undefined || executionArgument[key] === null || executionArgument[key] === "") {
 				return false
@@ -257,9 +275,12 @@ const RunWorkflow = (defaultprops) => {
 
 		return (
 			<div style={{marginTop: executionMargin, }}>
-				<Divider style={{marginTop: 20, marginBottom: 20, }}/>
+				{workflowQuestion !== "" ? null : 
+					<Divider style={{marginTop: 20, marginBottom: 20, }}/>
+				}
 
-				{validate.valid === false ?
+				{workflowQuestion !== "" ? null : 
+				validate.valid === false ?
 					<div style={{marginTop: 20, }}>
 						<Divider />
 						<Markdown
@@ -446,18 +467,6 @@ const RunWorkflow = (defaultprops) => {
 		})
 	}
 
-	/*
-    useEffect(() => {
-        if (executionRequest === undefined || executionRequest === null || executionRequest.execution_id === undefined || executionRequest.execution_id === null || executionRequest.execution_id.length === 0) {
-      	  return
-        }
-
-        if (executionRequest.start === true) {
-      	  start()
-        }
-    }, [executionRequest])
-	*/
-
     const { start, stop } = useInterval({
       duration: 1500,
       startImmediate: true,
@@ -520,8 +529,8 @@ const RunWorkflow = (defaultprops) => {
 				if (realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0) {
 					const newmarkdown = realtimeMarkdown.replace(`{{ ${workflow_id} }}`, "", -1)
 					setRealtimeMarkdown(newmarkdown)
-				} else if (inputWorkflow.input_markdown !== undefined && inputWorkflow.input_markdown !== null && inputWorkflow.input_markdown.length > 0) {
-					const newmarkdown = inputWorkflow.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
+				} else if (inputWorkflow.form_control.input_markdown !== undefined && inputWorkflow.form_control.input_markdown !== null && inputWorkflow.form_control.input_markdown.length > 0) {
+					const newmarkdown = inputWorkflow.form_control.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
 					setRealtimeMarkdown(newmarkdown)
 				}
 			}
@@ -531,14 +540,20 @@ const RunWorkflow = (defaultprops) => {
 			console.log("Get workflow error: ", error.toString())
 
 			if (realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0) {
-				const newmarkdown = inputWorkflow.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
+				const newmarkdown = inputWorkflow.form_control.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
 				setRealtimeMarkdown(newmarkdown)
-			} else if (inputWorkflow.input_markdown !== undefined && inputWorkflow.input_markdown !== null && inputWorkflow.input_markdown.length > 0) {
-				const newmarkdown = inputWorkflow.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
+			} else if (inputWorkflow.form_control.input_markdown !== undefined && inputWorkflow.form_control.input_markdown !== null && inputWorkflow.form_control.input_markdown.length > 0) {
+				const newmarkdown = inputWorkflow.form_control.input_markdown.replace(`{{ ${workflow_id} }}`, "", -1)
 				setRealtimeMarkdown(newmarkdown)
 			}
 		})
 	}
+
+	const searchParams = new URLSearchParams(window.location.search)
+	const answer = searchParams.get("answer")
+	const execution_id = searchParams.get("reference_execution")
+	const authorization = searchParams.get("authorization")
+	const sourceNode = searchParams.get("source_node")
 
 	const getWorkflow = (workflow_id, selectedNode) => {
   		setRealtimeMarkdown("")
@@ -595,6 +610,56 @@ const RunWorkflow = (defaultprops) => {
 				}
 			}
 
+			// Override with just relevant fields
+			if (sourceNode !== undefined && sourceNode !== null && sourceNode.length > 0) {
+				for (var triggerkey in responseJson.triggers) {
+					const trig = responseJson.triggers[triggerkey]
+					if (trig.id !== sourceNode) {
+						continue
+					}
+
+					console.log("TRIG: ", trig)
+					if (trig.parameters === undefined || trig.parameters === null) {
+						trig.parameters = []
+					}
+
+					for (var paramkey in trig.parameters) {
+						const param = trig.parameters[paramkey]
+						if (param.name !== "input_questions") {
+							continue
+						}
+
+						// Parse as json
+						var keepfields = []
+						try {
+							const parsed = JSON.parse(param.value)
+
+							// Find this in the workflow.input_questions
+							for (var questionkey in responseJson.input_questions) {
+								var question = JSON.parse(JSON.stringify(responseJson.input_questions[questionkey]))
+								question.value = question.value.split(";")[0]
+								if (parsed.includes(question.name)) {
+									keepfields.push(question.value)
+								}
+							}
+						
+							//newexec = {}
+						} catch (e) {
+							console.log("Error parsing input questions: ", e)
+						}
+
+						// Remapping it to exec
+						if (keepfields.length > 0) {
+							newexec = {}
+							for (var key in keepfields) {
+								newexec[keepfields[key]] = ""
+							}
+						}
+					}
+
+				}
+			}
+
 			setExecutionArgument(newexec)
 		}
 
@@ -631,7 +696,8 @@ const RunWorkflow = (defaultprops) => {
 									}
 								}
 
-								responseJson.input_questions = relevantquestions
+								setInputQuestions(relevantquestions)
+								//responseJson.input_questions = relevantquestions
 							}
 						}
 					}
@@ -642,10 +708,10 @@ const RunWorkflow = (defaultprops) => {
 			}
 		}
 
-		if (responseJson.input_markdown !== undefined && responseJson.input_markdown !== null && responseJson.input_markdown.length > 0) {
+		if (responseJson.form_control.input_markdown !== undefined && responseJson.form_control.input_markdown !== null && responseJson.form_control.input_markdown.length > 0) {
 			// Look for {{ uuid }} format, and try to run that workflow with their account
 			// This is a hack, but a fun one.
-			var newmarkdown = responseJson.input_markdown.replace("", "")
+			var newmarkdown = responseJson.form_control.input_markdown.replace("", "")
 			
 			const uuidRegex = /{{\s[a-f0-9-]+\s}}/g
 			const found = newmarkdown.match(uuidRegex)
@@ -697,7 +763,21 @@ const RunWorkflow = (defaultprops) => {
 		handleExecutionLoader()
 
 		handleGetOrg(responseJson.org_id)
-		setWorkflow(responseJson);
+
+		if (responseJson.form_control === undefined || responseJson.form_control === null) {
+			responseJson.form_control = {
+				"input_markdown": "",
+				"output_yields": [],
+				"form_width": 500,
+			}
+		}
+
+
+		if (responseJson.form_control.form_width !== undefined && responseJson.form_control.form_width !== null && responseJson.form_control.form_width > 300) {
+			setBoxWidth(responseJson.form_control.form_width)
+		}
+
+		setWorkflow(responseJson)
       })
       .catch((error) => {
         console.log("Get workflow error: ", error.toString());
@@ -723,7 +803,6 @@ const RunWorkflow = (defaultprops) => {
 					if (responseJson.result.startsWith("[") && responseJson.result.endsWith("]")) { 
 						try {
 							responseJson.result = JSON.parse(responseJson.result).length
-							console.log("Set length to: ", responseJson.result)
 						} catch (e) {
 							console.log("Error parsing length: ", e)
 						}
@@ -875,8 +954,8 @@ const RunWorkflow = (defaultprops) => {
 					const newmarkdown = realtimeMarkdown.replace(`{{ ${responseJson.workflow.id} }}`, responseJson.result, -1)
 					setRealtimeMarkdown(newmarkdown)
 
-				} else if (workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0) {
-					const newmarkdown = workflow.input_markdown.replace(`{{ ${responseJson.workflow.id} }}`, responseJson.result, -1)
+				} else if (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) {
+					const newmarkdown = workflow.form_control.input_markdown.replace(`{{ ${responseJson.workflow.id} }}`, responseJson.result, -1)
 					setRealtimeMarkdown(newmarkdown)
 				}
 
@@ -893,16 +972,22 @@ const RunWorkflow = (defaultprops) => {
 		});
   };
 
-	const searchParams = new URLSearchParams(window.location.search)
-	const answer = searchParams.get("answer")
-	const execution_id = searchParams.get("reference_execution")
-	const authorization = searchParams.get("authorization")
-	const sourceNode = searchParams.get("source_node")
 
 	useEffect(() => {
 		if (!isLoaded) {
 			return
 		}
+
+		if (props.match.params.key === undefined) {
+  			setExplorerUi(true)
+
+			if (isLoggedIn) {
+				loadForms(userdata.active_org.id)
+				handleGetOrg(userdata.active_org.id)
+			}
+
+			return
+		} 
 
 		getWorkflow(props.match.params.key, sourceNode) 
 		if (execution_id !== undefined && execution_id !== null && authorization !== undefined && authorization !== null) {
@@ -914,7 +999,6 @@ const RunWorkflow = (defaultprops) => {
 			console.log("Got answer: ", answer)
 		}
 	}, [isLoaded])
-
 
 	useEffect(() => {
 		if (executionData === undefined || executionData === null || executionData === {}) {
@@ -947,9 +1031,14 @@ const RunWorkflow = (defaultprops) => {
 			}
 
 			if (result.status !== "WAITING") {
+				if (parsedresult.information !== undefined && parsedresult.information !== null && parsedresult.information.length > 0) {
+					setWorkflowQuestion(parsedresult.information)
+				}
+
 				if (parsedresult.click_info !== undefined && parsedresult.click_info !== null) {
 					if (parsedresult.click_info.user !== undefined && parsedresult.click_info.user !== null && parsedresult.click_info.user.length > 0) {
 						setMessage("Already answered by " + parsedresult.click_info.user)
+  
 					}
 				} else {
 					setMessage("Answered.")
@@ -965,8 +1054,12 @@ const RunWorkflow = (defaultprops) => {
 	const buttonBackground = "linear-gradient(to right, #f86a3e, #f34079)"
 	const buttonStyle = {borderRadius: 25, height: 50, fontSize: 18, backgroundImage: handleValidateForm(executionArgument) || executionLoading ? buttonBackground : "grey", color: "white"}
 	
-	//const disabledButtons = message.length > 0 || executionData.status === "FINISHED" || executionData.status === "ABORTED"
-	const disabledButtons = executionLoading || executionRunning
+	// Check if all fields are filled in?
+	var disabledButtons = executionLoading || executionRunning || message.length > 0 
+	if (disabledButtons === false && workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0) {
+		// Check field values
+		//disabledButtons = handleValidateForm(executionArgument)
+	}
 
 	const organization = selectedOrganization !== undefined && selectedOrganization !== null ? selectedOrganization.name : "Unknown"
 	const contact = selectedOrganization !== undefined && selectedOrganization !== null && selectedOrganization.org !== undefined && selectedOrganization.org !== null? selectedOrganization.org : "support@shuffler.io"
@@ -995,20 +1088,69 @@ const RunWorkflow = (defaultprops) => {
 		}
 	}
 
+	const FormList = () => {
+		return (
+			<div>
+				{forms.map((form, formIndex) => {
+					if (form.id === undefined || form.id === null) {
+						return null
+					}
+
+					return (
+						<div key={formIndex} style={{marginBottom: 10, }}>
+							<RecentWorkflow 
+								workflow={form}
+								onclickHandler={() => {
+									navigate(`/forms/${form.id}`)
+									getWorkflow(form.id, sourceNode) 
+									setExplorerUi(false)
+								}}
+								currentWorkflowId={workflow.id}
+							/>
+						</div>
+					)
+				})}
+			</div>
+		)
+	}
+	
+	const ExplorerUi = () => {
+		return (
+			<div style={{paddingTop: 50, marginTop: 50, width: 250, itemAlign: "center", textAlign: "center", margin: "auto", }}>
+
+				{forms !== undefined && forms !== null && forms.length > 0 ?
+					<div>
+						<Typography variant="h6" style={{marginBottom: 20, }}>
+							Available forms
+						</Typography>
+						<FormList />
+					</div>
+					: 
+					<Typography variant="h6" style={{marginTop: 100, marginBottom: 20, }}>
+						No Form Found
+					</Typography>
+				}
+			</div> 
+		)
+	}
+
 	var validResults = 0
 	const basedata = 
 		<div style={bodyDivStyle}>
 			<Paper style={boxStyle}>
-				{workflow.id === undefined || workflow.id === null ?
+				{explorerUi === true ? 
+					<ExplorerUi />
+					:
+					workflow.id === undefined || workflow.id === null ?
 					<div style={{paddingTop: 150, marginTop: 150, width: 250, itemAlign: "center", textAlign: "center", margin: "auto", }}>
 						<CircularProgress />
 						<Typography variant="body1" style={{marginTop: 20, }}>
-							Loding Form Details...
+							Loading Form Details...
 						</Typography>
 					</div>
 				: 
 				<div>
-					{workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0 ? 
+					{workflowQuestion !== "" || (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) ? 
 						<div style={{marginBottom: 20, }}>
 							<Markdown
 							  components={{
@@ -1024,13 +1166,13 @@ const RunWorkflow = (defaultprops) => {
 							  }}
 							  rehypePlugins={[rehypeRaw]}
 							>
-							  {realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0 ? realtimeMarkdown : workflow.input_markdown}
+							  {workflowQuestion !== "" ? workflowQuestion : realtimeMarkdown !== undefined && realtimeMarkdown !== null && realtimeMarkdown.length > 0 ? realtimeMarkdown : workflow.form_control.input_markdown}
 		    				</Markdown>
 						</div> 
 					: null}
 
       				<form onSubmit={(e) => {onSubmit(e)}} style={{margin: "25px 0px 15px 0px",}}>
-						{workflow.input_markdown !== undefined && workflow.input_markdown !== null && workflow.input_markdown.length > 0 ? null : 
+						{workflowQuestion !== "" || (workflow.form_control.input_markdown !== undefined && workflow.form_control.input_markdown !== null && workflow.form_control.input_markdown.length > 0) ? null : 
 						<div>
 							<img
 								alt={workflow.name}
@@ -1066,7 +1208,7 @@ const RunWorkflow = (defaultprops) => {
 								<div style={{
 									backgroundColor: theme.palette.inputColor,
 									padding: 20,
-									borderRadius: theme.palette.borderRadius,
+									borderRadius: theme.palette?.borderRadius,
 									marginBottom: 35, 
 									marginTop: 30, 
 								}}>
@@ -1081,7 +1223,7 @@ const RunWorkflow = (defaultprops) => {
 							
 						{workflow.input_questions !== undefined && workflow.input_questions !== null && workflow.input_questions.length > 0 ?
 							<div style={{marginBottom: 5, }}>
-								{workflow.input_questions.map((question, index) => {
+								{inputQuestions.map((question, index) => {
 
 									// Multiple choice checks for semicolon-splits
 									var multiChoiceOptions = question.value !== undefined && question.value !== null && question.value.length > 0 && question.value.includes(";") ? question.value.split(";") : []
@@ -1215,25 +1357,26 @@ const RunWorkflow = (defaultprops) => {
 											What do you want to do?
 										</Typography>
 									}
-									<div fullWidth style={{width: "100%", marginTop: 10, marginBottom: 10, display: "flex", }}>
-										<Button fullWidth id="continue_execution" variant="contained" disabled={disabledButtons} color="primary" style={{flex: 1,}} onClick={() => {
-											onSubmit(null, execution_id, authorization, true) 
 
+									<div fullWidth style={{width: "100%", marginTop: 10, marginBottom: 10, display: "flex", }}>
+										<Button fullWidth id="continue_execution" variant="contained" disabled={!handleValidateForm(executionArgument) || disabledButtons} color="primary" style={{flex: 1,}} onClick={() => {
 											setButtonClicked("FINISHED")
 											setExecutionData({
 												status: "FINISHED",
 											})
+
+											onSubmit(null, execution_id, authorization, true) 
 										}}>Continue</Button>
 										<Typography variant="body1" style={{marginLeft: 3, marginRight: 3, marginTop: 3, }}>
 											&nbsp;or&nbsp;
 										</Typography>
-										<Button fullWidth id="abort_execution" variant="contained" color="primary" disabled={disabledButtons} style={{ flex: 1, }} onClick={() => {
-											onSubmit(null, execution_id, authorization, false) 
-
+										<Button fullWidth id="abort_execution" variant="contained" disabled={!handleValidateForm(executionArgument) || disabledButtons} color="primary" style={{ flex: 1, }} onClick={() => {
 											setButtonClicked("ABORTED")
 											setExecutionData({
 												status: "ABORTED",
 											})
+
+											onSubmit(null, execution_id, authorization, false) 
 										}}>Stop</Button>
 									</div>
 								</span>
@@ -1258,9 +1401,9 @@ const RunWorkflow = (defaultprops) => {
 						}
 
 
-						{workflow.output_yields !== undefined && workflow.output_yields !== null && workflow.output_yields.length > 0 ?
+						{workflow.form_control.output_yields !== undefined && workflow.form_control.output_yields !== null && workflow.form_control.output_yields.length > 0 ?
 							<div style={{marginTop: 20, }}>
-								{workflow.output_yields.map((yieldItem, index) => {
+								{workflow.form_control.output_yields.map((yieldItem, index) => {
 									if (executionData.results === undefined || executionData.results === null || executionData.results.length === 0) {
 										return null
 									}
@@ -1328,15 +1471,18 @@ const RunWorkflow = (defaultprops) => {
 				</div>
 				}
 			</Paper>
-			<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 10, }} >
-				Forms are in Beta. Form submissions data includes your Organization's unique ID while logged in, or a unique identifier for your browser otherwise. Your input will be automatically sanitized.
-			</Typography>
+
+			{workflowQuestion !== "" ? null : 
+				<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 10, }} >
+					Forms are in late Beta. Form submission data includes your Organization's unique ID while logged in, or a unique identifier for your browser otherwise. Your input will be automatically sanitized.
+				</Typography>
+			}
 		</div>
 
 
     // const isCorrectOrg = userdata.active_org.id === undefined || userdata.active_org.id === null || workflow.org_id === null || workflow.org_id === undefined || workflow.org_id.length === 0 || userdata.active_org.id === workflow.org_id 
 	const loadedCheck = isLoaded ? 
-		<div>
+		<div style={{marginTop: 30, }}>
 			{editWorkflowModalOpen === true ?
 			  <EditWorkflow
 				saveWorkflow={saveWorkflow}
@@ -1350,6 +1496,8 @@ const RunWorkflow = (defaultprops) => {
 
 				expanded={true}
 				setRealtimeMarkdown={setRealtimeMarkdown}
+				boxWidth={boxWidth}
+				setBoxWidth={setBoxWidth}
 				scrollTo={"form_fill"}
 			  />
 			: null}
@@ -1367,7 +1515,7 @@ const RunWorkflow = (defaultprops) => {
 				  minHeight: 400,
 				  maxHeight: 400, 
 				  padding: 25, 
-				  borderRadius: theme.palette.borderRadius,
+				  borderRadius: theme.palette?.borderRadius,
 				  //minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
 				  //maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
 				},
@@ -1407,7 +1555,7 @@ const RunWorkflow = (defaultprops) => {
 							>
 								Organization only
 							</MenuItem>
-							<Divider />
+							<Divider  />
 							<MenuItem 
 								value={"form"}
 							>
@@ -1418,7 +1566,7 @@ const RunWorkflow = (defaultprops) => {
 				</DialogContent>
 			</Dialog>
 
-			{isLoggedIn && userdata?.active_org?.id === workflow?.org_id ?
+			{isLoggedIn && userdata?.active_org?.id === workflow?.org_id || userdata?.support === true ?
 				<div style={{position: "fixed", top: 10, right: 20, }}>
 
 					<Button
@@ -1462,7 +1610,7 @@ const RunWorkflow = (defaultprops) => {
 							setEditWorkflowModalOpen(true)
 						}}
 					>
-						Edit Details
+						<EditIcon style={{marginRight: 5, }} /> Edit Form 
 					</Button>
 				</div> 
 			: null}
@@ -1476,7 +1624,8 @@ const RunWorkflow = (defaultprops) => {
 
 	// Check width
 	const overlap = window !== undefined && window.innerWidth !== undefined && window.innerWidth < 1300 
-	const formSidebar = !isLoaded || overlap || !(forms !== undefined && forms !== null && forms.length > 1) ? null :
+
+	const formSidebar = explorerUi === true || !isLoaded || overlap || !(forms !== undefined && forms !== null && forms.length > 1) ? null :
 		<div style={{
 			minWidth: 215, 
 			maxWidth: 215,
@@ -1485,10 +1634,10 @@ const RunWorkflow = (defaultprops) => {
 			minHeight: 500,
 			maxHeight: 500, 
 			position: "absolute", 
-			left: 100, 
+			left: 150, 
 			top: 0, 
 			border: "1px solid rgba(255,255,255,0.3)",
-			borderRadius: theme.palette.borderRadius,
+			borderRadius: theme.palette?.borderRadius,
 
 			padding: 25, 
 
@@ -1497,7 +1646,7 @@ const RunWorkflow = (defaultprops) => {
 		}}>
 			{selectedOrganization !== undefined && selectedOrganization !== null ?
 				<div style={{display: "flex", marginBottom: 20, }}>
-					<img src={selectedOrganization.image} style={{width: 40, height: 40, borderRadius: theme.palette.borderRadius, }} />
+					<img src={selectedOrganization.image} style={{width: 40, height: 40, borderRadius: theme.palette?.borderRadius, }} />
 					<Typography variant="body1" style={{marginTop: 7, marginLeft: 10, }}>
 						{selectedOrganization.name}
 					</Typography>
@@ -1506,41 +1655,7 @@ const RunWorkflow = (defaultprops) => {
 			: null}
 
 			{forms !== undefined && forms !== null && forms.length > 0 ?
-				<div>
-					{forms.map((form, formIndex) => {
-						if (form.id === undefined || form.id === null) {
-							return null
-						}
-
-						return (
-							<div key={formIndex} style={{marginBottom: 10, }}>
-								<RecentWorkflow 
-									workflow={form}
-									onclickHandler={() => {
-										navigate(`/forms/${form.id}`)
-										getWorkflow(form.id, sourceNode) 
-									}}
-									currentWorkflowId={workflow.id}
-								/>
-
-								{/*
-								<Button
-									variant="outlined"
-									color="primary"
-									fullWidth
-									style={{textTransform: "none", }}
-									onClick={() => {
-										navigate(`/forms/${form.id}`)
-										getWorkflow(form.id, sourceNode) 
-									}}
-								>
-									{form.name}
-								</Button>
-								*/}
-							</div>
-						)
-					})}
-				</div>
+				<FormList />
 			: 
 				<div>
 					No forms loaded
@@ -1557,4 +1672,4 @@ const RunWorkflow = (defaultprops) => {
 	)
 }
 
-export default RunWorkflow;
+export default RunWorkflow

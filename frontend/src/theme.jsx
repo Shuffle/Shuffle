@@ -1,7 +1,6 @@
 import React from "react";
 import { createTheme, adaptV4Theme } from "@mui/material/styles";
 
-//const theme = createTheme({
 const theme = createTheme(adaptV4Theme({
   palette: {
 	theme: "dark",

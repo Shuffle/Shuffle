@@ -319,7 +319,7 @@ const WorkflowValidationTimeline = (props) => {
 		<div 
 			style={{ 
 				padding: "10px 5px 10px 5px", 
-				borderRadius: theme.palette.borderRadius, 
+				borderRadius: theme.palette?.borderRadius, 
 
 				border: hovering === true && showHoverForClick === true ? `1px solid ${decidedColor}` : "1px solid rgba(255,255,255,0.0)",
 				cursor: hovering === true && showHoverForClick === true ? "pointer" : "default",

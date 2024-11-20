@@ -302,7 +302,7 @@ const SetAuthentication = (props) => {
   }
 
   return (
-    <div style={{ padding: 50, border: failed === true ? `1px solid ${red}` : "1px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius,  width: 500, margin: "auto", marginTop: 50, itemAlign: "center", textAlign: "center",}}>
+    <div style={{ padding: 50, border: failed === true ? `1px solid ${red}` : "1px solid rgba(255,255,255,0.6)", borderRadius: theme.palette?.borderRadius,  width: 500, margin: "auto", marginTop: 50, itemAlign: "center", textAlign: "center",}}>
       <Typography
         variant="h4"
         style={{ marginLeft: "auto", marginRight: "auto", marginTop: 50}}

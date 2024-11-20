@@ -100,7 +100,7 @@ const Detection = (props)  => {
 	  	  width: "100%", 
 		  padding: 50, 
 	  	  backgroundColor: theme.palette.backgroundColor,
-		  borderRadius: theme.palette.borderRadius,
+		  borderRadius: theme.palette?.borderRadius,
 	    }}
 	  >
         <Box

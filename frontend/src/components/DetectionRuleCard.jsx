@@ -98,7 +98,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 
   return (
     <Card style={{
-		borderRadius: theme.palette.borderRadius,
+		borderRadius: theme.palette?.borderRadius,
 		minHeight: 100, 
 		marginBottom: 10, 
 		paddingBottom: 0, 
@@ -145,7 +145,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 					backgroundColor: theme.palette.inputColor,
 					color: "white",
 					height: 40,
-					borderRadius: theme.palette.borderRadius,
+					borderRadius: theme.palette?.borderRadius,
 				  }}
 				>
 				  <MenuItem
@@ -197,7 +197,7 @@ const RuleCard = ({ ruleName, description, file_id, globalUrl, folderDisabled, i
 			overflow: 'visible', 
 			zIndex: 10,
 			//border: "1px solid rgba(255,255,255,0.3)", 
-			borderRadius: theme.palette.borderRadius,
+			borderRadius: theme.palette?.borderRadius,
 			marginTop: 5, 
 
 			minHeight: 40,

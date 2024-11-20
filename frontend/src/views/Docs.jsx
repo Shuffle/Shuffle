@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
+import React, { useEffect, useLayoutEffect, useRef, useState, useContext, memo } from "react"
 import { toast } from 'react-toastify';
 import Markdown from 'react-markdown'
 import theme from '../theme.jsx';
@@ -8,6 +8,7 @@ import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import remarkGfm from 'remark-gfm'
+import { Context } from "../context/ContextApi.jsx";
 import {
     Grid,
     TextField,
@@ -166,7 +167,7 @@ export const Img = (props) => {
 
     return(
 	  <img 
-		style={{border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, width: width, maxWidth: width, margin: "auto", marginTop: 10, marginBottom: 10, }} 
+		style={{border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, width: width, maxWidth: width, margin: "auto", marginTop: 10, marginBottom: 10, }} 
 		alt={props.alt} 
 		src={props.src} 
 	  />
@@ -213,7 +214,7 @@ export const CodeHandler = (props) => {
                 backgroundColor: theme.palette.inputColor,
                 overflowY: "auto",
                 // Have it inline
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
             }}
         >
             {validate.valid === true ?
@@ -250,10 +251,8 @@ export const CodeHandler = (props) => {
 }
 
 const Docs = (defaultprops) => {
-    const { globalUrl, selectedDoc, serverside, serverMobile } = defaultprops;
-
+    const { globalUrl, selectedDoc, serverside, serverMobile, userdata } = defaultprops;
     let navigate = useNavigate();
-
     // Quickfix for react router 5 -> 6 
     const params = useParams();
     //var props = JSON.parse(JSON.stringify(defaultprops))
@@ -526,7 +525,7 @@ const Docs = (defaultprops) => {
                     style={{
                         backgroundColor: theme.palette.inputColor,
                         padding: 15,
-                        borderRadius: theme.palette.borderRadius,
+                        borderRadius: theme.palette?.borderRadius,
                         marginBottom: 30,
                         display: "flex",
                     }}
@@ -892,7 +891,7 @@ const Docs = (defaultprops) => {
                 target="_blank"
                 style={{ textDecoration: "none", color: "inherit", flex: 1, margin: 10, }}
             >
-                <div style={{ cursor: hover ? "pointer" : "default", borderRadius: theme.palette.borderRadius, flex: 1, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, padding: 25, }}
+                <div style={{ cursor: hover ? "pointer" : "default", borderRadius: theme.palette?.borderRadius, flex: 1, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, padding: 25, }}
                     onClick={(event) => {
                         if (link === "" || link === undefined) {
                             event.preventDefault()
@@ -932,7 +931,7 @@ const Docs = (defaultprops) => {
 
         return (
             <Link to={link} style={hrefStyle}>
-                <div style={{ width: "100%", height: 80, cursor: hover ? "pointer" : "default", borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, }}
+                <div style={{ width: "100%", height: 80, cursor: hover ? "pointer" : "default", borderRadius: theme.palette?.borderRadius, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, }}
                     onMouseOver={() => {
                         setHover(true)
                     }}
@@ -968,8 +967,8 @@ const Docs = (defaultprops) => {
                 Documentation
             </Typography>
             <div style={{ display: "flex", marginTop: 25, }}>
-                <CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> />
-                <CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
+                <CustomButton title="Talk to Support" icon=<img src="/images/Shuffle_logo_new.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> />
+                <CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{ height: 35, width: 35, border: "", borderRadius: theme.palette?.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
             </div>
 
             <div style={{ textAlign: "left" }}>
@@ -1265,15 +1264,44 @@ const Docs = (defaultprops) => {
             </div>
         );
 
-    // Padding and zIndex etc set because of footer in cloud.
-    const loadedCheck = (
-        <div style={{ minHeight: 1000, zIndex: 50000, maxWidth: 1920, minWidth: isMobile ? null : 1366, margin: "auto", }}>
-            <BrowserView>{postDataBrowser}</BrowserView>
-            <MobileView>{postDataMobile}</MobileView>
-        </div>
-    );
+        console.log("docs render")
 
-    return <div style={{}}>{loadedCheck}</div>;
+    // Padding and zIndex etc set because of footer in cloud.
+const loadedCheck = (
+    <DocsWrapper userdata={userdata}>
+        <DocsContent postDataBrowser={postDataBrowser} postDataMobile={postDataMobile}/>
+    </DocsWrapper>
+);
+
+return <div>{loadedCheck}</div>;
+
 };
 
 export default Docs;
+
+const DocsContent = memo(({postDataBrowser, postDataMobile}) => {
+    return(
+        <div>
+            <BrowserView>{postDataBrowser}</BrowserView>
+            <MobileView>{postDataMobile}</MobileView>
+        </div>
+)})
+
+const DocsWrapper = memo(({userdata, children })=>{
+    
+    const { leftSideBarOpenByClick, windowWidth } = useContext(Context);
+
+    return (
+        <div style={{
+            minHeight: 1000, zIndex: 1, 
+            maxWidth: Math.min(!userdata?.support ? 1920 : leftSideBarOpenByClick ? windowWidth - 300 : windowWidth - 200, 1920), 
+            minWidth: isMobile ? null : userdata?.support ? leftSideBarOpenByClick ? 800 : 900 : null, margin: "auto", 
+            position: userdata?.support && leftSideBarOpenByClick ? "relative" : "static", 
+            left: userdata?.support && leftSideBarOpenByClick ? 120 : userdata?.support && !leftSideBarOpenByClick ? 80 : 0, 
+            marginLeft: windowWidth < 1920 ? leftSideBarOpenByClick && userdata?.support ? 160 : userdata?.support && !leftSideBarOpenByClick ? 80 : 0 : "auto", width: "100%", 
+            transition: "left 0.3s ease-in-out, min-width 0.3s ease-in-out, max-width 0.3s ease-in-out, position 0.3s ease-in-out, margin 0.3s ease-in-out, margin-left 0.3s ease"
+            }}>
+            {children}
+        </div>
+    )
+})

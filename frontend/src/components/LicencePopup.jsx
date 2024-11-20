@@ -87,7 +87,7 @@ const LicencePopup = (props) => {
 
     const paperStyle = {
         padding: 20,
-        borderRadius: theme.palette.borderRadius,
+        borderRadius: theme.palette?.borderRadius,
         height: "100%",
     }
 
@@ -193,7 +193,7 @@ const LicencePopup = (props) => {
 
         return (
             <Tooltip
-                style={{ borderRadius: theme.palette.borderRadius, }}
+                style={{ borderRadius: theme.palette?.borderRadius, }}
                 placement="bottom"
             >
                 <div style={{}}>
@@ -319,7 +319,7 @@ const LicencePopup = (props) => {
                                         margin: "auto",
                                         width: 100,
                                         backgroundColor: "white",
-                                        // borderRadius: theme.palette.borderRadius,
+                                        // borderRadius: theme.palette?.borderRadius,
                                     }}
                                 />
                                 : null}
@@ -389,7 +389,7 @@ const LicencePopup = (props) => {
                                                         value={feature.split("Worker License: ")[1]}
                                                         style={{
                                                             // backgroundColor: theme.palette.inputColor,
-                                                            // borderRadius: theme.palette.borderRadius,
+                                                            // borderRadius: theme.palette?.borderRadius,
                                                         }}
                                                         id={fieldId}
                                                         onClick={() => { }}
@@ -823,7 +823,7 @@ const LicencePopup = (props) => {
                         {errorMessage.length > 0 ? <Typography variant="h4">Error: {errorMessage}</Typography> : null}
                         <Card style={{
                             padding: 20,
-                            borderRadius: theme.palette.borderRadius,
+                            borderRadius: theme.palette?.borderRadius,
                             border: "1px solid #f85a3e",
                         }}>
                             <div>

@@ -6,6 +6,7 @@ import { makeStyles } from "@mui/styles";
 import { useNavigate, Link } from "react-router-dom";
 import countries from "../components/Countries.jsx";
 import CacheView from "../components/CacheView.jsx";
+import { CopyToClipboard } from "../views/Docs.jsx";
 
 import {
   FormControl,
@@ -77,6 +78,9 @@ import {
   Flag as FlagIcon,
   FmdGood as FmdGoodIcon,
   Warning as WarningIcon,
+	
+  ExpandLess as ExpandLessIcon, 
+  ExpandMore as ExpandMoreIcon, 
 } from "@mui/icons-material";
 
 //import { useAlert
@@ -215,6 +219,13 @@ const Admin = (props) => {
   const [pipelines, setPipelines] = React.useState([]);
   const [, forceUpdate] = React.useState();
   const [MFARequired, setMFARequired] = React.useState(selectedOrganization.mfa_required === undefined ? false : selectedOrganization.mfa_required);
+  const [listItemExpanded, setListItemExpanded] = React.useState(-1);
+  const [installationTab, setInstallationTab] = React.useState(0);
+  const [commandController, setCommandController] = React.useState({
+	  pipelines: false,
+	  proxies: false,
+  })
+  const [, setUpdate] = React.useState(0);
 
   useEffect(() => {
     if (selectedOrganization.mfa_required !== undefined) {
@@ -234,6 +245,13 @@ const Admin = (props) => {
     setTimeout(() => {
       const urlSearchParams = new URLSearchParams(window.location.search);
       const params = Object.fromEntries(urlSearchParams.entries());
+
+	  const foundOrgID = params["org_id"]
+	  if (foundOrgID !== null && foundOrgID !== undefined) {
+  		handleClickChangeOrg(foundOrgID)
+	  }
+	
+
 	  const foundTab = params["admin_tab"]
 	  if (foundTab !== null && foundTab !== undefined) {
 		  if (adminTab === 3) {
@@ -862,7 +880,7 @@ If you're interested, please let me know a time that works for you, or set up a 
       .then((responseJson) => {
         setWebHooks(responseJson.webhooks || []); // Handling the case where the result is null or undefined
         setAllSchedules(responseJson.schedules || []);
-        // setPipelines(responseJson.pipelines || []);
+        setPipelines(responseJson.pipelines || []);
       })
       .catch((error) => {
         // toast(error.toString());
@@ -1048,14 +1066,14 @@ If you're interested, please let me know a time that works for you, or set up a 
   
     const data = {
       name: pipeline.name,
+      id: pipeline.id,
       type: state,
+	  command: pipeline.definition,
       environment: pipeline.environment,
-      workflow_id: pipeline.workflow_id,
-      trigger_id: pipeline.trigger_id,
     };
   
     if (state === "start") toast("starting the pipeline");
-    else toast("stopping the pipeline");
+    else toast.info("Stopping the pipeline. This may take a few minutes to propagate.")
   
     const url = `${globalUrl}/api/v1/triggers/pipeline`;
     fetch(url, {
@@ -1077,10 +1095,26 @@ If you're interested, please let me know a time that works for you, or set up a 
       })
       .then((responseJson) => {
         if (!responseJson.success) {
-          toast("Failed to update the pipeline: " + responseJson.reason);
+          toast.error("Failed to update the pipeline: " + responseJson.reason);
         } else {
-          if (state === "start") toast("Successfully created pipeline");
-          else toast("Sucessfully stopped the pipeline");
+			setTimeout(() => {
+				handleGetAllTriggers()
+			}, 5000)
+
+			setTimeout(() => {
+				handleGetAllTriggers()
+			}, 20000)
+
+			setTimeout(() => {
+				handleGetAllTriggers()
+			}, 120000)
+			/*
+          if (state === "start") {
+			  toast("Successfully created pipeline");
+		  } else {
+          	toast("Sucessfully stopped the pipeline");
+		  }
+		  */
         }
       })
       .catch((error) => {
@@ -1255,10 +1289,10 @@ If you're interested, please let me know a time that works for you, or set up a 
           }
 
           selectedOrganization.cloud_sync = !selectedOrganization.cloud_sync;
-          setSelectedOrganization(selectedOrganization);
-          setCloudSyncApikey("");
+          setSelectedOrganization(selectedOrganization)
+          setCloudSyncApikey("")
 
-          handleGetOrg(userdata.active_org.id);
+          handleGetOrg(userdata.active_org.id)
         }
       })
       .catch((error) => {
@@ -1510,23 +1544,17 @@ If you're interested, please let me know a time that works for you, or set up a 
   };
 
   const handleGetOrg = (orgId) => {
-    if (
-      serverside !== true &&
-      window.location.search !== undefined &&
-      window.location.search !== null
-    ) {
+    if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
       const urlSearchParams = new URLSearchParams(window.location.search);
       const params = Object.fromEntries(urlSearchParams.entries());
-      const foundorgid = params["org_id"];
-      if (foundorgid !== undefined && foundorgid !== null) {
-        orgId = foundorgid;
+      const foundorgid = params["org_id"]
+      if (foundorgid !== undefined && foundorgid !== null && foundorgid.length === 36) {
+        orgId = foundorgid
       }
     }
 
     if (orgId.length === 0) {
-      toast(
-        "Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.",
-      );
+      toast("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.")
       return;
     }
 
@@ -1569,7 +1597,6 @@ If you're interested, please let me know a time that works for you, or set up a 
             responseJson.lead_info !== null
           ) {
             var leads = [];
-			  console.log("LEADINFO: ", responseJson.lead_info)
             if (responseJson.lead_info.testing_shuffle) {
               leads.push("testing shuffle");
             }
@@ -1730,21 +1757,23 @@ If you're interested, please let me know a time that works for you, or set up a 
       })
       .then(function (responseJson) {
         if (responseJson.success === true) {
-          if (
-            responseJson.region_url !== undefined &&
-            responseJson.region_url !== null &&
-            responseJson.region_url.length > 0
-          ) {
-            localStorage.setItem("globalUrl", responseJson.region_url);
+          if (responseJson.region_url !== undefined && responseJson.region_url !== null && responseJson.region_url.length > 0) {
+            localStorage.setItem("globalUrl", responseJson.region_url)
             //globalUrl = responseJson.region_url
           }
 
           setTimeout(() => {
-            window.location.reload();
+            window.location.reload()
           }, 2000);
           toast("Successfully changed active organization - refreshing!");
         } else {
-          toast("Failed changing org: " + responseJson.reason);
+			if (responseJson.reason !== undefined && responseJson.reason !== null) {
+				if (!responseJson.reason.includes("already")) {
+          			toast("Failed changing org: " + responseJson.reason);
+				}
+			} else {
+          		toast("Failed changing org")
+			}
         }
       })
       .catch((error) => {
@@ -1919,7 +1948,7 @@ If you're interested, please let me know a time that works for you, or set up a 
   };
 
   const rerunCloudWorkflows = (environment) => {
-    toast("Starting execution reruns. This can run in the background.");
+    toast("Starting execution reruns. This runs in the background. Check the /debug view to see the progress.");
     fetch(`${globalUrl}/api/v1/environments/${environment.id}/rerun`, {
       method: "GET",
       credentials: "include",
@@ -2238,11 +2267,11 @@ If you're interested, please let me know a time that works for you, or set up a 
         setEnvironments(responseJson);
 
         // Helper info for users in case they have a large queue and don't know about queue flushing
-        if (
-          responseJson !== undefined &&
-          responseJson !== null &&
-          responseJson.length > 0
-        ) {
+        if (responseJson !== undefined && responseJson !== null && responseJson.length > 0) {
+		  if (responseJson.length === 1 && responseJson[0].Type !== "cloud") {
+  			setListItemExpanded(0)
+		  }
+
           for (var i = 0; i < responseJson.length; i++) {
             const env = responseJson[i];
 
@@ -2351,8 +2380,8 @@ If you're interested, please let me know a time that works for you, or set up a 
     2: "app_auth",
     3: "files",
     4: "cache",
-    5: "schedules",
-    6: "environments",
+    5: "triggers",
+    6: "locations",
     7: "suborgs",
   };
 
@@ -2446,14 +2475,9 @@ If you're interested, please let me know a time that works for you, or set up a 
     }
   }
 
-  if (
-    selectedOrganization.id === undefined &&
-    userdata !== undefined &&
-    userdata.active_org !== undefined &&
-    orgRequest
-  ) {
+  if ( selectedOrganization.id === undefined && userdata !== undefined && userdata.active_org !== undefined && orgRequest) {
     setOrgRequest(false);
-    handleGetOrg(userdata.active_org.id);
+    handleGetOrg(userdata.active_org.id)
   }
 
   const paperStyle = {
@@ -2802,10 +2826,11 @@ If you're interested, please let me know a time that works for you, or set up a 
       }}
       PaperProps={{
         style: {
-          backgroundColor: theme.palette.surfaceColor,
+          backgroundColor: theme.palette.platformColor,
           color: "white",
           minWidth: "800px",
           minHeight: "320px",
+		  padding: 50, 
         },
       }}
     >
@@ -3225,7 +3250,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           style={{
             margin: 4,
             backgroundColor: theme.palette.platformColor,
-            borderRadius: theme.palette.borderRadius,
+            borderRadius: theme.palette?.borderRadius,
             border: "1px solid rgba(255,255,255,0.3)",
             color: "white",
             minHeight: expanded ? 250 : "inherit",
@@ -4517,16 +4542,6 @@ If you're interested, please let me know a time that works for you, or set up a 
             />
 
             <ListItemText
-              primary="API key"
-              style={{
-                marginleft: 10,
-                minWidth: 100,
-                maxWidth: 100,
-                overflow: "hidden",
-              }}
-            />
-
-            <ListItemText
               primary="Role"
               style={{ minWidth: 150, maxWidth: 150 }}
             />
@@ -4622,59 +4637,6 @@ If you're interested, please let me know a time that works for you, or set up a 
                         maxWidth: 350,
                         overflow: "hidden",
                       }}
-                    />
-
-                    <ListItemText
-                      style={{ marginLeft: 10, maxWidth: 100, minWidth: 100 }}
-                      primary={
-                        data.apikey === undefined ||
-                        data.apikey.length === 0 ? (
-                          ""
-                        ) : (
-                          <Tooltip
-                            title={"Copy Api Key"}
-                            style={{}}
-                            aria-label={"Copy APIkey"}
-                          >
-                            <IconButton
-                              style={{}}
-                              onClick={() => {
-                                const elementName = "copy_element_shuffle";
-                                var copyText =
-                                  document.getElementById(elementName);
-                                if (
-                                  copyText !== null &&
-                                  copyText !== undefined
-                                ) {
-                                  const clipboard = navigator.clipboard;
-                                  if (clipboard === undefined) {
-                                    toast(
-                                      "Can only copy over HTTPS (port 3443)",
-                                    );
-                                    return;
-                                  }
-
-                                  navigator.clipboard.writeText(data.apikey);
-                                  copyText.select();
-                                  copyText.setSelectionRange(
-                                    0,
-                                    99999,
-                                  ); /* For mobile devices */
-
-                                  /* Copy the text inside the text field */
-                                  document.execCommand("copy");
-
-                                  toast("Apikey copied to clipboard");
-                                }
-                              }}
-                            >
-                              <FileCopyIcon
-                                style={{ color: "rgba(255,255,255,0.8)" }}
-                              />
-                            </IconButton>
-                          </Tooltip>
-                        )
-                      }
                     />
 
                     <ListItemText
@@ -4995,7 +4957,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           </List>
         )}
 
-        <div style={{ marginTop: 20, marginBottom: 20 }}>
+        <div style={{ marginTop: 50, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Webhooks</h2>
           <span style={{ marginLeft: 25 }}>
 			Webhooks used in Shuffle workflows.&nbsp;
@@ -5149,7 +5111,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           </List>
         )}
   
-        <div style={{ marginTop: 20, marginBottom: 20 }}>
+        <div style={{ marginTop: 50, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Pipelines</h2>
           <span style={{ marginLeft: 25 }}>
             Controls a pipeline to run things.{" "}
@@ -5172,8 +5134,8 @@ If you're interested, please let me know a time that works for you, or set up a 
           }}
         />
         {pipelines === undefined ||
-        pipelines === null ||
-        pipelines.length === 0 ? (
+			pipelines === null ||
+			pipelines.length === 0 ? (
           <div
             style={{
               textAlign: "center",
@@ -5189,17 +5151,24 @@ If you're interested, please let me know a time that works for you, or set up a 
             <ListItem>
               <ListItemText
                 primary="Name"
-                style={{ maxWidth: 200, minWidth: 200 }}
+                style={{ maxWidth: 250, minWidth: 250 }}
               />
               <ListItemText
                 primary="Environment"
                 style={{ maxWidth: 150, minWidth: 150 }}
               />
               <ListItemText
-                primary="Workflow"
-                style={{ maxWidth: 315, minWidth: 315 }}
+                primary="Total Runs"
+                style={{ maxWidth: 150, minWidth: 150}}
               />
-              <ListItemText primary="Actions" />
+              <ListItemText
+                primary="Pipeline"
+                style={{ maxWidth: 300, minWidth: 300,}}
+              />
+              <ListItemText
+                primary="Actions"
+                style={{ maxWidth: 180, minWidth: 180,}}
+              />
             </ListItem>
             {pipelines.map((pipeline, index) => {
               var bgColor = "#27292d";
@@ -5210,7 +5179,7 @@ If you're interested, please let me know a time that works for you, or set up a 
               return (
                 <ListItem key={index} style={{ backgroundColor: bgColor }}>
                   <ListItemText
-                    style={{ maxWidth: 200, minWidth: 200 }}
+                    style={{ maxWidth: 250, minWidth: 250, }}
                     primary={pipeline.name}
                   />
                   <ListItemText
@@ -5218,34 +5187,27 @@ If you're interested, please let me know a time that works for you, or set up a 
                     primary={pipeline.environment}
                   />
                   <ListItemText
-                    style={{ maxWidth: 315, minWidth: 315 }}
-                    primary={
-                      <a
-                        style={{ textDecoration: "none", color: "#f85a3e" }}
-                        href={`/workflows/${pipeline.workflow_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {pipeline.workflow_id}
-                      </a>
-                    }
+                    style={{ maxWidth: 150, minWidth: 150 }}
+                    primary={pipeline.total_runs}
                   />
-                  <ListItemText>
+                  <ListItemText
+                    style={{ maxWidth: 300, minWidth: 300}}
+                    primary={pipeline.definition}
+                  />
+                  <ListItemText
+                    style={{ marginleft: 30, }}
+				  >
                     <Button
-                      style={{ marginLeft: "18%" }}
+                      style={{}}
                       variant={
-                        pipeline.status === "running" ? "contained" : "outlined"
+                        "outlined"
                       }
                       disabled={pipeline.status === "uninitialized"}
                       onClick={() => {
-                        if (pipeline.status === "running") {
-                          changePipelineState(pipeline, "stop");
-                        } else changePipelineState(pipeline, "start");
+                          changePipelineState(pipeline, "stop")
                       }}
                     >
-                      {pipeline.status === "running"
-                        ? "Stop pipeline"
-                        : "Start pipeline"}
+                    	Stop pipeline
                     </Button>
                   </ListItemText>
                 </ListItem>
@@ -5461,7 +5423,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 			src={data.app.large_image}
 			style={{
 			  maxWidth: 50,
-			  borderRadius: theme.palette.borderRadius,
+			  borderRadius: theme.palette?.borderRadius,
 			}}
 		  />
 		  style={{ minWidth: 75, maxWidth: 75 }}
@@ -5728,7 +5690,7 @@ If you're interested, please let me know a time that works for you, or set up a 
           </DialogTitle>
 
           <DialogContent style={{marginLeft: 0, paddingLeft: 0, }}>
-            <div style={{display: "flex", position: "sticky", top: 0, zIndex: 1, backgroundColor: theme.palette.surfaceColor, borderRadius: theme.palette.borderRadius, padding: 20, marginBottom: 10, }}>
+            <div style={{display: "flex", position: "sticky", top: 0, zIndex: 1, backgroundColor: theme.palette.surfaceColor, borderRadius: theme.palette?.borderRadius, padding: 20, marginBottom: 10, }}>
 		  		<div style={{marginRight: 50, minWidth: 250, }}>
 				  <Typography style={{marginTop: 10, }}>
 		  			Name
@@ -5778,7 +5740,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 				  </Select>
 			  : 
 				<Typography>
-				  	Environments failed to load. Please try again 
+				  	Locations failed to load. Please try again 
 				</Typography>
 			  }
             </div>
@@ -5833,7 +5795,7 @@ If you're interested, please let me know a time that works for you, or set up a 
 								  <img 
 									src={data.app.large_image ? data.app.large_image : '/images/no_image.png'}
 									alt=""
-									style={{ borderRadius: theme.palette.borderRadius, width: 50, height: 50, marginRight: 10 }} 
+									style={{ borderRadius: theme.palette?.borderRadius, width: 50, height: 50, marginRight: 10 }} 
 								  />
 								  <Checkbox
 									checked={checked}
@@ -6218,190 +6180,303 @@ If you're interested, please let me know a time that works for you, or set up a 
       });
   };
 
-  const environmentView =
-    curTab === 6 ? (
-      <div>
-        <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <h2 style={{ display: "inline" }}>Environments</h2>
-          <span style={{ marginLeft: 25 }}>
-            Decides what Orborus environment to run your workflow actions. If
-            you have scale problems, talk to our team:
-            support@shuffler.io.&nbsp;
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              href="/docs/organizations#environments"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
-            >
-              Learn more
-            </a>
-          </span>
-        </div>
-        <Button
-          style={{}}
-          variant="contained"
-          color="primary"
-          onClick={() => setModalOpen(true)}
-        >
-          Add environment
-        </Button>
-        <Button
-          style={{ marginLeft: 5, marginRight: 15 }}
-          variant="contained"
-          color="primary"
-          onClick={() => getEnvironments()}
-        >
-          <CachedIcon />
-        </Button>
-        <Switch
-          checked={showArchived}
-          onChange={() => {
-            setShowArchived(!showArchived);
-          }}
-        />{" "}
-        Show disabled
-        <Divider
-          style={{
-            marginTop: 20,
-            marginBottom: 20,
-            backgroundColor: theme.palette.inputColor,
-          }}
-        />
-        <List>
-          <ListItem style={{ paddingLeft: 10 }}>
-            <ListItemText
-              primary="Type"
-              style={{ minWidth: 50, maxWidth: 50 }}
-            />
-            <ListItemText
-              primary="Scale"
-              style={{ minWidth: 85, maxWidth: 85 }}
-            />
-            <ListItemText
-              primary="Name"
-              style={{ minWidth: 150, maxWidth: 150 }}
-            />
-            <ListItemText
-              primary="Status"
-              style={{ minWidth: 150, maxWidth: 150 }}
-            />
-            <ListItemText
-              primary="Command"
-              style={{ minWidth: 100, maxWidth: 100 }}
-            />
-            <ListItemText
-              primary="Location"
-              style={{ minWidth: 100, maxWidth: 100 }}
-            />
-            <ListItemText
-              primary={"Queue"}
-              style={{ minWidth: 100, maxWidth: 100 }}
-            />
-            <ListItemText
-              primary="Default"
-              style={{ minWidth: 110, maxWidth: 110 }}
-            />
-            <ListItemText
-              primary="Actions"
-              style={{ minWidth: 200, maxWidth: 200 }}
-            />
-          </ListItem>
-          {environments === undefined || environments === null
-            ? null
-            : environments.map((environment, index) => {
-                if (!showArchived && environment.archived) {
-                  return null;
-                }
 
-                if (environment.archived === undefined) {
-                  return null;
-                }
+  const getOrborusCommand = (environment) => {
+	if (environment.Type === "cloud") {
+	  //toast("No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.",)
+	  return
+	}
 
-                var bgColor = "#27292d";
-                if (index % 2 === 0) {
-                  bgColor = "#1f2023";
-                }
+	if (
+	  props.userdata.active_org === undefined ||
+	  props.userdata.active_org === null
+	) {
+	  toast(
+		"No active organization yet. Are you logged in?",
+	  );
+	  return;
+	}
 
-                // Check if there's a notification for it in userdata.priorities
-                var showCPUAlert = false;
-                var foundIndex = -1;
-                if (
-                  userdata !== undefined &&
-                  userdata !== null &&
-                  userdata.priorities !== undefined &&
-                  userdata.priorities !== null &&
-                  userdata.priorities.length > 0
-                ) {
-                  foundIndex = userdata.priorities.findIndex(
-                    (prio) => prio.name.includes("CPU") && prio.active === true,
-                  );
+	const elementName = "copy_element_shuffle";
+	const auth =
+	  environment.auth === ""
+		? "cb5st3d3Z!3X3zaJ*Pc"
+		: environment.auth;
+	const newUrl =
+	  globalUrl === "https://shuffler.io"
+		? "https://shuffle-backend-stbuwivzoq-nw.a.run.app"
+		: globalUrl;
 
-                  if (
-                    foundIndex >= 0 &&
-                    userdata.priorities[foundIndex].name.endsWith(
-                      environment.Name,
-                    )
-                  ) {
-                    showCPUAlert = true;
-                  }
-                }
+    var skipPipeline = false
+    if (commandController.pipelines === true) {
+        skipPipeline = true
+    }
 
-                const queueSize =
-                  environment.queue !== undefined && environment.queue !== null
-                    ? environment.queue < 0
-                      ? 0
-                      : environment.queue > 1000
-                        ? ">1000"
-                        : environment.queue
-                    : 0;
+	var addProxy = false
+    if (commandController.proxies === true) {
+		addProxy = true
+    }
 
-                return (
-                  <span key={index}>
-                    <ListItem
-                      key={index}
-                      style={{ backgroundColor: bgColor, marginLeft: 0 }}
-                    >
-                      <ListItemText
-                        primary={
-                          environment.run_type === "cloud" ||
-                          environment.name === "Cloud" ? (
-                            <Tooltip title="Cloud" placement="top">
-                              <CloudIcon
-                                style={{ color: "rgba(255,255,255,0.8)" }}
-                              />
-                            </Tooltip>
-                          ) : environment.run_type === "docker" ? (
-                            <Tooltip title="Docker" placement="top">
-                              <img
-                                src="/icons/docker.svg"
-                                style={{ width: 30, height: 30 }}
-                              />
-                            </Tooltip>
-                          ) : environment.run_type === "k8s" ? (
-                            <Tooltip title="Kubernetes" placement="top">
-                              <img
-                                src="/icons/k8s.svg"
-                                style={{ width: 30, height: 30 }}
-                              />
-                            </Tooltip>
-                          ) : (
-                            <Tooltip title="Unknown" placement="top">
-                              <HelpIcon
-                                style={{ color: "rgba(255,255,255,0.8)" }}
-                              />
-                            </Tooltip>
-                          )
-                        }
-                        style={{
-                          minWidth: 50,
-                          maxWidth: 50,
-                          overflow: "hidden",
-                        }}
-                      />
-                      <ListItemText
-                        primary={
-                          environment.licensed ? (
-                            <Tooltip title="Licensed" placement="top">
+	if (installationTab === 1) {
+		return (`docker run -d \\
+	--restart=always \\
+	--name="shuffle-orborus" \\
+	--pull=always \\
+	--volume "/var/run/docker.sock:/var/run/docker.sock" \\
+	-e AUTH="${environment.auth}" \\
+	-e ENVIRONMENT_NAME="${environment.Name}" \\
+	-e ORG="${environment.org_id}" \\
+	-e SHUFFLE_WORKER_IMAGE="ghcr.io/shuffle/shuffle-worker:nightly" \\
+	-e SHUFFLE_SWARM_CONFIG=run \\
+	-e SHUFFLE_LOGS_DISABLED=true \\
+	-e BASE_URL="${newUrl}" \\${addProxy ? "\n        -e HTTPS_PROXY=IP:PORT \\" : ""}${skipPipeline ? "\n        -e SHUFFLE_SKIP_PIPELINES=true \\" : ""}
+	ghcr.io/shuffle/shuffle-orborus:latest
+		`)
+	} else if (installationTab === 2) {
+		return `https://shuffler.io/docs/configuration#kubernetes`
+	}
+
+	const commandData = `docker rm shuffle-orborus --force; \\\ndocker run -d \\
+	--restart=always \\
+	--name="shuffle-orborus" \\
+	--pull=always  \\
+	--volume "/var/run/docker.sock:/var/run/docker.sock" \\
+	-e AUTH="${auth}" \\
+	-e ENVIRONMENT_NAME="${environment.Name}" \\
+	-e ORG="${props.userdata.active_org.id}" \\
+	-e BASE_URL="${newUrl}" \\${addProxy ? "\n        -e HTTPS_PROXY=IP:PORT \\" : ""}${skipPipeline ? "\n        -e SHUFFLE_SKIP_PIPELINES=true \\" : ""}
+	ghcr.io/shuffle/shuffle-orborus:latest`
+
+	return commandData
+
+
+	var copyText =
+	  document.getElementById(elementName);
+	if (
+	  copyText !== null &&
+	  copyText !== undefined
+	) {
+	  const clipboard = navigator.clipboard;
+	  if (clipboard === undefined) {
+		toast(
+		  "Can only copy over HTTPS (port 3443)",
+		);
+		return;
+	  }
+
+	  navigator.clipboard.writeText(commandData);
+	  copyText.select();
+	  copyText.setSelectionRange(
+		0,
+		99999,
+	  ); /* For mobile devices */
+
+	  /* Copy the text inside the text field */
+	  document.execCommand("copy");
+
+	  toast("Orborus command copied to clipboard");
+	}
+  }
+
+const environmentView =
+curTab === 6 ? (
+  <div>
+	<div style={{ marginTop: 20, marginBottom: 20 }}>
+	  <h2 style={{ display: "inline" }}>Locations</h2>
+	  <span style={{ marginLeft: 25 }}>
+		Decides where to run your workflows and actions. Uses Shuffle's Orborus runner to handle queued jobs onprem. Previously "Environments".
+
+		If you have scale problems, talk to our team: support@shuffler.io.&nbsp;
+		<a
+		  target="_blank"
+		  rel="noopener noreferrer"
+		  href="/docs/organizations#environments"
+		  style={{ textDecoration: "none", color: "#f85a3e" }}
+		>
+		  Learn more
+		</a>
+	  </span>
+	</div>
+	<Button
+	  style={{}}
+	  variant="contained"
+	  color="primary"
+	  onClick={() => setModalOpen(true)}
+	>
+	  Add location 
+	</Button>
+	<Button
+	  style={{ marginLeft: 5, marginRight: 15 }}
+	  variant="contained"
+	  color="primary"
+	  onClick={() => getEnvironments()}
+	>
+	  <CachedIcon />
+	</Button>
+	<Switch
+	  checked={showArchived}
+	  onChange={() => {
+		setShowArchived(!showArchived);
+	  }}
+	/>{" "}
+	Show disabled
+	<Divider
+	  style={{
+		marginTop: 20,
+		marginBottom: 20,
+		backgroundColor: theme.palette.inputColor,
+	  }}
+	/>
+	<List>
+	  <ListItem style={{ paddingLeft: 10 }}>
+		<ListItemText
+		  primary="Type"
+		  style={{ minWidth: 50, maxWidth: 50 }}
+		/>
+		<ListItemText
+		  primary="Scale"
+		  style={{ minWidth: 60, maxWidth: 60}}
+		/>
+		<ListItemText
+		  primary="Lake"
+		  style={{ minWidth: 60, maxWidth: 60 }}
+		/>
+		<ListItemText
+		  primary="Name"
+		  style={{ minWidth: 200, maxWidth: 200}}
+		/>
+		<ListItemText
+		  primary="Status"
+		  style={{ minWidth: 150, maxWidth: 150, marginRight: 10, }}
+		/>
+		<ListItemText
+		  primary="Type"
+		  style={{ minWidth: 100, maxWidth: 100 }}
+		/>
+		<ListItemText
+		  primary={"Queue"}
+		  style={{ minWidth: 80, maxWidth: 80}}
+		/>
+		<ListItemText
+		  primary="Actions"
+		  style={{ minWidth: 200, maxWidth: 200 }}
+		/>
+	  </ListItem>
+	  {environments === undefined || environments === null
+		? null
+		: environments.map((environment, index) => {
+			if (!showArchived && environment.archived) {
+			  return null;
+			}
+
+			if (environment.archived === undefined) {
+			  return null;
+			}
+
+			var bgColor = "#27292d";
+			if (index % 2 === 0) {
+			  bgColor = "#1f2023";
+			}
+
+			// Check if there's a notification for it in userdata.priorities
+			var showCPUAlert = false;
+			var foundIndex = -1;
+			if (
+			  userdata !== undefined &&
+			  userdata !== null &&
+			  userdata.priorities !== undefined &&
+			  userdata.priorities !== null &&
+			  userdata.priorities.length > 0
+			) {
+			  foundIndex = userdata.priorities.findIndex(
+				(prio) => prio.name.includes("CPU") && prio.active === true,
+			  );
+
+			  if (
+				foundIndex >= 0 &&
+				userdata.priorities[foundIndex].name.endsWith(
+				  environment.Name,
+				)
+			  ) {
+				showCPUAlert = true;
+			  }
+			}
+
+			const queueSize =
+			  environment.queue !== undefined && environment.queue !== null
+				? environment.queue < 0
+				  ? 0
+				  : environment.queue > 1000
+					? ">1000"
+					: environment.queue
+				: 0;
+
+
+			const orborusCommandWrapper = () => {
+				// Check the current text 
+				const orborusCommand = document.getElementById("orborus_command")
+				if (orborusCommand === undefined || orborusCommand === null) {
+					return getOrborusCommand(environment)
+				}
+
+				return orborusCommand.textContent
+			}
+
+			return (
+			  <span key={index}>
+				<ListItem
+				  key={index}
+				  style={{ cursor: "pointer", backgroundColor: bgColor, marginLeft: 0 }}
+				  onClick={() => {
+					if (environment.Type === "cloud") {
+						toast("Cloud environments are not configurable. To see what is possible, create a new environment.")
+						return
+					}
+
+					setListItemExpanded(listItemExpanded === index ? -1 : index)
+				  }}
+				>
+				  <ListItemText
+					primary={
+					  environment.run_type === "cloud" ||
+					  environment.name === "Cloud" ? (
+						<Tooltip title="Cloud" placement="top">
+						  <CloudIcon
+							style={{ color: "rgba(255,255,255,0.8)" }}
+						  />
+						</Tooltip>
+					  ) : environment.run_type === "docker" ? (
+						<Tooltip title="Docker" placement="top">
+						  <img
+							src="/icons/docker.svg"
+							style={{ width: 30, height: 30 }}
+						  />
+						</Tooltip>
+					  ) : environment.run_type === "k8s" ? (
+						<Tooltip title="Kubernetes" placement="top">
+						  <img
+							src="/icons/k8s.svg"
+							style={{ width: 30, height: 30 }}
+						  />
+						</Tooltip>
+					  ) : (
+						<Tooltip title="Unknown" placement="top">
+						  <HelpIcon
+							style={{ color: "rgba(255,255,255,0.8)" }}
+						  />
+						</Tooltip>
+					  )
+					}
+					style={{
+					  minWidth: 50,
+					  maxWidth: 50,
+					  overflow: "hidden",
+					}}
+				  />
+				  <ListItemText
+					primary={
+					  environment.licensed ? (
+						<Tooltip title="Scale configured (auto on cloud)" placement="top">
                               <CheckCircleIcon style={{ color: "#4caf50" }} />
                             </Tooltip>
                           ) : (
@@ -6410,7 +6485,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                               placement="top"
                             >
                               <a
-                                href="/admin?tab=billing"
+                                href="/docs/configuration#scaling-shuffle"
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
@@ -6420,16 +6495,61 @@ If you're interested, please let me know a time that works for you, or set up a 
                           )
                         }
                         style={{
-                          minWidth: 85,
-                          maxWidth: 85,
+                          minWidth: 60,
+                          maxWidth: 60,
+                          overflow: "hidden",
+                        }}
+                      />
+					  <ListItemText
+                        primary={
+						  environment.Type === "cloud" ? 
+
+                            <Tooltip title={"Make a new environment to set up a Datalake node. Please contact support@shuffler.io if this is something you want to see on Cloud directly."} placement="top">
+                              <CancelIcon style={{ color: "rgba(255,255,255,0.3)" }} />
+                            </Tooltip>
+						  :
+                          environment?.data_lake?.enabled ? (
+                              <a
+                                href="/detections/Sigma"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+								<Tooltip title={"Data Lake node enabled. Check /detections/Sigma to learn more"} placement="top">
+								  <CheckCircleIcon style={{ color: "#4caf50" }} />
+								</Tooltip>
+							  </a>
+                          ) : (
+                            <Tooltip
+                              title="Data Lake node disabled. Click to enable."
+                              placement="top"
+							  onClick={(e) => {
+								  e.preventDefault()
+								  e.stopPropagation()
+
+								  window.open("/detections/Sigma", "_blank")
+							  }}
+                            >
+                              <a
+                                href="/detections/Sigma"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <CancelIcon style={{ color: "#f85a3e" }} />
+                              </a>
+                            </Tooltip>
+                          )
+                        }
+                        style={{
+                          minWidth: 60,
+                          maxWidth: 60,
                           overflow: "hidden",
                         }}
                       />
                       <ListItemText
                         primary={environment.Name}
                         style={{
-                          minWidth: 150,
-                          maxWidth: 150,
+                          minWidth: 200,
+                          maxWidth: 200,
                           overflow: "hidden",
                         }}
                       />
@@ -6441,7 +6561,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                             environment.running_ip.length === 0 ? (
                               <div>Not running</div>
                             ) : (
-                              environment.running_ip
+                              environment.running_ip.split(":")[0]
                             )
                           ) : (
                             "N/A"
@@ -6450,90 +6570,9 @@ If you're interested, please let me know a time that works for you, or set up a 
                         style={{
                           minWidth: 150,
                           maxWidth: 150,
+						  marginRight: 10, 
                           overflow: "hidden",
                         }}
-                      />
-
-                      <ListItemText
-                        style={{ minWidth: 100, maxWidth: 100 }}
-                        primary={
-                          <Tooltip
-                            title={"Copy Orborus command"}
-                            style={{}}
-                            aria-label={"Copy orborus command"}
-                          >
-                            <IconButton
-                              style={{}}
-                              disabled={environment.Type === "cloud"}
-                              onClick={() => {
-                                if (environment.Type === "cloud") {
-                                  toast(
-                                    "No Orborus necessary for environment cloud. Create and use a different environment to run executions on-premises.",
-                                  );
-                                  return;
-                                }
-
-                                if (
-                                  props.userdata.active_org === undefined ||
-                                  props.userdata.active_org === null
-                                ) {
-                                  toast(
-                                    "No active organization yet. Are you logged in?",
-                                  );
-                                  return;
-                                }
-
-                                const elementName = "copy_element_shuffle";
-                                const auth =
-                                  environment.auth === ""
-                                    ? "cb5st3d3Z!3X3zaJ*Pc"
-                                    : environment.auth;
-                                const newUrl =
-                                  globalUrl === "https://shuffler.io"
-                                    ? "https://shuffle-backend-stbuwivzoq-nw.a.run.app"
-                                    : globalUrl;
-
-                                const commandData = `docker run --restart=always --volume "/var/run/docker.sock:/var/run/docker.sock" -e ENVIRONMENT_NAME="${environment.Name}" -e 'AUTH=${auth}' -e ORG="${props.userdata.active_org.id}" -e DOCKER_API_VERSION=1.40 -e BASE_URL="${newUrl}" --name="shuffle-orborus" -d ghcr.io/shuffle/shuffle-orborus:latest`;
-                                var copyText =
-                                  document.getElementById(elementName);
-                                if (
-                                  copyText !== null &&
-                                  copyText !== undefined
-                                ) {
-                                  const clipboard = navigator.clipboard;
-                                  if (clipboard === undefined) {
-                                    toast(
-                                      "Can only copy over HTTPS (port 3443)",
-                                    );
-                                    return;
-                                  }
-
-                                  navigator.clipboard.writeText(commandData);
-                                  copyText.select();
-                                  copyText.setSelectionRange(
-                                    0,
-                                    99999,
-                                  ); /* For mobile devices */
-
-                                  /* Copy the text inside the text field */
-                                  document.execCommand("copy");
-
-                                  toast("Orborus command copied to clipboard");
-                                }
-                              }}
-                            >
-                              <FileCopyIcon
-                                disabled={environment.Type === "cloud"}
-                                style={{
-                                  color:
-                                    environment.Type === "cloud"
-                                      ? "rgba(255,255,255,0.2)"
-                                      : "rgba(255,255,255,0.8)",
-                                }}
-                              />
-                            </IconButton>
-                          </Tooltip>
-                        }
                       />
 
                       <ListItemText
@@ -6542,8 +6581,8 @@ If you're interested, please let me know a time that works for you, or set up a 
                       />
                       <ListItemText
                         style={{
-                          minWidth: 100,
-                          maxWidth: 100,
+                          minWidth: 60,
+                          maxWidth: 60,
                           overflow: "hidden",
                           marginLeft: 0,
                         }}
@@ -6551,31 +6590,8 @@ If you're interested, please let me know a time that works for you, or set up a 
                       />
                       <ListItemText
                         style={{
-                          minWidth: 100,
-                          maxWidth: 100,
-                          overflow: "hidden",
-                        }}
-                        primary={environment.default ? "true" : null}
-                      >
-                        {environment.default ? null : (
-                          <Button
-                            variant="outlined"
-                            style={{
-                              marginLeft: 0,
-                              marginRight: 0,
-                              maxWidth: 150,
-                            }}
-                            onClick={() => setDefaultEnvironment(environment)}
-                            color="primary"
-                          >
-                            Set Default
-                          </Button>
-                        )}
-                      </ListItemText>
-                      <ListItemText
-                        style={{
-                          minWidth: 200,
-                          maxWidth: 200,
+                          minWidth: 330,
+                          maxWidth: 330,
                           overflow: "hidden",
                           marginLeft: 10,
                         }}
@@ -6584,6 +6600,19 @@ If you're interested, please let me know a time that works for you, or set up a 
                           <ButtonGroup
                             style={{ borderRadius: "5px 5px 5px 5px" }}
                           >
+							  <Button
+								variant="outlined"
+								disabled={environment.default}
+								style={{
+								  marginLeft: 0,
+								  marginRight: 0,
+								  maxWidth: 150,
+								}}
+								onClick={() => setDefaultEnvironment(environment)}
+								color="primary"
+							  >
+								Make Default
+							  </Button>
                             <Button
                               variant={
                                 environment.archived ? "contained" : "outlined"
@@ -6597,7 +6626,10 @@ If you're interested, please let me know a time that works for you, or set up a 
                             <Button
                               variant={"outlined"}
                               style={{}}
-                              onClick={() => {
+                              onClick={(e) => {
+								e.preventDefault()
+								e.stopPropagation()
+
                                 console.log(
                                   "Should clear executions for: ",
                                   environment,
@@ -6621,8 +6653,153 @@ If you're interested, please let me know a time that works for you, or set up a 
                             </Button>
                           </ButtonGroup>
                         </div>
+
                       </ListItemText>
+						<IconButton
+							disabled={environment.Type === "cloud"}
+						>
+							{listItemExpanded === index ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+						</IconButton>
                     </ListItem>
+					  {listItemExpanded === index ? (
+						  <div style={{minHeight: 250, width: "100%", backgroundColor: bgColor, }}>
+						  	<div style={{width: 775, margin: "auto", paddingTop: 50, paddingBottom: 100, }}>
+						  		<Typography variant="h6">
+						  			Your Onprem Orborus instance
+						  		</Typography>
+						  		<Typography variant="body2" color="textSecondary">
+						  			Orborus is the Shuffle queue handler that runs your hybrid workflows and manages pipelines. It can be run in Docker/k8s container on your server or in your cluster. Follow the steps below, and configure as need be.
+						  		</Typography>
+
+								<Tabs
+								  value={installationTab}
+								  indicatorColor="primary"
+								  textColor="secondary"
+								  onChange={(e, inputValue) => {
+									  setInstallationTab(inputValue)
+								  }}
+								  aria-label="disabled tabs example"
+								  variant="scrollable"
+								  scrollButtons="auto"
+						  		  style={{textAlign: "center", marginTop: 25, }}
+								>
+								  <Tab
+						  			value={0}
+									label=<span>
+									  <img
+										src="/icons/docker.svg"
+										style={{ width: 20, height: 20, marginRight: 10, }}
+									  /> Verbose (default)
+									</span>
+								  />
+								  <Tab
+						  			value={1}
+									label=<span>
+									  <img
+										src="/icons/docker.svg"
+										style={{ width: 20, height: 20, marginRight: 10, }}
+									  /> Scale
+									</span>
+								  />
+								  <Tab
+						  			value={2}
+									label=<span>
+									  <img
+										src="/icons/k8s.svg"
+										style={{ width: 20, height: 20, marginRight: 10, }}
+									  /> k8s 
+									</span>
+								  />
+						  		</Tabs>
+						  		<Typography variant="body1" color="textSecondary" style={{marginTop: 15, }}>
+						  			{installationTab === 2 ?
+										<span>
+						  					Check our <a href="https://docs.docker.com/get-started/get-docker/" target="_blank" rel="noopener noreferrer" style={{textDecoration: "none", color: "#f85a3e",}}>Kubernetes documentation</a> for more information on how to run Shuffle on Kubernetes. The status of the node will change when connected.
+										</span>
+										:
+										<span>
+						  					1. <a href="https://docs.docker.com/get-started/get-docker/" target="_blank" rel="noopener noreferrer" style={{textDecoration: "none", color: "#f85a3e",}}>Ensure Docker is installed</a> and the target server can reach '{globalUrl}'
+										</span>
+									}
+
+						  		</Typography>
+						  		<Typography variant="body1" color="textSecondary">
+						  			{installationTab === 2 ? null : 
+						  			"2. Run this command on the server you want to run workflows or store Pipeline data on"}
+						  		</Typography>
+
+						  		{installationTab === 2 ? null : 
+									<div
+										style={{
+											marginTop: 10, 
+											padding: 15,
+											minWidth: "50%",
+											maxWidth: "100%",
+											backgroundColor: theme.palette.inputColor,
+											overflowY: "auto",
+											// Have it inline
+											borderRadius: theme.palette?.borderRadius,
+										}}
+									>
+										<div style={{ display: "flex", position: "relative", }}>
+											<code
+												contenteditable="true"
+												id="orborus_command"
+												style={{
+													// Wrap if larger than X
+													whiteSpace: "pre-wrap",
+													overflow: "auto",
+													marginRight: 30,
+												}}
+											>
+												{getOrborusCommand(environment)}
+											</code>
+											<CopyToClipboard
+												text={orborusCommandWrapper()}
+											/>
+										</div>
+
+										<Divider style={{marginTop: 25, marginBottom: 10, }}/>
+										Configure HTTP Proxies: <Checkbox 
+											id="shuffle_skip_proxies"
+											onClick={() => {
+												if (commandController.proxies === undefined) { 
+													commandController.proxies = true 
+												} else {
+													commandController.proxies = !commandController.proxies
+												}
+
+												setCommandController(commandController)
+              									setUpdate(Math.random())
+											}}
+										/>
+										<div />
+										Disable Pipelines & Data Lake: <Checkbox 
+											id="shuffle_skip_pipelines"
+											onClick={() => {
+												if (commandController.pipelines === undefined) { 
+													commandController.pipelines = true 
+												} else {
+													commandController.pipelines = !commandController.pipelines
+												}
+												setCommandController(commandController)
+              									setUpdate(Math.random())
+											}}
+										/>
+						  			</div>
+								}
+
+						  		<Typography variant="body1" color="textSecondary" style={{marginTop: 15, }}>
+						  			{installationTab === 2 ? null : 
+										<span>
+						  					3. Verify if the node is running. Try to refresh the page a little while after running the command.
+										</span>
+					  				}
+						  		</Typography>
+						    </div>
+						  </div>
+					  ) : null}
+
                     {showCPUAlert === false ? null : (
                       <ListItem
                         key={index + "_cpu"}
@@ -6631,7 +6808,7 @@ If you're interested, please let me know a time that works for you, or set up a 
                         <div
                           style={{
                             border: "1px solid #f85a3e",
-                            borderRadius: theme.palette.borderRadius,
+                            borderRadius: theme.palette?.borderRadius,
                             marginTop: 10,
                             marginBottom: 10,
                             padding: 15,
@@ -7202,7 +7379,7 @@ If you're interested, please let me know a time that works for you, or set up a 
             disabled={userdata.admin !== "true"}
             label=<span>
               <FmdGoodIcon style={iconStyle} />
-              Environments
+              Locations 
             </span>
           />
           <Tab
@@ -7238,7 +7415,8 @@ If you're interested, please let me know a time that works for you, or set up a 
   );
 
   return (
-    <div>
+    <div style={{}} >
+	  &nbsp;
       {modalView}
       {cloudSyncModal}
       {editUserModal}

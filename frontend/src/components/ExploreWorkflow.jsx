@@ -227,7 +227,7 @@ const ExploreWorkflow = (props) => {
                                 <ArrowBackIosNewIcon />
                             </IconButton>
                         </Tooltip>
-                        <div style={{ minWidth: 554, maxWidth: 554, borderRadius: theme.palette.borderRadius, }}>
+                        <div style={{ minWidth: 554, maxWidth: 554, borderRadius: theme.palette?.borderRadius, }}>
                             <AliceCarousel
                                 style={{ backgroundColor: theme.palette.surfaceColor, minHeight: 750, maxHeight: 750, }}
                                 items={formattedCarousel}
@@ -320,7 +320,7 @@ const ExploreWorkflow = (props) => {
 
             <div style={{ marginTop: 0, }}>
                 <div className="thumbs" style={{ display: "flex" }}>
-                    <div style={{ minWidth: isMobile ? 300 : 554, maxWidth: isMobile ? 300 : 554, borderRadius: theme.palette.borderRadius, }}>
+                    <div style={{ minWidth: isMobile ? 300 : 554, maxWidth: isMobile ? 300 : 554, borderRadius: theme.palette?.borderRadius, }}>
                         <Grid item xs={11} style={{}}>
 							{suggestedUsecases.length === 0 && usecasesSet ? 
 								<Typography variant="h6" style={{ marginTop: 30, marginBottom: 50, }} color="rgba(158, 158, 158, 1)">

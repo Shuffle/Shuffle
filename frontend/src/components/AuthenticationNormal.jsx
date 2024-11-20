@@ -222,7 +222,7 @@ const AuthenticationData = (props) => {
 				<TextField
 					style={{
 						backgroundColor: theme.palette.inputColor,
-						borderRadius: theme.palette.borderRadius,
+						borderRadius: theme.palette?.borderRadius,
 					}}
 					InputProps={{
 						style: {
@@ -304,7 +304,7 @@ const AuthenticationData = (props) => {
 								<TextField
 									style={{
 										backgroundColor: theme.palette.inputColor,
-										borderRadius: theme.palette.borderRadius,
+										borderRadius: theme.palette?.borderRadius,
 									}}
 									InputProps={{
 										style: {

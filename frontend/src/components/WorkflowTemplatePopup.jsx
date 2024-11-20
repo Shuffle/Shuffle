@@ -585,7 +585,7 @@ const WorkflowTemplatePopup = (props) => {
 					{/*errorMessage === "" && configurationFinished === true && workflow.id !== undefined && workflowLoading === false ?
 						<Tooltip title="Click to explore the workflow" placement="top">
 							<span 
-								style={{position: "fixed", display: "flex", right: "10%", top: "20%", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, padding: "15px 30px 15px 30px", backgroundColor: theme.palette.platformColor, cursor: "pointer", }}
+								style={{position: "fixed", display: "flex", right: "10%", top: "20%", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, padding: "15px 30px 15px 30px", backgroundColor: theme.palette.platformColor, cursor: "pointer", }}
 								onClick={() => {
 									// Open in new tab
 									window.open("/workflows/" + workflow.id, "_blank")

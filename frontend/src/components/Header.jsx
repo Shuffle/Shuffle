@@ -50,8 +50,6 @@ const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
 const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, homePage, userdata, serverside, } = props;
-	//const theme = useTheme();
-	//const alert = useAlert()
 
 
 	const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
@@ -829,7 +827,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 										},
 									}}
 									style={{
-										borderRadius: theme.palette.borderRadius, 
+										borderRadius: theme.palette?.borderRadius, 
 										backgroundColor: theme.palette.surfaceColor, 
 										marginRight: 15, 
 										color: "white", 
@@ -904,7 +902,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 
 												<Tooltip color="primary" title={parsedTitle} placement="left">
 													<div style={{display: "flex"}}>
-														{isCloud?<Typography variant="body2" style={{borderRadius: theme.palette.borderRadius, float: "left", margin: "0 0 0 0", marginRight: 25, }}>{regiontag}</Typography>:null} {image} <span style={{marginLeft: 8}}>{data.name}</span> 
+														{isCloud?<Typography variant="body2" style={{borderRadius: theme.palette?.borderRadius, float: "left", margin: "0 0 0 0", marginRight: 25, }}>{regiontag}</Typography>:null} {image} <span style={{marginLeft: 8}}>{data.name}</span> 
 													</div>
 												</Tooltip>
 											</MenuItem>
@@ -935,7 +933,7 @@ const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, ho
 							null
 							:
 							<Tooltip title={`Amount of executions left: ${userdata.app_execution_usage} / ${userdata.app_execution_limit}. When the limit is reached, you can still use Shuffle normally, but your Workflow triggers may stop working. Reach out to support@shuffler.io to extend this limit.`}>
-								<div style={{maxHeight: 30, minHeight: 30, padding: 8, textAlign: "center", cursor: "pointer", borderRadius: theme.palette.borderRadius, marginRight: 10, marginTop: 12, backgroundColor: theme.palette.surfaceColor, minWidth: 60, maxWidth: 60, border: userdata.app_execution_usage/userdata.app_execution_limit >= 0.9 ? "#f86a3e" : null, }} onClick={() => {
+								<div style={{maxHeight: 30, minHeight: 30, padding: 8, textAlign: "center", cursor: "pointer", borderRadius: theme.palette?.borderRadius, marginRight: 10, marginTop: 12, backgroundColor: theme.palette.surfaceColor, minWidth: 60, maxWidth: 60, border: userdata.app_execution_usage/userdata.app_execution_limit >= 0.9 ? "#f86a3e" : null, }} onClick={() => {
 										console.log(userdata.appe_execution_usage/userdata.app_execution_limit)
 										if (window.drift !== undefined) {
 											window.drift.api.startInteraction({ interactionId: 326905 })

@@ -294,7 +294,7 @@ const AuthenticationData = (props) => {
 					<TextField
 						style={{
 							backgroundColor: theme.palette.inputColor,
-							borderRadius: theme.palette.borderRadius,
+							borderRadius: theme.palette?.borderRadius,
 						}}
 						InputProps={{
 							style: {
@@ -328,10 +328,10 @@ const AuthenticationData = (props) => {
 
 	const authenticationButtons = <span>
 		<Button
-			style={{ borderRadius: theme.palette.borderRadius, marginTop: authFieldsOnly ? 20 : 0 }}
+			style={{ borderRadius: theme.palette?.borderRadius, marginTop: authFieldsOnly ? 20 : 0 }}
 			onClick={() => {
-				setAuthenticationOptions(authenticationOption);
-				handleSubmitCheck();
+				setAuthenticationOptions(authenticationOption)
+				handleSubmitCheck()
 			}}
 			variant={"contained"}
 			disabled={submitSuccessful}
@@ -437,7 +437,7 @@ const AuthenticationData = (props) => {
 				<TextField
 					style={{
 						backgroundColor: theme.palette.inputColor,
-						borderRadius: theme.palette.borderRadius,
+						borderRadius: theme.palette?.borderRadius,
 					}}
 					InputProps={{
 						style: {

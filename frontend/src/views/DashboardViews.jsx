@@ -197,7 +197,7 @@ const LineChartWrapper = ({keys, height, width}) => {
 											const name = data.metadata !== undefined && data.metadata.name !== undefined ? data.metadata.name : "No"
 
 											return (
-												<div style={{borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
+												<div style={{borderRadius: theme.palette?.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
 													<Typography variant="body1">
 														{name}
 													</Typography>
@@ -281,7 +281,7 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 										}}
 										content={(data, color) => {
 											return (
-												<div style={{borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
+												<div style={{borderRadius: theme.palette?.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
 													<Typography variant="body1">
 														{data.x}
 													</Typography>
@@ -795,7 +795,7 @@ const Dashboard = (props) => {
 									color: "white",
 									height: 40,
 									maxWidth: 150, 
-									borderRadius: theme.palette.borderRadius,
+									borderRadius: theme.palette?.borderRadius,
 								  }}
 								>
 									{data.available_keys.map((foundKey, index) => {

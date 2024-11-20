@@ -10,10 +10,12 @@ import {
   Paper, 
   Divider,
   IconButton,
+  Tooltip,
 } from "@mui/material";
 
 import {
 	OpenInNew as OpenInNewIcon,
+  	FmdGood as FmdGoodIcon,
 } from "@mui/icons-material"
 
 import { toast } from "react-toastify";
@@ -68,6 +70,7 @@ const DetectionExplorer = (props)  => {
   const [detectionWorkflowId, setDetectionWorkflowId] = useState("")
   const [isDetectionValid, setIsDetectionValid] = useState(false)
   const [availableDetection, setAvailableDetection] = React.useState([]);
+  const [environmentList, setEnvironmentList] = React.useState([])
 
   const loadUsecases = () => {
 	  const url = `${globalUrl}/api/v1/workflows/usecases`
@@ -146,7 +149,7 @@ const DetectionExplorer = (props)  => {
 	}
 
     setLoading(true);
-    const url = `${globalUrl}/api/v1/detections/${detectionInfo?.category}/connect`;
+    const url = `${globalUrl}/api/v1/detections/${detectionInfo?.category}/connect`
 
     fetch(url, {
       method: "GET",
@@ -177,7 +180,11 @@ const DetectionExplorer = (props)  => {
 		  if (responseJson.reason !== undefined && responseJson.reason !== null) {
 			  toast(responseJson.reason)
 		  } else {
-		  	toast(`Failed to connect to ${detectionInfo?.category}`);
+			  if (responseJson.workflow_id === "" && responseJson.workflow_valid === false) {
+		  	  	toast.info(`Sent job to generate a Detection Workflow and enable ${detectionInfo?.category}. Please wait a minute and reload this UI.`);
+			  } else {
+		  	  	toast.error(`Failed to connect to ${detectionInfo?.category}`);
+			  }
 		  }
 
 		  if (responseJson.action !== undefined && responseJson.actio !== null && responseJson.action.length > 0) {
@@ -193,16 +200,52 @@ const DetectionExplorer = (props)  => {
 	.catch((error) => {
 	  setLoading(false);
 	  console.log(`Error in connecting to ${detectionInfo?.category}: `, error);
-	  toast(`An error occurred while connecting to ${detectionInfo?.category}`);
+	  toast.error(`An error occurred while connecting to ${detectionInfo?.category}`);
 	});
   }
 
+  const loadEnvironments = () => {
+	  const url = `${globalUrl}/api/v1/getenvironments`
+	  fetch(url, {
+		method: "GET",
+		credentials: "include",
+		headers: {
+		  "Content-Type": "application/json",
+		},
+	  })
+	  .then((response) => {
+		  return response.json()
+	  })
+	  .then((responseJson) => {
+		  if (responseJson.success === false) {
+			  return
+		  }
+
+		  if (responseJson.length == 0) {
+			  return
+		  }
+
+		  setEnvironmentList(responseJson)
+	  })
+	  .catch((error) => {
+		console.log(`Error in loading environments: `, error);
+	  })
+  }
 
   useEffect(() => {
   	loadUsecases() 
+	loadEnvironments()
   }, [])
 
   useEffect(() => {
+	  if (detectionInfo === undefined || detectionInfo === null) {
+		  return
+	  }
+
+	  if (detectionInfo.category === undefined || detectionInfo.category === null || detectionInfo.category === "") {
+		  return
+	  }
+
 	  handleConnectClick()
   }, [detectionInfo])
 
@@ -210,6 +253,8 @@ const DetectionExplorer = (props)  => {
     rule.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     rule.description.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const lakeNodes = environmentList !== undefined && environmentList !== null ? environmentList.filter((env) => env?.data_lake?.enabled === true).length : 0
 
   return (
     <Container>
@@ -219,7 +264,7 @@ const DetectionExplorer = (props)  => {
 	  	  width: "100%", 
 		  padding: 50, 
 	  	  backgroundColor: theme.palette.backgroundColor,
-		  borderRadius: theme.palette.borderRadius,
+		  borderRadius: theme.palette?.borderRadius,
 	    }}
 	  >
         <Box
@@ -234,6 +279,7 @@ const DetectionExplorer = (props)  => {
 	  		{detectionInfo?.title} {filteredRules === undefined || filteredRules === null ? null : `(${filteredRules?.length} rules)`}
           </Typography>
 
+	  	  <div style={{display: "flex", }}>
 		  {workflow !== undefined && workflow !== null && workflow.id !== undefined && workflow.id !== null && workflow.id.length > 0 ?
 			  <div style={{display: "flex", }}>
 			  	  <div style={{minWidth: 400, maxWidth: 400, }}>
@@ -282,6 +328,16 @@ const DetectionExplorer = (props)  => {
 					isDetectionValid ? `Connected to ${detectionInfo?.category}` : `Fix ${detectionInfo?.category} connection`}
 			  </Button>
 		  }
+
+	      {detectionInfo?.category === "SIGMA" || detectionInfo?.category === "SIEM" ?
+			  <Tooltip title={`You have ${lakeNodes} available Data Lake node(s)`}>
+				<a href="/admin?tab=environments" style={{textDecoration: "none", color: "inherit", }} target="_blank" rel="noreferrer">
+                	<FmdGoodIcon style={{marginLeft: 15, marginTop: 5, color: lakeNodes > 0 ? green : red}} />
+				</a>
+			  </Tooltip>
+		  : null}
+	  	  </div>
+	  	
         </Box>
         {filteredRules?.length > 0 ?
         <Box

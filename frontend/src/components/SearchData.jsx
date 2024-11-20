@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 
 import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
@@ -33,6 +33,8 @@ import {
     AvatarGroup,
 } from "@mui/material"
 
+import { Context } from '../context/ContextApi.jsx';
+
 import { Search as SearchIcon, Close as CloseIcon, Folder as FolderIcon, Code as CodeIcon, LibraryBooks as LibraryBooksIcon } from '@mui/icons-material'
 
 import algoliasearch from 'algoliasearch/lite';
@@ -47,8 +49,9 @@ const chipStyle = {
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const SearchData = props => {
-    const { serverside, globalUrl, userdata, searchBarModalOpen, setSearchBarModalOpen } = props
+    const { serverside, globalUrl, userdata } = props
     let navigate = useNavigate();
+    const { searchBarModalOpen, setSearchBarModalOpen } = useContext(Context);
     const borderRadius = 3
     const node = useRef()
     const [searchOpen, setSearchOpen] = useState(false)
@@ -547,8 +550,6 @@ const SearchData = props => {
 												e.preventDefault()
 												e.stopPropagation()
 
-												console.log("OBJECT CHANGE: ", hit.objectID)
-
 												// This does nothing rofl
 												if (userdata.active_apps === undefined || userdata.active_apps === null) {
 													activateApp(hit.name, hit.objectID, "activate")
@@ -873,10 +874,11 @@ const SearchData = props => {
                 </List>
             </Grid>
             <Grid style={{ textAlign: "end", width: "100%", textTransform: 'capitalize', }}>
-                <Button style={{ textAlign: "center", textTransform: 'capitalize' }}
-                    onClick={() => { window.location = "/search"; }} >
-                    See More
-                </Button>
+				<Link to="/search" style={{ textDecoration: "none", color: "#f85a3e" }}>	
+                	<Button style={{ textAlign: "center", textTransform: 'capitalize' }}>
+                    	See More
+                	</Button>
+				</Link>
             </Grid>
         </Grid>
     ) : null

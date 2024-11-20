@@ -464,8 +464,17 @@ const AppGrid = (props) => {
                                 }}
                               >
                                 <img
+								  id={`image_${index}`}
                                   alt={data.name}
                                   src={data.image_url ? data.image_url : "/images/no_image.png"}
+								  onError={(e) => {
+									  // Replace the image with the default image
+									  const foundImage = document.getElementById(`image_${index}`)
+									  if (foundImage !== undefined && foundImage !== null) {
+										  foundImage.src = theme.palette.defaultImage
+										  data.image_url = theme.palette.defaultImage
+									  }
+								  }}
                                   style={{
                                     width: 80,
                                     height: 80,
@@ -995,7 +1004,7 @@ const AppGrid = (props) => {
           }}
           autoComplete="off"
           color="primary"
-          placeholder="Search your Activated or Self-built apps"
+          placeholder="Search your Activated or self-built apps"
           id="shuffle_search_field"
           onChange={(event) => {
             setSearchQuery(event.currentTarget.value);

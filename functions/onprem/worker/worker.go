@@ -782,7 +782,6 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			// image on every Orborus/new worker restart.
 
 			// Running as coroutine for eventual completeness
-			//go shuffle.DownloadDockerImageBackend(&http.Client{}, image)
 			// FIXME: With goroutines it got too much trouble of deploying with an older version
 			// Allowing slow startups, as long as it's eventually fast, and uses the same registry as on host.
 			shuffle.DownloadDockerImageBackend(&http.Client{Timeout: imagedownloadTimeout}, image)

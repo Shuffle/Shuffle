@@ -4717,7 +4717,7 @@ const AppCreator = (defaultprops) => {
           <TextField
             style={{
               backgroundColor: inputColor,
-              borderRadius: theme.palette.borderRadius,
+              borderRadius: theme.palette?.borderRadius,
             }}
             InputProps={{
               style: {
@@ -5066,7 +5066,7 @@ const AppCreator = (defaultprops) => {
             <TextField
               style={{
                 backgroundColor: inputColor,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
               }}
               InputProps={{
                 style: {
@@ -5106,7 +5106,7 @@ const AppCreator = (defaultprops) => {
                   <TextField
                     style={{
                       backgroundColor: inputColor,
-                      borderRadius: theme.palette.borderRadius,
+                      borderRadius: theme.palette?.borderRadius,
                     }}
                     InputProps={{
                       style: {
@@ -6018,7 +6018,7 @@ const AppCreator = (defaultprops) => {
             setBaseUrl(tmpstring);
           }}
         />
-				<div style={{padding: 25, border: "2px solid rgba(255,255,255,0.7)", borderRadius: theme.palette.borderRadius, }}>
+				<div style={{padding: 25, border: "2px solid rgba(255,255,255,0.7)", borderRadius: theme.palette?.borderRadius, }}>
 	  				<span style={{display: "flex", }}>
 					<FormControl style={{ }} variant="outlined">
 						<Typography variant="h6">Authentication</Typography>

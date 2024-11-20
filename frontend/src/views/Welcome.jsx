@@ -304,14 +304,14 @@ const Welcome = (props) => {
 			minWidth: isMobile ? null : 275, 
 			backgroundColor: theme.palette.surfaceColor,
 			color: "white",
-			borderRadius: theme.palette.borderRadius,
+			borderRadius: theme.palette?.borderRadius,
 		}
 
 		const actionObject = {
 			padding: "25px", 
 			maxHeight: 280,
 			minHeight: 280,
-			borderRadius: theme.palette.borderRadius,
+			borderRadius: theme.palette?.borderRadius,
 		}
 
 		const imageStyle = {
@@ -340,7 +340,7 @@ const Welcome = (props) => {
 		const defaultImage = "/images/experienced.png"
 		const experienced_image = userdata !== undefined && userdata !== null && userdata.active_org !== undefined && userdata.active_org.image !== undefined && userdata.active_org.image !== null && userdata.active_org.image !== "" ? userdata.active_org.image : defaultImage
     return (
-				<div style={{ margin: "auto", paddingBottom: 150, minHeight: 1500, marginTop: 50, }}>
+				<div style={{ margin: "auto", paddingBottom: 150, minHeight: 1500, paddingTop: 50, }}>
 					{/*
 					<div style={{position: "fixed", bottom: 110, right: 110, display: "flex", }}>
 						<img src="/images/Arrow.png" style={{width: 250, height: "100%",}} />
@@ -354,7 +354,7 @@ const Welcome = (props) => {
 									color="primary"
 									style={{
 										backgroundColor: theme.palette.platformColor, 
-										borderRadius: theme.palette.borderRadius, 
+										borderRadius: theme.palette?.borderRadius, 
 										padding: 12, 
 										border: "1px solid rgba(255,255,255,0.3)", 
 										maxWidth: 500, 
@@ -434,7 +434,7 @@ const Welcome = (props) => {
 									We will use this information to personalize your automation
 								</Typography> */}
 								<div style={{display: isMobile ? null : "flex", marginTop: 70, width: isMobile ? 280 : 700, margin: "auto",}}>
-									<div style={{border: "2px solid #806BFF", borderRadius: theme.palette.borderRadius, }}>
+									<div style={{border: "2px solid #806BFF", borderRadius: theme.palette?.borderRadius, }}>
 										<Card style={paperObject} onClick={() => {
 											if (isCloud) {
 													ReactGA.event({
@@ -478,7 +478,7 @@ const Welcome = (props) => {
 										navigate("/workflows?message=Skipped intro")
 									}}>
 										<CardActionArea style={actionObject}>
-											<img src={experienced_image} style={{padding: experienced_image === defaultImage ? 2 : 10, objectFit: "scale-down", minHeight: experienced_image === defaultImage ? 40 : 70, maxHeight: experienced_image === defaultImage ? 40 : 70, bordeRadius: theme.palette.borderRadius*2, marginBottom: experienced_image === defaultImage ? 24 : 2 }} />
+											<img src={experienced_image} style={{padding: experienced_image === defaultImage ? 2 : 10, objectFit: "scale-down", minHeight: experienced_image === defaultImage ? 40 : 70, maxHeight: experienced_image === defaultImage ? 40 : 70, bordeRadius: theme.palette?.borderRadius*2, marginBottom: experienced_image === defaultImage ? 24 : 2 }} />
 											<Typography variant="h4" style={{color: "#F1F1F1"}}> 
 												Experienced 
 											</Typography>										

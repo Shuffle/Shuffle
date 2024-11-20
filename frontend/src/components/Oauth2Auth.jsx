@@ -96,7 +96,7 @@ const AuthenticationOauth2 = (props) => {
 	autoAuth, 
 	authButtonOnly, 
 	isLoggedIn,
-
+	org_id,
 	setFinalized,
   } = props;
 
@@ -148,7 +148,6 @@ const AuthenticationOauth2 = (props) => {
 			navigate(`/login?view=${window.location.pathname}&message=Log in to authenticate this app`)
 		}
 
-		console.log("Should automatically click the auto-auth button?: ", autoAuth)
 		if (autoAuth === true && selectedApp !== undefined) {
 			startOauth2Request() 
 		}
@@ -452,6 +451,8 @@ const AuthenticationOauth2 = (props) => {
 	if (orgId !== undefined && orgId !== null && orgId.length > 0) {
 		console.log("Adding org_id from user side")
 		state += `%26org_id%3d${orgId}`;
+	}else{
+		state += `%26org_id%3d${org_id}`
 	}
 
     if (oauth_url !== undefined && oauth_url !== null && oauth_url.length > 0) {
@@ -466,7 +467,7 @@ const AuthenticationOauth2 = (props) => {
       state += `%26refresh_uri%3d${authentication_url}`
     }
 
-	if (workflow.org_id !== undefined && workflow.org_id !== null && workflow.org_id.length > 0) {
+	if (workflow?.org_id !== undefined && workflow?.org_id !== null && workflow?.org_id.length > 0) {
 		state += `%26org_id%3d${workflow.org_id}`
 	}
 
@@ -696,7 +697,7 @@ const AuthenticationOauth2 = (props) => {
 					justifyContent: "flex-start",
 					backgroundColor: "#ffffff",
 					color: "#2f2f2f",
-					borderRadius: theme.palette.borderRadius,
+					borderRadius: theme.palette?.borderRadius,
 					minWidth:  300, 
 					maxWidth: 300,
 					maxHeight: 50,
@@ -721,7 +722,7 @@ const AuthenticationOauth2 = (props) => {
 					<span style={{display: "flex"}}>
 						<img
 							alt={selectedAction.app_name}
-							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette.borderRadius, }}
+							style={{ margin: 4, minHeight: 30, maxHeight: 30, borderRadius: theme.palette?.borderRadius, }}
 							src={selectedAction.large_image}
 						/>
 						<Typography style={{ margin: 0, marginLeft: 10, marginTop: 5,}} variant="body1">
@@ -803,7 +804,7 @@ const AuthenticationOauth2 = (props) => {
 					</span>
 				: null}
         {/*<TextField
-						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
+						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette?.borderRadius,}} 
 						InputProps={{
 							style:{
 							},
@@ -835,13 +836,14 @@ const AuthenticationOauth2 = (props) => {
                 setOauthUrl(data.value);
               }
 
-			  const defaultValue = data.name === "url" && authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0 && (authenticationType.authorizationUrl === undefined || authenticationType.authorizationUrl === null || authenticationType.authorizationUrl.length === 0) && authenticationType.type === "oauth2-app" ? authenticationType.token_uri : data.value === undefined || data.value === null ? "" : data.value
+			  const isNormalOauth = authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null && authenticationType.redirect_uri.length > 0 
 
+			  const defaultValue = !isNormalOauth && data.name === "url" && authenticationType.token_uri !== undefined && authenticationType.token_uri !== null && authenticationType.token_uri.length > 0 && (authenticationType.authorizationUrl === undefined || authenticationType.authorizationUrl === null || authenticationType.authorizationUrl.length === 0) && authenticationType.type === "oauth2-app" ? authenticationType.token_uri : data.value === undefined || data.value === null ? "" : data.value
 
-			  const fieldname = data.name === "url" && authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0 && authenticationType.type === "oauth2-app" ? "Token URL" : data.name
+			  const fieldname = !isNormalOauth && data.name === "url" && authenticationType.grant_type !== undefined && authenticationType.grant_type !== null && authenticationType.grant_type.length > 0 && authenticationType.type === "oauth2-app" ? "Token URL" : data.name
 
               return (
-                <div key={index} style={{ marginTop: authenticationType.type === "oauth2-app" ? 10 : 0, }}>
+                <div key={index} style={{ marginTop: !isNormalOauth && authenticationType.type === "oauth2-app" ? 10 : 0, }}>
                   <LockOpenIcon style={{ marginRight: 10 }} />
 
 				  <b>{fieldname}</b>
@@ -893,7 +895,7 @@ const AuthenticationOauth2 = (props) => {
                     <TextField
                       style={{
                         backgroundColor: theme.palette.inputColor,
-                        borderRadius: theme.palette.borderRadius,
+                        borderRadius: theme.palette?.borderRadius,
                       }}
                       InputProps={{
                         style: {
@@ -924,7 +926,7 @@ const AuthenticationOauth2 = (props) => {
               style={{
                 marginTop: 20,
                 backgroundColor: theme.palette.inputColor,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
               }}
               InputProps={{
                 style: {
@@ -942,7 +944,7 @@ const AuthenticationOauth2 = (props) => {
             <TextField
               style={{
                 backgroundColor: theme.palette.inputColor,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
 								marginBottom: 10, 
               }}
               InputProps={{
@@ -964,7 +966,7 @@ const AuthenticationOauth2 = (props) => {
 					<TextField
 					  style={{
 						backgroundColor: theme.palette.inputColor,
-						borderRadius: theme.palette.borderRadius,
+						borderRadius: theme.palette?.borderRadius,
 					  }}
 					  InputProps={{
 						style: {
@@ -982,7 +984,7 @@ const AuthenticationOauth2 = (props) => {
 					<TextField
 					  style={{
 						backgroundColor: theme.palette.inputColor,
-						borderRadius: theme.palette.borderRadius,
+						borderRadius: theme.palette?.borderRadius,
 						marginBottom: 10, 
 					  }}
 					  InputProps={{
@@ -1061,7 +1063,7 @@ const AuthenticationOauth2 = (props) => {
           style={{
             marginBottom: 40,
             marginTop: 20,
-            borderRadius: theme.palette.borderRadius,
+            borderRadius: theme.palette?.borderRadius,
           }}
           disabled={
             clientSecret.length === 0 || clientId.length === 0 || buttonClicked || (allscopes.length !== 0 && selectedScopes.length === 0)
@@ -1092,7 +1094,7 @@ const AuthenticationOauth2 = (props) => {
             <Button
               style={{
                 marginLeft: 10,
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
               }}
               disabled={clientSecret.length === 0 || clientId.length === 0}
               variant="text"

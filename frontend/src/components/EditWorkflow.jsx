@@ -43,6 +43,7 @@ import {
 	RadioGroup,
 	FormControl,
 	FormLabel,
+	Slider,
 
 } from "@mui/material";
 
@@ -65,7 +66,7 @@ import {
 } from "@mui/icons-material";
 
 const EditWorkflow = (props) => {
-	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, saveWorkflow, expanded, scrollTo, setRealtimeMarkdown, } = props
+	const { globalUrl, workflow, setWorkflow, modalOpen, setModalOpen, showUpload, usecases, setNewWorkflow, appFramework, isEditing, userdata, apps, saveWorkflow, expanded, scrollTo, setRealtimeMarkdown, boxWidth, setBoxWidth, } = props
 
   const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
 
@@ -82,11 +83,18 @@ const EditWorkflow = (props) => {
 	const [dueDate, setDueDate] = React.useState(workflow.due_date !== undefined && workflow.due_date !== null && workflow.due_date !== 0 ? dayjs(workflow.due_date*1000) : dayjs().subtract(1, 'day'))
 
     const [inputQuestions, setInputQuestions] = React.useState(workflow.input_questions !== undefined && workflow.input_questions !== null ? JSON.parse(JSON.stringify(workflow.input_questions)) : []) 
-	const [inputMarkdown, setInputMarkdown] = React.useState(workflow.input_markdown !== undefined && workflow.input_markdown !== null ? workflow.input_markdown : "")
+	const [inputMarkdown, setInputMarkdown] = React.useState(workflow?.form_control?.input_markdown !== undefined && workflow?.form_control?.input_markdown !== null ? workflow?.form_control?.input_markdown : "")
 	const [scrollDone, setScrollDone] = React.useState(false)
-	const [selectedYieldActions, setSelectedYieldActions] = React.useState(workflow.output_yields !== undefined && workflow.output_yields !== null ? JSON.parse(JSON.stringify(workflow.output_yields)) : [])
+	const [selectedYieldActions, setSelectedYieldActions] = React.useState(workflow?.form_control?.output_yields !== undefined && workflow?.form_control?.output_yields !== null ? JSON.parse(JSON.stringify(workflow?.form_control?.output_yields)) : [])
+	const [formWidth, setFormWidth] = React.useState(boxWidth === undefined || boxWidth === null ? 500 : boxWidth)
 
   const classes = useStyles();
+
+	useEffect(() => {
+		if (setBoxWidth !== undefined && boxWidth !== formWidth) {
+			setBoxWidth(formWidth)
+		}
+	}, [formWidth])
 
   if (scrollTo !== undefined && scrollTo !== null && scrollTo.length > 0 && scrollDone === false) {
 	  setTimeout(() => {
@@ -308,9 +316,14 @@ const EditWorkflow = (props) => {
 				}
 
 				innerWorkflow.input_questions = validfields
-				innerWorkflow.input_markdown = inputMarkdown
 
-				innerWorkflow.output_yields = selectedYieldActions
+				if (innerWorkflow.form_control === undefined || innerWorkflow.form_control === null) {
+					innerWorkflow.form_control = {}
+				}
+
+				innerWorkflow.form_control.input_markdown = inputMarkdown
+				innerWorkflow.form_control.output_yields = selectedYieldActions
+				innerWorkflow.form_control.form_width = formWidth
 
 				innerWorkflow.name = name 
 				innerWorkflow.description = description 
@@ -1049,9 +1062,30 @@ const EditWorkflow = (props) => {
 									}
 
 									setInputMarkdown(e.target.value)
-									workflow.input_markdown = e.target.value
+									workflow.form_control.input_markdown = e.target.value
 									setWorkflow(workflow)
 									setUpdate(Math.random())
+								}}
+							/>
+						</div>
+
+						<div id="form_size">
+							<Typography variant="h6" style={{marginTop: 50, }}>
+								Form Size
+							</Typography>
+							<Typography variant="body2" color="textSecondary" style={{marginBottom: 20, }}>
+								Control the width of the form. It will grow vertically as needed.
+							</Typography>
+							<Slider
+								defaultValue={formWidth}
+								aria-labelledby="discrete-slider"
+								valueLabelDisplay="auto"
+								step={10}
+								marks
+								min={300}
+								max={1000}
+								onChange={(e, value) => {
+									setFormWidth(value)
 								}}
 							/>
 						</div>
@@ -1117,7 +1151,7 @@ const EditWorkflow = (props) => {
 
 			<Tooltip color="primary" title={"Add more details"} placement="top">
 				<Button
-					style={{ margin: "auto", marginTop: 50, textAlign: "center",  textTransform: "none", }}
+					style={{ margin: "auto", marginTop: 50, marginBottom: 100, textAlign: "center",  textTransform: "none", }}
 					variant="outlined"
 					disabled={newWorkflow === true}
 					color="secondary"

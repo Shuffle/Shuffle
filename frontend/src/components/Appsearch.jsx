@@ -27,9 +27,6 @@ const Appsearch = props => {
     const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? 12 : parsedXs
-	//const theme = useTheme();
-	//const [apps, setApps] = React.useState([]);
-	//const [filteredApps, setFilteredApps] = React.useState([]);
 	const [formMail, setFormMail] = React.useState("");
 	const [message, setMessage] = React.useState("");
 	const [formMessage, setFormMessage] = React.useState("");

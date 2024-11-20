@@ -594,7 +594,7 @@ const UsecaseSearch = (props) => {
                 width: 30,
                 height: 30,
                 border: "2px solid rgba(255,255,255,0.6)",
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
                 maxHeight: 30,
                 maxWidth: 30,
                 overflow: "hidden",
@@ -616,7 +616,7 @@ const UsecaseSearch = (props) => {
                 width: 30,
                 height: 30,
                 border: "2px solid rgba(255,255,255,0.6)",
-                borderRadius: theme.palette.borderRadius,
+                borderRadius: theme.palette?.borderRadius,
                 maxWidth: 30,
                 maxHeight: 30,
                 overflow: "hidden",
@@ -1266,9 +1266,11 @@ const UsecaseSearch = (props) => {
 			.then((responseJson) => {
 				if (responseJson.success === false) {
 					var msgString = "Failed to activate the app"
+
 					if (responseJson.reason !== undefined) {
 						msgString += ": " + responseJson.reason
 					}
+
 					toast(msgString)
 				} else {
 					//toast("App activated for your organization! Refresh the page to use the app.")
@@ -1388,7 +1390,7 @@ const UsecaseSearch = (props) => {
 				<Typography variant="body1" style={{color: "rgba(255,255,255,0.5)", marginRight: 20, marginTop: 13, }}>
 					{startText}
 				</Typography>
-				<div style={{border: `1px solid ${borderColor}`, backgroundColor: theme.palette.surfaceColor, width: miditem === true ? "65%" : "85%", marginLeft: miditem === true ? 125 : 0, borderRadius: expanded ? theme.palette.borderRadius : 50, maxHeight: expanded || hasError ? 500 : 50, minHeight: 50, }}>
+				<div style={{border: `1px solid ${borderColor}`, backgroundColor: theme.palette.surfaceColor, width: miditem === true ? "65%" : "85%", marginLeft: miditem === true ? 125 : 0, borderRadius: expanded ? theme.palette?.borderRadius : 50, maxHeight: expanded || hasError ? 500 : 50, minHeight: 50, }}>
 
 					{selectionOpen === true ?
 						<AppsearchPopout 
@@ -1560,7 +1562,7 @@ const UsecaseSearch = (props) => {
 	// <b>{defaultSearch}: {allusecases[usecaseIndex].name}</b>
 	//console.log("UseCase: ", usecases)
 	return (
-		<div style={{maxWidth: "100%", minWidth: "100%",  border: "1px solid rgba(255,255,255,0)", borderRadius: theme.palette.borderRadius,}}>
+		<div style={{maxWidth: "100%", minWidth: "100%",  border: "1px solid rgba(255,255,255,0)", borderRadius: theme.palette?.borderRadius,}}>
       {configureWorkflowModal}
 			{authenticationModal}
 			{showTitle !== false && defaultSearch !== undefined ?
