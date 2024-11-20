@@ -984,7 +984,7 @@ const Apps2 = (props) => {
           <AppModal
             open={openModal}
             onClose={handleAppModalClose}
-            data={selectedApp}
+            app={selectedApp}
             userdata={userdata}
           />
       <div style={boxStyle}>

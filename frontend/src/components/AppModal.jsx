@@ -19,10 +19,9 @@ import LaunchIcon from '@mui/icons-material/Launch';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { CloudDownloadOutlined } from '@mui/icons-material';
 
-const AppModal = ({ open, onClose, data, userdata }) => {
+const AppModal = ({ open, onClose, app, userdata }) => {
 
-  console.log("App data: ", data)
-  console.log("userdata: ", userdata)
+  console.log("App data: ", app)
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -30,7 +29,7 @@ const AppModal = ({ open, onClose, data, userdata }) => {
       ? true
       : false;
 
-  var newAppname = data?.name;
+  var newAppname = app?.name;
   if (newAppname === undefined) {
     newAppname = "Undefined";
   } else {
@@ -38,7 +37,7 @@ const AppModal = ({ open, onClose, data, userdata }) => {
     newAppname = newAppname.replaceAll("_", " ");
   }
 
-  var canEditApp = userdata.admin === "true" || userdata.id === data?.owner || data?.owner === "" || (userdata.admin === "true" && userdata.active_org.id === data?.reference_org) || !data?.generated
+  var canEditApp = userdata.admin === "true" || userdata.id === app?.owner || app?.owner === "" || (userdata.admin === "true" && userdata.active_org.id === app?.reference_org) || !app?.generated
 
 
   return (
@@ -86,8 +85,8 @@ const AppModal = ({ open, onClose, data, userdata }) => {
 
           <div style={{ display: "flex", flexDirection: "row", gap: 10, fontFamily: "Inter" }}>
             <img
-              alt={data?.name}
-              src={data?.large_image}
+              alt={app?.name}
+              src={app?.large_image}
               style={{
                 borderRadius: 4,
                 maxWidth: 100,
@@ -110,7 +109,7 @@ const AppModal = ({ open, onClose, data, userdata }) => {
                   isCloud && (
                     <a
                       rel="noopener noreferrer"
-                      href={"https://shuffler.io/apps/" + data?.id}
+                      href={"https://shuffler.io/apps/" + app?.id}
                       style={{ textDecoration: "none", color: "#f85a3e", marginTop: "-2px" }}
                       target="_blank"
                     >
@@ -130,7 +129,7 @@ const AppModal = ({ open, onClose, data, userdata }) => {
                 variant="body2"
                 color="textSecondary"
               >
-                {data?.categories ? data.categories.join(", ") : "Communication"}
+                {app?.categories ? app.categories.join(", ") : "Communication"}
               </Typography>
             </div>
           </div>
@@ -202,7 +201,7 @@ const AppModal = ({ open, onClose, data, userdata }) => {
               mb: 0.3,
               color: '#fff'
             }}>
-              {data?.actions?.length}
+              {app?.actions?.length}
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
               Actions
@@ -215,14 +214,22 @@ const AppModal = ({ open, onClose, data, userdata }) => {
             paddingTop: "5px"
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: "5px" }}>
-              <CheckCircleIcon sx={{ color: '#4CAF50' }} />
-              <Typography variant="body1" sx={{
-                fontWeight: 500,
-                color: '#fff',
-                marginTop: "1px"
-              }}>
-                Google Collection
-              </Typography>
+              {
+                app?.collection ? (
+                  <>
+                    <CheckCircleIcon sx={{ color: '#4CAF50' }} />
+                    <Typography variant="body1" sx={{
+                      fontWeight: 500,
+                      color: '#fff',
+                      marginTop: "1px"
+                    }}>
+                      app.collection
+
+                    </Typography>
+                  </>
+                ) : "No collection yet"
+              }
+
             </div>
             <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', marginLeft: "1px" }}>
               Part of a collection
@@ -256,7 +263,7 @@ const AppModal = ({ open, onClose, data, userdata }) => {
           }}>
             <Stack direction="row" spacing={-1}>
               <Avatar
-                src={data?.large_image}
+                src={app?.large_image}
                 sx={{
                   width: 32,
                   height: 32,
@@ -267,7 +274,7 @@ const AppModal = ({ open, onClose, data, userdata }) => {
                 }}
               />
               <Avatar
-                src={data?.large_image}
+                src={app?.large_image}
                 sx={{
                   width: 32,
                   height: 32,
