@@ -4,13 +4,10 @@
 
 Shuffle Automation
 
-<<<<<<< HEAD
 [![CodeQL](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml)
 [![Autobuild](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml)
 [![Deploy to Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run/?git_repo=https://github.com/0x0elliot/Shuffle&ref=2.0.0)
 
-=======
->>>>>>> 8883de54d10855428866f598b70e16674df6d7c1
 </h1><h4 align="center">
 
 [Shuffle](https://shuffler.io) is an automation platform for and by the community, focusing on accessibility for anyone to automate. Security operations is complex, but it doesn't have to be.
