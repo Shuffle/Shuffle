@@ -25,6 +25,7 @@ import { toast } from "react-toastify";
 import algoliasearch from "algoliasearch/lite";
 import { debounce } from "lodash";
 import AppSelection from "../components/AppSelection.jsx";
+import AppModal from "../components/AppModal.jsx";
 
 
 const searchClient = algoliasearch(
@@ -33,7 +34,7 @@ const searchClient = algoliasearch(
 );
 
 // AppCard Component
-const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab }) => {
+const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick }) => {
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
 
@@ -51,12 +52,12 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
 
   return (
     <Grid item xs={12} key={index}>
-      <Paper elevation={0} 
-        style={paperStyle} 
-        onMouseOver={() => setMouseHoverIndex(index)} 
+      <Paper elevation={0}
+        style={paperStyle}
+        onMouseOver={() => setMouseHoverIndex(index)}
         onMouseOut={() => setMouseHoverIndex(-1)}
       >
-        <ButtonBase 
+        <ButtonBase
           style={{
             borderRadius: 6,
             fontSize: 16,
@@ -70,7 +71,8 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
             // if (!event.target.closest('.deactivate-button')) {
             //   window.location.href = appUrl;
             // }
-            console.log("clicked");
+
+            handleAppClick(data);
           }}
         >
           <img
@@ -136,7 +138,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               </div>
               {/* Deactivate button */}
               {currTab === 0 && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
-                <Button 
+                <Button
                   className="deactivate-button"
                   style={{
                     marginLeft: 15,
@@ -206,7 +208,6 @@ const Hits = ({
       return name;
     }
   };
-
 
 
   //Function for activation and deactivation of app
@@ -569,7 +570,7 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
       setSearchQuery(value);
       removeQuery("q");
       refine(value);
-    }, 300) // Adjust the delay as needed
+    }, 300)
   ).current;
 
   useEffect(() => {
@@ -702,8 +703,8 @@ const Apps2 = (props) => {
   const [mouseHoverIndex, setMouseHoverIndex] = useState(-1);
   var counted = 0;
   const [showNoAppFound, setShowNoAppFound] = useState(false);
-
-
+  const [openModal, setOpenModal] = useState(false);
+  const [selectedApp, setSelectedApp] = useState(null);
   const [appFramework, setAppFramework] = useState(undefined);
   const [defaultSearch, setDefaultSearch] = useState("");
   // Set the current tab based on the query parameter
@@ -799,6 +800,7 @@ const Apps2 = (props) => {
       }
     };
 
+
     // Only fetch if we have required data
     if (globalUrl && (currTab === 0 || (currTab === 1 && userdata?.id))) {
       fetchApps();
@@ -883,7 +885,7 @@ const Apps2 = (props) => {
 
   const handleCreateApp = (e) => {
     e.preventDefault();
-    console.log("Create app clicked")
+    setOpenModal(true);
   };
 
 
@@ -968,9 +970,23 @@ const Apps2 = (props) => {
     setSelectedLabel(value);
   };
 
+  const handleAppClick = (app) => {
+    setSelectedApp(app);
+    setOpenModal(true);
+  }
+
+  const handleAppModalClose = () => {
+    setOpenModal(false)
+  }
 
   return (
     <InstantSearch searchClient={searchClient} indexName="appsearch">
+          <AppModal
+            open={openModal}
+            onClose={handleAppModalClose}
+            data={selectedApp}
+            userdata={userdata}
+          />
       <div style={boxStyle}>
         <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none' }}>
           Apps
@@ -1103,7 +1119,7 @@ const Apps2 = (props) => {
                     {appsToShow?.length > 0 && appsToShow !== undefined && !isLoading ? (
                       <div style={{ rowGap: 16, columnGap: 16, marginTop: 16, display: "flex", flexWrap: "wrap", justifyContent: "flex-start", maxHeight: 570, scrollbarWidth: "thin", scrollbarColor: "#494949 #2f2f2f" }}>
                         {appsToShow.map((data, index) => (
-                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} />
+                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} handleAppClick={handleAppClick} />
                         ))}
                       </div>
                     ) : (
@@ -1137,7 +1153,7 @@ const Apps2 = (props) => {
                     {appsToShow?.length > 0 && appsToShow !== undefined ? (
                       <div style={{ rowGap: 16, columnGap: 16, marginTop: 16, display: "flex", flexWrap: "wrap", justifyContent: "flex-start", maxHeight: 570, scrollbarWidth: "thin", scrollbarColor: "#494949 #2f2f2f" }}>
                         {appsToShow.map((data, index) => (
-                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} />
+                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab}/>
                         ))}
                       </div>
                     ) : (
