@@ -7,7 +7,7 @@ Shuffle Automation
 <<<<<<< HEAD
 [![CodeQL](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml)
 [![Autobuild](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml)
-[![Deploy to AWS](https://d1.awsstatic.com/cloudformation-deploy-to-aws-button.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=Shuffle-Instance&templateURL=https://raw.githubusercontent.com/Shuffle/Shuffle/refs/heads/2.0.0/template.yaml)
+[![Deploy to Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run/?git_repo=https://github.com/0x0elliot/Shuffle&ref=2.0.0)
 
 =======
 >>>>>>> 8883de54d10855428866f598b70e16674df6d7c1
