@@ -210,6 +210,7 @@ const ParsedAction = (props) => {
   useEffect(() => {
 	  // Changes the order of params to show in order:
 	  // auth, required, optional
+	  /*
 	  var changed = false
 	  if (selectedActionParameters === undefined || selectedActionParameters === null || selectedActionParameters.length === 0) {
 		  return 
@@ -221,12 +222,16 @@ const ParsedAction = (props) => {
 
 	  var keyorder = []
 	  for (let paramkey in selectedActionParameters) {
-		  const param = selectedActionParameters[paramkey]
+		  var param = selectedActionParameters[paramkey]
 		  keyorder.push(param.name)
 
 		  if (param.configuration) {
 			  auth.push(param)
 			  continue
+		  }
+
+		  if (param?.value?.toLowerCase().includes("secret. replace")) {
+			  param.value = ""
 		  }
 
 		  if (param.required) {
@@ -250,6 +255,7 @@ const ParsedAction = (props) => {
 		  selectedAction.parameters = newparams
 		  setSelectedAction(selectedAction)
 	  }
+	  */
 
 
   }, [selectedActionParameters])
@@ -803,22 +809,21 @@ const ParsedAction = (props) => {
 
             console.log("IN ELSE: ", paramcheck);
           }
-          //console.log("PARAM: ", paramcheck)
-          //if (paramcheck.id === undefined) {
-          //	console.log("Normal paramcheck")
-          //} else {
-          //	selectedActionParameters[count]["value_replace"] = paramcheck
-          //	selectedAction.parameters[count]["value_replace"] = paramcheck
-          //}
+
+		  if (selectedActionParameters[count].value_replace === undefined) {
+			  selectedActionParameters[count].value_replace = paramcheck
+		  }
+
+		  if (selectedAction.parameters[count].value_replace === undefined) {
+			  selectedAction.parameters[count].value_replace = paramcheck
+		  }
 
           if (paramcheck["value_replace"] === undefined) {
-            selectedActionParameters[count]["value_replace"] = paramcheck;
-            selectedAction.parameters[count]["value_replace"] = paramcheck;
+            selectedActionParameters[count]["value_replace"] = paramcheck
+            selectedAction.parameters[count]["value_replace"] = paramcheck
           } else {
-            selectedActionParameters[count]["value_replace"] =
-              paramcheck["value_replace"];
-            selectedAction.parameters[count]["value_replace"] =
-              paramcheck["value_replace"];
+            selectedActionParameters[count]["value_replace"] = paramcheck["value_replace"];
+            selectedAction.parameters[count]["value_replace"] = paramcheck["value_replace"];
           }
           setSelectedAction(selectedAction);
           //setUpdate(Math.random())
@@ -999,8 +1004,6 @@ const ParsedAction = (props) => {
 						} else {
 							paramcheck["value_replace"][subparamindex]["value"] = toReplace 
 						}
-
-						console.log("IN ELSE: ", paramcheck)
 					}
 					//console.log("PARAM: ", paramcheck)
 					//if (paramcheck.id === undefined) {
@@ -1451,9 +1454,9 @@ const ParsedAction = (props) => {
 		  		  </Tooltip>
 				  <h3 style={{ }}>
 					{(
-					  selectedAction.app_name.charAt(0).toUpperCase() +
-					  selectedAction.app_name.substring(1)
-					).replaceAll("_", " ")}
+					  selectedAction?.app_name?.charAt(0).toUpperCase() +
+					  selectedAction?.app_name?.substring(1)
+					)?.replaceAll("_", " ")}
 				  </h3>
 		  	  </div>
               <div style={{display: "flex", marginTop: 0, }}>
@@ -2206,9 +2209,7 @@ const ParsedAction = (props) => {
 		</div>
       ) : null*/}
 
-      {workflow.execution_variables !== undefined &&
-      workflow.execution_variables !== null &&
-      workflow.execution_variables.length > 0 ? (
+      {workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ? (
         <div style={{ marginTop: "20px" }}>
           <Typography>Execution variable (optional)</Typography>
           <Select
@@ -2429,8 +2430,7 @@ const ParsedAction = (props) => {
               );
             }}
 			renderInput={(params) => {
-
-				if (params.inputProps?.value) {
+				  if (params.inputProps?.value) {
 					const prefixes = ["Post", "Put", "Patch"];
 					for (let prefix of prefixes) {
 						if (params.inputProps.value.startsWith(prefix)) {
@@ -2447,52 +2447,13 @@ const ParsedAction = (props) => {
 					if (params.inputProps.value.startsWith("Get List")) {
 						console.log("Get List");
 					}
-				}
+				  }
 
 
-				const actionDescription = null
-				/*(
-					<Box
-					p={1.5}
-					borderRadius={3}
-					boxShadow={2}
-					backgroundColor={theme.palette.textFieldStyle}
-					display="flex"
-					flexDirection="column"
-					>
-						<Box display="flex" alignItems="center" justifyContent="space-between">
-							<Typography variant="body1" style={{ flexGrow: 1 }}>
-								{params.inputProps.value}
-							</Typography>
-							<IconButton size="small"
-								 onMouseDown={(event) => {
-									event.preventDefault();
-									event.stopPropagation();
-								  }}
-								
-								 onClick={() => {
-									setHiddenDescription(true)
-									const inputElement = document.getElementById(uiBox);
-									if (inputElement) {
-									  inputElement.focus();
-									}
-								}}
-							>
-								<CloseIcon fontSize="small" />
-							</IconButton>
-						</Box>
-						<Divider sx={{ backgroundColor: theme.palette.surfaceColor, marginTop: "5px", marginBottom : "10px", height: "3px" }}/>
-						<Box display="flex" flexDirection="column">
-							<Typography variant="body2" mb={0.5}>
-							<strong>Description: </strong> {selectedAction?.description}
-							</Typography>
-						</Box>
-					</Box>
-				)
-				*/
+				  const actionDescription = null
 
 				  return (
-						<Tooltip title={actionDescription}
+					  <Tooltip title={actionDescription}
 						placement="right" 
 						open={!hiddenDescription}
 						PopperProps={{
@@ -2507,7 +2468,7 @@ const ParsedAction = (props) => {
 							},
 						}}
 						>
-							<TextField
+						  <TextField
 							{...params}
 
 							data-lpignore="true"
@@ -2525,7 +2486,7 @@ const ParsedAction = (props) => {
 							label={isIntegration ? "Choose a category" : "Find Actions"}
 							variant="outlined"
 							name={`disable_autocomplete_${Math.random()}`}
-							/>	
+						  />	
 						</Tooltip>
 				  );
 				}}
@@ -3043,7 +3004,6 @@ const ParsedAction = (props) => {
               //setSelectedActionParameters(selectedActionParameters)
             }
 
-             var hideBodyButton = "";
 			 const hideBodyButtonValue = (
 			 	<div
 			 	  key={data.name}
@@ -3066,74 +3026,73 @@ const ParsedAction = (props) => {
 			 		}
 			 		placement="top"
 			 	  >
-			 		<FormControlLabel
-			 		  control={
-			 			<Checkbox
-			 			  tabIndex="-1"
-			 			  checked={hideBody}
-			 			  style={{
-			 				color: theme.palette.primary.secondary,
-			 			  }}
-			 			  onChange={(event) => {
-			 				const newHideBody = !hideBody;
-			 				setHideBody(newHideBody)
+				 	<ButtonGroup fullWidth>
+				 		<Button variant={hideBody === true ? "outlined" : "contained"} color="primary" onClick={() => {
+							setHideBody(false)
+
+							const updatedParameters = selectedActionParameters.map((param) => {
+								if (param.name === "body") {
+									return {
+										...param,
+										id: "UNTOGGLED",
+									}
+								}
+
+			 				    if (param.description === openApiFieldDesc) {
+			 				      return { ...param, field_active: true }
+			 				    }
+
+								return param
+							})
 			
-			 				const updatedParameters = selectedActionParameters.map((param) => {
-			 				  if (param.name === "body") {
-			 					return { ...param, id: newHideBody ? "UNTOGGLED" : "TOGGLED" };
-			 				  }
-			 				  if (param.description === openApiFieldDesc) {
-			 					return { ...param, field_active: newHideBody };
-			 				  }
-			 				  return param;
-			 				});
+			 				setSelectedActionParameters(updatedParameters)
+						}}>
+				 			Simple
+				 		</Button>
+				 		<Button variant={hideBody === true ? "contained" : "outlined" }  color="primary" onClick={() => {
+							setHideBody(true)
+							// Make sure the body field is shown
+							const updatedParameters = selectedActionParameters.map((param) => {
+								if (param.name === "body") {
+									return {
+										...param,
+										id: "TOGGLED",
+									}
+								}
+
+			 				    if (param.description === openApiFieldDesc) {
+			 				      return { ...param, field_active: false }
+			 				    }
+
+								return param
+							})
 			
-			 				setSelectedActionParameters(updatedParameters);
-			
-							/*
-			 				setTimeout(() => {
-			 				  const element = document.getElementById("hide_body_button");
-			 				  if (element) {
-			 					element.scrollIntoView({
-			 					  behavior: "smooth",
-			 					  block: "center",
-			 					});
-			 				  }
-			 				}, 100);
-							*/
-			 			  }}
-			 			  name="requires_unique"
-			 			/>
-			 		  }
-			 		  label={hideBody ? "Show Body" : "Hide Body"}
-			 		/>
+			 				setSelectedActionParameters(updatedParameters)
+						}}>
+				 			Advanced
+				 		</Button>
+				 	</ButtonGroup>
 			 	  </Tooltip>
 			 	</div>
 			   );
 
+			 var showButtonField = false
              if (selectedApp.generated && data.name === "body") {
                const regex = /\${(\w+)}/g;
                const found = placeholder.match(regex);
+			 
+			   showButtonField = true 
 
-               hideBodyButton = hideBodyButtonValue;
-               if (found === null || !hideBody) {
-                 if (found === null) {
-
-				   if (activateHidingBodyButton !== true) {
-                      setActivateHidingBodyButton(true)
-				   }
-
-                 } else {
-			 		//console.log("In found: ", found, hideBody)
-			 	}
-               } else {
+               if (hideBody === true) {
+				   //toast("BODYBUTTON TRUE")
+			   } else {
 
                  rows = "1";
                  disabled = true;
                  openApiHelperText = "OpenAPI spec: fill the following fields.";
 
                  var changed = false;
-			 	var tempArray = []
+			 	 var tempArray = []
                  for (let specKey in found) {
                    const tmpitem = found[specKey];
                    var skip = false;
@@ -3181,7 +3140,7 @@ const ParsedAction = (props) => {
 			  	  
 			 		autocompleted: true,
                    });
-                 }
+                }
                 
 			 	var required = selectedActionParameters.filter(item => item.required === true)
 			 	var notRequired = selectedActionParameters.filter(item => item.required === false)
@@ -3200,10 +3159,9 @@ const ParsedAction = (props) => {
 			 			}
 			 		}
 			 	}
-			 	//selectedActionParameters
+
                  if (changed) {
 			 	  // Sort selectedActionParameters based on selectedActionParameters.required
-			 	  //selectedActionParameters.sort((a, b) => (a.required < b.required) ? 1 : -1)
 			 	  // Find the "headers" and "queries" field names and put them on the first indexes anyway
 			 	  var newArray = required.concat(notRequired)
 			    
@@ -3211,21 +3169,17 @@ const ParsedAction = (props) => {
                    setSelectedActionParameters(newArray)
                  }
 
-                 return hideBodyButton;
                }
-             }
-
-             if (activateHidingBodyButton === true) {
-               hideBodyButton = "";
+                 
+			   //return hideBodyButtonValue
              }
 
             const clickedFieldId = "rightside_field_" + count;
 
             var baseHelperText = ""
-						if (data !== undefined && data !== null && data.value !== undefined && data.value !== null && data.value.length > 0) {
-							baseHelperText = calculateHelpertext(data.value)
-						}
-
+			if (data !== undefined && data !== null && data.value !== undefined && data.value !== null && data.value.length > 0) {
+				baseHelperText = calculateHelpertext(data.value)
+			}
 
             var tmpitem = data.name.valueOf();
             if (data.name.startsWith("${") && data.name.endsWith("}")) {
@@ -3652,7 +3606,7 @@ const ParsedAction = (props) => {
 
 										selectedActionParameters[count].value += "\n"
 										selectedAction.parameters[count].value += "\n"
-          					setSelectedActionParameters(selectedActionParameters)
+          								setSelectedActionParameters(selectedActionParameters)
 										setSelectedAction(selectedAction)
 										setUpdate(Math.random())
 									}}>
@@ -4178,26 +4132,21 @@ const ParsedAction = (props) => {
                   })}
                 </Menu>
               );
-            };
- 
-
-            //var itemColor = "#f85a3e"
-            //if (!data.required) {
-            //	itemColor = "#ffeb3b"
-            //}
-            {
-              /*<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>*/
             }
-
+ 
 			const buttonTitle = `Authenticate API ${selectedApp.name.replaceAll("_", " ")}`
 			const hasAutocomplete = data?.autocompleted === true
 			if (data.variant === undefined || data.variant === null) {
 				data.variant = "STATIC_VALUE"
 			}
 
+			if (data.name === "body" && hideBody === false) {
+				return hideBodyButtonValue 
+			}
+
             return (
               <div key={data.name}>
-                {/* {hideBodyButton} */}
+                {showButtonField === true ? hideBodyButtonValue : null} 
                 <div
                   style={{ marginTop: 20, marginBottom: 0, display: "flex" }}
                 >

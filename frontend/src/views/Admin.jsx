@@ -4960,7 +4960,7 @@ If you're interested, please let me know a time that works for you, or set up a 
         <div style={{ marginTop: 50, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Webhooks</h2>
           <span style={{ marginLeft: 25 }}>
-			Webhooks used in Shuffle workflows.&nbsp;
+			Current HTTP Webhook endpoints in your organization.&nbsp;
             <a
               target="_blank"
               rel="noopener noreferrer"
@@ -5114,7 +5114,7 @@ If you're interested, please let me know a time that works for you, or set up a 
         <div style={{ marginTop: 50, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>Pipelines</h2>
           <span style={{ marginLeft: 25 }}>
-            Controls a pipeline to run things.{" "}
+            Controls a pipeline to e.g. connect to Kafka queues or search in the Tenzir storage.{" "}
             <a
               target="_blank"
               rel="noopener noreferrer"

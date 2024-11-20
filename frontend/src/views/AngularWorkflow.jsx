@@ -3967,7 +3967,7 @@ const releaseToConnectLabel = "Release to Connect"
   };
 
   const onNodeDragStop = (event, selectedAction) => {
-    const nodedata = event.target.data();
+    const nodedata = event.target.data()
     if (nodedata.id === selectedAction.id) {
       //console.log("Same node, return")
       return
@@ -4759,9 +4759,9 @@ const releaseToConnectLabel = "Release to Connect"
     // Forces all states to update at the same time,
 	// Otherwise everything is SUPER slow
     
-	//const data = JSON.parse(JSON.stringify(event.target.data()))
-    const data = event.target.data()
-
+	// FIXME: Do absolutely NOT use JSON.stringify on the event.target.data()
+	// This causes memory referencing to become a nightmare
+	const data = event.target.data()
     if (data.app_name === "Shuffle Workflow") {
       if ((data.parameters !== undefined) && (data.parameters.length > 0)) {
         getWorkflowApps(data.parameters[0].value)
@@ -5154,31 +5154,35 @@ const releaseToConnectLabel = "Release to Connect"
         return;
       }
 
-		if (data.type === undefined) {
-			console.log("No type, automatically setting to action");
-			data.type = "ACTION"
-		}
+	  if (data.type === undefined) {
+	    console.log("No type, automatically setting to action");
+		data.type = "ACTION"
+	  }
 
       if (data.type === "ACTION") {
         setSelectedComment({})
-        //var curaction = JSON.parse(JSON.stringify(data))
-        // FIXME: Trust it to just work?
-        //event.target.data()
+
+		// FIXME: is this what is mapping it an actual action in the workflow? wtf?
         var curaction = workflow.actions.find((a) => a.id === data.id)
         if (!curaction || curaction === undefined) {
           if (data.id !== undefined && data.app_name !== undefined) {
             workflow.actions.push(data)
             setWorkflow(workflow)
-            curaction = data
+
+			// FIXME: Is this necessary?
+            //curaction = JSON.parse(JSON.stringify(data))
           } else {
             if (workflow.public !== true) {
               toast("Action not found. Please remake it.");
             }
 
-            event.target.remove();
-            return;
+            event.target.remove()
+            return
           }
         }
+
+		// FIXME: This change may cause... something
+        curaction = data
 
         //var newapps = JSON.parse(JSON.stringify(apps))
         var newapps = apps
@@ -5410,6 +5414,7 @@ const releaseToConnectLabel = "Release to Connect"
     	          curaction.parameters[curActionParamKey].value = curaction.parameters[curActionParamKey].options[0];
     	        }
     	      }
+
     	    } else {
 				console.log("Should check APP if it has the same params as ACTION")
 				for (let actionKey in curapp.actions) {
@@ -5422,6 +5427,7 @@ const releaseToConnectLabel = "Release to Connect"
 						break
 					}
 				}
+
 			}
 
 		  // Fix authentication fields that may be missing in the UI
@@ -5466,7 +5472,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  }
 
           setSelectedApp(curapp)
-          setSelectedAction(curaction);
+          setSelectedAction(curaction)
 
           cy.removeListener("drag");
           cy.removeListener("free");
@@ -5943,7 +5949,7 @@ const releaseToConnectLabel = "Release to Connect"
             : item.label.toLowerCase().trim().replaceAll(" ", "_");
 
         exampledata = GetExampleResult(item);
-				if (dstdata.parameters !== undefined && dstdata.parameters !== null) {
+		if (dstdata.parameters !== undefined && dstdata.parameters !== null) {
         	for (let [paramkey,paramkeyval] in Object.entries(dstdata.parameters)) {
         	  const param = dstdata.parameters[paramkey];
         	  // Skip authentication params
@@ -5969,9 +5975,8 @@ const releaseToConnectLabel = "Release to Connect"
         	      //dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`;
         	    }
         	  }
-        	}
-				}
-        // Check agains every param
+          }
+		}
       }
     }
 
@@ -6208,29 +6213,29 @@ const releaseToConnectLabel = "Release to Connect"
 
   const onNodeAdded = (event) => {
     const node = event.target;
-    const nodedata = event.target.data();
+    const nodedata = JSON.parse(JSON.stringify(event.target.data()))
 
-    if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)
-    ) {
-      return;
+
+    if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)) {
+      return
     }
 
     // DONT MOVE THIS LINE RIGHT HERE v
     setLastSaved(false)
     if (node.isNode() && cy.nodes().size() === 1) {
-      workflow.start = node.data("id");
-      nodedata.isStartNode = true;
+      workflow.start = node.data("id")
+      nodedata.isStartNode = true
     } else {
       if (workflow.actions === null) {
         console.log("Returning because node has no value")
-        return;
+        return
       }
 
       // Remove bad startnode
       for (let actionkey in workflow.actions) {
         const action = workflow.actions[actionkey];
         if (action.isStartNode && workflow.start !== action.id) {
-          action.isStartNode = false;
+          action.isStartNode = false
         }
       }
     }
@@ -6289,25 +6294,23 @@ const releaseToConnectLabel = "Release to Connect"
       }
 
 
-      if (nodedata.parameters !== undefined && nodedata.parameters !== null && !nodedata.label.endsWith("_copy")) {
+      if (nodedata.parameters !== undefined && nodedata.parameters !== null && !nodedata?.label?.endsWith("_copy")) {
         var newparameters = [];
 
         for (let [subkey,subkeyval] in Object.entries(nodedata.parameters)) {
-          var newparam = JSON.parse(
-            JSON.stringify(nodedata.parameters[subkey])
-          );
-          newparam.id = uuidv4();
+          var newparam = JSON.parse(JSON.stringify(nodedata.parameters[subkey]))
+          newparam.id = uuidv4()
 
           if (newparam.value === undefined || newparam.value === null) {
-            newparam.value = "";
+            newparam.value = ""
           } else {
-            newparam.value = newparam.value;
+            newparam.value = newparam.value
           }
 
           newparameters.push(newparam);
         }
 
-        nodedata.parameters = newparameters;
+        nodedata.parameters = newparameters
       }
 
       if (workflow.actions === undefined || workflow.actions === null) {
@@ -7514,7 +7517,7 @@ const releaseToConnectLabel = "Release to Connect"
   };
 
   const onNodeHover = (event) => {
-    const nodedata = event.target.data();
+    const nodedata = JSON.parse(JSON.stringify(event.target.data()))
 
     const cytoscapeElement = document.getElementById("cytoscape_view")
     if (cytoscapeElement !== undefined && cytoscapeElement !== null) {
@@ -7528,7 +7531,7 @@ const releaseToConnectLabel = "Release to Connect"
     })
 
     if (nodedata.finished === false) {
-      console.log("NODE UNFINISHED (hover in): ", nodedata)
+      console.log("NODE UNFINISHED (hover in): ", JSON.parse(JSON.stringify(nodedata)))
 
 	  // Should just be 1, so this should be fast enough :3
 	  const incomingEdges = event.target.incomers("edge").jsons()
@@ -9635,7 +9638,6 @@ const releaseToConnectLabel = "Release to Connect"
         newNodeId = uuidv4();
         const actionType = "ACTION";
         const actionLabel = getNextActionName(app.name);
-		//console.log("Next action name: ", actionLabel)
         var parameters = null;
         var example = "";
         var description = ""
@@ -9653,12 +9655,9 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
 		// Make the first action the most relevant one for them based on previous use
-        if (
-          app.actions[actionIndex].parameters !== undefined &&
-          app.actions[actionIndex].parameters !== null &&
-          app.actions[actionIndex].parameters.length > 0
-        ) {
-          parameters = app.actions[actionIndex].parameters;
+        if (app.actions[actionIndex].parameters !== undefined && app.actions[actionIndex].parameters !== null && app.actions[actionIndex].parameters.length > 0) {
+
+          parameters = JSON.parse(JSON.stringify(app.actions[actionIndex].parameters))
 		  for (let paramkey in parameters) {
 			  // Check if parameter.name == "headers" and if it includes "=undefined". If it does, set the value to example if it exists, otherwise empty
 			  if (parameters[paramkey].name === "headers" && parameters[paramkey].value.includes("=undefined")) {
@@ -9669,8 +9668,6 @@ const releaseToConnectLabel = "Release to Connect"
 				  }
 			  }
 		  }
-
-          //parameters = app.actions[0].parameters;
         }
 
         if (
@@ -9763,23 +9760,20 @@ const releaseToConnectLabel = "Release to Connect"
           authentication_id: authId,
           finished: false,
           template: app.template === true ? true : false,
-        };
+        }
 
-        // FIXME: overwrite category if the ACTION chosen has a different category
-				//
+		// FIXME: Something is going wrong with params
+		if (!isCloud && (!app.is_valid || (!app.activated && app.generated)))  {
+			console.log("NOT VALID: Activate!")
+			
+			activateApp(app.id, false)
+		}
 
-				if (!isCloud && (!app.is_valid || (!app.activated && app.generated)))  {
-					console.log("NOT VALID: Activate!")
-                    
-					activateApp(app.id, false)
-				}
-
-        // const image = "url("+app.large_image+")"
-        // FIXME - find the cytoscape offset position
+        // find the cytoscape offset position
         // Can this be done with zoom calculations?
         const nodeToBeAdded = {
           group: "nodes",
-          data: newAppData,
+          data: JSON.parse(JSON.stringify(newAppData)),
           renderedPosition: {
             x: e.pageX - cycontainer.offsetLeft,
             y: e.pageY - cycontainer.offsetTop,
@@ -10559,7 +10553,6 @@ const releaseToConnectLabel = "Release to Connect"
 
     	        continue
     	      }
-    	      //newSelectedAction.parameters[newParamIndex].value = param.value
     	    }
 
     	    if (newSelectedAction.parameters === undefined || newSelectedAction.parameters === null) {
@@ -10583,6 +10576,13 @@ const releaseToConnectLabel = "Release to Connect"
 					continue
 				}
 			}
+
+			/*
+			console.log("PARAM CHANGE: ", param, newSelectedAction.parameters[newParamIndex])
+			if (param?.value?.includes("Secret. Replaced") && (param.configuration !== true || newSelectedAction.parameters[newParamIndex].configuration !== true)) {
+				continue
+			}
+			*/
 
     	    newSelectedAction.parameters[newParamIndex].value = param.value
     	    newSelectedAction.parameters[newParamIndex].autocompleted = true
@@ -10615,6 +10615,16 @@ const releaseToConnectLabel = "Release to Connect"
     	  }
     	}
 
+	for (var preparamindex in newSelectedAction.parameters) {
+		const param = newSelectedAction.parameters[preparamindex]
+		if (param.configuration === true) {
+			continue
+		}
+
+		if (param?.value?.toLowerCase().includes("secret. replace")) {
+			newSelectedAction.parameters[preparamindex].value = ""
+		}
+	}
 
     // Takes an action as input, then runs through and updates the relevant parameters based on previous actions' results (parent nodes)
     // Further checks if those fields are already set in a previously used action
@@ -11087,7 +11097,7 @@ const releaseToConnectLabel = "Release to Connect"
             type: "action",
             id: item.id,
             name: item.label,
-            autocomplete: `${item.label.split(" ").join("_")}`,
+            autocomplete: `${item?.label?.split(" ")?.join("_")}`,
             example: item.example === undefined ? "" : item.example,
           };
           actionlist.push(actionvalue);
@@ -16171,8 +16181,9 @@ const releaseToConnectLabel = "Release to Connect"
 					  for (let actionkey in workflow.actions) {
 						  workflow.actions[actionkey].environment = env.Name
 					  }
+
 					  setWorkflow(workflow)
-					  toast.success("Set execution location for ALL actions to " + env.Name)
+					  //toast.success("Set execution location for ALL actions to " + env.Name)
 					}}
 					style={{
 					  pointerEvents: "auto", 
@@ -20913,9 +20924,7 @@ const releaseToConnectLabel = "Release to Connect"
                     }
                     color="primary"
                     defaultValue={
-                      data.value !== undefined && data.value !== null && !data.value.includes("Secret. Replace") 
-                        ? data.value
-                        : ""
+                      data.value !== undefined && data.value !== null && !data.value.includes("Secret. Replace") ? data.value : ""
                     }
                     placeholder={data.example}
                     onChange={(event) => {
