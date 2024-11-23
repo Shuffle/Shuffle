@@ -86,7 +86,7 @@ const AppModal = ({ open, onClose, app, userdata }) => {
           <div style={{ display: "flex", flexDirection: "row", gap: 10, fontFamily: "Inter" }}>
             <img
               alt={app?.name}
-              src={app?.large_image}
+              src={app?.large_image || app?.image_url}
               style={{
                 borderRadius: 4,
                 maxWidth: 100,
@@ -201,7 +201,7 @@ const AppModal = ({ open, onClose, app, userdata }) => {
               mb: 0.3,
               color: '#fff'
             }}>
-              {app?.actions?.length}
+              {Array.isArray(app?.actions) ? app.actions.length : app?.actions}
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
               Actions

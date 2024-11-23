@@ -67,11 +67,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
             width: '100%',
             backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "#212121"
           }}
-          onClick={(event) => {
-            // if (!event.target.closest('.deactivate-button')) {
-            //   window.location.href = appUrl;
-            // }
-
+          onClick={() => {
             handleAppClick(data);
           }}
         >
@@ -190,6 +186,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
 const Hits = ({
   userdata,
   hits,
+  handleAppClick,
   setIsAnyAppActivated,
   searchQuery,
   globalUrl,
@@ -316,193 +313,192 @@ const Hits = ({
                           transitionDelay: `${workflowDelay}ms`,
                         }}
                       >
-                        <Grid>
-                          <a
-                            href={appUrl}
-                            rel="noopener noreferrer"
-                            target="_blank"
+                        <div
+                          onClick={
+                            () => {
+                              handleAppClick(data);
+                            }
+                          }
+                          style={{
+                            color: "#f85a3e",
+                          }}
+                        >
+                          <Paper
+                            elevation={0}
                             style={{
-                              textDecoration: "none",
-                              color: "#f85a3e",
+                              backgroundColor: hoverEffect === index ? "rgba(26, 26, 26, 1)" : "#1A1A1A",
+                              color: "rgba(241, 241, 241, 1)",
+                              cursor: "pointer",
+                              position: "relative",
+                              width: 365,
+                              height: 96,
+                              borderRadius: 8,
+                              boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
+                              marginBottom: 20,
+                            }}
+                            onMouseEnter={() => {
+                              setHoverEffect(index);
+                            }}
+                            onMouseLeave={() => {
+                              setHoverEffect(-1);
                             }}
                           >
-                            <Paper
-                              elevation={0}
-                              style={{
-                                backgroundColor: hoverEffect === index ? "rgba(26, 26, 26, 1)" : "#1A1A1A",
-                                color: "rgba(241, 241, 241, 1)",
-                                cursor: "pointer",
-                                position: "relative",
-                                width: 365,
-                                height: 96,
-                                borderRadius: 8,
-                                boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
-                                marginBottom: 20,
-                              }}
-                              onMouseEnter={() => {
-                                setHoverEffect(index);
-                              }}
-                              onMouseLeave={() => {
-                                setHoverEffect(-1);
-                              }}
-                            >
-                              <ButtonBase style={{
-                                borderRadius: 6,
-                                fontSize: 16,
-                                overflow: "hidden",
-                                display: "flex",
-                                alignItems: "flex-start",
-                                width: '100%',
-                                backgroundColor: hoverEffect === index ? "#2F2F2F" : "#212121"
-                              }}>
-                                <img
-                                  alt={data.name}
-                                  src={data.image_url ? data.image_url : "/images/no_image.png"}
+                            <ButtonBase style={{
+                              borderRadius: 6,
+                              fontSize: 16,
+                              overflow: "hidden",
+                              display: "flex",
+                              alignItems: "flex-start",
+                              width: '100%',
+                              backgroundColor: hoverEffect === index ? "#2F2F2F" : "#212121"
+                            }}>
+                              <img
+                                alt={data.name}
+                                src={data.image_url ? data.image_url : "/images/no_image.png"}
+                                style={{
+                                  width: 100,
+                                  height: 100,
+                                  borderRadius: 6,
+                                  margin: 10,
+                                  border: "1px solid #212122",
+                                  boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
+                                }}
+                              />
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "flex-start",
+                                  width: 339,
+                                  gap: 8,
+                                  fontWeight: '400',
+                                  overflow: "hidden",
+                                  margin: "12px 0",
+                                  fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
+                                }}
+                              >
+                                <div
                                   style={{
-                                    width: 100,
-                                    height: 100,
-                                    borderRadius: 6,
-                                    margin: 10,
-                                    border: "1px solid #212122",
-                                    boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
+                                    display: 'flex',
+                                    flexDirection: "row",
+                                    overflow: "hidden",
+                                    gap: 8,
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    color: '#F1F1F1'
                                   }}
-                                />
+                                >
+                                  {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
+                                  {normalizedString(data.name)}
+                                </div>
+
+                                <div
+                                  style={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    color: "rgba(158, 158, 158, 1)",
+                                    marginTop: 5
+                                  }}
+                                >
+                                  {data.categories !== null
+                                    ? normalizedString(data.categories).join(", ")
+                                    : "NA"}
+                                </div>
                                 <div
                                   style={{
                                     display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "flex-start",
-                                    width: 339,
-                                    gap: 8,
-                                    fontWeight: '400',
-                                    overflow: "hidden",
-                                    margin: "12px 0",
-                                    fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
+                                    justifyContent: 'space-between',
+                                    width: 230,
+                                    textAlign: 'start',
+                                    color: "rgba(158, 158, 158, 1)",
                                   }}
                                 >
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      flexDirection: "row",
-                                      overflow: "hidden",
-                                      gap: 8,
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
-                                      color: '#F1F1F1'
-                                    }}
-                                  >
-                                    {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
-                                    {normalizedString(data.name)}
-                                  </div>
-
-                                  <div
-                                    style={{
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
-                                      color: "rgba(158, 158, 158, 1)",
-                                      marginTop: 5
-                                    }}
-                                  >
-                                    {data.categories !== null
-                                      ? normalizedString(data.categories).join(", ")
-                                      : "NA"}
-                                  </div>
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      justifyContent: 'space-between',
-                                      width: 230,
-                                      textAlign: 'start',
-                                      color: "rgba(158, 158, 158, 1)",
-                                    }}
-                                  >
-                                    <div style={{ marginBottom: 15, }}>
-                                      {hoverEffect === index && isCloud ? (
-                                        <div>
-                                          {data.tags && (
-                                            <Tooltip
-                                              title={data.tags.join(", ")}
-                                              placement="bottom"
-                                              componentsProps={{
-                                                tooltip: {
-                                                  sx: {
-                                                    backgroundColor: "rgba(33, 33, 33, 1)",
-                                                    color: "rgba(241, 241, 241, 1)",
-                                                    width: "auto",
-                                                    height: "auto",
-                                                    fontSize: 16,
-                                                    border: "1px solid rgba(73, 73, 73, 1)",
-                                                  }
+                                  <div style={{ marginBottom: 15, }}>
+                                    {hoverEffect === index && isCloud ? (
+                                      <div>
+                                        {data.tags && (
+                                          <Tooltip
+                                            title={data.tags.join(", ")}
+                                            placement="bottom"
+                                            componentsProps={{
+                                              tooltip: {
+                                                sx: {
+                                                  backgroundColor: "rgba(33, 33, 33, 1)",
+                                                  color: "rgba(241, 241, 241, 1)",
+                                                  width: "auto",
+                                                  height: "auto",
+                                                  fontSize: 16,
+                                                  border: "1px solid rgba(73, 73, 73, 1)",
                                                 }
-                                              }}
-                                            >
-                                              <span>
-                                                {data.tags.slice(0, 1).map((tag, tagIndex) => (
-                                                  <span key={tagIndex}>
-                                                    {normalizedString(tag)}
-                                                    {tagIndex < 1 ? ", " : ""}
-                                                  </span>
-                                                ))}
-                                              </span>
-                                            </Tooltip>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        <div style={{ width: 230, textOverflow: "ellipsis", overflow: 'hidden', whiteSpace: 'nowrap', }}>
-                                          {data.tags &&
-                                            data.tags.map((tag, tagIndex) => (
-                                              <span key={tagIndex}>
-                                                {normalizedString(tag)}
-                                                {tagIndex < data.tags.length - 1 ? ", " : ""}
-                                              </span>
-                                            ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div style={{ position: 'relative', bottom: 5 }}>
-                                      {hoverEffect === index && isCloud && (
-                                        <div>
-                                          {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
-                                            <Button style={{
+                                              }
+                                            }}
+                                          >
+                                            <span>
+                                              {data.tags.slice(0, 1).map((tag, tagIndex) => (
+                                                <span key={tagIndex}>
+                                                  {normalizedString(tag)}
+                                                  {tagIndex < 1 ? ", " : ""}
+                                                </span>
+                                              ))}
+                                            </span>
+                                          </Tooltip>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div style={{ width: 230, textOverflow: "ellipsis", overflow: 'hidden', whiteSpace: 'nowrap', }}>
+                                        {data.tags &&
+                                          data.tags.map((tag, tagIndex) => (
+                                            <span key={tagIndex}>
+                                              {normalizedString(tag)}
+                                              {tagIndex < data.tags.length - 1 ? ", " : ""}
+                                            </span>
+                                          ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div style={{ position: 'relative', bottom: 5 }}>
+                                    {hoverEffect === index && isCloud && (
+                                      <div>
+                                        {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
+                                          <Button style={{
+                                            width: 102,
+                                            height: 35,
+                                            borderRadius: 200,
+                                            backgroundColor: "rgba(73, 73, 73, 1)",
+                                            color: "rgba(241, 241, 241, 1)",
+                                            textTransform: "none",
+                                          }}
+                                            onClick={(event) => {
+                                              handleActivateButton(event, data, "deactivate");
+                                            }}>
+                                            Deactivate
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            style={{
                                               width: 102,
                                               height: 35,
                                               borderRadius: 200,
-                                              backgroundColor: "rgba(73, 73, 73, 1)",
-                                              color: "rgba(241, 241, 241, 1)",
+                                              backgroundColor: "rgba(242, 101, 59, 1)",
+                                              color: "rgba(255, 255, 255, 1)",
                                               textTransform: "none",
                                             }}
-                                              onClick={(event) => {
-                                                handleActivateButton(event, data, "deactivate");
-                                              }}>
-                                              Deactivate
-                                            </Button>
-                                          ) : (
-                                            <Button
-                                              style={{
-                                                width: 102,
-                                                height: 35,
-                                                borderRadius: 200,
-                                                backgroundColor: "rgba(242, 101, 59, 1)",
-                                                color: "rgba(255, 255, 255, 1)",
-                                                textTransform: "none",
-                                              }}
-                                              onClick={(event) => {
-                                                handleActivateButton(event, data, "activate");
-                                              }}
-                                            >
-                                              Activate
-                                            </Button>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
+                                            onClick={(event) => {
+                                              handleActivateButton(event, data, "activate");
+                                            }}
+                                          >
+                                            Activate
+                                          </Button>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                              </ButtonBase>
-                            </Paper>
-                          </a>
-                        </Grid>
+                              </div>
+                            </ButtonBase>
+                          </Paper>
+                        </div>
                       </Zoom>
                     );
                   })}
@@ -981,12 +977,12 @@ const Apps2 = (props) => {
 
   return (
     <InstantSearch searchClient={searchClient} indexName="appsearch">
-          <AppModal
-            open={openModal}
-            onClose={handleAppModalClose}
-            app={selectedApp}
-            userdata={userdata}
-          />
+      <AppModal
+        open={openModal}
+        onClose={handleAppModalClose}
+        app={selectedApp}
+        userdata={userdata}
+      />
       <div style={boxStyle}>
         <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none' }}>
           Apps
@@ -1153,7 +1149,9 @@ const Apps2 = (props) => {
                     {appsToShow?.length > 0 && appsToShow !== undefined ? (
                       <div style={{ rowGap: 16, columnGap: 16, marginTop: 16, display: "flex", flexWrap: "wrap", justifyContent: "flex-start", maxHeight: 570, scrollbarWidth: "thin", scrollbarColor: "#494949 #2f2f2f" }}>
                         {appsToShow.map((data, index) => (
-                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab}/>
+                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} 
+                          handleAppClick={handleAppClick}
+                          />
                         ))}
                       </div>
                     ) : (
@@ -1172,6 +1170,7 @@ const Apps2 = (props) => {
             <CustomHits
               isLoggedIn={isLoggedIn}
               userdata={userdata}
+              handleAppClick={handleAppClick}
               setIsAnyAppActivated={setIsAnyAppActivated}
               hitsPerPage={5}
               globalUrl={globalUrl}
