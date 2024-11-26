@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/shuffle/shuffle-shared"
 	"io"
 	"io/ioutil"
 	"log"
@@ -31,12 +30,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/shuffle/shuffle-shared"
+
 	"math/rand"
 	//"os/signal"
 	//"syscall"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -102,6 +104,8 @@ var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
 var memcached = os.Getenv("SHUFFLE_MEMCACHED")
+var queuePerMinute = os.Getenv("SHUFFLE_EXECUTION_PER_MINIUTE")
+var queuePerMinuteInt = queuePerMinute
 
 // For it to download from Sigma?
 var apiKey = os.Getenv("AUTH_FOR_ORBORUS")
@@ -110,8 +114,8 @@ var pipelineUrl = os.Getenv("SHUFFLE_PIPELINE_URL")
 var executionIds = []string{}
 var pipelines = []shuffle.PipelineInfoMini{}
 var namespacemade = false // For K8s
-var skipPipelineMount = false 
-var tenzirDisabled = false 
+var skipPipelineMount = false
+var tenzirDisabled = false
 
 var dockercli *dockerclient.Client
 var containerId string
@@ -194,9 +198,7 @@ func skipCheckInCleanup(name string) bool {
 		strings.HasPrefix(name, "orborus") ||
 		strings.HasPrefix(name, "shuffle-orborus") ||
 		strings.HasPrefix(name, "opensearch") ||
-		strings.HasPrefix(name, "shuffle-opensearch") ||
-		strings.HasPrefix(name, "memcached") ||
-		strings.HasPrefix(name, "shuffle-memcached")
+		strings.HasPrefix(name, "shuffle-opensearch")
 }
 
 func cleanupExistingNodes(ctx context.Context) error {
@@ -291,7 +293,6 @@ func cleanupExistingNodes(ctx context.Context) error {
 	//log.Printf("\n\nFound %d contaienrs", len(services))
 
 	for _, service := range services {
-		//log.Printf("[INFO] Service: %#v", service.Spec.Annotations.Name)
 
 		//portFound := false
 		//for _, endpoint := range service.Spec.EndpointSpec.Ports {
@@ -330,6 +331,17 @@ func deployServiceWorkers(image string) {
 		return
 	}
 
+	isMemcachedRunning, err := checkMemcached(dockercli)
+	if err != nil {
+		log.Printf("[ERROR] Failed checking memcached: %s", err)
+	}
+	if isMemcachedRunning == false {
+		log.Printf("[ERROR] Memcached is not running. Will try to deploy it.")
+		deployMemcached(dockercli)
+	}
+	ip := getLocalIP()
+
+	os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
 
 	ctx := context.Background()
 	// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
@@ -594,7 +606,7 @@ func deployServiceWorkers(image string) {
 				Condition: swarm.RestartPolicyConditionOnFailure,
 			},
 			Placement: &swarm.Placement{
-				MaxReplicas: replicas,
+				Constraints: []string{},
 			},
 		},
 	}
@@ -1926,7 +1938,7 @@ func main() {
 
 		if len(containerId) > 0 {
 			pipelineUrl = "http://tenzir-node:5160"
-		} 
+		}
 
 		log.Printf("[WARNING] SHUFFLE_PIPELINE_URL not set, falling back to default URL: %s. If BASE_URL is set, we use the external IP for that", pipelineUrl)
 		os.Setenv("SHUFFLE_PIPELINE_URL", pipelineUrl)
@@ -2108,6 +2120,7 @@ func main() {
 				log.Printf("[DEBUG] Starting iteration on environment %#v (default = Shuffle). Got statuscode %d from backend on first request", environment, newresp.StatusCode)
 			}
 
+			go AutoScale(ctx)
 			hasStarted = true
 		}
 
@@ -2172,7 +2185,7 @@ func main() {
 
 						log.Printf("[ERROR] Failed handling pipeline (%s %s): %s. Deleting job anyway.", incRequest.Type, incRequest.ExecutionSource, err)
 					}
-			
+
 					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
 				} else if incRequest.Type == "DOCKER_IMAGE_DOWNLOAD" {
 					log.Printf("[INFO] Should delete -> download new images: %#v", incRequest.ExecutionArgument)
@@ -2507,37 +2520,38 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 			log.Printf("[ERROR] Failed to create pipeline: %s", err)
 			return err
 		}
-	} else if incRequest.Type == "PIPELINE_DELETE" || incRequest.Type == "PIPELINE_STOP" { {
-		log.Printf("[INFO] Should delete pipeline %#v", identifier)
-		pipelineId, err := searchPipeline(identifier)
-		if err != nil {
-			log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
-			return err
+	} else if incRequest.Type == "PIPELINE_DELETE" || incRequest.Type == "PIPELINE_STOP" {
+		{
+			log.Printf("[INFO] Should delete pipeline %#v", identifier)
+			pipelineId, err := searchPipeline(identifier)
+			if err != nil {
+				log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
+				return err
+			}
+
+			err = deletePipeline(pipelineId)
+			if err != nil {
+				log.Printf("[ERROR] Failed Deleting Pipeline %s", err)
+				return err
+			}
 		}
 
-		err = deletePipeline(pipelineId)
-		if err != nil {
-			log.Printf("[ERROR] Failed Deleting Pipeline %s", err)
-			return err
-		}
-	}
-		
-	/*
-	} else if incRequest.Type == "PIPELINE_STOP" {
-		log.Printf("[INFO] Should stop the pipeline %#v", identifier)
-		pipelineId, err := searchPipeline(identifier)
-		if err != nil {
-			log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
-			toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
-			return err
-		}
-		_, err = updatePipelineState(command, pipelineId, "stop")
-		if err != nil {
-			log.Printf("[ERROR] Failed to stop Pipeline: %s reason:%s ", pipelineId, err)
-			return err
-		} else {
-			log.Printf("[INFO] Successfully stopped the Pipeline: %s", pipelineId)
-		}
+		/*
+			} else if incRequest.Type == "PIPELINE_STOP" {
+				log.Printf("[INFO] Should stop the pipeline %#v", identifier)
+				pipelineId, err := searchPipeline(identifier)
+				if err != nil {
+					log.Printf("[ERROR] Failed searching for Pipeline with name %s reason:%s ", identifier, err)
+					toBeRemoved.Data = append(toBeRemoved.Data, incRequest)
+					return err
+				}
+				_, err = updatePipelineState(command, pipelineId, "stop")
+				if err != nil {
+					log.Printf("[ERROR] Failed to stop Pipeline: %s reason:%s ", pipelineId, err)
+					return err
+				} else {
+					log.Printf("[INFO] Successfully stopped the Pipeline: %s", pipelineId)
+				}
 		*/
 
 	} else if incRequest.Type == "PIPELINE_START" {
@@ -2678,17 +2692,17 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 
 	// Ensure restart policy is there
 	config := &container.Config{
-		Hostname:     containerName,
-		Cmd:          []string{"--commands=web server --mode=dev --bind=0.0.0.0"},
-		Image:        imageName,
-		Healthcheck:  healthconfig,
+		Hostname:    containerName,
+		Cmd:         []string{"--commands=web server --mode=dev --bind=0.0.0.0"},
+		Image:       imageName,
+		Healthcheck: healthconfig,
 		ExposedPorts: nat.PortSet{
 			"5160/tcp": struct{}{},
-			"514/udp": struct{}{},
-			"514/tcp": struct{}{},
+			"514/udp":  struct{}{},
+			"514/tcp":  struct{}{},
 		},
-		Entrypoint:   []string{containerName},
-		Env:		  []string{},
+		Entrypoint: []string{containerName},
+		Env:        []string{},
 	}
 
 	tenzirApikey := os.Getenv("TENZIR_PLUGINS__PLATFORM__API_KEY")
@@ -2698,38 +2712,36 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 	anyFound := false
 	if len(tenzirApikey) > 0 {
 		config.Env = append(config.Env, fmt.Sprintf("TENZIR_PLUGINS__PLATFORM__API_KEY=%s", tenzirApikey))
-		anyFound = true 
+		anyFound = true
 	}
 
 	if len(tenzirControlEndpoint) > 0 {
 		config.Env = append(config.Env, fmt.Sprintf("TENZIR_PLUGINS__PLATFORM__CONTROL_ENDPOINT=%s", tenzirControlEndpoint))
-		anyFound = true 
+		anyFound = true
 	}
 
 	if len(tenzirPluginsPlatform) > 0 {
 		config.Env = append(config.Env, fmt.Sprintf("TENZIR_PLUGINS__PLATFORM__TENANT_ID=%s", tenzirPluginsPlatform))
-		anyFound = true 
+		anyFound = true
 	}
 
 	tenzirStorageFolder := os.Getenv("SHUFFLE_STORAGE_FOLDER")
 	if len(tenzirStorageFolder) > 0 {
-		tenzirStorageFolder = tenzirStorageFolder 
+		tenzirStorageFolder = tenzirStorageFolder
 
 		if !strings.HasSuffix(tenzirStorageFolder, "/") {
 			tenzirStorageFolder = tenzirStorageFolder + "/"
 		}
 	} else {
 		tenzirStorageFolder = "/tmp/"
-		log.Printf("[DEBUG] Using folder %s for Tenzir storage. Change it using SHUFFLE_STORAGE_FOLDER", tenzirStorageFolder) 
+		log.Printf("[DEBUG] Using folder %s for Tenzir storage. Change it using SHUFFLE_STORAGE_FOLDER", tenzirStorageFolder)
 	}
 
-
 	if !anyFound {
-		//log.Printf("[DEBUG] No Tenzir Plugin environment variables found.") 
+		//log.Printf("[DEBUG] No Tenzir Plugin environment variables found.")
 	} else {
 		//log.Printf("[DEBUG] Attempting Tenzir connection with app.tenzir.com tenant '%s'", tenzirPluginsPlatform)
 	}
-
 
 	hostConfig := &container.HostConfig{
 		PortBindings: nat.PortMap{
@@ -3396,7 +3408,7 @@ func sendPipelineHealthStatus() (shuffle.LakeConfig, error) {
 		return pipelinePayload, nil
 	}
 
-	err := deployTenzirNode() 
+	err := deployTenzirNode()
 	if err != nil {
 		if (!strings.Contains(err.Error(), "SHUFFLE_SKIP_PIPELINES") && !strings.Contains(err.Error(), "Kubernetes not implemented for Tenzir node")) && !strings.Contains(err.Error(), "Tenzir Node is already running") && !strings.Contains(err.Error(), "docker daemon") {
 
@@ -3806,4 +3818,280 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 
 	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING:\n%s", workflowExecution.ExecutionId, streamUrl, debugCommand)
 	return nil
+}
+
+func AutoScale(ctx context.Context) {
+	if os.Getenv("SHUFFLE_SCALE_REPLICAS") != "" {
+		return
+	}
+
+	if queuePerMinute != "" {
+		var err error
+		queuePerMinuteInt, err = strconv.Atoi(queuePerMinute)
+		if err != nil {
+			queuePerMinuteInt = 60
+			log.Printf("[WARNING] Cannot convert %s to int please pass an interger value. Using default value for it %d", queuePerMinute, queuePerMinuteInt)
+		}
+	}
+
+	replicas := uint64(6)
+	scaleReplicas := os.Getenv("SHUFFLE_SCALE_REPLICAS")
+	if len(scaleReplicas) > 0 {
+		tmpInt, err := strconv.Atoi(scaleReplicas)
+		if err != nil {
+			log.Printf("[ERROR] %s is not a valid number for replication", scaleReplicas)
+		} else {
+			replicas = uint64(tmpInt)
+		}
+
+		log.Printf("[DEBUG] SHUFFLE_SCALE_REPLICAS set to value %#v. Trying to overwrite default (%d/node)", scaleReplicas, replicas)
+	}
+
+	config := shuffle.ScalingConfig{
+		QueuePerMinute:  queuePerMinuteInt,
+		ScalingInterval: 12 * time.Second, // TO ADD SOME BUFFER
+
+		MaxScaleUpStep: 1,
+		CooldownPeriod: time.Duration(10 * time.Second),
+
+		MaxReplicas: int(replicas),
+	}
+
+	lastScaleTime := time.Now().Add(-config.CooldownPeriod)
+	var lastQueueLength int
+	var lastCheckTime time.Time
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(config.ScalingInterval):
+			if time.Since(lastScaleTime) < config.CooldownPeriod {
+				continue
+			}
+
+			data, err := collectMetrics(ctx, dockercli)
+			if err != nil {
+				continue
+			}
+
+			currentTime := time.Now()
+			currentQueueLength := data
+
+			if !lastCheckTime.IsZero() {
+				timeDiff := currentTime.Sub(lastCheckTime).Seconds()
+				if timeDiff >= 10 {
+					rocq := int(math.Ceil(float64(currentQueueLength - lastQueueLength/int(timeDiff))))
+					//desiredReplicas, currentReplicas := numberOfReplicas(ctx, data, config)
+					requiredReplicas := 0
+
+					if rocq >= config.QueuePerMinute {
+						requiredReplicas = currentQueueLength + config.MaxScaleUpStep
+						if requiredReplicas > config.MaxReplicas {
+							requiredReplicas = config.MaxReplicas
+						}
+					}
+
+					if requiredReplicas != 0 {
+						err := scaleService(ctx, dockercli, uint64(requiredReplicas))
+						if err != nil {
+							log.Printf("[ERROR] Failed to scale the service: %s", err)
+						} else {
+							lastScaleTime = currentTime
+						}
+					}
+				}
+			}
+			lastQueueLength = currentQueueLength
+			lastCheckTime = currentTime
+		}
+	}
+}
+
+func scaleService(ctx context.Context, client *dockerclient.Client, replicas uint64) error {
+	service, _, err := client.ServiceInspectWithRaw(ctx, "shuffle-workers", types.ServiceInspectOptions{})
+	if err != nil {
+		return err
+	}
+
+	if service.Spec.Mode.Replicated == nil {
+		return errors.New("Service cannot be replicated")
+	}
+
+	if *service.Spec.Mode.Replicated.Replicas >= replicas {
+		return nil
+	}
+
+	service.Spec.Mode.Replicated.Replicas = &replicas
+
+	_, err = dockercli.ServiceUpdate(ctx, service.ID, service.Version, service.Spec, types.ServiceUpdateOptions{})
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[INFO] Scaled shuffle-worker to %d replicas", replicas)
+	return nil
+}
+
+func queueScaleFactor(numQueue int, config shuffle.ScalingConfig) float64 {
+	if numQueue > config.QueuePerMinute {
+		queuePressure := float64(numQueue) / float64(config.QueuePerMinute)
+		return 1.0 + math.Min(queuePressure-1.0, 1.0)
+	}
+
+	return 1.0
+}
+
+func checkMemcached(dockercli *dockerclient.Client) (bool, error) {
+	containerName := "shuffle-cache"
+	continer, err := dockercli.ContainerInspect(context.Background(), containerName)
+	if err != nil {
+		if dockerclient.IsErrNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return continer.State.Running, nil
+}
+
+func deployMemcached(dockercli *dockerclient.Client) error {
+	if os.Getenv("SHUFFLE_MEMCACHED") != "" {
+		return errors.New("Memcached already running")
+	}
+
+	defaultMem := "1024"
+	log.Printf("[INFO] Spanning a default memcached container to handle the distribution between cache across different workers. Default memory assigned %s", defaultMem)
+
+	ctx := context.Background()
+
+	containerConfig := &container.Config{
+		Image: "memcached",
+		Cmd:   []string{"-m", defaultMem},
+	}
+
+	//		PortBindings: nat.PortMap{
+	//			"514/tcp":  []nat.PortBinding{{HostPort: "514"}},
+	//			"514/udp":  []nat.PortBinding{{HostPort: "514"}},
+	//			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
+	//		},
+
+	hostConfig := &container.HostConfig{
+		PortBindings: nat.PortMap{
+			"11211/tcp": []nat.PortBinding{{HostPort: "11211"}},
+		},
+	}
+
+	containerName := "shuffle-cache"
+
+	resp, err := dockercli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, containerName)
+	if err != nil {
+		log.Printf("[ERROR] Error spanning memcached continer: %s", err)
+		return err
+	}
+	err = dockercli.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Error starting memcached continer: %s", err)
+		return err
+	}
+
+	log.Printf("[INFO] Memcached container started successfully at port 11211")
+
+	return nil
+}
+
+// How do we get the cpu usage? maybe just get the number of requests (much more useful for apps)
+/*
+func nodesResourceUsage(ctx context.Context, client *dockerclient.Client) error {
+	nodes, err := client.NodeList(ctx, types.NodeListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, node := range nodes {
+		res := node.Description.Resources
+	}
+
+	return nil
+}
+*/
+
+func numberOfReplicas(ctx context.Context, queueLength int, config shuffle.ScalingConfig) (int, int) {
+	queueScaleFactor := queueScaleFactor(queueLength, config)
+	numReplicas := int(float64(queueLength) * queueScaleFactor)
+	serviceName := "shuffle-workers"
+	nodes, err := dockercli.NodeList(ctx, types.NodeListOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Cannot find any nodes in the swarm network")
+	}
+
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("service", serviceName)
+	filterArgs.Add("desired-state", "running")
+
+	tasks, err := dockercli.TaskList(context.Background(), types.TaskListOptions{
+		Filters: filterArgs,
+	})
+	if err != nil {
+		log.Fatalf("[WARNING] Failed to list tasks for service %s: %s", serviceName, err)
+	}
+
+	runningReplicas := len(tasks)
+	if numReplicas > runningReplicas*len(nodes) {
+		maxIncrease := config.MaxScaleUpStep
+		if numReplicas > (runningReplicas*len(nodes) + maxIncrease) {
+			numReplicas = runningReplicas + maxIncrease
+		}
+	}
+
+	if numReplicas < config.MinReplicas {
+		numReplicas = config.MinReplicas
+	}
+	if numReplicas > config.MaxReplicas {
+		numReplicas = config.MaxReplicas
+	}
+
+	return numReplicas, runningReplicas
+}
+
+func collectMetrics(ctx context.Context, dockerClient *dockerclient.Client) (int, error) {
+	client := shuffle.GetExternalClient(baseUrl)
+	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
+	req, err := http.NewRequest("GET", fullUrl, nil)
+	if err != nil {
+		log.Printf("[ERROR] Failed to send a request to %s: %s", fullUrl, err)
+		return 0, err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Org-Id", environment)
+	if len(auth) > 0 {
+		req.Header.Add("Authorization", auth)
+	}
+
+	if len(org) > 0 {
+		req.Header.Add("Org", org)
+	}
+
+	if len(orborusLabel) > 0 {
+		log.Printf("[DEBUG] Sending with Label '%s'", orborusLabel)
+		req.Header.Add("X-Orborus-Label", orborusLabel)
+	}
+
+	if swarmConfig != "run" && swarmConfig != "swarm" {
+		req.Header.Add("X-Orborus-Runmode", "Default")
+	} else {
+		req.Header.Add("X-Orborus-Runmode", "Docker Swarm")
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+
+	var executionRequests shuffle.ExecutionRequestWrapper
+	body, err := ioutil.ReadAll(resp.Body)
+
+	json.Unmarshal(body, &executionRequests)
+
+	return len(executionRequests.Data), nil
 }
