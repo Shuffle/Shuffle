@@ -939,7 +939,6 @@ const Apps2 = (props) => {
     queryParams.set('tab', newQueryParam);
     queryParams.delete('q');
     window.history.replaceState({}, '', `${location.pathname}?${queryParams.toString()}`);
-    console.log("Apps to show", appsToShow)
   };
 
 
@@ -982,6 +981,7 @@ const Apps2 = (props) => {
         onClose={handleAppModalClose}
         app={selectedApp}
         userdata={userdata}
+        globalUrl={globalUrl}
       />
       <div style={boxStyle}>
         <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none' }}>

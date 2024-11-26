@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,15 +13,258 @@ import {
 
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
+import Search from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
 import ForkRightIcon from '@mui/icons-material/ForkRight';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import LaunchIcon from '@mui/icons-material/Launch';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { CloudDownloadOutlined } from '@mui/icons-material';
+import { findSpecificApp } from './AppFramework';
 
-const AppModal = ({ open, onClose, app, userdata }) => {
+const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
 
-  console.log("App data: ", app)
+  const [frameworkData, setFrameworkData] = useState({})
+  const [usecases, setUsecases] = useState([])
+  const [workflows, setWorkflows] = useState([])
+  const [prevSubcase, setPrevSubcase] = useState({})
+  const [inputUsecase, setInputUsecase] = useState({})
+  const [latestUsecase, setLatestUsecase] = useState([])
+  const [foundAppUsecase, setFoundAppUsecase] = useState({})
+
+  const parseUsecase = (subcase) => {
+    const srcdata = findSpecificApp(frameworkData, subcase.type)
+    const dstdata = findSpecificApp(frameworkData, subcase.last)
+
+    if (srcdata !== undefined && srcdata !== null) {
+      subcase.srcimg = srcdata.large_image
+      subcase.srcapp = srcdata.name
+    }
+
+    if (dstdata !== undefined && dstdata !== null) {
+      subcase.dstimg = dstdata.large_image
+      subcase.dstapp = dstdata.name
+    }
+    return subcase
+  }
+
+
+  const getFramework = () => {
+    fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for framework!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success === false) {
+          const preparedData = {
+            "siem": findSpecificApp({}, "SIEM"),
+            "communication": findSpecificApp({}, "COMMUNICATION"),
+            "assets": findSpecificApp({}, "ASSETS"),
+            "cases": findSpecificApp({}, "CASES"),
+            "network": findSpecificApp({}, "NETWORK"),
+            "intel": findSpecificApp({}, "INTEL"),
+            "edr": findSpecificApp({}, "EDR"),
+            "iam": findSpecificApp({}, "IAM"),
+            "email": findSpecificApp({}, "EMAIL"),
+          }
+
+          setFrameworkData(preparedData)
+        } else {
+          setFrameworkData(responseJson)
+        }
+      })
+      .catch((error) => {
+        console.log("Error getting framework: ", error)
+      })
+  }
+
+  const fetchUsecases = (workflows) => {
+    fetch(globalUrl + "/api/v1/workflows/usecases", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for usecases");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+
+
+        const newUsecases = [...usecases]
+        newUsecases.forEach((category, index) => {
+          category.list.forEach((subcase, subindex) => {
+            getUsecase(subcase, index, subindex)
+          })
+        })
+
+        setLatestUsecase(newUsecases)
+        // Matching workflows with usecases
+        if (responseJson.success !== false) {
+          if (workflows !== undefined && workflows !== null && workflows.length > 0) {
+            var categorydata = responseJson
+
+            var newcategories = []
+            for (var key in categorydata) {
+              var category = categorydata[key]
+              category.matches = []
+
+              for (var subcategorykey in category.list) {
+                var subcategory = category.list[subcategorykey]
+                subcategory.matches = []
+
+                for (var workflowkey in workflows) {
+                  const workflow = workflows[workflowkey]
+
+                  if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
+                    for (var usecasekey in workflow.usecase_ids) {
+                      if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory?.name?.toLowerCase()) {
+
+                        category.matches.push({
+                          "workflow": workflow.id,
+                          "category": subcategory?.name,
+                        })
+
+                        subcategory.matches.push(workflow)
+                        break
+                      }
+                    }
+                  }
+
+                  if (subcategory.matches.length > 0) {
+                    break
+                  }
+                }
+              }
+
+              newcategories.push(category)
+            }
+
+            if (newcategories !== undefined && newcategories !== null && newcategories.length > 0) {
+              setUsecases(newcategories)
+            } else {
+              setUsecases(responseJson)
+            }
+          } else {
+            setUsecases(responseJson)
+          }
+        }
+      })
+      .catch((error) => {
+        //toast("ERROR: " + error.toString());
+        console.log("ERROR: " + error.toString());
+      });
+  };
+
+  const getAvailableWorkflows = () => {
+    fetch(globalUrl + "/api/v1/workflows", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          fetchUsecases()
+          console.log("Status not 200 for workflows :O!: ", response.status);
+          return;
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        fetchUsecases(responseJson)
+
+        if (responseJson !== undefined) {
+          setWorkflows(responseJson);
+        }
+      })
+      .catch((error) => {
+        fetchUsecases()
+        //toast(error.toString());
+      });
+  }
+
+  const getUsecase = (subcase, index, subindex) => {
+    subcase = parseUsecase(subcase)
+    setPrevSubcase(subcase)
+
+    fetch(`${globalUrl}/api/v1/workflows/usecases/${escape(subcase?.name?.replaceAll(" ", "_"))}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for framework!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        var parsedUsecase = responseJson
+
+        if (responseJson.success === false) {
+          parsedUsecase = subcase
+        } else {
+          parsedUsecase = responseJson
+
+          parsedUsecase.srcimg = subcase.srcimg
+          parsedUsecase.srcapp = subcase.srcapp
+          parsedUsecase.dstimg = subcase.dstimg
+          parsedUsecase.dstapp = subcase.dstapp
+        }
+        // Look for the type of app and fill in img1, srcapp...
+        setInputUsecase(parsedUsecase)
+      })
+      .catch((error) => {
+        //toast(error.toString());
+        setInputUsecase(subcase)
+        console.log("Error getting usecase: ", error)
+      })
+  }
+
+
+
+  useEffect(() => {
+    getAvailableWorkflows()
+    getFramework()
+  }, [app])
+
+
+  useEffect(() => {
+    const foundCategory = latestUsecase?.find((category) =>
+      category?.list?.some((subcase) => subcase?.srcapp === app?.name || subcase?.dstapp === app?.name)
+    );
+
+    const foundSubcase = foundCategory?.list?.find(
+      (subcase) => subcase?.srcapp === app?.name || subcase?.dstapp === app?.name
+    );
+
+    setFoundAppUsecase(foundSubcase);
+  }, [latestUsecase])
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -34,7 +277,7 @@ const AppModal = ({ open, onClose, app, userdata }) => {
     newAppname = "Undefined";
   } else {
     newAppname = newAppname.charAt(0).toUpperCase() + newAppname.substring(1);
-    newAppname = newAppname.replaceAll("_", " ");
+    newAppname = newAppname?.replaceAll("_", " ");
   }
 
   var canEditApp = userdata.admin === "true" || userdata.id === app?.owner || app?.owner === "" || (userdata.admin === "true" && userdata.active_org.id === app?.reference_org) || !app?.generated
@@ -250,7 +493,13 @@ const AppModal = ({ open, onClose, app, userdata }) => {
             color: "#fff",
             marginBottom: "5px"
           }}>
-            Connect Gmail to Jira
+            {
+              (foundAppUsecase?.srcapp !== undefined && foundAppUsecase?.dstapp !== undefined) ? (
+                "Connect " + foundAppUsecase?.srcapp?.replaceAll("_", " ") + " to " + foundAppUsecase?.dstapp?.replaceAll("_", " ")
+              ) : (
+                "Connect " + app?.name + " to any tool"
+              )
+            }
           </div>
 
           <Box sx={{
@@ -262,30 +511,47 @@ const AppModal = ({ open, onClose, app, userdata }) => {
             mb: 3
           }}>
             <Stack direction="row" spacing={-1}>
-              <Avatar
-                src={app?.large_image}
-                sx={{
-                  width: 32,
-                  height: 32,
-                  bgcolor: 'background.paper',
-                  border: 1,
-                  borderColor: 'divider',
-                  zIndex: 10
-                }}
-              />
-              <Avatar
-                src={app?.large_image}
-                sx={{
-                  width: 32,
-                  height: 32,
-                  bgcolor: 'background.paper',
-                  border: 1,
-                  borderColor: 'divider'
-                }}
-              />
+              {
+                foundAppUsecase === undefined ? (
+                  <Avatar sx={{ width: 32, height: 32, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
+                    <Search sx={{ color: 'text.primary', zIndex: 10, fontSize: 18}} />
+                  </Avatar>
+                ) : (
+                  <Avatar
+                    src={foundAppUsecase?.srcimg}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      bgcolor: 'background.paper',
+                      border: 1,
+                      borderColor: 'divider',
+                      zIndex: 10
+                    }}
+                  />
+                )
+              }
+             {
+                foundAppUsecase === undefined ? (
+                  <Avatar sx={{ width: 32, height: 32, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
+                    <AddIcon sx={{ color: 'text.primary', zIndex: 10, fontSize: 18}} />
+                  </Avatar>
+                ) : (
+                  <Avatar
+                    src={foundAppUsecase?.dstimg}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      bgcolor: 'background.paper',
+                      border: 1,
+                      borderColor: 'divider',
+                      zIndex: 10
+                    }}
+                  />
+                )
+              }
             </Stack>
-            <Typography sx={{ ml: 2, fontSize: "12px" }}>
-              Email management
+            <Typography sx={{ ml: 2, fontSize: "14px", letterSpacing: "0.5px" }}>
+              {foundAppUsecase?.name || "Search for a Usecase"}
             </Typography>
           </Box>
         </div>
