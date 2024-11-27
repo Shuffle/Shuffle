@@ -4031,12 +4031,10 @@ func runInitEs(ctx context.Context) {
 			}
 
 			err = shuffle.SetOrg(ctx, newOrg, newOrg.Id)
-			setUsers := false
 			if err != nil {
 				log.Printf("[ERROR] Failed setting organization when creating original user: %s", err)
 			} else {
 				log.Printf("[DEBUG] Successfully created the default org with id %s!", orgId)
-				setUsers = true
 
 				item := shuffle.Environment{
 					Name:    defaultEnv,
@@ -4050,9 +4048,6 @@ func runInitEs(ctx context.Context) {
 				if err != nil {
 					log.Printf("[WARNING] Failed setting up new environment")
 				}
-			}
-
-			if setUsers {
 			}
 		}
 	} else {
