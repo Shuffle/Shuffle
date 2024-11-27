@@ -4009,11 +4009,23 @@ func runInitEs(ctx context.Context) {
 			log.Printf("[DEBUG] Creating org for default user %s", username)
 			orgId := uuid.NewV4().String()
 			orgSetupName := "default"
+			tmpOrg := shuffle.OrgMini{
+				Name: orgSetupName,
+				Id:   orgId,
+			}
+			err = createNewUser(username, password, "admin", apikey, tmpOrg)
+			if err != nil {
+				log.Printf("[ERROR] Failed to create default user %s: %s", username, err)
+			} else {
+				log.Printf("[INFO] Successfully created user %s", username)
+			}
+
+			user, err := shuffle.GetUser(ctx, username)
 			newOrg := shuffle.Org{
 				Name:      orgSetupName,
 				Id:        orgId,
 				Org:       orgSetupName,
-				Users:     []shuffle.User{},
+				Users:     []shuffle.User{*user},
 				Roles:     []string{"admin", "user"},
 				CloudSync: false,
 			}
@@ -4021,7 +4033,7 @@ func runInitEs(ctx context.Context) {
 			err = shuffle.SetOrg(ctx, newOrg, newOrg.Id)
 			setUsers := false
 			if err != nil {
-				log.Printf("[WARNING] Failed setting organization when creating original user: %s", err)
+				log.Printf("[ERROR] Failed setting organization when creating original user: %s", err)
 			} else {
 				log.Printf("[DEBUG] Successfully created the default org with id %s!", orgId)
 				setUsers = true
@@ -4041,17 +4053,6 @@ func runInitEs(ctx context.Context) {
 			}
 
 			if setUsers {
-				tmpOrg := shuffle.OrgMini{
-					Name: orgSetupName,
-					Id:   orgId,
-				}
-
-				err = createNewUser(username, password, "admin", apikey, tmpOrg)
-				if err != nil {
-					log.Printf("[INFO] Failed to create default user %s: %s", username, err)
-				} else {
-					log.Printf("[INFO] Successfully created user %s", username)
-				}
 			}
 		}
 	} else {
@@ -5026,7 +5027,7 @@ func initHandlers() {
 		go runInitEs(ctx)
 	} else {
 		//go shuffle.runInit(ctx)
-		log.Printf("[ERROR] Opensearch is the only viable option. Please set SHUFFLE_ELASTIC=true") 
+		log.Printf("[ERROR] Opensearch is the only viable option. Please set SHUFFLE_ELASTIC=true")
 		os.Exit(1)
 	}
 
