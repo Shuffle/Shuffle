@@ -142,10 +142,10 @@ const data = [
     },
   },
   {
-    selector: `node[app_name="Shuffle Tools"]`,
+    selector: `node[app_name="Shuffle Tools"], node[app_name="email"], node[app_name="http"]`,
     css: {
-      width: "30px",
-      height: "30px",
+      width: "35px",
+      height: "35px",
       "z-index": 5000,
       "font-size": "0px",
       "background-width": "75%",

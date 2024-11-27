@@ -153,10 +153,9 @@ const AuthenticationOauth2 = (props) => {
 		}
 	}, [])
 
-  if (selectedApp.authentication === undefined) {
-    return null;
-  }
-
+    if (selectedApp.authentication === undefined) {
+      return null;
+    }
 
 	const startOauth2Request = (admin_consent) => {
 		// Admin consent also means to add refresh tokens
@@ -758,7 +757,7 @@ const AuthenticationOauth2 = (props) => {
           <div />
         </span>
 
-				{isCloud && registeredApps.includes(selectedApp.name.toLowerCase()) ? 
+				{isCloud && registeredApps?.includes(selectedApp?.name?.replaceAll(" ", "_").toLowerCase()) ? 
 					<span>
 						<span style={{display: "flex"}}>
 							{autoAuthButton}

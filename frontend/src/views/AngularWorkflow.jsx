@@ -3793,6 +3793,20 @@ const releaseToConnectLabel = "Release to Connect"
       }
     }
 
+	// Ensuring overwriting
+	if (nodedata?.type === "ACTION") {
+
+		if (nodedata?.parameters !== undefined && nodedata.parameters !== null && nodedata.parameters.length > 0 && workflow?.actions !== undefined && workflow?.actions !== null && workflow?.actions.length > 0) {
+			for (var actionkey in workflow.actions) {
+				const action = workflow.actions[actionkey]
+				if (action.id === nodedata.id) {
+					workflow.actions[actionkey].parameters = nodedata.parameters
+					break
+				}
+			}
+		}
+	}
+
     // Unselecting all
     //cy.elements().unselect()
 
@@ -4164,6 +4178,7 @@ const releaseToConnectLabel = "Release to Connect"
 
   const onNodeDrag = (event, selectedAction) => {
     const nodedata = event.target.data();
+
     if (nodedata.finished === false) {
       console.log("NOT FINISHED - ADD EXAMPLE BRANCHES TO CLOSEST!!")
       return
@@ -4450,11 +4465,15 @@ const releaseToConnectLabel = "Release to Connect"
 		
 		var AppContext = []
 		var originalParams = []
+		var originalField = ""
 					
 		if (inputAction !== undefined && inputAction !== null) {
 			// Reload the data without copying
 			inputAction = JSON.parse(JSON.stringify(inputAction))
 			originalParams = JSON.parse(JSON.stringify(inputAction.parameters))
+			if (originalParams.length > 0) {
+				originalField = originalParams[0].name
+			}
 			const parents = getParents(inputAction)
 
 			var actionlist = []
@@ -4590,7 +4609,6 @@ const releaseToConnectLabel = "Release to Connect"
 			credentials: "include",
 		})
 		.then((response) => {
-		    setAiQueryModalOpen(false)
   			setAutocompleting(false)
 			if (setSuggestionLoading !== undefined) {
 				setSuggestionLoading(false)
@@ -4599,7 +4617,7 @@ const releaseToConnectLabel = "Release to Connect"
 			if (response.status !== 200) {
 				console.log("Status not 200 for stream results :O!");
 			} else {
-				toast("Completion finished. Please verify your action!")
+				toast("Completion finished. Please verify the output and run the workflow again!")
 			}
 
 			return response.json();
@@ -4611,47 +4629,49 @@ const releaseToConnectLabel = "Release to Connect"
 					if (setResponseMsg !== undefined) {
 						setResponseMsg(responseJson.reason)
 					}
+
+					toast.error(responseJson.reason)
 				}
 
 				return
+			} else {
+		    	setAiQueryModalOpen(false)
 			}
 
 			if (inputAction !== undefined) {
 				console.log("In input action! Should check params if they match, and add suggestions")
+
+				console.log("ORIGINAL PARAMS: ", originalParams)
+				console.log("RESPONSE PARAMS: ", responseJson.parameters)
 
 				if (responseJson.parameters === undefined || responseJson.parameters.length === 0) {
 					return
 				}
 
 				var changed = false
+				var codeeditorfound = false
 				for (let respParamKey in responseJson.parameters) {
 					var respParam = responseJson.parameters[respParamKey]
 					if (respParam.value === undefined || respParam.value === null || respParam.value === "" ) {
 						continue
 					}
 
-					for (let paramkey in originalParams) {
-						const actionParam = originalParams[paramkey]
-						/*
-						if (actionParam.value !== "" && actionParam.value !== actionParam.example) {
-							console.log("Skipping: ", actionParam)
-							continue
-						}
-						*/
-
-						if (respParam.name !== actionParam.name) {
+					for (var paramkey in selectedAction?.parameters) {
+						const actionParam = selectedAction.parameters[paramkey]
+						if (actionParam.name !== respParam.name) {
 							continue
 						}
 
 						const codeeditor = document.getElementById("shuffle-codeeditor")
-						if (codeeditor !== undefined && codeeditor !== null) {
+						if (codeeditor !== undefined && codeeditor !== null && actionParam.name === originalField) {
 							const editorInstance = window?.ace?.edit("shuffle-codeeditor")
 							if (editorInstance === undefined || editorInstance === null) {
 								toast.error("Failed to find code editor instance")
 								return
 							} else {
+								codeeditorfound = true
 								editorInstance.setValue(respParam.value)
-								originalParams[paramkey].autocompleted = true
+								//selectedAction.parameters[paramkey].value = respParam.value
 								changed = true
 							}
 						}
@@ -4659,26 +4679,25 @@ const releaseToConnectLabel = "Release to Connect"
 						if (!changed) {
 							console.log("Found match for param: ", respParam)
 							changed = true
-							originalParams[paramkey].autocompleted = true
-							originalParams[paramkey].value = respParam.value
+							selectedAction.parameters[paramkey].autocompleted = true
+							selectedAction.parameters[paramkey].value = respParam.value
 						}
-
-						break
 					}
 				}
 
-				if (changed === true) {
-					inputAction.parameters = originalParams
+				if (changed === true && codeeditorfound === false) {
+					//inputAction.parameters = JSON.parse(JSON.stringify(selectedAction.parameters))
+					selectedAction.parameters = JSON.parse(JSON.stringify(selectedAction.parameters))
 					console.log("Setting action! Force update pls :)")
 					setUpdate(Math.random())
 
-					setSelectedAction(inputAction)
+					setSelectedAction(selectedAction)
 
 					// Find it in cytoscape and update the action 
 					if (cy !== undefined && cy !== null) {
 						const cyAction = cy.getElementById(inputAction.id)
 						if (cyAction !== undefined && cyAction !== null) {
-							cyAction.data("parameters", inputAction.parameters)
+							cyAction.data("parameters", selectedAction.parameters)
 						}
 					}
 
@@ -8871,8 +8890,8 @@ const releaseToConnectLabel = "Release to Connect"
 
   const paperVariableStyle = {
     borderRadius: theme.palette?.borderRadius,
-    minHeight: 50,
-    maxHeight: 50,
+    minHeight: 70,
+    maxHeight: 150,
     minWidth: "100%",
     maxWidth: "100%",
     marginTop: "5px",
@@ -8960,7 +8979,7 @@ const releaseToConnectLabel = "Release to Connect"
 								}
 							}}
 						>
-							Name: {variable.name}
+							{variable.name}
 						</div>
 						<div style={{ flex: "1", marginLeft: "0px" }}>
 							<IconButton
@@ -9448,10 +9467,7 @@ const releaseToConnectLabel = "Release to Connect"
 
   const handleDragStop = (e, app) => {
     var currentnode = cy.getElementById(newNodeId);
-    if (
-      currentnode === undefined ||
-      currentnode === null ||
-      currentnode.length === 0
+    if (currentnode === undefined || currentnode === null || currentnode.length === 0
     ) {
       return;
     }
@@ -9464,15 +9480,36 @@ const releaseToConnectLabel = "Release to Connect"
 
     // Using remove & replace, as this triggers the function
     // onNodeAdded() with this node after it's added
+	console.log("Nodedata: ", parsedApp.data)
+    currentnode.remove()
 
-    currentnode.remove();
-    parsedApp.data.finished = true;
-    parsedApp.data.position = currentnode.renderedPosition();
-    parsedApp.position = currentnode.renderedPosition();
-    parsedApp.renderedPosition = currentnode.renderedPosition();
+    parsedApp.data.finished = true
+    parsedApp.data.position = currentnode.renderedPosition()
+    parsedApp.position = currentnode.renderedPosition()
+    parsedApp.renderedPosition = currentnode.renderedPosition()
 
-    var newAppData = parsedApp.data;
+    var newAppData = JSON.parse(JSON.stringify(parsedApp.data))
     if (newAppData.type === "ACTION") {
+
+	  if (newAppData.app_name === "Shuffle Tools") {
+	    const iconInfo = GetIconInfo(newAppData)
+	    const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
+	    const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+	    newAppData.large_image = svgpin_Url
+
+	    newAppData.fillGradient = iconInfo.fillGradient
+	    newAppData.fillstyle = "solid"
+	    if (
+	      newAppData.fillGradient !== undefined &&
+	      newAppData.fillGradient !== null &&
+	      newAppData.fillGradient.length > 0
+	    ) {
+	      newAppData.fillstyle = "linear-gradient"
+	    } else {
+	      newAppData.iconBackground = iconInfo.iconBackgroundColor
+	    }
+	  }
+
 
       //const activateApp = (appid) => {
       if (newAppData.activated === false) {
@@ -9556,13 +9593,13 @@ const releaseToConnectLabel = "Release to Connect"
       }
 
       parsedApp.data = newAppData;
-      cy.add(parsedApp);
+      cy.add(parsedApp)
     } else if (newAppData.type === "TRIGGER") {
-      cy.add(parsedApp);
+      cy.add(parsedApp)
     }
 
-    newNodeId = "";
-    parsedApp = {};
+    newNodeId = ""
+    parsedApp = {}
   };
 
   const barHeight = bodyHeight - appBarSize - 50;
@@ -9576,7 +9613,7 @@ const releaseToConnectLabel = "Release to Connect"
   }
 
   const handleAppDrag = (e, app) => {
-    const cycontainer = cy.container();
+    const cycontainer = cy.container()
 
 	// Handling drag of public apps
 	if (app.objectID !== undefined && app.objectID !== null && app.objectID.length > 0) {
@@ -9612,7 +9649,7 @@ const releaseToConnectLabel = "Release to Connect"
           currentnode === null ||
           currentnode.length === 0
         ) {
-          return;
+          return
         }
 
         currentnode[0].renderedPosition("x", e.pageX - cycontainer.offsetLeft)
@@ -9737,7 +9774,6 @@ const releaseToConnectLabel = "Release to Connect"
           description: description,
           environment: parsedEnvironments,
           errors: [],
-          finished: false,
           id_: newNodeId,
           _id_: newNodeId,
           id: newNodeId,
@@ -9758,8 +9794,10 @@ const releaseToConnectLabel = "Release to Connect"
               ? app.categories[0]
               : "",
           authentication_id: authId,
-          finished: false,
           template: app.template === true ? true : false,
+
+          //finished: false,
+          finished: false,
         }
 
 		// FIXME: Something is going wrong with params
@@ -11041,6 +11079,7 @@ const releaseToConnectLabel = "Release to Connect"
         autocomplete: "exec",
         example: "tmp",
       })
+
       actionlist.push({
         type: "Shuffle DB",
         name: "Shuffle DB",
@@ -13823,6 +13862,7 @@ const releaseToConnectLabel = "Release to Connect"
             </div>
           </div>
 
+		  {/*
           <div>
             <div>
             <div className="app">
@@ -13840,6 +13880,7 @@ const releaseToConnectLabel = "Release to Connect"
             </div>
             </div>
           </div>
+		  */}
         </div>
       );
     }
@@ -16152,7 +16193,7 @@ const releaseToConnectLabel = "Release to Connect"
 		</div>
 
 			{showEnvironment === true && environments.length > 1 && selectedActionEnvironment !== undefined && selectedActionEnvironment !== null && selectedActionEnvironment.Name !== undefined && selectedActionEnvironment.Name !== null ?
-			    <FormControl fullWidth style={{marginTop: 15, marginleft: 10, pointerEvents: "auto", }}>
+			    <FormControl fullWidth style={{marginTop: 15, marginleft: 10, pointerEvents: "auto", maxWidth: 250, }}>
 
 					<InputLabel
 					  id="execution_location"
@@ -21758,11 +21799,11 @@ const releaseToConnectLabel = "Release to Connect"
 	  }
 
 	  const drawerData = originalWorkflow !== undefined && originalWorkflow !== null ?
-      <div style={{ height: "100%"}}>
-      	<Typography variant="h4" style={{ paddingLeft: 25, paddingTop:25, backgroundColor: theme.palette.surfaceColor, }}>
+      <div style={{ height: "100%", backgroundColor: theme.palette.backgroundColor, }}>
+      	<Typography variant="h4" style={{ paddingLeft: 25, paddingTop:25, backgroundColor: theme.palette.backgroundColor, }}>
 			Version History
 		</Typography>
-		<Typography variant="body2" color="textSecondary" style={{ paddingLeft: 25, paddingTop: 5, paddingBottom: 5, backgroundColor: theme.palette.surfaceColor, }}>
+		<Typography variant="body2" color="textSecondary" style={{ paddingLeft: 25, paddingTop: 5, paddingBottom: 5, }}>
 			Versions are stored for every change made, up to once per minute. When restoring a version, the changes will not take effect until you save the workflow.
 		</Typography>
 		<Divider style={{marginTop: 25, }}/>
@@ -21871,21 +21912,23 @@ const releaseToConnectLabel = "Release to Connect"
 						</Button>
 					: null*/}
 				</div>
-				<div style={{textAlign: "center", color: "white", flex: 1, paddingTop: 20, }}>
+				<div style={{textAlign: "center", color: "white", flex: 2, paddingTop: 20, }}>
 					<Typography variant="h6">
 						{selectedVersion?.name}
 					</Typography>
 				</div>
-				{/* Cross icon to close it */}
 				<div style={{flex: 1, itemAlign: "right", textAlign: "right", paddingRight: 25, paddingTop: 10, }}>
-					<IconButton
+					<Button
 						onClick={() => {
 							setShowWorkflowRevisions(false)
 						}}
-						style={{color: "white", height: 50, width: 50, }}
+						color="secondary"
+						variant="outlined"
+						style={{marginTop: 10, }}
 					>
-						<CloseIcon />
-					</IconButton>
+						Use Version	
+						<CloseIcon style={{marginLeft: 10, }}/>
+					</Button>
 				</div>
 			</div>
 		</div>

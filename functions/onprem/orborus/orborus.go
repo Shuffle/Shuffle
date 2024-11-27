@@ -3513,7 +3513,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 
 		// Automatically updates the version
 		if err != nil {
-			log.Printf("[ERROR] Error getting containers: %s", err)
+			log.Printf("[ERROR] Error getting containers from Docker: %s", err)
 
 			newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
 			if len(newVersionSplit) > 1 {

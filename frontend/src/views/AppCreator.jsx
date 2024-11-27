@@ -37,14 +37,15 @@ import {
   AttachFile as AttachFileIcon,
   Apps as AppsIcon,
   ErrorOutline as ErrorOutlineIcon,
-	AddAPhoto as AddAPhotoIcon, 
-	AddAPhotoOutlined as AddAPhotoOutlinedIcon, 
-	ZoomInOutlined as ZoomInOutlinedIcon,
-	ZoomOutOutlined as ZoomOutOutlinedIcon,
-	Loop as LoopIcon,
-	AddPhotoAlternate as AddPhotoAlternateIcon,
-	CallMerge as CallMergeIcon,
+  AddAPhoto as AddAPhotoIcon, 
+  AddAPhotoOutlined as AddAPhotoOutlinedIcon, 
+  ZoomInOutlined as ZoomInOutlinedIcon,
+  ZoomOutOutlined as ZoomOutOutlinedIcon,
+  Loop as LoopIcon,
+  AddPhotoAlternate as AddPhotoAlternateIcon,
+  CallMerge as CallMergeIcon,
   CloudDownload as CloudDownloadIcon,
+  OpenInNew as OpenInNewIcon,
 } from "@mui/icons-material";
 
 import { v4 as uuidv4 } from "uuid";
@@ -3172,7 +3173,7 @@ const AppCreator = (defaultprops) => {
       <div style={{ color: "white", marginTop: 20 }}>
         <Typography variant="body1">API key authentication</Typography>
         <Typography variant="body2" color="textSecondary">
-          Add the name of the field used for authentication, e.g. "X-APIKEY". Should NOT be your actual API-key.
+          <b>Do NOT put your actual API-key.</b> Add the name of the field used for authentication, e.g. "X-APIKEY". 
         </Typography>
 				<div style={{display: "flex", marginTop: 10, }}>
 					<div style={{flex: 4,}}>
@@ -3848,7 +3849,7 @@ const AppCreator = (defaultprops) => {
     		        required
     		        style={{
     		          flex: "1",
-    		          marginTop: "5px",
+    		          marginTop: 5,
     		          marginRight: "15px",
     		          backgroundColor: inputColor,
     		        }}
@@ -4341,7 +4342,8 @@ const AppCreator = (defaultprops) => {
 				>
 					<ErrorOutlineIcon />
 				</Tooltip>
-			) : (
+			) : null
+				{/*
 				<Tooltip
 					color="secondary"
 					title={data.errors.join("\n")}
@@ -4349,7 +4351,7 @@ const AppCreator = (defaultprops) => {
 				>
 					<CheckCircleIcon style={{ marginTop: 6 }} />
 				</Tooltip>
-			);
+				*/}
 
 		var bgColor = "#61afee";
 		if (data.method === "POST") {
@@ -5800,19 +5802,35 @@ const AppCreator = (defaultprops) => {
 				  General information
 				</h2>
 			</div>
-			<div style={{flex: 1, itemAlign: "right", textAlign: "right",}}>
-          		<Tooltip title="Merge with another API (coming soon)" placement="bottom">
-					<IconButton
-						disabled
+			<div style={{flex: 1, itemAlign: "right", textAlign: "right", marginRight: 10, }}>
+          		<Tooltip title="Try the API" placement="bottom">
+					<Button
+	  					variant="outlined"
+	  					color="secondary"
 						onClick={() => {
-							setOpenApiModal(true)
+    						var urlParams = new URLSearchParams(window.location.search);
+    						if (!urlParams.has("id")) {
+								window.open(`/apis/${app.id}`, "_blank")
+							} else {
+								toast.error("Build the app first.")
+							}
+
 						}}
+					>
+  						<OpenInNewIcon style={{marginRight: 5, }}/>
+	  					Try the API
+					</Button>
+				</Tooltip>
+          		<Tooltip title="Manage forks and Merge with another API (coming soon)" placement="bottom">
+					<IconButton
+						onClick={() => {
+							//setOpenApiModal(true)
+							toast.info("Action merging & fork management coming soon")
+						}}
+	  					style={{marginLeft: 10, }}
 					>
 						<CallMergeIcon 
 							style={{}} 
-							onClick={() => {
-								setOpenApiModal(true)
-							}}
 						/>
 					</IconButton>
 				</Tooltip>
@@ -5839,18 +5857,13 @@ const AppCreator = (defaultprops) => {
                 flex: "1",
                 margin: 10,
                 border: "1px solid #f85a3e",
+				borderRadius: theme.palette?.borderRadius,
                 cursor: "pointer",
                 backgroundColor: inputColor,
                 maxWidth: 174,
                 maxHeight: 174,
               }}
               onClick={() => {
-                /*
-									if (fileBase64.length === 0) {
-										upload.click()
-									}
-									*/
-
                 setOpenImageModal(true);
               }}
             >
@@ -5863,7 +5876,7 @@ const AppCreator = (defaultprops) => {
               />
             </div>
           </Tooltip>
-          <div style={{ flex: "3", color: "white" }}>
+          <div style={{ flex: "3", color: "white", marginLeft: 20, }}>
             <div style={{ marginTop: "10px" }} />
             Name
             <TextField
@@ -5917,35 +5930,28 @@ const AppCreator = (defaultprops) => {
                 },
               }}
             />
-            <div style={{ marginTop: "10px" }} />
+            <div style={{ marginTop: 10, }} />
             Description
             <TextField
               required
               style={{
-                flex: "1",
-                marginTop: "5px",
-                marginRight: "15px",
+				paddingTop: 5,
+				marginTop: 5, 
+                marginRight: 15,
                 backgroundColor: inputColor,
-								maxHeight: 250,
-								overflow: "auto",
+				maxHeight: 250,
+				overflowY: "auto"
               }}
               fullWidth={true}
               type="name"
               id="outlined-with-placeholder"
               margin="normal"
-							multiline
+			  multiline
               variant="outlined"
               placeholder="A description for the service"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              InputProps={{
-                classes: {
-                  notchedOutline: classes.notchedOutline,
-                },
-                style: {
-                  color: "white",
-                },
-              }}
+              defaultValue={description}
+              //onChange={(e) => setDescription(e.target.value)}
+              onBlur={(e) => setDescription(e.target.value)}
             />
           </div>
         </div>
@@ -6185,62 +6191,63 @@ const AppCreator = (defaultprops) => {
 						{testView}
 					*/}
 
-	  	<div style={{display: "flex", marginTop: 35, }}>
-			{appDownloadData.length > 0 ?
-				<Tooltip title="Download the OpenAPI specification for the App" placement="bottom">
-					<IconButton
-						style={{marginRight: 25, }} 
-						onClick={() => {
-							toast(`Downloading OpenAPI JSON data for for ${name}`)
-							// Download as file
-          					var blob = new Blob([appDownloadData], {
-          					  type: "application/octet-stream",
-          					});
+	  	<div style={{height: 50, padding: 25, display: "flex", marginTop: 35, position: "fixed", bottom: 0, left: 0, width: "100%", backgroundColor: theme.palette?.backgroundColor, borderTop: "1px solid rgba(255,255,255,0.3)",}}>
+	  		<div style={{width: 450, margin: "auto", display: "flex", textAlign: "center", }}>
+				{appDownloadData.length > 0 ?
+					<Tooltip title="Download the OpenAPI specification for the App" placement="bottom">
+						<IconButton
+							style={{marginRight: 25, }} 
+							onClick={() => {
+								toast(`Downloading OpenAPI JSON data for for ${name}`)
+								// Download as file
+								var blob = new Blob([appDownloadData], {
+								  type: "application/octet-stream",
+								});
 
-          					var url = URL.createObjectURL(blob);
-							var link = document.createElement("a");
-						    link.setAttribute("href", url);
-						    link.setAttribute("download", `${name}.json`);
-						    var event = document.createEvent("MouseEvents");
-						    event.initMouseEvent(
-						      "click",
-						      true,
-						      true,
-						      window,
-						      1,
-						      0,
-						      0,
-						      0,
-						      0,
-						      false,
-						      false,
-						      false,
-						      false,
-						      0,
-						      null
-						    );
-						    link.dispatchEvent(event);
-						}}
-					>
-						<CloudDownloadIcon />
-					</IconButton>
-				</Tooltip>
-			: null}
-			<Button
-			  disabled={appBuilding}
-			  color="primary"
-			  variant="contained"
-	  		  fullWidth
-			  style={{ height: "50px", flex: 1,  }}
-			  onClick={() => {
-				submitApp();
-			  }}
-			>
-			  {appBuilding ? <CircularProgress /> : "Save"}
-			</Button>
-	  		{appDownloadData.length > 0 ?
-				<div style={{width: 50, }}/>
-			: null}
+								var url = URL.createObjectURL(blob);
+								var link = document.createElement("a");
+								link.setAttribute("href", url);
+								link.setAttribute("download", `${name}.json`);
+								var event = document.createEvent("MouseEvents");
+								event.initMouseEvent(
+								  "click",
+								  true,
+								  true,
+								  window,
+								  1,
+								  0,
+								  0,
+								  0,
+								  0,
+								  false,
+								  false,
+								  false,
+								  false,
+								  0,
+								  null
+								);
+								link.dispatchEvent(event);
+							}}
+						>
+							<CloudDownloadIcon />
+						</IconButton>
+					</Tooltip>
+				: null}
+				<Button
+				  disabled={appBuilding}
+				  color="primary"
+				  variant="contained"
+				  style={{ height: 50, flex: 1, minWidth: 400, maxWidth: 400, }}
+				  onClick={() => {
+					submitApp();
+				  }}
+				>
+				  {appBuilding ? <CircularProgress /> : "Save API"}
+				</Button>
+				{appDownloadData.length > 0 ?
+					<div style={{width: 50, }}/>
+				: null}
+	  		</div>
 	  	</div>
 
 		<Typography style={{ marginTop: 25, textAlign: "center", }}>

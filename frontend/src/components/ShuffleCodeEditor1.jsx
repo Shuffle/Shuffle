@@ -895,8 +895,8 @@ const CodeEditor = (props) => {
 		// Shuffle Tools 1.2.0 (in most cases?)
 		const appid = toolsAppId !== undefined && toolsAppId !== null && toolsAppId.length > 0 ? toolsAppId : "3e2bdf9d5069fe3f4746c29d68785a6a"
 
-		const actionname = selectedAction.name === "execute_python" && !inputdata.replaceAll(" ", "").includes("{%python%}") ? "execute_python" : "repeat_back_to_me"
-		const params = actionname === "execute_python" ? [{"name": "code", "value":inputdata}] : [{"name":"call", "value": inputdata}]
+		const actionname = selectedAction.name === "execute_python" && !inputdata.replaceAll(" ", "").includes("{%python%}") ? "execute_python" : selectedAction.name === "execute_bash" ? "execute_bash" : "repeat_back_to_me"
+		const params = actionname === "execute_python" ? [{"name": "code", "value":inputdata}] : actionname === "execute_bash" ? [{"name": "code", "value":inputdata}, {"name": "shuffle_input", "value": "", }] : [{"name":"call", "value": inputdata}]
 
 		const actiondata = {"description":"Repeats the call parameter","id":"","name":actionname,"label":"","node_type":"","environment":"","sharing":false,"private_id":"","public_id":"","app_id": appid,"tags":null,"authentication":[],"tested":false,"parameters": params, "execution_variable":{"description":"","id":"","name":"","value":""},"returns":{"description":"","example":"","id":"","schema":{"type":"string"}},"authentication_id":"","example":"","auth_not_required":false,"source_workflow":"","run_magic_output":false,"run_magic_input":false,"execution_delay":0,"app_name":"Shuffle Tools","app_version":"1.2.0","selectedAuthentication":{}}
 
@@ -1134,6 +1134,11 @@ const CodeEditor = (props) => {
 							<Typography variant="body1" style={{marginTop: 5, }}>
 								Run Python Code
 							</Typography>
+							:
+							selectedAction.name === "execute_bash" ? 
+								<Typography variant="body1" style={{marginTop: 5, }}>
+									Run Bash Code
+								</Typography>
 						: 
 						<div style={{display: "flex", }}>
 							<Button
@@ -1545,7 +1550,7 @@ const CodeEditor = (props) => {
 							width: 50, 
 							marginLeft: 0, 
 						}}
-						disabled={isAiLoading || editorData.name !== "body"}
+						disabled={isAiLoading}
 						onClick={() => {
 						  	if (setAiQueryModalOpen !== undefined) {
 								setAiQueryModalOpen(true)
@@ -1582,7 +1587,7 @@ const CodeEditor = (props) => {
 						id="shuffle-codeeditor"
 						name="shuffle-codeeditor"
 						value={localcodedata}
-						mode={selectedAction === undefined ? "json" : selectedAction.name === "execute_python" ? "python" : "json"}
+						mode={selectedAction === undefined ? "json" : selectedAction.name === "execute_python" ? "python" : selectedAction.name === "execute_bash" ? "bash" : "json"}
 						theme="gruvbox"
 						height={isFileEditor ? 450 : 550} 
 						width={isFileEditor ? 650 : "100%"}
@@ -1658,7 +1663,7 @@ const CodeEditor = (props) => {
 									<div>
 										<span style={{color: "white"}}>
 
-											{selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "Code to run" : "Expected Output"}
+											{selectedAction === undefined ? "" : selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? "Code to run" : `Expected Output for '${selectedAction.name}'`}
 										</span>
 									</div>
 
@@ -1686,7 +1691,7 @@ const CodeEditor = (props) => {
 										{executing ? 
 											<CircularProgress style={{height: 18, width: 18, }} /> 
 												: 						
-											<span>{selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "Run Python Code" : "Try it"}<PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
+											<span>{selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"}<PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
 										}
 									</Button>
 								</Tooltip>
