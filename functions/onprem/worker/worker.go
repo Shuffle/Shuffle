@@ -105,6 +105,7 @@ var autoDeploy = map[string]string{
 	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
 	"shuffle-subflow:1.0.0": "frikky/shuffle:shuffle-subflow_1.0.0",
 	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
+	"shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }
 
 //"testing:1.0.0":         "frikky/shuffle:testing_1.0.0",
@@ -3501,6 +3502,10 @@ func baseDeploy() {
 			fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
 			fmt.Sprintf("TZ=%s", timezone),
 			fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", logsDisabled),
+		}
+
+		if key == "shuffle-tools-fork:1.0.0" {
+			env = append(env, fmt.Sprintf("SHUFFLE_ALLOW_PACKAGE_INSTALL=%s", "true"))
 		}
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
