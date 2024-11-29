@@ -38,7 +38,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -105,7 +104,7 @@ var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var orborusLabel = os.Getenv("SHUFFLE_ORBORUS_LABEL")
 var memcached = os.Getenv("SHUFFLE_MEMCACHED")
 var queuePerMinute = os.Getenv("SHUFFLE_EXECUTION_PER_MINIUTE")
-var queuePerMinuteInt = queuePerMinute
+var queuePerMinuteInt int
 
 // For it to download from Sigma?
 var apiKey = os.Getenv("AUTH_FOR_ORBORUS")
@@ -122,6 +121,7 @@ var containerId string
 var executionCount = 0
 
 var imagedownloadTimeout = time.Second * 300
+var window = shuffle.NewTimeWindow(1 * time.Minute)
 
 func init() {
 	var err error
@@ -330,8 +330,9 @@ func deployServiceWorkers(image string) {
 		log.Printf("[DEBUG] Skipping deployment of workers as services as swarmConfig is not set to run or swarm. Value: %#v", swarmConfig)
 		return
 	}
+	ctx := context.Background()
 
-	isMemcachedRunning, err := checkMemcached(dockercli)
+	isMemcachedRunning, err := checkMemcached(ctx, dockercli)
 	if err != nil {
 		log.Printf("[ERROR] Failed checking memcached: %s", err)
 	}
@@ -343,7 +344,6 @@ func deployServiceWorkers(image string) {
 
 	os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
 
-	ctx := context.Background()
 	// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
 
 	// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/shuffle/shuffle-worker:nightly
@@ -3797,6 +3797,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest, image string,
 		log.Printf("[ERROR] Failed reading body in worker request body to worker on %s: %s", streamUrl, err)
 		return err
 	}
+	window.AddEvent(time.Now())
 
 	if newresp.StatusCode != 200 {
 		log.Printf("[WARNING] POTENTIAL error running worker request (2) - status code is %d for %s, not 200. Body: %s", newresp.StatusCode, streamUrl, string(body))
@@ -3825,85 +3826,43 @@ func AutoScale(ctx context.Context) {
 		return
 	}
 
-	if queuePerMinute != "" {
+	ticker := time.NewTicker(1 * time.Second)
+	coolDownPeriod := 10 * time.Second
+	queuePerMinuteInt = 20
+	if os.Getenv("SHUFFLE_QUEUE_PER_MINUTE") != "" {
 		var err error
-		queuePerMinuteInt, err = strconv.Atoi(queuePerMinute)
+		queuePerMinuteInt, err = strconv.Atoi(os.Getenv("SHUFFLE_QUEUE_PER_MINUTE"))
 		if err != nil {
-			queuePerMinuteInt = 60
-			log.Printf("[WARNING] Cannot convert %s to int please pass an interger value. Using default value for it %d", queuePerMinute, queuePerMinuteInt)
+			log.Printf("[WARNING] Cannot convert %s to int. Using default value for it: %d", queuePerMinute, queuePerMinuteInt)
 		}
 	}
 
-	replicas := uint64(6)
-	scaleReplicas := os.Getenv("SHUFFLE_SCALE_REPLICAS")
-	if len(scaleReplicas) > 0 {
-		tmpInt, err := strconv.Atoi(scaleReplicas)
-		if err != nil {
-			log.Printf("[ERROR] %s is not a valid number for replication", scaleReplicas)
-		} else {
-			replicas = uint64(tmpInt)
-		}
-
-		log.Printf("[DEBUG] SHUFFLE_SCALE_REPLICAS set to value %#v. Trying to overwrite default (%d/node)", scaleReplicas, replicas)
-	}
-
-	config := shuffle.ScalingConfig{
-		QueuePerMinute:  queuePerMinuteInt,
-		ScalingInterval: 12 * time.Second, // TO ADD SOME BUFFER
-
-		MaxScaleUpStep: 1,
-		CooldownPeriod: time.Duration(10 * time.Second),
-
-		MaxReplicas: int(replicas),
-	}
-
-	lastScaleTime := time.Now().Add(-config.CooldownPeriod)
-	var lastQueueLength int
-	var lastCheckTime time.Time
-
+	lastScaleTime := time.Now()
+	currentWorkers := currentWokerCount(ctx, dockercli)
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(config.ScalingInterval):
-			if time.Since(lastScaleTime) < config.CooldownPeriod {
+		case <-ticker.C:
+			if time.Since(lastScaleTime) < (coolDownPeriod) {
 				continue
 			}
-
-			data, err := collectMetrics(ctx, dockercli)
-			if err != nil {
-				continue
+			currentRequestCount := window.CountEvents(time.Now())
+			requiredReplicas := 0
+			if currentRequestCount >= queuePerMinuteInt*currentWorkers {
+				// FIXME: Hardcoded Max Replicas should be 6
+				requiredReplicas = int(math.Min(float64(6), float64(currentRequestCount/queuePerMinuteInt)+1))
 			}
 
-			currentTime := time.Now()
-			currentQueueLength := data
-
-			if !lastCheckTime.IsZero() {
-				timeDiff := currentTime.Sub(lastCheckTime).Seconds()
-				if timeDiff >= 10 {
-					rocq := int(math.Ceil(float64(currentQueueLength - lastQueueLength/int(timeDiff))))
-					//desiredReplicas, currentReplicas := numberOfReplicas(ctx, data, config)
-					requiredReplicas := 0
-
-					if rocq >= config.QueuePerMinute {
-						requiredReplicas = currentQueueLength + config.MaxScaleUpStep
-						if requiredReplicas > config.MaxReplicas {
-							requiredReplicas = config.MaxReplicas
-						}
-					}
-
-					if requiredReplicas != 0 {
-						err := scaleService(ctx, dockercli, uint64(requiredReplicas))
-						if err != nil {
-							log.Printf("[ERROR] Failed to scale the service: %s", err)
-						} else {
-							lastScaleTime = currentTime
-						}
-					}
+			if requiredReplicas > 0 {
+				err := scaleService(ctx, dockercli, uint64(requiredReplicas))
+				if err != nil {
+					log.Printf("[ERROR] Failed to scale service: %s", err)
+				} else {
+					lastScaleTime = time.Now()
+					currentWorkers = currentWokerCount(ctx, dockercli)
 				}
 			}
-			lastQueueLength = currentQueueLength
-			lastCheckTime = currentTime
 		}
 	}
 }
@@ -3933,16 +3892,29 @@ func scaleService(ctx context.Context, client *dockerclient.Client, replicas uin
 	return nil
 }
 
-func queueScaleFactor(numQueue int, config shuffle.ScalingConfig) float64 {
-	if numQueue > config.QueuePerMinute {
-		queuePressure := float64(numQueue) / float64(config.QueuePerMinute)
+func currentWokerCount(ctx context.Context, client *dockerclient.Client) int {
+	service, _, err := client.ServiceInspectWithRaw(ctx, "shuffle-workers", types.ServiceInspectOptions{})
+	if err != nil {
+		return 0
+	}
+
+	if service.Spec.Mode.Replicated == nil {
+		return 0
+	}
+
+	return int(*service.Spec.Mode.Replicated.Replicas)
+}
+
+func queueScaleFactor(numQueue int, queuePerMin int) float64 {
+	if numQueue > queuePerMin {
+		queuePressure := float64(numQueue) / float64(queuePerMin)
 		return 1.0 + math.Min(queuePressure-1.0, 1.0)
 	}
 
 	return 1.0
 }
 
-func checkMemcached(dockercli *dockerclient.Client) (bool, error) {
+func checkMemcached(ctx context.Context, dockercli *dockerclient.Client) (bool, error) {
 	containerName := "shuffle-cache"
 	continer, err := dockercli.ContainerInspect(context.Background(), containerName)
 	if err != nil {
@@ -3950,6 +3922,17 @@ func checkMemcached(dockercli *dockerclient.Client) (bool, error) {
 			return false, nil
 		}
 		return false, err
+	}
+
+	if continer.State.Running == false {
+		log.Printf("[INFO] Container %s exists but is not running. Attempting to start it.", containerName)
+		err = dockercli.ContainerStart(ctx, containerName, container.StartOptions{})
+		if err != nil {
+			log.Printf("[ERROR] Failed to start container %s: %v", containerName, err)
+			return false, err
+		}
+		log.Printf("[INFO] Successfully started container %s.", containerName)
+		return true, nil
 	}
 
 	return continer.State.Running, nil
@@ -3969,12 +3952,6 @@ func deployMemcached(dockercli *dockerclient.Client) error {
 		Image: "memcached",
 		Cmd:   []string{"-m", defaultMem},
 	}
-
-	//		PortBindings: nat.PortMap{
-	//			"514/tcp":  []nat.PortBinding{{HostPort: "514"}},
-	//			"514/udp":  []nat.PortBinding{{HostPort: "514"}},
-	//			"5160/tcp": []nat.PortBinding{{HostPort: "5160"}},
-	//		},
 
 	hostConfig := &container.HostConfig{
 		PortBindings: nat.PortMap{
@@ -4015,6 +3992,7 @@ func nodesResourceUsage(ctx context.Context, client *dockerclient.Client) error 
 }
 */
 
+/*
 func numberOfReplicas(ctx context.Context, queueLength int, config shuffle.ScalingConfig) (int, int) {
 	queueScaleFactor := queueScaleFactor(queueLength, config)
 	numReplicas := int(float64(queueLength) * queueScaleFactor)
@@ -4052,7 +4030,10 @@ func numberOfReplicas(ctx context.Context, queueLength int, config shuffle.Scali
 
 	return numReplicas, runningReplicas
 }
+*/
 
+// TODO: Currently we use number of request made for the worker to run a execution as it is much
+// easier to track in a window time frame. But this could be useful.
 func collectMetrics(ctx context.Context, dockerClient *dockerclient.Client) (int, error) {
 	client := shuffle.GetExternalClient(baseUrl)
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
