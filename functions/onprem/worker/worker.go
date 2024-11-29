@@ -1,8 +1,6 @@
 package main
 
 import (
-	"sync/atomic"
-
 	"github.com/shuffle/shuffle-shared"
 
 	"bytes"
@@ -101,6 +99,8 @@ type ImageRequest struct {
 var finishedExecutions []string
 var imagesDistributed []string
 var imagedownloadTimeout = time.Second * 300
+
+var window = shuffle.NewTimeWindow(10 * time.Second)
 
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
@@ -3851,7 +3851,8 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		time.Sleep(time.Duration(30) * time.Second)
 		checkUnfinished(resp, request, execRequest)
 	}()
-	atomic.AddInt64(&executionCount, 1)
+	window.AddEvent(time.Now())
+
 	ctx := context.Background()
 
 	// FIXME: This should be PER EXECUTION
@@ -4104,12 +4105,25 @@ func runWebserver(listener net.Listener) {
 			log.Printf("[ERROR] %s is not a valid number for replication", scaleReplicas)
 		} else {
 			maxReplicas = uint64(tmpInt)
+			_ = tmpInt
 		}
 
 		log.Printf("[DEBUG] SHUFFLE_APP_REPLICAS set to value %#v. Trying to overwrite default (%d/node)", scaleReplicas, maxReplicas)
 	}
 
-	go AutoScaleApps(ctx, dockercli)
+	maxExecutionsPerMinute := 10
+	if os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE") != "" {
+		tmpInt, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE"))
+		if err != nil {
+			log.Printf("[ERROR] %s is not a valid number for executions per minute", os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE"))
+		} else {
+			maxExecutionsPerMinute = tmpInt
+		}
+
+		log.Printf("[DEBUG] SHUFFLE_APP_EXECUTIONS_PER_MINUTE set to value %s. Trying to overwrite default (%d)", os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE"), maxExecutionsPerMinute)
+	}
+
+	go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
 
 	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
@@ -4145,18 +4159,26 @@ func runWebserver(listener net.Listener) {
 	}
 }
 
-func AutoScaleApps(ctx context.Context, client *dockerclient.Client) {
-	maxExecPerMin := 10
-	ticker := time.NewTicker(1 * time.Minute)
+func AutoScaleApps(ctx context.Context, client *dockerclient.Client, maxExecutionsPerMinute int) {
+	ticker := time.NewTicker(1 * time.Second)
+
 	defer ticker.Stop()
 	for {
-		<-ticker.C
-		count := atomic.SwapInt64(&executionCount, 0)
-		j := numberOfApps(ctx, client)
-		workers := numberOfWorkers(ctx, client)
-		execPerMin := maxExecPerMin / workers
-		if count > int64(execPerMin) {
-			scaleApps(ctx, client, uint64(j)+1)
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-ticker.C:
+			count := window.CountEvents(time.Now())
+			j := numberOfApps(ctx, client)
+			workers := numberOfWorkers(ctx, client)
+			execPerMin := maxExecutionsPerMinute / workers
+			log.Printf("[DEBUG] Running with %d workers\n\n\n\n\n", workers)
+
+			if count >= execPerMin {
+				log.Printf("[DEBUG] Too many executions per minute (%d). Scaling down to %d", count, execPerMin)
+				scaleApps(ctx, client, uint64(j+1))
+			}
 		}
 	}
 }
@@ -4173,7 +4195,8 @@ func scaleApps(ctx context.Context, client *dockerclient.Client, replicas uint64
 		log.Printf("[ERROR] Failed to get network Id in the swarm service: %s", err)
 	}
 
-	if replicas > maxReplicas {
+	workers := numberOfWorkers(ctx, client)
+	if replicas > uint64(workers) {
 		return nil
 	}
 
