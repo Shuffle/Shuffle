@@ -647,7 +647,8 @@ const Workflows2 = (props) => {
     const [selectedCategory, setSelectedCategory] = useState([]);
     const [selectedLabel, setSelectedLabel] = useState([]);
     const [mouseHoverIndex, setMouseHoverIndex] = useState(-1);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(false);
+    const [isLoadingPublicWorkflow, setIsLoadingPublicWorkflow] = useState(false);
     const [view, setView] = useState("grid");
     const classes = useStyles(theme)
     const imgSize = 60;
@@ -710,6 +711,15 @@ const Workflows2 = (props) => {
 
     document.title = "Shuffle - Workflows";
     const handleTabChange = (event, newValue) => {
+        // Set loading when switching to public workflows tab
+        if (newValue === 2) {
+            setIsLoadingPublicWorkflow(true);
+            // Simulate loading time for the Algolia search results
+            setTimeout(() => {
+                setIsLoadingPublicWorkflow(false);
+            }, 2000);
+        }
+
         setCurrTab(newValue);
     };
 
@@ -2044,42 +2054,42 @@ const Workflows2 = (props) => {
     };
 
     const getWorkflowAppgroup = (data) => {
-        if(currTab !== 2){
+        if (currTab !== 2) {
             if (data.actions === undefined || data.actions === null) {
                 return []
             }
-    
+
             var appsFound = []
             for (var key in data.actions) {
                 const parsedAction = data.actions[key]
                 if (parsedAction.large_image === undefined || parsedAction.large_image === null || parsedAction.large_image === "") {
                     continue
                 }
-    
+
                 if (parsedAction.app_name === "Shuffle Tools" || parsedAction.app_id === "bc78f35c6c6351b07a09b7aed5d29652") {
                     continue
                 }
-    
+
                 if (appsFound.findIndex(data => data.app_name === parsedAction.app_name) < 0) {
                     appsFound.push(parsedAction)
                 }
             }
-        }else{
+        } else {
             if (data.action_references === undefined || data.action_references === null) {
                 return []
             }
-    
+
             var appsFound = []
             for (var key in data.action_references) {
                 const parsedAction = data.action_references[key]
                 if (parsedAction.image_url === undefined || parsedAction.image_url === null || parsedAction.image_url === "") {
                     continue
                 }
-    
-                if (parsedAction.name === "Shuffle Tools" || parsedAction.id === "3e2bdf9d5069fe3f4746c29d68785a6a") {
+
+                if (parsedAction.name === "Shuffle Tools" || parsedAction.id === "bc78f35c6c6351b07a09b7aed5d29652") {
                     continue
                 }
-    
+
                 if (appsFound.findIndex(data => data.name === parsedAction.name) < 0) {
                     appsFound.push(parsedAction)
                 }
@@ -2090,7 +2100,7 @@ const Workflows2 = (props) => {
     }
 
     const WorkflowPaper = (props) => {
-        const { data, type="org" } = props;
+        const { data, type = "org" } = props;
         const [open, setOpen] = React.useState(false);
         const [anchorEl, setAnchorEl] = React.useState(null);
 
@@ -2120,7 +2130,6 @@ const Workflows2 = (props) => {
 
         const actions = data.actions !== null ? data.actions.length : 0;
         const appGroup = getWorkflowAppgroup(data)
-        console.log("appgroup", appGroup)
         const [triggers, subflows] = getWorkflowMeta(data)
 
         const hasSuborgs = data.suborg_distribution !== undefined && data.suborg_distribution !== null && data.suborg_distribution.length > 0
@@ -2242,7 +2251,7 @@ const Workflows2 = (props) => {
         );
 
         var image = "";
-        
+
         var orgName = "";
         var orgId = "";
         if (userdata.orgs !== undefined) {
@@ -2366,9 +2375,9 @@ const Workflows2 = (props) => {
                                     */
                                 }}
                                 title={
-                                    <div style={{ 
-                                        width: "100%", 
-                                        minWidth: 250, 
+                                    <div style={{
+                                        width: "100%",
+                                        minWidth: 250,
                                         maxWidth: 310,
                                         padding: "12px 0",
                                     }}>
@@ -2379,25 +2388,25 @@ const Workflows2 = (props) => {
                                                 overflow: "hidden",
                                                 border: `1px solid ${theme.palette.inputColor}`,
                                             }}>
-                                                <img 
-                                                    src={data.image} 
-                                                    alt={data.name} 
-                                                    style={{ 
+                                                <img
+                                                    src={data.image}
+                                                    alt={data.name}
+                                                    style={{
                                                         backgroundColor: theme.palette.surfaceColor,
                                                         width: "100%",
                                                         height: "auto",
                                                         display: "block",
-                                                    }} 
+                                                    }}
                                                 />
                                             </div>
                                         ) : null}
-                                        
+
                                         <Typography style={{
                                             color: "rgba(255,255,255,0.9)",
                                         }}>
                                             Edit: {data.name}
                                         </Typography>
-                                    
+
                                         {(isDistributed || hasSuborgs) && (
                                             <div style={{
                                                 backgroundColor: "rgba(64,224,208,0.1)", // Matching the teal color used in border
@@ -3269,7 +3278,7 @@ const Workflows2 = (props) => {
             }}
         >
             <DialogTitle style={{ padding: "20px 24px" }}>
-                                    <div style={{ 
+                <div style={{
                     color: "rgba(255,255,255,0.9)",
                     display: "flex",
                     justifyContent: "space-between",
@@ -3780,31 +3789,42 @@ const Workflows2 = (props) => {
     // 	}
 
     useEffect(() => {
-        console.log("CurrTab: ", currTab)
-        console.log("Workflows: ", workflows)
         if (userdata !== undefined && userdata !== null) {
+            var filteredWorkflows = []
+            setIsLoadingWorkflow(true);
             if (currTab === 0) {
-                const orgWorkflows = workflows.filter(workflow => workflow?.org_id === userdata?.active_org?.id)
-                setFilteredWorkflows(orgWorkflows)
+                filteredWorkflows = workflows.filter(workflow => workflow?.org_id === userdata?.active_org?.id)
             }
             else if (currTab === 1) {
-                const myWorkflows = workflows.filter(workflow => workflow?.org_id === userdata?.active_org?.id && workflow?.owner === userdata?.id)
-                setFilteredWorkflows(myWorkflows)
+                filteredWorkflows = workflows.filter(workflow => workflow?.org_id === userdata?.active_org?.id && workflow?.owner === userdata?.id)
             }
-        } else {
-            setFilteredWorkflows([])
+            setFilteredWorkflows(filteredWorkflows)
+            setIsLoadingWorkflow(false);
         }
     }, [currTab, workflows, userdata])
+
+    useEffect(() => {
+        console.log("SearchQuery: ", searchQuery)
+    }, [searchQuery])
 
     const Hits = ({ hits }) => {
         var counted = 0
         console.log("Public workflows", hits)
+
+        if (isLoadingPublicWorkflow) {
+            return (
+                <div style={{ textAlign: "center", marginTop: 50 }}>
+                    <CircularProgress style={{ color: "#f85a3e" }} />
+                </div>
+            );
+        }
+
         return (
             <div style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3, 1fr)", // Creates 3 equal columns
                 gap: "20px", // Adds consistent spacing between items
-                                        width: "100%", 
+                width: "100%",
             }}>
                 {hits.map((data, index) => {
                     return <WorkflowPaper key={index} data={data} type="public" />
@@ -3815,6 +3835,11 @@ const Workflows2 = (props) => {
     }
 
     const CustomHits = connectHits(Hits)
+
+
+    const handleCategoryChange = (e) => {
+        setSelectedCategory(e.target.value)
+    }
 
     const WorkflowView = memo(() => {
         if (workflows.length === 0) {
@@ -4009,46 +4034,84 @@ const Workflows2 = (props) => {
                         </div>
 
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 10 }}>
-                            <TextField
-                                fullWidth
+
+                            <MuiChipsInput
+                                placeholder="Filter Workflows"
                                 variant="outlined"
-                                placeholder="Search workflows"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                style={{ flex: 0.7, borderRadius: 8 }}
-                                InputProps={{
-                                    style: { borderRadius: 8 },
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            {searchQuery.length === 0 ? <Search /> :
-                                                <ClearIcon
-                                                    style={{ cursor: 'pointer' }}
-                                                    onClick={() => setSearchQuery('')}
-                                                />
-                                            }
-                                        </InputAdornment>
-                                    ),
+                                color="primary"
+                                value={filters}
+                                onChange={(chips) => {
+                                    console.log("CHANGE: ", chips);
+                                    setFilters(chips);
+                                    findWorkflow(chips);
                                 }}
+                                style={{ flex: 0.9, borderRadius: 8 }}
+                            // style={searchStyle}
+                            //onAdd={(chip) => {
+                            //	console.log("ADd: ", chip);
+                            //	addFilter(chip);
+                            //}}
+                            //onDelete={(_, index) => {
+                            //	console.log("Remove: ", index);
+                            //	removeFilter(index);
+                            //}}
                             />
+
+
 
                             <Select
                                 fullWidth
                                 variant="outlined"
                                 value={selectedCategory}
-                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                onChange={handleCategoryChange}
                                 displayEmpty
                                 multiple
-                                style={{ flex: 0.7, maxWidth: 300 }}
+                                style={{ flex: 0.9, maxWidth: 350, borderRadius: 8 }}
                                 renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
                             >
                                 <MenuItem disabled value="">All Categories</MenuItem>
-                                {/* Add category items here */}
+                                {usecases.map((usecase) => {
+
+                                    if (usecase?.name === "5. Verify") {
+                                        return null;
+                                    }
+
+
+                                    const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length / usecase.list.length * 100) : 0
+                                    if (percentDone === 0) {
+                                        usecase = findMatches(usecase, workflows)
+                                    }
+
+                                    const category = usecase?.name.split(" ")[1]
+                                    return (
+                                        <MenuItem value={category}
+
+                                            onClick={() => {
+                                                console.log("Filters: ", filters, usecase?.name.toLowerCase())
+                                                if (!filters.includes(usecase?.name.toLowerCase())) {
+                                                    addFilter(usecase.name)
+                                                } else {
+                                                    removeFilter(filters.indexOf(usecase?.name.toLowerCase()))
+                                                }
+                                            }}
+                                        >
+                                            <Checkbox checked={selectedCategory.includes(category)} />
+                                            <span style={{ textDecoration: "none", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", paddingRight: 2 }}>
+                                                <Typography variant="body1" color="textPrimary">
+                                                    {category}
+                                                </Typography>
+                                                <Typography variant="body2" color="textSecondary">
+                                                    {usecase?.matches.length}/{usecase?.list.length}
+                                                </Typography>
+                                            </span>
+                                        </MenuItem>)
+                                })}
                             </Select>
 
                             <div style={{ display: "flex", gap: 8, height: "100%" }}>
                                 <Tooltip title="Explore Workflow Runs" placement="top">
                                     <IconButton
-                                                    style={{ 
+                                        style={{
                                             color: 'white',
                                             backgroundColor: '#212121',
                                             borderRadius: '8px',
@@ -4101,7 +4164,15 @@ const Workflows2 = (props) => {
                                         {submitLoading ? <CircularProgress color="secondary" /> : <PublishIcon />}
                                     </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Download ALL workflows" placement="top">
+                                <input
+                                    hidden
+                                    type="file"
+                                    multiple="multiple"
+                                    ref={(ref) => (upload = ref)}
+                                    onChange={importFiles}
+                                />
+                                <Tooltip title={`Download ALL workflows (${workflows.length})`}
+                                    placement="top">
                                     <IconButton
                                         style={{
                                             color: 'white',
@@ -4111,7 +4182,11 @@ const Workflows2 = (props) => {
                                             width: '55px',
                                             height: '55px',
                                         }}
-                                        onClick={() => {/* Add export handling */ }}
+                                        disabled={isCloud}
+                                        variant="text"
+                                        onClick={() => {
+                                            exportAllWorkflows(workflows);
+                                        }}
                                     >
                                         <GetAppIcon />
                                     </IconButton>
@@ -4124,8 +4199,8 @@ const Workflows2 = (props) => {
                                 onClick={handleCreateWorkflow}
                                 style={{
                                     height: "56px",
-                                    borderRadius: 7,
-                                    flex: 0.7,
+                                    borderRadius: 8,
+                                    flex: 0.8,
                                     textTransform: 'none',
 
                                 }}
@@ -4139,37 +4214,50 @@ const Workflows2 = (props) => {
                         <div style={{
                             width: "100%",
                         }}>
-                            {view === "grid" && currTab !== 2 ? (
-                                <div style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "repeat(3, 1fr)", // Creates 3 equal columns
-                                    gap: "20px", // Adds consistent spacing between items
-                                    width: "100%",
-                                }}>
-                                    {filteredWorkflows.map((data, index) => {
-                                        // Shouldn't be a part of this list
-                                        if (data.public === true) {
-                                            return null
-                                        }
+                            {
+                                isLoadingWorkflow ? (
+                                    <div style={{ textAlign: "center", marginTop: 50 }}>
+                                        <CircularProgress style={{ color: "#f85a3e" }} />
+                                    </div>
+                                ) : (
+                                    view === "grid" && currTab !== 2 ? (
+                                        <>
+                                            <div style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "repeat(3, 1fr)", // Creates 3 equal columns
+                                                gap: "20px", // Adds consistent spacing between items
+                                                width: "100%",
+                                            }}>
 
-                                        if (firstLoad) {
-                                            workflowDelay += 75
-                                        } else {
-                                            return <WorkflowPaper key={index} data={data} />
-                                        }
 
-                                        return (
-                                            <span key={index}>
-                                                {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
-                                                <WorkflowPaper data={data} />
-                                                {/*</Zoom>*/}
-                                            </span>
-                                        )
-                                    })}
-                                </div>
-                            ) : (
-                                currTab !== 2 && <WorkflowListView />
-                            )}
+
+                                                {filteredWorkflows.map((data, index) => {
+                                                    // Shouldn't be a part of this list
+                                                    if (data.public === true) {
+                                                        return null
+                                                    }
+
+                                                    if (firstLoad) {
+                                                        workflowDelay += 75
+                                                    } else {
+                                                        return <WorkflowPaper key={index} data={data} />
+                                                    }
+
+                                                    return (
+                                                        <span key={index}>
+                                                            {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+                                                            <WorkflowPaper data={data} />
+                                                            {/*</Zoom>*/}
+                                                        </span>
+                                                    )
+                                                })}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        currTab !== 2 && <WorkflowListView />
+                                    )
+                                )
+                            }
 
                             {
                                 currTab === 2 &&
@@ -4261,7 +4349,7 @@ const Workflows2 = (props) => {
             onClose={() => { }}
             PaperProps={{
                 style: {
-                                                        backgroundColor: theme.palette.surfaceColor,
+                    backgroundColor: theme.palette.surfaceColor,
                     color: "white",
                     minWidth: "800px",
                     minHeight: "320px",
@@ -4322,8 +4410,8 @@ const Workflows2 = (props) => {
                         onChange={(e) => setDownloadBranch(e.target.value)}
                         placeholder="master"
                         fullWidth
-                                                />
-                                            </div>
+                    />
+                </div>
                 <span style={{ marginTop: 10 }}>
                     Authentication (optional - private repos etc):
                 </span>
@@ -4475,7 +4563,7 @@ const Workflows2 = (props) => {
                     setVideoViewOpen(true)
                 }}>
                     <b>Watch 2-min introduction video</b>
-                                        </Typography>
+                </Typography>
             </div>
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.3)", }}>
                 {gettingStartedItems.map((item, index) => {
