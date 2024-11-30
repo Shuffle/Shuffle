@@ -293,7 +293,6 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
         sx: {
           borderRadius: 3,
           border: "1px solid var(--Container-Stroke, #494949)",
-          backgroundColor: "var(--Container, #212121)",
           minWidth: '440px',
           fontFamily: "Inter"
         }
