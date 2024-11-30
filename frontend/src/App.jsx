@@ -45,6 +45,11 @@ import AlertTemplate from "./components/AlertTemplate";
 import { isMobile } from "react-device-detect";
 import RuntimeDebugger from "./components/RuntimeDebugger.jsx"
 
+import MFASetUp from './components/MFASetUP.jsx';
+import ApiExplorerWrapper from './views/ApiExplorerWrapper.jsx';
+import LeftSideBar from './components/LeftSideBar.jsx';
+import CodeWorkflow from './views/CodeWorkflow.jsx';
+
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -203,6 +208,11 @@ const App = (message, props) => {
 		<div style={{ minHeight: 68, maxHeight: 68, }}>
 			{curpath.includes("/workflows") && curpath.includes("/run") ? 
 				<div style={{ height: 60, }} />
+				:
+				isLoggedIn ? 
+					<div style={{ position: 'fixed', top: 32, left: 10, zIndex: 100000 }}>
+						<LeftSideBar userdata={userdata} globalUrl={globalUrl} serverside={false} notifications={notifications} />
+					</div>
 				:
 				<Header
 					billingInfo={{}}
@@ -454,6 +464,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route exact path="/apis/:appid" element={<ApiExplorerWrapper serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} isMobile={false} selectedApp={undefined} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
 			<Route
 				exact
 				path="/detections/sigma"
@@ -525,8 +536,14 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route exact path="/workflows/:key/code" element={<CodeWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
 			<Route exact path="/workflows/:key/run" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
 			<Route exact path="/workflows/:key/execute" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
+
+			<Route exact path="/forms" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms/:key/run" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms/:key" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
+
         	<Route
         	  exact
         	  path="/docs/:key"
@@ -582,6 +599,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route exact path="/login/:key/mfa-setup" element={<MFASetUp setCookie={setCookie} serverside={false} mainColor={theme.palette.backgroundColor} userdata={userdata} stripeKey={undefined} globalUrl={globalUrl} inputColor={theme.palette.inputColor} isLoaded={isLoaded} {...props} />} />
         	<Route
         	  exact
         	  path="/login_sso"
