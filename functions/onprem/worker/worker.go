@@ -58,6 +58,7 @@ var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
 
 var baseimagename = "frikky/shuffle"
 var kubernetesNamespace = os.Getenv("KUBERNETES_NAMESPACE")
+var executionCount int64
 
 // var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 
@@ -70,6 +71,7 @@ var requestsSent = 0
 var appsInitialized = false
 
 var hostname string
+var maxReplicas = uint64(12)
 
 /*
 var environments []string
@@ -97,6 +99,8 @@ type ImageRequest struct {
 var finishedExecutions []string
 var imagesDistributed []string
 var imagedownloadTimeout = time.Second * 300
+
+var window = shuffle.NewTimeWindow(10 * time.Second)
 
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
@@ -426,7 +430,7 @@ func deployk8sApp(image string, identifier string, env []string) error {
 
 	baseDeployMode := false
 
-	// check if autoDeploy contains a value 
+	// check if autoDeploy contains a value
 	// that is equal to the image being deployed.
 	for _, value := range autoDeploy {
 		if value == image {
@@ -2314,6 +2318,10 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	// 4. Push to db
 	// IF FAIL: Set executionstatus: abort or cancel
 	ctx := context.Background()
+	if actionResult.ExecutionId == "TBD" {
+		return
+	}
+
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
 		log.Printf("[ERROR][%s] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, actionResult.ExecutionId, err)
@@ -3049,8 +3057,7 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 				Condition: swarm.RestartPolicyConditionAny,
 			},
 			Placement: &swarm.Placement{
-				// Max per node
-				MaxReplicas: replicatedJobs,
+				Constraints: []string{},
 			},
 		},
 	}
@@ -3849,6 +3856,8 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		time.Sleep(time.Duration(30) * time.Second)
 		checkUnfinished(resp, request, execRequest)
 	}()
+	window.AddEvent(time.Now())
+
 	ctx := context.Background()
 
 	// FIXME: This should be PER EXECUTION
@@ -4092,6 +4101,34 @@ func runWebserver(listener net.Listener) {
 		log.Printf("[DEBUG] Running webserver config for SWARM and K8s")
 	}
 	/*** ENDREMOVE ***/
+	var dockercli *dockerclient.Client
+	ctx := context.Background()
+	scaleReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
+	if len(scaleReplicas) > 0 {
+		tmpInt, err := strconv.Atoi(scaleReplicas)
+		if err != nil {
+			log.Printf("[ERROR] %s is not a valid number for replication", scaleReplicas)
+		} else {
+			maxReplicas = uint64(tmpInt)
+			_ = tmpInt
+		}
+
+		log.Printf("[DEBUG] SHUFFLE_APP_REPLICAS set to value %#v. Trying to overwrite default (%d/node)", scaleReplicas, maxReplicas)
+	}
+
+	maxExecutionsPerMinute := 10
+	if os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE") != "" {
+		tmpInt, err := strconv.Atoi(os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE"))
+		if err != nil {
+			log.Printf("[ERROR] %s is not a valid number for executions per minute", os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE"))
+		} else {
+			maxExecutionsPerMinute = tmpInt
+		}
+
+		log.Printf("[DEBUG] SHUFFLE_APP_EXECUTIONS_PER_MINUTE set to value %s. Trying to overwrite default (%d)", os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE"), maxExecutionsPerMinute)
+	}
+
+	go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
 
 	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
@@ -4125,4 +4162,206 @@ func runWebserver(listener net.Listener) {
 	if err != nil {
 		log.Printf("[ERROR] Serve issue in worker: %#v", err)
 	}
+}
+
+func AutoScaleApps(ctx context.Context, client *dockerclient.Client, maxExecutionsPerMinute int) {
+	ticker := time.NewTicker(1 * time.Second)
+
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-ticker.C:
+			count := window.CountEvents(time.Now())
+			j := numberOfApps(ctx, client)
+			workers := numberOfWorkers(ctx, client)
+			execPerMin := maxExecutionsPerMinute / workers
+			log.Printf("[DEBUG] Running with %d workers\n\n\n\n\n", workers)
+
+			if count >= execPerMin {
+				log.Printf("[DEBUG] Too many executions per minute (%d). Scaling down to %d", count, execPerMin)
+				scaleApps(ctx, client, uint64(j+1))
+			}
+		}
+	}
+}
+
+func scaleApps(ctx context.Context, client *dockerclient.Client, replicas uint64) error {
+	client, err := dockerclient.NewEnvClient()
+	services, err := client.ServiceList(ctx, types.ServiceListOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Failed to find services in the swarm: %s", err)
+	}
+
+	networkId, err := getNetworkId(ctx, client)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get network Id in the swarm service: %s", err)
+	}
+
+	workers := numberOfWorkers(ctx, client)
+	if replicas > uint64(workers) {
+		return nil
+	}
+
+	for _, service := range services {
+		if service.Spec.Name == "shuffle-workers" {
+			continue
+		}
+
+		inNetwork := false
+		for _, vip := range service.Endpoint.VirtualIPs {
+			if vip.NetworkID == networkId {
+				inNetwork = true
+				break
+			}
+		}
+		if !inNetwork {
+			continue // skip services not in the target network
+		}
+
+		if service.Spec.Mode.Replicated == nil {
+			return errors.New("Service is not replicated")
+		}
+
+		if *service.Spec.Mode.Replicated.Replicas >= replicas {
+			continue
+		}
+
+		service.Spec.Mode.Replicated.Replicas = &replicas
+		_, err = client.ServiceUpdate(ctx, service.ID, service.Version, service.Spec, types.ServiceUpdateOptions{})
+		if err != nil {
+			return err
+		}
+
+	}
+
+	log.Printf("[DEBUG] Scaled all services to %d replicas", replicas)
+	return nil
+}
+
+func getNetworkId(ctx context.Context, dockercli *dockerclient.Client) (string, error) {
+	networkFilter := filters.NewArgs()
+	networkFilter.Add("name", swarmNetworkName)
+
+	networks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{
+		Filters: networkFilter,
+	})
+
+	if err != nil || len(networks) == 0 {
+		return "", err
+	}
+	networkId := networks[0].ID
+
+	return networkId, nil
+}
+
+func numberOfApps(ctx context.Context, dockercli *dockerclient.Client) int {
+	// swarmNetworkName
+
+	var err error
+	if swarmNetworkName == "" {
+		swarmNetworkName = "shuffle_swarm_executions"
+	}
+
+	if dockercli == nil {
+		dockercli, err = dockerclient.NewEnvClient()
+		if err != nil {
+			log.Printf("[ERROR] Unable to create docker client (5): %s", err)
+			return 0
+		}
+	}
+
+	networkFilter := filters.NewArgs()
+	networkFilter.Add("name", swarmNetworkName)
+
+	networks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{
+		Filters: networkFilter,
+	})
+
+	if err != nil || len(networks) == 0 {
+		return 0
+	}
+
+	networkId, err := getNetworkId(ctx, dockercli)
+	if err != nil {
+		log.Printf("[WARNING] Failed to get networkID is worker running in swarm: %s", err)
+		return 0
+	}
+
+	services, err := dockercli.ServiceList(ctx, types.ServiceListOptions{})
+	if err != nil {
+		log.Printf("[WARNING] Can't found any services. %s", err)
+		return 0
+	}
+
+	runningReplicas := 0
+
+	for _, service := range services {
+		if service.Spec.Name == "shuffle-workers" {
+			continue
+		}
+
+		inNetwork := false
+		for _, vip := range service.Endpoint.VirtualIPs {
+			if vip.NetworkID == networkId {
+				inNetwork = true
+				break
+			}
+		}
+		if !inNetwork {
+			continue // skip services not in the target network
+		}
+
+		filterArgs := filters.NewArgs()
+		filterArgs.Add("service", service.Spec.Name)
+		filterArgs.Add("desired-state", "running")
+
+		task, err := dockercli.TaskList(ctx, types.TaskListOptions{
+			Filters: filterArgs,
+		})
+		if err != nil {
+			log.Printf("[WARNING] Failed to get the list of running services %s: %s", service.Spec.Name, err)
+			continue
+		}
+
+		runningReplicas = len(task)
+		break
+	}
+
+	return runningReplicas
+}
+
+func IsServiceRunning(ctx context.Context, cli *dockerclient.Client) bool {
+	serviceName := "shuffle-tools_1-2-0"
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("name", serviceName)
+
+	services, err := cli.ServiceList(ctx, types.ServiceListOptions{Filters: filterArgs})
+
+	if err != nil {
+		log.Printf("[ERROR] Couldn't find %s service running got error: %s", serviceName, err)
+		return false
+	}
+	if len(services) > 0 {
+		return true
+	}
+
+	return false
+}
+
+func numberOfWorkers(ctx context.Context, cli *dockerclient.Client) int {
+	cli, err := dockerclient.NewEnvClient()
+	service, _, err := cli.ServiceInspectWithRaw(ctx, "shuffle-workers", types.ServiceInspectOptions{})
+	if err != nil {
+		return 0
+	}
+
+	if service.Spec.Mode.Replicated == nil {
+		return 0
+	}
+
+	replics := *service.Spec.Mode.Replicated.Replicas
+	return int(replics)
 }
