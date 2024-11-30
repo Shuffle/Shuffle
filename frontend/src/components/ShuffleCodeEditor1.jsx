@@ -1649,7 +1649,7 @@ const CodeEditor = (props) => {
 			</div>
 
 				{isFileEditor ? null : 
-					<div style={{flex: 1, marginLeft: 5, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, }}>
+					<div style={{flex: 1, marginLeft: 5, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, overflow: "hidden", }}>
 						<div>
 							{isMobile ? null : 
 								<DialogTitle

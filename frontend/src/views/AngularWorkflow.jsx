@@ -2233,9 +2233,68 @@ const releaseToConnectLabel = "Release to Connect"
 				workflow.actions[actionkey].is_valid = true;
 				workflow.actions[actionkey].errors = [];
 			  }
+			} else {
+				responseJson.errors.map((error) => {
+					// Find the word itself
+					const wordsplit = error.split(" ") 
+					if (wordsplit.length < 2) {
+						return
+					}
+
+					var word = ""
+					var isaction = false
+
+					for (var mapkey in wordsplit) {
+						const inword = wordsplit[mapkey]
+						if (isaction === true) {
+							word = inword
+							break
+						}
+
+						if (inword.toLowerCase() === "action") {
+							isaction = true
+						}
+					}
+
+					if (word === "") {
+						return
+					}
+
+					const foundnode = cy.nodes().find((node) => {
+						const nodelabel = node.data("label")
+						if (nodelabel === undefined || nodelabel === null) {
+							return false
+						}
+
+						return nodelabel.toLowerCase() === word.toLowerCase()
+					})
+
+					if (foundnode !== undefined && foundnode !== null) {
+						foundnode.data("is_valid", false)
+
+						// FIXME: Maybe append?
+						foundnode.data("errors", [error])
+
+						const parsedStyle = {
+						  "border-width": "10px",
+						  "border-opacity": ".9",
+						  "border-color": red,
+						}
+
+						const animationDuration = 150 
+						foundnode.animate(
+						  {
+							style: parsedStyle,
+						  },
+						  {
+							duration: animationDuration,
+						  }
+						)
+					}
+				})
 			}
 
-            setWorkflow(workflow);
+            setWorkflow(workflow)
           }
 
           setTimeout(() => {
@@ -5051,7 +5110,7 @@ const releaseToConnectLabel = "Release to Connect"
               newNodeData.position = {
                 x: newNodeData.position.x + 100,
                 y: newNodeData.position.y + 100,
-              };
+              }
             }
 
             newNodeData.isStartNode = false;
@@ -7984,10 +8043,16 @@ const releaseToConnectLabel = "Release to Connect"
       node.data.type = "ACTION";
       node.isStartNode = action["id"] === inputworkflow.start;
 
+	  if (node.data.errors !== undefined && node.data.errors !== null && node.data.errors.length > 0) {
+		  node.data.is_valid = false
+		  node.is_valid = false
+	  }
+
       if (inputworkflow.public === true) {
         node.data.is_valid = true
         node.is_valid = true
       }
+
 
       var example = "";
       if (
@@ -7999,6 +8064,42 @@ const releaseToConnectLabel = "Release to Connect"
       }
 
       node.data.example = example;
+
+	  if (inputworkflow?.id !== undefined && originalWorkflow?.id !== undefined && inputworkflow?.id !== originalWorkflow?.id && originalWorkflow.actions !== undefined && originalWorkflow.actions !== null && originalWorkflow.actions.length > 0) {
+		// Find the node in the original workflow
+		var inParent  = false
+		for (var i = 0; i < originalWorkflow.actions.length; i++) {
+			const originalAction = originalWorkflow.actions[i]
+			if (originalAction.id === action.id) {
+				inParent = true
+				break
+			}
+		}
+
+		if (inParent === true) {
+    		setTimeout(() => {
+				const foundnode = cy.getElementById(action.id)
+				if (foundnode !== undefined && foundnode !== null) {
+					const parsedStyle = {
+					  "border-width": "3px",
+					  "border-opacity": "1",
+					  "border-color": "#40E0D0",
+					  "opacity": "0.4",
+					}
+
+					const animationDuration = 150 
+					foundnode.animate(
+					  {
+						style: parsedStyle,
+					  },
+					  {
+						duration: animationDuration,
+					  }
+					)
+				}
+			}, 500)
+		}
+	  }
 
       return node
     })
@@ -8072,6 +8173,42 @@ const releaseToConnectLabel = "Release to Connect"
       node.data._id = trigger["id"];
       node.data.id = trigger["id"];
       node.data.type = "TRIGGER";
+
+	  if (inputworkflow?.id !== undefined && originalWorkflow?.id !== undefined && inputworkflow?.id !== originalWorkflow?.id && originalWorkflow.triggers !== undefined && originalWorkflow.triggers !== null && originalWorkflow.triggers.length > 0) {
+		// Find the node in the original workflow
+		var inParent  = false
+		for (var i = 0; i < originalWorkflow.triggers.length; i++) {
+			const originalAction = originalWorkflow.triggers[i]
+			if (originalAction.id === trigger.id) {
+				inParent = true
+				break
+			}
+		}
+
+		if (inParent === true) {
+    		setTimeout(() => {
+				const foundnode = cy.getElementById(trigger.id)
+				if (foundnode !== undefined && foundnode !== null) {
+					const parsedStyle = {
+					  "border-width": "3px",
+					  "border-opacity": "1",
+					  "border-color": "#40E0D0",
+					  "opacity": "0.4",
+					}
+
+					const animationDuration = 150 
+					foundnode.animate(
+					  {
+						style: parsedStyle,
+					  },
+					  {
+						duration: animationDuration,
+					  }
+					)
+				}
+			}, 500)
+		}
+	  }
 
       return node;
     });
@@ -16002,6 +16139,8 @@ const releaseToConnectLabel = "Release to Connect"
 						//}
 					}
 
+					navigate(`?org_id=${e.target.value}`)
+
 					// Unselect in cy
 					if (cy !== undefined && cy !== null) {
 						cy.nodes().unselect()
@@ -16031,9 +16170,8 @@ const releaseToConnectLabel = "Release to Connect"
 								//toast("Loading correct info for suborg")
 							}
 
-							console.log("Original: ", originalWorkflow)
 							if (originalWorkflow.childorg_workflow_ids === undefined || originalWorkflow.childorg_workflow_ids === null || originalWorkflow.childorg_workflow_ids.length === 0) {
-								console.log("In childorg doesn't exist. Suborgworkflows: ", suborgWorkflows)
+								//console.log("Childorg doesn't exist (?). Suborgworkflows: ", suborgWorkflows)
 
 								if (suborgWorkflows !== undefined && suborgWorkflows !== null && suborgWorkflows.length > 0) {
 									var found = false
@@ -16161,7 +16299,7 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
         </div>
-		<div style={{display: "flex", marginLeft: 10, pointerEvents: "auto", }}>
+		<div style={{display: "flex", marginLeft: 10, maxWidth: 250, pointerEvents: "auto", }}>
 			{parentWorkflows.slice(0,5).map((wf, index) => {
 				return (
 					<a href={`/workflows/${wf.id}`} target="_blank" rel="noopener noreferrer" key={index}>
@@ -16610,8 +16748,6 @@ const releaseToConnectLabel = "Release to Connect"
 							<span
 								style={{color: "#f85a3e", cursor: "pointer"}}
 								onClick={() => {
-									console.log("Clicked action: ", word)
-
 									// Find it in cytoscape
 									if (cy === undefined || cy === null) {
 										return
@@ -16623,17 +16759,13 @@ const releaseToConnectLabel = "Release to Connect"
 											return false
 										}
 
-										console.log("Node: ", nodelabel.toLowerCase(), "Word: ", word.toLowerCase())
 										return nodelabel.toLowerCase() === word.toLowerCase()
 									})
-
-									console.log("FOUND: ", foundnode)
 
 									if (foundnode === undefined || foundnode === null || foundnode.length === 0) {
 										return
 									}
 
-									console.log("Found node: ", foundnode)
             						cy.elements().unselect()
 									foundnode[0].select()
 								}}

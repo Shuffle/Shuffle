@@ -157,11 +157,6 @@ const data = [
     },
   },
   {
-    selector: `node[?parent_controlled]`,
-    css: {
-    },
-  },
-  {
     selector: `node[app_name="Testing"]`,
     css: {
       width: "30px",
@@ -300,7 +295,7 @@ const data = [
   {
     selector: "node[!is_valid]",
     css: {
-      "border-color": "red",
+      "border-color": "#f53434",
       "border-width": "10px",
     },
   },

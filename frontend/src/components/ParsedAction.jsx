@@ -665,9 +665,9 @@ const ParsedAction = (props) => {
 				let regex = /(^|[^\\])\$/;
 				if (regex.test(paramvalue)) {
 					if(message.length > 0){
-						message += "\nUse \"\\$\" instead of \"$\".";
+						message += "\nUse \"\\$\" instead of \"$\" if you want to escape $ (1)";
 					}else{
-						message = "Use \"\\$\" instead of \"$\" to escape variables.";
+						message = "Use \"\\$\" instead of \"$\" if you want to escape $ (2)";
 					}
 				}
 			}
