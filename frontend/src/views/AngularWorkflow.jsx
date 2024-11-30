@@ -9444,6 +9444,10 @@ const releaseToConnectLabel = "Release to Connect"
 				return null
 			}
 
+			if (trigger.trigger_type == "PIPELINE") {
+				return null
+			}
+
 			const imagesize = isMobile ? 40 : trigger.large_image.includes("svg") ? 50 : 50 
             var imageline = trigger.large_image.length === 0 ? <img alt="" style={{ borderRadius: theme.palette?.borderRadius, width: isMobile ? 40 : 60 , pointerEvents: "none" }} />
               : 
