@@ -3836,7 +3836,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Printf("[WARNING] Failed reading body for stream result queue")
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
@@ -3846,7 +3846,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	err = json.Unmarshal(body, &execRequest)
 	if err != nil {
 		log.Printf("[WARNING] Failed shuffle.WorkflowExecution unmarshaling: %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
@@ -3905,9 +3905,10 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		streamResultUrl,
 		bytes.NewBuffer([]byte(fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, execRequest.ExecutionId, execRequest.Authorization))),
 	)
+
 	if err != nil {
 		log.Printf("[ERROR][%s] Failed to create a new request", execRequest.ExecutionId)
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
@@ -3916,7 +3917,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	newresp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[ERROR] Failed making request (2): %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
@@ -3925,7 +3926,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	body, err = ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR][%s] Failed reading body (2): %s", execRequest.ExecutionId, err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
@@ -3938,7 +3939,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 			//shutdown(workflowExecution, "", "", true)
 		}
 
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad statuscode: %d"}`, newresp.StatusCode)))
 		return
 	}
@@ -3946,7 +3947,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	err = json.Unmarshal(body, &workflowExecution)
 	if err != nil {
 		log.Printf("[ERROR] Failed workflowExecution unmarshal: %s", err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
@@ -3981,7 +3982,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	if workflowExecution.Status != "EXECUTING" {
 		log.Printf("[WARNING] Exiting as worker execution has status %s!", workflowExecution.Status)
 		log.Printf("[DEBUG] Shutting down (38)")
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad status %s for the workflow execution %s"}`, workflowExecution.Status, workflowExecution.ExecutionId)))
 		return
 	}
@@ -4002,7 +4003,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	err = executionInit(workflowExecution)
 	if err != nil {
 		log.Printf("[DEBUG][%s] Shutting down (30) - Workflow setup failed: %s", workflowExecution.ExecutionId, err)
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in execution init: %s"}`, err)))
 		return
 		//shutdown(workflowExecution, "", "", true)
