@@ -49,11 +49,12 @@ services:
       - ORG_ID=Shuffle
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
       - DOCKER_API_VERSION=1.40
-      - HTTP_PROXY=${HTTP_PROXY}
-      - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
       - SHUFFLE_STATS_DISABLED=true
+      - SHUFFLE_SWARM_CONFIG=run
+      - SHUFFLE_LOGS_DISABLED=true
+      - SHUFFLE_WORKER_IMAGE=ghcr.io/shuffle/shuffle-worker:nightly
     env_file: .env
     restart: unless-stopped
     security_opt:
