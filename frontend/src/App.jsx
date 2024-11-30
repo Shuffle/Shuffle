@@ -51,6 +51,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Drift from "react-driftjs";
 
 import { AppContext } from './context/ContextApi.jsx';
+import Workflows2 from "./views/Workflows2.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
@@ -463,6 +464,23 @@ const App = (message, props) => {
         	  path="/workflows"
         	  element={
         	    <Workflows
+				  checkLogin={checkLogin}
+        	      cookies={cookies}
+        	      removeCookie={removeCookie}
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      cookies={cookies}
+        	      userdata={userdata}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+			<Route
+        	  exact
+        	  path="/workflows2"
+        	  element={
+        	    <Workflows2
 				  checkLogin={checkLogin}
         	      cookies={cookies}
         	      removeCookie={removeCookie}
