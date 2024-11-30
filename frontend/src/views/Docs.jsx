@@ -1294,11 +1294,11 @@ const DocsWrapper = memo(({userdata, children })=>{
     return (
         <div style={{
             minHeight: 1000, zIndex: 1, 
-            maxWidth: Math.min(!userdata?.support ? 1920 : leftSideBarOpenByClick ? windowWidth - 300 : windowWidth - 200, 1920), 
-            minWidth: isMobile ? null : userdata?.support ? leftSideBarOpenByClick ? 800 : 900 : null, margin: "auto", 
-            position: userdata?.support && leftSideBarOpenByClick ? "relative" : "static", 
-            left: userdata?.support && leftSideBarOpenByClick ? 120 : userdata?.support && !leftSideBarOpenByClick ? 80 : 0, 
-            marginLeft: windowWidth < 1920 ? leftSideBarOpenByClick && userdata?.support ? 160 : userdata?.support && !leftSideBarOpenByClick ? 80 : 0 : "auto", width: "100%", 
+            maxWidth: Math.min(leftSideBarOpenByClick ? windowWidth - 300 : windowWidth - 200, 1920), 
+            minWidth: isMobile ? null : leftSideBarOpenByClick ? 800 : 900, margin: "auto", 
+            position: leftSideBarOpenByClick ? "relative" : "static", 
+            left: leftSideBarOpenByClick ? 120 :  !leftSideBarOpenByClick ? 80 : 0, 
+            marginLeft: windowWidth < 1920 ? leftSideBarOpenByClick ? 160 : !leftSideBarOpenByClick ? 80 : 0 : "auto", width: "100%", 
             transition: "left 0.3s ease-in-out, min-width 0.3s ease-in-out, max-width 0.3s ease-in-out, position 0.3s ease-in-out, margin 0.3s ease-in-out, margin-left 0.3s ease"
             }}>
             {children}

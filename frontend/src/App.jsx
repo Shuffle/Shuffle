@@ -205,7 +205,7 @@ const App = (message, props) => {
 				/>
 		}
 
-		<div style={{ minHeight: 68, maxHeight: 68, }}>
+		
 			{curpath.includes("/workflows") && curpath.includes("/run") ? 
 				<div style={{ height: 60, }} />
 				:
@@ -214,6 +214,7 @@ const App = (message, props) => {
 						<LeftSideBar userdata={userdata} globalUrl={globalUrl} serverside={false} notifications={notifications} />
 					</div>
 				:
+				<div style={{ minHeight: 68, maxHeight: 68, }}>
 				<Header
 					billingInfo={{}}
 
@@ -234,8 +235,8 @@ const App = (message, props) => {
 
 					{...props}
 				/>
+			</div> 
 			}
-		</div>
 		
 				{/*
         <div style={{ height: 60 }} />
