@@ -324,7 +324,7 @@ const ConfigureWorkflow = (props) => {
             }
           }
 
-		  if (app.authentication.type === "oauth2" || app.authentication.type === "oauth2-app") {
+		  if (app?.authentication?.type === "oauth2" || app?.authentication?.type === "oauth2-app") {
 			  filled = false
 			
 			  action.auth_type = "oauth2"
@@ -848,7 +848,7 @@ const ConfigureWorkflow = (props) => {
 				{opened ?
 					<div style={{padding: 12, }}>
 	
-						{action.app.authentication.type === "oauth2-app" || action.app.authentication.type === "oauth2" || action.auth_type === "oauth2" ?
+						{action.app?.authentication?.type === "oauth2-app" || action.app?.authentication?.type === "oauth2" || action.auth_type === "oauth2" ?
 							<div>
 								<AuthenticationOauth2
 									selectedApp={action.app}
@@ -945,7 +945,7 @@ const ConfigureWorkflow = (props) => {
 							)
 						})}
 
-						{action.app.authentication.type !== "oauth2-app" && action.app.authentication.type !== "oauth2" ?  
+						{action.app?.authentication?.type !== "oauth2-app" && action.app?.authentication?.type !== "oauth2" ?  
 							<Button
 								variant="contained"
 								color="primary"

@@ -24,6 +24,7 @@ import DashboardView from "./views/DashboardViews.jsx";
 import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs.jsx";
+import Usecases2 from "./views/Usecases2.jsx";
 //import Introduction from "./views/Introduction";
 import SetAuthentication from "./views/SetAuthentication";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
@@ -376,6 +377,19 @@ const App = (message, props) => {
         	  path="/usecases"
         	  element={
         	    <Dashboard
+				  userdata={userdata}
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+			<Route
+        	  exact
+        	  path="/usecases2"
+        	  element={
+        	    <Usecases2
 				  userdata={userdata}
         	      isLoaded={isLoaded}
         	      isLoggedIn={isLoggedIn}

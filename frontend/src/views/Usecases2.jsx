@@ -692,7 +692,7 @@ const UsecaseListComponent = (props) => {
 
 // This is the start of a dashboard that can be used.
 // What data do we fill in here? Idk
-const Dashboard = (props) => {
+const Usecases2 = (props) => {
   const { globalUrl, isLoggedIn, userdata } = props;
   //const alert = useAlert();
   const { leftSideBarOpenByClick} = useContext(Context);
@@ -1250,4 +1250,4 @@ const Dashboard = (props) => {
   return dataWrapper
 };
 
-export default Dashboard;
+export default Usecases2;

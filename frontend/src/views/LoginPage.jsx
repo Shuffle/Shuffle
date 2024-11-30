@@ -183,7 +183,10 @@ const LoginDialog = (props) => {
 
 			  if (responseJson.tutorials === undefined || responseJson.tutorials === null || !responseJson.tutorials.includes("welcome")) {
 			  	console.log("RUN Welcome!!")
-			  	window.location.pathname = "/welcome?tab=2" 
+          setTimeout(() => {
+            navigate("/welcome?tab=2")
+          },200)
+			  	// window.location.pathname = "" 
 			  	return
 			  }
 
