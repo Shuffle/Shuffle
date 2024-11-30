@@ -1,5 +1,5 @@
 /* eslint-disable react/no-multi-comp */
-import React, { useState, useEffect, useLayoutEffect, memo, useMemo, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, memo, useMemo, useRef, useContext } from "react";
 import ReactDOM from "react-dom"
 
 import theme from "../theme.jsx";
@@ -71,6 +71,8 @@ import {
   Radio,
   ButtonGroup,
 } from "@mui/material";
+
+import CodeIcon from '@mui/icons-material/Code';
 
 import {
   Folder as FolderIcon,
@@ -151,6 +153,8 @@ import PaperComponent from "../components/PaperComponent.jsx"
 import ExtraApps from "../components/ExtraApps.jsx"
 import EditWorkflow from "../components/EditWorkflow.jsx"
 import { act } from "react";
+import { Context } from "../context/ContextApi.jsx";
+import transitions from "@material-ui/core/styles/transitions.js";
 // import AppStats from "../components/AppStats.jsx";
 const noImage = "/public/no_image.png";
 
@@ -395,6 +399,9 @@ const AngularWorkflow = (defaultprops) => {
   var props = JSON.parse(JSON.stringify(defaultprops))
   props.match = {}
   props.match.params = params
+
+  const { leftSideBarOpenByClick, windowWidth } = useContext(Context)
+  const [workflowAsCode, setWorkflowAsCode] = useState(false);
 
   var to_be_copied = "";
   const [firstrequest, setFirstrequest] = React.useState(true);
@@ -800,6 +807,15 @@ const releaseToConnectLabel = "Release to Connect"
 			console.log(`Failed side-loading app ${appId}: ${error}`)
 		})
 	}
+
+  useEffect(() => {
+    console.log("Loaded workflow: ", workflow)
+    if (workflow.actions?.length == 1) {
+      if (workflow.actions[0].app_id == "3e320a20966d33c9b7e6790b2705f0bf") {
+      setWorkflowAsCode(true);
+      }
+    }
+  }, [workflow]);
 
   // Event for making sure app is correct
   useEffect(() => {
@@ -3226,6 +3242,10 @@ const releaseToConnectLabel = "Release to Connect"
 		}
 
 		cy.add(nodeData)
+
+    if (workflowAsCode) {
+      setWorkflowAsCode(false)
+    }
 		
 		// Wait 100ms then add a style for it
 		setTimeout(() => {
@@ -6318,6 +6338,10 @@ const releaseToConnectLabel = "Release to Connect"
       }
     }
 
+    if (nodedata.app_id == "3e320a20966d33c9b7e6790b2705f0bf") {
+      setWorkflowAsCode(true);
+    }
+
 	if (nodedata.decorator !== true && nodedata.attachedTo === undefined) {
 		var newdata = JSON.parse(JSON.stringify(nodedata))
 		newdata.large_image = "" 
@@ -9002,7 +9026,7 @@ const releaseToConnectLabel = "Release to Connect"
       });
   };
 
-  const parsedHeight = isMobile ? bodyHeight - appBarSize * 4 : bodyHeight - appBarSize - 50 
+  const parsedHeight = isMobile ? bodyHeight - appBarSize * 4 : userdata?.support ? bodyHeight - 80 : bodyHeight - appBarSize - 50 
   const appViewStyle = {
     marginLeft: 5,
     marginRight: 5,
@@ -9342,6 +9366,7 @@ const releaseToConnectLabel = "Release to Connect"
             minHeight: parsedHeight,
             maxHeight: parsedHeight,
             overflow: "hidden",
+            paddingTop: userdata?.support ? 10 : 0,
           }}
         >
           {thisview}
@@ -11016,10 +11041,13 @@ const releaseToConnectLabel = "Release to Connect"
       iterations += 1;
     }
 
+
     // Remove on the end as we don't want to remove everything
     results = results.filter((data) => data.id !== action.id)
     results = results.filter((data) => data.type === "ACTION" || data.app_name === "Shuffle Workflow" || data.app_name === "User Input")
     results.push({ label: "Execution Argument", type: "INTERNAL" })
+
+    console.log(results)
 
     return results
   }
@@ -11050,9 +11078,9 @@ const releaseToConnectLabel = "Release to Connect"
   const minSize = 370
   var rightsidebarStyle = {
     position: "fixed",
-    top: appBarSize + 25,
+    top: userdata?.support ? appBarSize - 35 : appBarSize + 25,
     right: 25,
-    height: "80vh",
+    height: userdata?.support ? "90vh": "80vh",
     width: isMobile ? "100%" : minSize,
     minWidth: minSize,
     maxWidth: 600,
@@ -15961,24 +15989,33 @@ const releaseToConnectLabel = "Release to Connect"
   const cytoscapeViewWidths = isMobile ? 50 : 950;
   const bottomBarStyle = {
     position: "fixed",
-    right: isMobile ? 20 : 20,
-    bottom: isMobile ? undefined : 0,
-    top: isMobile ? appBarSize + 55 : undefined,
-    left: isMobile ? undefined : leftBarSize,
-    minWidth: cytoscapeViewWidths,
-    maxWidth: cytoscapeViewWidths,
+    transition: "all 0.3s ease",
+    minWidth: userdata?.support && windowWidth < 1600 && leftSideBarOpenByClick ? 800 : cytoscapeViewWidths,
+    maxWidth: userdata?.support && windowWidth < 1600 && leftSideBarOpenByClick ? 800 : cytoscapeViewWidths,
     marginLeft: 20,
-    marginBottom: 20,
+    marginBottom: 30,
     zIndex: 10,
-  };
+    transform: isMobile 
+        ? `translateX(20px)`
+        : `translateX(${userdata?.support 
+            ? leftSideBarOpenByClick ? 340 : 330 
+            : leftBarSize}px)`,
+    top: isMobile ? appBarSize + 55 : undefined, 
+    bottom: isMobile ? undefined : 0,
+};
 
   const topBarStyle = {
     position: "fixed",
-    right: 0,
-    left: isMobile ? 20 : leftBarSize + 20,
-    top: isMobile ? 30 : appBarSize + 20,
-	pointerEvents: "none",
-  }
+    top: isMobile ? 30 : userdata?.support ? appBarSize - 20 : appBarSize + 20,
+    pointerEvents: "none",
+    transition: "transform 0.3s ease",
+    transform: isMobile
+        ? `translateX(20px)`
+        : userdata?.support
+        ? `translateX(${leftSideBarOpenByClick ? 340 : 330}px)`
+        : `translateX(${leftBarSize + 20}px)`,
+};
+
 
 
 
@@ -15988,9 +16025,9 @@ const releaseToConnectLabel = "Release to Connect"
       return null
     }
 
-	if (userdata.active_org === undefined || userdata.active_org === null) {
-		return null
-	}
+    if (userdata.active_org === undefined || userdata.active_org === null) {
+      return null
+    }
 
     const isCorrectOrg = workflow.public === true || userdata.active_org.id === undefined || userdata.active_org.id === null || workflow.org_id === null || workflow.org_id === undefined || workflow.org_id.length === 0 || userdata.active_org.id === workflow.org_id 
 
@@ -16028,6 +16065,26 @@ const releaseToConnectLabel = "Release to Connect"
 				pointerEvents: "none",
 			}}>{workflow.name}</h2>
           </Breadcrumbs>
+          {workflowAsCode && (
+            <Tooltip title="Switch to Code View">
+              <Button
+                startIcon={<CodeIcon />}
+                variant="outlined"
+                color="secondary"
+                onClick={() => {
+                  window.location.href = `/workflows/${workflow.id}/code`
+                }}
+                style={{ 
+                  marginTop: 10, 
+                  marginLeft: 5,
+                  height: 40,
+                  pointerEvents: "auto",
+                }}
+              >
+                Build this workflow as code
+              </Button>
+            </Tooltip>
+          )}
 
 		  {!distributedFromParent ? 
 			isCorrectOrg ? null :
@@ -16706,11 +16763,12 @@ const releaseToConnectLabel = "Release to Connect"
   		style={{
 			border: "1px solid rgba(255,255,255,0.1)",
   			position: "absolute",
-  			bottom: 130,
-  			left: leftBarSize+20,
+  			bottom: 140,
+  			left: userdata?.support ? leftSideBarOpenByClick ? 620 : 435 : leftBarSize + 20,
 			color: "white",
 			padding: 10, 
 			borderRadius: theme.palette?.borderRadius,
+      transition: "left 0.3s ease, top 0.3s ease",
   		}}
   	>
 
@@ -17488,7 +17546,7 @@ const releaseToConnectLabel = "Release to Connect"
   // console.log(allowList, userdata.public_username)
 
   const leftView = workflow.public === true ?
-    <div style={{ minHeight: "82vh", maxHeight: "82vh", height: "100%", minWidth: leftBarSize - 70, maxWidth: leftBarSize - 70, zIndex: 0, padding: 35, borderRight: "1px solid rgba(91,96,100,1)", overflowY: "auto", }}>
+      <div style={{ minHeight: "82vh", maxHeight: "82vh", height: "100%", minWidth: leftBarSize - 70, maxWidth: leftBarSize - 70, zIndex: 0, padding: 35, borderRight: "1px solid rgba(91,96,100,1)", overflowY: "auto", }}>
 
 	  <span style={{display: "flex", }}>
 		  <Typography variant="h6" color="textPrimary" style={{
@@ -20293,7 +20351,7 @@ const releaseToConnectLabel = "Release to Connect"
   );
 
   const newView = (
-    <div style={{ color: "white" }}>
+    <div style={{ color: "white", marginLeft: userdata?.support ? leftSideBarOpenByClick ? 280 : 100 : 0, transition: "margin-left 0.3s ease", }}>
       <div
         style={{ display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)" }}
       >
@@ -20330,7 +20388,7 @@ const releaseToConnectLabel = "Release to Connect"
               wheelSensitivity={0.25}
               style={{
                 width: cytoscapeWidth,
-                height: bodyHeight - appBarSize - 5,
+                height: userdata?.support ? bodyHeight - 20 : bodyHeight - appBarSize - 5,
                 backgroundColor: theme.palette.surfaceColor,
               }}
               stylesheet={cystyle}
@@ -22225,7 +22283,7 @@ const releaseToConnectLabel = "Release to Connect"
 
   const loadedCheck =
     isLoaded && workflowDone ? (
-      <div>
+      <div style={{overflow:'hidden'}}>
         {newView}
         <VariablesModal variableInfo={variableInfo} setVariableInfo={setVariableInfo} />
         <ExecutionVariableModal variableInfo={variableInfo} setVariableInfo={setVariableInfo} />
@@ -22359,7 +22417,7 @@ const releaseToConnectLabel = "Release to Connect"
         />
       </div>
     ) : (
-      <div style={{width: 200, margin: "auto", marginTop: 300, textAlign: "center", }}>
+      <div style={{width: 200, margin: "auto", paddingTop: 300, textAlign: "center", }}>
 		<CircularProgress style={{}} />
 		<Typography variant="body2" color="textSecondary" style={{marginTop: 10, }}>
 			Loading Workflow & Apps...

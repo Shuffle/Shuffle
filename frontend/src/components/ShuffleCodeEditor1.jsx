@@ -114,6 +114,7 @@ const CodeEditor = (props) => {
 		editorData, 
 							
 		setAiQueryModalOpen,
+		fullScreenMode
 	} = props
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
@@ -999,6 +1000,55 @@ const CodeEditor = (props) => {
       }
     }
 
+	if (fullScreenMode) {
+		return (
+			<AceEditor
+			mode="python"
+			theme="gruvbox"
+			value={localcodedata}
+			onChange={(value, editor) => {
+				// setlocalcodedata(value)
+				// expectedOutput(value)
+				// highlight_variables(value,editor)
+				setlocalcodedata(value)
+				setcodedata(value)
+			}}
+			name="python-editor"
+			fontSize={14}
+			width="100%"
+			height="100%"
+			showPrintMargin={false}
+			showGutter={true}
+			markers={markers}
+			highlightActiveLine={false}
+				  
+			enableBasicAutocompletion={true}
+			completers={[customCompleter]}
+
+			style={{
+				wordBreak: "break-word",
+				marginTop: 0,
+				paddingBottom: 10,
+				overflowY: "auto",
+				whiteSpace: "pre-wrap",
+				wordWrap: "break-word",
+				backgroundColor: "rgba(40,40,40,1)",
+				zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+			}}
+
+			setOptions={{
+			  enableBasicAutocompletion: true,
+			  enableLiveAutocompletion: true,
+			  enableSnippets: true,
+			  showLineNumbers: true,
+			  tabSize: 4,
+			  fontFamily: "'JetBrains Mono', Consolas, monospace",
+			  useSoftTabs: true
+			}}
+		  />
+		)
+	}
+
 	return (
 		<Dialog
 			aria-labelledby="draggable-dialog-title"
@@ -1130,7 +1180,7 @@ const CodeEditor = (props) => {
 							*/}
 					{ isFileEditor ? null :
 					<div style={{display: "flex", maxHeight: 40, }}>
-						{selectedAction.name === "execute_python" ? 
+						{selectedAction?.name === "execute_python" ? 
 							<Typography variant="body1" style={{marginTop: 5, }}>
 								Run Python Code
 							</Typography>
@@ -1300,7 +1350,7 @@ const CodeEditor = (props) => {
 								maxHeight: 650,
 							}}
 						>
-							{actionlist.map((innerdata) => {
+							{actionlist?.map((innerdata) => {
 								const icon =
 									innerdata.type === "action" ? (
 										<AppsIcon style={{ marginRight: 10 }} />
