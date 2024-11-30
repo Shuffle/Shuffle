@@ -130,7 +130,7 @@ const Search = (props) => {
     flexDirection: "column",
     overflowX: "hidden",
     minHeight: 400,
-    paddingLeft: leftSideBarOpenByClick ? 250 : 0,
+    paddingLeft: leftSideBarOpenByClick ? 270 : 80,
     transition: "padding-left 0.3s ease",
   };
 

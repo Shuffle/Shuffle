@@ -9025,7 +9025,7 @@ const releaseToConnectLabel = "Release to Connect"
       });
   };
 
-  const parsedHeight = isMobile ? bodyHeight - appBarSize * 4 : userdata?.support ? bodyHeight - 80 : bodyHeight - appBarSize - 50 
+  const parsedHeight = isMobile ? bodyHeight - appBarSize * 4 :  bodyHeight - 65; 
   const appViewStyle = {
     marginLeft: 5,
     marginRight: 5,
@@ -9365,7 +9365,6 @@ const releaseToConnectLabel = "Release to Connect"
             minHeight: parsedHeight,
             maxHeight: parsedHeight,
             overflow: "hidden",
-            paddingTop: userdata?.support ? 10 : 0,
           }}
         >
           {thisview}
@@ -11081,9 +11080,9 @@ const releaseToConnectLabel = "Release to Connect"
   const minSize = 370
   var rightsidebarStyle = {
     position: "fixed",
-    top: userdata?.support ? appBarSize - 35 : appBarSize + 25,
+    top: appBarSize - 35,
     right: 25,
-    height: userdata?.support ? "90vh": "80vh",
+    height:  "90vh",
     width: isMobile ? "100%" : minSize,
     minWidth: minSize,
     maxWidth: 600,
@@ -15993,30 +15992,26 @@ const releaseToConnectLabel = "Release to Connect"
   const bottomBarStyle = {
     position: "fixed",
     transition: "all 0.3s ease",
-    minWidth: userdata?.support && windowWidth < 1600 && leftSideBarOpenByClick ? 800 : cytoscapeViewWidths,
-    maxWidth: userdata?.support && windowWidth < 1600 && leftSideBarOpenByClick ? 800 : cytoscapeViewWidths,
+    minWidth: windowWidth < 1600 && leftSideBarOpenByClick ? 800 : cytoscapeViewWidths,
+    maxWidth: windowWidth < 1600 && leftSideBarOpenByClick ? 800 : cytoscapeViewWidths,
     marginLeft: 20,
     marginBottom: 30,
     zIndex: 10,
     transform: isMobile 
         ? `translateX(20px)`
-        : `translateX(${userdata?.support 
-            ? leftSideBarOpenByClick ? 340 : 330 
-            : leftBarSize}px)`,
+        : `translateX(${leftSideBarOpenByClick ? 340 : 330}px)`,
     top: isMobile ? appBarSize + 55 : undefined, 
     bottom: isMobile ? undefined : 0,
 };
 
   const topBarStyle = {
     position: "fixed",
-    top: isMobile ? 30 : userdata?.support ? appBarSize - 20 : appBarSize + 20,
+    top: isMobile ? 30 :  appBarSize - 20,
     pointerEvents: "none",
     transition: "transform 0.3s ease",
     transform: isMobile
         ? `translateX(20px)`
-        : userdata?.support
-        ? `translateX(${leftSideBarOpenByClick ? 340 : 330}px)`
-        : `translateX(${leftBarSize + 20}px)`,
+        : `translateX(${leftSideBarOpenByClick ? 340 : 330}px)`
 };
 
 
@@ -16767,7 +16762,7 @@ const releaseToConnectLabel = "Release to Connect"
 			border: "1px solid rgba(255,255,255,0.1)",
   			position: "absolute",
   			bottom: 140,
-  			left: userdata?.support ? leftSideBarOpenByClick ? 620 : 435 : leftBarSize + 20,
+  			left: leftSideBarOpenByClick ? 620 : 435,
 			color: "white",
 			padding: 10, 
 			borderRadius: theme.palette?.borderRadius,
@@ -20354,7 +20349,7 @@ const releaseToConnectLabel = "Release to Connect"
   );
 
   const newView = (
-    <div style={{ color: "white", marginLeft: userdata?.support ? leftSideBarOpenByClick ? 280 : 100 : 0, transition: "margin-left 0.3s ease", }}>
+    <div style={{ color: "white", marginLeft:   leftSideBarOpenByClick ? 280 : 100, transition: "margin-left 0.3s ease", }}>
       <div
         style={{ display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)" }}
       >
@@ -20391,7 +20386,7 @@ const releaseToConnectLabel = "Release to Connect"
               wheelSensitivity={0.25}
               style={{
                 width: cytoscapeWidth,
-                height: userdata?.support ? bodyHeight - 20 : bodyHeight - appBarSize - 5,
+                height: bodyHeight - 20,
                 backgroundColor: theme.palette.surfaceColor,
               }}
               stylesheet={cystyle}

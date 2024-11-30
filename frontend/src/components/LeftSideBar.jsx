@@ -795,7 +795,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           </Button>
         </Box>
       </Box>
-      <Box sx={{ display: "flex", flexDirection: "column", width:"100%", height: "100%", overflowY: "auto", overflowX: "hidden",transition: 'display 0.3s ease' }} onMouseOver={()=>{!leftSideBarOpenByClick && setExpandLeftNav(true);}} onMouseLeave={()=>{!leftSideBarOpenByClick && setExpandLeftNav(false);setOpenAutocomplete(false);}}>
+      <Box sx={{ display: "flex", flexDirection: "column", width:"100%", height: "100%", overflowY: "auto", overflowX: "hidden",transition: 'display 0.3s ease',paddingTop: 0.5 }} onMouseOver={()=>{!leftSideBarOpenByClick && setExpandLeftNav(true);}} onMouseLeave={()=>{!leftSideBarOpenByClick && setExpandLeftNav(false);setOpenAutocomplete(false);}}>
       <Box
             sx={{
               display: "flex",
@@ -1053,9 +1053,17 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               marginTop: 2.5,
             }}
           >
-	  		<Link to="/dashboards/security" style={hrefStyle}>
+	  		<span style={{ display: "inline-block", width: "100%" }}> 
+          <Link
+            to={userdata?.support ? "/dashboards/security" : "#"} 
+            style={{
+              ...hrefStyle,
+              pointerEvents: userdata?.support ? "auto" : "none",
+            }}
+          >
             <Button
               onClick={(event) => {
+                if (!userdata?.support) return;
                 setOpenSecurityTab(true);
                 setOpenautomateTab(false);
                 setCurrentOpenTab("security");
@@ -1063,24 +1071,43 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               }}
               sx={{
                 ...ButtonStyle,
-                backgroundColor: ((currentOpenTab === "security" && currentPath.includes("/security")) || ((!expandLeftNav) && (currentPath.includes("detections") || currentPath.includes("response")))) ? "#2f2f2f": "transparent",
-                "&:hover": { backgroundColor: "#2f2f2f" },
+                backgroundColor:
+                  ((currentOpenTab === "security" && currentPath.includes("/security")) ||
+                  (!expandLeftNav &&
+                    (currentPath.includes("detections") || currentPath.includes("response"))))
+                    ? "#2f2f2f"
+                    : "transparent",
+                "&:hover": {
+                  backgroundColor: userdata?.support ? "#2f2f2f" : "transparent", 
+                },
+                cursor: userdata?.support ? "pointer" : "not-allowed",
               }}
+              disabled={!userdata?.support}
             >
               <ShieldOutlinedIcon
-                style={{ width: 16, height: 16, marginRight: expandLeftNav ? 10 : 0 }}
+                style={{
+                  width: 16,
+                  height: 16,
+                  marginRight: expandLeftNav ? 10 : 0,
+                  color: userdata?.support ? "inherit" : "#6F6F6F",
+                }}
               />
               <span
                 style={{
                   display: expandLeftNav ? "inline" : "none",
                   marginRight: "auto",
-                  color: currentOpenTab === "security" && currentPath.includes("/security") ? "#F1F1F1" : "#C8C8C8",
+                  color: userdata?.support
+                    ? currentOpenTab === "security" && currentPath.includes("/security")
+                      ? "#F1F1F1"
+                      : "#C8C8C8"
+                    : "#6F6F6F", 
                 }}
               >
                 Security
               </span>
             </Button>
-	  		</Link> 
+          </Link>
+        </span>
             <IconButton
               onClick={() => {
                 setOpenSecurityTab((prev) => !prev);
@@ -1106,82 +1133,126 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
             </IconButton>
           </Box>
           <Collapse in={openSecurityTab} timeout="auto" unmountOnExit>
-          <Box
-            style={{
-              maxHeight: openSecurityTab && expandLeftNav ? 100 : 0,
-              overflow: "hidden",
-              transition: "max-height 0.3s ease, opacity 0.3s ease",
-              display: "flex",
-              flexDirection: "column",
-              paddingLeft: 16,
-              gap: 4,
-              marginTop: expandLeftNav ? 16 : 0,
-            }}
-            disableRipple={expandLeftNav ? false : true}
-          >
-	  		<Link to="/detections" style={hrefStyle}>
-            <Button
-              onClick={(event) => {
-                setCurrentOpenTab("detection");
-                localStorage.setItem("lastTabOpenByUser", "detection");
-              }}
-              sx={{
-                width: "100%",
-                height: 35,
-                color: "#C8C8C8",
-                justifyContent: "flex-start",
-                textTransform: "none",
-                backgroundColor: currentOpenTab === "detection" && currentPath.includes("/detection")? "#2f2f2f": "transparent",
-                "&:hover": { backgroundColor: "#2f2f2f" },
-              }}
-              disableRipple={expandLeftNav ? false : true}
-            >
-              <span style={{position: 'relative', left: !expandLeftNav ? 10: 0, marginRight: 10, fontSize: 16 }}>•</span>
-              <span
+              <Box
                 style={{
-                  display: expandLeftNav ? "inline" : "none",
-                  opacity: expandLeftNav ? 1 : 0,
-                  transition: "opacity 0.3s ease",
-                  color:
-                    currentOpenTab === "detection" && currentPath.includes("/detection") ? "#F1F1F1" : "#C8C8C8",
+                  maxHeight: openSecurityTab && expandLeftNav ? 100 : 0,
+                  overflow: "hidden",
+                  transition: "max-height 0.3s ease, opacity 0.3s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  paddingLeft: 16,
+                  gap: 4,
+                  marginTop: expandLeftNav ? 16 : 0,
                 }}
+                disableRipple={expandLeftNav ? false : true}
               >
-                Detection
-              </span>
-            </Button>
-	  		</Link> 
-	  		<Link to="/response" style={hrefStyle}>
-            <Button
-              onClick={(event) => {
-                setCurrentOpenTab("response");
-                localStorage.setItem("lastTabOpenByUser", "response");
-              }}
-              sx={{
-                width: "100%",
-                height: 35,
-                color: "#C8C8C8",
-                justifyContent: "flex-start",
-                textTransform: "none",
-                backgroundColor: currentOpenTab === "response" && currentPath.includes("/response") ? "#2f2f2f": "transparent",
-                "&:hover": { backgroundColor: "#2f2f2f" },
-              }}
-              disableRipple={expandLeftNav ? false : true}
-            >
-              <span style={{position: 'relative', left: !expandLeftNav ? 10: 0, marginRight: 10, fontSize: 16 }}>•</span>
-              <span
-                style={{
-                  display: expandLeftNav ? "inline" : "none",
-                  opacity: expandLeftNav ? 1 : 0,
-                  transition: "opacity 0.3s ease",
-                  color: currentOpenTab === "response" && currentPath.includes("/response")? "#F1F1F1" : "#C8C8C8",
-                }}
-              >
-                Response
-              </span>
-            </Button>
-	  		</Link> 
-          </Box>
-          </Collapse>
+                <span style={{ display: "inline-block", width: "100%" }}>
+                  <Link
+                    to={userdata?.support ? "/detections" : "#"}
+                    style={{
+                      ...hrefStyle,
+                      pointerEvents: userdata?.support ? "auto" : "none",
+                    }}
+                  >
+                    <Button
+                      onClick={(event) => {
+                        if (!userdata?.support) return;
+                        setCurrentOpenTab("detection");
+                        localStorage.setItem("lastTabOpenByUser", "detection");
+                      }}
+                      sx={{
+                        width: "100%",
+                        height: 35,
+                        color: userdata?.support ? "#C8C8C8" : "#6F6F6F",
+                        justifyContent: "flex-start",
+                        textTransform: "none",
+                        backgroundColor:
+                          currentOpenTab === "detection" && currentPath.includes("/detection")
+                            ? "#2f2f2f"
+                            : "transparent",
+                        "&:hover": {
+                          backgroundColor: userdata?.support ? "#2f2f2f" : "transparent",
+                        },
+                        cursor: userdata?.support ? "pointer" : "not-allowed",
+                      }}
+                      disabled={!userdata?.support}
+                    >
+                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 16 }}>
+                        •
+                      </span>
+                      <span
+                        style={{
+                          display: expandLeftNav ? "inline" : "none",
+                          opacity: expandLeftNav ? 1 : 0,
+                          transition: "opacity 0.3s ease",
+                          color:
+                            userdata?.support && currentOpenTab === "detection" && currentPath.includes("/detection")
+                              ? "#F1F1F1"
+                              : userdata?.support
+                              ? "#C8C8C8"
+                              : "#6F6F6F",
+                        }}
+                      >
+                        Detection
+                      </span>
+                    </Button>
+                  </Link>
+                </span>
+                <span style={{ display: "inline-block", width: "100%" }}>
+                  <Link
+                    to={userdata?.support ? "/response" : "#"}
+                    style={{
+                      ...hrefStyle,
+                      pointerEvents: userdata?.support ? "auto" : "none",
+                    }}
+                  >
+                    <Button
+                      onClick={(event) => {
+                        if (!userdata?.support) return;
+                        setCurrentOpenTab("response");
+                        localStorage.setItem("lastTabOpenByUser", "response");
+                      }}
+                      sx={{
+                        width: "100%",
+                        height: 35,
+                        color: userdata?.support ? "#C8C8C8" : "#6F6F6F",
+                        justifyContent: "flex-start",
+                        textTransform: "none",
+                        backgroundColor:
+                          currentOpenTab === "response" && currentPath.includes("/response")
+                            ? "#2f2f2f"
+                            : "transparent",
+                        "&:hover": {
+                          backgroundColor: userdata?.support ? "#2f2f2f" : "transparent",
+                        },
+                        cursor: userdata?.support ? "pointer" : "not-allowed",
+                      }}
+                      disabled={!userdata?.support}
+                    >
+                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 16 }}>
+                        •
+                      </span>
+                      <span
+                        style={{
+                          display: expandLeftNav ? "inline" : "none",
+                          opacity: expandLeftNav ? 1 : 0,
+                          transition: "opacity 0.3s ease",
+                          color:
+                            userdata?.support && currentOpenTab === "response" && currentPath.includes("/response")
+                              ? "#F1F1F1"
+                              : userdata?.support
+                              ? "#C8C8C8"
+                              : "#6F6F6F",
+                        }}
+                      >
+                        Response
+                      </span>
+                    </Button>
+                  </Link>
+                </span>
+              </Box>
+            </Collapse>
+
 
 	  	  <Link to="/docs" style={hrefStyle}>
           <Button
@@ -1280,6 +1351,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                 style={{
                   display: "flex",
                   alignItems: "center",
+                  minWidth: "250px",
                   justifyContent:
                     option.id === "add_suborg" ? "center" : "flex-start",
                   backgroundColor:
@@ -1308,7 +1380,9 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                     setOpenAutocomplete(false);
                 }}
               >
-                    <span
+                    {
+                      isCloud ? (
+                        <span
                       style={{
                         color: "#bbb",
                         fontSize: "16px",
@@ -1316,7 +1390,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                       }}
                     >
                       {option.region_url}
-                    </span>
+                    </span>) : null
+                    }
                     <img
                       src={option.image ? option.image : "/images/no_image.png"}
                       alt={option.name}
