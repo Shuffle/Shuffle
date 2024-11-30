@@ -3,7 +3,7 @@ module worker
 go 1.22.2
 
 require (
-	github.com/docker/docker v26.1.4+incompatible
+	github.com/docker/docker v26.1.5+incompatible
 	github.com/gorilla/mux v1.8.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/shuffle/shuffle-shared v0.6.30
