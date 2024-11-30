@@ -38,6 +38,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -340,7 +341,7 @@ func deployServiceWorkers(image string) {
 		log.Printf("[ERROR] Memcached is not running. Will try to deploy it.")
 		deployMemcached(dockercli)
 	}
-	ip := getLocalIP()
+	ip := "shuffle-cache"
 
 	os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
 
@@ -1973,6 +1974,12 @@ func main() {
 			deployK8sWorker(workerImage, "shuffle-workers", []string{})
 			runString = "Run: \"kubectl get pods\" for more info"
 		}
+
+		err := setBackendToSwarmNetwork(ctx)
+		if err != nil {
+			log.Printf("[WARNING] Failed setting backend to swarm network: %s", err)
+		}
+
 		log.Printf("[DEBUG] Waiting 45 seconds to ensure workers are deployed. %s", runString)
 		time.Sleep(time.Duration(45) * time.Second)
 
@@ -2786,11 +2793,11 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		},
 	}
 
-	if isKubernetes != "true" {
+	if isKubernetes != "true" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 	}
 
-	_, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
+	resp, err := dockercli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
 		if strings.Contains(err.Error(), "path does not exist") {
 			log.Printf("[ERROR] Not using permanent pipeline storage as storage folder %s does not exist. If you want permanent storage, create the %s folder then restart Orborus (1). Raw: %s", tenzirStorageFolder, tenzirStorageFolder, err)
@@ -2800,6 +2807,14 @@ func createAndStartTenzirNode(ctx context.Context, containerName, imageName stri
 		}
 
 		return err
+	}
+
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+		networkName := "shuffle_swarm_executions"
+		err = dockercli.NetworkConnect(ctx, networkName, resp.ID, nil)
+		if err != nil {
+			log.Printf("[ERROR] Error connecting tenzir container to network: %s", err)
+		}
 	}
 
 	err = dockercli.ContainerStart(ctx, containerName, containerStartOptions)
@@ -3971,6 +3986,11 @@ func deployMemcached(dockercli *dockerclient.Client) error {
 		log.Printf("[ERROR] Error starting memcached continer: %s", err)
 		return err
 	}
+	networkName := "shuffle_swarm_executions"
+	err = dockercli.NetworkConnect(ctx, networkName, resp.ID, nil)
+	if err != nil {
+		log.Printf("[ERROR] Error connecting memcached container to network: %s", err)
+	}
 
 	log.Printf("[INFO] Memcached container started successfully at port 11211")
 
@@ -4075,4 +4095,30 @@ func collectMetrics(ctx context.Context, dockerClient *dockerclient.Client) (int
 	json.Unmarshal(body, &executionRequests)
 
 	return len(executionRequests.Data), nil
+}
+
+func setBackendToSwarmNetwork(ctx context.Context) error {
+	containerId := ""
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("name", "shuffle-backend")
+
+	containers, err := dockercli.ContainerList(ctx, container.ListOptions{
+		All:     true,
+		Filters: filterArgs,
+	})
+	if err != nil {
+		return err
+	}
+	if len(containers) == 0 {
+		return errors.New("No containers found with name shuffle-backend")
+	}
+
+	containerId = containers[0].ID
+	networkName := "shuffle_swarm_executions"
+	err = dockercli.NetworkConnect(ctx, networkName, containerId, nil)
+	if err != nil {
+		log.Printf("[ERROR] Error connecting backend container to network: %s", err)
+	}
+
+	return nil
 }
