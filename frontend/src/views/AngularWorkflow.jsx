@@ -154,7 +154,6 @@ import ExtraApps from "../components/ExtraApps.jsx"
 import EditWorkflow from "../components/EditWorkflow.jsx"
 import { act } from "react";
 import { Context } from "../context/ContextApi.jsx";
-import transitions from "@material-ui/core/styles/transitions.js";
 // import AppStats from "../components/AppStats.jsx";
 const noImage = "/public/no_image.png";
 

@@ -11,7 +11,7 @@ ADD ./go-app/docker.go /app
 ADD ./go-app/go.mod /app
 
 # Required files for code generation
-ADD ./app_sdk/app_base.py /app_sdk
+RUN wget -O /app_sdk/app_base.py https://raw.githubusercontent.com/Shuffle/app_sdk/refs/heads/main/shuffle_sdk/shuffle_sdk.py
 ADD ./app_gen /app_gen
 
 RUN go get -v
