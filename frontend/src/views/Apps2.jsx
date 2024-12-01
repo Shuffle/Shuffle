@@ -966,7 +966,7 @@ const Apps2 = (props) => {
   }, [searchQuery, selectedCategory, selectedLabel, currTab]);
 
 
-  const handleTabChange = (newTab) => {
+  const handleTabChange = (event, newTab) => {
     setCurrTab(newTab);
     
     // Apply filters immediately when changing tabs
@@ -977,12 +977,16 @@ const Apps2 = (props) => {
       const filteredUserApps = filterApps(userApps, searchQuery, selectedCategory, selectedLabel);
       setAppsToShow(filteredUserApps);
     }
-    // Note: We don't clear the search when switching to tab 2 (Discover Apps) anymore
 
-    // Update URL query params
-    const newQueryParam = newTab === 0 ? 'org_apps' : newTab === 1 ? 'my_apps' : 'all_apps';
+    // Update URL query params based on tab index
+    const tabMapping = {
+      0: 'org_apps',
+      1: 'my_apps',
+      2: 'all_apps'
+    };
+    
     const queryParams = new URLSearchParams(location.search);
-    queryParams.set('tab', newQueryParam);
+    queryParams.set('tab', tabMapping[newTab]);
     
     // Maintain search query in URL regardless of tab
     if (searchQuery) {
@@ -991,7 +995,7 @@ const Apps2 = (props) => {
       queryParams.delete('q');
     }
     
-    window.history.replaceState({}, '', `${location.pathname}?${queryParams.toString()}`);
+    navigate(`${location.pathname}?${queryParams.toString()}`);
   };
 
   // Update useEffect to handle initial load and URL search params
@@ -1076,7 +1080,7 @@ const Apps2 = (props) => {
           <div style={{ borderBottom: '1px solid gray', marginBottom: 30, marginRight: 10 }}>
             <Tabs
               value={currTab}
-              onChange={(event, newTab) => handleTabChange(newTab)}
+              onChange={(event, newTab) => handleTabChange(event, newTab)}
               TabIndicatorProps={{ style: { height: '3px', borderRadius: 10 } }}
               style={{ fontFamily: "Inter" }}
             >
