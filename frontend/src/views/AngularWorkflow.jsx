@@ -360,11 +360,11 @@ export function removeParam(key, sourceURL) {
 
 const useStyles = makeStyles({
   notchedOutline: {
-    borderColor: "#f85a3e !important",
+    borderColor: "#FF8544 !important",
   },
   root: {
     "& .MuiAutocomplete-listbox": {
-      border: "2px solid #f85a3e",
+      border: "2px solid #FF8544",
       color: "white",
       fontSize: 18,
       "& li:nth-child(even)": {
@@ -4463,7 +4463,7 @@ const releaseToConnectLabel = "Release to Connect"
 
       const elementMouseIsOver = document.elementFromPoint(x, y);
       if (elementMouseIsOver !== undefined && elementMouseIsOver !== null) {
-        // Color for #f85a3e translated to rgb
+        // Color for #FF8544 translated to rgb
         const newBorder = "3px solid rgb(248, 90, 62)";
         if (
           elementMouseIsOver.style.border !== newBorder &&
@@ -8739,6 +8739,11 @@ const releaseToConnectLabel = "Release to Connect"
     if (cy.edgehandles !== undefined) {
       cy.edgehandles({
         handleNodes: (el) => {
+	      // Check of length of el.data() is 1
+		  if (el.data() === undefined || Object.keys(el.data()).length === 1) {
+			  return false
+		  }
+
           if (el.isNode() &&
             el.data("buttonType") != "ACTIONSUGGESTION" &&
             el.data("name") != "switch" &&
@@ -9231,7 +9236,7 @@ const releaseToConnectLabel = "Release to Connect"
             rel="noopener noreferrer"
             href="https://shuffler.io/docs/workflows#workflow_variables"
             target="_blank"
-            style={{ textDecoration: "none", color: "#f85a3e" }}
+            style={{ textDecoration: "none", color: "#FF8544" }}
           >
             Workflow variables?
           </a>
@@ -9281,7 +9286,7 @@ const releaseToConnectLabel = "Release to Connect"
             rel="noopener noreferrer"
             href="https://shuffler.io/docs/workflows#execution_variables"
             target="_blank"
-            style={{ textDecoration: "none", color: "#f85a3e" }}
+            style={{ textDecoration: "none", color: "#FF8544" }}
           >
             Runtime variables?
           </a>
@@ -11049,8 +11054,6 @@ const releaseToConnectLabel = "Release to Connect"
     results = results.filter((data) => data.type === "ACTION" || data.app_name === "Shuffle Workflow" || data.app_name === "User Input")
     results.push({ label: "Execution Argument", type: "INTERNAL" })
 
-    console.log(results)
-
     return results
   }
 
@@ -11383,7 +11386,7 @@ const releaseToConnectLabel = "Release to Connect"
               width: "17px",
               height: "17px",
               borderRadius: 17 / 2,
-              backgroundColor: "#f85a3e",
+              backgroundColor: "#FF8544",
               marginRight: "10px",
             }}
           />
@@ -11420,7 +11423,7 @@ const releaseToConnectLabel = "Release to Connect"
               open={showAutocomplete}
               fullWidth
               style={{
-                borderBottom: `1px solid #f85a3e`,
+                borderBottom: `1px solid #FF8544`,
                 color: "white",
                 height: 50,
                 marginTop: 2,
@@ -11450,7 +11453,7 @@ const releaseToConnectLabel = "Release to Connect"
                   );
                   if (exec_text_field !== null) {
                     if (inside) {
-                      exec_text_field.style.border = "2px solid #f85a3e";
+                      exec_text_field.style.border = "2px solid #FF8544";
                     } else {
                       exec_text_field.style.border = "";
                     }
@@ -11598,6 +11601,9 @@ const releaseToConnectLabel = "Release to Connect"
           color: "white",
           minWidth: isMobile ? "90%" : 800,
           border: theme.palette.defaultBorder,
+
+		  borderRadius: theme.palette.borderRadius,
+		  backgroundColor: "black",
         },
       }}
       onClose={() => {
@@ -11719,6 +11725,9 @@ const releaseToConnectLabel = "Release to Connect"
           color: "white",
           minWidth: isMobile ? "90%" : 650,
           border: theme.palette.defaultBorder,
+
+		  borderRadius: theme.palette.borderRadius,
+		  backgroundColor: "black",
         },
       }}
       onClose={() => {
@@ -11930,6 +11939,7 @@ const releaseToConnectLabel = "Release to Connect"
 		  padding: 50, 
 		  paddingBottom: 70,
 
+		  borderRadius: theme.palette.borderRadius,
     	  borderImage: "linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1",
         },
       }}
@@ -12034,6 +12044,9 @@ const releaseToConnectLabel = "Release to Connect"
           color: "white",
           minWidth: isMobile ? "90%" : 800,
           border: theme.palette.defaultBorder,
+
+		  borderRadius: theme.palette.borderRadius,
+		  backgroundColor: "black",
         },
       }}
       onClose={() => {
@@ -12055,7 +12068,7 @@ const releaseToConnectLabel = "Release to Connect"
           href="/docs/workflows#conditions"
           style={{ 
 			  	textDecoration: "none", 
-				color: "#f85a3e",
+				color: "#FF8544",
 		  }}
         >
           Learn more
@@ -12539,7 +12552,7 @@ const releaseToConnectLabel = "Release to Connect"
               rel="noopener noreferrer"
               target="_blank"
               href="https://shuffler.io/docs/workflows#conditions"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
+              style={{ textDecoration: "none", color: "#FF8544" }}
             >
               What are conditions?
             </a>
@@ -13292,7 +13305,7 @@ const releaseToConnectLabel = "Release to Connect"
 			rel="noopener noreferrer"
 			target="_blank"
 			href="https://shuffler.io/docs/triggers#subflow"
-			style={{ textDecoration: "none", color: "#f85a3e" }}
+			style={{ textDecoration: "none", color: "#FF8544" }}
 		  >
 			What are subflows?
 		  </a>
@@ -13414,7 +13427,7 @@ const releaseToConnectLabel = "Release to Connect"
                       target="_blank"
                       style={{
                         textDecoration: "none",
-                        color: "#f85a3e",
+                        color: "#FF8544",
                         marginLeft: 5,
                         marginTop: 10,
                       }}
@@ -13707,7 +13720,7 @@ const releaseToConnectLabel = "Release to Connect"
                 }}
                 open={!!menuPosition}
                 style={{
-                  border: `2px solid #f85a3e`,
+                  border: `2px solid #FF8544`,
                   color: "white",
                   marginTop: 2,
                 }}
@@ -13729,7 +13742,7 @@ const releaseToConnectLabel = "Release to Connect"
                     );
                     if (exec_text_field !== null) {
                       if (inside) {
-                        exec_text_field.style.border = "2px solid #f85a3e";
+                        exec_text_field.style.border = "2px solid #FF8544";
                       } else {
                         exec_text_field.style.border = "";
                       }
@@ -14089,7 +14102,7 @@ const releaseToConnectLabel = "Release to Connect"
 			rel="noopener noreferrer"
 			target="_blank"
 			href="https://shuffler.io/docs/workflows#comments"
-			style={{ textDecoration: "none", color: "#f85a3e" }}
+			style={{ textDecoration: "none", color: "#FF8544" }}
 		  >
 			What are comments?
 		  </a>
@@ -14356,7 +14369,7 @@ const releaseToConnectLabel = "Release to Connect"
 			rel="noopener noreferrer"
 			target="_blank"
 			href="https://shuffler.io/docs/triggers#webhook"
-			style={{ textDecoration: "none", color: "#f85a3e" }}
+			style={{ textDecoration: "none", color: "#FF8544" }}
 		  >
 			What are webhooks?
 		  </a>
@@ -14600,7 +14613,7 @@ const releaseToConnectLabel = "Release to Connect"
                     width: "17px",
                     height: "17px",
                     borderRadius: 17 / 2,
-                    backgroundColor: "#f85a3e",
+                    backgroundColor: "#FF8544",
                     marginRight: "10px",
                   }}
                 />
@@ -15084,7 +15097,7 @@ const releaseToConnectLabel = "Release to Connect"
 			rel="noopener noreferrer"
 			target="_blank"
 			href="https://shuffler.io/docs/triggers#user_input"
-			style={{ textDecoration: "none", color: "#f85a3e" }}
+			style={{ textDecoration: "none", color: "#FF8544" }}
 		  >
 			What is the user input trigger?
 		  </a>
@@ -15471,7 +15484,7 @@ const releaseToConnectLabel = "Release to Connect"
 				})}
 			</div> 
 		  : 
-			<div style={{cursor: "pointer", color: "#f85a3e", marginTop: 10, }} onClick={() => {
+			<div style={{cursor: "pointer", color: "#FF8544", marginTop: 10, }} onClick={() => {
                 setEditWorkflowModalOpen(true)
 				toast.info("Expand and scroll down to add input-questions")
 			}}>
@@ -15498,7 +15511,7 @@ const releaseToConnectLabel = "Release to Connect"
               rel="noopener noreferrer"
               target="_blank"
               href="https://shuffler.io/docs/triggers#pipelines"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
+              style={{ textDecoration: "none", color: "#FF8544" }}
             >
               What are pipelines?
             </a>
@@ -15760,7 +15773,7 @@ const releaseToConnectLabel = "Release to Connect"
 			rel="noopener noreferrer"
 			target="_blank"
 			href="https://shuffler.io/docs/triggers#schedule"
-			style={{ textDecoration: "none", color: "#f85a3e" }}
+			style={{ textDecoration: "none", color: "#FF8544" }}
 		  >
 			What are schedules?
 		  </a>
@@ -15864,12 +15877,12 @@ const releaseToConnectLabel = "Release to Connect"
                     width: "17px",
                     height: "17px",
                     borderRadius: 17 / 2,
-                    backgroundColor: "#f85a3e",
+                    backgroundColor: "#FF8544",
                     marginRight: "10px",
                   }}
                 />
                 <div style={{ flex: "10" }}>
-                  <b>When to start: {isCloud || selectedTrigger?.environment === "cloud" ? <a href="https://crontab.guru" target="_blank" style={{color: "#f85a3e", }}>Cron formatting</a> : "every X second"}</b>
+                  <b>When to start: {isCloud || selectedTrigger?.environment === "cloud" ? <a href="https://crontab.guru" target="_blank" style={{color: "#FF8544", }}>Cron formatting</a> : "every X second"}</b>
                 </div>
               </div>
               <TextField
@@ -15914,7 +15927,7 @@ const releaseToConnectLabel = "Release to Connect"
                     width: "17px",
                     height: "17px",
                     borderRadius: 17 / 2,
-                    backgroundColor: "#f85a3e",
+                    backgroundColor: "#FF8544",
                     marginRight: "10px",
                   }}
                 />
@@ -15990,7 +16003,7 @@ const releaseToConnectLabel = "Release to Connect"
 
   const cytoscapeViewWidths = isMobile ? 50 : 950;
   const bottomBarStyle = {
-    position: "fixed",
+    position: "absolute",
     transition: "all 0.3s ease",
     minWidth: windowWidth < 1600 && leftSideBarOpenByClick ? 800 : cytoscapeViewWidths,
     maxWidth: windowWidth < 1600 && leftSideBarOpenByClick ? 800 : cytoscapeViewWidths,
@@ -15999,14 +16012,14 @@ const releaseToConnectLabel = "Release to Connect"
     zIndex: 10,
     transform: isMobile 
         ? `translateX(20px)`
-        : `translateX(${leftSideBarOpenByClick ? 340 : 330}px)`,
+        : `translateX(280px)`,
     top: isMobile ? appBarSize + 55 : undefined, 
     bottom: isMobile ? undefined : 0,
 };
 
   const topBarStyle = {
     position: "fixed",
-    top: isMobile ? 30 :  appBarSize - 20,
+    top: isMobile ? 30 : 35,
     pointerEvents: "none",
     transition: "transform 0.3s ease",
     transform: isMobile
@@ -16032,7 +16045,7 @@ const releaseToConnectLabel = "Release to Connect"
     return (
       <div style={topBarStyle}>
         <div style={{ 
-			margin: "0px 10px 0px 10px",
+			margin: "0px 10px 0px 35px",
 			pointerEvents: "none",
 		}}>
           <Breadcrumbs
@@ -16043,7 +16056,7 @@ const releaseToConnectLabel = "Release to Connect"
 				pointerEvents: "auto",
 			}}
           >
-
+			{/*
             <Link
               to="/workflows"
               style={{ textDecoration: "none", color: "inherit" }}
@@ -16058,6 +16071,7 @@ const releaseToConnectLabel = "Release to Connect"
                 Workflows
               </h2>
             </Link>
+			*/}
             <h2 style={{ 
 				margin: 0,
 				pointerEvents: "none",
@@ -16088,7 +16102,7 @@ const releaseToConnectLabel = "Release to Connect"
 			isCorrectOrg ? null :
 			<Typography variant="body1">
 				<b>Warning</b>: Change <span
-			  		style={{color: "#f85a3e", cursor: "pointer", pointerEvents: "auto", }}
+			  		style={{color: "#FF8544", cursor: "pointer", pointerEvents: "auto", }}
 			  		onClick={() => {
 						toast("Changing to correct organisation. Please wait a few seconds.")
 
@@ -16761,12 +16775,12 @@ const releaseToConnectLabel = "Release to Connect"
   		style={{
 			border: "1px solid rgba(255,255,255,0.1)",
   			position: "absolute",
-  			bottom: 140,
-  			left: leftSideBarOpenByClick ? 620 : 435,
+  			bottom: 100,
+  			left: leftSideBarOpenByClick ? 630 : 445,
 			color: "white",
 			padding: 10, 
 			borderRadius: theme.palette?.borderRadius,
-      transition: "left 0.3s ease, top 0.3s ease",
+      		transition: "left 0.3s ease, top 0.3s ease",
   		}}
   	>
 
@@ -16787,9 +16801,9 @@ const releaseToConnectLabel = "Release to Connect"
           </IconButton>
         </Tooltip>
 
-  		<Typography variant="body22">
+  		<Typography variant="body2" color="textSecondary">
 			{/*<WarningIcon style={{marginRight: 5, height: 15, width: 15, }} />*/}
-  			<b>Workflow Issues:</b> {workflow.errors.length} 
+  			<b>{workflow.errors.length} Workflow Issue{workflow.errors.length > 1 ? "s" : ""}</b>
   		</Typography>
   		<Typography
   			variant="body2"
@@ -16802,7 +16816,7 @@ const releaseToConnectLabel = "Release to Connect"
 						colornext = false
 						return (
 							<span
-								style={{color: "#f85a3e", cursor: "pointer"}}
+								style={{color: "#FF8544", cursor: "pointer"}}
 								onClick={() => {
 									// Find it in cytoscape
 									if (cy === undefined || cy === null) {
@@ -16976,7 +16990,7 @@ const releaseToConnectLabel = "Release to Connect"
 				top: "40%", 
 				width: 70, 
 				height: 235, 
-				border: "1px solid #f85a3e", 
+				border: "1px solid #FF8544", 
 				cursor: "pointer", 
 				borderRadius: theme.palette?.borderRadius, 
 				padding: 10, 
@@ -17084,7 +17098,8 @@ const releaseToConnectLabel = "Release to Connect"
       return null;
     }
 
-    const boxSize = isMobile ? 50 : 100;
+    const buttonHeights = 45 
+    const boxSize = buttonHeights+5
     const executionButton = executionRunning ? (
       <Tooltip color="primary" title="Stop execution" placement="top">
         <span>
@@ -17096,7 +17111,7 @@ const releaseToConnectLabel = "Release to Connect"
               abortExecution();
             }}
           >
-            <PauseIcon style={{ fontSize: isMobile ? 30 : 60 }} />
+            <PauseIcon style={{ fontSize: isMobile ? 30 : 30 }} />
           </Button>
         </span>
       </Tooltip>
@@ -17107,24 +17122,23 @@ const releaseToConnectLabel = "Release to Connect"
               workflow.public 
 			  || executionRequestStarted
             }
-            style={{ height: boxSize, width: boxSize }}
+            style={{ height: boxSize, width: boxSize, backgroundColor: green, }}
             color="primary"
             variant="contained"
             onClick={() => {
               executeWorkflow(executionText, workflow.start, lastSaved);
             }}
           >
-            <PlayArrowIcon style={{ fontSize: isMobile ? 30 : 60 }} />
+            <PlayArrowIcon style={{ fontSize: isMobile ? 30 : 30 }} />
           </Button>
         </span>
     )
 
     return (
       <div style={bottomBarStyle}>
-        {executionButton}
         <div
           style={{
-            marginLeft: isMobile ? 0 : 10,
+            marginLeft: 0,
             marginTop: isMobile ? 5 : 0,
             left: isMobile ? -10 : boxSize,
             top: isMobile ? boxSize : undefined,
@@ -17134,7 +17148,8 @@ const releaseToConnectLabel = "Release to Connect"
             flexDirection: isMobile ? "column" : "row",
           }}
         >
-          {isMobile || workflow.public ? null : (
+			<ButtonGroup>
+			{executionButton}
             <Tooltip
               color="primary"
               title="An argument to be used for execution. This is a variable available to every node in your workflow."
@@ -17142,31 +17157,52 @@ const releaseToConnectLabel = "Release to Connect"
             >
               <TextField
                 id="execution_argument_input_field"
-                style={theme.palette.textFieldStyle}
+                style={{
+					...theme.palette.textFieldStyle,
+					width: 200, 
+					marginLeft: 0, 
+				}}
                 disabled={workflow.public}
                 color="secondary"
-                placeholder={"Execution Argument"}
+                placeholder={"Runtime Argument"}
                 defaultValue={executionText}
+			  	disabled={isMobile || workflow.public || executionRunning}
                 onBlur={(e) => {
                   setExecutionText(e.target.value);
                 }}
+			    // Start adornment
+			  	inputProps={{
+					style: {
+						height: 18,
+					},
+				}}
               />
             </Tooltip>
-          )}
+			</ButtonGroup>
 
           {/*userdata.avatar === creatorProfile.github_avatar ? null :*/}
-          <Tooltip color="primary" title={workflow.public === true ? "Use this Workflow in your organisation" : "Save Workflow"} placement="top">
+		  <ButtonGroup 
+			style={{
+				marginLeft: 25, 
+				marginTop: 2, 
+				border: "1px solid rgba(255,255,255,0.3)",
+				borderRadius: theme.palette?.borderRadius/2,
+
+				maxHeight: buttonHeights, 
+			}}
+		  >
+          <Tooltip title={workflow.public === true ? "Use this Workflow in your organisation" : "Save Workflow"} placement="top">
             <span>
               <Button
                 disabled={savingState !== 0}
-                color="primary"
+                color="secondary"
+				variant="text"
                 style={{
-                  height: workflow.public ? 100 : 50,
+                  height: workflow.public ? 100 : buttonHeights,
                   width: workflow.public ? 100 : 64,
-                  marginLeft: 10,
                 }}
                 variant={
-                  lastSaved && !workflow.public ? "outlined" : "contained"
+                  lastSaved && !workflow.public ? "text" : "contained"
                 }
                 onClick={() => {
                   saveWorkflow(workflow)
@@ -17212,17 +17248,17 @@ const releaseToConnectLabel = "Release to Connect"
               </Button>
             </span>
           </Tooltip>
-          {workflow.public || userdata.support == true ? (
+          {workflow.public || userdata.support == true ? 
             <Tooltip
               color="secondary"
-              title="Download workflow"
+              title="Download public workflow"
               placement="top-start"
             >
               <span>
                 <Button
-                  color="primary"
-                  style={{ height: 50, marginLeft: 10 }}
-                  variant="outlined"
+                  color="secondary"
+			  	  variant="text"
+                  style={{ width: 65, height: buttonHeights, }}
                   onClick={() => {
                     const data = workflow;
                     let exportFileDefaultName = data.name + ".json";
@@ -17241,7 +17277,9 @@ const releaseToConnectLabel = "Release to Connect"
                 </Button>
               </span>
             </Tooltip>
-          ) : null}
+           : null}
+
+		  {/*
           <Tooltip
             color="secondary"
             title="Fit to screen"
@@ -17249,22 +17287,23 @@ const releaseToConnectLabel = "Release to Connect"
           >
             <span>
               <Button
-                color="primary"
-                style={{ height: 50, marginLeft: 10 }}
-                variant="outlined"
+                color="secondary"
+			  	variant="text"
+                style={{ width: 65, height: buttonHeights, }}
                 onClick={() => cy.fit(null, 50)}
               >
                 <AspectRatioIcon />
               </Button>
             </span>
           </Tooltip>
+		  */}
           <Tooltip color="secondary" title="Undo" placement="top-start">
             <span>
               <Button
                 disabled={history.length === 0 || !(originalWorkflow.suborg_distribution === undefined || originalWorkflow.suborg_distribution === null || originalWorkflow.suborg_distribution.length === 0 || originalWorkflow.suborg_distribution.includes("none"))}
-                color="primary"
-                style={{ height: 50, marginLeft: 10 }}
-                variant="outlined"
+                color="secondary"
+			  	variant="text"
+                style={{ width: 65, height: buttonHeights, }}
                 onClick={(event) => {
                   handleHistoryUndo(history);
                 }}
@@ -17280,10 +17319,10 @@ const releaseToConnectLabel = "Release to Connect"
           >
             <span>
               <Button
-                color="primary"
+                color="secondary"
+			  	variant="text"
                 disabled={workflow.public}
-                style={{ height: 50, marginLeft: 10 }}
-                variant="outlined"
+                style={{ width: 65, height: buttonHeights, }}
                 onClick={() => {
                   const selectedNode = cy.$(":selected");
                   if (selectedNode.data() === undefined) {
@@ -17297,41 +17336,14 @@ const releaseToConnectLabel = "Release to Connect"
               </Button>
             </span>
           </Tooltip>
-          <Tooltip
-            color="secondary"
-            title={`Show executions (${workflowExecutions.length}) (Ctrl + ')`}
-            placement="top-start"
-          >
-            <span>
-              <Button
-                disabled={workflow.public}
-                color="primary"
-                style={{ height: 50, marginLeft: 10 }}
-                variant="outlined"
-                onClick={() => {
-                  setExecutionModalOpen(true);
-                  getWorkflowExecution(props.match.params.key, "");
-                }}
-              >
-                {/*<Badge 
-									sx={{"& .MuiBadge-badge": {
-											right: `20px`,
-											bottom: `20px`,
-										}
-									}}
-									variant="outlined" badgeContent={workflowExecutions.length} color="primary" anchorOrigin={{vertical: "top", horizontal: "left", }}> */}
-                <DirectionsRunIcon />
-                {/*</Badge>*/}
-              </Button>
-            </span>
-          </Tooltip>
+          
           <Tooltip color="secondary" title="Add comment" placement="top-start">
             <span>
               <Button
                 disabled={workflow.public}
-                color="primary"
-                style={{ height: 50, marginLeft: 10 }}
-                variant="outlined"
+                color="secondary"
+			  	variant="text"
+                style={{ width: 65, height: buttonHeights, }}
                 onClick={() => {
                   addCommentNode();
                 }}
@@ -17340,6 +17352,7 @@ const releaseToConnectLabel = "Release to Connect"
               </Button>
             </span>
           </Tooltip>
+
           {workflow.configuration !== null &&
             workflow.configuration !== undefined &&
             workflow.configuration.exit_on_error !== undefined ? (
@@ -17353,9 +17366,9 @@ const releaseToConnectLabel = "Release to Connect"
             <span>
               <Button
                 disabled={workflow.public}
-                color="primary"
-                style={{ height: 50, marginLeft: 10 }}
-                variant="outlined"
+                color="secondary"
+			  	variant="text"
+                style={{ width: 65, height: buttonHeights, }}
                 onClick={() => {
                   console.log("SHOW EDIT VIEW!")
 
@@ -17367,6 +17380,28 @@ const releaseToConnectLabel = "Release to Connect"
               </Button>
             </span>
           </Tooltip>
+
+		  <Tooltip
+            color="secondary"
+            title={`Show executions (${workflowExecutions.length}) (Ctrl + ')`}
+            placement="top-start"
+          >
+            <span>
+              <Button
+                disabled={workflow.public}
+                color="secondary"
+			  	variant={executionModalOpen ? "contained" : "text"}
+                style={{ width: 65, height: buttonHeights, }}
+                onClick={() => {
+                  setExecutionModalOpen(true);
+                  getWorkflowExecution(props.match.params.key, "");
+                }}
+              >
+                <DirectionsRunIcon />
+              </Button>
+            </span>
+          </Tooltip>
+
           <Tooltip
             color="secondary"
             title="Show Workflow Revision History (Ctrl + ])"
@@ -17375,9 +17410,9 @@ const releaseToConnectLabel = "Release to Connect"
             <span>
               <Button
                 disabled={workflow.public}
-                color="primary"
-                style={{ height: 50, marginLeft: 10 }}
-                variant={"outlined"}
+                color="secondary"
+			  	variant="text"
+                style={{ width: 65, height: buttonHeights, }}
                 onClick={() => {
                   setShowWorkflowRevisions(true)
                 }}
@@ -17386,6 +17421,7 @@ const releaseToConnectLabel = "Release to Connect"
               </Button>
             </span>
           </Tooltip>
+		  </ButtonGroup>
 
 		  
         </div>
@@ -18483,6 +18519,9 @@ const releaseToConnectLabel = "Release to Connect"
           color: "white",
           fontSize: 18,
           borderLeft: theme.palette.defaultBorder,
+
+		  borderRadius: theme.palette.borderRadius,
+		  backgroundColor: "black",
         },
       }}
     >
@@ -18804,7 +18843,7 @@ const releaseToConnectLabel = "Release to Connect"
                             {lastExecution === data.execution_id ? (
                               <KeyboardArrowRightIcon
                                 style={{
-                                  color: "#f85a3e",
+                                  color: "#FF8544",
                                   marginTop: "auto",
                                   marginBottom: "auto",
                                 }}
@@ -19095,7 +19134,7 @@ const releaseToConnectLabel = "Release to Connect"
                 <b style={{ }}>Env &nbsp;&nbsp;&nbsp;&nbsp;</b>
               </Typography>
 
-              <Typography variant="body1" color="textSecondary" style={{color: "#f85a3e", cursor: "pointer", }} onClick={() => {
+              <Typography variant="body1" color="textSecondary" style={{color: "#FF8544", cursor: "pointer", }} onClick={() => {
 				  window.open("/admin?tab=locations", "_blank")
 			  }}>
                 {executionData.workflow.actions[0].environment}
@@ -19131,7 +19170,7 @@ const releaseToConnectLabel = "Release to Connect"
                       rel="noopener noreferrer"
                       href={`/admin?tab=app_auth`}
                       target="_blank"
-                      style={{ textDecoration: "none", color: "#f85a3e" }}
+                      style={{ textDecoration: "none", color: "#FF8544" }}
                     >
 						Auth Group '{executionData.authgroup !== undefined && executionData.authgroup !== null && executionData.authgroup.length > 0 ? `${executionData.authgroup}` : null}'
                     </a>
@@ -19141,7 +19180,7 @@ const releaseToConnectLabel = "Release to Connect"
                   executionData.execution_parent.length > 0 ? (
                   executionData.execution_source === props.match.params.key ? 
                     <span
-                      style={{ cursor: "pointer", color: "#f85a3e" }}
+                      style={{ cursor: "pointer", color: "#FF8544" }}
                       onClick={(event) => {
                         getWorkflowExecution(
                           props.match.params.key,
@@ -19156,7 +19195,7 @@ const releaseToConnectLabel = "Release to Connect"
                       rel="noopener noreferrer"
                       href={`/workflows/${executionData.execution_source}?view=executions&execution_id=${executionData.execution_parent}`}
                       target="_blank"
-                      style={{ textDecoration: "none", color: "#f85a3e" }}
+                      style={{ textDecoration: "none", color: "#FF8544" }}
                     >
                       Parent Workflow
                     </a>
@@ -19167,7 +19206,7 @@ const releaseToConnectLabel = "Release to Connect"
                       rel="noopener noreferrer"
                       href={`/forms/${executionData.workflow.id}`}
                       target="_blank"
-                      style={{ textDecoration: "none", color: "#f85a3e" }}
+                      style={{ textDecoration: "none", color: "#FF8544" }}
                     >
 						Form	
                     </a>
@@ -19613,7 +19652,7 @@ const releaseToConnectLabel = "Release to Connect"
                           data.action.parameters[0].value ===
                             props.match.params.key ? (
                             <span
-                              style={{ cursor: "pointer", color: "#f85a3e" }}
+                              style={{ cursor: "pointer", color: "#FF8544" }}
                               onClick={(event) => {
                                 getWorkflowExecution(
                                   props.match.params.key,
@@ -19630,7 +19669,7 @@ const releaseToConnectLabel = "Release to Connect"
                               target="_blank"
                               style={{
                                 textDecoration: "none",
-                                color: "#f85a3e",
+                                color: "#FF8544",
                               }}
                               onClick={(event) => { }}
                             >
@@ -19758,7 +19797,7 @@ const releaseToConnectLabel = "Release to Connect"
 				  <b>Action Logs</b>
 				</Typography>
 				<Typography variant="body2" style={{ whiteSpace: 'pre-line', }}>
-					Logs for an action are not available without <a style={{color: "#f85a3e", }} href="/admin?tab=locations" target="_blank" rel="noopener noreferrer">an onprem environment</a> with the <a style={{color: "#f85a3e", }} href="/docs/configuration#scaling-shuffle" target="_blank" rel="noopener noreferrer">SHUFFLE_LOGS_DISABLED</a> environment variable set to false: SHUFFLE_LOGS_DISABLED=false. Logs are enabled by default, except in scale mode.
+					Logs for an action are not available without <a style={{color: "#FF8544", }} href="/admin?tab=locations" target="_blank" rel="noopener noreferrer">an onprem environment</a> with the <a style={{color: "#FF8544", }} href="/docs/configuration#scaling-shuffle" target="_blank" rel="noopener noreferrer">SHUFFLE_LOGS_DISABLED</a> environment variable set to false: SHUFFLE_LOGS_DISABLED=false. Logs are enabled by default, except in scale mode.
 				</Typography>
 			</div> 
 		)
@@ -19839,7 +19878,7 @@ const releaseToConnectLabel = "Release to Connect"
 					variant="body2"
 					style={{
 						whiteSpace: 'pre-line',
-						color: showlink ? "#f85a3e" : "white",
+						color: showlink ? "#FF8544" : "white",
 						cursor: showlink ? "pointer" : "default",
 					}}
 					onClick={(e) => {
@@ -20005,7 +20044,7 @@ const releaseToConnectLabel = "Release to Connect"
 		PaperComponent={PaperComponent}
 		aria-labelledby="draggable-dialog-title"
         disableEnforceFocus={true}
-        style={{ pointerEvents: "none", zIndex : activeDialog === "result" ? 1200 : 1100 }}
+        style={{ pointerEvents: "none", zIndex : activeDialog === "result" ? 1200 : 1100, }}
         hideBackdrop={true}
         open={codeModalOpen}
         PaperProps={{
@@ -20019,6 +20058,9 @@ const releaseToConnectLabel = "Release to Connect"
             overflowY: "auto",
             overflowX: "hidden",
 			border: theme.palette.defaultBorder,
+
+			borderRadius: theme.palette.borderRadius,
+			backgroundColor: "black",
           },
         }}
       >
@@ -20198,7 +20240,7 @@ const releaseToConnectLabel = "Release to Connect"
         </Tooltip>
       </span>
 
-      <div style={{ marginBottom: 40,  }}>
+      <div style={{ marginBottom: 40, }}>
         <div style={{ display: "flex", marginBottom: 15, position: "sticky", top: -31, zIndex: 10000, }}>
           {curapp === null ? null : (
             <img
@@ -20210,6 +20252,7 @@ const releaseToConnectLabel = "Release to Connect"
                 height: imgsize,
                 border: `2px solid ${statusColor}`,
 				filter: curapp === undefined ? "grayscale(100%)" : null,
+				borderRadius: theme.palette?.borderRadius,
               }}
             />
           )}
@@ -20574,7 +20617,10 @@ const releaseToConnectLabel = "Release to Connect"
             color: "white",
             border: theme.palette.defaultBorder,
             maxWidth: isMobile ? bodyWidth - 100 : 800,
-						minWidth: isMobile ? bodyWidth - 100 : 800,
+			minWidth: isMobile ? bodyWidth - 100 : 800,
+
+		    borderRadius: theme.palette.borderRadius,
+		    backgroundColor: "black",
           },
         }}
       >
@@ -20589,7 +20635,7 @@ const releaseToConnectLabel = "Release to Connect"
               rel="noopener noreferrer"
               href="https://shuffler.io/docs/workflows#execution_variables"
               target="_blank"
-              style={{ textDecoration: "none", color: "#f85a3e" }}
+              style={{ textDecoration: "none", color: "#FF8544" }}
             >
               here
             </a>
@@ -20751,6 +20797,9 @@ const releaseToConnectLabel = "Release to Connect"
             color: "white",
             border: theme.palette.defaultBorder,
             maxWidth: isMobile ? bodyWidth - 100 : "100%",
+
+		    borderRadius: theme.palette.borderRadius,
+		    backgroundColor: "black",
           },
         }}
       >
@@ -21027,7 +21076,7 @@ const releaseToConnectLabel = "Release to Connect"
             target="_blank"
             rel="noopener noreferrer"
             href="https://shuffler.io/docs/apps#authentication"
-            style={{ textDecoration: "none", color: "#f85a3e" }}
+            style={{ textDecoration: "none", color: "#FF8544" }}
           >
             What is app authentication?
           </a>
@@ -21195,6 +21244,9 @@ const releaseToConnectLabel = "Release to Connect"
             color: "white",
             minWidth: 650,
             border: theme.palette.defaultBorder,
+
+		    borderRadius: theme.palette.borderRadius,
+		    backgroundColor: "black",
           },
         }}
       >
@@ -21262,6 +21314,9 @@ const releaseToConnectLabel = "Release to Connect"
           overflow: "hidden",
           zIndex: 10012,
           border: theme.palette.defaultBorder,
+
+		  borderRadius: theme.palette.borderRadius,
+		  backgroundColor: "black",
         },
       }}
     >
@@ -21548,7 +21603,7 @@ const releaseToConnectLabel = "Release to Connect"
 								rel="noopener noreferrer"
 								target="_blank"
 								href={selectedMeta.link}
-								style={{ textDecoration: "none", color: "#f85a3e" }}
+								style={{ textDecoration: "none", color: "#FF8544" }}
 							>
 								<Button style={{ color: "white", }} variant="outlined" color="secondary">
 									<EditIcon /> &nbsp;&nbsp;Edit
@@ -21586,7 +21641,7 @@ const releaseToConnectLabel = "Release to Connect"
 										rel="noopener noreferrer"
 										target="_blank"
 										href={data.url}
-										style={{ textDecoration: "none", color: "#f85a3e" }}
+										style={{ textDecoration: "none", color: "#FF8544" }}
 									>
 										<Tooltip title={data.url} placement="bottom">
 											<img
@@ -21655,6 +21710,9 @@ const releaseToConnectLabel = "Release to Connect"
             overflow: "hidden",
             zIndex: 10012,
             border: theme.palette.defaultBorder,
+
+		    borderRadius: theme.palette.borderRadius,
+		    backgroundColor: "black",
           },
         }}
       >
@@ -22061,7 +22119,11 @@ const releaseToConnectLabel = "Release to Connect"
 			onClose={() => {
 			  //setShowWorkflowRevisions(false)
 			}}
-			style={{ resize: "both", overflow: "hidden", zIndex: 10005 }}
+			style={{ 
+				resize: "both", 
+				overflow: "hidden", 
+				zIndex: 10005,
+			}}
 			hideBackdrop={true}
 			variant="persistent"
 			BackdropProps={{
@@ -22072,7 +22134,7 @@ const releaseToConnectLabel = "Release to Connect"
 			PaperProps={{
 				style: {
 				  resize: "both",
-          overflow: "hidden",
+          		  overflow: "hidden",
 				  minWidth: isMobile ? "100%" : 360,
 				  maxWidth: isMobile ? "100%" : 360,
 				  backgroundColor: theme.palette.platformColor,
@@ -22080,6 +22142,12 @@ const releaseToConnectLabel = "Release to Connect"
 				  fontSize: 18,
 				  zIndex: 15001,
 				  borderRight: theme.palette.defaultBorder,
+
+				  paddingLeft: leftSideBarOpenByClick ? 280 : 100,
+				  transition: "padding-left 0.3s",
+
+		          borderRadius: theme.palette.borderRadius,
+		          backgroundColor: "black",
 				},
 			}}
 		  >

@@ -1059,9 +1059,11 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
             style={{
               ...hrefStyle,
               pointerEvents: userdata?.support ? "auto" : "none",
+			  cursor: "not-allowed",
             }}
           >
             <Button
+              disabled={true}
               onClick={(event) => {
                 if (!userdata?.support) return;
                 setOpenSecurityTab(true);
@@ -1082,7 +1084,6 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                 },
                 cursor: userdata?.support ? "pointer" : "not-allowed",
               }}
-              disabled={!userdata?.support}
             >
               <ShieldOutlinedIcon
                 style={{
@@ -1109,6 +1110,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           </Link>
         </span>
             <IconButton
+              disabled={true}
               onClick={() => {
                 setOpenSecurityTab((prev) => !prev);
                 setOpenautomateTab(false);
@@ -1175,7 +1177,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                         },
                         cursor: userdata?.support ? "pointer" : "not-allowed",
                       }}
-                      disabled={!userdata?.support}
+                      disabled={userdata?.support === false}
                     >
                       <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 16 }}>
                         •

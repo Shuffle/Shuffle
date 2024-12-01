@@ -1264,8 +1264,6 @@ const Docs = (defaultprops) => {
             </div>
         );
 
-        console.log("docs render")
-
     // Padding and zIndex etc set because of footer in cloud.
 const loadedCheck = (
     <DocsWrapper userdata={userdata}>

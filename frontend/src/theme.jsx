@@ -4,13 +4,13 @@ import { createTheme, adaptV4Theme } from "@mui/material/styles";
 const theme = createTheme(adaptV4Theme({
   palette: {
 	theme: "dark",
-    main: "#F86743",
+    main: "#FF8544",
     primary: {
-      main: "#F86743",
+      main: "#FF8544",
   	  contrastText: "#ffffff",
     },
     secondary: {
-      main: "#e8eaf6",
+      main: "rgba(255,255,255,0.7)",
 	  contrastText: "#000000",
     },
     text: {
@@ -21,7 +21,8 @@ const theme = createTheme(adaptV4Theme({
     
 	inputColor: "rgba(39,41,45,1)",
     surfaceColor: "#27292d",
-    platformColor: "#1c1c1d",
+    //platformColor: "#1c1c1d",
+    platformColor: "#212121",
     backgroundColor: "#1a1a1a",
 
     green: "#5cc879",
@@ -45,10 +46,13 @@ const theme = createTheme(adaptV4Theme({
 		overflowX: "auto",
 	},
     textFieldStyle: {
-      backgroundColor: "#383B40",
+      backgroundColor: "#212121",
       borderRadius: 5,
     },
     innerTextfieldStyle: {
+	  height: 40,
+	  fontSize: 16,
+      backgroundColor: "#212121",
 	  // Removed since upgrading to mui 18
       //color: "white",
       //minHeight: 50,

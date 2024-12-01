@@ -94,9 +94,6 @@ import {
 } from '@mui/icons-material';
 
 export const useStyles = makeStyles({
-  notchedOutline: {
-    borderColor: "#f85a3e !important",
-  },
   root: {
     "& .MuiAutocomplete-listbox": {
       border: "2px solid grey",
@@ -216,10 +213,26 @@ const ParsedAction = (props) => {
 		  return 
 	  }
 
+	  // Fixing required fields with a shitty structure :)
+	  if (selectedApp !== undefined && selectedApp !== null && selectedApp.generated === true && selectedAction !== undefined && selectedAction !== null && selectedAction.name !== undefined && selectedAction.name !== null && selectedApp.actions !== undefined && selectedApp.actions !== null && selectedApp.actions.length > 0 && (selectedAction.required_body_fields === undefined || selectedAction.required_body_fields === null || selectedAction.required_body_fields.length === 0)) {
+		// Check for required fields
+		for (var actionkey in selectedApp.actions) {
+			var action = selectedApp.actions[actionkey]
+			if (action.name === selectedAction.name) {
+				selectedAction.required_body_fields = action.required_body_fields
+				break
+			}
+		}
+	  }
+
 	  // Check if missing parameters?
 	  var auth = []
 	  var required = []
 	  var optional = []
+
+	  var bodyfield = []
+	  var special_optional = []
+	  var generated_optional = []
 
 	  var keyorder = []
 	  for (let paramkey in selectedActionParameters) {
@@ -235,8 +248,21 @@ const ParsedAction = (props) => {
 			  param.value = ""
 		  }
 
+
 		  if (selectedApp?.generated === true && param?.name === "body") {
 			  param.required = true
+			  bodyfield.push(param)
+			  continue
+		  }
+
+		  if (param.required === false && param.name.startsWith("${") && param.name.endsWith("}")) {
+			  // Check if it's a required param
+			  param.autocompleted = false 
+			  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null && selectedAction.required_body_fields.length > 0) {
+				if (selectedAction.required_body_fields.includes(param.name)) {
+					param.required = true
+				}
+			  }
 		  }
 
 		  if (param.required) {
@@ -244,18 +270,47 @@ const ParsedAction = (props) => {
 			  continue
 		  }
 
+		  if (param.name === "headers" || param.name === "queries") {
+			  special_optional.push(param)
+			  continue
+		  }
+
+		  if (hideBody && param?.description.includes("Generated")) {
+			  continue
+		  }
+
+		  if (param.field_active === true) {
+			  generated_optional.push(param)
+			  continue
+		  }
+
 		  optional.push(param)
 	  }
 
-	  // Check new keyorder
-	  const newparams = auth.concat(required).concat(optional)
+	  // Sort order: auth > body(used for simple/advanced) > required > optional
+	  // Optional field order:
+	  // 1. headers & queries
+	  // 2. other fields
+	  // 3. generated fields & all else
+
+
+	  const newparams = auth
+		  .concat(bodyfield)
+		  .concat(required)
+		  .concat(special_optional)
+		  .concat(generated_optional)
+		  .concat(optional)
+
 	  var newkeyorder = []
 	  for (let paramkey in newparams) {
+		  //console.log("Param: ", newparams[paramkey])
+
 		  newkeyorder.push(newparams[paramkey].name)
 	  }
 
 	  if (keyorder.join(",") !== newkeyorder.join(",")) {
-		  //toast("Changed order of params")
+		  //toast("KEYORDER CHANGED!")
+
 		  setSelectedActionParameters(newparams)
 		  selectedAction.parameters = newparams
 		  setSelectedAction(selectedAction)
@@ -1266,7 +1321,7 @@ const ParsedAction = (props) => {
 			}
 
 			if (!actionKey.includes(".#") && actionValue.includes(".#")) {
-				return <span>When the key ({actionKey}) is static, but the value is a list ({actionValue}), it will overwrite the list. You may be looking for the <span onClick={() => {}} style={{cursor: "pointer", color: "#f85a3e", }}>Check Cache Contains</span> action instead.</span>
+				return <span>When the key ({actionKey}) is static, but the value is a list ({actionValue}), it will overwrite the list. You may be looking for the <span onClick={() => {}} style={{cursor: "pointer", color: "#FF8544", }}>Check Cache Contains</span> action instead.</span>
 			}
 		}
 
@@ -1573,16 +1628,6 @@ const ParsedAction = (props) => {
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              {/*selectedAction.id === workflow.start ? null : 
-
-							<Tooltip color="primary" title={"Make this node the start action"} placement="top">
-								<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
-									defineStartnode(e)	
-								}}>
-									<KeyboardArrowRightIcon />
-								</Button> 				
-							</Tooltip>
-						*/}
               {selectedApp.versions !== null &&
 				  selectedApp.versions !== undefined &&
 				  selectedApp.versions.length > 1 ? (
@@ -1646,7 +1691,6 @@ const ParsedAction = (props) => {
 						<div style={{flex: 5}}>
 							<Typography style={{color: "rgba(255,255,255,0.7)"}}>Name</Typography>
 							<TextField
-
 								style={theme.palette.textFieldStyle}
 								InputProps={{
 									style: theme.palette.innerTextfieldStyle,
@@ -2012,7 +2056,7 @@ const ParsedAction = (props) => {
               style={{
                 backgroundColor: theme.palette.inputColor,
                 color: "white",
-                height: 50,
+                height: 35,
                 maxWidth: rightsidebarStyle.maxWidth - 80,
                 borderRadius: theme.palette?.borderRadius,
               }}
@@ -2109,7 +2153,7 @@ const ParsedAction = (props) => {
       ) : null}
 
 	  {selectedAction.authentication_id === "authgroups" && (authGroups === undefined || authGroups === null || authGroups.length === 0) ? 
-		<a href="/admin?tab=app_auth" target="_blank" style={{textDecoration: "none", color: "#f85a3e",}}>
+		<a href="/admin?tab=app_auth" target="_blank" style={{textDecoration: "none", color: "#FF8544",}}>
 			<Typography variant="body2" style={{marginTop: 5,}}>
 				Create your first Authentication group
 			</Typography>
@@ -2336,7 +2380,7 @@ const ParsedAction = (props) => {
             fullWidth
             style={{
               backgroundColor: theme.palette.inputColor,
-              height: 50,
+              height: 35,
               borderRadius: theme.palette?.borderRadius,
             }}
             onChange={(event, newValue) => {
@@ -2491,43 +2535,6 @@ const ParsedAction = (props) => {
 			/>
         ) : null}
 
-        {/*setNewSelectedAction !== undefined ? 
-					<Select
-						MenuProps={{
-							disableScrollLock: true,
-						}}
-						value={selectedAction.name}
-						fullWidth
-						onChange={setNewSelectedAction}
-						style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette?.borderRadius,}}
-						SelectDisplayProps={{
-							style: {
-								marginLeft: 10,
-								maxHeight: 200,
-							}
-						}}
-					>
-						{sortByKey(selectedApp.actions, "label").map(data => {
-							var newActionname = data.name
-							if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-								newActionname = data.label
-							}
-
-							const iconInfo = GetIconInfo({"name": data.name})
-							const useIcon = iconInfo.originalIcon
-
-							// ROFL FIXME - loop
-							newActionname = newActionname.replaceAll("_", " ")
-							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
-							return (
-								<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: theme.palette.inputColor, color: "white", display: "flex",}} value={data.name}>
-									<span style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>{useIcon}</span> 
-									<span style={{}}>{newActionname}</span>
-								</MenuItem>
-							)
-						})}
-					</Select>
-				: null*/}
         <div
           style={{
             marginTop: "10px",
@@ -2675,10 +2682,18 @@ const ParsedAction = (props) => {
 					title={"Click to learn more about this action"}
 					placement="top"
 				>
+					<div style={{marginTop: 50, }} />
+					{/*
 					<Button 
 						variant="text" 
 						color="secondary" 
-						style={{justifyContent: "flex-start", textAlign: "left", textTransform: "none", width: "100%",}}
+						style={{
+							justifyContent: "flex-start", 
+							textAlign: "left", 
+							textTransform: "none", 
+							width: "100%", 
+							marginTop: 15, 
+						}}
 						fullWidth
 						disabled={selectedAction.description === undefined || selectedAction.description === null || selectedAction.description.length === 0}
 						onClick={() => {
@@ -2687,6 +2702,7 @@ const ParsedAction = (props) => {
 					>
 						<b>Parameters</b>
 					</Button>
+					*/}
 				</Tooltip>
 			}
 
@@ -2726,7 +2742,7 @@ const ParsedAction = (props) => {
           		  fullWidth
           		  style={{
           		    backgroundColor: theme.palette.inputColor,
-          		    height: 50,
+          		    height: 35,
           		    borderRadius: theme.palette?.borderRadius,
           		  }}
           		  onChange={(event, newValue) => {
@@ -2905,13 +2921,9 @@ const ParsedAction = (props) => {
 				data.value = data.value.join(",")
 			}
 
-            if (
-              data.value !== undefined &&
-              data.value !== null &&
-              data.value.startsWith("{") &&
-              data.value.endsWith("}")
-            ) {
-              multiline = true;
+            if (data.value !== undefined && data.value !== null &&
+              data.value.startsWith("{") && data.value.endsWith("}")) {
+              multiline = true
             }
 
             var placeholder = "Value";
@@ -3013,6 +3025,91 @@ const ParsedAction = (props) => {
 			 		textAlign: "center",
 			 	  }}
 			 	>
+				<Tabs
+				  value={hideBody === true ? 1 : 0}
+				  indicatorColor="primary"
+				  style={{
+					  width: "100%",
+					  display: "flex", 
+					  textAlign: "center",
+					  textTransform: "none",
+				  }}
+        		>
+				  <Tab
+					label={
+						"Simple"
+					}
+				 	style={{
+						flex: 1, 
+						textTransform: "none",
+					    borderBottom: "1px solid rgba(255,255,255,0.3)",
+					}}
+					onClick={() => {
+						// Set localstorage
+						localStorage.setItem("hideBody", "true")
+						
+						setHideBody(false)
+						const updatedParameters = selectedActionParameters.map((param) => {
+							if (param.name === "body") {
+								return {
+									...param,
+									id: "UNTOGGLED",
+								}
+							}
+
+							if (param.description === openApiFieldDesc) {
+							  // Check required fields here
+							  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null && selectedAction.required_body_fields.length > 0) {
+								// Look for the field name in the required_body_fields
+								if (selectedAction.required_body_fields.includes(param.name)) {
+									param.required = true
+								} else {
+									param.required = false
+								}
+							  } 
+
+							  return { ...param, field_active: true }
+							}
+
+							return param
+						})
+				
+						setSelectedActionParameters(updatedParameters)
+					}}
+				  />
+				  <Tab
+					label={
+						"Advanced"
+					}
+				 	style={{
+						flex: 1, 
+						textTransform: "none",
+					    borderBottom: "1px solid rgba(255,255,255,0.3)",
+					}}
+					onClick={() => {
+						localStorage.setItem("hideBody", "false")
+						setHideBody(true)
+						// Make sure the body field is shown
+						const updatedParameters = selectedActionParameters.map((param) => {
+							if (param.name === "body") {
+								return {
+									...param,
+									id: "TOGGLED",
+								}
+							}
+
+							if (param.description === openApiFieldDesc) {
+							  return { ...param, field_active: false }
+							}
+
+							return param
+						})
+		
+						setSelectedActionParameters(updatedParameters)
+					}}
+				  />
+				 </Tabs>
+				 {/*
 				 	<ButtonGroup fullWidth>
 					  <Tooltip
 						color="secondary"
@@ -3096,8 +3193,9 @@ const ParsedAction = (props) => {
 							</Button>
 				 	    </Tooltip>
 				 	</ButtonGroup>
+					*/}
 			 	</div>
-			   );
+			   )
 
 			 var showButtonField = false
              if (selectedApp.generated === true && data.name === "body") {
@@ -3159,7 +3257,7 @@ const ParsedAction = (props) => {
                      description: openApiFieldDesc,
                      example: "",
                      id: "",
-                     multiline: true,
+                     multiline: false,
                      name: tmpitem,
                      options: null,
                      required: isRequired,
@@ -3170,7 +3268,7 @@ const ParsedAction = (props) => {
                      variant: "STATIC_VALUE",
                      field_active: true,
 			  	  
-			 		autocompleted: true,
+			 		autocompleted: false,
                    });
                 }
                 
@@ -3230,7 +3328,8 @@ const ParsedAction = (props) => {
               tmpitem = "Password"
 			}
 
-			multiline = data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline
+			// No longer multiline for new fields
+			//multiline = data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline
 
 			if (data.name === "body") {
 				//console.log("BODY: ", data)
@@ -3293,7 +3392,7 @@ const ParsedAction = (props) => {
 							localStorage.setItem("disabled_ui_box", "true")
 							setUiBox("closed")
 						}}>
-							<Typography style={{marginTop: 10, color: "#f85a3e", cursor: "pointer",}} variant="body2"> 
+							<Typography style={{marginTop: 10, color: "#FF8544", cursor: "pointer",}} variant="body2"> 
 								Don't show again
 							</Typography>
 						</div>
@@ -3330,16 +3429,20 @@ const ParsedAction = (props) => {
                 style={{
                   backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette?.borderRadius,
+                  width: "100%",
+				  maxHeight: multiline === true ? undefined : 40, 
+				  minHeight: 40, 
+
                   border:
                     selectedActionParameters[count].required ||
                     selectedActionParameters[count].configuration
-                      ? "2px solid #f85a3e"
+                      ? "1px solid #FF8544"
                       : "",
-                  color: "white",
-                  width: "100%",
-                  fontSize: "1em",
                 }}
                 InputProps={{
+				  style: {
+					  maxHeight: multiline === true ? undefined : 40,
+				  },
 				  disableUnderline: true,
                   endAdornment: hideExtraTypes ? null : (
                     <InputAdornment position="end">
@@ -3392,7 +3495,7 @@ const ParsedAction = (props) => {
 				</InputAdornment>
                   ),
                 }}
-                multiline={data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline}
+                multiline={multiline}
                 onClick={() => {
 				  	/*
                   		setExpansionModalOpen(false);
@@ -3802,7 +3905,7 @@ const ParsedAction = (props) => {
                 </Select>
               );
             } else if (data.variant === "STATIC_VALUE") {
-              staticcolor = "#f85a3e";
+              staticcolor = "#FF8544";
             }
 
             if (data.field_active === false) {
@@ -3938,7 +4041,7 @@ const ParsedAction = (props) => {
                       );
                       if (exec_text_field !== null) {
                         if (inside) {
-                          exec_text_field.style.border = "2px solid #f85a3e";
+                          exec_text_field.style.border = "2px solid #FF8544";
                         } else {
                           exec_text_field.style.border = "";
                         }
@@ -4228,7 +4331,7 @@ const ParsedAction = (props) => {
 				  	>
 						<a href="/admin?tab=cache" target="_blank" style={{textDecoration: "none"}}>
 							<StorageIcon style={{ 
-								color: "#f85a3e",
+								color: "#FF8544",
 								marginRight: 10, 
 							}}/>
 					  </a>
@@ -4240,65 +4343,12 @@ const ParsedAction = (props) => {
                       flex: "10",
                       marginTop: "auto",
                       marginBottom: "auto",
+					  color: "#C5C5C5",
                     }}
                   >
-                      <b>{tmpitem} </b>
+                      {tmpitem} <span style={{color: theme.palette.main}}>{selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "*" : ""}</span>
                   </div>
 
-                  {/*selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
-								<div style={{display: "flex"}}>
-									<Tooltip color="primary" title="Static data" placement="top">
-										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
-												e.preventDefault()
-												changeActionParameterVariant("STATIC_VALUE", count) 
-											}}>
-											<CreateIcon />
-										</div>
-									</Tooltip>
-									&nbsp;|&nbsp;
-									<Tooltip color="primary" title="Data from previous action" placement="top">
-										<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
-											e.preventDefault()
-											changeActionParameterVariant("ACTION_RESULT", count) 
-										}}>
-											<AppsIcon />
-										</div>
-									</Tooltip>
-									&nbsp;|&nbsp;
-									<Tooltip color="primary" title="Use local variable" placement="top">
-										<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
-											e.preventDefault()
-											changeActionParameterVariant("WORKFLOW_VARIABLE", count) 
-										}}>
-											<FavoriteBorderIcon />
-										</div>
-									</Tooltip>
-								</div>	
-							*/}
-                  {/*(selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0 && selectedActionParameters[count].required === true && selectedActionParameters[count].unique_toggled !== undefined) || hideExtraTypes ? null : 
-								<div style={{display: "flex"}}>
-									<Tooltip color="secondary" title="Value must be unique" placement="top">
-										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {}}>
-          						<Checkbox
-												tabIndex="-1"
-          						  checked={selectedActionParameters[count].unique_toggled}
-												style={{
-													color: theme.palette.primary.secondary,
-												}}
-          						  onChange={(event) => {
-													//console.log("CHECKED!: ", selectedActionParameters[count])
-          						  	selectedActionParameters[count].unique_toggled = !selectedActionParameters[count].unique_toggled
-												  selectedAction.parameters[count].unique_toggled = selectedActionParameters[count].unique_toggled
-          						  	setSelectedActionParameters(selectedActionParameters)
-													setSelectedAction(selectedAction)
-													setUpdate(Math.random())
-												}}
-          						  name="requires_unique"
-          						/>
-										</div>
-									</Tooltip>
-								</div>
-							*/}
                 </div>
                 {datafield}
 				{/*shufflecode*/}
@@ -4338,7 +4388,7 @@ const ParsedAction = (props) => {
                       open={showAutocomplete}
                       style={{
                         color: "white",
-                        height: 50,
+                        height: 35,
                         marginTop: 2,
                         borderRadius: theme.palette?.borderRadius,
                       }}
