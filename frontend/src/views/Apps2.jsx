@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import { Context } from "../context/ContextApi.jsx";
 import Add from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
 import InputAdornment from '@mui/material/InputAdornment';
 import Search from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -34,20 +35,23 @@ const searchClient = algoliasearch(
 );
 
 // AppCard Component
-const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick }) => {
+const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick, leftSideBarOpenByClick, userdata }) => {
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
+  var canEditApp = userdata.admin === "true" || userdata.id === data?.owner || data?.owner === "" || (userdata.admin === "true" && userdata.active_org.id === data?.reference_org) || !data?.generated
 
   const paperStyle = {
-    backgroundColor: mouseHoverIndex === index ? "rgba(26, 26, 26, 1)" : "#1A1A1A",
+    backgroundColor: mouseHoverIndex === index ? "rgba(26, 26, 26, 1)" : "#212121",
     color: "rgba(241, 241, 241, 1)",
     cursor: "pointer",
-    position: "relative",
-    width: 365,
+    fontFamily: "Inter",
+    // position: "relative",
+    width: "100%",
     height: 96,
     borderRadius: 8,
     boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
     marginBottom: 20,
+    transition: "width 0.3s ease",
   };
 
   return (
@@ -63,7 +67,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
             fontSize: 16,
             overflow: "hidden",
             display: "flex",
-            alignItems: "flex-start",
+            fontFamily: "Inter",
             width: '100%',
             backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "#212121"
           }}
@@ -92,13 +96,14 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
             fontWeight: '400',
             overflow: "hidden",
             margin: "12px 0",
-            fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
+            fontFamily: "Inter"
           }}>
             <div style={{
               display: 'flex',
               flexDirection: 'row',
               overflow: "hidden",
               textOverflow: "ellipsis",
+              fontWeight: 600,
               whiteSpace: "nowrap",
               marginLeft: 8,
               gap: 8
@@ -118,13 +123,14 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
-              width: 230,
-              textAlign: 'start',
+              width: "100%",
               marginLeft: 8,
               color: "rgba(158, 158, 158, 1)",
-              display: "flex"
+              display: "flex",
+              justifyContent: 'space-between',
+              paddingRight: 15,
             }}>
-              <div style={{ minWidth: 120, overflow: "hidden" }}>
+              <div style={{ overflow: "hidden", textAlign: 'start' }}>
                 {data.generated !== true && data.tags && data.tags.slice(0, 2).map((tag, tagIndex) => (
                   <span key={tagIndex}>
                     {tag}
@@ -134,44 +140,57 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               </div>
               {/* Deactivate button */}
               {currTab === 0 && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
-                <Button
-                  className="deactivate-button"
-                  style={{
-                    marginLeft: 15,
-                    width: 102,
-                    height: 35,
-                    borderRadius: 200,
-                    backgroundColor: "rgba(73, 73, 73, 1)",
-                    color: "rgba(241, 241, 241, 1)",
-                    textTransform: "none",
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
+                <div style={{
+                  display: "flex",
+                  gap: 8
+                }}>
+                  {
+                    canEditApp && (
+                      <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <EditIcon />
+                      </button>
+                    )
+                  }
+                  <Button
+                    className="deactivate-button"
+                    style={{
+                      // marginLeft: 15,
+                      width: 102,
+                      height: 35,
+                      borderRadius: 6,
+                      backgroundColor: "rgba(73, 73, 73, 1)",
+                      color: "rgba(241, 241, 241, 1)",
+                      textTransform: "none",
+                      fontFamily: "Inter"
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
 
-                    fetch(url, {
-                      method: 'GET',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                      },
-                      credentials: "include",
-                    })
-                      .then((response) => response.json())
-                      .then((responseJson) => {
-                        if (responseJson.success === false) {
-                          toast.error(responseJson.reason);
-                        } else {
-                          toast.success("App Deactivated Successfully. Reload UI to see updated changes.");
-                        }
+                      fetch(url, {
+                        method: 'GET',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Accept': 'application/json',
+                        },
+                        credentials: "include",
                       })
-                      .catch(error => {
-                        console.log("app error: ", error.toString());
-                      });
-                  }}
-                >
-                  Deactivate
-                </Button>
+                        .then((response) => response.json())
+                        .then((responseJson) => {
+                          if (responseJson.success === false) {
+                            toast.error(responseJson.reason);
+                          } else {
+                            toast.success("App Deactivated Successfully. Reload UI to see updated changes.");
+                          }
+                        })
+                        .catch(error => {
+                          console.log("app error: ", error.toString());
+                        });
+                    }}
+                  >
+                    Deactivate
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -192,6 +211,7 @@ const Hits = ({
   globalUrl,
   isLoading,
   isLoggedIn,
+  leftSideBarOpenByClick
 }) => {
   const [hoverEffect, setHoverEffect] = useState(-1);
   const [allActivatedAppIds, setAllActivatedAppIds] = useState(userdata?.active_apps);
@@ -330,7 +350,7 @@ const Hits = ({
                               color: "rgba(241, 241, 241, 1)",
                               cursor: "pointer",
                               position: "relative",
-                              width: 365,
+                              width: leftSideBarOpenByClick ? 325 : 365,
                               height: 96,
                               borderRadius: 8,
                               boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
@@ -374,7 +394,6 @@ const Hits = ({
                                   fontWeight: '400',
                                   overflow: "hidden",
                                   margin: "12px 0",
-                                  fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)"
                                 }}
                               >
                                 <div
@@ -398,7 +417,7 @@ const Hits = ({
                                     textOverflow: "ellipsis",
                                     whiteSpace: "nowrap",
                                     color: "rgba(158, 158, 158, 1)",
-                                    marginTop: 5
+                                    marginTop: 5,
                                   }}
                                 >
                                   {data.categories !== null
@@ -514,46 +533,7 @@ const Hits = ({
   );
 }
 
-// Custom Category Dropdown Component
-const CategoryDropdown = ({ items, currentRefinement, refine }) => {
-  const handleChange = (event) => {
-    const value = event.target.value;
-    refine(value);
-  };
 
-  return (
-    <Select
-      fullWidth
-      variant="outlined"
-      value={currentRefinement}
-      onChange={handleChange}
-      displayEmpty
-      multiple
-      style={{
-        width: '100%',
-        maxWidth: '300px',
-        borderRadius: '7px',
-        fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-      }}
-      renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
-    >
-      <MenuItem disabled value="">
-        All Categories
-      </MenuItem>
-      {items.map(item => (
-        <MenuItem key={item.label} value={item.label}>
-          <Checkbox checked={currentRefinement.includes(item.label)} />
-          {item.label} ({item.count})
-        </MenuItem>
-      ))}
-    </Select>
-  );
-};
-
-const CustomCategoryDropdown = connectRefinementList(CategoryDropdown);
 
 // Custom SearchBox Component
 const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
@@ -608,10 +588,11 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
           event.preventDefault();
         }
       }}
-      style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
+      style={{ borderRadius: 8, height: 45, fontFamily: "Inter", flex: 1 }}
       InputProps={{
         style: {
           borderRadius: 8,
+          height: 45
         },
         endAdornment: (
           <InputAdornment position="end">
@@ -637,6 +618,38 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
 const CustomSearchBox = connectSearchBox(SearchBox);
 const CustomHits = connectHits(Hits);
 
+// Custom Category Dropdown Component
+const CategoryDropdown = ({ items, currentRefinement, refine }) => {
+  const handleChange = (event) => {
+    const value = event.target.value;
+    refine(value);
+  };
+
+  return (
+    <Select
+      fullWidth
+      variant="outlined"
+      value={currentRefinement}
+      onChange={handleChange}
+      displayEmpty
+      multiple
+      style={{ borderRadius: 8, height: 45, fontFamily: "Inter", flex: 1 }}
+      renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
+    >
+      <MenuItem disabled value="" style={{ fontFamily: "Inter" }}>
+        All Categories
+      </MenuItem>
+      {items.map(item => (
+        <MenuItem key={item.label} value={item.label} style={{ fontFamily: "Inter" }}>
+          <Checkbox checked={currentRefinement.includes(item.label)} />
+          {item.label} ({item.count})
+        </MenuItem>
+      ))}
+    </Select>
+  );
+};
+const CustomCategoryDropdown = connectRefinementList(CategoryDropdown);
+
 // Custom Label Dropdown Component
 const LabelDropdown = ({ items, currentRefinement, refine }) => {
   const handleChange = (event) => {
@@ -652,15 +665,7 @@ const LabelDropdown = ({ items, currentRefinement, refine }) => {
       onChange={handleChange}
       displayEmpty
       multiple
-      style={{
-        width: '100%',
-        maxWidth: '300px',
-        borderRadius: '7px',
-        fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)",
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-      }}
+      style={{ borderRadius: 8, height: 45, fontFamily: "Inter", flex: 1 }}
       renderValue={(selected) => selected.length ? selected.join(', ') : 'All Labels'}
     >
       <MenuItem disabled value="">
@@ -675,8 +680,43 @@ const LabelDropdown = ({ items, currentRefinement, refine }) => {
     </Select>
   );
 };
-
 const CustomLabelDropdown = connectRefinementList(LabelDropdown);
+
+
+
+// New filter function
+const filterApps = (apps, searchQuery, selectedCategory, selectedLabel) => {
+  if (!Array.isArray(apps)) return [];
+
+  return apps.filter((app) => {
+    const matchesSearchQuery = (
+      searchQuery === "" || // If searchQuery is empty, match all apps
+      app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (app.tags && app.tags.some(tag =>
+        tag.toLowerCase().includes(searchQuery.toLowerCase())
+      )) ||
+      (app.categories && app.categories.some((category) =>
+        category.toLowerCase().includes(searchQuery.toLowerCase())
+      ))
+    );
+
+    const matchesSelectedCategories = (
+      selectedCategory.length === 0 || // If no category is selected, match all apps
+      (app.categories && app.categories.some(category =>
+        selectedCategory.includes(category)
+      ))
+    );
+
+    const matchesSelectedTags = (
+      selectedLabel.length === 0 || // If no label is selected, match all apps
+      (app.tags && app.tags.some(tag =>
+        selectedLabel.includes(tag)
+      ))
+    );
+
+    return matchesSearchQuery && matchesSelectedCategories && matchesSelectedTags;
+  });
+};
 
 // Main Apps Component
 const Apps2 = (props) => {
@@ -803,14 +843,16 @@ const Apps2 = (props) => {
     }
   }, [currTab, globalUrl, userdata?.id]); // Remove location.search dependency
 
-  useEffect(() => {
-    setSearchQuery("");
-  }, [currTab])
+  // useEffect(() => {
+  //   // setSearchQuery("");
+  //   setSelectedCategory([]);
+  //   setSelectedLabel([]);
+  // }, [currTab])
 
 
   // Find top categories and tags based on the current tab
   useEffect(() => {
-    if (currTab === 0) {
+    if (currTab === 0 || currTab === 1) {
       setCategories(findTopCategories());
       setLabels(findTopTags());
     }
@@ -881,76 +923,81 @@ const Apps2 = (props) => {
 
   const handleCreateApp = (e) => {
     e.preventDefault();
-    setOpenModal(true);
+    // setOpenModal(true);
   };
 
 
   useEffect(() => {
     const apps = currTab === 1 ? userApps : orgApps;
-    // Search app based on app name, category, and tag
-    const filteredUserAppdata = Array.isArray(apps) ? apps.filter((app) => {
-
-      const matchesSearchQuery = (
-        searchQuery === "" || // If searchQuery is empty, match all apps
-        app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (app.tags && app.tags.some(tag =>
-          tag.toLowerCase().includes(searchQuery.toLowerCase())
-        )) ||
-        (app.categories && app.categories.some((category) =>
-          category.toLowerCase().includes(searchQuery.toLowerCase())
-        ))
-      );
-
-      const matchesSelectedCategories = (
-        selectedCategory.length === 0 || // If no category is selected, match all apps
-        (app.categories && app.categories.some(category =>
-          selectedCategory.includes(category)
-        ))
-      );
-
-      const matchesSelectedTags = (
-        selectedLabel.length === 0 || // If no label is selected, match all apps
-        (app.tags && app.tags.some(tag =>
-          selectedLabel.includes(tag)
-        ))
-      );
-
-      return matchesSearchQuery && matchesSelectedCategories && matchesSelectedTags;
-    }) : [];
-
+    const filteredUserAppdata = filterApps(apps, searchQuery, selectedCategory, selectedLabel);
     setAppsToShow(filteredUserAppdata);
-  }, [searchQuery, selectedCategory, selectedLabel]);
+  }, [searchQuery, selectedCategory, selectedLabel, currTab]);
 
 
   const handleTabChange = (newTab) => {
     setCurrTab(newTab);
+    // Apply filters immediately when changing tabs
     if (newTab === 0) {
-      setAppsToShow(orgApps)
-      const categories = findTopCategories();
-      const labels = findTopTags();
-      setCategories(categories);
-      setLabels(labels);
+      const filteredOrgApps = filterApps(orgApps, searchQuery, selectedCategory, selectedLabel);
+      setAppsToShow(filteredOrgApps);
+    } else if (newTab === 1) {
+      const filteredUserApps = filterApps(userApps, searchQuery, selectedCategory, selectedLabel);
+      setAppsToShow(filteredUserApps);
     }
-    if (newTab === 1) {
-      setAppsToShow(userApps)
-    }
+
+    // Update URL query params
     const newQueryParam = newTab === 0 ? 'org_apps' : newTab === 1 ? 'my_apps' : 'all_apps';
     const queryParams = new URLSearchParams(location.search);
     queryParams.set('tab', newQueryParam);
-    queryParams.delete('q');
+    // Only remove 'q' param if search is empty
+    if (!searchQuery) {
+      queryParams.delete('q');
+    }
     window.history.replaceState({}, '', `${location.pathname}?${queryParams.toString()}`);
   };
 
+  // Update useEffect to handle initial load and URL search params
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const searchParam = queryParams.get('q');
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+  }, []);
 
+  // Update useEffect for filtering to handle both tabs
+  useEffect(() => {
+    if (currTab === 2) return; // Skip for "Discover Apps" tab as it uses Algolia
 
+    const apps = currTab === 1 ? userApps : orgApps;
+    const filteredApps = filterApps(apps, searchQuery, selectedCategory, selectedLabel);
+    setAppsToShow(filteredApps);
+
+    // Update URL with search query
+    const queryParams = new URLSearchParams(location.search);
+    if (searchQuery) {
+      queryParams.set('q', searchQuery);
+    } else {
+      queryParams.delete('q');
+    }
+    window.history.replaceState({}, '', `${location.pathname}?${queryParams.toString()}`);
+  }, [searchQuery, selectedCategory, selectedLabel, currTab, userApps, orgApps]);
+
+  // Update search input handler to maintain state across tabs
+  const handleSearchChange = (event) => {
+    const newSearchQuery = event.target.value;
+    setSearchQuery(newSearchQuery);
+  };
 
   const boxStyle = {
     color: "white",
     display: "flex",
     flexDirection: "column",
+    height: "100%",
     width: "100%",
     margin: "auto",
-    maxWidth: "60%",
+    maxWidth: "70%",
+    fontFamily: "Inter",
     // padding: '20px 380px',
   };
 
@@ -975,214 +1022,287 @@ const Apps2 = (props) => {
   }
 
   return (
-    <InstantSearch searchClient={searchClient} indexName="appsearch">
-      <AppModal
-        open={openModal}
-        onClose={handleAppModalClose}
-        app={selectedApp}
-        userdata={userdata}
-        globalUrl={globalUrl}
-      />
-      <div style={boxStyle}>
-        <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none' }}>
-          Apps
-        </Typography>
-        <div style={{ borderBottom: '1px solid gray', marginBottom: 30, marginRight: 10 }}>
-          <Tabs
-            value={currTab}
-            onChange={(event, newTab) => handleTabChange(newTab)}
-            TabIndicatorProps={{ style: { height: '3px', borderRadius: 10 } }}
-          >
-            <Tab label="Organization Apps" style={{ textTransform: 'none', marginRight: 20 }} />
-            <Tab label="My Apps" style={{ textTransform: 'none', marginRight: 20 }} />
-            <Tab label="Discover Apps" style={{ textTransform: 'none' }} />
-          </Tabs>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ flex: 1, marginRight: 10 }}>
+    <div style={{ paddingTop: 70, minHeight: 1000, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: "#1A1A1A" }}>
+      <InstantSearch searchClient={searchClient} indexName="appsearch">
+        <AppModal
+          open={openModal}
+          onClose={handleAppModalClose}
+          app={selectedApp}
+          userdata={userdata}
+          globalUrl={globalUrl}
+        />
+        <div style={boxStyle}>
+          <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: "Inter" }}>
+            Apps
+          </Typography>
+          <div style={{ borderBottom: '1px solid gray', marginBottom: 30, marginRight: 10 }}>
+            <Tabs
+              value={currTab}
+              onChange={(event, newTab) => handleTabChange(newTab)}
+              TabIndicatorProps={{ style: { height: '3px', borderRadius: 10 } }}
+              style={{ fontFamily: "Inter" }}
+            >
+              <Tab label="Organization Apps" style={{ textTransform: 'none', marginRight: 20, fontFamily: "Inter" }} />
+              <Tab label="My Apps" style={{ textTransform: 'none', marginRight: 20, fontFamily: "Inter" }} />
+              <Tab label="Discover Apps" style={{ textTransform: 'none', fontFamily: "Inter" }} />
+            </Tabs>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 20, height: 45 }}>
+            <div style={{ flex: 1, width: '100%', borderRadius: '7px' }}>
+              {
+                (currTab === 0 || currTab === 1) &&
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  placeholder="Search for apps"
+                  value={searchQuery}
+                  id="shuffle_search_field"
+                  onChange={handleSearchChange}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                    }
+                  }}
+                  limit={5}
+                  InputProps={{
+                    style: {
+                      borderRadius: 8,
+                      height: 45
+                    },
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        {searchQuery.length === 0 ? (
+                          <Search />
+                        ) : (
+                          <ClearIcon
+                            style={{ cursor: "pointer" }}
+                            onClick={() => {
+                              setSearchQuery("");
+                            }}
+                          />
+                        )}
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              }
+              {
+                currTab === 2 &&
+                <CustomSearchBox searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+              }
+            </div>
+            <div style={{ flex: 1, width: '100%', borderRadius: '7px', position: 'relative' }}>
+              {currTab === 2 ? (
+                <CustomCategoryDropdown attribute="categories" />
+              ) : (
+                <>
+                  <Select
+                    fullWidth
+                    variant="outlined"
+                    value={selectedCategory}
+                    onChange={handleCategoryChange}
+                    displayEmpty
+                    multiple
+                    style={{ borderRadius: 8, height: 45, fontFamily: "Inter" }}
+                    renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
+                  >
+                    <MenuItem disabled value="" style={{ fontFamily: "Inter" }}>
+                      All Categories
+                    </MenuItem>
+                    {categories?.map((category) => (
+                      <MenuItem key={category.category} value={category.category} style={{ fontFamily: "Inter" }}>
+                        <Checkbox checked={selectedCategory.includes(category.category)} />
+                        {category.category}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {selectedCategory.length > 0 && (
+                    <ClearIcon
+                      style={{
+                        position: 'absolute',
+                        right: 35,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        cursor: 'pointer',
+                        color: 'white',
+                        fontSize: 20,
+                        zIndex: 1000
+                      }}
+                      onClick={() => setSelectedCategory([])}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+            <div style={{ flex: 1, width: '100%', borderRadius: '7px', position: 'relative' }}>
+              {currTab === 2 ? (
+                <CustomLabelDropdown attribute="action_labels" />
+              ) : (
+                <>
+                  <Select
+                    fullWidth
+                    variant="outlined"
+                    value={selectedLabel}
+                    onChange={handleLabelChange}
+                    displayEmpty
+                    multiple
+                    style={{ borderRadius: 8, height: 45, fontFamily: "Inter" }}
+                    renderValue={(selected) => selected.length ? selected.join(', ') : 'All Labels'}
+                  >
+                    <MenuItem disabled value="" style={{ fontFamily: "Inter" }}>
+                      All Labels
+                    </MenuItem>
+                    {labels?.map((tag) => (
+                      <MenuItem key={tag.tag} value={tag.tag} style={{ fontFamily: "Inter" }}>
+                        <Checkbox checked={selectedLabel.includes(tag.tag)} />
+                        {tag.tag}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {selectedLabel.length > 0 && (
+                    <ClearIcon
+                      style={{
+                        position: 'absolute',
+                        right: 35,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        cursor: 'pointer',
+                        color: 'white',
+                        fontSize: 20,
+                        zIndex: 1000
+                      }}
+                      onClick={() => setSelectedLabel([])}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+            <div style={{ flex: 1 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleCreateApp}
+                style={{ height: "100%", width: '100%', borderRadius: '7px', textTransform: 'none', backgroundColor: "#FF8544", color: "#1A1A1A", fontFamily: "Inter" }}
+              >
+                <Add style={{ marginRight: 10, color: "#1A1A1A", fontSize: 20 }} />
+                Create an App
+              </Button>
+            </div>
+          </div>
+          <div>
+
             {
-              (currTab === 0 || currTab === 1) &&
-              <TextField
-                fullWidth
-                variant="outlined"
-                placeholder="Search for apps"
-                value={searchQuery}
-                id="shuffle_search_field"
-                onChange={(event) => {
-                  setSearchQuery(event.target.value);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                  }
-                }}
-                limit={5}
-                style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
-                InputProps={{
-                  style: {
-                    borderRadius: 8,
-                  },
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      {
-                        searchQuery.length === 0 ? <Search /> : <ClearIcon />
-                      }
-                    </InputAdornment>
-                  ),
-                }}
-              />
+              currTab === 0 && (
+                <div style={{ minHeight: 570 }}>
+                  {isLoading ? (
+                    <div style={{ width: "100%", textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                      <CircularProgress />
+                    </div>
+                  ) : (
+                    <>
+                      {appsToShow?.length > 0 && appsToShow !== undefined && !isLoading ? (
+                        <div style={{
+                          marginTop: 16,
+                          width: "100%",
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
+                          gap: "20px",
+                          justifyContent: "space-between",
+                          alignItems: "start",
+                          padding: "0 10px"
+                        }}>
+                          {appsToShow.map((data, index) => (
+                            <AppCard
+                              key={index}
+                              data={data}
+                              index={index}
+                              mouseHoverIndex={mouseHoverIndex}
+                              setMouseHoverIndex={setMouseHoverIndex}
+                              globalUrl={globalUrl}
+                              deactivatedIndexes={deactivatedIndexes}
+                              currTab={currTab}
+                              handleAppClick={handleAppClick}
+                              leftSideBarOpenByClick={leftSideBarOpenByClick}
+                              userdata={userdata}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                          <AppSelection
+                            userdata={userdata}
+                            globalUrl={globalUrl}
+                            appFramework={appFramework}
+                            setAppFramework={setAppFramework}
+                            defaultSearch={defaultSearch}
+                            setDefaultSearch={setDefaultSearch}
+                            checkLogin={checkLogin}
+                            isAppPage={true}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )
             }
+            {
+              currTab === 1 && (
+                <div style={{ minHeight: 570, overflowY: "auto", overflowX: "hidden" }}>
+                  {isLoading ? (
+                    <div style={{ width: "100%", textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                      <CircularProgress />
+                    </div>
+                  ) : (
+                    <>
+                      {appsToShow?.length > 0 && appsToShow !== undefined ? (
+                        <div style={{
+                          marginTop: 16,
+                          width: "100%",
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
+                          gap: "20px",
+                          justifyContent: "space-between",
+                          alignItems: "start",
+                          padding: "0 10px"
+                        }}>
+                          {appsToShow.map((data, index) => (
+                            <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} userdata={userdata}
+                              handleAppClick={handleAppClick} leftSideBarOpenByClick={leftSideBarOpenByClick}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                          <Typography variant="body1">No Apps Found</Typography>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )
+            }
+
             {
               currTab === 2 &&
-              <CustomSearchBox searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+              <CustomHits
+                isLoggedIn={isLoggedIn}
+                userdata={userdata}
+                handleAppClick={handleAppClick}
+                setIsAnyAppActivated={setIsAnyAppActivated}
+                hitsPerPage={5}
+                globalUrl={globalUrl}
+                searchQuery={searchQuery}
+                mouseHoverIndex={mouseHoverIndex}
+                setMouseHoverIndex={setMouseHoverIndex}
+                leftSideBarOpenByClick={leftSideBarOpenByClick}
+              />
             }
           </div>
-          <div style={{ flex: 1, marginRight: 10 }}>
-            {currTab === 2 ? (
-              <CustomCategoryDropdown attribute="categories" />
-            ) : (
-              <Select
-                fullWidth
-                variant="outlined"
-                value={selectedCategory}
-                onChange={handleCategoryChange}
-                displayEmpty
-                multiple
-                style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", maxWidth: "300px" }}
-                renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
-              >
-                <MenuItem disabled value="">
-                  All Categories
-                </MenuItem>
-                {categories?.map((category) => (
-                  <MenuItem key={category.category} value={category.category}>
-                    <Checkbox checked={selectedCategory.includes(category.category)} />
-                    {category.category}
-                  </MenuItem>
-                ))}
-              </Select>
-            )}
-          </div>
-          <div style={{ flex: 1, marginRight: 10 }}>
-            {currTab === 2 ? (
-              <CustomLabelDropdown attribute="action_labels" />
-            ) : (
-              <Select
-                fullWidth
-                variant="outlined"
-                value={selectedLabel}
-                onChange={handleLabelChange}
-                displayEmpty
-                multiple
-                style={{ width: '100%', borderRadius: '7px', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)", maxWidth: "300px" }}
-                renderValue={(selected) => selected.length ? selected.join(', ') : 'All Labels'}
-              >
-                <MenuItem disabled value="">
-                  All Labels
-                </MenuItem>
-                {labels?.map((tag) => (
-                  <MenuItem key={tag.tag} value={tag.tag}>
-                    <Checkbox checked={selectedLabel.includes(tag.tag)} />
-                    {tag.tag}
-                  </MenuItem>
-                ))}
-              </Select>
-            )}
-          </div>
-          <div style={{ flex: 1, marginRight: 10 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleCreateApp}
-              style={{ height: "100%", width: '100%', borderRadius: '7px', textTransform: 'none', fontFamily: "var(--zds-typography-base,Inter,Helvetica,arial,sans-serif)" }}
-            >
-              <Add style={{ marginRight: 10 }} />
-              Create an App
-            </Button>
-          </div>
-        </div>
-        <div>
-
-          {
-            currTab === 0 && (
-              <div style={{ minHeight: 570, overflowY: "auto", overflowX: "hidden" }}>
-                {isLoading ? (
-                  <div style={{ width: "100%", textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    <CircularProgress />
-                  </div>
-                ) : (
-                  <>
-                    {appsToShow?.length > 0 && appsToShow !== undefined && !isLoading ? (
-                      <div style={{ rowGap: 16, columnGap: 16, marginTop: 16, display: "flex", flexWrap: "wrap", justifyContent: "flex-start", maxHeight: 570, scrollbarWidth: "thin", scrollbarColor: "#494949 #2f2f2f" }}>
-                        {appsToShow.map((data, index) => (
-                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} handleAppClick={handleAppClick} />
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                        <AppSelection
-                          userdata={userdata}
-                          globalUrl={globalUrl}
-                          appFramework={appFramework}
-                          setAppFramework={setAppFramework}
-                          defaultSearch={defaultSearch}
-                          setDefaultSearch={setDefaultSearch}
-                          checkLogin={checkLogin}
-                          isAppPage={true}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )
-          }
-          {
-            currTab === 1 && (
-              <div style={{ minHeight: 570, overflowY: "auto", overflowX: "hidden" }}>
-                {isLoading ? (
-                  <div style={{ width: "100%", textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    <CircularProgress />
-                  </div>
-                ) : (
-                  <>
-                    {appsToShow?.length > 0 && appsToShow !== undefined ? (
-                      <div style={{ rowGap: 16, columnGap: 16, marginTop: 16, display: "flex", flexWrap: "wrap", justifyContent: "flex-start", maxHeight: 570, scrollbarWidth: "thin", scrollbarColor: "#494949 #2f2f2f" }}>
-                        {appsToShow.map((data, index) => (
-                          <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} 
-                          handleAppClick={handleAppClick}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                        <Typography variant="body1">No Apps Found</Typography>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )
-          }
-
-          {
-            currTab === 2 &&
-            <CustomHits
-              isLoggedIn={isLoggedIn}
-              userdata={userdata}
-              handleAppClick={handleAppClick}
-              setIsAnyAppActivated={setIsAnyAppActivated}
-              hitsPerPage={5}
-              globalUrl={globalUrl}
-              searchQuery={searchQuery}
-              mouseHoverIndex={mouseHoverIndex}
-              setMouseHoverIndex={setMouseHoverIndex}
-            />
-          }
-        </div>
-      </div >
-      <Configure clickAnalytics />
-    </InstantSearch>
+        </div >
+        <Configure clickAnalytics />
+      </InstantSearch>
+    </div>
   );
 };
 
