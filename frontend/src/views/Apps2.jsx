@@ -12,6 +12,7 @@ import {
   Box,
   CircularProgress,
   Checkbox,
+  Skeleton,
 } from "@mui/material";
 import { Context } from "../context/ContextApi.jsx";
 import Add from '@mui/icons-material/Add';
@@ -280,7 +281,6 @@ const Hits = ({
 
   const [showNoAppFound, setShowNoAppFound] = useState(false);
 
-  //show some delay to show the "App Not Found." so it doesn't not show while changing tab.
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowNoAppFound(true);
@@ -514,7 +514,7 @@ const Hits = ({
           )}
         </div>
       ) : (
-        <div><Box sx={{ position: 'absolute', top: '30%', left: '50%', }}> <CircularProgress /></Box></div>
+        <LoadingGrid />
       )
       }
     </div >
@@ -748,6 +748,81 @@ const filterApps = (apps, searchQuery, selectedCategory, selectedLabel) => {
 
     return matchesSearchQuery && matchesSelectedCategories && matchesSelectedTags;
   });
+};
+
+// Add this new component for the app skeleton
+const AppSkeleton = () => {
+  return (
+    <Paper elevation={0} style={{
+      backgroundColor: "#212121",
+      width: "100%",
+      height: 120,
+      borderRadius: 8,
+    }}>
+      <div style={{
+        display: "flex",
+        padding: 10,
+        width: "100%",
+        height: "100%"
+      }}>
+        <Skeleton 
+          variant="rectangular" 
+          width={100} 
+          height={90} 
+          style={{ 
+            borderRadius: 6,
+            backgroundColor: "rgba(255, 255, 255, 0.1)" 
+          }} 
+        />
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          marginLeft: 10,
+          flex: 1,
+          gap: 6
+        }}>
+          <Skeleton 
+            variant="text" 
+            width="40%" 
+            height={24}
+            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }} 
+          />
+          <Skeleton 
+            variant="text" 
+            width="60%" 
+            height={20}
+            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }} 
+          />
+          <Skeleton 
+            variant="text" 
+            width="30%" 
+            height={20}
+            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }} 
+          />
+        </div>
+      </div>
+    </Paper>
+  );
+};
+
+// Replace the loading sections in the main component with this
+const LoadingGrid = () => {
+  return (
+    <div style={{
+      marginTop: 16,
+      width: "100%",
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
+      gap: "20px",
+      justifyContent: "space-between",
+      alignItems: "start",
+      padding: "0 10px"
+    }}>
+      {[...Array(7)].map((_, index) => (
+        <AppSkeleton key={index} />
+      ))}
+    </div>
+  );
 };
 
 // Main Apps Component
@@ -1237,9 +1312,7 @@ const Apps2 = (props) => {
               currTab === 0 && (
                 <div style={{ minHeight: 570 }}>
                   {isLoading ? (
-                    <div style={{ width: "100%", textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                      <CircularProgress />
-                    </div>
+                    <LoadingGrid />
                   ) : (
                     <>
                       {appsToShow?.length > 0 && appsToShow !== undefined && !isLoading ? (
@@ -1292,9 +1365,7 @@ const Apps2 = (props) => {
               currTab === 1 && (
                 <div style={{ minHeight: 570, overflowY: "auto", overflowX: "hidden" }}>
                   {isLoading ? (
-                    <div style={{ width: "100%", textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                      <CircularProgress />
-                    </div>
+                    <LoadingGrid />
                   ) : (
                     <>
                       {appsToShow?.length > 0 && appsToShow !== undefined ? (
