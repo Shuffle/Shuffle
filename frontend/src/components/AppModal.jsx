@@ -309,7 +309,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
         }}
       >
         <Typography variant="h5" component="div" sx={{ fontWeight: 500 }}>
-          About Gmail
+          About {app?.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
         </Typography>
         <IconButton
           onClick={onClose}
