@@ -724,7 +724,15 @@ const Workflows2 = (props) => {
     };
 
     const handleCreateWorkflow = () => {
-        setDialogModalOpen(true)
+        setModalOpen(true)
+        setIsEditing(false)
+        setNewWorkflowName("")
+        setNewWorkflowDescription("")
+        setDefaultReturnValue("")
+        setEditingWorkflow({})
+        setNewWorkflowTags([])
+        setSelectedUsecases([])
+
     };
 
 
@@ -3232,7 +3240,7 @@ const Workflows2 = (props) => {
                     <IconButton
                         style={{ position: "absolute", top: 10, right: 50, zIndex: 1000 }}
                         onClick={() => {
-                            setDialogModalOpen(true)
+                            setModalOpen(true)
                             setIsEditing(false)
                         }}
                     >
@@ -4690,7 +4698,7 @@ const Workflows2 = (props) => {
 				</ShepherdTour>
 				*/}
                 <DropzoneWrapper onDrop={uploadFile} WorkflowView={WorkflowView} />
-                {modalView}
+                {/* {modalView} */}
                 {deleteModal}
                 {exportVerifyModal}
                 {publishModal}
