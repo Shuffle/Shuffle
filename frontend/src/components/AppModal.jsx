@@ -291,10 +291,23 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 3,
-          border: "1px solid var(--Container-Stroke, #494949)",
+          borderRadius: 2,
+          border: "1px solid #494949",
           minWidth: '440px',
-          fontFamily: "Inter"
+          fontFamily: "Inter",
+          backgroundColor: "#212121",
+          '& .MuiDialogContent-root': {
+            backgroundColor: "#212121",
+          },
+          '& .MuiDialogTitle-root': {
+            backgroundColor: "#212121",
+          },
+          '& .MuiTypography-root': {
+            fontFamily: 'Inter, sans-serif',
+          },
+          '& .MuiButton-root': {
+            fontFamily: 'Inter, sans-serif',
+          },
         }
       }}
     >
@@ -303,27 +316,29 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          pb: 1,
+          pb: 2,
           pt: 2,
-          px: 3
+          pl: 3,
+          pr: 2,
+          fontFamily: "Inter"
         }}
       >
-        <Typography variant="h5" component="div" sx={{ fontWeight: 500 }}>
+        <Typography variant="h5" component="div" sx={{ fontWeight: 500, color: "#F1F1F1" }}>
           About {app?.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
         </Typography>
         <IconButton
           onClick={onClose}
           sx={{
-            color: 'text.secondary',
-            '&:hover': { bgcolor: 'action.hover' }
+            color: 'rgba(255, 255, 255, 0.7)',
+            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
           }}
         >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
-      <DialogContent>
-        <Box sx={{ display: 'flex', alignItems: 'space-between', justifyContent: 'space-between', pt: 2 }}>
+      <DialogContent sx={{ py: 3, px: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'space-between', justifyContent: 'space-between' }}>
 
           <div style={{ display: "flex", flexDirection: "row", gap: 10, fontFamily: "Inter" }}>
             <img
@@ -339,7 +354,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
                 boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.2)"
               }}
             />
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingLeft: 8 }}>
               <div style={{
                 display: "flex",
                 flexDirection: "row",
@@ -379,13 +394,16 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
             <Button
               variant="contained"
               sx={{
-                bgcolor: '#ff7043',
-                '&:hover': { bgcolor: '#f4511e' },
+                bgcolor: '#494949',
+                '&:hover': { bgcolor: '#494949' },
                 textTransform: 'none',
                 borderRadius: 1,
-                py: 1,
-                display: 'flex',
-                alignItems: 'center'
+                minWidth: '45px',
+                width: '45px',
+                height: '40px',
+                padding: 2,
+                color: "#fff",
+                fontFamily: "Inter"
               }}
             >
               <CloudDownloadOutlined />
@@ -393,17 +411,17 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
             <Button
               variant="contained"
               sx={{
-                bgcolor: '#ff7043',
-                '&:hover': { bgcolor: '#f4511e' },
+                bgcolor: "#494949",
+                '&:hover': { bgcolor: '#494949' },
                 textTransform: 'none',
                 borderRadius: 1,
                 py: 1,
-                display: 'flex',
-                alignItems: 'center'
+                px: 3,
+                height: '40px',
+                color: "#fff",
+                fontFamily: "Inter"
               }}
-              startIcon={
-                canEditApp ? <EditIcon /> : <ForkRightIcon />
-              }
+              startIcon={canEditApp ? <EditIcon /> : <ForkRightIcon />}
             >
               {canEditApp ? "Edit" : "Fork"}
             </Button>
@@ -420,14 +438,26 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
             textAlign: "start",
             flex: 1,
           }}>
-            <Typography variant="h4" sx={{
-              fontWeight: 700,
-              mb: 0.3,
-              color: '#fff'
-            }}>
+            <Typography 
+              variant="h6" 
+              sx={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '24px',
+                fontWeight: 600,
+                mb: 0.3,
+                color: '#fff'
+              }}
+            >
               20
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px'
+              }}
+            >
               Public Workflow
             </Typography>
           </div>
@@ -438,8 +468,9 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
             paddingLeft: "10px",
             height: "100%",
           }}>
-            <Typography variant="h4" sx={{
-              fontWeight: 700,
+            <Typography variant="h6" 
+            sx={{
+              fontWeight: 600,
               mb: 0.3,
               color: '#fff'
             }}>
@@ -455,7 +486,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
             paddingLeft: "10px",
             paddingTop: "5px"
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: "5px" }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: "5px", fontFamily: "Inter", fontSize: "14px", fontWeight: 600 }}>
               {
                 app?.collection ? (
                   <>
@@ -473,7 +504,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
               }
 
             </div>
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', marginLeft: "1px" }}>
+            <Typography variant="body2" sx={{ color: 'rgba(158, 158, 158, 1)' }}>
               Part of a collection
             </Typography>
           </div>
@@ -488,9 +519,9 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
           <div style={{
             fontFamily: "Inter",
             fontSize: "16px",
-            fontWeight: 500,
             color: "#fff",
-            marginBottom: "5px"
+            marginBottom: "16px",
+            fontWeight: 600
           }}>
             {
               (foundAppUsecase?.srcapp !== undefined && foundAppUsecase?.dstapp !== undefined) ? (
@@ -502,9 +533,9 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
           </div>
 
           <Box sx={{
-            bgcolor: 'action.hover',
+            bgcolor: '#2F2F2F',
             p: 2,
-            borderRadius: 1,
+            borderRadius: 2,
             display: 'flex',
             alignItems: 'center',
             mb: 3
@@ -549,7 +580,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
                 )
               }
             </Stack>
-            <Typography sx={{ ml: 2, fontSize: "14px", letterSpacing: "0.5px" }}>
+            <Typography sx={{ ml: 2, fontSize: "16px", letterSpacing: "0.5px" }}>
               {foundAppUsecase?.name || "Search for a Usecase"}
             </Typography>
           </Box>
@@ -559,24 +590,24 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
           <Button
             variant="contained"
             sx={{
-              bgcolor: '#ff7043',
-              '&:hover': {
-                bgcolor: '#f4511e'
-              },
+              bgcolor: '#FF8544',
+              '&:hover': { bgcolor: '#FF8544' },
               textTransform: 'none',
               borderRadius: 1,
               py: 1,
-              px: 5,
-              fontSize: "16px",
-              tracking: "0.5px",
-              color: "black"
+              px: 7,
+              fontSize: "14px",
+              letterSpacing: "0.5px",
+              color: "black",
+              fontFamily: "Inter",
+              minWidth: '200px'
             }}
           >
             Create a Usecase
           </Button>
         </div>
       </DialogContent>
-    </Dialog >
+    </Dialog>
   );
 };
 
