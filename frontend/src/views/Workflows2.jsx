@@ -724,7 +724,15 @@ const Workflows2 = (props) => {
     };
 
     const handleCreateWorkflow = () => {
-        setDialogModalOpen(true)
+        setModalOpen(true)
+        setIsEditing(false)
+        setNewWorkflowName("")
+        setNewWorkflowDescription("")
+        setDefaultReturnValue("")
+        setEditingWorkflow({})
+        setNewWorkflowTags([])
+        setSelectedUsecases([])
+
     };
 
 
@@ -2086,9 +2094,9 @@ const Workflows2 = (props) => {
                     continue
                 }
 
-                if (parsedAction.name === "Shuffle Tools" || parsedAction.id === "bc78f35c6c6351b07a09b7aed5d29652") {
-                    continue
-                }
+                // if (parsedAction.name === "Shuffle Tools" || parsedAction.id === "bc78f35c6c6351b07a09b7aed5d29652") {
+                //     continue
+                // }
 
                 if (appsFound.findIndex(data => data.name === parsedAction.name) < 0) {
                     appsFound.push(parsedAction)
@@ -3232,7 +3240,7 @@ const Workflows2 = (props) => {
                     <IconButton
                         style={{ position: "absolute", top: 10, right: 50, zIndex: 1000 }}
                         onClick={() => {
-                            setDialogModalOpen(true)
+                            setModalOpen(true)
                             setIsEditing(false)
                         }}
                     >
@@ -3287,11 +3295,11 @@ const Workflows2 = (props) => {
                     <Typography variant="h5">
                         {editingWorkflow.id !== undefined ? "Edit Workflow" : "Create New Workflow"}
                     </Typography>
-                    <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ display: "flex", gap: 15 }}>
                         <Tooltip title={"Import manually"} placement="top">
                             <IconButton
                                 color="primary"
-                                size="small"
+                                size="medium"
                                 onClick={() => upload.click()}
                                 style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
                             >
@@ -3299,7 +3307,7 @@ const Workflows2 = (props) => {
                             </IconButton>
                         </Tooltip>
                         <IconButton
-                            size="small"
+                            size="medium"
                             onClick={() => setDialogModalOpen(false)}
                             style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
                         >
@@ -3532,7 +3540,7 @@ const Workflows2 = (props) => {
                             setDefaultReturnValue("");
                             setEditingWorkflow({});
                             setNewWorkflowTags([]);
-                            setModalOpen(false);
+                            setDialogModalOpen(false);
                             setSelectedUsecases([])
                         }}
                     >
@@ -4035,6 +4043,7 @@ const Workflows2 = (props) => {
 
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 10 }}>
 
+
                             <MuiChipsInput
                                 placeholder="Filter Workflows"
                                 variant="outlined"
@@ -4045,19 +4054,37 @@ const Workflows2 = (props) => {
                                     setFilters(chips);
                                     findWorkflow(chips);
                                 }}
-                                style={{ flex: 0.9, borderRadius: 8 }}
-                            // style={searchStyle}
-                            //onAdd={(chip) => {
-                            //	console.log("ADd: ", chip);
-                            //	addFilter(chip);
-                            //}}
-                            //onDelete={(_, index) => {
-                            //	console.log("Remove: ", index);
-                            //	removeFilter(index);
-                            //}}
+                                style={{ flex: 0.9 }}
+                                InputProps={{
+                                    style: {
+                                        color: "white",
+                                        borderRadius: 8,
+                                    },
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#f85a3e',
+                                        },
+                                    },
+                                    '& .MuiChip-root': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        color: 'white',
+                                        '& .MuiChip-deleteIcon': {
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            '&:hover': {
+                                                color: 'white',
+                                            },
+                                        },
+                                    },
+                                }}
                             />
-
-
 
                             <Select
                                 fullWidth
@@ -4069,13 +4096,11 @@ const Workflows2 = (props) => {
                                 style={{ flex: 0.9, maxWidth: 350, borderRadius: 8 }}
                                 renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
                             >
-                                <MenuItem disabled value="">All Categories</MenuItem>
-                                {usecases.map((usecase) => {
-
+                                <MenuItem disabled value="" style={{}}>All Categories</MenuItem>
+                                {usecases.map((usecase, index) => {
                                     if (usecase?.name === "5. Verify") {
                                         return null;
                                     }
-
 
                                     const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length / usecase.list.length * 100) : 0
                                     if (percentDone === 0) {
@@ -4084,27 +4109,68 @@ const Workflows2 = (props) => {
 
                                     const category = usecase?.name.split(" ")[1]
                                     return (
-                                        <MenuItem value={category}
-
+                                        <MenuItem
+                                            value={category}
                                             onClick={() => {
-                                                console.log("Filters: ", filters, usecase?.name.toLowerCase())
                                                 if (!filters.includes(usecase?.name.toLowerCase())) {
                                                     addFilter(usecase.name)
                                                 } else {
                                                     removeFilter(filters.indexOf(usecase?.name.toLowerCase()))
                                                 }
                                             }}
+                                            style={{
+                                                padding: "12px 16px",
+                                                borderBottom: index === usecases.length - 2 ? "none" : "1px solid rgba(255,255,255,0.05)",
+                                                "&:hover": {
+                                                    backgroundColor: "rgba(255,255,255,0.1)"
+                                                }
+                                            }}
                                         >
-                                            <Checkbox checked={selectedCategory.includes(category)} />
-                                            <span style={{ textDecoration: "none", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", paddingRight: 2 }}>
-                                                <Typography variant="body1" color="textPrimary">
-                                                    {category}
-                                                </Typography>
-                                                <Typography variant="body2" color="textSecondary">
-                                                    {usecase?.matches.length}/{usecase?.list.length}
-                                                </Typography>
-                                            </span>
-                                        </MenuItem>)
+                                            <div style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                width: "100%",
+                                                gap: "12px"
+                                            }}>
+                                                <Checkbox
+                                                    checked={selectedCategory.includes(category)}
+                                                    style={{
+                                                        padding: 0,
+                                                        marginRight: 8,
+                                                        color: "rgba(255,255,255,0.7)"
+                                                    }}
+                                                />
+                                                <div style={{
+                                                    display: "flex",
+                                                    justifyContent: "space-between",
+                                                    alignItems: "center",
+                                                    width: "100%"
+                                                }}>
+                                                    <Typography
+                                                        variant="body1"
+                                                        style={{
+                                                            color: "rgba(255,255,255,0.9)",
+                                                            fontWeight: selectedCategory.includes(category) ? 500 : 400
+                                                        }}
+                                                    >
+                                                        {category}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="body2"
+                                                        style={{
+                                                            color: "rgba(255,255,255,0.5)",
+                                                            backgroundColor: "rgba(255,255,255,0.1)",
+                                                            padding: "2px 8px",
+                                                            borderRadius: "12px",
+                                                            fontSize: "0.75rem"
+                                                        }}
+                                                    >
+                                                        {usecase?.matches.length}/{usecase?.list.length}
+                                                    </Typography>
+                                                </div>
+                                            </div>
+                                        </MenuItem>
+                                    )
                                 })}
                             </Select>
 
@@ -4632,7 +4698,7 @@ const Workflows2 = (props) => {
 				</ShepherdTour>
 				*/}
                 <DropzoneWrapper onDrop={uploadFile} WorkflowView={WorkflowView} />
-                {modalView}
+                {/* {modalView} */}
                 {deleteModal}
                 {exportVerifyModal}
                 {publishModal}
