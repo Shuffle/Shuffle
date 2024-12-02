@@ -205,6 +205,8 @@ const EditWorkflow = (props) => {
 					paddingLeft: 50,
 					//minWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
 					//maxWidth: isMobile ? "90%" : newWorkflow === true ? 1000 : 550,
+		    		borderRadius: theme.palette.borderRadius,
+		    		backgroundColor: "black",
 				},
 			}}
 		>
@@ -280,22 +282,18 @@ const EditWorkflow = (props) => {
 				</div>
 			</DialogTitle>
 			<FormControl>
-				<div style={{ borderTop: "1px solid rgba(255,255,255,0.5)", width: 600, position: "fixed", right: 20, bottom: 0, zIndex: 1002, backgroundColor: "rgba(53,53,53,1)", height: 75, paddingTop: 20, paddingLeft: 75, }}>
-					{/*
-          <Button
-            style={{}}
-            onClick={() => {
-				if (setNewWorkflow !== undefined) {
-					setWorkflow({})
-				}
-
-				setModalOpen(false)
-            }}
-            color="primary"
-          >
-            Cancel
-          </Button>
-		  */}
+				<div style={{ 
+					borderTop: "1px solid rgba(255,255,255,0.5)", 
+					width: 600, 
+					position: "fixed", 
+					right: 20, 
+					bottom: 0, 
+					zIndex: 1002, 
+					backgroundColor: theme.palette.backgroundColor,
+					height: 50, 
+					paddingTop: 20, 
+					paddingLeft: 75, 
+				}}>
 					<Button
 						variant="contained"
 						style={{}}

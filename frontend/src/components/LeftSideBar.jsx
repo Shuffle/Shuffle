@@ -729,13 +729,14 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         display: "flex",
         flexDirection: "column",
         width: expandLeftNav ? 260 : 80,
-        height: "calc(100vh - 60px)",
         borderRadius: 8,
-        backgroundColor: "#212121",
+        backgroundColor: theme.palette.backgroundColor,
         position: "relative",
         transition: "width 0.3s ease",
         boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.2)" ,
         resize: 'both',
+
+        height: "calc(100vh - 32px)",
       }}
     >
       {modalView}

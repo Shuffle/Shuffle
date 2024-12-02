@@ -2378,8 +2378,17 @@ const ParsedAction = (props) => {
               return newname;
             }}
             fullWidth
+			  sx={{
+				'& .MuiOutlinedInput-root': {
+				  height: 40, // Adjust the input height
+				},
+				'& .MuiAutocomplete-input': {
+				  padding: '8px', // Adjust the text padding
+				},
+			  }}
+
             style={{
-              backgroundColor: theme.palette.inputColor,
+              backgroundColor: theme.palette.backgroundColor,
               height: 35,
               borderRadius: theme.palette?.borderRadius,
             }}
@@ -2522,7 +2531,7 @@ const ParsedAction = (props) => {
 							id="checkbox-search"
 							variant="body1"
 							style={{
-								backgroundColor: theme.palette.inputColor,
+								backgroundColor: theme.palette.platformColor,
 								borderRadius: theme.palette?.borderRadius,
 							}}
 							label={isIntegration ? "Choose a category" : "Find Actions"}

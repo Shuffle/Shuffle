@@ -422,7 +422,7 @@ const AngularWorkflow = (defaultprops) => {
   const [subworkflow, setSubworkflow] = React.useState({});
   const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
   const [leftViewOpen, setLeftViewOpen] = React.useState(isMobile ? false : true);
-  const [leftBarSize, setLeftBarSize] = React.useState(isMobile ? 0 : 325)
+  const [leftBarSize, setLeftBarSize] = React.useState(isMobile ? 0 : 265)
   const [creatorProfile, setCreatorProfile] = React.useState({});
   const [usecases, setUsecases] = React.useState([]);
   const [files, setFiles] = React.useState({
@@ -808,10 +808,9 @@ const releaseToConnectLabel = "Release to Connect"
 	}
 
   useEffect(() => {
-    console.log("Loaded workflow: ", workflow)
     if (workflow.actions?.length == 1) {
       if (workflow.actions[0].app_id == "3e320a20966d33c9b7e6790b2705f0bf") {
-      setWorkflowAsCode(true);
+      	setWorkflowAsCode(true);
       }
     }
   }, [workflow]);
@@ -9042,8 +9041,8 @@ const releaseToConnectLabel = "Release to Connect"
 
   const paperAppStyle = {
     borderRadius: theme.palette?.borderRadius,
-    minHeight: isMobile ? 50 : 70,
-    maxHeight: isMobile ? 50 : 70,
+    minHeight: isMobile ? 50 : 55,
+    maxHeight: isMobile ? 50 : 55,
     minWidth: isMobile ? 50 : "100%",
     maxWidth: isMobile ? 50 : "100%",
     marginTop: "5px",
@@ -10012,8 +10011,25 @@ const releaseToConnectLabel = "Release to Connect"
     var runDelay = false
 
     const ParsedAppPaper = (props) => {
-      const app = props.app;
+      const app = props.app
+	  const small = props.small
+	  const actionString = props.action
       const [hover, setHover] = React.useState(false);
+	
+	  if (app === undefined || app === null) {
+		  return (
+			<img
+				style={{
+					pointerEvents: "none",
+					userDrag: "none",
+					userSelect: "none",
+					borderRadius: theme.palette?.borderRadius,
+					height: isMobile ? 40 : 55,
+					width: isMobile ? 40 : 55,
+				}}
+		  	/>
+		  )
+	  }
 
 	  if (app.type !== "TRIGGER" && (app.id === "" || app.name === "")) {
 	  	return null
@@ -10027,6 +10043,30 @@ const releaseToConnectLabel = "Release to Connect"
       }
 
       newAppname = newAppname.replaceAll("_", " ")
+
+	  if (actionString !== undefined && actionString !== null && actionString.length > 0 && app.actions !== undefined && app.actions !== null && app.actions.length > 0) {
+		  // Find the action and make it the FIRST one in the list if possible
+		  const foundAction = app.actions.findIndex((action) => action.name === actionString)
+		  if (foundAction !== undefined && foundAction !== null && foundAction >= 0) {
+			  // Move the action to the front
+			  var action = app.actions[foundAction]
+
+			  // Change the Large Image
+			  const iconInfo = GetIconInfo(action)
+			  const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 -4 ${svgSize} ${svgSize+8}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
+			  const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
+			  app.large_image = svgpin_Url
+    	  	  app.fillGradient = iconInfo.fillGradient
+    	  	  app.fillstyle = "linear-gradient"
+			  action.fillstyle = "linear-gradient"
+			  action.fillGradient = iconInfo.fillGradient
+			  action.iconBackground = iconInfo.iconBackgroundColor
+
+			  // newSelectedAction.iconBackground = iconInfo.iconBackgroundColor;
+			  app.actions.splice(foundAction, 1)
+			  app.actions.unshift(action)
+		  }
+	  }
 
 	  if (app.large_image === undefined || app.large_image === null || app.large_image === "") {
 	  	app.large_image = theme.palette.defaultImage
@@ -10051,21 +10091,29 @@ const releaseToConnectLabel = "Release to Connect"
         newAppStyle.borderLeft = `${pixelSize} solid ${yellow}`;
       }
 
+	  if (small === true) {
+		  newAppStyle.width = 55 
+		  newAppStyle.minWidth = newAppStyle.width 
+		  newAppStyle.maxWidth = newAppStyle.width 
+
+		  // Transparent background on paper
+		  newAppStyle.backgroundColor = "transparent"
+		  newAppStyle.border = hover ? "1px solid " + theme?.palette.main : "1px solid transparent"
+
+		  // If action is set, look for the icon of it with the normal setup
+	  }
+
       return (
         <Draggable
           onDrag={(e) => {
-            handleAppDrag(e, app);
+            handleAppDrag(e, app)
           }}
           onStop={(e) => {
-            handleDragStop(e, app);
+            handleDragStop(e, app)
           }}
           key={app.id}
-          dragging={false}
-          position={{
-            x: 0,
-            y: 0,
-          }}
         >
+		  <Tooltip title={(actionString?.replaceAll("_", " "))} placement="top" disabled={small !== true}>
           <Paper
             square
             style={newAppStyle}
@@ -10174,7 +10222,7 @@ const releaseToConnectLabel = "Release to Connect"
           >
             <Grid
               container
-              style={{ margin: "7px 10px 10px 10px", flex: "10" }}
+              style={{ display: "flex", margin: 5, flex: "10" }}
             >
               <Grid item>
                 <img
@@ -10196,12 +10244,14 @@ const releaseToConnectLabel = "Release to Connect"
                     userDrag: "none",
                     userSelect: "none",
                     borderRadius: theme.palette?.borderRadius,
-                    height: isMobile ? 40 : 55,
-                    width: isMobile ? 40 : 55,
+                    height: isMobile ? 40 : 45,
+                    width: isMobile ? 40 : 45,
+
+                    background: `linear-gradient(to right, ${app.fillGradient})`,
                   }}
                 />
               </Grid>
-              {isMobile ? null :
+              {isMobile || small === true ? null :
                 <Grid
                   style={{
                     display: "flex",
@@ -10216,11 +10266,11 @@ const releaseToConnectLabel = "Release to Connect"
                   <Grid item style={{ flex: 1 }}>
                     <Typography
                       variant="body1"
+				  	  color="textSecondary"
                       style={{ 
 						  marginBottom: 0, 
 						  marginLeft: 5, 
 						  marginTop: newAppname.length > 20 ? -1 : 12, 
-						  fontSize: 19, 
 					  }}
                     >
                       {newAppname}
@@ -10230,6 +10280,7 @@ const releaseToConnectLabel = "Release to Connect"
               }
             </Grid>
           </Paper>
+		  </Tooltip> 
         </Draggable>
       );
     };
@@ -10512,6 +10563,8 @@ const releaseToConnectLabel = "Release to Connect"
     const CustomSearchBox = connectSearchBox(SearchBox)
     const CustomAppHits = connectHits(AppHits)
 
+	var shuffleToolsApp = apps.find((app) => app.name === "Shuffle Tools")
+
 	var viewedApps = []
     return (
       <div style={appViewStyle}>
@@ -10522,12 +10575,14 @@ const releaseToConnectLabel = "Release to Connect"
               borderRadius: theme.palette?.borderRadius,
               marginTop: 5,
               marginRight: 10,
+			  height: 40, 
             }}
             InputProps={{
               style: {
+				  height: 40, 
               },
-              endAdornment: (
-                <InputAdornment position="end">
+              startAdornment: (
+                <InputAdornment position="start">
                   <Tooltip title="Run search" placement="top">
                     <SearchIcon style={{ cursor: "pointer" }} />
                   </Tooltip>
@@ -10536,7 +10591,7 @@ const releaseToConnectLabel = "Release to Connect"
             }}
             fullWidth
             color="primary"
-            placeholder={"Search Active Apps"}
+            placeholder={"Search apps"}
             id="appsearch"
             onKeyPress={(event) => {
               if (event.key === "Enter") {
@@ -10547,12 +10602,63 @@ const releaseToConnectLabel = "Release to Connect"
               runSearch(event.target.value)
 			}}
             onBlur={(event) => {
-
               //navigate(`?q=${event.target.value}`)
 
               //runSearch(event.target.value)
             }}
           />
+
+		  {shuffleToolsApp !== undefined && shuffleToolsApp !== null ?
+			  <div style={{marginBottom: 25, }}>
+				<Typography variant="body1" color="textSecondary" style={{marginTop: 20, marginLeft: 5, }}>
+					Popular Actions
+				</Typography> 
+				<div style={{
+					display: "flex", 
+				}}>
+					<ParsedAppPaper small={true} action={"repeat_back_to_me"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<div style={{marginLeft: 5, }}/>
+					<ParsedAppPaper small={true} action={"filter_list"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<div style={{marginLeft: 5, }}/>
+					<ParsedAppPaper small={true} action={"execute_python"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<div style={{marginLeft: 5, }}/>
+					<ParsedAppPaper small={true} action={"parse_ioc"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+				</div>
+				<div style={{
+					display: "flex", 
+				}}>
+					<ParsedAppPaper small={true} action={"set_cache_value"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<div style={{marginLeft: 5, }}/>
+					<ParsedAppPaper small={true} action={"get_file_meta"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<div style={{marginLeft: 5, }}/>
+					<ParsedAppPaper small={true} action={"merge_lists"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+					<div style={{marginLeft: 5, }}/>
+					<ParsedAppPaper small={true} action={"send_sms_shuffle"} app={JSON.parse(JSON.stringify(shuffleToolsApp))} />
+				</div>
+			  </div>
+		  : null}
+
+		  <div style={{marginBottom: 25, }}>
+			<Typography variant="body1" color="textSecondary" style={{marginTop: 20, marginLeft: 5, }}>
+				Triggers
+			</Typography> 
+			<div style={{
+				display: "flex", 
+			}}>
+				{triggers.map((trigger, index) => {
+					return(
+						<span>
+							<ParsedAppPaper small={true} action={"trigger"} app={JSON.parse(JSON.stringify(trigger))} />
+							{index !== triggers.length - 1 ? <div style={{marginLeft: 5, }}/> : null}
+						</span>
+					)
+				})}
+			</div>
+		  </div>
+
+		  <Typography variant="body1" color="textSecondary" style={{marginTop: 20, marginLeft: 5, }}>
+			Your Apps
+		  </Typography> 
           {visibleApps.length > extraApps.length ? (
             <div style={appScrollStyle}>
               {visibleApps.map((app, index) => {
@@ -10806,11 +10912,7 @@ const releaseToConnectLabel = "Release to Connect"
     	  newSelectedAction.large_image = svgpin_Url;
     	  newSelectedAction.fillGradient = iconInfo.fillGradient;
     	  newSelectedAction.fillstyle = "solid";
-    	  if (
-    	    newSelectedAction.fillGradient !== undefined &&
-    	    newSelectedAction.fillGradient !== null &&
-    	    newSelectedAction.fillGradient.length > 0
-    	  ) {
+    	  if (newSelectedAction.fillGradient !== undefined && newSelectedAction.fillGradient !== null && newSelectedAction.fillGradient.length > 0) {
     	    newSelectedAction.fillstyle = "linear-gradient";
     	  } else {
     	    newSelectedAction.iconBackground = iconInfo.iconBackgroundColor;
@@ -16012,24 +16114,20 @@ const releaseToConnectLabel = "Release to Connect"
     zIndex: 10,
     transform: isMobile 
         ? `translateX(20px)`
-        : `translateX(280px)`,
+        : `translateX(${leftBarSize}px)`,
     top: isMobile ? appBarSize + 55 : undefined, 
     bottom: isMobile ? undefined : 0,
 };
 
   const topBarStyle = {
-    position: "fixed",
-    top: isMobile ? 30 : 35,
-    pointerEvents: "none",
-    transition: "transform 0.3s ease",
-    transform: isMobile
-        ? `translateX(20px)`
-        : `translateX(${leftSideBarOpenByClick ? 340 : 330}px)`
-};
+    position: "absolute",
 
+    top: isMobile ? 30 : 25,
+	left: isMobile ? 20 : leftSideBarOpenByClick ? leftBarSize + 275 : leftBarSize+100,
 
-
-
+    transition: "left 0.3s ease",
+	maxWidth: 500, 
+  }
 
   const TopCytoscapeBar = (props) => {
     if (workflow.public === true) {
@@ -16046,37 +16144,13 @@ const releaseToConnectLabel = "Release to Connect"
       <div style={topBarStyle}>
         <div style={{ 
 			margin: "0px 10px 0px 35px",
-			pointerEvents: "none",
+			maxWidth: 500, 
 		}}>
-          <Breadcrumbs
-            aria-label="breadcrumb"
-            separator="›"
-            style={{ 
-			 	color: "white",
-				pointerEvents: "auto",
-			}}
-          >
-			{/*
-            <Link
-              to="/workflows"
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              <h2
-                style={{
-                  color: "rgba(255,255,255,0.5)",
-                  margin: "0px 0px 0px 0px",
-                }}
-              >
-                <PolylineIcon style={{ marginRight: 10 }} />
-                Workflows
-              </h2>
-            </Link>
-			*/}
-            <h2 style={{ 
-				margin: 0,
-				pointerEvents: "none",
-			}}>{workflow.name}</h2>
-          </Breadcrumbs>
+		  <Typography variant="h6" style={{ 
+		  	margin: 0,
+		  }}>
+		  	{workflow.name}
+		  </Typography>
           {workflowAsCode && (
             <Tooltip title="Switch to Code View">
               <Button
@@ -16776,7 +16850,8 @@ const releaseToConnectLabel = "Release to Connect"
 			border: "1px solid rgba(255,255,255,0.1)",
   			position: "absolute",
   			bottom: 100,
-  			left: leftSideBarOpenByClick ? 630 : 445,
+  			left: leftSideBarOpenByClick ? leftBarSize+300 : leftBarSize+115,
+
 			color: "white",
 			padding: 10, 
 			borderRadius: theme.palette?.borderRadius,
@@ -17140,7 +17215,8 @@ const releaseToConnectLabel = "Release to Connect"
           style={{
             marginLeft: 0,
             marginTop: isMobile ? 5 : 0,
-            left: isMobile ? -10 : boxSize,
+            left: isMobile ? -10 : 0,
+
             top: isMobile ? boxSize : undefined,
             bottom: 0,
             position: "absolute",
@@ -20394,7 +20470,7 @@ const releaseToConnectLabel = "Release to Connect"
   const newView = (
     <div style={{ color: "white", marginLeft:   leftSideBarOpenByClick ? 280 : 100, transition: "margin-left 0.3s ease", }}>
       <div
-        style={{ display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)" }}
+        style={{ display: "flex", borderTop: "0px solid rgba(91, 96, 100, 1)" }}
       >
         {/*isMobile ? null : leftView*/}
         {leftView}
@@ -20429,7 +20505,7 @@ const releaseToConnectLabel = "Release to Connect"
               wheelSensitivity={0.25}
               style={{
                 width: cytoscapeWidth,
-                height: bodyHeight - 20,
+                height: bodyHeight - 5,
                 backgroundColor: theme.palette.surfaceColor,
               }}
               stylesheet={cystyle}

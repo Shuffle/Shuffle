@@ -210,7 +210,7 @@ const App = (message, props) => {
 				<div style={{ height: 60, }} />
 				:
 				isLoggedIn ? 
-					<div style={{ position: 'fixed', top: 32, left: 10, zIndex: 100000 }}>
+					<div style={{ position: 'fixed', top: 16, left: 10, zIndex: 100000 }}>
 						<LeftSideBar userdata={userdata} globalUrl={globalUrl} serverside={false} notifications={notifications} />
 					</div>
 				:
