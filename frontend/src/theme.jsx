@@ -48,6 +48,7 @@ const theme = createTheme(adaptV4Theme({
     textFieldStyle: {
       backgroundColor: "#212121",
       borderRadius: 5,
+	  height: 40, 
     },
     innerTextfieldStyle: {
 	  height: 40,

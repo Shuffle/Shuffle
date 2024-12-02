@@ -49,6 +49,7 @@ import MFASetUp from './components/MFASetUP.jsx';
 import ApiExplorerWrapper from './views/ApiExplorerWrapper.jsx';
 import LeftSideBar from './components/LeftSideBar.jsx';
 import CodeWorkflow from './views/CodeWorkflow.jsx';
+import NotFound from './views/404.jsx';
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -679,7 +680,15 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-				</Routes>
+
+			<Route
+				exact
+				path="/*"
+				element={
+					<NotFound />
+				}
+			/>
+		</Routes>
       </div>
 
   return (

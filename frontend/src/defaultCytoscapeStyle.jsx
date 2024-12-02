@@ -58,7 +58,7 @@ const data = [
       "curve-style": "unbundled-bezier",
       label: "data(label)",
       "text-margin-y": "-15px",
-      width: "5px",
+      width: "3px",
       color: "white",
       "line-fill": "linear-gradient",
       "line-gradient-stop-positions": ["0.0", "100"],
@@ -296,7 +296,7 @@ const data = [
     selector: "node[!is_valid]",
     css: {
       "border-color": "#f53434",
-      "border-width": "10px",
+      "border-width": "5px",
     },
   },
   {

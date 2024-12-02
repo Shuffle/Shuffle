@@ -985,7 +985,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               </span>
             </Button>
 	  		</Link>
-	  		<Link to="/workflows" style={hrefStyle}>
+	  		<Link to="/workflows2" style={hrefStyle}>
             <Button
               onClick={(event) => {
                 setCurrentOpenTab("workflows");
@@ -1015,7 +1015,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               </span>
             </Button>
 	  		</Link> 
-	  		<Link to="/search?tab=org_apps" style={hrefStyle}>
+	  		<Link to="/apps2" style={hrefStyle}>
             <Button
               onClick={(event) => {
                 setCurrentOpenTab("apps");
