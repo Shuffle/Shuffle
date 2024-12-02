@@ -323,7 +323,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
           fontFamily: "Inter"
         }}
       >
-        <Typography variant="h5" component="div" sx={{ fontWeight: 500, color: "#F1F1F1" }}>
+        <Typography component="div" sx={{ fontWeight: 500, color: "#F1F1F1", fontSize: "22px" }}>
           About {app?.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
         </Typography>
         <IconButton
@@ -359,7 +359,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
                 display: "flex",
                 flexDirection: "row",
               }}>
-                <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
+                <Typography variant="h5" component="div" sx={{ fontWeight: 600 }}>
                   {newAppname}
                 </Typography>
                 {

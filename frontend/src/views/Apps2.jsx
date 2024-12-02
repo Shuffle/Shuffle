@@ -13,13 +13,21 @@ import {
   CircularProgress,
   Checkbox,
   Skeleton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
 } from "@mui/material";
 import { Context } from "../context/ContextApi.jsx";
 import Add from '@mui/icons-material/Add';
+import CachedIcon from '@mui/icons-material/Cached';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import EditIcon from '@mui/icons-material/Edit';
 import InputAdornment from '@mui/material/InputAdornment';
 import Search from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
+import CloseIcon from '@mui/icons-material/Close';
 
 import { ClearRefinements, connectHits, connectSearchBox, connectStateResults, InstantSearch, RefinementList, connectRefinementList, Configure } from "react-instantsearch-dom";
 import { removeQuery } from "../components/ScrollToTop.jsx";
@@ -147,7 +155,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                 }}>
                   {
                     canEditApp && (
-                      <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <EditIcon />
                       </button>
                     )
@@ -158,7 +166,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                       // marginLeft: 15,
                       width: 102,
                       height: 35,
-                      borderRadius: 6,
+                      borderRadius: 3,
                       backgroundColor: "rgba(73, 73, 73, 1)",
                       color: "rgba(241, 241, 241, 1)",
                       textTransform: "none",
@@ -391,7 +399,7 @@ const Hits = ({
                               flexDirection: "row",
                               overflow: "hidden",
                               gap: 8,
-                              fontWeight:600,
+                              fontWeight: 600,
                               textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
                               color: '#F1F1F1'
@@ -765,14 +773,14 @@ const AppSkeleton = () => {
         width: "100%",
         height: "100%"
       }}>
-        <Skeleton 
-          variant="rectangular" 
-          width={100} 
-          height={90} 
-          style={{ 
+        <Skeleton
+          variant="rectangular"
+          width={100}
+          height={90}
+          style={{
             borderRadius: 6,
-            backgroundColor: "rgba(255, 255, 255, 0.1)" 
-          }} 
+            backgroundColor: "rgba(255, 255, 255, 0.1)"
+          }}
         />
         <div style={{
           display: "flex",
@@ -781,23 +789,23 @@ const AppSkeleton = () => {
           flex: 1,
           gap: 6
         }}>
-          <Skeleton 
-            variant="text" 
-            width="40%" 
+          <Skeleton
+            variant="text"
+            width="40%"
             height={24}
-            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }} 
+            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
           />
-          <Skeleton 
-            variant="text" 
-            width="60%" 
+          <Skeleton
+            variant="text"
+            width="60%"
             height={20}
-            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }} 
+            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
           />
-          <Skeleton 
-            variant="text" 
-            width="30%" 
+          <Skeleton
+            variant="text"
+            width="30%"
             height={20}
-            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }} 
+            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
           />
         </div>
       </div>
@@ -827,7 +835,7 @@ const LoadingGrid = () => {
 
 // Main Apps Component
 const Apps2 = (props) => {
-  const { globalUrl, isLoaded, serverside, userdata, isLoggedIn, checkLogin } = props;
+  const { globalUrl, isLoaded, serverside, userdata, isLoggedIn, checkLogin, isCloud } = props;
   let navigate = useNavigate();
   const { leftSideBarOpenByClick } = useContext(Context);
   const location = useLocation();
@@ -850,6 +858,20 @@ const Apps2 = (props) => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [appFramework, setAppFramework] = useState(undefined);
   const [defaultSearch, setDefaultSearch] = useState("");
+
+  const [apps, setApps] = useState([]);
+  const [filteredApps, setFilteredApps] = useState([]);
+  const [appSearchLoading, setAppSearchLoading] = useState(false);
+  const [creatorProfile, setCreatorProfile] = useState({});
+  const [openApi, setOpenApi] = React.useState("");
+  const [loadAppsModalOpen, setLoadAppsModalOpen] = useState(false);
+  const [downloadBranch, setDownloadBranch] = useState("master");
+  const [field1, setField1] = useState("");
+  const [field2, setField2] = useState("");
+  const [validation, setValidation] = useState(null);
+
+  const baseRepository = "https://github.com/frikky/shuffle-apps";
+
   // Set the current tab based on the query parameter
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -965,12 +987,466 @@ const Apps2 = (props) => {
     }
   }, [currTab, appsToShow])
 
+  const getUserProfile = (username) => {
+    if (serverside === true || !isCloud) {
+      setCreatorProfile({})
+      return;
+    }
+
+    fetch(`${globalUrl}/api/v1/users/creators/${username}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for WORKFLOW EXECUTION :O!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success !== false) {
+          console.log("creator profile: ", responseJson)
+          setCreatorProfile(responseJson);
+        } else {
+          setCreatorProfile({})
+        }
+      })
+      .catch((error) => {
+        console.log(error);
+        setCreatorProfile({})
+      });
+  };
 
   useEffect(() => {
     if (serverside) {
       return null;
     }
   }, [serverside]);
+
+  const getApps = () => {
+    // Get apps from localstorage
+    var storageApps = []
+    try {
+      const appstorage = localStorage.getItem("apps")
+      storageApps = JSON.parse(appstorage)
+      if (storageApps === null || storageApps === undefined || storageApps.length === 0) {
+        storageApps = []
+      } else {
+        setApps(storageApps)
+        setFilteredApps(storageApps)
+        setAppSearchLoading(false)
+      }
+    } catch (e) {
+      //console.log("Failed to get apps from localstorage: ", e)
+    }
+
+    fetch(globalUrl + "/api/v1/apps", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        setIsLoading(false);
+        if (response.status !== 200) {
+          console.log("Status not 200 for apps :O!");
+
+          //if (isCloud) {
+          //  window.location.pathname = "/search";
+          //}
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        //responseJson = sortByKey(responseJson, "large_image")
+        //responseJson = sortByKey(responseJson, "is_valid")
+        //setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
+        console.log("responseJson: from getApps ", responseJson)
+        var privateapps = [];
+        var valid = [];
+        var invalid = [];
+        for (var key in responseJson) {
+          const app = responseJson[key];
+          if (app.is_valid && !(!app.activated && app.generated)) {
+            privateapps.push(app);
+          } else if (
+            app.private_id !== undefined &&
+            app.private_id.length > 0
+          ) {
+            valid.push(app);
+          } else {
+            invalid.push(app);
+          }
+        }
+
+        //console.log(privateapps)
+        //console.log(valid)
+        //console.log(invalid)
+        //console.log(privateapps)
+        //privateapps.reverse()
+        privateapps.push(...valid);
+        privateapps.push(...invalid);
+        console.log("privateapps: setting apps ", privateapps)
+        setApps(privateapps);
+        // setCursearch("");
+
+        //handleSearchChange(event.target.value)
+        //setCursearch(event.target.value)
+        setFilteredApps(privateapps);
+        if (privateapps.length > 0) {
+          if (selectedApp.id === undefined || selectedApp.id === null) {
+            if (privateapps[0].owner !== undefined && privateapps[0].owner !== null) {
+              getUserProfile(privateapps[0].owner);
+            }
+
+            // setContact(privateapps[0].contact_info)
+
+            // setSelectedApp(privateapps[0]);
+            // setSharingConfiguration(privateapps[0].sharing === true ? "public" : "you")
+          }
+
+          // if (
+          //   privateapps[0].actions !== null &&
+          //   privateapps[0].actions.length > 0
+          // ) {
+          //   setSelectedAction(privateapps[0].actions[0]);
+          // } else {
+          //   setSelectedAction({});
+          // }
+        }
+
+        if (privateapps.length > 0 && storageApps.length === 0) {
+          try {
+            localStorage.setItem("apps", JSON.stringify(privateapps))
+          } catch (e) {
+            console.log("Failed to set apps in localstorage: ", e)
+          }
+        }
+
+        //setTimeout(() => {
+        //	setFirstLoad(false)
+        //}, 5000)
+      })
+      .catch((error) => {
+        toast(error.toString());
+        setIsLoading(false);
+      });
+  };
+
+
+  // Locally hotloads app from folder
+  const hotloadApps = () => {
+    toast("Hotloading apps from location in .env");
+    setIsLoading(true);
+    fetch(globalUrl + "/api/v1/apps/run_hotload", {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        setIsLoading(false);
+        if (response.status === 200) {
+          //toast("Hotloaded apps!")
+          getApps();
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success === true) {
+          toast("Successfully finished hotload");
+        } else {
+          toast("Failed hotload: ", responseJson.reason);
+          //(responseJson.reason !== undefined && responseJson.reason.length > 0) {
+        }
+      })
+      .catch((error) => {
+        toast(error.toString());
+      });
+  };
+
+
+  // Load data e.g. from github
+  const getSpecificApps = (url, forceUpdate) => {
+    setValidation(true);
+
+    setIsLoading(true);
+    //start()
+
+    const parsedData = {
+      url: url,
+      branch: downloadBranch || "master",
+    };
+
+    if (field1.length > 0) {
+      parsedData["field_1"] = field1;
+    }
+
+    if (field2.length > 0) {
+      parsedData["field_2"] = field2;
+    }
+
+    parsedData["force_update"] = forceUpdate;
+
+    toast("Getting specific apps from your URL.");
+    var cors = "cors";
+    fetch(globalUrl + "/api/v1/apps/get_existing", {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        Accept: "application/json",
+      },
+      body: JSON.stringify(parsedData),
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status === 200) {
+          toast("Loaded existing apps!");
+        }
+
+        //stop()
+        setIsLoading(false);
+        setValidation(false);
+        return response.json();
+      })
+      .then((responseJson) => {
+        console.log("DATA: ", responseJson);
+        if (responseJson.reason !== undefined) {
+          toast("Failed loading: " + responseJson.reason);
+        }
+      })
+      .catch((error) => {
+        console.log("ERROR: ", error.toString());
+        //toast(error.toString());
+        //stop()
+        
+				setIsLoading(false);
+        setValidation(false);
+      });
+  };
+
+  const handleGithubValidation = (forceUpdate) => {
+    getSpecificApps(openApi, forceUpdate);
+    setLoadAppsModalOpen(false);
+  };
+
+
+  const appsModalLoad = loadAppsModalOpen ? (
+    <Dialog
+      open={loadAppsModalOpen}
+      onClose={() => {
+        setOpenApi("");
+        setLoadAppsModalOpen(false);
+        setField1("");
+        setField2("");
+      }}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          border: "1px solid #494949",
+          minWidth: '440px',
+          fontFamily: "Inter",
+          backgroundColor: "#212121",
+          zIndex: 1000,
+          '& .MuiDialogContent-root': {
+            backgroundColor: "#212121",
+          },
+          '& .MuiDialogTitle-root': {
+            backgroundColor: "#212121",
+          },
+          '& .MuiTypography-root': {
+            fontFamily: 'Inter, sans-serif',
+          },
+          '& .MuiButton-root': {
+            fontFamily: 'Inter, sans-serif',
+          },
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          pb: 2,
+          pt: 2,
+          pl: 3,
+          pr: 2,
+        }}
+      >
+        <Typography component="div" sx={{ fontWeight: 500, color: "#F1F1F1", fontSize: "22px" }}>
+          Load from Github Repository
+        </Typography>
+        <IconButton
+          onClick={() => {
+            setOpenApi("");
+            setLoadAppsModalOpen(false);
+            setField1("");
+            setField2("");
+          }}
+          sx={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ py: 3, px: 3 }}>
+        <Typography variant="body1" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
+          Repository (supported: github, gitlab, bitbucket)
+        </Typography>
+        <TextField
+          fullWidth
+          variant="outlined"
+          defaultValue="https://github.com/frikky/shuffle-apps"
+          placeholder="https://github.com/frikky/shuffle-apps"
+          value={openApi}
+          onChange={(e) => setOpenApi(e.target.value)}
+          sx={{
+            mb: 3,
+            '& .MuiOutlinedInput-root': {
+              color: 'white',
+              height: '50px',
+              '& fieldset': {
+                borderColor: 'rgba(255, 255, 255, 0.23)',
+              },
+            },
+          }}
+        />
+
+        <Typography variant="body1" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
+          Branch (default value is "master")
+        </Typography>
+        <TextField
+          fullWidth
+          variant="outlined"
+          value={downloadBranch}
+          onChange={(e) => setDownloadBranch(e.target.value)}
+          placeholder="master"
+          sx={{
+            mb: 3,
+            '& .MuiOutlinedInput-root': {
+              color: 'white',
+              height: '50px',
+              '& fieldset': {
+                borderColor: 'rgba(255, 255, 255, 0.23)',
+              },
+            },
+          }}
+        />
+
+        <Typography variant="body1" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
+          Authentication (optional - private repos etc)
+        </Typography>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            type="text"
+            placeholder="Username / APIkey (optional)"
+            value={field1}
+            onChange={(e) => setField1(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                color: 'white',
+                height: '50px',
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)',
+                },
+              },
+            }}
+          />
+          <TextField
+            fullWidth
+            variant="outlined"
+            type="password"
+            placeholder="Password (optional)"
+            value={field2}
+            onChange={(e) => setField2(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                color: 'white',
+                height: '50px',
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.23)',
+                },
+              },
+            }}
+          />
+        </div>
+      </DialogContent>
+      <DialogActions sx={{ p: 3,
+        backgroundColor: "#212121"
+       }}>
+        <Button
+          variant="contained"
+          sx={{
+            bgcolor: '#494949',
+            '&:hover': { bgcolor: '#494949' },
+            textTransform: 'none',
+            borderRadius: 1,
+            py: 1,
+            px: 3,
+            color: "#fff",
+            fontFamily: "Inter"
+          }}
+          onClick={() => setLoadAppsModalOpen(false)}
+        >
+          Cancel
+        </Button>
+        {!isCloud && (
+          <Button
+            variant="contained"
+            sx={{
+              bgcolor: '#494949',
+              '&:hover': { bgcolor: '#494949' },
+              textTransform: 'none',
+              borderRadius: 1,
+              py: 1,
+              px: 3,
+              color: "#fff",
+              fontFamily: "Inter"
+            }}
+            disabled={openApi.length === 0 || !openApi.includes("http")}
+            onClick={() => handleGithubValidation(true)}
+          >
+            Force Update
+          </Button>
+        )}
+        <Button
+          variant="contained"
+          sx={{
+            bgcolor: '#FF8544',
+            '&:hover': { bgcolor: '#FF8544' },
+            textTransform: 'none',
+            borderRadius: 1,
+            py: 1,
+            px: 3,
+            color: "black",
+            fontFamily: "Inter"
+          }}
+          disabled={openApi.length === 0 || !openApi.includes("http")}
+          onClick={() => handleGithubValidation(false)}
+        >
+          Submit
+        </Button>
+      </DialogActions>
+    </Dialog>
+  ) : null;
 
 
   const findTopCategories = () => {
@@ -1043,7 +1519,7 @@ const Apps2 = (props) => {
 
   const handleTabChange = (event, newTab) => {
     setCurrTab(newTab);
-    
+
     // Apply filters immediately when changing tabs
     if (newTab === 0) {
       const filteredOrgApps = filterApps(orgApps, searchQuery, selectedCategory, selectedLabel);
@@ -1059,17 +1535,17 @@ const Apps2 = (props) => {
       1: 'my_apps',
       2: 'all_apps'
     };
-    
+
     const queryParams = new URLSearchParams(location.search);
     queryParams.set('tab', tabMapping[newTab]);
-    
+
     // Maintain search query in URL regardless of tab
     if (searchQuery) {
       queryParams.set('q', searchQuery);
     } else {
       queryParams.delete('q');
     }
-    
+
     navigate(`${location.pathname}?${queryParams.toString()}`);
   };
 
@@ -1148,10 +1624,98 @@ const Apps2 = (props) => {
           userdata={userdata}
           globalUrl={globalUrl}
         />
+        {appsModalLoad}
         <div style={boxStyle}>
-          <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: "Inter" }}>
-            Apps
-          </Typography>
+          <div style={{ display: "flex", flexDirection: "row", width: "100%", justifyContent: "space-between" }}>
+            <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: "Inter" }}>
+              Apps
+            </Typography>
+            {isCloud ? null : (
+              <span style={{ display: "flex", gap: 15 }}>
+                {userdata === undefined || userdata === null || isLoading ? null : (
+                  <Tooltip
+                    title={"Reload apps locally"}
+                    style={{ marginTop: "28px" }}
+                    placement="bottom"
+                    componentsProps={{
+                      tooltip: {
+                        sx: {
+                          backgroundColor: "rgba(33, 33, 33, 1)",
+                          color: "rgba(241, 241, 241, 1)",
+                          fontSize: 14,
+                          border: "1px solid rgba(73, 73, 73, 1)",
+                          fontFamily: "Inter"
+                        }
+                      }
+                    }}
+                  >
+                    <Button
+                      variant="contained"
+                      style={{
+                        height: 45,
+                        minWidth: 45,
+                        backgroundColor: "#2F2F2F",
+                        borderRadius: 8,
+                        padding: "8px 16px",
+                      }}
+                      disabled={isLoading}
+                      onClick={() => {
+                        hotloadApps();
+                      }}
+                    >
+                      {isLoading ? (
+                        <CircularProgress size={20} style={{ color: "#FF8544" }} />
+                      ) : (
+                        <CachedIcon style={{ color: "#F1F1F1" }} />
+                      )}
+                    </Button>
+                  </Tooltip>
+                )}
+
+                {userdata === undefined || userdata === null || userdata.admin === "false" ? null :
+                  <Tooltip
+                    title={"Download from Github"}
+                    style={{ marginTop: "28px" }}
+                    placement="bottom"
+                    componentsProps={{
+                      tooltip: {
+                        sx: {
+                          backgroundColor: "rgba(33, 33, 33, 1)",
+                          color: "rgba(241, 241, 241, 1)",
+                          fontSize: 14,
+                          border: "1px solid rgba(73, 73, 73, 1)",
+                          fontFamily: "Inter"
+                        }
+                      }
+                    }}
+                  >
+                    <Button
+                      variant="contained"
+                      style={{
+                        height: 45,
+                        minWidth: 45,
+                        backgroundColor: "#2F2F2F",
+                        borderRadius: 8,
+                        padding: "8px 16px",
+                      }}
+                      disabled={isLoading}
+                      onClick={() => {
+                        console.log("opening modal")
+                        setOpenApi(baseRepository);
+                        setLoadAppsModalOpen(true);
+                      }}
+                    >
+                      {isLoading ? (
+                        <CircularProgress size={20} style={{ color: "#FF8544" }} />
+                      ) : (
+                        <CloudDownloadIcon style={{ color: "#F1F1F1" }} />
+                      )}
+                    </Button>
+                  </Tooltip>
+                }
+              </span>
+            )}
+          </div>
           <div style={{ borderBottom: '1px solid gray', marginBottom: 30, marginRight: 10 }}>
             <Tabs
               value={currTab}
