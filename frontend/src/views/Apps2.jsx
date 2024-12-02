@@ -1037,9 +1037,11 @@ const Apps2 = (props) => {
       if (storageApps === null || storageApps === undefined || storageApps.length === 0) {
         storageApps = []
       } else {
+        setAppsToShow(storageApps)
+        setOrgApps(storageApps)
         setApps(storageApps)
-        setFilteredApps(storageApps)
-        setAppSearchLoading(false)
+        // setFilteredApps(storageApps)
+        // setAppSearchLoading(false)
       }
     } catch (e) {
       //console.log("Failed to get apps from localstorage: ", e)
@@ -1095,12 +1097,14 @@ const Apps2 = (props) => {
         privateapps.push(...valid);
         privateapps.push(...invalid);
         console.log("privateapps: setting apps ", privateapps)
+        setAppsToShow(privateapps);
+        setOrgApps(privateapps);
         setApps(privateapps);
         // setCursearch("");
 
         //handleSearchChange(event.target.value)
         //setCursearch(event.target.value)
-        setFilteredApps(privateapps);
+        // setFilteredApps(privateapps);
         if (privateapps.length > 0) {
           if (selectedApp.id === undefined || selectedApp.id === null) {
             if (privateapps[0].owner !== undefined && privateapps[0].owner !== null) {
@@ -1141,7 +1145,6 @@ const Apps2 = (props) => {
       });
   };
 
-
   // Locally hotloads app from folder
   const hotloadApps = () => {
     toast("Hotloading apps from location in .env");
@@ -1167,12 +1170,13 @@ const Apps2 = (props) => {
         if (responseJson.success === true) {
           toast("Successfully finished hotload");
         } else {
-          toast("Failed hotload: ", responseJson.reason);
+          console.log("failed hotload: ", responseJson)
+          // toast(`Failed hotload: ${responseJson.reason}`);
           //(responseJson.reason !== undefined && responseJson.reason.length > 0) {
         }
       })
       .catch((error) => {
-        toast(error.toString());
+        toast(`Failed hotload: ${error.toString()}`);
       });
   };
 
