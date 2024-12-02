@@ -4037,7 +4037,7 @@ const Workflows2 = (props) => {
                             >
                                 <Tab label="Organization Workflows" style={{ textTransform: 'none', marginRight: 20 }} />
                                 <Tab label="My Workflows" style={{ textTransform: 'none', marginRight: 20 }} />
-                                <Tab label="Discover Workflow" style={{ textTransform: 'none' }} />
+                                <Tab label="Discover Workflows" style={{ textTransform: 'none' }} />
                             </Tabs>
                         </div>
 

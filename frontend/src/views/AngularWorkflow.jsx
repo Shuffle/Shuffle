@@ -422,7 +422,7 @@ const AngularWorkflow = (defaultprops) => {
   const [subworkflow, setSubworkflow] = React.useState({});
   const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
   const [leftViewOpen, setLeftViewOpen] = React.useState(isMobile ? false : true);
-  const [leftBarSize, setLeftBarSize] = React.useState(isMobile ? 0 : 265)
+  const [leftBarSize, setLeftBarSize] = React.useState(isMobile ? 0 : 255)
   const [creatorProfile, setCreatorProfile] = React.useState({});
   const [usecases, setUsecases] = React.useState([]);
   const [files, setFiles] = React.useState({
@@ -9029,7 +9029,7 @@ const releaseToConnectLabel = "Release to Connect"
       });
   };
 
-  const parsedHeight = isMobile ? bodyHeight - appBarSize * 4 :  bodyHeight - 65; 
+  const parsedHeight = isMobile ? bodyHeight - appBarSize * 4 :  bodyHeight - 57 
   const appViewStyle = {
     marginLeft: 5,
     marginRight: 5,
@@ -9351,8 +9351,8 @@ const releaseToConnectLabel = "Release to Connect"
     }
 
     const tabStyle = {
-      maxWidth: isMobile ? leftBarSize : leftBarSize / 3,
-      minWidth: isMobile ? leftBarSize : leftBarSize / 3,
+      maxWidth: isMobile ? leftBarSize : leftBarSize / 2,
+      minWidth: isMobile ? leftBarSize : leftBarSize / 2,
       flex: 1,
       textTransform: "none",
     };
@@ -9383,6 +9383,7 @@ const releaseToConnectLabel = "Release to Connect"
           style={{}}
         >
           <Tab
+			value={0}
             label={
               <Grid container direction="row" alignItems="center">
                 <Grid item>
@@ -9393,7 +9394,9 @@ const releaseToConnectLabel = "Release to Connect"
             }
             style={tabStyle}
           />
+		  {/*
           <Tab
+			value={1}
             label={
               <Grid container direction="row" alignItems="center">
                 <Grid item>
@@ -9410,13 +9413,15 @@ const releaseToConnectLabel = "Release to Connect"
 			  padding: 0, 
 			}}
           />
+		  */}
           <Tab
+			value={2}
             label={
               <Grid container direction="row" alignItems="center">
                 <Grid item>
                   <FavoriteBorderIcon style={iconStyle} />
                 </Grid>
-                {isMobile ? null : <Grid item>Vars</Grid>}
+                {isMobile ? null : <Grid item>Variables</Grid>}
               </Grid>
             }
             style={tabStyle}
@@ -9610,14 +9615,12 @@ const releaseToConnectLabel = "Release to Connect"
 				return true
 			})
 
-			console.log("NEWENV: ", environments, newenv)
 			if (newenv !== undefined && newenv !== null) {
 				newAppData.environment = newenv.Name
 			} else {
 				newAppData.environment = ""
 			}
 		}
-	    console.log("NEW DATA: ", newAppData)
 
         // Can all the data be in here? hmm
         const nodeToBeAdded = {
@@ -9773,8 +9776,8 @@ const releaseToConnectLabel = "Release to Connect"
   const barHeight = bodyHeight - appBarSize - 50;
   const appScrollStyle = {
     overflow: "scroll",
-    maxHeight: isMobile ? bodyHeight - appBarSize * 4 : barHeight,
-    minHeight: isMobile ? bodyHeight - appBarSize * 4 : barHeight,
+    maxHeight: isMobile ? bodyHeight - appBarSize * 4 : barHeight-300,
+    minHeight: isMobile ? bodyHeight - appBarSize * 4 : barHeight-300,
     marginTop: 1,
     overflowY: "auto",
     overflowX: "hidden",
@@ -9782,6 +9785,7 @@ const releaseToConnectLabel = "Release to Connect"
 
   const handleAppDrag = (e, app) => {
     const cycontainer = cy.container()
+
 
 	// Handling drag of public apps
 	if (app.objectID !== undefined && app.objectID !== null && app.objectID.length > 0) {
@@ -9805,20 +9809,14 @@ const releaseToConnectLabel = "Release to Connect"
 		return
 	}
 
-    //console.log("e: ", e)
-    //console.log("Offset: ", cycontainer)
-
     // HTML -> Canvas overlap check
     if (e.pageX > cycontainer.offsetLeft && e.pageX < cycontainer.offsetLeft + cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop && e.pageY < cycontainer.offsetTop + cycontainer.offsetHeight) {
       if (newNodeId.length > 0) {
         var currentnode = cy.getElementById(newNodeId);
-        if (
-          currentnode === undefined ||
-          currentnode === null ||
-          currentnode.length === 0
-        ) {
+        if (currentnode === undefined || currentnode === null || currentnode.length === 0) {
           return
         }
+
 
         currentnode[0].renderedPosition("x", e.pageX - cycontainer.offsetLeft)
         currentnode[0].renderedPosition("y", e.pageY - cycontainer.offsetTop)
@@ -9990,8 +9988,9 @@ const releaseToConnectLabel = "Release to Connect"
         cy.add(nodeToBeAdded);
         return;
       }
-    }
-  };
+    } else {
+	}
+  }
 
   const AppView = (props) => {
     const { allApps, prioritizedApps, filteredApps, extraApps } = props;
@@ -10076,7 +10075,6 @@ const releaseToConnectLabel = "Release to Connect"
 			
       const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle))
       const pixelSize = !hover ? "2px" : "4px";
-      //newAppStyle.borderLeft = app.is_valid && app.actions !== null && app.actions !== undefined && app.actions.length > 0 && !(app.activated && app.generated)
       newAppStyle.borderLeft = app.is_valid && app.actions !== null && app.actions !== undefined && app.actions.length > 0
         ? `${pixelSize} solid ${green}`
         : `${pixelSize} solid ${yellow}`;
@@ -10097,11 +10095,12 @@ const releaseToConnectLabel = "Release to Connect"
 		  newAppStyle.maxWidth = newAppStyle.width 
 
 		  // Transparent background on paper
-		  newAppStyle.backgroundColor = "transparent"
 		  newAppStyle.border = hover ? "1px solid " + theme?.palette.main : "1px solid transparent"
 
 		  // If action is set, look for the icon of it with the normal setup
 	  }
+		
+	  newAppStyle.backgroundColor = theme.palette.backgroundColor
 
       return (
         <Draggable
@@ -10112,8 +10111,8 @@ const releaseToConnectLabel = "Release to Connect"
             handleDragStop(e, app)
           }}
           key={app.id}
+		  dragging={false}
         >
-		  <Tooltip title={(actionString?.replaceAll("_", " "))} placement="top" disabled={small !== true}>
           <Paper
             square
             style={newAppStyle}
@@ -10220,11 +10219,12 @@ const releaseToConnectLabel = "Release to Connect"
               }
             }}
           >
+		    <Tooltip title={(actionString?.replaceAll("_", " "))} placement="top" disabled={small !== true}>
             <Grid
               container
               style={{ display: "flex", margin: 5, flex: "10" }}
             >
-              <Grid item>
+              <Grid item style={{}}>
                 <img
 		  		  id={`image_${props?.index}`}
                   src={image}
@@ -10252,13 +10252,13 @@ const releaseToConnectLabel = "Release to Connect"
                 />
               </Grid>
               {isMobile || small === true ? null :
-                <Grid
+                <Grid item
                   style={{
                     display: "flex",
                     flexDirection: "column",
                     marginLeft: "20px",
-                    minWidth: 185,
-                    maxWidth: 185,
+                    minWidth: 150,
+                    maxWidth: 150,
                     overflow: "hidden",
                     maxHeight: 77,
                   }}
@@ -10270,7 +10270,7 @@ const releaseToConnectLabel = "Release to Connect"
                       style={{ 
 						  marginBottom: 0, 
 						  marginLeft: 5, 
-						  marginTop: newAppname.length > 20 ? -1 : 12, 
+						  marginTop: newAppname.length > 17 ? -3 : 8, 
 					  }}
                     >
                       {newAppname}
@@ -10279,8 +10279,8 @@ const releaseToConnectLabel = "Release to Connect"
                 </Grid>
               }
             </Grid>
+		  	</Tooltip> 
           </Paper>
-		  </Tooltip> 
         </Draggable>
       );
     };
@@ -10591,7 +10591,7 @@ const releaseToConnectLabel = "Release to Connect"
             }}
             fullWidth
             color="primary"
-            placeholder={"Search apps"}
+            placeholder={"Search apps, triggers..."} 
             id="appsearch"
             onKeyPress={(event) => {
               if (event.key === "Enter") {
@@ -10608,7 +10608,7 @@ const releaseToConnectLabel = "Release to Connect"
             }}
           />
 
-		  {shuffleToolsApp !== undefined && shuffleToolsApp !== null ?
+		  {shuffleToolsApp !== undefined && shuffleToolsApp !== null && document?.getElementById("appsearch")?.value?.length === 0 ?
 			  <div style={{marginBottom: 25, }}>
 				<Typography variant="body1" color="textSecondary" style={{marginTop: 20, marginLeft: 5, }}>
 					Popular Actions
@@ -10638,23 +10638,29 @@ const releaseToConnectLabel = "Release to Connect"
 			  </div>
 		  : null}
 
-		  <div style={{marginBottom: 25, }}>
-			<Typography variant="body1" color="textSecondary" style={{marginTop: 20, marginLeft: 5, }}>
-				Triggers
-			</Typography> 
-			<div style={{
-				display: "flex", 
-			}}>
-				{triggers.map((trigger, index) => {
-					return(
-						<span>
-							<ParsedAppPaper small={true} action={"trigger"} app={JSON.parse(JSON.stringify(trigger))} />
-							{index !== triggers.length - 1 ? <div style={{marginLeft: 5, }}/> : null}
-						</span>
-					)
-				})}
-			</div>
-		  </div>
+		  {document?.getElementById("appsearch")?.value?.length === 0 ?
+			  <div style={{marginBottom: 25, }}>
+				<Typography variant="body1" color="textSecondary" style={{marginTop: 20, marginLeft: 5, }}>
+					Triggers
+				</Typography> 
+				<div style={{
+					display: "flex", 
+				}}>
+					{triggers.map((trigger, index) => {
+						if (trigger.trigger_type === "PIPELINE") {  
+							return null
+						}
+
+
+						return(
+							<div style={{marginLeft: index !== 0 ? 5 : 0, }}>
+								<ParsedAppPaper small={true} action={trigger.name} app={JSON.parse(JSON.stringify(trigger))} />
+							</div>
+						)
+					})}
+				</div>
+			  </div>
+		  : null}
 
 		  <Typography variant="body1" color="textSecondary" style={{marginTop: 20, marginLeft: 5, }}>
 			Your Apps
@@ -10676,6 +10682,11 @@ const releaseToConnectLabel = "Release to Connect"
 
 				if (viewedApps.includes(app.id)) {
 					return null
+				}
+
+				if (app.trigger_type !== undefined && app.trigger_type !== null && app.trigger_type.length > 0) { 
+					app.is_valid = true
+					app.actions = [{"name": "empty"}]
 				}
 
 				viewedApps.push(app.id)
@@ -13556,6 +13567,14 @@ const releaseToConnectLabel = "Release to Connect"
                       color: "white",
                     },
                   }}
+				  sx={{
+				    '& .MuiOutlinedInput-root': {
+				      height: 40, // Adjust the input height
+				    },
+				    '& .MuiAutocomplete-input': {
+				      padding: '8px', // Adjust the text padding
+				    },
+				  }}
                   getOptionSelected={(option, value) => option.id === value.id}
                   getOptionLabel={(option) => {
                     if (
@@ -13642,10 +13661,7 @@ const releaseToConnectLabel = "Release to Connect"
                   renderInput={(params) => {
                     return (
                       <TextField
-                        style={{
-                          backgroundColor: theme.palette.inputColor,
-                          borderRadius: theme.palette?.borderRadius,
-                        }}
+						style={theme.palette.textFieldStyle}
                         {...params}
                         label="Find your workflow"
                         variant="outlined"
@@ -13684,6 +13700,14 @@ const releaseToConnectLabel = "Release to Connect"
                         color: "white",
                       },
                     }}
+					  sx={{
+						'& .MuiOutlinedInput-root': {
+						  height: 40, // Adjust the input height
+						},
+						'& .MuiAutocomplete-input': {
+						  padding: '8px', // Adjust the text padding
+						},
+					  }}
                     getOptionSelected={(option, value) => option.id === value.id}
                     getOptionLabel={(option) => {
                       if (option === undefined || option === null || option.label === undefined || option.label === null) {
@@ -13748,10 +13772,7 @@ const releaseToConnectLabel = "Release to Connect"
                     renderInput={(params) => {
                       return (
                         <TextField
-                          style={{
-                            backgroundColor: theme.palette.inputColor,
-                            borderRadius: theme.palette?.borderRadius,
-                          }}
+						  style={theme.palette.textFieldStyle}
                           {...params}
                           label="Select a start-node (optional)"
                           variant="outlined"
@@ -13773,10 +13794,7 @@ const releaseToConnectLabel = "Release to Connect"
                 </div>
               </div>
               <TextField
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette?.borderRadius,
-                }}
+                style={theme.palette.textFieldStyle}
                 InputProps={{
                   style: {
                   },
@@ -14486,13 +14504,9 @@ const releaseToConnectLabel = "Release to Connect"
           />
           <div>Name</div>
           <TextField
-            style={{
-              backgroundColor: theme.palette.inputColor,
-              borderRadius: theme.palette?.borderRadius,
-            }}
+			style={theme.palette.textFieldStyle}
             InputProps={{
-              style: {
-              },
+			  style: theme.palette.innerTextfieldStyle,
             }}
             fullWidth
             color="primary"
@@ -14512,6 +14526,14 @@ const releaseToConnectLabel = "Release to Connect"
                     color: "white",
                   },
                 }}
+				sx={{
+					'& .MuiOutlinedInput-root': {
+					  height: 40, // Adjust the input height
+					},
+					'& .MuiAutocomplete-input': {
+					  padding: '8px', // Adjust the text padding
+					},
+				  }}
                 filterOptions={(options, { inputValue }) => {
                   const lowercaseValue = inputValue.toLowerCase()
                   options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
@@ -14605,12 +14627,12 @@ const releaseToConnectLabel = "Release to Connect"
                 renderInput={(params) => {
                   return (
                     <TextField
+            		  InputProps={{
+					    style: theme.palette.innerTextfieldStyle,
+            		  }}
                       color="primary"
                       variant="body1"
-                      style={{
-                        backgroundColor: theme.palette.inputColor,
-                        borderRadius: theme.palette?.borderRadius,
-                      }}
+					  style={theme.palette.textFieldStyle}
                       {...params}
                       label="Find Associated App (optional)"
                       variant="outlined"
@@ -15367,6 +15389,14 @@ const releaseToConnectLabel = "Release to Connect"
               	        color: "white",
               	      },
               	    }}
+					sx={{
+					  '& .MuiOutlinedInput-root': {
+						height: 40, // Adjust the input height
+					  },
+					  '& .MuiAutocomplete-input': {
+						padding: '8px', // Adjust the text padding
+					  },
+					}}
               	    getOptionSelected={(option, value) => option.id === value.id}
               	    getOptionLabel={(option) => {
               	      if (option === undefined || option === null || option.name === undefined || option.name === null) {
@@ -16882,6 +16912,7 @@ const releaseToConnectLabel = "Release to Connect"
   		</Typography>
   		<Typography
   			variant="body2"
+			color="textSecondary"
   		>
   			{workflow.errors.slice(0,3).map((error) => {
 				// Loop through each word, and if it matches "Action <name> " then replace it with a link to the action
@@ -17174,7 +17205,7 @@ const releaseToConnectLabel = "Release to Connect"
     }
 
     const buttonHeights = 45 
-    const boxSize = buttonHeights+5
+    const boxSize = buttonHeights
     const executionButton = executionRunning ? (
       <Tooltip color="primary" title="Stop execution" placement="top">
         <span>
@@ -17224,8 +17255,32 @@ const releaseToConnectLabel = "Release to Connect"
             flexDirection: isMobile ? "column" : "row",
           }}
         >
-			<ButtonGroup>
+			<ButtonGroup
+				style={{
+					borderTop: "1px solid rgba(74, 74, 74, 1)",
+					borderBottom: "1px solid rgba(74, 74, 74, 1)",
+					height: buttonHeights, 
+				}}
+			>
 			{executionButton}
+			<Tooltip
+				color="secondary"
+				title={`Show previous runs (${workflowExecutions.length}) (Ctrl + ')`}
+				placement="top-start"
+			  >
+				  <Button
+					disabled={workflow.public}
+					color="secondary"
+					variant={executionModalOpen ? "contained" : "text"}
+					style={{ width: 55, }}
+					onClick={() => {
+					  setExecutionModalOpen(true);
+					  getWorkflowExecution(props.match.params.key, "");
+					}}
+				  >
+					<DirectionsRunIcon />
+				  </Button>
+			  </Tooltip>
             <Tooltip
               color="primary"
               title="An argument to be used for execution. This is a variable available to every node in your workflow."
@@ -17235,8 +17290,15 @@ const releaseToConnectLabel = "Release to Connect"
                 id="execution_argument_input_field"
                 style={{
 					...theme.palette.textFieldStyle,
-					width: 200, 
-					marginLeft: 0, 
+					height: buttonHeights+2,
+				}}
+				InputProps={{
+					style: {
+						...theme.palette.innerTextfieldStyle,
+						height: buttonHeights+2,
+						marginTop: -1,
+						border: "none", 
+					}
 				}}
                 disabled={workflow.public}
                 color="secondary"
@@ -17246,12 +17308,8 @@ const releaseToConnectLabel = "Release to Connect"
                 onBlur={(e) => {
                   setExecutionText(e.target.value);
                 }}
+
 			    // Start adornment
-			  	inputProps={{
-					style: {
-						height: 18,
-					},
-				}}
               />
             </Tooltip>
 			</ButtonGroup>
@@ -17455,28 +17513,7 @@ const releaseToConnectLabel = "Release to Connect"
                 <EditIcon />
               </Button>
             </span>
-          </Tooltip>
-
-		  <Tooltip
-            color="secondary"
-            title={`Show executions (${workflowExecutions.length}) (Ctrl + ')`}
-            placement="top-start"
-          >
-            <span>
-              <Button
-                disabled={workflow.public}
-                color="secondary"
-			  	variant={executionModalOpen ? "contained" : "text"}
-                style={{ width: 65, height: buttonHeights, }}
-                onClick={() => {
-                  setExecutionModalOpen(true);
-                  getWorkflowExecution(props.match.params.key, "");
-                }}
-              >
-                <DirectionsRunIcon />
-              </Button>
-            </span>
-          </Tooltip>
+          </Tooltip> 
 
           <Tooltip
             color="secondary"
@@ -17995,7 +18032,8 @@ const releaseToConnectLabel = "Release to Connect"
     color: "white",
     marginBottom: 10,
     padding: 5,
-    backgroundColor: theme.palette.surfaceColor,
+    backgroundColor: theme.palette.backgroundColor,
+	borderRadius: theme.palette.borderRadius,
     cursor: "pointer",
     display: "flex",
     minHeight: 45,
@@ -18915,7 +18953,7 @@ const releaseToConnectLabel = "Release to Connect"
 							</Tooltip>
 						: null}
 
-                          <Tooltip title={"Inspect execution"} placement="top">
+                          <Tooltip title={"Inspect this run"} placement="top">
                             {lastExecution === data.execution_id ? (
                               <KeyboardArrowRightIcon
                                 style={{
@@ -18949,6 +18987,9 @@ const releaseToConnectLabel = "Release to Connect"
 						variant="outlined"
 						style={{
 							marginTop: 20,
+							textTransform: "none",
+							border: `1px solid ${green}`,
+							color: green,
 						}}
 						onClick={() => {
 							executeWorkflow(executionText, workflow.start, lastSaved);

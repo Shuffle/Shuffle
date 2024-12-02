@@ -2378,14 +2378,14 @@ const ParsedAction = (props) => {
               return newname;
             }}
             fullWidth
-			  sx={{
-				'& .MuiOutlinedInput-root': {
-				  height: 40, // Adjust the input height
-				},
-				'& .MuiAutocomplete-input': {
-				  padding: '8px', // Adjust the text padding
-				},
-			  }}
+		    sx={{
+		      '& .MuiOutlinedInput-root': {
+		        height: 40, // Adjust the input height
+		      },
+		      '& .MuiAutocomplete-input': {
+		        padding: '8px', // Adjust the text padding
+		      },
+		    }}
 
             style={{
               backgroundColor: theme.palette.backgroundColor,
@@ -2530,10 +2530,7 @@ const ParsedAction = (props) => {
 							color="primary"
 							id="checkbox-search"
 							variant="body1"
-							style={{
-								backgroundColor: theme.palette.platformColor,
-								borderRadius: theme.palette?.borderRadius,
-							}}
+							style={theme.palette.textFieldStyle}
 							label={isIntegration ? "Choose a category" : "Find Actions"}
 							variant="outlined"
 							name={`disable_autocomplete_${Math.random()}`}
