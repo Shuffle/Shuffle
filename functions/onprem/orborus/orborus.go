@@ -341,6 +341,7 @@ func deployServiceWorkers(image string) {
 		log.Printf("[ERROR] Memcached is not running. Will try to deploy it.")
 		deployMemcached(dockercli)
 	}
+
 	ip := "shuffle-cache"
 
 	os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
@@ -1256,27 +1257,27 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		Resources: container.Resources{},
 	}
 
-    certPath := "/certs"
+	certPath := "/certs"
 
-    // This is just to test the mounting locally so
-    // I can control from what source I'm mounting
-    // the certs to. Default behaviour is:  
-    // /certs:/certs.
-    if os.Getenv("SHUFFLE_CERT_PATH") != "" {
-        certPath = os.Getenv("SHUFFLE_CERT_PATH") 
-    }
+	// This is just to test the mounting locally so
+	// I can control from what source I'm mounting
+	// the certs to. Default behaviour is:
+	// /certs:/certs.
+	if os.Getenv("SHUFFLE_CERT_PATH") != "" {
+		certPath = os.Getenv("SHUFFLE_CERT_PATH")
+	}
 
-    _, err := os.ReadDir(certPath)
+	_, err := os.ReadDir(certPath)
 
-    if certPath != "" && err == nil {
-        certVol := mount.Mount{
-            Type: mount.TypeBind,
-            Source: certPath,
-            Target: "/certs",
-        }
+	if certPath != "" && err == nil {
+		certVol := mount.Mount{
+			Type:   mount.TypeBind,
+			Source: certPath,
+			Target: "/certs",
+		}
 
-        hostConfig.Mounts = append(hostConfig.Mounts, certVol)
-    }
+		hostConfig.Mounts = append(hostConfig.Mounts, certVol)
+	}
 
 	if len(os.Getenv("DOCKER_HOST")) == 0 {
 		if runtime.GOOS == "windows" {
@@ -3985,8 +3986,9 @@ func deployMemcached(dockercli *dockerclient.Client) error {
 
 	ctx := context.Background()
 
+	memcachedImage := "memcached"
 	containerConfig := &container.Config{
-		Image: "memcached",
+		Image: memcachedImage,
 		Cmd:   []string{"-m", defaultMem},
 	}
 
@@ -3996,6 +3998,7 @@ func deployMemcached(dockercli *dockerclient.Client) error {
 		},
 	}
 
+	dockercli.ImagePull(ctx, memcachedImage, image.PullOptions{})
 	containerName := "shuffle-cache"
 
 	resp, err := dockercli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, containerName)
