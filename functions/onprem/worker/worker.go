@@ -104,11 +104,11 @@ var window = shuffle.NewTimeWindow(10 * time.Second)
 
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
-	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
-	"http:1.3.0":            "frikky/shuffle:http_1.3.0",
-	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
-	"shuffle-subflow:1.0.0": "frikky/shuffle:shuffle-subflow_1.0.0",
-	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
+	"http:1.4.0":               "frikky/shuffle:http_1.4.0",
+	"http:1.3.0":               "frikky/shuffle:http_1.3.0",
+	"shuffle-tools:1.2.0":      "frikky/shuffle:shuffle-tools_1.2.0",
+	"shuffle-subflow:1.0.0":    "frikky/shuffle:shuffle-subflow_1.0.0",
+	"shuffle-subflow:1.1.0":    "frikky/shuffle:shuffle-subflow_1.1.0",
 	"shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }
 
@@ -4179,8 +4179,6 @@ func AutoScaleApps(ctx context.Context, client *dockerclient.Client, maxExecutio
 			j := numberOfApps(ctx, client)
 			workers := numberOfWorkers(ctx, client)
 			execPerMin := maxExecutionsPerMinute / workers
-			log.Printf("[DEBUG] Running with %d workers\n\n\n\n\n", workers)
-
 			if count >= execPerMin {
 				log.Printf("[DEBUG] Too many executions per minute (%d). Scaling down to %d", count, execPerMin)
 				scaleApps(ctx, client, uint64(j+1))

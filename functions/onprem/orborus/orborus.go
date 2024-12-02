@@ -2624,7 +2624,6 @@ func deployTenzirNode() error {
 
 	err := checkTenzirNode()
 	if err == nil {
-		log.Printf("[INFO] Tenzir Node is already running")
 		return nil
 	}
 
