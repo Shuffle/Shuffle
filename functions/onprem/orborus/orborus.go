@@ -3986,7 +3986,7 @@ func deployMemcached(dockercli *dockerclient.Client) error {
 
 	ctx := context.Background()
 
-	memcachedImage := "memcached"
+	memcachedImage := "docker.io/library/memcached:latest"
 	containerConfig := &container.Config{
 		Image: memcachedImage,
 		Cmd:   []string{"-m", defaultMem},
