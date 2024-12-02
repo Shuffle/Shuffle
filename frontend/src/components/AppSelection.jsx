@@ -428,30 +428,56 @@ const AppSelection = props => {
             	            />
             	        </div>
             	    ) : null}
-            	    <Typography
-            	        variant="h4"
-            	        style={{
-            	            marginLeft: 8,
-            	            marginTop: isMobile ? null : 40,
-            	            marginRight: 30,
-            	            marginBottom: 0,
-            	        }}
-            	        color="rgba(241, 241, 241, 1)"
-            	    >
-            	        Find your apps
-            	    </Typography>
-            	    <Typography
-            	        variant="body2"
-            	        style={{
-            	            marginLeft: 8,
-            	            marginTop: 10,
-            	            marginRight: 30,
-            	            marginBottom: 40,
-            	        }}
-            	        color="rgba(158, 158, 158, 1)"
-            	    >
-            	        Select the apps you work with and we will connect them for you.
-            	    </Typography>
+					{
+						!isAppPage && (
+							<>
+							<Typography
+							variant="h4"
+							style={{
+								marginLeft: 8,
+								marginTop: isMobile ? null : 40,
+								marginRight: 30,
+								marginBottom: 0,
+							}}
+							color="rgba(241, 241, 241, 1)"
+						>
+							Find your apps
+						</Typography>
+						<Typography
+							variant="body2"
+							style={{
+								marginLeft: 8,
+								marginTop: 10,
+								marginRight: 30,
+								marginBottom: 40,
+							}}
+							color="rgba(158, 158, 158, 1)"
+						>
+							Select the apps you work with and we will connect them for you.
+							</Typography>
+							</>
+						)
+					}
+					{
+						isAppPage && (	
+							<div style={{marginBottom: 20}}>
+								<span
+								style={{
+									fontSize: 16,
+									color: "rgba(158, 158, 158, 1)",
+									fontFamily: "Inter",
+								}}
+							>
+								Your organization has no apps yet, select your starting apps here 
+								or discover more apps using the <span 
+								onClick={() => {
+									navigate("/apps2?tab=all_apps")
+								}}
+								style={{ color: "#FF8444", fontWeight: "medium", fontSize: 16, cursor:"pointer" }}>App Library</span>
+							</span>
+							</div>
+						)
+					}
             	    <Grid rowSpacing={1} columnSpacing={2} container >
             	        {appButtons.map((appData, index) => {
             	            // This is here due to a memory issue with setting apps properly
