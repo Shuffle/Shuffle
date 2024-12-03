@@ -333,19 +333,6 @@ func deployServiceWorkers(image string) {
 	}
 	ctx := context.Background()
 
-	isMemcachedRunning, err := checkMemcached(ctx, dockercli)
-	if err != nil {
-		log.Printf("[ERROR] Failed checking memcached: %s", err)
-	}
-	if isMemcachedRunning == false {
-		log.Printf("[ERROR] Memcached is not running. Will try to deploy it.")
-		deployMemcached(dockercli)
-	}
-
-	ip := "shuffle-cache"
-
-	os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
-
 	// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
 
 	// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/shuffle/shuffle-worker:nightly
@@ -456,6 +443,19 @@ func deployServiceWorkers(image string) {
 			log.Printf("[DEBUG] Failed to create network %s for workers: %s. This is not critical, and containers will still be added", networkName, err)
 		}
 	}
+
+	isMemcachedRunning, err := checkMemcached(ctx, dockercli)
+	if err != nil {
+		log.Printf("[ERROR] Failed checking memcached: %s", err)
+	}
+	if isMemcachedRunning == false {
+		log.Printf("[ERROR] Memcached is not running. Will try to deploy it.")
+		deployMemcached(dockercli)
+	}
+
+	ip := "shuffle-cache"
+
+	os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
 
 	defaultNetworkAttach := false
 	if containerId != "" {
