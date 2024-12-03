@@ -4024,11 +4024,21 @@ func deployMemcached(dockercli *dockerclient.Client) error {
 		log.Printf("[ERROR] Error spanning memcached continer: %s", err)
 		return err
 	}
+
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+		networkName := "shuffle_swarm_executions"
+		err = dockercli.NetworkConnect(ctx, networkName, resp.ID, nil)
+		if err != nil {
+			log.Printf("[ERROR] Error connecting tenzir container to network: %s", err)
+		}
+	}
+
 	err = dockercli.ContainerStart(ctx, resp.ID, container.StartOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Error starting memcached continer: %s", err)
 		return err
 	}
+
 	networkName := "shuffle_swarm_executions"
 	err = dockercli.NetworkConnect(ctx, networkName, resp.ID, nil)
 	if err != nil {
