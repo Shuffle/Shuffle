@@ -3960,6 +3960,11 @@ func checkMemcached(ctx context.Context, dockercli *dockerclient.Client) (bool, 
 		}
 		return false, err
 	}
+	networkName := "shuffle_swarm_executions"
+	err = dockercli.NetworkConnect(ctx, networkName, containerName, nil)
+	if err != nil {
+		log.Printf("[WARNING] Failed connecting memcached container to network: %s", err)
+	}
 
 	if continer.State.Running == false {
 		log.Printf("[INFO] Container %s exists but is not running. Attempting to start it.", containerName)
@@ -3997,9 +4002,23 @@ func deployMemcached(dockercli *dockerclient.Client) error {
 		},
 	}
 
-	dockercli.ImagePull(ctx, memcachedImage, image.PullOptions{})
-	containerName := "shuffle-cache"
+	_, _, err := dockercli.ImageInspectWithRaw(ctx, memcachedImage)
+	if dockerclient.IsErrNotFound(err) {
+		log.Printf("[DEBUG] Pulling image %s. This may take a while.", memcachedImage)
+		pullOptions := image.PullOptions{}
+		out, err := dockercli.ImagePull(ctx, memcachedImage, pullOptions)
+		if err != nil {
+			log.Printf("[ERROR] Failed to pull the memcached image: %s", err)
+			return err
+		}
+		defer out.Close()
 
+		io.Copy(io.Discard, out)
+	} else if err != nil {
+		return err
+	}
+
+	containerName := "shuffle-cache"
 	resp, err := dockercli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, containerName)
 	if err != nil {
 		log.Printf("[ERROR] Error spanning memcached continer: %s", err)
