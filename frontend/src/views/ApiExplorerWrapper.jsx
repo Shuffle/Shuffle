@@ -1,3 +1,4 @@
+
 import React, { memo, useCallback } from "react";
 import { useState, useEffect, useContext, Suspense } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
@@ -57,7 +58,7 @@ const ApiExplorer = React.lazy(() => import("../components/ApiExplorer.jsx"));
 
 
 const ApiExplorerWrapper = (props) => {
-  const { globalUrl, serverside, userdata, isLoggedIn} = props;
+  const { globalUrl, serverside, userdata, isLoggedIn, isLoaded} = props;
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io"
   const location = useLocation();
   const navigate = useNavigate();
@@ -1754,7 +1755,7 @@ const ApiExplorerWrapper = (props) => {
   )});
 
   return (
-    <Wrapper userdata={userdata}>
+    <Wrapper isLoggedIn={isLoggedIn} isLoaded={isLoaded}>
           <Suspense fallback={skeletonLoader}>
             {authenticationModal}
             <ApiExplorer
@@ -1765,6 +1766,8 @@ const ApiExplorerWrapper = (props) => {
               HandleApiExecution={HandleApiExecution}
               selectedAppData={selectedAppData}
               ConfigurationTab={ConfigurationTab}
+              isLoggedIn={isLoggedIn}
+              isLoaded={isLoaded}
             />
           </Suspense>
     </Wrapper>
@@ -1774,13 +1777,13 @@ const ApiExplorerWrapper = (props) => {
 export default ApiExplorerWrapper;
 
 
-const Wrapper = ({children, userdata})=>{
+const Wrapper = ({children, isLoaded,isLoggedIn})=>{
 
   const { leftSideBarOpenByClick } = useContext(Context);
 
   return(
     
-    <div className="api-explorer-wrapper" style={{ paddingLeft: userdata?.support ? leftSideBarOpenByClick ? 280 : 100 : 0, transition: 'padding-left 0.3s ease' }}>
+    <div className="api-explorer-wrapper" style={{ paddingLeft: (isLoggedIn && isLoaded) ? leftSideBarOpenByClick ? 280 : 100 : 0, transition: 'padding-left 0.3s ease' }}>
       {children}
     </div>
   )

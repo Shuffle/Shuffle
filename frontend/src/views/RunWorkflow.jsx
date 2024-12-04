@@ -108,7 +108,6 @@ const RunWorkflow = (defaultprops) => {
 	const boxStyle = {
 		color: "white",
 		padding: "25px 50px 50px 50px", 
-		backgroundColor: theme.palette.surfaceColor,
 		borderRadius: 25, 
 		minHeight: 500, 
 	}
@@ -1116,7 +1115,7 @@ const RunWorkflow = (defaultprops) => {
 	
 	const ExplorerUi = () => {
 		return (
-			<div style={{paddingTop: 50, marginTop: 50, width: 250, itemAlign: "center", textAlign: "center", margin: "auto", }}>
+			<div style={{paddingTop: 50, marginTop: 50, width: 350, itemAlign: "center", textAlign: "center", margin: "auto", }}>
 
 				{forms !== undefined && forms !== null && forms.length > 0 ?
 					<div>
@@ -1126,9 +1125,14 @@ const RunWorkflow = (defaultprops) => {
 						<FormList />
 					</div>
 					: 
-					<Typography variant="h6" style={{marginTop: 100, marginBottom: 20, }}>
-						No Form Found
-					</Typography>
+					<div>
+						<Typography variant="h4" style={{marginTop: 125, marginBottom: 25, }}>
+							No Forms Found
+						</Typography>
+						<Typography variant="body1" color="textSecondary">
+							<b>Every</b> Workflow is a form, and can be accessed by going to /forms/{`{workflow_id}`}. You can control the form by editing the workflow details in the "Forms" section.
+						</Typography>
+					</div>
 				}
 			</div> 
 		)
@@ -1474,7 +1478,7 @@ const RunWorkflow = (defaultprops) => {
 
 			{workflowQuestion !== "" ? null : 
 				<Typography variant="body2" color="textSecondary" align="center" style={{marginTop: 10, }} >
-					Forms are in late Beta. Form submission data includes your Organization's unique ID while logged in, or a unique identifier for your browser otherwise. Your input will be automatically sanitized.
+					Form submission data includes your Organization's unique ID while logged in, or a unique identifier for your browser otherwise. Your input will be automatically sanitized.
 				</Typography>
 			}
 		</div>
@@ -1482,7 +1486,7 @@ const RunWorkflow = (defaultprops) => {
 
     // const isCorrectOrg = userdata.active_org.id === undefined || userdata.active_org.id === null || workflow.org_id === null || workflow.org_id === undefined || workflow.org_id.length === 0 || userdata.active_org.id === workflow.org_id 
 	const loadedCheck = isLoaded ? 
-		<div style={{marginTop: 30, }}>
+		<div style={{paddingTop: 60, }}>
 			{editWorkflowModalOpen === true ?
 			  <EditWorkflow
 				saveWorkflow={saveWorkflow}
@@ -1570,6 +1574,7 @@ const RunWorkflow = (defaultprops) => {
 				<div style={{position: "fixed", top: 10, right: 20, }}>
 
 					<Button
+						disabled={workflow.id === undefined || workflow.id === null}
 						variant={"outlined"}
 						color={"secondary"}
 						style={{marginRight: 10, }}
@@ -1582,6 +1587,7 @@ const RunWorkflow = (defaultprops) => {
 					</Button>
 
 					<Button
+						disabled={workflow.id === undefined || workflow.id === null}
 						variant={workflow.sharing === "form" ? "outlined" : "contained"}
 						color={"secondary"}
 						style={{marginRight: 10, }}
@@ -1603,6 +1609,7 @@ const RunWorkflow = (defaultprops) => {
 					</Button>
 
 					<Button
+						disabled={workflow.id === undefined || workflow.id === null}
 						variant={"contained"}
 						color={"primary"}
 						style={{}}

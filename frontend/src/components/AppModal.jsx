@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
+
 import {
   Dialog,
   DialogTitle,
@@ -21,17 +23,22 @@ import LaunchIcon from '@mui/icons-material/Launch';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { CloudDownloadOutlined } from '@mui/icons-material';
 import { findSpecificApp } from './AppFramework';
+import theme from "../theme";
+import YAML from 'yaml';
+import { toast } from 'react-toastify';
+import { Link } from 'react-router-dom';
 
-const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
+const AppModal = ({ open, onClose, app, globalUrl }) => {
 
   const [frameworkData, setFrameworkData] = useState({})
+  const [userdata, setUserdata] = useState({})
   const [usecases, setUsecases] = useState([])
   const [workflows, setWorkflows] = useState([])
   const [prevSubcase, setPrevSubcase] = useState({})
   const [inputUsecase, setInputUsecase] = useState({})
   const [latestUsecase, setLatestUsecase] = useState([])
   const [foundAppUsecase, setFoundAppUsecase] = useState({})
-
+  const navigate = useNavigate();
   const parseUsecase = (subcase) => {
     const srcdata = findSpecificApp(frameworkData, subcase.type)
     const dstdata = findSpecificApp(frameworkData, subcase.last)
@@ -47,6 +54,25 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
     }
     return subcase
   }
+
+  useEffect(() => {
+    var baseurl = globalUrl;
+    fetch(baseurl + "/api/v1/me", {
+      credentials: "include",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then(response => response.json())
+      .then(responseJson => {
+        if (responseJson.success) {
+          setUserdata(responseJson)
+        }
+      })
+      .catch(error => {
+        console.log("Failed login check: ", error);
+      });
+  }, [app]);
 
 
   const getFramework = () => {
@@ -266,6 +292,89 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
     setFoundAppUsecase(foundSubcase);
   }, [latestUsecase])
 
+  const downloadApp = (inputdata) => {
+    const id = inputdata.id;
+
+    toast("Downloading..");
+    fetch(globalUrl + "/api/v1/apps/" + id + "/config", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          window.location.pathname = "/apps";
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (!responseJson.success) {
+          toast("Failed to download file");
+        } else {
+          console.log(responseJson);
+          const basedata = atob(responseJson.openapi);
+          console.log("BASE: ", basedata);
+          var inputdata = JSON.parse(basedata);
+          console.log("POST INPUT: ", inputdata);
+          inputdata = JSON.parse(inputdata.body);
+
+          const newpaths = {};
+          if (inputdata["paths"] !== undefined) {
+            Object.keys(inputdata["paths"]).forEach(function (key) {
+              newpaths[key.split("?")[0]] = inputdata.paths[key];
+            });
+          }
+
+          inputdata.paths = newpaths;
+          console.log("INPUT: ", inputdata);
+          var name = inputdata.info.title;
+          name = name.replace(/ /g, "_", -1);
+          name = name.toLowerCase();
+
+          delete inputdata.id;
+          delete inputdata.editing;
+
+          const data = YAML.stringify(inputdata);
+          var blob = new Blob([data], {
+            type: "application/octet-stream",
+          });
+
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement("a");
+          link.setAttribute("href", url);
+          link.setAttribute("download", `${name}.yaml`);
+          var event = document.createEvent("MouseEvents");
+          event.initMouseEvent(
+            "click",
+            true,
+            true,
+            window,
+            1,
+            0,
+            0,
+            0,
+            0,
+            false,
+            false,
+            false,
+            false,
+            0,
+            null
+          );
+          link.dispatchEvent(event);
+          //link.parentNode.removeChild(link)
+        }
+      })
+      .catch((error) => {
+        console.log(error);
+        toast(error.toString());
+      });
+  };
+
   const isCloud =
     window.location.host === "localhost:3002" ||
       window.location.host === "shuffler.io" || window.location.host === "localhost:3000"
@@ -280,7 +389,8 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
     newAppname = newAppname?.replaceAll("_", " ");
   }
 
-  var canEditApp = userdata.admin === "true" || userdata.id === app?.owner || app?.owner === "" || (userdata.admin === "true" && userdata.active_org.id === app?.reference_org) || !app?.generated
+  var canEditApp = userdata.admin === "true" || userdata?.id === app?.owner || app?.owner === "" || (userdata.admin === "true" && userdata.active_org.id === app?.reference_org) || !app?.generated
+
 
 
   return (
@@ -294,7 +404,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
           borderRadius: 2,
           border: "1px solid #494949",
           minWidth: '440px',
-          fontFamily: "Inter",
+          fontFamily: theme?.typography?.fontFamily,
           backgroundColor: "#212121",
           '& .MuiDialogContent-root': {
             backgroundColor: "#212121",
@@ -303,10 +413,10 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
             backgroundColor: "#212121",
           },
           '& .MuiTypography-root': {
-            fontFamily: 'Inter, sans-serif',
+            fontFamily: theme?.typography?.fontFamily,
           },
           '& .MuiButton-root': {
-            fontFamily: 'Inter, sans-serif',
+            fontFamily: theme?.typography?.fontFamily,
           },
         }
       }}
@@ -320,7 +430,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
           pt: 2,
           pl: 3,
           pr: 2,
-          fontFamily: "Inter"
+          fontFamily: theme?.typography?.fontFamily
         }}
       >
         <Typography component="div" sx={{ fontWeight: 500, color: "#F1F1F1", fontSize: "22px" }}>
@@ -340,7 +450,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
       <DialogContent sx={{ py: 3, px: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'space-between', justifyContent: 'space-between' }}>
 
-          <div style={{ display: "flex", flexDirection: "row", gap: 10, fontFamily: "Inter" }}>
+          <div style={{ display: "flex", flexDirection: "row", gap: 10, fontFamily: theme?.typography?.fontFamily }}>
             <img
               alt={app?.name}
               src={app?.large_image || app?.image_url}
@@ -364,11 +474,9 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
                 </Typography>
                 {
                   isCloud && (
-                    <a
-                      rel="noopener noreferrer"
-                      href={"https://shuffler.io/apps/" + app?.id}
+                    <Link
+                      to={"/apps/" + (app?.id || app?.objectID)}
                       style={{ textDecoration: "none", color: "#f85a3e", marginTop: "-2px" }}
-                      target="_blank"
                     >
                       <IconButton
                         style={{
@@ -378,7 +486,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
                       >
                         <OpenInNewIcon />
                       </IconButton>
-                    </a>
+                    </Link>
                   )
                 }
               </div>
@@ -391,23 +499,33 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 10 }}>
-            <Button
-              variant="contained"
-              sx={{
-                bgcolor: '#494949',
-                '&:hover': { bgcolor: '#494949' },
-                textTransform: 'none',
-                borderRadius: 1,
-                minWidth: '45px',
-                width: '45px',
-                height: '40px',
-                padding: 2,
-                color: "#fff",
-                fontFamily: "Inter"
-              }}
-            >
-              <CloudDownloadOutlined />
-            </Button>
+
+            {app?.activated &&
+              app?.private_id !== undefined &&
+              app?.private_id?.length > 0 &&
+              app?.generated ? (
+              <Button
+                variant="contained"
+                sx={{
+                  bgcolor: '#494949',
+                  '&:hover': { bgcolor: '#494949' },
+                  textTransform: 'none',
+                  borderRadius: 1,
+                  minWidth: '45px',
+                  width: '45px',
+                  height: '40px',
+                  padding: 2,
+                  color: "#fff",
+                  fontFamily: theme?.typography?.fontFamily
+                }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  downloadApp(app);
+                }}
+              >
+                <CloudDownloadOutlined />
+              </Button>) : null}
             <Button
               variant="contained"
               sx={{
@@ -419,9 +537,21 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
                 px: 3,
                 height: '40px',
                 color: "#fff",
-                fontFamily: "Inter"
+                fontFamily: theme?.typography?.fontFamily
               }}
-              startIcon={canEditApp ? <EditIcon /> : <ForkRightIcon />}
+              startIcon={canEditApp ? <EditIcon /> :
+                (app?.generated && app?.activated && userdata?.id !== app?.owner && isCloud ?
+                  <ForkRightIcon /> : null
+                )}
+              onClick={() => {
+                if (canEditApp) {
+                  const editUrl = "/apps/edit/" + (app?.id || app?.objectID);
+                  navigate(editUrl)
+                }else{
+                  const forkUrl = "/apps/new?id=" + (app?.id || app?.objectID);
+                  navigate(forkUrl)
+                }
+              }}
             >
               {canEditApp ? "Edit" : "Fork"}
             </Button>
@@ -431,17 +561,17 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
         <div style={{
           display: "flex",
           justifyContent: "space-between",
-          fontFamily: "Inter",
+          fontFamily: theme?.typography?.fontFamily,
           padding: "26px 0px"
         }}>
           <div style={{
             textAlign: "start",
             flex: 1,
           }}>
-            <Typography 
-              variant="h6" 
+            <Typography
+              variant="h6"
               sx={{
-                fontFamily: 'Inter, sans-serif',
+                fontFamily: theme?.typography?.fontFamily,
                 fontSize: '24px',
                 fontWeight: 600,
                 mb: 0.3,
@@ -450,11 +580,11 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
             >
               20
             </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
+            <Typography
+              variant="body2"
+              sx={{
                 color: 'rgba(255, 255, 255, 0.7)',
-                fontFamily: 'Inter, sans-serif',
+                fontFamily: theme?.typography?.fontFamily,
                 fontSize: '14px'
               }}
             >
@@ -468,12 +598,12 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
             paddingLeft: "10px",
             height: "100%",
           }}>
-            <Typography variant="h6" 
-            sx={{
-              fontWeight: 600,
-              mb: 0.3,
-              color: '#fff'
-            }}>
+            <Typography variant="h6"
+              sx={{
+                fontWeight: 600,
+                mb: 0.3,
+                color: '#fff'
+              }}>
               {Array.isArray(app?.actions) ? app.actions.length : app?.actions}
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
@@ -486,7 +616,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
             paddingLeft: "10px",
             paddingTop: "5px"
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: "5px", fontFamily: "Inter", fontSize: "14px", fontWeight: 600 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: "5px", fontFamily: theme?.typography?.fontFamily, fontSize: "14px", fontWeight: 600, color: 'white' }}>
               {
                 app?.collection ? (
                   <>
@@ -494,13 +624,25 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
                     <Typography variant="body1" sx={{
                       fontWeight: 500,
                       color: '#fff',
-                      marginTop: "1px"
+                      marginTop: "1px",
+                      fontFamily: theme?.typography?.fontFamily,
+                      fontSize: "16px"
                     }}>
                       app.collection
 
                     </Typography>
                   </>
-                ) : "No collection yet"
+                ) : (
+                  <Typography sx={{
+                    fontSize: "16px",
+                    fontWeight: 500,
+                    marginTop: "1px",
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontFamily: theme?.typography?.fontFamily
+                  }}>
+                    No collection yet
+                  </Typography>
+                )
               }
 
             </div>
@@ -517,7 +659,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
           width: "100%"
         }}>
           <div style={{
-            fontFamily: "Inter",
+            fontFamily: theme?.typography?.fontFamily,
             fontSize: "16px",
             color: "#fff",
             marginBottom: "16px",
@@ -544,7 +686,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
               {
                 foundAppUsecase === undefined ? (
                   <Avatar sx={{ width: 32, height: 32, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
-                    <Search sx={{ color: 'text.primary', zIndex: 10, fontSize: 18}} />
+                    <Search sx={{ color: 'text.primary', zIndex: 10, fontSize: 18 }} />
                   </Avatar>
                 ) : (
                   <Avatar
@@ -560,10 +702,10 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
                   />
                 )
               }
-             {
+              {
                 foundAppUsecase === undefined ? (
                   <Avatar sx={{ width: 32, height: 32, bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
-                    <AddIcon sx={{ color: 'text.primary', zIndex: 10, fontSize: 18}} />
+                    <AddIcon sx={{ color: 'text.primary', zIndex: 10, fontSize: 18 }} />
                   </Avatar>
                 ) : (
                   <Avatar
@@ -586,7 +728,7 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
           </Box>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", fontFamily: "Inter" }}>
+        <div style={{ display: "flex", justifyContent: "center", fontFamily: theme?.typography?.fontFamily }}>
           <Button
             variant="contained"
             sx={{
@@ -599,11 +741,14 @@ const AppModal = ({ open, onClose, app, userdata, globalUrl }) => {
               fontSize: "14px",
               letterSpacing: "0.5px",
               color: "black",
-              fontFamily: "Inter",
+              fontFamily: theme?.typography?.fontFamily,
               minWidth: '200px'
             }}
+            onClick={() => {
+              navigate("/usecases2")
+            }}
           >
-            Create a Usecase
+            Find a Usecase
           </Button>
         </div>
       </DialogContent>

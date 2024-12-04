@@ -2932,9 +2932,7 @@ func checkTenzirNode() error {
 		return nil
 	}
 
-	log.Printf("[DEBUG] Failed to verify Tenzir node on %s: %s", url, err)
-
-	return fmt.Errorf("Tenzir node is not available")
+	return fmt.Errorf("Tenzir node is not available due to: %s", err)
 }
 
 func createPipeline(command, identifier string) (string, error) {

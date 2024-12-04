@@ -1220,7 +1220,7 @@ const Usecases2 = (props) => {
     ) : null
 
   const data = 
-    <div className="content" style={{width: isMobile ? "100%": leftSideBarOpenByClick ? 1200: 1000, margin: "auto", paddingBottom: 200, textAlign: "center", paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease, width 0.3s ease"}}>
+    <div className="content" style={{width: isMobile ? "100%": leftSideBarOpenByClick ? 1000: 1200, margin: "auto", paddingBottom: 200, textAlign: "center", paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease, width 0.3s ease"}}>
 
 			<UsecaseListComponent 
 	  			userdata={userdata}
@@ -1241,7 +1241,7 @@ const Usecases2 = (props) => {
 
   const dataWrapper = 
 		<Fade in={true} timeout={1250}>
-			<div style={{ maxWidth: 1366, margin: "auto", }}>
+			<div style={{ maxWidth: 1366, margin: "auto", zoom: 0.8, }}>
 				{data}
 			</div>
 		</Fade>

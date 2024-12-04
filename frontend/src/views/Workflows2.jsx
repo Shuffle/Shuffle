@@ -58,6 +58,7 @@ import {
     AvatarGroup,
     Zoom,
     Collapse,
+    Skeleton,
 } from "@mui/material";
 
 // Material UI Icons
@@ -430,14 +431,17 @@ export const GetIconInfo = (action) => {
 };
 
 const chipStyle = {
-    backgroundColor: "#3d3f43",
+    backgroundColor: "#2F2F2F",
     marginRight: 5,
     paddingLeft: 5,
     paddingRight: 5,
-    height: 28,
+    height: 35,
     cursor: "pointer",
-    borderColor: "#3d3f43",
-    color: "white",
+    borderColor: "#2F2F2F",
+    color: "#C8C8C8",
+    fontSize: "14px",
+    fontFamily: theme?.typography?.fontFamily,
+    borderRadius: "17.5px"
 };
 
 export const collapseField = (field) => {
@@ -618,9 +622,11 @@ const useDropzoneStyles = () => {
     const { leftSideBarOpenByClick } = useContext(Context);
 
     return {
-        maxWidth: window.innerWidth > 1366 ? 1366 : isMobile ? "100%" : 1200,
-        margin: "auto",
-        padding: 20,
+        paddingTop: 70,
+        // minHeight: 1000,
+        backgroundColor: "#1A1A1A",
+        fontFamily: theme?.typography?.fontFamily,
+        // maxWidth: window.innerWidth > 1366 ? 1366 : isMobile ? "100%" : 1200,
         paddingLeft: leftSideBarOpenByClick ? 200 : 0,
         transition: "padding-left 0.3s ease",
     };
@@ -640,6 +646,7 @@ const DropzoneWrapper = memo(({ onDrop, WorkflowView }) => {
 
 const Workflows2 = (props) => {
     const { globalUrl, isLoggedIn, isLoaded, userdata, checkLogin } = props;
+    const { leftSideBarOpenByClick } = useContext(Context);
     const location = useLocation();
     const navigate = useNavigate();
     const [currTab, setCurrTab] = useState(0);
@@ -707,7 +714,6 @@ const Workflows2 = (props) => {
     const [highlightIds, setHighlightIds] = React.useState([])
 
     const [apps, setApps] = React.useState([]);
-
 
     document.title = "Shuffle - Workflows";
     const handleTabChange = (event, newValue) => {
@@ -1516,24 +1522,25 @@ const Workflows2 = (props) => {
     };
 
     const paperAppStyle = {
-        minHeight: 130,
-        maxHeight: 130,
+        minHeight: 146,
+        maxHeight: 146,
         overflow: "hidden",
         width: "100%",
         color: "white",
         padding: "12px 12px 0px 15px",
         display: "flex",
+        fontFamily: theme?.typography?.fontFamily,
         boxSizing: "border-box",
         position: "relative",
-        borderRadius: theme.palette?.borderRadius,
-        backgroundColor: theme.palette.surfaceColor,
+        borderRadius: "8px",
+        // backgroundColor: "#212121",
     };
 
     const gridContainer = {
         height: "auto",
         color: "white",
         margin: "10px",
-        backgroundColor: theme.palette.surfaceColor,
+        backgroundColor: "#212121",
         position: "relative",
     };
 
@@ -1542,6 +1549,7 @@ const Workflows2 = (props) => {
         width: 160,
         height: 44,
         justifyContent: "space-between",
+        fontFamily: theme?.typography?.fontFamily,
     };
 
     const exportAllWorkflows = (allWorkflows) => {
@@ -2107,6 +2115,80 @@ const Workflows2 = (props) => {
         return appsFound
     }
 
+    const WorkflowSkeleton = () => {
+        return (
+            <Paper elevation={0} style={{
+                backgroundColor: "#212121",
+                width: "100%",
+                height: 120,
+                borderRadius: 8,
+            }}>
+                <div style={{
+                    display: "flex",
+                    padding: 10,
+                    width: "100%",
+                    height: "100%"
+                }}>
+                    <Skeleton
+                        variant="rectangular"
+                        width={100}
+                        height={90}
+                        style={{
+                            borderRadius: 6,
+                            backgroundColor: "rgba(255, 255, 255, 0.1)"
+                        }}
+                    />
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        marginLeft: 10,
+                        flex: 1,
+                        gap: 6
+                    }}>
+                        <Skeleton
+                            variant="text"
+                            width="40%"
+                            height={24}
+                            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                        />
+                        <Skeleton
+                            variant="text"
+                            width="60%"
+                            height={20}
+                            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                        />
+                        <Skeleton
+                            variant="text"
+                            width="30%"
+                            height={20}
+                            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                        />
+                    </div>
+                </div>
+            </Paper>
+        );
+    };
+
+    // Replace the loading sections in the main component with this
+    const LoadingWorkflowGrid = () => {
+        return (
+            <div style={{
+                marginTop: 16,
+                width: "100%",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
+                gap: "20px",
+                justifyContent: "space-between",
+                alignItems: "start",
+                padding: "0 10px"
+            }}>
+                {[...Array(7)].map((_, index) => (
+                    <WorkflowSkeleton key={index} />
+                ))}
+            </div>
+        );
+    };
+
     const WorkflowPaper = (props) => {
         const { data, type = "org" } = props;
         const [open, setOpen] = React.useState(false);
@@ -2283,8 +2365,9 @@ const Workflows2 = (props) => {
                     marginRight: 10,
                 };
 
+
                 image =
-                    foundOrg.image === "" ? (
+                    foundOrg.image === "" || foundOrg.image === null || foundOrg.image === undefined ? (
                         <img
                             alt={foundOrg.name}
                             src={theme.palette.defaultImage}
@@ -2336,8 +2419,30 @@ const Workflows2 = (props) => {
             }
         }
 
+        if (type === "public" && currTab === 2) {
+
+            const imageStyle = {
+                width: 24,
+                height: 24,
+                marginRight: 10,
+                border: "1px solid rgba(255,255,255,0.3)",
+            }
+
+            image = data.creator_info !== undefined && data.creator_info !== null && data.creator_info.image !== undefined && data.creator_info.image !== null && data.creator_info.image.length > 0 ? <Avatar alt={data.creator} src={data.creator_info.image} style={imageStyle} /> : <Avatar alt={"shuffle_image"} src={theme.palette.defaultImage} style={imageStyle} />
+            const creatorname = data.creator_info !== undefined && data.creator_info !== null && data.creator_info.username !== undefined && data.creator_info.username !== null && data.creator_info.username.length > 0 ? data.creator_info.username : "Shuffle"
+            if ((data.objectID === undefined || data.objectID === null) && data.id !== undefined && data.id !== null) {
+                data.objectID = data.id
+            }
+
+            //console.log("IMG: ", data)
+            var parsedUrl = `/workflows/${data.objectID}`
+            if (data.__queryID !== undefined && data.__queryID !== null) {
+                parsedUrl += `?queryID=${data.__queryID}`
+            }
+        }
+
         return (
-            <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? "1px solid #40E0D0" : "inherit", borderRadius: theme.palette?.borderRadius, }}>
+            <div style={{ width: "100%", minWidth: 320, position: "relative", border: highlightIds.includes(data.id) ? "2px solid #f85a3e" : isDistributed || hasSuborgs ? "1px solid #40E0D0" : "inherit", borderRadius: theme.palette?.borderRadius, backgroundColor: "#212121", fontFamily: theme?.typography?.fontFamily }}>
                 <Paper square style={paperAppStyle}>
                     {selectedCategory !== "" ?
                         <Tooltip title={`Usecase Category: ${selectedCategory}`} placement="bottom">
@@ -2351,6 +2456,7 @@ const Workflows2 = (props) => {
                                     width: 3,
                                     backgroundColor: boxColor,
                                     borderRadius: "0 100px 0 0",
+                                    fontFamily: theme?.typography?.fontFamily,
                                 }}
                                 onClick={() => {
                                     addFilter(selectedCategory)
@@ -2360,7 +2466,7 @@ const Workflows2 = (props) => {
                         : null}
                     <Grid
                         item
-                        style={{ display: "flex", flexDirection: "column", width: "100%" }}
+                        style={{ display: "flex", flexDirection: "column", width: "100%", fontFamily: theme?.typography?.fontFamily }}
                     >
                         <Grid item style={{ display: "flex", maxHeight: 34 }}>
                             <Tooltip title={`Org "${orgName}". Click to edit image.`} placement="bottom">
@@ -2389,7 +2495,7 @@ const Workflows2 = (props) => {
                                         maxWidth: 310,
                                         padding: "12px 0",
                                     }}>
-                                        {data.image !== undefined && data.image !== null && data.image.length > 0 ? (
+                                        {(data?.image !== undefined || data?.image_url !== undefined) ? (
                                             <div style={{
                                                 marginBottom: 15,
                                                 borderRadius: theme.palette?.borderRadius,
@@ -2397,8 +2503,8 @@ const Workflows2 = (props) => {
                                                 border: `1px solid ${theme.palette.inputColor}`,
                                             }}>
                                                 <img
-                                                    src={data.image}
-                                                    alt={data.name}
+                                                    src={data?.image || data?.image_url}
+                                                    alt={data?.name}
                                                     style={{
                                                         backgroundColor: theme.palette.surfaceColor,
                                                         width: "100%",
@@ -2411,6 +2517,8 @@ const Workflows2 = (props) => {
 
                                         <Typography style={{
                                             color: "rgba(255,255,255,0.9)",
+                                            fontSize: "16px",
+                                            fontFamily: theme?.typography?.fontFamily,
                                         }}>
                                             Edit: {data.name}
                                         </Typography>
@@ -2443,10 +2551,14 @@ const Workflows2 = (props) => {
                                         paddingBottom: 0,
                                         maxHeight: 30,
                                         flex: 10,
+                                        fontFamily: theme?.typography?.fontFamily,
+                                        fontWeight: 500,
                                     }}
                                 >
                                     <Link
-                                        to={"/workflows/" + data.id}
+                                        to={
+                                            type === "public" ? parsedUrl : data.workflow_as_code ? `/workflows/${data.id}/code` : `/workflows/${data.id}`
+                                        }
                                         style={{ textDecoration: "none", color: "inherit" }}
                                     >
                                         {parsedName}
@@ -2620,8 +2732,9 @@ const Workflows2 = (props) => {
                             style={{
                                 justifyContent: "left",
                                 overflow: "hidden",
-                                marginTop: 5,
-                                maxHeight: 28,
+                                marginTop: 8,
+                                maxHeight: 35,
+                                fontFamily: theme?.typography?.fontFamily,
                             }}
                         >
                             {data.tags !== undefined && data.tags !== null
@@ -3079,11 +3192,7 @@ const Workflows2 = (props) => {
                                             </Typography>
                                         </span>
                                     </Tooltip>
-                                    <Tooltip
-                                        color="primary"
-                                        title="Subflows used"
-                                        placement="bottom"
-                                    >
+                                    <Tooltip color="primary" title="Subflows used" placement="bottom">
                                         <span
                                             style={{
                                                 marginLeft: 15,
@@ -3235,7 +3344,7 @@ const Workflows2 = (props) => {
             );
         }
         return (
-            <div style={gridContainer}>
+            <div style={{ ...gridContainer, backgroundColor: "#212121" }}>
                 <Tooltip title={`New Workflow`} placement="bottom">
                     <IconButton
                         style={{ position: "absolute", top: 10, right: 50, zIndex: 1000 }}
@@ -3797,9 +3906,9 @@ const Workflows2 = (props) => {
     // 	}
 
     useEffect(() => {
-        if (userdata !== undefined && userdata !== null) {
-            var filteredWorkflows = []
+        if (userdata !== undefined && userdata !== null && currTab !== 2) {
             setIsLoadingWorkflow(true);
+            var filteredWorkflows = []
             if (currTab === 0) {
                 filteredWorkflows = workflows.filter(workflow => workflow?.org_id === userdata?.active_org?.id)
             }
@@ -3807,7 +3916,10 @@ const Workflows2 = (props) => {
                 filteredWorkflows = workflows.filter(workflow => workflow?.org_id === userdata?.active_org?.id && workflow?.owner === userdata?.id)
             }
             setFilteredWorkflows(filteredWorkflows)
-            setIsLoadingWorkflow(false);
+            setTimeout(() => {
+                setIsLoadingWorkflow(false);
+            }, 500);
+
         }
     }, [currTab, workflows, userdata])
 
@@ -3819,25 +3931,29 @@ const Workflows2 = (props) => {
         var counted = 0
         console.log("Public workflows", hits)
 
-        if (isLoadingPublicWorkflow) {
-            return (
-                <div style={{ textAlign: "center", marginTop: 50 }}>
-                    <CircularProgress style={{ color: "#f85a3e" }} />
-                </div>
-            );
-        }
-
         return (
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)", // Creates 3 equal columns
-                gap: "20px", // Adds consistent spacing between items
-                width: "100%",
-            }}>
-                {hits.map((data, index) => {
-                    return <WorkflowPaper key={index} data={data} type="public" />
-                })}
-            </div>
+
+            isLoadingPublicWorkflow ?
+                (
+                    <LoadingWorkflowGrid />
+                ) : (
+
+                    <div style={{
+                        marginTop: 16,
+                        width: "100%",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
+                        gap: "20px",
+                        justifyContent: "space-between",
+                        alignItems: "start",
+                        padding: "0 10px",
+                        paddingBottom: 40
+                    }}>
+                        {hits.map((data, index) => {
+                            return <WorkflowPaper key={index} data={data} type="public" />
+                        })}
+                    </div>
+                )
 
         )
     }
@@ -3849,6 +3965,21 @@ const Workflows2 = (props) => {
         setSelectedCategory(e.target.value)
     }
 
+
+    const iconButtonStyle = {
+        color: 'white',
+        backgroundColor: '#212121',
+        borderRadius: '4px',
+        padding: "12px 16px",
+        cursor: 'pointer',
+        minWidth: '40px', 
+        height: 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+
+    }
+
     const WorkflowView = memo(() => {
         if (workflows.length === 0) {
         }
@@ -3858,378 +3989,258 @@ const Workflows2 = (props) => {
 
         const foundPriority = userdata === undefined || userdata === null || userdata.priorities === undefined || userdata.priorities === null ? null : userdata.priorities.find(prio => prio.type === "usecase" && prio.active === true)
         return (
-            <div style={viewStyle}>
-                <div style={workflowViewStyle}>
-                    <div style={{ display: "flex", marginTop: 25, }}>
-                        {/* <div style={{ flex: 1 }}>
-			 	<Typography variant="h1" style={{fontSize: 30}}>
-              		Workflows
-				</Typography>
-            </div> */}
-                        {/*
-            <div style={{ flex: 1 }}>
-              <Typography style={{ marginTop: 7, marginBottom: "auto" }}>
-                <a
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  href="https://shuffler.io/docs/workflows"
-                  style={{ textDecoration: "none", color: "#f85a3e" }}
-                >
-                  Learn more about Workflows
-                </a>
-              </Typography>
-            </div>
-						*/}
-                        {/* {isMobile ? null : 
-							<div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
-								<div style={{ flex: 1, float: "right" }}>
-									<MuiChipsInput
-										style={{}}
-										InputProps={{
-											style: {
-												color: "white",
-												maxWidth: 275,
-												minWidth: 275,
-											},
-										}}
-										rows={1}
-										placeholder="Filter Workflows"
-										color="primary"
-										fullWidth
-										value={filters}
-										onChange={(chips) => {
-											console.log("CHANGE: ", chips);
-											setFilters(chips);
-    										findWorkflow(chips);
-										}}
-										//onAdd={(chip) => {
-										//	console.log("ADd: ", chip);
-										//	addFilter(chip);
-										//}}
-										//onDelete={(_, index) => {
-										//	console.log("Remove: ", index);
-										//	removeFilter(index);
-										//}}
-									/>
-								</div>
-							</div>
-						} */}
-                        {/* <div style={{ flex: 1, textAlign: "right", }}>
-              {workflowButtons}
-            </div> */}
+            <>
+                <div style={{
+                    color: "white",
+                    display: "flex",
+                    flexDirection: "column",
+                    width: "100%",
+                    maxWidth: "70%",
+                    margin: "auto",
+                }}>
+                    <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme?.typography?.fontFamily }}>
+                        Workflows
+                    </Typography>
+
+                    <div style={{ borderBottom: '1px solid gray', marginBottom: 30 }}>
+                        <Tabs
+                            value={currTab}
+                            onChange={handleTabChange}
+                            TabIndicatorProps={{ style: { height: '3px', borderRadius: 10, backgroundColor: "#FF8544" } }}
+                            style={{ fontFamily: theme?.typography?.fontFamily }}
+                        >
+                            <Tab label="Organization Workflows" style={{ textTransform: 'none', marginRight: 20, fontFamily: theme?.typography?.fontFamily }} />
+                            <Tab label="My Workflows" style={{ textTransform: 'none', marginRight: 20, fontFamily: theme?.typography?.fontFamily }} />
+                            <Tab label="Discover Workflows" style={{ textTransform: 'none', fontFamily: theme?.typography?.fontFamily }} />
+                        </Tabs>
                     </div>
 
-                    {/* <div style={{width: "100%", minHeight: isMobile ? 0 : hasWorkflows ? 0 : 51, maxHeight: isMobile ? 0 : 51, marginTop: 10, }}>
-						{!isMobile && !hasWorkflows && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
-							<div style={{ display: "flex", }}>
-								{usecases.map((usecase, index) => {
-									if (usecase.name === "5. Verify") {
-										return null
-									}
 
-									const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length/usecase.list.length*100) : 0
-									if (percentDone === 0) {
-										usecase = findMatches(usecase, workflows)
-									}
-
-									return (
-										<Paper
-											key={usecase.name}
-											style={{
-												flex: 1,
-												backgroundImage: `linear-gradient(to right, ${usecase.color}, ${usecase.color} ${percentDone}%, transparent ${percentDone}%, transparent 100%)`,
-												backgroundColor: filters.includes(usecase.name.toLowerCase()) ? null : theme.palette.surfaceColor,
-                                                borderRadius: theme.palette?.borderRadius,
-												marginRight: index === usecases.length-1 ? 0 : 10, 
-												cursor: "pointer",
-												border: `2px solid ${usecase.color}`,
-                                                overflow: "hidden",
-												padding: 10,
-											}}
-											onClick={() => {
-												console.log("Filters: ", filters, usecase.name.toLowerCase())
-												if (!filters.includes(usecase.name.toLowerCase())) {
-													addFilter(usecase.name)
-												} else {
-  												removeFilter(filters.indexOf(usecase.name.toLowerCase()))
-												}
-
-											}}
-										>
-											<span style={{ textDecoration: "none", display: "flex", }}>
-												<Typography variant="body1" color="textPrimary" style={{flex: 4, }}>
-													{usecase.name}
-												</Typography>
-												<Typography variant="body2" color="textSecondary" style={{flex: 1, marginTop: 0,}}>
-													{usecase.matches.length}/{usecase.list.length}
-												</Typography>
-											</span>
-										</Paper>
-									)
-								})}
-							</div>
-						: null}
-					</div> */}
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 20, paddingRight: 25, minHeight: 47 }}>
 
 
+                        <MuiChipsInput
+                            style={{
+                                width: "25%",
+                                maxWidth: "25%",
+                                minWidth: "25%",
+                                height: 43,
+                                maxHeight: "fit-content",
+                                backgroundColor: "#212121",
+                                zIndex: 1000,
+                            }}
+                            disabled={currTab === 2}
+                            InputProps={{
+                                style: {
+                                    color: "white",
+                                    height: "fit-content",
+                                    maxHeight: "fit-content",
+                                    backgroundColor: "#212121",
+                                },
+                                placeholder: "Filter Workflows",
+                                // endAdornment: (
+                                //     <InputAdornment position="end">
+                                //         <SearchIcon style={{ color: 'white', paddingRight: 5 }} />
+                                //     </InputAdornment>
+                                // ),
+                                onKeyDown: (e) => {
+                                    // Prevent default behavior for Enter and Backspace
+                                    if (e.key === 'Enter' || e.key === 'Backspace') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.target.focus();
+                                    }
+                                },
+                            }}
+                            clearInputOnBlur={false}
+                            sx={{
+                                // Container styling
+                                '& .MuiOutlinedInput-root': {
+                                    height: "fit-content",
+                                    borderRadius: '4px',
+                                    backgroundColor: '#212121',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.23)',
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                                    },
+                                },
 
-                    {userdata.priorities !== undefined && userdata.priorities !== null && userdata.priorities.length > 0 && userdata.priorities[0].name.includes("CPU") && userdata.priorities[0].active === true ?
-                        <div style={{
-                            border: "1px solid rgba(255,255,255,0.1)", borderRadius: theme.palette?.borderRadius, marginTop: 10,
-                            marginBottom: 10, padding: 15, textAlign: "center", height: 70, textAlign: "left", backgroundColor:
-                                theme.palette.surfaceColor, display: "flex", maxHeight: "105px", minHeight: "110px"
-                        }}
+                                // Adjust chip container to center vertically
+                                '& .MuiInputBase-root': {
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: '4px',
+                                    padding: '4px 8px',
+                                    alignItems: 'center',
+                                    height: "fit-content", // Match height
+                                },
+
+                                // Rest of the styling remains the same...
+                            }}
+                            value={filters}
+                            onChange={(chips) => {
+                                setFilters(chips);
+                                findWorkflow(chips);
+                            }}
+                        //onAdd={(chip) => {
+                        //	console.log("ADd: ", chip);
+                        //	addFilter(chip);
+                        //}}
+                        //onDelete={(_, index) => {
+                        //	console.log("Remove: ", index);
+                        //	removeFilter(index);
+                        //}}
+                        />
+
+                        <Select
+                            fullWidth
+                            variant="outlined"
+                            value={selectedCategory}
+                            onChange={handleCategoryChange}
+                            displayEmpty
+                            disabled={currTab === 2}
+                            multiple
+                            style={{
+                                width: "25%",
+                                minWidth: "25%",
+                                maxWidth: "25%",
+                                height: 47,
+                                borderRadius: 4,
+                                backgroundColor: "#212121",
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.23)',
+                                    },
+                                },
+                            }}
+                            renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
                         >
-                            <div style={{ flex: 2, overflow: "hidden", }}>
-                                <Typography variant="body1" >
-                                    {userdata.priorities[0].name}
-                                </Typography>
-                                <div style={{ flex: "2 1 0%", overflow: "hidden" }}>
-                                    <span style={{ display: "flex", marginTop: "10px" }}>
-                                        <Typography variant="body2" color="textSecondary" style={{ marginTop: "3px" }}>
-                                            {userdata.priorities[0].description}
-                                        </Typography>
-                                    </span>
-                                </div>
-                            </div>
-                            <div style={{ flex: 1, display: "flex", marginLeft: 30, }}>
-                                <Button style={{ height: 50, borderRadius: 25, marginTop: 8, width: 175, backgroundColor: "rgba(255,255,255,0.8)" }} variant="contained" color="secondary" onClick={() => { navigate(userdata.priorities[0].url) }}>
-                                    explore
-                                </Button>
-                                {/*
-								<Button  style={{borderRadius: 25, width: 200, height: 50, marginTop: 8, }} variant="text" color="secondary">
-									Ignore
-								</Button>
-								*/}
-                            </div>
-                        </div>
-                        : null}
+                            <MenuItem disabled value="" style={{}}>All Categories</MenuItem>
+                            {usecases.map((usecase, index) => {
+                                if (usecase?.name === "5. Verify") {
+                                    return null;
+                                }
 
-                    {/* {foundPriority != null && workflows.length < 6 ? 
-						<Priority
-							globalUrl={globalUrl}
-							userdata={userdata}
-							priority={foundPriority}
-							checkLogin={checkLogin}
-							appFramework={appFramework}
-						/>
-					: null} */}
+                                const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length / usecase.list.length * 100) : 0
+                                if (percentDone === 0) {
+                                    usecase = findMatches(usecase, workflows)
+                                }
 
-                    <div style={{
-                        color: "white",
-                        display: "flex",
-                        flexDirection: "column",
-                        width: "100%",
-                        marginTop: 50,
-                        margin: "auto",
-                        // maxWidth: "80%",
-
-                    }}>
-                        <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15 }}>
-                            Workflows
-                        </Typography>
-
-                        <div style={{ borderBottom: '1px solid gray', marginBottom: 30 }}>
-                            <Tabs
-                                value={currTab}
-                                onChange={handleTabChange}
-                                TabIndicatorProps={{ style: { height: '3px', borderRadius: 10 } }}
-                            >
-                                <Tab label="Organization Workflows" style={{ textTransform: 'none', marginRight: 20 }} />
-                                <Tab label="My Workflows" style={{ textTransform: 'none', marginRight: 20 }} />
-                                <Tab label="Discover Workflows" style={{ textTransform: 'none' }} />
-                            </Tabs>
-                        </div>
-
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 10 }}>
-
-
-                            <MuiChipsInput
-                                placeholder="Filter Workflows"
-                                variant="outlined"
-                                color="primary"
-                                value={filters}
-                                onChange={(chips) => {
-                                    console.log("CHANGE: ", chips);
-                                    setFilters(chips);
-                                    findWorkflow(chips);
-                                }}
-                                style={{ flex: 0.9 }}
-                                InputProps={{
-                                    style: {
-                                        color: "white",
-                                        borderRadius: 8,
-                                    },
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.2)',
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.3)',
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: '#f85a3e',
-                                        },
-                                    },
-                                    '& .MuiChip-root': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                        color: 'white',
-                                        '& .MuiChip-deleteIcon': {
-                                            color: 'rgba(255, 255, 255, 0.7)',
-                                            '&:hover': {
-                                                color: 'white',
-                                            },
-                                        },
-                                    },
-                                }}
-                            />
-
-                            <Select
-                                fullWidth
-                                variant="outlined"
-                                value={selectedCategory}
-                                onChange={handleCategoryChange}
-                                displayEmpty
-                                multiple
-                                style={{ flex: 0.9, maxWidth: 350, borderRadius: 8 }}
-                                renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
-                            >
-                                <MenuItem disabled value="" style={{}}>All Categories</MenuItem>
-                                {usecases.map((usecase, index) => {
-                                    if (usecase?.name === "5. Verify") {
-                                        return null;
-                                    }
-
-                                    const percentDone = usecase.matches.length > 0 ? parseInt(usecase.matches.length / usecase.list.length * 100) : 0
-                                    if (percentDone === 0) {
-                                        usecase = findMatches(usecase, workflows)
-                                    }
-
-                                    const category = usecase?.name.split(" ")[1]
-                                    return (
-                                        <MenuItem
-                                            value={category}
-                                            onClick={() => {
-                                                if (!filters.includes(usecase?.name.toLowerCase())) {
-                                                    addFilter(usecase.name)
-                                                } else {
-                                                    removeFilter(filters.indexOf(usecase?.name.toLowerCase()))
-                                                }
-                                            }}
-                                            style={{
-                                                padding: "12px 16px",
-                                                borderBottom: index === usecases.length - 2 ? "none" : "1px solid rgba(255,255,255,0.05)",
-                                                "&:hover": {
-                                                    backgroundColor: "rgba(255,255,255,0.1)"
-                                                }
-                                            }}
-                                        >
-                                            <div style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                width: "100%",
-                                                gap: "12px"
-                                            }}>
-                                                <Checkbox
-                                                    checked={selectedCategory.includes(category)}
-                                                    style={{
-                                                        padding: 0,
-                                                        marginRight: 8,
-                                                        color: "rgba(255,255,255,0.7)"
-                                                    }}
-                                                />
-                                                <div style={{
-                                                    display: "flex",
-                                                    justifyContent: "space-between",
-                                                    alignItems: "center",
-                                                    width: "100%"
-                                                }}>
-                                                    <Typography
-                                                        variant="body1"
-                                                        style={{
-                                                            color: "rgba(255,255,255,0.9)",
-                                                            fontWeight: selectedCategory.includes(category) ? 500 : 400
-                                                        }}
-                                                    >
-                                                        {category}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="body2"
-                                                        style={{
-                                                            color: "rgba(255,255,255,0.5)",
-                                                            backgroundColor: "rgba(255,255,255,0.1)",
-                                                            padding: "2px 8px",
-                                                            borderRadius: "12px",
-                                                            fontSize: "0.75rem"
-                                                        }}
-                                                    >
-                                                        {usecase?.matches.length}/{usecase?.list.length}
-                                                    </Typography>
-                                                </div>
-                                            </div>
-                                        </MenuItem>
-                                    )
-                                })}
-                            </Select>
-
-                            <div style={{ display: "flex", gap: 8, height: "100%" }}>
-                                <Tooltip title="Explore Workflow Runs" placement="top">
-                                    <IconButton
-                                        style={{
-                                            color: 'white',
-                                            backgroundColor: '#212121',
-                                            borderRadius: '8px',
-                                            padding: '6px',
-                                            width: '55px',
-                                            height: '55px',
-                                        }}
-                                        onClick={() => navigate("/workflows/debug")}
-                                    >
-                                        <QueryStatsIcon />
-                                    </IconButton>
-                                </Tooltip>
-                                <Tooltip title={view === "grid" ? "Grid view" : "List view"} placement="top">
-                                    <IconButton
-                                        style={{
-                                            color: 'white',
-                                            backgroundColor: '#212121',
-                                            borderRadius: '8px',
-                                            padding: '6px',
-                                            width: '55px',
-                                            height: '55px',
-                                        }}
+                                const category = usecase?.name.split(" ")[1]
+                                return (
+                                    <MenuItem
+                                        value={category}
                                         onClick={() => {
-                                            if (view === "grid") {
-                                                localStorage.setItem("workflowView", "list");
-                                                setView("list");
+                                            if (!filters.includes(usecase?.name.toLowerCase())) {
+                                                addFilter(usecase.name)
                                             } else {
-                                                localStorage.setItem("workflowView", "grid");
-                                                setView("grid");
+                                                removeFilter(filters.indexOf(usecase?.name.toLowerCase()))
+                                            }
+                                        }}
+                                        style={{
+                                            padding: "12px 16px",
+                                            borderBottom: index === usecases.length - 2 ? "none" : "1px solid rgba(255,255,255,0.05)",
+                                            "&:hover": {
+                                                backgroundColor: "rgba(255,255,255,0.1)"
                                             }
                                         }}
                                     >
-                                        {
-                                            view === "list" ? <ListIcon /> : <GridOnIcon />
-                                        }
+                                        <div style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            width: "100%",
+                                            gap: "12px"
+                                        }}>
+                                            <Checkbox
+                                                checked={selectedCategory.includes(category)}
+                                                style={{
+                                                    padding: 0,
+                                                    marginRight: 8,
+                                                    color: "rgba(255,255,255,0.7)"
+                                                }}
+                                            />
+                                            <div style={{
+                                                display: "flex",
+                                                justifyContent: "space-between",
+                                                alignItems: "center",
+                                                width: "100%"
+                                            }}>
+                                                <Typography
+                                                    variant="body1"
+                                                    style={{
+                                                        color: "rgba(255,255,255,0.9)",
+                                                        fontWeight: selectedCategory.includes(category) ? 500 : 400
+                                                    }}
+                                                >
+                                                    {category}
+                                                </Typography>
+                                                <Typography
+                                                    variant="body2"
+                                                    style={{
+                                                        color: "rgba(255,255,255,0.5)",
+                                                        backgroundColor: "rgba(255,255,255,0.1)",
+                                                        padding: "2px 8px",
+                                                        borderRadius: "12px",
+                                                        fontSize: "0.75rem"
+                                                    }}
+                                                >
+                                                    {usecase?.matches.length}/{usecase?.list.length}
+                                                </Typography>
+                                            </div>
+                                        </div>
+                                    </MenuItem>
+                                )
+                            })}
+                        </Select>
+
+
+                        <div style={{ width: "50%", minWidth: "50%", maxWidth: "50%", height: 47, display: "flex", gap: 5 }}>
+                            <div style={{
+                                display: "flex", height: "100%",
+                                justifyContent: "space-around",
+                                flex: 0.7,
+                                paddingLeft: 1,
+                                paddingRight: 1,
+                                gap: 4
+                            }}>
+                                <Tooltip title="Explore Workflow Runs" placement="top">
+                                    <IconButton
+                                        style={iconButtonStyle}
+                                        onClick={() => navigate("/workflows/debug")}
+                                        disabled={currTab === 2}
+                                    >
+                                        <QueryStatsIcon style={{ color: "#F1F1F1" }} />
                                     </IconButton>
                                 </Tooltip>
+
+                                <Tooltip title={view === "grid" ? "List view" : "Grid view"} placement="top">
+                                    <IconButton
+                                        style={iconButtonStyle}
+                                        onClick={() => {
+                                            const newView = view === "grid" ? "list" : "grid";
+                                            localStorage.setItem("workflowView", newView);
+                                            setView(newView);
+                                        }}
+                                        disabled={currTab === 2}
+                                    >
+                                        {view === "grid" ? <ListIcon /> : <GridOnIcon />}
+                                    </IconButton>
+                                </Tooltip>
+
                                 <Tooltip title="Import workflows" placement="top">
                                     <IconButton
-                                        style={{
-                                            color: 'white',
-                                            backgroundColor: '#212121',
-                                            borderRadius: '8px',
-                                            padding: '6px',
-                                            width: '55px',
-                                            height: '55px',
-                                        }}
+                                        style={iconButtonStyle}
                                         onClick={() => upload.click()}
+                                        disabled={currTab === 2}
                                     >
                                         {submitLoading ? <CircularProgress color="secondary" /> : <PublishIcon />}
                                     </IconButton>
                                 </Tooltip>
+
                                 <input
                                     hidden
                                     type="file"
@@ -4237,120 +4248,107 @@ const Workflows2 = (props) => {
                                     ref={(ref) => (upload = ref)}
                                     onChange={importFiles}
                                 />
-                                <Tooltip title={`Download ALL workflows (${workflows.length})`}
-                                    placement="top">
+
+                                <Tooltip title={`Download ALL workflows (${workflows.length})`} placement="top">
                                     <IconButton
-                                        style={{
-                                            color: 'white',
-                                            backgroundColor: '#212121',
-                                            borderRadius: '8px',
-                                            padding: '6px',
-                                            width: '55px',
-                                            height: '55px',
-                                        }}
-                                        disabled={isCloud}
-                                        variant="text"
-                                        onClick={() => {
-                                            exportAllWorkflows(workflows);
-                                        }}
+                                        style={{ ...iconButtonStyle, cursor: "pointer" }}
+                                        disabled={isCloud || currTab === 2}
+                                        onClick={() => exportAllWorkflows(workflows)}
                                     >
                                         <GetAppIcon />
                                     </IconButton>
                                 </Tooltip>
                             </div>
-
                             <Button
                                 variant="contained"
                                 color="primary"
                                 onClick={handleCreateWorkflow}
                                 style={{
-                                    height: "56px",
-                                    borderRadius: 8,
+                                    borderRadius: 4,
                                     flex: 0.8,
                                     textTransform: 'none',
-
+                                    backgroundColor: "#FF8544",
+                                    color: "#1A1A1A",
+                                    fontFamily: theme?.typography?.fontFamily,
+                                    fontSize: 16,
+                                    fontWeight: 500
                                 }}
+                                startIcon={<Add style={{ color: "#1A1A1A" }} />}
                             >
-                                <Add style={{ marginRight: 10 }} />
                                 Create Workflow
                             </Button>
-
-
                         </div>
-                        <div style={{
-                            width: "100%",
-                        }}>
-                            {
-                                isLoadingWorkflow ? (
-                                    <div style={{ textAlign: "center", marginTop: 50 }}>
-                                        <CircularProgress style={{ color: "#f85a3e" }} />
-                                    </div>
-                                ) : (
-                                    view === "grid" && currTab !== 2 ? (
-                                        <>
-                                            <div style={{
-                                                display: "grid",
-                                                gridTemplateColumns: "repeat(3, 1fr)", // Creates 3 equal columns
-                                                gap: "20px", // Adds consistent spacing between items
-                                                width: "100%",
-                                            }}>
 
 
-
-                                                {filteredWorkflows.map((data, index) => {
-                                                    // Shouldn't be a part of this list
-                                                    if (data.public === true) {
-                                                        return null
-                                                    }
-
-                                                    if (firstLoad) {
-                                                        workflowDelay += 75
-                                                    } else {
-                                                        return <WorkflowPaper key={index} data={data} />
-                                                    }
-
-                                                    return (
-                                                        <span key={index}>
-                                                            {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
-                                                            <WorkflowPaper data={data} />
-                                                            {/*</Zoom>*/}
-                                                        </span>
-                                                    )
-                                                })}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        currTab !== 2 && <WorkflowListView />
-                                    )
-                                )
-                            }
-
-                            {
-                                currTab === 2 &&
-                                (
-                                    <InstantSearch searchClient={searchClient} indexName="workflows">
-                                        <Configure clickAnalytics />
-                                        <CustomHits hitsPerPage={5} />
-                                    </InstantSearch>
-                                )
-                            }
-
-                        </div>
                     </div>
+                    <div style={{
+                        width: "100%",
+                        position: "relative",
+                        zIndex: 1
+                    }}>
+                        {
+                            isLoadingWorkflow ? (
+                                <LoadingWorkflowGrid/>
+                            ) : (
+                                view === "grid" && currTab !== 2 ? (
+                                    <>
+                                        <div style={{
+                                            marginTop: 16,
+                                            width: "100%",
+                                            display: "grid",
+                                            gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
+                                            gap: "20px",
+                                            justifyContent: "space-between",
+                                            alignItems: "start",
+                                            padding: "0 10px",
+                                            paddingBottom: 40
+                                        }}>
 
 
-                    {/* {foundPriority != null && filteredWorkflows.length > 6 ? 
-							<Priority
-								style={{marginTop: 15, }}
-								globalUrl={globalUrl}
-								priority={foundPriority}
-								checkLogin={checkLogin}
-								appFramework={appFramework}
-							/>
-					: null} */}
 
+                                            {filteredWorkflows.map((data, index) => {
+                                                // Shouldn't be a part of this list
+                                                if (data.public === true) {
+                                                    return null
+                                                }
+
+                                                if (firstLoad) {
+                                                    workflowDelay += 75
+                                                } else {
+                                                    return <WorkflowPaper key={index} data={data} />
+                                                }
+
+                                                return (
+                                                    <span key={index}>
+                                                        {/*<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>*/}
+                                                        <WorkflowPaper data={data} />
+                                                        {/*</Zoom>*/}
+                                                    </span>
+                                                )
+                                            })}
+                                        </div>
+                                    </>
+                                ) : (
+                                    currTab !== 2 && <WorkflowListView />
+                                )
+                            )
+                        }
+
+                        {
+                            currTab === 2 &&
+                            (
+                                <InstantSearch searchClient={searchClient} indexName="workflows">
+                                    <Configure clickAnalytics />
+                                    <CustomHits hitsPerPage={5} type="public" />
+                                </InstantSearch>
+                            )
+                        }
+
+                    </div>
                 </div>
-            </div>
+
+            </>
+
         );
     });
 
@@ -4758,7 +4756,7 @@ const Workflows2 = (props) => {
         );
 
     // Maybe use gridview or something, idk
-    return <div>{loadedCheck}</div>;
+    return <div style={{zoom: 0.8, }}>{loadedCheck}</div>;
 };
 
 

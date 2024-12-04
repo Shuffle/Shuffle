@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext, memo, useMemo } from "react";
 import ReactGA from 'react-ga4';
 
 import theme from "../theme.jsx";
@@ -41,7 +41,8 @@ import {
 	Delete,
 	RestaurantRounded,
 	Cloud,
-	CheckCircle
+	CheckCircle,
+	Padding,
 } from "@mui/icons-material";
 
 //import { useAlert 
@@ -49,8 +50,9 @@ import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
 import BillingStats from "./BillingStats.jsx";
 import { handlePayasyougo } from "../views/HandlePaymentNew.jsx"
 import DeleteIcon from '@mui/icons-material/Delete';
+import { Context } from "../context/ContextApi.jsx";
 
-const Billing = (props) => {
+const Billing = memo((props) => {
 	const { globalUrl, userdata, serverside, billingInfo, stripeKey, selectedOrganization, handleGetOrg, clickedFromOrgTab } = props;
 	//const alert = useAlert();
 	let navigate = useNavigate();
@@ -72,7 +74,7 @@ const Billing = (props) => {
 	const [alertThresholds, setAlertThresholds] = useState(selectedOrganization.Billing !== undefined && selectedOrganization.Billing.AlertThreshold !== undefined && selectedOrganization.Billing.AlertThreshold !== null ? selectedOrganization.Billing.AlertThreshold : [{ percentage: '', count: '', Email_send: false }]);
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [deleteAlertVerification, setDeleteAlertVerification] = useState(false);
-
+	
 	useEffect(() => {
 		if (userdata.app_execution_limit !== undefined && userdata.app_execution_usage !== undefined) {
 			const percentage = (userdata.app_execution_usage / userdata.app_execution_limit) * 100;
@@ -81,18 +83,12 @@ const Billing = (props) => {
 		}
 	}, [userdata]);
 
+	const [BillingEmail, setBillingEmail] = useState(selectedOrganization?.Billing?.Email);
 
-	const [BillingEmail, setBillingEmail] = useState(selectedOrganization.Billing !== undefined && selectedOrganization.Billing.Email !== undefined && selectedOrganization.Billing.Email != null && selectedOrganization.Billing.Email.length > 0 ? selectedOrganization.Billing.Email : selectedOrganization.org);
-
-	useState(() => {
-		// Set the billing email
-		setBillingEmail(
-			selectedOrganization.Billing !== undefined &&
-				selectedOrganization.Billing.Email !== undefined &&
-				selectedOrganization.Billing.Email.length > 0
-				? selectedOrganization.Billing.Email
-				: selectedOrganization.org
-		);
+	useEffect(() => {
+		if (BillingEmail !== selectedOrganization?.Billing?.Email) {
+			setBillingEmail(selectedOrganization?.Billing?.Email);
+		}
 
 		// Set and sort the alert thresholds
 		const alertThresholds = selectedOrganization.Billing !== undefined &&
@@ -126,7 +122,6 @@ const Billing = (props) => {
 	];
 
 	const handleGetDeals = (orgId) => {
-		console.log("Get deals!");
 
 		if (orgId.length === 0) {
 			toast(
@@ -178,7 +173,7 @@ const Billing = (props) => {
 		width: 340,
 		height: 480,
 		// width: "100%",
-		backgroundColor: theme.palette.platformColor,
+		backgroundColor: theme.palette.backgroundColor,
 		borderRadius: theme.palette?.borderRadius * 2,
 		border: "1px solid rgba(255,255,255,0.3)",
 		marginRight: 10,
@@ -384,7 +379,7 @@ const Billing = (props) => {
 		}
 
 		if (hovered) {
-			newPaperstyle.backgroundColor = theme.palette.surfaceColor
+			newPaperstyle.backgroundColor = "#2b2b2b"
 		}
 
 		const handleClickOpen = () => {
@@ -412,7 +407,6 @@ const Billing = (props) => {
 		const HandleChangeBillingEmail = (orgId) => {
 			const email = newBillingEmail;
 			const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-			console.log("Pattern matches: ", emailPattern.test(email));
 			if (!emailPattern.test(email)) {
 				toast("Please enter a valid email address");
 				return;
@@ -445,7 +439,6 @@ const Billing = (props) => {
 					}
 					return response.json();
 				}).then((responseJson) => {
-					console.log("Got org:", responseJson);
 					if (responseJson.success === true) {
 						toast.success("Successfully updated billing email");
 						setBillingEmail(newBillingEmail);
@@ -460,7 +453,7 @@ const Billing = (props) => {
 		}
 
 		return (
-			<Paper
+			<div
 				style={newPaperstyle}
 				onMouseEnter={() => setHovered(true)}
 				onMouseLeave={() => setHovered(false)}
@@ -726,7 +719,7 @@ const Billing = (props) => {
 						</Typography>
 						<div style={{ display: 'flex', flexDirection: 'row' }}>
 							<Typography variant="body2" style={{ marginTop: !userdata.has_card_available ? 5 : 0 }}>
-								Billing email: {BillingEmail}
+								{BillingEmail?.length > 0 ? `Billing email: ${BillingEmail}` : null}
 							</Typography>
 							{userdata.has_card_available === true && (
 								<Button
@@ -817,11 +810,11 @@ const Billing = (props) => {
 							color="primary"
 							style={{
 								marginTop: !userdata.has_card_available ? 20 : 10,
-								borderRadius: 25,
+								borderRadius: 8,
 								height: 40,
 								fontSize: 16,
-								color: "white",
-								backgroundColor: userdata.has_card_available ? null : "#f86743",
+								color: userdata.has_card_available ? "#ff8544" : "#1a1a1a",
+								backgroundColor: userdata.has_card_available ? null : "#ff8544",
 								// backgroundImage: userdata.has_card_available ? null : "linear-gradient(to right, #f86a3e, #f34079)",
 								textTransform: "none",
 
@@ -850,11 +843,11 @@ const Billing = (props) => {
 								color="primary"
 								style={{
 									marginTop: 10,
-									borderRadius: 25,
+									borderRadius: 8,
 									height: 40,
 									fontSize: 16,
-									color: "white",
-									backgroundColor: "#f86743",
+									color: "#1a1a1a",
+									backgroundColor: "#ff8544",
 									textTransform: 'none'
 								}}
 								onClick={() => {
@@ -873,7 +866,6 @@ const Billing = (props) => {
 					: null}
 				{showSupport ?
 					<Button variant="outlined" color="primary" style={{ marginTop: 20, marginBottom: 10, }} onClick={() => {
-						console.log("Support click")
 						if (window.drift !== undefined) {
 							//window.drift.api.startInteraction({ interactionId: 340045 })
 							window.drift.api.startInteraction({ interactionId: 340043 })
@@ -884,7 +876,7 @@ const Billing = (props) => {
 						Get Support
 					</Button>
 					: null}
-			</Paper>
+			</div>
 		)
 	}
 	const ConsultationManagement = (props) => {
@@ -1035,12 +1027,12 @@ const Billing = (props) => {
 		})
 
 		return (
-			<Paper style={{
+			<div style={{
 				padding: 20,
 				// maxWidth: 400,
 				width: 340,
 				height: 480,
-				backgroundColor: hovered ? "#232427" : theme.palette.platformColor,
+				backgroundColor: hovered ? "#2b2b2b" : theme.palette.backgroundColor,
 				borderRadius: theme.palette?.borderRadius * 2,
 				border: "1px solid rgba(255,255,255,0.3)",
 				marginRight: 10,
@@ -1131,11 +1123,11 @@ const Billing = (props) => {
 						color="primary"
 						style={{
 							marginTop: userdata.support ? 0 : 10,
-							borderRadius: 25,
+							borderRadius: 8,
 							height: 40,
 							fontSize: 16,
-							color: "white",
-							backgroundColor: "#f86743",
+							color: "#1A1A1A",
+							backgroundColor: "#FF8544",
 							textTransform: 'none',
 						}}
 						onClick={() => {
@@ -1150,7 +1142,7 @@ const Billing = (props) => {
 					>
 						Buy
 					</Button>
-					<Dialog open={clickOnBuy} onClose={() => { setClickOnBuy(false) }}>
+					<Dialog open={clickOnBuy} onClose={() => { setClickOnBuy(false) }} PaperProps={{style: {backgroundColor: "rgb(26, 26, 26)"}}}>
 						<Typography variant="body1" style={{ marginTop: 10, textAlign: 'center', padding: 20, fontSize: 18 }}>
 							You will be taken to Stripe to book professional service hours. You can adjust the number of hours on the left side of the Stripe page.
 						</Typography>
@@ -1158,7 +1150,7 @@ const Billing = (props) => {
 							<Button
 								variant="contained"
 								color="primary"
-								style={{ display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none', fontSize: 16 }}
+								style={{ display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none', fontSize: 16, color: "#1a1a1a", backgroundColor: "#ff8544" }}
 								onClick={() => {
 									if (Cloud) {
 										ReactGA.event({
@@ -1186,10 +1178,10 @@ const Billing = (props) => {
 								color="primary"
 								style={{
 									marginTop: userdata.support ? 5 : 10,
-									borderRadius: 25,
+									borderRadius: 8,
 									height: 40,
 									fontSize: 16,
-									color: "white",
+									color: "#ff8544",
 									textTransform: 'none',
 									cursor: getProfessionalServices ? 'pointer' : 'not-allowed',
 									opacity: getProfessionalServices ? 1 : 0.6,
@@ -1259,7 +1251,7 @@ const Billing = (props) => {
 						</Button>
 					</DialogContent>
 				</Dialog>
-			</Paper >
+			</div >
 		)
 	}
 
@@ -1308,13 +1300,13 @@ const Billing = (props) => {
 		}
 
 		return (
-			<Paper
+			<div
 				style={{
 					padding: 20,
 					height: 480,
 					// maxWidth: 400,
 					width: 340,
-					backgroundColor: hovered ? "#232427" : theme.palette.platformColor,
+					backgroundColor: hovered ? "#2b2b2b" : theme.palette.backgroundColor,
 					borderRadius: theme.palette?.borderRadius * 2,
 					border: "1px solid rgba(255,255,255,0.3)",
 					marginRight: 10,
@@ -1370,11 +1362,12 @@ const Billing = (props) => {
 						color="primary"
 						style={{
 							marginTop: 10,
-							borderRadius: 25,
+							borderRadius: 8,
 							height: 40,
 							fontSize: 16,
-							color: "white",
-							textTransform: 'none'
+							color: "#1A1A1A",
+							textTransform: 'none',
+							backgroundColor: "#FF8544"
 						}}
 						onClick={() => {
 							if (Cloud) {
@@ -1397,10 +1390,12 @@ const Billing = (props) => {
 						color="primary"
 						style={{
 							marginTop: 10,
-							borderRadius: 25,
+							borderRadius: 8,
 							height: 40,
 							fontSize: 16,
-							textTransform: 'none'
+							textTransform: 'none',
+							color: "#FF8544",
+							backgroundColor: "#1a1a1a",
 						}}
 						onClick={() => {
 							if (Cloud) {
@@ -1425,6 +1420,7 @@ const Billing = (props) => {
 							style: {
 								width: 500,
 								margin: 0,
+								backgroundColor: "rgb(26, 26, 26)",
 							}
 						}}
 					>
@@ -1464,7 +1460,7 @@ const Billing = (props) => {
 							<Button
 								variant="contained"
 								color="primary"
-								style={{ marginTop: '24px', display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none' }}
+								style={{ marginTop: '24px', display: 'block', marginLeft: 'auto', marginRight: 'auto', padding: '12px 24px', textTransform: 'none', color: "#1a1a1a", backgroundColor: "#ff8544" }}
 								onClick={handlePrivateTraining}
 							>
 								Submit Request
@@ -1472,7 +1468,7 @@ const Billing = (props) => {
 						</DialogContent>
 					</Dialog>
 				</div>
-			</Paper>
+			</div>
 		)
 	}
 
@@ -1892,13 +1888,15 @@ const Billing = (props) => {
 		}
 	};
 
-
-	const isChildOrg = userdata.active_org.creator_org !== "" && userdata.active_org.creator_org !== undefined && userdata.active_org.creator_org !== null
+	const isChildOrg = userdata?.active_org?.creator_org !== "" && userdata?.active_org?.creator_org !== undefined && userdata?.active_org?.creator_org !== null
+	
 	return (
-		<div style={{ width: clickedFromOrgTab ? 1030 : "auto", padding: 27, backgroundColor: '#212121', borderRadius: '16px', }}>
-			{addDealModal}
+		<Wrapper clickedFromOrgTab={clickedFromOrgTab}>
+			<div style={{ height: "100%", width: "100%"}}>
+				<div style={{ width: "100%",}}>
+				{addDealModal}
 			{clickedFromOrgTab ?
-				<h2 style={{ marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Billing & Licensing</h2> :
+				<Typography style={{fontSize: 24, fontWeight: "bold", marginBottom: 8, marginTop: 0, color: "#ffffff" }}>Billing & Licensing</Typography> :
 				<Typography variant="h4" style={{ marginTop: 20, marginBottom: 10 }}>
 					Billing	& Licensing
 				</Typography>}
@@ -1942,11 +1940,11 @@ const Billing = (props) => {
 
 			{isChildOrg ?
 				<Typography variant="h6" style={{ marginBottom: 50, }}>
-					Billing is handled by your parent organisation. Reach out to support@shuffler.io if you have questions about this.
+					Licensing is handled by your parent organisation. Reach out to support@shuffler.io if you have questions about this.
 				</Typography>
 				: null}
 
-			<div style={{ display: "flex", width: 1180, overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#494949 #2f2f2f', height: 580 }} >
+			<div style={{ display: "flex", width: clickedFromOrgTab ? 1030 : "auto", overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#494949 #2f2f2f', height: isChildOrg ? 0 : 580 }} >
 				{isCloud && billingInfo.subscription !== undefined && billingInfo.subscription !== null ? isChildOrg ? null :
 					<SubscriptionObject
 						index={0}
@@ -2258,10 +2256,10 @@ const Billing = (props) => {
             ) : null*/}
 			{!isChildOrg && isCloud && (
 				<div style={{ display: 'flex', flexDirection: 'column', marginTop: 10 }}>
-					<Typography style={{ marginBottom: 5 }} variant="h4">
+					<Typography style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}>
 						Professional Services
 					</Typography>
-					<Typography color="textSecondary">
+					<Typography color="textSecondary" style={{fontSize: 16,}}>
 						We offer priority support through consultations and training to help you make the most of our product. If you have any questions, please reach out to us at support@shuffler.io.
 					</Typography>
 					<div style={{ display: 'flex', flexDirection: 'row', marginTop: 5 }}>
@@ -2280,15 +2278,14 @@ const Billing = (props) => {
 			)}
 			<div style={{ marginTop: isCloud && 40, marginLeft: 10 }}>
 				<Typography
-					style={{ marginBottom: 5 }}
-					variant="h4"
+					style={{ marginBottom: 5, fontSize: 24, fontWeight: "bold" }}
 				>
 					Manage Billing
 				</Typography>
-				<Typography variant="body1" color="textSecondary" style={{ marginTop: 0, marginBottom: 10 }}>
+				<Typography color="textSecondary" style={{ marginTop: 10, marginBottom: 10, fontSize: 16, }}>
 					Manage your billing and licensing information below. When you reach the certain thresholds of your subscription limit, you will be notified by email.
 				</Typography>
-				<Typography variant="body1">Current Usage:</Typography>
+				<Typography style={{fontSize: 18, marginTop: 10}}>Current Usage:</Typography>
 				<LinearProgress
 					variant="determinate"
 					value={currentAppRunsInPercentage}
@@ -2300,15 +2297,15 @@ const Billing = (props) => {
 						marginBottom: 10,
 					}}
 				/>
-				<Typography variant="body1" color="textSecondary">
+				<Typography style={{marginTop: 10, fontSize: 16,}} color="textSecondary">
 					You have used <strong>{currentAppRunsInPercentage}%</strong> of total app execution limit or <strong>{userdata.app_execution_usage}</strong> app runs out of <strong>{userdata.app_execution_limit}</strong> app runs.
 				</Typography>
 
 				<div>
-					<Typography variant="body1" style={{ marginTop: 20 }}>
+					<Typography style={{ marginTop: 20, fontSize: 18 }}>
 						Set email alert thresholds for app runs
 					</Typography>
-					<Typography variant="body1" color="textSecondary" style={{ marginTop: 10 }}>
+					<Typography color="textSecondary" style={{ marginTop: 10, fontSize: 16 }}>
 						You will be notified by email when you reach the
 						{currentIndex !== -1
 							? " " + getSafeValue(alertThresholds[currentIndex].percentage) + '%' + " "
@@ -2320,8 +2317,8 @@ const Billing = (props) => {
 							: " " + 0 + " "}
 						app runs.
 					</Typography>
-					<Typography variant="body1" color="textSecondary" style={{ marginTop: 10 }}>
-						Please note: Once your app runs reach the set alert threshold, all admins in the organization will receive an email notification.
+					<Typography color="textSecondary" style={{ fontSize: 16 }}>
+						<span style={{fontWeight: 'bold'}}>Please note</span>: Once your app runs reach the set alert threshold, all admins in the organization will receive an email notification.
 					</Typography>
 					<div style={{ marginTop: 15 }}>
 						{alertThresholds.map((threshold, index) => (
@@ -2329,7 +2326,7 @@ const Billing = (props) => {
 								<TextField
 									style={{
 										marginTop: 10,
-										backgroundColor: theme.palette.inputColor,
+										backgroundColor: "#212121",
 										width: 250,
 									}}
 									InputProps={{
@@ -2354,7 +2351,7 @@ const Billing = (props) => {
 								<TextField
 									style={{
 										marginTop: 10,
-										backgroundColor: theme.palette.inputColor,
+										backgroundColor: "#212121",
 										width: 250,
 										marginLeft: 15,
 									}}
@@ -2422,10 +2419,10 @@ const Billing = (props) => {
 				</Button>
 
 			</div>
+			</div>
 			<div style={{ marginTop: 40, display: 'flex', flexDirection: 'column' }}>
 				<Typography
-					style={{ marginTop: 10, marginLeft: 10, marginBottom: 5 }}
-					variant="h4"
+					style={{ marginTop: 10, marginLeft: 10, marginBottom: 5, fontSize: 24, fontWeight: "bold" }}
 				>
 					Utilization & Stats
 				</Typography>
@@ -2436,9 +2433,41 @@ const Billing = (props) => {
 				globalUrl={globalUrl}
 				selectedOrganization={selectedOrganization}
 				userdata={userdata}
-			/>
-		</div>
+			/>	
+			</div>
+		</Wrapper>
 	)
-}
+})
 
-export default Billing;
+export default memo(Billing);
+
+const PaddingWrapper = memo(({ clickedFromOrgTab, children }) => {
+  
+	const wrapperStyle = useMemo(() => ({
+	  width: clickedFromOrgTab 
+		? "100%"
+		: "auto",
+	  padding: "27px 10px 19px 27px", 
+	  backgroundColor: '#212121', 
+	  borderRadius: '16px',
+	  height: '100%',
+	  boxSizing: 'border-box',
+	  borderLeft: '1px solid #494949',
+	  overflow: 'hidden',
+	  maxHeight: "1700px", overflowY: "auto",scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'
+	}), [clickedFromOrgTab]);
+  
+	return (
+	  <div style={wrapperStyle}>
+		{children}
+	  </div>
+	);
+  });
+  
+  const Wrapper = memo(({ children, clickedFromOrgTab }) => {
+	return (
+	  <PaddingWrapper clickedFromOrgTab={clickedFromOrgTab}>
+		{children}
+	  </PaddingWrapper>
+	);
+  });

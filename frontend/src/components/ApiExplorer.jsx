@@ -92,7 +92,7 @@ const RequestMethods = [
   },
 ];
 
-const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, selectedAppData, ConfigurationTab }) => {
+const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, selectedAppData, ConfigurationTab, isLoggedIn, isLoaded }) => {
   const [actions, setActions] = useState([]);
   const [info, setInfo] = useState({});
   const [serverurl, setServerUrl] = useState("");
@@ -1265,12 +1265,12 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
       style={{
         display: "flex",
         flexDirection: 'row',
-        height: userdata?.support ? "auto" : "calc(100vh - 80px)",
+        height: (isLoggedIn && isLoaded) ? "auto" : "calc(100vh - 80px)",
       }}
     >
-        <ActionsList info={info} openapi={openapi} userdata={userdata} actions={actions} filteredActions={filteredActions} setFilteredActions={setFilteredActions} selectedActionIndex={selectedActionIndex} setSelectedActionIndex={setSelectedActionIndex} setExampleBody={setExampleBody }/>
+        <ActionsList info={info} openapi={openapi} isLoggedIn={isLoggedIn} isLoaded={isLoaded} userdata={userdata} actions={actions} filteredActions={filteredActions} setFilteredActions={setFilteredActions} selectedActionIndex={selectedActionIndex} setSelectedActionIndex={setSelectedActionIndex} setExampleBody={setExampleBody }/>
 
-        <ActionResponseAndRequest ConfigurationTab={ConfigurationTab} selectedAppData={selectedAppData} HandleApiExecution={HandleApiExecution} userdata={userdata} info={info} filteredActions={filteredActions} setFilteredActions={setFilteredActions} actions={actions} selectedActionIndex={selectedActionIndex} ExampleBody={ExampleBody} setExampleBody={setExampleBody} openapi={openapi} serverurl={serverurl} globalUrl={globalUrl} setSelectedActionIndex={setSelectedActionIndex}/>
+        <ActionResponseAndRequest isLoaded={isLoaded} isLoggedIn={isLoggedIn} ConfigurationTab={ConfigurationTab} selectedAppData={selectedAppData} HandleApiExecution={HandleApiExecution} userdata={userdata} info={info} filteredActions={filteredActions} setFilteredActions={setFilteredActions} actions={actions} selectedActionIndex={selectedActionIndex} ExampleBody={ExampleBody} setExampleBody={setExampleBody} openapi={openapi} serverurl={serverurl} globalUrl={globalUrl} setSelectedActionIndex={setSelectedActionIndex}/>
 
     </div>
   );
@@ -1279,7 +1279,7 @@ const ApiExplorer = memo(({ openapi, globalUrl, userdata, HandleApiExecution, se
 export default ApiExplorer;
 
 
-const ActionResponseAndRequest = memo(({ConfigurationTab, selectedAppData,actions, info, HandleApiExecution, userdata, filteredActions, setFilteredActions, serverurl, globalUrl, setSelectedActionIndex, ExampleBody, setExampleBody, selectedActionIndex}) => {
+const ActionResponseAndRequest = memo(({ isLoggedIn, isLoaded, ConfigurationTab, selectedAppData,actions, info, HandleApiExecution, userdata, filteredActions, setFilteredActions, serverurl, globalUrl, setSelectedActionIndex, ExampleBody, setExampleBody, selectedActionIndex}) => {
   const [apiResponse, setApiResponse] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const loadAction = 10;
@@ -1366,7 +1366,7 @@ const ActionResponseAndRequest = memo(({ConfigurationTab, selectedAppData,action
                 ))}
         </div>
 
-        <ActionResponse userdata={userdata} apiResponse={apiResponse} ExampleBody={ExampleBody}/>
+        <ActionResponse isLoaded={isLoaded} isLoggedIn={isLoggedIn} apiResponse={apiResponse} ExampleBody={ExampleBody}/>
     </div>
   )})
 
@@ -1381,6 +1381,8 @@ const ActionsList = memo(({
   userdata,
   info,
   openapi,
+  isLoggedIn,
+  isLoaded
 }) => {
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -1436,7 +1438,7 @@ const ActionsList = memo(({
     }
   };
   return (
-    <div style={{ maxWidth: '350px', width: "25%", overflow: 'hidden', marginLeft: !userdata.support ? 5 : 0}}>
+    <div style={{ maxWidth: '350px', width: "25%", overflow: 'hidden', marginLeft: !(isLoggedIn || isLoaded) ? 5 : 0}}>
     <div style={{ borderBottom: '1px solid #494949', paddingTop: 10, paddingBottom: 10}}>
             <div>
                 {info?.title ? (
@@ -1487,7 +1489,7 @@ const ActionsList = memo(({
           marginTop: 15,
           backgroundColor: "#1a1a1a",
           overflowY: "auto",
-          height: userdata?.support ? "calc(100vh - 190px)" : "calc(100vh - 260px)",
+          height: (isLoaded && isLoggedIn) ? "calc(100vh - 190px)" : "calc(100vh - 260px)",
           paddingRight: 5,
         }}
       >
@@ -2776,7 +2778,7 @@ const Action = memo((
         );
 })
 
-const ActionResponse = memo(({ apiResponse, ExampleBody, userdata }) => {
+const ActionResponse = memo(({ apiResponse, ExampleBody, isLoggedIn, isLoaded }) => {
   const [height, setHeight] = useState("14vh")
   const [responseTabIndex, setResponseTabIndex] = useState(0)
   const [oldResponse, setOldResponse] = useState(apiResponse)
@@ -2897,7 +2899,7 @@ const ActionResponse = memo(({ apiResponse, ExampleBody, userdata }) => {
   }, []);
 
   return (
-    <ApiResponseWrapper userdata={userdata}>
+    <ApiResponseWrapper isLoggedIn={isLoggedIn} isLoaded={isLoaded}>
       <div
         style={{
           width: '100%',
@@ -3016,12 +3018,12 @@ const ResponseTabWrapper = memo(({ apiResponse }) => {
         />
   )})
 
-const PaddingWrapper = memo(({ userdata, children }) => {
+const PaddingWrapper = memo(({ isLoggedIn, isLoaded, children }) => {
   const { leftSideBarOpenByClick, windowWidth } = useContext(Context);
   return (
     <div
       style={{
-        width: userdata?.support
+        width: (isLoggedIn && isLoaded)
           ? leftSideBarOpenByClick
             ? windowWidth >= 1920  ? "calc(100% - 630px)" : "calc(100% - 570px)"
             : windowWidth >= 1920 ? "calc(100vw - 460px)": "calc(100% - 410px)"
@@ -3042,9 +3044,9 @@ const PaddingWrapper = memo(({ userdata, children }) => {
   );
 });
 
-const ApiResponseWrapper = memo(({ children, userdata }) => {
+const ApiResponseWrapper = memo(({ children, isLoaded, isLoggedIn }) => {
   return (
-    <PaddingWrapper userdata={userdata}>
+    <PaddingWrapper isLoggedIn={isLoggedIn} isLoaded={isLoaded}>
       {children}
     </PaddingWrapper>
   );

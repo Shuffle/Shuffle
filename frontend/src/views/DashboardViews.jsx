@@ -337,11 +337,23 @@ const Dashboard = (props) => {
   const [, setUpdate] = useState(0);
 
 	let navigate = useNavigate();
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
+  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+
+	const path = window.location.pathname
+	if (path !== undefined && path !== null) { 
+		if (path.includes("/automate")) {
+			navigate("/usecases")
+		}
+
+		if (path.includes("/security")) {
+			navigate("/forms")
+		}
+	}
 
 	useEffect(() => {
+		// Look for the path. If it is automation, go to usecases
+		// Handles redirect
+
 		const widgetnames = ["app_executions_cloud"]
 		for (let widgetkey in widgetnames) {
 			const widgetName = widgetnames[widgetkey]
@@ -859,7 +871,7 @@ const Dashboard = (props) => {
   );
 
   const dataWrapper = (
-    <div style={{ maxWidth: 1366, margin: "auto" }}>{data}</div>
+    <div style={{ maxWidth: 1366, margin: "auto", paddingTop: 10, }}>{data}</div>
   );
 
   return dataWrapper;

@@ -53,6 +53,7 @@ import {
 
 import {
   HelpOutline as HelpOutlineIcon,
+  OpenInFull as OpenInFullIcon, 
   Description as DescriptionIcon,
   GetApp as GetAppIcon,
   Search as SearchIcon,
@@ -2090,7 +2091,7 @@ const ParsedAction = (props) => {
 					{data?.validation?.valid === true ? 
 						<Tooltip title="Authentication has been validated" placement="top">
 							<Chip
-								style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", borderColor: green, }}
+								style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", borderColor: green, maxHeight: 25, }}
 								label={"Valid"}
 								variant="outlined"
 								color="secondary"
@@ -2099,7 +2100,7 @@ const ParsedAction = (props) => {
 					: null }
 					{data?.last_modified === true ? 
 						<Chip
-							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", maxHeight: 25, }}
 							label={"Latest"}
 							variant="outlined"
 							color="secondary"
@@ -2139,7 +2140,7 @@ const ParsedAction = (props) => {
             >
               <IconButton
                 color="primary"
-								variant="outlined"
+				variant="outlined"
                 style={{}}
                 onClick={() => {
                   setAuthenticationModalOpen(true);
@@ -3452,36 +3453,10 @@ const ParsedAction = (props) => {
 				  disableUnderline: true,
                   endAdornment: hideExtraTypes ? null : (
                     <InputAdornment position="end">
-					<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
-						<Tooltip title="Expand window" placement="top">
-							<AspectRatioIcon
-								style={{ cursor: "pointer", margin: multiline ? 5 : 0 ,}}
-								onClick={(event) => {
-									event.preventDefault()
-									setFieldCount(count)
-									setExpansionModalOpen(true)
-									setActiveDialog("codeeditor")
-									//setcodedata(data.value)
-									var parsedvalue = data.value
-									if (parsedvalue === undefined || parsedvalue === null) {
-										parsedvalue = ""
-									}
-
-									setEditorData({
-										"name": data.name,
-										"value": parsedvalue,
-										"field_number": count,
-										"actionlist": actionlist,
-										"field_id": clickedFieldId,
-
-										"example": selectedActionParameters[count].example,
-									})
-								}}
-							/>
-						</Tooltip>
+					<ButtonGroup color="secondary" orientation={multiline ? "vertical" : "horizontal"}>
 						<Tooltip title="Autocomplete text" placement="bottom">
 							<AddCircleOutlineIcon
-								style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
+								style={{ color: "rgba(255,255,255,0.7)", cursor: "pointer", margin: multiline ? 5 : 0, }}
 								onClick={(event) => {
 									event.preventDefault()
 
@@ -4354,6 +4329,34 @@ const ParsedAction = (props) => {
                   >
                       {tmpitem} <span style={{color: theme.palette.main}}>{selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "*" : ""}</span>
                   </div>
+
+					<Tooltip title="Expand editor window" placement="top">
+
+						<OpenInFullIcon
+							style={{ color: "rgba(255,255,255,0.7)", cursor: "pointer", margin: multiline ? 5 : 0, height: 20, width: 20, }}
+							onClick={(event) => {
+								event.preventDefault()
+								setFieldCount(count)
+								setExpansionModalOpen(true)
+								setActiveDialog("codeeditor")
+								//setcodedata(data.value)
+								var parsedvalue = data.value
+								if (parsedvalue === undefined || parsedvalue === null) {
+									parsedvalue = ""
+								}
+
+								setEditorData({
+									"name": data.name,
+									"value": parsedvalue,
+									"field_number": count,
+									"actionlist": actionlist,
+									"field_id": clickedFieldId,
+
+									"example": selectedActionParameters[count].example,
+								})
+							}}
+						/>
+					</Tooltip>
 
                 </div>
                 {datafield}

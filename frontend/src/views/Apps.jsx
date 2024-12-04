@@ -3239,15 +3239,13 @@ const AppsWrapper = memo(({ appView, modalView, userdata, publishModal, generate
 ));
 
 
-const SidebarAdjustWrapper = memo(({ userdata, children }) => {
+const SidebarAdjustWrapper = memo(({ children }) => {
 
   const {leftSideBarOpenByClick } = useContext(Context)
-  const marginLeft = userdata?.support
-    ? leftSideBarOpenByClick ? 250 : 80
-    : 0;
+  
 
   return (
-    <div style={{ marginLeft, transition: 'margin-left 0.3s ease' }}>
+    <div style={{ marginLeft: leftSideBarOpenByClick ? 250 : 80, transition: 'margin-left 0.3s ease' }}>
       {children}
     </div>
   );
