@@ -274,7 +274,8 @@ const CodeWorkflow = (defaultprops) => {
             display: 'flex',
             flexDirection: 'column',
             height: '100vh', // Set to full viewport height
-            backgroundColor: '#252526'
+            backgroundColor: '#252526',
+            marginLeft: '100px',
         }}>
             {/* IDE-like toolbar */}
             <Toolbar

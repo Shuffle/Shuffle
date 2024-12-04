@@ -91,7 +91,7 @@ const Search = (props) => {
     userdata={userdata}
   />, [curTab]);
 
-  const MemoizedDiscordChat = useMemo(() => <DiscordChat isMobile={isMobile} />)
+  const MemoizedDiscordChat = useMemo(() => <DiscordChat isMobile={isMobile} />, [curTab])
 
   const useStyles = makeStyles({
     hideIndicator: {

@@ -127,7 +127,7 @@ const MFASetup = ({ isLoaded, globalUrl, setCookie }) => {
     };
 
     return (
-        <div style={{ margin: "50px auto", width: "500px" }}>
+        <div style={{ paddingTop: 50, margin: "0px auto", width: "500px" }}>
             <Paper elevation={3} style={{ padding: "30px", backgroundColor: "#212121" }}>
                 <Typography variant="h5" style={{ color: "white", marginBottom: 10, textAlign: "center" }}>
                     Multi-Factor Authentication Setup

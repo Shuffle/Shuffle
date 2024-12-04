@@ -50,6 +50,12 @@ const theme = createTheme(adaptV4Theme({
       borderRadius: 5,
 	  height: 40, 
     },
+    DialogStyle: {
+      backgroundColor: "#212121",
+      borderRadius: 2,
+      boxShadow: "0px 0px 10px 0px rgba(0,0,0,0.75)",
+      border: "1px solid #494949",
+    },
     innerTextfieldStyle: {
 	  height: 40,
 	  fontSize: 16,

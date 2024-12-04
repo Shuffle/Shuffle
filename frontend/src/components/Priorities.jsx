@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext, memo } from "react";
 
 import { toast } from "react-toastify";
 import theme from "../theme.jsx";
@@ -13,22 +13,25 @@ import {
 	Card,
 	Chip,
   	Switch,
+		Skeleton,
 } from "@mui/material";
+import { Context } from "../context/ContextApi.jsx";
 
 import { useNavigate, Link } from "react-router-dom";
 import Priority from "../components/Priority.jsx";
+import { constrainMatrix } from "reaviz";
 //import { useAlert 
 
-const Priorities = (props) => {
+const Priorities = memo((props) => {
   const { globalUrl, userdata,clickedFromOrgTab, serverside, billingInfo, stripeKey, checkLogin, setAdminTab, setCurTab, notifications, setNotifications, } = props;
+  
   const [showDismissed, setShowDismissed] = React.useState(false);
   const [showRead, setShowRead] = React.useState(false);
   const [appFramework, setAppFramework] = React.useState({});
-
   const [selectedWorkflow, setSelectedWorkflow] = React.useState("NO HIGHLIGHT");
   const [selectedExecutionId, setSelectedExecutionId] = React.useState("NO HIGHLIGHT");
   const [highlightKMS, setHighlightKMS] = React.useState(false)
-
+  
   let navigate = useNavigate();
 	useEffect(() => {
 		getFramework()
@@ -216,188 +219,16 @@ const Priorities = (props) => {
 	const notificationWidth = "100%" 
 	const imagesize = 22
   	const boxColor = "#86c142"
-	const NotificationItem = (props) => {
-		const {data} = props
-
-    	var image = "";
-    	var orgName = "";
-    	var orgId = "";
-
-
-		var highlighted = selectedExecutionId === "" && selectedWorkflow === "" ? false : data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0 ? false : data.reference_url.includes(selectedExecutionId) || data.reference_url.includes(selectedWorkflow) 
-
-		if (!highlighted && highlightKMS) {
-			if (data.title !== undefined && data.title !== null && data.title.toLowerCase().includes("kms")) {
-				highlighted = true
-			} else if (data.description !== undefined && data.description !== null && data.description.toLowerCase().includes("kms")) {
-				highlighted = true
-			}
-
-		}
-
-    	if (userdata.orgs !== undefined) {
-    	  const foundOrg = userdata.orgs.find((org) => org.id === data["org_id"]);
-    	  if (foundOrg !== undefined && foundOrg !== null) {
-    	    //position: "absolute", bottom: 5, right: -5,
-    	    const imageStyle = {
-    	      width: imagesize,
-    	      height: imagesize,
-    	      pointerEvents: "none",
-    	      marginLeft:
-    	        data.creator_org !== undefined && data.creator_org.length > 0
-    	          ? 20
-    	          : 0,
-    	      borderRadius: 10,
-    	      border:
-    	        foundOrg.id === userdata.active_org.id
-    	          ? `3px solid ${boxColor}`
-    	          : null,
-    	      cursor: "pointer",
-    	      marginRight: 10,
-    	    };
-
-    	    image =
-    	      foundOrg.image === "" ? (
-    	        <img
-    	          alt={foundOrg.name}
-    	          src={theme.palette.defaultImage}
-    	          style={imageStyle}
-    	        />
-    	      ) : (
-    	        <img
-    	          alt={foundOrg.name}
-    	          src={foundOrg.image}
-    	          style={imageStyle}
-    	          onClick={() => {}}
-    	        />
-    	      );
-
-    	    orgName = foundOrg.name;
-    	    orgId = foundOrg.id;
-    	  }
-		}
-
-		return (
-    	  <Paper
-    	    style={{
-    	      backgroundColor: theme.palette.platformColor,
-    	      width: clickedFromOrgTab ? null :notificationWidth,
-    	      padding: 30,
-    	      borderBottom: "1px solid rgba(255,255,255,0.4)",
-			  marginBottom: 20, 
-			  border: highlighted ? "2px solid #f85a3e" : null,
-			  borderRadius: theme.palette?.borderRadius,
-    	    }}
-    	  >
-			<div style={{display: "flex", }}>
-				{data.amount === 1 && data.read === false ? 
-					<Chip
-						label={"First seen"}
-						variant="contained"
-						color="primary"
-						style={{marginRight: 15, height: 25, }}
-					  />
-				: null}
-				{data.ignored === true ? 
-					<Chip
-						label={"Disabled"}
-						variant="outlined"
-						color="primary"
-						style={{marginRight: 15, height: 25, }}
-					  />
-				: null}
-				{data.read === false ?
-					<Chip
-						label={"Unread"}
-						variant="outlined"
-						color="primary"
-						style={{marginRight: 15, height: 25, }}
-					  />
-				: 
-					<Chip
-						label={"Read"}
-						variant="outlined"
-						color="secondary"
-						style={{marginRight: 15, height: 25, }}
-					  />
-				}
-				<Typography variant="body1" color="textPrimary">
-					{data.title}
-				</Typography >
-			</div>
-
-			{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
-				<img alt={data.title} src={data.image} style={{height: 100, width: 100, }} />
-				: 
-				null
-			}
-			<Typography variant="body2" color="textSecondary" style={{marginTop: 10, maxHeight: 200, overflowX: "hidden", overflowY: "auto", }}>
-				{data.description}
-			</Typography >
-    	    <div style={{ display: "flex" }}>
-			  <ButtonGroup>
-			  	<Button
-			  	  color="secondary"
-			  	  variant="outlined"
-			  	  style={{ marginTop: 15 }}
-			  	  disabled={data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0}
-			  	  onClick={() => {
-					window.open(data.reference_url, "_blank")
-			  	  }}
-			  	>
-			  	 	Explore 
-			  	</Button>
-    	      	{data.read === false ? (
-    	      	  <Button
-    	      	    color="secondary"
-    	      	    variant="outlined"
-    	      	    style={{ marginTop: 15 }}
-    	      	    onClick={() => {
-    	      	      dismissNotification(data.id);
-    	      	    }}
-    	      	  >
-    	      	    Dismiss 
-    	      	  </Button>
-    	      	) : null}
-				<Tooltip title="Disabling a notification makes it so similar notifications to this one will NOT be re-opened. It will NOT forward notifications to your notification workflow, but WILL still keep counting." placement="top">
-					<Button
-					  color="secondary"
-					  variant={data.ignored === true ? "contained" : "outlined"}
-					  style={{ marginTop: 15, }}
-					  onClick={() => {
-						if (data.ignored === true) {
-							dismissNotification(data.id, false)
-						} else {
-							dismissNotification(data.id, true)
-						}
-					  }}
-					>
-						{data.ignored === true ? "Re-enable" : "Disable"}
-					</Button>
-				</Tooltip>
-			  </ButtonGroup>
-
-		      <Typography variant="body2" color="textSecondary" style={{marginLeft: 20, marginTop: 20, }}>
-				<b>First seen</b>: {new Date(data.created_at * 1000).toISOString().slice(0, 19)}
-			  </Typography >
-			  <Typography variant="body2" color="textSecondary" style={{marginLeft: 20, marginTop: 20, }}>
-				<b>Last seen</b>: {new Date(data.updated_at * 1000).toISOString().slice(0, 19)}
-			  </Typography >
-			  <Typography variant="body2" color="textSecondary" style={{marginLeft: 20, marginTop: 20, }}>
-				<b>Times seen</b>: {data.amount}
-			  </Typography >
-    	    </div>
-    	  </Paper>
-    	);
-    }
 
 	return (
-		<div style={{width: clickedFromOrgTab ? 1030:1000, padding: clickedFromOrgTab ? 27:null, height: clickedFromOrgTab ? "auto":null, backgroundColor: clickedFromOrgTab ? '#212121':null, borderRadius: clickedFromOrgTab ? '16px':null,  }}>
-			<h2 style={{ display: clickedFromOrgTab?null:"inline", marginBottom: clickedFromOrgTab? 8:null, marginTop: clickedFromOrgTab?40:null, color: clickedFromOrgTab?"#ffffff":null }}>Notifications ({
+		<div style={{width: "100%", height: "100%", boxSizing: 'border-box', transition: 'width 0.3s ease', padding: clickedFromOrgTab ? "27px 10px 19px 27px":null, height: clickedFromOrgTab ? "auto":null, minHeight: 843, backgroundColor: clickedFromOrgTab ? '#212121':null, borderRadius: clickedFromOrgTab ? '16px':null,  }}>
+		  <div style={{ maxHeight: 1700,  overflowY: "auto", width: '100%', scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
+			<div style={{maxWidth: "calc(100% - 20px)"}}>
+		  <Typography style={{ fontSize: 24, fontWeight: 'bold', display: clickedFromOrgTab?null:"inline", marginBottom: clickedFromOrgTab? 8:null, color: clickedFromOrgTab?"#ffffff":null }}>Notifications ({
 				notifications?.filter((notification) => showRead === true || notification.read === false).length
-				})</h2>
+				})</Typography>
 
-			<span style={{ marginLeft: clickedFromOrgTab?null:25, color: clickedFromOrgTab?"#9E9E9E":null, }}>
+			<span style={{ fontSize: 16,  marginLeft: clickedFromOrgTab?null:25, color: clickedFromOrgTab?"#9E9E9E":null, }}>
 				Notifications help you find potential problems with your workflows and apps.&nbsp;
 				<a
 					target="_blank"
@@ -430,24 +261,11 @@ const Priorities = (props) => {
 					</Button>
 				  ) : null}
 			</div>
-			{notifications === null || notifications === undefined || notifications.length === 0 ? null : 
-				<div>
-					{notifications.map((notification, index) => {
-						if (showRead === false && notification.read === true) {
-							return null
-						}
-
-						return (
-							<NotificationItem data={notification} key={index} />
-						)
-					})}
-				</div>
-			}
+			<NotificationComponent  notifications={notifications} showRead={showRead} selectedExecutionId={selectedExecutionId} selectedWorkflow={selectedWorkflow} highlightKMS={highlightKMS} userdata={userdata} imagesize={imagesize} boxColor={boxColor} clickedFromOrgTab={clickedFromOrgTab} notificationWidth={notificationWidth} dismissNotification={dismissNotification}/>
 
 			{clickedFromOrgTab? null : <Divider style={{marginTop: 50, marginBottom: 50, }} />}
-
-			<h2 style={{ display: clickedFromOrgTab ? null:"inline", marginBottom: clickedFromOrgTab ? 8:null, marginTop: clickedFromOrgTab ?0:null, color: clickedFromOrgTab ? "#ffffff" : null }}>Suggestions</h2>
-			<span style={{ color: clickedFromOrgTab ?"#9E9E9E":null,marginLeft: clickedFromOrgTab ?null:25 }}>
+			<h2 style={{ display: clickedFromOrgTab ? null:"inline", marginBottom: clickedFromOrgTab ? 8:null, marginTop: clickedFromOrgTab ? 30 :null, color: clickedFromOrgTab ? "#ffffff" : null }}>Suggestions</h2>
+			<span style={{ fontSize: 16, color: clickedFromOrgTab ?"#9E9E9E":null,marginLeft: clickedFromOrgTab ?null:25 }}>
 				Suggestions are tasks identified by Shuffle to help you discover ways to protect your and customers' company. <br/>These range from simple configurations in Shuffle to Usecases you may have missed.&nbsp;
 				<a
 					target="_blank"
@@ -489,9 +307,232 @@ const Priorities = (props) => {
 					)
 				})
 			}
-
+		  </div>
+		  </div>
 		</div>
 	)
-}
+})
 
 export default Priorities;
+
+
+const NotificationItem = memo((props) => {
+	const {data, selectedExecutionId, selectedWorkflow, highlightKMS, userdata, imagesize, boxColor, clickedFromOrgTab, notificationWidth, dismissNotification} = props
+
+	var image = "";
+	var orgName = "";
+	var orgId = "";
+
+	
+	var highlighted = selectedExecutionId === "" && selectedWorkflow === "" ? false : data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0 ? false : data.reference_url.includes(selectedExecutionId) || data.reference_url.includes(selectedWorkflow) 
+
+	if (!highlighted && highlightKMS) {
+		if (data.title !== undefined && data.title !== null && data.title.toLowerCase().includes("kms")) {
+			highlighted = true
+		} else if (data.description !== undefined && data.description !== null && data.description.toLowerCase().includes("kms")) {
+			highlighted = true
+		}
+
+	}
+
+	if (userdata.orgs !== undefined) {
+	  const foundOrg = userdata.orgs.find((org) => org.id === data["org_id"]);
+	  if (foundOrg !== undefined && foundOrg !== null) {
+		//position: "absolute", bottom: 5, right: -5,
+		const imageStyle = {
+		  width: imagesize,
+		  height: imagesize,
+		  pointerEvents: "none",
+		  marginLeft:
+			data.creator_org !== undefined && data.creator_org.length > 0
+			  ? 20
+			  : 0,
+		  borderRadius: 10,
+		  border:
+			foundOrg.id === userdata.active_org.id
+			  ? `3px solid ${boxColor}`
+			  : null,
+		  cursor: "pointer",
+		  marginRight: 10,
+		};
+
+		image =
+		  foundOrg.image === "" ? (
+			<img
+			  alt={foundOrg.name}
+			  src={theme.palette.defaultImage}
+			  style={imageStyle}
+			/>
+		  ) : (
+			<img
+			  alt={foundOrg.name}
+			  src={foundOrg.image}
+			  style={imageStyle}
+			  onClick={() => {}}
+			/>
+		  );
+
+		orgName = foundOrg.name;
+		orgId = foundOrg.id;
+	  }
+	}
+
+	return (
+	  <Paper
+		style={{
+		  backgroundColor: theme.palette.inputColor.backgroundColor,
+		  width: clickedFromOrgTab ? null :notificationWidth,
+		  padding: 30,
+		  borderBottom: "1px solid rgba(255,255,255,0.4)",
+		  marginBottom: 20, 
+		  border: highlighted ? "2px solid #f85a3e" : null,
+		  borderRadius: theme.palette?.borderRadius,
+		}}
+	  >
+		<div style={{display: "flex", }}>
+			{data.amount === 1 && data.read === false ? 
+				<Chip
+					label={"First seen"}
+					variant="contained"
+					color="primary"
+					style={{marginRight: 15, height: 25, }}
+				  />
+			: null}
+			{data.ignored === true ? 
+				<Chip
+					label={"Disabled"}
+					variant="outlined"
+					color="primary"
+					style={{marginRight: 15, height: 25, }}
+				  />
+			: null}
+			{data.read === false ?
+				<Chip
+					label={"Unread"}
+					variant="outlined"
+					color="primary"
+					style={{marginRight: 15, height: 25, }}
+				  />
+			: 
+				<Chip
+					label={"Read"}
+					variant="outlined"
+					color="secondary"
+					style={{marginRight: 15, height: 25, }}
+				  />
+			}
+			<Typography variant="body1" color="textPrimary" style={{ wordWrap: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>
+				{data.title}
+			</Typography >
+		</div>
+
+		{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
+			<img alt={data.title} src={data.image} style={{height: 100, width: 100, }} />
+			: 
+			null
+		}
+		<Typography variant="body2" color="textSecondary" style={{ marginTop: 10, maxHeight: 200, overflowX: "hidden", overflowY: "auto", wordWrap: "break-word" }}>
+			{data.description}
+		</Typography >
+		<div style={{ display: "flex" }}>
+		  <ButtonGroup>
+			  <Button
+				color="secondary"
+				variant="outlined"
+				style={{ marginTop: 15 }}
+				disabled={data.reference_url === undefined || data.reference_url === null || data.reference_url.length === 0}
+				onClick={() => {
+				window.open(data.reference_url, "_blank")
+				}}
+			  >
+				   Explore 
+			  </Button>
+			  {data.read === false ? (
+				<Button
+				  color="secondary"
+				  variant="outlined"
+				  style={{ marginTop: 15 }}
+				  onClick={() => {
+					dismissNotification(data.id);
+				  }}
+				>
+				  Dismiss 
+				</Button>
+			  ) : null}
+			<Tooltip title="Disabling a notification makes it so similar notifications to this one will NOT be re-opened. It will NOT forward notifications to your notification workflow, but WILL still keep counting." placement="top">
+				<Button
+				  color="secondary"
+				  variant={data.ignored === true ? "contained" : "outlined"}
+				  style={{ marginTop: 15, }}
+				  onClick={() => {
+					if (data.ignored === true) {
+						dismissNotification(data.id, false)
+					} else {
+						dismissNotification(data.id, true)
+					}
+				  }}
+				>
+					{data.ignored === true ? "Re-enable" : "Disable"}
+				</Button>
+			</Tooltip>
+		  </ButtonGroup>
+
+		  <Typography variant="body2" color="textSecondary" style={{ marginLeft: 20, marginTop: 20, wordWrap: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>
+			<b>First seen</b>: {new Date(data.created_at * 1000).toISOString().slice(0, 19)}
+			</Typography >
+
+			<Typography variant="body2" color="textSecondary" style={{ marginLeft: 20, marginTop: 20, wordWrap: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>
+			<b>Last seen</b>: {new Date(data.updated_at * 1000).toISOString().slice(0, 19)}
+			</Typography >
+
+			<Typography variant="body2" color="textSecondary" style={{ marginLeft: 20, marginTop: 20, wordWrap: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>
+			<b>Times seen</b>: {data.amount}
+			</Typography >
+		</div>
+	  </Paper>
+	);
+})
+
+
+const NotificationComponent = memo(({notifications, showRead, selectedExecutionId, selectedWorkflow, highlightKMS, userdata, imagesize, boxColor, clickedFromOrgTab, notificationWidth, dismissNotification}) => {
+
+	return(
+		<div>
+			{notifications === null || notifications === undefined || notifications?.length === 0 ? (
+			null
+		) : 
+			<div>
+				{notifications?.map((notification, index) => {
+					if (showRead === false && notification.read === true) {
+						return null
+					}
+
+					return (
+						<NotificationItem data={notification} key={index} selectedExecutionId={selectedExecutionId} selectedWorkflow={selectedWorkflow} highlightKMS={highlightKMS} userdata={userdata} imagesize={imagesize} boxColor={boxColor} clickedFromOrgTab={clickedFromOrgTab} notificationWidth={notificationWidth} dismissNotification={dismissNotification} />
+					)
+				})}
+			</div>
+		}
+		</div>
+	)
+})
+
+// const PaddingWrapper = memo(({children, clickedFromOrgTab}) => {
+
+// 	const { leftSideBarOpenByClick } = useContext(Context)
+
+// 	return(
+// 		<div style={{width: leftSideBarOpenByClick ? 950 : 1030,transition: 'width 0.3s ease', padding: clickedFromOrgTab ? "27px 10px 19px 27px":null, height: clickedFromOrgTab ? "auto":null, minHeight: 843, backgroundColor: clickedFromOrgTab ? '#212121':null, borderRadius: clickedFromOrgTab ? '16px':null,  }}>
+// 			{children}
+// 		</div>
+// 	)
+// })
+
+// const Wrapper = memo(({children, clickedFromOrgTab}) => {
+
+// 	return(
+// 		<PaddingWrapper clickedFromOrgTab={clickedFromOrgTab}>
+// 			{children}
+// 		</PaddingWrapper>
+// 	)
+// })

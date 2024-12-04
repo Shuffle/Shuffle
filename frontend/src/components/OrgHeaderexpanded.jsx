@@ -227,7 +227,7 @@ const OrgHeaderexpanded = (props) => {
 		defaults,
 		sso_config
 	) => {
-
+console.log("defatult in handleEditOrg", defaults)
 		const data = {
 			name: name,
 			description: description,
@@ -309,6 +309,7 @@ const OrgHeaderexpanded = (props) => {
 								openid_authorization: openidAuthorization,
 								openid_token: openidToken,
 								SSORequired: SSORequired,
+								auto_provision: selectedOrganization?.sso_config?.auto_provision,
 							}
 						)
 					}
@@ -485,6 +486,7 @@ const OrgHeaderexpanded = (props) => {
 													value={data}
 													onClick={(e) => {
 														var parsedinput = { target: { value: data } }
+														console.log("Parsed input: ", parsedinput)
 														handleWorkflowSelectionUpdate(parsedinput)
 													}}
 												>
@@ -753,7 +755,7 @@ const OrgHeaderexpanded = (props) => {
             {SSORequired ? "Required" : "Optional"}
           </div>
         </div>
-        <div
+        {/* <div
           style={{
             display: "flex",
             flexDirection: "column",
@@ -800,7 +802,7 @@ const OrgHeaderexpanded = (props) => {
               </Button>
             </span>
           </Tooltip>
-        </div>
+        </div> */}
         <div></div>
         <Grid item xs={12} style={{}}>
           <Typography variant="h6" style={{ textAlign: "center" }}>

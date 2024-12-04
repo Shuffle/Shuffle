@@ -465,7 +465,7 @@ const AppSelection = props => {
 								style={{
 									fontSize: 16,
 									color: "rgba(158, 158, 158, 1)",
-									fontFamily: "Inter",
+									fontFamily: theme?.typography?.fontFamily,
 								}}
 							>
 								Your organization has no apps yet, select your starting apps here 

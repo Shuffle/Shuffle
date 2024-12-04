@@ -1149,7 +1149,7 @@ const EditWorkflow = (props) => {
 							</div>
 							: null}
 
-						{/*!isEditing ? <>
+						{!isEditing ? <>
 							<div style={{ marginTop: 20, }}>
 								<FormControlLabel
 									control={<Checkbox />}
@@ -1164,7 +1164,7 @@ const EditWorkflow = (props) => {
 								/>
 
 							</div>
-						</> : null*/}
+						</> : null}
 
 						<Tooltip color="primary" title={"Add more details"} placement="top">
 							<Button

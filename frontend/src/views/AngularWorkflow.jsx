@@ -422,7 +422,7 @@ const AngularWorkflow = (defaultprops) => {
   const [subworkflow, setSubworkflow] = React.useState({});
   const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
   const [leftViewOpen, setLeftViewOpen] = React.useState(isMobile ? false : true);
-  const [leftBarSize, setLeftBarSize] = React.useState(isMobile ? 0 : 255)
+  const [leftBarSize, setLeftBarSize] = React.useState(isMobile ? 0 : 235)
   const [creatorProfile, setCreatorProfile] = React.useState({});
   const [usecases, setUsecases] = React.useState([]);
   const [files, setFiles] = React.useState({
@@ -3813,7 +3813,7 @@ const releaseToConnectLabel = "Release to Connect"
             });
           }
 
-          cy.fit(null, 100);
+          cy.fit(null, 400);
           cy.on("add", "node", (e) => onNodeAdded(e));
           cy.on("add", "edge", (e) => onEdgeAdded(e));
         } else {
@@ -4052,7 +4052,7 @@ const releaseToConnectLabel = "Release to Connect"
 	  .then(() => {
 	  	console.log("DONE: ", workflow_id);
 	  	getWorkflow(workflow_id.value, nodedata);
-	  	cy.fit(null, 50);
+	  	cy.fit(null, 300);
 	  });
     }
   };
@@ -4180,7 +4180,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 			if (nodedata.app_name === "Webhook" || nodedata.app_name === "Schedule" || nodedata.app_name === "Gmail" || nodedata.app_name === "Office365") {
       			if (!found) {
-					console.log("Find amount of executions for the specific nodetype: ", nodedata.app_name, "Executions: ", workflowExecutions)
+					//console.log("Find amount of executions for the specific nodetype: ", nodedata.app_name, "Executions: ", workflowExecutions)
 					// Find how many executions it has 
 					var executions = 0
 					const matchingExecutions = workflowExecutions.filter((execution => execution.execution_source === nodedata.app_name.toLowerCase()))
@@ -6121,7 +6121,7 @@ const releaseToConnectLabel = "Release to Connect"
               event.target.remove()
 
               //console.log("Found branch already!")
-              toast.error("Triggers can have exactly one target node")
+              toast.error("Triggers can point to exactly one start node")
               return
 
 
@@ -7782,7 +7782,7 @@ const releaseToConnectLabel = "Release to Connect"
       const item = typeIds[idkey]
       if (item.data.id === nodedata.id) {
         //console.log("items: ", item.data.id, nodedata.id)
-        parsedStyle["border-width"] = "12px"
+        parsedStyle["border-width"] = "7px"
         break
       }
     }
@@ -8391,7 +8391,7 @@ const releaseToConnectLabel = "Release to Connect"
 	// Reset view for cytoscape
 	if (cy !== undefined && cy !== null) {
 		cy.add(insertedNodes);
-    	cy.fit(null, 200);
+    	cy.fit(null, 400);
 	} else {
     	setElements(insertedNodes);
 	}
@@ -8772,7 +8772,7 @@ const releaseToConnectLabel = "Release to Connect"
     }
     // preview: true,
 
-    cy.fit(null, 200);
+    cy.fit(null, 400)
 
     cy.on("boxselect", "node", (e) => {
       if (e.target.data("isButton") || e.target.data("isDescriptor") || e.target.data("isSuggestion")) {
@@ -9380,7 +9380,9 @@ const releaseToConnectLabel = "Release to Connect"
           onChange={handleSetTab}
           aria-label="Left sidebar tab"
           orientation={isMobile ? "vertical" : "horizontal"}
-          style={{}}
+          style={{
+			  display: "flex", 
+		  }}
         >
           <Tab
 			value={0}
@@ -9421,7 +9423,7 @@ const releaseToConnectLabel = "Release to Connect"
                 <Grid item>
                   <FavoriteBorderIcon style={iconStyle} />
                 </Grid>
-                {isMobile ? null : <Grid item>Variables</Grid>}
+                {isMobile ? null : <Grid item>Vars</Grid>}
               </Grid>
             }
             style={tabStyle}
@@ -9776,11 +9778,13 @@ const releaseToConnectLabel = "Release to Connect"
   const barHeight = bodyHeight - appBarSize - 50;
   const appScrollStyle = {
     overflow: "scroll",
-    maxHeight: isMobile ? bodyHeight - appBarSize * 4 : barHeight-300,
-    minHeight: isMobile ? bodyHeight - appBarSize * 4 : barHeight-300,
+    maxHeight: isMobile ? bodyHeight - appBarSize * 4 : barHeight-70,
+    minHeight: isMobile ? bodyHeight - appBarSize * 4 : barHeight-70,
     marginTop: 1,
     overflowY: "auto",
     overflowX: "hidden",
+
+	zoom: 0.9,
   }
 
   const handleAppDrag = (e, app) => {
@@ -10568,12 +10572,12 @@ const releaseToConnectLabel = "Release to Connect"
 	var viewedApps = []
     return (
       <div style={appViewStyle}>
-        <div style={{ flex: "1" }}>
+        <div style={{ flex: "1", zoom: 0.9, }}>
           <TextField
             style={{
               backgroundColor: theme.palette.inputColor,
               borderRadius: theme.palette?.borderRadius,
-              marginTop: 5,
+              marginTop: 10,
               marginRight: 10,
 			  height: 40, 
             }}
@@ -11193,14 +11197,12 @@ const releaseToConnectLabel = "Release to Connect"
 	overflowAnchor: "none",
   };
 
-  const minSize = 370
+  const minSize = 370 
   var rightsidebarStyle = {
     position: "fixed",
     top: appBarSize - 35,
     right: 25,
     height:  "90vh",
-    width: isMobile ? "100%" : minSize,
-    minWidth: minSize,
     maxWidth: 600,
     maxHeight: "100vh",
     border: "1px solid rgb(91, 96, 100)",
@@ -11210,6 +11212,9 @@ const releaseToConnectLabel = "Release to Connect"
     overflow: "auto",
 
 	overflowAnchor: "none",
+    minWidth: minSize,
+    width: isMobile ? "100%" : minSize,
+	zoom: 0.9,
   };
 
   const setTriggerFolderWrapperMulti = (event) => {
@@ -16153,13 +16158,15 @@ const releaseToConnectLabel = "Release to Connect"
     position: "absolute",
 
     top: isMobile ? 30 : 25,
-	left: isMobile ? 20 : leftSideBarOpenByClick ? leftBarSize + 275 : leftBarSize+100,
+	left: isMobile ? 20 : leftSideBarOpenByClick ? leftBarSize + 275 : leftBarSize+135,
 
     transition: "left 0.3s ease",
-	maxWidth: 500, 
+	zoom: 0.9, 
   }
 
   const TopCytoscapeBar = (props) => {
+	const [hovered, setHovered] = useState(false)
+
     if (workflow.public === true) {
       return null
     }
@@ -16174,12 +16181,30 @@ const releaseToConnectLabel = "Release to Connect"
       <div style={topBarStyle}>
         <div style={{ 
 			margin: "0px 10px 0px 35px",
-			maxWidth: 500, 
 		}}>
 		  <Typography variant="h6" style={{ 
 		  	margin: 0,
-		  }}>
-		  	{workflow.name}
+			cursor: "pointer",
+			display: "flex", 
+			borderRadius: theme.palette.borderRadius, 
+			border: hovered ? "1px solid rgba(255,255,255,0.3)" : "1px solid transparent",
+			paddingRight: 10, 
+			paddingLeft: 10, 
+			position: "relative", 
+		  }}
+			onMouseEnter={() => {
+				setHovered(true)
+			}}
+			onMouseLeave={() => {
+				setHovered(false)
+			}}
+			onClick={() => {
+                setEditWorkflowModalOpen(true)
+  				setLastSaved(false)
+			}}
+			>
+            	<EditIcon style={{position: "absolute", top: 7, height: 20, width: 20, }} />
+				<span style={{marginLeft: 30, }}>{workflow.name}</span>
 		  </Typography>
           {workflowAsCode && (
             <Tooltip title="Switch to Code View">
@@ -16204,7 +16229,7 @@ const releaseToConnectLabel = "Release to Connect"
 
 		  {!distributedFromParent ? 
 			isCorrectOrg ? null :
-			<Typography variant="body1">
+			<Typography variant="body2">
 				<b>Warning</b>: Change <span
 			  		style={{color: "#FF8544", cursor: "pointer", pointerEvents: "auto", }}
 			  		onClick={() => {
@@ -16275,7 +16300,7 @@ const releaseToConnectLabel = "Release to Connect"
 			  	>Active Organization</span> to edit this Workflow.
 			</Typography>
 			:
-			<Typography variant="body1">
+			<Typography variant="body2" color="textSecondary">
 				Warning: This workflow is controlled by your parent org and may not be editable.
 			</Typography>
 		  }
@@ -16285,7 +16310,7 @@ const releaseToConnectLabel = "Release to Connect"
 
             <InputLabel
               id="suborg-changer"
-              style={{ color: "white" }}
+              style={{ color: "rgba(255,255,255,0.7)", }}
             >
 				Select an Org
             </InputLabel>
@@ -16294,10 +16319,15 @@ const releaseToConnectLabel = "Release to Connect"
 					  pointerEvents: "auto", 
 					  backgroundColor: theme.palette.inputColor,
 					  color: "white",
-					  height: 50,
 					  maxWidth: 250, 
 					  minWidth: 250, 
 					  borderRadius: theme.palette?.borderRadius,
+					  height: 40,
+				}}
+			  	InputProps={{
+					style: {
+						height: 40,
+					}
 				}}
               	labelId="suborg-changer"
 				value={workflow.org_id}
@@ -16470,47 +16500,16 @@ const releaseToConnectLabel = "Release to Connect"
 			</Select>
         </FormControl> 
 		}
-
-        </div>
-		<div style={{display: "flex", marginLeft: 10, maxWidth: 250, pointerEvents: "auto", }}>
-			{parentWorkflows.slice(0,5).map((wf, index) => {
-				return (
-					<a href={`/workflows/${wf.id}`} target="_blank" rel="noopener noreferrer" key={index}>
-						<Tooltip arrow placement="left" title={
-							<span style={{}}>
-								{wf.image !== undefined && wf.image !== null && wf.image.length > 0 ?
-									<img 
-										src={wf.image} 
-										alt={wf.name} 
-										style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} 
-										
-									/>
-									: null}
-								<Typography>
-									Parent workflow: '{wf.name}'
-								</Typography>
-							</span>
-
-						} placement="bottom">
-							<span onClick={() => {
-								console.log("Click: ", wf)
-							}}>
-								<img src={theme.palette.defaultImage} style={{height: 25, width: 25, cursor: "pointer", border: 15, marginRight: 5, marginTop: 5, filter: "grayscale(90%)", }} />
-							</span>
-						</Tooltip>
-					</a>
-				)
-			})}
-		</div>
+        </div>	
 
 			{showEnvironment === true && environments.length > 1 && selectedActionEnvironment !== undefined && selectedActionEnvironment !== null && selectedActionEnvironment.Name !== undefined && selectedActionEnvironment.Name !== null ?
-			    <FormControl fullWidth style={{marginTop: 15, marginleft: 10, pointerEvents: "auto", maxWidth: 250, }}>
+			    <FormControl fullWidth style={{marginTop: 15, pointerEvents: "auto", maxWidth: 250, }}>
 
 					<InputLabel
 					  id="execution_location"
-					  style={{ color: "white" }}
+					  style={{ color: "rgba(255,255,255,0.7)", marginLeft: 40, }}
 					>
-						Execution Location
+						Location
 					</InputLabel>
 					<Select
 					labelId="execution_location"
@@ -16522,6 +16521,11 @@ const releaseToConnectLabel = "Release to Connect"
 					SelectDisplayProps={{
 					  style: {
 					  },
+					}}
+					InputProps={{
+						style: {
+							height: 40,
+						}
 					}}
 					onChange={(e) => {
   					  setLastSaved(false)
@@ -16539,13 +16543,14 @@ const releaseToConnectLabel = "Release to Connect"
 					}}
 					style={{
 					  pointerEvents: "auto", 
-					  backgroundColor: theme.palette.inputColor,
 					  color: "white",
-					  height: 50,
 					  maxWidth: 250, 
 					  minWidth: 250, 
 					  borderRadius: theme.palette?.borderRadius,
-					  marginLeft: 10, 
+					  marginLeft: 35, 
+
+					  backgroundColor: theme.palette.inputColor,
+					  height: 40,
 					}}
 				  >
 					{environments.map((data, index) => {
@@ -16602,6 +16607,43 @@ const releaseToConnectLabel = "Release to Connect"
 				  </Select>
 				</FormControl> 
 			: null}
+
+
+		{parentWorkflows === undefined || parentWorkflows === null || parentWorkflows.length === 0 ? null :
+		<div style={{display: "flex", marginLeft: 40, maxWidth: 250, pointerEvents: "auto", marginTop: 5, }}>
+			<Typography variant="body2" color="textSecondary" style={{marginRight: 5, marginTop: 5, }}>
+				<b>Parent Workflows:</b>
+			</Typography> 
+			{parentWorkflows.slice(0,5).map((wf, index) => {
+				return (
+					<a href={`/workflows/${wf.id}`} target="_blank" rel="noopener noreferrer" key={index}>
+						<Tooltip arrow placement="left" title={
+							<span style={{}}>
+								{wf.image !== undefined && wf.image !== null && wf.image.length > 0 ?
+									<img 
+										src={wf.image} 
+										alt={wf.name} 
+										style={{ backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} 
+										
+									/>
+									: null}
+								<Typography>
+									Parent workflow: '{wf.name}'
+								</Typography>
+							</span>
+
+						} placement="bottom">
+							<span onClick={() => {
+								console.log("Click: ", wf)
+							}}>
+								<img src={theme.palette.defaultImage} style={{height: 25, width: 25, cursor: "pointer", border: 15, marginRight: 5, marginTop: 5, filter: "grayscale(90%)", }} />
+							</span>
+						</Tooltip>
+					</a>
+				)
+			})}
+		</div>
+		}
 
       </div>
     );
@@ -17210,7 +17252,7 @@ const releaseToConnectLabel = "Release to Connect"
       <Tooltip color="primary" title="Stop execution" placement="top">
         <span>
           <Button
-            style={{ height: boxSize, width: boxSize }}
+            style={{ height: boxSize, width: boxSize+5 }}
             color="secondary"
             variant="contained"
             onClick={() => {
@@ -17228,7 +17270,7 @@ const releaseToConnectLabel = "Release to Connect"
               workflow.public 
 			  || executionRequestStarted
             }
-            style={{ height: boxSize, width: boxSize, backgroundColor: green, }}
+            style={{ height: boxSize, width: boxSize+5, backgroundColor: green, }}
             color="primary"
             variant="contained"
             onClick={() => {
@@ -17265,7 +17307,7 @@ const releaseToConnectLabel = "Release to Connect"
 			{executionButton}
 			<Tooltip
 				color="secondary"
-				title={`Show previous runs (${workflowExecutions.length}) (Ctrl + ')`}
+				title={`Show previous workflow runs (${workflowExecutions.length}) (Ctrl + ')`}
 				placement="top-start"
 			  >
 				  <Button
@@ -17492,6 +17534,8 @@ const releaseToConnectLabel = "Release to Connect"
             workflow.configuration.exit_on_error !== undefined ? (
             <WorkflowMenu />
           ) : null}
+
+		  {/*
           <Tooltip
             color="secondary"
             title="Edit workflow details"
@@ -17514,6 +17558,7 @@ const releaseToConnectLabel = "Release to Connect"
               </Button>
             </span>
           </Tooltip> 
+		  */}
 
           <Tooltip
             color="secondary"

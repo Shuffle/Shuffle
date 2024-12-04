@@ -1084,6 +1084,8 @@ const CodeEditor = (props) => {
 					maxHeight: isMobile ? "100%" : 700,
 					border: theme.palette.defaultBorder,
 					padding: isMobile ? "25px 10px 25px 10px" : 25,
+					zoom: 0.8, 
+					backgroundColor: "black", 
 				},
 			}}
 		>

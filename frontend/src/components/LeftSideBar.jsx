@@ -7,6 +7,7 @@ import {
   Add as AddIcon,
   BorderColor,
   Close as CloseIcon,
+  ConstructionOutlined,
 } from "@mui/icons-material";
 import SearchBox from "./SearchData.jsx";
 import {
@@ -85,7 +86,21 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
     return orgOptions.find((option) => option.name === selectedOrg);
   }, [selectedOrg, orgOptions]);
 
+//With this code it is opening search bar on google chrome search bar as well which is not required
+useEffect(() => {
+  const handleKeyDown = (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+      event.preventDefault();
+      setSearchBarModalOpen((prev)=> !prev);
+    }
+  };
 
+  window.addEventListener("keydown", handleKeyDown);
+
+  return () => {
+    window.removeEventListener("keydown", handleKeyDown);
+  };
+}, [setSearchBarModalOpen]);
   
   const CustomPopper = (props) => {
     return (
@@ -141,7 +156,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         >
           {props.children}
         </Box>
-        <Link to="/admin2" style={hrefStyle}>
+        <Link to="/admin?tab=tenants" style={hrefStyle}>
 			<Box
 				sx={{
 				  width: "100%",
@@ -446,7 +461,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
           },
         }}
       >
-        <Link to="/admin2" style={hrefStyle}>
+        <Link to="/admin" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
               handleClose();
@@ -466,7 +481,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         </Link>
 
         <Divider style={{ marginTop: 10, marginBottom: 10, }} />
-		<Link to="/admin2?admin_tab=priorities" style={hrefStyle}>
+		<Link to="/admin?admin_tab=notifications" style={hrefStyle}>
 		  <MenuItem
 			onClick={(event) => {
 			  handleClose();
@@ -478,7 +493,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 			}) 
 		  </MenuItem>
 		</Link>
-        <Link to="/usecases2" style={hrefStyle}>
+        <Link to="/usecases" style={hrefStyle}>
           <MenuItem
             onClick={(event) => {
               handleClose();
@@ -641,7 +656,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 };
 
   const getRegionTag = (region_url) => {
-    let regiontag = "eu";
+    let regiontag = "UK";
     if (
       region_url !== undefined &&
       region_url !== null &&
@@ -653,14 +668,24 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         regiontag = namesplit[namesplit.length - 1];
 
         if (regiontag === "california") {
-          regiontag = "us";
+          regiontag = "US";
         } else if (regiontag === "frankfurt") {
-          regiontag = "fr";
+          regiontag = "EU";
+        } else if (regiontag === "ca"){
+          regiontag = "CA";
         }
       }
     }
+
     return regiontag;
   };
+
+  useEffect(() => {
+
+    if(activeOrgName !== userdata?.active_org?.name){
+      setActiveOrgName(userdata?.active_org?.name || "Select Organization");
+    }
+  }, [userdata]);
 
   const CheckOrgStates = useCallback(() => {
     setOrgOptions(
@@ -723,6 +748,20 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
 		</Dialog>
 	);
 
+  const getRegionFlag = (region_url) => {
+    var region = "gb";
+    const regionMapping = {
+			"US": "us",
+			"EU": "eu",
+			"CA": "ca",
+			"UK": "gb"
+		};
+
+    region = regionMapping[region_url] || "gb";
+    
+    return `https://flagcdn.com/48x36/${region}.png`;
+  };
+
   return (
     <div
       style={{
@@ -736,7 +775,8 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.2)" ,
         resize: 'both',
 
-        height: "calc(100vh - 32px)",
+		zoom: 0.8, 
+        height: "calc((100vh - 32px)*1.2)",
       }}
     >
       {modalView}
@@ -759,7 +799,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
         <Box
           sx={{
             display: "flex",
-            alignItems: "center",
+            // alignItems: "center",
             justifyContent: "center",
             position: "relative",
             right: !expandLeftNav && 8,
@@ -814,46 +854,62 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
             {expandLeftNav ? (
               <Fade in={expandLeftNav} timeout={500}>
                 <TextField
-                id="sidebar-search"
-              placeholder= "Search"
-              sx={{
-                width: "100%",
-                maxWidth: 228,
-                "& .MuiInputBase-root": {
-                  height: 35,
-                  padding: 0,
-                },
-                "& .MuiOutlinedInput-root": {
-                  cursor: "pointer",
-                  width: 228,
-                  "& fieldset": {
-                    borderColor: "#494949",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "#ffffff",
-                    display: "block"
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "#A9A9A9",
-                  },
-                },
-                "& input": {
-                  padding: "8px 14px",
-                  fontSize: "14px",
-                  color: "#C8C8C8",
-                },
-                backgroundColor: "transparent",
-              }}
-              variant="outlined"
-              InputProps={{
-                startAdornment: (
-                  <SearchIcon style={{ color: "#CDCDCD", width: 24, height: 24, marginLeft: 16}} />
-                ),
-                disableUnderline: true,
-              }}
-              onClick={()=>{setSearchBarModalOpen(true)}}
-              onChange={()=> {setSearchBarModalOpen(true)}}
-            />
+                    id="sidebar-search"
+                    placeholder="Search"
+                    sx={{
+                      width: "100%",
+                      maxWidth: 228,
+                      "& .MuiInputBase-root": {
+                        height: 35,
+                        padding: 0,
+                      },
+                      "& .MuiOutlinedInput-root": {
+                        cursor: "pointer",
+                        width: 228,
+                        "& fieldset": {
+                          borderColor: "#494949",
+                        },
+                        "&:hover fieldset": {
+                          borderColor: "#ffffff",
+                          display: "block",
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: "#A9A9A9",
+                        },
+                      },
+                      "& input": {
+                        padding: "8px 14px",
+                        fontSize: "14px",
+                        color: "#C8C8C8",
+                      },
+                      backgroundColor: "transparent",
+                    }}
+                    variant="outlined"
+                    InputProps={{
+                      startAdornment: (
+                        <SearchIcon style={{ color: "#CDCDCD", width: 24, height: 24, marginLeft: 16 }} />
+                      ),
+                      endAdornment: (
+                        <span
+                          style={{
+                            color: "#C8C8C8",
+                            fontSize: "12px",
+                            marginRight: 16,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>K</kbd>
+                        </span>
+                      ),
+                      disableUnderline: true,
+                    }}
+                    onClick={() => {
+                      setSearchBarModalOpen(true);
+                    }}
+                    onChange={() => {
+                      setSearchBarModalOpen(true);
+                    }}
+                  />
             </Fade>
             ):(
             <>
@@ -891,10 +947,16 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                 setCurrentOpenTab("automate");
                 localStorage.setItem("lastTabOpenByUser", "automate");
               }}
-              sx={{
+              variant="text"
+              style={{
                 ...ButtonStyle,
                 backgroundColor: ((currentOpenTab === "automate" && currentPath.includes("/dashboards/automate"))|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases2" || currentPath.includes("/search"))))? "#2f2f2f": "transparent",
-                "&:hover": { backgroundColor: "#2f2f2f" },
+              }}
+              onMouseOver={(event)=>{
+                event.currentTarget.style.backgroundColor = "#2f2f2f";
+              }}
+              onMouseOut={(event)=>{
+                event.currentTarget.style.backgroundColor = ((currentOpenTab === "automate" && currentPath.includes("/dashboards/automate"))|| (!expandLeftNav && (currentPath === "/workflows" || currentPath === "/usecases2" || currentPath.includes("/search"))))? "#2f2f2f": "transparent";
               }}
             >
               <img
@@ -920,8 +982,15 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                 setOpenautomateTab((prev) => !prev);
                 setOpenSecurityTab(false);
               }}
-              sx={{
-                marginLeft: 0.625,
+              style={{
+                  color: "#FFFFFF",
+                  marginLeft: 0.625,
+              }}
+              onMouseOver={(event)=>{
+                event.currentTarget.style.backgroundColor = "#2f2f2f";
+              }}
+              onMouseOut={(event)=>{
+                event.currentTarget.style.backgroundColor = "transparent";
               }}
             >
               {openautomatetab ? (
@@ -952,23 +1021,28 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               flexDirection: "column",
               paddingLeft: 16,
               gap: 4,
-              marginTop: expandLeftNav ? 16 : 0,
             }}
           >
-	  		<Link to="/usecases2" style={hrefStyle}>
+	  		<Link to="/usecases" style={hrefStyle}>
             <Button
               onClick={(event) => {
                 setCurrentOpenTab("usecases");
                 localStorage.setItem("lastTabOpenByUser", "usecases");
               }}
-              sx={{
+              style={{
                 width: "100%",
                 height: 35,
                 color: "#C8C8C8",
                 justifyContent: "flex-start",
                 textTransform: "none",
-                backgroundColor: currentOpenTab === "usecases" && expandLeftNav && currentPath.includes("/usecases2")? "#2f2f2f": "transparent",
-                "&:hover": { backgroundColor: "#2f2f2f" },
+                backgroundColor: currentOpenTab === "usecases" && expandLeftNav && currentPath.includes("/usecases")? "#2f2f2f": "transparent",
+                marginLeft: 16
+              }}
+              onMouseOver={(event)=>{
+                event.currentTarget.style.backgroundColor = "#2f2f2f";
+              }}
+              onMouseOut={(event)=>{
+                event.currentTarget.style.backgroundColor = currentOpenTab === "usecases" && expandLeftNav && currentPath.includes("/usecases")? "#2f2f2f": "transparent";
               }}
               disableRipple={expandLeftNav ? false : true}
             >
@@ -985,22 +1059,28 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               </span>
             </Button>
 	  		</Link>
-	  		<Link to="/workflows2" style={hrefStyle}>
+	  		<Link to="/workflows" style={hrefStyle}>
             <Button
               onClick={(event) => {
                 setCurrentOpenTab("workflows");
                 localStorage.setItem("lastTabOpenByUser", "workflows");
               }}
-              sx={{
+              style={{
                 width: "100%",
                 height: 35,
                 color: "#C8C8C8",
                 justifyContent: "flex-start",
                 textTransform: "none",
                 backgroundColor: currentOpenTab === "workflows" && currentPath === "/workflows" && expandLeftNav? "#2f2f2f": "transparent",
-                "&:hover": { backgroundColor: "#2f2f2f" },
+                marginLeft: 16
               }}
               disableRipple={expandLeftNav ? false : true}
+              onMouseOver={(event)=>{
+                event.currentTarget.style.backgroundColor = "#2f2f2f";
+              }}
+              onMouseOut={(event)=>{
+                event.currentTarget.style.backgroundColor = currentOpenTab === "workflows" && currentPath === "/workflows" && expandLeftNav? "#2f2f2f": "transparent";
+              }}
             >
               <span style={{display: expandLeftNav ? "inline" : "none", opacity: expandLeftNav ? 1 : 0, transition: "opacity 0.3s ease", position: 'relative', left: !expandLeftNav ? 10: 0, marginRight: 10, fontSize: 16 }}>•</span>{" "}
               <span
@@ -1015,20 +1095,26 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               </span>
             </Button>
 	  		</Link> 
-	  		<Link to="/apps2" style={hrefStyle}>
+	  		<Link to="/apps" style={hrefStyle}>
             <Button
               onClick={(event) => {
                 setCurrentOpenTab("apps");
                 localStorage.setItem("lastTabOpenByUser", "apps");
               }}
-              sx={{
+              style={{
                 width: "100%",
                 height: 35,
                 color: "#C8C8C8",
                 justifyContent: "flex-start",
                 textTransform: "none",
-                backgroundColor: currentOpenTab === "apps" && expandLeftNav && currentPath.includes("/search") ? "#2f2f2f": "transparent",
-                "&:hover": { backgroundColor: "#2f2f2f" },
+                backgroundColor: currentOpenTab === "apps" && expandLeftNav && currentPath.includes("/apps2") ? "#2f2f2f": "transparent",
+                marginLeft: 16
+              }}
+              onMouseOver={(event)=>{
+                event.currentTarget.style.backgroundColor = "#2f2f2f";
+              }}
+              onMouseOut={(event)=>{
+                event.currentTarget.style.backgroundColor = currentOpenTab === "apps" && expandLeftNav && currentPath.includes("/search") ? "#2f2f2f": "transparent";
               }}
               disableRipple={expandLeftNav ? false : true}
             >
@@ -1038,7 +1124,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                   display: expandLeftNav ? "inline" : "none",
                   opacity: expandLeftNav ? 1 : 0,
                   transition: "opacity 0.3s ease",
-                  color: currentOpenTab === "apps" && currentPath.includes("/search") ? "#F1F1F1" : "#C8C8C8",
+                  color: currentOpenTab === "apps" && currentPath.includes("/apps2") ? "#F1F1F1" : "#C8C8C8",
                 }}
               >
                 Apps
@@ -1051,7 +1137,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
             sx={{
               display: "flex",
               flexDirection: "row",
-              marginTop: 2.5,
+              marginTop: 1
             }}
           >
 	  		<span style={{ display: "inline-block", width: "100%" }}> 
@@ -1072,7 +1158,7 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                 setCurrentOpenTab("security");
                 localStorage.setItem("lastTabOpenByUser", "security");
               }}
-              sx={{
+              style={{
                 ...ButtonStyle,
                 backgroundColor:
                   ((currentOpenTab === "security" && currentPath.includes("/security")) ||
@@ -1080,11 +1166,19 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                     (currentPath.includes("detections") || currentPath.includes("response"))))
                     ? "#2f2f2f"
                     : "transparent",
-                "&:hover": {
-                  backgroundColor: userdata?.support ? "#2f2f2f" : "transparent", 
-                },
                 cursor: userdata?.support ? "pointer" : "not-allowed",
               }}
+              onMouseOver={(event)=>{
+                event.currentTarget.style.backgroundColor = "#2f2f2f";
+              }}
+              onMouseOut={(event)=>{
+                event.currentTarget.style.backgroundColor = ((currentOpenTab === "security" && currentPath.includes("/security")) ||
+                (!expandLeftNav &&
+                  (currentPath.includes("detections") || currentPath.includes("response"))))
+                  ? "#2f2f2f"
+                  : "transparent";
+              }}
+              disabled={!userdata?.support}
             >
               <ShieldOutlinedIcon
                 style={{
@@ -1105,19 +1199,25 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                     : "#6F6F6F", 
                 }}
               >
-                Security
+               	Content 
               </span>
             </Button>
           </Link>
         </span>
             <IconButton
-              disabled={true}
               onClick={() => {
                 setOpenSecurityTab((prev) => !prev);
                 setOpenautomateTab(false);
               }}
-              sx={{
+              style={{
                 marginLeft: 0.625,
+                color: "#FFFFFF",
+              }}
+              onMouseOver={(event)=>{
+                event.currentTarget.style.backgroundColor = "#2f2f2f";
+              }}
+              onMouseOut={(event)=>{
+                event.currentTarget.style.backgroundColor = "transparent";
               }}
             >
               {openSecurityTab ? (
@@ -1144,14 +1244,12 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                   display: "flex",
                   flexDirection: "column",
                   paddingLeft: 16,
-                  gap: 4,
-                  marginTop: expandLeftNav ? 16 : 0,
                 }}
                 disableRipple={expandLeftNav ? false : true}
               >
                 <span style={{ display: "inline-block", width: "100%" }}>
                   <Link
-                    to={userdata?.support ? "/detections" : "#"}
+                    to={"/forms"}
                     style={{
                       ...hrefStyle,
                       pointerEvents: userdata?.support ? "auto" : "none",
@@ -1196,14 +1294,14 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                               : "#6F6F6F",
                         }}
                       >
-                        Detection
+                       	Forms	
                       </span>
                     </Button>
                   </Link>
                 </span>
-                <span style={{ display: "inline-block", width: "100%" }}>
+				<span style={{ display: "inline-block", width: "100%" }}>
                   <Link
-                    to={userdata?.support ? "/response" : "#"}
+                    to={"/admin?tab=datastore"}
                     style={{
                       ...hrefStyle,
                       pointerEvents: userdata?.support ? "auto" : "none",
@@ -1230,7 +1328,6 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                         },
                         cursor: userdata?.support ? "pointer" : "not-allowed",
                       }}
-                      disabled={!userdata?.support}
                     >
                       <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 16 }}>
                         •
@@ -1248,26 +1345,81 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
                               : "#6F6F6F",
                         }}
                       >
-                        Response
+                       	Datastore	
+                      </span>
+                    </Button>
+                  </Link>
+                </span>
+                <span style={{ display: "inline-block", width: "100%" }}>
+                  <Link
+                    to={"/admin?tab=files"}
+                    style={{
+                      ...hrefStyle,
+                      pointerEvents: userdata?.support ? "auto" : "none",
+                    }}
+                  >
+                    <Button
+                      onClick={(event) => {
+                        if (!userdata?.support) return;
+                        setCurrentOpenTab("response");
+                        localStorage.setItem("lastTabOpenByUser", "response");
+                      }}
+                      sx={{
+                        width: "100%",
+                        height: 35,
+                        color: userdata?.support ? "#C8C8C8" : "#6F6F6F",
+                        justifyContent: "flex-start",
+                        textTransform: "none",
+                        backgroundColor:
+                          currentOpenTab === "response" && currentPath.includes("/response")
+                            ? "#2f2f2f"
+                            : "transparent",
+                        "&:hover": {
+                          backgroundColor: userdata?.support ? "#2f2f2f" : "transparent",
+                        },
+                        cursor: userdata?.support ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      <span style={{ position: "relative", left: !expandLeftNav ? 10 : 0, marginRight: 10, fontSize: 16 }}>
+                        •
+                      </span>
+                      <span
+                        style={{
+                          display: expandLeftNav ? "inline" : "none",
+                          opacity: expandLeftNav ? 1 : 0,
+                          transition: "opacity 0.3s ease",
+                          color:
+                            userdata?.support && currentOpenTab === "response" && currentPath.includes("/response")
+                              ? "#F1F1F1"
+                              : userdata?.support
+                              ? "#C8C8C8"
+                              : "#6F6F6F",
+                        }}
+                      >
+                       	Files	
                       </span>
                     </Button>
                   </Link>
                 </span>
               </Box>
             </Collapse>
-
-
 	  	  <Link to="/docs" style={hrefStyle}>
           <Button
             onClick={(event) => {
               setCurrentOpenTab("docs");
               localStorage.setItem("lastTabOpenByUser", "docs");
             }}
-            sx={{
+            style={{
               ...ButtonStyle,
-              marginTop: 2,
+              marginTop: 8,
+              marginTop: 8,
               backgroundColor: currentOpenTab === "docs" && currentPath.includes("/docs") ? "#2f2f2f": "transparent",
-              "&:hover": { backgroundColor: "#2f2f2f" },
+            }}
+            onMouseOver={(event)=>{
+              event.currentTarget.style.backgroundColor = "#2f2f2f";
+            }}
+            onMouseOut={(event)=>{
+              event.currentTarget.style.backgroundColor = currentOpenTab === "docs" && currentPath.includes("/docs") ? "#2f2f2f": "transparent";
             }}
           >
             <img
@@ -1385,15 +1537,20 @@ const LeftSideBar = ({ userdata, serverside, globalUrl, notifications, }) => {
               >
                     {
                       isCloud ? (
-                        <span
+                          <span
                       style={{
                         color: "#bbb",
                         fontSize: "16px",
                         marginRight: 12,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
+                      <img src={getRegionFlag(option.region_url)} alt={option.region_url} style={{ width: 24, height: 24, marginRight: 12, borderRadius: "50%" }} />
                       {option.region_url}
-                    </span>) : null
+                    </span>
+                    ) : null
                     }
                     <img
                       src={option.image ? option.image : "/images/no_image.png"}

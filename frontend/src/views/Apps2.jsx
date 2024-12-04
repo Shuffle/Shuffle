@@ -36,6 +36,7 @@ import algoliasearch from "algoliasearch/lite";
 import { debounce } from "lodash";
 import AppSelection from "../components/AppSelection.jsx";
 import AppModal from "../components/AppModal.jsx";
+import AppCreationModal from "../components/AppCreationModal.jsx";
 
 
 const searchClient = algoliasearch(
@@ -45,6 +46,7 @@ const searchClient = algoliasearch(
 
 // AppCard Component
 const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, deactivatedIndexes, currTab, handleAppClick, leftSideBarOpenByClick, userdata }) => {
+  const navigate = useNavigate();
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" || window.location.host === "localhost:3000";
   const appUrl = isCloud ? `/apps/${data.id}` : `https://shuffler.io/apps/${data.id}`;
   var canEditApp = userdata.admin === "true" || userdata.id === data?.owner || data?.owner === "" || (userdata.admin === "true" && userdata.active_org.id === data?.reference_org) || !data?.generated
@@ -53,7 +55,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
     backgroundColor: mouseHoverIndex === index ? "rgba(26, 26, 26, 1)" : "#212121",
     color: "rgba(241, 241, 241, 1)",
     cursor: "pointer",
-    fontFamily: "Inter",
+    fontFamily: theme?.typography?.fontFamily,
     // position: "relative",
     width: "100%",
     height: 96,
@@ -76,7 +78,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
             fontSize: 16,
             overflow: "hidden",
             display: "flex",
-            fontFamily: "Inter",
+            fontFamily: theme?.typography?.fontFamily,
             width: '100%',
             backgroundColor: mouseHoverIndex === index ? "#2F2F2F" : "#212121"
           }}
@@ -105,7 +107,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
             fontWeight: '400',
             overflow: "hidden",
             margin: "12px 0",
-            fontFamily: "Inter"
+            fontFamily: theme?.typography?.fontFamily
           }}>
             <div style={{
               display: 'flex',
@@ -138,8 +140,14 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               display: "flex",
               justifyContent: 'space-between',
               paddingRight: 15,
+              height: 35,
             }}>
-              <div style={{ overflow: "hidden", textAlign: 'start' }}>
+              <div style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                color: "rgba(158, 158, 158, 1)",
+              }}>
                 {data.generated !== true && data.tags && data.tags.slice(0, 2).map((tag, tagIndex) => (
                   <span key={tagIndex}>
                     {tag}
@@ -151,31 +159,46 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
               {currTab === 0 && !deactivatedIndexes.includes(index) && mouseHoverIndex === index && data.generated === true && (
                 <div style={{
                   display: "flex",
-                  gap: 8
+                  gap: 8,
+                  alignItems: 'center',
+                  paddingRight: 20
                 }}>
                   {
                     canEditApp && (
-                      <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <button style={{ backgroundColor: "rgba(73, 73, 73, 1)", border: "none", cursor: "pointer", color: "white", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", height: 35 }}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (canEditApp) {
+                            const editUrl = "/apps/edit/" + data?.id;
+                            navigate(editUrl)
+                          }
+                        }}
+                      >
                         <EditIcon />
                       </button>
                     )
                   }
                   <Button
                     className="deactivate-button"
-                    style={{
-                      // marginLeft: 15,
+                    sx={{
                       width: 102,
                       height: 35,
-                      borderRadius: 3,
-                      backgroundColor: "rgba(73, 73, 73, 1)",
+                      borderRadius: 0.75,
+                      bgcolor: "rgba(73, 73, 73, 1)",
                       color: "rgba(241, 241, 241, 1)",
                       textTransform: "none",
-                      fontFamily: "Inter"
+                      fontFamily: theme?.typography?.fontFamily,
+                      transition: "background-color 0.3s ease",
+                      "&:hover": {
+                        bgcolor: "rgba(93, 93, 93, 1)",
+                      },
                     }}
                     onClick={(event) => {
+                      event.preventDefault();
                       event.stopPropagation();
                       const url = `${globalUrl}/api/v1/apps/${data.id}/deactivate`;
-
+                      toast("Deactivating app. Please wait...");
                       fetch(url, {
                         method: 'GET',
                         headers: {
@@ -189,7 +212,7 @@ const AppCard = ({ data, index, mouseHoverIndex, setMouseHoverIndex, globalUrl, 
                           if (responseJson.success === false) {
                             toast.error(responseJson.reason);
                           } else {
-                            toast.success("App Deactivated Successfully. Reload UI to see updated changes.");
+                            toast.success("App Deactivated Successfully.");
                           }
                         })
                         .catch(error => {
@@ -218,14 +241,35 @@ const Hits = ({
   setIsAnyAppActivated,
   searchQuery,
   globalUrl,
-  isLoading,
   isLoggedIn,
+  currTab,
   leftSideBarOpenByClick
 }) => {
   const [hoverEffect, setHoverEffect] = useState(-1);
-  const [allActivatedAppIds, setAllActivatedAppIds] = useState(userdata?.active_apps);
+  const [allActivatedAppIds, setAllActivatedAppIds] = useState([]);
   const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
   const [deactivatedIndexes, setDeactivatedIndexes] = React.useState([]);
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    var baseurl = globalUrl;
+    fetch(baseurl + "/api/v1/me", {
+      credentials: "include",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then(response => response.json())
+      .then(responseJson => {
+        if (responseJson.success) {
+          setAllActivatedAppIds(responseJson.active_apps)
+        }
+        setIsLoading(false)
+      })
+      .catch(error => {
+        console.log("Failed login check: ", error);
+      });
+  }, [currTab]);
 
   const normalizedString = (name) => {
     if (typeof name === 'string') {
@@ -235,12 +279,20 @@ const Hits = ({
     }
   };
 
+  useEffect(() => {
+    if (userdata && userdata.active_apps) {
+      setAllActivatedAppIds(userdata.active_apps);
+    }
+  }, [currTab, window.location]);
+
 
   //Function for activation and deactivation of app
   const handleActivateButton = (event, data, type) => {
 
     //use prevent default so it will stop redirection to the app page
     event.preventDefault();
+    event.stopPropagation();
+
     if (!isLoggedIn) {
       toast.error("Please log in to your account to activate the app.")
       return;
@@ -287,243 +339,254 @@ const Hits = ({
   let workflowDelay = 0;
   const isHeader = true;
 
-  const [showNoAppFound, setShowNoAppFound] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowNoAppFound(true);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
 
 
   return (
     <div>
-      {!isLoading ? (
-        <div>
-          {hits?.length === 0 && searchQuery.length >= 0 && showNoAppFound ? (
-            <div style={{ marginTop: 100, fontSize: 20, fontWeight: 500, width: "100%", textAlign: "center" }}>
-              <Typography variant="body1">No Apps Found</Typography>
-            </div>
-          ) : (
-            <div
-              style={{
-                marginTop: 16,
-                width: "100%",
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
-                gap: "20px",
-                justifyContent: "space-between",
-                alignItems: "start",
-                padding: "0 10px"
-              }}
-            >
-              {hits?.map((data, index) => {
-                const appUrl =
-                  isCloud
-                    ? `/apps/${data.objectID}?queryID=${data.__queryID}`
-                    : `https://shuffler.io/apps/${data.objectID}?queryID=${data.__queryID}`;
+      {!isLoading ?
+        (
+          <div>
+            {hits?.length === 0 && searchQuery.length >= 0 ? (
+              <Typography>No apps found</Typography>
+            ) : (
+              <div
+                style={{
+                  marginTop: 16,
+                  width: "100%",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(365px, 1fr))",
+                  gap: "20px",
+                  fontFamily: theme?.typography?.fontFamily,
+                  justifyContent: "space-between",
+                  alignItems: "start",
+                  padding: "0 10px",
+                  paddingBottom: 40
+                }}
+              >
+                {hits?.map((data, index) => {
+                  const appUrl =
+                    isCloud
+                      ? `/apps/${data.objectID}?queryID=${data.__queryID}`
+                      : `https://shuffler.io/apps/${data.objectID}?queryID=${data.__queryID}`;
 
-                return (
-                  <Zoom
-                    key={index}
-                    in={true}
-                    style={{
-                      transitionDelay: `${workflowDelay}ms`,
-                    }}
-                  >
-                    <Paper
-                      elevation={0}
+                  return (
+                    <Zoom
+                      key={index}
+                      in={true}
                       style={{
-                        backgroundColor: hoverEffect === index ? "rgba(26, 26, 26, 1)" : "#212121",
-                        color: "rgba(241, 241, 241, 1)",
-                        cursor: "pointer",
-                        fontFamily: "Inter",
-                        // position: "relative",
-                        width: "100%",
-                        height: 96,
-                        borderRadius: 8,
-                        boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
-                        marginBottom: 20,
-                        transition: "width 0.3s ease",
-                      }}
-                      onMouseEnter={() => {
-                        setHoverEffect(index);
-                      }}
-                      onMouseLeave={() => {
-                        setHoverEffect(-1);
+                        transitionDelay: `${workflowDelay}ms`,
                       }}
                     >
-                      <ButtonBase style={{
-                        borderRadius: 6,
-                        fontSize: 16,
-                        overflow: "hidden",
-                        display: "flex",
-                        fontFamily: "Inter",
-                        width: '100%',
-                        backgroundColor: hoverEffect === index ? "#2F2F2F" : "#212121"
-                      }}
-                        onClick={() => {
-                          handleAppClick(data);
+                      <Paper
+                        elevation={0}
+                        style={{
+                          backgroundColor: hoverEffect === index ? "rgba(26, 26, 26, 1)" : "#212121",
+                          color: "rgba(241, 241, 241, 1)",
+                          cursor: "pointer",
+                          fontFamily: theme?.typography?.fontFamily,
+                          // position: "relative",
+                          width: "100%",
+                          height: 96,
+                          borderRadius: 8,
+                          boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)",
+                          marginBottom: 20,
+                          transition: "width 0.3s ease",
+                        }}
+                        onMouseEnter={() => {
+                          setHoverEffect(index);
+                        }}
+                        onMouseLeave={() => {
+                          setHoverEffect(-1);
                         }}
                       >
-                        <img
-                          alt={data.name}
-                          src={data.image_url ? data.image_url : "/images/no_image.png"}
-                          style={{
-                            width: 100,
-                            height: 100,
-                            borderRadius: 6,
-                            margin: 10,
-                            border: "1px solid #212122",
-                            boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
-                          }}
-                        />
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "flex-start",
-                            width: 339,
-                            gap: 6,
-                            fontWeight: '400',
-                            overflow: "hidden",
-                            margin: "12px 0",
-                            fontFamily: "Inter"
+                        <ButtonBase style={{
+                          borderRadius: 6,
+                          fontSize: 16,
+                          overflow: "hidden",
+                          display: "flex",
+                          width: '100%',
+                          backgroundColor: hoverEffect === index ? "#2F2F2F" : "#212121",
+                          fontFamily: theme?.typography?.fontFamily
+                        }}
+                          onClick={() => {
+                            console.log("App modal", data)
+                            handleAppClick(data);
                           }}
                         >
-                          <div
+                          <img
+                            alt={data.name}
+                            src={data.image_url ? data.image_url : "/images/no_image.png"}
                             style={{
-                              display: 'flex',
-                              flexDirection: "row",
-                              overflow: "hidden",
-                              gap: 8,
-                              fontWeight: 600,
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              color: '#F1F1F1'
+                              width: 100,
+                              height: 100,
+                              borderRadius: 6,
+                              margin: 10,
+                              border: "1px solid #212122",
+                              boxShadow: "0px 0px 10px 0px rgba(0, 0, 0, 0.1)"
                             }}
-                          >
-                            {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
-                            {normalizedString(data.name)}
-                          </div>
-
-                          <div
-                            style={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              color: "rgba(158, 158, 158, 1)",
-                              marginTop: 5,
-                            }}
-                          >
-                            {data.categories !== null
-                              ? normalizedString(data.categories).join(", ")
-                              : "NA"}
-                          </div>
+                          />
                           <div
                             style={{
                               display: "flex",
-                              justifyContent: 'space-between',
-                              width: 230,
-                              textAlign: 'start',
-                              color: "rgba(158, 158, 158, 1)",
+                              flexDirection: "column",
+                              alignItems: "flex-start",
+                              width: 339,
+                              gap: 6,
+                              fontWeight: '400',
+                              overflow: "hidden",
+                              margin: "12px 0",
+                              fontFamily: theme?.typography?.fontFamily
                             }}
                           >
-                            <div style={{ marginBottom: 15, }}>
-                              {hoverEffect === index && isCloud ? (
-                                <div>
-                                  {data.tags && (
-                                    <Tooltip
-                                      title={data.tags.join(", ")}
-                                      placement="bottom"
-                                      componentsProps={{
-                                        tooltip: {
-                                          sx: {
-                                            backgroundColor: "rgba(33, 33, 33, 1)",
-                                            color: "rgba(241, 241, 241, 1)",
-                                            width: "auto",
-                                            height: "auto",
-                                            fontSize: 16,
-                                            border: "1px solid rgba(73, 73, 73, 1)",
-                                          }
-                                        }
-                                      }}
-                                    >
-                                      <span>
-                                        {data.tags.slice(0, 1).map((tag, tagIndex) => (
-                                          <span key={tagIndex}>
-                                            {normalizedString(tag)}
-                                            {tagIndex < 1 ? ", " : ""}
-                                          </span>
-                                        ))}
-                                      </span>
-                                    </Tooltip>
-                                  )}
-                                </div>
-                              ) : (
-                                <div style={{ width: 230, textOverflow: "ellipsis", overflow: 'hidden', whiteSpace: 'nowrap', }}>
-                                  {data.tags &&
-                                    data.tags.map((tag, tagIndex) => (
-                                      <span key={tagIndex}>
-                                        {normalizedString(tag)}
-                                        {tagIndex < data.tags.length - 1 ? ", " : ""}
-                                      </span>
-                                    ))}
-                                </div>
-                              )}
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexDirection: "row",
+                                overflow: "hidden",
+                                gap: 8,
+                                fontWeight: 600,
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                color: '#F1F1F1'
+                              }}
+                            >
+                              {(allActivatedAppIds && allActivatedAppIds.includes(data.objectID)) && <Box sx={{ width: 8, height: 8, backgroundColor: "#02CB70", borderRadius: '50%' }} />}
+                              {normalizedString(data.name)}
                             </div>
-                            <div style={{ position: 'relative', bottom: 5 }}>
-                              {hoverEffect === index && isCloud && (
-                                <div>
-                                  {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
-                                    <Button style={{
-                                      width: 102,
-                                      height: 35,
-                                      borderRadius: 200,
-                                      backgroundColor: "rgba(73, 73, 73, 1)",
-                                      color: "rgba(241, 241, 241, 1)",
-                                      textTransform: "none",
-                                    }}
-                                      onClick={(event) => {
-                                        handleActivateButton(event, data, "deactivate");
-                                      }}>
-                                      Deactivate
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      style={{
-                                        width: 102,
-                                        height: 35,
-                                        borderRadius: 200,
-                                        backgroundColor: "rgba(242, 101, 59, 1)",
-                                        color: "rgba(255, 255, 255, 1)",
-                                        textTransform: "none",
-                                      }}
-                                      onClick={(event) => {
-                                        handleActivateButton(event, data, "activate");
-                                      }}
-                                    >
-                                      Activate
-                                    </Button>
-                                  )}
-                                </div>
-                              )}
+
+                            <div
+                              style={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                color: "rgba(158, 158, 158, 1)",
+                                marginTop: 5,
+                              }}
+                            >
+                              {data.categories !== null
+                                ? normalizedString(data.categories).join(", ")
+                                : "NA"}
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: 'space-between',
+                                width: "100%",
+                                textAlign: 'start',
+                                color: "rgba(158, 158, 158, 1)",
+                                height: 35,
+                                alignItems: 'center'
+                              }}
+                            >
+                              <div style={{
+                                flex: 1
+                              }}>
+                                {hoverEffect === index && isCloud ? (
+                                  <div>
+                                    {data.tags && (
+                                      <Tooltip
+                                        title={data.tags.join(", ")}
+                                        placement="bottom"
+                                        componentsProps={{
+                                          tooltip: {
+                                            sx: {
+                                              backgroundColor: "rgba(33, 33, 33, 1)",
+                                              color: "rgba(241, 241, 241, 1)",
+                                              width: "auto",
+                                              height: "auto",
+                                              fontSize: 16,
+                                              border: "1px solid rgba(73, 73, 73, 1)",
+                                            }
+                                          }
+                                        }}
+                                      >
+                                        <span>
+                                          {data.tags.slice(0, 1).map((tag, tagIndex) => (
+                                            <span key={tagIndex}>
+                                              {normalizedString(tag)}
+                                              {tagIndex < 1 ? ", " : ""}
+                                            </span>
+                                          ))}
+                                        </span>
+                                      </Tooltip>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div style={{
+                                    width: 230,
+                                    textOverflow: "ellipsis",
+                                    overflow: 'hidden',
+                                    whiteSpace: 'nowrap',
+                                  }}>
+                                    {data.tags &&
+                                      data.tags.map((tag, tagIndex) => (
+                                        <span key={tagIndex}>
+                                          {normalizedString(tag)}
+                                          {tagIndex < data.tags.length - 1 ? ", " : ""}
+                                        </span>
+                                      ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                alignItems: 'center',
+                                paddingRight: 10,
+                                minWidth: 110
+                              }}>
+                                {hoverEffect === index && isCloud && (
+                                  <div>
+                                    {allActivatedAppIds && allActivatedAppIds.includes(data.objectID) ? (
+                                      <Button
+                                        style={{
+                                          width: 102,
+                                          height: 35,
+                                          borderRadius: 3,
+                                          backgroundColor: "rgba(73, 73, 73, 1)",
+                                          color: "rgba(241, 241, 241, 1)",
+                                          textTransform: "none",
+                                          fontFamily: theme?.typography?.fontFamily,
+                                        }}
+                                        onClick={(event) => {
+                                          handleActivateButton(event, data, "deactivate");
+                                        }}>
+                                        Deactivate
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        style={{
+                                          backgroundColor: "#FF8544",
+                                          color: "black",
+                                          width: 102,
+                                          height: 35,
+                                          borderRadius: 3,
+                                          textTransform: "none",
+                                          fontFamily: theme?.typography?.fontFamily,
+                                        }}
+                                        onClick={(event) => {
+                                          handleActivateButton(event, data, "activate");
+                                        }}
+                                      >
+                                        Activate
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </ButtonBase>
-                    </Paper>
-                  </Zoom>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ) : (
-        <LoadingGrid />
-      )
+                        </ButtonBase>
+                      </Paper>
+                    </Zoom>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <LoadingGrid />
+        )
       }
     </div >
   );
@@ -535,7 +598,7 @@ const Hits = ({
 const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
   const inputRef = useRef(null);
   const [localQuery, setLocalQuery] = useState(searchQuery);
-
+  const location = useLocation();
   // Initialize search when component mounts or when switching to Discover tab
   useEffect(() => {
     if (searchQuery) {
@@ -592,7 +655,7 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
           event.preventDefault();
         }
       }}
-      style={{ borderRadius: 8, height: 45, fontFamily: "Inter", flex: 1 }}
+      style={{ borderRadius: 8, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1 }}
       InputProps={{
         style: {
           borderRadius: 8,
@@ -608,6 +671,9 @@ const SearchBox = ({ refine, searchQuery, setSearchQuery }) => {
                 onClick={() => {
                   setLocalQuery('');
                   debouncedRefine('');
+                  const queryParams = new URLSearchParams(location.search);
+                  queryParams.delete('q');
+                  window.history.replaceState({}, '', `${location.pathname}?${queryParams.toString()}`);
                 }}
               />
             )}
@@ -637,14 +703,26 @@ const CategoryDropdown = ({ items, currentRefinement, refine }) => {
         onChange={handleChange}
         displayEmpty
         multiple
-        style={{ borderRadius: 8, height: 45, fontFamily: "Inter", flex: 1 }}
-        renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
+        style={{ borderRadius: 8, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1 }}
+        renderValue={(selected) => {
+          if (selected.length === 0) return 'All Categories';
+          return (
+            <div style={{
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '90%'
+            }}>
+              {selected.join(', ')}
+            </div>
+          );
+        }}
       >
-        <MenuItem disabled value="" style={{ fontFamily: "Inter" }}>
+        <MenuItem disabled value="" style={{ fontFamily: theme?.typography?.fontFamily }}>
           All Categories
         </MenuItem>
         {items.map(item => (
-          <MenuItem key={item.label} value={item.label} style={{ fontFamily: "Inter", fontSize: 16 }}>
+          <MenuItem key={item.label} value={item.label} style={{ fontFamily: theme?.typography?.fontFamily, fontSize: 16 }}>
             <Checkbox checked={currentRefinement.includes(item.label)} />
             {item.label} ({item.count})
           </MenuItem>
@@ -686,15 +764,27 @@ const LabelDropdown = ({ items, currentRefinement, refine }) => {
         onChange={handleChange}
         displayEmpty
         multiple
-        style={{ borderRadius: 8, height: 45, fontFamily: "Inter", flex: 1 }}
-        renderValue={(selected) => selected.length ? selected.join(', ') : 'All Labels'}
+        style={{ borderRadius: 8, height: 45, fontFamily: theme?.typography?.fontFamily, flex: 1 }}
+        renderValue={(selected) => {
+          if (selected.length === 0) return 'All Labels';
+          return (
+            <div style={{
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '90%'
+            }}>
+              {selected.join(', ')}
+            </div>
+          );
+        }}
       >
         <MenuItem disabled value="">
           All Labels
         </MenuItem>
         {items.map(item => (
           <MenuItem key={item.label} value={item.label} style={{
-            fontFamily: "Inter",
+            fontFamily: theme?.typography?.fontFamily,
             fontSize: 16
           }}>
             <Checkbox checked={currentRefinement.includes(item.label)} />
@@ -835,7 +925,7 @@ const LoadingGrid = () => {
 
 // Main Apps Component
 const Apps2 = (props) => {
-  const { globalUrl, isLoaded, serverside, userdata, isLoggedIn, checkLogin, isCloud } = props;
+  const { globalUrl, isLoaded, serverside, userdata, isLoggedIn, checkLogin } = props;
   let navigate = useNavigate();
   const { leftSideBarOpenByClick } = useContext(Context);
   const location = useLocation();
@@ -869,8 +959,15 @@ const Apps2 = (props) => {
   const [field1, setField1] = useState("");
   const [field2, setField2] = useState("");
   const [validation, setValidation] = useState(null);
+  const [createAppModalOpen, setCreateAppModalOpen] = useState(false);
 
   const baseRepository = "https://github.com/frikky/shuffle-apps";
+
+  const isCloud =
+    window.location.host === "localhost:3002" ||
+      window.location.host === "shuffler.io"
+      ? true
+      : false;
 
   // Set the current tab based on the query parameter
   useEffect(() => {
@@ -931,14 +1028,13 @@ const Apps2 = (props) => {
     const fetchApps = async () => {
       const baseUrl = globalUrl;
       let url;
-
+      setIsLoading(true);
       const userId = userdata?.id;
       if (currTab === 1 && userId) {
         url = `${baseUrl}/api/v1/users/${userId}/apps`;
       } else if (currTab === 0) {
         url = `${baseUrl}/api/v1/apps`;
       }
-      setIsLoading(true);
       try {
         const response = await fetch(url, {
           method: "GET",
@@ -1234,8 +1330,8 @@ const Apps2 = (props) => {
         console.log("ERROR: ", error.toString());
         //toast(error.toString());
         //stop()
-        
-				setIsLoading(false);
+
+        setIsLoading(false);
         setValidation(false);
       });
   };
@@ -1262,7 +1358,7 @@ const Apps2 = (props) => {
           borderRadius: 2,
           border: "1px solid #494949",
           minWidth: '440px',
-          fontFamily: "Inter",
+          fontFamily: theme?.typography?.fontFamily,
           backgroundColor: "#212121",
           zIndex: 1000,
           '& .MuiDialogContent-root': {
@@ -1272,10 +1368,10 @@ const Apps2 = (props) => {
             backgroundColor: "#212121",
           },
           '& .MuiTypography-root': {
-            fontFamily: 'Inter, sans-serif',
+            fontFamily: theme?.typography?.fontFamily,
           },
           '& .MuiButton-root': {
-            fontFamily: 'Inter, sans-serif',
+            fontFamily: theme?.typography?.fontFamily,
           },
         }
       }}
@@ -1393,9 +1489,10 @@ const Apps2 = (props) => {
           />
         </div>
       </DialogContent>
-      <DialogActions sx={{ p: 3,
+      <DialogActions sx={{
+        p: 3,
         backgroundColor: "#212121"
-       }}>
+      }}>
         <Button
           variant="contained"
           sx={{
@@ -1406,7 +1503,7 @@ const Apps2 = (props) => {
             py: 1,
             px: 3,
             color: "#fff",
-            fontFamily: "Inter"
+            fontFamily: theme?.typography?.fontFamily
           }}
           onClick={() => setLoadAppsModalOpen(false)}
         >
@@ -1423,7 +1520,7 @@ const Apps2 = (props) => {
               py: 1,
               px: 3,
               color: "#fff",
-              fontFamily: "Inter"
+              fontFamily: theme?.typography?.fontFamily
             }}
             disabled={openApi.length === 0 || !openApi.includes("http")}
             onClick={() => handleGithubValidation(true)}
@@ -1441,7 +1538,7 @@ const Apps2 = (props) => {
             py: 1,
             px: 3,
             color: "black",
-            fontFamily: "Inter"
+            fontFamily: theme?.typography?.fontFamily
           }}
           disabled={openApi.length === 0 || !openApi.includes("http")}
           onClick={() => handleGithubValidation(false)}
@@ -1510,6 +1607,7 @@ const Apps2 = (props) => {
 
   const handleCreateApp = (e) => {
     e.preventDefault();
+    setCreateAppModalOpen(true);
     // setOpenModal(true);
   };
 
@@ -1553,37 +1651,28 @@ const Apps2 = (props) => {
     navigate(`${location.pathname}?${queryParams.toString()}`);
   };
 
-  // Update useEffect to handle initial load and URL search params
-  useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const searchParam = queryParams.get('q');
-    if (searchParam) {
-      setSearchQuery(searchParam);
-    }
-  }, []);
-
-  // Update useEffect for filtering to handle both tabs
+  // Update useEffect for filtering without URL manipulation
   useEffect(() => {
     if (currTab === 2) return; // Skip for "Discover Apps" tab as it uses Algolia
 
     const apps = currTab === 1 ? userApps : orgApps;
     const filteredApps = filterApps(apps, searchQuery, selectedCategory, selectedLabel);
     setAppsToShow(filteredApps);
+  }, [searchQuery, selectedCategory, selectedLabel, currTab, userApps, orgApps]);
 
-    // Update URL with search query
+  // Add URL update only when search is performed
+  const handleSearchChange = (event) => {
+    const newSearchQuery = event.target.value;
+    setSearchQuery(newSearchQuery);
+
+    // Update URL only when user performs search
     const queryParams = new URLSearchParams(location.search);
-    if (searchQuery) {
-      queryParams.set('q', searchQuery);
+    if (newSearchQuery) {
+      queryParams.set('q', newSearchQuery);
     } else {
       queryParams.delete('q');
     }
     window.history.replaceState({}, '', `${location.pathname}?${queryParams.toString()}`);
-  }, [searchQuery, selectedCategory, selectedLabel, currTab, userApps, orgApps]);
-
-  // Update search input handler to maintain state across tabs
-  const handleSearchChange = (event) => {
-    const newSearchQuery = event.target.value;
-    setSearchQuery(newSearchQuery);
   };
 
   const boxStyle = {
@@ -1594,7 +1683,7 @@ const Apps2 = (props) => {
     width: "100%",
     margin: "auto",
     maxWidth: "70%",
-    fontFamily: "Inter",
+    fontFamily: theme?.typography?.fontFamily,
     // padding: '20px 380px',
   };
 
@@ -1619,7 +1708,7 @@ const Apps2 = (props) => {
   }
 
   return (
-    <div style={{ paddingTop: 70, minHeight: 1000, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: "#1A1A1A" }}>
+    <div style={{ paddingTop: 70, paddingLeft: leftSideBarOpenByClick ? 200 : 0, transition: "padding-left 0.3s ease", backgroundColor: "#1A1A1A", fontFamily: theme?.typography?.fontFamily, zoom: 0.8, }}>
       <InstantSearch searchClient={searchClient} indexName="appsearch">
         <AppModal
           open={openModal}
@@ -1628,10 +1717,17 @@ const Apps2 = (props) => {
           userdata={userdata}
           globalUrl={globalUrl}
         />
+        <AppCreationModal
+          open={createAppModalOpen}
+          onClose={() => setCreateAppModalOpen(false)}
+          theme={theme}
+          globalUrl={globalUrl}
+          isCloud={isCloud}
+        />
         {appsModalLoad}
         <div style={boxStyle}>
           <div style={{ display: "flex", flexDirection: "row", width: "100%", justifyContent: "space-between" }}>
-            <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: "Inter" }}>
+            <Typography variant="h4" style={{ marginBottom: 20, paddingLeft: 15, textTransform: 'none', fontFamily: theme?.typography?.fontFamily }}>
               Apps
             </Typography>
             {isCloud ? null : (
@@ -1648,7 +1744,7 @@ const Apps2 = (props) => {
                           color: "rgba(241, 241, 241, 1)",
                           fontSize: 14,
                           border: "1px solid rgba(73, 73, 73, 1)",
-                          fontFamily: "Inter"
+                          fontFamily: theme?.typography?.fontFamily,
                         }
                       }
                     }}
@@ -1688,7 +1784,7 @@ const Apps2 = (props) => {
                           color: "rgba(241, 241, 241, 1)",
                           fontSize: 14,
                           border: "1px solid rgba(73, 73, 73, 1)",
-                          fontFamily: "Inter"
+                          fontFamily: theme?.typography?.fontFamily,
                         }
                       }
                     }}
@@ -1720,22 +1816,25 @@ const Apps2 = (props) => {
               </span>
             )}
           </div>
-          <div style={{ borderBottom: '1px solid gray', marginBottom: 30, marginRight: 10 }}>
+          <div style={{ borderBottom: '1px solid gray', marginBottom: 30 }}>
             <Tabs
               value={currTab}
               onChange={(event, newTab) => handleTabChange(event, newTab)}
-              TabIndicatorProps={{ style: { height: '3px', borderRadius: 10 } }}
-              style={{ fontFamily: "Inter" }}
+              TabIndicatorProps={{ style: { height: '3px', borderRadius: 10, backgroundColor: "#FF8544" } }}
+              style={{ fontFamily: theme?.typography?.fontFamily }}
             >
-              <Tab label="Organization Apps" style={{ textTransform: 'none', marginRight: 20, fontFamily: "Inter" }} />
-              <Tab label="My Apps" style={{ textTransform: 'none', marginRight: 20, fontFamily: "Inter" }} />
-              <Tab label="Discover Apps" style={{ textTransform: 'none', fontFamily: "Inter" }} />
+              <Tab label="Organization Apps" style={{ textTransform: 'none', marginRight: 20, fontFamily: theme?.typography?.fontFamily }} />
+              <Tab label="My Apps" style={{ textTransform: 'none', marginRight: 20, fontFamily: theme?.typography?.fontFamily }} />
+              <Tab label="Discover Apps" style={{ textTransform: 'none', fontFamily: theme?.typography?.fontFamily }} />
             </Tabs>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 20, height: 45 }}>
-            <div style={{ flex: 1, width: '100%', borderRadius: '7px' }}>
-              {
-                (currTab === 0 || currTab === 1) &&
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 20, height: 45, paddingRight: 25 }}>
+            <div style={{
+              width: "25%",
+              minWidth: "25%",
+              maxWidth: "25%"
+            }}>
+              {(currTab === 0 || currTab === 1) ? (
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -1756,13 +1855,14 @@ const Apps2 = (props) => {
                     },
                     endAdornment: (
                       <InputAdornment position="end">
-                        {searchQuery.length === 0 ? (
-                          <Search />
-                        ) : (
+                        {searchQuery.length === 0 ? <Search /> : (
                           <ClearIcon
                             style={{ cursor: "pointer" }}
                             onClick={() => {
-                              setSearchQuery("");
+                              setSearchQuery("")
+                              const queryParams = new URLSearchParams(location.search);
+                              queryParams.delete('q');
+                              window.history.replaceState({}, '', `${location.pathname}?${queryParams.toString()}`);
                             }}
                           />
                         )}
@@ -1770,13 +1870,16 @@ const Apps2 = (props) => {
                     ),
                   }}
                 />
-              }
-              {
-                currTab === 2 &&
+              ) : (
                 <CustomSearchBox searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-              }
+              )}
             </div>
-            <div style={{ flex: 1, width: '100%', borderRadius: '7px', position: 'relative' }}>
+            <div style={{
+              width: "25%",
+              minWidth: "25%",
+              maxWidth: "25%",
+              position: 'relative'
+            }}>
               {currTab === 2 ? (
                 <CustomCategoryDropdown attribute="categories" />
               ) : (
@@ -1788,14 +1891,30 @@ const Apps2 = (props) => {
                     onChange={handleCategoryChange}
                     displayEmpty
                     multiple
-                    style={{ borderRadius: 8, height: 45, fontFamily: "Inter" }}
-                    renderValue={(selected) => selected.length ? selected.join(', ') : 'All Categories'}
+                    style={{
+                      borderRadius: 8,
+                      height: 45,
+                      fontFamily: theme?.typography?.fontFamily
+                    }}
+                    renderValue={(selected) => {
+                      if (selected.length === 0) return 'All Categories';
+                      return (
+                        <div style={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '90%'
+                        }}>
+                          {selected.join(', ')}
+                        </div>
+                      );
+                    }}
                   >
-                    <MenuItem disabled value="" style={{ fontFamily: "Inter" }}>
+                    <MenuItem disabled value="" style={{ fontFamily: theme?.typography?.fontFamily }}>
                       All Categories
                     </MenuItem>
                     {categories?.map((category) => (
-                      <MenuItem key={category.category} value={category.category} style={{ fontFamily: "Inter", fontSize: 16 }}>
+                      <MenuItem key={category.category} value={category.category} style={{ fontFamily: theme?.typography?.fontFamily, fontSize: 16 }}>
                         <Checkbox checked={selectedCategory.includes(category.category)} />
                         {category.category}
                       </MenuItem>
@@ -1819,7 +1938,12 @@ const Apps2 = (props) => {
                 </>
               )}
             </div>
-            <div style={{ flex: 1, width: '100%', borderRadius: '7px', position: 'relative' }}>
+            <div style={{
+              width: "25%",
+              minWidth: "25%",
+              maxWidth: "25%",
+              position: 'relative'
+            }}>
               {currTab === 2 ? (
                 <CustomLabelDropdown attribute="action_labels" />
               ) : (
@@ -1831,14 +1955,30 @@ const Apps2 = (props) => {
                     onChange={handleLabelChange}
                     displayEmpty
                     multiple
-                    style={{ borderRadius: 8, height: 45, fontFamily: "Inter" }}
-                    renderValue={(selected) => selected.length ? selected.join(', ') : 'All Labels'}
+                    style={{
+                      borderRadius: 8,
+                      height: 45,
+                      fontFamily: theme?.typography?.fontFamily
+                    }}
+                    renderValue={(selected) => {
+                      if (selected.length === 0) return 'All Labels';
+                      return (
+                        <div style={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '90%'
+                        }}>
+                          {selected.join(', ')}
+                        </div>
+                      );
+                    }}
                   >
-                    <MenuItem disabled value="" style={{ fontFamily: "Inter" }}>
+                    <MenuItem disabled value="" style={{ fontFamily: theme?.typography?.fontFamily }}>
                       All Labels
                     </MenuItem>
                     {labels?.map((tag) => (
-                      <MenuItem key={tag.tag} value={tag.tag} style={{ fontFamily: "Inter", fontSize: 16 }}>
+                      <MenuItem key={tag.tag} value={tag.tag} style={{ fontFamily: theme?.typography?.fontFamily, fontSize: 16 }}>
                         <Checkbox checked={selectedLabel.includes(tag.tag)} />
                         {tag.tag}
                       </MenuItem>
@@ -1862,14 +2002,28 @@ const Apps2 = (props) => {
                 </>
               )}
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{
+              width: "25%",
+              minWidth: "25%",
+              maxWidth: "25%"
+            }}>
               <Button
                 variant="contained"
                 color="primary"
                 onClick={handleCreateApp}
-                style={{ height: "100%", width: '100%', borderRadius: '7px', textTransform: 'none', backgroundColor: "#FF8544", color: "#1A1A1A", fontFamily: "Inter" }}
+                style={{
+                  height: "100%",
+                  width: '100%',
+                  borderRadius: '7px',
+                  textTransform: 'none',
+                  backgroundColor: "#FF8544",
+                  color: "#1A1A1A",
+                  fontFamily: theme?.typography?.fontFamily,
+                  fontSize: 16,
+                  fontWeight: 500
+                }}
+                startIcon={<Add style={{ color: "#1A1A1A" }} />}
               >
-                <Add style={{ marginRight: 10, color: "#1A1A1A", fontSize: 20 }} />
                 Create an App
               </Button>
             </div>
@@ -1892,7 +2046,8 @@ const Apps2 = (props) => {
                           gap: "20px",
                           justifyContent: "space-between",
                           alignItems: "start",
-                          padding: "0 10px"
+                          padding: "0 10px",
+                          paddingBottom: 40
                         }}>
                           {appsToShow.map((data, index) => (
                             <AppCard
@@ -1931,7 +2086,7 @@ const Apps2 = (props) => {
             }
             {
               currTab === 1 && (
-                <div style={{ minHeight: 570, overflowY: "auto", overflowX: "hidden" }}>
+                <div style={{ minHeight: 570 }}>
                   {isLoading ? (
                     <LoadingGrid />
                   ) : (
@@ -1945,7 +2100,8 @@ const Apps2 = (props) => {
                           gap: "20px",
                           justifyContent: "space-between",
                           alignItems: "start",
-                          padding: "0 10px"
+                          padding: "0 10px",
+                          paddingBottom: 40
                         }}>
                           {appsToShow.map((data, index) => (
                             <AppCard key={index} data={data} index={index} mouseHoverIndex={mouseHoverIndex} setMouseHoverIndex={setMouseHoverIndex} globalUrl={globalUrl} deactivatedIndexes={deactivatedIndexes} currTab={currTab} userdata={userdata}
@@ -1955,7 +2111,16 @@ const Apps2 = (props) => {
                         </div>
                       ) : (
                         <div style={{ width: "100%", marginTop: 60, textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                          <Typography variant="body1">No Apps Found</Typography>
+                          <AppSelection
+                            userdata={userdata}
+                            globalUrl={globalUrl}
+                            appFramework={appFramework}
+                            setAppFramework={setAppFramework}
+                            defaultSearch={defaultSearch}
+                            setDefaultSearch={setDefaultSearch}
+                            checkLogin={checkLogin}
+                            isAppPage={true}
+                          />
                         </div>
                       )}
                     </>
@@ -1976,6 +2141,7 @@ const Apps2 = (props) => {
                 searchQuery={searchQuery}
                 mouseHoverIndex={mouseHoverIndex}
                 setMouseHoverIndex={setMouseHoverIndex}
+                currTab={currTab}
                 leftSideBarOpenByClick={leftSideBarOpenByClick}
               />
             }

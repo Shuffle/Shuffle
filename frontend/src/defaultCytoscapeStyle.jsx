@@ -382,7 +382,7 @@ const data = [
     css: {
       "background-color": "#f85a3e",
       "border-color": "#f85a3e",
-      "border-width": "12px",
+      "border-width": "7px",
       "transition-property": "border-width",
       "transition-duration": "0.25s",
       label: "data(label)",
