@@ -2150,7 +2150,9 @@ func main() {
 				log.Printf("[DEBUG] Starting iteration on environment %#v (default = Shuffle). Got statuscode %d from backend on first request", environment, newresp.StatusCode)
 			}
 
-			go AutoScale(ctx)
+			if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" && os.Getenv("SHUFFLE_SCALE_REPLICAS") == "" {
+				go AutoScale(ctx)
+			}
 			hasStarted = true
 		}
 

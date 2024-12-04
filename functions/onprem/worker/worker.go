@@ -4129,8 +4129,9 @@ func runWebserver(listener net.Listener) {
 		log.Printf("[DEBUG] SHUFFLE_APP_EXECUTIONS_PER_MINUTE set to value %s. Trying to overwrite default (%d)", os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE"), maxExecutionsPerMinute)
 	}
 
-	go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
-
+	if strings.ToLower(os.Getenv("SHUFFLE_SWARM_CONFIG")) == "run" || strings.ToLower(os.Getenv("SHUFFLE_APP_REPLICAS")) == "" {
+		go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
+	}
 	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
 		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
