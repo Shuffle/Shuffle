@@ -104,11 +104,11 @@ var window = shuffle.NewTimeWindow(10 * time.Second)
 
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
-	"http:1.4.0":            "frikky/shuffle:http_1.4.0",
-	"http:1.3.0":            "frikky/shuffle:http_1.3.0",
-	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
-	"shuffle-subflow:1.0.0": "frikky/shuffle:shuffle-subflow_1.0.0",
-	"shuffle-subflow:1.1.0": "frikky/shuffle:shuffle-subflow_1.1.0",
+	"http:1.4.0":               "frikky/shuffle:http_1.4.0",
+	"http:1.3.0":               "frikky/shuffle:http_1.3.0",
+	"shuffle-tools:1.2.0":      "frikky/shuffle:shuffle-tools_1.2.0",
+	"shuffle-subflow:1.0.0":    "frikky/shuffle:shuffle-subflow_1.0.0",
+	"shuffle-subflow:1.1.0":    "frikky/shuffle:shuffle-subflow_1.1.0",
 	"shuffle-tools-fork:1.0.0": "frikky/shuffle:shuffle-tools-fork_1.0.0",
 }
 
@@ -4129,8 +4129,9 @@ func runWebserver(listener net.Listener) {
 		log.Printf("[DEBUG] SHUFFLE_APP_EXECUTIONS_PER_MINUTE set to value %s. Trying to overwrite default (%d)", os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE"), maxExecutionsPerMinute)
 	}
 
-	go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
-
+	if strings.ToLower(os.Getenv("SHUFFLE_SWARM_CONFIG")) == "run" || strings.ToLower(os.Getenv("SHUFFLE_APP_REPLICAS")) == "" {
+		go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
+	}
 	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
 		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
@@ -4179,8 +4180,6 @@ func AutoScaleApps(ctx context.Context, client *dockerclient.Client, maxExecutio
 			j := numberOfApps(ctx, client)
 			workers := numberOfWorkers(ctx, client)
 			execPerMin := maxExecutionsPerMinute / workers
-			log.Printf("[DEBUG] Running with %d workers\n\n\n\n\n", workers)
-
 			if count >= execPerMin {
 				log.Printf("[DEBUG] Too many executions per minute (%d). Scaling down to %d", count, execPerMin)
 				scaleApps(ctx, client, uint64(j+1))

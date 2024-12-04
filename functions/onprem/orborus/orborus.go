@@ -333,19 +333,6 @@ func deployServiceWorkers(image string) {
 	}
 	ctx := context.Background()
 
-	isMemcachedRunning, err := checkMemcached(ctx, dockercli)
-	if err != nil {
-		log.Printf("[ERROR] Failed checking memcached: %s", err)
-	}
-	if isMemcachedRunning == false {
-		log.Printf("[ERROR] Memcached is not running. Will try to deploy it.")
-		deployMemcached(dockercli)
-	}
-
-	ip := "shuffle-cache"
-
-	os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
-
 	// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
 
 	// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/shuffle/shuffle-worker:nightly
@@ -456,6 +443,19 @@ func deployServiceWorkers(image string) {
 			log.Printf("[DEBUG] Failed to create network %s for workers: %s. This is not critical, and containers will still be added", networkName, err)
 		}
 	}
+
+	isMemcachedRunning, err := checkMemcached(ctx, dockercli)
+	if err != nil {
+		log.Printf("[ERROR] Failed checking memcached: %s", err)
+	}
+	if isMemcachedRunning == false {
+		log.Printf("[ERROR] Memcached is not running. Will try to deploy it.")
+		deployMemcached(dockercli)
+	}
+
+	ip := "shuffle-cache"
+
+	os.Setenv("SHUFFLE_MEMCACHED", fmt.Sprintf("%s:11211", ip))
 
 	defaultNetworkAttach := false
 	if containerId != "" {
@@ -2150,7 +2150,9 @@ func main() {
 				log.Printf("[DEBUG] Starting iteration on environment %#v (default = Shuffle). Got statuscode %d from backend on first request", environment, newresp.StatusCode)
 			}
 
-			go AutoScale(ctx)
+			if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" && os.Getenv("SHUFFLE_SCALE_REPLICAS") == "" {
+				go AutoScale(ctx)
+			}
 			hasStarted = true
 		}
 
@@ -2624,7 +2626,6 @@ func deployTenzirNode() error {
 
 	err := checkTenzirNode()
 	if err == nil {
-		log.Printf("[INFO] Tenzir Node is already running")
 		return nil
 	}
 
@@ -2930,9 +2931,7 @@ func checkTenzirNode() error {
 		return nil
 	}
 
-	log.Printf("[DEBUG] Failed to verify Tenzir node on %s: %s", url, err)
-
-	return fmt.Errorf("Tenzir node is not available")
+	return fmt.Errorf("Tenzir node is not available due to: %s", err)
 }
 
 func createPipeline(command, identifier string) (string, error) {
@@ -3961,6 +3960,11 @@ func checkMemcached(ctx context.Context, dockercli *dockerclient.Client) (bool, 
 		}
 		return false, err
 	}
+	networkName := "shuffle_swarm_executions"
+	err = dockercli.NetworkConnect(ctx, networkName, containerName, nil)
+	if err != nil {
+		log.Printf("[WARNING] Failed connecting memcached container to network: %s", err)
+	}
 
 	if continer.State.Running == false {
 		log.Printf("[INFO] Container %s exists but is not running. Attempting to start it.", containerName)
@@ -3998,19 +4002,43 @@ func deployMemcached(dockercli *dockerclient.Client) error {
 		},
 	}
 
-	dockercli.ImagePull(ctx, memcachedImage, image.PullOptions{})
-	containerName := "shuffle-cache"
+	_, _, err := dockercli.ImageInspectWithRaw(ctx, memcachedImage)
+	if dockerclient.IsErrNotFound(err) {
+		log.Printf("[DEBUG] Pulling image %s. This may take a while.", memcachedImage)
+		pullOptions := image.PullOptions{}
+		out, err := dockercli.ImagePull(ctx, memcachedImage, pullOptions)
+		if err != nil {
+			log.Printf("[ERROR] Failed to pull the memcached image: %s", err)
+			return err
+		}
+		defer out.Close()
 
+		io.Copy(io.Discard, out)
+	} else if err != nil {
+		return err
+	}
+
+	containerName := "shuffle-cache"
 	resp, err := dockercli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, containerName)
 	if err != nil {
 		log.Printf("[ERROR] Error spanning memcached continer: %s", err)
 		return err
 	}
+
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+		networkName := "shuffle_swarm_executions"
+		err = dockercli.NetworkConnect(ctx, networkName, resp.ID, nil)
+		if err != nil {
+			log.Printf("[ERROR] Error connecting tenzir container to network: %s", err)
+		}
+	}
+
 	err = dockercli.ContainerStart(ctx, resp.ID, container.StartOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Error starting memcached continer: %s", err)
 		return err
 	}
+
 	networkName := "shuffle_swarm_executions"
 	err = dockercli.NetworkConnect(ctx, networkName, resp.ID, nil)
 	if err != nil {
