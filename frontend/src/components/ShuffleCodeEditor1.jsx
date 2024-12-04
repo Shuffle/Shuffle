@@ -40,11 +40,12 @@ import {
 
 	Close as CloseIcon,
 	DragIndicator as DragIndicatorIcon, 
+	RestartAlt as RestartAltIcon,
 } from '@mui/icons-material';
 
 
 import { validateJson } from "../views/Workflows.jsx";
-import ReactJson from "react-json-view";
+import ReactJson from "react-json-view-ssr";
 import PaperComponent from "../components/PaperComponent.jsx";
 
 import { padding, textAlign } from '@mui/system';
@@ -56,6 +57,7 @@ import { tags as t } from '@lezer/highlight';
 import AceEditor from "react-ace";
 import ace from "ace-builds";
 import 'ace-builds/src-noconflict/mode-python';
+import 'ace-builds/src-noconflict/mode-json';
 //import 'ace-builds/src-noconflict/theme-twilight';
 //import 'ace-builds/src-noconflict/theme-solarized_dark';
 import 'ace-builds/src-noconflict/theme-gruvbox';
@@ -105,11 +107,15 @@ const CodeEditor = (props) => {
 		selectedAction ,
 		workflowExecutions,
 		getParents,
-
+		activeDialog,
+		setActiveDialog,
 		fieldname,
+		contentLoading,
+		editorData, 
+							
+		setAiQueryModalOpen,
+		fullScreenMode
 	} = props
-
-
 
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
 
@@ -162,6 +168,11 @@ const CodeEditor = (props) => {
 
 		setMenuPosition(null);
 	}
+
+	useEffect(() => {
+		highlight_variables(localcodedata)
+		expectedOutput(localcodedata)
+	}, [localcodedata])
 
 	let navigate = useNavigate();
 
@@ -627,8 +638,8 @@ const CodeEditor = (props) => {
 						newMarkers.push({
 							startRow: i,
 							startCol: startCh,
-							endRow: i+1,
-							endCol: endCh+1,
+							endRow: i,
+							endCol: endCh,
 							className: correctVariable ? "good-marker" : "bad-marker",
 							type: "text",
 						})
@@ -811,11 +822,7 @@ const CodeEditor = (props) => {
 	}
 
   const handleItemClick = (values) => {
-		if (
-			values === undefined ||
-			values === null ||
-			values.length === 0
-		) {
+		if (values === undefined || values === null || values.length === 0) {
 			return;
 		}
 
@@ -830,7 +837,11 @@ const CodeEditor = (props) => {
 			toComplete += values[key].autocomplete;
 		}
 
-		setlocalcodedata(localcodedata+toComplete)
+
+		handleClick({
+			"value": toComplete
+		})
+		//setlocalcodedata(localcodedata+toComplete)
 		setMenuPosition(null)
 	}
 
@@ -839,10 +850,37 @@ const CodeEditor = (props) => {
 			return
 		}
 
-		if (!item.value.includes("{%") && !item.value.includes("{{")) {
-			setlocalcodedata(localcodedata+" | "+item.value+" }}")
-		} else {
-			setlocalcodedata(localcodedata+item.value)
+		// Injects it in the right spot instead of random
+		var edited = false
+		if (currentCharacter !== undefined && currentCharacter !== null && currentCharacter !== -1 && currentLine !== undefined && currentLine !== null && currentLine !== -1) {
+			// Input at the right spot
+			var codedatasplit = localcodedata.split('\n')
+			if (codedatasplit.length > currentLine) {
+				var currentLineData = codedatasplit[currentLine]
+
+				// Remove newlines from item.value
+				if (item.value.includes("% python %")) {
+					item.value = item.value.replaceAll("\n", ";")
+					item.value = item.value.replaceAll("python %};", "python %}")
+				} else {
+					item.value = item.value.replaceAll("\n", "")
+				}
+
+				currentLineData = currentLineData.slice(0, currentCharacter) + item.value + currentLineData.slice(currentCharacter)
+				codedatasplit[currentLine] = currentLineData
+
+				setlocalcodedata(codedatasplit.join('\n'))
+
+				edited = true 
+			}
+		}
+
+		if (edited === false) {
+			if (!item.value.includes("{%") && !item.value.includes("{{")) {
+				setlocalcodedata(localcodedata+" | "+item.value+" }}")
+			} else {
+				setlocalcodedata(localcodedata+item.value)
+			}
 		}
 
 		setAnchorEl(null)
@@ -858,8 +896,8 @@ const CodeEditor = (props) => {
 		// Shuffle Tools 1.2.0 (in most cases?)
 		const appid = toolsAppId !== undefined && toolsAppId !== null && toolsAppId.length > 0 ? toolsAppId : "3e2bdf9d5069fe3f4746c29d68785a6a"
 
-		const actionname = selectedAction.name === "execute_python" && !inputdata.replaceAll(" ", "").includes("{%python%}") ? "execute_python" : "repeat_back_to_me"
-		const params = actionname === "execute_python" ? [{"name": "code", "value":inputdata}] : [{"name":"call", "value": inputdata}]
+		const actionname = selectedAction.name === "execute_python" && !inputdata.replaceAll(" ", "").includes("{%python%}") ? "execute_python" : selectedAction.name === "execute_bash" ? "execute_bash" : "repeat_back_to_me"
+		const params = actionname === "execute_python" ? [{"name": "code", "value":inputdata}] : actionname === "execute_bash" ? [{"name": "code", "value":inputdata}, {"name": "shuffle_input", "value": "", }] : [{"name":"call", "value": inputdata}]
 
 		const actiondata = {"description":"Repeats the call parameter","id":"","name":actionname,"label":"","node_type":"","environment":"","sharing":false,"private_id":"","public_id":"","app_id": appid,"tags":null,"authentication":[],"tested":false,"parameters": params, "execution_variable":{"description":"","id":"","name":"","value":""},"returns":{"description":"","example":"","id":"","schema":{"type":"string"}},"authentication_id":"","example":"","auth_not_required":false,"source_workflow":"","run_magic_output":false,"run_magic_input":false,"execution_delay":0,"app_name":"Shuffle Tools","app_version":"1.2.0","selectedAuthentication":{}}
 
@@ -946,23 +984,77 @@ const CodeEditor = (props) => {
 
 
     // Define a custom completer for the Ace Editor
-	const customVariables = availableVariables
     const customCompleter = {
       getCompletions: function(editor, session, pos, prefix, callback) {
-        callback(null, customVariables.map((variable) => ({
-      	caption: variable,
-      	value: variable,
-      	meta: 'custom',
-        })));
+		console.log("CUSTOM COMPLETER: ", prefix)
+
+        callback(null, availableVariables.map((variable) => {
+			console.log("CUSTOM VAR: ", variable)
+
+			return ({
+				caption: variable,
+				value: variable,
+				meta: 'custom',
+        	})
+		}))
       }
     }
 
+	if (fullScreenMode) {
+		return (
+			<AceEditor
+			mode="python"
+			theme="gruvbox"
+			value={localcodedata}
+			onChange={(value, editor) => {
+				// setlocalcodedata(value)
+				// expectedOutput(value)
+				// highlight_variables(value,editor)
+				setlocalcodedata(value)
+				setcodedata(value)
+			}}
+			name="python-editor"
+			fontSize={14}
+			width="100%"
+			height="100%"
+			showPrintMargin={false}
+			showGutter={true}
+			markers={markers}
+			highlightActiveLine={false}
+				  
+			enableBasicAutocompletion={true}
+			completers={[customCompleter]}
+
+			style={{
+				wordBreak: "break-word",
+				marginTop: 0,
+				paddingBottom: 10,
+				overflowY: "auto",
+				whiteSpace: "pre-wrap",
+				wordWrap: "break-word",
+				backgroundColor: "rgba(40,40,40,1)",
+				zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
+			}}
+
+			setOptions={{
+			  enableBasicAutocompletion: true,
+			  enableLiveAutocompletion: true,
+			  enableSnippets: true,
+			  showLineNumbers: true,
+			  tabSize: 4,
+			  fontFamily: "'JetBrains Mono', Consolas, monospace",
+			  useSoftTabs: true
+			}}
+		  />
+		)
+	}
+
 	return (
 		<Dialog
-			aria-labelledby="draggable-code-modal"
-			disableBackdropClick={true}
+			aria-labelledby="draggable-dialog-title"
+			// disableBackdropClick={true}
 			disableEnforceFocus={true}
-      		//style={{ pointerEvents: "none" }}
+      		style={{ pointerEvents: "none", zIndex: activeDialog === "codeeditor" ? 1200 : 1100}}
 			hideBackdrop={true}
 			open={expansionModalOpen}
 			onClose={() => {
@@ -977,8 +1069,14 @@ const CodeEditor = (props) => {
 			}}
 			PaperComponent={PaperComponent}
 			PaperProps={{
+				onClick: () => {
+					if (setActiveDialog !== undefined) {
+						setActiveDialog("codeeditor")
+					}
+				},
 				style: {
-					zIndex: 12501,
+					// zIndex: 12501,
+					pointerEvents: "auto",
 					color: "white",
 					minWidth: isMobile ? "100%" : isFileEditor ? 650 : "80%",
 					maxWidth: isMobile ? "100%" : isFileEditor ? 650 : 1100,
@@ -986,9 +1084,22 @@ const CodeEditor = (props) => {
 					maxHeight: isMobile ? "100%" : 700,
 					border: theme.palette.defaultBorder,
 					padding: isMobile ? "25px 10px 25px 10px" : 25,
+					zoom: 0.8, 
+					backgroundColor: "black", 
 				},
 			}}
 		>
+
+		{contentLoading === true ? 
+			  <Tooltip
+				color="primary"
+				title={`The File content is loading. Please wait a moment.`}
+				placement="top"
+			  >
+				<CircularProgress style={{position: "absolute", right: 106, top: 6, }}/>
+			  </Tooltip>
+		: null}
+
 		  <Tooltip
 		  	color="primary"
 		  	title={`Move window`}
@@ -1071,10 +1182,15 @@ const CodeEditor = (props) => {
 							*/}
 					{ isFileEditor ? null :
 					<div style={{display: "flex", maxHeight: 40, }}>
-						{selectedAction.name === "execute_python" ? 
+						{selectedAction?.name === "execute_python" ? 
 							<Typography variant="body1" style={{marginTop: 5, }}>
 								Run Python Code
 							</Typography>
+							:
+							selectedAction.name === "execute_bash" ? 
+								<Typography variant="body1" style={{marginTop: 5, }}>
+									Run Bash Code
+								</Typography>
 						: 
 						<div style={{display: "flex", }}>
 							<Button
@@ -1236,7 +1352,7 @@ const CodeEditor = (props) => {
 								maxHeight: 650,
 							}}
 						>
-							{actionlist.map((innerdata) => {
+							{actionlist?.map((innerdata) => {
 								const icon =
 									innerdata.type === "action" ? (
 										<AppsIcon style={{ marginRight: 10 }} />
@@ -1321,6 +1437,8 @@ const CodeEditor = (props) => {
 										onClick={() => {
 											console.log("CLICKED: ", innerdata);
 											console.log(innerdata.example)
+
+											//const handleClick = (item) => {
 											handleItemClick([innerdata]);
 										}}
 									>
@@ -1465,14 +1583,37 @@ const CodeEditor = (props) => {
 							width: 50, 
 							marginLeft: 100, 
 						}}
+						disabled={editorData === undefined || editorData.example === undefined || editorData.example === null || editorData.example.length === 0}
+						onClick={() => {
+							setlocalcodedata(editorData.example)
+						}}
+						color="secondary"
+					>
+						<Tooltip
+							title={"Reset to example body"}
+							placement="top"
+						>
+							<RestartAltIcon /> 
+						</Tooltip>
+					</IconButton>
+					<IconButton
+						style={{
+							height: 50, 
+							width: 50, 
+							marginLeft: 0, 
+						}}
 						disabled={isAiLoading}
 						onClick={() => {
-							autoFormat(localcodedata) 
+						  	if (setAiQueryModalOpen !== undefined) {
+								setAiQueryModalOpen(true)
+							} else {
+								autoFormat(localcodedata) 
+							}
 						}}
 					>
 						<Tooltip
 							color="primary"
-							title={"Auto format data"}
+							title={"Format with AI"}
 							placement="top"
 						>
 							{isAiLoading ? 
@@ -1487,7 +1628,7 @@ const CodeEditor = (props) => {
 			}
 					
 			<div style={{
-				borderRadius: theme.palette.borderRadius,
+				borderRadius: theme.palette?.borderRadius,
 				position: "relative",
 				paddingTop: 0, 
 				// minHeight: 548,
@@ -1495,8 +1636,10 @@ const CodeEditor = (props) => {
 			}}>
 				{(availableVariables !== undefined && availableVariables !== null && availableVariables.length > 0) || isFileEditor ? (
 					<AceEditor
+						id="shuffle-codeeditor"
+						name="shuffle-codeeditor"
 						value={localcodedata}
-						mode={selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "python" : ""}
+						mode={selectedAction === undefined ? "json" : selectedAction.name === "execute_python" ? "python" : selectedAction.name === "execute_bash" ? "bash" : "json"}
 						theme="gruvbox"
 						height={isFileEditor ? 450 : 550} 
 						width={isFileEditor ? 650 : "100%"}
@@ -1515,17 +1658,16 @@ const CodeEditor = (props) => {
 							whiteSpace: "pre-wrap",
 							wordWrap: "break-word",
 							backgroundColor: "rgba(40,40,40,1)",
+							zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
 						}}
 						onLoad={(editor) => {
 							highlight_variables(localcodedata)
 						}}
 						onCursorChange={(cursorPosition, editor, value) => {
-							setCurrentCharacter(cursorPosition.column)
-							setCurrentLine(cursorPosition.row)
+							setCurrentCharacter(cursorPosition.cursor.column)
+							setCurrentLine(cursorPosition.cursor.row)
 							findIndex(cursorPosition.row, cursorPosition.column)
 
-							//highlight_variables(localcodedata)
-							//console.log("VALUE CURSOR: ", value)
 						}}
 						onChange={(value, editor) => {
 							// setlocalcodedata(value)
@@ -1559,7 +1701,7 @@ const CodeEditor = (props) => {
 			</div>
 
 				{isFileEditor ? null : 
-					<div style={{flex: 1, marginLeft: 5, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, }}>
+					<div style={{flex: 1, marginLeft: 5, borderLeft: "1px solid rgba(255,255,255,0.3)", paddingLeft: 5, overflow: "hidden", }}>
 						<div>
 							{isMobile ? null : 
 								<DialogTitle
@@ -1567,11 +1709,13 @@ const CodeEditor = (props) => {
 										paddingLeft: 10, 
 										paddingTop: 0, 
 										display: "flex", 
+										cursor: "move"
 									}}
 								>
 									<div>
 										<span style={{color: "white"}}>
-											Expected Output
+
+											{selectedAction === undefined ? "" : selectedAction.name === "execute_python" || selectedAction.name === "execute_bash" ? "Code to run" : `Expected Output for '${selectedAction.name}'`}
 										</span>
 									</div>
 
@@ -1588,7 +1732,7 @@ const CodeEditor = (props) => {
 											border: `1px solid ${theme.palette.primary.main}`, 
 											position: "absolute",
 											top: 24,
-											right: 65, 
+											right: 100, 
 											maxHeight: 35, 
 											minWidth: 70, 
 										}} 
@@ -1599,7 +1743,7 @@ const CodeEditor = (props) => {
 										{executing ? 
 											<CircularProgress style={{height: 18, width: 18, }} /> 
 												: 						
-											<span>Try it <PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
+											<span>{selectedAction === undefined ? "" : selectedAction.name === "execute_python" ? "Run Python Code" : selectedAction.name === "execute_bash" ? "Run Bash" : "Try it"}<PlayArrowIcon style={{height: 18, width: 18, marginBottom: -4, marginLeft: 5,  }} /> </span>
 										}
 									</Button>
 								</Tooltip>
@@ -1618,6 +1762,7 @@ const CodeEditor = (props) => {
 												overflow: "auto",
 												minWidth: 450, 
 												maxWidth: "100%", 
+												zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
 											}}
 											collapsed={false}
 											enableClipboard={(copy) => {
@@ -1645,11 +1790,12 @@ const CodeEditor = (props) => {
 												padding: 10,
 												marginTop: -2,
 												border: `2px solid ${theme.palette.inputColor}`,
-												borderRadius: theme.palette.borderRadius,
+												borderRadius: theme.palette?.borderRadius,
 												maxHeight: 450,
 												minHeight: 450, 
 												overflow: "auto", 
                                                 wordWrap: "anywhere",
+												zIndex: activeDialog === "codeeditor" ? 1200 : 1100,
 											}}
 										>
 											{expOutput}

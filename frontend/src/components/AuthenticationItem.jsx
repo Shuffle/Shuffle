@@ -45,21 +45,21 @@ const AuthenticationItem = (props) => {
 			data.fields = [
 				{
 					key: "url",
-					value: "Secret. Replaced during app execution!",
+					value: "URL Secret. Replaced during runtime",
 				},
 				{
 					key: "client_id",
-					value: "Secret. Replaced during app execution!",
+					value: "ClientID Secret. Replaced during runtime.",
 				},
 				{
 					key: "client_secret",
-					value: "Secret. Replaced during app execution!",
+					value: "Client Secret. Replaced during runtime.",
 				},
 				{
 					key: "scope",
-					value: "Secret. Replaced during app execution!",
+					value: "Scope Secret. Replaced during runtime.",
 				},
-			];
+			]
 		}
 
 		const deleteAuthentication = (data) => {
@@ -152,7 +152,7 @@ const AuthenticationItem = (props) => {
 						src={data.app.large_image}
 						style={{
 							maxWidth: 50,
-							borderRadius: theme.palette.borderRadius,
+							borderRadius: theme.palette?.borderRadius,
 						}}
 					/>
 					style={{ minWidth: 75, maxWidth: 75 }}

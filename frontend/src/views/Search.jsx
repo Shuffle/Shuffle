@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useContext } from "react";
 
 import theme from "../theme.jsx";
 import { isMobile } from "react-device-detect";
@@ -7,28 +7,29 @@ import WorkflowGrid from "../components/WorkflowGrid.jsx";
 import CreatorGrid from "../components/CreatorGrid.jsx";
 import DocsGrid from "../components/DocsGrid.jsx";
 import { useNavigate } from "react-router-dom";
-import Typography from "@material-ui/core/Typography";
 import { Tabs, Tab, setRef } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { makeStyles } from '@mui/styles';
 import DiscordChat from "../components/DiscordChat.jsx";
+import { Context } from "../context/ContextApi.jsx";
 
 import {
   Apps as AppsIcon,
   Code as CodeIcon,
   EmojiObjects as EmojiObjectsIcon,
   Chat as ChatIcon,
-  BorderBottom,
+  PeopleAltOutlined as PeopleAltOutlinedIcon, 
+  DescriptionOutlined as DescriptionOutlinedIcon, 
 } from "@mui/icons-material";
 
-import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import {Typography} from "@mui/material";
 
 // Should be different if logged in :|
 const Search = (props) => {
   const { globalUrl, isLoaded, serverside, userdata, hidemargins, isHeader } =
     props;
   let navigate = useNavigate();
+  const { leftSideBarOpenByClick } = useContext(Context);
 
   const [curTab, setCurTab] = useState(0);
   const iconStyle = { marginRight: isHeader ? null : 10 };
@@ -43,11 +44,10 @@ const Search = (props) => {
       const params = Object.fromEntries(urlSearchParams.entries());
       const foundTab = params["tab"];
       if (foundTab !== null && foundTab !== undefined) {
-        for (var key in Object.keys(views)) {
+        for (let key in views) {
           const value = views[key];
-          console.log(key, value);
           if (value === foundTab) {
-            setConfig("", key);
+            setConfig(null, key);
             break;
           }
         }
@@ -91,7 +91,7 @@ const Search = (props) => {
     userdata={userdata}
   />, [curTab]);
 
-  const MemoizedDiscordChat = useMemo(() => <DiscordChat isMobile={isMobile} />)
+  const MemoizedDiscordChat = useMemo(() => <DiscordChat isMobile={isMobile} />, [curTab])
 
   const useStyles = makeStyles({
     hideIndicator: {
@@ -123,7 +123,6 @@ const Search = (props) => {
     flex: "1",
     marginLeft: isHeader ? null : 10,
     marginRight: isHeader ? null : 10,
-    paddingLeft: isHeader ? null : 30,
     paddingRight: isHeader ? null : 30,
     paddingBottom: isHeader ? null : 30,
     paddingTop: hidemargins === true ? 0 : isHeader ? null : 30,
@@ -131,6 +130,8 @@ const Search = (props) => {
     flexDirection: "column",
     overflowX: "hidden",
     minHeight: 400,
+    paddingLeft: leftSideBarOpenByClick ? 270 : 80,
+    transition: "padding-left 0.3s ease",
   };
 
   const views = {
@@ -138,7 +139,9 @@ const Search = (props) => {
     1: "workflows",
     2: "docs",
     3: "creators",
+    4: "discord"
   };
+
   const setConfig = (event, inputValue) => {
     const newValue = parseInt(inputValue);
 
@@ -216,19 +219,19 @@ const Search = (props) => {
       <div style={boxStyle}>
         <Tabs
           style={{
-            width: 741,
+            width: 757,
             margin: isHeader ? null : "auto",
             marginTop: hidemargins === true ? 0 : isHeader ? null : 25,
             backgroundColor: "rgba(33, 33, 33, 1)",
-            borderRadius: 8
+            borderRadius: 8,
           }}
           value={curTab}
           indicatorColor="primary"
           textColor="secondary"
           onChange={setConfig}
           aria-label="disabled tabs example"
-          variant="scrollable"
-          scrollButtons="auto"
+          // variant="scrollable"
+          // scrollButtons="auto"
           classes={{ indicator: classes.hideIndicator, root: classes.customTab }}
         >
           <StyledTab

@@ -64,6 +64,7 @@ const WelcomeForm = (props) => {
     discoveryWrapper,
     setDiscoveryWrapper,
     appFramework,
+	setAppFramework,
     getFramework,
     activeStep,
     setActiveStep,
@@ -160,7 +161,7 @@ const WelcomeForm = (props) => {
   const [clickdiff, setclickdiff] = useState(0);
   const [mouseHoverIndex, setMouseHoverIndex] = useState(-1)
 
-  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
   //const alert = useAlert();
   let navigate = useNavigate();
 
@@ -435,20 +436,6 @@ const WelcomeForm = (props) => {
     setSkipped(newSkipped);
   };
 
-  const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
-
-    if (activeStep === 2) {
-      setDiscoveryWrapper({});
-
-      if (getFramework !== undefined) {
-        getFramework();
-      }
-      navigate("/welcome?tab=2");
-    } else if (activeStep === 1) {
-      navigate("/welcome?tab=1");
-    }
-  };
 
   const handleReset = () => {
     setActiveStep(0);
@@ -645,6 +632,7 @@ const WelcomeForm = (props) => {
             globalUrl={globalUrl}
             userdata={userdata}
             appFramework={appFramework}
+			setAppFramework={setAppFramework}
             setActiveStep={setActiveStep}
             defaultSearch={defaultSearch}
             setDefaultSearch={setDefaultSearch}
@@ -660,7 +648,7 @@ const WelcomeForm = (props) => {
 
               <div style={{ marginTop: 0, }}>
                 <div className="thumbs" style={{ display: "flex" }}>
-                  <div style={{ minWidth: isMobile ? 300 :  554, maxWidth: isMobile ? 300 : 554, borderRadius: theme.palette.borderRadius, }}>
+                  <div style={{ minWidth: isMobile ? 300 :  554, maxWidth: isMobile ? 300 : 554, borderRadius: theme.palette?.borderRadius, }}>
                     <ExploreWorkflow
                       globalUrl={globalUrl}
 					  isLoggedIn={isLoggedIn}

@@ -28,7 +28,7 @@ const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e52
 const AppGrid = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, alternativeView, onlyResults, inputsearch } = props
 
-    const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+    const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 4 : parsedXs
 	//const [apps, setApps] = React.useState([]);
@@ -204,6 +204,9 @@ const AppGrid = props => {
 					style={{backgroundColor: theme.palette.inputColor, borderRadius: borderRadius, margin: 10, width: "100%",}} 
 					InputProps={{
 						style:{
+							color: "white",
+							fontSize: "1em",
+							height: 50,
 						},
 						startAdornment: (
 							<InputAdornment position="start">
@@ -221,6 +224,11 @@ const AppGrid = props => {
 						removeQuery("q")
 						refine(event.currentTarget.value)
 					}}
+					onKeyDown={(event) => {
+						if(event.key === "Enter") {
+							event.preventDefault();
+						}
+					}}
 					limit={5}
 				/>
 			: null}
@@ -233,6 +241,8 @@ const AppGrid = props => {
     flexWrap: "wrap",
     alignContent: "space-between",
     marginTop: 5,
+	padding: "0px 180px",
+	width:"auto"
   }
 	
 	var workflowDelay = -50

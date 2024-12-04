@@ -211,6 +211,7 @@ func fixTags(tags []string) []string {
 func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder string, downloadIfFail bool) error {
 	ctx := context.Background()
 	client, err := client.NewEnvClient()
+        defer client.Close()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
 		return err
@@ -349,7 +350,7 @@ func deleteJob(client *kubernetes.Clientset, jobName, namespace string) error {
 	})
 }
 
-func buildImage(tags []string, dockerfileFolder string) error {
+func buildImage(tags []string, dockerfileLocation string) error {
 
 	isKubernetes := false
 	if os.Getenv("IS_KUBERNETES") == "true" {
@@ -369,10 +370,8 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 		log.Printf("[INFO] registry name: %s", registryName)
 
-		contextDir := strings.Replace(dockerfileFolder, "Dockerfile", "", -1)
-		contextDir = "/app/" + contextDir
+		contextDir := filepath.Join("/app/", filepath.Dir(dockerfileLocation))
 		log.Print("contextDir: ", contextDir)
-		dockerFile := "./Dockerfile"
 
 		client, err := getK8sClient()
 		if err != nil {
@@ -407,7 +406,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 								Image: "gcr.io/kaniko-project/executor:latest",
 								Args: []string{
 									"--verbosity=debug",
-									"--dockerfile=" + dockerFile,
+									"--dockerfile=Dockerfile",
 									"--context=dir://" + contextDir,
 									"--skip-tls-verify",
 									"--destination=" + registryName + "/" + tags[1],
@@ -420,9 +419,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 								},
 							},
 						},
-						NodeSelector: map[string]string{
-							"node": backendNodeName,
-						},
+						NodeName:      backendNodeName,
 						RestartPolicy: corev1.RestartPolicyNever,
 						Volumes: []corev1.Volume{
 							{
@@ -480,13 +477,14 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 		ctx := context.Background()
 		client, err := client.NewEnvClient()
+                defer client.Close()
 		if err != nil {
 			log.Printf("Unable to create docker client: %s", err)
 			return err
 		}
 
 		log.Printf("[INFO] Docker Tags: %s", tags)
-		dockerfileSplit := strings.Split(dockerfileFolder, "/")
+		dockerfileSplit := strings.Split(dockerfileLocation, "/")
 
 		// Create a buffer
 		buf := new(bytes.Buffer)
@@ -836,14 +834,23 @@ func handleRemoteDownloadApp(resp http.ResponseWriter, ctx context.Context, user
 		type tmpapp struct {
 			Success bool   `json:"success"`
 			OpenAPI string `json:"openapi"`
+			App 	string `json:"app"`
 		}
 
 		app := tmpapp{}
 		err := json.Unmarshal(respBody, &app)
 		if err != nil || app.Success == false || len(app.OpenAPI) == 0 {
 			log.Printf("[ERROR] Failed app unmarshal during auto-download. Success: %#v. Applength: %d: %s", app.Success, len(app.OpenAPI), err)
+
 			resp.WriteHeader(401)
+			if len(app.App) > 0 {
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Not an OpenAPI app, but a Python app. Please download the app using the Remote Download system: https://shuffler.io/docs/apps#importing-remote-apps"}`)))
+			} else {
+				resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			}
+
 			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+
 			return
 		}
 

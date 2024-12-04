@@ -106,7 +106,6 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 	}
 
 	log.Printf("[INFO] Starting frequency for execution: %d", newfrequency)
-	
 
 	//jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
 	jobret, err := newscheduler.Every(newfrequency).Seconds().Run(job)
@@ -292,29 +291,44 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	ctx := shuffle.GetContext(request)
 	env, err := shuffle.GetEnvironment(ctx, orgId, "")
 	timeNow := time.Now().Unix()
-	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 {
+	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 && request.Method == "POST" { 
 		// Updates every 60 seconds~
 		if time.Now().Unix() > env.Edited+60 {
 			env.RunningIp = shuffle.GetRequestIp(request)
+
+			// Orborus label = custom label for Orborus
 			if len(orborusLabel) > 0 {
 				env.RunningIp = orborusLabel
 			}
 
-			if request.Method == "POST" {
-				body, err := ioutil.ReadAll(request.Body)
-				if err == nil {
-					var envData shuffle.OrborusStats
-					err = json.Unmarshal(body, &envData)
-					if err == nil {
-						if envData.Swarm {
-							env.Licensed = true
-							env.RunType = "docker"
-						} 
+			// Set the checkin cache
 
-						if envData.Kubernetes {
-							env.RunType = "k8s"
-						}
+
+			body, err := ioutil.ReadAll(request.Body)
+			if err == nil {
+				var envData shuffle.OrborusStats
+				err = json.Unmarshal(body, &envData)
+				if err == nil {
+					envData.RunningIp = env.RunningIp
+
+					marshalled, err := json.Marshal(envData)
+					if err == nil {
+						cacheKey := fmt.Sprintf("queueconfig-%s-%s", env.Name, env.OrgId)
+						go shuffle.SetCache(context.Background(), cacheKey, marshalled, 2)
 					}
+
+
+
+					if envData.Swarm {
+						env.Licensed = true
+						env.RunType = "docker"
+					} 
+
+					if envData.Kubernetes {
+						env.RunType = "k8s"
+					}
+
+					envData.DataLake = env.DataLake
 				}
 			}
 
@@ -572,14 +586,20 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		//return
 	}
 
+	if len(actionResult.ExecutionId) == 0 {
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Provide execution_id and authorization"}`)))
+		return
+	}
+
 	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
-	if err != nil {
+	if err != nil || workflowExecution.ExecutionId != actionResult.ExecutionId {
 		if len(actionResult.ExecutionId) > 0 {
 			log.Printf("[WARNING][%s] Failed getting execution (streamresult): %s", actionResult.ExecutionId, err)
 		}
 
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
 	}
@@ -638,9 +658,27 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if workflowExecution.Workflow.Sharing == "form" {
+		newWorkflow := shuffle.Workflow{
+			Name:           workflowExecution.Workflow.Name,
+			ID:			 	workflowExecution.Workflow.ID,
+			Owner:          workflowExecution.Workflow.Owner,
+			OrgId:          workflowExecution.Workflow.OrgId,
+
+			Sharing: 		workflowExecution.Workflow.Sharing,
+			Description:    workflowExecution.Workflow.Description,
+			InputQuestions: workflowExecution.Workflow.InputQuestions,
+
+			FormControl:	workflowExecution.Workflow.FormControl,
+		}
+
+		workflowExecution.Results = []shuffle.ActionResult{}
+		workflowExecution.Workflow = newWorkflow
+	}
+
 	newjson, err := json.Marshal(workflowExecution)
 	if err != nil {
-		resp.WriteHeader(401)
+		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow execution"}`)))
 		return
 	}
@@ -670,7 +708,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Actionresult unmarshal: %s", string(body))
-	log.Printf("[DEBUG] Got workflow result from %s of length %d", request.RemoteAddr, len(body))
+	//log.Printf("[DEBUG] Got workflow result from %s of length %d", request.RemoteAddr, len(body))
 	ctx := context.Background()
 	err = shuffle.ValidateNewWorkerExecution(ctx, body)
 	if err == nil {
@@ -681,7 +719,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[DEBUG] Handling other execution variant (subflow?): %s", err)
 	}
 
-	log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
+	//log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
 
 	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
@@ -739,8 +777,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
-	log.Printf("[DEBUG][%s] Running workflow execution update", workflowExecutionId)
-
+	log.Printf("[DEBUG][%s] Running workflow execution update with result from %s (%s) of status %s", workflowExecutionId, actionResult.Action.Label, actionResult.Action.ID, actionResult.Status)
 
 	// Should start a tx for the execution here
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
@@ -771,7 +808,6 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	setExecution := true
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 		err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-		//err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
@@ -925,7 +961,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	if len(workflow.ParentWorkflowId) > 0 {
 		resp.WriteHeader(403)
 		resp.Write([]byte(`{"success": false, "reason": "Can't delete a workflow distributed from your parent org"}`))
-		return 
+		return
 	}
 
 	if user.Id != workflow.Owner || len(user.Id) == 0 {
@@ -936,6 +972,27 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
+		}
+	}
+
+	// Look for Child workflows and delete them
+	if workflow.ParentWorkflowId == "" {
+		log.Printf("[DEBUG] Looking for child workflows for workflow %s to delete. User %s (%s) in org %s (%s)", workflow.ID, user.Username, user.Id, user.ActiveOrg.Name, user.ActiveOrg.Id)
+
+		childWorkflows, err := shuffle.ListChildWorkflows(ctx, workflow.ID)
+		if err != nil {
+			log.Printf("[ERROR] Failed to list child workflows: %s", err)
+		} else { 
+			log.Printf("\n\n[DEBUG] Found %d child workflows for workflow %s\n\n", len(childWorkflows), workflow.ID)
+
+			// Find cookies and append them to request.Header to replicate current request as closely as possible
+			for _, childWorkflow := range childWorkflows {
+				if childWorkflow.ID == workflow.ID {
+					continue
+				}
+
+				go shuffle.SendDeleteWorkflowRequest(childWorkflow, request)
+			}
 		}
 	}
 
@@ -984,8 +1041,6 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
-
-
 func handleExecution(id string, workflow shuffle.Workflow, request *http.Request, orgId string) (shuffle.WorkflowExecution, string, error) {
 	//go func() {
 	//	log.Printf("\n\nPRE TIME: %s\n\n", time.Now().Format("2006-01-02 15:04:05"))
@@ -1003,17 +1058,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 		workflow = *tmpworkflow
 	}
-
-	/*
-		if len(workflow.ExecutingOrg.Id) == 0 {
-			if len(orgId) > 0 {
-				workflow.ExecutingOrg.Id = orgId
-			} else {
-				log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
-				return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
-			}
-		}
-	*/
 
 	if len(workflow.Actions) == 0 {
 		workflow.Actions = []shuffle.Action{}
@@ -1065,21 +1109,23 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	workflowExecution, execInfo, _, workflowExecErr := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
 	if workflowExecErr != nil {
-		err := shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
-		if err != nil {
-			log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
+		if len(workflowExecution.Workflow.Actions) > 0 && len(workflowExecution.Results) > 0 && len(workflowExecution.ExecutionId) > 0 { 
+			err := shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
+			if err != nil {
+				log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
+			}
 		}
 
 		if strings.Contains(fmt.Sprintf("%s", workflowExecErr), "User Input") {
 			// Special for user input callbacks
-			log.Printf("[INFO] User input callback: %s", workflowExecErr)
 			// return workflowExecution, fmt.Sprintf("%s", err), nil
+			//log.Printf("[INFO] User input callback: %s", workflowExecErr)
+			return shuffle.WorkflowExecution{}, "", nil
 		} else {
-			log.Printf("[ERROR] Failed in prepareExecution: '%s'", err)
-			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed running: %s", err), err
+			log.Printf("[ERROR] Failed in prepareExecution: '%s'", workflowExecErr)
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed running: %s", workflowExecErr), workflowExecErr 
 		}
 	}
-
 
 	err := imageCheckBuilder(execInfo.ImageNames)
 	if err != nil {
@@ -1087,6 +1133,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		return shuffle.WorkflowExecution{}, "Failed unmarshal during execution", err
 	}
 
+	/*
 	makeNew := true
 	start, startok := request.URL.Query()["start"]
 	if request.Method == "POST" {
@@ -1206,7 +1253,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 		answer, answerok := request.URL.Query()["answer"]
 		referenceId, referenceok := request.URL.Query()["reference_execution"]
-		if answerok && referenceok {
+		if answerok && referenceok && len(answer) > 0 && len(referenceId) > 0 {
 			// If answer is false, reference execution with result
 			log.Printf("[INFO] Answer is OK AND reference is OK!")
 			if answer[0] == "false" {
@@ -1230,7 +1277,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 					log.Printf("%s - %s", result.Action.ID, start[0])
 					if result.Action.ID == start[0] {
 						note, noteok := request.URL.Query()["note"]
-						if noteok {
+						if noteok && len(note) > 0 {
 							result.Result = fmt.Sprintf("User note: %s", note[0])
 						} else {
 							result.Result = fmt.Sprintf("User clicked %s", answer[0])
@@ -1354,7 +1401,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		}
 	}
 
-	childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start, []string{}, []string{})
+	childNodes := shuffle.FindChildNodes(workflowExecution.Workflow, workflowExecution.Start, []string{}, []string{})
 
 	startFound := false
 	newActions := []shuffle.Action{}
@@ -1560,7 +1607,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	//	newTriggers = append(newTriggers, trigger)
 	//}
 	//workflowExecution.Workflow.Triggers = newTriggers
-	_ = removeTriggers
 
 	if !startFound {
 		if len(workflowExecution.Start) == 0 && len(workflowExecution.Workflow.Start) > 0 {
@@ -1585,12 +1631,17 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	if len(workflowExecution.ExecutionOrg) == 0 && len(workflow.ExecutingOrg.Id) > 0 {
 		workflowExecution.ExecutionOrg = workflow.ExecutingOrg.Id
 	}
+	*/
 
+	//workflowExecution, execInfo, _, workflowExecErr := shuffle.PrepareWorkflowExecution(ctx, workflow, request, int64(maxExecutionDepth))
 	err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
 		log.Printf("[ERROR] Failed setting workflow execution during init (2): %s", err)
 	}
 
+	onpremExecution := execInfo.OnpremExecution
+	_ = onpremExecution
+	environments := execInfo.Environments
 	var allEnvs []shuffle.Environment
 	if len(workflowExecution.ExecutionOrg) > 0 {
 		//log.Printf("[INFO] Executing ORG: %s", workflowExecution.ExecutionOrg)
@@ -1854,7 +1905,6 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("[INFO] Inside execute workflow for ID %s", fileId)
-
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil && workflow.ID == "" {
@@ -2408,7 +2458,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	workflow.Schedules = append(workflow.Schedules, schedule)
+	//workflow.Schedules = append(workflow.Schedules, schedule)
 	err = shuffle.SetWorkflow(ctx, *workflow, workflow.ID)
 	if err != nil {
 		log.Printf("Failed setting workflow for schedule: %s", err)
@@ -2665,6 +2715,8 @@ func loadGithubWorkflows(url, username, password, userId, branch, orgId string) 
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
+        cloneOptions = checkGitProxy(cloneOptions)
+
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
@@ -2762,6 +2814,70 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
+func handleSingleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+	ctx := context.Background()
+	cacheKey := fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-0")
+	shuffle.DeleteCache(ctx, cacheKey)
+	// Just need to be logged in
+	// FIXME - should have some permissions?
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in app hotload: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+	if user.Role != "admin" {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Must be admin to hotload apps"}`))
+		return
+	}
+	location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
+	if len(location) == 0 {
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SHUFFLE_APP_HOTLOAD_FOLDER not specified in .env"}`)))
+		return
+	}
+	requestUrlFields := strings.Split(request.URL.String(), "/")
+	var appName string
+	if requestUrlFields[1] == "api" {
+		if len(requestUrlFields) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+		appName = requestUrlFields[4]
+		if strings.Contains(appName, "?") {
+			appName = strings.Split(appName, "?")[0]
+		}
+	}
+	location = location + "/" + appName
+	log.Printf("[INFO] Starting hotloading from %s", location)
+	err = handleAppHotload(ctx, location, true)
+	if err != nil {
+		log.Printf("[WARNING] Failed app hotload: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+	cacheKey = fmt.Sprintf("workflowapps-sorted-100")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
@@ -3374,7 +3490,15 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body)
+
+	runValidationAction := false
+	query := request.URL.Query()
+	validation, ok := query["validation"]
+	if ok && validation[0] == "true" {
+		runValidationAction = true
+	}
+
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body, runValidationAction)
 	if err != nil {
 		log.Printf("[INFO] Failed workflowrequest POST read: %s", err)
 		resp.WriteHeader(401)
@@ -3410,7 +3534,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 	// FIXME: Should use environment that is in the source workflow if it exists
 	for i, _ := range workflowExecution.Workflow.Actions {
 		workflowExecution.Workflow.Actions[i].Environment = environment
-		workflowExecution.Workflow.Actions[i].Label = "TMP" 
+		workflowExecution.Workflow.Actions[i].Label = "TMP"
 	}
 	shuffle.SetWorkflowExecution(ctx, workflowExecution, false)
 
@@ -3940,6 +4064,8 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
+        cloneOptions = checkGitProxy(cloneOptions)
+
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
@@ -4192,7 +4318,6 @@ func checkUnfinishedExecution(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] Failed adding execution to db: %s", err)
 	}
-
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Reran workflow in %s"}`, parsedEnv)))

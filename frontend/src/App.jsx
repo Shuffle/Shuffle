@@ -14,7 +14,9 @@ import HealthPage from "./components/HealthPage.jsx";
 //import Header from "./components/Header.jsx";
 import theme from "./theme";
 import Apps from "./views/Apps";
+import Apps2 from "./views/Apps2.jsx";
 import AppCreator from "./views/AppCreator";
+import DetectionDashBoard from "./views/DetectionDashboard.jsx";
 
 import Welcome from "./views/Welcome.jsx";
 import Dashboard from "./views/Dashboard.jsx";
@@ -22,6 +24,7 @@ import DashboardView from "./views/DashboardViews.jsx";
 import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs.jsx";
+import Usecases2 from "./views/Usecases2.jsx";
 //import Introduction from "./views/Introduction";
 import SetAuthentication from "./views/SetAuthentication";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
@@ -42,10 +45,19 @@ import AlertTemplate from "./components/AlertTemplate";
 import { isMobile } from "react-device-detect";
 import RuntimeDebugger from "./components/RuntimeDebugger.jsx"
 
+import MFASetUp from './components/MFASetUP.jsx';
+import ApiExplorerWrapper from './views/ApiExplorerWrapper.jsx';
+import LeftSideBar from './components/LeftSideBar.jsx';
+import CodeWorkflow from './views/CodeWorkflow.jsx';
+import NotFound from './views/404.jsx';
+
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import Drift from "react-driftjs";
+
+import { AppContext } from './context/ContextApi.jsx';
+import Workflows2 from "./views/Workflows2.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
@@ -194,28 +206,38 @@ const App = (message, props) => {
 				/>
 		}
 
-		<div style={{ minHeight: 68, maxHeight: 68, }}>
-			<Header
-				billingInfo={{}}
+		
+			{curpath.includes("/workflows") && curpath.includes("/run") ? 
+				<div style={{ height: 60, }} />
+				:
+				isLoggedIn ? 
+					<div style={{ position: 'fixed', top: 16, left: 10, zIndex: 100000 }}>
+						<LeftSideBar userdata={userdata} globalUrl={globalUrl} serverside={false} notifications={notifications} />
+					</div>
+				:
+				<div style={{ minHeight: 68, maxHeight: 68, }}>
+				<Header
+					billingInfo={{}}
 
-				notifications={notifications}
-				setNotifications={setNotifications}
-				checkLogin={checkLogin}
-				cookies={cookies}
-				removeCookie={removeCookie}
-				isLoaded={isLoaded}
-				globalUrl={globalUrl}
-				setIsLoggedIn={setIsLoggedIn}
-				isLoggedIn={isLoggedIn}
-				userdata={userdata}
+					notifications={notifications}
+					setNotifications={setNotifications}
+					checkLogin={checkLogin}
+					cookies={cookies}
+					removeCookie={removeCookie}
+					isLoaded={isLoaded}
+					globalUrl={globalUrl}
+					setIsLoggedIn={setIsLoggedIn}
+					isLoggedIn={isLoggedIn}
+					userdata={userdata}
 
-				curpath={curpath}
-				serverside={false}
-				isMobile={false}
+					curpath={curpath}
+					serverside={false}
+					isMobile={false}
 
-				{...props}
-			/>
-		</div>
+					{...props}
+				/>
+			</div> 
+			}
 		
 				{/*
         <div style={{ height: 60 }} />
@@ -376,6 +398,19 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route
+        	  exact
+        	  path="/usecases2"
+        	  element={
+        	    <Usecases2
+				  userdata={userdata}
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
         	<Route
         	  exact
         	  path="/apps/new"
@@ -402,6 +437,23 @@ const App = (message, props) => {
 				/>
         	  }
         	/>
+			<Route
+        	  exact
+        	  path="/apps2"
+        	  element={
+				<Apps2
+					serverside={false} 
+					isLoaded={isLoaded} 
+					isLoggedIn={isLoggedIn}
+					checkLogin={checkLogin}
+					userdata={userdata} 
+					globalUrl={globalUrl} 
+					surfaceColor={theme.palette.surfaceColor} 
+					inputColor={theme.palette.inputColor} 
+					{...props} 
+				/>
+        	  }
+        	/>
         	<Route
         	  exact
         	  path="/apps/edit/:appid"
@@ -414,11 +466,34 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route exact path="/apis/:appid" element={<ApiExplorerWrapper serverside={false} userdata={userdata} isLoggedIn={isLoggedIn} isMobile={false} selectedApp={undefined} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} checkLogin={checkLogin} {...props} />} />
+			<Route
+				exact
+				path="/detections/sigma"
+				element={<DetectionDashBoard globalUrl={globalUrl} />}
+			/>
         	<Route
         	  exact
         	  path="/workflows"
         	  element={
         	    <Workflows
+				  checkLogin={checkLogin}
+        	      cookies={cookies}
+        	      removeCookie={removeCookie}
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      cookies={cookies}
+        	      userdata={userdata}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+			<Route
+        	  exact
+        	  path="/workflows2"
+        	  element={
+        	    <Workflows2
 				  checkLogin={checkLogin}
         	      cookies={cookies}
         	      removeCookie={removeCookie}
@@ -463,8 +538,14 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route exact path="/workflows/:key/code" element={<CodeWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
 			<Route exact path="/workflows/:key/run" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
 			<Route exact path="/workflows/:key/execute" element={<RunWorkflow  userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} /> } />
+
+			<Route exact path="/forms" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms/:key/run" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
+			<Route exact path="/forms/:key" element={<RunWorkflow serverside={false} userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor}{...props} />} />
+
         	<Route
         	  exact
         	  path="/docs/:key"
@@ -520,6 +601,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+			<Route exact path="/login/:key/mfa-setup" element={<MFASetUp setCookie={setCookie} serverside={false} mainColor={theme.palette.backgroundColor} userdata={userdata} stripeKey={undefined} globalUrl={globalUrl} inputColor={theme.palette.inputColor} isLoaded={isLoaded} {...props} />} />
         	<Route
         	  exact
         	  path="/login_sso"
@@ -598,30 +680,40 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
-				</Routes>
+
+			<Route
+				exact
+				path="/*"
+				element={
+					<NotFound />
+				}
+			/>
+		</Routes>
       </div>
 
   return (
-    <ThemeProvider theme={theme}>
-	  <CssBaseline />
-      <CookiesProvider>
-        <BrowserRouter>
-		  {includedData}
-        </BrowserRouter>
-		<ToastContainer 
-			position="bottom-center"
-			autoClose={5000}
-			hideProgressBar={false}
-			newestOnTop={false}
-			closeOnClick
-			rtl={false}
-			pauseOnFocusLoss
-			draggable
-			pauseOnHover
-			theme="dark"
-		/>
-      </CookiesProvider>
-    </ThemeProvider>
+	<AppContext>
+		<ThemeProvider theme={theme}>
+		  <CssBaseline />
+		  <CookiesProvider>
+			<BrowserRouter>
+			  {includedData}
+			</BrowserRouter>
+			<ToastContainer 
+				position="bottom-center"
+				autoClose={5000}
+				hideProgressBar={false}
+				newestOnTop={false}
+				closeOnClick
+				rtl={false}
+				pauseOnFocusLoss
+				draggable
+				pauseOnHover
+				theme="dark"
+			/>
+		  </CookiesProvider>
+		</ThemeProvider>
+	  </AppContext>
   );
 };
 

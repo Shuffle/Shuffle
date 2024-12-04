@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import { Typography, CircularProgress } from "@mui/material";
 import theme from '../theme.jsx';
 
+import { red,  } from "../views/AngularWorkflow.jsx"
+
 const SetAuthentication = (props) => {
   const { globalUrl } = props;
 
@@ -300,7 +302,7 @@ const SetAuthentication = (props) => {
   }
 
   return (
-    <div style={{ maringTop: 50, padding: 50, border: "1px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius,  width: 500, margin: "auto", itemAlign: "center", textAlign: "center",}}>
+    <div style={{ padding: 50, border: failed === true ? `1px solid ${red}` : "1px solid rgba(255,255,255,0.6)", borderRadius: theme.palette?.borderRadius,  width: 500, margin: "auto", paddingTop: 50, itemAlign: "center", textAlign: "center",}}>
       <Typography
         variant="h4"
         style={{ marginLeft: "auto", marginRight: "auto", marginTop: 50}}
@@ -311,18 +313,22 @@ const SetAuthentication = (props) => {
         variant="h6"
         style={{ marginLeft: "auto", marginRight: "auto", marginTop: 50}}
       >
-        {!finished ? (
+        {!finished ? 
 			failed ? 
 				null :
           	<CircularProgress />
-        ) : (
-          "Done - this window should close within 3 seconds."
-        )}
-        <div />
-        {failed ? "Failed setup. Error: " : ""} {response}
+         : 
+			failed ? 
+				null
+				:
+          		"Done - this window should close within 3 seconds."
+        }
+
+        <div style={{marginTop: 10, }} />
+        <b>{failed ? "Failed auth. Error: " : ""}</b> {response}
 				<br/>
 				<br/>
-        {failed ? "If the error persists, try to use fewer scopes. Contact our support at support@shuffler.io if you need further assistance. You may close this window." : ""}
+        {failed ? "If the error persists, try to use fewer scopes. Contact support@shuffler.io if you need further assistance, and include the current URL and a screenshot. You may now close this window." : ""}
       </Typography>
     </div>
   );

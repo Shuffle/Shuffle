@@ -222,7 +222,7 @@ const AuthenticationData = (props) => {
 				<TextField
 					style={{
 						backgroundColor: theme.palette.inputColor,
-						borderRadius: theme.palette.borderRadius,
+						borderRadius: theme.palette?.borderRadius,
 					}}
 					InputProps={{
 						style: {
@@ -304,7 +304,7 @@ const AuthenticationData = (props) => {
 								<TextField
 									style={{
 										backgroundColor: theme.palette.inputColor,
-										borderRadius: theme.palette.borderRadius,
+										borderRadius: theme.palette?.borderRadius,
 									}}
 									InputProps={{
 										style: {
@@ -344,12 +344,13 @@ const AuthenticationData = (props) => {
 					onClick={() => {
 						setAuthenticationModalOpen(false);
 					}}
-					color="primary"
+					color="secondary"
 				>
 					Cancel
 				</Button>
 				<Button
 					style={{ borderRadius: "0px" }}
+					variant="outlined"
 					onClick={() => {
 						setAuthenticationOptions(authenticationOption);
 						handleSubmitCheck();

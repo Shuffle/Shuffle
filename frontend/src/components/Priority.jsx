@@ -24,8 +24,15 @@ import {
 const Priority = (props) => {
   	const { globalUrl, clickedFromOrgTab,userdata, serverside, priority, checkLogin, setAdminTab, setCurTab, appFramework, } = props;
 
-  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+  	const isCloud = (window.location.host === "localhost:3002" || window.location.host === "shuffler.io") ? true : (process.env.IS_SSR === "true");
 	let navigate = useNavigate();
+
+	if (window.location.pathname === "/workflows") {
+		const hidePriorities = localStorage.getItem("hidePriorities", "true")
+		if (hidePriorities === "true") {
+			return null
+		}
+	}
 
 	var realignedSrc = false
 	var realignedDst = false
@@ -114,7 +121,7 @@ const Priority = (props) => {
 	const srcSize = realignedSrc ? 35 : 30 
 	const dstSize = realignedDst ? 35 : 30
 	return (
-		<div style={{border: priority.active === false ? "1px solid #000000" :  priority.severity === 1 ? "1px solid #f85a3e" :  clickedFromOrgTab ?null:"1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, marginTop: 10, marginBottom: 10, padding:  clickedFromOrgTab ? 24:15, textAlign: "center", minHeight: isCloud ? 70 : 100, maxHeight: isCloud ? 70 : 100, textAlign: "left", backgroundColor: clickedFromOrgTab ?  "#1A1A1A": theme.palette.surfaceColor, display: "flex", }}>
+		<div style={{border: priority.active === false ? "1px solid #000000" :  priority.severity === 1 ? "1px solid #f85a3e" :  clickedFromOrgTab ?null:"1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, marginTop: 10, marginBottom: 10, padding:  clickedFromOrgTab ? 24:15, textAlign: "center", minHeight: isCloud ? 70 : 100, maxHeight: isCloud ? 70 : 100, textAlign: "left", backgroundColor: clickedFromOrgTab ?  "#1A1A1A": theme.palette.surfaceColor, display: "flex", }}>
 			<div style={{flex: 2, overflow: "hidden",}}>
 				<span style={{display: "flex", }}>
 					{priority.type === "usecase" || priority.type == "apps" ? <AutoFixHighIcon style={{height: 19, width: 19, marginLeft: 3, marginRight: 10, }}/> : null} 
@@ -124,7 +131,7 @@ const Priority = (props) => {
 				</span>
 				{priority.type === "usecase" && priority.description.includes("&") ?
 					<span style={{display: "flex", marginTop: 10,  }}>
-						<img src={newdescription.split("&")[1]} alt={priority.name} style={{height: srcSize, width: srcSize, marginRight: realignedSrc ? isCloud ? 0 : -10 : 10, borderRadius: theme.palette.borderRadius-3, marginTop: realignedSrc ?  5 : 0 }} />
+						<img src={newdescription.split("&")[1]} alt={priority.name} style={{height: srcSize, width: srcSize, marginRight: realignedSrc ? isCloud ? 0 : -10 : 10, borderRadius: theme.palette?.borderRadius-3, marginTop: realignedSrc ?  5 : 0 }} />
 						<Typography variant="body2" color="textSecondary" style={{marginTop: 3, }}>
 							{newdescription.split("&")[0]} 
 						</Typography>
@@ -132,7 +139,7 @@ const Priority = (props) => {
 						{newdescription.split("&").length > 3 ?
 							<span style={{display: "flex", }}>
 								<ArrowForwardIcon style={{marginLeft: 15, marginRight: 15, }}/>
-								<img src={newdescription.split("&")[3]} alt={priority.name+"2"} style={{height: dstSize, width: dstSize, marginRight: realignedDst ? -5 : 10,	borderRadius: theme.palette.borderRadius-3, marginTop: realignedDst ? 5 : 0 }} />
+								<img src={newdescription.split("&")[3]} alt={priority.name+"2"} style={{height: dstSize, width: dstSize, marginRight: realignedDst ? -5 : 10,	borderRadius: theme.palette?.borderRadius-3, marginTop: realignedDst ? 5 : 0 }} />
 								<Typography variant="body2" color="textSecondary" style={{marginTop: 3}}>
 									{newdescription.split("&")[2]} 
 								</Typography>
@@ -176,6 +183,20 @@ const Priority = (props) => {
 					<Button style={{borderRadius: 25, fontSize:16, boxShadow: clickedFromOrgTab ? "none":null,textTransform: clickedFromOrgTab ? 'capitalize':null, width: 100, height: 50, marginTop: 8, }} variant="text" color="secondary" onClick={() => {
 						// dismiss -> get envs
 						changeRecommendation(priority, "dismiss")
+
+						// Check window location if it's /workflows
+						if (window.location.pathname === "/workflows") {
+							// Set local storage to hide priorities for now
+							localStorage.setItem("hidePriorities", "true")
+						}
+
+						if (isCloud) {
+							ReactGA.event({
+								category: "recommendation",
+								action: `dismiss_${priority.name}`,
+								label: "",
+							})
+						}
 					}}>
 						Dismiss	
 					</Button>

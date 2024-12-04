@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext, memo } from "react";
 import theme from "../theme.jsx";
 import { toast } from 'react-toastify';
-import ReactJson from "react-json-view";
+import ReactJson from "react-json-view-ssr";
 
 import {
 	Typography,
@@ -19,6 +19,7 @@ import {
     Dialog,
     DialogTitle,
     DialogActions,
+    Skeleton,
 } from "@mui/material";
 
 import {
@@ -47,6 +48,7 @@ import {
     VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
 import { validateJson, } from "../views/Workflows.jsx";
+import { Context } from "../context/ContextApi.jsx";
 
 const scrollStyle1 = {
     height: 100,
@@ -65,7 +67,7 @@ const scrollStyle2 = {
 }
 
 
-const CacheView = (props) => {
+const CacheView = memo((props) => {
     const { globalUrl, userdata, serverside, orgId, isSelectedDataStore } = props;
     const [orgCache, setOrgCache] = React.useState("");
     const [listCache, setListCache] = React.useState([]);
@@ -78,11 +80,13 @@ const CacheView = (props) => {
     const [cacheCursor, setCacheCursor] = React.useState("");
     const [dataValue, setDataValue] = React.useState({});
     const [editCache, setEditCache] = React.useState(false);
+    const [cachedLoaded, setCachedLoaded] = React.useState(false);
     const [show, setShow] = useState({});
-
     useEffect(() => {
-        listOrgCache(orgId);
-    }, []);
+        if(orgId?.length >0){
+            listOrgCache(orgId);
+        }
+    }, [orgId]);
 
     const listOrgCache = (orgId) => {
         fetch(globalUrl + `/api/v1/orgs/${orgId}/list_cache`, {
@@ -104,6 +108,7 @@ const CacheView = (props) => {
 		.then((responseJson) => {
 			if (responseJson.success === true) {
 				setListCache(responseJson.keys);
+                setCachedLoaded(true);
 			}
 
 			if (responseJson.cursor !== undefined && responseJson.cursor !== null && responseJson.cursor !== "") {
@@ -232,6 +237,34 @@ const CacheView = (props) => {
 		}
 	}
 
+    const handleReactJsonClipboard = (copy) => {
+        const elementName = "copy_element_shuffle";
+        let copyText = document.getElementById(elementName);
+    
+        if (copyText) {
+          if (copy.namespace && copy.name && copy.src) {
+            copy = copy.src;
+          }
+    
+          const clipboard = navigator.clipboard;
+          if (!clipboard) {
+            toast("Can only copy over HTTPS (port 3443)");
+            return;
+          }
+    
+          let stringified = JSON.stringify(copy);
+          if (stringified.startsWith('"') && stringified.endsWith('"')) {
+            stringified = stringified.slice(1, -1);
+          }
+    
+          navigator.clipboard.writeText(stringified);
+          toast("Copied value to clipboard, NOT json path.");
+        } else {
+          console.log("Failed to copy from " + elementName + ": ", copyText);
+        }
+      };
+
+
     const modalView = (
         // console.log("key:", dataValue.key),
         //console.log("value:",dataValue.value),
@@ -241,11 +274,23 @@ const CacheView = (props) => {
                 setModalOpen(false);
             }}
             PaperProps={{
-                style: {
-                    backgroundColor: theme.palette.surfaceColor,
-                    color: "white",
+                sx: {
+                    borderRadius: theme?.palette?.DialogStyle?.borderRadius,
+                    border: theme?.palette?.DialogStyle?.border,
                     minWidth: "800px",
                     minHeight: "320px",
+                    fontFamily: theme?.typography?.fontFamily,
+                    backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    zIndex: 1000,
+                    '& .MuiDialogContent-root': {
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                    '& .MuiDialogTitle-root': {
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
+                    '& .MuiDialogActions-root': {
+                      backgroundColor: theme?.palette?.DialogStyle?.backgroundColor,
+                    },
                 },
             }}
         >
@@ -254,7 +299,7 @@ const CacheView = (props) => {
                     { editCache ? "Edit Cache" : "Add Cache" }
                 </span>
             </DialogTitle>
-            <div style={{ paddingLeft: "30px", paddingRight: '30px' }}>
+            <div style={{ paddingLeft: "30px", paddingRight: '30px', backgroundColor: "#212121", }}>
                 Key
                 <TextField
                     color="primary"
@@ -278,7 +323,7 @@ const CacheView = (props) => {
                     onChange={(e) => setKey(e.target.value)}
                 />
             </div>
-            <div style={{ paddingLeft: 30, paddingRight: 30 }}>
+            <div style={{ paddingLeft: 30, paddingRight: 30, backgroundColor: "#212121" }}>
 				<div style={{display: "flex", }}>
 					<Typography style={{marginTop: 25, marginBottom: 0, flex: 20, }}>
 						Value - ({isValidJson.valid === true ? "Valid" : "Invalid"} JSON)
@@ -320,7 +365,7 @@ const CacheView = (props) => {
             </div>
             <DialogActions style={{ paddingLeft: "30px", paddingRight: '30px' }}>
                 <Button
-                    style={{ borderRadius: "0px" }}
+                    style={{ borderRadius: "2px", fontSize: 16, color: "#ff8544", textTransform:"none" }}
                     onClick={() => {
 						setModalOpen(false)
 						setValue("")
@@ -332,7 +377,7 @@ const CacheView = (props) => {
                 </Button>
                 <Button
                     variant="contained"
-                    style={{ borderRadius: "0px" }}
+                    style={{ borderRadius: "2px", backgroundColor: "#ff8544",color: "#1a1a1a", textTransform:"none" }}
                     onClick={() => {
                         {editCache ? editOrgCache(orgId) : addOrgCache(orgId)}
 						
@@ -348,10 +393,11 @@ const CacheView = (props) => {
     );
 
     return (
-
-        <div style={{paddingBottom: isSelectedDataStore?null:250, width: isSelectedDataStore?1030:null, padding:isSelectedDataStore?27:null, height: isSelectedDataStore?"auto":null, color: isSelectedDataStore?'#ffffff':null, backgroundColor: isSelectedDataStore?'#212121':null, borderRadius: isSelectedDataStore?'16px':null, }}>
+        <div style={{paddingBottom: isSelectedDataStore?null:250, minHeight: 1000, boxSizing: "border-box", width: isSelectedDataStore? "100%" :null, transition: "width 0.3s ease", padding:isSelectedDataStore?"27px 10px 27px 27px":null, height: isSelectedDataStore?"100%":null, color: isSelectedDataStore?'#ffffff':null, backgroundColor: isSelectedDataStore?'#212121':null, borderTopRightRadius: isSelectedDataStore?'8px':null, borderBottomRightRadius: isSelectedDataStore?'8px':null, borderLeft: "1px solid #494949" }}>
             {modalView}
-            <div style={{ marginTop: isSelectedDataStore?null:20, marginBottom: 20 }}>
+            <div style={{height: "100%", maxHeight: 1700, overflowY: "auto", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'}}>
+              <div style={{ height: "100%", width: "calc(100% - 20px)", scrollbarColor: '#494949 transparent', scrollbarWidth: 'thin'  }}>
+              <div style={{ marginTop: isSelectedDataStore?null:20, marginBottom: 20 }}>
                 <h2 style={{ display: isSelectedDataStore?null: "inline" }}>Shuffle Datastore</h2>
                 <span style={{ marginLeft: isSelectedDataStore?null:25, color:isSelectedDataStore?"#9E9E9E":null}}>
                     Datastore is a permanent key-value database for storing data that can be used cross-workflow. <br/>You can store anything from lists of IPs to complex configurations.&nbsp;
@@ -366,7 +412,7 @@ const CacheView = (props) => {
                 </span>
             </div>
             <Button
-                style={{backgroundColor: isSelectedDataStore?'rgba(255, 132, 68, 0.2)':null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null, color:isSelectedDataStore?"#FF8444":null, borderRadius:isSelectedDataStore?200:null, width:isSelectedDataStore?162:null, height:isSelectedDataStore?40:null}}
+                style={{backgroundColor: isSelectedDataStore? "#ff8544":null, fontSize: 16, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null, color:isSelectedDataStore?"#1a1a1a":null, borderRadius:isSelectedDataStore?8:null, width:isSelectedDataStore?162:null, height:isSelectedDataStore?40:null}}
                 variant="contained"
                 color="primary"
                 onClick={() =>{ 
@@ -379,7 +425,7 @@ const CacheView = (props) => {
                 Add Cache
             </Button>
             <Button
-                style={{ marginLeft: 5, marginRight: 15, backgroundColor: isSelectedDataStore?"#2F2F2F":null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null,borderRadius:isSelectedDataStore?200:null, width:isSelectedDataStore?81:null, height:isSelectedDataStore?40:null,  }}
+                style={{ marginLeft: 5, marginRight: 15, backgroundColor: isSelectedDataStore?"#2F2F2F":null, boxShadow: isSelectedDataStore ? "none":null,textTransform: isSelectedDataStore ? 'capitalize':null,borderRadius:isSelectedDataStore?8:null, width:isSelectedDataStore?81:null, height:isSelectedDataStore?40:null,  }}
                 variant="contained"
                 color="primary"
                 onClick={() => listOrgCache(orgId)}
@@ -392,28 +438,79 @@ const CacheView = (props) => {
                     marginBottom: 20,
                 }}
             />}
-            <List style={{borderRadius: isSelectedDataStore?8:null, border:isSelectedDataStore?"1px solid #494949":null, marginTop:isSelectedDataStore?24:null}}>
-                <ListItem style={{width: isSelectedDataStore?"100%":null, borderBottom:isSelectedDataStore?"1px solid #494949":null}}>
-                    <ListItemText
-                        primary="Key"
-                    	style={{ minWidth: isSelectedDataStore?200:250, maxWidth: isSelectedDataStore?200:250, }}
-                    />
-                    <ListItemText
-                        primary="Value"
-                    	style={{ minWidth: isSelectedDataStore?300:400, maxWidth: isSelectedDataStore?300:400, overflowX: "auto", overflowY: "hidden", }}
-                    />
-                    <ListItemText
-                        primary="Actions"
-                    	style={{ minWidth: 150, maxWidth: 150, marginLeft: isSelectedDataStore?80:null,}}
-                    />
-                    <ListItemText
-                        style={{textAlign:isSelectedDataStore?"center":null}}
-                        primary="Updated"
-                    />
+            <div
+                style={{
+                borderRadius: 8,
+                marginTop: 24,
+                border: "1px solid #494949",
+                width: "100%",
+                overflowX: "auto", 
+                paddingBottom: 0,
+                }}
+            >
+            <List 
+             style={{
+                borderRadius: 8,
+                paddingBottom: 0,
+                tableLayout: "auto", 
+                display: "table", 
+                width: '100%',
+                minWidth: 800,
+                overflowX: "auto",
+             }}>
+                <ListItem style={{width: isSelectedDataStore?"100%":null, borderBottom:isSelectedDataStore?"1px solid #494949":null, display: "table-row"}}>
+                {["Key", "Value", "Actions", "Updated"].map((header, index) => (
+                        <ListItemText
+                            key={index}
+                            primary={header}
+                            style={{
+                                display: "table-cell",
+                                padding: "0px 8px 8px 8px",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                borderBottom: "1px solid #494949"
+                            }}
+                        />
+                    ))}
                 </ListItem>
-                {listCache === undefined || listCache === null
-                    ? null
-                    : listCache.map((data, index) => {
+                {cachedLoaded === false
+                    ? [...Array(6)].map((_, rowIndex) => (
+                        <ListItem
+                            key={rowIndex}
+                            style={{
+                                display: "table-row",
+                                backgroundColor: "#212121",
+                            }}
+                        >
+                            {Array(4)
+                                .fill()
+                                .map((_, colIndex) => (
+                                    <ListItemText
+                                        key={colIndex}
+                                        style={{
+                                            display: "table-cell",
+                                            padding: "8px",
+                                        }}
+                                    >
+                                        <Skeleton
+                                            variant="text"
+                                            animation="wave"
+                                            sx={{
+                                                backgroundColor: "#1a1a1a",
+                                                height: "20px",
+                                                borderRadius: "4px",
+                                            }}
+                                        />
+                                    </ListItemText>
+                                ))}
+                        </ListItem>
+                    ))
+                    : listCache?.length === 0 ? (
+                        <Typography style={{ textAlign: "center", marginTop: 20, marginBottom: 20, minWidth: 1000, }}>
+                            No Keys Found
+                        </Typography>
+                    ): listCache?.map((data, index) => {
                         var bgColor = isSelectedDataStore? "#212121":"#27292d";
                         if (index % 2 === 0) {
                             bgColor = isSelectedDataStore? "#1A1A1A":"#1f2023";
@@ -421,49 +518,61 @@ const CacheView = (props) => {
 
               			const validate = validateJson(data.value);
                         return (
-                            <ListItem key={index} style={{ backgroundColor: bgColor, maxHeight: 300, overflow: "auto", }}>
+                            <ListItem key={index} style={{display:'table-row', backgroundColor: bgColor, maxHeight: 300, overflow: "auto", borderBottomLeftRadius: listCache?.length - 1 === index ? 8 : 0, borderBottomRightRadius: listCache?.length - 1 === index ? 8 : 0}}>
                                 <ListItemText
                                     style={{
-                                        maxWidth: 200,
-                                        minWidth: 200,
+                                        display: "table-cell",
                                         overflow: "hidden",
+                                        padding: 8,
+                                        verticalAlign: "middle",
                                     }}
                                     primary={data.key}
                                 />
                                 <ListItemText
                                     style={{
-										minWidth: 300,
-										maxWidth: 300,
-                                        // height:200,
-                                        overflowX: "hidden",
+										display: "table-cell",
+                                        overflowY: "auto",
+                                        overflowX: "auto",
+                                        border: "1px solid rgba(255,255,255,0.7)",
+                                        borderRadius: 6,
+                                        backgroundColor: "#151515",
+                                        maxHeight: 300,
+                                        verticalAlign: "middle",
 									}}
-                                    primary={validate.valid ? 
-                      					<ReactJson
-                      					  src={validate.result}
-                      					  theme={theme.palette.jsonTheme}
-                      					  style={theme.palette.reactJsonStyle}
-                      					  collapsed={true}
-                      					  enableClipboard={(copy) => {
-                      					    //handleReactJsonClipboard(copy);
-                      					  }}
-                      					  displayDataTypes={false}
-                      					  onSelect={(select) => {
-                      					    //HandleJsonCopy(showResult, select, data.action.label);
-                      					    //console.log("SELECTED!: ", select);
-                      					  }}
-                      					  name={"value"}
-                      					/>
+                                    primary={validate.valid ?
+                                            <ReactJson
+                                                src={validate.result}
+                                                theme={theme.palette.jsonTheme}
+                                                style={{
+                                                    padding: 5,
+                                                    maxHeight: 300,
+                                                    overflowY: "auto",
+                                                }}
+                                                collapsed={true}
+                                                enableClipboard={(copy) => {
+                                                    // handleReactJsonClipboard(copy);
+                                                }}
+                                                collapseStringsAfterLength={theme.palette.jsonCollapseStringsAfterLength}
+                                                iconStyle={theme.palette.jsonIconStyle}
+                                                displayDataTypes={false}
+                                                onSelect={(select) => {
+                                                    // HandleJsonCopy(showResult, select, data.action.label);
+                                                    console.log("SELECTED!: ", select);
+                                                }}
+                                                name={"value"}
+                                                />
 										:
 										data.value
 									}
 								/>
                                 <ListItemText
                                     style={{
-                                        maxWidth: 200,
-                                        minWidth: 200,
-										marginLeft: 50,
+                                        display: "table-cell",
+                                        verticalAlign: "middle",
+                                        padding: 8
                                     }}
-                                    primary=<span style={{ display: "inline" }}>
+                                    primary={(
+                                        <span style={{ display: "inline" }}>
                                         <Tooltip
                                             title="Edit item"
                                             style={{}}
@@ -482,9 +591,7 @@ const CacheView = (props) => {
                                                         setModalOpen(true)
                                                     }}
                                                 >
-                                                    <EditIcon
-                                                        style={{ color: "white" }}
-                                                    />
+                                                    <img src="/icons/editIcon.svg" alt="edit" />
                                                 </IconButton>
                                             </span>
                                         </Tooltip>
@@ -508,7 +615,6 @@ const CacheView = (props) => {
                                         </Tooltip>
                                         <Tooltip
                                             title={"Delete item"}
-                                            style={{ marginLeft: 25, }}
                                             aria-label={"Delete"}
                                         >
                                             <span>
@@ -519,18 +625,18 @@ const CacheView = (props) => {
                                                         //deleteFile(orgId);
                                                     }}
                                                 >
-                                                    <DeleteIcon
-                                                        style={{ color: "white" }}
-                                                    />
+                                                    <img src="/icons/deleteIcon.svg" alt="delete" />
                                                 </IconButton>
                                             </span>
                                         </Tooltip>
                                     </span>
+                                    )}
                                 />
 								<ListItemText
 									style={{
-										maxWidth: 225,
-										minWidth: 225,
+										display: "table-cell",
+                                        verticalAlign: "middle",
+                                        padding: 8
 									}}
 									primary={new Date(data.edited * 1000).toISOString()}
 								/>
@@ -538,8 +644,11 @@ const CacheView = (props) => {
                         );
                     })}
             </List>
+            </div>
+              </div>
+            </div>
         </div>
-
     );
-}
-export default CacheView;
+});
+
+export default memo(CacheView);

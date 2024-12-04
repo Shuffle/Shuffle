@@ -21,6 +21,7 @@ import {
 	Paper,
 	Chip,
 	Checkbox,
+	Fade,
 } from "@mui/material";
 
 import {
@@ -62,6 +63,7 @@ import {
 	TreeMapLabel,
 	TreeMapRect,
 } from 'reaviz';
+import { isMobile } from "react-device-detect"
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -381,7 +383,7 @@ const UsecaseListComponent = (props) => {
 						<Typography variant="h6">
 							{usecase.name}
 						</Typography>
-      					<Grid container spacing={3} style={{marginTop: 25}}>
+      					<Grid container spacing={3} style={{marginTop: isMobile ? null:25, padding: isMobile?20:null}}>
 							{usecase.list.map((subcase, subindex) => {
 								const selectedItem = subindex === expandedItem && index === expandedIndex
 
@@ -426,7 +428,7 @@ const UsecaseListComponent = (props) => {
 								const fixedName = subcase.name.toLowerCase().replace("_", " ")
 
 								return (
-      								<Grid id={fixedName} item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
+      								<Grid id={fixedName} item xs={isMobile ? 12 : selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
 										if (fixedName === "reporting") {
 											getUsecase(subcase, index, subindex) 
 											return
@@ -439,11 +441,11 @@ const UsecaseListComponent = (props) => {
 											navigate(`/usecases?selected_object=${fixedName}`)
 										}
 									}}>
-										<Paper style={{padding: 25, minHeight: isCloud ? 75 : 122, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor, borderRadius: theme.palette.borderRadius, }} onClick={() => {
+										<Paper style={{padding: 25, minHeight: isCloud ? 75 : 122, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor, borderRadius: theme.palette?.borderRadius, }} onClick={() => {
 										}}>
 											{!selectedItem ? 
 												<div style={{textAlign: "left", position: "relative",}}>
-													<Typography variant="h6" style={{maxWidth: 215}}>
+													<Typography variant="h6" style={{maxWidth: isMobile? null:215}}>
 														<b>{subcase.name}</b>
 													</Typography>
 															{finished ? 
@@ -478,7 +480,7 @@ const UsecaseListComponent = (props) => {
 																		<IconButton
 																			style={{
 																				position: "absolute",
-																				bottom: -25,
+																				bottom: isMobile ? 11 :-20,
 																				right: -15,
 																			}}
 																			onClick={(e) => {
@@ -503,7 +505,7 @@ const UsecaseListComponent = (props) => {
 																		<IconButton
 																			style={{
 																				position: "absolute",
-																				bottom: -65,
+																				bottom: isMobile ? -22 : 10,
 																				right: -15,
 																			}}
 																			onClick={(e) => {
@@ -618,7 +620,7 @@ const UsecaseListComponent = (props) => {
           									  </IconButton>
           									</Tooltip>
 													</div>
-													<div style={{marginTop: 25, display: "flex", minHeight: 400, maxHeight: 400, marginRight: 15, }}>
+													<div style={{marginTop: isMobile? null:25, padding: isMobile?20:null, width: isMobile?"100%":null, display: isMobile ? null:"flex", minHeight: isMobile ? "auto":400, maxHeight: isMobile ? null:400, marginRight: isMobile?null:15 }}>
 														{editing ? 
 															<div style={{flex: 1, marginRight: 50, }}>
 																<TextField
@@ -797,7 +799,7 @@ const UsecaseListComponent = (props) => {
           													  style={{
           													    backgroundColor: theme.palette.inputColor,
           													    height: 50,
-          													    borderRadius: theme.palette.borderRadius,
+          													    borderRadius: theme.palette?.borderRadius,
           													  }}
           													  onChange={(event, newValue) => {
 																//handleWorkflowSelectionUpdate({ target: { value: newValue} })
@@ -854,7 +856,7 @@ const UsecaseListComponent = (props) => {
 																			<Tooltip arrow placement="left" title={
 																				<span style={{}}>
 																					{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
-																						<img src={data.image} alt={newname} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+																						<img src={data.image} alt={newname} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette?.borderRadius, }} />
 																					: null}
 																					<Typography>
 																						Choose {newname}
@@ -879,7 +881,7 @@ const UsecaseListComponent = (props) => {
 																	<TextField
 																		style={{
 																			backgroundColor: theme.palette.inputColor,
-																			borderRadius: theme.palette.borderRadius,
+																			borderRadius: theme.palette?.borderRadius,
 																		}}
 																		{...params}
 																		label="Find your workflows"
@@ -950,8 +952,8 @@ const UsecaseListComponent = (props) => {
 																							target="_blank"
 																							style={{ textDecoration: "none", color: "rgba(255,255,255,0.7)", marginRight: 5, }}
 																						>
-																							<div style={{width: 160, display: "flex", borderRadius: theme.palette.borderRadius, cursor: "pointer", border: highlight ? "2px solid #f86a3e" : "1px solid rgba(255,255,255,0.7)", backgroundColor: theme.palette.inputColor, padding: "0px 0px 15px 15px", overflow: "hidden",}}>
-																								<img src={subdata.image} style={{width: 40, height: 40, borderRadius: theme.palette.borderRadius, marginTop: 15, }} />
+																							<div style={{width: 160, display: "flex", borderRadius: theme.palette?.borderRadius, cursor: "pointer", border: highlight ? "2px solid #f86a3e" : "1px solid rgba(255,255,255,0.7)", backgroundColor: theme.palette.inputColor, padding: "0px 0px 15px 15px", overflow: "hidden",}}>
+																								<img src={subdata.image} style={{width: 40, height: 40, borderRadius: theme.palette?.borderRadius, marginTop: 15, }} />
 																								<Typography variant="body1" style={{lineHeight: "95%", marginLeft: 12, marginTop: marginTop === 0 ? 19 : 25, maxHeight: 34, }}>
 																									{subdata.name}
 																								</Typography>
@@ -979,8 +981,9 @@ const UsecaseListComponent = (props) => {
 															}
 															<div style={{
 																	height: 350, 
-																	width: 350, 
-																	borderRadius: theme.palette.borderRadius,
+																	width: isMobile? null:350, 
+																	marginTop: isMobile ? 50:null,
+																	borderRadius: theme.palette?.borderRadius,
 																	border: "1px solid rgba(255,255,255,0.3)",
 																	padding: 5,
 																	backgroundColor: theme.palette.backgroundColor,
@@ -1066,8 +1069,8 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 		}}>
 			<RadialAreaChart
 				id="workflow_categories"
-				height={500}
-				width={500}
+				height={isMobile ? 400:500}
+				width={isMobile ? null:500}
 				data={keys}
     		axis={<RadialAxis type="category" />}
 				series={
@@ -1110,7 +1113,7 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 										}}
 										content={(data, color) => {
 											return (
-												<div style={{borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
+												<div style={{borderRadius: theme.palette?.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
 													<Typography variant="body1">
 														{data.x}
 													</Typography>
@@ -1675,15 +1678,15 @@ const Dashboard = (props) => {
 	console.log("USECASES: ", usecases)
 
   const data = 
-    <div className="content" style={{width: 1000, margin: "auto", paddingBottom: 200, textAlign: "center",}}>
-			<div style={{width: 500, margin: "auto"}}>
+    <div className="content" style={{width: isMobile ? "100%": 1000, margin: "auto", paddingBottom: 200, textAlign: "center",}}>
+			<div style={{width: isMobile ? null:500, margin: "auto"}}>
 				{keys.length > 0 ?
 					<RadialChart keys={keys} setSelectedCategory={setSelectedUsecaseCategory} />
 				: null}
 			</div>
 
 			{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
-				<div style={{ display: "flex", marginLeft: 180, }}>
+				<div style={{ display: isMobile ? null:"flex", marginLeft: isMobile? null :180,  }}>
 					{usecases.map((usecase, index) => {
 						return (
 							<Chip
@@ -1693,6 +1696,7 @@ const Dashboard = (props) => {
 									marginRight: 10, 
 									paddingLeft: 5,
 									paddingRight: 5,
+									marginTop: isMobile? 10:null,
 									height: 28,
 									cursor: "pointer",
 									border: `1px solid ${usecase.color}`,
@@ -1738,9 +1742,11 @@ const Dashboard = (props) => {
     </div>
 
   const dataWrapper = 
-    <div style={{ maxWidth: 1366, margin: "auto" }}>
-	  {data}
-	</div>
+	<Fade in={true} timeout={1250}>
+		<div style={{ maxWidth: 1366, margin: "auto" }}>
+		  {data}
+		</div>
+	</Fade>
   
 
   return dataWrapper

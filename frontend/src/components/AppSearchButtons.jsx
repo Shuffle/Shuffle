@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import theme from '../theme.jsx';
 import ReactGA from 'react-ga4';
 import { useNavigate, Link } from 'react-router-dom';
-
+import { isMobile } from 'react-device-detect';
 import { Search as Searchicon, CloudQueue as CloudQueueicon, Code as Codeicon, Close as Closeicon, Folder as Foldericon, LibraryBooks as LibraryBooksicon, Delete as DeleteIcon, Close as CloseIcon, } from '@mui/icons-material';
 import aa from 'search-insights'
 import Deleteicon from '@mui/icons-material/Delete';
@@ -47,6 +47,8 @@ const AppSearchButtons = (props) => {
     const [newSelectedApp, setNewSelectedApp] = useState(undefined)
 
     useEffect(() => {
+		console.log("UPDATED APP: ", newSelectedApp)
+
         if (newSelectedApp !== undefined && setMissing != undefined) {
             const submitAppFramework = {
                 "description": newSelectedApp.description,
@@ -136,8 +138,14 @@ const AppSearchButtons = (props) => {
 
     const icon = foundApp.large_image
 	var foundAppImage = AppImage
-	if (foundApp.name !== undefined && foundApp.name !== null && !foundApp.name.includes(":default")) {
-		foundAppImage = foundApp.large_image
+	if (foundApp.name !== undefined && foundApp.name !== null && foundApp.name.length > 0 && !foundApp.name.includes(":default")) {
+
+		if (AppImage === undefined || AppImage === null || AppImage.length < 10) {
+			foundAppImage = foundApp.large_image
+		}
+	} else {
+		const newapp = findSpecificApp(appFramework, appType) 
+    	// const { userdata, globalUrl, appFramework, moreButton, finishedApps, appType, totalApps, index, onNodeSelect, setDiscoveryData, appName, AppImage, setDefaultSearch, discoveryData, checkLogin, setMissing, getAppFramework, } = props
 	}
 
     let xsValue = 12;
@@ -181,7 +189,7 @@ const AppSearchButtons = (props) => {
                         width: 319,
                         height: 395,
                         flexShrink: 0,
-                        marginLeft: 70,
+                        marginLeft: isMobile? null:70,
                         marginTop: 68,
                         position: "absolute",
                         zIndex: 100,
@@ -204,9 +212,14 @@ const AppSearchButtons = (props) => {
                                 <IconButton
                                     style={{
                                         flex: 1,
+										position: "absolute",
+										right: 0, 
+										top: 10, 
+										height: 10, 
+
                                         // width: 224,
-                                        marginLeft: discoveryData === ("communication") ? 112 : 200,
-                                        width: "100%",
+                                        //marginLeft: discoveryData === ("communication") ? 112 : 200,
+                                        //width: "100%",
                                         marginBottom: 23,
                                         fontSize: 16,
                                         background: "rgba(33, 33, 33, 1)",
@@ -220,6 +233,7 @@ const AppSearchButtons = (props) => {
                                     <Closeicon style={{ width: 16 }} />
                                 </IconButton>
                             </Tooltip>
+							{/*
                             <Tooltip
                                 title="Delete app"
                                 placement="bottom"
@@ -259,6 +273,7 @@ const AppSearchButtons = (props) => {
                                     <DeleteIcon style={{ height: 15, width: 15, }} />
                                 </IconButton>
                             </Tooltip>
+							*/}
                         </div>
                     </div>
                     <div

@@ -11,6 +11,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 //import { useAlert
 import { ToastContainer, toast } from "react-toastify" 
 import Draggable from "react-draggable";
+import DashboardBarchart, { LoadStats } from '../components/DashboardBarchart.jsx';
 
 import {
 	Autocomplete, 
@@ -18,6 +19,8 @@ import {
 	TextField,
 	IconButton,
 	Button,
+	Select,
+	MenuItem,
 	Typography,
 	Grid,
 	Paper,
@@ -146,27 +149,7 @@ const inputdata = [
 const LineChartWrapper = ({keys, height, width}) => {
   const [hovered, setHovered] = useState("");
 
-	//console.log("Date: ", new Date("2019-11-14T08:00:00.000Z"))
-	console.log("Keys: ", keys)
 	var inputdata = keys.data
-
-	/*
-	const inputdata = [{
-		"key": "Intel",
-		"data": [
-				{ key: new Date('11/22/2019'), data: 3, metadata: {color: "orange", "name": "Intel"}},
-				{ key: new Date('11/24/2019'), data: 8, metadata: {color: "orange", "name": "Intel"}},
-				{ key: new Date('11/29/2019'), data: 2, metadata: {color: "orange", "name": "Intel"}},
-		]},
-		{
-			"key": "Popper",
-			"data": [
-				{ key: new Date('11/24/2019'), data: 9, },
-				{ key: new Date('11/29/2019'), data: 3, },
-			]
-		}
-	]
-	*/
 
 	return (
 		<div style={{}}>
@@ -211,11 +194,10 @@ const LineChartWrapper = ({keys, height, width}) => {
 											offset: '5px, 5px'
 										}}
 										content={(data, color) => {
-											console.log("DATA: ", data)
 											const name = data.metadata !== undefined && data.metadata.name !== undefined ? data.metadata.name : "No"
 
 											return (
-												<div style={{borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
+												<div style={{borderRadius: theme.palette?.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
 													<Typography variant="body1">
 														{name}
 													</Typography>
@@ -299,7 +281,7 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 										}}
 										content={(data, color) => {
 											return (
-												<div style={{borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
+												<div style={{borderRadius: theme.palette?.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
 													<Typography variant="body1">
 														{data.x}
 													</Typography>
@@ -350,12 +332,47 @@ const Dashboard = (props) => {
   const [frameworkData, setFrameworkData] = useState(undefined);
 
   const [widgetData, setWidgetData] = useState([]);
+  const [newWidgetData, setNewWidgetData] = useState([]);
+
+  const [, setUpdate] = useState(0);
 
 	let navigate = useNavigate();
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
+  	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
+	const path = window.location.pathname
+	if (path !== undefined && path !== null) { 
+		if (path.includes("/automate")) {
+			navigate("/usecases")
+		}
+
+		if (path.includes("/security")) {
+			navigate("/forms")
+		}
+	}
+
+	useEffect(() => {
+		// Look for the path. If it is automation, go to usecases
+		// Handles redirect
+
+		const widgetnames = ["app_executions_cloud"]
+		for (let widgetkey in widgetnames) {
+			const widgetName = widgetnames[widgetkey]
+
+			console.log("NAME: ", widgetName)
+
+			const resp = LoadStats(globalUrl, widgetName)
+			if (resp !== undefined) { 
+				resp.then((data) => {
+					console.log("Got data in parent: ", data)
+					if (data === undefined) {
+					} else {
+						newWidgetData.push(data)
+						setNewWidgetData(newWidgetData)
+					}
+				})
+			}
+		}
+	  }, [])
 
 	useEffect(() => {
 		if (selectedUsecaseCategory.length === 0) {
@@ -367,6 +384,7 @@ const Dashboard = (props) => {
 			}
 		}
 	}, [selectedUsecaseCategory])
+
 
 	const checkSelectedParams = () => {
 		const urlSearchParams = new URLSearchParams(window.location.search)
@@ -409,23 +427,22 @@ const Dashboard = (props) => {
 	}, [usecases])
 
 	const getWidget = (dashboard, widget) => {
-    fetch(`${globalUrl}/api/v1/dashboards/${dashboard}/widgets/${widget}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for framework!");
-        }
+		fetch(`${globalUrl}/api/v1/dashboards/${dashboard}/widgets/${widget}`, {
+		  method: "GET",
+		  headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		  },
+		  credentials: "include",
+		})
+		  .then((response) => {
+			if (response.status !== 200) {
+			  console.log("Status not 200 for framework!");
+			}
 
-        return response.json();
-      })
-      .then((responseJson) => {
-				console.log("Resp: ", responseJson)
+			return response.json();
+		  })
+		  .then((responseJson) => {
 				if (responseJson.success === false) {
 					if (responseJson.reason !== undefined) {
 						//toast("Failed loading: " + responseJson.reason)
@@ -441,14 +458,12 @@ const Dashboard = (props) => {
 					}
 
 					const foundWidget = widgetData.findIndex(data => data.title === widget)
-					console.log("Found: ", foundWidget)
 					if (foundWidget !== undefined && foundWidget !== null && foundWidget >= 0) {
 						widgetData[foundWidget] = tmpdata
 					} else { 
 						widgetData.push(tmpdata)
 					}
 
-					console.log("Data: ", widgetData)
 					setWidgetData(widgetData)
 				}
 			})
@@ -480,7 +495,7 @@ const Dashboard = (props) => {
   useEffect(() => {
 		getWidget("main", "Overall") 
 		getWidget("main", "Overall2") 
-  }, []);
+  }, [])
 
   const fetchdata = (stats_id) => {
     fetch(globalUrl + "/api/v1/stats/" + stats_id, {
@@ -646,7 +661,6 @@ const Dashboard = (props) => {
       stats["workflow_executions"].data !== undefined
     ) {
       setStatsRan(true);
-      //console.log("NEW DATA?: ", stats)
       console.log("SET WORKFLOW: ", stats["workflow_executions"]);
       //var curday = startDate.getDate()
 
@@ -729,6 +743,100 @@ const Dashboard = (props) => {
       </div>
     ) : null;
 
+	const WidgetController = (props) => {
+		const { data, index, availableStats, } = props
+		const [hovering, setHovering] = useState(false)
+
+		const newname = data.key !== undefined ? data.key.replaceAll("_", " ") : ""
+
+		console.log("KEYDATA: ", data)
+
+		const loadNewStats = (newkey) => {
+			const resp = LoadStats(globalUrl, newkey)
+			if (resp !== undefined) { 
+				resp.then((respdata) => {
+					if (respdata === undefined || respdata === null) {
+						toast("Failed to laod data. Please try again, or contact support@shuffler.io if this persists.")
+					} else {
+						newWidgetData[index] = respdata
+						setNewWidgetData(newWidgetData)
+
+						setUpdate(Math.random())
+					}
+				})
+			}
+		}
+
+		return (
+			<Draggable>
+				<Paper 
+					style={{
+						height: "100%", width: "100%", maxWidth: 500, margin: 15, padding: "15px 15px 15px 15px", textAlign: "left", 
+						backgroundColor: hovering ? theme.palette.inputColor : theme.palette.backgroundColor,
+						cursor: hovering ? "pointer" : "default",
+					}}
+					onMouseEnter={() => {
+						setHovering(true)
+					}}
+					onMouseLeave={() => {
+						setHovering(false)
+					}}
+				>
+					<div style={{display: "flex", justifyContent: "space-between", alignItems: "center",}}>
+						<Typography variant="h6">
+							{newname}
+						</Typography>
+
+						{data.available_keys === undefined || data.available_keys === null || data.available_keys.length === 0 ? null :
+							<Select
+								  MenuProps={{
+									disableScrollLock: true,
+								  }}
+								  labelId="Response Action"
+								  value={data.key}
+								  SelectDisplayProps={{
+									style: {
+									},
+								  }}
+								  fullWidth
+								  onChange={(e) => {
+									  loadNewStats(e.target.value)
+								  }}
+								  style={{
+									backgroundColor: theme.palette.inputColor,
+									color: "white",
+									height: 40,
+									maxWidth: 150, 
+									borderRadius: theme.palette?.borderRadius,
+								  }}
+								>
+									{data.available_keys.map((foundKey, index) => {
+										const parsedKeyName = foundKey.replaceAll("_", " ")
+
+										return (
+										  <MenuItem
+											style={{
+											  backgroundColor: theme.palette.inputColor,
+											  color: "white",
+											}}
+											value={foundKey}
+										  >
+											<em>{parsedKeyName}</em>
+										  </MenuItem>
+										)
+									})}
+							</Select>
+						}
+					</div>
+					<DashboardBarchart 
+						timelineData={data}
+						height={50}
+					/>
+				</Paper>
+			</Draggable>
+		)
+	}
+
   const data = (
     <div className="content" style={{width: 1000, margin: "auto", paddingBottom: 200, textAlign: "center",}}>
 			<div style={{width: 500, margin: "auto"}}>
@@ -739,18 +847,31 @@ const Dashboard = (props) => {
 				: null}
 			</div>
 
-			{widgetData === undefined || widgetData === null || widgetData === [] || widgetData.length === 0 ? null : 
+			{/*widgetData === undefined || widgetData === null || widgetData === [] || widgetData.length === 0 ? null : 
 				<Draggable>
 					<Paper style={{height: 350, width: 500, padding: "15px 15px 15px 15px", }}>
 						<LineChartWrapper keys={widgetData[0]} height={280} width={470}  />
 					</Paper>
 				</Draggable>
+			*/}
+
+	  		{newWidgetData === undefined || newWidgetData === null || newWidgetData === [] ? null :
+				newWidgetData.map((data, index) => {
+
+					return (
+						<WidgetController
+							key={index}
+							index={index}
+							data={data}
+						/>
+					)
+				})
 			}
     </div>
   );
 
   const dataWrapper = (
-    <div style={{ maxWidth: 1366, margin: "auto" }}>{data}</div>
+    <div style={{ maxWidth: 1366, margin: "auto", paddingTop: 10, }}>{data}</div>
   );
 
   return dataWrapper;

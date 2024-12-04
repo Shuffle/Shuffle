@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { toast } from 'react-toastify';
 import { makeStyles, createStyles } from "@mui/styles";
 import theme from '../theme.jsx';
 
-
+import { useNavigate, Link, useParams } from "react-router-dom";
 import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { NestedMenuItem } from "mui-nested-menu";
 import { parsedDatatypeImages } from "../components/AppFramework.jsx";
+import { green, yellow, red } from "../views/AngularWorkflow.jsx"
 //import { useAlert 
 
 import {
@@ -46,11 +47,13 @@ import {
   CircularProgress,
   Switch,
   Collapse,
-	Autocomplete 
+	Autocomplete, 
+	Box
 } from "@mui/material";
 
 import {
   HelpOutline as HelpOutlineIcon,
+  OpenInFull as OpenInFullIcon, 
   Description as DescriptionIcon,
   GetApp as GetAppIcon,
   Search as SearchIcon,
@@ -88,12 +91,10 @@ import {
   Circle as  CircleIcon,
 	SquareFoot as SquareFootIcon,
 	Storage as StorageIcon,
+	Check as CheckIcon,
 } from '@mui/icons-material';
 
-const useStyles = makeStyles({
-  notchedOutline: {
-    borderColor: "#f85a3e !important",
-  },
+export const useStyles = makeStyles({
   root: {
     "& .MuiAutocomplete-listbox": {
       border: "2px solid grey",
@@ -166,22 +167,36 @@ const ParsedAction = (props) => {
 	setExpansionModalOpen,
 
 	listCache,
-	
+	setActiveDialog,
+	authGroups,
 	apps,
 	setEditorData,
 	setcodedata,
 	setAiQueryModalOpen,
   } = props;
 
+  let navigate = useNavigate();
   const classes = useStyles();
-  const [hideBody, setHideBody] = React.useState(true);
-  const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
 
+  const [hideBody, setHideBody] = React.useState(false)
+  const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false)
+  const [appActionName, setAppActionName] = React.useState(selectedAction?.label);
+  const [delay, setDelay] = React.useState(selectedAction?.execution_delay || 0);
+  const [prevActionName, setPrevActionName] = React.useState(selectedAction?.label);
   const [fieldCount, setFieldCount] = React.useState(0);
   const [hiddenDescription, setHiddenDescription] = React.useState(true);
-
+  const [hiddenParameters, setHiddenParameters] = React.useState(true);
   const [autoCompleting, setAutocompleting] = React.useState(false);
-
+  const [selectedActionParameters, setSelectedActionParameters] = React.useState(selectedAction?.parameters || []);
+  const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
+  const [paramUpdate, setParamUpdate] = React.useState("");
+  const [actionlist, setActionlist] = React.useState([]);
+  const [jsonList, setJsonList] = React.useState([]);
+  const [showDropdown, setShowDropdown] = React.useState(false);
+  const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
+  const [showAutocomplete, setShowAutocomplete] = React.useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
+  const [uiBox, setUiBox] = useState(null);
   const isIntegration = selectedAction.app_id === "integration"
 
   useEffect(() => {
@@ -190,27 +205,141 @@ const ParsedAction = (props) => {
 	}
   }, [expansionModalOpen])
 
+
   useEffect(() => {
-	if (selectedAction.parameters === null || selectedAction.parameters === undefined) {
-		return
-	}
+	  // Changes the order of params to show in order:
+	  // auth, required, optional
+	  var changed = false
+	  if (selectedActionParameters === undefined || selectedActionParameters === null || selectedActionParameters.length === 0) {
+		  return 
+	  }
 
-	const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-	if (paramcheck === undefined || paramcheck === null) {
-		return
-	}
-
-	// This was just opposite..
-	if (paramcheck.id === "TOGGLED"){ 
-		setHideBody(true)
-	} else {
-		setHideBody(false)
-
-		if (paramcheck.id === "UNTOGGLED") {
-			setActivateHidingBodyButton(false)
+	  // Fixing required fields with a shitty structure :)
+	  if (selectedApp !== undefined && selectedApp !== null && selectedApp.generated === true && selectedAction !== undefined && selectedAction !== null && selectedAction.name !== undefined && selectedAction.name !== null && selectedApp.actions !== undefined && selectedApp.actions !== null && selectedApp.actions.length > 0 && (selectedAction.required_body_fields === undefined || selectedAction.required_body_fields === null || selectedAction.required_body_fields.length === 0)) {
+		// Check for required fields
+		for (var actionkey in selectedApp.actions) {
+			var action = selectedApp.actions[actionkey]
+			if (action.name === selectedAction.name) {
+				selectedAction.required_body_fields = action.required_body_fields
+				break
+			}
 		}
-	}
+	  }
 
+	  // Check if missing parameters?
+	  var auth = []
+	  var required = []
+	  var optional = []
+
+	  var bodyfield = []
+	  var special_optional = []
+	  var generated_optional = []
+
+	  var keyorder = []
+	  for (let paramkey in selectedActionParameters) {
+		  var param = selectedActionParameters[paramkey]
+		  keyorder.push(param.name)
+
+		  if (param.configuration) {
+			  auth.push(param)
+			  continue
+		  }
+
+		  if (param?.value?.toLowerCase().includes("secret. replace")) {
+			  param.value = ""
+		  }
+
+
+		  if (selectedApp?.generated === true && param?.name === "body") {
+			  param.required = true
+			  bodyfield.push(param)
+			  continue
+		  }
+
+		  if (param.required === false && param.name.startsWith("${") && param.name.endsWith("}")) {
+			  // Check if it's a required param
+			  param.autocompleted = false 
+			  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null && selectedAction.required_body_fields.length > 0) {
+				if (selectedAction.required_body_fields.includes(param.name)) {
+					param.required = true
+				}
+			  }
+		  }
+
+		  if (param.required) {
+			  required.push(param)
+			  continue
+		  }
+
+		  if (param.name === "headers" || param.name === "queries") {
+			  special_optional.push(param)
+			  continue
+		  }
+
+		  if (hideBody && param?.description.includes("Generated")) {
+			  continue
+		  }
+
+		  if (param.field_active === true) {
+			  generated_optional.push(param)
+			  continue
+		  }
+
+		  optional.push(param)
+	  }
+
+	  // Sort order: auth > body(used for simple/advanced) > required > optional
+	  // Optional field order:
+	  // 1. headers & queries
+	  // 2. other fields
+	  // 3. generated fields & all else
+
+
+	  const newparams = auth
+		  .concat(bodyfield)
+		  .concat(required)
+		  .concat(special_optional)
+		  .concat(generated_optional)
+		  .concat(optional)
+
+	  var newkeyorder = []
+	  for (let paramkey in newparams) {
+		  //console.log("Param: ", newparams[paramkey])
+
+		  newkeyorder.push(newparams[paramkey].name)
+	  }
+
+	  if (keyorder.join(",") !== newkeyorder.join(",")) {
+		  //toast("KEYORDER CHANGED!")
+
+		  setSelectedActionParameters(newparams)
+		  selectedAction.parameters = newparams
+		  setSelectedAction(selectedAction)
+	  }
+  }, [selectedActionParameters])
+
+  useEffect(() => {
+		const shouldHide = localStorage.getItem("hideBody") 
+		if (shouldHide !== null) {
+			const ishiding = shouldHide !== "true"
+			if (ishiding !== hideBody) {
+				setHideBody(ishiding)
+			}
+		}
+
+	  if (selectedActionEnvironment === undefined || selectedActionEnvironment === null || Object.keys(selectedActionEnvironment).length === 0) {
+
+		  if (environments !== undefined && environments !== null && environments.length > 0) {
+			  if (selectedAction.environment !== undefined && selectedAction.environment !== null) {
+
+				  const foundenv = environments.find(env => env.id === selectedAction.environment || selectedAction.environment === env.Name)
+
+				  if (foundenv !== undefined && foundenv !== null) {
+				  	setSelectedActionEnvironment(foundenv)
+				  }
+			  }
+		  }
+	  }
   }, [])
 
   const keywords = [
@@ -280,7 +409,6 @@ const ParsedAction = (props) => {
             (action) =>
               action.name.toLowerCase() === selectedAction.name.toLowerCase()
           );
-          console.log("FOUNDACTION: ", foundAction);
           if (foundAction !== null && foundAction !== undefined) {
             var foundparams = [];
             for (let [paramkey,paramkeyval] in Object.entries(foundAction.parameters)) {
@@ -371,251 +499,259 @@ const ParsedAction = (props) => {
     //setStartNode(selectedAction.id)
   };
 
-  const AppActionArguments = (props) => {
-    const [selectedActionParameters, setSelectedActionParameters] = React.useState([]);
-    const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
-    const [actionlist, setActionlist] = React.useState([]);
-    const [jsonList, setJsonList] = React.useState([]);
-    const [showDropdown, setShowDropdown] = React.useState(false);
-    const [showDropdownNumber, setShowDropdownNumber] = React.useState(0);
-    const [showAutocomplete, setShowAutocomplete] = React.useState(false);
-    const [menuPosition, setMenuPosition] = useState(null);
 
     useEffect(() => {
-      if (selectedActionParameters !== undefined && selectedActionParameters !== null && selectedActionParameters.length === 0
-      ) {
-        if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
-          setSelectedActionParameters(selectedAction.parameters);
-        }
-      }
+		// Only set app action name if it has changed
+		if (selectedAction.label !== appActionName) {
+			setAppActionName(selectedAction.label);
 
-      if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && workflow.workflow_variables !== null && workflow.workflow_variables.length > 0) {
-      
-        // FIXME - this is the bad thing
-        setSelectedVariableParameter(workflow.workflow_variables[0].name);
-      }
-
-      if (actionlist.length === 0) {
-        // FIXME: Have previous execution values in here
-			if (workflowExecutions.length > 0) {
-				for (let [key,keyval] in Object.entries(workflowExecutions)) {
-					if (
-						workflowExecutions[key].execution_argument === undefined ||
-						workflowExecutions[key].execution_argument === null ||
-						workflowExecutions[key].execution_argument.length === 0 
-					) {
-						continue;
-					}
-
-					const valid = validateJson(workflowExecutions[key].execution_argument)
-					if (valid.valid) {
-						actionlist.push({
-							type: "Execution Argument",
-							name: "Execution Argument",
-							value: "$exec",
-							highlight: "exec",
-							autocomplete: "exec",
-							example: valid.result,
-						})
-						break
-					}
-				}
-
-			}
-
-			if (actionlist.length === 0) {
-				actionlist.push({
-					type: "Execution Argument",
-					name: "Execution Argument",
-					value: "$exec",
-					highlight: "exec",
-					autocomplete: "exec",
-					example: "",
-				})
-			}
-
-		/*
-        actionlist.push({
-          type: "Shuffle DB",
-          name: "Shuffle DB",
-          value: "$shuffle_cache",
-          highlight: "shuffle_cache",
-          autocomplete: "shuffle_cache",
-          example: {
-			  "what": "",
-			  "unique gmail ids new": "",
-		  },
-        })
-		*/
-
-		var cachekey = {
-          type: "Shuffle DB",
-          name: "Shuffle DB",
-          value: "$shuffle_cache",
-          highlight: "shuffle_cache",
-          autocomplete: "shuffle_cache",
-          example: "",
-        }
-
-		if (listCache !== undefined && listCache !== null && listCache.keys !== undefined && listCache.keys !== null && listCache.keys.length > 0) {
-			cachekey.example = {}
-
-			for (var i in listCache.keys) {
-				const item = listCache.keys[i]
-				if (item.key === undefined || item.key === null || item.key.length === 0) {
-					continue
-				}
-
-				var itemvalue = item.value === undefined || item.value === null ? "" : item.value
-				try{ 
-					if (itemvalue.length > 10000) {
-						itemvalue = ""
-					}
-
-				} catch (e) {
-					itemvalue = ""
-				}
-
-				var itemkey = item.key.split(" ").join("_")
-				cachekey.example[itemkey] = {
-					"value": itemvalue,
+			const shouldHide = localStorage.getItem("hideBody") 
+			if (shouldHide !== null) {
+				const ishiding = shouldHide !== "true"
+				if (ishiding !== hideBody) {
+					setHideBody(ishiding)
 				}
 			}
-		} else {
 		}
 
-        actionlist.push(cachekey)
+		if(selectedAction.label !== prevActionName){
+			setPrevActionName(selectedAction.label)
+		}
+	
+		// Only set delay if it has changed
+		const newDelay = selectedAction?.execution_delay || 0;
+		if (newDelay !== delay) {
+			setDelay(newDelay);
+		}
+	
+		// Only set selected action parameters if they have changed
+		if (selectedAction?.parameters?.length > 0 && selectedAction.label !== appActionName) {
+			//console.log("PARAMS CHANGED DURING APPCHANGE: ", selectedAction.parameters)
+			setSelectedActionParameters(selectedAction.parameters);
+		}
+	
+		// Only set selected variable parameter if it is null or undefined
+		if (!selectedVariableParameter && workflow.workflow_variables?.length > 0) {
+			setSelectedVariableParameter(workflow.workflow_variables[0].name);
+		}
+	},[selectedAction,selectedApp,setNewSelectedAction,workflow, workflowExecutions, getParents])
 
-        if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
-          for (let [key,keyval] in Object.entries(workflow.workflow_variables)) {
-            const item = workflow.workflow_variables[key];
-            actionlist.push({
-              type: "workflow_variable",
-              name: item.name,
-              value: item.value,
-              id: item.id,
-              autocomplete: `${item.name.split(" ").join("_")}`,
-              example: item.value,
-            });
-          }
+	useEffect(() => {
+        const newActionList = [];
+		const parentActionList = [];
+
+        // Process workflowExecutions
+        if (workflowExecutions.length > 0) {
+            for (let execution of workflowExecutions) {
+                const execArg = execution.execution_argument;
+                if (execArg && execArg.length > 0) {
+                    const valid = validateJson(execArg);
+                    if (valid.valid) {
+                        newActionList.push({
+                            type: "Execution Argument",
+                            name: "Execution Argument",
+                            value: "$exec",
+                            highlight: "exec",
+                            autocomplete: "exec",
+                            example: valid.result,
+                        })
+
+                        break
+                    }
+                }
+            }
         }
 
-        if (workflow.execution_variables !== null && workflow.execution_variables !== undefined && workflow.execution_variables.length > 0) {
-          for (let [key,keyval] in Object.entries(workflow.execution_variables)) {
-            const item = workflow.execution_variables[key]
+        // Add default Execution Argument if none were added
+        if (newActionList.length === 0) {
+            newActionList.push({
+                type: "Execution Argument",
+                name: "Execution Argument",
+                value: "$exec",
+                highlight: "exec",
+                autocomplete: "exec",
+                example: "",
+            })
+		}
 
-			var exampleoutput = ""
-			for (let execkey in workflowExecutions) {
-				const exec = workflowExecutions[execkey]
-				if (exec["execution_variables"] === undefined || exec["execution_variables"] === null) {
-					continue
-				}
+		// Look for cachekey
+		if (newActionList.find((item) => item.type === "Shuffle DB") === undefined) {
+			let cacheKey = {
+				type: "Shuffle DB",
+				name: "Shuffle DB",
+				value: "$shuffle_cache",
+				highlight: "shuffle_cache",
+				autocomplete: "shuffle_cache",
+				example: "",
+			};
 
-				const foundExec = exec.execution_variables.find((exvar) => exvar.name === item.name)
-				if (!foundExec) {
-					continue
-				}
-
-				if (foundExec.value !== undefined && foundExec.value !== null && foundExec.value.length > 0) {
-					exampleoutput = foundExec.value
-					break
-				}
-			}
-
-            actionlist.push({
-              type: "execution_variable",
-              name: item.name,
-              value: item.value,
-              id: item.id,
-              autocomplete: `${item.name.split(" ").join("_")}`,
-              example: exampleoutput,
-            });
-          }
-        }
-
-        // Loops parent nodes' old results to fix autocomplete
-		if (getParents !== undefined) {
-        	var parents = getParents(selectedAction)
-
-        	if (parents.length > 1) {
-			  var labels = []
-        	  //for (let [parentkey, parentkeyval] in Object.entries(parents)) {
-        	  for (let parentkey in parents) {
-        	    const parentNode = parents[parentkey]
-        	    if (parentNode.label === "Execution Argument") {
-        	      continue
-        	    }
-
-				//if (labels.includes(item.label)) {
-				//	continue
-				//}
-
-				labels.push(parentNode.label)
-
-        	    var exampledata = parentNode.example === undefined || parentNode.example === null ? "" : parentNode.example
-        	    // Find previous execution and their variables
-        	    //exampledata === "" &&
-        	    if (workflowExecutions.length > 0) {
-        	      // Look for the ID
-        	      const found = false;
-        	      for (let wfkey in workflowExecutions) {
-        	        if (workflowExecutions[wfkey].results === undefined || workflowExecutions[wfkey].results === null) {
-        	        
-        	          continue;
-        	        }
-
-        	        var foundResult = workflowExecutions[wfkey].results.find((result) => result.action.id === parentNode.id)
-
-        	        if (foundResult === undefined || foundResult === null) {
-        	          continue
-        	        }
-
-					if (foundResult.result !== undefined && foundResult.result !== null) {
-						foundResult = foundResult.result
-					}
-
-					const valid = validateJson(foundResult)
-					if (valid.valid) {
-						if (valid.result.success === false) {
-							//console.log("Skipping success false autocomplete")
-						} else {
-
-							// FIXME: Have a merge system to allow to use kind of any key from that node in the last 10-20 execs
-							//if (exampledata.length > 0) {
-							//	exampledata = valid.result
-							//} else {
-							//	exampledata = valid.result
-							//}
-
-							exampledata = valid.result
-							break
+			if (listCache?.keys?.length > 0) {
+				cacheKey.example = {};
+				for (let item of listCache.keys) {
+					if (item.key) {
+						let itemValue = item.value ?? "";
+						if (itemValue.length > 10000) {
+							itemValue = "";
 						}
-        	        } else {
-        	          exampledata = foundResult
+						cacheKey.example[item.key.split(" ").join("_")] = { value: itemValue };
 					}
-        	      }
-        	    }
+				}
+			}
 
-        	    // 1. Take
-        	    const itemlabelComplete = parentNode.label === null || parentNode.label === undefined ? "" : parentNode.label.split(" ").join("_");
-
-        	    const actionvalue = {
-        	      type: "action",
-        	      id: parentNode.id,
-        	      name: parentNode.label,
-        	      autocomplete: itemlabelComplete,
-        	      example: exampledata,
-        	    }
-
-        	    actionlist.push(actionvalue)
-        	  }
-        	}
-
-        	setActionlist(actionlist);
+			newActionList.push(cacheKey);
 		}
-      }
-    });
 
+        // Process workflow variables
+        if (workflow.workflow_variables?.length > 0) {
+            for (let variable of workflow.workflow_variables) {
+                newActionList.push({
+                    type: "workflow_variable",
+                    name: variable.name,
+                    value: variable.value,
+                    id: variable.id,
+                    autocomplete: variable.name.split(" ").join("_"),
+                    example: variable.value,
+                });
+            }
+        }
+
+        // Process execution variables
+        if (workflow.execution_variables?.length > 0) {
+            for (let variable of workflow.execution_variables) {
+                let exampleOutput = "";
+                for (let exec of workflowExecutions) {
+                    const foundExec = exec.execution_variables?.find(exvar => exvar.name === variable.name);
+                    if (foundExec?.value) {
+                        exampleOutput = foundExec.value;
+                        break;
+                    }
+                }
+                newActionList.push({
+                    type: "execution_variable",
+                    name: variable.name,
+                    value: variable.value,
+                    id: variable.id,
+                    autocomplete: variable.name.split(" ").join("_"),
+                    example: exampleOutput,
+                });
+            }
+        }
+
+        // Process parent actions if getParents is provided
+        if (getParents) {
+            const parents = getParents(selectedAction);
+            if (parents.length > 1) {
+                const labels = [];
+                for (let parentNode of parents) {
+                    if (parentNode.label !== "Execution Argument" && !labels.includes(parentNode.label)) {
+                        labels.push(parentNode.label);
+                        let exampleData = parentNode.example ?? "";
+                        if (!exampleData && workflowExecutions.length > 0) {
+                            for (let exec of workflowExecutions) {
+                                const foundResult = exec.results?.find(result => result.action.id === parentNode.id);
+                                if (foundResult) {
+                                    const valid = validateJson(foundResult.result);
+                                    if (valid.valid && valid.result.success !== false) {
+                                        exampleData = valid.result;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+						if (parentNode.label === undefined) {
+							parentNode.label = ""
+						}
+
+                        newActionList.push({
+                            type: "action",
+                            id: parentNode.id,
+                            name: parentNode.label,
+                            autocomplete: parentNode.label.split(" ").join("_"),
+                            example: exampleData,
+                        });
+
+						parentActionList.push({
+                            type: "action",
+                            id: parentNode.id,
+                            name: parentNode.label,
+                            autocomplete: parentNode.label.split(" ").join("_"),
+                            example: exampleData,
+                        });
+
+							
+                    }
+                }
+            }
+        }
+
+		let newParameters =  selectedAction?.parameters?.map((param) => {
+			let paramvalue = param.value === undefined || param.value === null ? "" : param.value;
+			let errorVars = [];
+
+			if(paramvalue.includes("$")){
+				let actions = workflow.actions?.map((action) => {
+					return "$"+action.label?.toLowerCase();
+				})
+
+				if(newActionList?.length > 0){
+					let appParentActions = parentActionList?.map(action => "$" + action.name.toLowerCase());
+					let notPresentAction = actions?.filter((action) => !appParentActions?.includes(action))
+					notPresentAction?.forEach((action) => {
+						action = action.replace(" ", "_");
+						if(paramvalue.includes(action)){
+							errorVars.push(action);
+							// paramvalue = paramvalue.replace(action, "")
+							// paramvalue = paramvalue.replace(/^\s*[\r\n]/gm, "");
+						}
+					})
+				}
+			}
+
+			let message = "";
+			if(errorVars.length > 0){
+				if(errorVars.length === 1){
+					message = errorVars[0] + " is not accessible in this action.";
+				}else{
+					message = errorVars.join(", ") + " are not accessible in this action.";
+				}
+			}
+
+			if (param?.configuration) {
+				let regex = /(^|[^\\])\$/;
+				if (regex.test(paramvalue)) {
+					if(message.length > 0){
+						message += "\nUse \"\\$\" instead of \"$\" if you want to escape $ (1)";
+					}else{
+						message = "Use \"\\$\" instead of \"$\" if you want to escape $ (2)";
+					}
+				}
+			}
+			return {...param, value: paramvalue, error: message}
+		});	
+		setSelectedActionParameters(newParameters);
+        setActionlist(newActionList);
+    }, [workflow.execution_variables, paramUpdate, workflow.workflow_variables, workflowExecutions, workflow, selectedAction, listCache, getParents,setNewSelectedAction]);
+
+	useEffect(() => {
+		selectedNameChange(appActionName)
+
+		if (actionDelayChange !== undefined) {
+			actionDelayChange(delay) 
+		}
+	  },[appActionName,delay])
+	 
+		const handleParamChange = (event, count,data) => {
+			const newParams = [...selectedActionParameters];
+			newParams.map((param) => {
+				if (param.name === data.name) {
+					param.value = event.target.value;
+				}
+			})
+			setSelectedActionParameters(newParams);
+			setParamUpdate(event.target.value);
+			changeActionParameter(event, count, data)
+		}
 
 		const calculateHelpertext = (input_data) => {
 			var helperText = ""
@@ -682,7 +818,7 @@ const ParsedAction = (props) => {
 		}
 
     const changeActionParameter = (event, count, data, viewForceUpdate) => {
-			//console.log("Action change: ", selectedAction, data)
+	  //console.log("Action change: ", selectedAction, data)
       if (data.name.startsWith("${") && data.name.endsWith("}")) {
         // PARAM FIX - Gonna use the ID field, even though it's a hack
         const paramcheck = selectedAction.parameters.find((param) => param.name === "body");
@@ -692,9 +828,9 @@ const ParsedAction = (props) => {
           var toReplace = event.target.value.trim()
 
 
-					if (!toReplace.startsWith("{") && !toReplace.startsWith("[")) {
-						toReplace = toReplace.replaceAll('\\"', '"').replaceAll('"', '\\"')
-					}
+		  if (!toReplace.startsWith("{") && !toReplace.startsWith("[")) {
+		  	toReplace = toReplace.replaceAll('\\"', '"').replaceAll('"', '\\"')
+		  }
 
           console.log("REPLACE WITH: ", toReplace);
           if (
@@ -708,7 +844,6 @@ const ParsedAction = (props) => {
               },
             ];
 
-            console.log("IN IF: ", paramcheck);
           } else {
             const subparamindex = paramcheck["value_replace"].findIndex(
               (param) => param.key === data.name
@@ -721,25 +856,27 @@ const ParsedAction = (props) => {
             } else {
               paramcheck["value_replace"][subparamindex]["value"] = toReplace;
             }
-
-            console.log("IN ELSE: ", paramcheck);
           }
-          //console.log("PARAM: ", paramcheck)
-          //if (paramcheck.id === undefined) {
-          //	console.log("Normal paramcheck")
-          //} else {
-          //	selectedActionParameters[count]["value_replace"] = paramcheck
-          //	selectedAction.parameters[count]["value_replace"] = paramcheck
-          //}
+
+		  if (selectedActionParameters[count].value_replace === undefined) {
+			  selectedActionParameters[count].value_replace = paramcheck
+		  }
+
+		  if (selectedAction?.parameters[count] !== undefined && selectedAction?.parameters[count].value_replace === undefined) {
+			  selectedAction.parameters[count].value_replace = paramcheck
+		  }
 
           if (paramcheck["value_replace"] === undefined) {
-            selectedActionParameters[count]["value_replace"] = paramcheck;
-            selectedAction.parameters[count]["value_replace"] = paramcheck;
+            selectedActionParameters[count]["value_replace"] = paramcheck
+
+			if (selectedAction?.parameters[count] !== undefined) {
+            	selectedAction.parameters[count]["value_replace"] = paramcheck
+			}
           } else {
-            selectedActionParameters[count]["value_replace"] =
-              paramcheck["value_replace"];
-            selectedAction.parameters[count]["value_replace"] =
-              paramcheck["value_replace"];
+            selectedActionParameters[count]["value_replace"] = paramcheck["value_replace"];
+			if (selectedAction?.parameters[count] !== undefined) {
+            	selectedAction.parameters[count]["value_replace"] = paramcheck["value_replace"];
+			}
           }
           setSelectedAction(selectedAction);
           //setUpdate(Math.random())
@@ -840,41 +977,58 @@ const ParsedAction = (props) => {
         }
       }
 
-      //console.log("CHANGING ACTION COUNT !")
-			selectedActionParameters[count].autocompleted = false
-			selectedAction.parameters[count].autocompleted = false 
-      selectedActionParameters[count].value = event.target.value;
-      selectedAction.parameters[count].value = event.target.value;
+		selectedActionParameters[count].autocompleted = false
+		selectedAction.parameters[count].autocompleted = false
+		selectedActionParameters[count].value = event.target.value;
+		selectedAction.parameters[count].value = event.target.value;
 
-			var forceUpdate = false 
-			if (isCloud && (selectedAction.app_name === "Shuffle Tools" || selectedAction.app_name === "email") && (selectedAction.name === "send_email_shuffle" || selectedAction.name === "send_sms_shuffle") && data.name === "apikey") {
-				console.log("APIKEY - this shouldn't show up!")
-			}
+		var forceUpdate = false 
+		if (isCloud && (selectedAction.app_name === "Shuffle Tools" || selectedAction.app_name === "email") && (selectedAction.name === "send_email_shuffle" || selectedAction.name === "send_sms_shuffle") && data.name === "apikey") {
+			console.log("APIKEY - this shouldn't show up!")
+		}
 
-			if (selectedAction.app_name === "Shuffle Tools" && selectedAction.name === "filter_list" && data.name === "input_list") {
-				//console.log("FILTER LIST!: ", event, count, data)
-				const parsedvalue = event.target.value
-				if (parsedvalue.includes("#")) {
-					const splitparsed = parsedvalue.split(".#.")
-					//console.log("Cant contain #: ", splitparsed)
-					if (splitparsed.length > 1) {
-						data.value = splitparsed[0]
+		if (selectedAction.app_name === "Shuffle Tools" && selectedAction.name === "filter_list" && data.name === "input_list") {
+			//console.log("FILTER LIST!: ", event, count, data)
+			const parsedvalue = event.target.value
+			if (parsedvalue.includes(".#")) {
+				const splitparsed = parsedvalue.split(".#.")
+				//console.log("Cant contain #: ", splitparsed)
+				if (splitparsed.length > 1) {
+					data.value = splitparsed[0]
 
-						selectedActionParameters[count].value = splitparsed[0]
-						selectedAction.parameters[count].value = splitparsed[0]
+					selectedActionParameters[count].value = splitparsed[0]
+					selectedAction.parameters[count].value = splitparsed[0]
 
-          	selectedActionParameters[1].value = splitparsed[1] 
-      			selectedAction.parameters[1].value = splitparsed[1] 
-						forceUpdate = true
-					}
+					selectedActionParameters[1].value = splitparsed[1] 
+					selectedAction.parameters[1].value = splitparsed[1] 
+				} else {
+					// Remove .# and after
+					const splitparsed = parsedvalue.split(".#")
+					data.value = splitparsed[0]
+					selectedActionParameters[0].value = splitparsed[0]
+					selectedAction.parameters[0].value = splitparsed[0]
+
+					selectedActionParameters[1].value = ""
+					selectedAction.parameters[1].value = ""
+
+					toast.warn("No value found in the list. Please select an item in the list to filter based on.")
 				}
-			}
 
-      setSelectedAction(selectedAction);
-			if (forceUpdate || viewForceUpdate === true) {
-				setUpdate(Math.random())
+				forceUpdate = true
+				selectedActionParameters[0].autocompleted = true
+				selectedAction.parameters[0].autocompleted = true
+				selectedActionParameters[1].autocompleted = true
+				selectedAction.parameters[1].autocompleted = true
 			}
-      //setUpdate(event.target.value)
+		}
+
+		setSelectedAction(selectedAction)
+		if (forceUpdate || viewForceUpdate === true) {
+			setUpdate(Math.random())
+		}
+
+		//console.log("END OF THIS THING")
+      	//setUpdate(event.target.value)
     };
 
 		
@@ -904,8 +1058,6 @@ const ParsedAction = (props) => {
 						} else {
 							paramcheck["value_replace"][subparamindex]["value"] = toReplace 
 						}
-
-						console.log("IN ELSE: ", paramcheck)
 					}
 					//console.log("PARAM: ", paramcheck)
 					//if (paramcheck.id === undefined) {
@@ -940,6 +1092,7 @@ const ParsedAction = (props) => {
 					setShowDropdown(false)
 				}
 			}
+
 
 			// bad detection mechanism probably
 			if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
@@ -1014,10 +1167,12 @@ const ParsedAction = (props) => {
 				}
 			}
 
+			setTimeout(() => {
 			selectedActionParameters[count].autocompleted = false
 			selectedAction.parameters[count].autocompleted = false 
 			selectedActionParameters[count].value = data
 			selectedAction.parameters[count].value = data
+			}, 100);
 			setSelectedAction(selectedAction)
 			//setUpdate(Math.random())
 			//setUpdate(event.target.value)
@@ -1111,7 +1266,7 @@ const ParsedAction = (props) => {
 		var helperText = ""
 		if (name.includes("url")) {
 			if (value.includes("localhost") || value.includes("127.0.0.1")) {
-				helperText = "Can't use localhost. Please change to your external IP." 
+				helperText = "Can't use localhost in Shuffle. Please change to server's IP." 
 			}
 		}
 
@@ -1123,10 +1278,77 @@ const ParsedAction = (props) => {
 		return helperText
 	}
 
+	const errorHelperText = (name, value, error) => {
+		return (
+			<div style={{ whiteSpace: 'pre-line' }}>
+				{error}
+			</div>
+		);
+	}
+
+
+	const analyzeFields = () => {
+
+		if (selectedAction === undefined || selectedAction === null) {
+			return null
+		}
+
+		if (selectedActionParameters === undefined || selectedActionParameters === null || selectedActionParameters.length === 0) {
+			return null
+		}
+
+		// Only shuffle tools for now
+		if (selectedAction.app_name !== "Shuffle Tools") {
+			return null
+		}
+
+		// Custom rules 
+		if (selectedAction.name === "set_cache_value") {
+			var actionKey = ""
+			var actionValue = ""
+			for (let [key,keyval] in Object.entries(selectedActionParameters)) {
+				const param = selectedActionParameters[key]
+				if (param.name === "key") {
+					actionKey = param.value
+				}
+
+				if (param.name === "value") {
+					actionValue = param.value
+				}
+			}
+
+			if (actionKey === "" || actionValue === "") {
+				return null
+			}
+
+			if (!actionKey.includes(".#") && actionValue.includes(".#")) {
+				return <span>When the key ({actionKey}) is static, but the value is a list ({actionValue}), it will overwrite the list. You may be looking for the <span onClick={() => {}} style={{cursor: "pointer", color: "#FF8544", }}>Check Cache Contains</span> action instead.</span>
+			}
+		}
+
+		return null
+
+	}
+
+	const suggestionInfo = () => {
+		const suggestionText = analyzeFields()
+		if (suggestionText === undefined || suggestionText === null) {
+			return null
+		}
+
+		if (selectedAction.errors === undefined || selectedAction.errors === null || selectedAction.errors.length === 0) {
+			selectedAction.errors = ["Suggestion: " + suggestionText]
+		}
+
+		return <Paper style={{padding: 10, backgroundColor: theme.palette.surfaceColor, border: "1px solid red",}}>
+		  	<Typography variant="body" style={{color: "white", }}>
+		  		<b>Tip:</b> {suggestionText}
+	  		</Typography>
+		</Paper>
+	}
 
     // FIXME: Issue #40 - selectedActionParameters not reset
-    if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
-
+	if (Object.getOwnPropertyNames(selectedAction)?.length > 0 && selectedActionParameters?.length > 0) {
 	  var wrapperapp = {
 	  	"id": "",
 	  	"name": "noapp",
@@ -1150,15 +1372,1186 @@ const ParsedAction = (props) => {
 		}
 	  }
 
-      var authWritten = false;
+	  var authWritten = false;
 	  var noAppSelected = false 
-	  const paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
-	  if (paramIndex === -1 || selectedAction.parameters[paramIndex].value === "" || selectedAction.parameters[paramIndex].value === "noapp") {
-	  	// Check the actual value and if it's the same
-	  	noAppSelected = true
+	  if (selectedAction.parameters !== undefined && selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
+		  var paramIndex = selectedAction.parameters.findIndex((param) => param.name === "app_name")
+		  if (paramIndex === -1 || selectedAction.parameters[paramIndex].value === "" || selectedAction.parameters[paramIndex].value === "noapp") {
+			// Check the actual value and if it's the same
+			noAppSelected = true
+		  }
 	  }
-      return (
-        <div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
+	}
+
+
+	const ActionSelectOption = (actionprops) => {
+		const { option, newActionname, newActiondescription, useIcon, extraDescription, } = actionprops;
+  		const [hover, setHover] = React.useState(false);
+
+		return (
+			<Tooltip
+			  color="secondary"
+			  title={newActiondescription}
+			  placement="left"
+			>
+				<div style={{
+					cursor: "pointer", 
+					padding: 8, 
+					paddingLeft: 14, 
+					paddingBottom: 4,
+					backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor,
+				}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+				onClick={(event) => {
+					// event.preventDefault()
+					//setSelectedAction(actionprops)
+					//setShowActionList(false)
+					//setUpdate(Math.random())
+					//
+					if (option !== undefined && option !== null) { 
+                		setNewSelectedAction({ 
+							target: { 
+								value: option.name 
+							} 
+						});
+              		}
+
+					document.activeElement.blur();
+
+					const disabledUiBox = localStorage.getItem("disabled_ui_box")
+					if (disabledUiBox === "true") {
+					} else {
+						setHiddenDescription(false)
+					}
+				}}
+				>
+					<div style={{ display: "flex", marginBottom: 0,}}>
+						<span
+							style={{
+								marginRight: 10,
+								marginTop: "auto",
+								marginBottom: 0,
+							}}
+						>
+							{useIcon}
+						</span>
+						<span style={{marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
+					</div>
+					{extraDescription.length > 0 ? 
+						<Typography variant="body2" color="textSecondary" style={{marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block",}}>
+							{extraDescription}	
+						</Typography>
+					: null}
+				</div>
+			</Tooltip>
+		)
+	}
+
+  const sortByCategoryLabel = (a, b) => {
+	  const aHasCategoryLabel = a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0
+	  const bHasCategoryLabel = b.category_label !== undefined && b.category_label !== null && b.category_label.length > 0
+
+	  // Sort by existence and length of "category_label"
+	  if (aHasCategoryLabel && !bHasCategoryLabel) {
+		return -1
+	  } else if (!aHasCategoryLabel && bHasCategoryLabel) {
+		return 1
+	  } else {
+		return 0
+	  }
+  }
+
+	// Function to deduplicate based on the "name" field
+	const deduplicateByName = (array) => {
+	  const uniqueNames = {};
+	  return array.filter(item => {
+		if (!item.hasOwnProperty('name') || !item.name.length) {
+		  return true
+		}
+		if (!uniqueNames[item.name]) {
+		  uniqueNames[item.name] = true
+		  return true
+		}
+		return false
+	  })
+	}
+
+  // Gets the most important actions first
+  const renderedActionOptions = deduplicateByName((
+	  selectedApp.actions === undefined || selectedApp.actions === null ? [] : 
+	  selectedApp.actions.filter((a) => 
+		  a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))
+      ).sort(sortByCategoryLabel))
+	
+
+  const selectedAppIcon = selectedAction.large_image
+  return (
+    <div style={appApiViewStyle} id="parsed_action_view">
+
+      {hideExtraTypes === true ? null : (
+        <span>
+          <div style={{ display: "flex", minHeight: 40, marginBottom: 30 }}>
+            <div style={{ flex: 1 }}>
+		  	  <div style={{ display: "flex", }}
+		  		onClick={() => {
+					//window.open("/apps/${selectedAction.app_id}", "_blank")
+				}}
+		  	  >
+		  		  <Tooltip title={"App: "+selectedAction.app_name} placement="top">
+					  <img src={selectedAppIcon} style={{ 
+						width: 30, 
+						height: 30, 
+						marginRight: 10, 
+						borderRadius: 5,
+						marginTop: 13, 
+					    border: "2px solid rgba(255,255,255,0.3)",
+					  }} />
+		  		  </Tooltip>
+				  <h3 style={{ }}>
+					{(
+					  selectedAction?.app_name?.charAt(0).toUpperCase() +
+					  selectedAction?.app_name?.substring(1)
+					)?.replaceAll("_", " ")}
+				  </h3>
+		  	  </div>
+              <div style={{display: "flex", marginTop: 0, }}>
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    paddingLeft: 0,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+                    if (workflowExecutions.length > 0) {
+                      // Look for the ID
+                      var found = false;
+                      for (let [key,keyval] in Object.entries(workflowExecutions)) {
+                        if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+                          continue;
+                        }
+
+                        var foundResult = workflowExecutions[key].results.find(
+                          (result) => result.action.id === selectedAction.id
+                        )
+
+                        if (foundResult === undefined || foundResult === null) {
+                          continue
+                        }
+
+						const oldstartnode = cy.getElementById(selectedAction.id);
+						if (oldstartnode !== undefined && oldstartnode !== null) {
+							const foundname = oldstartnode.data("label")
+							if (foundname !== undefined && foundname !== null) {
+								foundResult.action.label = foundname
+							}
+						}
+
+                        setSelectedResult(foundResult);
+                        if (setCodeModalOpen !== undefined) {
+                          setCodeModalOpen(true)
+                      	
+						  found = true
+                        }
+
+                        break
+                      }
+
+					  if (!found) {
+						  toast("No result for this action yet. Please run the workflow first.")
+					  }
+                    }
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title="See previous results for this action"
+                    placement="top"
+                  >
+                    <ArrowLeftIcon style={{ color: "rgba(255,255,255,0.7)" }} />
+                  </Tooltip>
+                </IconButton>
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+                    setAuthenticationModalOpen(true)
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title="Find app documentation"
+                    placement="top"
+                  >
+                    <DescriptionIcon style={{ color: "rgba(255,255,255,0.7)" }} />
+                  </Tooltip>
+                </IconButton>
+
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+		  		  disabled={autoCompleting}
+                  onClick={() => {
+					  if (setAiQueryModalOpen !== undefined) {
+					    setAiQueryModalOpen(true)
+					  } else {
+						  aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
+					  }
+						
+					  setAutocompleting(true)
+					  setTimeout(() => {
+						  setAutocompleting(false)
+					  }, 3000)
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title={"Autocomplete the action"}
+                    placement="top"
+                  >
+		  			{autoCompleting ? 
+						<CircularProgress style={{height: 20, width: 20, }} />
+						:
+						<AutoFixHighIcon style={{ color: "rgba(255,255,255,0.7)", height: 24, }} />
+					}
+                  </Tooltip>
+                </IconButton>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {selectedApp.versions !== null &&
+				  selectedApp.versions !== undefined &&
+				  selectedApp.versions.length > 1 ? (
+                <Select
+				  MenuProps={{
+				  	disableScrollLock: true,
+				  }}
+                  value={selectedAction.app_version}
+                  onChange={(event) => {
+                    const newversion = selectedApp.versions.find(
+                      (tmpApp) => tmpApp.version == event.target.value
+                    )
+
+                    if (newversion !== undefined && newversion !== null) {
+                      getApp(newversion.id, true)
+                    }
+
+					// Change in all actions in the workflow at the same time and add a toast.success() about it
+					for (var actionkey in workflow.actions) {
+						const action = workflow.actions[actionkey]
+						if (action.app_name === selectedAction.app_name) {
+							workflow.actions[actionkey].app_version = event.target.value
+						}
+					}
+
+					toast.success("Changed version of all nodes to "+event.target.value)
+                  }}
+                  style={{
+                    marginTop: 10,
+                    backgroundColor: theme.palette.surfaceColor,
+                    backgroundColor: theme.palette.inputColor,
+                    color: "white",
+                    height: 35,
+                    marginleft: 10,
+                    borderRadius: theme.palette?.borderRadius,
+                  }}
+                  SelectDisplayProps={{
+                    style: {
+                    },
+                  }}
+                >
+                  {selectedApp.versions.map((data, index) => {
+                    return (
+                      <MenuItem
+                        key={index}
+                        style={{
+                          backgroundColor: theme.palette.inputColor,
+                          color: "white",
+                        }}
+                        value={data.version}
+                      >
+                        {data.version}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              ) : null}
+            </div>
+          </div>
+					<div style={{display: "flex"}}>
+						<div style={{flex: 5}}>
+							<Typography style={{color: "rgba(255,255,255,0.7)"}}>Name</Typography>
+							<TextField
+								style={theme.palette.textFieldStyle}
+								InputProps={{
+									style: theme.palette.innerTextfieldStyle,
+									disableUnderline: true,
+								}}
+								fullWidth
+								color="primary"
+								placeholder={selectedAction.label}
+								value={appActionName}
+								onChange={
+									(event) => {
+										let newValue = event.target.value
+										newValue = newValue.replaceAll(" ", "_")
+										setAppActionName(newValue)
+									}
+								}
+								onBlur={(e) => {
+									// Copy the name value
+									const name = e.target.value
+									const parsedBaseLabel = "$"+prevActionName.toLowerCase().replaceAll(" ", "_")
+									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
+
+									// Check if it's the same as the current name in use
+									//if (name === selectedAction.label) { 
+									//	console.log("Returning from name thing")
+									//	return
+									//}
+
+									// Change in actions, triggers & conditions
+									// Highlight the changes somehow with a glow?
+									if (workflow.branches !== undefined && workflow.branches !== null) {	
+										for (let [key,keyval] in Object.entries(workflow.branches)) {
+											if (workflow.branches[key].conditions !== undefined && workflow.branches[key].conditions !== null) {
+												for (let [subkey,subkeyval] in Object.entries(workflow.branches[key].conditions)) {
+													const condition = workflow.branches[key].conditions[subkey]
+													const sourceparam = condition.source
+													const destinationparam = condition.destination
+
+													// Should have a smarter way of discovering node names
+													// Finding index(es) and replacing at the location
+													if (sourceparam.value.includes("$")) {
+														try {
+															var cnt = -1
+															var previous = 0
+															while (true) {
+																cnt += 1 
+																// Need to make sure e.g. changing the first here doesn't change the 2nd
+																// $change_me
+																// $change_me_2
+																
+																const foundindex = sourceparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+																if (foundindex === previous && foundindex !== 0) {
+																	break
+																}
+	
+																if (foundindex >= 0) {
+																	previous = foundindex+newname.length
+																	// Need to add diff of length to word
+	
+																	// Check location:
+																	// If it's a-zA-Z_ then don't replace
+																	if (sourceparam.value.length > foundindex+parsedBaseLabel.length) {
+																		const regex = /[a-zA-Z0-9_]/g;
+																		const match = sourceparam.value[foundindex+parsedBaseLabel.length].match(regex);
+																		if (match !== null) {
+																			continue
+																		}
+																	}
+																	
+																	console.log("Old found: ", workflow.branches[key].conditions[subkey].source.value)
+																	const extralength = newname.length-parsedBaseLabel.length
+																	sourceparam.value = sourceparam.value.substring(0, foundindex) + newname + sourceparam.value.substring(foundindex-extralength+newname.length, sourceparam.value.length)
+
+																	console.log("New: ", workflow.branches[key].conditions[subkey].source.value)
+																} else { 
+																	break
+																}
+	
+																// Break no matter what after 5 replaces. May need to increase
+																if (cnt >= 5) {
+																	break
+																}
+	
+															}
+            								} catch (e) {
+															console.log("Failed value replacement based on index: ", e)
+														}
+													}
+
+													if (destinationparam.value.includes("$")) {
+														try {
+															var cnt = -1
+															var previous = 0
+															while (true) {
+																cnt += 1 
+																// Need to make sure e.g. changing the first here doesn't change the 2nd
+																// $change_me
+																// $change_me_2
+																
+																const foundindex = destinationparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+																if (foundindex === previous && foundindex !== 0) {
+																	break
+																}
+	
+																if (foundindex >= 0) {
+																	previous = foundindex+newname.length
+																	// Need to add diff of length to word
+	
+																	// Check location:
+																	// If it's a-zA-Z_ then don't replace
+																	if (destinationparam.value.length > foundindex+parsedBaseLabel.length) {
+																		const regex = /[a-zA-Z0-9_]/g;
+																		const match = destinationparam.value[foundindex+parsedBaseLabel.length].match(regex);
+																		if (match !== null) {
+																			continue
+																		}
+																	}
+																	
+																	console.log("Old found: ", workflow.branches[key].conditions[subkey].destination.value)
+																	const extralength = newname.length-parsedBaseLabel.length
+																	destinationparam.value = destinationparam.value.substring(0, foundindex) + newname + destinationparam.value.substring(foundindex-extralength+newname.length, destinationparam.value.length)
+
+																	console.log("New: ", workflow.branches[key].conditions[subkey].destination.value)
+																} else { 
+																	break
+																}
+	
+																// Break no matter what after 5 replaces. May need to increase
+																if (cnt >= 5) {
+																	break
+																}
+	
+															}
+            								} catch (e) {
+															console.log("Failed value replacement based on index: ", e)
+														}
+													}
+												}
+											}
+										}
+									}
+
+									for (let [key,keyval] in Object.entries(workflow.actions)) {
+										if (workflow.actions[key].id === selectedAction.id) {
+											continue
+										}
+
+										const params = workflow.actions[key].parameters
+										if (params === null || params === undefined) {
+											continue
+										}
+
+										for (let [subkey, subkeyval] in Object.entries(params)) {
+											const param = workflow.actions[key].parameters[subkey];
+											if (!param.value.includes("$")) {
+												continue
+											}
+
+											// Should have a smarter way of discovering node names
+											// Do regex? 
+											// Finding index(es) and replacing at the location
+											//
+
+											try {
+												var cnt = -1
+												var previous = 0
+												while (true) {
+													cnt += 1 
+													// Need to make sure e.g. changing the first here doesn't change the 2nd
+													// $change_me
+													// $change_me_2
+													const foundindex = param.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+													if (foundindex === previous && foundindex !== 0) {
+														break
+													}
+	
+													if (foundindex >= 0) {
+														previous = foundindex+newname.length
+														// Need to add diff of length to word
+	
+														// Check location:
+														// If it's a-zA-Z_ then don't replace
+														if (param.value.length > foundindex+parsedBaseLabel.length) {
+															const regex = /[a-zA-Z0-9_]/g;
+															const match = param.value[foundindex+parsedBaseLabel.length].match(regex);
+															if (match !== null) {
+																continue
+															}
+														}
+														
+														const extralength = newname.length-parsedBaseLabel.length
+														param.value = param.value.substring(0, foundindex) + newname + param.value.substring(foundindex-extralength+newname.length, param.value.length)
+
+													} else { 
+														break
+													}
+	
+													// Break no matter what after 5 replaces. May need to increase
+													if (cnt >= 5) {
+														break
+													}
+	
+												}
+            					} catch (e) {
+												console.log("Failed value replacement based on index: ", e)
+											}
+										}
+									}
+
+									setWorkflow(workflow);
+                  					setUpdate(Math.random());
+									setPrevActionName(name)
+								}}
+							/>
+						</div>
+						{/*!isCloud ? null :*/}
+							<div style={{flex: 1, marginLeft: 5,}}>
+								<Tooltip
+									color="primary"
+									title={"Delay before action executes (in seconds)"}
+									placement="top"
+								>
+									<span>
+										<Typography style={{color: "rgba(255,255,255,0.7)"}}>Delay</Typography>
+										<TextField
+											InputProps={{
+												style: theme.palette.innerTextfieldStyle,
+												disableUnderline: true,
+											}}
+											placeholder={selectedAction.execution_delay}
+											value={delay}
+											onChange={(event) => {
+												setDelay(event.target.value)
+											}}
+										/>
+									</span>
+								</Tooltip>
+							</div>
+						{/**/}
+					</div>
+        </span>
+      )}
+
+      {selectedApp.name !== undefined &&
+			selectedAction.authentication !== null &&
+			selectedAction.authentication !== undefined &&
+			selectedAction.authentication.length === 0 &&
+			requiresAuthentication ? (
+        <div style={{ marginTop: 15 }}>
+          <Tooltip
+            color="primary"
+            title={"Add authentication option"}
+            placement="top"
+          >
+            <span>
+              <Button
+                color="primary"
+                style={{
+					textTransform: "none",
+				}}
+                fullWidth
+                variant="contained"
+                onClick={() => {
+                  //if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
+                  //	return null
+                  //}
+
+                  setAuthenticationModalOpen(true);
+                }}
+              >
+                <AddIcon style={{ marginRight: 10 }} /> Authenticate{" "}
+                {selectedApp.name.replaceAll("_", " ")}
+              </Button>
+            </span>
+          </Tooltip>
+        </div>
+      ) : null}
+
+      {selectedAction.authentication !== undefined &&
+				selectedAction.authentication !== null &&
+				selectedAction.authentication.length > 0 ? (
+        <div style={{ marginTop: 15 }}>
+          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Authentication</Typography>
+          <div style={{ display: "flex" }}>
+            <Select
+			  MenuProps={{
+			  	disableScrollLock: true,
+			  }}
+              labelId="select-app-auth"
+              value={
+				selectedAction.authentication_id === "authgroups" ? "authgroups" :
+                Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0
+                  ? "No selection"
+                  : selectedAction.selectedAuthentication
+              }
+              SelectDisplayProps={{
+                style: {
+					maxWidth: 250,
+                },
+              }}
+              fullWidth
+              onChange={(e) => {
+                if (e.target.value === "No selection") {
+                  selectedAction.selectedAuthentication = {};
+                  selectedAction.authentication_id = "";
+
+                  for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
+                    if (selectedAction.parameters[key].configuration === false) {
+						//console.log("FIELDSKIP: ", selectedAction.parameters[key].name)
+						continue
+					} 
+
+					if (selectedAction.parameters[key].name === "url" && authenticationType?.type === "oauth2-app" && selectedAction.parameters[key].value.includes("http")) { 
+						continue
+					}
+
+				    if (selectedAction.parameters[key].example !== undefined && selectedAction.parameters[key].example !== null && selectedAction.parameters[key].example !== "") {
+				      if (selectedAction.parameters[key].example.toLowerCase().includes("apik") || selectedAction.parameters[key].example.toLowerCase().includes("key") || selectedAction.parameters[key].example.toLowerCase().includes("pass") || selectedAction.parameters[key].example.toLowerCase().includes("****")) {
+				      	selectedAction.parameters[key].value = ""
+				      } else {
+				      	selectedAction.parameters[key].value = selectedAction.parameters[key].example
+				      }
+
+				    } else {
+				      selectedAction.parameters[key].value = ""
+				    }
+                  }
+                  setSelectedAction(selectedAction)
+                  setUpdate(Math.random())
+				
+				} else if (e.target.value === "authgroups") {
+					if (authGroups !== undefined && authGroups !== null && authGroups.length === 0) {
+						toast("No auth groups created. Opening window to create one")
+
+						setTimeout(() => {
+							window.open("/admin?tab=app_auth", "_blank")
+						}, 2500)
+					} else {
+						selectedAction.selectedAuthentication = {};
+						selectedAction.authentication_id = "authgroups"
+
+						for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
+						  //console.log(selectedAction.parameters[key])
+						  if (selectedAction.parameters[key].configuration) {
+
+							if (selectedAction.parameters[key].name === "url" && authenticationType?.type === "oauth2-app") {
+							} else {
+								selectedAction.parameters[key].value = "authgroup controlled"
+							}
+						  }
+						}
+
+						setSelectedAction(selectedAction)
+						setUpdate(Math.random())
+					}
+                } else {
+                  selectedAction.selectedAuthentication = e.target.value;
+                  selectedAction.authentication_id = e.target.value.id;
+                  setSelectedAction(selectedAction)
+                  setUpdate(Math.random())
+                }
+              }}
+              style={{
+                backgroundColor: theme.palette.inputColor,
+                color: "white",
+                height: 35,
+                maxWidth: rightsidebarStyle.maxWidth - 80,
+                borderRadius: theme.palette?.borderRadius,
+              }}
+            >
+              <MenuItem
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  color: "white",
+                }}
+                value="No selection"
+              >
+                <em>No selection</em>
+              </MenuItem>
+              {selectedAction.authentication.map((data) => {
+				if (data.last_modified === true) {
+					//console.log("LAST MODIFIED: ", data.label)
+				}
+
+                return (
+                  <MenuItem
+                    key={data.id}
+                    style={{
+                      backgroundColor: theme.palette.inputColor,
+                      color: "white",
+					  maxWidth: 500, 
+					  overflowX: "auto",
+                    }}
+                    value={data}
+                  >
+
+					{data?.validation?.valid === true ? 
+						<Tooltip title="Authentication has been validated" placement="top">
+							<Chip
+								style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", borderColor: green, maxHeight: 25, }}
+								label={"Valid"}
+								variant="outlined"
+								color="secondary"
+							/>
+						</Tooltip>
+					: null }
+					{data?.last_modified === true ? 
+						<Chip
+							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", maxHeight: 25, }}
+							label={"Latest"}
+							variant="outlined"
+							color="secondary"
+						/>
+					: null}
+					{/*data.app.app_version !== undefined && data.app.app_version !== null && data.app.app_version !== "" && data.app.app_version !== "undefined" ?
+						<Chip
+							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+							label={data.app.app_version}
+							variant="outlined"
+							color="secondary"
+						/>
+					: null*/}
+						{data.label} 
+                  </MenuItem>
+                );
+              })}
+
+			  <Divider style={{marginTop: 10, marginBottom: 10, }}/>
+
+              <MenuItem
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  color: "white",
+                }}
+                value="authgroups"
+              >
+                <em>Auth Groups</em>
+              </MenuItem>
+
+            </Select>
+
+            <Tooltip
+              color="primary"
+              title={"Add authentication option"}
+              placement="top"
+            >
+              <IconButton
+                color="primary"
+				variant="outlined"
+                style={{}}
+                onClick={() => {
+                  setAuthenticationModalOpen(true);
+                }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
+          </div>
+        </div>
+      ) : null}
+
+	  {selectedAction.authentication_id === "authgroups" && (authGroups === undefined || authGroups === null || authGroups.length === 0) ? 
+		<a href="/admin?tab=app_auth" target="_blank" style={{textDecoration: "none", color: "#FF8544",}}>
+			<Typography variant="body2" style={{marginTop: 5,}}>
+				Create your first Authentication group
+			</Typography>
+		</a>
+	  : null}
+
+
+      {/*showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
+        <div style={{ marginTop: "20px" }}>
+          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Environment</Typography>
+          <Select
+			MenuProps={{
+				disableScrollLock: true,
+			}}
+            value={
+              selectedActionEnvironment === undefined || selectedActionEnvironment === null || selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null ? isCloud ? "Cloud" : "Shuffle" : selectedActionEnvironment.Name
+            }
+            SelectDisplayProps={{
+              style: {
+              },
+            }}
+            fullWidth
+            onChange={(e) => {
+              const env = environments.find((a) => a.Name === e.target.value);
+              setSelectedActionEnvironment(env);
+              selectedAction.environment = env.Name;
+              setSelectedAction(selectedAction);
+
+			  for (let actionkey in workflow.actions) {
+				  workflow.actions[actionkey].environment = env.Name
+			  }
+			  setWorkflow(workflow)
+			  toast.success("Set environment for ALL actions to " + env.Name)
+            }}
+            style={{
+              backgroundColor: theme.palette.inputColor,
+              color: "white",
+              height: "50px",
+              borderRadius: theme.palette?.borderRadius,
+            }}
+          >
+            {environments.map((data, index) => {
+              if (data.archived === true) {
+                return null
+              }
+
+			  const isRunning = data.running_ip !== "" 
+
+              return (
+                <MenuItem
+                  key={data.Name}
+                  style={{
+                    backgroundColor: theme.palette.inputColor,
+                    color: "white",
+                  }}
+                  value={data.Name}
+                >
+
+				  {data.Name === "cloud" || data.Name === "Cloud" ? null : !isRunning ?
+					  <a href={`/admin?tab=environments&env=${data.Name}`} target="_blank" style={{textDecoration: "none",}}>
+						  <Tooltip title={"Click to configure the environment"} placement="top">
+							  <Chip
+								style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer", backgroundColor: red, }}
+								label={"Stopped"}
+								variant="outlined"
+								color="secondary"
+					  			onClick={(e) => {
+									e.preventDefault()
+									e.stopPropagation()
+									window.open(`/admin?tab=environments&env=${data.Name}`, "_blank", "noopener,noreferrer")
+								}}
+
+
+							  />
+						  </Tooltip>
+					  </a>
+					: null}
+
+				  {data.default === true ?
+					  <Chip
+						style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
+						label={"Default"}
+						variant="outlined"
+						color="secondary"
+					  />
+					  : null}
+
+
+                  {data.Name}
+                </MenuItem>
+              );
+            })}
+          </Select>
+
+		</div>
+      ) : null*/}
+
+      {workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ? (
+        <div style={{ marginTop: "20px" }}>
+          <Typography>Execution variable (optional)</Typography>
+          <Select
+			MenuProps={{
+				disableScrollLock: true,
+			}}
+            value={
+              selectedAction.execution_variable !== undefined
+              && selectedAction.execution_variable !== null 
+              && selectedAction.execution_variable.name !== undefined 
+              && selectedAction.execution_variable.name !== null 
+              && selectedAction.execution_variable.name.length > 0 
+                ? selectedAction.execution_variable.name
+                : "No selection"
+            }
+            SelectDisplayProps={{
+              style: {
+              },
+            }}
+            fullWidth
+            onChange={(e) => {
+              if (e.target.value === "No selection") {
+                selectedAction.execution_variable = { name: "No selection" };
+              } else {
+                const value = workflow.execution_variables.find(
+                  (a) => a.name === e.target.value
+                );
+                selectedAction.execution_variable = value;
+              }
+              setSelectedAction(selectedAction);
+              setUpdate(Math.random());
+            }}
+            style={{
+              backgroundColor: theme.palette.inputColor,
+              color: "white",
+              height: "50px",
+              borderRadius: theme.palette?.borderRadius,
+            }}
+          >
+            <MenuItem
+              style={{
+                backgroundColor: theme.palette.inputColor,
+                color: "white",
+              }}
+              value="No selection"
+            >
+              <em>No selection</em>
+            </MenuItem>
+            <Divider style={{ backgroundColor: theme.palette.inputColor }} />
+            {workflow.execution_variables.map((data) => (
+              <MenuItem
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  color: "white",
+                }}
+                value={data.name}
+              >
+                {data.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </div>
+      ) : null}
+
+      <Divider
+        style={{
+          marginTop: "20px",
+          height: "1px",
+          width: "100%",
+          backgroundColor: "rgb(91, 96, 100)",
+        }}
+      />
+      <div style={{ flex: "6", marginTop: "20px" }}>
+        {/*hideExtraTypes ? null : 
+					<div style={{marginBottom: 5}}>
+						<b>Actions</b>
+					</div>
+				*/}
+
+        {setNewSelectedAction !== undefined ? (
+          <Autocomplete
+            id="action_search"
+            autoHighlight
+            value={selectedAction}
+            classes={{ inputRoot: classes.inputRoot }}
+			groupBy={(option) => {
+				// FIXME: Sorting
+				// Most popular
+				// Is categorized
+				// Uncategorized
+				return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
+			}}
+			renderGroup={(params) => {
+
+				return (
+					<li key={params.key}>
+						<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
+						<Typography variant="body2">{params.children}</Typography>
+					</li>
+				)	
+			}}
+            options={renderedActionOptions}
+            ListboxProps={{
+              style: {
+                backgroundColor: theme.palette.surfaceColor,
+                color: "white",
+              },
+            }}
+			filterOptions={(options, { inputValue }) => {
+				const lowercaseValue = inputValue.toLowerCase()
+				options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
+
+				return options
+			}}
+            getOptionLabel={(option) => {
+              if (option === undefined || option === null || option.name === undefined || option.name === null ) {
+                return null;
+              }
+
+              const newname = (
+                option.name.charAt(0).toUpperCase() + option.name.substring(1)
+              ).replaceAll("_", " ");
+
+              return newname;
+            }}
+            fullWidth
+		    sx={{
+		      '& .MuiOutlinedInput-root': {
+		        height: 40, // Adjust the input height
+		      },
+		      '& .MuiAutocomplete-input': {
+		        padding: '8px', // Adjust the text padding
+		      },
+		    }}
+
+            style={{
+              backgroundColor: theme.palette.backgroundColor,
+              height: 35,
+              borderRadius: theme.palette?.borderRadius,
+            }}
+            onChange={(event, newValue) => {
+              // Workaround with event lol
+              if (newValue !== undefined && newValue !== null) {
+                setNewSelectedAction({ 
+					target: { 
+						value: newValue.name 
+					} 
+				});
+              }
+			}}
+            renderOption={(props, option, state) => {
+              var newActionname = option.name;
+              if (option.label !== undefined && option.label !== null && option.label.length > 0) {
+                newActionname = option.label;
+              }
+
+              var newActiondescription = option.description;
+			  //console.log("DESC: ", newActiondescription)
+              if (option.description === undefined || option.description === null) {
+				newActiondescription = "Description: No description defined for this action"
+              } else {
+				newActiondescription = "Description: "+newActiondescription
+			  }
+
+              const iconInfo = GetIconInfo({ name: option.name });
+              const useIcon = iconInfo.originalIcon;
+
+			  if (newActionname === undefined || newActionname === null) {
+				  newActionname = "No name"
+				  option.name = "No name"
+				  option.label = "No name"
+			  }
+
+              newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
+
+				var method = ""
+				var extraDescription = ""
+				if (option.name.includes("get_")) {
+					method = "GET"
+				} else if (option.name.includes("post_")) {
+					method = "POST"
+				} else if (option.name.includes("put_")) {
+					method = "PUT"
+				} else if (option.name.includes("patch_")) {
+					method = "PATCH"
+				} else if (option.name.includes("delete_")) {
+					method = "DELETE"
+				} else if (option.name.includes("options_")) {
+					method = "OPTIONS"
+				} else if (option.name.includes("connect_")) {
+					method = "CONNECT"
+				}
+
+				// FIXME: Should it require a base URL?
+				if (method.length > 0 && option.description !== undefined && option.description !== null && option.description.includes("http")) {
+					var extraUrl = ""
+					const descSplit = option.description.split("\n")
+					// Last line of descSplit
+					if (descSplit.length > 0) {
+						extraUrl = descSplit[descSplit.length-1]
+					} 
+
+					if (extraUrl.length > 0) {
+						if (extraUrl.includes(" ")) {
+							extraUrl = extraUrl.split(" ")[0]
+						}
+
+						if (extraUrl.includes("#")) {
+							extraUrl = extraUrl.split("#")[0]
+						}
+
+						extraDescription = `${method} ${extraUrl}`
+					} else {
+						//console.log("No url found. Check again :)")
+					}
+				}
+
+              return (
+			  	<ActionSelectOption
+				  {...props}
+					option={option}
+					newActiondescription={newActiondescription}
+					useIcon={useIcon}
+					newActionname={newActionname}
+					extraDescription={extraDescription}
+				/>
+              );
+            }}
+			renderInput={(params) => {
+				  if (params.inputProps?.value) {
+					const prefixes = ["Post", "Put", "Patch"];
+					for (let prefix of prefixes) {
+						if (params.inputProps.value.startsWith(prefix)) {
+							let newValue = params.inputProps.value.replace(prefix + " ", "");
+							if (newValue.length > 1) {
+								newValue = newValue.charAt(0).toUpperCase() + newValue.substring(1);
+							}
+							// Set the new value without mutating inputProps
+							params = { ...params, inputProps: { ...params.inputProps, value: newValue } };
+							break;
+						}
+					}
+					// Check if it starts with "Get List" and method is "Get"
+					if (params.inputProps.value.startsWith("Get List")) {
+						console.log("Get List");
+					}
+				  }
+
+
+				  const actionDescription = null
+
+				  return (
+					  <Tooltip title={actionDescription}
+						placement="right" 
+						open={!hiddenDescription}
+						PopperProps={{
+							sx: {
+							'& .MuiTooltip-tooltip': {
+								backgroundColor: 'transparent',
+								boxShadow: 'none',
+							},
+							'& .MuiTooltip-arrow': {
+								color: 'transparent',
+							},
+							},
+						}}
+						>
+						  <TextField
+							{...params}
+
+							data-lpignore="true"
+							autocomplete="off"
+							dataLPIgnore="true"
+							autoComplete="off"
+
+							color="primary"
+							id="checkbox-search"
+							variant="body1"
+							style={theme.palette.textFieldStyle}
+							label={isIntegration ? "Choose a category" : "Find Actions"}
+							variant="outlined"
+							name={`disable_autocomplete_${Math.random()}`}
+						  />	
+						</Tooltip>
+				  );
+				}}
+			/>
+        ) : null}
+
+        <div
+          style={{
+            marginTop: "10px",
+            borderColor: "white",
+            borderWidth: "2px",
+            marginBottom: hideExtraTypes ? 50 : 200,
+          }}
+        > {
+			selectedActionParameters !== undefined && selectedActionParameters !== null && Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0 ? 
+	<div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
 		  	{isIntegration ? 
 				apps !== undefined && apps !== null && apps.length > 0 ?
 					<div style={{display: "flex", maxWidth: 335, overflowX: "auto", overflowY: "hidden",}}>
@@ -1296,20 +2689,30 @@ const ParsedAction = (props) => {
 					title={"Click to learn more about this action"}
 					placement="top"
 				>
+					<div style={{marginTop: 50, }} />
+					{/*
 					<Button 
 						variant="text" 
 						color="secondary" 
-						style={{justifyContent: "flex-start", textAlign: "left", textTransform: "none", width: "100%",}}
+						style={{
+							justifyContent: "flex-start", 
+							textAlign: "left", 
+							textTransform: "none", 
+							width: "100%", 
+							marginTop: 15, 
+						}}
 						fullWidth
 						disabled={selectedAction.description === undefined || selectedAction.description === null || selectedAction.description.length === 0}
 						onClick={() => {
-							setHiddenDescription(!hiddenDescription)
+							setHiddenParameters(!hiddenParameters)
 						}}
 					>
 						<b>Parameters</b>
 					</Button>
+					*/}
 				</Tooltip>
 			}
+
 			{selectedAction.template === true && selectedAction.matching_actions !== undefined && selectedAction.matching_actions !== null && selectedAction.matching_actions.length > 0 ?
 			<div>
 			<Typography variant="body1">
@@ -1346,8 +2749,8 @@ const ParsedAction = (props) => {
           		  fullWidth
           		  style={{
           		    backgroundColor: theme.palette.inputColor,
-          		    height: 50,
-          		    borderRadius: theme.palette.borderRadius,
+          		    height: 35,
+          		    borderRadius: theme.palette?.borderRadius,
           		  }}
           		  onChange={(event, newValue) => {
 					console.log("SELECT: ", event, newValue)
@@ -1409,7 +2812,7 @@ const ParsedAction = (props) => {
 						<TextField
 							style={{
 								backgroundColor: theme.palette.inputColor,
-								borderRadius: theme.palette.borderRadius,
+								borderRadius: theme.palette?.borderRadius,
 							}}
 							{...params}
 							label="Find App to Translate"
@@ -1420,11 +2823,11 @@ const ParsedAction = (props) => {
           		/>
 						</div>
 					: null}
-        	{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 &&  hiddenDescription === false ? (
+        	{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 &&  hiddenParameters === false ? (
 						<div
 							style={{
 								border: "1px solid rgba(255,255,255,0.6)",
-								borderRadius: theme.palette.borderRadius,
+								borderRadius: theme.palette?.borderRadius,
 								marginTop: 15,
 								marginBottom: 10,
 								maxHeight: 70,
@@ -1441,7 +2844,8 @@ const ParsedAction = (props) => {
 						</div>
 					) : null}
 
-          {selectedActionParameters.map((data, count) => {
+		  {suggestionInfo()}
+          {selectedActionParameters?.map((data, count) => {
             if (data.variant === "") {
               data.variant = "STATIC_VALUE";
             }
@@ -1450,20 +2854,31 @@ const ParsedAction = (props) => {
 			  return null
 			}
 
-            // selectedAction.selectedAuthentication = e.target.value
-            // selectedAction.authentication_id = e.target.value.id
-            if (
-              !selectedAction.auth_not_required &&
-              selectedAction.selectedAuthentication !== undefined &&
-              selectedAction.selectedAuthentication.fields !== undefined &&
-              selectedAction.selectedAuthentication.fields[data.name] !==
-                undefined
-            ) {
+			if (data.value === "authgroup controlled") {
+				if (data?.name === "url" && authenticationType?.type === "oauth2-app") {
+				} else {
+					return null
+				}
+			}
+
+			if (selectedAction.parameters === undefined || selectedAction.parameters === null || selectedAction.parameters.length !== selectedActionParameters.length) {
+
+				//selectedAction.parameters = selectedActionParameters
+				//console.log("PARAM BUG - length change(?): ", selectedAction)
+			}
+
+            //!selectedAction.auth_not_required &&
+			if (selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined && selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
+
               // This sets the placeholder in the frontend. (Replaced in backend)
-              selectedActionParameters[count].value =
-                selectedAction.selectedAuthentication.fields[data.name];
-              selectedAction.parameters[count].value =
-                selectedAction.selectedAuthentication.fields[data.name];
+              if (selectedActionParameters[count] !== undefined) {
+				  selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+			  }
+
+			  if (selectedAction.parameters[count] !== undefined) {
+              	  selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+			  }
+
               setSelectedAction(selectedAction);
               //setUpdate(Math.random())
 
@@ -1484,6 +2899,7 @@ const ParsedAction = (props) => {
                 </Typography>
               );
             }
+
 
 			// Added autofill to make this ALOT simpler
 			if (isCloud && (selectedAction.app_name === "Shuffle Tools" || selectedAction.app_name === "email") && (selectedAction.name === "send_email_shuffle" || selectedAction.name === "send_sms_shuffle") && data.name === "apikey") {
@@ -1512,13 +2928,9 @@ const ParsedAction = (props) => {
 				data.value = data.value.join(",")
 			}
 
-            if (
-              data.value !== undefined &&
-              data.value !== null &&
-              data.value.startsWith("{") &&
-              data.value.endsWith("}")
-            ) {
-              multiline = true;
+            if (data.value !== undefined && data.value !== null &&
+              data.value.startsWith("{") && data.value.endsWith("}")) {
+              multiline = true
             }
 
             var placeholder = "Value";
@@ -1526,9 +2938,9 @@ const ParsedAction = (props) => {
             
               placeholder = data.example;
 
-              if (data.name === "url" && data.value !== undefined && data.value !== null && data.value.length === 0) {
-                data.value = data.example;
-              }
+            //   if (data.name === "url") {
+            //     data.value = data.example;
+            //   }
 					// In case of data.example
 					if (data.value === undefined || data.value === null) {
 						data.value = ""
@@ -1536,7 +2948,7 @@ const ParsedAction = (props) => {
 
 					if (data.value.length === 0) {
               			if (data.name.toLowerCase() === "headers") {
-							console.log("Should show headers field instead with + and -!")
+							//console.log("Should show headers field instead with + and -!")
 
 							// Check if file ID exists
 							//
@@ -1601,6 +3013,7 @@ const ParsedAction = (props) => {
             var rows = "3";
             var openApiHelperText = "This is an OpenAPI specific field";
 
+
             if (selectedApp.generated && data.name === "headers") {
               //console.log("HEADER: ", data)
               //if (data.value.length === 0) {
@@ -1608,194 +3021,300 @@ const ParsedAction = (props) => {
               //setSelectedActionParameters(selectedActionParameters)
             }
 
-            var hideBodyButton = "";
-            const hideBodyButtonValue = (
-              <div
-				key={data.name}
-				id="hide_body_button"
-                style={{
-                  marginTop: 50,
-                  border: "1px solid rgba(255,255,255,0.7)",
-                  borderTop: "1px solid rgba(255,255,255,0.7)",
-                  borderRadius: theme.palette.borderRadius,
-                  alignItems: "center",
-                  textAlign: "center",
-                }}
-              >
-                <Tooltip
-                  color="secondary"
-                  title={hideBody ?  "Hide all body fields and only show the body itself" : "Show all body fields instead of the body itself"}
-                  placement="top"
-                >
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        tabIndex="-1"
-                        checked={hideBody}
-                        style={{
-                          color: theme.palette.primary.secondary,
-                        }}
-                        onChange={(event) => {
-						  var tag = "TOGGLED"
-						  if (hideBody) {
-						  	tag = "UNTOGGLED"
-						  } 
-
-                          setHideBody(!hideBody)
-                          for (let paramkey in Object.entries(selectedActionParameters)) {
-                            var currentItem = selectedActionParameters[paramkey];
-							if (currentItem.name === "ssl_verify") {
-
-							}
-
-							if (currentItem.name === "body") {
-								currentItem.id = tag
-							}
-
-                            if (currentItem.description === openApiFieldDesc) {
-                              currentItem.field_active = !hideBody
-                            }
-                          }
-				
-							
-						  // Scroll to hide_body_button
-						  setTimeout(() => {
-							var element = document.getElementById("hide_body_button")
-							if (element !== undefined && element !== null) {
-								// Keep the button a little below the top
-								element.scrollIntoView({
-									behavior: "smooth",
-									block: "center",
-								})
-							}
-						  }, 100)
-							
-
-                        }}
-                        name="requires_unique"
-                      />
-                    }
-                    label={hideBody ? "Show Body" : "Hide Body"}
-                  />
-                </Tooltip>
-              </div>
-            )
-
-            if (selectedApp.generated && data.name === "body") {
-              const regex = /\${(\w+)}/g;
-              const found = placeholder.match(regex);
-
-			  // setActivateHidingBodyButton(false)
-				//
-              hideBodyButton = hideBodyButtonValue;
-              if (found === null || !hideBody) {
-                if (found === null) {
-                  setActivateHidingBodyButton(true);
-                } else {
-					//console.log("In found: ", found, hideBody)
-				}
-              } else {
-
-                rows = "1";
-                disabled = true;
-                openApiHelperText = "OpenAPI spec: fill the following fields.";
-
-                var changed = false;
-				var tempArray = []
-                for (let specKey in found) {
-                  const tmpitem = found[specKey];
-                  var skip = false;
-
-                  for (let innerkey in selectedActionParameters) {
-                    if (selectedActionParameters[innerkey].name === tmpitem) {
-                      skip = true;
-                      break;
-                    }
-                  }
-
-                  if (skip) {
-                    //console.log("SKIPPING ", tmpitem)
-                    continue;
-                  }
-
-                  changed = true;
-				  var isRequired = false
-				  // Check if original field name is in the selectedAction.required_body_fields
-				  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null) {
-					  for (let innerkey in selectedAction.required_body_fields) {
-						  if (selectedAction.required_body_fields[innerkey] === tmpitem) {
-							  isRequired = true
-							  break
-						  }
-					  }
-				  }
-
-				  tempArray.push({
-                    action_field: "",
-                    configuration: false,
-                    description: openApiFieldDesc,
-                    example: "",
-                    id: "",
-                    multiline: true,
-                    name: tmpitem,
-                    options: null,
-                    required: isRequired,
-                    schema: { type: "string" },
-                    skip_multicheck: false,
-                    tags: null,
-                    value: "",
-                    variant: "STATIC_VALUE",
-                    field_active: true,
-					  
-					autocompleted: true,
-                  });
-                }
-                  
-				console.log("TEMP ARRAY: ", tempArray)
-				var required = selectedActionParameters.filter(item => item.required === true)
-				var notRequired = selectedActionParameters.filter(item => item.required === false)
-
-				if (tempArray.length > 0) {
-					// Sort tempArray based on tempArray.required
-					tempArray.sort((a, b) => (a.required < b.required) ? 1 : -1)
-					// Add all items to the selectedActionParameters array
-					for (let innerkey in tempArray) {
-						tempArray[innerkey].id = "ADDED"
-
-						if (tempArray[innerkey].required === true) {
-							required.push(tempArray[innerkey])
-						} else {
-							notRequired.push(tempArray[innerkey])	
-						}
+			 var hideBodyButtonValue = (
+			 	<div
+			 	  key={data.name}
+			 	  id="hide_body_button"
+			 	  style={{
+			 		marginTop: 30,
+			 		borderRadius: theme.palette?.borderRadius,
+			 		alignItems: "center",
+			 		textAlign: "center",
+			 	  }}
+			 	>
+				<Tabs
+				  value={hideBody === true ? 1 : 0}
+				  indicatorColor="primary"
+				  style={{
+					  width: "100%",
+					  display: "flex", 
+					  textAlign: "center",
+					  textTransform: "none",
+				  }}
+        		>
+				  <Tab
+					label={
+						"Simple"
 					}
-				}
-				//selectedActionParameters
+				 	style={{
+						flex: 1, 
+						textTransform: "none",
+					    borderBottom: "1px solid rgba(255,255,255,0.3)",
+					}}
+					onClick={() => {
+						// Set localstorage
+						localStorage.setItem("hideBody", "true")
+						
+						setHideBody(false)
+						const updatedParameters = selectedActionParameters.map((param) => {
+							if (param.name === "body") {
+								return {
+									...param,
+									id: "UNTOGGLED",
+								}
+							}
 
-                if (changed) {
-				  // Sort selectedActionParameters based on selectedActionParameters.required
-				  //selectedActionParameters.sort((a, b) => (a.required < b.required) ? 1 : -1)
-				  // Find the "headers" and "queries" field names and put them on the first indexes anyway
-				  var newArray = required.concat(notRequired)
-				  
+							if (param.description === openApiFieldDesc) {
+							  // Check required fields here
+							  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null && selectedAction.required_body_fields.length > 0) {
+								// Look for the field name in the required_body_fields
+								if (selectedAction.required_body_fields.includes(param.name)) {
+									param.required = true
+								} else {
+									param.required = false
+								}
+							  } 
 
-                  setSelectedActionParameters(newArray)
+							  return { ...param, field_active: true }
+							}
+
+							return param
+						})
+				
+						setSelectedActionParameters(updatedParameters)
+					}}
+				  />
+				  <Tab
+					label={
+						"Advanced"
+					}
+				 	style={{
+						flex: 1, 
+						textTransform: "none",
+					    borderBottom: "1px solid rgba(255,255,255,0.3)",
+					}}
+					onClick={() => {
+						localStorage.setItem("hideBody", "false")
+						setHideBody(true)
+						// Make sure the body field is shown
+						const updatedParameters = selectedActionParameters.map((param) => {
+							if (param.name === "body") {
+								return {
+									...param,
+									id: "TOGGLED",
+								}
+							}
+
+							if (param.description === openApiFieldDesc) {
+							  return { ...param, field_active: false }
+							}
+
+							return param
+						})
+		
+						setSelectedActionParameters(updatedParameters)
+					}}
+				  />
+				 </Tabs>
+				 {/*
+				 	<ButtonGroup fullWidth>
+					  <Tooltip
+						color="secondary"
+						title={
+							"Show all body fields instead of the body itself"
+						}
+						placement="top"
+					  >
+							<Button 
+				 				variant={hideBody === true ? "outlined" : "contained"} 
+				 				color="primary" 
+				 				style={{textTransform: "none",}}
+				 				onClick={() => {
+								// Set localstorage
+								localStorage.setItem("hideBody", "true")
+								
+								setHideBody(false)
+								const updatedParameters = selectedActionParameters.map((param) => {
+									if (param.name === "body") {
+										return {
+											...param,
+											id: "UNTOGGLED",
+										}
+									}
+
+									if (param.description === openApiFieldDesc) {
+									  // Check required fields here
+									  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null && selectedAction.required_body_fields.length > 0) {
+										// Look for the field name in the required_body_fields
+										if (selectedAction.required_body_fields.includes(param.name)) {
+									  		param.required = true
+										} else {
+											param.required = false
+										}
+									  } 
+
+									  return { ...param, field_active: true }
+									}
+
+									return param
+								})
+				
+								setSelectedActionParameters(updatedParameters)
+							}}>
+								Simplified	
+							</Button>
+				 		</Tooltip>
+					    <Tooltip
+					      color="secondary"
+					      title={
+					      	"Show the body as it is"
+					      }
+					      placement="top"
+					    >
+							<Button 
+				 				variant={hideBody === true ? "contained" : "outlined" }  
+				 				color="primary" 
+				 				style={{textTransform: "none",}}
+				 				onClick={() => {
+								localStorage.setItem("hideBody", "false")
+								setHideBody(true)
+								// Make sure the body field is shown
+								const updatedParameters = selectedActionParameters.map((param) => {
+									if (param.name === "body") {
+										return {
+											...param,
+											id: "TOGGLED",
+										}
+									}
+
+									if (param.description === openApiFieldDesc) {
+									  return { ...param, field_active: false }
+									}
+
+									return param
+								})
+				
+								setSelectedActionParameters(updatedParameters)
+							}}>
+								Advanced
+							</Button>
+				 	    </Tooltip>
+				 	</ButtonGroup>
+					*/}
+			 	</div>
+			   )
+
+			 var showButtonField = false
+             if (selectedApp.generated === true && data.name === "body") {
+               const regex = /\${(\w+)}/g;
+               const found = placeholder.match(regex);
+
+			   var newhidebody = hideBody 
+			   showButtonField = true 
+			   if (found === undefined || found === null || found.length === 0) {
+			   		newhidebody = false 
+			       	hideBodyButtonValue = null
+
+				    if (hideBody === false) {
+					   setHideBody(true)
+				    }
+			   }
+			 
+               if (newhidebody === true) {
+				   //toast("BODYBUTTON TRUE")
+			   } else {
+
+                 rows = "1";
+                 disabled = true;
+                 openApiHelperText = "OpenAPI spec: fill the following fields.";
+
+                 var changed = false;
+			 	 var tempArray = []
+                 for (let specKey in found) {
+                   const tmpitem = found[specKey];
+                   var skip = false;
+
+                   for (let innerkey in selectedActionParameters) {
+                     if (selectedActionParameters[innerkey].name === tmpitem) {
+                       skip = true;
+                       break;
+                     }
+                   }
+
+                   if (skip) {
+                     //console.log("SKIPPING ", tmpitem)
+                     continue;
+                   }
+
+                   changed = true;
+			 	  var isRequired = false
+			 	  // Check if original field name is in the selectedAction.required_body_fields
+			 	  if (selectedAction.required_body_fields !== undefined && selectedAction.required_body_fields !== null) {
+			 		  for (let innerkey in selectedAction.required_body_fields) {
+			 			  if (selectedAction.required_body_fields[innerkey] === tmpitem) {
+			 				  isRequired = true
+			 				  break
+			 			  }
+			 		  }
+			 	  }
+
+			 	  tempArray.push({
+                     action_field: "",
+                     configuration: false,
+                     description: openApiFieldDesc,
+                     example: "",
+                     id: "",
+                     multiline: false,
+                     name: tmpitem,
+                     options: null,
+                     required: isRequired,
+                     schema: { type: "string" },
+                     skip_multicheck: false,
+                     tags: null,
+                     value: "",
+                     variant: "STATIC_VALUE",
+                     field_active: true,
+			  	  
+			 		autocompleted: false,
+                   });
                 }
+                
+			 	var required = selectedActionParameters.filter(item => item.required === true)
+			 	var notRequired = selectedActionParameters.filter(item => item.required === false)
 
-                return hideBodyButton;
-              }
-            }
+			 	if (tempArray.length > 0) {
+			 		// Sort tempArray based on tempArray.required
+			 		tempArray.sort((a, b) => (a.required < b.required) ? 1 : -1)
+			 		// Add all items to the selectedActionParameters array
+			 		for (let innerkey in tempArray) {
+			 			tempArray[innerkey].id = "ADDED"
 
-            if (activateHidingBodyButton === true) {
-              hideBodyButton = "";
-            }
+			 			if (tempArray[innerkey].required === true) {
+			 				required.push(tempArray[innerkey])
+			 			} else {
+			 				notRequired.push(tempArray[innerkey])	
+			 			}
+			 		}
+			 	}
+
+                 if (changed) {
+			 	  // Sort selectedActionParameters based on selectedActionParameters.required
+			 	  // Find the "headers" and "queries" field names and put them on the first indexes anyway
+			 	  var newArray = required.concat(notRequired)
+			    
+
+                   setSelectedActionParameters(newArray)
+                 }
+
+               }
+             }
 
             const clickedFieldId = "rightside_field_" + count;
 
             var baseHelperText = ""
-						if (data !== undefined && data !== null && data.value !== undefined && data.value !== null && data.value.length > 0) {
-							baseHelperText = calculateHelpertext(data.value)
-						}
-
+			if (data !== undefined && data !== null && data.value !== undefined && data.value !== null && data.value.length > 0) {
+				baseHelperText = calculateHelpertext(data.value)
+			}
 
             var tmpitem = data.name.valueOf();
             if (data.name.startsWith("${") && data.name.endsWith("}")) {
@@ -1814,57 +3333,130 @@ const ParsedAction = (props) => {
               tmpitem = "Username"
             } else if (tmpitem === "Password basic") {
               tmpitem = "Password"
+			}
+
+			// No longer multiline for new fields
+			//multiline = data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline
+
+			if (data.name === "body") {
+				//console.log("BODY: ", data)
+				if (hideBody === false) {
+					return hideBodyButtonValue 
+				}
+
+            	rows = "4"
+				multiline = true
+				disabled = false
+			}
+			
+			const description = data.description === undefined ? "" : data?.description;
+			
+			const tooltipDescription = (
+			<Box
+				p={1.5}
+				borderRadius={3}
+				boxShadow={2}
+				backgroundColor={theme.palette.textFieldStyle}
+				display="flex"
+				flexDirection="column"
+				>
+					<Box display="flex" alignItems="center" justifyContent="space-between">
+					<Typography variant="body1" style={{ flexGrow: 1 }}>
+						{tmpitem.charAt(0).toUpperCase() + tmpitem.slice(1)}
+					</Typography>
+					<IconButton size="small"
+						 onClick={() => {
+							setUiBox("closed")
+						}}
+					>
+						<CloseIcon fontSize="small" />
+					</IconButton>
+					</Box>
+					<Divider sx={{ backgroundColor: theme.palette.surfaceColor, marginTop: "5px", marginBottom : "10px", height: "3px" }}/>
+					<Box display="flex" flexDirection="column">
+						<Typography variant="body2" mb={0.5}>
+						<strong>Required:</strong> {data.required === true || data.configuration === true ? "True" : "False"}
+						</Typography>
+						<Typography variant="body2" mb={0.5}>
+						<strong>Description:</strong> {description}
+						</Typography>
+						<Typography variant="body2">
+						<strong>Ex. :</strong> {data?.example?.length > 0 ? data.example : "No example available"}
+						</Typography>
+						{
+							data?.configuration === true ?
+							(
+								<Typography variant="body2" mt={0.5}>
+								<strong>Auth: </strong>Use "\$" instead of "$"
+								</Typography>
+							) : null
 						}
 
-						multiline = data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline
-						
+						<div onClick={(e) => {
+							e.preventDefault()
+							e.stopPropagation()
+
+							localStorage.setItem("disabled_ui_box", "true")
+							setUiBox("closed")
+						}}>
+							<Typography style={{marginTop: 10, color: "#FF8544", cursor: "pointer",}} variant="body2"> 
+								Don't show again
+							</Typography>
+						</div>
+					</Box>
+				</Box>
+			);
+
+
             var datafield = (
+			<Tooltip 
+				title={tooltipDescription} 
+				placement="right" 
+				open={clickedFieldId === uiBox}
+				style={{
+					zIndex: 0,
+				}}
+				PopperProps={{
+					sx: {
+					  '& .MuiTooltip-tooltip': {
+						backgroundColor: 'transparent',
+						boxShadow: 'none',
+					  },
+					  '& .MuiTooltip-arrow': {
+						color: 'transparent',
+					  },
+					},
+				  }}
+				>
               <TextField
+				autofill="off"
+				autoComplete="off"
+                id={clickedFieldId}
                 disabled={disabled}
                 style={{
                   backgroundColor: theme.palette.inputColor,
-                  borderRadius: theme.palette.borderRadius,
+                  borderRadius: theme.palette?.borderRadius,
+                  width: "100%",
+				  maxHeight: multiline === true ? undefined : 40, 
+				  minHeight: 40, 
+
                   border:
                     selectedActionParameters[count].required ||
                     selectedActionParameters[count].configuration
-                      ? "2px solid #f85a3e"
+                      ? "1px solid #FF8544"
                       : "",
-                  color: "white",
-                  width: "100%",
-                  fontSize: "1em",
                 }}
                 InputProps={{
+				  style: {
+					  maxHeight: multiline === true ? undefined : 40,
+				  },
 				  disableUnderline: true,
                   endAdornment: hideExtraTypes ? null : (
                     <InputAdornment position="end">
-					<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
-						<Tooltip title="Expand window" placement="top">
-							<AspectRatioIcon
-								style={{ cursor: "pointer", margin: multiline ? 5 : 0 ,}}
-								onClick={(event) => {
-									event.preventDefault()
-									setFieldCount(count)
-									setExpansionModalOpen(true)
-
-									//setcodedata(data.value)
-									var parsedvalue = data.value
-									if (parsedvalue === undefined || parsedvalue === null) {
-										parsedvalue = ""
-									}
-
-									setEditorData({
-										"name": data.name,
-										"value": parsedvalue,
-										"field_number": count,
-										"actionlist": actionlist,
-										"field_id": clickedFieldId,
-									})
-								}}
-							/>
-						</Tooltip>
-						<Tooltip title="Autocomplete text" placement="top">
+					<ButtonGroup color="secondary" orientation={multiline ? "vertical" : "horizontal"}>
+						<Tooltip title="Autocomplete text" placement="bottom">
 							<AddCircleOutlineIcon
-								style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
+								style={{ color: "rgba(255,255,255,0.7)", cursor: "pointer", margin: multiline ? 5 : 0, }}
 								onClick={(event) => {
 									event.preventDefault()
 
@@ -1884,7 +3476,7 @@ const ParsedAction = (props) => {
 				</InputAdornment>
                   ),
                 }}
-                multiline={data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline}
+                multiline={multiline}
                 onClick={() => {
 				  	/*
                   		setExpansionModalOpen(false);
@@ -1896,18 +3488,22 @@ const ParsedAction = (props) => {
 						setScrollConfig(scrollConfig)
 					}
                 }}
-                id={clickedFieldId}
                 rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
                 color="primary"
-                defaultValue={data.value}
-                //value={data.value}
+                // defaultValue={data.value}
+                value={
+					data?.value
+				}
+				error={
+					data?.error?.length > 0 ? true : false
+				}
+				helperText={data?.error?.length > 0 ? errorHelperText(data?.name,data?.value,data?.error) : returnHelperText(data.name, data.value)}
                 //options={{
                 //	theme: 'gruvbox-dark',
                 //	keyMap: 'sublime',
                 //	mode: 'python',
                 //}}
                 //height={multiline ? 50 : 150}
-
                 type={
                   placeholder.includes("***") ||
                   (data.configuration &&
@@ -1920,16 +3516,35 @@ const ParsedAction = (props) => {
                 placeholder={placeholder}
                 onChange={(event) => {
                   //changeActionParameterCodemirror(event, count, data)
-                  changeActionParameter(event, count, data);
+                //   changeActionParameter(event, count, data);
+				handleParamChange(event, count, data)
                 }}
-                helperText={returnHelperText(data.name, data.value)}
+				onFocus={(event) => {
+					// Get local storage key "disabled_ui_box" and check if it's true
+					const disabledUiBox = localStorage.getItem("disabled_ui_box")
+					if (disabledUiBox === "true") {
+					} else {
+						//setUiBox(event.target.id)
+					}
+				}}
                 onBlur={(event) => {
 					baseHelperText = calculateHelpertext(event.target.value)
 					if (setLastSaved !== undefined) {
 						setLastSaved(false)
 					}
+
+					// Check if we clicked the tooltip or not
+					const tooltipid = "rightside_field_tooltip" + count
+					const foundElement = document.getElementById(tooltipid)
+					if (foundElement !== null && foundElement !== undefined) {
+						console.log("FOUND: ", foundElement)
+					} else {
+						//console.log("TOOLTIP -> NOT FOUND")
+						//setUiBox("closed")
+					}
                 }}
               />
+			</Tooltip>
             );
 		
 						// Finds headers from a string to be used for autocompletion
@@ -2115,7 +3730,7 @@ const ParsedAction = (props) => {
 
 										selectedActionParameters[count].value += "\n"
 										selectedAction.parameters[count].value += "\n"
-          					setSelectedActionParameters(selectedActionParameters)
+          								setSelectedActionParameters(selectedActionParameters)
 										setSelectedAction(selectedAction)
 										setUpdate(Math.random())
 									}}>
@@ -2124,7 +3739,6 @@ const ParsedAction = (props) => {
 								</div>
 						}
 
-            //console.log("FIELD VALUE: ", data.value)
             //const regexp = new RegExp("\W+\.", "g")
             //let match
             //while ((match = regexp.exec(data.value)) !== null) {
@@ -2140,15 +3754,13 @@ const ParsedAction = (props) => {
             //	}
             //}
 
-						// Basic helpertext
-
             if (files !== undefined && files !== null && data.name.toLowerCase() === "file_category") {
-              //selectedActionParameters[count].options.length > 0
-							console.log("FileS: ", files)
-							if (files.namespaces !== undefined && files.namespaces !== null && files.namespaces.length > 0) {
-								data.options = files.namespaces
-							}
-						}
+              	//selectedActionParameters[count].options.length > 0
+				console.log("FileS: ", files)
+				if (files.namespaces !== undefined && files.namespaces !== null && files.namespaces.length > 0) {
+					data.options = files.namespaces
+				}
+			}
 
             //const keywords = ["len", "lower", "upper", "trim", "split", "length", "number", "parse", "join"]
             if (
@@ -2160,7 +3772,7 @@ const ParsedAction = (props) => {
                 <TextField
                   style={{
                     backgroundColor: theme.palette.inputColor,
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                   }}
                   InputProps={{
                     endAdornment: hideExtraTypes ? null : (
@@ -2182,7 +3794,7 @@ const ParsedAction = (props) => {
                       </InputAdornment>
                     ),
                   }}
-                	helperText={returnHelperText(data.name, data.value)}
+                  helperText={returnHelperText(data.name, data.value)}
                   fullWidth
                   multiline={multiline}
                   rows={"3"}
@@ -2196,26 +3808,11 @@ const ParsedAction = (props) => {
                   }}
                   onBlur={(event) => {}}
                 />
-              );
-              //const fileId = "6daabec1-892b-469c-b603-c902e47223a9"
-              //datafield = `SHOW FILES FROM OTHER NODES? Filename: ${selectedActionParameters[count].value}`
-              /*
-							if (selectedActionParameters[count].value != fileId) {
-								changeActionParameter(fileId, count, data)
-								setUpdate(Math.random())
-
-							}
-							*/
+              )
             } else if (
-              (data.options !== undefined &&
-              data.options !== null &&
-              data.options.length > 0) 
-							||
-              (selectedActionParameters[count].options !== undefined &&
-              selectedActionParameters[count].options !== null &&
-              selectedActionParameters[count].options.length > 0)
-            ) {
-							const parsedoptions = data.options !== undefined && data.options !== null && data.options.length > 0 ? data.options : selectedActionParameters[count].options 
+              (data.options !== undefined && data.options !== null && data.options.length > 0) ||
+              (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0)) {
+				const parsedoptions = data.options !== undefined && data.options !== null && data.options.length > 0 ? data.options : selectedActionParameters[count].options 
 
               if (selectedActionParameters[count].value === "") {
                 // && selectedActionParameters[count].required) {
@@ -2259,7 +3856,7 @@ const ParsedAction = (props) => {
                     backgroundColor: theme.palette.surfaceColor,
                     color: "white",
                     height: "50px",
-                    borderRadius: theme.palette.borderRadius,
+                    borderRadius: theme.palette?.borderRadius,
                   }}
                 >
                   {parsedoptions.map(
@@ -2289,13 +3886,13 @@ const ParsedAction = (props) => {
                 </Select>
               );
             } else if (data.variant === "STATIC_VALUE") {
-              staticcolor = "#f85a3e";
+              staticcolor = "#FF8544";
             }
 
             if (data.field_active === false) {
-              return null;
+				console.log("Field not active: ", data?.name)
+              	return null
             }
-
 
             // Shows nested list of nodes > their JSON lists
             const ActionlistWrapper = (props) => {
@@ -2315,7 +3912,6 @@ const ParsedAction = (props) => {
               };
 
               const handleItemClick = (values) => {
-								console.log("In normal itemclick")
                 if (values === undefined ||values === null ||values.length === 0) {
                   return;
                 }
@@ -2338,31 +3934,28 @@ const ParsedAction = (props) => {
 
                 // Handles the fields under OpenAPI body to be parsed.
                 if (data.name.startsWith("${") && data.name.endsWith("}")) {
-                  console.log("INSIDE VALUE REPLACE: ", data.name, toComplete);
-                  // PARAM FIX - Gonna use the ID field, even though it's a hack
                   const paramcheck = selectedAction.parameters.find(
                     (param) => param.name === "body"
-                  );
+                  )
+
                   if (paramcheck !== undefined) {
-                    if (
-                      paramcheck["value_replace"] === undefined ||
-                      paramcheck["value_replace"] === null
-                    ) {
+                    if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
                       paramcheck["value_replace"] = [
                         {
                           key: data.name,
                           value: toComplete,
                         },
-                      ];
+                      ]
                     } else {
-                      const subparamindex = paramcheck[
-                        "value_replace"
-                      ].findIndex((param) => param.key === data.name);
+                      const subparamindex = paramcheck["value_replace"]
+						.findIndex((param) => param.key === data.name);
+
                       if (subparamindex === -1) {
                         paramcheck["value_replace"].push({
                           key: data.name,
                           value: toComplete,
-                        });
+                        })
+
                       } else {
                         paramcheck["value_replace"][subparamindex]["value"] +=
                           toComplete;
@@ -2370,7 +3963,9 @@ const ParsedAction = (props) => {
                     }
 
                     selectedActionParameters[count]["value_replace"] = paramcheck;
-                    selectedAction.parameters[count]["value_replace"] = paramcheck;
+
+					selectedAction.parameters = selectedActionParameters
+                    //selectedAction.parameters[count]["value_replace"] = paramcheck;
                     setSelectedAction(selectedAction);
                     setUpdate(Math.random());
 
@@ -2387,7 +3982,7 @@ const ParsedAction = (props) => {
                 //selectedAction.parameters[count].value = selectedActionParameters[count].value;
                 //setSelectedAction(selectedAction);
 								//setUpdate(Math.random());
-                
+	
 								setShowDropdown(false);
                 setMenuPosition(null);
               };
@@ -2427,7 +4022,7 @@ const ParsedAction = (props) => {
                       );
                       if (exec_text_field !== null) {
                         if (inside) {
-                          exec_text_field.style.border = "2px solid #f85a3e";
+                          exec_text_field.style.border = "2px solid #FF8544";
                         } else {
                           exec_text_field.style.border = "";
                         }
@@ -2613,7 +4208,8 @@ const ParsedAction = (props) => {
 												newname = newname.slice(0, newname.length-5)
 											}
 										
-											selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
+											//selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
+											selectedActionParameters[count].value += `$${innerdata.name}.${newname}`
 											selectedAction.parameters[count].value = selectedActionParameters[count].value;
 											setSelectedAction(selectedAction);
 											setUpdate(Math.random());
@@ -2660,40 +4256,17 @@ const ParsedAction = (props) => {
                   })}
                 </Menu>
               );
-            };
- 
-            const description =
-              data.description === undefined ? "" : data.description;
-            const tooltipDescription = (
-              <span>
-                <Typography variant="body2">
-                  - Required:{" "}
-                  {data.required === true || data.configuration === true
-                    ? "True"
-                    : "False"}
-                </Typography>
-                <Typography variant="body2">
-                  - Example: {data.example}
-                </Typography>
-                <Typography variant="body2">
-                  - Description: {description}
-                </Typography>
-              </span>
-            );
-
-            //var itemColor = "#f85a3e"
-            //if (!data.required) {
-            //	itemColor = "#ffeb3b"
-            //}
-            {
-              /*<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>*/
             }
+ 
+			const buttonTitle = `Authenticate API ${selectedApp.name.replaceAll("_", " ")}`
+			const hasAutocomplete = data?.autocompleted === true
+			if (data.variant === undefined || data.variant === null) {
+				data.variant = "STATIC_VALUE"
+			}
 
-			const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
-			const hasAutocomplete = data.autocompleted === true
             return (
               <div key={data.name}>
-                {hideBodyButton}
+                {showButtonField === true ? hideBodyButtonValue : null} 
                 <div
                   style={{ marginTop: 20, marginBottom: 0, display: "flex" }}
                 >
@@ -2739,7 +4312,7 @@ const ParsedAction = (props) => {
 				  	>
 						<a href="/admin?tab=cache" target="_blank" style={{textDecoration: "none"}}>
 							<StorageIcon style={{ 
-								color: "#f85a3e",
+								color: "#FF8544",
 								marginRight: 10, 
 							}}/>
 					  </a>
@@ -2751,67 +4324,40 @@ const ParsedAction = (props) => {
                       flex: "10",
                       marginTop: "auto",
                       marginBottom: "auto",
+					  color: "#C5C5C5",
                     }}
                   >
-                    <Tooltip title={tooltipDescription} placement="top">
-                      <b>{tmpitem} </b>
-                    </Tooltip>
+                      {tmpitem} <span style={{color: theme.palette.main}}>{selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "*" : ""}</span>
                   </div>
 
-                  {/*selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
-								<div style={{display: "flex"}}>
-									<Tooltip color="primary" title="Static data" placement="top">
-										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
-												e.preventDefault()
-												changeActionParameterVariant("STATIC_VALUE", count) 
-											}}>
-											<CreateIcon />
-										</div>
-									</Tooltip>
-									&nbsp;|&nbsp;
-									<Tooltip color="primary" title="Data from previous action" placement="top">
-										<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
-											e.preventDefault()
-											changeActionParameterVariant("ACTION_RESULT", count) 
-										}}>
-											<AppsIcon />
-										</div>
-									</Tooltip>
-									&nbsp;|&nbsp;
-									<Tooltip color="primary" title="Use local variable" placement="top">
-										<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
-											e.preventDefault()
-											changeActionParameterVariant("WORKFLOW_VARIABLE", count) 
-										}}>
-											<FavoriteBorderIcon />
-										</div>
-									</Tooltip>
-								</div>	
-							*/}
-                  {/*(selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0 && selectedActionParameters[count].required === true && selectedActionParameters[count].unique_toggled !== undefined) || hideExtraTypes ? null : 
-								<div style={{display: "flex"}}>
-									<Tooltip color="secondary" title="Value must be unique" placement="top">
-										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {}}>
-          						<Checkbox
-												tabIndex="-1"
-          						  checked={selectedActionParameters[count].unique_toggled}
-												style={{
-													color: theme.palette.primary.secondary,
-												}}
-          						  onChange={(event) => {
-													//console.log("CHECKED!: ", selectedActionParameters[count])
-          						  	selectedActionParameters[count].unique_toggled = !selectedActionParameters[count].unique_toggled
-												  selectedAction.parameters[count].unique_toggled = selectedActionParameters[count].unique_toggled
-          						  	setSelectedActionParameters(selectedActionParameters)
-													setSelectedAction(selectedAction)
-													setUpdate(Math.random())
-												}}
-          						  name="requires_unique"
-          						/>
-										</div>
-									</Tooltip>
-								</div>
-							*/}
+					<Tooltip title="Expand editor window" placement="top">
+
+						<OpenInFullIcon
+							style={{ color: "rgba(255,255,255,0.7)", cursor: "pointer", margin: multiline ? 5 : 0, height: 20, width: 20, }}
+							onClick={(event) => {
+								event.preventDefault()
+								setFieldCount(count)
+								setExpansionModalOpen(true)
+								setActiveDialog("codeeditor")
+								//setcodedata(data.value)
+								var parsedvalue = data.value
+								if (parsedvalue === undefined || parsedvalue === null) {
+									parsedvalue = ""
+								}
+
+								setEditorData({
+									"name": data.name,
+									"value": parsedvalue,
+									"field_number": count,
+									"actionlist": actionlist,
+									"field_id": clickedFieldId,
+
+									"example": selectedActionParameters[count].example,
+								})
+							}}
+						/>
+					</Tooltip>
+
                 </div>
                 {datafield}
 				{/*shufflecode*/}
@@ -2827,9 +4373,9 @@ const ParsedAction = (props) => {
                       Autocomplete
                     </InputLabel>
                     <Select
-											MenuProps={{
-			          				disableScrollLock: true,
-								      }}
+					  MenuProps={{
+			        	disableScrollLock: true,
+					  }}
                       labelId="action-autocompleter"
                       SelectDisplayProps={{
                         style: {
@@ -2838,11 +4384,7 @@ const ParsedAction = (props) => {
                       onClose={() => {
                         setShowAutocomplete(false);
 
-                        if (
-                          !selectedActionParameters[count].value[
-                            selectedActionParameters[count].value.length - 1
-                          ] === "."
-                        ) {
+                        if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length - 1] === ".") {
                           setShowDropdown(false);
                         }
 
@@ -2855,11 +4397,13 @@ const ParsedAction = (props) => {
                       open={showAutocomplete}
                       style={{
                         color: "white",
-                        height: 50,
+                        height: 35,
                         marginTop: 2,
-                        borderRadius: theme.palette.borderRadius,
+                        borderRadius: theme.palette?.borderRadius,
                       }}
                       onChange={(e) => {
+						  console.log("SELECT ONCHANGE DONE")
+
                         if (selectedActionParameters[count].value[selectedActionParameters[count].value.length - 1] === ".") {
                           e.target.value.autocomplete = e.target.value.autocomplete.slice(1,e.target.value.autocomplete.length);
                         }
@@ -2921,1204 +4465,9 @@ const ParsedAction = (props) => {
             );
           })}
         </div>
-      );
-    }
-    return null;
-  };
-
-
-	const ActionSelectOption = (actionprops) => {
-		const { data, newActionname, newActiondescription, useIcon, extraDescription, } = actionprops;
-  		const [hover, setHover] = React.useState(false);
-
-		return (
-			<Tooltip
-			  color="secondary"
-			  title={newActiondescription}
-			  placement="left"
-			>
-				<div style={{
-					cursor: "pointer", 
-					padding: 8, 
-					paddingLeft: 14, 
-					paddingBottom: 4,
-					backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor,
-				}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-				onClick={() => {
-					//setSelectedAction(actionprops)
-					//setShowActionList(false)
-					//setUpdate(Math.random())
-					//
-					if (data !== undefined && data !== null) { 
-                		setNewSelectedAction({ 
-							target: { 
-								value: data.name 
-							} 
-						});
-              		}
-				}}
-				>
-					<div style={{ display: "flex", marginBottom: 0,}}>
-						<span
-							style={{
-								marginRight: 10,
-								marginTop: "auto",
-								marginBottom: 0,
-							}}
-						>
-							{useIcon}
-						</span>
-						<span style={{marginBottom: 0, marginTop: 3, }}>{newActionname}</span>
-					</div>
-					{extraDescription.length > 0 ? 
-						<Typography variant="body2" color="textSecondary" style={{marginTop: 0, overflow: "hidden", whiteSpace: "nowrap", display: "block",}}>
-							{extraDescription}	
-						</Typography>
-					: null}
-				</div>
-			</Tooltip>
-		)
-	}
-
-  const sortByCategoryLabel = (a, b) => {
-	  const aHasCategoryLabel = a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0
-	  const bHasCategoryLabel = b.category_label !== undefined && b.category_label !== null && b.category_label.length > 0
-
-	  // Sort by existence and length of "category_label"
-	  if (aHasCategoryLabel && !bHasCategoryLabel) {
-		return -1
-	  } else if (!aHasCategoryLabel && bHasCategoryLabel) {
-		return 1
-	  } else {
-		return 0
-	  }
-  }
-
-	// Function to deduplicate based on the "name" field
-	const deduplicateByName = (array) => {
-	  const uniqueNames = {};
-	  return array.filter(item => {
-		if (!item.hasOwnProperty('name') || !item.name.length) {
-		  return true
+			: null
 		}
-		if (!uniqueNames[item.name]) {
-		  uniqueNames[item.name] = true
-		  return true
-		}
-		return false
-	  })
-	}
-
-  // Gets the most important actions first
-  const renderedActionOptions = deduplicateByName((
-	  selectedApp.actions === undefined || selectedApp.actions === null ? [] : 
-	  selectedApp.actions.filter((a) => 
-		  a.category_label !== undefined && a.category_label !== null && a.category_label.length > 0).concat(sortByKey(selectedApp.actions, "label"))
-      ).sort(sortByCategoryLabel))
-	
-
-  const selectedAppIcon = selectedAction.large_image
-  var baselabel = selectedAction.label
-  return (
-    <div style={appApiViewStyle} id="parsed_action_view">
-
-      {hideExtraTypes === true ? null : (
-        <span>
-          <div style={{ display: "flex", minHeight: 40, marginBottom: 30 }}>
-            <div style={{ flex: 1 }}>
-		  	  <div style={{ display: "flex", }}
-		  		onClick={() => {
-					//window.open("/apps/${selectedAction.app_id}", "_blank")
-				}}
-		  	  >
-		  		  <Tooltip title={"App: "+selectedAction.app_name} placement="top">
-					  <img src={selectedAppIcon} style={{ 
-						width: 30, 
-						height: 30, 
-						marginRight: 10, 
-						borderRadius: 5,
-						marginTop: 13, 
-					    border: "2px solid rgba(255,255,255,0.3)",
-					  }} />
-		  		  </Tooltip>
-				  <h3 style={{ }}>
-					{(
-					  selectedAction.app_name.charAt(0).toUpperCase() +
-					  selectedAction.app_name.substring(1)
-					).replaceAll("_", " ")}
-				  </h3>
-		  	  </div>
-              <div style={{display: "flex", marginTop: 0, }}>
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    paddingLeft: 0,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {
-                    if (workflowExecutions.length > 0) {
-                      // Look for the ID
-                      var found = false;
-                      for (let [key,keyval] in Object.entries(workflowExecutions)) {
-                        if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
-                          continue;
-                        }
-
-                        var foundResult = workflowExecutions[key].results.find(
-                          (result) => result.action.id === selectedAction.id
-                        )
-
-                        if (foundResult === undefined || foundResult === null) {
-                          continue;
-                        }
-
-						const oldstartnode = cy.getElementById(selectedAction.id);
-						if (oldstartnode !== undefined && oldstartnode !== null) {
-							const foundname = oldstartnode.data("label")
-							if (foundname !== undefined && foundname !== null) {
-								foundResult.action.label = foundname
-							}
-						}
-
-                        setSelectedResult(foundResult);
-                        if (setCodeModalOpen !== undefined) {
-                          setCodeModalOpen(true);
-                      	
-						  found = true
-                        }
-
-                        break;
-                      }
-
-					  if (!found) {
-						  toast("No result for this action yet. Please run the workflow first.")
-					  }
-                    }
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title="See previous results for this action"
-                    placement="top"
-                  >
-                    <ArrowLeftIcon style={{ color: "rgba(255,255,255,0.7)" }} />
-                  </Tooltip>
-                </IconButton>
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {
-                    setAuthenticationModalOpen(true)
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title="Find app documentation"
-                    placement="top"
-                  >
-                    <DescriptionIcon style={{ color: "rgba(255,255,255,0.7)" }} />
-                  </Tooltip>
-                </IconButton>
-		  		{/*
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {}}
-                >
-                  <a
-                    href="https://shuffler.io/docs/workflows#nodes"
-                    rel="norefferer"
-                    target="_blank"
-                    style={{ textDecoration: "none", color: "#f85a3e" }}
-                  >
-                    <Tooltip
-                      color="primary"
-                      title="What are actions?"
-                      placement="top"
-                    >
-                      <HelpOutlineIcon style={{ color: "rgba(255,255,255,0.7)" }} />
-                    </Tooltip>
-                  </a>
-                </IconButton>
-				*/}
-								{/*
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {
-                    //setAuthenticationModalOpen(true);
-										console.log("Should enable/disable magic!")
-										console.log("Action: ", selectedAction)
-										if (selectedAction.run_magic_output === undefined) {
-											selectedAction.run_magic_output = true
-										} else {
-											if (selectedAction.run_magic_output === true) {
-												selectedAction.run_magic_output = false
-											} else {
-												selectedAction.run_magic_output = true 
-											}
-										}
-
-										setSelectedAction(selectedAction)
-										setUpdate(Math.random());
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title={selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "Click to enable magic parsing" : "Click to disable magic parsing"}
-                    placement="top"
-                  >
-										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "rgba(255,255,255,0.7)" : "#f86a3e"}} />
-                  </Tooltip>
-                </IconButton>
-								*/}
-		  		{/*
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-                  onClick={() => {
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title={"Find related tworkflows"}
-                    placement="top"
-                  >
-					<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
-						<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
-					</a>
-                  </Tooltip>
-                </IconButton>
-				*/}
-                <IconButton
-                  style={{
-                    marginTop: "auto",
-                    marginBottom: "auto",
-                    height: 30,
-                    marginLeft: 15,
-                    paddingRight: 0,
-                  }}
-		  		  disabled={autoCompleting}
-                  onClick={() => {
-					  //if (setAiQueryModalOpen !== undefined) {
-					  //  setAiQueryModalOpen(true)
-					  //} else {
-					  	aiSubmit("Fill based on previous values", undefined, undefined, selectedAction)
-					  //}
-  					  setAutocompleting(true)
-                  }}
-                >
-                  <Tooltip
-                    color="primary"
-                    title={"Autocomplete fields. Uses the name of the current action, the fields and previous actions' results"}
-                    placement="top"
-                  >
-		  			{autoCompleting ? 
-						<CircularProgress style={{height: 20, width: 20, }} />
-						:
-						<AutoFixHighIcon style={{ color: "rgba(255,255,255,0.7)", height: 24, }} />
-					}
-                  </Tooltip>
-                </IconButton>
-              </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {/*selectedAction.id === workflow.start ? null : 
-
-							<Tooltip color="primary" title={"Make this node the start action"} placement="top">
-								<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
-									defineStartnode(e)	
-								}}>
-									<KeyboardArrowRightIcon />
-								</Button> 				
-							</Tooltip>
-						*/}
-              {selectedApp.versions !== null &&
-				  selectedApp.versions !== undefined &&
-				  selectedApp.versions.length > 1 ? (
-                <Select
-				  MenuProps={{
-				  	disableScrollLock: true,
-				  }}
-                  defaultValue={selectedAction.app_version}
-                  onChange={(event) => {
-                    const newversion = selectedApp.versions.find(
-                      (tmpApp) => tmpApp.version == event.target.value
-                    )
-
-                    if (newversion !== undefined && newversion !== null) {
-                      getApp(newversion.id, true)
-                    }
-
-					// Change in all actions in the workflow at the same time and add a toast.success() about it
-					for (var actionkey in workflow.actions) {
-						const action = workflow.actions[actionkey]
-						if (action.app_name === selectedAction.app_name) {
-							workflow.actions[actionkey].app_version = event.target.value
-						}
-					}
-
-					toast.success("Changed version of all nodes to "+event.target.value)
-                  }}
-                  style={{
-                    marginTop: 10,
-                    backgroundColor: theme.palette.surfaceColor,
-                    backgroundColor: theme.palette.inputColor,
-                    color: "white",
-                    height: 35,
-                    marginleft: 10,
-                    borderRadius: theme.palette.borderRadius,
-                  }}
-                  SelectDisplayProps={{
-                    style: {
-                    },
-                  }}
-                >
-                  {selectedApp.versions.map((data, index) => {
-                    return (
-                      <MenuItem
-                        key={index}
-                        style={{
-                          backgroundColor: theme.palette.inputColor,
-                          color: "white",
-                        }}
-                        value={data.version}
-                      >
-                        {data.version}
-                      </MenuItem>
-                    );
-                  })}
-                </Select>
-              ) : null}
-            </div>
-          </div>
-					<div style={{display: "flex"}}>
-						<div style={{flex: 5}}>
-							<Typography style={{color: "rgba(255,255,255,0.7)"}}>Name</Typography>
-							<TextField
-
-								style={theme.palette.textFieldStyle}
-								InputProps={{
-									style: theme.palette.innerTextfieldStyle,
-									disableUnderline: true,
-								}}
-								fullWidth
-								color="primary"
-								placeholder={selectedAction.label}
-								defaultValue={selectedAction.label}
-								onChange={selectedNameChange}
-								onBlur={(e) => {
-									// Copy the name value
-									const name = e.target.value
-									const parsedBaseLabel = "$"+baselabel.toLowerCase().replaceAll(" ", "_")
-									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
-
-									// Check if it's the same as the current name in use
-									//if (name === selectedAction.label) { 
-									//	console.log("Returning from name thing")
-									//	return
-									//}
-
-									// Change in actions, triggers & conditions
-									// Highlight the changes somehow with a glow?
-									if (workflow.branches !== undefined && workflow.branches !== null) {	
-										for (let [key,keyval] in Object.entries(workflow.branches)) {
-											if (workflow.branches[key].conditions !== undefined && workflow.branches[key].conditions !== null) {
-												for (let [subkey,subkeyval] in Object.entries(workflow.branches[key].conditions)) {
-													const condition = workflow.branches[key].conditions[subkey]
-													const sourceparam = condition.source
-													const destinationparam = condition.destination
-
-													// Should have a smarter way of discovering node names
-													// Finding index(es) and replacing at the location
-													if (sourceparam.value.includes("$")) {
-														try {
-															var cnt = -1
-															var previous = 0
-															while (true) {
-																cnt += 1 
-																// Need to make sure e.g. changing the first here doesn't change the 2nd
-																// $change_me
-																// $change_me_2
-																
-																const foundindex = sourceparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
-																if (foundindex === previous && foundindex !== 0) {
-																	break
-																}
-	
-																if (foundindex >= 0) {
-																	previous = foundindex+newname.length
-																	// Need to add diff of length to word
-	
-																	// Check location:
-																	// If it's a-zA-Z_ then don't replace
-																	if (sourceparam.value.length > foundindex+parsedBaseLabel.length) {
-																		const regex = /[a-zA-Z0-9_]/g;
-																		const match = sourceparam.value[foundindex+parsedBaseLabel.length].match(regex);
-																		if (match !== null) {
-																			continue
-																		}
-																	}
-																	
-																	console.log("Old found: ", workflow.branches[key].conditions[subkey].source.value)
-																	const extralength = newname.length-parsedBaseLabel.length
-																	sourceparam.value = sourceparam.value.substring(0, foundindex) + newname + sourceparam.value.substring(foundindex-extralength+newname.length, sourceparam.value.length)
-
-																	console.log("New: ", workflow.branches[key].conditions[subkey].source.value)
-																} else { 
-																	break
-																}
-	
-																// Break no matter what after 5 replaces. May need to increase
-																if (cnt >= 5) {
-																	break
-																}
-	
-															}
-            								} catch (e) {
-															console.log("Failed value replacement based on index: ", e)
-														}
-													}
-
-													if (destinationparam.value.includes("$")) {
-														try {
-															var cnt = -1
-															var previous = 0
-															while (true) {
-																cnt += 1 
-																// Need to make sure e.g. changing the first here doesn't change the 2nd
-																// $change_me
-																// $change_me_2
-																
-																const foundindex = destinationparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
-																if (foundindex === previous && foundindex !== 0) {
-																	break
-																}
-	
-																if (foundindex >= 0) {
-																	previous = foundindex+newname.length
-																	// Need to add diff of length to word
-	
-																	// Check location:
-																	// If it's a-zA-Z_ then don't replace
-																	if (destinationparam.value.length > foundindex+parsedBaseLabel.length) {
-																		const regex = /[a-zA-Z0-9_]/g;
-																		const match = destinationparam.value[foundindex+parsedBaseLabel.length].match(regex);
-																		if (match !== null) {
-																			continue
-																		}
-																	}
-																	
-																	console.log("Old found: ", workflow.branches[key].conditions[subkey].destination.value)
-																	const extralength = newname.length-parsedBaseLabel.length
-																	destinationparam.value = destinationparam.value.substring(0, foundindex) + newname + destinationparam.value.substring(foundindex-extralength+newname.length, destinationparam.value.length)
-
-																	console.log("New: ", workflow.branches[key].conditions[subkey].destination.value)
-																} else { 
-																	break
-																}
-	
-																// Break no matter what after 5 replaces. May need to increase
-																if (cnt >= 5) {
-																	break
-																}
-	
-															}
-            								} catch (e) {
-															console.log("Failed value replacement based on index: ", e)
-														}
-													}
-												}
-											}
-										}
-									}
-
-									for (let [key,keyval] in Object.entries(workflow.actions)) {
-										if (workflow.actions[key].id === selectedAction.id) {
-											continue
-										}
-
-										const params = workflow.actions[key].parameters
-										console.log(params)
-										if (params === null || params === undefined) {
-											continue
-										}
-
-										for (let [subkey, subkeyval] in Object.entries(params)) {
-											const param = workflow.actions[key].parameters[subkey];
-											if (!param.value.includes("$")) {
-												continue
-											}
-
-											// Should have a smarter way of discovering node names
-											// Do regex? 
-											// Finding index(es) and replacing at the location
-											//
-
-											try {
-												var cnt = -1
-												var previous = 0
-												while (true) {
-													cnt += 1 
-													// Need to make sure e.g. changing the first here doesn't change the 2nd
-													// $change_me
-													// $change_me_2
-													
-													const foundindex = param.value.toLowerCase().indexOf(parsedBaseLabel, previous)
-													if (foundindex === previous && foundindex !== 0) {
-														break
-													}
-	
-													if (foundindex >= 0) {
-														previous = foundindex+newname.length
-														// Need to add diff of length to word
-	
-														// Check location:
-														// If it's a-zA-Z_ then don't replace
-														if (param.value.length > foundindex+parsedBaseLabel.length) {
-															const regex = /[a-zA-Z0-9_]/g;
-															const match = param.value[foundindex+parsedBaseLabel.length].match(regex);
-															if (match !== null) {
-																continue
-															}
-														}
-														
-														console.log("Old found: ", workflow.actions[key].parameters[subkey].value)
-														const extralength = newname.length-parsedBaseLabel.length
-														param.value = param.value.substring(0, foundindex) + newname + param.value.substring(foundindex-extralength+newname.length, param.value.length)
-
-														console.log("New: ", workflow.actions[key].parameters[subkey].value)
-													} else { 
-														break
-													}
-	
-													// Break no matter what after 5 replaces. May need to increase
-													if (cnt >= 5) {
-														break
-													}
-	
-												}
-            					} catch (e) {
-												console.log("Failed value replacement based on index: ", e)
-											}
-										}
-									}
-
-									setWorkflow(workflow);
-                  					setUpdate(Math.random());
-									baselabel = name
-								}}
-							/>
-						</div>
-						{/*!isCloud ? null :*/}
-							<div style={{flex: 1, marginLeft: 5,}}>
-								<Tooltip
-									color="primary"
-									title={"Delay before action executes (in seconds)"}
-									placement="top"
-								>
-									<span>
-										<Typography style={{color: "rgba(255,255,255,0.7)"}}>Delay</Typography>
-										<TextField
-											InputProps={{
-												style: theme.palette.innerTextfieldStyle,
-												disableUnderline: true,
-											}}
-											placeholder={selectedAction.execution_delay}
-											defaultValue={selectedAction.execution_delay}
-											onChange={(event) => {
-												if (actionDelayChange !== undefined) {
-													actionDelayChange(event) 
-												}
-											}}
-										/>
-									</span>
-								</Tooltip>
-							</div>
-						{/**/}
-					</div>
-        </span>
-      )}
-      {selectedApp.name !== undefined &&
-			selectedAction.authentication !== null &&
-			selectedAction.authentication !== undefined &&
-			selectedAction.authentication.length === 0 &&
-			requiresAuthentication ? (
-        <div style={{ marginTop: 15 }}>
-          <Tooltip
-            color="primary"
-            title={"Add authentication option"}
-            placement="top"
-          >
-            <span>
-              <Button
-                color="primary"
-                style={{}}
-                fullWidth
-                variant="contained"
-                onClick={() => {
-                  //if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
-                  //	return null
-                  //}
-
-                  setAuthenticationModalOpen(true);
-                }}
-              >
-                <AddIcon style={{ marginRight: 10 }} /> Authenticate{" "}
-                {selectedApp.name.replaceAll("_", " ")}
-              </Button>
-            </span>
-          </Tooltip>
-        </div>
-      ) : null}
-
-      {selectedAction.authentication !== undefined &&
-				selectedAction.authentication !== null &&
-				selectedAction.authentication.length > 0 ? (
-        <div style={{ marginTop: 15 }}>
-          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Authentication</Typography>
-          <div style={{ display: "flex" }}>
-            <Select
-			  MenuProps={{
-			  	disableScrollLock: true,
-			  }}
-              labelId="select-app-auth"
-              value={
-                Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0
-                  ? "No selection"
-                  : selectedAction.selectedAuthentication
-              }
-              SelectDisplayProps={{
-                style: {
-					maxWidth: 250,
-                },
-              }}
-              fullWidth
-              onChange={(e) => {
-                if (e.target.value === "No selection") {
-                  selectedAction.selectedAuthentication = {};
-                  selectedAction.authentication_id = "";
-
-                  for (let [key,keyval] in Object.entries(selectedAction.parameters)) {
-                    //console.log(selectedAction.parameters[key])
-                    if (selectedAction.parameters[key].configuration) {
-                      selectedAction.parameters[key].value = "";
-                    }
-                  }
-                  setSelectedAction(selectedAction);
-                  setUpdate(Math.random());
-                } else {
-                  selectedAction.selectedAuthentication = e.target.value;
-                  selectedAction.authentication_id = e.target.value.id;
-                  setSelectedAction(selectedAction);
-                  setUpdate(Math.random());
-                }
-              }}
-              style={{
-                backgroundColor: theme.palette.inputColor,
-                color: "white",
-                height: 50,
-                maxWidth: rightsidebarStyle.maxWidth - 80,
-                borderRadius: theme.palette.borderRadius,
-              }}
-            >
-              <MenuItem
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  color: "white",
-                }}
-                value="No selection"
-              >
-                <em>No selection</em>
-              </MenuItem>
-              {selectedAction.authentication.map((data) => {
-				if (data.last_modified === true) {
-					//console.log("LAST MODIFIED: ", data.label)
-				}
-
-                return (
-                  <MenuItem
-                    key={data.id}
-                    style={{
-                      backgroundColor: theme.palette.inputColor,
-                      color: "white",
-					  maxWidth: 500, 
-					  overflowX: "auto",
-                    }}
-                    value={data}
-                  >
-					{data.last_modified === true ? 
-						<Chip
-							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
-							label={"Latest"}
-							variant="outlined"
-							color="secondary"
-						/>
-					: null}
-					{data.app.app_version !== undefined && data.app.app_version !== null && data.app.app_version !== "" && data.app.app_version !== "undefined" ?
-						<Chip
-							style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
-							label={data.app.app_version}
-							variant="outlined"
-							color="secondary"
-						/>
-					: null}
-						{data.label} 
-                  </MenuItem>
-                );
-              })}
-            </Select>
-
-            {/*
-
-						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
-							AUTHENTICATE
-						</Button>
-						curaction.authentication = authenticationOptions
-							if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "")
-						*/}
-            <Tooltip
-              color="primary"
-              title={"Add authentication option"}
-              placement="top"
-            >
-              <IconButton
-                color="primary"
-								variant="outlined"
-                style={{}}
-                onClick={() => {
-                  setAuthenticationModalOpen(true);
-                }}
-              >
-                <AddIcon />
-              </IconButton>
-            </Tooltip>
-          </div>
-        </div>
-      ) : null}
-
-      {showEnvironment !== undefined && showEnvironment && environments.length > 1 && !isIntegration  ? (
-        <div style={{ marginTop: "20px" }}>
-          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Environment</Typography>
-          <Select
-			MenuProps={{
-				disableScrollLock: true,
-			}}
-            value={
-              selectedActionEnvironment === undefined || selectedActionEnvironment === null ||
-              selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null 
-                ? isCloud ? "Cloud" : "Shuffle"
-                : selectedActionEnvironment.Name
-            }
-            SelectDisplayProps={{
-              style: {
-              },
-            }}
-            fullWidth
-            onChange={(e) => {
-              const env = environments.find((a) => a.Name === e.target.value);
-              setSelectedActionEnvironment(env);
-              selectedAction.environment = env.Name;
-              setSelectedAction(selectedAction);
-
-			  for (let actionkey in workflow.actions) {
-				  workflow.actions[actionkey].environment = env.Name
-			  }
-			  setWorkflow(workflow)
-			  toast("Set environment for ALL actions to " + env.Name)
-            }}
-            style={{
-              backgroundColor: theme.palette.inputColor,
-              color: "white",
-              height: "50px",
-              borderRadius: theme.palette.borderRadius,
-            }}
-          >
-            {environments.map((data, index) => {
-              if (data.archived === true) {
-                return null;
-              }
-
-              return (
-                <MenuItem
-									key={index}
-                  key={data.Name}
-                  style={{
-                    backgroundColor: theme.palette.inputColor,
-                    color: "white",
-                  }}
-                  value={data.Name}
-                >
-				  {data.default === true ?
-					  <Chip
-						style={{marginLeft: 0, padding: 0, marginRight: 10, cursor: "pointer",}}
-						label={"Default"}
-						variant="outlined"
-						color="secondary"
-					  />
-					  : null}
-                  {data.Name}
-                </MenuItem>
-              );
-            })}
-          </Select>
-        </div>
-      ) : null}
-
-      {workflow.execution_variables !== undefined &&
-      workflow.execution_variables !== null &&
-      workflow.execution_variables.length > 0 ? (
-        <div style={{ marginTop: "20px" }}>
-          <Typography>Execution variable (optional)</Typography>
-          <Select
-			MenuProps={{
-				disableScrollLock: true,
-			}}
-            value={
-              selectedAction.execution_variable !== undefined
-              && selectedAction.execution_variable !== null 
-              && selectedAction.execution_variable.name !== undefined 
-              && selectedAction.execution_variable.name !== null 
-              && selectedAction.execution_variable.name.length > 0 
-                ? selectedAction.execution_variable.name
-                : "No selection"
-            }
-            SelectDisplayProps={{
-              style: {
-              },
-            }}
-            fullWidth
-            onChange={(e) => {
-              if (e.target.value === "No selection") {
-                selectedAction.execution_variable = { name: "No selection" };
-              } else {
-                const value = workflow.execution_variables.find(
-                  (a) => a.name === e.target.value
-                );
-                selectedAction.execution_variable = value;
-              }
-              setSelectedAction(selectedAction);
-              setUpdate(Math.random());
-            }}
-            style={{
-              backgroundColor: theme.palette.inputColor,
-              color: "white",
-              height: "50px",
-              borderRadius: theme.palette.borderRadius,
-            }}
-          >
-            <MenuItem
-              style={{
-                backgroundColor: theme.palette.inputColor,
-                color: "white",
-              }}
-              value="No selection"
-            >
-              <em>No selection</em>
-            </MenuItem>
-            <Divider style={{ backgroundColor: theme.palette.inputColor }} />
-            {workflow.execution_variables.map((data) => (
-              <MenuItem
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  color: "white",
-                }}
-                value={data.name}
-              >
-                {data.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </div>
-      ) : null}
-
-      <Divider
-        style={{
-          marginTop: "20px",
-          height: "1px",
-          width: "100%",
-          backgroundColor: "rgb(91, 96, 100)",
-        }}
-      />
-      <div style={{ flex: "6", marginTop: "20px" }}>
-        {/*hideExtraTypes ? null : 
-					<div style={{marginBottom: 5}}>
-						<b>Actions</b>
-					</div>
-				*/}
-
-        {setNewSelectedAction !== undefined ? (
-          <Autocomplete
-            id="action_search"
-            autoHighlight
-            value={selectedAction}
-            classes={{ inputRoot: classes.inputRoot }}
-			groupBy={(option) => {
-				// Most popular
-				// Is categorized
-				// Uncategorized
-				return option.category_label !== undefined && option.category_label !== null && option.category_label.length > 0 ? "Most used" : "All Actions";
-			}}
-			renderGroup={(params) => {
-
-				return (
-					<li key={params.key}>
-						<Typography variant="body1" style={{textAlign: "center", marginLeft: 10, marginTop: 25, marginBottom: 10, }}>{params.group}</Typography>
-						<Typography variant="body2">{params.children}</Typography>
-					</li>
-				)	
-			}}
-            options={renderedActionOptions}
-            ListboxProps={{
-              style: {
-                backgroundColor: theme.palette.surfaceColor,
-                color: "white",
-              },
-            }}
-			filterOptions={(options, { inputValue }) => {
-				//console.log("Option contains?: ", inputValue, options)
-				const lowercaseValue = inputValue.toLowerCase()
-				options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
-
-				return options
-			}}
-            getOptionLabel={(option) => {
-              if (option === undefined || option === null || option.name === undefined || option.name === null ) {
-                return null;
-              }
-
-              const newname = (
-                option.name.charAt(0).toUpperCase() + option.name.substring(1)
-              ).replaceAll("_", " ");
-
-              return newname;
-            }}
-            fullWidth
-            style={{
-              backgroundColor: theme.palette.inputColor,
-              height: 50,
-              borderRadius: theme.palette.borderRadius,
-            }}
-            onChange={(event, newValue) => {
-              // Workaround with event lol
-              if (newValue !== undefined && newValue !== null) {
-                setNewSelectedAction({ 
-					target: { 
-						value: newValue.name 
-					} 
-				});
-              }
-            }}
-            renderOption={(props, data, state) => {
-              var newActionname = data.name;
-              if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-                newActionname = data.label;
-              }
-
-              var newActiondescription = data.description;
-			  //console.log("DESC: ", newActiondescription)
-              if (data.description === undefined || data.description === null) {
-				newActiondescription = "Description: No description defined for this action"
-              } else {
-				newActiondescription = "Description: "+newActiondescription
-			  }
-
-              const iconInfo = GetIconInfo({ name: data.name });
-              const useIcon = iconInfo.originalIcon;
-
-			  if (newActionname === undefined || newActionname === null) {
-				  newActionname = "No name"
-				  data.name = "No name"
-				  data.label = "No name"
-			  }
-
-              newActionname = (newActionname.charAt(0).toUpperCase() + newActionname.substring(1)).replaceAll("_", " ");
-
-				var method = ""
-				var extraDescription = ""
-				if (data.name.includes("get_")) {
-					method = "GET"
-				} else if (data.name.includes("post_")) {
-					method = "POST"
-				} else if (data.name.includes("put_")) {
-					method = "PUT"
-				} else if (data.name.includes("patch_")) {
-					method = "PATCH"
-				} else if (data.name.includes("delete_")) {
-					method = "DELETE"
-				} else if (data.name.includes("options_")) {
-					method = "OPTIONS"
-				} else if (data.name.includes("connect_")) {
-					method = "CONNECT"
-				}
-
-				// FIXME: Should it require a base URL?
-				if (method.length > 0 && data.description !== undefined && data.description !== null && data.description.includes("http")) {
-					var extraUrl = ""
-					const descSplit = data.description.split("\n")
-					// Last line of descSplit
-					if (descSplit.length > 0) {
-						extraUrl = descSplit[descSplit.length-1]
-					} 
-
-					//for (let [line,lineval] in Object.entries(descSplit)) {
-					//	if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
-					//		const urlsplit = descSplit[line].split("/")
-					//		try {
-					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
-					//		} catch (e) {
-					//			//console.log("Failed - running with -1")
-					//			extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
-					//		}
-
-
-					//		//console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
-					//		//break
-					//	} 
-					//}
-
-					if (extraUrl.length > 0) {
-						if (extraUrl.includes(" ")) {
-							extraUrl = extraUrl.split(" ")[0]
-						}
-
-						if (extraUrl.includes("#")) {
-							extraUrl = extraUrl.split("#")[0]
-						}
-
-						extraDescription = `${method} ${extraUrl}`
-					} else {
-						//console.log("No url found. Check again :)")
-					}
-				}
-
-              return (
-			  	<ActionSelectOption
-					data={data}
-					newActiondescription={newActiondescription}
-					useIcon={useIcon}
-					newActionname={newActionname}
-					extraDescription={extraDescription}
-				/>
-              );
-            }}
-            renderInput={(params) => {
-				if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
-					const prefixes = ["Post", "Put", "Patch"]
-					for (let [key,keyval] in Object.entries(prefixes)) {
-						if (params.inputProps.value.startsWith(prefixes[key])) {
-							params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
-							if (params.inputProps.value.length > 1) {
-								params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
-							}
-							break
-						}
-					}
-
-					// Check if it starts with "Get List" and method is "Get"
-					if (params.inputProps.value.startsWith("Get List")) {
-						console.log("Get List")
-					}
-				}
-
-              return (
-					<TextField
-						{...params}
-
-						data-lpignore="true"
-						autocomplete="off"
-						dataLPIgnore="true"
-				  		autoComplete="off"
-
-						color="primary"
-						id="checkbox-search"
-						variant="body1"
-						style={{
-							backgroundColor: theme.palette.inputColor,
-							borderRadius: theme.palette.borderRadius,
-						}}
-						label={isIntegration ? "Choose a category" : "Find Actions"}
-						variant="outlined"
-				        name={`disable_autocomplete_${Math.random()}`}
-
-					/>
-              );
-            }}
-          />
-        ) : null}
-
-        {/*setNewSelectedAction !== undefined ? 
-					<Select
-						MenuProps={{
-							disableScrollLock: true,
-						}}
-						value={selectedAction.name}
-						fullWidth
-						onChange={setNewSelectedAction}
-						style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette.borderRadius,}}
-						SelectDisplayProps={{
-							style: {
-								marginLeft: 10,
-								maxHeight: 200,
-							}
-						}}
-					>
-						{sortByKey(selectedApp.actions, "label").map(data => {
-							var newActionname = data.name
-							if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-								newActionname = data.label
-							}
-
-							const iconInfo = GetIconInfo({"name": data.name})
-							const useIcon = iconInfo.originalIcon
-
-							// ROFL FIXME - loop
-							newActionname = newActionname.replaceAll("_", " ")
-							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
-							return (
-								<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: theme.palette.inputColor, color: "white", display: "flex",}} value={data.name}>
-									<span style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>{useIcon}</span> 
-									<span style={{}}>{newActionname}</span>
-								</MenuItem>
-							)
-						})}
-					</Select>
-				: null*/}
-
-        <div
-          style={{
-            marginTop: "10px",
-            borderColor: "white",
-            borderWidth: "2px",
-            marginBottom: hideExtraTypes ? 50 : 200,
-          }}
-        >
-          <AppActionArguments
-            key={selectedAction.id}
-            selectedAction={selectedAction}
-          />
+          
         </div>
       </div>
     </div>

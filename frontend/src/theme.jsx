@@ -1,28 +1,30 @@
 import React from "react";
 import { createTheme, adaptV4Theme } from "@mui/material/styles";
 
-//const theme = createTheme({
 const theme = createTheme(adaptV4Theme({
   palette: {
 	theme: "dark",
-    main: "#F86743",
+    main: "#FF8544",
     primary: {
-      main: "#F86743",
+      main: "#FF8544",
   	  contrastText: "#ffffff",
     },
     secondary: {
-      main: "#e8eaf6",
+      main: "rgba(255,255,255,0.7)",
 	  contrastText: "#000000",
     },
     text: {
       secondary: "rgba(255,255,255,0.7)",
     },
     type: "dark",
-    inputColor: "rgba(39,41,45,1)",
     //inputColor: "#383B40",
+    
+	inputColor: "rgba(39,41,45,1)",
     surfaceColor: "#27292d",
-    platformColor: "#1c1c1d",
+    //platformColor: "#1c1c1d",
+    platformColor: "#212121",
     backgroundColor: "#1a1a1a",
+
     green: "#5cc879",
     borderRadius: 10,
     defaultBorder: "1px solid rgba(255,255,255,0.3)",
@@ -44,10 +46,20 @@ const theme = createTheme(adaptV4Theme({
 		overflowX: "auto",
 	},
     textFieldStyle: {
-      backgroundColor: "#383B40",
+      backgroundColor: "#212121",
       borderRadius: 5,
+	  height: 40, 
+    },
+    DialogStyle: {
+      backgroundColor: "#212121",
+      borderRadius: 2,
+      boxShadow: "0px 0px 10px 0px rgba(0,0,0,0.75)",
+      border: "1px solid #494949",
     },
     innerTextfieldStyle: {
+	  height: 40,
+	  fontSize: 16,
+      backgroundColor: "#212121",
 	  // Removed since upgrading to mui 18
       //color: "white",
       //minHeight: 50,

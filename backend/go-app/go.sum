@@ -334,8 +334,10 @@ github.com/sendgrid/sendgrid-go v3.14.0+incompatible/go.mod h1:QRQt+LX/NmgVEvmdR
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 h1:n661drycOFuPLCN3Uc8sB6B/s6Z4t2xvBgU1htSHuq8=
 github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3/go.mod h1:A0bzQcvG0E7Rwjx0REVgAGH58e96+X0MeOfepqsbeW4=
-github.com/shuffle/shuffle-shared v0.6.50 h1:MBeGAiBNkw9Eg+3YTJIlBOuskWntGvT0uefFUYOBhbY=
-github.com/shuffle/shuffle-shared v0.6.50/go.mod h1:RAJiSFjmuKmijKTbbEf9A6Ojb+3/te7g71lED7JjPus=
+github.com/shuffle/shuffle-shared v0.6.77 h1:KKtM50xW2DLuRHINxhp3uXrNH0AhiwkeiiU93a8fB3A=
+github.com/shuffle/shuffle-shared v0.6.77/go.mod h1:RAJiSFjmuKmijKTbbEf9A6Ojb+3/te7g71lED7JjPus=
+github.com/shuffle/shuffle-shared v0.6.90 h1:FzIYtEt44eWgEsW/9tj2ki7qq8FEm/HWXUok+THp72M=
+github.com/shuffle/shuffle-shared v0.6.90/go.mod h1:RAJiSFjmuKmijKTbbEf9A6Ojb+3/te7g71lED7JjPus=
 github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=

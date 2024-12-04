@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext, memo, useMemo } from 'react';
 
 import theme from '../theme.jsx';
 import classNames from "classnames";
@@ -37,13 +37,14 @@ import {
 } from 'reaviz';
 
 import { typecost, typecost_single, } from "../views/HandlePaymentNew.jsx";
+import { Context } from '../context/ContextApi.jsx';
 
 const LineChartWrapper = ({keys, inputname, height, width}) => {
   const [hovered, setHovered] = useState("");
 	const inputdata = keys.data === undefined ? keys : keys.data
 	
 	return (
-		<div style={{color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, padding: 30, marginTop: 15, backgroundColor: theme.palette.platformColor, overflow: "hidden", }}>
+		<div style={{color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette?.borderRadius, padding: 30, marginTop: 15, backgroundColor: theme.palette.platformColor, overflow: "hidden", }}>
 			<Typography variant="h6" style={{marginBotton: 15, }}>
 				{inputname}
 			</Typography>
@@ -82,15 +83,14 @@ const AppStats = (defaultprops) => {
   const [workflows, setWorkflows] = useState(inputWorkflows === undefined ? [] : inputWorkflows)
   const [resultRows, setResultRows] = useState([])
   const [resultLoading, setResultLoading] = useState(true)
-
-  const includedExecutions = selectedOrganization.sync_features.app_executions !== undefined ? selectedOrganization.sync_features.app_executions.limit : 0 
+  
+  const includedExecutions = selectedOrganization?.sync_features?.app_executions !== undefined ? selectedOrganization?.sync_features?.app_executions?.limit : 0 
 
   useEffect(() => {
 	  if (workflows === undefined || workflows === null || workflows.length === 0) {
 		  getAvailableWorkflows()
 	  }
   }, [])
-
 
 
   const getWorkflowStats = async (workflow, startTime, endTime) => {
@@ -134,6 +134,9 @@ const AppStats = (defaultprops) => {
 				Accept: "application/json",
 			},
 			credentials: "include",
+	  }).catch((error) => {
+		  console.log("Error getting workflow stats: " + error);
+		  return workflow
 	  })
 
 	  if (response.status !== 200) {
@@ -159,8 +162,6 @@ const AppStats = (defaultprops) => {
 
   const loadWorkflowStats = (foundWorkflows, startTime, endTime) => {
 	  if (!userdata.support) {
-		  console.log("Not support")
-
 		  return
 	  }
 
@@ -485,8 +486,13 @@ const AppStats = (defaultprops) => {
 		setApprunCosts(appcostRuns)
 	}	
 
-	const getStats = () => {
-		fetch(`${globalUrl}/api/v1/orgs/${selectedOrganization.id}/stats`, {
+	const getStats = (orgid) => {
+		
+		if (orgid === undefined || orgid === null) {
+			return
+		}
+
+		fetch(`${globalUrl}/api/v1/orgs/${orgid}/stats`, {
 		  method: "GET",
 		  headers: {
 			"Content-Type": "application/json",
@@ -516,8 +522,10 @@ const AppStats = (defaultprops) => {
 	}
 	
 	useEffect(() => {
-		getStats()
-	}, [])
+		if(selectedOrganization?.id?.length > 0) {
+			getStats(selectedOrganization.id)
+		}
+	}, [selectedOrganization])
 
 	const paperStyle = {
 		textAlign: "center", 
@@ -636,7 +644,7 @@ const AppStats = (defaultprops) => {
 
   	const data = (
     <div className="content" style={{width: "100%", margin: "auto", }}>
-		<Typography variant="body1" style={{margin: "auto", marginLeft: 10, marginBottom: 20, }} color="textSecondary">
+		<Typography style={{margin: "auto", marginLeft: 10, marginBottom: 20, fontSize: 16}} color="textSecondary">
 			All shown statistics are gathered from <a 
 				href={`${globalUrl}/api/v1/orgs/${selectedOrganization.id}/stats`} 
 				target="_blank"
@@ -719,6 +727,40 @@ const AppStats = (defaultprops) => {
 				</div>
 			: null}
 
+			{clickedFromOrgTab? (
+				<LocalizationProvider dateAdapter={AdapterDayjs} style={{ flex: 1 }}>
+				<div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+					<div style={{ flex: 1, maxWidth: "200px", }}>
+					<DateTimePicker
+						sx={{
+						marginTop: 1,
+						marginLeft: 1,
+						}}
+						ampm={false}
+						label="Search from"
+						format="YYYY-MM-DD HH:mm:ss"
+						value={startTime}
+						onChange={handleStartTimeChange}
+						renderInput={(params) => <TextField {...params} />}
+					/>
+					</div>
+					<div style={{ flex: 1, maxWidth: "200px",}}>
+					<DateTimePicker
+						sx={{
+						marginTop: 1,
+						marginLeft: 1,
+						}}
+						ampm={false}
+						label="Search until"
+						format="YYYY-MM-DD HH:mm:ss"
+						value={endTime}
+						onChange={handleEndTimeChange}
+						renderInput={(params) => <TextField {...params} />}
+					/>
+					</div>
+				</div>
+				</LocalizationProvider>
+			):(
 			<LocalizationProvider dateAdapter={AdapterDayjs} style={{flex: 1, }}>
 				<div style={{display: "flex", flexDirection: "column", }}>
 					<DateTimePicker
@@ -751,6 +793,8 @@ const AppStats = (defaultprops) => {
 					/>
 				</div>
 			</LocalizationProvider>
+			)}
+
 
 		</div>
 

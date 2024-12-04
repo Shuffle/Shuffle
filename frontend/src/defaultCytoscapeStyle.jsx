@@ -13,6 +13,30 @@ const data = [
 		  return elementname
 	  },
       "text-valign": "center",
+	  "text-margin-x": function(element) {
+		  // Attempt at bottom-positioning
+		  // Required text-valign: bottom
+		  // FIXME: Disabled for now.
+		  return "15px"
+
+
+
+		  const name = element.data("label")
+		  console.log("Name: ", name)
+		  if (name === null || name === undefined || name == "" || document=== undefined || document === null) {
+			  return "0px"
+		  }
+
+		  const canvas = document.createElement('canvas');
+    	  const context = canvas.getContext('2d')
+
+		  context.font = '18px Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif'
+
+		  const textWidth = context.measureText(name).width
+		  return textWidth + "px"
+		  //return -1*(textWidth) + "px"
+	  },
+
       "font-family": "Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif",
       "font-weight": "lighter",
       "font-size": "18px",
@@ -23,7 +47,6 @@ const data = [
       padding: "10px",
       margin: "5px",
       "border-width": "1px",
-      "text-margin-x": "10px",
       "z-index": 5001,
     },
   },
@@ -35,7 +58,7 @@ const data = [
       "curve-style": "unbundled-bezier",
       label: "data(label)",
       "text-margin-y": "-15px",
-      width: "5px",
+      width: "3px",
       color: "white",
       "line-fill": "linear-gradient",
       "line-gradient-stop-positions": ["0.0", "100"],
@@ -119,10 +142,10 @@ const data = [
     },
   },
   {
-    selector: `node[app_name="Shuffle Tools"]`,
+    selector: `node[app_name="Shuffle Tools"], node[app_name="email"], node[app_name="http"]`,
     css: {
-      width: "30px",
-      height: "30px",
+      width: "35px",
+      height: "35px",
       "z-index": 5000,
       "font-size": "0px",
       "background-width": "75%",
@@ -258,7 +281,9 @@ const data = [
   {
     selector: "node[?isStartNode]",
     css: {
-      shape: "ellipse",
+      shape: function(element) {
+		  return "ellipse" 
+	  },
       "border-color": "#80deea",
       width: "80px",
       height: "80px",
@@ -270,8 +295,8 @@ const data = [
   {
     selector: "node[!is_valid]",
     css: {
-      "border-color": "red",
-      "border-width": "10px",
+      "border-color": "#f53434",
+      "border-width": "5px",
     },
   },
   {
@@ -357,7 +382,7 @@ const data = [
     css: {
       "background-color": "#f85a3e",
       "border-color": "#f85a3e",
-      "border-width": "12px",
+      "border-width": "7px",
       "transition-property": "border-width",
       "transition-duration": "0.25s",
       label: "data(label)",
@@ -462,13 +487,66 @@ const data = [
       "font-size": "0px",
     },
   },
-	{
-		selector: "node:selected",
-		css: {
-			"border-color": "#f86a3e",
-			"border-width": "7px",
-		},
-	},
+  {
+  	selector: "node:selected",
+  	css: {
+  		"border-color": "#f86a3e",
+  		"border-width": "7px",
+  	},
+  },
+  {
+    selector: `node[buttonType="condition-drag"]`,
+    css: {
+		"width": "5px",
+		"height": "5px",
+		"background-color": "#f85a3e",
+    },
+  },
+  {
+    selector: `node[name="switch"]`,
+    css: {
+      label: function(element) {
+		  // Load from the actual element
+		  var nodeheight = 400 
+		  var conditions = [{
+			  "name": "Condition 1",
+			  "check": "X equals Y",
+		  },
+		  {
+			  "name": "Condition 2",
+			  "check": "X2 equals Y2",
+		  },
+		  {
+			  "name": "Condition 3",
+			  "check": "X3 equals Y3",
+		  }]
+
+		  conditions.push({
+			  "name": "Else",
+			  "check": "If all else fails",
+		  })
+
+		  const newlines = nodeheight / conditions.length
+		  console.log("Newlines: ", newlines)
+
+		  const label = conditions.map((condition) => {
+			  return `${condition.name}\n\n\n`
+		  }).join("\n")
+
+		  return label
+	  },
+      color: "white",
+      "border-color": "#f85a3e",
+	  "background-color": "#1f1f1f",
+      "font-size": "19px",
+      "text-margin-x": "-110px",
+	  "text-wrap": "wrap",
+      shape: "roundrectangle",
+      width: "100",
+      height: "300",
+
+    },
+  },
 ];
 
 //{

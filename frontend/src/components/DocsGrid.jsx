@@ -124,6 +124,11 @@ const DocsGrid = props => {
 						removeQuery("q")
 						refine(event.currentTarget.value)
 					}}
+					onKeyDown={(event) => {
+						if(event.key === "Enter") {
+							event.preventDefault();
+						}
+					}}
 					limit={5}
 				/>
 				{/*isSearchStalled ? 'My search is stalled' : ''*/}
@@ -274,7 +279,7 @@ const DocsGrid = props => {
 				</Button>
 			</div>
 			*/}
-			<div style={{width: "100%", position: "relative", height: "100%",}}>
+			<div style={{width: "100%", position: "relative", height: "100%", padding: "0px 180px"}}>
 				<InstantSearch searchClient={searchClient} indexName="documentation">
 					<div style={{maxWidth: 450, margin: "auto", marginTop: 15, marginBottom: 15, }}>
 						<CustomSearchBox />

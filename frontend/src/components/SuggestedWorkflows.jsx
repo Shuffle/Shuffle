@@ -102,7 +102,7 @@ const SuggestedWorkflows = (props) => {
 				placement="top"
 				style={{ zIndex: 10011 }}
 			>
-				<div key={index} style={{cursor: finished ? "auto" : "pointer", marginTop: 10, padding: 10, borderRadius: theme.palette.borderRadius, border: `1px solid ${bordercolor}`, display: "flex", backgroundColor: hovering === true ? theme.palette.inputColor : theme.palette.surfaceColor, }} onMouseOver={() => {
+				<div key={index} style={{cursor: finished ? "auto" : "pointer", marginTop: 10, padding: 10, borderRadius: theme.palette?.borderRadius, border: `1px solid ${bordercolor}`, display: "flex", backgroundColor: hovering === true ? theme.palette.inputColor : theme.palette.surfaceColor, }} onMouseOver={() => {
 					setHovering(true)
 				}} onMouseOut={() => {
 					setHovering(false)
@@ -140,7 +140,7 @@ const SuggestedWorkflows = (props) => {
 
 	//<Paper style={{width: 275, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: -50, left: 50, }}>
 	return (
-		<Paper style={{margin: "auto", position: "relative", backgroundColor: theme.palette.surfaceColor, borderRadius: theme.palette.borderRadius, zIndex: foundZindex, border: "1px solid rgba(255,255,255,0.2)", top: 100, left: 85,}}>
+		<Paper style={{margin: "auto", position: "relative", backgroundColor: theme.palette.surfaceColor, borderRadius: theme.palette?.borderRadius, zIndex: foundZindex, border: "1px solid rgba(255,255,255,0.2)", top: 100, left: 85,}}>
 			<Dialog
 					open={usecaseSearch.length > 0 && usecaseSearchType.length > 0}
 					onClose={() => {
@@ -193,7 +193,7 @@ const SuggestedWorkflows = (props) => {
 					apps={apps}
 				/>
 			</Dialog>
-			<div style={{minWidth: 250, maxWidth: 250, padding: 15, borderRadius: theme.palette.borderRadius, position: "relative", }}>
+			<div style={{minWidth: 250, maxWidth: 250, padding: 15, borderRadius: theme.palette?.borderRadius, position: "relative", }}>
 				<Typography variant="body1" style={{textAlign: "center"}}>
 					Suggested Workflows ({finishedUsecases.length}/{usecaseSuggestions.length})
 				</Typography>

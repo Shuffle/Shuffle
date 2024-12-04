@@ -136,6 +136,11 @@ const CreatorGrid = props => {
 						removeQuery("q")
 						refine(event.currentTarget.value)
 					}}
+					onKeyDown={(event) => {
+						if(event.key === "Enter") {
+							event.preventDefault();
+						}
+					}}
 				/>
 				{/*isSearchStalled ? 'My search is stalled' : ''*/}
 			</form>
@@ -147,6 +152,7 @@ const CreatorGrid = props => {
     flexWrap: "wrap",
     alignContent: "space-between",
     marginTop: 5,
+	padding:"0px 180px",
   }
 	
 	const Hits = ({ hits }) => {

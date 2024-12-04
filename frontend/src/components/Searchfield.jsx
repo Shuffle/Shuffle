@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 
 import theme from '../theme.jsx';
 import { useNavigate, Link, useParams } from "react-router-dom";
 import SearchBox from "../components/SearchData.jsx";
+
+import { Context } from '../context/ContextApi.jsx';
 
 import {
 	Chip,
@@ -45,20 +47,22 @@ const chipStyle = {
 const SearchField = props => {
 	const { serverside, userdata, isMobile, isLoaded, globalUrl, isHeader, isLoggedIn, small, rounded } = props
 
+	const {searchBarModalOpen, setSearchBarModalOpen} = useContext(Context);
+
 	let navigate = useNavigate();
 	const borderRadius = 3
 	const node = useRef()
 	const [searchOpen, setSearchOpen] = useState(false)
-	const [modalOpen, setModalOpen] = React.useState(false);
+	// const [modalOpen, setModalOpen] = React.useState(false);
 	const [oldPath, setOldPath] = useState("")
 	const [value, setValue] = useState("");
 	useEffect(() => {
 		Mousetrap.bind(['command+k', 'ctrl+k'], () => {
-			setModalOpen(true);
+			setSearchBarModalOpen(true);
 			return false; // Prevent the default action
 		});
 		Mousetrap.bind(['esc'], () => {
-			setModalOpen(false);
+			setSearchBarModalOpen(false);
 			return false; // Prevent the default action
 		});
 
@@ -72,9 +76,9 @@ const SearchField = props => {
 		// console.log("key:", dataValue.key),
 		//console.log("value:",dataValue.value),
 		<Dialog
-			open={modalOpen}
+			open={searchBarModalOpen}
 			onClose={() => {
-				setModalOpen(false);
+				setSearchBarModalOpen(false);
 			}}
 			PaperProps={{
 				style: {
@@ -92,12 +96,12 @@ const SearchField = props => {
 			{isHeader ? <div style={{ display: "flex"}}>
 				<DialogTitle style={{ marginTop: 15, marginLeft: 5, color: "var(--Paragraph-text, #C8C8C8)" }} >Search for Docs, Apps, Workflows and more</DialogTitle>
 				<Button color="secondary" fullWidth style={{ marginLeft:180, }} onClick={() => {
-					setModalOpen(false);
+					setSearchBarModalOpen(false);
 				}}><CloseIcon /></Button>
 			</div>
 				: null}
 			<DialogContent className='dialog-content' style={{}}>
-				<SearchBox globalUrl={globalUrl} setModalOpen={setModalOpen} modalOpen={modalOpen} serverside={serverside} userdata={userdata} />
+				<SearchBox globalUrl={globalUrl} serverside={serverside} userdata={userdata} />
 			</DialogContent>
 			<Divider style={{overflow: "hidden"}}/>
 			<span style={{display:"flex", width:"100%", height:30}}>
@@ -124,10 +128,10 @@ const SearchField = props => {
 	);
 
 	return (
-		<div style={{ marginTop: "auto", marginLeft: !isLoggedIn ? 0 : 130 }}>
+		<div style={{ marginTop: "auto", marginLeft: !isLoggedIn ? 0: "auto", marginRight: !isLoggedIn ? 0 : "auto", width: !isLoggedIn ? "auto" : 410, }}>
 			{modalView}
 			<TextField
-				style={{ backgroundColor: "#212121", height: 48, borderRadius: rounded === true ? 25 : theme.palette.borderRadius, minWidth: fieldWidth, maxWidth: fieldWidth, }}
+				style={{ backgroundColor: "#212121", height: 48, borderRadius: rounded === true ? 25 : theme.palette?.borderRadius, minWidth: fieldWidth, maxWidth: fieldWidth, }}
 				InputProps={{
 					style: {
 						color: "white",
@@ -155,7 +159,7 @@ const SearchField = props => {
 				color="primary"
 				placeholder="Search Apps, Workflows, Docs..."
 				onClick={(event) => {
-					setModalOpen(true)
+					setSearchBarModalOpen(true)
 				}}
 				limit={5}
 			/>

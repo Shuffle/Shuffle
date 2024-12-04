@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import ReactGA from 'react-ga4';
 
 import theme from "../theme.jsx";
-import { useTheme } from "@mui/styles";
 import countries from "../components/Countries.jsx";
 import {
     Box,
@@ -88,7 +87,7 @@ const LicencePopup = (props) => {
 
     const paperStyle = {
         padding: 20,
-        borderRadius: theme.palette.borderRadius,
+        borderRadius: theme.palette?.borderRadius,
         height: "100%",
     }
 
@@ -194,7 +193,7 @@ const LicencePopup = (props) => {
 
         return (
             <Tooltip
-                style={{ borderRadius: theme.palette.borderRadius, }}
+                style={{ borderRadius: theme.palette?.borderRadius, }}
                 placement="bottom"
             >
                 <div style={{}}>
@@ -320,7 +319,7 @@ const LicencePopup = (props) => {
                                         margin: "auto",
                                         width: 100,
                                         backgroundColor: "white",
-                                        // borderRadius: theme.palette.borderRadius,
+                                        // borderRadius: theme.palette?.borderRadius,
                                     }}
                                 />
                                 : null}
@@ -390,7 +389,7 @@ const LicencePopup = (props) => {
                                                         value={feature.split("Worker License: ")[1]}
                                                         style={{
                                                             // backgroundColor: theme.palette.inputColor,
-                                                            // borderRadius: theme.palette.borderRadius,
+                                                            // borderRadius: theme.palette?.borderRadius,
                                                         }}
                                                         id={fieldId}
                                                         onClick={() => { }}
@@ -515,16 +514,16 @@ const LicencePopup = (props) => {
     }
 
     useEffect(() => {
-        console.log("New variant: ", shuffleVariant)
+		console.log("New variant: ", shuffleVariant)
 
-        if (shuffleVariant === 1) {
-            setCalculatedCost("$600")
-            setSelectedValue(8)
-        } else {
-            setCalculatedCost("$540")
-            setSelectedValue(300)
-        }
-    }, [shuffleVariant])
+		if (shuffleVariant === 1) {
+			setCalculatedCost("$960")
+			setSelectedValue(8)
+		} else {
+			setCalculatedCost("$960")
+			setSelectedValue(300)
+		}
+	}, [shuffleVariant])
 
     if (typeof window === 'undefined' || window.location === undefined) {
         return null
@@ -680,7 +679,7 @@ const LicencePopup = (props) => {
         color: "white",
     }
 
-
+    console.log("Priceitem: ", shuffleVariant)
     const isLoggedInHandler = () => {
         if (calculatedCost === payasyougo) {
             handlePayasyougo(props.userdata)
@@ -690,7 +689,7 @@ const LicencePopup = (props) => {
         const priceItem = window.location.origin === "https://shuffler.io" ?
             shuffleVariant === 0 ? "app_executions" : "cores"
             :
-            shuffleVariant === 0 ? "price_1MROFrDzMUgUjxHShcSxgHO1" : "price_1NXjQqDzMUgUjxHSg690R4FP"
+            shuffleVariant === 0 ? "price_1PZPSSEJjT17t98NLJoTMYja" : "price_1PZPQuEJjT17t98N3yORUtd9"
 
         const successUrl = `${window.location.origin}/admin?admin_tab=billing&payment=success`
         const failUrl = `${window.location.origin}/pricing?admin_tab=billing&payment=failure`
@@ -824,7 +823,7 @@ const LicencePopup = (props) => {
                         {errorMessage.length > 0 ? <Typography variant="h4">Error: {errorMessage}</Typography> : null}
                         <Card style={{
                             padding: 20,
-                            borderRadius: theme.palette.borderRadius,
+                            borderRadius: theme.palette?.borderRadius,
                             border: "1px solid #f85a3e",
                         }}>
                             <div>
