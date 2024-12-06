@@ -2617,8 +2617,11 @@ func handlePipeline(incRequest shuffle.ExecutionRequest) error {
 }
 
 func deployTenzirNode() error {
-	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "true" {
-		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
+	if os.Getenv("SHUFFLE_SKIP_PIPELINES") == "false" || os.Getenv("SHUFFLE_PIPELINE_ENABLED") == "true" {
+		// return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES")
+		log.Printf("[INFO] Pipelines are enabled by user")
+	} else {
+		return errors.New("Pipelines are disabled by user with SHUFFLE_SKIP_PIPELINES") 
 	}
 
 	if isKubernetes == "true" {
