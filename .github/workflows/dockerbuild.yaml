@@ -23,7 +23,7 @@ jobs:
             experimental: true
           - app: backend
             path: backend
-            version: nightly
+            version: 2.0.0
             experimental: true
           - app: orborus
             path: functions/onprem/orborus
