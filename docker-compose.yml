@@ -53,7 +53,7 @@ services:
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
       - SHUFFLE_STATS_DISABLED=true
-      - SHUFFLE_SWARM_CONFIG=run
+      # - SHUFFLE_SWARM_CONFIG=run
       - SHUFFLE_LOGS_DISABLED=true
       - SHUFFLE_WORKER_IMAGE=ghcr.io/shuffle/shuffle-worker:1.4.0
     env_file: .env
