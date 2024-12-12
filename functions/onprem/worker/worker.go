@@ -4104,7 +4104,7 @@ func runWebserver(listener net.Listener) {
 
 	/***  ***/
 	var dockercli *dockerclient.Client
-	ctx := context.Background()
+	defer dockercli.Close()
 	scaleReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
 	if len(scaleReplicas) > 0 {
 		tmpInt, err := strconv.Atoi(scaleReplicas)
@@ -4130,9 +4130,13 @@ func runWebserver(listener net.Listener) {
 		log.Printf("[DEBUG] SHUFFLE_APP_EXECUTIONS_PER_MINUTE set to value %s. Trying to overwrite default (%d)", os.Getenv("SHUFFLE_APP_EXECUTIONS_PER_MINUTE"), maxExecutionsPerMinute)
 	}
 
+	/*
+	ctx := context.Background()
 	if strings.ToLower(os.Getenv("SHUFFLE_SWARM_CONFIG")) == "run" || strings.ToLower(os.Getenv("SHUFFLE_APP_REPLICAS")) == "" {
 		go AutoScaleApps(ctx, dockercli, maxExecutionsPerMinute)
 	}
+	*/
+
 	if strings.ToLower(os.Getenv("SHUFFLE_DEBUG_MEMORY")) == "true" {
 		r.HandleFunc("/debug/pprof/", pprof.Index)
 		r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
@@ -4178,12 +4182,14 @@ func AutoScaleApps(ctx context.Context, client *dockerclient.Client, maxExecutio
 
 		case <-ticker.C:
 			count := window.CountEvents(time.Now())
-			j := numberOfApps(ctx, client)
+
+			appNumber := numberOfApps(ctx, client)
 			workers := numberOfWorkers(ctx, client)
+
 			execPerMin := maxExecutionsPerMinute / workers
 			if count >= execPerMin {
 				log.Printf("[DEBUG] Too many executions per minute (%d). Scaling down to %d", count, execPerMin)
-				scaleApps(ctx, client, uint64(j+1))
+				scaleApps(ctx, client, uint64(appNumber+1))
 			}
 		}
 	}
