@@ -6,7 +6,6 @@ Shuffle Automation
 
 [![CodeQL](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/codeql-analysis.yml)
 [![Autobuild](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml/badge.svg?branch=launch)](https://github.com/Shuffle/Shuffle/actions/workflows/dockerbuild.yaml)
-[![Deploy to AWS](https://d1.awsstatic.com/cloudformation-deploy-to-aws-button.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=Shuffle-Instance&templateURL=https://shuffle-public-amis.s3.eu-north-1.amazonaws.com/template.yaml)
 
 </h1><h4 align="center">
 
