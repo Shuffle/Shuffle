@@ -3856,7 +3856,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		time.Sleep(time.Duration(30) * time.Second)
 		checkUnfinished(resp, request, execRequest)
 	}()
-	// window.AddEvent(time.Now())
+	window.AddEvent(time.Now())
 
 	ctx := context.Background()
 
